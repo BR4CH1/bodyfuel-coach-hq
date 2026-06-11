@@ -90,9 +90,14 @@ function LandingPage() {
 function Header() {
   return (
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-        <Link to="/">
-          <Logo />
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
+        <Link to="/" className="min-w-0 shrink-0">
+          <span className="block sm:hidden">
+            <Logo compact />
+          </span>
+          <span className="hidden sm:block">
+            <Logo />
+          </span>
         </Link>
         <nav className="hidden items-center gap-7 text-sm text-muted-foreground md:flex">
           <a href="#fuer-wen" className="transition hover:text-foreground">Für wen</a>
@@ -102,10 +107,13 @@ function Header() {
           <a href="#coach" className="transition hover:text-foreground">Coach</a>
           <a href="#kontakt" className="transition hover:text-foreground">Kontakt</a>
         </nav>
-        <div className="flex items-center gap-2">
-          <Button asChild size="sm" variant="outline" className="border-gold/40 text-foreground hover:bg-gold/10">
-            <Link to="/auth">Login</Link>
-          </Button>
+        <div className="flex shrink-0 items-center gap-2">
+          <Link
+            to="/auth"
+            className="inline-flex h-8 shrink-0 items-center justify-center rounded-md border border-gold/40 bg-background px-3 text-xs font-medium text-foreground shadow-sm transition hover:bg-gold/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          >
+            Login
+          </Link>
           <a href="#kontakt">
             <Button size="sm" className="bg-gradient-gold text-primary-foreground hover:opacity-90">
               Erstgespräch
