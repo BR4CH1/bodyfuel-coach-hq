@@ -4,6 +4,7 @@ import { Flame, Target, Calendar, TrendingUp, ArrowRight, Scale, Plus, CalendarC
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { MyPackagePanel } from "@/components/bodyfuel/MyPackagePanel";
 import { TrainingDevelopmentCard } from "@/components/bodyfuel/TrainingTrends";
+import { DailyChecklist } from "@/components/bodyfuel/DailyChecklist";
 
 import { useSession } from "@/lib/bodyfuel/session";
 import { supabase } from "@/integrations/supabase/client";
