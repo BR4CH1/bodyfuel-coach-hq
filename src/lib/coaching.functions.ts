@@ -130,11 +130,9 @@ export const createCustomer = createServerFn({ method: "POST" })
     await assertCoach(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const origin =
-      data.origin ||
-      process.env.SITE_URL ||
-      process.env.VITE_PUBLIC_SITE_URL ||
-      "https://bodyfuel-coach-hq.lovable.app";
+    // Immer die veröffentlichte URL nutzen, nie die Preview-Origin – sonst landen
+    // Empfänger auf der Lovable-Preview, die einen Lovable-Login verlangt.
+    const origin = "https://bodyfuel-coach-hq.lovable.app";
 
     // Invite per Magic Link. Trigger handle_new_user erstellt profile+user_roles.
     const { data: invited, error: invErr } =
@@ -229,8 +227,7 @@ export const resendInvite = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertCoach(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const origin =
-      data.origin || process.env.SITE_URL || "https://bodyfuel-coach-hq.lovable.app";
+    const origin = "https://bodyfuel-coach-hq.lovable.app";
 
     const { data: u } = await supabaseAdmin.auth.admin.getUserById(data.user_id);
     const email = u.user?.email;
@@ -249,8 +246,7 @@ export const sendPasswordReset = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertCoach(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const origin =
-      data.origin || process.env.SITE_URL || "https://bodyfuel-coach-hq.lovable.app";
+    const origin = "https://bodyfuel-coach-hq.lovable.app";
 
     const { data: u } = await supabaseAdmin.auth.admin.getUserById(data.user_id);
     const email = u.user?.email;
