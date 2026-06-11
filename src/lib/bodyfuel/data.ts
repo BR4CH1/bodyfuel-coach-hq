@@ -193,7 +193,7 @@ function weightSeries(start: number, days: number, drift: number): WeightEntry[]
 
 export const CLIENTS: Client[] = [
   {
-    id: "stefan",
+    id: "andreas",
     name: "Andreas",
     email: "andreas@bodyfuel.app",
     avatar: "A",
@@ -212,7 +212,7 @@ export const CLIENTS: Client[] = [
     nextCheckIn: "Heute, 20:00",
   },
   {
-    id: "michelle",
+    id: "patrick",
     name: "Patrick",
     email: "patrick@bodyfuel.app",
     avatar: "P",
@@ -232,7 +232,7 @@ export const CLIENTS: Client[] = [
     nextCheckIn: "Morgen, 19:30",
   },
   {
-    id: "mia",
+    id: "luisa",
     name: "Luisa",
     email: "luisa@bodyfuel.app",
     avatar: "L",

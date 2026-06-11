@@ -187,7 +187,7 @@ function LoginPage() {
                 ))}
                 <button
                   onClick={() => {
-                    loginAs("stefan", true);
+                    loginAs("andreas", true);
                     navigate({ to: "/coach" });
                   }}
                   className="flex w-full items-center gap-3 rounded-xl border border-gold/40 bg-accent/40 p-3 text-left transition hover:bg-accent"
