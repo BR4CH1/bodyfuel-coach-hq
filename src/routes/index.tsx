@@ -29,7 +29,8 @@ import {
   Zap,
 } from "lucide-react";
 import { Logo } from "@/components/bodyfuel/Logo";
-import { BookingDialog, type BookingPackage } from "@/components/bodyfuel/BookingDialog";
+import { useServerFn } from "@tanstack/react-start";
+import { submitLead } from "@/lib/coaching.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
