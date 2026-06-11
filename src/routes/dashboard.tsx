@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Flame, Target, Calendar, TrendingUp, ArrowRight, Scale, Plus, CalendarCheck } from "lucide-react";
+import { Flame, Target, Calendar, TrendingUp, ArrowRight, Scale, Plus, CalendarCheck, ListChecks } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { MyPackagePanel } from "@/components/bodyfuel/MyPackagePanel";
 import { TrainingDevelopmentCard } from "@/components/bodyfuel/TrainingTrends";
@@ -92,6 +92,27 @@ function DashboardContent() {
           Tagescheck starten <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
+
+      {today < MAX_DAILY_POINTS && (
+        <Link
+          to="/daily-checklist"
+          className="group flex items-center justify-between rounded-2xl border border-gold/40 bg-gradient-to-br from-gold/15 to-transparent p-5 transition hover:border-gold/70"
+        >
+          <div className="flex items-center gap-3">
+            <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-gold text-primary-foreground shadow-gold">
+              <ListChecks className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="text-xs uppercase tracking-wider text-gold">Tagescheck offen</div>
+              <div className="font-display text-base font-bold">
+                Noch {MAX_DAILY_POINTS - today} von {MAX_DAILY_POINTS} Punkten heute
+              </div>
+              <div className="text-xs text-muted-foreground">Hak deine Tagesziele ab — Streak nicht reißen lassen!</div>
+            </div>
+          </div>
+          <ArrowRight className="h-5 w-5 text-gold transition group-hover:translate-x-1" />
+        </Link>
+      )}
 
       {supabaseUser && <MyPackagePanel />}
 
@@ -316,6 +337,27 @@ function RealUserDashboard() {
           <Plus className="h-4 w-4" /> Messung eintragen
         </Link>
       </div>
+
+      {todayDbPoints < MAX_DAILY_POINTS && (
+        <Link
+          to="/daily-checklist"
+          className="group flex items-center justify-between rounded-2xl border border-gold/40 bg-gradient-to-br from-gold/15 to-transparent p-5 transition hover:border-gold/70"
+        >
+          <div className="flex items-center gap-3">
+            <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-gold text-primary-foreground shadow-gold">
+              <ListChecks className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="text-xs uppercase tracking-wider text-gold">Tagescheck offen</div>
+              <div className="font-display text-base font-bold">
+                Noch {MAX_DAILY_POINTS - todayDbPoints} von {MAX_DAILY_POINTS} Punkten heute
+              </div>
+              <div className="text-xs text-muted-foreground">Hak deine Tagesziele ab — Streak nicht reißen lassen!</div>
+            </div>
+          </div>
+          <ArrowRight className="h-5 w-5 text-gold transition group-hover:translate-x-1" />
+        </Link>
+      )}
 
       <MyPackagePanel />
 
