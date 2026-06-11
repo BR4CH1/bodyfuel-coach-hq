@@ -1,160 +1,372 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { AlertTriangle, ChevronRight, Users } from "lucide-react";
-import { AppLayout } from "@/components/bodyfuel/AppLayout";
-import { CLIENTS } from "@/lib/bodyfuel/session";
+import { useEffect, useState } from "react";
 import {
-  daysSinceLastCheck,
-  getLevel,
-  todayPoints,
-  totalPoints,
-  weekPoints,
-} from "@/lib/bodyfuel/data";
+  AlertTriangle,
+  ChevronRight,
+  Inbox,
+  Scale,
+  Users,
+  CheckCircle2,
+  Clock,
+} from "lucide-react";
+import { AppLayout } from "@/components/bodyfuel/AppLayout";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/coach/")({
   head: () => ({ meta: [{ title: "Coach Dashboard — BODYFUEL" }] }),
   component: () => (
     <AppLayout>
-      <CoachList />
+      <CoachDashboard />
     </AppLayout>
   ),
 });
 
-function CoachList() {
+type Client = {
+  id: string;
+  display_name: string | null;
+  last_checkin: string | null;
+  last_weight: number | null;
+  last_weight_at: string | null;
+};
+
+type Lead = {
+  id: string;
+  name: string;
+  email: string;
+  goal: string | null;
+  created_at: string;
+};
+
+function mondayOf(d: Date): string {
+  const x = new Date(d);
+  const day = (x.getDay() + 6) % 7; // 0 = Monday
+  x.setDate(x.getDate() - day);
+  return x.toISOString().slice(0, 10);
+}
+
+function daysAgo(iso: string | null): number | null {
+  if (!iso) return null;
+  const diff = Date.now() - new Date(iso).getTime();
+  return Math.floor(diff / (1000 * 60 * 60 * 24));
+}
+
+function CoachDashboard() {
+  const [clients, setClients] = useState<Client[]>([]);
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [loading, setLoading] = useState(true);
+  const weekStart = mondayOf(new Date());
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+
+      // Find all client user_ids
+      const { data: rolesData } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "client");
+      const ids = (rolesData ?? []).map((r) => r.user_id);
+
+      let clientRows: Client[] = [];
+      if (ids.length > 0) {
+        const [profiles, checkins, measurements] = await Promise.all([
+          supabase.from("profiles").select("id, display_name").in("id", ids),
+          supabase
+            .from("weekly_checkins")
+            .select("user_id, week_start, submitted_at")
+            .in("user_id", ids)
+            .order("week_start", { ascending: false }),
+          supabase
+            .from("body_measurements")
+            .select("user_id, weight_kg, measured_at")
+            .in("user_id", ids)
+            .order("measured_at", { ascending: false }),
+        ]);
+
+        const lastCheckin = new Map<string, string>();
+        (checkins.data ?? []).forEach((c) => {
+          if (!lastCheckin.has(c.user_id)) lastCheckin.set(c.user_id, c.week_start);
+        });
+        const lastWeight = new Map<string, { w: number | null; at: string }>();
+        (measurements.data ?? []).forEach((m) => {
+          if (!lastWeight.has(m.user_id))
+            lastWeight.set(m.user_id, { w: m.weight_kg, at: m.measured_at });
+        });
+
+        clientRows = (profiles.data ?? []).map((p) => ({
+          id: p.id,
+          display_name: p.display_name,
+          last_checkin: lastCheckin.get(p.id) ?? null,
+          last_weight: lastWeight.get(p.id)?.w ?? null,
+          last_weight_at: lastWeight.get(p.id)?.at ?? null,
+        }));
+      }
+      setClients(clientRows);
+
+      const { data: leadsData } = await supabase
+        .from("leads")
+        .select("id, name, email, goal, created_at")
+        .eq("status", "new")
+        .order("created_at", { ascending: false })
+        .limit(10);
+      setLeads((leadsData as Lead[]) ?? []);
+
+      setLoading(false);
+    })();
+  }, []);
+
+  const openWeek = clients.filter((c) => c.last_checkin !== weekStart);
+  const inactive = clients
+    .map((c) => ({ ...c, days: daysAgo(c.last_checkin) }))
+    .filter((c) => c.days === null || c.days >= 14)
+    .sort((a, b) => (b.days ?? 999) - (a.days ?? 999));
+  const recentMeasurements = [...clients]
+    .filter((c) => c.last_weight_at)
+    .sort(
+      (a, b) =>
+        new Date(b.last_weight_at!).getTime() - new Date(a.last_weight_at!).getTime(),
+    )
+    .slice(0, 6);
+
   return (
     <div className="space-y-6">
-      <div className="flex items-end justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Coach</p>
-          <h1 className="font-display text-3xl font-bold sm:text-4xl">Kundenübersicht</h1>
+          <h1 className="font-display text-3xl font-bold sm:text-4xl">Dashboard</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Woche ab {new Date(weekStart).toLocaleDateString("de-DE")}
+          </p>
         </div>
-        <div className="hidden items-center gap-2 rounded-xl border border-border bg-card px-4 py-2 text-sm sm:flex">
-          <Users className="h-4 w-4 text-gold" />
-          <span className="font-semibold">{CLIENTS.length}</span>
-          <span className="text-muted-foreground">aktive Kunden</span>
+        <div className="flex flex-wrap gap-2">
+          <StatPill icon={<Users className="h-4 w-4" />} value={clients.length} label="Kunden" />
+          <StatPill icon={<Inbox className="h-4 w-4" />} value={leads.length} label="Neue Leads" />
+          <StatPill
+            icon={<Clock className="h-4 w-4" />}
+            value={openWeek.length}
+            label="Check-in offen"
+            warn={openWeek.length > 0}
+          />
         </div>
       </div>
 
-      <div className="grid gap-3 lg:hidden">
-        {CLIENTS.map((c) => {
-          const pts = totalPoints(c);
-          const { level } = getLevel(pts);
-          const days = daysSinceLastCheck(c);
-          const warn = days >= 3;
-          return (
-            <Link
-              key={c.id}
-              to="/coach/$clientId"
-              params={{ clientId: c.id }}
-              className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 hover:border-gold/40"
-            >
-              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-gradient-gold font-display text-sm font-bold text-primary-foreground">
-                {c.avatar}
+      {loading && (
+        <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground">
+          Lade…
+        </div>
+      )}
+
+      {!loading && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* Diese Woche offen */}
+          <Panel
+            icon={<Clock className="h-5 w-5" />}
+            title="Diese Woche noch offen"
+            empty={openWeek.length === 0}
+            emptyText="Alle Kunden haben ihren Wochen-Check-in abgegeben 🎉"
+            footer={
+              <Link to="/coach/customers" className="text-xs font-semibold text-gold hover:underline">
+                Alle Kunden ansehen →
+              </Link>
+            }
+          >
+            {openWeek.slice(0, 8).map((c) => (
+              <CustomerRow
+                key={c.id}
+                id={c.id}
+                name={c.display_name ?? "Ohne Namen"}
+                meta={
+                  c.last_checkin
+                    ? `Letzter Check-in ${new Date(c.last_checkin).toLocaleDateString("de-DE")}`
+                    : "Noch nie eingecheckt"
+                }
+              />
+            ))}
+            {openWeek.length > 8 && (
+              <div className="px-1 pt-1 text-xs text-muted-foreground">
+                +{openWeek.length - 8} weitere
               </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <div className="truncate text-sm font-semibold">{c.name}</div>
-                  {warn && <AlertTriangle className="h-3.5 w-3.5 text-warning" />}
+            )}
+          </Panel>
+
+          {/* Inaktiv-Warnung */}
+          <Panel
+            icon={<AlertTriangle className="h-5 w-5" />}
+            title="Inaktiv (14+ Tage)"
+            empty={inactive.length === 0}
+            emptyText="Niemand inaktiv. Top!"
+          >
+            {inactive.slice(0, 8).map((c) => (
+              <CustomerRow
+                key={c.id}
+                id={c.id}
+                name={c.display_name ?? "Ohne Namen"}
+                warn
+                meta={
+                  c.days === null
+                    ? "Noch nie eingecheckt"
+                    : `Vor ${c.days} Tagen zuletzt aktiv`
+                }
+              />
+            ))}
+          </Panel>
+
+          {/* Neue Leads */}
+          <Panel
+            icon={<Inbox className="h-5 w-5" />}
+            title="Neue Anfragen"
+            empty={leads.length === 0}
+            emptyText="Keine neuen Anfragen"
+            footer={
+              <Link to="/coach/leads" className="text-xs font-semibold text-gold hover:underline">
+                Alle Anfragen →
+              </Link>
+            }
+          >
+            {leads.slice(0, 6).map((l) => (
+              <Link
+                key={l.id}
+                to="/coach/leads"
+                className="flex items-center gap-3 rounded-xl border border-border bg-background/40 p-3 hover:border-gold/40"
+              >
+                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-gold text-xs font-bold text-primary-foreground">
+                  {l.name.slice(0, 2).toUpperCase()}
                 </div>
-                <div className="text-xs text-gold">
-                  {level.name} · {pts} Pkt
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-semibold">{l.name}</div>
+                  <div className="truncate text-xs text-muted-foreground">
+                    {l.goal ?? l.email}
+                  </div>
                 </div>
                 <div className="text-[11px] text-muted-foreground">
-                  Streak {c.streak} · {days === 0 ? "heute aktiv" : `vor ${days} Tagen`}
+                  {new Date(l.created_at).toLocaleDateString("de-DE")}
                 </div>
-              </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </Link>
-          );
-        })}
-      </div>
+              </Link>
+            ))}
+          </Panel>
 
-      <div className="hidden overflow-hidden rounded-2xl border border-border bg-card lg:block">
-        <table className="w-full">
-          <thead className="border-b border-border bg-secondary/40 text-left text-[11px] uppercase tracking-wider text-muted-foreground">
-            <tr>
-              <th className="px-5 py-3">Kunde</th>
-              <th className="px-5 py-3">Level</th>
-              <th className="px-5 py-3">Gesamt</th>
-              <th className="px-5 py-3">Woche</th>
-              <th className="px-5 py-3">Heute</th>
-              <th className="px-5 py-3">Streak</th>
-              <th className="px-5 py-3">Letzter Check-in</th>
-              <th className="px-5 py-3"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {CLIENTS.map((c) => {
-              const pts = totalPoints(c);
-              const { level } = getLevel(pts);
-              const days = daysSinceLastCheck(c);
-              const warn = days >= 3;
-              return (
-                <tr
-                  key={c.id}
-                  className="border-b border-border transition last:border-0 hover:bg-secondary/40"
-                >
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-gold font-display text-xs font-bold text-primary-foreground">
-                        {c.avatar}
-                      </div>
-                      <div>
-                        <div className="text-sm font-semibold">{c.name}</div>
-                        <div className="text-xs text-muted-foreground">{c.email}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-5 py-4">
-                    <span className="rounded-full bg-accent px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-gold">
-                      {level.name}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4 font-display font-bold">{pts}</td>
-                  <td className="px-5 py-4">{weekPoints(c)}</td>
-                  <td className="px-5 py-4">{todayPoints(c)}</td>
-                  <td className="px-5 py-4">
-                    <span className={c.streak >= 14 ? "text-gold" : ""}>{c.streak} Tage</span>
-                  </td>
-                  <td className="px-5 py-4">
-                    <span
-                      className={`inline-flex items-center gap-1.5 text-sm ${
-                        warn ? "text-warning" : "text-muted-foreground"
-                      }`}
-                    >
-                      {warn && <AlertTriangle className="h-3.5 w-3.5" />}
-                      {days === 0 ? "heute" : `vor ${days} ${days === 1 ? "Tag" : "Tagen"}`}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4 text-right">
-                    <Link
-                      to="/coach/$clientId"
-                      params={{ clientId: c.id }}
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-gold hover:underline"
-                    >
-                      Details <ChevronRight className="h-3 w-3" />
-                    </Link>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {CLIENTS.some((c) => daysSinceLastCheck(c) >= 3) && (
-        <div className="flex items-start gap-3 rounded-2xl border border-warning/40 bg-warning/10 p-4">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
-          <div className="text-sm">
-            <div className="font-semibold">Inaktive Kunden</div>
-            <div className="text-xs text-muted-foreground">
-              {CLIENTS.filter((c) => daysSinceLastCheck(c) >= 3)
-                .map((c) => c.name)
-                .join(", ")}{" "}
-              haben seit 3+ Tagen nichts eingetragen.
-            </div>
-          </div>
+          {/* Aktuelle Maße */}
+          <Panel
+            icon={<Scale className="h-5 w-5" />}
+            title="Letzte Messungen"
+            empty={recentMeasurements.length === 0}
+            emptyText="Noch keine Messungen erfasst"
+          >
+            {recentMeasurements.map((c) => (
+              <CustomerRow
+                key={c.id}
+                id={c.id}
+                name={c.display_name ?? "Ohne Namen"}
+                meta={
+                  c.last_weight_at
+                    ? `${c.last_weight ?? "—"} kg · ${new Date(
+                        c.last_weight_at,
+                      ).toLocaleDateString("de-DE")}`
+                    : "—"
+                }
+                tone="info"
+              />
+            ))}
+          </Panel>
         </div>
       )}
     </div>
+  );
+}
+
+function StatPill({
+  icon,
+  value,
+  label,
+  warn,
+}: {
+  icon: React.ReactNode;
+  value: number;
+  label: string;
+  warn?: boolean;
+}) {
+  return (
+    <div
+      className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm ${
+        warn ? "border-warning/40 bg-warning/10" : "border-border bg-card"
+      }`}
+    >
+      <span className={warn ? "text-warning" : "text-gold"}>{icon}</span>
+      <span className="font-display text-lg font-bold">{value}</span>
+      <span className="text-muted-foreground">{label}</span>
+    </div>
+  );
+}
+
+function Panel({
+  icon,
+  title,
+  children,
+  empty,
+  emptyText,
+  footer,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  children: React.ReactNode;
+  empty: boolean;
+  emptyText: string;
+  footer?: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5">
+      <div className="mb-4 flex items-center gap-2">
+        <span className="text-gold">{icon}</span>
+        <h2 className="font-display text-lg font-bold">{title}</h2>
+      </div>
+      {empty ? (
+        <div className="flex items-center gap-2 rounded-xl bg-background/40 p-4 text-sm text-muted-foreground">
+          <CheckCircle2 className="h-4 w-4 text-gold" />
+          {emptyText}
+        </div>
+      ) : (
+        <div className="space-y-2">{children}</div>
+      )}
+      {footer && <div className="mt-4">{footer}</div>}
+    </div>
+  );
+}
+
+function CustomerRow({
+  id,
+  name,
+  meta,
+  warn,
+  tone,
+}: {
+  id: string;
+  name: string;
+  meta: string;
+  warn?: boolean;
+  tone?: "info";
+}) {
+  return (
+    <Link
+      to="/coach/customers/$userId"
+      params={{ userId: id }}
+      className={`flex items-center gap-3 rounded-xl border bg-background/40 p-3 transition hover:border-gold/40 ${
+        warn ? "border-warning/30" : "border-border"
+      }`}
+    >
+      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-gold text-xs font-bold text-primary-foreground">
+        {name.slice(0, 2).toUpperCase()}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-sm font-semibold">{name}</div>
+        <div
+          className={`truncate text-xs ${
+            warn ? "text-warning" : tone === "info" ? "text-gold" : "text-muted-foreground"
+          }`}
+        >
+          {meta}
+        </div>
+      </div>
+      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+    </Link>
   );
 }
