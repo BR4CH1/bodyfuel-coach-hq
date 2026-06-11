@@ -297,6 +297,10 @@ function RealUserDashboard() {
         />
       </div>
 
+      {supabaseUser && <TrainingDevelopmentCard clientId={supabaseUser.id} />}
+
+
+
       <div className="rounded-2xl border border-border bg-card p-6">
         <div className="flex items-center gap-2 text-gold">
           <Target className="h-5 w-5" />
