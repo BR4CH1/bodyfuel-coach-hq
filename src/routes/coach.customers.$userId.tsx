@@ -164,7 +164,7 @@ function CustomerDetail() {
               size="sm"
               variant="outline"
               onClick={() => {
-                if (confirm("Zugang wirklich deaktivieren? Der Kunde kann sich nicht mehr einloggen.")) {
+                if (window.confirm("Zugang wirklich deaktivieren? Der Kunde kann sich nicht mehr einloggen.")) {
                   accessAction.mutate("deactivate");
                 }
               }}
