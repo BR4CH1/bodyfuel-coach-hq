@@ -12,7 +12,6 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as WelcomeRouteImport } from './routes/welcome'
 import { Route as TrainingRouteImport } from './routes/training'
 import { Route as ProgressRouteImport } from './routes/progress'
-import { Route as NutritionRouteImport } from './routes/nutrition'
 import { Route as MeasurementsRouteImport } from './routes/measurements'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -22,7 +21,9 @@ import { Route as CheckInRouteImport } from './routes/check-in'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AchievementsRouteImport } from './routes/achievements'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as NutritionIndexRouteImport } from './routes/nutrition.index'
 import { Route as CoachIndexRouteImport } from './routes/coach.index'
+import { Route as NutritionTrackingRouteImport } from './routes/nutrition.tracking'
 import { Route as CoachLeadsRouteImport } from './routes/coach.leads'
 import { Route as CoachCustomersRouteImport } from './routes/coach.customers'
 import { Route as CoachClientIdRouteImport } from './routes/coach.$clientId'
@@ -43,11 +44,6 @@ const TrainingRoute = TrainingRouteImport.update({
 const ProgressRoute = ProgressRouteImport.update({
   id: '/progress',
   path: '/progress',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const NutritionRoute = NutritionRouteImport.update({
-  id: '/nutrition',
-  path: '/nutrition',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MeasurementsRoute = MeasurementsRouteImport.update({
@@ -95,10 +91,20 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const NutritionIndexRoute = NutritionIndexRouteImport.update({
+  id: '/nutrition/',
+  path: '/nutrition/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CoachIndexRoute = CoachIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => CoachRoute,
+} as any)
+const NutritionTrackingRoute = NutritionTrackingRouteImport.update({
+  id: '/tracking',
+  path: '/tracking',
+  getParentRoute: () => NutritionRoute,
 } as any)
 const CoachLeadsRoute = CoachLeadsRouteImport.update({
   id: '/leads',
@@ -141,14 +147,15 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/measurements': typeof MeasurementsRoute
-  '/nutrition': typeof NutritionRoute
   '/progress': typeof ProgressRoute
   '/training': typeof TrainingRoute
   '/welcome': typeof WelcomeRoute
   '/coach/$clientId': typeof CoachClientIdRoute
   '/coach/customers': typeof CoachCustomersRouteWithChildren
   '/coach/leads': typeof CoachLeadsRoute
+  '/nutrition/tracking': typeof NutritionTrackingRoute
   '/coach/': typeof CoachIndexRoute
+  '/nutrition/': typeof NutritionIndexRoute
   '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/coach/customers/': typeof CoachCustomersIndexRoute
@@ -162,13 +169,14 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/measurements': typeof MeasurementsRoute
-  '/nutrition': typeof NutritionRoute
   '/progress': typeof ProgressRoute
   '/training': typeof TrainingRoute
   '/welcome': typeof WelcomeRoute
   '/coach/$clientId': typeof CoachClientIdRoute
   '/coach/leads': typeof CoachLeadsRoute
+  '/nutrition/tracking': typeof NutritionTrackingRoute
   '/coach': typeof CoachIndexRoute
+  '/nutrition': typeof NutritionIndexRoute
   '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/coach/customers': typeof CoachCustomersIndexRoute
@@ -184,14 +192,15 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/measurements': typeof MeasurementsRoute
-  '/nutrition': typeof NutritionRoute
   '/progress': typeof ProgressRoute
   '/training': typeof TrainingRoute
   '/welcome': typeof WelcomeRoute
   '/coach/$clientId': typeof CoachClientIdRoute
   '/coach/customers': typeof CoachCustomersRouteWithChildren
   '/coach/leads': typeof CoachLeadsRoute
+  '/nutrition/tracking': typeof NutritionTrackingRoute
   '/coach/': typeof CoachIndexRoute
+  '/nutrition/': typeof NutritionIndexRoute
   '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/coach/customers/': typeof CoachCustomersIndexRoute
@@ -208,14 +217,15 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/measurements'
-    | '/nutrition'
     | '/progress'
     | '/training'
     | '/welcome'
     | '/coach/$clientId'
     | '/coach/customers'
     | '/coach/leads'
+    | '/nutrition/tracking'
     | '/coach/'
+    | '/nutrition/'
     | '/coach/customers/$userId'
     | '/coach/customers/new'
     | '/coach/customers/'
@@ -229,13 +239,14 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/measurements'
-    | '/nutrition'
     | '/progress'
     | '/training'
     | '/welcome'
     | '/coach/$clientId'
     | '/coach/leads'
+    | '/nutrition/tracking'
     | '/coach'
+    | '/nutrition'
     | '/coach/customers/$userId'
     | '/coach/customers/new'
     | '/coach/customers'
@@ -250,14 +261,15 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/measurements'
-    | '/nutrition'
     | '/progress'
     | '/training'
     | '/welcome'
     | '/coach/$clientId'
     | '/coach/customers'
     | '/coach/leads'
+    | '/nutrition/tracking'
     | '/coach/'
+    | '/nutrition/'
     | '/coach/customers/$userId'
     | '/coach/customers/new'
     | '/coach/customers/'
@@ -273,10 +285,10 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
   MeasurementsRoute: typeof MeasurementsRoute
-  NutritionRoute: typeof NutritionRoute
   ProgressRoute: typeof ProgressRoute
   TrainingRoute: typeof TrainingRoute
   WelcomeRoute: typeof WelcomeRoute
+  NutritionIndexRoute: typeof NutritionIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -300,13 +312,6 @@ declare module '@tanstack/react-router' {
       path: '/progress'
       fullPath: '/progress'
       preLoaderRoute: typeof ProgressRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/nutrition': {
-      id: '/nutrition'
-      path: '/nutrition'
-      fullPath: '/nutrition'
-      preLoaderRoute: typeof NutritionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/measurements': {
@@ -372,12 +377,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/nutrition/': {
+      id: '/nutrition/'
+      path: '/nutrition'
+      fullPath: '/nutrition/'
+      preLoaderRoute: typeof NutritionIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/coach/': {
       id: '/coach/'
       path: '/'
       fullPath: '/coach/'
       preLoaderRoute: typeof CoachIndexRouteImport
       parentRoute: typeof CoachRoute
+    }
+    '/nutrition/tracking': {
+      id: '/nutrition/tracking'
+      path: '/tracking'
+      fullPath: '/nutrition/tracking'
+      preLoaderRoute: typeof NutritionTrackingRouteImport
+      parentRoute: typeof NutritionRoute
     }
     '/coach/leads': {
       id: '/coach/leads'
@@ -466,11 +485,21 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
   MeasurementsRoute: MeasurementsRoute,
-  NutritionRoute: NutritionRoute,
   ProgressRoute: ProgressRoute,
   TrainingRoute: TrainingRoute,
   WelcomeRoute: WelcomeRoute,
+  NutritionIndexRoute: NutritionIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
