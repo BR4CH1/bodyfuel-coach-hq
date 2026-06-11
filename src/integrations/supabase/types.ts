@@ -148,6 +148,7 @@ export type Database = {
           file_path: string
           id: string
           is_active: boolean
+          plan_type: string
           title: string
           uploaded_by: string | null
         }
@@ -158,6 +159,7 @@ export type Database = {
           file_path: string
           id?: string
           is_active?: boolean
+          plan_type?: string
           title: string
           uploaded_by?: string | null
         }
@@ -168,6 +170,7 @@ export type Database = {
           file_path?: string
           id?: string
           is_active?: boolean
+          plan_type?: string
           title?: string
           uploaded_by?: string | null
         }
