@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { Flame, Target, Calendar, TrendingUp, ArrowRight, Scale, Plus } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { MyPackagePanel } from "@/components/bodyfuel/MyPackagePanel";
+import { TrainingDevelopmentCard } from "@/components/bodyfuel/TrainingTrends";
+
 import { useSession } from "@/lib/bodyfuel/session";
 import { supabase } from "@/integrations/supabase/client";
 import {
