@@ -18,7 +18,7 @@ import { totalPoints } from "@/lib/bodyfuel/data";
 
 const clientNav = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/check-in", label: "Tagescheck", icon: CheckSquare },
+  { to: "/check-in", label: "Check-in", icon: CheckSquare },
   { to: "/measurements", label: "Maße", icon: Scale },
   { to: "/progress", label: "Fortschritt", icon: TrendingUp },
   { to: "/nutrition", label: "Ernährung", icon: FileText },
