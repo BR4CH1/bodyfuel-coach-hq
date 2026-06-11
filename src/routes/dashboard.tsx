@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Flame, Target, Calendar, TrendingUp, ArrowRight, Scale, Plus } from "lucide-react";
+import { Flame, Target, Calendar, TrendingUp, ArrowRight, Scale, Plus, CalendarCheck } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { MyPackagePanel } from "@/components/bodyfuel/MyPackagePanel";
 import { TrainingDevelopmentCard } from "@/components/bodyfuel/TrainingTrends";
@@ -296,6 +296,23 @@ function RealUserDashboard() {
           hint="Verlauf"
         />
       </div>
+
+      <Link
+        to="/check-in"
+        className="group flex items-center justify-between rounded-2xl border border-gold/30 bg-gradient-to-br from-gold/10 to-transparent p-5 transition hover:border-gold/60"
+      >
+        <div className="flex items-center gap-3">
+          <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-gold text-primary-foreground shadow-gold">
+            <CalendarCheck className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="text-xs uppercase tracking-wider text-gold">Wochen-Check-in</div>
+            <div className="font-display text-base font-bold">Diese Woche eintragen</div>
+            <div className="text-xs text-muted-foreground">Maße, Stimmung, Erfolge & Hürden</div>
+          </div>
+        </div>
+        <ArrowRight className="h-5 w-5 text-gold transition group-hover:translate-x-1" />
+      </Link>
 
       {supabaseUser && <TrainingDevelopmentCard clientId={supabaseUser.id} />}
 
