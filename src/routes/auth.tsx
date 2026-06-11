@@ -25,7 +25,7 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [role, setRole] = useState<"client" | "coach">("client");
-  const [demoKey, setDemoKey] = useState<string>("stefan");
+  const [demoKey, setDemoKey] = useState<string>("andreas");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -127,7 +127,7 @@ function AuthPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="pl-9"
-                  placeholder="Stefan M."
+                  placeholder="Andreas M."
                   maxLength={80}
                 />
               </div>

@@ -196,7 +196,7 @@ function HeroMockup() {
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
               Heute
             </div>
-            <div className="font-display text-lg font-bold">Stefan</div>
+            <div className="font-display text-lg font-bold">Andreas</div>
           </div>
           <div className="flex items-center gap-2 rounded-full border border-gold/30 bg-gold/10 px-3 py-1 text-xs text-gold">
             <Flame className="h-3.5 w-3.5" /> 12 Tage Streak
