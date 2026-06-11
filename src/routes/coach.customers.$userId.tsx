@@ -73,7 +73,37 @@ function CustomerDetail() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const accessAction = useMutation({
+    mutationFn: async (action: "invite" | "reset" | "deactivate" | "activate") => {
+      const origin = typeof window !== "undefined" ? window.location.origin : undefined;
+      if (action === "invite") return inviteFn({ data: { user_id: userId, origin } });
+      if (action === "reset") return resetFn({ data: { user_id: userId, origin } });
+      return activeFn({ data: { user_id: userId, active: action === "activate" } });
+    },
+    onSuccess: (_d, action) => {
+      const m = {
+        invite: "Einladung erneut versendet.",
+        reset: "Passwort-Reset-Mail versendet.",
+        activate: "Zugang aktiviert.",
+        deactivate: "Zugang deaktiviert.",
+      } as const;
+      toast.success(m[action]);
+      qc.invalidateQueries({ queryKey: ["customer", userId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   if (isLoading || !data) return <p className="text-sm text-muted-foreground">Lade…</p>;
+
+  const status = data.auth?.status ?? "invited";
+  const statusLabel =
+    status === "active" ? "Aktiv" : status === "deactivated" ? "Deaktiviert" : "Einladung offen";
+  const statusClass =
+    status === "active"
+      ? "bg-gold/10 text-gold"
+      : status === "deactivated"
+        ? "bg-destructive/10 text-destructive"
+        : "bg-warning/20 text-warning";
 
   return (
     <div className="space-y-6">
@@ -86,6 +116,65 @@ function CustomerDetail() {
         {data.profile?.phone && (
           <p className="text-sm text-muted-foreground">{data.profile.phone}</p>
         )}
+      </div>
+
+      <div className="rounded-2xl border border-border bg-card p-6">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="font-display text-lg font-bold">Zugang</h2>
+          <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${statusClass}`}>
+            {statusLabel}
+          </span>
+        </div>
+        <div className="mt-3 text-xs text-muted-foreground space-y-0.5">
+          {data.auth?.invited_at && (
+            <div>Eingeladen am: {new Date(data.auth.invited_at).toLocaleDateString("de-DE")}</div>
+          )}
+          {data.auth?.last_sign_in_at && (
+            <div>Zuletzt eingeloggt: {new Date(data.auth.last_sign_in_at).toLocaleString("de-DE")}</div>
+          )}
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            onClick={() => accessAction.mutate("invite")}
+            disabled={accessAction.isPending}
+            className="bg-gradient-gold text-primary-foreground"
+          >
+            {status === "invited" ? "Einladung erneut senden" : "Einladung senden"}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => accessAction.mutate("reset")}
+            disabled={accessAction.isPending}
+          >
+            Passwort zurücksetzen
+          </Button>
+          {status === "deactivated" ? (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => accessAction.mutate("activate")}
+              disabled={accessAction.isPending}
+            >
+              Zugang aktivieren
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                if (confirm("Zugang wirklich deaktivieren? Der Kunde kann sich nicht mehr einloggen.")) {
+                  accessAction.mutate("deactivate");
+                }
+              }}
+              disabled={accessAction.isPending}
+              className="text-destructive hover:text-destructive"
+            >
+              Zugang deaktivieren
+            </Button>
+          )}
+        </div>
       </div>
 
       {activePkg && (
