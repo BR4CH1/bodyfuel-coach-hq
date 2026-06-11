@@ -265,6 +265,120 @@ export type Database = {
         }
         Relationships: []
       }
+      training_days: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          plan_id: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          plan_id: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          plan_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_days_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "nutrition_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_exercises: {
+        Row: {
+          created_at: string
+          day_id: string
+          id: string
+          name: string
+          notes: string | null
+          sort_order: number
+          target_reps: string | null
+          target_sets: number | null
+        }
+        Insert: {
+          created_at?: string
+          day_id: string
+          id?: string
+          name: string
+          notes?: string | null
+          sort_order?: number
+          target_reps?: string | null
+          target_sets?: number | null
+        }
+        Update: {
+          created_at?: string
+          day_id?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          sort_order?: number
+          target_reps?: string | null
+          target_sets?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_exercises_day_id_fkey"
+            columns: ["day_id"]
+            isOneToOne: false
+            referencedRelation: "training_days"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_set_logs: {
+        Row: {
+          client_id: string
+          created_at: string
+          exercise_id: string
+          id: string
+          performed_at: string
+          reps: number | null
+          set_number: number
+          weight_kg: number | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          exercise_id: string
+          id?: string
+          performed_at?: string
+          reps?: number | null
+          set_number: number
+          weight_kg?: number | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          exercise_id?: string
+          id?: string
+          performed_at?: string
+          reps?: number | null
+          set_number?: number
+          weight_kg?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_set_logs_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "training_exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
