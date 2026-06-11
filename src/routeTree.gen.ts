@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as WelcomeRouteImport } from './routes/welcome'
 import { Route as TrainingRouteImport } from './routes/training'
 import { Route as ProgressRouteImport } from './routes/progress'
+import { Route as NutritionRouteImport } from './routes/nutrition'
 import { Route as MeasurementsRouteImport } from './routes/measurements'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -44,6 +45,11 @@ const TrainingRoute = TrainingRouteImport.update({
 const ProgressRoute = ProgressRouteImport.update({
   id: '/progress',
   path: '/progress',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NutritionRoute = NutritionRouteImport.update({
+  id: '/nutrition',
+  path: '/nutrition',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MeasurementsRoute = MeasurementsRouteImport.update({
@@ -92,9 +98,9 @@ const IndexRoute = IndexRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const NutritionIndexRoute = NutritionIndexRouteImport.update({
-  id: '/nutrition/',
-  path: '/nutrition/',
-  getParentRoute: () => rootRouteImport,
+  id: '/',
+  path: '/',
+  getParentRoute: () => NutritionRoute,
 } as any)
 const CoachIndexRoute = CoachIndexRouteImport.update({
   id: '/',
@@ -147,6 +153,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/measurements': typeof MeasurementsRoute
+  '/nutrition': typeof NutritionRouteWithChildren
   '/progress': typeof ProgressRoute
   '/training': typeof TrainingRoute
   '/welcome': typeof WelcomeRoute
@@ -192,6 +199,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/measurements': typeof MeasurementsRoute
+  '/nutrition': typeof NutritionRouteWithChildren
   '/progress': typeof ProgressRoute
   '/training': typeof TrainingRoute
   '/welcome': typeof WelcomeRoute
@@ -217,6 +225,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/measurements'
+    | '/nutrition'
     | '/progress'
     | '/training'
     | '/welcome'
@@ -261,6 +270,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/measurements'
+    | '/nutrition'
     | '/progress'
     | '/training'
     | '/welcome'
@@ -285,10 +295,10 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
   MeasurementsRoute: typeof MeasurementsRoute
+  NutritionRoute: typeof NutritionRouteWithChildren
   ProgressRoute: typeof ProgressRoute
   TrainingRoute: typeof TrainingRoute
   WelcomeRoute: typeof WelcomeRoute
-  NutritionIndexRoute: typeof NutritionIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -312,6 +322,13 @@ declare module '@tanstack/react-router' {
       path: '/progress'
       fullPath: '/progress'
       preLoaderRoute: typeof ProgressRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/nutrition': {
+      id: '/nutrition'
+      path: '/nutrition'
+      fullPath: '/nutrition'
+      preLoaderRoute: typeof NutritionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/measurements': {
@@ -379,10 +396,10 @@ declare module '@tanstack/react-router' {
     }
     '/nutrition/': {
       id: '/nutrition/'
-      path: '/nutrition'
+      path: '/'
       fullPath: '/nutrition/'
       preLoaderRoute: typeof NutritionIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof NutritionRoute
     }
     '/coach/': {
       id: '/coach/'
@@ -475,6 +492,20 @@ const CoachRouteChildren: CoachRouteChildren = {
 
 const CoachRouteWithChildren = CoachRoute._addFileChildren(CoachRouteChildren)
 
+interface NutritionRouteChildren {
+  NutritionTrackingRoute: typeof NutritionTrackingRoute
+  NutritionIndexRoute: typeof NutritionIndexRoute
+}
+
+const NutritionRouteChildren: NutritionRouteChildren = {
+  NutritionTrackingRoute: NutritionTrackingRoute,
+  NutritionIndexRoute: NutritionIndexRoute,
+}
+
+const NutritionRouteWithChildren = NutritionRoute._addFileChildren(
+  NutritionRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AchievementsRoute: AchievementsRoute,
@@ -485,10 +516,10 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
   MeasurementsRoute: MeasurementsRoute,
+  NutritionRoute: NutritionRouteWithChildren,
   ProgressRoute: ProgressRoute,
   TrainingRoute: TrainingRoute,
   WelcomeRoute: WelcomeRoute,
-  NutritionIndexRoute: NutritionIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
