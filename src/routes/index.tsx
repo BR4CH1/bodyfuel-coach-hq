@@ -815,8 +815,6 @@ const PACKAGES: Array<{
 ];
 
 function Pricing() {
-  const [openPkg, setOpenPkg] = useState<BookingPackage | null>(null);
-
   return (
     <section
       id="pakete"
@@ -886,36 +884,30 @@ function Pricing() {
 
               <div className="mt-8 flex-1" />
 
-              <Button
-                size="lg"
-                onClick={() =>
-                  setOpenPkg({ name: p.name, price: p.price })
-                }
-                className={
-                  "w-full " +
-                  (p.popular
-                    ? "bg-gradient-gold text-primary-foreground shadow-gold hover:opacity-90"
-                    : "bg-card border border-border hover:bg-primary/10 hover:border-primary/40 hover:text-foreground")
-                }
-              >
-                {p.cta}
-                <ArrowRight className="ml-1 h-4 w-4" />
-              </Button>
+              <a href="#kontakt" className="block">
+                <Button
+                  size="lg"
+                  className={
+                    "w-full " +
+                    (p.popular
+                      ? "bg-gradient-gold text-primary-foreground shadow-gold hover:opacity-90"
+                      : "bg-card border border-border hover:bg-primary/10 hover:border-primary/40 hover:text-foreground")
+                  }
+                >
+                  Kostenloses Erstgespräch vereinbaren
+                  <ArrowRight className="ml-1 h-4 w-4" />
+                </Button>
+              </a>
             </div>
           ))}
         </div>
 
         <p className="mx-auto mt-10 max-w-2xl text-center text-xs text-muted-foreground">
-          Zahlung per PayPal. Alle Preise inkl. Kleinunternehmerregelung gemäß § 19 UStG.
-          Es wird keine Umsatzsteuer ausgewiesen. Monatlich kündbar.
+          Alle Preise gemäß § 19 UStG (Kleinunternehmerregelung). Es wird keine
+          Umsatzsteuer ausgewiesen. Neue Kunden werden ausschließlich nach einem
+          persönlichen Erstgespräch vom Coach angelegt.
         </p>
       </div>
-
-      <BookingDialog
-        pkg={openPkg}
-        open={openPkg !== null}
-        onOpenChange={(o) => !o && setOpenPkg(null)}
-      />
     </section>
   );
 }
