@@ -60,7 +60,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                     : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                 }`}
               >
-                <Icon className="h-4.5 w-4.5" />
+                <Icon className="h-4 w-4" />
                 {item.label}
               </Link>
             );
