@@ -217,7 +217,13 @@ export const updateCustomerPackage = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertCoach(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const patch: Record<string, unknown> = {};
+    const patch: {
+      package?: PackageKey;
+      price_eur?: number;
+      end_date?: string;
+      is_active?: boolean;
+      notes?: string;
+    } = {};
     if (data.package !== undefined) patch.package = data.package;
     if (data.price_eur !== undefined) patch.price_eur = data.price_eur;
     if (data.end_date !== undefined) patch.end_date = data.end_date;
