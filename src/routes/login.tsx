@@ -155,53 +155,66 @@ function LoginPage() {
             </Button>
           </form>
 
-          <div className="my-6 flex items-center gap-3">
-            <div className="h-px flex-1 bg-border" />
-            <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
-              Demo-Konten
-            </span>
-            <div className="h-px flex-1 bg-border" />
-          </div>
+          {showDemo && (
+            <>
+              <div className="my-6 flex items-center gap-3">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                  Demo-Konten
+                </span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
 
-          <div className="space-y-2">
-            {CLIENTS.map((c) => (
-              <button
-                key={c.id}
-                onClick={() => {
-                  loginAs(c.id, false);
-                  navigate({ to: "/dashboard" });
-                }}
-                className="flex w-full items-center gap-3 rounded-xl border border-border bg-secondary/40 p-3 text-left transition hover:border-gold/50 hover:bg-secondary"
-              >
-                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-gold font-display text-sm font-bold text-primary-foreground">
-                  {c.avatar}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-semibold">{c.name}</div>
-                  <div className="truncate text-xs text-muted-foreground">{c.email}</div>
-                </div>
-                <span className="text-[10px] uppercase tracking-wider text-gold">Login →</span>
-              </button>
-            ))}
-            <button
-              onClick={() => {
-                loginAs("stefan", true);
-                navigate({ to: "/coach" });
-              }}
-              className="flex w-full items-center gap-3 rounded-xl border border-gold/40 bg-accent/40 p-3 text-left transition hover:bg-accent"
-            >
-              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-background font-display text-sm font-bold text-gold">
-                <Shield className="h-4 w-4" />
+              <div className="space-y-2">
+                {CLIENTS.map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => {
+                      loginAs(c.id, false);
+                      navigate({ to: "/dashboard" });
+                    }}
+                    className="flex w-full items-center gap-3 rounded-xl border border-border bg-secondary/40 p-3 text-left transition hover:border-gold/50 hover:bg-secondary"
+                  >
+                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-gold font-display text-sm font-bold text-primary-foreground">
+                      {c.avatar}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-semibold">{c.name}</div>
+                      <div className="truncate text-xs text-muted-foreground">{c.email}</div>
+                    </div>
+                    <span className="text-[10px] uppercase tracking-wider text-gold">Login →</span>
+                  </button>
+                ))}
+                <button
+                  onClick={() => {
+                    loginAs("stefan", true);
+                    navigate({ to: "/coach" });
+                  }}
+                  className="flex w-full items-center gap-3 rounded-xl border border-gold/40 bg-accent/40 p-3 text-left transition hover:bg-accent"
+                >
+                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-background font-display text-sm font-bold text-gold">
+                    <Shield className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-semibold">Coach-Modus</div>
+                    <div className="truncate text-xs text-muted-foreground">
+                      Übersicht aller Kunden öffnen
+                    </div>
+                  </div>
+                  <span className="text-[10px] uppercase tracking-wider text-gold">Coach →</span>
+                </button>
+                <button
+                  onClick={() => {
+                    localStorage.removeItem(DEMO_FLAG_KEY);
+                    setShowDemo(false);
+                  }}
+                  className="mt-2 w-full text-center text-[10px] uppercase tracking-wider text-muted-foreground hover:text-gold"
+                >
+                  Demo-Konten ausblenden
+                </button>
               </div>
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-semibold">Coach-Modus</div>
-                <div className="truncate text-xs text-muted-foreground">
-                  Übersicht aller Kunden öffnen
-                </div>
-              </div>
-              <span className="text-[10px] uppercase tracking-wider text-gold">Coach →</span>
-            </button>
-          </div>
+            </>
+          )}
         </div>
       </div>
     </div>
