@@ -19,20 +19,39 @@ export function BarcodeScanner({
 
     (async () => {
       try {
-        const devices = await BrowserMultiFormatReader.listVideoInputDevices();
-        const back =
-          devices.find((d) => /back|rear|environment/i.test(d.label))?.deviceId ??
-          devices[0]?.deviceId;
-        if (!back) throw new Error("Keine Kamera gefunden");
-        controls = await reader.decodeFromVideoDevice(back, videoRef.current!, (result) => {
-          if (stopped) return;
-          if (result) {
-            stopped = true;
-            onDetected(result.getText());
-          }
+        if (typeof window === "undefined" || !navigator?.mediaDevices?.getUserMedia) {
+          throw new Error("Dein Browser unterstützt keinen Kamerazugriff.");
+        }
+        if (!window.isSecureContext) {
+          throw new Error("Kamera benötigt HTTPS.");
+        }
+        // Trigger permission prompt explicitly, otherwise device labels stay empty
+        // and decodeFromVideoDevice may pick the wrong (or no) camera on iOS.
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" } },
+          audio: false,
         });
+        // Stop probe stream — zxing will start its own using constraints below.
+        stream.getTracks().forEach((t) => t.stop());
+
+        controls = await reader.decodeFromConstraints(
+          { video: { facingMode: { ideal: "environment" } }, audio: false },
+          videoRef.current!,
+          (result) => {
+            if (stopped) return;
+            if (result) {
+              stopped = true;
+              onDetected(result.getText());
+            }
+          },
+        );
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Kamera-Fehler");
+        const msg = e instanceof Error ? e.message : "Kamera-Fehler";
+        setError(
+          /denied|NotAllowed/i.test(msg)
+            ? "Kamera-Zugriff verweigert. Bitte in den Browser-Einstellungen erlauben."
+            : msg,
+        );
       }
     })();
 
