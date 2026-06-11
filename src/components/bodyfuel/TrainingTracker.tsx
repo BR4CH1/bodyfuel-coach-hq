@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Sparkles, Plus, ChevronDown, ChevronRight, Trash2, Loader2 } from "lucide-react";
+import { Sparkles, Plus, ChevronDown, ChevronRight, Trash2, Loader2, BarChart3 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
 import { parseTrainingPlan, logSet, deleteSetLog } from "@/lib/training.functions";
+import { ExerciseAnalytics } from "./ExerciseAnalytics";
+
 
 type Plan = { id: string; client_id: string; title: string };
 type Day = { id: string; name: string; sort_order: number };
