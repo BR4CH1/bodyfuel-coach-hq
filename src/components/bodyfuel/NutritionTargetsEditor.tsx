@@ -116,7 +116,7 @@ export function NutritionTargetsEditor({ userId }: { userId: string }) {
               <Input type="number" value={water} onChange={(e) => setWater(Number(e.target.value))} />
             </div>
           </div>
-          <div className="mt-4">
+          <div className="mt-4 flex flex-wrap gap-2">
             <Button
               onClick={save}
               disabled={saving}
@@ -124,7 +124,24 @@ export function NutritionTargetsEditor({ userId }: { userId: string }) {
             >
               {saving ? "Speichere…" : "Speichern"}
             </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={extractFromPlan}
+              disabled={extracting}
+            >
+              {extracting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles className="h-4 w-4" />
+              )}
+              {extracting ? "Lese Plan…" : "Aus aktuellem Plan extrahieren (KI)"}
+            </Button>
           </div>
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            Die KI liest die kcal- und Makro-Werte aus dem aktiven Ernährungsplan-PDF.
+            Danach bitte prüfen und speichern.
+          </p>
         </>
       )}
     </div>
