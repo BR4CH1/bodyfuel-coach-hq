@@ -4,6 +4,7 @@ import { Flame, Target, Calendar, TrendingUp, ArrowRight, Scale, Plus, CalendarC
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { MyPackagePanel } from "@/components/bodyfuel/MyPackagePanel";
 import { TrainingDevelopmentCard } from "@/components/bodyfuel/TrainingTrends";
+import { DailyChecklist } from "@/components/bodyfuel/DailyChecklist";
 
 import { useSession } from "@/lib/bodyfuel/session";
 import { supabase } from "@/integrations/supabase/client";
@@ -313,6 +314,8 @@ function RealUserDashboard() {
         </div>
         <ArrowRight className="h-5 w-5 text-gold transition group-hover:translate-x-1" />
       </Link>
+
+      {supabaseUser && <DailyChecklist userId={supabaseUser.id} />}
 
       {supabaseUser && <TrainingDevelopmentCard clientId={supabaseUser.id} />}
 
