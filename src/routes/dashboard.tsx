@@ -315,6 +315,8 @@ function RealUserDashboard() {
         <ArrowRight className="h-5 w-5 text-gold transition group-hover:translate-x-1" />
       </Link>
 
+      {supabaseUser && <DailyChecklist userId={supabaseUser.id} />}
+
       {supabaseUser && <TrainingDevelopmentCard clientId={supabaseUser.id} />}
 
 
