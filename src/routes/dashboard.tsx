@@ -105,7 +105,9 @@ function DashboardContent() {
 
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-1 sm:gap-2">
             <Stat label="Gesamt" value={points} suffix="Pkt" />
+          <Link to="/daily-checklist" className="contents">
             <Stat label="Heute" value={today} suffix={`/ ${MAX_DAILY_POINTS}`} />
+          </Link>
             <Stat
               label="Streak"
               value={user.streak}
