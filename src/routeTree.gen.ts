@@ -20,7 +20,12 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AchievementsRouteImport } from './routes/achievements'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CoachIndexRouteImport } from './routes/coach.index'
+import { Route as CoachLeadsRouteImport } from './routes/coach.leads'
+import { Route as CoachCustomersRouteImport } from './routes/coach.customers'
 import { Route as CoachClientIdRouteImport } from './routes/coach.$clientId'
+import { Route as CoachCustomersIndexRouteImport } from './routes/coach.customers.index'
+import { Route as CoachCustomersNewRouteImport } from './routes/coach.customers.new'
+import { Route as CoachCustomersUserIdRouteImport } from './routes/coach.customers.$userId'
 
 const WelcomeRoute = WelcomeRouteImport.update({
   id: '/welcome',
@@ -77,10 +82,35 @@ const CoachIndexRoute = CoachIndexRouteImport.update({
   path: '/',
   getParentRoute: () => CoachRoute,
 } as any)
+const CoachLeadsRoute = CoachLeadsRouteImport.update({
+  id: '/leads',
+  path: '/leads',
+  getParentRoute: () => CoachRoute,
+} as any)
+const CoachCustomersRoute = CoachCustomersRouteImport.update({
+  id: '/customers',
+  path: '/customers',
+  getParentRoute: () => CoachRoute,
+} as any)
 const CoachClientIdRoute = CoachClientIdRouteImport.update({
   id: '/$clientId',
   path: '/$clientId',
   getParentRoute: () => CoachRoute,
+} as any)
+const CoachCustomersIndexRoute = CoachCustomersIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => CoachCustomersRoute,
+} as any)
+const CoachCustomersNewRoute = CoachCustomersNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => CoachCustomersRoute,
+} as any)
+const CoachCustomersUserIdRoute = CoachCustomersUserIdRouteImport.update({
+  id: '/$userId',
+  path: '/$userId',
+  getParentRoute: () => CoachCustomersRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -95,7 +125,12 @@ export interface FileRoutesByFullPath {
   '/progress': typeof ProgressRoute
   '/welcome': typeof WelcomeRoute
   '/coach/$clientId': typeof CoachClientIdRoute
+  '/coach/customers': typeof CoachCustomersRouteWithChildren
+  '/coach/leads': typeof CoachLeadsRoute
   '/coach/': typeof CoachIndexRoute
+  '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
+  '/coach/customers/new': typeof CoachCustomersNewRoute
+  '/coach/customers/': typeof CoachCustomersIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -108,7 +143,11 @@ export interface FileRoutesByTo {
   '/progress': typeof ProgressRoute
   '/welcome': typeof WelcomeRoute
   '/coach/$clientId': typeof CoachClientIdRoute
+  '/coach/leads': typeof CoachLeadsRoute
   '/coach': typeof CoachIndexRoute
+  '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
+  '/coach/customers/new': typeof CoachCustomersNewRoute
+  '/coach/customers': typeof CoachCustomersIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -123,7 +162,12 @@ export interface FileRoutesById {
   '/progress': typeof ProgressRoute
   '/welcome': typeof WelcomeRoute
   '/coach/$clientId': typeof CoachClientIdRoute
+  '/coach/customers': typeof CoachCustomersRouteWithChildren
+  '/coach/leads': typeof CoachLeadsRoute
   '/coach/': typeof CoachIndexRoute
+  '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
+  '/coach/customers/new': typeof CoachCustomersNewRoute
+  '/coach/customers/': typeof CoachCustomersIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -139,7 +183,12 @@ export interface FileRouteTypes {
     | '/progress'
     | '/welcome'
     | '/coach/$clientId'
+    | '/coach/customers'
+    | '/coach/leads'
     | '/coach/'
+    | '/coach/customers/$userId'
+    | '/coach/customers/new'
+    | '/coach/customers/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -152,7 +201,11 @@ export interface FileRouteTypes {
     | '/progress'
     | '/welcome'
     | '/coach/$clientId'
+    | '/coach/leads'
     | '/coach'
+    | '/coach/customers/$userId'
+    | '/coach/customers/new'
+    | '/coach/customers'
   id:
     | '__root__'
     | '/'
@@ -166,7 +219,12 @@ export interface FileRouteTypes {
     | '/progress'
     | '/welcome'
     | '/coach/$clientId'
+    | '/coach/customers'
+    | '/coach/leads'
     | '/coach/'
+    | '/coach/customers/$userId'
+    | '/coach/customers/new'
+    | '/coach/customers/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -261,6 +319,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CoachIndexRouteImport
       parentRoute: typeof CoachRoute
     }
+    '/coach/leads': {
+      id: '/coach/leads'
+      path: '/leads'
+      fullPath: '/coach/leads'
+      preLoaderRoute: typeof CoachLeadsRouteImport
+      parentRoute: typeof CoachRoute
+    }
+    '/coach/customers': {
+      id: '/coach/customers'
+      path: '/customers'
+      fullPath: '/coach/customers'
+      preLoaderRoute: typeof CoachCustomersRouteImport
+      parentRoute: typeof CoachRoute
+    }
     '/coach/$clientId': {
       id: '/coach/$clientId'
       path: '/$clientId'
@@ -268,16 +340,57 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CoachClientIdRouteImport
       parentRoute: typeof CoachRoute
     }
+    '/coach/customers/': {
+      id: '/coach/customers/'
+      path: '/'
+      fullPath: '/coach/customers/'
+      preLoaderRoute: typeof CoachCustomersIndexRouteImport
+      parentRoute: typeof CoachCustomersRoute
+    }
+    '/coach/customers/new': {
+      id: '/coach/customers/new'
+      path: '/new'
+      fullPath: '/coach/customers/new'
+      preLoaderRoute: typeof CoachCustomersNewRouteImport
+      parentRoute: typeof CoachCustomersRoute
+    }
+    '/coach/customers/$userId': {
+      id: '/coach/customers/$userId'
+      path: '/$userId'
+      fullPath: '/coach/customers/$userId'
+      preLoaderRoute: typeof CoachCustomersUserIdRouteImport
+      parentRoute: typeof CoachCustomersRoute
+    }
   }
 }
 
+interface CoachCustomersRouteChildren {
+  CoachCustomersUserIdRoute: typeof CoachCustomersUserIdRoute
+  CoachCustomersNewRoute: typeof CoachCustomersNewRoute
+  CoachCustomersIndexRoute: typeof CoachCustomersIndexRoute
+}
+
+const CoachCustomersRouteChildren: CoachCustomersRouteChildren = {
+  CoachCustomersUserIdRoute: CoachCustomersUserIdRoute,
+  CoachCustomersNewRoute: CoachCustomersNewRoute,
+  CoachCustomersIndexRoute: CoachCustomersIndexRoute,
+}
+
+const CoachCustomersRouteWithChildren = CoachCustomersRoute._addFileChildren(
+  CoachCustomersRouteChildren,
+)
+
 interface CoachRouteChildren {
   CoachClientIdRoute: typeof CoachClientIdRoute
+  CoachCustomersRoute: typeof CoachCustomersRouteWithChildren
+  CoachLeadsRoute: typeof CoachLeadsRoute
   CoachIndexRoute: typeof CoachIndexRoute
 }
 
 const CoachRouteChildren: CoachRouteChildren = {
   CoachClientIdRoute: CoachClientIdRoute,
+  CoachCustomersRoute: CoachCustomersRouteWithChildren,
+  CoachLeadsRoute: CoachLeadsRoute,
   CoachIndexRoute: CoachIndexRoute,
 }
 
