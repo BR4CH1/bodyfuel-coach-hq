@@ -37,7 +37,7 @@ function NutritionContent() {
       {/* Current plan */}
       {current && (
         <div className="overflow-hidden rounded-3xl border border-gold/40 bg-card">
-          <div className="bg-gradient-gold/10 border-b border-gold/30 p-5 sm:p-6">
+          <div className="border-b border-gold/30 bg-accent/30 p-5 sm:p-6">
             <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-gold">
               <FileText className="h-3.5 w-3.5" /> Aktueller Plan
             </div>

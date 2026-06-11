@@ -17,6 +17,7 @@ import { Route as CoachRouteImport } from './routes/coach'
 import { Route as CheckInRouteImport } from './routes/check-in'
 import { Route as AchievementsRouteImport } from './routes/achievements'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CoachIndexRouteImport } from './routes/coach.index'
 import { Route as CoachClientIdRouteImport } from './routes/coach.$clientId'
 
 const ProgressRoute = ProgressRouteImport.update({
@@ -59,6 +60,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CoachIndexRoute = CoachIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => CoachRoute,
+} as any)
 const CoachClientIdRoute = CoachClientIdRouteImport.update({
   id: '/$clientId',
   path: '/$clientId',
@@ -75,17 +81,18 @@ export interface FileRoutesByFullPath {
   '/nutrition': typeof NutritionRoute
   '/progress': typeof ProgressRoute
   '/coach/$clientId': typeof CoachClientIdRoute
+  '/coach/': typeof CoachIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/achievements': typeof AchievementsRoute
   '/check-in': typeof CheckInRoute
-  '/coach': typeof CoachRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/nutrition': typeof NutritionRoute
   '/progress': typeof ProgressRoute
   '/coach/$clientId': typeof CoachClientIdRoute
+  '/coach': typeof CoachIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -98,6 +105,7 @@ export interface FileRoutesById {
   '/nutrition': typeof NutritionRoute
   '/progress': typeof ProgressRoute
   '/coach/$clientId': typeof CoachClientIdRoute
+  '/coach/': typeof CoachIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -111,17 +119,18 @@ export interface FileRouteTypes {
     | '/nutrition'
     | '/progress'
     | '/coach/$clientId'
+    | '/coach/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/achievements'
     | '/check-in'
-    | '/coach'
     | '/dashboard'
     | '/login'
     | '/nutrition'
     | '/progress'
     | '/coach/$clientId'
+    | '/coach'
   id:
     | '__root__'
     | '/'
@@ -133,6 +142,7 @@ export interface FileRouteTypes {
     | '/nutrition'
     | '/progress'
     | '/coach/$clientId'
+    | '/coach/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -204,6 +214,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/coach/': {
+      id: '/coach/'
+      path: '/'
+      fullPath: '/coach/'
+      preLoaderRoute: typeof CoachIndexRouteImport
+      parentRoute: typeof CoachRoute
+    }
     '/coach/$clientId': {
       id: '/coach/$clientId'
       path: '/$clientId'
@@ -216,10 +233,12 @@ declare module '@tanstack/react-router' {
 
 interface CoachRouteChildren {
   CoachClientIdRoute: typeof CoachClientIdRoute
+  CoachIndexRoute: typeof CoachIndexRoute
 }
 
 const CoachRouteChildren: CoachRouteChildren = {
   CoachClientIdRoute: CoachClientIdRoute,
+  CoachIndexRoute: CoachIndexRoute,
 }
 
 const CoachRouteWithChildren = CoachRoute._addFileChildren(CoachRouteChildren)
