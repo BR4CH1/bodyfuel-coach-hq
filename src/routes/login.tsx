@@ -165,9 +165,10 @@ function LoginPage() {
 
             <Button
               type="submit"
+              disabled={busy}
               className="w-full bg-gradient-gold text-primary-foreground hover:opacity-90"
             >
-              Einloggen
+              {busy ? "..." : "Einloggen"}
             </Button>
           </form>
 
