@@ -1,5 +1,7 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { ArrowLeft, Flame, Mail } from "lucide-react";
+import { AppLayout } from "@/components/bodyfuel/AppLayout";
+
 import {
   ResponsiveContainer,
   LineChart,
@@ -30,16 +32,23 @@ export const Route = createFileRoute("/coach/$clientId")({
     if (!client) throw notFound();
     return { client };
   },
-  component: ClientDetail,
+  component: () => (
+    <AppLayout>
+      <ClientDetail />
+    </AppLayout>
+  ),
   notFoundComponent: () => (
-    <div className="py-20 text-center">
-      <p className="text-muted-foreground">Kunde nicht gefunden.</p>
-      <Link to="/coach" className="mt-4 inline-block text-gold hover:underline">
-        Zurück zur Übersicht
-      </Link>
-    </div>
+    <AppLayout>
+      <div className="py-20 text-center">
+        <p className="text-muted-foreground">Kunde nicht gefunden.</p>
+        <Link to="/coach" className="mt-4 inline-block text-gold hover:underline">
+          Zurück zur Übersicht
+        </Link>
+      </div>
+    </AppLayout>
   ),
 });
+
 
 function ClientDetail() {
   const { clientId } = Route.useParams();
