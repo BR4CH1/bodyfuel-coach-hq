@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { Flame, Target, Calendar, TrendingUp, ArrowRight, Scale, Plus } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { MyPackagePanel } from "@/components/bodyfuel/MyPackagePanel";
+import { TrainingDevelopmentCard } from "@/components/bodyfuel/TrainingTrends";
+
 import { useSession } from "@/lib/bodyfuel/session";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -294,6 +296,10 @@ function RealUserDashboard() {
           hint="Verlauf"
         />
       </div>
+
+      {supabaseUser && <TrainingDevelopmentCard clientId={supabaseUser.id} />}
+
+
 
       <div className="rounded-2xl border border-border bg-card p-6">
         <div className="flex items-center gap-2 text-gold">

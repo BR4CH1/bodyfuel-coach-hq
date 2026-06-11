@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Sparkles, Plus, ChevronDown, ChevronRight, Trash2, Loader2 } from "lucide-react";
+import { Sparkles, Plus, ChevronDown, ChevronRight, Trash2, Loader2, BarChart3 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
 import { parseTrainingPlan, logSet, deleteSetLog } from "@/lib/training.functions";
+import { ExerciseAnalytics } from "./ExerciseAnalytics";
+
 
 type Plan = { id: string; client_id: string; title: string };
 type Day = { id: string; name: string; sort_order: number };
@@ -347,6 +349,16 @@ function ExerciseCard({
           </ul>
         </details>
       )}
+
+      <details className="mt-3">
+        <summary className="flex cursor-pointer items-center gap-1 text-[11px] font-semibold text-gold">
+          <BarChart3 className="h-3.5 w-3.5" /> Fortschrittsanalyse
+        </summary>
+        <div className="mt-2">
+          <ExerciseAnalytics logs={logs} />
+        </div>
+      </details>
     </div>
   );
 }
+

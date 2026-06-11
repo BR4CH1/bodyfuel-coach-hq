@@ -17,6 +17,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CoachTrainingSummary } from "@/components/bodyfuel/TrainingTrends";
+
 
 export const Route = createFileRoute("/coach/customers/$userId")({
   head: () => ({ meta: [{ title: "Kunde — BODYFUEL" }] }),
@@ -358,6 +360,9 @@ function CustomerDetail() {
           </table>
         )}
       </div>
+
+      <CoachTrainingSummary clientId={userId} />
     </div>
   );
 }
+
