@@ -76,6 +76,7 @@ function LandingPage() {
       <Gamification />
       <Results />
       <AboutCoach />
+      <Pricing />
       <CTASection />
       <ContactForm />
       <Footer />
