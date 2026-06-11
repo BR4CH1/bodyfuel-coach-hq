@@ -1,14 +1,20 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getNutritionTargets, setNutritionTargets } from "@/lib/nutrition.functions";
+import {
+  getNutritionTargets,
+  setNutritionTargets,
+  extractTargetsFromPlan,
+} from "@/lib/nutrition.functions";
 
 export function NutritionTargetsEditor({ userId }: { userId: string }) {
   const getFn = useServerFn(getNutritionTargets);
   const setFn = useServerFn(setNutritionTargets);
+  const extractFn = useServerFn(extractTargetsFromPlan);
   const [kcal, setKcal] = useState(2200);
   const [protein, setProtein] = useState(150);
   const [carbs, setCarbs] = useState(220);
