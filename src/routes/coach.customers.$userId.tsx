@@ -358,6 +358,9 @@ function CustomerDetail() {
           </table>
         )}
       </div>
+
+      <CoachTrainingSummary clientId={userId} />
     </div>
   );
 }
+
