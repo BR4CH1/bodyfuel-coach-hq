@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WelcomeRouteImport } from './routes/welcome'
 import { Route as ProgressRouteImport } from './routes/progress'
 import { Route as NutritionRouteImport } from './routes/nutrition'
 import { Route as LoginRouteImport } from './routes/login'
@@ -21,6 +22,11 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as CoachIndexRouteImport } from './routes/coach.index'
 import { Route as CoachClientIdRouteImport } from './routes/coach.$clientId'
 
+const WelcomeRoute = WelcomeRouteImport.update({
+  id: '/welcome',
+  path: '/welcome',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProgressRoute = ProgressRouteImport.update({
   id: '/progress',
   path: '/progress',
@@ -87,6 +93,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/nutrition': typeof NutritionRoute
   '/progress': typeof ProgressRoute
+  '/welcome': typeof WelcomeRoute
   '/coach/$clientId': typeof CoachClientIdRoute
   '/coach/': typeof CoachIndexRoute
 }
@@ -99,6 +106,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/nutrition': typeof NutritionRoute
   '/progress': typeof ProgressRoute
+  '/welcome': typeof WelcomeRoute
   '/coach/$clientId': typeof CoachClientIdRoute
   '/coach': typeof CoachIndexRoute
 }
@@ -113,6 +121,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/nutrition': typeof NutritionRoute
   '/progress': typeof ProgressRoute
+  '/welcome': typeof WelcomeRoute
   '/coach/$clientId': typeof CoachClientIdRoute
   '/coach/': typeof CoachIndexRoute
 }
@@ -128,6 +137,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/nutrition'
     | '/progress'
+    | '/welcome'
     | '/coach/$clientId'
     | '/coach/'
   fileRoutesByTo: FileRoutesByTo
@@ -140,6 +150,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/nutrition'
     | '/progress'
+    | '/welcome'
     | '/coach/$clientId'
     | '/coach'
   id:
@@ -153,6 +164,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/nutrition'
     | '/progress'
+    | '/welcome'
     | '/coach/$clientId'
     | '/coach/'
   fileRoutesById: FileRoutesById
@@ -167,10 +179,18 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   NutritionRoute: typeof NutritionRoute
   ProgressRoute: typeof ProgressRoute
+  WelcomeRoute: typeof WelcomeRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/welcome': {
+      id: '/welcome'
+      path: '/welcome'
+      fullPath: '/welcome'
+      preLoaderRoute: typeof WelcomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/progress': {
       id: '/progress'
       path: '/progress'
@@ -273,7 +293,18 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   NutritionRoute: NutritionRoute,
   ProgressRoute: ProgressRoute,
+  WelcomeRoute: WelcomeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
