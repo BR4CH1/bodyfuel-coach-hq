@@ -29,6 +29,7 @@ import {
   Zap,
 } from "lucide-react";
 import { Logo } from "@/components/bodyfuel/Logo";
+import { BookingDialog, type BookingPackage } from "@/components/bodyfuel/BookingDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -75,6 +76,7 @@ function LandingPage() {
       <Gamification />
       <Results />
       <AboutCoach />
+      <Pricing />
       <CTASection />
       <ContactForm />
       <Footer />
@@ -95,6 +97,7 @@ function Header() {
           <a href="#fuer-wen" className="transition hover:text-foreground">Für wen</a>
           <a href="#system" className="transition hover:text-foreground">System</a>
           <a href="#level" className="transition hover:text-foreground">Level</a>
+          <a href="#pakete" className="transition hover:text-foreground">Pakete</a>
           <a href="#coach" className="transition hover:text-foreground">Coach</a>
           <a href="#kontakt" className="transition hover:text-foreground">Kontakt</a>
         </nav>
@@ -751,6 +754,167 @@ function CTASection() {
           </div>
         </div>
       </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
+const PACKAGES: Array<{
+  name: string;
+  price: number;
+  tagline: string;
+  features: string[];
+  cta: string;
+  popular?: boolean;
+}> = [
+  {
+    name: "BODYFUEL STARTER",
+    price: 79,
+    tagline: "Dein Einstieg mit Plan & System",
+    cta: "Starter buchen",
+    features: [
+      "Individueller Ernährungsplan",
+      "BodyFuel Dashboard Zugang",
+      "Punkte- & Level-System",
+      "1 Check-in pro Monat",
+      "Fortschrittstracking",
+    ],
+  },
+  {
+    name: "BODYFUEL COACHING",
+    price: 129,
+    tagline: "Die beliebteste Wahl für echte Ergebnisse",
+    cta: "Coaching buchen",
+    popular: true,
+    features: [
+      "Individueller Ernährungsplan",
+      "Wöchentliche Check-ins",
+      "Anpassungen bei Bedarf",
+      "BodyFuel Dashboard Zugang",
+      "Punkte- & Level-System",
+      "Fortschrittsfotos & Gewichtstracking",
+      "WhatsApp Support",
+    ],
+  },
+  {
+    name: "BODYFUEL PREMIUM",
+    price: 199,
+    tagline: "Maximale Betreuung & persönliche Strategie",
+    cta: "Premium buchen",
+    features: [
+      "Alles aus Coaching",
+      "Engere Betreuung",
+      "Individuelle Trainingsplanung",
+      "Priorisierter Support",
+      "Regelmäßige Anpassungen",
+      "Persönliche Strategiegespräche",
+    ],
+  },
+];
+
+function Pricing() {
+  const [openPkg, setOpenPkg] = useState<BookingPackage | null>(null);
+
+  return (
+    <section
+      id="pakete"
+      className="relative border-t border-border/60 bg-background py-20 sm:py-28"
+    >
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <div className="text-center">
+          <SectionLabel center>BodyFuel Pakete</SectionLabel>
+          <h2 className="mt-3 font-display text-3xl font-bold sm:text-4xl">
+            Wähle dein <span className="text-gradient-gold">Level</span>
+          </h2>
+          <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
+            Drei Pakete, ein Ziel: dein bester Körper — mit System, klarer Struktur und
+            persönlicher Betreuung.
+          </p>
+        </div>
+
+        <div className="mt-12 grid gap-6 md:grid-cols-3">
+          {PACKAGES.map((p) => (
+            <div
+              key={p.name}
+              className={
+                "relative flex flex-col rounded-3xl border bg-card/40 p-6 transition sm:p-8 " +
+                (p.popular
+                  ? "border-primary/60 bg-gradient-to-b from-primary/10 to-card/40 shadow-gold md:scale-[1.03]"
+                  : "border-border hover:border-primary/40")
+              }
+            >
+              {p.popular && (
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-gold px-4 py-1 text-xs font-bold uppercase tracking-widest text-primary-foreground shadow-gold">
+                  Beliebt
+                </span>
+              )}
+
+              <div className="flex flex-col gap-1">
+                <p className="font-display text-sm font-bold uppercase tracking-widest text-muted-foreground">
+                  {p.name}
+                </p>
+                <p className="text-sm text-muted-foreground">{p.tagline}</p>
+              </div>
+
+              <div className="mt-6 flex items-baseline gap-1">
+                <span
+                  className={
+                    "font-display text-5xl font-bold " +
+                    (p.popular ? "text-gradient-gold" : "text-foreground")
+                  }
+                >
+                  {p.price} €
+                </span>
+                <span className="text-sm text-muted-foreground">/ Monat</span>
+              </div>
+
+              <ul className="mt-6 space-y-3">
+                {p.features.map((f) => (
+                  <li key={f} className="flex items-start gap-2 text-sm">
+                    <Check
+                      className={
+                        "mt-0.5 h-4 w-4 shrink-0 " +
+                        (p.popular ? "text-primary" : "text-primary/80")
+                      }
+                    />
+                    <span>{f}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="mt-8 flex-1" />
+
+              <Button
+                size="lg"
+                onClick={() =>
+                  setOpenPkg({ name: p.name, price: p.price })
+                }
+                className={
+                  "w-full " +
+                  (p.popular
+                    ? "bg-gradient-gold text-primary-foreground shadow-gold hover:opacity-90"
+                    : "bg-card border border-border hover:bg-primary/10 hover:border-primary/40 hover:text-foreground")
+                }
+              >
+                {p.cta}
+                <ArrowRight className="ml-1 h-4 w-4" />
+              </Button>
+            </div>
+          ))}
+        </div>
+
+        <p className="mx-auto mt-10 max-w-2xl text-center text-xs text-muted-foreground">
+          Zahlung per PayPal. Alle Preise inkl. Kleinunternehmerregelung gemäß § 19 UStG.
+          Es wird keine Umsatzsteuer ausgewiesen. Monatlich kündbar.
+        </p>
+      </div>
+
+      <BookingDialog
+        pkg={openPkg}
+        open={openPkg !== null}
+        onOpenChange={(o) => !o && setOpenPkg(null)}
+      />
     </section>
   );
 }

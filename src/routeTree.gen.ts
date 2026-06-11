@@ -13,6 +13,7 @@ import { Route as ProgressRouteImport } from './routes/progress'
 import { Route as NutritionRouteImport } from './routes/nutrition'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as DankeRouteImport } from './routes/danke'
 import { Route as CoachRouteImport } from './routes/coach'
 import { Route as CheckInRouteImport } from './routes/check-in'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -39,6 +40,11 @@ const LoginRoute = LoginRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DankeRoute = DankeRouteImport.update({
+  id: '/danke',
+  path: '/danke',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CoachRoute = CoachRouteImport.update({
@@ -83,6 +89,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/check-in': typeof CheckInRoute
   '/coach': typeof CoachRouteWithChildren
+  '/danke': typeof DankeRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/nutrition': typeof NutritionRoute
@@ -95,6 +102,7 @@ export interface FileRoutesByTo {
   '/achievements': typeof AchievementsRoute
   '/auth': typeof AuthRoute
   '/check-in': typeof CheckInRoute
+  '/danke': typeof DankeRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/nutrition': typeof NutritionRoute
@@ -109,6 +117,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/check-in': typeof CheckInRoute
   '/coach': typeof CoachRouteWithChildren
+  '/danke': typeof DankeRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/nutrition': typeof NutritionRoute
@@ -124,6 +133,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/check-in'
     | '/coach'
+    | '/danke'
     | '/dashboard'
     | '/login'
     | '/nutrition'
@@ -136,6 +146,7 @@ export interface FileRouteTypes {
     | '/achievements'
     | '/auth'
     | '/check-in'
+    | '/danke'
     | '/dashboard'
     | '/login'
     | '/nutrition'
@@ -149,6 +160,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/check-in'
     | '/coach'
+    | '/danke'
     | '/dashboard'
     | '/login'
     | '/nutrition'
@@ -163,6 +175,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   CheckInRoute: typeof CheckInRoute
   CoachRoute: typeof CoachRouteWithChildren
+  DankeRoute: typeof DankeRoute
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
   NutritionRoute: typeof NutritionRoute
@@ -197,6 +210,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/danke': {
+      id: '/danke'
+      path: '/danke'
+      fullPath: '/danke'
+      preLoaderRoute: typeof DankeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/coach': {
@@ -269,6 +289,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   CheckInRoute: CheckInRoute,
   CoachRoute: CoachRouteWithChildren,
+  DankeRoute: DankeRoute,
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
   NutritionRoute: NutritionRoute,

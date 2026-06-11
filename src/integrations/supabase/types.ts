@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      bookings: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string
+          package: string
+          payment_status: string
+          phone: string | null
+          price_eur: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          name: string
+          package: string
+          payment_status?: string
+          phone?: string | null
+          price_eur: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          package?: string
+          payment_status?: string
+          phone?: string | null
+          price_eur?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       nutrition_plans: {
         Row: {
           client_id: string
