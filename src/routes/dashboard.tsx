@@ -30,11 +30,39 @@ export const Route = createFileRoute("/dashboard")({
 
 function DashboardContent() {
   const { user, supabaseUser } = useSession();
+  const [dbPoints, setDbPoints] = useState<{ total: number; today: number; streak: number } | null>(null);
+
+  useEffect(() => {
+    if (!supabaseUser) return;
+    const today = new Date().toISOString().slice(0, 10);
+    (async () => {
+      const [{ data: up }, { data: dc }] = await Promise.all([
+        supabase
+          .from("user_points")
+          .select("total_points, current_streak")
+          .eq("user_id", supabaseUser.id)
+          .maybeSingle(),
+        supabase
+          .from("daily_checks")
+          .select("points")
+          .eq("user_id", supabaseUser.id)
+          .eq("check_date", today)
+          .maybeSingle(),
+      ]);
+      setDbPoints({
+        total: up?.total_points ?? 0,
+        today: dc?.points ?? 0,
+        streak: up?.current_streak ?? 0,
+      });
+    })();
+  }, [supabaseUser]);
+
   if (!user) return <RealUserDashboard />;
 
-  const points = totalPoints(user);
+  const points = dbPoints?.total ?? totalPoints(user);
   const { level, next, progress } = getLevel(points);
-  const today = todayPoints(user);
+  const today = dbPoints?.today ?? todayPoints(user);
+  const streak = dbPoints?.streak ?? user.streak;
   const week = weekPoints(user);
 
   const lastWeek = lastNDays(7)
