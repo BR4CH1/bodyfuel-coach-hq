@@ -58,11 +58,11 @@
   --popover: oklch(0.18 0.006 250);
   --popover-foreground: oklch(0.97 0.005 90);
 
-  --primary: oklch(0.82 0.16 86);          /* gold */
+  --primary: oklch(0.68 0.17 148);          /* green */
   --primary-foreground: oklch(0.16 0.01 250);
 
-  --gold: oklch(0.82 0.16 86);
-  --gold-soft: oklch(0.88 0.12 90);
+  --gold: oklch(0.72 0.18 148);
+  --gold-soft: oklch(0.82 0.14 150);
 
   --secondary: oklch(0.24 0.008 250);
   --secondary-foreground: oklch(0.97 0.005 90);
