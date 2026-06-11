@@ -8,6 +8,7 @@ import {
   Trophy,
   Users,
   LogOut,
+  Inbox,
 } from "lucide-react";
 import { useSession } from "@/lib/bodyfuel/session";
 import { Logo } from "./Logo";
@@ -22,7 +23,10 @@ const clientNav = [
   { to: "/achievements", label: "Erfolge", icon: Trophy },
 ];
 
-const coachNav = [{ to: "/coach", label: "Kunden", icon: Users }];
+const coachNav = [
+  { to: "/coach/customers", label: "Kunden", icon: Users },
+  { to: "/coach/leads", label: "Anfragen", icon: Inbox },
+];
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const { user, isCoach, logout } = useSession();

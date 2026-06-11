@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Flame, Target, Calendar, TrendingUp, ArrowRight } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
+import { MyPackagePanel } from "@/components/bodyfuel/MyPackagePanel";
 import { useSession } from "@/lib/bodyfuel/session";
 import {
   getLevel,
@@ -22,7 +23,7 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 function DashboardContent() {
-  const { user } = useSession();
+  const { user, supabaseUser } = useSession();
   if (!user) return null;
 
   const points = totalPoints(user);
@@ -57,6 +58,8 @@ function DashboardContent() {
           Tagescheck starten <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
+
+      {supabaseUser && <MyPackagePanel />}
 
       {/* Level hero card */}
       <div className="relative overflow-hidden rounded-3xl border border-border bg-card p-6 sm:p-8">

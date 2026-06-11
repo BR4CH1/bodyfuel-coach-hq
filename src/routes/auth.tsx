@@ -1,10 +1,10 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Flame, Lock, Mail, User as UserIcon, Shield } from "lucide-react";
+import { Flame, Lock, Mail } from "lucide-react";
 import { z } from "zod";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useSession, CLIENTS } from "@/lib/bodyfuel/session";
+import { useSession } from "@/lib/bodyfuel/session";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,12 +20,8 @@ const pwSchema = z.string().min(6, "Mindestens 6 Zeichen").max(100);
 function AuthPage() {
   const { supabaseUser, profile, isCoach } = useSession();
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
-  const [role, setRole] = useState<"client" | "coach">("client");
-  const [demoKey, setDemoKey] = useState<string>("andreas");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -43,30 +39,12 @@ function AuthPage() {
 
     setBusy(true);
     try {
-      if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
-          email: ev.data,
-          password: pv.data,
-          options: {
-            emailRedirectTo: `${window.location.origin}/dashboard`,
-            data: {
-              display_name: name.trim() || ev.data.split("@")[0],
-              role,
-              demo_client_key: role === "client" ? demoKey : null,
-            },
-          },
-        });
-        if (error) throw error;
-        toast.success("Account erstellt! Du bist eingeloggt.");
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: ev.data,
-          password: pv.data,
-        });
-        if (error) throw error;
-        toast.success("Willkommen zurück!");
-      }
-      // navigation triggered by effect
+      const { error } = await supabase.auth.signInWithPassword({
+        email: ev.data,
+        password: pv.data,
+      });
+      if (error) throw error;
+      toast.success("Willkommen zurück!");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Login fehlgeschlagen";
       toast.error(msg);
@@ -97,43 +75,13 @@ function AuthPage() {
           </div>
         </div>
 
-        <div className="mb-6 flex gap-1 rounded-lg border border-border bg-secondary/40 p-1">
-          {(["signin", "signup"] as const).map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => setMode(m)}
-              className={`flex-1 rounded-md px-3 py-2 text-xs font-semibold uppercase tracking-wider transition ${
-                mode === m ? "bg-gradient-gold text-primary-foreground" : "text-muted-foreground"
-              }`}
-            >
-              {m === "signin" ? "Einloggen" : "Registrieren"}
-            </button>
-          ))}
-        </div>
-
-        <h2 className="font-display text-2xl font-bold">
-          {mode === "signin" ? "Willkommen zurück" : "Werde Teil von BODYFUEL"}
-        </h2>
+        <h2 className="font-display text-2xl font-bold">Willkommen zurück</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Melde dich mit deinen Zugangsdaten an. Neue Kunden erhalten ihren
+          Login per E-Mail nach dem Erstgespräch.
+        </p>
 
         <form onSubmit={submit} className="mt-6 space-y-4">
-          {mode === "signup" && (
-            <div className="space-y-2">
-              <Label htmlFor="name">Anzeigename</Label>
-              <div className="relative">
-                <UserIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="pl-9"
-                  placeholder="Andreas M."
-                  maxLength={80}
-                />
-              </div>
-            </div>
-          )}
-
           <div className="space-y-2">
             <Label htmlFor="email">E-Mail</Label>
             <div className="relative">
@@ -161,78 +109,36 @@ function AuthPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 className="pl-9"
                 required
-                autoComplete={mode === "signin" ? "current-password" : "new-password"}
+                autoComplete="current-password"
               />
             </div>
           </div>
-
-          {mode === "signup" && (
-            <>
-              <div className="space-y-2">
-                <Label>Rolle</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  {(["client", "coach"] as const).map((r) => (
-                    <button
-                      key={r}
-                      type="button"
-                      onClick={() => setRole(r)}
-                      className={`rounded-lg border p-3 text-left transition ${
-                        role === r
-                          ? "border-gold/60 bg-accent/40"
-                          : "border-border bg-secondary/30 hover:border-gold/30"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 text-sm font-semibold">
-                        {r === "coach" ? <Shield className="h-4 w-4 text-gold" /> : <UserIcon className="h-4 w-4 text-gold" />}
-                        {r === "client" ? "Kunde" : "Coach"}
-                      </div>
-                      <div className="mt-1 text-[11px] text-muted-foreground">
-                        {r === "client" ? "Tracking & Plan ansehen" : "Kunden verwalten & Pläne hochladen"}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {role === "client" && (
-                <div className="space-y-2">
-                  <Label htmlFor="demo">Demo-Profil verknüpfen</Label>
-                  <select
-                    id="demo"
-                    value={demoKey}
-                    onChange={(e) => setDemoKey(e.target.value)}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  >
-                    {CLIENTS.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-[11px] text-muted-foreground">
-                    Lädt das Demo-Dashboard für diesen Charakter (Tracking-Daten sind Beispiele).
-                  </p>
-                </div>
-              )}
-            </>
-          )}
 
           <Button
             type="submit"
             disabled={busy}
             className="w-full bg-gradient-gold text-primary-foreground hover:opacity-90"
           >
-            {busy ? "..." : mode === "signin" ? "Einloggen" : "Account erstellen"}
+            {busy ? "..." : "Einloggen"}
           </Button>
         </form>
 
-        <div className="mt-6 text-center text-xs text-muted-foreground">
-          oder{" "}
-          <Link to="/login" className="text-gold hover:underline">
-            Demo-Login ohne Account
-          </Link>
+        <div className="mt-6 space-y-2 text-center text-xs text-muted-foreground">
+          <div>
+            Noch kein Kunde?{" "}
+            <Link to="/" className="text-gold hover:underline">
+              Kostenloses Erstgespräch anfragen
+            </Link>
+          </div>
+          <div>
+            oder{" "}
+            <Link to="/login" className="text-gold hover:underline">
+              Demo-Login ohne Account
+            </Link>
+          </div>
         </div>
       </div>
     </div>
   );
 }
+
