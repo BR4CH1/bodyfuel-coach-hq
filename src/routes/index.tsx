@@ -107,13 +107,13 @@ function Header() {
           <a href="#coach" className="transition hover:text-foreground">Coach</a>
           <a href="#kontakt" className="transition hover:text-foreground">Kontakt</a>
         </nav>
-        <div className="flex shrink-0 items-center gap-2">
-          <Link
-            to="/auth"
-            className="inline-flex h-8 shrink-0 items-center justify-center rounded-md border border-gold/40 bg-background px-3 text-xs font-medium text-foreground shadow-sm transition hover:bg-gold/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        <div className="relative z-50 flex shrink-0 items-center gap-2">
+          <a
+            href="/auth"
+            className="relative z-50 inline-flex h-8 shrink-0 touch-manipulation select-none items-center justify-center rounded-md border border-gold/40 bg-background px-3 text-xs font-medium text-foreground shadow-sm transition hover:bg-gold/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           >
             Login
-          </Link>
+          </a>
           <a href="#kontakt">
             <Button size="sm" className="bg-gradient-gold text-primary-foreground hover:opacity-90">
               Erstgespräch
