@@ -1,8 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Flame, Target, Calendar, TrendingUp, ArrowRight } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Flame, Target, Calendar, TrendingUp, ArrowRight, Scale, Plus } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { MyPackagePanel } from "@/components/bodyfuel/MyPackagePanel";
 import { useSession } from "@/lib/bodyfuel/session";
+import { supabase } from "@/integrations/supabase/client";
 import {
   getLevel,
   totalPoints,
@@ -23,8 +25,8 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 function DashboardContent() {
-  const { user, supabaseUser } = useSession();
-  if (!user) return null;
+  const { user, supabaseUser, profile } = useSession();
+  if (!user) return <RealUserDashboard />;
 
   const points = totalPoints(user);
   const { level, next, progress } = getLevel(points);
