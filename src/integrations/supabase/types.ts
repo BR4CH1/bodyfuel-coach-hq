@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      body_measurements: {
+        Row: {
+          body_fat_pct: number | null
+          chest_cm: number | null
+          created_at: string
+          hip_cm: number | null
+          id: string
+          measured_at: string
+          muscle_mass_kg: number | null
+          notes: string | null
+          updated_at: string
+          user_id: string
+          waist_cm: number | null
+          weight_kg: number | null
+        }
+        Insert: {
+          body_fat_pct?: number | null
+          chest_cm?: number | null
+          created_at?: string
+          hip_cm?: number | null
+          id?: string
+          measured_at?: string
+          muscle_mass_kg?: number | null
+          notes?: string | null
+          updated_at?: string
+          user_id: string
+          waist_cm?: number | null
+          weight_kg?: number | null
+        }
+        Update: {
+          body_fat_pct?: number | null
+          chest_cm?: number | null
+          created_at?: string
+          hip_cm?: number | null
+          id?: string
+          measured_at?: string
+          muscle_mass_kg?: number | null
+          notes?: string | null
+          updated_at?: string
+          user_id?: string
+          waist_cm?: number | null
+          weight_kg?: number | null
+        }
+        Relationships: []
+      }
       customer_packages: {
         Row: {
           created_at: string
@@ -177,25 +222,40 @@ export type Database = {
       }
       profiles: {
         Row: {
+          activity_level: string | null
+          birthdate: string | null
           created_at: string
           demo_client_key: string | null
           display_name: string | null
+          gender: string | null
+          goal_weight_kg: number | null
+          height_cm: number | null
           id: string
           phone: string | null
           updated_at: string
         }
         Insert: {
+          activity_level?: string | null
+          birthdate?: string | null
           created_at?: string
           demo_client_key?: string | null
           display_name?: string | null
+          gender?: string | null
+          goal_weight_kg?: number | null
+          height_cm?: number | null
           id: string
           phone?: string | null
           updated_at?: string
         }
         Update: {
+          activity_level?: string | null
+          birthdate?: string | null
           created_at?: string
           demo_client_key?: string | null
           display_name?: string | null
+          gender?: string | null
+          goal_weight_kg?: number | null
+          height_cm?: number | null
           id?: string
           phone?: string | null
           updated_at?: string
