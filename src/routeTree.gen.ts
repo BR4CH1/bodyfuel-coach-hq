@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as WelcomeRouteImport } from './routes/welcome'
 import { Route as ProgressRouteImport } from './routes/progress'
 import { Route as NutritionRouteImport } from './routes/nutrition'
+import { Route as MeasurementsRouteImport } from './routes/measurements'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CoachRouteImport } from './routes/coach'
@@ -40,6 +41,11 @@ const ProgressRoute = ProgressRouteImport.update({
 const NutritionRoute = NutritionRouteImport.update({
   id: '/nutrition',
   path: '/nutrition',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MeasurementsRoute = MeasurementsRouteImport.update({
+  id: '/measurements',
+  path: '/measurements',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -121,6 +127,7 @@ export interface FileRoutesByFullPath {
   '/coach': typeof CoachRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/measurements': typeof MeasurementsRoute
   '/nutrition': typeof NutritionRoute
   '/progress': typeof ProgressRoute
   '/welcome': typeof WelcomeRoute
@@ -139,6 +146,7 @@ export interface FileRoutesByTo {
   '/check-in': typeof CheckInRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/measurements': typeof MeasurementsRoute
   '/nutrition': typeof NutritionRoute
   '/progress': typeof ProgressRoute
   '/welcome': typeof WelcomeRoute
@@ -158,6 +166,7 @@ export interface FileRoutesById {
   '/coach': typeof CoachRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/measurements': typeof MeasurementsRoute
   '/nutrition': typeof NutritionRoute
   '/progress': typeof ProgressRoute
   '/welcome': typeof WelcomeRoute
@@ -179,6 +188,7 @@ export interface FileRouteTypes {
     | '/coach'
     | '/dashboard'
     | '/login'
+    | '/measurements'
     | '/nutrition'
     | '/progress'
     | '/welcome'
@@ -197,6 +207,7 @@ export interface FileRouteTypes {
     | '/check-in'
     | '/dashboard'
     | '/login'
+    | '/measurements'
     | '/nutrition'
     | '/progress'
     | '/welcome'
@@ -215,6 +226,7 @@ export interface FileRouteTypes {
     | '/coach'
     | '/dashboard'
     | '/login'
+    | '/measurements'
     | '/nutrition'
     | '/progress'
     | '/welcome'
@@ -235,6 +247,7 @@ export interface RootRouteChildren {
   CoachRoute: typeof CoachRouteWithChildren
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
+  MeasurementsRoute: typeof MeasurementsRoute
   NutritionRoute: typeof NutritionRoute
   ProgressRoute: typeof ProgressRoute
   WelcomeRoute: typeof WelcomeRoute
@@ -261,6 +274,13 @@ declare module '@tanstack/react-router' {
       path: '/nutrition'
       fullPath: '/nutrition'
       preLoaderRoute: typeof NutritionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/measurements': {
+      id: '/measurements'
+      path: '/measurements'
+      fullPath: '/measurements'
+      preLoaderRoute: typeof MeasurementsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -404,6 +424,7 @@ const rootRouteChildren: RootRouteChildren = {
   CoachRoute: CoachRouteWithChildren,
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
+  MeasurementsRoute: MeasurementsRoute,
   NutritionRoute: NutritionRoute,
   ProgressRoute: ProgressRoute,
   WelcomeRoute: WelcomeRoute,
