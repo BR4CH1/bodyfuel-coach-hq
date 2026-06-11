@@ -59,6 +59,8 @@ function DashboardContent() {
         </Link>
       </div>
 
+      {supabaseUser && <MyPackagePanel />}
+
       {/* Level hero card */}
       <div className="relative overflow-hidden rounded-3xl border border-border bg-card p-6 sm:p-8">
         <div className="absolute -right-20 -top-20 h-60 w-60 rounded-full bg-gold/10 blur-3xl" />
