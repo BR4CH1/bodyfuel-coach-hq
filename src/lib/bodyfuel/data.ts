@@ -194,9 +194,9 @@ function weightSeries(start: number, days: number, drift: number): WeightEntry[]
 export const CLIENTS: Client[] = [
   {
     id: "stefan",
-    name: "Stefan Maier",
-    email: "stefan@bodyfuel.app",
-    avatar: "SM",
+    name: "Andreas",
+    email: "andreas@bodyfuel.app",
+    avatar: "A",
     streak: 12,
     checks: seedChecks(60, 0.78),
     weightHistory: weightSeries(92, 12, -0.4),
