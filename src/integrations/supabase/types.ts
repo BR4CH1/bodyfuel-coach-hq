@@ -98,6 +98,36 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_checks: {
+        Row: {
+          check_date: string
+          created_at: string
+          id: string
+          points: number
+          tasks: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          check_date: string
+          created_at?: string
+          id?: string
+          points?: number
+          tasks?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          check_date?: string
+          created_at?: string
+          id?: string
+          points?: number
+          tasks?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       leads: {
         Row: {
           created_at: string
