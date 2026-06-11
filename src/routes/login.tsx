@@ -1,7 +1,9 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Flame, Lock, Mail, Shield } from "lucide-react";
+import { toast } from "sonner";
 import { CLIENTS, useSession } from "@/lib/bodyfuel/session";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,11 +21,12 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
-  const { loginAs } = useSession();
+  const { loginAs, supabaseUser, isCoach } = useSession();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showDemo, setShowDemo] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -37,12 +40,25 @@ function LoginPage() {
     setShowDemo(localStorage.getItem(DEMO_FLAG_KEY) === "1");
   }, []);
 
-  const submit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (supabaseUser) navigate({ to: isCoach ? "/coach" : "/dashboard" });
+  }, [supabaseUser, isCoach, navigate]);
+
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const client = CLIENTS.find((c) => c.email.toLowerCase() === email.toLowerCase());
-    if (client) {
-      loginAs(client.id, false);
-      navigate({ to: "/dashboard" });
+    if (!email || !password) return;
+    setBusy(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+      if (error) throw error;
+      toast.success("Willkommen zurück!");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Login fehlgeschlagen");
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -149,9 +165,10 @@ function LoginPage() {
 
             <Button
               type="submit"
+              disabled={busy}
               className="w-full bg-gradient-gold text-primary-foreground hover:opacity-90"
             >
-              Einloggen
+              {busy ? "..." : "Einloggen"}
             </Button>
           </form>
 
