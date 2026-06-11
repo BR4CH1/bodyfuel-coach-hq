@@ -108,11 +108,11 @@ function LoginPage() {
             </div>
           </div>
 
-          <h2 className="font-display text-2xl font-bold">Demo-Modus</h2>
+          <h2 className="font-display text-2xl font-bold">{showDemo ? "Demo-Modus" : "Login"}</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Klick dich durch die App – oder{" "}
+            {showDemo ? "Klick dich durch die App – oder " : "Noch kein Account? "}
             <Link to="/auth" className="text-gold hover:underline">
-              erstelle einen echten Account
+              {showDemo ? "erstelle einen echten Account" : "Jetzt registrieren"}
             </Link>
             .
           </p>
