@@ -8,6 +8,9 @@ import {
   getCustomerDetail,
   updateCustomerPackage,
   confirmPayment,
+  resendInvite,
+  sendPasswordReset,
+  setCustomerActive,
 } from "@/lib/coaching.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
