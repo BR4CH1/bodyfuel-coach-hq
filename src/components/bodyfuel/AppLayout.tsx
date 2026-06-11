@@ -6,6 +6,7 @@ import {
   Scale,
   TrendingUp,
   FileText,
+  Dumbbell,
   Trophy,
   Users,
   LogOut,
@@ -22,6 +23,7 @@ const clientNav = [
   { to: "/measurements", label: "Maße", icon: Scale },
   { to: "/progress", label: "Fortschritt", icon: TrendingUp },
   { to: "/nutrition", label: "Ernährung", icon: FileText },
+  { to: "/training", label: "Training", icon: Dumbbell },
   { to: "/achievements", label: "Erfolge", icon: Trophy },
 ];
 
@@ -29,7 +31,10 @@ const coachNav = [
   { to: "/coach", label: "Dashboard", icon: LayoutDashboard },
   { to: "/coach/customers", label: "Kunden", icon: Users },
   { to: "/coach/leads", label: "Anfragen", icon: Inbox },
+  { to: "/nutrition", label: "Ernährung", icon: FileText },
+  { to: "/training", label: "Training", icon: Dumbbell },
 ];
+
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const { user, isCoach, supabaseUser, profile, loading, logout } = useSession();
