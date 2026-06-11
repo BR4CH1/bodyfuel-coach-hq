@@ -160,12 +160,20 @@ function MeasurementsContent() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Mein Körper</p>
-        <h1 className="font-display text-3xl font-bold sm:text-4xl">Körpermaße</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Halte deine Werte regelmäßig fest, damit dein Coach deinen Fortschritt sieht.
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Mein Körper</p>
+          <h1 className="font-display text-3xl font-bold sm:text-4xl">Körpermaße & Fortschritt</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Halte deine Werte regelmäßig fest, damit dein Coach deinen Fortschritt sieht.
+          </p>
+        </div>
+        <a
+          href="/progress"
+          className="inline-flex items-center gap-2 self-start rounded-lg border border-gold/40 px-4 py-2 text-sm font-semibold text-gold hover:bg-gold/10"
+        >
+          Verlauf & Diagramme →
+        </a>
       </div>
 
       {/* Summary */}
