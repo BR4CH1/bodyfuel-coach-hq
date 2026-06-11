@@ -123,6 +123,7 @@ export const createCustomer = createServerFn({ method: "POST" })
       start_date: string; // YYYY-MM-DD
       duration_days: number;
       notes?: string;
+      origin?: string;
     }) => data,
   )
   .handler(async ({ data, context }) => {
@@ -130,9 +131,10 @@ export const createCustomer = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const origin =
+      data.origin ||
       process.env.SITE_URL ||
       process.env.VITE_PUBLIC_SITE_URL ||
-      "https://bodyfuel.app";
+      "https://bodyfuel-coach-hq.lovable.app";
 
     // Invite per Magic Link. Trigger handle_new_user erstellt profile+user_roles.
     const { data: invited, error: invErr } =
@@ -143,6 +145,7 @@ export const createCustomer = createServerFn({ method: "POST" })
         },
         redirectTo: `${origin}/welcome`,
       });
+
     if (invErr) throw new Error(invErr.message);
     const newUserId = invited.user.id;
 

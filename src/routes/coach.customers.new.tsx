@@ -47,7 +47,7 @@ function NewCustomerForm() {
     if (!form.name || !form.email) return toast.error("Name und E-Mail erforderlich.");
     setBusy(true);
     try {
-      await fn({ data: form });
+      await fn({ data: { ...form, origin: window.location.origin } });
       toast.success("Kunde angelegt — Einladung verschickt.");
       navigate({ to: "/coach/customers" });
     } catch (err) {
