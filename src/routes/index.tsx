@@ -103,7 +103,7 @@ function Header() {
           <a href="#kontakt" className="transition hover:text-foreground">Kontakt</a>
         </nav>
         <div className="flex items-center gap-2">
-          <Link to="/login">
+          <Link to="/auth">
             <Button size="sm" variant="outline" className="border-gold/40 text-foreground hover:bg-gold/10">
               Login
             </Button>
