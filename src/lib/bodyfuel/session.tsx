@@ -82,7 +82,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     if (r.data) {
       const isCoach = r.data.some((x) => x.role === "coach");
       setRole(isCoach ? "coach" : "client");
-      if (isCoach) setDemoCoach(true);
+      if (isCoach) {
+        setDemoCoach(true);
+      } else {
+        // Ensure stale coach flag from previous session doesn't leak to clients
+        setDemoCoach(false);
+        persist(p.data?.demo_client_key ?? uid, false);
+      }
     }
   };
 
