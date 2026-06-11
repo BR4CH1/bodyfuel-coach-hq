@@ -18,6 +18,7 @@ function WelcomePage() {
   const [pw2, setPw2] = useState("");
   const [busy, setBusy] = useState(false);
   const [hasSession, setHasSession] = useState(false);
+  const [done, setDone] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setHasSession(!!data.session));
@@ -29,14 +30,14 @@ function WelcomePage() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (pw.length < 6) return toast.error("Mindestens 6 Zeichen.");
+    if (pw.length < 8) return toast.error("Mindestens 8 Zeichen.");
     if (pw !== pw2) return toast.error("Passwörter stimmen nicht überein.");
     setBusy(true);
     try {
       const { error } = await supabase.auth.updateUser({ password: pw });
       if (error) throw error;
-      toast.success("Passwort gesetzt — willkommen bei BodyFuel!");
-      navigate({ to: "/dashboard" });
+      await supabase.auth.signOut();
+      setDone(true);
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -46,7 +47,7 @@ function WelcomePage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
-      <div className="w-full max-w-md rounded-3xl border border-border bg-card p-8 shadow-gold">
+      <div className="w-full max-w-md rounded-3xl border border-gold/30 bg-card p-8 shadow-gold">
         <div className="flex items-center gap-3">
           <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-gold">
             <Flame className="h-5 w-5 text-primary-foreground" />
@@ -54,55 +55,83 @@ function WelcomePage() {
           <div>
             <div className="font-display text-lg font-bold tracking-wider">BODYFUEL</div>
             <div className="text-[10px] uppercase tracking-[0.2em] text-gold">
-              Willkommen an Bord
+              Nutrition Coaching
             </div>
           </div>
         </div>
 
-        <h2 className="mt-6 font-display text-2xl font-bold">Setze dein Passwort</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Manu hat dich als Kunde angelegt. Vergib ein Passwort, um dein Dashboard
-          zu öffnen.
-        </p>
-
-        {!hasSession ? (
-          <p className="mt-6 rounded-xl border border-warning/40 bg-warning/10 p-4 text-sm">
-            Bitte öffne diese Seite über den Einladungslink aus deiner E-Mail.
-          </p>
-        ) : (
-          <form onSubmit={submit} className="mt-6 space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="pw">Neues Passwort</Label>
-              <div className="relative">
-                <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="pw"
-                  type="password"
-                  value={pw}
-                  onChange={(e) => setPw(e.target.value)}
-                  className="pl-9"
-                  required
-                />
-              </div>
+        {done ? (
+          <div className="mt-8 text-center">
+            <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-gradient-gold text-2xl">
+              ✓
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="pw2">Passwort wiederholen</Label>
-              <Input
-                id="pw2"
-                type="password"
-                value={pw2}
-                onChange={(e) => setPw2(e.target.value)}
-                required
-              />
-            </div>
+            <h2 className="mt-6 font-display text-2xl font-bold">
+              Dein Zugang wurde erfolgreich eingerichtet.
+            </h2>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Willkommen bei BodyFuel! 💪
+            </p>
             <Button
-              type="submit"
-              disabled={busy}
-              className="w-full bg-gradient-gold text-primary-foreground hover:opacity-90"
+              onClick={() => navigate({ to: "/login" })}
+              className="mt-6 w-full bg-gradient-gold text-primary-foreground hover:opacity-90"
             >
-              {busy ? "…" : "Passwort speichern & loslegen"}
+              Jetzt anmelden
             </Button>
-          </form>
+          </div>
+        ) : (
+          <>
+            <h2 className="mt-6 font-display text-2xl font-bold">
+              Willkommen bei BodyFuel
+            </h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Bitte erstelle dein persönliches Passwort für deinen Zugang.
+            </p>
+
+            {!hasSession ? (
+              <p className="mt-6 rounded-xl border border-warning/40 bg-warning/10 p-4 text-sm">
+                Bitte öffne diese Seite über den Einladungslink aus deiner E-Mail.
+                Der Link ist nur einmal gültig und läuft nach 7 Tagen ab.
+              </p>
+            ) : (
+              <form onSubmit={submit} className="mt-6 space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="pw">Neues Passwort</Label>
+                  <div className="relative">
+                    <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="pw"
+                      type="password"
+                      value={pw}
+                      onChange={(e) => setPw(e.target.value)}
+                      className="pl-9"
+                      autoComplete="new-password"
+                      minLength={8}
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="pw2">Passwort wiederholen</Label>
+                  <Input
+                    id="pw2"
+                    type="password"
+                    value={pw2}
+                    onChange={(e) => setPw2(e.target.value)}
+                    autoComplete="new-password"
+                    minLength={8}
+                    required
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  disabled={busy}
+                  className="w-full bg-gradient-gold text-primary-foreground hover:opacity-90"
+                >
+                  {busy ? "…" : "Zugang aktivieren"}
+                </Button>
+              </form>
+            )}
+          </>
         )}
       </div>
     </div>
