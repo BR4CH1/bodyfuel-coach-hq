@@ -30,6 +30,9 @@ function CustomerDetail() {
   const getFn = useServerFn(getCustomerDetail);
   const updFn = useServerFn(updateCustomerPackage);
   const payFn = useServerFn(confirmPayment);
+  const inviteFn = useServerFn(resendInvite);
+  const resetFn = useServerFn(sendPasswordReset);
+  const activeFn = useServerFn(setCustomerActive);
   const qc = useQueryClient();
 
   const { data, isLoading } = useQuery({
