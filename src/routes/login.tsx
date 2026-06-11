@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Flame, Lock, Mail, Shield } from "lucide-react";
 import { CLIENTS, useSession } from "@/lib/bodyfuel/session";
