@@ -29,19 +29,24 @@ const coachNav = [
 ];
 
 export function AppLayout({ children }: { children: ReactNode }) {
-  const { user, isCoach, logout } = useSession();
+  const { user, isCoach, supabaseUser, profile, loading, logout } = useSession();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   useEffect(() => {
-    if (!user) navigate({ to: "/login" });
-  }, [user, navigate]);
+    if (loading) return;
+    if (!user && !supabaseUser) navigate({ to: "/login" });
+  }, [user, supabaseUser, loading, navigate]);
 
-  if (!user) return null;
+  if (loading) return null;
+  if (!user && !supabaseUser) return null;
 
   const nav = isCoach ? [...coachNav, ...clientNav] : clientNav;
-  const points = totalPoints(user);
+  const points = user ? totalPoints(user) : 0;
   const { level } = getLevel(points);
+  const displayName = user?.name ?? profile?.display_name ?? supabaseUser?.email ?? "Coach";
+  const avatar = user?.avatar ?? (displayName.slice(0, 2).toUpperCase());
+  const roleLabel = user ? level.name : isCoach ? "Coach" : "Mitglied";
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -73,11 +78,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
         <div className="border-t border-border p-3">
           <div className="flex items-center gap-3 rounded-lg bg-secondary/60 p-3">
             <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-gold font-display text-sm font-bold text-primary-foreground">
-              {user.avatar}
+              {avatar}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-semibold">{user.name}</div>
-              <div className="text-[11px] uppercase tracking-wider text-gold">{level.name}</div>
+              <div className="truncate text-sm font-semibold">{displayName}</div>
+              <div className="text-[11px] uppercase tracking-wider text-gold">{roleLabel}</div>
             </div>
             <button
               onClick={() => {
