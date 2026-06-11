@@ -1156,7 +1156,7 @@ function Footer() {
         </div>
         <div className="mt-10 flex flex-col items-start justify-between gap-3 border-t border-border pt-6 text-xs text-muted-foreground sm:flex-row sm:items-center">
           <div>© {new Date().getFullYear()} BODYFUEL Nutrition Coaching. Alle Rechte vorbehalten.</div>
-          <Link to="/login" className="hover:text-foreground">Kunden-Login →</Link>
+          <Link to="/auth" className="hover:text-foreground">Kunden-Login →</Link>
         </div>
       </div>
     </footer>
