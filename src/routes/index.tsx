@@ -519,9 +519,9 @@ function Gamification() {
 
 function Results() {
   const testimonials = [
-    { quote: "Ich hatte endlich einen Plan, den ich wirklich durchziehen konnte.", name: "Stefan", role: "−12 kg in 5 Monaten" },
-    { quote: "Die Punkte haben mir geholfen, täglich dranzubleiben.", name: "Michelle", role: "Muskelaufbau + Struktur" },
-    { quote: "Es fühlt sich nicht wie Diät an, sondern wie ein System.", name: "Mia", role: "−8 cm Bauchumfang" },
+    { quote: "Ich hatte endlich einen Plan, den ich wirklich durchziehen konnte.", name: "Andreas", role: "−12 kg in 5 Monaten" },
+    { quote: "Die Punkte haben mir geholfen, täglich dranzubleiben.", name: "Patrick", role: "Muskelaufbau + Struktur" },
+    { quote: "Es fühlt sich nicht wie Diät an, sondern wie ein System.", name: "Luisa", role: "−8 cm Bauchumfang" },
   ];
 
   return (

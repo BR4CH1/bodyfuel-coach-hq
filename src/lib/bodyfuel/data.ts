@@ -194,9 +194,9 @@ function weightSeries(start: number, days: number, drift: number): WeightEntry[]
 export const CLIENTS: Client[] = [
   {
     id: "stefan",
-    name: "Stefan Maier",
-    email: "stefan@bodyfuel.app",
-    avatar: "SM",
+    name: "Andreas",
+    email: "andreas@bodyfuel.app",
+    avatar: "A",
     streak: 12,
     checks: seedChecks(60, 0.78),
     weightHistory: weightSeries(92, 12, -0.4),
@@ -213,9 +213,9 @@ export const CLIENTS: Client[] = [
   },
   {
     id: "michelle",
-    name: "Michelle Roth",
-    email: "michelle@bodyfuel.app",
-    avatar: "MR",
+    name: "Patrick",
+    email: "patrick@bodyfuel.app",
+    avatar: "P",
     streak: 28,
     checks: seedChecks(120, 0.92),
     weightHistory: weightSeries(68, 12, -0.2),
@@ -233,9 +233,9 @@ export const CLIENTS: Client[] = [
   },
   {
     id: "mia",
-    name: "Mia Schulz",
-    email: "mia@bodyfuel.app",
-    avatar: "MS",
+    name: "Luisa",
+    email: "luisa@bodyfuel.app",
+    avatar: "L",
     streak: 0,
     checks: seedChecks(20, 0.45, 4), // skipped last 4 days → warning
     weightHistory: weightSeries(74, 12, 0.05),
