@@ -120,12 +120,14 @@ function DashboardContent() {
 
       {/* Stat grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card
-          icon={<Target className="h-5 w-5" />}
-          label="Heute"
-          value={`${today} / ${MAX_DAILY_POINTS}`}
-          hint="Tagespunkte"
-        />
+        <Link to="/daily-checklist" className="contents">
+          <Card
+            icon={<Target className="h-5 w-5" />}
+            label="Heute"
+            value={`${today} / ${MAX_DAILY_POINTS}`}
+            hint="Tagespunkte"
+          />
+        </Link>
         <Card
           icon={<TrendingUp className="h-5 w-5" />}
           label="Diese Woche"
