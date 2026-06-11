@@ -16,6 +16,7 @@ import { Route as NutritionRouteImport } from './routes/nutrition'
 import { Route as MeasurementsRouteImport } from './routes/measurements'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as DailyChecklistRouteImport } from './routes/daily-checklist'
 import { Route as CoachRouteImport } from './routes/coach'
 import { Route as CheckInRouteImport } from './routes/check-in'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -62,6 +63,11 @@ const LoginRoute = LoginRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DailyChecklistRoute = DailyChecklistRouteImport.update({
+  id: '/daily-checklist',
+  path: '/daily-checklist',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CoachRoute = CoachRouteImport.update({
@@ -131,6 +137,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/check-in': typeof CheckInRoute
   '/coach': typeof CoachRouteWithChildren
+  '/daily-checklist': typeof DailyChecklistRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/measurements': typeof MeasurementsRoute
@@ -151,6 +158,7 @@ export interface FileRoutesByTo {
   '/achievements': typeof AchievementsRoute
   '/auth': typeof AuthRoute
   '/check-in': typeof CheckInRoute
+  '/daily-checklist': typeof DailyChecklistRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/measurements': typeof MeasurementsRoute
@@ -172,6 +180,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/check-in': typeof CheckInRoute
   '/coach': typeof CoachRouteWithChildren
+  '/daily-checklist': typeof DailyChecklistRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/measurements': typeof MeasurementsRoute
@@ -195,6 +204,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/check-in'
     | '/coach'
+    | '/daily-checklist'
     | '/dashboard'
     | '/login'
     | '/measurements'
@@ -215,6 +225,7 @@ export interface FileRouteTypes {
     | '/achievements'
     | '/auth'
     | '/check-in'
+    | '/daily-checklist'
     | '/dashboard'
     | '/login'
     | '/measurements'
@@ -235,6 +246,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/check-in'
     | '/coach'
+    | '/daily-checklist'
     | '/dashboard'
     | '/login'
     | '/measurements'
@@ -257,6 +269,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   CheckInRoute: typeof CheckInRoute
   CoachRoute: typeof CoachRouteWithChildren
+  DailyChecklistRoute: typeof DailyChecklistRoute
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
   MeasurementsRoute: typeof MeasurementsRoute
@@ -315,6 +328,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/daily-checklist': {
+      id: '/daily-checklist'
+      path: '/daily-checklist'
+      fullPath: '/daily-checklist'
+      preLoaderRoute: typeof DailyChecklistRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/coach': {
@@ -442,6 +462,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   CheckInRoute: CheckInRoute,
   CoachRoute: CoachRouteWithChildren,
+  DailyChecklistRoute: DailyChecklistRoute,
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
   MeasurementsRoute: MeasurementsRoute,
@@ -453,3 +474,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

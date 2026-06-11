@@ -105,7 +105,9 @@ function DashboardContent() {
 
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-1 sm:gap-2">
             <Stat label="Gesamt" value={points} suffix="Pkt" />
+          <Link to="/daily-checklist" className="contents">
             <Stat label="Heute" value={today} suffix={`/ ${MAX_DAILY_POINTS}`} />
+          </Link>
             <Stat
               label="Streak"
               value={user.streak}
@@ -118,12 +120,14 @@ function DashboardContent() {
 
       {/* Stat grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card
-          icon={<Target className="h-5 w-5" />}
-          label="Heute"
-          value={`${today} / ${MAX_DAILY_POINTS}`}
-          hint="Tagespunkte"
-        />
+        <Link to="/daily-checklist" className="contents">
+          <Card
+            icon={<Target className="h-5 w-5" />}
+            label="Heute"
+            value={`${today} / ${MAX_DAILY_POINTS}`}
+            hint="Tagespunkte"
+          />
+        </Link>
         <Card
           icon={<TrendingUp className="h-5 w-5" />}
           label="Diese Woche"
@@ -230,7 +234,10 @@ function RealUserDashboard() {
   const { supabaseUser, profile } = useSession();
   const [latest, setLatest] = useState<LatestMeasurement | null>(null);
   const [count, setCount] = useState(0);
+  const [todayDbPoints, setTodayDbPoints] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  const todayStr = new Date().toISOString().slice(0, 10);
 
   useEffect(() => {
     if (!supabaseUser) return;
@@ -243,9 +250,18 @@ function RealUserDashboard() {
         .limit(1);
       setLatest((data?.[0] as LatestMeasurement | undefined) ?? null);
       setCount(c ?? 0);
+
+      const { data: checkData } = await supabase
+        .from("daily_checks")
+        .select("points")
+        .eq("user_id", supabaseUser.id)
+        .eq("check_date", todayStr)
+        .maybeSingle();
+      setTodayDbPoints(checkData?.points ?? 0);
+
       setLoading(false);
     })();
-  }, [supabaseUser]);
+  }, [supabaseUser, todayStr]);
 
   const name = profile?.display_name?.split(" ")[0] ?? supabaseUser?.email?.split("@")[0] ?? "";
 
@@ -273,7 +289,7 @@ function RealUserDashboard() {
 
       <MyPackagePanel />
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card
           icon={<Scale className="h-5 w-5" />}
           label="Aktuelles Gewicht"
@@ -296,6 +312,14 @@ function RealUserDashboard() {
           value={`${count}`}
           hint="Verlauf"
         />
+        <Link to="/daily-checklist" className="contents">
+          <Card
+            icon={<Target className="h-5 w-5" />}
+            label="Heute"
+            value={`${todayDbPoints} / ${MAX_DAILY_POINTS}`}
+            hint="Tagespunkte"
+          />
+        </Link>
       </div>
 
       <Link
