@@ -128,8 +128,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
       {/* Mobile bottom nav */}
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 backdrop-blur lg:hidden">
-        <div className="grid grid-cols-5">
-          {nav.slice(0, 5).map((item) => {
+        <div className={`grid grid-cols-${Math.min(nav.length, 7)}`} style={{ gridTemplateColumns: `repeat(${Math.min(nav.length, 7)}, minmax(0, 1fr))` }}>
+          {nav.slice(0, 7).map((item) => {
             const active = item.to === "/coach" ? pathname === "/coach" : pathname.startsWith(item.to);
             const Icon = item.icon;
             return (
