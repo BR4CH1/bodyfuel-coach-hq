@@ -93,9 +93,13 @@ function LoginPage() {
             </div>
           </div>
 
-          <h2 className="font-display text-2xl font-bold">Willkommen zurück</h2>
+          <h2 className="font-display text-2xl font-bold">Demo-Modus</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Melde dich mit deinem Kunden-Account an.
+            Klick dich durch die App – oder{" "}
+            <Link to="/auth" className="text-gold hover:underline">
+              erstelle einen echten Account
+            </Link>
+            .
           </p>
 
           <form onSubmit={submit} className="mt-6 space-y-4">
