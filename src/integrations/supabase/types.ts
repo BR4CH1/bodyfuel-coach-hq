@@ -14,38 +14,83 @@ export type Database = {
   }
   public: {
     Tables: {
-      bookings: {
+      customer_packages: {
         Row: {
           created_at: string
-          email: string
+          end_date: string
           id: string
-          name: string
+          is_active: boolean
+          notes: string | null
           package: string
-          payment_status: string
-          phone: string | null
           price_eur: number
+          start_date: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          package: string
+          price_eur: number
+          start_date?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          package?: string
+          price_eur?: number
+          start_date?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      leads: {
+        Row: {
+          created_at: string
+          current_weight: string | null
+          desired_package: string | null
+          email: string
+          goal: string | null
+          id: string
+          message: string | null
+          name: string
+          phone: string | null
+          status: string
           updated_at: string
         }
         Insert: {
           created_at?: string
+          current_weight?: string | null
+          desired_package?: string | null
           email: string
+          goal?: string | null
           id?: string
+          message?: string | null
           name: string
-          package: string
-          payment_status?: string
           phone?: string | null
-          price_eur: number
+          status?: string
           updated_at?: string
         }
         Update: {
           created_at?: string
+          current_weight?: string | null
+          desired_package?: string | null
           email?: string
+          goal?: string | null
           id?: string
+          message?: string | null
           name?: string
-          package?: string
-          payment_status?: string
           phone?: string | null
-          price_eur?: number
+          status?: string
           updated_at?: string
         }
         Relationships: []
@@ -83,12 +128,60 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_history: {
+        Row: {
+          amount_eur: number
+          created_at: string
+          customer_package_id: string | null
+          id: string
+          method: string
+          note: string | null
+          payment_date: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_eur: number
+          created_at?: string
+          customer_package_id?: string | null
+          id?: string
+          method?: string
+          note?: string | null
+          payment_date?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_eur?: number
+          created_at?: string
+          customer_package_id?: string | null
+          id?: string
+          method?: string
+          note?: string | null
+          payment_date?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_history_customer_package_id_fkey"
+            columns: ["customer_package_id"]
+            isOneToOne: false
+            referencedRelation: "customer_packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
           demo_client_key: string | null
           display_name: string | null
           id: string
+          phone: string | null
           updated_at: string
         }
         Insert: {
@@ -96,6 +189,7 @@ export type Database = {
           demo_client_key?: string | null
           display_name?: string | null
           id: string
+          phone?: string | null
           updated_at?: string
         }
         Update: {
@@ -103,6 +197,7 @@ export type Database = {
           demo_client_key?: string | null
           display_name?: string | null
           id?: string
+          phone?: string | null
           updated_at?: string
         }
         Relationships: []
