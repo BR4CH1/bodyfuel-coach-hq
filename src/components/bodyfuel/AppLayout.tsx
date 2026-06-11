@@ -43,7 +43,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   if (loading) return null;
   if (!user && !supabaseUser) return null;
 
-  const nav = isCoach ? [...coachNav, ...clientNav] : clientNav;
+  const nav = isCoach ? coachNav : clientNav;
   const points = user ? totalPoints(user) : 0;
   const { level } = getLevel(points);
   const displayName = user?.name ?? profile?.display_name ?? supabaseUser?.email ?? "Coach";
