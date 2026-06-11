@@ -20,7 +20,6 @@ import { totalPoints } from "@/lib/bodyfuel/data";
 const clientNav = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/measurements", label: "Maße", icon: Scale },
-  { to: "/progress", label: "Fortschritt", icon: TrendingUp },
   { to: "/nutrition", label: "Ernährung", icon: FileText },
   { to: "/training", label: "Training", icon: Dumbbell },
   { to: "/achievements", label: "Erfolge", icon: Trophy },
