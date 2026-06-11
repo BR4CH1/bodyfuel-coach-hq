@@ -167,8 +167,8 @@ function DashboardContent() {
         <Card
           icon={<Flame className="h-5 w-5" />}
           label="Streak"
-          value={`${user.streak} Tage`}
-          hint={user.streak >= 14 ? "🔥 On Fire" : "Keep going"}
+          value={`${streak} Tage`}
+          hint={streak >= 14 ? "🔥 On Fire" : "Keep going"}
         />
         <Card
           icon={<Calendar className="h-5 w-5" />}
