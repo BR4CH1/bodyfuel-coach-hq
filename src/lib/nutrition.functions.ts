@@ -140,3 +140,97 @@ export const getNutritionTargets = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return row;
   });
+
+/** Extract daily kcal/macros from the user's active nutrition plan PDF via Lovable AI */
+export const extractTargetsFromPlan = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { user_id: string }) => d)
+  .handler(async ({ data, context }) => {
+    await assertCoach(context.supabase, context.userId);
+    const apiKey = process.env.LOVABLE_API_KEY;
+    if (!apiKey) throw new Error("LOVABLE_API_KEY fehlt");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: plan, error: pErr } = await supabaseAdmin
+      .from("nutrition_plans")
+      .select("file_path")
+      .eq("client_id", data.user_id)
+      .eq("plan_type", "nutrition")
+      .eq("is_active", true)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (pErr) throw new Error(pErr.message);
+    if (!plan) throw new Error("Kein aktiver Ernährungsplan vorhanden");
+
+    const { data: file, error: dlErr } = await supabaseAdmin.storage
+      .from("nutrition-plans")
+      .download(plan.file_path);
+    if (dlErr || !file) throw new Error(dlErr?.message || "Plan konnte nicht geladen werden");
+
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    let bin = "";
+    for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    const b64 = btoa(bin);
+
+    const prompt = `Du bekommst einen Ernährungsplan als PDF. Extrahiere die TÄGLICHEN Zielwerte:
+- kcal (Gesamtkalorien pro Tag)
+- protein_g (Eiweiß in Gramm pro Tag)
+- carbs_g (Kohlenhydrate in Gramm pro Tag)
+- fat_g (Fett in Gramm pro Tag)
+- water_l (empfohlene Wassermenge in Litern pro Tag, falls angegeben — sonst null)
+
+Falls mehrere Tage/Phasen genannt sind, nimm die HAUPT-Phase (Standardtag).
+Antworte ausschließlich mit gültigem JSON:
+{ "kcal": <int>, "protein_g": <int>, "carbs_g": <int>, "fat_g": <int>, "water_l": <number|null> }`;
+
+    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: prompt },
+              {
+                type: "file",
+                file: {
+                  filename: "plan.pdf",
+                  file_data: `data:application/pdf;base64,${b64}`,
+                },
+              },
+            ],
+          },
+        ],
+      }),
+    });
+    if (!aiRes.ok) {
+      const txt = await aiRes.text();
+      throw new Error(`KI-Fehler [${aiRes.status}]: ${txt.slice(0, 300)}`);
+    }
+    const aiJson = await aiRes.json();
+    const raw = aiJson?.choices?.[0]?.message?.content ?? "";
+    let parsed: any;
+    try {
+      parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+    } catch {
+      throw new Error("KI-Antwort konnte nicht gelesen werden");
+    }
+
+    const kcal = Math.max(0, Math.round(Number(parsed.kcal) || 0));
+    const protein_g = Math.max(0, Math.round(Number(parsed.protein_g) || 0));
+    const carbs_g = Math.max(0, Math.round(Number(parsed.carbs_g) || 0));
+    const fat_g = Math.max(0, Math.round(Number(parsed.fat_g) || 0));
+    const water_l = Number(parsed.water_l);
+    const water_glasses = isFinite(water_l) && water_l > 0
+      ? Math.max(4, Math.round((water_l * 1000) / 250))
+      : null;
+
+    if (!kcal && !protein_g) {
+      throw new Error("Keine Werte im Plan gefunden. Bitte manuell eintragen.");
+    }
+    return { kcal, protein_g, carbs_g, fat_g, water_glasses };
+  });
