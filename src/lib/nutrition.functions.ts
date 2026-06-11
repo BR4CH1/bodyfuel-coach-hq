@@ -42,20 +42,45 @@ export const lookupBarcode = createServerFn({ method: "POST" })
     return mapped;
   });
 
-/** Search via OpenFoodFacts (DE bias) */
+/** Search via OpenFoodFacts (German-language hint, no country filter to maximise matches) */
 export const searchFoods = createServerFn({ method: "POST" })
   .inputValidator((d: { query: string }) => d)
   .handler(async ({ data }) => {
     const q = data.query.trim();
     if (!q) return [] as FoodResult[];
-    const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=15&lc=de&countries=germany`;
-    const res = await fetch(url);
-    if (!res.ok) return [] as FoodResult[];
-    const json = (await res.json()) as any;
+    const fields =
+      "code,product_name,product_name_de,generic_name,brands,nutriments";
+    const tryUrls = [
+      // German DB first — most German products are indexed here
+      `https://de.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=25&fields=${fields}`,
+      // World DB as fallback
+      `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=25&fields=${fields}`,
+    ];
+    const seen = new Set<string>();
     const arr: FoodResult[] = [];
-    for (const p of json.products ?? []) {
-      const m = mapOff(p);
-      if (m) arr.push(m);
+    for (const url of tryUrls) {
+      try {
+        const res = await fetch(url, {
+          headers: { "User-Agent": "BodyFuelCoaching/1.0" },
+        });
+        if (!res.ok) continue;
+        const json = (await res.json()) as any;
+        for (const p of json.products ?? []) {
+          const m = mapOff({
+            ...p,
+            product_name: p.product_name_de || p.product_name || p.generic_name,
+          });
+          if (!m) continue;
+          const key = (m.barcode || m.name) + "|" + (m.brand ?? "");
+          if (seen.has(key)) continue;
+          seen.add(key);
+          arr.push(m);
+          if (arr.length >= 20) break;
+        }
+        if (arr.length) break;
+      } catch {
+        /* try next */
+      }
     }
     return arr;
   });
