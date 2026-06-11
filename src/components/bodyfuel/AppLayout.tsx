@@ -60,7 +60,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </div>
         <nav className="flex-1 space-y-1 p-3">
           {nav.map((item) => {
-            const active = pathname.startsWith(item.to);
+            const active = item.to === "/coach" ? pathname === "/coach" : pathname.startsWith(item.to);
             const Icon = item.icon;
             return (
               <Link
@@ -125,7 +125,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 backdrop-blur lg:hidden">
         <div className="grid grid-cols-5">
           {nav.slice(0, 5).map((item) => {
-            const active = pathname.startsWith(item.to);
+            const active = item.to === "/coach" ? pathname === "/coach" : pathname.startsWith(item.to);
             const Icon = item.icon;
             return (
               <Link
