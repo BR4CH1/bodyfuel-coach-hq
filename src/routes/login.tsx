@@ -1,10 +1,12 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Flame, Lock, Mail, Shield } from "lucide-react";
 import { CLIENTS, useSession } from "@/lib/bodyfuel/session";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+
+const DEMO_FLAG_KEY = "bodyfuel:demo-visible";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -19,8 +21,21 @@ export const Route = createFileRoute("/login")({
 function LoginPage() {
   const { loginAs } = useSession();
   const navigate = useNavigate();
-  const [email, setEmail] = useState("stefan@bodyfuel.app");
-  const [password, setPassword] = useState("demo");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showDemo, setShowDemo] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    const param = url.searchParams.get("demo");
+    if (param === "1") {
+      localStorage.setItem(DEMO_FLAG_KEY, "1");
+    } else if (param === "0") {
+      localStorage.removeItem(DEMO_FLAG_KEY);
+    }
+    setShowDemo(localStorage.getItem(DEMO_FLAG_KEY) === "1");
+  }, []);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,11 +108,11 @@ function LoginPage() {
             </div>
           </div>
 
-          <h2 className="font-display text-2xl font-bold">Demo-Modus</h2>
+          <h2 className="font-display text-2xl font-bold">{showDemo ? "Demo-Modus" : "Login"}</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Klick dich durch die App – oder{" "}
+            {showDemo ? "Klick dich durch die App – oder " : "Noch kein Account? "}
             <Link to="/auth" className="text-gold hover:underline">
-              erstelle einen echten Account
+              {showDemo ? "erstelle einen echten Account" : "Jetzt registrieren"}
             </Link>
             .
           </p>
@@ -140,53 +155,66 @@ function LoginPage() {
             </Button>
           </form>
 
-          <div className="my-6 flex items-center gap-3">
-            <div className="h-px flex-1 bg-border" />
-            <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
-              Demo-Konten
-            </span>
-            <div className="h-px flex-1 bg-border" />
-          </div>
+          {showDemo && (
+            <>
+              <div className="my-6 flex items-center gap-3">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                  Demo-Konten
+                </span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
 
-          <div className="space-y-2">
-            {CLIENTS.map((c) => (
-              <button
-                key={c.id}
-                onClick={() => {
-                  loginAs(c.id, false);
-                  navigate({ to: "/dashboard" });
-                }}
-                className="flex w-full items-center gap-3 rounded-xl border border-border bg-secondary/40 p-3 text-left transition hover:border-gold/50 hover:bg-secondary"
-              >
-                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-gold font-display text-sm font-bold text-primary-foreground">
-                  {c.avatar}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-semibold">{c.name}</div>
-                  <div className="truncate text-xs text-muted-foreground">{c.email}</div>
-                </div>
-                <span className="text-[10px] uppercase tracking-wider text-gold">Login →</span>
-              </button>
-            ))}
-            <button
-              onClick={() => {
-                loginAs("stefan", true);
-                navigate({ to: "/coach" });
-              }}
-              className="flex w-full items-center gap-3 rounded-xl border border-gold/40 bg-accent/40 p-3 text-left transition hover:bg-accent"
-            >
-              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-background font-display text-sm font-bold text-gold">
-                <Shield className="h-4 w-4" />
+              <div className="space-y-2">
+                {CLIENTS.map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => {
+                      loginAs(c.id, false);
+                      navigate({ to: "/dashboard" });
+                    }}
+                    className="flex w-full items-center gap-3 rounded-xl border border-border bg-secondary/40 p-3 text-left transition hover:border-gold/50 hover:bg-secondary"
+                  >
+                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-gold font-display text-sm font-bold text-primary-foreground">
+                      {c.avatar}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-semibold">{c.name}</div>
+                      <div className="truncate text-xs text-muted-foreground">{c.email}</div>
+                    </div>
+                    <span className="text-[10px] uppercase tracking-wider text-gold">Login →</span>
+                  </button>
+                ))}
+                <button
+                  onClick={() => {
+                    loginAs("stefan", true);
+                    navigate({ to: "/coach" });
+                  }}
+                  className="flex w-full items-center gap-3 rounded-xl border border-gold/40 bg-accent/40 p-3 text-left transition hover:bg-accent"
+                >
+                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-background font-display text-sm font-bold text-gold">
+                    <Shield className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-semibold">Coach-Modus</div>
+                    <div className="truncate text-xs text-muted-foreground">
+                      Übersicht aller Kunden öffnen
+                    </div>
+                  </div>
+                  <span className="text-[10px] uppercase tracking-wider text-gold">Coach →</span>
+                </button>
+                <button
+                  onClick={() => {
+                    localStorage.removeItem(DEMO_FLAG_KEY);
+                    setShowDemo(false);
+                  }}
+                  className="mt-2 w-full text-center text-[10px] uppercase tracking-wider text-muted-foreground hover:text-gold"
+                >
+                  Demo-Konten ausblenden
+                </button>
               </div>
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-semibold">Coach-Modus</div>
-                <div className="truncate text-xs text-muted-foreground">
-                  Übersicht aller Kunden öffnen
-                </div>
-              </div>
-              <span className="text-[10px] uppercase tracking-wider text-gold">Coach →</span>
-            </button>
-          </div>
+            </>
+          )}
         </div>
       </div>
     </div>
