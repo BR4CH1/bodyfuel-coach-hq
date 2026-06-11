@@ -22,6 +22,24 @@ export function NutritionTargetsEditor({ userId }: { userId: string }) {
   const [water, setWater] = useState(8);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [extracting, setExtracting] = useState(false);
+
+  const extractFromPlan = async () => {
+    setExtracting(true);
+    try {
+      const t = await extractFn({ data: { user_id: userId } });
+      setKcal(t.kcal);
+      setProtein(t.protein_g);
+      setCarbs(t.carbs_g);
+      setFat(t.fat_g);
+      if (t.water_glasses) setWater(t.water_glasses);
+      toast.success("Werte aus Plan übernommen — bitte prüfen & speichern.");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setExtracting(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
