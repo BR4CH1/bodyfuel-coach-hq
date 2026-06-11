@@ -25,9 +25,19 @@ function AuthPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (supabaseUser) {
-      navigate({ to: isCoach ? "/coach" : "/dashboard" });
+    if (!supabaseUser) return;
+    if (isCoach) {
+      navigate({ to: "/coach" });
+      return;
     }
+    // Clients: send first-time users directly to measurements
+    (async () => {
+      const { count } = await supabase
+        .from("body_measurements")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", supabaseUser.id);
+      navigate({ to: (count ?? 0) === 0 ? "/measurements" : "/dashboard" });
+    })();
   }, [supabaseUser, isCoach, navigate]);
 
   const submit = async (e: React.FormEvent) => {
