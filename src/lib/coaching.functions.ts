@@ -197,12 +197,83 @@ export const getCustomerDetail = createServerFn({ method: "POST" })
       supabaseAdmin.auth.admin.getUserById(data.user_id),
     ]);
 
+    const u = userRes.data.user as any;
+    const banned = u?.banned_until
+      ? new Date(u.banned_until).getTime() > Date.now()
+      : false;
+    const status: "invited" | "active" | "deactivated" = banned
+      ? "deactivated"
+      : u?.last_sign_in_at
+        ? "active"
+        : "invited";
+
     return {
       profile: profile.data,
-      email: userRes.data.user?.email ?? null,
+      email: u?.email ?? null,
       packages: pkgs.data ?? [],
       payments: payments.data ?? [],
+      auth: {
+        invited_at: u?.invited_at ?? null,
+        confirmed_at: u?.email_confirmed_at ?? u?.confirmed_at ?? null,
+        last_sign_in_at: u?.last_sign_in_at ?? null,
+        status,
+      },
     };
+  });
+
+/* ---------------- INVITE / PASSWORT / DEAKTIVIEREN ---------------- */
+
+export const resendInvite = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { user_id: string; origin?: string }) => data)
+  .handler(async ({ data, context }) => {
+    await assertCoach(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const origin =
+      data.origin || process.env.SITE_URL || "https://bodyfuel-coach-hq.lovable.app";
+
+    const { data: u } = await supabaseAdmin.auth.admin.getUserById(data.user_id);
+    const email = u.user?.email;
+    if (!email) throw new Error("Kein E-Mail-Account gefunden");
+
+    const { error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+      redirectTo: `${origin}/welcome`,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const sendPasswordReset = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { user_id: string; origin?: string }) => data)
+  .handler(async ({ data, context }) => {
+    await assertCoach(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const origin =
+      data.origin || process.env.SITE_URL || "https://bodyfuel-coach-hq.lovable.app";
+
+    const { data: u } = await supabaseAdmin.auth.admin.getUserById(data.user_id);
+    const email = u.user?.email;
+    if (!email) throw new Error("Kein E-Mail-Account gefunden");
+
+    const { error } = await supabaseAdmin.auth.resetPasswordForEmail(email, {
+      redirectTo: `${origin}/welcome`,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const setCustomerActive = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { user_id: string; active: boolean }) => data)
+  .handler(async ({ data, context }) => {
+    await assertCoach(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(data.user_id, {
+      ban_duration: data.active ? "none" : "87600h",
+    } as any);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
 
 export const updateCustomerPackage = createServerFn({ method: "POST" })
