@@ -1,4 +1,4 @@
-import { createFileRoute, useParams } from "@tanstack/react-router";
+import { createFileRoute, useParams, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useEffect } from "react";
@@ -11,6 +11,8 @@ import {
   resendInvite,
   sendPasswordReset,
   setCustomerActive,
+  setCustomerPassword,
+  deleteCustomer,
 } from "@/lib/coaching.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,13 +29,19 @@ export const Route = createFileRoute("/coach/customers/$userId")({
 
 function CustomerDetail() {
   const { userId } = useParams({ from: "/coach/customers/$userId" });
+  const navigate = useNavigate();
   const getFn = useServerFn(getCustomerDetail);
   const updFn = useServerFn(updateCustomerPackage);
   const payFn = useServerFn(confirmPayment);
   const inviteFn = useServerFn(resendInvite);
   const resetFn = useServerFn(sendPasswordReset);
   const activeFn = useServerFn(setCustomerActive);
+  const setPwFn = useServerFn(setCustomerPassword);
+  const deleteFn = useServerFn(deleteCustomer);
   const qc = useQueryClient();
+
+  const [newPw, setNewPw] = useState("");
+  const [showPwForm, setShowPwForm] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["customer", userId],
