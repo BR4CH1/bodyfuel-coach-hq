@@ -26,6 +26,7 @@ const clientNav = [
 ];
 
 const coachNav = [
+  { to: "/coach", label: "Dashboard", icon: LayoutDashboard },
   { to: "/coach/customers", label: "Kunden", icon: Users },
   { to: "/coach/leads", label: "Anfragen", icon: Inbox },
 ];
