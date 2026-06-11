@@ -139,10 +139,35 @@ function DashboardContent() {
           </Link>
             <Stat
               label="Streak"
-              value={user.streak}
+              value={streak}
               suffix="Tage"
-              accent={user.streak > 0}
+              accent={streak > 0}
             />
+          </div>
+        </div>
+      </div>
+
+      {/* Stat grid */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Link to="/daily-checklist" className="contents">
+          <Card
+            icon={<Target className="h-5 w-5" />}
+            label="Heute"
+            value={`${today} / ${MAX_DAILY_POINTS}`}
+            hint="Tagespunkte"
+          />
+        </Link>
+        <Card
+          icon={<TrendingUp className="h-5 w-5" />}
+          label="Diese Woche"
+          value={`${week}`}
+          hint={`Ø ${(week / 7).toFixed(1)} / Tag`}
+        />
+        <Card
+          icon={<Flame className="h-5 w-5" />}
+          label="Streak"
+          value={`${streak} Tage`}
+          hint={streak >= 14 ? "🔥 On Fire" : "Keep going"}
           </div>
         </div>
       </div>
