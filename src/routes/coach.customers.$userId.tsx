@@ -1,4 +1,4 @@
-import { createFileRoute, useParams } from "@tanstack/react-router";
+import { createFileRoute, useParams, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useEffect } from "react";
@@ -11,6 +11,8 @@ import {
   resendInvite,
   sendPasswordReset,
   setCustomerActive,
+  setCustomerPassword,
+  deleteCustomer,
 } from "@/lib/coaching.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,13 +29,19 @@ export const Route = createFileRoute("/coach/customers/$userId")({
 
 function CustomerDetail() {
   const { userId } = useParams({ from: "/coach/customers/$userId" });
+  const navigate = useNavigate();
   const getFn = useServerFn(getCustomerDetail);
   const updFn = useServerFn(updateCustomerPackage);
   const payFn = useServerFn(confirmPayment);
   const inviteFn = useServerFn(resendInvite);
   const resetFn = useServerFn(sendPasswordReset);
   const activeFn = useServerFn(setCustomerActive);
+  const setPwFn = useServerFn(setCustomerPassword);
+  const deleteFn = useServerFn(deleteCustomer);
   const qc = useQueryClient();
+
+  const [newPw, setNewPw] = useState("");
+  const [showPwForm, setShowPwForm] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["customer", userId],
@@ -174,8 +182,68 @@ function CustomerDetail() {
               Zugang deaktivieren
             </Button>
           )}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setShowPwForm((v) => !v)}
+          >
+            Passwort selbst setzen
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={async () => {
+              const name = data.profile?.display_name ?? data.email ?? "diesen Kunden";
+              if (!window.confirm(`Konto von ${name} unwiderruflich löschen? Alle Pakete und Zahlungen werden ebenfalls entfernt.`)) return;
+              try {
+                await deleteFn({ data: { user_id: userId } });
+                toast.success("Kunde gelöscht.");
+                navigate({ to: "/coach/customers" });
+              } catch (e) {
+                toast.error((e as Error).message);
+              }
+            }}
+            className="text-destructive hover:text-destructive"
+          >
+            Konto löschen
+          </Button>
         </div>
+
+        {showPwForm && (
+          <form
+            className="mt-4 flex flex-wrap items-end gap-2"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (newPw.length < 8) return toast.error("Mindestens 8 Zeichen.");
+              try {
+                await setPwFn({ data: { user_id: userId, password: newPw } });
+                toast.success("Passwort gesetzt.");
+                setNewPw("");
+                setShowPwForm(false);
+              } catch (err) {
+                toast.error((err as Error).message);
+              }
+            }}
+          >
+            <div className="space-y-1">
+              <Label htmlFor="manual-pw">Neues Passwort</Label>
+              <Input
+                id="manual-pw"
+                type="text"
+                value={newPw}
+                onChange={(e) => setNewPw(e.target.value)}
+                placeholder="Mind. 8 Zeichen"
+                className="w-56"
+                autoComplete="new-password"
+              />
+            </div>
+            <Button type="submit" size="sm" className="bg-gradient-gold text-primary-foreground">
+              Speichern
+            </Button>
+          </form>
+        )}
       </div>
+
 
       {activePkg && (
         <div className="rounded-2xl border border-border bg-card p-6">

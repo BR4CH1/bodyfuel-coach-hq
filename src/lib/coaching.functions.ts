@@ -272,6 +272,41 @@ export const setCustomerActive = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const setCustomerPassword = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { user_id: string; password: string }) => data)
+  .handler(async ({ data, context }) => {
+    await assertCoach(context.supabase, context.userId);
+    if (!data.password || data.password.length < 8) {
+      throw new Error("Passwort muss mindestens 8 Zeichen lang sein.");
+    }
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(data.user_id, {
+      password: data.password,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const deleteCustomer = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { user_id: string }) => data)
+  .handler(async ({ data, context }) => {
+    await assertCoach(context.supabase, context.userId);
+    if (data.user_id === context.userId) {
+      throw new Error("Du kannst dein eigenes Konto nicht hier löschen.");
+    }
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // Abhängige Daten zuerst entfernen
+    await supabaseAdmin.from("payment_history").delete().eq("user_id", data.user_id);
+    await supabaseAdmin.from("customer_packages").delete().eq("user_id", data.user_id);
+    await supabaseAdmin.from("user_roles").delete().eq("user_id", data.user_id);
+    await supabaseAdmin.from("profiles").delete().eq("id", data.user_id);
+    const { error } = await supabaseAdmin.auth.admin.deleteUser(data.user_id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const updateCustomerPackage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
