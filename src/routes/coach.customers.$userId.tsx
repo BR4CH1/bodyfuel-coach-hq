@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CoachTrainingSummary } from "@/components/bodyfuel/TrainingTrends";
+import { NutritionTargetsEditor } from "@/components/bodyfuel/NutritionTargetsEditor";
 
 
 export const Route = createFileRoute("/coach/customers/$userId")({
@@ -361,6 +362,7 @@ function CustomerDetail() {
         )}
       </div>
 
+      <NutritionTargetsEditor userId={userId} />
       <CoachTrainingSummary clientId={userId} />
     </div>
   );
