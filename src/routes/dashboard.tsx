@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Flame, Target, Calendar, TrendingUp, ArrowRight } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
+import { MyPackagePanel } from "@/components/bodyfuel/MyPackagePanel";
 import { useSession } from "@/lib/bodyfuel/session";
 import {
   getLevel,
