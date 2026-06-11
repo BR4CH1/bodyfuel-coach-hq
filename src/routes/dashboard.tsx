@@ -25,7 +25,7 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 function DashboardContent() {
-  const { user, supabaseUser, profile } = useSession();
+  const { user, supabaseUser } = useSession();
   if (!user) return <RealUserDashboard />;
 
   const points = totalPoints(user);
