@@ -29,14 +29,16 @@ const coachNav = [
 ];
 
 export function AppLayout({ children }: { children: ReactNode }) {
-  const { user, isCoach, supabaseUser, profile, logout } = useSession();
+  const { user, isCoach, supabaseUser, profile, loading, logout } = useSession();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   useEffect(() => {
+    if (loading) return;
     if (!user && !supabaseUser) navigate({ to: "/login" });
-  }, [user, supabaseUser, navigate]);
+  }, [user, supabaseUser, loading, navigate]);
 
+  if (loading) return null;
   if (!user && !supabaseUser) return null;
 
   const nav = isCoach ? [...coachNav, ...clientNav] : clientNav;
