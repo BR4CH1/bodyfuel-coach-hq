@@ -29,7 +29,8 @@ import {
   Zap,
 } from "lucide-react";
 import { Logo } from "@/components/bodyfuel/Logo";
-import { BookingDialog, type BookingPackage } from "@/components/bodyfuel/BookingDialog";
+import { useServerFn } from "@tanstack/react-start";
+import { submitLead } from "@/lib/coaching.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -814,8 +815,6 @@ const PACKAGES: Array<{
 ];
 
 function Pricing() {
-  const [openPkg, setOpenPkg] = useState<BookingPackage | null>(null);
-
   return (
     <section
       id="pakete"
@@ -885,36 +884,30 @@ function Pricing() {
 
               <div className="mt-8 flex-1" />
 
-              <Button
-                size="lg"
-                onClick={() =>
-                  setOpenPkg({ name: p.name, price: p.price })
-                }
-                className={
-                  "w-full " +
-                  (p.popular
-                    ? "bg-gradient-gold text-primary-foreground shadow-gold hover:opacity-90"
-                    : "bg-card border border-border hover:bg-primary/10 hover:border-primary/40 hover:text-foreground")
-                }
-              >
-                {p.cta}
-                <ArrowRight className="ml-1 h-4 w-4" />
-              </Button>
+              <a href="#kontakt" className="block">
+                <Button
+                  size="lg"
+                  className={
+                    "w-full " +
+                    (p.popular
+                      ? "bg-gradient-gold text-primary-foreground shadow-gold hover:opacity-90"
+                      : "bg-card border border-border hover:bg-primary/10 hover:border-primary/40 hover:text-foreground")
+                  }
+                >
+                  Kostenloses Erstgespräch vereinbaren
+                  <ArrowRight className="ml-1 h-4 w-4" />
+                </Button>
+              </a>
             </div>
           ))}
         </div>
 
         <p className="mx-auto mt-10 max-w-2xl text-center text-xs text-muted-foreground">
-          Zahlung per PayPal. Alle Preise inkl. Kleinunternehmerregelung gemäß § 19 UStG.
-          Es wird keine Umsatzsteuer ausgewiesen. Monatlich kündbar.
+          Alle Preise gemäß § 19 UStG (Kleinunternehmerregelung). Es wird keine
+          Umsatzsteuer ausgewiesen. Neue Kunden werden ausschließlich nach einem
+          persönlichen Erstgespräch vom Coach angelegt.
         </p>
       </div>
-
-      <BookingDialog
-        pkg={openPkg}
-        open={openPkg !== null}
-        onOpenChange={(o) => !o && setOpenPkg(null)}
-      />
     </section>
   );
 }
@@ -922,125 +915,203 @@ function Pricing() {
 /* ------------------------------------------------------------------ */
 
 function ContactForm() {
+  const submitLeadFn = useServerFn(submitLead);
   const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState(false);
   const [form, setForm] = useState({
     name: "",
     email: "",
     phone: "",
     goal: "",
+    current_weight: "",
+    desired_package: "" as "" | "starter" | "coaching" | "premium" | "unsure",
     message: "",
   });
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.email || !form.goal) {
-      toast.error("Bitte fülle Name, E-Mail und Ziel aus.");
+    if (!form.name || !form.email) {
+      toast.error("Bitte fülle mindestens Name und E-Mail aus.");
       return;
     }
     setSubmitting(true);
-    setTimeout(() => {
+    try {
+      await submitLeadFn({
+        data: {
+          name: form.name,
+          email: form.email,
+          phone: form.phone || undefined,
+          goal: form.goal || undefined,
+          current_weight: form.current_weight || undefined,
+          desired_package: form.desired_package || undefined,
+          message: form.message || undefined,
+        },
+      });
+      setDone(true);
+      setForm({
+        name: "",
+        email: "",
+        phone: "",
+        goal: "",
+        current_weight: "",
+        desired_package: "",
+        message: "",
+      });
+    } catch (err) {
+      toast.error((err as Error).message || "Senden fehlgeschlagen.");
+    } finally {
       setSubmitting(false);
-      toast.success("Anfrage gesendet! Manu meldet sich innerhalb von 24 h.");
-      setForm({ name: "", email: "", phone: "", goal: "", message: "" });
-    }, 800);
+    }
   };
 
   return (
     <section id="kontakt" className="relative border-t border-border/60 bg-card/30 py-20 sm:py-28">
       <div className="mx-auto max-w-3xl px-4 sm:px-6">
         <div className="text-center">
-          <SectionLabel center>Kontakt</SectionLabel>
+          <SectionLabel center>Erstgespräch</SectionLabel>
           <h2 className="mt-3 font-display text-3xl font-bold sm:text-4xl">
-            Sag <span className="text-gradient-gold">Hi.</span>
+            Kostenloses <span className="text-gradient-gold">Erstgespräch</span>
           </h2>
           <p className="mx-auto mt-3 max-w-lg text-muted-foreground">
-            Fülle das Formular aus — Manu meldet sich persönlich bei dir, um dein
-            kostenloses Erstgespräch zu vereinbaren.
+            Fülle das Formular aus — Manu meldet sich persönlich bei dir, damit ihr gemeinsam
+            schauen könnt, ob BodyFuel zu dir passt.
           </p>
         </div>
 
-        <form
-          onSubmit={submit}
-          className="mt-10 space-y-5 rounded-3xl border border-border bg-background/60 p-6 sm:p-10"
-        >
-          <div className="grid gap-5 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="name">Name *</Label>
-              <Input
-                id="name"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="Max Mustermann"
-                required
-              />
+        {done ? (
+          <div className="mt-10 rounded-3xl border border-gold/40 bg-gold/5 p-8 text-center sm:p-12">
+            <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-gradient-gold shadow-gold">
+              <Check className="h-7 w-7 text-primary-foreground" strokeWidth={3} />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">E-Mail *</Label>
-              <Input
-                id="email"
-                type="email"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                placeholder="max@beispiel.de"
-                required
-              />
-            </div>
+            <h3 className="mt-5 font-display text-2xl font-bold">Vielen Dank für deine Anfrage.</h3>
+            <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
+              Ich werde mich schnellstmöglich bei dir melden, damit wir gemeinsam schauen können,
+              ob BodyFuel zu dir passt.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-6"
+              onClick={() => setDone(false)}
+            >
+              Weitere Anfrage
+            </Button>
           </div>
-
-          <div className="grid gap-5 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="phone">Telefonnummer (optional)</Label>
-              <Input
-                id="phone"
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                placeholder="+49 …"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="goal">Dein Ziel *</Label>
-              <Select
-                value={form.goal}
-                onValueChange={(v) => setForm({ ...form, goal: v })}
-              >
-                <SelectTrigger id="goal">
-                  <SelectValue placeholder="Wähle dein Ziel" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="abnehmen">Abnehmen</SelectItem>
-                  <SelectItem value="muskelaufbau">Muskelaufbau</SelectItem>
-                  <SelectItem value="koerperform">Körperform verbessern</SelectItem>
-                  <SelectItem value="ernaehrung">Ernährung strukturieren</SelectItem>
-                  <SelectItem value="sonstiges">Sonstiges</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="message">Nachricht</Label>
-            <Textarea
-              id="message"
-              rows={5}
-              value={form.message}
-              onChange={(e) => setForm({ ...form, message: e.target.value })}
-              placeholder="Erzähl kurz, wo du gerade stehst …"
-            />
-          </div>
-
-          <Button
-            type="submit"
-            disabled={submitting}
-            size="lg"
-            className="w-full bg-gradient-gold text-primary-foreground shadow-gold hover:opacity-90"
+        ) : (
+          <form
+            onSubmit={submit}
+            className="mt-10 space-y-5 rounded-3xl border border-border bg-background/60 p-6 sm:p-10"
           >
-            {submitting ? "Wird gesendet …" : "Anfrage senden"}
-            {!submitting && <ArrowRight className="ml-1 h-4 w-4" />}
-          </Button>
-          <p className="text-center text-xs text-muted-foreground">
-            100 % unverbindlich · keine Vertragsbindung · Antwort innerhalb von 24 h
-          </p>
-        </form>
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="name">Name *</Label>
+                <Input
+                  id="name"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  placeholder="Max Mustermann"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">E-Mail *</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  placeholder="max@beispiel.de"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="phone">Telefonnummer</Label>
+                <Input
+                  id="phone"
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  placeholder="+49 …"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="weight">Aktuelles Gewicht</Label>
+                <Input
+                  id="weight"
+                  value={form.current_weight}
+                  onChange={(e) => setForm({ ...form, current_weight: e.target.value })}
+                  placeholder="z.B. 82 kg"
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="goal">Dein Ziel</Label>
+                <Select
+                  value={form.goal}
+                  onValueChange={(v) => setForm({ ...form, goal: v })}
+                >
+                  <SelectTrigger id="goal">
+                    <SelectValue placeholder="Wähle dein Ziel" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="abnehmen">Abnehmen</SelectItem>
+                    <SelectItem value="muskelaufbau">Muskelaufbau</SelectItem>
+                    <SelectItem value="koerperform">Körperform verbessern</SelectItem>
+                    <SelectItem value="ernaehrung">Ernährung strukturieren</SelectItem>
+                    <SelectItem value="sonstiges">Sonstiges</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="pkg">Wunschpaket</Label>
+                <Select
+                  value={form.desired_package}
+                  onValueChange={(v) =>
+                    setForm({ ...form, desired_package: v as typeof form.desired_package })
+                  }
+                >
+                  <SelectTrigger id="pkg">
+                    <SelectValue placeholder="Noch unsicher? Auch okay." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="starter">Starter (79 €)</SelectItem>
+                    <SelectItem value="coaching">Coaching (129 €)</SelectItem>
+                    <SelectItem value="premium">Premium (199 €)</SelectItem>
+                    <SelectItem value="unsure">Noch unsicher</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="message">Nachricht</Label>
+              <Textarea
+                id="message"
+                rows={5}
+                value={form.message}
+                onChange={(e) => setForm({ ...form, message: e.target.value })}
+                placeholder="Erzähl kurz, wo du gerade stehst …"
+              />
+            </div>
+
+            <Button
+              type="submit"
+              disabled={submitting}
+              size="lg"
+              className="w-full bg-gradient-gold text-primary-foreground shadow-gold hover:opacity-90"
+            >
+              {submitting ? "Wird gesendet …" : "Anfrage senden"}
+              {!submitting && <ArrowRight className="ml-1 h-4 w-4" />}
+            </Button>
+            <p className="text-center text-xs text-muted-foreground">
+              100 % unverbindlich · keine Vertragsbindung · Antwort innerhalb von 24 h
+            </p>
+          </form>
+        )}
       </div>
     </section>
   );

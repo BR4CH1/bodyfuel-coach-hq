@@ -9,19 +9,29 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WelcomeRouteImport } from './routes/welcome'
 import { Route as ProgressRouteImport } from './routes/progress'
 import { Route as NutritionRouteImport } from './routes/nutrition'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
-import { Route as DankeRouteImport } from './routes/danke'
 import { Route as CoachRouteImport } from './routes/coach'
 import { Route as CheckInRouteImport } from './routes/check-in'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AchievementsRouteImport } from './routes/achievements'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CoachIndexRouteImport } from './routes/coach.index'
+import { Route as CoachLeadsRouteImport } from './routes/coach.leads'
+import { Route as CoachCustomersRouteImport } from './routes/coach.customers'
 import { Route as CoachClientIdRouteImport } from './routes/coach.$clientId'
+import { Route as CoachCustomersIndexRouteImport } from './routes/coach.customers.index'
+import { Route as CoachCustomersNewRouteImport } from './routes/coach.customers.new'
+import { Route as CoachCustomersUserIdRouteImport } from './routes/coach.customers.$userId'
 
+const WelcomeRoute = WelcomeRouteImport.update({
+  id: '/welcome',
+  path: '/welcome',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProgressRoute = ProgressRouteImport.update({
   id: '/progress',
   path: '/progress',
@@ -40,11 +50,6 @@ const LoginRoute = LoginRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DankeRoute = DankeRouteImport.update({
-  id: '/danke',
-  path: '/danke',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CoachRoute = CoachRouteImport.update({
@@ -77,10 +82,35 @@ const CoachIndexRoute = CoachIndexRouteImport.update({
   path: '/',
   getParentRoute: () => CoachRoute,
 } as any)
+const CoachLeadsRoute = CoachLeadsRouteImport.update({
+  id: '/leads',
+  path: '/leads',
+  getParentRoute: () => CoachRoute,
+} as any)
+const CoachCustomersRoute = CoachCustomersRouteImport.update({
+  id: '/customers',
+  path: '/customers',
+  getParentRoute: () => CoachRoute,
+} as any)
 const CoachClientIdRoute = CoachClientIdRouteImport.update({
   id: '/$clientId',
   path: '/$clientId',
   getParentRoute: () => CoachRoute,
+} as any)
+const CoachCustomersIndexRoute = CoachCustomersIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => CoachCustomersRoute,
+} as any)
+const CoachCustomersNewRoute = CoachCustomersNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => CoachCustomersRoute,
+} as any)
+const CoachCustomersUserIdRoute = CoachCustomersUserIdRouteImport.update({
+  id: '/$userId',
+  path: '/$userId',
+  getParentRoute: () => CoachCustomersRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -89,26 +119,35 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/check-in': typeof CheckInRoute
   '/coach': typeof CoachRouteWithChildren
-  '/danke': typeof DankeRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/nutrition': typeof NutritionRoute
   '/progress': typeof ProgressRoute
+  '/welcome': typeof WelcomeRoute
   '/coach/$clientId': typeof CoachClientIdRoute
+  '/coach/customers': typeof CoachCustomersRouteWithChildren
+  '/coach/leads': typeof CoachLeadsRoute
   '/coach/': typeof CoachIndexRoute
+  '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
+  '/coach/customers/new': typeof CoachCustomersNewRoute
+  '/coach/customers/': typeof CoachCustomersIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/achievements': typeof AchievementsRoute
   '/auth': typeof AuthRoute
   '/check-in': typeof CheckInRoute
-  '/danke': typeof DankeRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/nutrition': typeof NutritionRoute
   '/progress': typeof ProgressRoute
+  '/welcome': typeof WelcomeRoute
   '/coach/$clientId': typeof CoachClientIdRoute
+  '/coach/leads': typeof CoachLeadsRoute
   '/coach': typeof CoachIndexRoute
+  '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
+  '/coach/customers/new': typeof CoachCustomersNewRoute
+  '/coach/customers': typeof CoachCustomersIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -117,13 +156,18 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/check-in': typeof CheckInRoute
   '/coach': typeof CoachRouteWithChildren
-  '/danke': typeof DankeRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/nutrition': typeof NutritionRoute
   '/progress': typeof ProgressRoute
+  '/welcome': typeof WelcomeRoute
   '/coach/$clientId': typeof CoachClientIdRoute
+  '/coach/customers': typeof CoachCustomersRouteWithChildren
+  '/coach/leads': typeof CoachLeadsRoute
   '/coach/': typeof CoachIndexRoute
+  '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
+  '/coach/customers/new': typeof CoachCustomersNewRoute
+  '/coach/customers/': typeof CoachCustomersIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -133,26 +177,35 @@ export interface FileRouteTypes {
     | '/auth'
     | '/check-in'
     | '/coach'
-    | '/danke'
     | '/dashboard'
     | '/login'
     | '/nutrition'
     | '/progress'
+    | '/welcome'
     | '/coach/$clientId'
+    | '/coach/customers'
+    | '/coach/leads'
     | '/coach/'
+    | '/coach/customers/$userId'
+    | '/coach/customers/new'
+    | '/coach/customers/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/achievements'
     | '/auth'
     | '/check-in'
-    | '/danke'
     | '/dashboard'
     | '/login'
     | '/nutrition'
     | '/progress'
+    | '/welcome'
     | '/coach/$clientId'
+    | '/coach/leads'
     | '/coach'
+    | '/coach/customers/$userId'
+    | '/coach/customers/new'
+    | '/coach/customers'
   id:
     | '__root__'
     | '/'
@@ -160,13 +213,18 @@ export interface FileRouteTypes {
     | '/auth'
     | '/check-in'
     | '/coach'
-    | '/danke'
     | '/dashboard'
     | '/login'
     | '/nutrition'
     | '/progress'
+    | '/welcome'
     | '/coach/$clientId'
+    | '/coach/customers'
+    | '/coach/leads'
     | '/coach/'
+    | '/coach/customers/$userId'
+    | '/coach/customers/new'
+    | '/coach/customers/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -175,15 +233,22 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   CheckInRoute: typeof CheckInRoute
   CoachRoute: typeof CoachRouteWithChildren
-  DankeRoute: typeof DankeRoute
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
   NutritionRoute: typeof NutritionRoute
   ProgressRoute: typeof ProgressRoute
+  WelcomeRoute: typeof WelcomeRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/welcome': {
+      id: '/welcome'
+      path: '/welcome'
+      fullPath: '/welcome'
+      preLoaderRoute: typeof WelcomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/progress': {
       id: '/progress'
       path: '/progress'
@@ -210,13 +275,6 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/danke': {
-      id: '/danke'
-      path: '/danke'
-      fullPath: '/danke'
-      preLoaderRoute: typeof DankeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/coach': {
@@ -261,6 +319,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CoachIndexRouteImport
       parentRoute: typeof CoachRoute
     }
+    '/coach/leads': {
+      id: '/coach/leads'
+      path: '/leads'
+      fullPath: '/coach/leads'
+      preLoaderRoute: typeof CoachLeadsRouteImport
+      parentRoute: typeof CoachRoute
+    }
+    '/coach/customers': {
+      id: '/coach/customers'
+      path: '/customers'
+      fullPath: '/coach/customers'
+      preLoaderRoute: typeof CoachCustomersRouteImport
+      parentRoute: typeof CoachRoute
+    }
     '/coach/$clientId': {
       id: '/coach/$clientId'
       path: '/$clientId'
@@ -268,16 +340,57 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CoachClientIdRouteImport
       parentRoute: typeof CoachRoute
     }
+    '/coach/customers/': {
+      id: '/coach/customers/'
+      path: '/'
+      fullPath: '/coach/customers/'
+      preLoaderRoute: typeof CoachCustomersIndexRouteImport
+      parentRoute: typeof CoachCustomersRoute
+    }
+    '/coach/customers/new': {
+      id: '/coach/customers/new'
+      path: '/new'
+      fullPath: '/coach/customers/new'
+      preLoaderRoute: typeof CoachCustomersNewRouteImport
+      parentRoute: typeof CoachCustomersRoute
+    }
+    '/coach/customers/$userId': {
+      id: '/coach/customers/$userId'
+      path: '/$userId'
+      fullPath: '/coach/customers/$userId'
+      preLoaderRoute: typeof CoachCustomersUserIdRouteImport
+      parentRoute: typeof CoachCustomersRoute
+    }
   }
 }
 
+interface CoachCustomersRouteChildren {
+  CoachCustomersUserIdRoute: typeof CoachCustomersUserIdRoute
+  CoachCustomersNewRoute: typeof CoachCustomersNewRoute
+  CoachCustomersIndexRoute: typeof CoachCustomersIndexRoute
+}
+
+const CoachCustomersRouteChildren: CoachCustomersRouteChildren = {
+  CoachCustomersUserIdRoute: CoachCustomersUserIdRoute,
+  CoachCustomersNewRoute: CoachCustomersNewRoute,
+  CoachCustomersIndexRoute: CoachCustomersIndexRoute,
+}
+
+const CoachCustomersRouteWithChildren = CoachCustomersRoute._addFileChildren(
+  CoachCustomersRouteChildren,
+)
+
 interface CoachRouteChildren {
   CoachClientIdRoute: typeof CoachClientIdRoute
+  CoachCustomersRoute: typeof CoachCustomersRouteWithChildren
+  CoachLeadsRoute: typeof CoachLeadsRoute
   CoachIndexRoute: typeof CoachIndexRoute
 }
 
 const CoachRouteChildren: CoachRouteChildren = {
   CoachClientIdRoute: CoachClientIdRoute,
+  CoachCustomersRoute: CoachCustomersRouteWithChildren,
+  CoachLeadsRoute: CoachLeadsRoute,
   CoachIndexRoute: CoachIndexRoute,
 }
 
@@ -289,11 +402,11 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   CheckInRoute: CheckInRoute,
   CoachRoute: CoachRouteWithChildren,
-  DankeRoute: DankeRoute,
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
   NutritionRoute: NutritionRoute,
   ProgressRoute: ProgressRoute,
+  WelcomeRoute: WelcomeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
