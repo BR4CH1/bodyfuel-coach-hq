@@ -280,6 +280,75 @@ export type Database = {
         }
         Relationships: []
       }
+      weekly_checkins: {
+        Row: {
+          body_fat_pct: number | null
+          chest_cm: number | null
+          coach_notes: string | null
+          created_at: string
+          energy: number | null
+          hip_cm: number | null
+          id: string
+          mood: number | null
+          nutrition_adherence: number | null
+          photo_urls: string[]
+          sleep_quality: number | null
+          struggles: string | null
+          submitted_at: string
+          training_adherence: number | null
+          updated_at: string
+          user_id: string
+          waist_cm: number | null
+          week_start: string
+          weight_kg: number | null
+          wins: string | null
+        }
+        Insert: {
+          body_fat_pct?: number | null
+          chest_cm?: number | null
+          coach_notes?: string | null
+          created_at?: string
+          energy?: number | null
+          hip_cm?: number | null
+          id?: string
+          mood?: number | null
+          nutrition_adherence?: number | null
+          photo_urls?: string[]
+          sleep_quality?: number | null
+          struggles?: string | null
+          submitted_at?: string
+          training_adherence?: number | null
+          updated_at?: string
+          user_id: string
+          waist_cm?: number | null
+          week_start: string
+          weight_kg?: number | null
+          wins?: string | null
+        }
+        Update: {
+          body_fat_pct?: number | null
+          chest_cm?: number | null
+          coach_notes?: string | null
+          created_at?: string
+          energy?: number | null
+          hip_cm?: number | null
+          id?: string
+          mood?: number | null
+          nutrition_adherence?: number | null
+          photo_urls?: string[]
+          sleep_quality?: number | null
+          struggles?: string | null
+          submitted_at?: string
+          training_adherence?: number | null
+          updated_at?: string
+          user_id?: string
+          waist_cm?: number | null
+          week_start?: string
+          weight_kg?: number | null
+          wins?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
