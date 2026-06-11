@@ -1,10 +1,12 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Flame, Lock, Mail, Shield } from "lucide-react";
 import { CLIENTS, useSession } from "@/lib/bodyfuel/session";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+
+const DEMO_FLAG_KEY = "bodyfuel:demo-visible";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
