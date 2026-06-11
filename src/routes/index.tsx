@@ -96,7 +96,7 @@ function Header() {
             <Logo compact />
           </span>
           <span className="hidden sm:block">
-            <Logo />
+            <Logo showTagline />
           </span>
         </Link>
         <nav className="hidden items-center gap-7 text-sm text-muted-foreground md:flex">
