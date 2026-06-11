@@ -289,7 +289,7 @@ function RealUserDashboard() {
 
       <MyPackagePanel />
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card
           icon={<Scale className="h-5 w-5" />}
           label="Aktuelles Gewicht"
@@ -312,6 +312,14 @@ function RealUserDashboard() {
           value={`${count}`}
           hint="Verlauf"
         />
+        <Link to="/daily-checklist" className="contents">
+          <Card
+            icon={<Target className="h-5 w-5" />}
+            label="Heute"
+            value={`${todayDbPoints} / ${MAX_DAILY_POINTS}`}
+            hint="Tagespunkte"
+          />
+        </Link>
       </div>
 
       <Link
