@@ -233,9 +233,9 @@ export const CLIENTS: Client[] = [
   },
   {
     id: "mia",
-    name: "Mia Schulz",
-    email: "mia@bodyfuel.app",
-    avatar: "MS",
+    name: "Luisa",
+    email: "luisa@bodyfuel.app",
+    avatar: "L",
     streak: 0,
     checks: seedChecks(20, 0.45, 4), // skipped last 4 days → warning
     weightHistory: weightSeries(74, 12, 0.05),
