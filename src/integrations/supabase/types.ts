@@ -173,6 +173,60 @@ export type Database = {
         }
         Relationships: []
       }
+      food_entries: {
+        Row: {
+          barcode: string | null
+          brand: string | null
+          carbs_g: number
+          created_at: string
+          entry_date: string
+          fat_g: number
+          id: string
+          kcal: number
+          meal: string
+          name: string
+          protein_g: number
+          serving_g: number
+          source: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          barcode?: string | null
+          brand?: string | null
+          carbs_g?: number
+          created_at?: string
+          entry_date?: string
+          fat_g?: number
+          id?: string
+          kcal?: number
+          meal: string
+          name: string
+          protein_g?: number
+          serving_g?: number
+          source?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          barcode?: string | null
+          brand?: string | null
+          carbs_g?: number
+          created_at?: string
+          entry_date?: string
+          fat_g?: number
+          id?: string
+          kcal?: number
+          meal?: string
+          name?: string
+          protein_g?: number
+          serving_g?: number
+          source?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       leads: {
         Row: {
           created_at: string
@@ -248,6 +302,42 @@ export type Database = {
           plan_type?: string
           title?: string
           uploaded_by?: string | null
+        }
+        Relationships: []
+      }
+      nutrition_targets: {
+        Row: {
+          carbs_g: number
+          created_at: string
+          fat_g: number
+          kcal: number
+          protein_g: number
+          updated_at: string
+          updated_by: string | null
+          user_id: string
+          water_glasses: number
+        }
+        Insert: {
+          carbs_g?: number
+          created_at?: string
+          fat_g?: number
+          kcal?: number
+          protein_g?: number
+          updated_at?: string
+          updated_by?: string | null
+          user_id: string
+          water_glasses?: number
+        }
+        Update: {
+          carbs_g?: number
+          created_at?: string
+          fat_g?: number
+          kcal?: number
+          protein_g?: number
+          updated_at?: string
+          updated_by?: string | null
+          user_id?: string
+          water_glasses?: number
         }
         Relationships: []
       }
@@ -530,6 +620,30 @@ export type Database = {
         Update: {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      water_logs: {
+        Row: {
+          created_at: string
+          entry_date: string
+          glasses: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          entry_date?: string
+          glasses?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          entry_date?: string
+          glasses?: number
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
