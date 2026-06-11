@@ -103,7 +103,7 @@ function Header() {
           <a href="#kontakt" className="transition hover:text-foreground">Kontakt</a>
         </nav>
         <div className="flex items-center gap-2">
-          <Link to="/login">
+          <Link to="/auth">
             <Button size="sm" variant="outline" className="border-gold/40 text-foreground hover:bg-gold/10">
               Login
             </Button>
@@ -1156,7 +1156,7 @@ function Footer() {
         </div>
         <div className="mt-10 flex flex-col items-start justify-between gap-3 border-t border-border pt-6 text-xs text-muted-foreground sm:flex-row sm:items-center">
           <div>© {new Date().getFullYear()} BODYFUEL Nutrition Coaching. Alle Rechte vorbehalten.</div>
-          <Link to="/login" className="hover:text-foreground">Kunden-Login →</Link>
+          <Link to="/auth" className="hover:text-foreground">Kunden-Login →</Link>
         </div>
       </div>
     </footer>
