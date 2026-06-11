@@ -216,3 +216,109 @@ function Card({
     </div>
   );
 }
+
+type LatestMeasurement = {
+  measured_at: string;
+  weight_kg: number | null;
+  body_fat_pct: number | null;
+};
+
+function RealUserDashboard() {
+  const { supabaseUser, profile } = useSession();
+  const [latest, setLatest] = useState<LatestMeasurement | null>(null);
+  const [count, setCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!supabaseUser) return;
+    (async () => {
+      const { data, count: c } = await supabase
+        .from("body_measurements")
+        .select("measured_at, weight_kg, body_fat_pct", { count: "exact" })
+        .eq("user_id", supabaseUser.id)
+        .order("measured_at", { ascending: false })
+        .limit(1);
+      setLatest((data?.[0] as LatestMeasurement | undefined) ?? null);
+      setCount(c ?? 0);
+      setLoading(false);
+    })();
+  }, [supabaseUser]);
+
+  const name = profile?.display_name?.split(" ")[0] ?? supabaseUser?.email?.split("@")[0] ?? "";
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+            Willkommen
+          </p>
+          <h1 className="font-display text-3xl font-bold sm:text-4xl">
+            Hey {name} 👋
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Pflege deine Körpermaße, damit dein Coach deinen Fortschritt sieht.
+          </p>
+        </div>
+        <Link
+          to="/measurements"
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-gold px-5 py-3 text-sm font-semibold text-primary-foreground shadow-gold transition hover:opacity-90"
+        >
+          <Plus className="h-4 w-4" /> Messung eintragen
+        </Link>
+      </div>
+
+      <MyPackagePanel />
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Card
+          icon={<Scale className="h-5 w-5" />}
+          label="Aktuelles Gewicht"
+          value={latest?.weight_kg ? `${latest.weight_kg} kg` : "—"}
+          hint={
+            latest
+              ? `Stand ${new Date(latest.measured_at).toLocaleDateString("de-DE")}`
+              : "Noch keine Messung"
+          }
+        />
+        <Card
+          icon={<TrendingUp className="h-5 w-5" />}
+          label="Körperfett"
+          value={latest?.body_fat_pct ? `${latest.body_fat_pct} %` : "—"}
+          hint={latest ? "Letzte Messung" : "Noch keine Messung"}
+        />
+        <Card
+          icon={<Calendar className="h-5 w-5" />}
+          label="Einträge gesamt"
+          value={`${count}`}
+          hint="Verlauf"
+        />
+      </div>
+
+      <div className="rounded-2xl border border-border bg-card p-6">
+        <div className="flex items-center gap-2 text-gold">
+          <Target className="h-5 w-5" />
+          <span className="text-xs uppercase tracking-wider">Nächster Schritt</span>
+        </div>
+        <h2 className="mt-2 font-display text-xl font-bold">
+          {loading
+            ? "…"
+            : count === 0
+            ? "Lege deine Startwerte an"
+            : "Halte deine Maße aktuell"}
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {count === 0
+            ? "Trage Größe, Geburtsdatum und deine erste Messung ein."
+            : "Trage einmal pro Woche neue Werte ein, um deinen Fortschritt zu sehen."}
+        </p>
+        <Link
+          to="/measurements"
+          className="mt-4 inline-flex items-center gap-2 rounded-lg border border-gold/40 px-4 py-2 text-sm font-semibold text-gold hover:bg-gold/10"
+        >
+          Zu meinen Körpermaßen <ArrowRight className="h-4 w-4" />
+        </Link>
+      </div>
+    </div>
+  );
+}
