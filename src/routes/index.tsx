@@ -339,10 +339,36 @@ function ForWhom() {
 
 function WhatIs() {
   const features = [
-    { icon: Salad, title: "Individueller Ernährungsplan", text: "Auf dich, dein Leben und dein Ziel zugeschnitten — kein Copy-Paste-Plan." },
-    { icon: Users, title: "Persönliche Check-ins", text: "Regelmäßiger Austausch mit deinem Coach. Du wirst nicht alleine gelassen." },
-    { icon: Trophy, title: "Punkte- & Level-System", text: "Aus täglichen Habits werden Punkte. Aus Punkten werden Level — und Ergebnisse." },
-    { icon: LineChart, title: "Fortschrittstracking", text: "Gewicht, Maße, Bilder, Streaks — alles an einem Ort, transparent dokumentiert." },
+    {
+      icon: Salad,
+      title: "Individueller Ernährungsplan",
+      text: "Dein persönlicher Ernährungsplan als PDF — auf dich, dein Leben und dein Ziel zugeschnitten.",
+    },
+    {
+      icon: Dumbbell,
+      title: "Trainingsplan mit Live-Tracking",
+      text: "Deine Übungen direkt aus dem Plan. Trag Gewicht & Wdh. pro Satz ein — Verlauf und Vorschläge inklusive.",
+    },
+    {
+      icon: LineChart,
+      title: "Intelligente Trainings-Analyse",
+      text: "e1RM, Volumen, Bestleistungen und Trend pro Übung. Du siehst sofort, wo du stärker wirst oder stagnierst.",
+    },
+    {
+      icon: Users,
+      title: "Persönliche Check-ins",
+      text: "Regelmäßiger Austausch mit deinem Coach. Du wirst nicht alleine gelassen.",
+    },
+    {
+      icon: Trophy,
+      title: "Punkte- & Level-System",
+      text: "Aus täglichen Habits werden Punkte, aus Punkten Level — und aus Konstanz Ergebnisse.",
+    },
+    {
+      icon: Activity,
+      title: "Fortschrittstracking",
+      text: "Gewicht, Maße, Bilder, Streaks — alles an einem Ort, transparent dokumentiert.",
+    },
   ];
   return (
     <section className="relative border-y border-border/60 bg-card/30 py-20 sm:py-28">
@@ -355,8 +381,10 @@ function WhatIs() {
             </h2>
             <p className="mt-4 text-muted-foreground leading-relaxed">
               BodyFuel ist kein klassischer Ernährungsplan, den du einmal bekommst und
-              dann alleine umsetzen musst. Du bekommst ein System aus Ernährung, Training,
-              Check-ins, Punkten, Leveln und persönlichem Coaching.
+              dann alleine umsetzen musst. Du bekommst zwei getrennte Bereiche —{" "}
+              <span className="text-foreground">Ernährung</span> für deinen Plan und{" "}
+              <span className="text-foreground">Training</span> mit Live-Tracking & Analyse —
+              dazu Check-ins, Punkte, Level und persönliches Coaching.
             </p>
             <a href="#kontakt" className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-gold hover:underline">
               Jetzt unverbindlich starten <ArrowRight className="h-4 w-4" />
