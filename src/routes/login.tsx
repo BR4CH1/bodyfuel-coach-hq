@@ -21,8 +21,21 @@ export const Route = createFileRoute("/login")({
 function LoginPage() {
   const { loginAs } = useSession();
   const navigate = useNavigate();
-  const [email, setEmail] = useState("stefan@bodyfuel.app");
-  const [password, setPassword] = useState("demo");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showDemo, setShowDemo] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    const param = url.searchParams.get("demo");
+    if (param === "1") {
+      localStorage.setItem(DEMO_FLAG_KEY, "1");
+    } else if (param === "0") {
+      localStorage.removeItem(DEMO_FLAG_KEY);
+    }
+    setShowDemo(localStorage.getItem(DEMO_FLAG_KEY) === "1");
+  }, []);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
