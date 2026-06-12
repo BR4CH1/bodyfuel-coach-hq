@@ -304,19 +304,26 @@ export const resendInvite = createServerFn({ method: "POST" })
     if (!email) throw new Error("Kein E-Mail-Account gefunden");
 
     const existingMeta = (u.user?.user_metadata ?? {}) as Record<string, unknown>;
-    let firstName = typeof existingMeta.first_name === "string" ? existingMeta.first_name : "";
-    if (!firstName) {
-      const display = typeof existingMeta.display_name === "string" ? existingMeta.display_name : "";
-      if (display) firstName = display.trim().split(/\s+/)[0] ?? "";
-    }
+    const emailLocalPart = email.split("@")[0]?.trim().toLowerCase() ?? "";
+    const usableFirstName = (value: unknown) => {
+      const first = typeof value === "string" ? value.trim().split(/\s+/)[0] : "";
+      if (!first || first.includes("@")) return "";
+      if (emailLocalPart && first.toLowerCase() === emailLocalPart) return "";
+      return first;
+    };
+    let firstName = "";
     if (!firstName) {
       const { data: prof } = await supabaseAdmin
         .from("profiles")
         .select("display_name")
         .eq("id", data.user_id)
         .maybeSingle();
-      if (prof?.display_name) firstName = prof.display_name.trim().split(/\s+/)[0] ?? "";
+      firstName = usableFirstName(prof?.display_name);
     }
+    if (!firstName) firstName = usableFirstName(existingMeta.first_name);
+    if (!firstName) firstName = usableFirstName(existingMeta.display_name);
+    if (!firstName) firstName = usableFirstName(existingMeta.full_name);
+    if (!firstName) firstName = usableFirstName(existingMeta.name);
 
     const { error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
       data: { ...existingMeta, first_name: firstName },

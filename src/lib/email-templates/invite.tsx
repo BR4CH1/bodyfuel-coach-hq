@@ -33,8 +33,6 @@ export const InviteEmail = ({
   const name =
     firstName && firstName.trim().length > 0
       ? firstName
-      : recipient
-      ? recipient.split('@')[0]
       : 'Athlet'
 
   return (
