@@ -122,13 +122,14 @@ export const InviteEmail = ({
 
 export default InviteEmail
 
-// === Styles: BodyFuel dark + gold ===
-const GOLD = '#D4AF37'
-const BG = '#0A0A0A'
-const CARD_BG = '#141414'
-const BORDER = '#2A2A2A'
-const TEXT = '#EDEDED'
-const MUTED = '#9A9A9A'
+// === Styles: BodyFuel light + brand green ===
+const GREEN = '#1F4D2E'
+const GREEN_DARK = '#143521'
+const BG = '#F5F4EF'
+const CARD_BG = '#FFFFFF'
+const BORDER = '#E2E0D7'
+const TEXT = '#1A1A1A'
+const MUTED = '#6B6B6B'
 
 const main = {
   backgroundColor: BG,
