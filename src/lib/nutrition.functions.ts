@@ -245,14 +245,21 @@ export const extractTargetsFromPlan = createServerFn({ method: "POST" })
     for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
     const b64 = btoa(bin);
 
-    const prompt = `Du bekommst einen Ernährungsplan als PDF. Extrahiere die TÄGLICHEN Zielwerte.
+    const prompt = `Du bekommst einen Ernährungsplan als PDF. Extrahiere die TÄGLICHEN Zielwerte (Tagessummen, NICHT pro Mahlzeit).
 
-WICHTIG: Falls der Plan zwischen TRAININGSTAG und TRAININGSFREIEM TAG (Restday / Refeed-frei / "Off-Day") unterscheidet, gib BEIDE Sätze zurück. Sonst nur den Standardsatz und lass die _rest-Felder null.
+ERKENNUNG TRAININGSTAG vs RESTDAY:
+Suche nach Sektionen mit Überschriften wie:
+- TRAININGSTAG: "TRAININGSTAG", "Training Day", "Workout", "Football/Gym", "Gesamtwerte Trainingstag"
+- RESTDAY: "RESTDAY", "Rest Day", "Regeneration", "trainingsfreier Tag", "Off-Day", "Refeed-frei", "Gesamtwerte Restday"
+Wenn der Plan BEIDE Varianten enthält, gib BEIDE Sätze zurück. Nutze bevorzugt die "Gesamtwerte"-Zeilen am Ende jeder Sektion; sonst summiere alle Mahlzeiten der Sektion. Wenn keine Unterscheidung: nur Standardsatz, _rest-Felder = null.
+
+WERTBEREICHE:
+Bei Bereichen (z.B. "3200–3400 kcal" oder "255–265 g") nimm den MITTELWERT und runde auf ganze Zahlen (3300, 260). Ignoriere "~" / "ca.".
 
 Felder:
-- kcal, protein_g, carbs_g, fat_g: Werte für einen TRAININGSTAG (oder den Standardtag, falls keine Unterscheidung).
-- kcal_rest, protein_g_rest, carbs_g_rest, fat_g_rest: Werte für einen RESTDAY/trainingsfreien Tag. Null, falls der Plan das nicht unterscheidet.
-- water_l: empfohlene Wassermenge in Litern pro Tag, oder null.
+- kcal, protein_g, carbs_g, fat_g: TRAININGSTAG (oder Standardtag).
+- kcal_rest, protein_g_rest, carbs_g_rest, fat_g_rest: RESTDAY, sonst null.
+- water_l: Wasser in Litern pro Tag, oder null.
 
 Antworte ausschließlich mit gültigem JSON:
 { "kcal": <int>, "protein_g": <int>, "carbs_g": <int>, "fat_g": <int>,
