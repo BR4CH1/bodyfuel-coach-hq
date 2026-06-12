@@ -148,12 +148,22 @@ function WelcomePage() {
                       onChange={(e) => setPw(e.target.value)}
                       className="pl-9"
                       autoComplete="new-password"
-                      minLength={8}
+                      minLength={6}
                       required
                     />
                   </div>
                 </div>
                 <div className="space-y-2">
+                  <Label htmlFor="pw2">Passwort wiederholen</Label>
+                  <Input
+                    id="pw2"
+                    type="password"
+                    value={pw2}
+                    onChange={(e) => setPw2(e.target.value)}
+                    autoComplete="new-password"
+                    minLength={6}
+                    required
+                  />
                   <Label htmlFor="pw2">Passwort wiederholen</Label>
                   <Input
                     id="pw2"
