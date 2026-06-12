@@ -11,8 +11,12 @@ import {
   searchFoods,
   lookupBarcode,
   getNutritionTargets,
+  getDayType,
+  setDayType,
   type FoodResult,
+  type DayType,
 } from "@/lib/nutrition.functions";
+import { Dumbbell, Moon } from "lucide-react";
 
 type Meal = "breakfast" | "lunch" | "dinner" | "snack";
 const MEALS: { key: Meal; label: string; emoji: string }[] = [
