@@ -9,6 +9,10 @@ export type FoodResult = {
   protein_per_100g: number;
   carbs_per_100g: number;
   fat_per_100g: number;
+  /** Gramm pro Stück/Portion (z.B. 1 Scheibe Toast = 25g), falls bekannt */
+  serving_g: number | null;
+  /** Roh-Label von OFF, z.B. "1 slice (25g)" oder "30 g" */
+  serving_label: string | null;
 };
 
 function mapOff(p: any): FoodResult | null {
@@ -16,6 +20,8 @@ function mapOff(p: any): FoodResult | null {
   if (!n) return null;
   const kcal = Number(n["energy-kcal_100g"] ?? n["energy-kcal"] ?? 0);
   if (!kcal && !n["proteins_100g"]) return null;
+  const sq = Number(p.serving_quantity);
+  const serving_g = isFinite(sq) && sq > 0 ? sq : null;
   return {
     name: p.product_name || p.generic_name || "Unbekannt",
     brand: p.brands || null,
@@ -24,8 +30,11 @@ function mapOff(p: any): FoodResult | null {
     protein_per_100g: Number(n["proteins_100g"] ?? 0),
     carbs_per_100g: Number(n["carbohydrates_100g"] ?? 0),
     fat_per_100g: Number(n["fat_100g"] ?? 0),
+    serving_g,
+    serving_label: (p.serving_size as string) || null,
   };
 }
+
 
 /** Barcode lookup via OpenFoodFacts */
 export const lookupBarcode = createServerFn({ method: "POST" })
