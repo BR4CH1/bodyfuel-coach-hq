@@ -194,6 +194,9 @@ export const createCustomer = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertCoach(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    if (!data.first_name?.trim() || !data.last_name?.trim() || !data.email?.trim()) {
+      throw new Error("Vorname, Nachname und E-Mail erforderlich.");
+    }
 
     // Immer die veröffentlichte URL nutzen, nie die Preview-Origin – sonst landen
     // Empfänger auf der Lovable-Preview, die einen Lovable-Login verlangt.
