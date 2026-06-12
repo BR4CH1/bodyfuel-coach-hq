@@ -65,26 +65,8 @@ export const Route = createFileRoute("/profile")({
   ),
 });
 
-const PKG_LABEL: Record<string, string> = {
-  starter: "BodyFuel Starter",
-  coaching: "BodyFuel Coaching",
-  premium: "BodyFuel Premium",
-};
-
-type ProfileRow = {
-  display_name: string | null;
-  created_at: string;
-  coaching_goal: string | null;
-  checkin_reminder: boolean;
-  notifications_enabled: boolean;
-  next_checkin_date: string | null;
-};
-
-type Points = {
-  total_points: number;
-  level: number;
-  current_streak: number;
 const PKG_LABEL = PACKAGE_LABEL;
+
 
 type ProfileRow = {
   display_name: string | null;
