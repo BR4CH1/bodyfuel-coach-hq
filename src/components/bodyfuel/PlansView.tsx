@@ -317,7 +317,11 @@ export function PlansView({ planType }: { planType: PlanType }) {
           </div>
           <ul className="divide-y divide-border">
             {archive.map((p) => (
-              <li key={p.id} className="flex items-center gap-3 py-3">
+              <li
+                key={p.id}
+                onClick={() => download(p)}
+                className="flex cursor-pointer items-center gap-3 py-3 transition-colors hover:bg-accent/10"
+              >
                 <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-secondary text-gold">
                   <FileText className="h-4 w-4" />
                 </div>
@@ -327,16 +331,15 @@ export function PlansView({ planType }: { planType: PlanType }) {
                     {new Date(p.created_at).toLocaleDateString("de-DE")}
                   </div>
                 </div>
-                <button
-                  onClick={() => download(p)}
-                  className="rounded-md p-2 text-muted-foreground hover:bg-secondary hover:text-foreground"
-                  aria-label="Download"
-                >
+                <span className="rounded-md p-2 text-muted-foreground">
                   <Download className="h-4 w-4" />
-                </button>
+                </span>
                 {isCoach && (
                   <button
-                    onClick={() => deletePlan(p)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deletePlan(p);
+                    }}
                     className="rounded-md p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                     aria-label="Löschen"
                   >
