@@ -694,7 +694,8 @@ export function NutritionTracker() {
                   </Button>
                 </div>
               </div>
-            )}
+                );
+              })()}
           </div>
         </div>
       )}
