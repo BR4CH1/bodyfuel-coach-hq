@@ -8,10 +8,14 @@ import {
   Heading,
   Hr,
   Html,
+  Img,
   Preview,
   Section,
   Text,
 } from '@react-email/components'
+
+const LOGO_URL =
+  'https://bodyfuel-coaching.com/__l5e/assets-v1/ba9d5358-39bc-4ca2-b583-74e75d27a3a7/bodyfuel-logo.png'
 
 interface InviteEmailProps {
   siteName: string
