@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Search, Barcode, Plus, Trash2, Droplet, Loader2 } from "lucide-react";
+import { Barcode, Plus, Trash2, Droplet, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import {
   type FoodResult,
   type DayType,
 } from "@/lib/nutrition.functions";
+import { LOCAL_FOODS } from "@/lib/bodyfuel/localFoods";
 import { Dumbbell, Moon } from "lucide-react";
 
 type Meal = "breakfast" | "lunch" | "dinner" | "snack";
@@ -276,18 +277,50 @@ export function NutritionTracker() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [totals.protein_g, waterGlasses, targets.protein_g, targets.water_glasses, loading]);
 
-  const runSearch = async () => {
-    if (!query.trim()) return;
+  const runSearch = async (q?: string) => {
+    const term = (q ?? query).trim();
+    if (!term) {
+      setResults([]);
+      return;
+    }
     setSearching(true);
     try {
-      const res = await searchFn({ data: { query } });
-      setResults(res);
+      const remote = await searchFn({ data: { query: term } });
+      const t = term.toLowerCase();
+      const local = LOCAL_FOODS.filter(
+        (f) =>
+          f.name.toLowerCase().includes(t) ||
+          (f.aliases ?? []).some((a) => a.toLowerCase().includes(t)),
+      ).map(({ aliases: _a, ...r }) => r);
+      // Local first so basics ("Ei", "Apfel", "Banane"…) are always findable
+      const seen = new Set<string>();
+      const merged: FoodResult[] = [];
+      for (const r of [...local, ...remote]) {
+        const key = (r.barcode || r.name) + "|" + (r.brand ?? "");
+        if (seen.has(key)) continue;
+        seen.add(key);
+        merged.push(r);
+      }
+      setResults(merged);
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
       setSearching(false);
     }
   };
+
+  // Live suggestions: debounced auto-search while typing
+  useEffect(() => {
+    if (!openMeal || picking) return;
+    const term = query.trim();
+    if (!term) {
+      setResults([]);
+      return;
+    }
+    const t = setTimeout(() => runSearch(term), 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, openMeal, picking]);
 
   const handleBarcode = async (code: string) => {
     setScannerOpen(false);
@@ -537,9 +570,9 @@ export function NutritionTracker() {
 
       {/* Add-Dialog */}
       {openMeal && (
-        <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-4">
-          <div className="w-full max-w-lg overflow-hidden rounded-t-2xl border border-border bg-card sm:rounded-2xl">
-            <div className="flex items-center justify-between border-b border-border px-4 py-3">
+        <div className="fixed inset-0 z-40 flex items-stretch justify-center bg-black/60 sm:items-center sm:p-4">
+          <div className="flex h-[100dvh] w-full max-w-lg flex-col overflow-hidden border-border bg-card sm:h-auto sm:max-h-[90dvh] sm:rounded-2xl sm:border">
+            <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
               <div className="text-sm font-semibold">
                 {MEALS.find((x) => x.key === openMeal)?.label} — hinzufügen
               </div>
@@ -555,26 +588,32 @@ export function NutritionTracker() {
             </div>
 
             {!picking ? (
-              <div className="p-4">
-                <div className="flex gap-2">
+              <div className="flex min-h-0 flex-1 flex-col p-4">
+                <div className="flex shrink-0 gap-2">
                   <Input
                     autoFocus
-                    placeholder="z.B. Skyr, Haferflocken…"
+                    placeholder="z.B. Ei, Skyr, Haferflocken…"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && runSearch()}
                   />
-                  <Button onClick={runSearch} disabled={searching}>
-                    {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                  </Button>
                   <Button variant="outline" onClick={() => setScannerOpen(true)}>
                     <Barcode className="h-4 w-4" />
                   </Button>
                 </div>
-                <div className="mt-3 max-h-80 overflow-y-auto">
-                  {results.length === 0 && !searching && (
+                <div className="mt-3 min-h-0 flex-1 overflow-y-auto">
+                  {query.trim() === "" && (
                     <p className="py-6 text-center text-xs text-muted-foreground">
-                      Suche oder Barcode scannen
+                      Tippe los — Vorschläge erscheinen automatisch
+                    </p>
+                  )}
+                  {query.trim() !== "" && results.length === 0 && (
+                    <p className="flex items-center justify-center gap-2 py-6 text-center text-xs text-muted-foreground">
+                      {searching ? (
+                        <><Loader2 className="h-3 w-3 animate-spin" /> Suche…</>
+                      ) : (
+                        "Keine Treffer — anders schreiben oder Barcode scannen"
+                      )}
                     </p>
                   )}
                   <ul className="divide-y divide-border">
@@ -586,7 +625,7 @@ export function NutritionTracker() {
                             setUnit(r.serving_g ? "piece" : "g");
                             setAmountStr(r.serving_g ? "1" : "100");
                           }}
-                          className="w-full px-2 py-2 text-left hover:bg-secondary"
+                          className="w-full px-2 py-3 text-left hover:bg-secondary"
                         >
                           <div className="truncate text-sm font-medium">{r.name}</div>
                           <div className="text-[11px] text-muted-foreground">
@@ -605,7 +644,7 @@ export function NutritionTracker() {
                 const gramsCalc = unit === "piece" && picking.serving_g ? amt * picking.serving_g : amt;
                 const factor = gramsCalc / 100;
                 return (
-              <div className="space-y-3 p-4">
+              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
                 <div>
                   <div className="text-sm font-semibold">{picking.name}</div>
                   <div className="text-xs text-muted-foreground">
