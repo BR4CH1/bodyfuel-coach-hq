@@ -570,9 +570,9 @@ export function NutritionTracker() {
 
       {/* Add-Dialog */}
       {openMeal && (
-        <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-4">
-          <div className="w-full max-w-lg overflow-hidden rounded-t-2xl border border-border bg-card sm:rounded-2xl">
-            <div className="flex items-center justify-between border-b border-border px-4 py-3">
+        <div className="fixed inset-0 z-40 flex items-stretch justify-center bg-black/60 sm:items-center sm:p-4">
+          <div className="flex h-[100dvh] w-full max-w-lg flex-col overflow-hidden border-border bg-card sm:h-auto sm:max-h-[90dvh] sm:rounded-2xl sm:border">
+            <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
               <div className="text-sm font-semibold">
                 {MEALS.find((x) => x.key === openMeal)?.label} — hinzufügen
               </div>
@@ -588,26 +588,32 @@ export function NutritionTracker() {
             </div>
 
             {!picking ? (
-              <div className="p-4">
-                <div className="flex gap-2">
+              <div className="flex min-h-0 flex-1 flex-col p-4">
+                <div className="flex shrink-0 gap-2">
                   <Input
                     autoFocus
-                    placeholder="z.B. Skyr, Haferflocken…"
+                    placeholder="z.B. Ei, Skyr, Haferflocken…"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && runSearch()}
                   />
-                  <Button onClick={runSearch} disabled={searching}>
-                    {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                  </Button>
                   <Button variant="outline" onClick={() => setScannerOpen(true)}>
                     <Barcode className="h-4 w-4" />
                   </Button>
                 </div>
-                <div className="mt-3 max-h-80 overflow-y-auto">
-                  {results.length === 0 && !searching && (
+                <div className="mt-3 min-h-0 flex-1 overflow-y-auto">
+                  {query.trim() === "" && (
                     <p className="py-6 text-center text-xs text-muted-foreground">
-                      Suche oder Barcode scannen
+                      Tippe los — Vorschläge erscheinen automatisch
+                    </p>
+                  )}
+                  {query.trim() !== "" && results.length === 0 && (
+                    <p className="flex items-center justify-center gap-2 py-6 text-center text-xs text-muted-foreground">
+                      {searching ? (
+                        <><Loader2 className="h-3 w-3 animate-spin" /> Suche…</>
+                      ) : (
+                        "Keine Treffer — anders schreiben oder Barcode scannen"
+                      )}
                     </p>
                   )}
                   <ul className="divide-y divide-border">
@@ -619,7 +625,7 @@ export function NutritionTracker() {
                             setUnit(r.serving_g ? "piece" : "g");
                             setAmountStr(r.serving_g ? "1" : "100");
                           }}
-                          className="w-full px-2 py-2 text-left hover:bg-secondary"
+                          className="w-full px-2 py-3 text-left hover:bg-secondary"
                         >
                           <div className="truncate text-sm font-medium">{r.name}</div>
                           <div className="text-[11px] text-muted-foreground">
