@@ -29,7 +29,12 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 function DashboardContent() {
-  const { user, supabaseUser } = useSession();
+  const { user, supabaseUser, profile } = useSession();
+  const greetingName =
+    profile?.display_name?.split(" ")[0] ??
+    supabaseUser?.email?.split("@")[0] ??
+    user?.name.split(" ")[0] ??
+    "";
   const [dbPoints, setDbPoints] = useState<{ total: number; today: number; streak: number } | null>(null);
 
   useEffect(() => {
@@ -82,7 +87,7 @@ function DashboardContent() {
             Willkommen zurück
           </p>
           <h1 className="font-display text-3xl font-bold sm:text-4xl">
-            Hey {user.name.split(" ")[0]} 👋
+            Hey {greetingName} 👋
           </h1>
         </div>
         <Link
