@@ -378,6 +378,7 @@ function CustomerDetail() {
       </div>
 
       <NutritionTargetsEditor userId={userId} />
+      <TrainingBonusCard userId={userId} isCoach />
       <CoachTrainingSummary clientId={userId} />
     </div>
   );
