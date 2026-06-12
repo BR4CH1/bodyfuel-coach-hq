@@ -103,13 +103,77 @@ export const listCustomers = createServerFn({ method: "GET" })
     const emailMap = new Map(usersData.users.map((u) => [u.id, u.email]));
     const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));
 
-    return (packages ?? []).map((p) => ({
-      ...p,
-      email: emailMap.get(p.user_id) ?? null,
-      display_name: profileMap.get(p.user_id)?.display_name ?? null,
-      phone: profileMap.get(p.user_id)?.phone ?? null,
-    }));
+    // Zahlungen laden für Status-Badges
+    const { data: payments } = await supabaseAdmin
+      .from("payment_history")
+      .select("user_id, status, amount_eur, created_at, payment_date")
+      .in("user_id", userIds);
+
+    const paymentsByUser = new Map<string, typeof payments>();
+    for (const p of payments ?? []) {
+      const arr = paymentsByUser.get(p.user_id) ?? [];
+      arr.push(p);
+      paymentsByUser.set(p.user_id, arr);
+    }
+
+    const DAY = 86400000;
+    const now = Date.now();
+
+    return (packages ?? []).map((p) => {
+      const userPayments = paymentsByUser.get(p.user_id) ?? [];
+      const pending = userPayments.filter((x) => x.status === "pending");
+      const confirmed = userPayments
+        .filter((x) => x.status === "confirmed")
+        .sort(
+          (a, b) =>
+            new Date(b.payment_date).getTime() -
+            new Date(a.payment_date).getTime(),
+        );
+
+      const pending_amount = pending.reduce(
+        (s, x) => s + Number(x.amount_eur),
+        0,
+      );
+      const oldestPending = pending.length
+        ? pending.reduce((a, b) =>
+            new Date(a.created_at) < new Date(b.created_at) ? a : b,
+          )
+        : null;
+
+      let payment_due_date: string | null = null;
+      let payment_days_left: number | null = null;
+      let payment_status: "ok" | "due" | "overdue" = "ok";
+
+      if (oldestPending) {
+        const due = new Date(oldestPending.created_at);
+        due.setDate(due.getDate() + 3);
+        payment_due_date = due.toISOString().slice(0, 10);
+        payment_days_left = Math.ceil((due.getTime() - now) / DAY);
+        payment_status = due.getTime() < now ? "overdue" : "due";
+      }
+
+      const end = new Date(p.end_date).getTime();
+      const days_until_end = Math.ceil((end - now) / DAY);
+      // Paket bereits abgelaufen ohne offene Zahlung => überfällig
+      if (!oldestPending && p.is_active && days_until_end < 0) {
+        payment_status = "overdue";
+      }
+
+      return {
+        ...p,
+        email: emailMap.get(p.user_id) ?? null,
+        display_name: profileMap.get(p.user_id)?.display_name ?? null,
+        phone: profileMap.get(p.user_id)?.phone ?? null,
+        last_payment_date: confirmed[0]?.payment_date ?? null,
+        pending_amount,
+        payment_due_date,
+        payment_days_left,
+        payment_status,
+        days_until_end,
+      };
+    });
   });
+
 
 export const createCustomer = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
