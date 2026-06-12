@@ -110,7 +110,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
       {/* Mobile top bar */}
       <header className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background/85 px-4 py-3 backdrop-blur lg:hidden">
-        <Logo />
+        <Link to={isCoach ? "/coach" : "/dashboard"}>
+          <Logo />
+        </Link>
         <button
           onClick={() => {
             logout();
