@@ -32,7 +32,8 @@ function NewCustomerForm() {
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({
-    name: "",
+    first_name: "",
+    last_name: "",
     email: "",
     phone: "",
     package: "coaching" as "starter" | "coaching" | "premium",
@@ -44,7 +45,9 @@ function NewCustomerForm() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.email) return toast.error("Vorname und E-Mail erforderlich.");
+    if (!form.first_name || !form.last_name || !form.email) {
+      return toast.error("Vorname, Nachname und E-Mail erforderlich.");
+    }
     setBusy(true);
     try {
       await fn({ data: { ...form, origin: window.location.origin } });
@@ -72,11 +75,22 @@ function NewCustomerForm() {
           <div className="space-y-2">
             <Label>Vorname *</Label>
             <Input
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              value={form.first_name}
+              onChange={(e) => setForm({ ...form, first_name: e.target.value })}
               required
             />
           </div>
+          <div className="space-y-2">
+            <Label>Nachname *</Label>
+            <Input
+              value={form.last_name}
+              onChange={(e) => setForm({ ...form, last_name: e.target.value })}
+              required
+            />
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label>E-Mail *</Label>
             <Input

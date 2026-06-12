@@ -146,39 +146,64 @@ export const Route = createFileRoute("/lovable/email/auth/webhook")({
         const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
         // Build template props from payload.data (HookData structure)
-        const userMeta = (payload.data.user?.user_metadata ?? {}) as Record<string, unknown>
-        const pickFirst = (s: string | null | undefined) =>
-          s ? s.trim().split(/\s+/)[0] : ""
-
-        let firstName: string | undefined =
-          (typeof userMeta.first_name === "string" && userMeta.first_name) ||
-          pickFirst(typeof userMeta.display_name === "string" ? userMeta.display_name : "") ||
-          pickFirst(typeof userMeta.full_name === "string" ? userMeta.full_name : "") ||
-          pickFirst(typeof userMeta.name === "string" ? userMeta.name : "") ||
-          undefined
-
-        // Fallback: aus Profil per user_id
-        const userId = payload.data.user?.id
-        if (!firstName && userId) {
-          const { data: prof } = await supabase
-            .from("profiles")
-            .select("display_name")
-            .eq("id", userId)
-            .maybeSingle()
-          if (prof?.display_name) firstName = pickFirst(prof.display_name) || undefined
+        const payloadMeta = (payload.data.user?.user_metadata ?? {}) as Record<string, unknown>
+        const email = typeof payload.data.email === 'string' ? payload.data.email : ''
+        const emailLocalPart = email.split('@')[0]?.trim().toLowerCase() ?? ''
+        const pickFirst = (s: unknown) =>
+          typeof s === 'string' ? s.trim().split(/\s+/)[0] : ''
+        const usableFirstName = (s: unknown) => {
+          const first = pickFirst(s)
+          if (!first || first.includes('@')) return undefined
+          if (emailLocalPart && first.toLowerCase() === emailLocalPart) return undefined
+          return first
         }
 
-        // Fallback: aus Leads per E-Mail (Coach hat hier den echten Namen erfasst)
-        if (!firstName && payload.data.email) {
+        const userId = payload.data.user?.id
+        let adminMeta: Record<string, unknown> = {}
+        let resolvedUserId = userId
+        if (userId) {
+          const { data: adminUser } = await supabase.auth.admin.getUserById(userId)
+          adminMeta = (adminUser.user?.user_metadata ?? {}) as Record<string, unknown>
+        } else if (email) {
+          const { data: usersData } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 })
+          const user = usersData.users.find((u) => u.email?.toLowerCase() === email.toLowerCase())
+          resolvedUserId = user?.id
+          adminMeta = (user?.user_metadata ?? {}) as Record<string, unknown>
+        }
+
+        let profileDisplayName = ''
+        if (resolvedUserId) {
+          const { data: prof } = await supabase
+            .from('profiles')
+            .select('display_name')
+            .eq('id', resolvedUserId)
+            .maybeSingle()
+          profileDisplayName = prof?.display_name ?? ''
+        }
+
+        let leadName = ''
+        if (email) {
           const { data: lead } = await supabase
-            .from("leads")
-            .select("name")
-            .eq("email", payload.data.email)
-            .order("created_at", { ascending: false })
+            .from('leads')
+            .select('name')
+            .eq('email', email)
+            .order('created_at', { ascending: false })
             .limit(1)
             .maybeSingle()
-          if (lead?.name) firstName = pickFirst(lead.name) || undefined
+          leadName = lead?.name ?? ''
         }
+
+        const firstName =
+          usableFirstName(profileDisplayName) ||
+          usableFirstName(leadName) ||
+          usableFirstName(adminMeta.first_name) ||
+          usableFirstName(payloadMeta.first_name) ||
+          usableFirstName(adminMeta.display_name) ||
+          usableFirstName(payloadMeta.display_name) ||
+          usableFirstName(adminMeta.full_name) ||
+          usableFirstName(payloadMeta.full_name) ||
+          usableFirstName(adminMeta.name) ||
+          usableFirstName(payloadMeta.name)
 
         const templateProps = {
           siteName: SITE_NAME,

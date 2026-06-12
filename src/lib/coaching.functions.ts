@@ -179,7 +179,8 @@ export const createCustomer = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
     (data: {
-      name: string;
+      first_name: string;
+      last_name: string;
       email: string;
       phone?: string;
       package: PackageKey;
@@ -193,18 +194,39 @@ export const createCustomer = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertCoach(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    if (!data.first_name?.trim() || !data.last_name?.trim() || !data.email?.trim()) {
+      throw new Error("Vorname, Nachname und E-Mail erforderlich.");
+    }
 
     // Immer die veröffentlichte URL nutzen, nie die Preview-Origin – sonst landen
     // Empfänger auf der Lovable-Preview, die einen Lovable-Login verlangt.
     const origin = "https://bodyfuel-coach-hq.lovable.app";
 
     // Invite per Magic Link. Trigger handle_new_user erstellt profile+user_roles.
-    const firstName = data.name.trim().split(/\s+/)[0] ?? "";
+    const firstName = data.first_name.trim().split(/\s+/)[0] ?? "";
+    const lastName = data.last_name.trim();
+    const displayName = [firstName, lastName].filter(Boolean).join(" ");
+    const email = data.email.trim();
+
+    // Vor dem Invite sichern, damit die E-Mail-Anrede sofort den Coaching-Namen findet.
+    const { error: leadErr } = await supabaseAdmin.from("leads").insert({
+      name: displayName,
+      email,
+      phone: data.phone || null,
+      desired_package: data.package,
+      status: "converted",
+      message: data.notes || null,
+    });
+    if (leadErr) throw new Error(leadErr.message);
+
     const { data: invited, error: invErr } =
-      await supabaseAdmin.auth.admin.inviteUserByEmail(data.email, {
+      await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
         data: {
-          display_name: data.name,
+          display_name: displayName,
           first_name: firstName,
+          last_name: lastName,
+          full_name: displayName,
+          name: displayName,
           role: "client",
         },
         redirectTo: `${origin}/welcome`,
@@ -213,13 +235,11 @@ export const createCustomer = createServerFn({ method: "POST" })
     if (invErr) throw new Error(invErr.message);
     const newUserId = invited.user.id;
 
-    // Phone in profile speichern
-    if (data.phone) {
-      await supabaseAdmin
-        .from("profiles")
-        .update({ phone: data.phone })
-        .eq("id", newUserId);
-    }
+    // Im Coaching-Profil den vollständigen Namen und optional Telefon speichern.
+    await supabaseAdmin
+      .from("profiles")
+      .update({ display_name: displayName, phone: data.phone || null })
+      .eq("id", newUserId);
 
     const start = new Date(data.start_date);
     const end = new Date(start);
@@ -300,19 +320,26 @@ export const resendInvite = createServerFn({ method: "POST" })
     if (!email) throw new Error("Kein E-Mail-Account gefunden");
 
     const existingMeta = (u.user?.user_metadata ?? {}) as Record<string, unknown>;
-    let firstName = typeof existingMeta.first_name === "string" ? existingMeta.first_name : "";
-    if (!firstName) {
-      const display = typeof existingMeta.display_name === "string" ? existingMeta.display_name : "";
-      if (display) firstName = display.trim().split(/\s+/)[0] ?? "";
-    }
+    const emailLocalPart = email.split("@")[0]?.trim().toLowerCase() ?? "";
+    const usableFirstName = (value: unknown) => {
+      const first = typeof value === "string" ? value.trim().split(/\s+/)[0] : "";
+      if (!first || first.includes("@")) return "";
+      if (emailLocalPart && first.toLowerCase() === emailLocalPart) return "";
+      return first;
+    };
+    let firstName = "";
     if (!firstName) {
       const { data: prof } = await supabaseAdmin
         .from("profiles")
         .select("display_name")
         .eq("id", data.user_id)
         .maybeSingle();
-      if (prof?.display_name) firstName = prof.display_name.trim().split(/\s+/)[0] ?? "";
+      firstName = usableFirstName(prof?.display_name);
     }
+    if (!firstName) firstName = usableFirstName(existingMeta.first_name);
+    if (!firstName) firstName = usableFirstName(existingMeta.display_name);
+    if (!firstName) firstName = usableFirstName(existingMeta.full_name);
+    if (!firstName) firstName = usableFirstName(existingMeta.name);
 
     const { error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
       data: { ...existingMeta, first_name: firstName },
