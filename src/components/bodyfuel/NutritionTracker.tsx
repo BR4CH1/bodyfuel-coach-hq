@@ -130,7 +130,8 @@ export function NutritionTracker() {
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<FoodResult[]>([]);
   const [picking, setPicking] = useState<FoodResult | null>(null);
-  const [grams, setGrams] = useState<number>(100);
+  const [unit, setUnit] = useState<"g" | "piece">("g");
+  const [amountStr, setAmountStr] = useState<string>("100");
   const [scannerOpen, setScannerOpen] = useState(false);
 
   const getTargetsFn = useServerFn(getNutritionTargets);
