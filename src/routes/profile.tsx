@@ -271,7 +271,7 @@ function ProfileContent() {
             label="Aktuelles Paket"
             value={
               pkg
-                ? `${PKG_LABEL[pkg.package] ?? pkg.package} (bis ${pkg.end_date})`
+                ? `${PKG_LABEL[pkg.package as PackageKey] ?? pkg.package} (bis ${pkg.end_date})`
                 : "Kein aktives Paket"
             }
           />
