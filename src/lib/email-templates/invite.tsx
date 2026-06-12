@@ -229,7 +229,7 @@ const signature = {
 const signatureName = {
   fontSize: '15px',
   fontWeight: 700,
-  color: GOLD,
+  color: GREEN,
   margin: '0 0 2px',
 }
 
