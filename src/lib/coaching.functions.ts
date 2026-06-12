@@ -179,7 +179,8 @@ export const createCustomer = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
     (data: {
-      name: string;
+      first_name: string;
+      last_name: string;
       email: string;
       phone?: string;
       package: PackageKey;
@@ -199,12 +200,17 @@ export const createCustomer = createServerFn({ method: "POST" })
     const origin = "https://bodyfuel-coach-hq.lovable.app";
 
     // Invite per Magic Link. Trigger handle_new_user erstellt profile+user_roles.
-    const firstName = data.name.trim().split(/\s+/)[0] ?? "";
+    const firstName = data.first_name.trim().split(/\s+/)[0] ?? "";
+    const lastName = data.last_name.trim();
+    const displayName = [firstName, lastName].filter(Boolean).join(" ");
     const { data: invited, error: invErr } =
       await supabaseAdmin.auth.admin.inviteUserByEmail(data.email, {
         data: {
-          display_name: data.name,
+          display_name: displayName,
           first_name: firstName,
+          last_name: lastName,
+          full_name: displayName,
+          name: displayName,
           role: "client",
         },
         redirectTo: `${origin}/welcome`,
@@ -213,13 +219,11 @@ export const createCustomer = createServerFn({ method: "POST" })
     if (invErr) throw new Error(invErr.message);
     const newUserId = invited.user.id;
 
-    // Phone in profile speichern
-    if (data.phone) {
-      await supabaseAdmin
-        .from("profiles")
-        .update({ phone: data.phone })
-        .eq("id", newUserId);
-    }
+    // Im Coaching-Profil den vollständigen Namen und optional Telefon speichern.
+    await supabaseAdmin
+      .from("profiles")
+      .update({ display_name: displayName, phone: data.phone || null })
+      .eq("id", newUserId);
 
     const start = new Date(data.start_date);
     const end = new Date(start);
