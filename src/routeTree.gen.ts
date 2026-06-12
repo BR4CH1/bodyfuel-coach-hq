@@ -26,6 +26,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as NutritionIndexRouteImport } from './routes/nutrition.index'
 import { Route as CoachIndexRouteImport } from './routes/coach.index'
 import { Route as NutritionTrackingRouteImport } from './routes/nutrition.tracking'
+import { Route as CoachPackageRequestsRouteImport } from './routes/coach.package-requests'
 import { Route as CoachLeadsRouteImport } from './routes/coach.leads'
 import { Route as CoachCustomersRouteImport } from './routes/coach.customers'
 import { Route as CoachClientIdRouteImport } from './routes/coach.$clientId'
@@ -118,6 +119,11 @@ const NutritionTrackingRoute = NutritionTrackingRouteImport.update({
   path: '/tracking',
   getParentRoute: () => NutritionRoute,
 } as any)
+const CoachPackageRequestsRoute = CoachPackageRequestsRouteImport.update({
+  id: '/package-requests',
+  path: '/package-requests',
+  getParentRoute: () => CoachRoute,
+} as any)
 const CoachLeadsRoute = CoachLeadsRouteImport.update({
   id: '/leads',
   path: '/leads',
@@ -167,6 +173,7 @@ export interface FileRoutesByFullPath {
   '/coach/$clientId': typeof CoachClientIdRoute
   '/coach/customers': typeof CoachCustomersRouteWithChildren
   '/coach/leads': typeof CoachLeadsRoute
+  '/coach/package-requests': typeof CoachPackageRequestsRoute
   '/nutrition/tracking': typeof NutritionTrackingRoute
   '/coach/': typeof CoachIndexRoute
   '/nutrition/': typeof NutritionIndexRoute
@@ -189,6 +196,7 @@ export interface FileRoutesByTo {
   '/welcome': typeof WelcomeRoute
   '/coach/$clientId': typeof CoachClientIdRoute
   '/coach/leads': typeof CoachLeadsRoute
+  '/coach/package-requests': typeof CoachPackageRequestsRoute
   '/nutrition/tracking': typeof NutritionTrackingRoute
   '/coach': typeof CoachIndexRoute
   '/nutrition': typeof NutritionIndexRoute
@@ -215,6 +223,7 @@ export interface FileRoutesById {
   '/coach/$clientId': typeof CoachClientIdRoute
   '/coach/customers': typeof CoachCustomersRouteWithChildren
   '/coach/leads': typeof CoachLeadsRoute
+  '/coach/package-requests': typeof CoachPackageRequestsRoute
   '/nutrition/tracking': typeof NutritionTrackingRoute
   '/coach/': typeof CoachIndexRoute
   '/nutrition/': typeof NutritionIndexRoute
@@ -242,6 +251,7 @@ export interface FileRouteTypes {
     | '/coach/$clientId'
     | '/coach/customers'
     | '/coach/leads'
+    | '/coach/package-requests'
     | '/nutrition/tracking'
     | '/coach/'
     | '/nutrition/'
@@ -264,6 +274,7 @@ export interface FileRouteTypes {
     | '/welcome'
     | '/coach/$clientId'
     | '/coach/leads'
+    | '/coach/package-requests'
     | '/nutrition/tracking'
     | '/coach'
     | '/nutrition'
@@ -289,6 +300,7 @@ export interface FileRouteTypes {
     | '/coach/$clientId'
     | '/coach/customers'
     | '/coach/leads'
+    | '/coach/package-requests'
     | '/nutrition/tracking'
     | '/coach/'
     | '/nutrition/'
@@ -435,6 +447,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NutritionTrackingRouteImport
       parentRoute: typeof NutritionRoute
     }
+    '/coach/package-requests': {
+      id: '/coach/package-requests'
+      path: '/package-requests'
+      fullPath: '/coach/package-requests'
+      preLoaderRoute: typeof CoachPackageRequestsRouteImport
+      parentRoute: typeof CoachRoute
+    }
     '/coach/leads': {
       id: '/coach/leads'
       path: '/leads'
@@ -500,6 +519,7 @@ interface CoachRouteChildren {
   CoachClientIdRoute: typeof CoachClientIdRoute
   CoachCustomersRoute: typeof CoachCustomersRouteWithChildren
   CoachLeadsRoute: typeof CoachLeadsRoute
+  CoachPackageRequestsRoute: typeof CoachPackageRequestsRoute
   CoachIndexRoute: typeof CoachIndexRoute
 }
 
@@ -507,6 +527,7 @@ const CoachRouteChildren: CoachRouteChildren = {
   CoachClientIdRoute: CoachClientIdRoute,
   CoachCustomersRoute: CoachCustomersRouteWithChildren,
   CoachLeadsRoute: CoachLeadsRoute,
+  CoachPackageRequestsRoute: CoachPackageRequestsRoute,
   CoachIndexRoute: CoachIndexRoute,
 }
 
