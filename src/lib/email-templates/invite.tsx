@@ -45,8 +45,12 @@ export const InviteEmail = ({
         <Container style={container}>
           {/* Header */}
           <Section style={header}>
-            <Text style={brandName}>BODYFUEL</Text>
-            <Text style={brandTag}>Nutrition Coaching</Text>
+            <Img
+              src={LOGO_URL}
+              alt="BodyFuel Coaching"
+              width="180"
+              style={logo}
+            />
           </Section>
 
           {/* Body card */}
