@@ -328,11 +328,13 @@ function RealUserDashboard() {
 
       const { data: up } = await supabase
         .from("user_points")
-        .select("total_points, current_streak, longest_streak, level")
+        .select("total_points, daily_points, performance_points, current_streak, longest_streak, level")
         .eq("user_id", supabaseUser.id)
         .maybeSingle();
       setUserPts({
         total: up?.total_points ?? 0,
+        daily: up?.daily_points ?? 0,
+        perf: up?.performance_points ?? 0,
         streak: up?.current_streak ?? 0,
         longest: up?.longest_streak ?? 0,
         level: up?.level ?? 1,
