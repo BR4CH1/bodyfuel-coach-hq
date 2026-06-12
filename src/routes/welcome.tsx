@@ -51,7 +51,7 @@ function WelcomePage() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (pw.length < 8) return toast.error("Mindestens 8 Zeichen.");
+    if (pw.length < 6) return toast.error("Mindestens 6 Zeichen.");
     if (pw !== pw2) return toast.error("Passwörter stimmen nicht überein.");
     setBusy(true);
     try {
@@ -148,7 +148,7 @@ function WelcomePage() {
                       onChange={(e) => setPw(e.target.value)}
                       className="pl-9"
                       autoComplete="new-password"
-                      minLength={8}
+                      minLength={6}
                       required
                     />
                   </div>
@@ -161,7 +161,7 @@ function WelcomePage() {
                     value={pw2}
                     onChange={(e) => setPw2(e.target.value)}
                     autoComplete="new-password"
-                    minLength={8}
+                    minLength={6}
                     required
                   />
                 </div>
