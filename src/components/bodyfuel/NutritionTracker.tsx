@@ -276,18 +276,50 @@ export function NutritionTracker() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [totals.protein_g, waterGlasses, targets.protein_g, targets.water_glasses, loading]);
 
-  const runSearch = async () => {
-    if (!query.trim()) return;
+  const runSearch = async (q?: string) => {
+    const term = (q ?? query).trim();
+    if (!term) {
+      setResults([]);
+      return;
+    }
     setSearching(true);
     try {
-      const res = await searchFn({ data: { query } });
-      setResults(res);
+      const remote = await searchFn({ data: { query: term } });
+      const t = term.toLowerCase();
+      const local = LOCAL_FOODS.filter(
+        (f) =>
+          f.name.toLowerCase().includes(t) ||
+          (f.aliases ?? []).some((a) => a.toLowerCase().includes(t)),
+      ).map(({ aliases: _a, ...r }) => r);
+      // Local first so basics ("Ei", "Apfel", "Banane"…) are always findable
+      const seen = new Set<string>();
+      const merged: FoodResult[] = [];
+      for (const r of [...local, ...remote]) {
+        const key = (r.barcode || r.name) + "|" + (r.brand ?? "");
+        if (seen.has(key)) continue;
+        seen.add(key);
+        merged.push(r);
+      }
+      setResults(merged);
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
       setSearching(false);
     }
   };
+
+  // Live suggestions: debounced auto-search while typing
+  useEffect(() => {
+    if (!openMeal || picking) return;
+    const term = query.trim();
+    if (!term) {
+      setResults([]);
+      return;
+    }
+    const t = setTimeout(() => runSearch(term), 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, openMeal, picking]);
 
   const handleBarcode = async (code: string) => {
     setScannerOpen(false);
