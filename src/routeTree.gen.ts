@@ -33,6 +33,7 @@ import { Route as CoachClientIdRouteImport } from './routes/coach.$clientId'
 import { Route as CoachCustomersIndexRouteImport } from './routes/coach.customers.index'
 import { Route as CoachCustomersNewRouteImport } from './routes/coach.customers.new'
 import { Route as CoachCustomersUserIdRouteImport } from './routes/coach.customers.$userId'
+import { Route as ApiPublicResetLukasRouteImport } from './routes/api/public/reset-lukas'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
@@ -157,6 +158,11 @@ const CoachCustomersUserIdRoute = CoachCustomersUserIdRouteImport.update({
   path: '/$userId',
   getParentRoute: () => CoachCustomersRoute,
 } as any)
+const ApiPublicResetLukasRoute = ApiPublicResetLukasRouteImport.update({
+  id: '/api/public/reset-lukas',
+  path: '/api/public/reset-lukas',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LovableEmailQueueProcessRoute =
   LovableEmailQueueProcessRouteImport.update({
     id: '/lovable/email/queue/process',
@@ -196,6 +202,7 @@ export interface FileRoutesByFullPath {
   '/nutrition/tracking': typeof NutritionTrackingRoute
   '/coach/': typeof CoachIndexRoute
   '/nutrition/': typeof NutritionIndexRoute
+  '/api/public/reset-lukas': typeof ApiPublicResetLukasRoute
   '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/coach/customers/': typeof CoachCustomersIndexRoute
@@ -222,6 +229,7 @@ export interface FileRoutesByTo {
   '/nutrition/tracking': typeof NutritionTrackingRoute
   '/coach': typeof CoachIndexRoute
   '/nutrition': typeof NutritionIndexRoute
+  '/api/public/reset-lukas': typeof ApiPublicResetLukasRoute
   '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/coach/customers': typeof CoachCustomersIndexRoute
@@ -252,6 +260,7 @@ export interface FileRoutesById {
   '/nutrition/tracking': typeof NutritionTrackingRoute
   '/coach/': typeof CoachIndexRoute
   '/nutrition/': typeof NutritionIndexRoute
+  '/api/public/reset-lukas': typeof ApiPublicResetLukasRoute
   '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/coach/customers/': typeof CoachCustomersIndexRoute
@@ -283,6 +292,7 @@ export interface FileRouteTypes {
     | '/nutrition/tracking'
     | '/coach/'
     | '/nutrition/'
+    | '/api/public/reset-lukas'
     | '/coach/customers/$userId'
     | '/coach/customers/new'
     | '/coach/customers/'
@@ -309,6 +319,7 @@ export interface FileRouteTypes {
     | '/nutrition/tracking'
     | '/coach'
     | '/nutrition'
+    | '/api/public/reset-lukas'
     | '/coach/customers/$userId'
     | '/coach/customers/new'
     | '/coach/customers'
@@ -338,6 +349,7 @@ export interface FileRouteTypes {
     | '/nutrition/tracking'
     | '/coach/'
     | '/nutrition/'
+    | '/api/public/reset-lukas'
     | '/coach/customers/$userId'
     | '/coach/customers/new'
     | '/coach/customers/'
@@ -361,6 +373,7 @@ export interface RootRouteChildren {
   ProgressRoute: typeof ProgressRoute
   TrainingRoute: typeof TrainingRoute
   WelcomeRoute: typeof WelcomeRoute
+  ApiPublicResetLukasRoute: typeof ApiPublicResetLukasRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
@@ -536,6 +549,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CoachCustomersUserIdRouteImport
       parentRoute: typeof CoachCustomersRoute
     }
+    '/api/public/reset-lukas': {
+      id: '/api/public/reset-lukas'
+      path: '/api/public/reset-lukas'
+      fullPath: '/api/public/reset-lukas'
+      preLoaderRoute: typeof ApiPublicResetLukasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lovable/email/queue/process': {
       id: '/lovable/email/queue/process'
       path: '/lovable/email/queue/process'
@@ -623,6 +643,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProgressRoute: ProgressRoute,
   TrainingRoute: TrainingRoute,
   WelcomeRoute: WelcomeRoute,
+  ApiPublicResetLukasRoute: ApiPublicResetLukasRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
@@ -630,3 +651,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
