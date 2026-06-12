@@ -583,7 +583,8 @@ export function NutritionTracker() {
                         <button
                           onClick={() => {
                             setPicking(r);
-                            setGrams(100);
+                            setUnit(r.serving_g ? "piece" : "g");
+                            setAmountStr(r.serving_g ? "1" : "100");
                           }}
                           className="w-full px-2 py-2 text-left hover:bg-secondary"
                         >
@@ -591,6 +592,7 @@ export function NutritionTracker() {
                           <div className="text-[11px] text-muted-foreground">
                             {r.brand ? `${r.brand} · ` : ""}
                             {Math.round(r.kcal_per_100g)} kcal · P {r.protein_per_100g.toFixed(1)} · K {r.carbs_per_100g.toFixed(1)} · F {r.fat_per_100g.toFixed(1)} (/100g)
+                            {r.serving_g ? ` · 1 Stück ≈ ${r.serving_g} g` : ""}
                           </div>
                         </button>
                       </li>
@@ -598,39 +600,87 @@ export function NutritionTracker() {
                   </ul>
                 </div>
               </div>
-            ) : (
+            ) : (() => {
+                const amt = parseFloat(amountStr.replace(",", ".")) || 0;
+                const gramsCalc = unit === "piece" && picking.serving_g ? amt * picking.serving_g : amt;
+                const factor = gramsCalc / 100;
+                return (
               <div className="space-y-3 p-4">
                 <div>
                   <div className="text-sm font-semibold">{picking.name}</div>
-                  <div className="text-xs text-muted-foreground">{picking.brand ?? "—"}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {picking.brand ?? "—"}
+                    {picking.serving_g ? ` · 1 Stück ≈ ${picking.serving_g} g` : ""}
+                  </div>
                 </div>
+                {picking.serving_g && (
+                  <div className="inline-flex rounded-md border border-border bg-background/40 p-0.5 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUnit("g");
+                        setAmountStr((s) => {
+                          const a = parseFloat(s.replace(",", ".")) || 0;
+                          return String(Math.round(a * (picking.serving_g ?? 1)));
+                        });
+                      }}
+                      className={`rounded px-3 py-1 ${unit === "g" ? "bg-gold text-primary-foreground" : "text-muted-foreground"}`}
+                    >
+                      Gramm
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUnit("piece");
+                        setAmountStr((s) => {
+                          const a = parseFloat(s.replace(",", ".")) || 0;
+                          const sg = picking.serving_g ?? 1;
+                          return (a / sg).toFixed(a / sg < 1 ? 2 : 1).replace(/\.?0+$/, "");
+                        });
+                      }}
+                      className={`rounded px-3 py-1 ${unit === "piece" ? "bg-gold text-primary-foreground" : "text-muted-foreground"}`}
+                    >
+                      Stück
+                    </button>
+                  </div>
+                )}
                 <div>
                   <label className="text-xs uppercase tracking-wider text-muted-foreground">
-                    Menge (g)
+                    Menge ({unit === "piece" ? "Stück" : "g"})
                   </label>
                   <Input
-                    type="number"
-                    value={grams}
-                    onChange={(e) => setGrams(Number(e.target.value) || 0)}
+                    type="text"
+                    inputMode="decimal"
+                    value={amountStr}
+                    onChange={(e) => {
+                      const v = e.target.value.replace(/[^0-9.,]/g, "");
+                      setAmountStr(v);
+                    }}
+                    placeholder={unit === "piece" ? "z.B. 1" : "z.B. 50"}
                     className="mt-1"
                   />
+                  {unit === "piece" && picking.serving_g && (
+                    <div className="mt-1 text-[11px] text-muted-foreground">
+                      = {Math.round(gramsCalc)} g
+                    </div>
+                  )}
                 </div>
                 <div className="rounded-lg bg-secondary/40 p-3 text-xs">
                   <div className="grid grid-cols-4 gap-2 text-center">
                     <div>
-                      <div className="font-bold">{Math.round((picking.kcal_per_100g * grams) / 100)}</div>
+                      <div className="font-bold">{Math.round(picking.kcal_per_100g * factor)}</div>
                       <div className="text-muted-foreground">kcal</div>
                     </div>
                     <div>
-                      <div className="font-bold">{((picking.protein_per_100g * grams) / 100).toFixed(1)}</div>
+                      <div className="font-bold">{(picking.protein_per_100g * factor).toFixed(1)}</div>
                       <div className="text-muted-foreground">Protein</div>
                     </div>
                     <div>
-                      <div className="font-bold">{((picking.carbs_per_100g * grams) / 100).toFixed(1)}</div>
+                      <div className="font-bold">{(picking.carbs_per_100g * factor).toFixed(1)}</div>
                       <div className="text-muted-foreground">Carbs</div>
                     </div>
                     <div>
-                      <div className="font-bold">{((picking.fat_per_100g * grams) / 100).toFixed(1)}</div>
+                      <div className="font-bold">{(picking.fat_per_100g * factor).toFixed(1)}</div>
                       <div className="text-muted-foreground">Fett</div>
                     </div>
                   </div>
