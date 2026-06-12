@@ -245,16 +245,19 @@ export const extractTargetsFromPlan = createServerFn({ method: "POST" })
     for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
     const b64 = btoa(bin);
 
-    const prompt = `Du bekommst einen Ernährungsplan als PDF. Extrahiere die TÄGLICHEN Zielwerte:
-- kcal (Gesamtkalorien pro Tag)
-- protein_g (Eiweiß in Gramm pro Tag)
-- carbs_g (Kohlenhydrate in Gramm pro Tag)
-- fat_g (Fett in Gramm pro Tag)
-- water_l (empfohlene Wassermenge in Litern pro Tag, falls angegeben — sonst null)
+    const prompt = `Du bekommst einen Ernährungsplan als PDF. Extrahiere die TÄGLICHEN Zielwerte.
 
-Falls mehrere Tage/Phasen genannt sind, nimm die HAUPT-Phase (Standardtag).
+WICHTIG: Falls der Plan zwischen TRAININGSTAG und TRAININGSFREIEM TAG (Restday / Refeed-frei / "Off-Day") unterscheidet, gib BEIDE Sätze zurück. Sonst nur den Standardsatz und lass die _rest-Felder null.
+
+Felder:
+- kcal, protein_g, carbs_g, fat_g: Werte für einen TRAININGSTAG (oder den Standardtag, falls keine Unterscheidung).
+- kcal_rest, protein_g_rest, carbs_g_rest, fat_g_rest: Werte für einen RESTDAY/trainingsfreien Tag. Null, falls der Plan das nicht unterscheidet.
+- water_l: empfohlene Wassermenge in Litern pro Tag, oder null.
+
 Antworte ausschließlich mit gültigem JSON:
-{ "kcal": <int>, "protein_g": <int>, "carbs_g": <int>, "fat_g": <int>, "water_l": <number|null> }`;
+{ "kcal": <int>, "protein_g": <int>, "carbs_g": <int>, "fat_g": <int>,
+  "kcal_rest": <int|null>, "protein_g_rest": <int|null>, "carbs_g_rest": <int|null>, "fat_g_rest": <int|null>,
+  "water_l": <number|null> }`;
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -292,10 +295,18 @@ Antworte ausschließlich mit gültigem JSON:
       throw new Error("KI-Antwort konnte nicht gelesen werden");
     }
 
+    const nz = (v: any) => {
+      const n = Number(v);
+      return isFinite(n) && n > 0 ? Math.round(n) : null;
+    };
     const kcal = Math.max(0, Math.round(Number(parsed.kcal) || 0));
     const protein_g = Math.max(0, Math.round(Number(parsed.protein_g) || 0));
     const carbs_g = Math.max(0, Math.round(Number(parsed.carbs_g) || 0));
     const fat_g = Math.max(0, Math.round(Number(parsed.fat_g) || 0));
+    const kcal_rest = nz(parsed.kcal_rest);
+    const protein_g_rest = nz(parsed.protein_g_rest);
+    const carbs_g_rest = nz(parsed.carbs_g_rest);
+    const fat_g_rest = nz(parsed.fat_g_rest);
     const water_l = Number(parsed.water_l);
     const water_glasses = isFinite(water_l) && water_l > 0
       ? Math.max(4, Math.round((water_l * 1000) / 250))
@@ -304,5 +315,9 @@ Antworte ausschließlich mit gültigem JSON:
     if (!kcal && !protein_g) {
       throw new Error("Keine Werte im Plan gefunden. Bitte manuell eintragen.");
     }
-    return { kcal, protein_g, carbs_g, fat_g, water_glasses };
+    return {
+      kcal, protein_g, carbs_g, fat_g,
+      kcal_rest, protein_g_rest, carbs_g_rest, fat_g_rest,
+      water_glasses,
+    };
   });
