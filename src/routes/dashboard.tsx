@@ -172,6 +172,7 @@ function DashboardContent() {
               suffix="Tage"
               accent={streak > 0}
             />
+          </div>
         </div>
       </div>
 
