@@ -44,7 +44,7 @@ function NewCustomerForm() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.email) return toast.error("Name und E-Mail erforderlich.");
+    if (!form.name || !form.email) return toast.error("Vorname und E-Mail erforderlich.");
     setBusy(true);
     try {
       await fn({ data: { ...form, origin: window.location.origin } });
@@ -70,7 +70,7 @@ function NewCustomerForm() {
       <form onSubmit={submit} className="space-y-5 rounded-2xl border border-border bg-card p-6">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label>Name *</Label>
+            <Label>Vorname *</Label>
             <Input
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
