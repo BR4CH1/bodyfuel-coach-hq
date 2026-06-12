@@ -377,10 +377,99 @@ function CustomerDetail() {
         )}
       </div>
 
+      <MeasurementsCard measurements={data.measurements ?? []} />
+
       <NutritionTargetsEditor userId={userId} />
       <TrainingBonusCard userId={userId} isCoach />
       <CoachTrainingSummary clientId={userId} />
     </div>
   );
 }
+
+function MeasurementsCard({ measurements }: { measurements: any[] }) {
+  const [showAll, setShowAll] = useState(false);
+  if (!measurements.length) {
+    return (
+      <div className="rounded-2xl border border-border bg-card p-6">
+        <h2 className="font-display text-lg font-bold">Maße & Gewicht</h2>
+        <p className="mt-3 text-sm text-muted-foreground">
+          Noch keine Maße erfasst.
+        </p>
+      </div>
+    );
+  }
+  const latest = measurements[0];
+  const visible = showAll ? measurements : measurements.slice(0, 5);
+  const fmt = (v: any, unit: string) =>
+    v == null || v === "" ? "—" : `${Number(v).toLocaleString("de-DE")} ${unit}`;
+  return (
+    <div className="rounded-2xl border border-border bg-card p-6">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="font-display text-lg font-bold">Maße & Gewicht</h2>
+        <span className="text-xs text-muted-foreground">
+          Aktuell: {new Date(latest.measured_at).toLocaleDateString("de-DE")}
+        </span>
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <Stat label="Gewicht" value={fmt(latest.weight_kg, "kg")} />
+        <Stat label="Körperfett" value={fmt(latest.body_fat_pct, "%")} />
+        <Stat label="Muskelmasse" value={fmt(latest.muscle_mass_kg, "kg")} />
+        <Stat label="Taille" value={fmt(latest.waist_cm, "cm")} />
+        <Stat label="Brust" value={fmt(latest.chest_cm, "cm")} />
+        <Stat label="Hüfte" value={fmt(latest.hip_cm, "cm")} />
+      </div>
+
+      <div className="mt-6 overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="text-left text-[11px] uppercase tracking-wider text-muted-foreground">
+            <tr>
+              <th className="py-2">Datum</th>
+              <th>Gewicht</th>
+              <th>KFA</th>
+              <th>Muskel</th>
+              <th>Taille</th>
+              <th>Brust</th>
+              <th>Hüfte</th>
+            </tr>
+          </thead>
+          <tbody>
+            {visible.map((m) => (
+              <tr key={m.id} className="border-t border-border">
+                <td className="py-2">
+                  {new Date(m.measured_at).toLocaleDateString("de-DE")}
+                </td>
+                <td>{fmt(m.weight_kg, "kg")}</td>
+                <td>{fmt(m.body_fat_pct, "%")}</td>
+                <td>{fmt(m.muscle_mass_kg, "kg")}</td>
+                <td>{fmt(m.waist_cm, "cm")}</td>
+                <td>{fmt(m.chest_cm, "cm")}</td>
+                <td>{fmt(m.hip_cm, "cm")}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {measurements.length > 5 && (
+        <button
+          onClick={() => setShowAll((v) => !v)}
+          className="mt-3 text-xs font-semibold uppercase tracking-wider text-gold hover:underline"
+        >
+          {showAll ? "Weniger anzeigen" : `Alle ${measurements.length} anzeigen`}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-border bg-secondary/30 p-3">
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+        {label}
+      </div>
+      <div className="font-display text-lg font-bold">{value}</div>
+    </div>
+  );
+}
+
 
