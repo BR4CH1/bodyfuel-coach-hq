@@ -103,11 +103,17 @@ export const setNutritionTargets = createServerFn({ method: "POST" })
       carbs_g: number;
       fat_g: number;
       water_glasses: number;
+      kcal_rest?: number | null;
+      protein_g_rest?: number | null;
+      carbs_g_rest?: number | null;
+      fat_g_rest?: number | null;
     }) => d,
   )
   .handler(async ({ data, context }) => {
     await assertCoach(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const nz = (v: number | null | undefined) =>
+      v == null || !isFinite(Number(v)) ? null : Math.max(0, Math.round(Number(v)));
     const { error } = await supabaseAdmin.from("nutrition_targets").upsert(
       {
         user_id: data.user_id,
@@ -116,6 +122,10 @@ export const setNutritionTargets = createServerFn({ method: "POST" })
         carbs_g: Math.max(0, Math.round(data.carbs_g)),
         fat_g: Math.max(0, Math.round(data.fat_g)),
         water_glasses: Math.max(1, Math.round(data.water_glasses)),
+        kcal_rest: nz(data.kcal_rest),
+        protein_g_rest: nz(data.protein_g_rest),
+        carbs_g_rest: nz(data.carbs_g_rest),
+        fat_g_rest: nz(data.fat_g_rest),
         updated_by: context.userId,
       },
       { onConflict: "user_id" },
@@ -128,7 +138,6 @@ export const getNutritionTargets = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { user_id: string }) => d)
   .handler(async ({ data, context }) => {
-    // self or coach
     if (data.user_id !== context.userId) {
       await assertCoach(context.supabase, context.userId);
     }
@@ -139,6 +148,69 @@ export const getNutritionTargets = createServerFn({ method: "POST" })
       .maybeSingle();
     if (error) throw new Error(error.message);
     return row;
+  });
+
+/* ----------- Day type (training vs rest) ----------- */
+
+export type DayType = "training" | "rest";
+
+/** Returns the effective day type for a user/date, plus its source. */
+export const getDayType = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { user_id: string; date: string }) => d)
+  .handler(async ({ data, context }) => {
+    if (data.user_id !== context.userId) {
+      await assertCoach(context.supabase, context.userId);
+    }
+    const { data: override } = await context.supabase
+      .from("day_type_overrides")
+      .select("kind")
+      .eq("user_id", data.user_id)
+      .eq("entry_date", data.date)
+      .maybeSingle();
+    if (override?.kind) {
+      return { kind: override.kind as DayType, source: "manual" as const };
+    }
+    const start = `${data.date}T00:00:00`;
+    const end = `${data.date}T23:59:59.999`;
+    const { count } = await context.supabase
+      .from("training_set_logs")
+      .select("id", { count: "exact", head: true })
+      .eq("client_id", data.user_id)
+      .gte("performed_at", start)
+      .lte("performed_at", end);
+    return {
+      kind: ((count ?? 0) > 0 ? "training" : "rest") as DayType,
+      source: "auto" as const,
+    };
+  });
+
+export const setDayType = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (d: { user_id: string; date: string; kind: DayType | null }) => d,
+  )
+  .handler(async ({ data, context }) => {
+    if (data.user_id !== context.userId) {
+      await assertCoach(context.supabase, context.userId);
+    }
+    if (data.kind === null) {
+      const { error } = await context.supabase
+        .from("day_type_overrides")
+        .delete()
+        .eq("user_id", data.user_id)
+        .eq("entry_date", data.date);
+      if (error) throw new Error(error.message);
+      return { ok: true };
+    }
+    const { error } = await context.supabase
+      .from("day_type_overrides")
+      .upsert(
+        { user_id: data.user_id, entry_date: data.date, kind: data.kind },
+        { onConflict: "user_id,entry_date" },
+      );
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
 
 /** Extract daily kcal/macros from the user's active nutrition plan PDF via Lovable AI */
