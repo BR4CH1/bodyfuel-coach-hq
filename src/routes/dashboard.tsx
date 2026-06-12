@@ -87,7 +87,7 @@ function DashboardContent() {
             Willkommen zurück
           </p>
           <h1 className="font-display text-3xl font-bold sm:text-4xl">
-            Hey {user.name.split(" ")[0]} 👋
+            Hey {greetingName} 👋
           </h1>
         </div>
         <Link
