@@ -132,6 +132,12 @@ export const Route = createFileRoute("/lovable/email/auth/webhook")({
         }
 
         // Build template props from payload.data (HookData structure)
+        const userMeta = (payload.data.user?.user_metadata ?? {}) as Record<string, unknown>
+        const firstName =
+          (typeof userMeta.first_name === "string" && userMeta.first_name) ||
+          (typeof userMeta.display_name === "string" && userMeta.display_name.trim().split(/\s+/)[0]) ||
+          undefined
+
         const templateProps = {
           siteName: SITE_NAME,
           siteUrl: `https://${ROOT_DOMAIN}`,
@@ -141,6 +147,7 @@ export const Route = createFileRoute("/lovable/email/auth/webhook")({
           email: payload.data.email,
           oldEmail: payload.data.old_email,
           newEmail: payload.data.new_email,
+          firstName,
         }
 
         // Render React Email to HTML and plain text
