@@ -206,19 +206,21 @@ export const createCustomer = createServerFn({ method: "POST" })
     const firstName = data.first_name.trim().split(/\s+/)[0] ?? "";
     const lastName = data.last_name.trim();
     const displayName = [firstName, lastName].filter(Boolean).join(" ");
+    const email = data.email.trim();
 
     // Vor dem Invite sichern, damit die E-Mail-Anrede sofort den Coaching-Namen findet.
-    await supabaseAdmin.from("leads").insert({
+    const { error: leadErr } = await supabaseAdmin.from("leads").insert({
       name: displayName,
-      email: data.email.trim(),
+      email,
       phone: data.phone || null,
       desired_package: data.package,
       status: "converted",
       message: data.notes || null,
     });
+    if (leadErr) throw new Error(leadErr.message);
 
     const { data: invited, error: invErr } =
-      await supabaseAdmin.auth.admin.inviteUserByEmail(data.email, {
+      await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
         data: {
           display_name: displayName,
           first_name: firstName,
