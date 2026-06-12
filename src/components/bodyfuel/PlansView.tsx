@@ -139,11 +139,30 @@ export function PlansView({ planType }: { planType: PlanType }) {
   };
 
   const download = async (plan: Plan) => {
-    const { data, error } = await supabase.storage
-      .from("nutrition-plans")
-      .createSignedUrl(plan.file_path, 60);
-    if (error || !data) return toast.error(error?.message ?? "Download fehlgeschlagen");
-    window.open(data.signedUrl, "_blank");
+    try {
+      const { data, error } = await supabase.storage
+        .from("nutrition-plans")
+        .download(plan.file_path);
+      if (error || !data) throw error ?? new Error("Download fehlgeschlagen");
+      const blobUrl = URL.createObjectURL(data);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = plan.file_name || "plan.pdf";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+    } catch (err: unknown) {
+      // Fallback: open signed URL in new tab
+      const { data, error } = await supabase.storage
+        .from("nutrition-plans")
+        .createSignedUrl(plan.file_path, 60, { download: plan.file_name || true });
+      if (error || !data) {
+        toast.error(err instanceof Error ? err.message : "Download fehlgeschlagen");
+        return;
+      }
+      window.location.href = data.signedUrl;
+    }
   };
 
   const deletePlan = async (plan: Plan) => {
