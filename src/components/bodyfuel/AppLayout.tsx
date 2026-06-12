@@ -61,7 +61,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
       {/* Desktop sidebar */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-border bg-card/60 backdrop-blur lg:flex">
         <div className="border-b border-border px-5 py-5">
-          <Logo showTagline />
+          <Link to={isCoach ? "/coach" : "/dashboard"}>
+            <Logo showTagline />
+          </Link>
         </div>
         <nav className="flex-1 space-y-1 p-3">
           {nav.map((item) => {
@@ -108,7 +110,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
       {/* Mobile top bar */}
       <header className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background/85 px-4 py-3 backdrop-blur lg:hidden">
-        <Logo />
+        <Link to={isCoach ? "/coach" : "/dashboard"}>
+          <Logo />
+        </Link>
         <button
           onClick={() => {
             logout();
