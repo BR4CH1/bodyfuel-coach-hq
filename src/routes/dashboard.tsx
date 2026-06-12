@@ -7,6 +7,7 @@ import { TrainingDevelopmentCard } from "@/components/bodyfuel/TrainingTrends";
 import { DailyChecklist } from "@/components/bodyfuel/DailyChecklist";
 import { AchievementsCard } from "@/components/bodyfuel/AchievementsCard";
 import { TrainingBonusCard } from "@/components/bodyfuel/TrainingBonusCard";
+import { MacroTargetsCard } from "@/components/bodyfuel/MacroTargetsCard";
 
 import { useSession } from "@/lib/bodyfuel/session";
 import { supabase } from "@/integrations/supabase/client";
@@ -496,6 +497,8 @@ function RealUserDashboard() {
       </Link>
 
       {supabaseUser && <DailyChecklist userId={supabaseUser.id} />}
+
+      {supabaseUser && <MacroTargetsCard userId={supabaseUser.id} />}
 
       {supabaseUser && <AchievementsCard userId={supabaseUser.id} />}
 

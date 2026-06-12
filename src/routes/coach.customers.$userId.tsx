@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CoachTrainingSummary } from "@/components/bodyfuel/TrainingTrends";
 import { NutritionTargetsEditor } from "@/components/bodyfuel/NutritionTargetsEditor";
+import { MacroTargetsCard } from "@/components/bodyfuel/MacroTargetsCard";
 import { TrainingBonusCard } from "@/components/bodyfuel/TrainingBonusCard";
 
 
@@ -379,6 +380,7 @@ function CustomerDetail() {
 
       <MeasurementsCard measurements={data.measurements ?? []} />
 
+      <MacroTargetsCard userId={userId} />
       <NutritionTargetsEditor userId={userId} />
       <TrainingBonusCard userId={userId} isCoach />
       <CoachTrainingSummary clientId={userId} />
