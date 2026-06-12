@@ -293,6 +293,12 @@ function RealUserDashboard() {
   const [latest, setLatest] = useState<LatestMeasurement | null>(null);
   const [count, setCount] = useState(0);
   const [todayDbPoints, setTodayDbPoints] = useState(0);
+  const [userPts, setUserPts] = useState<{ total: number; streak: number; longest: number; level: number }>({
+    total: 0,
+    streak: 0,
+    longest: 0,
+    level: 1,
+  });
   const [loading, setLoading] = useState(true);
 
   const todayStr = new Date().toISOString().slice(0, 10);
@@ -316,6 +322,18 @@ function RealUserDashboard() {
         .eq("check_date", todayStr)
         .maybeSingle();
       setTodayDbPoints(checkData?.points ?? 0);
+
+      const { data: up } = await supabase
+        .from("user_points")
+        .select("total_points, current_streak, longest_streak, level")
+        .eq("user_id", supabaseUser.id)
+        .maybeSingle();
+      setUserPts({
+        total: up?.total_points ?? 0,
+        streak: up?.current_streak ?? 0,
+        longest: up?.longest_streak ?? 0,
+        level: up?.level ?? 1,
+      });
 
       setLoading(false);
     })();
