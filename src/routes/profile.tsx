@@ -125,7 +125,7 @@ function ProfileContent() {
           .maybeSingle(),
         supabase
           .from("customer_packages")
-          .select("package, end_date, is_active")
+          .select("package, start_date, end_date, price_eur, is_active")
           .eq("user_id", uid)
           .eq("is_active", true)
           .order("end_date", { ascending: false })
