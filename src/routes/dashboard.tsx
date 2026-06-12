@@ -456,14 +456,19 @@ function RealUserDashboard() {
 
 function PendingPaymentBanner({ userId }: { userId: string }) {
   const [pending, setPending] = useState<
-    { id: string; amount_eur: number | string; note: string | null }[]
+    {
+      id: string;
+      amount_eur: number | string;
+      note: string | null;
+      created_at: string;
+    }[]
   >([]);
 
   useEffect(() => {
     (async () => {
       const { data } = await supabase
         .from("payment_history")
-        .select("id, amount_eur, note")
+        .select("id, amount_eur, note, created_at")
         .eq("user_id", userId)
         .eq("status", "pending")
         .order("created_at", { ascending: false });
@@ -475,25 +480,55 @@ function PendingPaymentBanner({ userId }: { userId: string }) {
   const total = pending.reduce((s, p) => s + Number(p.amount_eur), 0);
   const paypalUrl = `https://www.paypal.me/ManuSchrader/${total}EUR`;
 
+  // Frühestes pending bestimmt die Frist (3 Tage ab Anlage)
+  const earliest = pending.reduce((a, b) =>
+    new Date(a.created_at) < new Date(b.created_at) ? a : b,
+  );
+  const dueDate = new Date(earliest.created_at);
+  dueDate.setDate(dueDate.getDate() + 3);
+  const msLeft = dueDate.getTime() - Date.now();
+  const daysLeft = Math.ceil(msLeft / 86400000);
+  const overdue = msLeft < 0;
+  const dueLabel = dueDate.toLocaleDateString("de-DE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+
+  const accent = overdue
+    ? "border-destructive/60 from-destructive/20"
+    : "border-gold/40 from-gold/15";
+  const badge = overdue ? "text-destructive" : "text-gold";
+
   return (
-    <div className="rounded-2xl border border-gold/40 bg-gradient-to-r from-gold/15 to-transparent p-5">
+    <div
+      className={`rounded-2xl border bg-gradient-to-r to-transparent p-5 ${accent}`}
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-start gap-3">
           <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-gold text-primary-foreground shadow-gold">
             💳
           </div>
           <div>
-            <div className="text-xs uppercase tracking-wider text-gold">
-              Zahlung ausstehend
+            <div className={`text-xs uppercase tracking-wider ${badge}`}>
+              {overdue ? "Zahlung überfällig" : "Zahlung ausstehend"}
             </div>
             <div className="font-display text-base font-bold">
-              Dein Coach hat deine Anfrage freigegeben
+              {overdue
+                ? `Bitte zeitnah begleichen (Frist war ${dueLabel})`
+                : `Bitte bis ${dueLabel} bezahlen`}
             </div>
             <div className="text-xs text-muted-foreground">
-              {pending.map((p) => p.note).filter(Boolean).join(" · ") ||
-                "Bitte begleiche den offenen Betrag, damit dein Paket aktiviert/verlängert wird."}
+              {overdue
+                ? `${Math.abs(daysLeft)} Tag(e) überfällig`
+                : daysLeft <= 0
+                ? "Heute fällig"
+                : `Noch ${daysLeft} Tag${daysLeft === 1 ? "" : "e"} Zeit`}
+              {pending.some((p) => p.note)
+                ? ` · ${pending.map((p) => p.note).filter(Boolean).join(" · ")}`
+                : ""}
             </div>
-            <div className="mt-1 font-display text-lg text-gold">
+            <div className={`mt-1 font-display text-lg ${badge}`}>
               {total.toFixed(2)} €
             </div>
           </div>
@@ -506,6 +541,7 @@ function PendingPaymentBanner({ userId }: { userId: string }) {
         >
           Jetzt mit PayPal zahlen
           <ArrowRight className="h-4 w-4" />
+
         </a>
       </div>
     </div>
