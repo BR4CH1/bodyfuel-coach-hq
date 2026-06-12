@@ -380,6 +380,7 @@ function CustomerDetail() {
 
       <MeasurementsCard measurements={data.measurements ?? []} />
 
+      <MacroTargetsCard userId={userId} />
       <NutritionTargetsEditor userId={userId} />
       <TrainingBonusCard userId={userId} isCoach />
       <CoachTrainingSummary clientId={userId} />
