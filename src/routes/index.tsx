@@ -797,6 +797,8 @@ function CTASection() {
 
 /* ------------------------------------------------------------------ */
 
+import { PACKAGES as SHARED_PACKAGES } from "@/lib/bodyfuel/packages";
+
 const PACKAGES: Array<{
   name: string;
   price: number;
@@ -804,51 +806,15 @@ const PACKAGES: Array<{
   features: string[];
   cta: string;
   popular?: boolean;
-}> = [
-  {
-    name: "BODYFUEL STARTER",
-    price: 79,
-    tagline: "Dein Einstieg mit Plan & System",
-    cta: "Starter buchen",
-    features: [
-      "Individueller Ernährungsplan",
-      "BodyFuel Dashboard Zugang",
-      "Punkte- & Level-System",
-      "1 Check-in pro Monat",
-      "Fortschrittstracking",
-    ],
-  },
-  {
-    name: "BODYFUEL COACHING",
-    price: 129,
-    tagline: "Die beliebteste Wahl für echte Ergebnisse",
-    cta: "Coaching buchen",
-    popular: true,
-    features: [
-      "Individueller Ernährungsplan",
-      "Wöchentliche Check-ins",
-      "Anpassungen bei Bedarf",
-      "BodyFuel Dashboard Zugang",
-      "Punkte- & Level-System",
-      "Fortschrittsfotos & Gewichtstracking",
-      "WhatsApp Support",
-    ],
-  },
-  {
-    name: "BODYFUEL PREMIUM",
-    price: 199,
-    tagline: "Maximale Betreuung & persönliche Strategie",
-    cta: "Premium buchen",
-    features: [
-      "Alles aus Coaching",
-      "Engere Betreuung",
-      "Individuelle Trainingsplanung",
-      "Priorisierter Support",
-      "Regelmäßige Anpassungen",
-      "Persönliche Strategiegespräche",
-    ],
-  },
-];
+}> = SHARED_PACKAGES.map((p) => ({
+  name: p.name,
+  price: p.price,
+  tagline: p.tagline,
+  features: p.features,
+  popular: p.popular,
+  cta: `${p.key.charAt(0).toUpperCase() + p.key.slice(1)} buchen`,
+}));
+
 
 function Pricing() {
   return (
