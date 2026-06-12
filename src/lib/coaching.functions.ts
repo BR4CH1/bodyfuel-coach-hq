@@ -544,6 +544,16 @@ export const updatePackageRequest = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertCoach(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Load the request
+    const { data: req, error: reqErr } = await supabaseAdmin
+      .from("package_requests")
+      .select("*")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (reqErr) throw new Error(reqErr.message);
+    if (!req) throw new Error("Anfrage nicht gefunden");
+
     const { error } = await supabaseAdmin
       .from("package_requests")
       .update({
@@ -552,5 +562,43 @@ export const updatePackageRequest = createServerFn({ method: "POST" })
       })
       .eq("id", data.id);
     if (error) throw new Error(error.message);
+
+    // On approval: create a pending payment so the customer sees a "Zahlung ausstehend" hint with PayPal link
+    if (data.status === "approved" && req.request_type !== "contact") {
+      const PRICES: Record<string, number> = { starter: 79, coaching: 129, premium: 199 };
+
+      // Current active package (for renewal amount + linking)
+      const { data: activePkg } = await supabaseAdmin
+        .from("customer_packages")
+        .select("*")
+        .eq("user_id", req.user_id)
+        .eq("is_active", true)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      let amount = 0;
+      let note = "";
+      if (req.request_type === "renewal") {
+        amount = Number(activePkg?.price_eur ?? PRICES[activePkg?.package ?? ""] ?? 0);
+        note = `Verlängerung Paket ${activePkg?.package ?? ""}`;
+      } else if (req.request_type === "change") {
+        amount = PRICES[req.requested_package ?? ""] ?? 0;
+        note = `Paketwechsel → ${req.requested_package}`;
+      }
+
+      if (amount > 0) {
+        await supabaseAdmin.from("payment_history").insert({
+          user_id: req.user_id,
+          customer_package_id: activePkg?.id ?? null,
+          amount_eur: amount,
+          method: "paypal_me",
+          status: "pending",
+          note,
+        });
+      }
+    }
+
     return { ok: true };
   });
+
