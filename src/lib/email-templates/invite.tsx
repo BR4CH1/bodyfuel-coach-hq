@@ -8,10 +8,14 @@ import {
   Heading,
   Hr,
   Html,
+  Img,
   Preview,
   Section,
   Text,
 } from '@react-email/components'
+
+const LOGO_URL =
+  'https://bodyfuel-coaching.com/__l5e/assets-v1/ba9d5358-39bc-4ca2-b583-74e75d27a3a7/bodyfuel-logo.png'
 
 interface InviteEmailProps {
   siteName: string
@@ -41,8 +45,12 @@ export const InviteEmail = ({
         <Container style={container}>
           {/* Header */}
           <Section style={header}>
-            <Text style={brandName}>BODYFUEL</Text>
-            <Text style={brandTag}>Nutrition Coaching</Text>
+            <Img
+              src={LOGO_URL}
+              alt="BodyFuel Coaching"
+              width="180"
+              style={logo}
+            />
           </Section>
 
           {/* Body card */}
@@ -114,13 +122,14 @@ export const InviteEmail = ({
 
 export default InviteEmail
 
-// === Styles: BodyFuel dark + gold ===
-const GOLD = '#D4AF37'
-const BG = '#0A0A0A'
-const CARD_BG = '#141414'
-const BORDER = '#2A2A2A'
-const TEXT = '#EDEDED'
-const MUTED = '#9A9A9A'
+// === Styles: BodyFuel light + brand green ===
+const GREEN = '#1F4D2E'
+const GREEN_DARK = '#143521'
+const BG = '#F5F4EF'
+const CARD_BG = '#FFFFFF'
+const BORDER = '#E2E0D7'
+const TEXT = '#1A1A1A'
+const MUTED = '#6B6B6B'
 
 const main = {
   backgroundColor: BG,
@@ -138,23 +147,14 @@ const container = {
 
 const header = {
   textAlign: 'center' as const,
-  padding: '16px 0 24px',
+  padding: '24px 0 28px',
 }
 
-const brandName = {
-  fontSize: '24px',
-  fontWeight: 800,
-  letterSpacing: '0.25em',
-  color: GOLD,
-  margin: 0,
-}
-
-const brandTag = {
-  fontSize: '10px',
-  letterSpacing: '0.3em',
-  textTransform: 'uppercase' as const,
-  color: MUTED,
-  margin: '4px 0 0',
+const logo = {
+  display: 'block',
+  margin: '0 auto',
+  maxWidth: '180px',
+  height: 'auto',
 }
 
 const card = {
@@ -167,7 +167,7 @@ const card = {
 const h1 = {
   fontSize: '24px',
   fontWeight: 700,
-  color: GOLD,
+  color: GREEN,
   margin: '0 0 20px',
   lineHeight: '1.3',
 }
@@ -198,8 +198,8 @@ const buttonWrap = {
 }
 
 const button = {
-  backgroundColor: GOLD,
-  color: '#000000',
+  backgroundColor: GREEN,
+  color: '#FFFFFF',
   fontSize: '15px',
   fontWeight: 700,
   letterSpacing: '0.04em',
@@ -229,7 +229,7 @@ const signature = {
 const signatureName = {
   fontSize: '15px',
   fontWeight: 700,
-  color: GOLD,
+  color: GREEN,
   margin: '0 0 2px',
 }
 
