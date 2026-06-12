@@ -44,7 +44,7 @@ function NewCustomerForm() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.email) return toast.error("Name und E-Mail erforderlich.");
+    if (!form.name || !form.email) return toast.error("Vorname und E-Mail erforderlich.");
     setBusy(true);
     try {
       await fn({ data: { ...form, origin: window.location.origin } });
