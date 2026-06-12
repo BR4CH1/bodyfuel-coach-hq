@@ -448,3 +448,61 @@ function RealUserDashboard() {
     </div>
   );
 }
+
+function PendingPaymentBanner({ userId }: { userId: string }) {
+  const [pending, setPending] = useState<
+    { id: string; amount_eur: number | string; note: string | null }[]
+  >([]);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("payment_history")
+        .select("id, amount_eur, note")
+        .eq("user_id", userId)
+        .eq("status", "pending")
+        .order("created_at", { ascending: false });
+      setPending((data as any) ?? []);
+    })();
+  }, [userId]);
+
+  if (pending.length === 0) return null;
+  const total = pending.reduce((s, p) => s + Number(p.amount_eur), 0);
+  const paypalUrl = `https://www.paypal.me/ManuSchrader/${total}EUR`;
+
+  return (
+    <div className="rounded-2xl border border-gold/40 bg-gradient-to-r from-gold/15 to-transparent p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-gold text-primary-foreground shadow-gold">
+            💳
+          </div>
+          <div>
+            <div className="text-xs uppercase tracking-wider text-gold">
+              Zahlung ausstehend
+            </div>
+            <div className="font-display text-base font-bold">
+              Dein Coach hat deine Anfrage freigegeben
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {pending.map((p) => p.note).filter(Boolean).join(" · ") ||
+                "Bitte begleiche den offenen Betrag, damit dein Paket aktiviert/verlängert wird."}
+            </div>
+            <div className="mt-1 font-display text-lg text-gold">
+              {total.toFixed(2)} €
+            </div>
+          </div>
+        </div>
+        <a
+          href={paypalUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-1 rounded-xl bg-gradient-gold px-4 py-2 text-sm font-semibold text-primary-foreground shadow-gold hover:opacity-90"
+        >
+          Jetzt mit PayPal zahlen
+          <ArrowRight className="h-4 w-4" />
+        </a>
+      </div>
+    </div>
+  );
+}
