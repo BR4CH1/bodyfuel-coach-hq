@@ -41,6 +41,8 @@ export function MyPackagePanel() {
     ),
   );
   const lastPayment = data.payments[0];
+  const hasCompletedPayment = data.payments.some((p) => p.status === "completed");
+  const renewLabel = hasCompletedPayment ? "Coaching verlängern" : "Coaching starten";
 
   return (
     <div className="rounded-2xl border border-border bg-card p-6">
@@ -60,7 +62,7 @@ export function MyPackagePanel() {
           className="bg-gradient-gold text-primary-foreground"
         >
           <RefreshCcw className="mr-1 h-4 w-4" />
-          Coaching verlängern
+          {renewLabel}
         </Button>
       </div>
 
