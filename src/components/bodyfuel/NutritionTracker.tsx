@@ -112,7 +112,15 @@ export function NutritionTracker() {
   const userId = supabaseUser?.id;
   const date = today();
 
-  const [targets, setTargets] = useState<Targets>(DEFAULT_TARGETS);
+  const [baseTargets, setBaseTargets] = useState<Targets>(DEFAULT_TARGETS);
+  const [restTargets, setRestTargets] = useState<Targets | null>(null);
+  const [dayType, setDayTypeState] = useState<DayType>("training");
+  const [dayTypeSource, setDayTypeSource] = useState<"manual" | "auto">("auto");
+  const [savingDayType, setSavingDayType] = useState(false);
+
+  const targets: Targets =
+    dayType === "rest" && restTargets ? restTargets : baseTargets;
+
   const [entries, setEntries] = useState<FoodEntry[]>([]);
   const [waterGlasses, setWaterGlasses] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -126,16 +134,18 @@ export function NutritionTracker() {
   const [scannerOpen, setScannerOpen] = useState(false);
 
   const getTargetsFn = useServerFn(getNutritionTargets);
+  const getDayTypeFn = useServerFn(getDayType);
+  const setDayTypeFn = useServerFn(setDayType);
   const searchFn = useServerFn(searchFoods);
   const lookupFn = useServerFn(lookupBarcode);
 
-  // Load targets + entries + water
+  // Load targets + entries + water + day type
   useEffect(() => {
     if (!userId) return;
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const [t, e, w] = await Promise.all([
+      const [t, e, w, d] = await Promise.all([
         getTargetsFn({ data: { user_id: userId } }),
         supabase
           .from("food_entries")
@@ -149,25 +159,70 @@ export function NutritionTracker() {
           .eq("user_id", userId)
           .eq("entry_date", date)
           .maybeSingle(),
+        getDayTypeFn({ data: { user_id: userId, date } }),
       ]);
       if (cancelled) return;
       if (t) {
-        setTargets({
+        setBaseTargets({
           kcal: t.kcal,
           protein_g: t.protein_g,
           carbs_g: t.carbs_g,
           fat_g: t.fat_g,
           water_glasses: t.water_glasses,
         });
+        if (t.kcal_rest != null) {
+          setRestTargets({
+            kcal: t.kcal_rest,
+            protein_g: t.protein_g_rest ?? t.protein_g,
+            carbs_g: t.carbs_g_rest ?? t.carbs_g,
+            fat_g: t.fat_g_rest ?? t.fat_g,
+            water_glasses: t.water_glasses,
+          });
+        } else {
+          setRestTargets(null);
+        }
       }
       setEntries(((e.data as FoodEntry[]) ?? []).map((r) => ({ ...r })));
       setWaterGlasses(w.data?.glasses ?? 0);
+      setDayTypeState(d.kind);
+      setDayTypeSource(d.source);
       setLoading(false);
     })();
     return () => {
       cancelled = true;
     };
-  }, [userId, date, getTargetsFn]);
+  }, [userId, date, getTargetsFn, getDayTypeFn]);
+
+  const toggleDayType = async () => {
+    if (!userId) return;
+    const next: DayType = dayType === "training" ? "rest" : "training";
+    setSavingDayType(true);
+    setDayTypeState(next);
+    setDayTypeSource("manual");
+    try {
+      await setDayTypeFn({ data: { user_id: userId, date, kind: next } });
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setSavingDayType(false);
+    }
+  };
+
+  const resetDayType = async () => {
+    if (!userId) return;
+    setSavingDayType(true);
+    try {
+      await setDayTypeFn({ data: { user_id: userId, date, kind: null } });
+      const d = await getDayTypeFn({ data: { user_id: userId, date } });
+      setDayTypeState(d.kind);
+      setDayTypeSource(d.source);
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setSavingDayType(false);
+    }
+  };
+
 
   const totals = useMemo(() => {
     return entries.reduce(
