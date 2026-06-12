@@ -172,9 +172,10 @@ function DashboardContent() {
               suffix="Tage"
               accent={streak > 0}
             />
-          </div>
         </div>
       </div>
+
+      {supabaseUser && <TrainingBonusCard userId={supabaseUser.id} />}
 
 
       {/* Stat grid */}
