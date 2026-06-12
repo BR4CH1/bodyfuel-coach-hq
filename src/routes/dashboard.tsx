@@ -294,12 +294,14 @@ function RealUserDashboard() {
   const [latest, setLatest] = useState<LatestMeasurement | null>(null);
   const [count, setCount] = useState(0);
   const [todayDbPoints, setTodayDbPoints] = useState(0);
-  const [userPts, setUserPts] = useState<{ total: number; streak: number; longest: number; level: number }>({
-    total: 0,
-    streak: 0,
-    longest: 0,
-    level: 1,
-  });
+  const [userPts, setUserPts] = useState<{
+    total: number;
+    daily: number;
+    perf: number;
+    streak: number;
+    longest: number;
+    level: number;
+  }>({ total: 0, daily: 0, perf: 0, streak: 0, longest: 0, level: 1 });
   const [loading, setLoading] = useState(true);
 
   const todayStr = new Date().toISOString().slice(0, 10);
