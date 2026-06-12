@@ -235,7 +235,23 @@ export const resendInvite = createServerFn({ method: "POST" })
     const email = u.user?.email;
     if (!email) throw new Error("Kein E-Mail-Account gefunden");
 
+    const existingMeta = (u.user?.user_metadata ?? {}) as Record<string, unknown>;
+    let firstName = typeof existingMeta.first_name === "string" ? existingMeta.first_name : "";
+    if (!firstName) {
+      const display = typeof existingMeta.display_name === "string" ? existingMeta.display_name : "";
+      if (display) firstName = display.trim().split(/\s+/)[0] ?? "";
+    }
+    if (!firstName) {
+      const { data: prof } = await supabaseAdmin
+        .from("profiles")
+        .select("display_name")
+        .eq("id", data.user_id)
+        .maybeSingle();
+      if (prof?.display_name) firstName = prof.display_name.trim().split(/\s+/)[0] ?? "";
+    }
+
     const { error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+      data: { ...existingMeta, first_name: firstName },
       redirectTo: `${origin}/welcome`,
     });
     if (error) throw new Error(error.message);
