@@ -147,23 +147,14 @@ const container = {
 
 const header = {
   textAlign: 'center' as const,
-  padding: '16px 0 24px',
+  padding: '24px 0 28px',
 }
 
-const brandName = {
-  fontSize: '24px',
-  fontWeight: 800,
-  letterSpacing: '0.25em',
-  color: GOLD,
-  margin: 0,
-}
-
-const brandTag = {
-  fontSize: '10px',
-  letterSpacing: '0.3em',
-  textTransform: 'uppercase' as const,
-  color: MUTED,
-  margin: '4px 0 0',
+const logo = {
+  display: 'block',
+  margin: '0 auto',
+  maxWidth: '180px',
+  height: 'auto',
 }
 
 const card = {
@@ -176,7 +167,7 @@ const card = {
 const h1 = {
   fontSize: '24px',
   fontWeight: 700,
-  color: GOLD,
+  color: GREEN,
   margin: '0 0 20px',
   lineHeight: '1.3',
 }
@@ -207,8 +198,8 @@ const buttonWrap = {
 }
 
 const button = {
-  backgroundColor: GOLD,
-  color: '#000000',
+  backgroundColor: GREEN,
+  color: '#FFFFFF',
   fontSize: '15px',
   fontWeight: 700,
   letterSpacing: '0.04em',
