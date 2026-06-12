@@ -16,6 +16,7 @@ import {
   type FoodResult,
   type DayType,
 } from "@/lib/nutrition.functions";
+import { LOCAL_FOODS } from "@/lib/bodyfuel/localFoods";
 import { Dumbbell, Moon } from "lucide-react";
 
 type Meal = "breakfast" | "lunch" | "dinner" | "snack";
