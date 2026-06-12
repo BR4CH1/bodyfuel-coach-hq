@@ -294,7 +294,8 @@ export function NutritionTracker() {
     try {
       const food = await lookupFn({ data: { barcode: code } });
       setPicking(food);
-      setGrams(100);
+      setUnit(food.serving_g ? "piece" : "g");
+      setAmountStr(food.serving_g ? "1" : "100");
     } catch (e) {
       toast.error((e as Error).message);
     }
@@ -302,6 +303,12 @@ export function NutritionTracker() {
 
   const addPicked = async () => {
     if (!picking || !openMeal || !userId) return;
+    const amt = parseFloat(amountStr.replace(",", "."));
+    if (!isFinite(amt) || amt <= 0) {
+      toast.error("Bitte gültige Menge eingeben");
+      return;
+    }
+    const grams = unit === "piece" && picking.serving_g ? amt * picking.serving_g : amt;
     const factor = grams / 100;
     const payload = {
       user_id: userId,
@@ -310,7 +317,7 @@ export function NutritionTracker() {
       name: picking.name,
       brand: picking.brand,
       barcode: picking.barcode,
-      serving_g: grams,
+      serving_g: +grams.toFixed(1),
       kcal: Math.round(picking.kcal_per_100g * factor),
       protein_g: +(picking.protein_per_100g * factor).toFixed(1),
       carbs_g: +(picking.carbs_per_100g * factor).toFixed(1),
