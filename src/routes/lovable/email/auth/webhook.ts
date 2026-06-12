@@ -195,6 +195,7 @@ export const Route = createFileRoute("/lovable/email/auth/webhook")({
 
         const firstName =
           usableFirstName(profileDisplayName) ||
+          usableFirstName(leadName) ||
           usableFirstName(adminMeta.first_name) ||
           usableFirstName(payloadMeta.first_name) ||
           usableFirstName(adminMeta.display_name) ||
@@ -202,8 +203,7 @@ export const Route = createFileRoute("/lovable/email/auth/webhook")({
           usableFirstName(adminMeta.full_name) ||
           usableFirstName(payloadMeta.full_name) ||
           usableFirstName(adminMeta.name) ||
-          usableFirstName(payloadMeta.name) ||
-          usableFirstName(leadName)
+          usableFirstName(payloadMeta.name)
 
         const templateProps = {
           siteName: SITE_NAME,
