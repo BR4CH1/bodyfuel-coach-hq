@@ -644,7 +644,7 @@ export function NutritionTracker() {
                 const gramsCalc = unit === "piece" && picking.serving_g ? amt * picking.serving_g : amt;
                 const factor = gramsCalc / 100;
                 return (
-              <div className="space-y-3 p-4">
+              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
                 <div>
                   <div className="text-sm font-semibold">{picking.name}</div>
                   <div className="text-xs text-muted-foreground">
