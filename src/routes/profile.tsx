@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
 import {
   User as UserIcon,
   Mail,
@@ -14,7 +15,32 @@ import {
   KeyRound,
   CalendarCheck,
   Save,
+  RefreshCcw,
+  ArrowLeftRight,
+  MessageSquare,
+  Check,
+  Sparkles,
 } from "lucide-react";
+import {
+  createPackageRequest,
+  listMyPackageRequests,
+} from "@/lib/coaching.functions";
+import {
+  PACKAGES,
+  PACKAGE_LABEL,
+  getPackage,
+  type PackageKey,
+} from "@/lib/bodyfuel/packages";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { useSession } from "@/lib/bodyfuel/session";
 import { supabase } from "@/integrations/supabase/client";
