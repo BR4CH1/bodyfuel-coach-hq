@@ -253,7 +253,7 @@ function CustomerDetail() {
       {activePkg && (
         <div className="rounded-2xl border border-border bg-card p-6">
           <h2 className="font-display text-lg font-bold">Aktives Paket</h2>
-          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Paket</Label>
               <select
@@ -276,6 +276,17 @@ function CustomerDetail() {
               />
             </div>
             <div className="space-y-2">
+              <Label>Startdatum</Label>
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Vertragsbeginn — auch in der Zukunft möglich (z.B. 01.07.).
+              </p>
+            </div>
+            <div className="space-y-2">
               <Label>Ablaufdatum</Label>
               <Input
                 type="date"
@@ -291,6 +302,7 @@ function CustomerDetail() {
                   package_id: activePkg.id,
                   package: pkgKey as "starter" | "coaching" | "premium",
                   price_eur: price,
+                  start_date: startDate || undefined,
                   end_date: endDate,
                 })
               }
