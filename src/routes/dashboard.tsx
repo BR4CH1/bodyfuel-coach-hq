@@ -497,6 +497,8 @@ function RealUserDashboard() {
 
       {supabaseUser && <DailyChecklist userId={supabaseUser.id} />}
 
+      {supabaseUser && <MacroTargetsCard userId={supabaseUser.id} />}
+
       {supabaseUser && <AchievementsCard userId={supabaseUser.id} />}
 
       {supabaseUser && <TrainingDevelopmentCard clientId={supabaseUser.id} />}
