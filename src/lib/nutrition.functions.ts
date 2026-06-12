@@ -58,7 +58,7 @@ export const searchFoods = createServerFn({ method: "POST" })
     const q = data.query.trim();
     if (!q) return [] as FoodResult[];
     const fields =
-      "code,product_name,product_name_de,generic_name,brands,nutriments";
+      "code,product_name,product_name_de,generic_name,brands,nutriments,serving_size,serving_quantity";
     const tryUrls = [
       // German DB first — most German products are indexed here
       `https://de.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=25&fields=${fields}`,
