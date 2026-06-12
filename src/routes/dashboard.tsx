@@ -29,7 +29,12 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 function DashboardContent() {
-  const { user, supabaseUser } = useSession();
+  const { user, supabaseUser, profile } = useSession();
+  const greetingName =
+    profile?.display_name?.split(" ")[0] ??
+    supabaseUser?.email?.split("@")[0] ??
+    user?.name.split(" ")[0] ??
+    "";
   const [dbPoints, setDbPoints] = useState<{ total: number; today: number; streak: number } | null>(null);
 
   useEffect(() => {
