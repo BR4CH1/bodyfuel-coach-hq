@@ -229,7 +229,11 @@ function ProfileContent() {
         </div>
       </section>
 
+      {/* Mein Paket */}
+      <MyPackageSection pkg={pkg} />
+
       {/* Coaching-Infos */}
+
       <section className="rounded-2xl border border-border bg-card p-6">
         <h2 className="font-display text-lg font-bold">Coaching-Infos</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
