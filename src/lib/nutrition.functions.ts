@@ -103,11 +103,17 @@ export const setNutritionTargets = createServerFn({ method: "POST" })
       carbs_g: number;
       fat_g: number;
       water_glasses: number;
+      kcal_rest?: number | null;
+      protein_g_rest?: number | null;
+      carbs_g_rest?: number | null;
+      fat_g_rest?: number | null;
     }) => d,
   )
   .handler(async ({ data, context }) => {
     await assertCoach(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const nz = (v: number | null | undefined) =>
+      v == null || !isFinite(Number(v)) ? null : Math.max(0, Math.round(Number(v)));
     const { error } = await supabaseAdmin.from("nutrition_targets").upsert(
       {
         user_id: data.user_id,
@@ -116,6 +122,10 @@ export const setNutritionTargets = createServerFn({ method: "POST" })
         carbs_g: Math.max(0, Math.round(data.carbs_g)),
         fat_g: Math.max(0, Math.round(data.fat_g)),
         water_glasses: Math.max(1, Math.round(data.water_glasses)),
+        kcal_rest: nz(data.kcal_rest),
+        protein_g_rest: nz(data.protein_g_rest),
+        carbs_g_rest: nz(data.carbs_g_rest),
+        fat_g_rest: nz(data.fat_g_rest),
         updated_by: context.userId,
       },
       { onConflict: "user_id" },
@@ -128,7 +138,6 @@ export const getNutritionTargets = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { user_id: string }) => d)
   .handler(async ({ data, context }) => {
-    // self or coach
     if (data.user_id !== context.userId) {
       await assertCoach(context.supabase, context.userId);
     }
@@ -139,6 +148,69 @@ export const getNutritionTargets = createServerFn({ method: "POST" })
       .maybeSingle();
     if (error) throw new Error(error.message);
     return row;
+  });
+
+/* ----------- Day type (training vs rest) ----------- */
+
+export type DayType = "training" | "rest";
+
+/** Returns the effective day type for a user/date, plus its source. */
+export const getDayType = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { user_id: string; date: string }) => d)
+  .handler(async ({ data, context }) => {
+    if (data.user_id !== context.userId) {
+      await assertCoach(context.supabase, context.userId);
+    }
+    const { data: override } = await context.supabase
+      .from("day_type_overrides")
+      .select("kind")
+      .eq("user_id", data.user_id)
+      .eq("entry_date", data.date)
+      .maybeSingle();
+    if (override?.kind) {
+      return { kind: override.kind as DayType, source: "manual" as const };
+    }
+    const start = `${data.date}T00:00:00`;
+    const end = `${data.date}T23:59:59.999`;
+    const { count } = await context.supabase
+      .from("training_set_logs")
+      .select("id", { count: "exact", head: true })
+      .eq("client_id", data.user_id)
+      .gte("performed_at", start)
+      .lte("performed_at", end);
+    return {
+      kind: ((count ?? 0) > 0 ? "training" : "rest") as DayType,
+      source: "auto" as const,
+    };
+  });
+
+export const setDayType = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (d: { user_id: string; date: string; kind: DayType | null }) => d,
+  )
+  .handler(async ({ data, context }) => {
+    if (data.user_id !== context.userId) {
+      await assertCoach(context.supabase, context.userId);
+    }
+    if (data.kind === null) {
+      const { error } = await context.supabase
+        .from("day_type_overrides")
+        .delete()
+        .eq("user_id", data.user_id)
+        .eq("entry_date", data.date);
+      if (error) throw new Error(error.message);
+      return { ok: true };
+    }
+    const { error } = await context.supabase
+      .from("day_type_overrides")
+      .upsert(
+        { user_id: data.user_id, entry_date: data.date, kind: data.kind },
+        { onConflict: "user_id,entry_date" },
+      );
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
 
 /** Extract daily kcal/macros from the user's active nutrition plan PDF via Lovable AI */
@@ -173,16 +245,19 @@ export const extractTargetsFromPlan = createServerFn({ method: "POST" })
     for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
     const b64 = btoa(bin);
 
-    const prompt = `Du bekommst einen Ernährungsplan als PDF. Extrahiere die TÄGLICHEN Zielwerte:
-- kcal (Gesamtkalorien pro Tag)
-- protein_g (Eiweiß in Gramm pro Tag)
-- carbs_g (Kohlenhydrate in Gramm pro Tag)
-- fat_g (Fett in Gramm pro Tag)
-- water_l (empfohlene Wassermenge in Litern pro Tag, falls angegeben — sonst null)
+    const prompt = `Du bekommst einen Ernährungsplan als PDF. Extrahiere die TÄGLICHEN Zielwerte.
 
-Falls mehrere Tage/Phasen genannt sind, nimm die HAUPT-Phase (Standardtag).
+WICHTIG: Falls der Plan zwischen TRAININGSTAG und TRAININGSFREIEM TAG (Restday / Refeed-frei / "Off-Day") unterscheidet, gib BEIDE Sätze zurück. Sonst nur den Standardsatz und lass die _rest-Felder null.
+
+Felder:
+- kcal, protein_g, carbs_g, fat_g: Werte für einen TRAININGSTAG (oder den Standardtag, falls keine Unterscheidung).
+- kcal_rest, protein_g_rest, carbs_g_rest, fat_g_rest: Werte für einen RESTDAY/trainingsfreien Tag. Null, falls der Plan das nicht unterscheidet.
+- water_l: empfohlene Wassermenge in Litern pro Tag, oder null.
+
 Antworte ausschließlich mit gültigem JSON:
-{ "kcal": <int>, "protein_g": <int>, "carbs_g": <int>, "fat_g": <int>, "water_l": <number|null> }`;
+{ "kcal": <int>, "protein_g": <int>, "carbs_g": <int>, "fat_g": <int>,
+  "kcal_rest": <int|null>, "protein_g_rest": <int|null>, "carbs_g_rest": <int|null>, "fat_g_rest": <int|null>,
+  "water_l": <number|null> }`;
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -220,10 +295,18 @@ Antworte ausschließlich mit gültigem JSON:
       throw new Error("KI-Antwort konnte nicht gelesen werden");
     }
 
+    const nz = (v: any) => {
+      const n = Number(v);
+      return isFinite(n) && n > 0 ? Math.round(n) : null;
+    };
     const kcal = Math.max(0, Math.round(Number(parsed.kcal) || 0));
     const protein_g = Math.max(0, Math.round(Number(parsed.protein_g) || 0));
     const carbs_g = Math.max(0, Math.round(Number(parsed.carbs_g) || 0));
     const fat_g = Math.max(0, Math.round(Number(parsed.fat_g) || 0));
+    const kcal_rest = nz(parsed.kcal_rest);
+    const protein_g_rest = nz(parsed.protein_g_rest);
+    const carbs_g_rest = nz(parsed.carbs_g_rest);
+    const fat_g_rest = nz(parsed.fat_g_rest);
     const water_l = Number(parsed.water_l);
     const water_glasses = isFinite(water_l) && water_l > 0
       ? Math.max(4, Math.round((water_l * 1000) / 250))
@@ -232,5 +315,9 @@ Antworte ausschließlich mit gültigem JSON:
     if (!kcal && !protein_g) {
       throw new Error("Keine Werte im Plan gefunden. Bitte manuell eintragen.");
     }
-    return { kcal, protein_g, carbs_g, fat_g, water_glasses };
+    return {
+      kcal, protein_g, carbs_g, fat_g,
+      kcal_rest, protein_g_rest, carbs_g_rest, fat_g_rest,
+      water_glasses,
+    };
   });

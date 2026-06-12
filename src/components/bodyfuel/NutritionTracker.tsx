@@ -11,8 +11,12 @@ import {
   searchFoods,
   lookupBarcode,
   getNutritionTargets,
+  getDayType,
+  setDayType,
   type FoodResult,
+  type DayType,
 } from "@/lib/nutrition.functions";
+import { Dumbbell, Moon } from "lucide-react";
 
 type Meal = "breakfast" | "lunch" | "dinner" | "snack";
 const MEALS: { key: Meal; label: string; emoji: string }[] = [
@@ -108,7 +112,15 @@ export function NutritionTracker() {
   const userId = supabaseUser?.id;
   const date = today();
 
-  const [targets, setTargets] = useState<Targets>(DEFAULT_TARGETS);
+  const [baseTargets, setBaseTargets] = useState<Targets>(DEFAULT_TARGETS);
+  const [restTargets, setRestTargets] = useState<Targets | null>(null);
+  const [dayType, setDayTypeState] = useState<DayType>("training");
+  const [dayTypeSource, setDayTypeSource] = useState<"manual" | "auto">("auto");
+  const [savingDayType, setSavingDayType] = useState(false);
+
+  const targets: Targets =
+    dayType === "rest" && restTargets ? restTargets : baseTargets;
+
   const [entries, setEntries] = useState<FoodEntry[]>([]);
   const [waterGlasses, setWaterGlasses] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -122,16 +134,18 @@ export function NutritionTracker() {
   const [scannerOpen, setScannerOpen] = useState(false);
 
   const getTargetsFn = useServerFn(getNutritionTargets);
+  const getDayTypeFn = useServerFn(getDayType);
+  const setDayTypeFn = useServerFn(setDayType);
   const searchFn = useServerFn(searchFoods);
   const lookupFn = useServerFn(lookupBarcode);
 
-  // Load targets + entries + water
+  // Load targets + entries + water + day type
   useEffect(() => {
     if (!userId) return;
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const [t, e, w] = await Promise.all([
+      const [t, e, w, d] = await Promise.all([
         getTargetsFn({ data: { user_id: userId } }),
         supabase
           .from("food_entries")
@@ -145,25 +159,70 @@ export function NutritionTracker() {
           .eq("user_id", userId)
           .eq("entry_date", date)
           .maybeSingle(),
+        getDayTypeFn({ data: { user_id: userId, date } }),
       ]);
       if (cancelled) return;
       if (t) {
-        setTargets({
+        setBaseTargets({
           kcal: t.kcal,
           protein_g: t.protein_g,
           carbs_g: t.carbs_g,
           fat_g: t.fat_g,
           water_glasses: t.water_glasses,
         });
+        if (t.kcal_rest != null) {
+          setRestTargets({
+            kcal: t.kcal_rest,
+            protein_g: t.protein_g_rest ?? t.protein_g,
+            carbs_g: t.carbs_g_rest ?? t.carbs_g,
+            fat_g: t.fat_g_rest ?? t.fat_g,
+            water_glasses: t.water_glasses,
+          });
+        } else {
+          setRestTargets(null);
+        }
       }
       setEntries(((e.data as FoodEntry[]) ?? []).map((r) => ({ ...r })));
       setWaterGlasses(w.data?.glasses ?? 0);
+      setDayTypeState(d.kind);
+      setDayTypeSource(d.source);
       setLoading(false);
     })();
     return () => {
       cancelled = true;
     };
-  }, [userId, date, getTargetsFn]);
+  }, [userId, date, getTargetsFn, getDayTypeFn]);
+
+  const toggleDayType = async () => {
+    if (!userId) return;
+    const next: DayType = dayType === "training" ? "rest" : "training";
+    setSavingDayType(true);
+    setDayTypeState(next);
+    setDayTypeSource("manual");
+    try {
+      await setDayTypeFn({ data: { user_id: userId, date, kind: next } });
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setSavingDayType(false);
+    }
+  };
+
+  const resetDayType = async () => {
+    if (!userId) return;
+    setSavingDayType(true);
+    try {
+      await setDayTypeFn({ data: { user_id: userId, date, kind: null } });
+      const d = await getDayTypeFn({ data: { user_id: userId, date } });
+      setDayTypeState(d.kind);
+      setDayTypeSource(d.source);
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setSavingDayType(false);
+    }
+  };
+
 
   const totals = useMemo(() => {
     return entries.reduce(
@@ -312,6 +371,51 @@ export function NutritionTracker() {
 
   return (
     <div className="space-y-6">
+      {/* Day-type badge */}
+      <div
+        className={`flex items-center justify-between gap-3 rounded-2xl border p-4 ${
+          dayType === "training"
+            ? "border-gold/50 bg-gradient-to-br from-accent/40 to-card"
+            : "border-blue-400/40 bg-blue-400/10"
+        }`}
+      >
+        <div className="flex items-center gap-3">
+          <div
+            className={`grid h-11 w-11 place-items-center rounded-xl ${
+              dayType === "training"
+                ? "bg-gradient-gold text-primary-foreground"
+                : "bg-blue-400/20 text-blue-300"
+            }`}
+          >
+            {dayType === "training" ? <Dumbbell className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          </div>
+          <div>
+            <div className="text-sm font-bold">
+              {dayType === "training" ? "Trainingstag" : "Restday"}
+            </div>
+            <div className="text-[11px] text-muted-foreground">
+              {restTargets
+                ? dayType === "training"
+                  ? `Training: ${baseTargets.kcal} kcal · P ${baseTargets.protein_g} · K ${baseTargets.carbs_g} · F ${baseTargets.fat_g}`
+                  : `Restday: ${restTargets.kcal} kcal · P ${restTargets.protein_g} · K ${restTargets.carbs_g} · F ${restTargets.fat_g}`
+                : "Im Plan ist kein Restday-Wert hinterlegt"}
+              {" · "}
+              {dayTypeSource === "auto" ? "automatisch erkannt" : "manuell gesetzt"}
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {dayTypeSource === "manual" && (
+            <Button size="sm" variant="ghost" onClick={resetDayType} disabled={savingDayType}>
+              Auto
+            </Button>
+          )}
+          <Button size="sm" variant="outline" onClick={toggleDayType} disabled={savingDayType}>
+            Auf {dayType === "training" ? "Restday" : "Trainingstag"} ändern
+          </Button>
+        </div>
+      </div>
+
       {/* Header rings */}
       <div className="rounded-2xl border border-border bg-card p-5">
         <div className="mb-3 flex items-center justify-between">
