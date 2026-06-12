@@ -84,13 +84,31 @@ type Points = {
   total_points: number;
   level: number;
   current_streak: number;
+const PKG_LABEL = PACKAGE_LABEL;
+
+type ProfileRow = {
+  display_name: string | null;
+  created_at: string;
+  coaching_goal: string | null;
+  checkin_reminder: boolean;
+  notifications_enabled: boolean;
+  next_checkin_date: string | null;
+};
+
+type Points = {
+  total_points: number;
+  level: number;
+  current_streak: number;
 };
 
 type Pkg = {
   package: string;
+  start_date: string;
   end_date: string;
+  price_eur: number | string;
   is_active: boolean;
 };
+
 
 function ProfileContent() {
   const navigate = useNavigate();
