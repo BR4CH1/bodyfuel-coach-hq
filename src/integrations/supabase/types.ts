@@ -550,6 +550,59 @@ export type Database = {
           },
         ]
       }
+      performance_points: {
+        Row: {
+          approved: boolean
+          created_at: string
+          details: Json
+          exercise_id: string | null
+          exercise_name: string | null
+          flagged: boolean
+          id: string
+          kind: string
+          points: number
+          training_date: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          approved?: boolean
+          created_at?: string
+          details?: Json
+          exercise_id?: string | null
+          exercise_name?: string | null
+          flagged?: boolean
+          id?: string
+          kind: string
+          points: number
+          training_date: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          approved?: boolean
+          created_at?: string
+          details?: Json
+          exercise_id?: string | null
+          exercise_name?: string | null
+          flagged?: boolean
+          id?: string
+          kind?: string
+          points?: number
+          training_date?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_points_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "training_exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           activity_level: string | null
@@ -775,9 +828,11 @@ export type Database = {
         Row: {
           created_at: string
           current_streak: number
+          daily_points: number
           last_check_date: string | null
           level: number
           longest_streak: number
+          performance_points: number
           total_points: number
           updated_at: string
           user_id: string
@@ -785,9 +840,11 @@ export type Database = {
         Insert: {
           created_at?: string
           current_streak?: number
+          daily_points?: number
           last_check_date?: string | null
           level?: number
           longest_streak?: number
+          performance_points?: number
           total_points?: number
           updated_at?: string
           user_id: string
@@ -795,9 +852,11 @@ export type Database = {
         Update: {
           created_at?: string
           current_streak?: number
+          daily_points?: number
           last_check_date?: string | null
           level?: number
           longest_streak?: number
+          performance_points?: number
           total_points?: number
           updated_at?: string
           user_id?: string
@@ -952,6 +1011,7 @@ export type Database = {
           read_ct: number
         }[]
       }
+      recompute_user_points: { Args: { _user_id: string }; Returns: undefined }
     }
     Enums: {
       app_role: "coach" | "client"
