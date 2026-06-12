@@ -266,7 +266,7 @@ export const getCustomerDetail = createServerFn({ method: "POST" })
     await assertCoach(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const [profile, pkgs, payments, userRes] = await Promise.all([
+    const [profile, pkgs, payments, userRes, measurements] = await Promise.all([
       supabaseAdmin.from("profiles").select("*").eq("id", data.user_id).maybeSingle(),
       supabaseAdmin
         .from("customer_packages")
@@ -279,6 +279,11 @@ export const getCustomerDetail = createServerFn({ method: "POST" })
         .eq("user_id", data.user_id)
         .order("payment_date", { ascending: false }),
       supabaseAdmin.auth.admin.getUserById(data.user_id),
+      supabaseAdmin
+        .from("body_measurements")
+        .select("*")
+        .eq("user_id", data.user_id)
+        .order("measured_at", { ascending: false }),
     ]);
 
     const u = userRes.data.user as any;
@@ -296,6 +301,7 @@ export const getCustomerDetail = createServerFn({ method: "POST" })
       email: u?.email ?? null,
       packages: pkgs.data ?? [],
       payments: payments.data ?? [],
+      measurements: measurements.data ?? [],
       auth: {
         invited_at: u?.invited_at ?? null,
         confirmed_at: u?.email_confirmed_at ?? u?.confirmed_at ?? null,
@@ -303,6 +309,7 @@ export const getCustomerDetail = createServerFn({ method: "POST" })
         status,
       },
     };
+
   });
 
 /* ---------------- INVITE / PASSWORT / DEAKTIVIEREN ---------------- */
