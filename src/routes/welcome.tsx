@@ -109,10 +109,32 @@ function WelcomePage() {
             </p>
 
             {!hasSession ? (
-              <p className="mt-6 rounded-xl border border-warning/40 bg-warning/10 p-4 text-sm">
-                Bitte öffne diese Seite über den Einladungslink aus deiner E-Mail.
-                Der Link ist nur einmal gültig und läuft nach 7 Tagen ab.
-              </p>
+              <div className="mt-6 space-y-4">
+                <div className="rounded-xl border border-warning/40 bg-warning/10 p-4 text-sm">
+                  Dein Link ist abgelaufen oder ungültig. Bitte fordere unten einen neuen Link an — er ist 15 Minuten gültig.
+                </div>
+                <form onSubmit={requestNewLink} className="space-y-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="resend-email">Deine E-Mail-Adresse</Label>
+                    <Input
+                      id="resend-email"
+                      type="email"
+                      value={resendEmail}
+                      onChange={(e) => setResendEmail(e.target.value)}
+                      placeholder="name@example.com"
+                      required
+                    />
+                  </div>
+                  <Button
+                    type="submit"
+                    disabled={resending}
+                    className="w-full bg-gradient-gold text-primary-foreground hover:opacity-90"
+                  >
+                    {resending ? "…" : "Neuen Link senden"}
+                  </Button>
+                </form>
+              </div>
+
             ) : (
               <form onSubmit={submit} className="mt-6 space-y-4">
                 <div className="space-y-2">
