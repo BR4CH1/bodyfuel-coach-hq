@@ -55,12 +55,14 @@ function CustomerDetail() {
 
   const [price, setPrice] = useState<number>(0);
   const [pkgKey, setPkgKey] = useState<string>("");
+  const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
 
   useEffect(() => {
     if (activePkg) {
       setPrice(Number(activePkg.price_eur));
       setPkgKey(activePkg.package);
+      setStartDate(activePkg.start_date ?? "");
       setEndDate(activePkg.end_date);
     }
   }, [activePkg]);
