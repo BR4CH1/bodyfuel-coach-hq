@@ -6,6 +6,7 @@ import { MyPackagePanel } from "@/components/bodyfuel/MyPackagePanel";
 import { TrainingDevelopmentCard } from "@/components/bodyfuel/TrainingTrends";
 import { DailyChecklist } from "@/components/bodyfuel/DailyChecklist";
 import { AchievementsCard } from "@/components/bodyfuel/AchievementsCard";
+import { TrainingBonusCard } from "@/components/bodyfuel/TrainingBonusCard";
 
 import { useSession } from "@/lib/bodyfuel/session";
 import { supabase } from "@/integrations/supabase/client";
@@ -175,6 +176,8 @@ function DashboardContent() {
         </div>
       </div>
 
+      {supabaseUser && <TrainingBonusCard userId={supabaseUser.id} />}
+
 
       {/* Stat grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -293,12 +296,14 @@ function RealUserDashboard() {
   const [latest, setLatest] = useState<LatestMeasurement | null>(null);
   const [count, setCount] = useState(0);
   const [todayDbPoints, setTodayDbPoints] = useState(0);
-  const [userPts, setUserPts] = useState<{ total: number; streak: number; longest: number; level: number }>({
-    total: 0,
-    streak: 0,
-    longest: 0,
-    level: 1,
-  });
+  const [userPts, setUserPts] = useState<{
+    total: number;
+    daily: number;
+    perf: number;
+    streak: number;
+    longest: number;
+    level: number;
+  }>({ total: 0, daily: 0, perf: 0, streak: 0, longest: 0, level: 1 });
   const [loading, setLoading] = useState(true);
 
   const todayStr = new Date().toISOString().slice(0, 10);
@@ -325,11 +330,13 @@ function RealUserDashboard() {
 
       const { data: up } = await supabase
         .from("user_points")
-        .select("total_points, current_streak, longest_streak, level")
+        .select("total_points, daily_points, performance_points, current_streak, longest_streak, level")
         .eq("user_id", supabaseUser.id)
         .maybeSingle();
       setUserPts({
         total: up?.total_points ?? 0,
+        daily: up?.daily_points ?? 0,
+        perf: up?.performance_points ?? 0,
         streak: up?.current_streak ?? 0,
         longest: up?.longest_streak ?? 0,
         level: up?.level ?? 1,
@@ -427,20 +434,15 @@ function RealUserDashboard() {
               </div>
               <div className="grid grid-cols-3 gap-3 sm:grid-cols-1 sm:gap-2">
                 <Stat label="Gesamt" value={points} suffix="Pkt" />
-                <Link to="/daily-checklist" className="contents">
-                  <Stat label="Heute" value={todayDbPoints} suffix={`/ ${MAX_DAILY_POINTS}`} />
-                </Link>
-                <Stat
-                  label="Streak"
-                  value={userPts.streak}
-                  suffix="Tage"
-                  accent={userPts.streak > 0}
-                />
+                <Stat label="Daily" value={userPts.daily} suffix="Pkt" />
+                <Stat label="Training" value={userPts.perf} suffix="Pkt" accent={userPts.perf > 0} />
               </div>
             </div>
           </div>
         );
       })()}
+
+      {supabaseUser && <TrainingBonusCard userId={supabaseUser.id} />}
 
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
