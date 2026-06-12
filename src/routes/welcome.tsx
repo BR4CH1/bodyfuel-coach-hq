@@ -19,6 +19,8 @@ function WelcomePage() {
   const [busy, setBusy] = useState(false);
   const [hasSession, setHasSession] = useState(false);
   const [done, setDone] = useState(false);
+  const [resendEmail, setResendEmail] = useState("");
+  const [resending, setResending] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setHasSession(!!data.session));
@@ -27,6 +29,25 @@ function WelcomePage() {
     );
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  const requestNewLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resendEmail) return;
+    setResending(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(resendEmail, {
+        redirectTo: `${window.location.origin}/welcome`,
+      });
+      if (error) throw error;
+      toast.success("Neuer Link wurde gesendet. Bitte E-Mails (auch Spam) prüfen.");
+      setResendEmail("");
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setResending(false);
+    }
+  };
+
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
