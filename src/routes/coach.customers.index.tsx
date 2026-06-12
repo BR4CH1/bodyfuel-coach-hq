@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ChevronRight, Plus, Inbox } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ChevronRight, Plus, Inbox, AlertTriangle, Clock } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { listCustomers } from "@/lib/coaching.functions";
 import { Button } from "@/components/ui/button";
@@ -15,12 +16,27 @@ export const Route = createFileRoute("/coach/customers/")({
   ),
 });
 
+type Filter = "all" | "due" | "overdue";
+
 function CustomersList() {
   const fn = useServerFn(listCustomers);
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["customers"],
     queryFn: () => fn(),
   });
+  const [filter, setFilter] = useState<Filter>("all");
+
+  const counts = useMemo(() => {
+    const due = (data ?? []).filter((c: any) => c.payment_status === "due").length;
+    const overdue = (data ?? []).filter((c: any) => c.payment_status === "overdue").length;
+    return { all: data?.length ?? 0, due, overdue };
+  }, [data]);
+
+  const filtered = useMemo(() => {
+    if (!data) return [];
+    if (filter === "all") return data;
+    return (data as any[]).filter((c) => c.payment_status === filter);
+  }, [data, filter]);
 
   return (
     <div className="space-y-6">
@@ -43,14 +59,82 @@ function CustomersList() {
         </div>
       </div>
 
+      {/* Warn-Banner */}
+      {(counts.overdue > 0 || counts.due > 0) && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {counts.overdue > 0 && (
+            <button
+              onClick={() => setFilter("overdue")}
+              className="flex items-center justify-between rounded-2xl border border-destructive/60 bg-destructive/10 p-4 text-left hover:bg-destructive/15"
+            >
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+                <div>
+                  <div className="text-xs uppercase tracking-wider text-destructive">Überfällig</div>
+                  <div className="font-display text-lg font-bold">
+                    {counts.overdue} Kunde{counts.overdue === 1 ? "" : "n"}
+                  </div>
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-destructive" />
+            </button>
+          )}
+          {counts.due > 0 && (
+            <button
+              onClick={() => setFilter("due")}
+              className="flex items-center justify-between rounded-2xl border border-gold/50 bg-gold/10 p-4 text-left hover:bg-gold/15"
+            >
+              <div className="flex items-center gap-3">
+                <Clock className="h-5 w-5 text-gold" />
+                <div>
+                  <div className="text-xs uppercase tracking-wider text-gold">Zahlung fällig</div>
+                  <div className="font-display text-lg font-bold">
+                    {counts.due} Kunde{counts.due === 1 ? "" : "n"}
+                  </div>
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-gold" />
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Filter-Chips */}
+      <div className="flex flex-wrap gap-2">
+        {([
+          ["all", `Alle (${counts.all})`],
+          ["due", `Zahlung fällig (${counts.due})`],
+          ["overdue", `Überfällig (${counts.overdue})`],
+        ] as [Filter, string][]).map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => setFilter(key)}
+            className={
+              "rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition " +
+              (filter === key
+                ? key === "overdue"
+                  ? "border-destructive bg-destructive/15 text-destructive"
+                  : key === "due"
+                  ? "border-gold bg-gold/15 text-gold"
+                  : "border-gold bg-gold/15 text-gold"
+                : "border-border text-muted-foreground hover:border-gold/40")
+            }
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       {isLoading && <p className="text-sm text-muted-foreground">Lade…</p>}
-      {data && data.length === 0 && (
+      {data && filtered.length === 0 && (
         <p className="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground">
-          Noch keine Kunden angelegt.
+          {filter === "all"
+            ? "Noch keine Kunden angelegt."
+            : "Keine Kunden in dieser Ansicht."}
         </p>
       )}
 
-      {data && data.length > 0 && (
+      {filtered.length > 0 && (
         <>
           {/* Desktop table */}
           <div className="hidden overflow-x-auto rounded-2xl border border-border bg-card sm:block">
@@ -58,35 +142,36 @@ function CustomersList() {
               <thead className="border-b border-border bg-secondary/40 text-left text-[11px] uppercase tracking-wider text-muted-foreground">
                 <tr>
                   <th className="px-4 py-3">Name</th>
-                  <th className="px-4 py-3">E-Mail</th>
                   <th className="px-4 py-3">Paket</th>
                   <th className="px-4 py-3">Preis</th>
-                  <th className="px-4 py-3">Start</th>
                   <th className="px-4 py-3">Ende</th>
-                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Letzte Zahlung</th>
+                  <th className="px-4 py-3">Zahlung</th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
               <tbody>
-                {data.map((c) => (
+                {(filtered as any[]).map((c) => (
                   <tr key={c.id} className="border-b border-border last:border-0 hover:bg-secondary/30">
-                    <td className="px-4 py-3 font-semibold">{c.display_name ?? "—"}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{c.email ?? "—"}</td>
+                    <td className="px-4 py-3">
+                      <div className="font-semibold">{c.display_name ?? "—"}</div>
+                      <div className="text-xs text-muted-foreground">{c.email ?? "—"}</div>
+                    </td>
                     <td className="px-4 py-3 uppercase tracking-wider text-gold">{c.package}</td>
                     <td className="px-4 py-3 font-display">{Number(c.price_eur).toFixed(2)} €</td>
-                    <td className="px-4 py-3">{c.start_date}</td>
-                    <td className="px-4 py-3">{c.end_date}</td>
                     <td className="px-4 py-3">
-                      <span
-                        className={
-                          "rounded-full px-2 py-1 text-[10px] font-bold uppercase " +
-                          (c.is_active
-                            ? "bg-gold/10 text-gold"
-                            : "bg-muted text-muted-foreground")
-                        }
-                      >
-                        {c.is_active ? "aktiv" : "inaktiv"}
-                      </span>
+                      {c.end_date}
+                      {c.is_active && c.days_until_end <= 7 && c.days_until_end >= 0 && (
+                        <div className="text-[10px] uppercase tracking-wider text-gold">
+                          läuft in {c.days_until_end} T.
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {c.last_payment_date ?? "—"}
+                    </td>
+                    <td className="px-4 py-3">
+                      <PaymentBadge c={c} />
                     </td>
                     <td className="px-4 py-3 text-right">
                       <Link
@@ -105,28 +190,19 @@ function CustomersList() {
 
           {/* Mobile cards */}
           <div className="space-y-3 sm:hidden">
-            {data.map((c) => (
+            {(filtered as any[]).map((c) => (
               <Link
                 key={c.id}
                 to="/coach/customers/$userId"
                 params={{ userId: c.user_id }}
                 className="block rounded-2xl border border-border bg-card p-4 active:bg-secondary/30"
               >
-                <div className="flex items-start justify-between">
+                <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold">{c.display_name ?? "—"}</p>
                     <p className="truncate text-xs text-muted-foreground">{c.email ?? "—"}</p>
                   </div>
-                  <span
-                    className={
-                      "ml-2 shrink-0 rounded-full px-2 py-1 text-[10px] font-bold uppercase " +
-                      (c.is_active
-                        ? "bg-gold/10 text-gold"
-                        : "bg-muted text-muted-foreground")
-                    }
-                  >
-                    {c.is_active ? "aktiv" : "inaktiv"}
-                  </span>
+                  <PaymentBadge c={c} />
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-y-2 text-xs">
                   <div>
@@ -138,12 +214,12 @@ function CustomersList() {
                     <p className="font-display">{Number(c.price_eur).toFixed(2)} €</p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Start</p>
-                    <p>{c.start_date}</p>
-                  </div>
-                  <div>
                     <p className="text-muted-foreground">Ende</p>
                     <p>{c.end_date}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Letzte Zahlung</p>
+                    <p>{c.last_payment_date ?? "—"}</p>
                   </div>
                 </div>
                 <div className="mt-3 flex items-center gap-1 text-xs font-semibold text-gold">
@@ -155,5 +231,37 @@ function CustomersList() {
         </>
       )}
     </div>
+  );
+}
+
+function PaymentBadge({ c }: { c: any }) {
+  if (c.payment_status === "overdue") {
+    const label =
+      c.payment_days_left != null
+        ? `Überfällig (${Math.abs(c.payment_days_left)} T.)`
+        : "Überfällig";
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full border border-destructive/60 bg-destructive/10 px-2 py-1 text-[10px] font-bold uppercase text-destructive">
+        <AlertTriangle className="h-3 w-3" /> {label}
+        {c.pending_amount > 0 && (
+          <span className="ml-1 font-display">{Number(c.pending_amount).toFixed(2)} €</span>
+        )}
+      </span>
+    );
+  }
+  if (c.payment_status === "due") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full border border-gold/50 bg-gold/10 px-2 py-1 text-[10px] font-bold uppercase text-gold">
+        <Clock className="h-3 w-3" /> Fällig in {c.payment_days_left} T.
+        {c.pending_amount > 0 && (
+          <span className="ml-1 font-display">{Number(c.pending_amount).toFixed(2)} €</span>
+        )}
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex rounded-full bg-emerald-500/10 px-2 py-1 text-[10px] font-bold uppercase text-emerald-500">
+      OK
+    </span>
   );
 }
