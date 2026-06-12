@@ -392,6 +392,8 @@ export type Database = {
         Row: {
           activity_level: string | null
           birthdate: string | null
+          checkin_reminder: boolean
+          coaching_goal: string | null
           created_at: string
           demo_client_key: string | null
           display_name: string | null
@@ -399,12 +401,16 @@ export type Database = {
           goal_weight_kg: number | null
           height_cm: number | null
           id: string
+          next_checkin_date: string | null
+          notifications_enabled: boolean
           phone: string | null
           updated_at: string
         }
         Insert: {
           activity_level?: string | null
           birthdate?: string | null
+          checkin_reminder?: boolean
+          coaching_goal?: string | null
           created_at?: string
           demo_client_key?: string | null
           display_name?: string | null
@@ -412,12 +418,16 @@ export type Database = {
           goal_weight_kg?: number | null
           height_cm?: number | null
           id: string
+          next_checkin_date?: string | null
+          notifications_enabled?: boolean
           phone?: string | null
           updated_at?: string
         }
         Update: {
           activity_level?: string | null
           birthdate?: string | null
+          checkin_reminder?: boolean
+          coaching_goal?: string | null
           created_at?: string
           demo_client_key?: string | null
           display_name?: string | null
@@ -425,6 +435,8 @@ export type Database = {
           goal_weight_kg?: number | null
           height_cm?: number | null
           id?: string
+          next_checkin_date?: string | null
+          notifications_enabled?: boolean
           phone?: string | null
           updated_at?: string
         }
