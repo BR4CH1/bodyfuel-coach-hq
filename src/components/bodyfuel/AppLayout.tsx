@@ -61,7 +61,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
       {/* Desktop sidebar */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-border bg-card/60 backdrop-blur lg:flex">
         <div className="border-b border-border px-5 py-5">
-          <Logo showTagline />
+          <Link to={isCoach ? "/coach" : "/dashboard"}>
+            <Logo showTagline />
+          </Link>
         </div>
         <nav className="flex-1 space-y-1 p-3">
           {nav.map((item) => {
