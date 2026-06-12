@@ -173,6 +173,30 @@ export type Database = {
         }
         Relationships: []
       }
+      day_type_overrides: {
+        Row: {
+          created_at: string
+          entry_date: string
+          kind: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          entry_date: string
+          kind: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          entry_date?: string
+          kind?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       email_send_log: {
         Row: {
           created_at: string
@@ -395,10 +419,14 @@ export type Database = {
       nutrition_targets: {
         Row: {
           carbs_g: number
+          carbs_g_rest: number | null
           created_at: string
           fat_g: number
+          fat_g_rest: number | null
           kcal: number
+          kcal_rest: number | null
           protein_g: number
+          protein_g_rest: number | null
           updated_at: string
           updated_by: string | null
           user_id: string
@@ -406,10 +434,14 @@ export type Database = {
         }
         Insert: {
           carbs_g?: number
+          carbs_g_rest?: number | null
           created_at?: string
           fat_g?: number
+          fat_g_rest?: number | null
           kcal?: number
+          kcal_rest?: number | null
           protein_g?: number
+          protein_g_rest?: number | null
           updated_at?: string
           updated_by?: string | null
           user_id: string
@@ -417,10 +449,14 @@ export type Database = {
         }
         Update: {
           carbs_g?: number
+          carbs_g_rest?: number | null
           created_at?: string
           fat_g?: number
+          fat_g_rest?: number | null
           kcal?: number
+          kcal_rest?: number | null
           protein_g?: number
+          protein_g_rest?: number | null
           updated_at?: string
           updated_by?: string | null
           user_id?: string
