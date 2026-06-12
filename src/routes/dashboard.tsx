@@ -386,6 +386,63 @@ function RealUserDashboard() {
 
       <MyPackagePanel />
 
+      {/* Level hero card */}
+      {(() => {
+        const points = userPts.total;
+        const { level, next, progress } = getLevel(points);
+        return (
+          <div className="relative overflow-hidden rounded-3xl border border-border bg-card p-6 sm:p-8">
+            <div className="absolute -right-20 -top-20 h-60 w-60 rounded-full bg-gold/10 blur-3xl" />
+            <div className="relative grid gap-6 sm:grid-cols-[1fr_auto] sm:items-center">
+              <div>
+                <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-gold">
+                  <Flame className="h-3.5 w-3.5" /> Aktuelles Level
+                </div>
+                <div className="mt-1 font-display text-5xl font-bold text-gradient-gold sm:text-6xl">
+                  {level.name}
+                </div>
+                <div className="mt-2 text-sm text-muted-foreground">
+                  {next ? (
+                    <>
+                      Noch <span className="font-semibold text-foreground">{next.min - points}</span>{" "}
+                      Punkte bis <span className="text-gold">{next.name}</span>
+                    </>
+                  ) : (
+                    "Max Level erreicht — Legendary!"
+                  )}
+                </div>
+                <div className="mt-5 space-y-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">{level.name}</span>
+                    <span className="font-semibold text-foreground">{points} Pkt</span>
+                    <span className="text-muted-foreground">{next ? next.name : "MAX"}</span>
+                  </div>
+                  <div className="h-2.5 overflow-hidden rounded-full bg-secondary">
+                    <div
+                      className="h-full rounded-full bg-gradient-gold transition-all"
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-3 sm:grid-cols-1 sm:gap-2">
+                <Stat label="Gesamt" value={points} suffix="Pkt" />
+                <Link to="/daily-checklist" className="contents">
+                  <Stat label="Heute" value={todayDbPoints} suffix={`/ ${MAX_DAILY_POINTS}`} />
+                </Link>
+                <Stat
+                  label="Streak"
+                  value={userPts.streak}
+                  suffix="Tage"
+                  accent={userPts.streak > 0}
+                />
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card
           icon={<Scale className="h-5 w-5" />}
