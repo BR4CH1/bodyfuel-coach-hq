@@ -131,12 +131,54 @@ export const Route = createFileRoute("/lovable/email/auth/webhook")({
           )
         }
 
+        // Supabase admin client (auch für Profil-Lookup als Fallback)
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+        if (!supabaseUrl || !supabaseServiceKey) {
+          console.error('Missing Supabase environment variables')
+          return Response.json(
+            { error: 'Server configuration error' },
+            { status: 500 }
+          )
+        }
+
+        const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
         // Build template props from payload.data (HookData structure)
         const userMeta = (payload.data.user?.user_metadata ?? {}) as Record<string, unknown>
-        const firstName =
+        const pickFirst = (s: string | null | undefined) =>
+          s ? s.trim().split(/\s+/)[0] : ""
+
+        let firstName: string | undefined =
           (typeof userMeta.first_name === "string" && userMeta.first_name) ||
-          (typeof userMeta.display_name === "string" && userMeta.display_name.trim().split(/\s+/)[0]) ||
+          pickFirst(typeof userMeta.display_name === "string" ? userMeta.display_name : "") ||
+          pickFirst(typeof userMeta.full_name === "string" ? userMeta.full_name : "") ||
+          pickFirst(typeof userMeta.name === "string" ? userMeta.name : "") ||
           undefined
+
+        // Fallback: aus Profil per user_id
+        const userId = payload.data.user?.id
+        if (!firstName && userId) {
+          const { data: prof } = await supabase
+            .from("profiles")
+            .select("display_name")
+            .eq("id", userId)
+            .maybeSingle()
+          if (prof?.display_name) firstName = pickFirst(prof.display_name) || undefined
+        }
+
+        // Fallback: aus Leads per E-Mail (Coach hat hier den echten Namen erfasst)
+        if (!firstName && payload.data.email) {
+          const { data: lead } = await supabase
+            .from("leads")
+            .select("name")
+            .eq("email", payload.data.email)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle()
+          if (lead?.name) firstName = pickFirst(lead.name) || undefined
+        }
 
         const templateProps = {
           siteName: SITE_NAME,
@@ -156,18 +198,6 @@ export const Route = createFileRoute("/lovable/email/auth/webhook")({
         const text = await render(element, { plainText: true })
 
         // Enqueue email for async processing by the dispatcher (process-email-queue).
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-        if (!supabaseUrl || !supabaseServiceKey) {
-          console.error('Missing Supabase environment variables')
-          return Response.json(
-            { error: 'Server configuration error' },
-            { status: 500 }
-          )
-        }
-
-        const supabase = createClient(supabaseUrl, supabaseServiceKey)
         const messageId = crypto.randomUUID()
 
         // Log pending BEFORE enqueue so we have a record even if enqueue crashes
