@@ -164,16 +164,6 @@ function WelcomePage() {
                     minLength={6}
                     required
                   />
-                  <Label htmlFor="pw2">Passwort wiederholen</Label>
-                  <Input
-                    id="pw2"
-                    type="password"
-                    value={pw2}
-                    onChange={(e) => setPw2(e.target.value)}
-                    autoComplete="new-password"
-                    minLength={8}
-                    required
-                  />
                 </div>
                 <Button
                   type="submit"
