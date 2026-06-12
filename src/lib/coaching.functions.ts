@@ -135,10 +135,12 @@ export const createCustomer = createServerFn({ method: "POST" })
     const origin = "https://bodyfuel-coach-hq.lovable.app";
 
     // Invite per Magic Link. Trigger handle_new_user erstellt profile+user_roles.
+    const firstName = data.name.trim().split(/\s+/)[0] ?? "";
     const { data: invited, error: invErr } =
       await supabaseAdmin.auth.admin.inviteUserByEmail(data.email, {
         data: {
           display_name: data.name,
+          first_name: firstName,
           role: "client",
         },
         redirectTo: `${origin}/welcome`,
