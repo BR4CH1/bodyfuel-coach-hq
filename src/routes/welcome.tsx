@@ -152,6 +152,7 @@ function WelcomePage() {
                       required
                     />
                   </div>
+                  <p className="text-xs text-muted-foreground">Mindestens 6 Zeichen</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="pw2">Passwort wiederholen</Label>
