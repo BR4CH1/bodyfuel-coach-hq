@@ -449,3 +449,108 @@ export const requestRenewal = createServerFn({ method: "POST" })
     const url = `${PAYPAL_ME}/${pkg.price_eur}EUR`;
     return { paypal_url: url };
   });
+
+/* ---------------- PAKET-ANFRAGEN (Verlängerung / Wechsel / Kontakt) ---------------- */
+
+export const createPackageRequest = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (data: {
+      request_type: "renewal" | "change" | "contact";
+      requested_package?: "starter" | "coaching" | "premium" | null;
+      note?: string;
+    }) => data,
+  )
+  .handler(async ({ data, context }) => {
+    const { data: pkg } = await context.supabase
+      .from("customer_packages")
+      .select("package")
+      .eq("user_id", context.userId)
+      .eq("is_active", true)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const { error } = await context.supabase.from("package_requests").insert({
+      user_id: context.userId,
+      request_type: data.request_type,
+      current_package: pkg?.package ?? null,
+      requested_package: data.requested_package ?? null,
+      note: data.note?.slice(0, 2000) ?? null,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const listMyPackageRequests = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("package_requests")
+      .select("*")
+      .eq("user_id", context.userId)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+export const listPackageRequests = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertCoach(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows, error } = await supabaseAdmin
+      .from("package_requests")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+
+    const userIds = [...new Set((rows ?? []).map((r: any) => r.user_id))];
+    let profilesMap: Record<string, { display_name: string | null }> = {};
+    let emailsMap: Record<string, string> = {};
+    if (userIds.length > 0) {
+      const { data: profiles } = await supabaseAdmin
+        .from("profiles")
+        .select("id, display_name")
+        .in("id", userIds);
+      profilesMap = Object.fromEntries(
+        (profiles ?? []).map((p: any) => [p.id, { display_name: p.display_name }]),
+      );
+      const { data: usersData } = await supabaseAdmin.auth.admin.listUsers({
+        page: 1,
+        perPage: 1000,
+      });
+      emailsMap = Object.fromEntries(
+        (usersData?.users ?? []).map((u: any) => [u.id, u.email ?? ""]),
+      );
+    }
+
+    return (rows ?? []).map((r: any) => ({
+      ...r,
+      customer_name: profilesMap[r.user_id]?.display_name ?? null,
+      customer_email: emailsMap[r.user_id] ?? null,
+    }));
+  });
+
+export const updatePackageRequest = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (data: {
+      id: string;
+      status: "pending" | "approved" | "declined";
+      coach_note?: string;
+    }) => data,
+  )
+  .handler(async ({ data, context }) => {
+    await assertCoach(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("package_requests")
+      .update({
+        status: data.status,
+        coach_note: data.coach_note ?? null,
+      })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });

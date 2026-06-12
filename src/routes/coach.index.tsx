@@ -147,7 +147,15 @@ function CoachDashboard() {
             label="Check-in offen"
             warn={openWeek.length > 0}
           />
+          <Link
+            to="/coach/package-requests"
+            className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm hover:border-gold/40"
+          >
+            <span className="text-gold">📦</span>
+            <span className="font-display text-sm font-bold">Paketanfragen</span>
+          </Link>
         </div>
+
       </div>
 
       {loading && (

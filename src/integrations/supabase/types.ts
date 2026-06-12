@@ -341,6 +341,45 @@ export type Database = {
         }
         Relationships: []
       }
+      package_requests: {
+        Row: {
+          coach_note: string | null
+          created_at: string
+          current_package: string | null
+          id: string
+          note: string | null
+          request_type: string
+          requested_package: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          coach_note?: string | null
+          created_at?: string
+          current_package?: string | null
+          id?: string
+          note?: string | null
+          request_type: string
+          requested_package?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          coach_note?: string | null
+          created_at?: string
+          current_package?: string | null
+          id?: string
+          note?: string | null
+          request_type?: string
+          requested_package?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       payment_history: {
         Row: {
           amount_eur: number
