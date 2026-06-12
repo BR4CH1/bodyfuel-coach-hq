@@ -275,7 +275,10 @@ export function PlansView({ planType }: { planType: PlanType }) {
       )}
 
       {current && (
-        <div className="overflow-hidden rounded-3xl border border-gold/40 bg-card">
+        <div
+          onClick={() => download(current)}
+          className="cursor-pointer overflow-hidden rounded-3xl border border-gold/40 bg-card transition-colors hover:bg-accent/10"
+        >
           <div className="border-b border-gold/30 bg-accent/30 p-5 sm:p-6">
             <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-gold">
               <FileText className="h-3.5 w-3.5" /> Aktueller Plan
@@ -288,13 +291,10 @@ export function PlansView({ planType }: { planType: PlanType }) {
                   {current.file_name}
                 </p>
               </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => download(current)}
-                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-secondary px-4 py-2 text-sm font-medium hover:bg-accent"
-                >
+              <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                <span className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-secondary px-4 py-2 text-sm font-medium">
                   <Download className="h-4 w-4" /> PDF
-                </button>
+                </span>
                 {isCoach && (
                   <button
                     onClick={() => deletePlan(current)}
@@ -317,7 +317,11 @@ export function PlansView({ planType }: { planType: PlanType }) {
           </div>
           <ul className="divide-y divide-border">
             {archive.map((p) => (
-              <li key={p.id} className="flex items-center gap-3 py-3">
+              <li
+                key={p.id}
+                onClick={() => download(p)}
+                className="flex cursor-pointer items-center gap-3 py-3 transition-colors hover:bg-accent/10"
+              >
                 <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-secondary text-gold">
                   <FileText className="h-4 w-4" />
                 </div>
@@ -327,16 +331,15 @@ export function PlansView({ planType }: { planType: PlanType }) {
                     {new Date(p.created_at).toLocaleDateString("de-DE")}
                   </div>
                 </div>
-                <button
-                  onClick={() => download(p)}
-                  className="rounded-md p-2 text-muted-foreground hover:bg-secondary hover:text-foreground"
-                  aria-label="Download"
-                >
+                <span className="rounded-md p-2 text-muted-foreground">
                   <Download className="h-4 w-4" />
-                </button>
+                </span>
                 {isCoach && (
                   <button
-                    onClick={() => deletePlan(p)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deletePlan(p);
+                    }}
                     className="rounded-md p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                     aria-label="Löschen"
                   >
