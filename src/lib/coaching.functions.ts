@@ -396,6 +396,7 @@ export const updateCustomerPackage = createServerFn({ method: "POST" })
       package_id: string;
       package?: PackageKey;
       price_eur?: number;
+      start_date?: string;
       end_date?: string;
       is_active?: boolean;
       notes?: string;
@@ -407,12 +408,14 @@ export const updateCustomerPackage = createServerFn({ method: "POST" })
     const patch: {
       package?: PackageKey;
       price_eur?: number;
+      start_date?: string;
       end_date?: string;
       is_active?: boolean;
       notes?: string;
     } = {};
     if (data.package !== undefined) patch.package = data.package;
     if (data.price_eur !== undefined) patch.price_eur = data.price_eur;
+    if (data.start_date !== undefined) patch.start_date = data.start_date;
     if (data.end_date !== undefined) patch.end_date = data.end_date;
     if (data.is_active !== undefined) patch.is_active = data.is_active;
     if (data.notes !== undefined) patch.notes = data.notes;
