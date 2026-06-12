@@ -432,20 +432,15 @@ function RealUserDashboard() {
               </div>
               <div className="grid grid-cols-3 gap-3 sm:grid-cols-1 sm:gap-2">
                 <Stat label="Gesamt" value={points} suffix="Pkt" />
-                <Link to="/daily-checklist" className="contents">
-                  <Stat label="Heute" value={todayDbPoints} suffix={`/ ${MAX_DAILY_POINTS}`} />
-                </Link>
-                <Stat
-                  label="Streak"
-                  value={userPts.streak}
-                  suffix="Tage"
-                  accent={userPts.streak > 0}
-                />
+                <Stat label="Daily" value={userPts.daily} suffix="Pkt" />
+                <Stat label="Training" value={userPts.perf} suffix="Pkt" accent={userPts.perf > 0} />
               </div>
             </div>
           </div>
         );
       })()}
+
+      {supabaseUser && <TrainingBonusCard userId={supabaseUser.id} />}
 
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
