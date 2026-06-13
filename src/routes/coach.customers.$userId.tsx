@@ -19,11 +19,19 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { CoachTrainingSummary } from "@/components/bodyfuel/TrainingTrends";
 import { NutritionTargetsEditor } from "@/components/bodyfuel/NutritionTargetsEditor";
 import { MacroTargetsCard } from "@/components/bodyfuel/MacroTargetsCard";
 import { TrainingBonusCard } from "@/components/bodyfuel/TrainingBonusCard";
 import { CustomerRecentActivityCard } from "@/components/bodyfuel/CustomerRecentActivityCard";
+
 
 
 export const Route = createFileRoute("/coach/customers/$userId")({
