@@ -300,6 +300,8 @@ function RealUserDashboard() {
   const [count, setCount] = useState(0);
   const [todayDbPoints, setTodayDbPoints] = useState(0);
   const [nextCheckin, setNextCheckin] = useState<string | null>(null);
+  const [trainedToday, setTrainedToday] = useState(false);
+  const [measuredToday, setMeasuredToday] = useState(false);
   const [userPts, setUserPts] = useState<{
     total: number;
     daily: number;
