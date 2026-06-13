@@ -7,6 +7,8 @@ import { MacroTargetsCard } from "@/components/bodyfuel/MacroTargetsCard";
 import { PlanContentView } from "@/components/bodyfuel/PlanContentView";
 import { useSession } from "@/lib/bodyfuel/session";
 import { supabase } from "@/integrations/supabase/client";
+import { useTrial } from "@/hooks/use-trial";
+import { TrialNutritionPlan } from "@/components/bodyfuel/TrialPlanView";
 
 export const Route = createFileRoute("/nutrition/")({
   head: () => ({ meta: [{ title: "Ernährungsplan — BODYFUEL" }] }),
