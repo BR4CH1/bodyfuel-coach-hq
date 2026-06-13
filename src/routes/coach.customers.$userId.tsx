@@ -514,7 +514,10 @@ function MeasurementsCard({ measurements }: { measurements: any[] }) {
               <th>Muskel</th>
               <th>Taille</th>
               <th>Brust</th>
-              <th>Hüfte</th>
+              <th>OS L</th>
+              <th>OS R</th>
+              <th>Bi L</th>
+              <th>Bi R</th>
             </tr>
           </thead>
           <tbody>
