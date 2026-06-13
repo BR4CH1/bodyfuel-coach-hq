@@ -284,10 +284,27 @@ export function PlanContentView({ clientId, planType }: Props) {
       ) : (
         <>
           <div className="mt-4">
-            <label className="text-xs uppercase tracking-wider text-muted-foreground">Tag wählen</label>
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-xs uppercase tracking-wider text-muted-foreground">
+                {isSelf && dayKind
+                  ? dayKind === "rest" ? "Heute: Restday" : "Heute: Trainingstag"
+                  : "Tag wählen"}
+              </label>
+              {isSelf && planType === "nutrition" && days.length > 1 && (
+                <button
+                  onClick={pickAnotherDay}
+                  className="inline-flex items-center gap-1 rounded-md border border-border bg-background/40 px-2 py-1 text-[11px] text-muted-foreground hover:text-gold"
+                >
+                  <Shuffle className="h-3 w-3" /> Anderen Tag
+                </button>
+              )}
+            </div>
             <select
               value={activeDay}
-              onChange={(e) => setActiveDay(e.target.value)}
+              onChange={(e) => {
+                setActiveDay(e.target.value);
+                try { localStorage.setItem(pickStorageKey, e.target.value); } catch {}
+              }}
               className="mt-2 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             >
               {days.map((d) => (
@@ -295,6 +312,7 @@ export function PlanContentView({ clientId, planType }: Props) {
               ))}
             </select>
           </div>
+
 
           {canTrack && (
             <p className="mt-3 text-[11px] text-muted-foreground">
