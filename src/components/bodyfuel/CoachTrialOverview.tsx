@@ -112,6 +112,52 @@ export function CoachTrialOverview() {
   );
 }
 
+function TrialPermalink() {
+  const url = typeof window !== "undefined"
+    ? `${window.location.origin}/trial`
+    : "/trial";
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Trial-Link kopiert");
+    } catch {
+      toast.error("Konnte Link nicht kopieren");
+    }
+  };
+  return (
+    <div className="mt-4 rounded-xl border border-gold/30 bg-background/40 p-3">
+      <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-gold">
+        <Sparkles className="h-3 w-3" /> Öffentlicher Trial-Link
+      </div>
+      <div className="mt-2 flex items-center gap-2">
+        <code className="flex-1 truncate rounded-md bg-background/60 px-2 py-1.5 text-xs text-foreground">
+          {url}
+        </code>
+        <button
+          type="button"
+          onClick={copy}
+          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border bg-background/60 text-muted-foreground transition hover:text-foreground"
+          aria-label="Link kopieren"
+        >
+          <Copy className="h-3.5 w-3.5" />
+        </button>
+        <a
+          href="/trial"
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border bg-background/60 text-muted-foreground transition hover:text-foreground"
+          aria-label="Trial-Seite öffnen"
+        >
+          <ExternalLink className="h-3.5 w-3.5" />
+        </a>
+      </div>
+      <p className="mt-1.5 text-[10px] text-muted-foreground">
+        Teile diesen Link – neue Nutzer starten automatisch ein 7-Tage-Trial.
+      </p>
+    </div>
+  );
+}
+
 function Stat({ icon, label, value, tone }: { icon: React.ReactNode; label: string; value: number | string; tone: "gold" | "warn" | "green" }) {
   const cls =
     tone === "warn"
