@@ -32,6 +32,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [supabaseUser, setSupabaseUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [role, setRole] = useState<"coach" | "client" | null>(null);
+  const [groups, setGroups] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [, setTick] = useState(0);
 
