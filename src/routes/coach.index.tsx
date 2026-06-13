@@ -26,7 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { supabase } from "@/integrations/supabase/client";
+
 
 export const Route = createFileRoute("/coach/")({
   head: () => ({ meta: [{ title: "Coach Dashboard — BODYFUEL" }] }),
