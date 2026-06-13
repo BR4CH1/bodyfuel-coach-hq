@@ -416,7 +416,10 @@ function MeasurementsContent() {
                   <th className="py-2 pr-3">Muskel</th>
                   <th className="py-2 pr-3">Taille</th>
                   <th className="py-2 pr-3">Brust</th>
-                  <th className="py-2 pr-3">Hüfte</th>
+                  <th className="py-2 pr-3">OS L</th>
+                  <th className="py-2 pr-3">OS R</th>
+                  <th className="py-2 pr-3">Bi L</th>
+                  <th className="py-2 pr-3">Bi R</th>
                   <th className="py-2 pr-3" />
                 </tr>
               </thead>
