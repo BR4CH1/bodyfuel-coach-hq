@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
+import { startMyTrial } from "@/lib/trial.functions";
+
 
 export type TrialStatus = "none" | "trial" | "trial_expired" | "active";
 
