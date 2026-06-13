@@ -218,6 +218,22 @@ export function PlanContentView({ clientId, planType }: Props) {
           .sort((a, b) => a.sort_order - b.sort_order);
         const idx = dayMeals.findIndex((x) => x.id === m.id);
         const slot = mealSlot(idx, dayMeals.length);
+
+        let kcal = m.kcal ?? 0;
+        let p = m.protein_g ?? 0;
+        let c = m.carbs_g ?? 0;
+        let f = m.fat_g ?? 0;
+        if (!kcal && !p && !c && !f) {
+          try {
+            const est = await estimateMacros({ data: { meal_id: m.id } });
+            kcal = est.kcal; p = est.protein_g; c = est.carbs_g; f = est.fat_g;
+            setMeals((arr) => arr.map((x) => x.id === m.id ? { ...x, kcal, protein_g: p, carbs_g: c, fat_g: f } : x));
+          } catch (e: any) {
+            toast.error("Nährwerte konnten nicht geschätzt werden");
+            return;
+          }
+        }
+
         const { data, error } = await supabase
           .from("food_entries")
           .insert({
@@ -225,11 +241,11 @@ export function PlanContentView({ clientId, planType }: Props) {
             entry_date: todayKey(),
             meal: slot,
             name: m.name + (m.description ? ` — ${m.description}` : ""),
-            serving_g: 1,
-            kcal: m.kcal ?? 0,
-            protein_g: m.protein_g ?? 0,
-            carbs_g: m.carbs_g ?? 0,
-            fat_g: m.fat_g ?? 0,
+            serving_g: 100,
+            kcal,
+            protein_g: p,
+            carbs_g: c,
+            fat_g: f,
             source: `plan:${m.id}`,
           })
           .select("id")
