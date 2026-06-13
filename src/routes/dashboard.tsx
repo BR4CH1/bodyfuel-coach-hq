@@ -90,6 +90,8 @@ function DashboardContent() {
     <div className="space-y-6">
       <TrialWelcomeDialog />
       <TrialStatusBanner />
+      {supabaseUser && <TrialChecklistGate userId={supabaseUser.id} />}
+
 
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
