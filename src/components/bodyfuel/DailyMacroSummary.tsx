@@ -4,8 +4,9 @@ import { ArrowRight } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { getNutritionTargets, getDayType } from "@/lib/nutrition.functions";
+import { entryMatchesActiveTrialDay } from "@/lib/bodyfuel/trialTracking";
 
-type Totals = { kcal: number; protein_g: number; carbs_g: number; fat_g: number };
+type Totals = { kcal: number; protein_g: number; carbs_g: number; fat_g: number; source?: string | null };
 type Targets = { kcal: number; protein_g: number; carbs_g: number; fat_g: number };
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -26,7 +27,7 @@ export function DailyMacroSummary({ userId }: { userId: string }) {
         getDayFn({ data: { user_id: userId, date } }).catch(() => null),
         supabase
           .from("food_entries")
-          .select("kcal, protein_g, carbs_g, fat_g")
+          .select("kcal, protein_g, carbs_g, fat_g, source")
           .eq("user_id", userId)
           .eq("entry_date", date),
       ]);
@@ -40,7 +41,8 @@ export function DailyMacroSummary({ userId }: { userId: string }) {
           fat_g: useRest ? (t.fat_g_rest ?? t.fat_g) : t.fat_g,
         });
       }
-      const list = (entries.data as Totals[]) ?? [];
+      const activeKind = d?.kind === "rest" ? "rest" : "training";
+      const list = ((entries.data as Totals[]) ?? []).filter((entry) => entryMatchesActiveTrialDay(entry, activeKind));
       setTotals(
         list.reduce(
           (s, e) => ({
