@@ -64,30 +64,32 @@ function extractDayGroup(name: string): { group: string; label: string } | null 
 
 type VirtualDay = { id: string; name: string; realDayId: string };
 
-function buildVirtualDays(days: Day[], meals: Meal[]): {
+type DayLike = { id: string; name: string; sort_order: number };
+type ItemLike = { id: string; day_id: string; name: string; sort_order: number };
+
+function buildVirtualDays<T extends ItemLike>(days: DayLike[], items: T[]): {
   virtualDays: VirtualDay[];
-  mealToVirtual: Record<string, string>;
-  mealDisplayName: Record<string, string>;
+  itemToVirtual: Record<string, string>;
+  itemDisplayName: Record<string, string>;
 } {
   const virtualDays: VirtualDay[] = [];
-  const mealToVirtual: Record<string, string> = {};
-  const mealDisplayName: Record<string, string> = {};
+  const itemToVirtual: Record<string, string> = {};
+  const itemDisplayName: Record<string, string> = {};
 
   for (const day of days) {
-    const dayMeals = meals
+    const dayItems = items
       .filter((m) => m.day_id === day.id)
       .sort((a, b) => a.sort_order - b.sort_order);
 
-    // Versuche Mahlzeiten anhand des Namens in Gruppen aufzuteilen
-    const groups = new Map<string, { meals: Meal[]; firstIndex: number }>();
-    let allHaveGroup = dayMeals.length > 0;
-    dayMeals.forEach((m, idx) => {
+    const groups = new Map<string, { items: T[]; firstIndex: number }>();
+    let allHaveGroup = dayItems.length > 0;
+    dayItems.forEach((m, idx) => {
       const g = extractDayGroup(m.name);
       if (!g) { allHaveGroup = false; return; }
       const key = g.group;
-      if (!groups.has(key)) groups.set(key, { meals: [], firstIndex: idx });
-      groups.get(key)!.meals.push(m);
-      mealDisplayName[m.id] = g.label;
+      if (!groups.has(key)) groups.set(key, { items: [], firstIndex: idx });
+      groups.get(key)!.items.push(m);
+      itemDisplayName[m.id] = g.label;
     });
 
     if (allHaveGroup && groups.size > 1) {
@@ -97,18 +99,17 @@ function buildVirtualDays(days: Day[], meals: Meal[]): {
       for (const [groupName, info] of sorted) {
         const vid = `${day.id}::${groupName}`;
         virtualDays.push({ id: vid, name: groupName, realDayId: day.id });
-        info.meals.forEach((m) => { mealToVirtual[m.id] = vid; });
+        info.items.forEach((m) => { itemToVirtual[m.id] = vid; });
       }
     } else {
-      // Fallback: ein virtueller Tag = echter Tag
       virtualDays.push({ id: day.id, name: day.name, realDayId: day.id });
-      dayMeals.forEach((m) => {
-        mealToVirtual[m.id] = day.id;
-        if (!mealDisplayName[m.id]) mealDisplayName[m.id] = m.name;
+      dayItems.forEach((m) => {
+        itemToVirtual[m.id] = day.id;
+        if (!itemDisplayName[m.id]) itemDisplayName[m.id] = m.name;
       });
     }
   }
-  return { virtualDays, mealToVirtual, mealDisplayName };
+  return { virtualDays, itemToVirtual, itemDisplayName };
 }
 
 export function PlanContentView({ clientId, planType }: Props) {
