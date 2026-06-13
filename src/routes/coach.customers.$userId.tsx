@@ -531,7 +531,10 @@ function MeasurementsCard({ measurements }: { measurements: any[] }) {
                 <td>{fmt(m.muscle_mass_kg, "kg")}</td>
                 <td>{fmt(m.waist_cm, "cm")}</td>
                 <td>{fmt(m.chest_cm, "cm")}</td>
-                <td>{fmt(m.hip_cm, "cm")}</td>
+                <td>{fmt(m.thigh_left_cm, "cm")}</td>
+                <td>{fmt(m.thigh_right_cm, "cm")}</td>
+                <td>{fmt(m.biceps_left_cm, "cm")}</td>
+                <td>{fmt(m.biceps_right_cm, "cm")}</td>
               </tr>
             ))}
           </tbody>
