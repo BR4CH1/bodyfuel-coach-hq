@@ -406,14 +406,15 @@ export function PlanContentView({ clientId, planType }: Props) {
 
           <div className="mt-3 space-y-3">
             {planType === "nutrition"
-              ? meals.filter((m) => m.day_id === activeDay).map((m) => {
+              ? meals.filter((m) => itemToVirtual[m.id] === activeDay).map((m) => {
                   const isTracked = !!tracked[m.id];
                   const busy = togglingId === m.id;
+                  const displayName = itemDisplayName[m.id] ?? m.name;
                   const inner = (
                     <>
                       <div className="flex items-baseline justify-between gap-3">
                         <div className="flex items-center gap-2">
-                          <div className="text-xs font-bold uppercase tracking-wider text-gold">{m.name}</div>
+                          <div className="text-xs font-bold uppercase tracking-wider text-gold">{displayName}</div>
                           {canTrack && isTracked && (
                             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
                               <Check className="h-3 w-3" /> getrackt
@@ -453,10 +454,10 @@ export function PlanContentView({ clientId, planType }: Props) {
                     <div key={m.id} className={`${base} ${style}`}>{inner}</div>
                   );
                 })
-              : exercises.filter((e) => e.day_id === activeDay).map((e) => (
+              : exercises.filter((e) => itemToVirtual[e.id] === activeDay).map((e) => (
                   <div key={e.id} className="rounded-2xl border border-border bg-background/40 p-4">
                     <div className="flex items-baseline justify-between gap-3">
-                      <div className="text-sm font-semibold">{e.name}</div>
+                      <div className="text-sm font-semibold">{itemDisplayName[e.id] ?? e.name}</div>
                       <div className="text-xs text-muted-foreground">
                         {e.target_sets ?? "—"}×{e.target_reps ?? "—"}
                       </div>
@@ -465,7 +466,7 @@ export function PlanContentView({ clientId, planType }: Props) {
                   </div>
                 ))}
             {((planType === "nutrition" ? meals : exercises).filter(
-              (x: any) => x.day_id === activeDay,
+              (x: any) => itemToVirtual[x.id] === activeDay,
             ).length === 0) && (
               <p className="text-sm text-muted-foreground">Keine {empty} für diesen Tag.</p>
             )}
