@@ -53,13 +53,15 @@ export const startMyTrial = createServerFn({ method: "POST" })
     return { ok: true, trial_status: "trial" as const, trial_start: start, trial_end: end };
   });
 
-/** Coach: Trial verlängern (+7/+14/+30 Tage). Verlängert auch ein abgelaufenes Trial. */
+/** Coach: Trial verlängern (beliebige Tageszahl 1–365). Verlängert auch abgelaufene Trials. */
 export const coachExtendTrial = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: { user_id: string; days: number }) => data)
   .handler(async ({ data, context }) => {
     await assertCoach(context.supabase, context.userId);
-    if (![7, 14, 30].includes(data.days)) throw new Error("Ungültige Tageszahl");
+    if (!Number.isFinite(data.days) || data.days < 1 || data.days > 365) {
+      throw new Error("Ungültige Tageszahl (1–365)");
+    }
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: prof } = await supabaseAdmin
       .from("profiles")
@@ -82,6 +84,26 @@ export const coachExtendTrial = createServerFn({ method: "POST" })
       .eq("id", data.user_id);
     if (error) throw new Error(error.message);
     return { ok: true, trial_end: newEnd };
+  });
+
+/** Coach: Neues Trial starten (auch nach Mitgliedschaft / Ablauf). */
+export const coachStartTrial = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { user_id: string; days: number }) => data)
+  .handler(async ({ data, context }) => {
+    await assertCoach(context.supabase, context.userId);
+    if (!Number.isFinite(data.days) || data.days < 1 || data.days > 365) {
+      throw new Error("Ungültige Tageszahl (1–365)");
+    }
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const start = todayIso();
+    const end = addDaysIso(start, data.days);
+    const { error } = await supabaseAdmin
+      .from("profiles")
+      .update({ trial_status: "trial", trial_start: start, trial_end: end })
+      .eq("id", data.user_id);
+    if (error) throw new Error(error.message);
+    return { ok: true, trial_start: start, trial_end: end };
   });
 
 /** Coach: Trial sofort beenden. */
