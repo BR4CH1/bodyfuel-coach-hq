@@ -17,7 +17,11 @@ import {
   type DayType,
 } from "@/lib/nutrition.functions";
 import { LOCAL_FOODS } from "@/lib/bodyfuel/localFoods";
-import { entryMatchesActiveDay, getPlanMealDayKind, planMealIdFromEntry } from "@/lib/bodyfuel/trialTracking";
+import {
+  entryMatchesActiveDay,
+  getPlanMealDayKind,
+  planMealIdFromEntry,
+} from "@/lib/bodyfuel/trialTracking";
 import { Dumbbell, Moon } from "lucide-react";
 
 type Meal = "breakfast" | "lunch" | "dinner" | "snack";
@@ -47,6 +51,12 @@ type Targets = {
   carbs_g: number;
   fat_g: number;
   water_glasses: number;
+};
+
+type PlanMealDayRow = {
+  id: string;
+  name: string;
+  nutrition_plan_days?: { name: string } | { name: string }[] | null;
 };
 
 const DEFAULT_TARGETS: Targets = {
@@ -192,14 +202,16 @@ export function NutritionTracker() {
         }
       }
       const rows = ((e.data as FoodEntry[]) ?? []).map((r) => ({ ...r }));
-      const planMealIds = [...new Set(rows.map(planMealIdFromEntry).filter((id): id is string => !!id))];
+      const planMealIds = [
+        ...new Set(rows.map(planMealIdFromEntry).filter((id): id is string => !!id)),
+      ];
       const nextPlanMealKinds: Record<string, DayType> = {};
       if (planMealIds.length) {
         const { data: planMeals } = await supabase
           .from("nutrition_plan_meals")
           .select("id, name, nutrition_plan_days(name)")
           .in("id", planMealIds);
-        ((planMeals as any[]) ?? []).forEach((meal) => {
+        ((planMeals as PlanMealDayRow[]) ?? []).forEach((meal) => {
           const dayName = Array.isArray(meal.nutrition_plan_days)
             ? meal.nutrition_plan_days[0]?.name
             : meal.nutrition_plan_days?.name;
