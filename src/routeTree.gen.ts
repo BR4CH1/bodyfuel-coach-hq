@@ -18,6 +18,8 @@ import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as NutritionRouteImport } from './routes/nutrition'
 import { Route as MeasurementsRouteImport } from './routes/measurements'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ImpressumRouteImport } from './routes/impressum'
+import { Route as DatenschutzRouteImport } from './routes/datenschutz'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as DailyChecklistRouteImport } from './routes/daily-checklist'
 import { Route as CoachRouteImport } from './routes/coach'
@@ -95,6 +97,16 @@ const MeasurementsRoute = MeasurementsRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ImpressumRoute = ImpressumRouteImport.update({
+  id: '/impressum',
+  path: '/impressum',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DatenschutzRoute = DatenschutzRouteImport.update({
+  id: '/datenschutz',
+  path: '/datenschutz',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -275,6 +287,8 @@ export interface FileRoutesByFullPath {
   '/coach': typeof CoachRouteWithChildren
   '/daily-checklist': typeof DailyChecklistRoute
   '/dashboard': typeof DashboardRoute
+  '/datenschutz': typeof DatenschutzRoute
+  '/impressum': typeof ImpressumRoute
   '/login': typeof LoginRoute
   '/measurements': typeof MeasurementsRoute
   '/nutrition': typeof NutritionRouteWithChildren
@@ -318,6 +332,8 @@ export interface FileRoutesByTo {
   '/check-in': typeof CheckInRoute
   '/daily-checklist': typeof DailyChecklistRoute
   '/dashboard': typeof DashboardRoute
+  '/datenschutz': typeof DatenschutzRoute
+  '/impressum': typeof ImpressumRoute
   '/login': typeof LoginRoute
   '/measurements': typeof MeasurementsRoute
   '/profile': typeof ProfileRoute
@@ -361,6 +377,8 @@ export interface FileRoutesById {
   '/coach': typeof CoachRouteWithChildren
   '/daily-checklist': typeof DailyChecklistRoute
   '/dashboard': typeof DashboardRoute
+  '/datenschutz': typeof DatenschutzRoute
+  '/impressum': typeof ImpressumRoute
   '/login': typeof LoginRoute
   '/measurements': typeof MeasurementsRoute
   '/nutrition': typeof NutritionRouteWithChildren
@@ -407,6 +425,8 @@ export interface FileRouteTypes {
     | '/coach'
     | '/daily-checklist'
     | '/dashboard'
+    | '/datenschutz'
+    | '/impressum'
     | '/login'
     | '/measurements'
     | '/nutrition'
@@ -450,6 +470,8 @@ export interface FileRouteTypes {
     | '/check-in'
     | '/daily-checklist'
     | '/dashboard'
+    | '/datenschutz'
+    | '/impressum'
     | '/login'
     | '/measurements'
     | '/profile'
@@ -492,6 +514,8 @@ export interface FileRouteTypes {
     | '/coach'
     | '/daily-checklist'
     | '/dashboard'
+    | '/datenschutz'
+    | '/impressum'
     | '/login'
     | '/measurements'
     | '/nutrition'
@@ -537,6 +561,8 @@ export interface RootRouteChildren {
   CoachRoute: typeof CoachRouteWithChildren
   DailyChecklistRoute: typeof DailyChecklistRoute
   DashboardRoute: typeof DashboardRoute
+  DatenschutzRoute: typeof DatenschutzRoute
+  ImpressumRoute: typeof ImpressumRoute
   LoginRoute: typeof LoginRoute
   MeasurementsRoute: typeof MeasurementsRoute
   NutritionRoute: typeof NutritionRouteWithChildren
@@ -626,6 +652,20 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/impressum': {
+      id: '/impressum'
+      path: '/impressum'
+      fullPath: '/impressum'
+      preLoaderRoute: typeof ImpressumRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/datenschutz': {
+      id: '/datenschutz'
+      path: '/datenschutz'
+      fullPath: '/datenschutz'
+      preLoaderRoute: typeof DatenschutzRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -920,6 +960,8 @@ const rootRouteChildren: RootRouteChildren = {
   CoachRoute: CoachRouteWithChildren,
   DailyChecklistRoute: DailyChecklistRoute,
   DashboardRoute: DashboardRoute,
+  DatenschutzRoute: DatenschutzRoute,
+  ImpressumRoute: ImpressumRoute,
   LoginRoute: LoginRoute,
   MeasurementsRoute: MeasurementsRoute,
   NutritionRoute: NutritionRouteWithChildren,
@@ -948,13 +990,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
