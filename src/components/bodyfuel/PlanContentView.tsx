@@ -45,6 +45,14 @@ const mealSlot = (idx: number, total: number): "breakfast" | "lunch" | "dinner" 
   if (idx === 1 && total > 2) return "lunch";
   return "snack";
 };
+const slotFromName = (name: string): "breakfast" | "lunch" | "dinner" | "snack" | null => {
+  const n = name.toLowerCase();
+  if (/fr(ü|u)hst(ü|u)ck|breakfast/.test(n)) return "breakfast";
+  if (/mittag|lunch/.test(n)) return "lunch";
+  if (/abend|dinner|sp(ä|a)t/.test(n)) return "dinner";
+  if (/snack|shake|pre[- ]?workout|post[- ]?workout|zwischen/.test(n)) return "snack";
+  return null;
+};
 const isRestDay = (name: string) => /rest|ruh|pause|off|frei/i.test(name);
 const pickRandom = <T,>(arr: T[]): T | null =>
   arr.length ? arr[Math.floor(Math.random() * arr.length)] : null;
