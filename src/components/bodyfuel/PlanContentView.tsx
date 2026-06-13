@@ -43,6 +43,9 @@ const mealSlot = (idx: number, total: number): "breakfast" | "lunch" | "dinner" 
   if (idx === 1 && total > 2) return "lunch";
   return "snack";
 };
+const isRestDay = (name: string) => /rest|ruh|pause|off|frei/i.test(name);
+const pickRandom = <T,>(arr: T[]): T | null =>
+  arr.length ? arr[Math.floor(Math.random() * arr.length)] : null;
 
 export function PlanContentView({ clientId, planType }: Props) {
   const { isCoach, supabaseUser } = useSession();
