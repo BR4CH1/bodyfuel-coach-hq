@@ -292,6 +292,19 @@ function CustomerDetail() {
         )}
       </div>
 
+      <GroupsCard
+        userId={userId}
+        groups={(data as any).groups ?? []}
+        onToggle={async (group, enabled) => {
+          try {
+            await groupFn({ data: { user_id: userId, group, enabled } });
+            toast.success(enabled ? "Zugang aktiviert." : "Zugang entfernt.");
+            qc.invalidateQueries({ queryKey: ["customer", userId] });
+          } catch (e) {
+            toast.error((e as Error).message);
+          }
+        }}
+      />
 
       {activePkg && (
         <div className="rounded-2xl border border-border bg-card p-6">
