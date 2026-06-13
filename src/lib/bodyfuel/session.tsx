@@ -72,16 +72,19 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const loadProfile = async (uid: string) => {
-    const [p, r] = await Promise.all([
+    const [p, r, g] = await Promise.all([
       supabase.from("profiles").select("id, display_name, demo_client_key").eq("id", uid).maybeSingle(),
       supabase.from("user_roles").select("role").eq("user_id", uid),
+      supabase.from("user_groups").select("group_name").eq("user_id", uid),
     ]);
     if (p.data) {
       setProfile(p.data as Profile);
-      // auto-bind demo client for nicer dashboard experience
       if (p.data.demo_client_key && !demoUserId) {
         setDemoUserId(p.data.demo_client_key);
       }
+    }
+    if (g.data) {
+      setGroups(g.data.map((x: any) => x.group_name as string));
     }
     if (r.data) {
       const isCoach = r.data.some((x) => x.role === "coach");
@@ -89,12 +92,20 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       if (isCoach) {
         setDemoCoach(true);
       } else {
-        // Ensure stale coach flag from previous session doesn't leak to clients
         setDemoCoach(false);
         persist(p.data?.demo_client_key ?? uid, false);
       }
     }
   };
+
+  const value: SessionCtx = {
+    user: effectiveUser,
+    isCoach: effectiveCoach,
+    supabaseUser,
+    profile,
+    loading,
+    groups,
+    hasGroup: (gname: string) => groups.includes(gname),
 
   const persist = (id: string | null, coach: boolean) => {
     if (id) localStorage.setItem(KEY, JSON.stringify({ userId: id, isCoach: coach }));
