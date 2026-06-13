@@ -54,10 +54,36 @@ export function useTrial(): TrialState {
     });
   };
 
+  const autoStartedRef = useRef(false);
+
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabaseUser?.id]);
+
+  // Auto-Start Trial: wenn der Nutzer per Trial-Signup eingestiegen ist
+  // (localStorage-Flag) UND noch keinen Trial-/Mitgliedsstatus hat,
+  // wird der 7-Tage-Trial automatisch aktiviert (idempotent serverseitig).
+  useEffect(() => {
+    if (state.loading) return;
+    if (!supabaseUser || isCoach) return;
+    if (state.status !== "none") return;
+    if (autoStartedRef.current) return;
+    if (typeof window === "undefined") return;
+    const pending = localStorage.getItem("bodyfuel.trial.pending");
+    if (!pending) return;
+    autoStartedRef.current = true;
+    (async () => {
+      try {
+        await startMyTrial();
+        localStorage.removeItem("bodyfuel.trial.pending");
+        await load();
+      } catch (err) {
+        console.error("auto startMyTrial failed", err);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.loading, state.status, supabaseUser?.id, isCoach]);
 
   let effectiveStatus = state.status;
   const daysLeft = calcDaysLeft(state.trial_end);
