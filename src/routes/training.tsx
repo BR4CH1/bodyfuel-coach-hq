@@ -23,8 +23,26 @@ export const Route = createFileRoute("/training")({
 function TrainingPage() {
   const { isCoach, supabaseUser } = useSession();
   const { isTrial, isExpired } = useTrial();
+  const ensureFn = useServerFn(ensureTrialTrainingPlan);
   const [clientId, setClientId] = useState<string>("");
   const [clients, setClients] = useState<{ id: string; display_name: string | null }[]>([]);
+  const [trackerKey, setTrackerKey] = useState(0);
+  const seededRef = useRef(false);
+
+  // Trial-Nutzer: Starter-Trainingsplan idempotent anlegen, damit der Tracker
+  // sofort Übungen anzeigt und Sätze geloggt werden können.
+  useEffect(() => {
+    if (!supabaseUser || isCoach || !isTrial || seededRef.current) return;
+    seededRef.current = true;
+    (async () => {
+      try {
+        await ensureFn();
+        setTrackerKey((k) => k + 1);
+      } catch (e) {
+        console.error("ensureTrialTrainingPlan failed", e);
+      }
+    })();
+  }, [supabaseUser, isCoach, isTrial, ensureFn]);
 
   useEffect(() => {
     if (!supabaseUser) return;
