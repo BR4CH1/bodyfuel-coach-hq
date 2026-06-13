@@ -554,7 +554,7 @@ export function NutritionTracker() {
                 {list.map((e) => (
                   <li key={e.id} className="flex items-center gap-3 py-2">
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-medium">{e.name}</div>
+                      <div className="text-sm font-medium break-words">{e.name}</div>
                       <div className="text-[11px] text-muted-foreground">
                         {e.brand ? `${e.brand} · ` : ""}{Number(e.serving_g)} g · {Math.round(Number(e.kcal))} kcal · P {Number(e.protein_g)} · K {Number(e.carbs_g)} · F {Number(e.fat_g)}
                       </div>
