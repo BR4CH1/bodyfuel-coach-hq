@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Flame, Target, Calendar, TrendingUp, ArrowRight, Scale, Plus, CalendarCheck, ListChecks, Utensils, Dumbbell } from "lucide-react";
+import { Flame, Target, Calendar, TrendingUp, ArrowRight, Scale, Plus, CalendarCheck, ListChecks, Dumbbell } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { MyPackagePanel } from "@/components/bodyfuel/MyPackagePanel";
 import { TrainingDevelopmentCard } from "@/components/bodyfuel/TrainingTrends";
@@ -8,6 +8,8 @@ import { DailyChecklist } from "@/components/bodyfuel/DailyChecklist";
 import { AchievementsCard } from "@/components/bodyfuel/AchievementsCard";
 import { TrainingBonusCard } from "@/components/bodyfuel/TrainingBonusCard";
 import { MacroTargetsCard } from "@/components/bodyfuel/MacroTargetsCard";
+import { DayTypePrompt } from "@/components/bodyfuel/DayTypePrompt";
+import { DailyMacroSummary } from "@/components/bodyfuel/DailyMacroSummary";
 
 import { useSession } from "@/lib/bodyfuel/session";
 import { supabase } from "@/integrations/supabase/client";
@@ -298,6 +300,8 @@ function RealUserDashboard() {
   const [count, setCount] = useState(0);
   const [todayDbPoints, setTodayDbPoints] = useState(0);
   const [nextCheckin, setNextCheckin] = useState<string | null>(null);
+  const [trainedToday, setTrainedToday] = useState(false);
+  const [measuredToday, setMeasuredToday] = useState(false);
   const [userPts, setUserPts] = useState<{
     total: number;
     daily: number;
@@ -319,8 +323,10 @@ function RealUserDashboard() {
         .eq("user_id", supabaseUser.id)
         .order("measured_at", { ascending: false })
         .limit(1);
-      setLatest((data?.[0] as LatestMeasurement | undefined) ?? null);
+      const latestRow = (data?.[0] as LatestMeasurement | undefined) ?? null;
+      setLatest(latestRow);
       setCount(c ?? 0);
+      setMeasuredToday(!!latestRow && latestRow.measured_at.slice(0, 10) === todayStr);
 
       const { data: checkData } = await supabase
         .from("daily_checks")
@@ -350,6 +356,14 @@ function RealUserDashboard() {
         .eq("id", supabaseUser.id)
         .maybeSingle();
       setNextCheckin((prof as any)?.next_checkin_date ?? null);
+
+      const { count: tCount } = await supabase
+        .from("training_set_logs")
+        .select("id", { count: "exact", head: true })
+        .eq("client_id", supabaseUser.id)
+        .gte("performed_at", `${todayStr}T00:00:00`)
+        .lte("performed_at", `${todayStr}T23:59:59.999`);
+      setTrainedToday((tCount ?? 0) > 0);
 
       setLoading(false);
     })();
@@ -430,8 +444,16 @@ function RealUserDashboard() {
             Pflege deine Körpermaße, damit dein Coach deinen Fortschritt sieht.
           </p>
         </div>
-        <DashboardQuickActions />
+        <DashboardQuickActions
+          excludeKeys={[
+            ...(trainedToday ? (["training"] as const) : []),
+            ...(measuredToday ? (["measurement"] as const) : []),
+          ]}
+        />
       </div>
+
+      {supabaseUser && <DayTypePrompt userId={supabaseUser.id} />}
+      {supabaseUser && <DailyMacroSummary userId={supabaseUser.id} />}
 
 
       {todayDbPoints < MAX_DAILY_POINTS && (
@@ -692,14 +714,15 @@ function PendingPaymentBanner({ userId }: { userId: string }) {
 }
 
 const QUICK_ACTIONS = [
-  { key: "nutrition", to: "/nutrition/tracking", label: "Ernährung eintragen", Icon: Utensils },
   { key: "training", to: "/training", label: "Training eintragen", Icon: Dumbbell },
   { key: "measurement", to: "/measurements", label: "Messung eintragen", Icon: Plus },
 ] as const;
 
+type QuickActionKey = (typeof QUICK_ACTIONS)[number]["key"];
+
 const SEEN_STORAGE_KEY = "bf:dashboard:quickActionsSeen";
 
-function DashboardQuickActions() {
+function DashboardQuickActions({ excludeKeys = [] }: { excludeKeys?: readonly QuickActionKey[] }) {
   const [seen, setSeen] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
@@ -720,9 +743,12 @@ function DashboardQuickActions() {
     });
   };
 
+  const visible = QUICK_ACTIONS.filter((a) => !excludeKeys.includes(a.key));
+  if (visible.length === 0) return null;
+
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {QUICK_ACTIONS.map(({ key, to, label, Icon }) => (
+      {visible.map(({ key, to, label, Icon }) => (
         <Link
           key={key}
           to={to}

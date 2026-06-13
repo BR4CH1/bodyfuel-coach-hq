@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, Sparkles, Utensils, Dumbbell, Check } from "lucide-react";
+import { Loader2, Sparkles, Utensils, Dumbbell, Check, Shuffle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
 import { parseNutritionPlan } from "@/lib/nutrition-plan.functions";
 import { parseTrainingPlan } from "@/lib/training.functions";
+import { getDayType } from "@/lib/nutrition.functions";
 
 type Plan = { id: string; client_id: string; title: string };
 type Day = { id: string; name: string; sort_order: number };
@@ -42,11 +43,15 @@ const mealSlot = (idx: number, total: number): "breakfast" | "lunch" | "dinner" 
   if (idx === 1 && total > 2) return "lunch";
   return "snack";
 };
+const isRestDay = (name: string) => /rest|ruh|pause|off|frei/i.test(name);
+const pickRandom = <T,>(arr: T[]): T | null =>
+  arr.length ? arr[Math.floor(Math.random() * arr.length)] : null;
 
 export function PlanContentView({ clientId, planType }: Props) {
   const { isCoach, supabaseUser } = useSession();
   const parseNutrition = useServerFn(parseNutritionPlan);
   const parseTraining = useServerFn(parseTrainingPlan);
+  const getDayTypeFn = useServerFn(getDayType);
 
   const [plan, setPlan] = useState<Plan | null>(null);
   const [days, setDays] = useState<Day[]>([]);
@@ -57,12 +62,14 @@ export function PlanContentView({ clientId, planType }: Props) {
   const [parsing, setParsing] = useState(false);
   const [tracked, setTracked] = useState<Record<string, string>>({}); // meal_id -> food_entry.id
   const [togglingId, setTogglingId] = useState<string>("");
+  const [dayKind, setDayKind] = useState<"training" | "rest" | null>(null);
 
   const dayTable = planType === "nutrition" ? "nutrition_plan_days" : "training_days";
   const itemTable = planType === "nutrition" ? "nutrition_plan_meals" : "training_exercises";
 
-  const canTrack =
-    planType === "nutrition" && !!supabaseUser && supabaseUser.id === clientId && !isCoach;
+  const isSelf = !!supabaseUser && supabaseUser.id === clientId && !isCoach;
+  const canTrack = planType === "nutrition" && isSelf;
+  const pickStorageKey = `bf:plan:${planType}:${clientId}:${todayKey()}`;
 
   const reload = async () => {
     if (!clientId) return;
@@ -86,7 +93,14 @@ export function PlanContentView({ clientId, planType }: Props) {
       .order("sort_order");
     const dayList = (dayRows as Day[]) ?? [];
     setDays(dayList);
-    setActiveDay((cur) => (dayList.find((d) => d.id === cur) ? cur : dayList[0]?.id ?? ""));
+    setActiveDay((cur) => {
+      if (dayList.find((d) => d.id === cur)) return cur;
+      const saved = (() => {
+        try { return localStorage.getItem(pickStorageKey) ?? ""; } catch { return ""; }
+      })();
+      if (saved && dayList.find((d) => d.id === saved)) return saved;
+      return dayList[0]?.id ?? "";
+    });
 
     if (dayList.length) {
       const { data: itemRows } = await supabase
@@ -120,6 +134,53 @@ export function PlanContentView({ clientId, planType }: Props) {
 
   useEffect(() => { reload(); /* eslint-disable-next-line */ }, [clientId, planType]);
   useEffect(() => { reloadTracked(); /* eslint-disable-next-line */ }, [clientId, planType, supabaseUser?.id]);
+
+  // Fetch today's day type (only for self / nutrition); used to auto-pick a matching day.
+  useEffect(() => {
+    if (!isSelf || planType !== "nutrition") { setDayKind(null); return; }
+    let cancelled = false;
+    (async () => {
+      try {
+        const d = await getDayTypeFn({ data: { user_id: clientId, date: todayKey() } });
+        if (!cancelled) setDayKind(d.kind);
+      } catch {
+        if (!cancelled) setDayKind(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [clientId, planType, isSelf, getDayTypeFn]);
+
+  // Auto-pick a random matching plan day for today if no manual pick is stored yet.
+  useEffect(() => {
+    if (!days.length || !dayKind) return;
+    let saved = "";
+    try { saved = localStorage.getItem(pickStorageKey) ?? ""; } catch {}
+    if (saved && days.find((d) => d.id === saved)) return;
+    const matches = days.filter((d) =>
+      dayKind === "rest" ? isRestDay(d.name) : !isRestDay(d.name),
+    );
+    const pool = matches.length ? matches : days;
+    const pick = pickRandom(pool);
+    if (pick) {
+      setActiveDay(pick.id);
+      try { localStorage.setItem(pickStorageKey, pick.id); } catch {}
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [days, dayKind]);
+
+  const pickAnotherDay = () => {
+    if (!days.length) return;
+    const matches = days.filter((d) =>
+      dayKind === "rest" ? isRestDay(d.name) : !isRestDay(d.name),
+    );
+    const pool = (matches.length ? matches : days).filter((d) => d.id !== activeDay);
+    const pick = pickRandom(pool.length ? pool : days);
+    if (pick) {
+      setActiveDay(pick.id);
+      try { localStorage.setItem(pickStorageKey, pick.id); } catch {}
+    }
+  };
+
 
   const handleParse = async () => {
     if (!plan) return;
@@ -223,10 +284,27 @@ export function PlanContentView({ clientId, planType }: Props) {
       ) : (
         <>
           <div className="mt-4">
-            <label className="text-xs uppercase tracking-wider text-muted-foreground">Tag wählen</label>
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-xs uppercase tracking-wider text-muted-foreground">
+                {isSelf && dayKind
+                  ? dayKind === "rest" ? "Heute: Restday" : "Heute: Trainingstag"
+                  : "Tag wählen"}
+              </label>
+              {isSelf && planType === "nutrition" && days.length > 1 && (
+                <button
+                  onClick={pickAnotherDay}
+                  className="inline-flex items-center gap-1 rounded-md border border-border bg-background/40 px-2 py-1 text-[11px] text-muted-foreground hover:text-gold"
+                >
+                  <Shuffle className="h-3 w-3" /> Anderen Tag
+                </button>
+              )}
+            </div>
             <select
               value={activeDay}
-              onChange={(e) => setActiveDay(e.target.value)}
+              onChange={(e) => {
+                setActiveDay(e.target.value);
+                try { localStorage.setItem(pickStorageKey, e.target.value); } catch {}
+              }}
               className="mt-2 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             >
               {days.map((d) => (
@@ -234,6 +312,7 @@ export function PlanContentView({ clientId, planType }: Props) {
               ))}
             </select>
           </div>
+
 
           {canTrack && (
             <p className="mt-3 text-[11px] text-muted-foreground">
