@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Utensils, Dumbbell, Sparkles, Lock, Check, Plus } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
 import { TRIAL_NUTRITION, TRIAL_TRAINING, type TrialMeal } from "@/lib/bodyfuel/trialPlans";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
+import { getDayType } from "@/lib/nutrition.functions";
 
 function mapMealCategory(name: string): "breakfast" | "lunch" | "dinner" | "snack" {
   const n = name.toLowerCase();
