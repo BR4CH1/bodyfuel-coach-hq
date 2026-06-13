@@ -380,11 +380,101 @@ function CoachDashboard() {
             ))}
           </Panel>
 
+          {/* Ranking */}
+          <div className="lg:col-span-2">
+            <RankingPanel />
+          </div>
+
         </div>
       )}
     </div>
   );
 }
+
+function RankingPanel() {
+  const [period, setPeriod] = useState<RankingPeriod>("week");
+  const getRankingFn = useServerFn(getRanking);
+  const { data, isLoading } = useQuery({
+    queryKey: ["coach-ranking", period],
+    queryFn: () => getRankingFn({ data: { period } }),
+  });
+  const rows = (data ?? []).filter((r) => r.points > 0);
+
+  const PERIOD_LABEL: Record<RankingPeriod, string> = {
+    today: "Heute",
+    week: "Diese Woche",
+    month: "Diesen Monat",
+    all: "Allzeit",
+  };
+
+  const medal = (idx: number) =>
+    idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `${idx + 1}.`;
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Trophy className="h-5 w-5 text-gold" />
+          <h2 className="font-display text-lg font-bold">Ranking</h2>
+        </div>
+        <Select value={period} onValueChange={(v) => setPeriod(v as RankingPeriod)}>
+          <SelectTrigger className="w-44">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="today">Heute</SelectItem>
+            <SelectItem value="week">Diese Woche</SelectItem>
+            <SelectItem value="month">Diesen Monat</SelectItem>
+            <SelectItem value="all">Allzeit</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {isLoading ? (
+        <div className="rounded-xl bg-background/40 p-4 text-sm text-muted-foreground">
+          Lade…
+        </div>
+      ) : rows.length === 0 ? (
+        <div className="flex items-center gap-2 rounded-xl bg-background/40 p-4 text-sm text-muted-foreground">
+          <CheckCircle2 className="h-4 w-4 text-gold" />
+          Noch keine Punkte im Zeitraum „{PERIOD_LABEL[period]}".
+        </div>
+      ) : (
+        <ol className="space-y-2">
+          {rows.map((r, i) => (
+            <Link
+              key={r.user_id}
+              to="/coach/customers/$userId"
+              params={{ userId: r.user_id }}
+              className={`flex items-center gap-3 rounded-xl border bg-background/40 p-3 transition hover:border-gold/40 ${
+                i === 0 ? "border-gold/40" : "border-border"
+              }`}
+            >
+              <div className="w-8 shrink-0 text-center text-lg font-bold">
+                {medal(i)}
+              </div>
+              <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-gold text-xs font-bold text-primary-foreground">
+                {(r.display_name ?? "??").slice(0, 2).toUpperCase()}
+              </div>
+              <div className="min-w-0 flex-1 truncate text-sm font-semibold">
+                {r.display_name ?? "Ohne Namen"}
+              </div>
+              <div className="shrink-0 text-right">
+                <div className="font-display text-base font-bold text-gold">
+                  {r.points}
+                </div>
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Punkte
+                </div>
+              </div>
+            </Link>
+          ))}
+        </ol>
+      )}
+    </div>
+  );
+}
+
 
 function StatPill({
   icon,
