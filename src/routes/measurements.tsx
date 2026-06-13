@@ -63,7 +63,10 @@ function MeasurementsContent() {
     muscle_mass_kg: "",
     waist_cm: "",
     chest_cm: "",
-    hip_cm: "",
+    thigh_left_cm: "",
+    thigh_right_cm: "",
+    biceps_left_cm: "",
+    biceps_right_cm: "",
     notes: "",
   });
 
