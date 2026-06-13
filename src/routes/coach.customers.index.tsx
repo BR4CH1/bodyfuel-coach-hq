@@ -157,7 +157,10 @@ function CustomersList() {
                 {(filtered as any[]).map((c) => (
                   <tr key={c.id} className="border-b border-border last:border-0 hover:bg-secondary/30">
                     <td className="px-4 py-3">
-                      <div className="font-semibold">{c.display_name ?? "—"}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold">{c.display_name ?? "—"}</span>
+                        {(c.groups ?? []).includes("bulls") && <BullsBadge />}
+                      </div>
                       <div className="text-xs text-muted-foreground">{c.email ?? "—"}</div>
                     </td>
                     <td className="px-4 py-3 uppercase tracking-wider text-gold">{c.package}</td>
