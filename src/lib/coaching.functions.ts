@@ -269,6 +269,15 @@ export const createCustomer = createServerFn({ method: "POST" })
     });
     if (pkgErr) throw new Error(pkgErr.message);
 
+    if (data.bulls) {
+      await supabaseAdmin
+        .from("user_groups")
+        .upsert(
+          { user_id: newUserId, group_name: "bulls" },
+          { onConflict: "user_id,group_name" },
+        );
+    }
+
     return { ok: true, user_id: newUserId };
   });
 
