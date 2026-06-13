@@ -582,7 +582,7 @@ export function NutritionTracker() {
             {list.length > 0 && (
               <ul className="mt-3 divide-y divide-border">
                 {list.map((e) => {
-                  const isPlan = typeof (e as any).source === "string" && (e as any).source.startsWith("plan:");
+                  const isPlan = typeof e.source === "string" && e.source.startsWith("plan:");
                   const cleanName = isPlan
                     ? e.name.replace(/^\s*(Frühstück|Mittagessen|Mittag|Abendessen|Abend|Snack|Spätsnack|Late[- ]?Night|Pre[- ]?Workout|Post[- ]?Workout|Shake|Mahlzeit\s*\d+)\s*[—–\-:]\s*/i, "")
                     : e.name;
