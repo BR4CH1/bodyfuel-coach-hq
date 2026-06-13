@@ -15,6 +15,7 @@ import {
   setCustomerPassword,
   deleteCustomer,
 } from "@/lib/coaching.functions";
+import { setUserGroup } from "@/lib/admin-groups.functions";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
