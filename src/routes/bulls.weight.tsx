@@ -16,7 +16,7 @@ import {
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { BullsGate } from "@/components/bodyfuel/BullsGate";
 import { BullsHero } from "@/components/bodyfuel/BullsHero";
-import { CoachingUpsell } from "@/components/bodyfuel/CoachingUpsell";
+
 import { listBullsWeights, logBullsWeight } from "@/lib/bulls.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -138,7 +138,7 @@ function WeightPage() {
         </>
       )}
 
-      <CoachingUpsell />
+      
     </div>
   );
 }

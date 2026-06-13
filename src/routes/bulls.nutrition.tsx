@@ -5,7 +5,7 @@ import { ArrowLeft } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { BullsGate } from "@/components/bodyfuel/BullsGate";
 import { BullsHero } from "@/components/bodyfuel/BullsHero";
-import { CoachingUpsell } from "@/components/bodyfuel/CoachingUpsell";
+
 import { trackHubEvent } from "@/lib/bulls.functions";
 
 export const Route = createFileRoute("/bulls/nutrition")({
@@ -78,7 +78,7 @@ function NutritionPage() {
         </Day>
       </div>
 
-      <CoachingUpsell />
+      
     </div>
   );
 }
