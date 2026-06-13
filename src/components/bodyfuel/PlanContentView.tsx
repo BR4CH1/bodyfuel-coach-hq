@@ -281,11 +281,22 @@ export function PlanContentView({ clientId, planType }: Props) {
         setTracked((t) => { const n = { ...t }; delete n[m.id]; return n; });
         toast.success(`${m.name} entfernt`);
       } else {
-        const dayMeals = meals
+        const meta = extractDayGroup(m.name);
+        const dayMealsAll = meals
           .filter((x) => x.day_id === m.day_id)
           .sort((a, b) => a.sort_order - b.sort_order);
-        const idx = dayMeals.findIndex((x) => x.id === m.id);
-        const slot = mealSlot(idx, dayMeals.length);
+        const dayMeals = meta
+          ? dayMealsAll.filter((x) => {
+              const g = extractDayGroup(x.name);
+              return g && g.group.toLowerCase() === meta.group.toLowerCase();
+            })
+          : dayMealsAll;
+        const list = dayMeals.length ? dayMeals : dayMealsAll;
+        let idx = list.findIndex((x) => x.id === m.id);
+        // Prefer "Mahlzeit N" number from the name when present
+        const mn = m.name.match(/Mahlzeit\s*(\d+)/i);
+        if (mn) idx = Math.max(0, parseInt(mn[1], 10) - 1);
+        const slot = mealSlot(idx, list.length);
 
         let kcal = m.kcal ?? 0;
         let p = m.protein_g ?? 0;
