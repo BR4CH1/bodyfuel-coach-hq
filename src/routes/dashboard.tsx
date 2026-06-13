@@ -11,6 +11,7 @@ import { MacroTargetsCard } from "@/components/bodyfuel/MacroTargetsCard";
 import { DayTypePrompt } from "@/components/bodyfuel/DayTypePrompt";
 import { DailyMacroSummary } from "@/components/bodyfuel/DailyMacroSummary";
 import { PointsBreakdownCard } from "@/components/bodyfuel/PointsBreakdownCard";
+import { TrialStatusBanner, TrialWelcomeDialog } from "@/components/bodyfuel/Trial";
 
 import { useSession } from "@/lib/bodyfuel/session";
 import { supabase } from "@/integrations/supabase/client";
