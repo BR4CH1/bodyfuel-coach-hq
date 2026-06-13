@@ -21,6 +21,7 @@ import { CoachTrainingSummary } from "@/components/bodyfuel/TrainingTrends";
 import { NutritionTargetsEditor } from "@/components/bodyfuel/NutritionTargetsEditor";
 import { MacroTargetsCard } from "@/components/bodyfuel/MacroTargetsCard";
 import { TrainingBonusCard } from "@/components/bodyfuel/TrainingBonusCard";
+import { CustomerRecentActivityCard } from "@/components/bodyfuel/CustomerRecentActivityCard";
 
 
 export const Route = createFileRoute("/coach/customers/$userId")({
