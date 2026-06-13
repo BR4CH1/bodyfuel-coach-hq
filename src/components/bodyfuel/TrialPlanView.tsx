@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
 import { getDayType } from "@/lib/nutrition.functions";
 import { ensureTrialTrainingPlan } from "@/lib/trial.functions";
+import { trialMealEntrySource, trialMealTrackedKey } from "@/lib/bodyfuel/trialTracking";
 
 function mapMealCategory(name: string): "breakfast" | "lunch" | "dinner" | "snack" {
   const n = name.toLowerCase();
@@ -34,11 +35,11 @@ export function TrialNutritionPlan() {
     const today = new Date().toISOString().slice(0, 10);
     const { data } = await supabase
       .from("food_entries")
-      .select("source")
+      .select("source, name, kcal, protein_g, carbs_g, fat_g")
       .eq("user_id", supabaseUser.id)
       .eq("entry_date", today)
-      .like("source", "trial-plan:%");
-    setTrackedKeys(new Set(((data as { source: string }[]) ?? []).map((r) => r.source)));
+      .like("source", "trial-plan%");
+    setTrackedKeys(new Set(((data as Parameters<typeof trialMealTrackedKey>[0][]) ?? []).map(trialMealTrackedKey).filter(Boolean) as string[]));
   };
 
   useEffect(() => {
@@ -105,7 +106,7 @@ export function TrialNutritionPlan() {
 
       <div className="mt-4 space-y-3">
         {variant.meals.map((m, i) => {
-          const key = `trial-plan:${dayId}:${variantId}:${i}`;
+          const key = trialMealEntrySource(dayId, variantId, i);
           return (
             <TrialMealCard
               key={`${dayId}-${variantId}-${i}`}
