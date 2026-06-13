@@ -86,10 +86,43 @@ async function seedTrialTrainingPlanFor(userId: string) {
   return { ok: true, plan_id: plan.id, created: true };
 }
 
-/** Stellt sicher, dass der eingeloggte Trial-Nutzer den Starter-Trainingsplan hat. */
+/** Idempotent: Trial-Nutzer bekommt Nutrition-Targets mit Trainings- und Restday-Werten. */
+async function seedTrialNutritionTargetsFor(userId: string) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: existing } = await supabaseAdmin
+    .from("nutrition_targets")
+    .select("user_id, kcal_rest")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (existing && existing.kcal_rest != null) return { ok: true, created: false };
+
+  // Werte korrespondieren mit TRIAL_NUTRITION (Variante A)
+  const payload = {
+    user_id: userId,
+    kcal: 2400,
+    protein_g: 191,
+    carbs_g: 258,
+    fat_g: 55,
+    kcal_rest: 2000,
+    protein_g_rest: 165,
+    carbs_g_rest: 44,
+    fat_g_rest: 106,
+  };
+  const { error } = await supabaseAdmin
+    .from("nutrition_targets")
+    .upsert(payload, { onConflict: "user_id" });
+  if (error) throw new Error(error.message);
+  return { ok: true, created: true };
+}
+
+/** Stellt sicher, dass der eingeloggte Trial-Nutzer Starter-Trainingsplan + Nutrition-Targets hat. */
 export const ensureTrialTrainingPlan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => seedTrialTrainingPlanFor(context.userId));
+  .handler(async ({ context }) => {
+    const r = await seedTrialTrainingPlanFor(context.userId);
+    try { await seedTrialNutritionTargetsFor(context.userId); } catch (e) { console.error(e); }
+    return r;
+  });
 
 /** Wird vom Trial-Signup nach Auth-Signup aufgerufen, um den Trial zu starten. */
 export const startMyTrial = createServerFn({ method: "POST" })
