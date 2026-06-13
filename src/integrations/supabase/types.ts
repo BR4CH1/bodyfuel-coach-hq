@@ -824,6 +824,9 @@ export type Database = {
           next_checkin_date: string | null
           notifications_enabled: boolean
           phone: string | null
+          trial_end: string | null
+          trial_start: string | null
+          trial_status: string
           updated_at: string
         }
         Insert: {
@@ -841,6 +844,9 @@ export type Database = {
           next_checkin_date?: string | null
           notifications_enabled?: boolean
           phone?: string | null
+          trial_end?: string | null
+          trial_start?: string | null
+          trial_status?: string
           updated_at?: string
         }
         Update: {
@@ -858,6 +864,9 @@ export type Database = {
           next_checkin_date?: string | null
           notifications_enabled?: boolean
           phone?: string | null
+          trial_end?: string | null
+          trial_start?: string | null
+          trial_status?: string
           updated_at?: string
         }
         Relationships: []
