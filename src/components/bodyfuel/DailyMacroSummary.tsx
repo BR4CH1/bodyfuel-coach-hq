@@ -80,7 +80,7 @@ export function DailyMacroSummary({ userId }: { userId: string }) {
         </div>
       </div>
       <div className="mt-5 grid grid-cols-4 gap-3 text-center">
-        <MacroCell color="hsl(var(--gold))" label="kcal" value={totals.kcal} target={targets.kcal} />
+        <MacroCell color="var(--gold)" label="kcal" value={totals.kcal} target={targets.kcal} />
         <MacroCell color="#ef4444" label="Protein" value={totals.protein_g} target={targets.protein_g} unit="g" />
         <MacroCell color="#3b82f6" label="Carbs" value={totals.carbs_g} target={targets.carbs_g} unit="g" />
         <MacroCell color="#f59e0b" label="Fett" value={totals.fat_g} target={targets.fat_g} unit="g" />
