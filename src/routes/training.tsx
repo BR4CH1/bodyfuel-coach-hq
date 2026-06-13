@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { PlansView } from "@/components/bodyfuel/PlansView";
 import { TrainingTracker } from "@/components/bodyfuel/TrainingTracker";
@@ -8,6 +9,7 @@ import { useSession } from "@/lib/bodyfuel/session";
 import { supabase } from "@/integrations/supabase/client";
 import { useTrial } from "@/hooks/use-trial";
 import { TrialTrainingPlan } from "@/components/bodyfuel/TrialPlanView";
+import { ensureTrialTrainingPlan } from "@/lib/trial.functions";
 
 export const Route = createFileRoute("/training")({
   head: () => ({ meta: [{ title: "Trainingsplan — BODYFUEL" }] }),
@@ -21,8 +23,26 @@ export const Route = createFileRoute("/training")({
 function TrainingPage() {
   const { isCoach, supabaseUser } = useSession();
   const { isTrial, isExpired } = useTrial();
+  const ensureFn = useServerFn(ensureTrialTrainingPlan);
   const [clientId, setClientId] = useState<string>("");
   const [clients, setClients] = useState<{ id: string; display_name: string | null }[]>([]);
+  const [trackerKey, setTrackerKey] = useState(0);
+  const seededRef = useRef(false);
+
+  // Trial-Nutzer: Starter-Trainingsplan idempotent anlegen, damit der Tracker
+  // sofort Übungen anzeigt und Sätze geloggt werden können.
+  useEffect(() => {
+    if (!supabaseUser || isCoach || !isTrial || seededRef.current) return;
+    seededRef.current = true;
+    (async () => {
+      try {
+        await ensureFn();
+        setTrackerKey((k) => k + 1);
+      } catch (e) {
+        console.error("ensureTrialTrainingPlan failed", e);
+      }
+    })();
+  }, [supabaseUser, isCoach, isTrial, ensureFn]);
 
   useEffect(() => {
     if (!supabaseUser) return;
@@ -73,7 +93,7 @@ function TrainingPage() {
               </select>
             </div>
           )}
-          {clientId && <TrainingTracker clientId={clientId} />}
+          {clientId && <TrainingTracker key={trackerKey} clientId={clientId} />}
         </section>
       )}
     </div>
