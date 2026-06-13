@@ -41,7 +41,7 @@ function TrainingPage() {
 
   return (
     <div className="space-y-8">
-      <PlansView planType="training" />
+      {isCoach && <PlansView planType="training" />}
       {supabaseUser && (clientId || !isCoach) && (
         <PlanContentView clientId={clientId || supabaseUser.id} planType="training" />
       )}
