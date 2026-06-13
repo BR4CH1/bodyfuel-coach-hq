@@ -157,3 +157,70 @@ function UpgradeHint({ text }: { text: string }) {
     </div>
   );
 }
+
+function TrialMealCard({ meal }: { meal: TrialMeal }) {
+  const { supabaseUser } = useSession();
+  const [busy, setBusy] = useState(false);
+  const [tracked, setTracked] = useState(false);
+
+  const track = async () => {
+    if (!supabaseUser || busy || tracked) return;
+    setBusy(true);
+    const { error } = await supabase.from("food_entries").insert({
+      user_id: supabaseUser.id,
+      entry_date: new Date().toISOString().slice(0, 10),
+      meal: mapMealCategory(meal.name),
+      name: `${meal.name} — ${meal.description}`.slice(0, 200),
+      serving_g: 100,
+      kcal: meal.kcal,
+      protein_g: meal.protein_g,
+      carbs_g: meal.carbs_g,
+      fat_g: meal.fat_g,
+      source: "trial-plan",
+    });
+    setBusy(false);
+    if (error) {
+      toast.error("Konnte Mahlzeit nicht tracken: " + error.message);
+      return;
+    }
+    setTracked(true);
+    toast.success(`${meal.name} getrackt`);
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={track}
+      disabled={busy || tracked || !supabaseUser}
+      className={
+        "group block w-full rounded-2xl border p-4 text-left transition " +
+        (tracked
+          ? "border-gold/60 bg-gold/10"
+          : "border-border bg-background/40 hover:border-gold/50 hover:bg-accent/40")
+      }
+    >
+      <div className="flex items-baseline justify-between gap-3">
+        <div className="text-xs font-bold uppercase tracking-wider text-gold">{meal.name}</div>
+        <div className="text-[11px] text-muted-foreground">{meal.kcal} kcal</div>
+      </div>
+      <p className="mt-1 text-sm">{meal.description}</p>
+      <div className="mt-2 flex items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+          <span>P {meal.protein_g}g</span>
+          <span>· KH {meal.carbs_g}g</span>
+          <span>· F {meal.fat_g}g</span>
+        </div>
+        <span
+          className={
+            "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider " +
+            (tracked
+              ? "bg-gold/20 text-gold"
+              : "bg-secondary text-muted-foreground group-hover:bg-gold/15 group-hover:text-gold")
+          }
+        >
+          {tracked ? <><Check className="h-3 w-3" /> Getrackt</> : <><Plus className="h-3 w-3" /> Tracken</>}
+        </span>
+      </div>
+    </button>
+  );
+}
