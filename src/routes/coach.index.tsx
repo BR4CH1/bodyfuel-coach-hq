@@ -159,6 +159,21 @@ function CoachDashboard() {
         new Date(b.last_weight_at!).getTime() - new Date(a.last_weight_at!).getTime(),
     )
     .slice(0, 6);
+  const recentNutrition = [...clients]
+    .filter((c) => c.last_nutrition_at)
+    .sort(
+      (a, b) =>
+        new Date(b.last_nutrition_at!).getTime() - new Date(a.last_nutrition_at!).getTime(),
+    )
+    .slice(0, 6);
+  const recentTraining = [...clients]
+    .filter((c) => c.last_training_at)
+    .sort(
+      (a, b) =>
+        new Date(b.last_training_at!).getTime() - new Date(a.last_training_at!).getTime(),
+    )
+    .slice(0, 6);
+
 
   return (
     <div className="space-y-6">
