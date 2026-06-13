@@ -509,6 +509,14 @@ export function PlanContentView({ clientId, planType }: Props) {
           </div>
         </>
       )}
+      {recipeMeal && (
+        <RecipeDialog
+          meal={recipeMeal}
+          displayName={itemDisplayName[recipeMeal.id] ?? recipeMeal.name}
+          isCoach={isCoach}
+          onClose={() => setRecipeMeal(null)}
+        />
+      )}
     </div>
   );
 }
