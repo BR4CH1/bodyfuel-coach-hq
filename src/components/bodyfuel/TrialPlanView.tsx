@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Utensils, Dumbbell, Sparkles, Lock, Check, Plus } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
 import { TRIAL_NUTRITION, TRIAL_TRAINING, type TrialMeal } from "@/lib/bodyfuel/trialPlans";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
+import { getDayType } from "@/lib/nutrition.functions";
+import { ensureTrialTrainingPlan } from "@/lib/trial.functions";
 
 function mapMealCategory(name: string): "breakfast" | "lunch" | "dinner" | "snack" {
   const n = name.toLowerCase();
@@ -16,10 +19,40 @@ function mapMealCategory(name: string): "breakfast" | "lunch" | "dinner" | "snac
 
 /** Liest Read-only-Starterpläne für den Trial – keine DB-Abhängigkeit. */
 export function TrialNutritionPlan() {
+  const { supabaseUser } = useSession();
+  const getDayFn = useServerFn(getDayType);
+  const ensureFn = useServerFn(ensureTrialTrainingPlan);
   const [dayId, setDayId] = useState<string>(TRIAL_NUTRITION[0].id);
+  const [autoNote, setAutoNote] = useState<string | null>(null);
   const day = TRIAL_NUTRITION.find((d) => d.id === dayId)!;
   const [variantId, setVariantId] = useState<string>(day.variants[0].id);
   const variant = day.variants.find((v) => v.id === variantId) ?? day.variants[0];
+
+  // Automatisch Trainings- vs. Restday wählen (anhand heutiger Trainings-Logs / Override)
+  useEffect(() => {
+    if (!supabaseUser) return;
+    // Trial-Seeds (Trainingsplan + Nutrition-Targets) idempotent sicherstellen.
+    ensureFn().catch(() => {});
+    let cancelled = false;
+    const date = new Date().toISOString().slice(0, 10);
+    getDayFn({ data: { user_id: supabaseUser.id, date } })
+      .then((res) => {
+        if (cancelled || !res?.kind) return;
+        const targetId = res.kind === "training" ? "training" : "rest";
+        const target = TRIAL_NUTRITION.find((d) => d.id === targetId);
+        if (target) {
+          setDayId(target.id);
+          setVariantId(target.variants[0].id);
+          setAutoNote(
+            res.source === "manual"
+              ? `Heute manuell als ${res.kind === "training" ? "Trainingstag" : "Restday"} markiert.`
+              : `Automatisch erkannt: ${res.kind === "training" ? "Trainingstag (Sätze geloggt)" : "Restday (noch keine Sätze)"}.`,
+          );
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [supabaseUser, getDayFn, ensureFn]);
 
   return (
     <div className="rounded-3xl border border-gold/30 bg-gradient-to-b from-card to-gold/5 p-5 sm:p-6">
@@ -47,6 +80,10 @@ export function TrialNutritionPlan() {
           options={day.variants.map((v) => ({ value: v.id, label: v.label }))}
         />
       </div>
+
+      {autoNote && (
+        <p className="mt-3 text-[11px] text-muted-foreground">{autoNote}</p>
+      )}
 
       <div className="mt-4 space-y-3">
         {variant.meals.map((m, i) => (
