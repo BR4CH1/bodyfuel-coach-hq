@@ -7,7 +7,7 @@ import { ArrowLeft, Upload, Image as ImageIcon } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { BullsGate } from "@/components/bodyfuel/BullsGate";
 import { BullsHero } from "@/components/bodyfuel/BullsHero";
-import { CoachingUpsell } from "@/components/bodyfuel/CoachingUpsell";
+
 import { listProgressPhotos, saveProgressPhotoSet } from "@/lib/bulls.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
@@ -118,7 +118,7 @@ function PhotosPage() {
         </div>
       )}
 
-      <CoachingUpsell />
+      
     </div>
   );
 }

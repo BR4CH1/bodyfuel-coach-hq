@@ -1,13 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { BullsGate } from "@/components/bodyfuel/BullsGate";
 import { BullsHero } from "@/components/bodyfuel/BullsHero";
-import { CoachingUpsell } from "@/components/bodyfuel/CoachingUpsell";
-import { trackHubEvent } from "@/lib/bulls.functions";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getBullsProfile, trackHubEvent, type BullsGoal } from "@/lib/bulls.functions";
 
 export const Route = createFileRoute("/bulls/training")({
   head: () => ({ meta: [{ title: "Mini-Trainingsplan — Bulls Hub" }] }),
@@ -20,17 +19,19 @@ export const Route = createFileRoute("/bulls/training")({
   ),
 });
 
-const GOALS = [
-  { key: "fat_loss", label: "Körperfett reduzieren" },
-  { key: "muscle_gain", label: "Muskelmasse aufbauen" },
-  { key: "performance", label: "Football Performance" },
-  { key: "general_fitness", label: "Allgemein fitter werden" },
-] as const;
+const GOAL_LABEL: Record<BullsGoal, string> = {
+  fat_loss: "Körperfett reduzieren",
+  muscle_gain: "Muskelmasse aufbauen",
+  performance: "Football Performance",
+  general_fitness: "Allgemein fitter werden",
+};
 
 function TrainingPage() {
   const fn = useServerFn(trackHubEvent);
-  const [goal, setGoal] = useState<string>("fat_loss");
+  const profileQ = useQuery({ queryKey: ["bulls-profile"], queryFn: useServerFn(getBullsProfile) });
   useEffect(() => { fn({ data: { kind: "training_plan_opened" } }).catch(() => {}); }, [fn]);
+
+  const goal = (profileQ.data as any)?.main_goal as BullsGoal | undefined;
 
   return (
     <div className="space-y-6">
@@ -40,85 +41,90 @@ function TrainingPage() {
       <BullsHero
         eyebrow="Mini-Trainingsplan"
         title="Dein kostenloser Mini-Trainingsplan"
-        subtitle="Ein einfacher Starter-Plan, der dir Struktur gibt und die wichtigsten Grundlagen vermittelt."
+        subtitle={goal ? `Plan passend zu deinem Ziel: ${GOAL_LABEL[goal]}.` : "Ein einfacher Starter-Plan."}
       />
 
-      <Tabs value={goal} onValueChange={setGoal} className="space-y-4">
-        <TabsList className="flex flex-wrap h-auto">
-          {GOALS.map((g) => <TabsTrigger key={g.key} value={g.key}>{g.label}</TabsTrigger>)}
-        </TabsList>
+      {!goal ? (
+        <p className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground">Lade…</p>
+      ) : (
+        <Plan goal={goal} />
+      )}
+    </div>
+  );
+}
 
-        <TabsContent value="fat_loss" className="grid gap-4 lg:grid-cols-2">
-          <Block title="Einheit A">
-            <li>Kniebeugen oder Beinpresse 3×8–10</li>
-            <li>Rudern 3×10</li>
-            <li>Liegestütze oder Bankdrücken 3×8–10</li>
-            <li>Plank 3×30–45 Sek.</li>
-          </Block>
-          <Block title="Einheit B">
-            <li>Kreuzheben leicht oder Hip Thrust 3×8</li>
-            <li>Latzug 3×10</li>
-            <li>Schulterdrücken 3×8–10</li>
-            <li>Farmers Walk 3 Runden</li>
-          </Block>
-          <Note>Zusätzlich: 8.000 Schritte täglich · 2 Cardioeinheiten pro Woche à 20–30 Min.</Note>
-        </TabsContent>
-
-        <TabsContent value="muscle_gain" className="grid gap-4 lg:grid-cols-2">
-          <Block title="Einheit A">
-            <li>Kniebeugen oder Beinpresse 4×8</li>
-            <li>Bankdrücken 4×8</li>
-            <li>Rudern 4×10</li>
-            <li>Bauchübung 3 Sätze</li>
-          </Block>
-          <Block title="Einheit B">
-            <li>Kreuzheben oder Hip Thrust 4×6–8</li>
-            <li>Schulterdrücken 4×8</li>
-            <li>Latzug oder Klimmzüge 4×8–10</li>
-            <li>Seitheben 3×12–15</li>
-          </Block>
-          <Note>Progression tracken — jede Woche versuchen stärker zu werden.</Note>
-        </TabsContent>
-
-        <TabsContent value="performance" className="grid gap-4 lg:grid-cols-3">
-          <Block title="A — Kraft">
-            <li>Kniebeugen oder Beinpresse 3×5</li>
-            <li>Bankdrücken 3×5</li>
-            <li>Rudern 3×8</li>
-            <li>Core 3 Sätze</li>
-          </Block>
-          <Block title="B — Explosivität">
-            <li>Box Jumps 3×5</li>
-            <li>Sprints 6×10–20 m</li>
-            <li>Farmers Walk 3 Runden</li>
-            <li>Mobility 10 Min.</li>
-          </Block>
-          <Block title="C — Stabilität & Recovery">
-            <li>Ausfallschritte 3×8 je Seite</li>
-            <li>Schulter-Stabi 3×12</li>
-            <li>Dead Bug 3×10 je Seite</li>
-            <li>Mobility 10 Min.</li>
-          </Block>
-        </TabsContent>
-
-        <TabsContent value="general_fitness" className="grid gap-4 lg:grid-cols-2">
-          <Block title="Einheit A">
-            <li>Beinpresse 3×10</li>
-            <li>Brustpresse 3×10</li>
-            <li>Rudern 3×10</li>
-            <li>Plank 3×30 Sek.</li>
-          </Block>
-          <Block title="Einheit B">
-            <li>Ausfallschritte 3×8 je Seite</li>
-            <li>Latzug 3×10</li>
-            <li>Schulterdrücken 3×10</li>
-            <li>Dead Bug 3×10 je Seite</li>
-          </Block>
-          <Note>Zusätzlich: 8.000 Schritte täglich · 2 Cardioeinheiten pro Woche.</Note>
-        </TabsContent>
-      </Tabs>
-
-      <CoachingUpsell />
+function Plan({ goal }: { goal: BullsGoal }) {
+  if (goal === "fat_loss") return (
+    <div className="grid gap-4 lg:grid-cols-2">
+      <Block title="Einheit A">
+        <li>Kniebeugen oder Beinpresse 3×8–10</li>
+        <li>Rudern 3×10</li>
+        <li>Liegestütze oder Bankdrücken 3×8–10</li>
+        <li>Plank 3×30–45 Sek.</li>
+      </Block>
+      <Block title="Einheit B">
+        <li>Kreuzheben leicht oder Hip Thrust 3×8</li>
+        <li>Latzug 3×10</li>
+        <li>Schulterdrücken 3×8–10</li>
+        <li>Farmers Walk 3 Runden</li>
+      </Block>
+      <Note>Zusätzlich: 8.000 Schritte täglich · 2 Cardioeinheiten pro Woche à 20–30 Min.</Note>
+    </div>
+  );
+  if (goal === "muscle_gain") return (
+    <div className="grid gap-4 lg:grid-cols-2">
+      <Block title="Einheit A">
+        <li>Kniebeugen oder Beinpresse 4×8</li>
+        <li>Bankdrücken 4×8</li>
+        <li>Rudern 4×10</li>
+        <li>Bauchübung 3 Sätze</li>
+      </Block>
+      <Block title="Einheit B">
+        <li>Kreuzheben oder Hip Thrust 4×6–8</li>
+        <li>Schulterdrücken 4×8</li>
+        <li>Latzug oder Klimmzüge 4×8–10</li>
+        <li>Seitheben 3×12–15</li>
+      </Block>
+      <Note>Progression tracken — jede Woche versuchen stärker zu werden.</Note>
+    </div>
+  );
+  if (goal === "performance") return (
+    <div className="grid gap-4 lg:grid-cols-3">
+      <Block title="A — Kraft">
+        <li>Kniebeugen oder Beinpresse 3×5</li>
+        <li>Bankdrücken 3×5</li>
+        <li>Rudern 3×8</li>
+        <li>Core 3 Sätze</li>
+      </Block>
+      <Block title="B — Explosivität">
+        <li>Box Jumps 3×5</li>
+        <li>Sprints 6×10–20 m</li>
+        <li>Farmers Walk 3 Runden</li>
+        <li>Mobility 10 Min.</li>
+      </Block>
+      <Block title="C — Stabilität & Recovery">
+        <li>Ausfallschritte 3×8 je Seite</li>
+        <li>Schulter-Stabi 3×12</li>
+        <li>Dead Bug 3×10 je Seite</li>
+        <li>Mobility 10 Min.</li>
+      </Block>
+    </div>
+  );
+  return (
+    <div className="grid gap-4 lg:grid-cols-2">
+      <Block title="Einheit A">
+        <li>Beinpresse 3×10</li>
+        <li>Brustpresse 3×10</li>
+        <li>Rudern 3×10</li>
+        <li>Plank 3×30 Sek.</li>
+      </Block>
+      <Block title="Einheit B">
+        <li>Ausfallschritte 3×8 je Seite</li>
+        <li>Latzug 3×10</li>
+        <li>Schulterdrücken 3×10</li>
+        <li>Dead Bug 3×10 je Seite</li>
+      </Block>
+      <Note>Zusätzlich: 8.000 Schritte täglich · 2 Cardioeinheiten pro Woche.</Note>
     </div>
   );
 }
