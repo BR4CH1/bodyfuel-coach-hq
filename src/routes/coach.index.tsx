@@ -8,7 +8,10 @@ import {
   Users,
   CheckCircle2,
   Clock,
+  Utensils,
+  Dumbbell,
 } from "lucide-react";
+
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -27,7 +30,11 @@ type Client = {
   last_checkin: string | null;
   last_weight: number | null;
   last_weight_at: string | null;
+  last_nutrition_at: string | null;
+  last_nutrition_name: string | null;
+  last_training_at: string | null;
 };
+
 
 type Lead = {
   id: string;
@@ -69,7 +76,7 @@ function CoachDashboard() {
 
       let clientRows: Client[] = [];
       if (ids.length > 0) {
-        const [profiles, checkins, measurements] = await Promise.all([
+        const [profiles, checkins, measurements, foods, sets] = await Promise.all([
           supabase.from("profiles").select("id, display_name").in("id", ids),
           supabase
             .from("weekly_checkins")
@@ -81,6 +88,18 @@ function CoachDashboard() {
             .select("user_id, weight_kg, measured_at")
             .in("user_id", ids)
             .order("measured_at", { ascending: false }),
+          supabase
+            .from("food_entries")
+            .select("user_id, name, created_at")
+            .in("user_id", ids)
+            .order("created_at", { ascending: false })
+            .limit(200),
+          supabase
+            .from("training_set_logs")
+            .select("client_id, performed_at")
+            .in("client_id", ids)
+            .order("performed_at", { ascending: false })
+            .limit(200),
         ]);
 
         const lastCheckin = new Map<string, string>();
@@ -92,6 +111,15 @@ function CoachDashboard() {
           if (!lastWeight.has(m.user_id))
             lastWeight.set(m.user_id, { w: m.weight_kg, at: m.measured_at });
         });
+        const lastFood = new Map<string, { at: string; name: string }>();
+        (foods.data ?? []).forEach((f) => {
+          if (!lastFood.has(f.user_id))
+            lastFood.set(f.user_id, { at: f.created_at, name: f.name });
+        });
+        const lastTraining = new Map<string, string>();
+        (sets.data ?? []).forEach((s) => {
+          if (!lastTraining.has(s.client_id)) lastTraining.set(s.client_id, s.performed_at);
+        });
 
         clientRows = (profiles.data ?? []).map((p) => ({
           id: p.id,
@@ -99,8 +127,12 @@ function CoachDashboard() {
           last_checkin: lastCheckin.get(p.id) ?? null,
           last_weight: lastWeight.get(p.id)?.w ?? null,
           last_weight_at: lastWeight.get(p.id)?.at ?? null,
+          last_nutrition_at: lastFood.get(p.id)?.at ?? null,
+          last_nutrition_name: lastFood.get(p.id)?.name ?? null,
+          last_training_at: lastTraining.get(p.id) ?? null,
         }));
       }
+
       setClients(clientRows);
 
       const { data: leadsData } = await supabase
@@ -127,6 +159,21 @@ function CoachDashboard() {
         new Date(b.last_weight_at!).getTime() - new Date(a.last_weight_at!).getTime(),
     )
     .slice(0, 6);
+  const recentNutrition = [...clients]
+    .filter((c) => c.last_nutrition_at)
+    .sort(
+      (a, b) =>
+        new Date(b.last_nutrition_at!).getTime() - new Date(a.last_nutrition_at!).getTime(),
+    )
+    .slice(0, 6);
+  const recentTraining = [...clients]
+    .filter((c) => c.last_training_at)
+    .sort(
+      (a, b) =>
+        new Date(b.last_training_at!).getTime() - new Date(a.last_training_at!).getTime(),
+    )
+    .slice(0, 6);
+
 
   return (
     <div className="space-y-6">
@@ -276,6 +323,50 @@ function CoachDashboard() {
               />
             ))}
           </Panel>
+
+          {/* Letzte Eintragung Ernährung */}
+          <Panel
+            icon={<Utensils className="h-5 w-5" />}
+            title="Letzte Eintragung Ernährung"
+            empty={recentNutrition.length === 0}
+            emptyText="Noch keine Ernährungs-Einträge"
+          >
+            {recentNutrition.map((c) => (
+              <CustomerRow
+                key={c.id}
+                id={c.id}
+                name={c.display_name ?? "Ohne Namen"}
+                meta={`${c.last_nutrition_name ?? "Eintrag"} · ${new Date(
+                  c.last_nutrition_at!,
+                ).toLocaleDateString("de-DE")}`}
+                tone="info"
+              />
+            ))}
+          </Panel>
+
+          {/* Letzte Eintragung Training */}
+          <Panel
+            icon={<Dumbbell className="h-5 w-5" />}
+            title="Letzte Eintragung Training"
+            empty={recentTraining.length === 0}
+            emptyText="Noch keine Trainings-Einträge"
+          >
+            {recentTraining.map((c) => (
+              <CustomerRow
+                key={c.id}
+                id={c.id}
+                name={c.display_name ?? "Ohne Namen"}
+                meta={new Date(c.last_training_at!).toLocaleDateString("de-DE", {
+                  weekday: "short",
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric",
+                })}
+                tone="info"
+              />
+            ))}
+          </Panel>
+
         </div>
       )}
     </div>
