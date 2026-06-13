@@ -6,6 +6,8 @@ import { TrainingTracker } from "@/components/bodyfuel/TrainingTracker";
 import { PlanContentView } from "@/components/bodyfuel/PlanContentView";
 import { useSession } from "@/lib/bodyfuel/session";
 import { supabase } from "@/integrations/supabase/client";
+import { useTrial } from "@/hooks/use-trial";
+import { TrialTrainingPlan } from "@/components/bodyfuel/TrialPlanView";
 
 export const Route = createFileRoute("/training")({
   head: () => ({ meta: [{ title: "Trainingsplan — BODYFUEL" }] }),
