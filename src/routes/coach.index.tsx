@@ -30,7 +30,11 @@ type Client = {
   last_checkin: string | null;
   last_weight: number | null;
   last_weight_at: string | null;
+  last_nutrition_at: string | null;
+  last_nutrition_name: string | null;
+  last_training_at: string | null;
 };
+
 
 type Lead = {
   id: string;
