@@ -549,6 +549,9 @@ export type Database = {
           kcal: number | null
           name: string
           protein_g: number | null
+          recipe_generated_at: string | null
+          recipe_ingredients: string[] | null
+          recipe_steps: string[] | null
           sort_order: number
         }
         Insert: {
@@ -561,6 +564,9 @@ export type Database = {
           kcal?: number | null
           name: string
           protein_g?: number | null
+          recipe_generated_at?: string | null
+          recipe_ingredients?: string[] | null
+          recipe_steps?: string[] | null
           sort_order?: number
         }
         Update: {
@@ -573,6 +579,9 @@ export type Database = {
           kcal?: number | null
           name?: string
           protein_g?: number | null
+          recipe_generated_at?: string | null
+          recipe_ingredients?: string[] | null
+          recipe_steps?: string[] | null
           sort_order?: number
         }
         Relationships: [
