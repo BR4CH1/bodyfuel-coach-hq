@@ -306,3 +306,59 @@ function BullsBadge() {
     </span>
   );
 }
+
+function TrialList({ users }: { users: any[] }) {
+  if (users.length === 0) {
+    return (
+      <p className="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground">
+        Keine Nutzer in dieser Ansicht.
+      </p>
+    );
+  }
+  return (
+    <div className="space-y-2">
+      {users.map((u) => {
+        const dl = u.trial_end
+          ? Math.ceil(
+              (new Date(`${u.trial_end}T23:59:59Z`).getTime() - Date.now()) / 86_400_000,
+            )
+          : null;
+        const expired = u.trial_status === "trial_expired";
+        return (
+          <Link
+            key={u.id}
+            to="/coach/customers/$userId"
+            params={{ userId: u.id }}
+            className="flex items-center justify-between rounded-2xl border border-border bg-card p-4 transition hover:border-gold/40"
+          >
+            <div>
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-gold" />
+                <span className="font-semibold">{u.display_name ?? "—"}</span>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Trial-Ende: {u.trial_end ? new Date(u.trial_end).toLocaleDateString("de-DE") : "—"}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span
+                className={
+                  "rounded-full px-2 py-1 text-[10px] font-bold uppercase " +
+                  (expired
+                    ? "bg-destructive/15 text-destructive"
+                    : "bg-gold/15 text-gold")
+                }
+              >
+                {expired
+                  ? "Abgelaufen"
+                  : `${Math.max(0, dl ?? 0)} ${dl === 1 ? "Tag" : "Tage"} verbleibend`}
+              </span>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </div>
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
+
