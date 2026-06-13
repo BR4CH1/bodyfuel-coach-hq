@@ -126,7 +126,10 @@ function MeasurementsContent() {
       muscle_mass_kg: num(m.muscle_mass_kg),
       waist_cm: num(m.waist_cm),
       chest_cm: num(m.chest_cm),
-      hip_cm: num(m.hip_cm),
+      thigh_left_cm: num(m.thigh_left_cm),
+      thigh_right_cm: num(m.thigh_right_cm),
+      biceps_left_cm: num(m.biceps_left_cm),
+      biceps_right_cm: num(m.biceps_right_cm),
       notes: m.notes.trim() || null,
     });
     setSavingMeasurement(false);
@@ -139,7 +142,10 @@ function MeasurementsContent() {
       muscle_mass_kg: "",
       waist_cm: "",
       chest_cm: "",
-      hip_cm: "",
+      thigh_left_cm: "",
+      thigh_right_cm: "",
+      biceps_left_cm: "",
+      biceps_right_cm: "",
       notes: "",
     });
     load();
