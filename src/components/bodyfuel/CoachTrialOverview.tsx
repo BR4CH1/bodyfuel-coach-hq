@@ -44,7 +44,6 @@ export function CoachTrialOverview() {
         </div>
         <Link
           to="/coach/customers"
-          search={{ filter: "trial" } as any}
           className="text-xs font-semibold text-gold hover:underline"
         >
           Alle Trials →
