@@ -86,6 +86,9 @@ function DashboardContent() {
 
   return (
     <div className="space-y-6">
+      <TrialWelcomeDialog />
+      <TrialStatusBanner />
+
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
