@@ -452,21 +452,33 @@ export function PlanContentView({ clientId, planType }: Props) {
                       )}
                     </>
                   );
-                  const base = "w-full text-left rounded-2xl border p-4 transition";
+                  const base = "rounded-2xl border p-4 transition";
                   const style = isTracked
                     ? "border-emerald-500/40 bg-emerald-500/5"
                     : "border-border bg-background/40";
-                  return canTrack ? (
-                    <button
-                      key={m.id}
-                      onClick={() => toggleMeal(m)}
-                      disabled={busy}
-                      className={`${base} ${style} hover:border-gold/50 disabled:opacity-60`}
-                    >
-                      {inner}
-                    </button>
-                  ) : (
-                    <div key={m.id} className={`${base} ${style}`}>{inner}</div>
+                  return (
+                    <div key={m.id} className={`${base} ${style} relative`}>
+                      <button
+                        type="button"
+                        onClick={() => setRecipeMeal(m)}
+                        className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-md border border-border bg-background/60 px-2 py-1 text-[10px] font-semibold text-muted-foreground hover:border-gold/50 hover:text-gold"
+                        aria-label="Rezept anzeigen"
+                      >
+                        <BookOpen className="h-3 w-3" /> Rezept
+                      </button>
+                      {canTrack ? (
+                        <button
+                          type="button"
+                          onClick={() => toggleMeal(m)}
+                          disabled={busy}
+                          className="block w-full pr-20 text-left hover:opacity-90 disabled:opacity-60"
+                        >
+                          {inner}
+                        </button>
+                      ) : (
+                        <div className="pr-20">{inner}</div>
+                      )}
+                    </div>
                   );
                 })
               : exercises.filter((e) => itemToVirtual[e.id] === activeDay).map((e) => {
