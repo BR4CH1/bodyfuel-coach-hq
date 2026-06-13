@@ -937,6 +937,7 @@ export type Database = {
           sort_order: number
           target_reps: string | null
           target_sets: number | null
+          target_weights: string | null
         }
         Insert: {
           created_at?: string
@@ -947,6 +948,7 @@ export type Database = {
           sort_order?: number
           target_reps?: string | null
           target_sets?: number | null
+          target_weights?: string | null
         }
         Update: {
           created_at?: string
@@ -957,6 +959,7 @@ export type Database = {
           sort_order?: number
           target_reps?: string | null
           target_sets?: number | null
+          target_weights?: string | null
         }
         Relationships: [
           {
