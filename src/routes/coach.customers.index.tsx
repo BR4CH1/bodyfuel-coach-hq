@@ -205,7 +205,10 @@ function CustomersList() {
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold">{c.display_name ?? "—"}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="truncate font-semibold">{c.display_name ?? "—"}</p>
+                      {(c.groups ?? []).includes("bulls") && <BullsBadge />}
+                    </div>
                     <p className="truncate text-xs text-muted-foreground">{c.email ?? "—"}</p>
                   </div>
                   <PaymentBadge c={c} />
