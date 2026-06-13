@@ -185,10 +185,11 @@ export const createCustomer = createServerFn({ method: "POST" })
       phone?: string;
       package: PackageKey;
       price_eur: number;
-      start_date: string; // YYYY-MM-DD
+      start_date: string;
       duration_days: number;
       notes?: string;
       origin?: string;
+      bulls?: boolean;
     }) => data,
   )
   .handler(async ({ data, context }) => {
