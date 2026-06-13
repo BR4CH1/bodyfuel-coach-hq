@@ -26,7 +26,10 @@ type Measurement = {
   muscle_mass_kg: number | null;
   waist_cm: number | null;
   chest_cm: number | null;
-  hip_cm: number | null;
+  thigh_left_cm: number | null;
+  thigh_right_cm: number | null;
+  biceps_left_cm: number | null;
+  biceps_right_cm: number | null;
   notes: string | null;
 };
 
@@ -60,7 +63,10 @@ function MeasurementsContent() {
     muscle_mass_kg: "",
     waist_cm: "",
     chest_cm: "",
-    hip_cm: "",
+    thigh_left_cm: "",
+    thigh_right_cm: "",
+    biceps_left_cm: "",
+    biceps_right_cm: "",
     notes: "",
   });
 
@@ -120,7 +126,10 @@ function MeasurementsContent() {
       muscle_mass_kg: num(m.muscle_mass_kg),
       waist_cm: num(m.waist_cm),
       chest_cm: num(m.chest_cm),
-      hip_cm: num(m.hip_cm),
+      thigh_left_cm: num(m.thigh_left_cm),
+      thigh_right_cm: num(m.thigh_right_cm),
+      biceps_left_cm: num(m.biceps_left_cm),
+      biceps_right_cm: num(m.biceps_right_cm),
       notes: m.notes.trim() || null,
     });
     setSavingMeasurement(false);
@@ -133,7 +142,10 @@ function MeasurementsContent() {
       muscle_mass_kg: "",
       waist_cm: "",
       chest_cm: "",
-      hip_cm: "",
+      thigh_left_cm: "",
+      thigh_right_cm: "",
+      biceps_left_cm: "",
+      biceps_right_cm: "",
       notes: "",
     });
     load();
@@ -329,12 +341,36 @@ function MeasurementsContent() {
               onChange={(e) => setM({ ...m, chest_cm: e.target.value })}
             />
           </Field>
-          <Field label="Hüfte (cm)">
+          <Field label="Oberschenkel L (cm)">
             <Input
               type="number"
               step="0.1"
-              value={m.hip_cm}
-              onChange={(e) => setM({ ...m, hip_cm: e.target.value })}
+              value={m.thigh_left_cm}
+              onChange={(e) => setM({ ...m, thigh_left_cm: e.target.value })}
+            />
+          </Field>
+          <Field label="Oberschenkel R (cm)">
+            <Input
+              type="number"
+              step="0.1"
+              value={m.thigh_right_cm}
+              onChange={(e) => setM({ ...m, thigh_right_cm: e.target.value })}
+            />
+          </Field>
+          <Field label="Bizeps L (cm)">
+            <Input
+              type="number"
+              step="0.1"
+              value={m.biceps_left_cm}
+              onChange={(e) => setM({ ...m, biceps_left_cm: e.target.value })}
+            />
+          </Field>
+          <Field label="Bizeps R (cm)">
+            <Input
+              type="number"
+              step="0.1"
+              value={m.biceps_right_cm}
+              onChange={(e) => setM({ ...m, biceps_right_cm: e.target.value })}
             />
           </Field>
           <Field label="Notizen" className="sm:col-span-2">
@@ -380,7 +416,10 @@ function MeasurementsContent() {
                   <th className="py-2 pr-3">Muskel</th>
                   <th className="py-2 pr-3">Taille</th>
                   <th className="py-2 pr-3">Brust</th>
-                  <th className="py-2 pr-3">Hüfte</th>
+                  <th className="py-2 pr-3">OS L</th>
+                  <th className="py-2 pr-3">OS R</th>
+                  <th className="py-2 pr-3">Bi L</th>
+                  <th className="py-2 pr-3">Bi R</th>
                   <th className="py-2 pr-3" />
                 </tr>
               </thead>
@@ -395,7 +434,10 @@ function MeasurementsContent() {
                     <td className="py-2 pr-3">{i.muscle_mass_kg ?? "—"}</td>
                     <td className="py-2 pr-3">{i.waist_cm ?? "—"}</td>
                     <td className="py-2 pr-3">{i.chest_cm ?? "—"}</td>
-                    <td className="py-2 pr-3">{i.hip_cm ?? "—"}</td>
+                    <td className="py-2 pr-3">{i.thigh_left_cm ?? "—"}</td>
+                    <td className="py-2 pr-3">{i.thigh_right_cm ?? "—"}</td>
+                    <td className="py-2 pr-3">{i.biceps_left_cm ?? "—"}</td>
+                    <td className="py-2 pr-3">{i.biceps_right_cm ?? "—"}</td>
                     <td className="py-2 pr-3 text-right">
                       <button
                         onClick={() => removeMeasurement(i.id)}

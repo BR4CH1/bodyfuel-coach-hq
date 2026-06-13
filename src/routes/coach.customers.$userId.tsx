@@ -498,7 +498,10 @@ function MeasurementsCard({ measurements }: { measurements: any[] }) {
         <Stat label="Muskelmasse" value={fmt(latest.muscle_mass_kg, "kg")} />
         <Stat label="Taille" value={fmt(latest.waist_cm, "cm")} />
         <Stat label="Brust" value={fmt(latest.chest_cm, "cm")} />
-        <Stat label="Hüfte" value={fmt(latest.hip_cm, "cm")} />
+        <Stat label="Oberschenkel L" value={fmt(latest.thigh_left_cm, "cm")} />
+        <Stat label="Oberschenkel R" value={fmt(latest.thigh_right_cm, "cm")} />
+        <Stat label="Bizeps L" value={fmt(latest.biceps_left_cm, "cm")} />
+        <Stat label="Bizeps R" value={fmt(latest.biceps_right_cm, "cm")} />
       </div>
 
       <div className="mt-6 overflow-x-auto">
@@ -511,7 +514,10 @@ function MeasurementsCard({ measurements }: { measurements: any[] }) {
               <th>Muskel</th>
               <th>Taille</th>
               <th>Brust</th>
-              <th>Hüfte</th>
+              <th>OS L</th>
+              <th>OS R</th>
+              <th>Bi L</th>
+              <th>Bi R</th>
             </tr>
           </thead>
           <tbody>
@@ -525,7 +531,10 @@ function MeasurementsCard({ measurements }: { measurements: any[] }) {
                 <td>{fmt(m.muscle_mass_kg, "kg")}</td>
                 <td>{fmt(m.waist_cm, "cm")}</td>
                 <td>{fmt(m.chest_cm, "cm")}</td>
-                <td>{fmt(m.hip_cm, "cm")}</td>
+                <td>{fmt(m.thigh_left_cm, "cm")}</td>
+                <td>{fmt(m.thigh_right_cm, "cm")}</td>
+                <td>{fmt(m.biceps_left_cm, "cm")}</td>
+                <td>{fmt(m.biceps_right_cm, "cm")}</td>
               </tr>
             ))}
           </tbody>

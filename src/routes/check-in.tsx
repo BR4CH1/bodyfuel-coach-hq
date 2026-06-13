@@ -33,7 +33,10 @@ type Form = {
   body_fat_pct: string;
   waist_cm: string;
   chest_cm: string;
-  hip_cm: string;
+  thigh_left_cm: string;
+  thigh_right_cm: string;
+  biceps_left_cm: string;
+  biceps_right_cm: string;
   mood: number | null;
   energy: number | null;
   sleep_quality: number | null;
@@ -48,7 +51,10 @@ const empty: Form = {
   body_fat_pct: "",
   waist_cm: "",
   chest_cm: "",
-  hip_cm: "",
+  thigh_left_cm: "",
+  thigh_right_cm: "",
+  biceps_left_cm: "",
+  biceps_right_cm: "",
   mood: null,
   energy: null,
   sleep_quality: null,
@@ -83,7 +89,10 @@ function WeeklyCheckIn() {
           body_fat_pct: data.body_fat_pct?.toString() ?? "",
           waist_cm: data.waist_cm?.toString() ?? "",
           chest_cm: data.chest_cm?.toString() ?? "",
-          hip_cm: data.hip_cm?.toString() ?? "",
+          thigh_left_cm: data.thigh_left_cm?.toString() ?? "",
+          thigh_right_cm: data.thigh_right_cm?.toString() ?? "",
+          biceps_left_cm: data.biceps_left_cm?.toString() ?? "",
+          biceps_right_cm: data.biceps_right_cm?.toString() ?? "",
           mood: data.mood,
           energy: data.energy,
           sleep_quality: data.sleep_quality,
@@ -108,7 +117,10 @@ function WeeklyCheckIn() {
       body_fat_pct: num(form.body_fat_pct),
       waist_cm: num(form.waist_cm),
       chest_cm: num(form.chest_cm),
-      hip_cm: num(form.hip_cm),
+      thigh_left_cm: num(form.thigh_left_cm),
+      thigh_right_cm: num(form.thigh_right_cm),
+      biceps_left_cm: num(form.biceps_left_cm),
+      biceps_right_cm: num(form.biceps_right_cm),
       mood: form.mood,
       energy: form.energy,
       sleep_quality: form.sleep_quality,
@@ -131,7 +143,10 @@ function WeeklyCheckIn() {
         body_fat_pct: payload.body_fat_pct,
         waist_cm: payload.waist_cm,
         chest_cm: payload.chest_cm,
-        hip_cm: payload.hip_cm,
+        thigh_left_cm: payload.thigh_left_cm,
+        thigh_right_cm: payload.thigh_right_cm,
+        biceps_left_cm: payload.biceps_left_cm,
+        biceps_right_cm: payload.biceps_right_cm,
       });
     }
 
@@ -197,12 +212,36 @@ function WeeklyCheckIn() {
                   onChange={(e) => setForm({ ...form, chest_cm: e.target.value })}
                 />
               </Field>
-              <Field label="Hüfte (cm)">
+              <Field label="Oberschenkel L (cm)">
                 <Input
                   type="number"
                   step="0.1"
-                  value={form.hip_cm}
-                  onChange={(e) => setForm({ ...form, hip_cm: e.target.value })}
+                  value={form.thigh_left_cm}
+                  onChange={(e) => setForm({ ...form, thigh_left_cm: e.target.value })}
+                />
+              </Field>
+              <Field label="Oberschenkel R (cm)">
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={form.thigh_right_cm}
+                  onChange={(e) => setForm({ ...form, thigh_right_cm: e.target.value })}
+                />
+              </Field>
+              <Field label="Bizeps L (cm)">
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={form.biceps_left_cm}
+                  onChange={(e) => setForm({ ...form, biceps_left_cm: e.target.value })}
+                />
+              </Field>
+              <Field label="Bizeps R (cm)">
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={form.biceps_right_cm}
+                  onChange={(e) => setForm({ ...form, biceps_right_cm: e.target.value })}
                 />
               </Field>
             </div>
