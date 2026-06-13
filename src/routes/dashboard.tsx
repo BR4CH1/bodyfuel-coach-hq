@@ -363,12 +363,26 @@ function RealUserDashboard() {
             Pflege deine Körpermaße, damit dein Coach deinen Fortschritt sieht.
           </p>
         </div>
-        <Link
-          to="/measurements"
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-gold px-5 py-3 text-sm font-semibold text-primary-foreground shadow-gold transition hover:opacity-90"
-        >
-          <Plus className="h-4 w-4" /> Messung eintragen
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            to="/nutrition/tracking"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-gold px-5 py-3 text-sm font-semibold text-primary-foreground shadow-gold transition hover:opacity-90"
+          >
+            <Utensils className="h-4 w-4" /> Ernährung eintragen
+          </Link>
+          <Link
+            to="/training"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-gold px-5 py-3 text-sm font-semibold text-primary-foreground shadow-gold transition hover:opacity-90"
+          >
+            <Dumbbell className="h-4 w-4" /> Training eintragen
+          </Link>
+          <Link
+            to="/measurements"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-gold px-5 py-3 text-sm font-semibold text-primary-foreground shadow-gold transition hover:opacity-90"
+          >
+            <Plus className="h-4 w-4" /> Messung eintragen
+          </Link>
+        </div>
       </div>
 
       {todayDbPoints < MAX_DAILY_POINTS && (
