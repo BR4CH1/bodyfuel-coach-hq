@@ -854,3 +854,93 @@ export const updatePackageRequest = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+
+/* ---------------- RANKING ---------------- */
+
+export type RankingPeriod = "today" | "week" | "month" | "all";
+
+export type RankingEntry = {
+  user_id: string;
+  display_name: string | null;
+  points: number;
+};
+
+function periodStart(period: RankingPeriod): string | null {
+  if (period === "all") return null;
+  const d = new Date();
+  if (period === "today") return d.toISOString().slice(0, 10);
+  if (period === "week") {
+    const day = (d.getDay() + 6) % 7;
+    d.setDate(d.getDate() - day);
+    return d.toISOString().slice(0, 10);
+  }
+  d.setDate(1);
+  return d.toISOString().slice(0, 10);
+}
+
+export const getRanking = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { period: RankingPeriod }) => d)
+  .handler(async ({ data, context }) => {
+    await assertCoach(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: roles } = await supabaseAdmin
+      .from("user_roles")
+      .select("user_id")
+      .eq("role", "client");
+    const ids = (roles ?? []).map((r: { user_id: string }) => r.user_id);
+    if (ids.length === 0) return [] as RankingEntry[];
+
+    const { data: profiles } = await supabaseAdmin
+      .from("profiles")
+      .select("id, display_name")
+      .in("id", ids);
+    const nameMap = new Map<string, string | null>(
+      (profiles ?? []).map((p: { id: string; display_name: string | null }) => [
+        p.id,
+        p.display_name,
+      ]),
+    );
+
+    const start = periodStart(data.period);
+    const totals = new Map<string, number>();
+
+    if (data.period === "all") {
+      const { data: pts } = await supabaseAdmin
+        .from("user_points")
+        .select("user_id, total_points")
+        .in("user_id", ids);
+      (pts ?? []).forEach((r: { user_id: string; total_points: number }) => {
+        totals.set(r.user_id, r.total_points);
+      });
+    } else {
+      const daily = await supabaseAdmin
+        .from("daily_checks")
+        .select("user_id, points")
+        .in("user_id", ids)
+        .gte("check_date", start!);
+      (daily.data ?? []).forEach((r: { user_id: string; points: number }) => {
+        totals.set(r.user_id, (totals.get(r.user_id) ?? 0) + (r.points ?? 0));
+      });
+      const perf = await supabaseAdmin
+        .from("performance_points")
+        .select("user_id, points, approved")
+        .in("user_id", ids)
+        .gte("training_date", start!);
+      (perf.data ?? []).forEach(
+        (r: { user_id: string; points: number; approved: boolean }) => {
+          if (!r.approved) return;
+          totals.set(r.user_id, (totals.get(r.user_id) ?? 0) + (r.points ?? 0));
+        },
+      );
+    }
+
+    const rows: RankingEntry[] = ids.map((id) => ({
+      user_id: id,
+      display_name: nameMap.get(id) ?? null,
+      points: totals.get(id) ?? 0,
+    }));
+    rows.sort((a, b) => b.points - a.points);
+    return rows;
+  });
