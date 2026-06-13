@@ -45,6 +45,14 @@ const mealSlot = (idx: number, total: number): "breakfast" | "lunch" | "dinner" 
   if (idx === 1 && total > 2) return "lunch";
   return "snack";
 };
+const slotFromName = (name: string): "breakfast" | "lunch" | "dinner" | "snack" | null => {
+  const n = name.toLowerCase();
+  if (/fr(ü|u)hst(ü|u)ck|breakfast/.test(n)) return "breakfast";
+  if (/mittag|lunch/.test(n)) return "lunch";
+  if (/abend|dinner|sp(ä|a)t/.test(n)) return "dinner";
+  if (/snack|shake|pre[- ]?workout|post[- ]?workout|zwischen/.test(n)) return "snack";
+  return null;
+};
 const isRestDay = (name: string) => /rest|ruh|pause|off|frei/i.test(name);
 const pickRandom = <T,>(arr: T[]): T | null =>
   arr.length ? arr[Math.floor(Math.random() * arr.length)] : null;
@@ -299,7 +307,7 @@ export function PlanContentView({ clientId, planType }: Props) {
         // Prefer "Mahlzeit N" number from the name when present
         const mn = m.name.match(/Mahlzeit\s*(\d+)/i);
         if (mn) idx = Math.max(0, parseInt(mn[1], 10) - 1);
-        const slot = mealSlot(idx, list.length);
+        const slot = slotFromName(m.name) ?? slotFromName(itemDisplayName[m.id] ?? "") ?? mealSlot(idx, list.length);
 
         let kcal = m.kcal ?? 0;
         let p = m.protein_g ?? 0;
