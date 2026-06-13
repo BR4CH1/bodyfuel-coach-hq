@@ -38,7 +38,13 @@ const LABELS: Record<PlanType, { eyebrow: string; clientTitle: string; coachTitl
   },
 };
 
-export function PlansView({ planType }: { planType: PlanType }) {
+export function PlansView({
+  planType,
+  onClientChange,
+}: {
+  planType: PlanType;
+  onClientChange?: (id: string) => void;
+}) {
   const { user, supabaseUser, isCoach } = useSession();
   const L = LABELS[planType];
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -61,10 +67,13 @@ export function PlansView({ planType }: { planType: PlanType }) {
         if (data) {
           const opts = data as ClientOption[];
           setClients(opts);
-          if (opts.length && !selectedClientId) setSelectedClientId(opts[0].id);
+          if (opts.length && !selectedClientId) {
+            setSelectedClientId(opts[0].id);
+            onClientChange?.(opts[0].id);
+          }
         }
       });
-  }, [isCoach, supabaseUser, selectedClientId]);
+  }, [isCoach, supabaseUser, selectedClientId, onClientChange]);
 
   useEffect(() => {
     if (!effectiveClientId) {
@@ -221,7 +230,7 @@ export function PlansView({ planType }: { planType: PlanType }) {
           <label className="text-xs uppercase tracking-wider text-muted-foreground">Kunde</label>
           <select
             value={selectedClientId}
-            onChange={(e) => setSelectedClientId(e.target.value)}
+            onChange={(e) => { setSelectedClientId(e.target.value); onClientChange?.(e.target.value); }}
             className="mt-2 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
           >
             {clients.length === 0 && <option>Noch keine Kunden registriert</option>}
