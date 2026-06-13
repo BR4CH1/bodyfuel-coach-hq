@@ -41,6 +41,7 @@ function NewCustomerForm() {
     start_date: new Date().toISOString().slice(0, 10),
     duration_days: 30,
     notes: "",
+    bulls: false,
   });
 
   const submit = async (e: React.FormEvent) => {
