@@ -109,6 +109,17 @@ export const listCustomers = createServerFn({ method: "GET" })
       .select("user_id, status, amount_eur, created_at, payment_date")
       .in("user_id", userIds);
 
+    const { data: groupsData } = await supabaseAdmin
+      .from("user_groups")
+      .select("user_id, group_name")
+      .in("user_id", userIds);
+    const groupsByUser = new Map<string, string[]>();
+    for (const g of groupsData ?? []) {
+      const a = groupsByUser.get(g.user_id) ?? [];
+      a.push(g.group_name);
+      groupsByUser.set(g.user_id, a);
+    }
+
     const paymentsByUser = new Map<string, typeof payments>();
     for (const p of payments ?? []) {
       const arr = paymentsByUser.get(p.user_id) ?? [];
