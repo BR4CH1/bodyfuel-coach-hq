@@ -19,21 +19,6 @@ function NutritionIndex() {
   const { isCoach, supabaseUser } = useSession();
   const { isTrial, isExpired } = useTrial();
   const [coachClientId, setCoachClientId] = useState<string>("");
-  const [clients, setClients] = useState<{ id: string; display_name: string | null }[]>([]);
-
-  useEffect(() => {
-    if (!isCoach || !supabaseUser) return;
-    supabase
-      .from("profiles")
-      .select("id, display_name")
-      .order("display_name")
-      .then(({ data }) => {
-        const opts = (data as { id: string; display_name: string | null }[]) ?? [];
-        setClients(opts);
-        if (opts.length && !coachClientId) setCoachClientId(opts[0].id);
-      });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isCoach, supabaseUser]);
 
   const viewClientId = isCoach ? coachClientId : supabaseUser?.id ?? "";
 
@@ -62,21 +47,7 @@ function NutritionIndex() {
             <MacroTargetsCard userId={supabaseUser?.id} />
           </>
         )}
-        {isCoach && <PlansView planType="nutrition" />}
-        {isCoach && clients.length > 0 && (
-          <div className="rounded-2xl border border-border bg-card p-4">
-            <label className="text-xs uppercase tracking-wider text-muted-foreground">Inhalte ansehen für</label>
-            <select
-              value={coachClientId}
-              onChange={(e) => setCoachClientId(e.target.value)}
-              className="mt-2 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-            >
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>{c.display_name ?? c.id.slice(0, 8)}</option>
-              ))}
-            </select>
-          </div>
-        )}
+        {isCoach && <PlansView planType="nutrition" onClientChange={setCoachClientId} />}
         {!isCoach && (isTrial || isExpired) ? (
           <TrialNutritionPlan />
         ) : (
