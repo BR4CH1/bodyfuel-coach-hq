@@ -143,7 +143,10 @@ function WeeklyCheckIn() {
         body_fat_pct: payload.body_fat_pct,
         waist_cm: payload.waist_cm,
         chest_cm: payload.chest_cm,
-        hip_cm: payload.hip_cm,
+        thigh_left_cm: payload.thigh_left_cm,
+        thigh_right_cm: payload.thigh_right_cm,
+        biceps_left_cm: payload.biceps_left_cm,
+        biceps_right_cm: payload.biceps_right_cm,
       });
     }
 
