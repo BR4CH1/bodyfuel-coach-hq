@@ -12,6 +12,7 @@ import {
   LogOut,
   Inbox,
   UserCircle,
+  Shield,
 } from "lucide-react";
 import { useSession } from "@/lib/bodyfuel/session";
 import { Logo } from "./Logo";
@@ -27,6 +28,8 @@ const clientNav = [
   { to: "/profile", label: "Profil", icon: UserCircle },
 ];
 
+const bullsNavItem = { to: "/bulls", label: "Bulls Hub", icon: Shield };
+
 const coachNav = [
   { to: "/coach", label: "Dashboard", icon: LayoutDashboard },
   { to: "/coach/customers", label: "Kunden", icon: Users },
@@ -37,7 +40,7 @@ const coachNav = [
 
 
 export function AppLayout({ children }: { children: ReactNode }) {
-  const { user, isCoach, supabaseUser, profile, loading, logout } = useSession();
+  const { user, isCoach, supabaseUser, profile, loading, logout, hasGroup } = useSession();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
@@ -49,7 +52,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
   if (loading) return null;
   if (!user && !supabaseUser) return null;
 
-  const nav = isCoach ? coachNav : clientNav;
+  const baseNav = isCoach ? coachNav : clientNav;
+  const nav = !isCoach && hasGroup("bulls") ? [...baseNav, bullsNavItem] : baseNav;
   const points = user ? totalPoints(user) : 0;
   const { level } = getLevel(points);
   const displayName = user?.name ?? profile?.display_name ?? supabaseUser?.email ?? "Coach";

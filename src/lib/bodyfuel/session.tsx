@@ -15,6 +15,8 @@ type SessionCtx = {
   supabaseUser: User | null;
   profile: Profile | null;
   loading: boolean;
+  groups: string[];
+  hasGroup: (g: string) => boolean;
   loginAs: (id: string, coach?: boolean) => void;
   logout: () => Promise<void>;
   updateTodayCheck: (tasks: DailyCheck["tasks"]) => void;
@@ -30,6 +32,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [supabaseUser, setSupabaseUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [role, setRole] = useState<"coach" | "client" | null>(null);
+  const [groups, setGroups] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [, setTick] = useState(0);
 
@@ -52,6 +55,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       if (!session?.user) {
         setProfile(null);
         setRole(null);
+        setGroups([]);
       } else {
         // defer DB reads off the callback
         setTimeout(() => loadProfile(session.user.id), 0);
@@ -68,16 +72,19 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const loadProfile = async (uid: string) => {
-    const [p, r] = await Promise.all([
+    const [p, r, g] = await Promise.all([
       supabase.from("profiles").select("id, display_name, demo_client_key").eq("id", uid).maybeSingle(),
       supabase.from("user_roles").select("role").eq("user_id", uid),
+      supabase.from("user_groups").select("group_name").eq("user_id", uid),
     ]);
     if (p.data) {
       setProfile(p.data as Profile);
-      // auto-bind demo client for nicer dashboard experience
       if (p.data.demo_client_key && !demoUserId) {
         setDemoUserId(p.data.demo_client_key);
       }
+    }
+    if (g.data) {
+      setGroups(g.data.map((x: any) => x.group_name as string));
     }
     if (r.data) {
       const isCoach = r.data.some((x) => x.role === "coach");
@@ -85,7 +92,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       if (isCoach) {
         setDemoCoach(true);
       } else {
-        // Ensure stale coach flag from previous session doesn't leak to clients
         setDemoCoach(false);
         persist(p.data?.demo_client_key ?? uid, false);
       }
@@ -106,6 +112,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     supabaseUser,
     profile,
     loading,
+    groups,
+    hasGroup: (gname: string) => groups.includes(gname),
     loginAs: (id, coach = false) => {
       setDemoUserId(id);
       setDemoCoach(coach);

@@ -25,11 +25,17 @@ import { Route as AchievementsRouteImport } from './routes/achievements'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as NutritionIndexRouteImport } from './routes/nutrition.index'
 import { Route as CoachIndexRouteImport } from './routes/coach.index'
+import { Route as BullsIndexRouteImport } from './routes/bulls.index'
 import { Route as NutritionTrackingRouteImport } from './routes/nutrition.tracking'
 import { Route as CoachPackageRequestsRouteImport } from './routes/coach.package-requests'
 import { Route as CoachLeadsRouteImport } from './routes/coach.leads'
 import { Route as CoachCustomersRouteImport } from './routes/coach.customers'
 import { Route as CoachClientIdRouteImport } from './routes/coach.$clientId'
+import { Route as BullsWeightRouteImport } from './routes/bulls.weight'
+import { Route as BullsTrainingRouteImport } from './routes/bulls.training'
+import { Route as BullsPhotosRouteImport } from './routes/bulls.photos'
+import { Route as BullsNutritionRouteImport } from './routes/bulls.nutrition'
+import { Route as BullsBenchmarksRouteImport } from './routes/bulls.benchmarks'
 import { Route as CoachCustomersIndexRouteImport } from './routes/coach.customers.index'
 import { Route as CoachCustomersNewRouteImport } from './routes/coach.customers.new'
 import { Route as CoachCustomersUserIdRouteImport } from './routes/coach.customers.$userId'
@@ -117,6 +123,11 @@ const CoachIndexRoute = CoachIndexRouteImport.update({
   path: '/',
   getParentRoute: () => CoachRoute,
 } as any)
+const BullsIndexRoute = BullsIndexRouteImport.update({
+  id: '/bulls/',
+  path: '/bulls/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const NutritionTrackingRoute = NutritionTrackingRouteImport.update({
   id: '/tracking',
   path: '/tracking',
@@ -141,6 +152,31 @@ const CoachClientIdRoute = CoachClientIdRouteImport.update({
   id: '/$clientId',
   path: '/$clientId',
   getParentRoute: () => CoachRoute,
+} as any)
+const BullsWeightRoute = BullsWeightRouteImport.update({
+  id: '/bulls/weight',
+  path: '/bulls/weight',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BullsTrainingRoute = BullsTrainingRouteImport.update({
+  id: '/bulls/training',
+  path: '/bulls/training',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BullsPhotosRoute = BullsPhotosRouteImport.update({
+  id: '/bulls/photos',
+  path: '/bulls/photos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BullsNutritionRoute = BullsNutritionRouteImport.update({
+  id: '/bulls/nutrition',
+  path: '/bulls/nutrition',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BullsBenchmarksRoute = BullsBenchmarksRouteImport.update({
+  id: '/bulls/benchmarks',
+  path: '/bulls/benchmarks',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const CoachCustomersIndexRoute = CoachCustomersIndexRouteImport.update({
   id: '/',
@@ -189,11 +225,17 @@ export interface FileRoutesByFullPath {
   '/progress': typeof ProgressRoute
   '/training': typeof TrainingRoute
   '/welcome': typeof WelcomeRoute
+  '/bulls/benchmarks': typeof BullsBenchmarksRoute
+  '/bulls/nutrition': typeof BullsNutritionRoute
+  '/bulls/photos': typeof BullsPhotosRoute
+  '/bulls/training': typeof BullsTrainingRoute
+  '/bulls/weight': typeof BullsWeightRoute
   '/coach/$clientId': typeof CoachClientIdRoute
   '/coach/customers': typeof CoachCustomersRouteWithChildren
   '/coach/leads': typeof CoachLeadsRoute
   '/coach/package-requests': typeof CoachPackageRequestsRoute
   '/nutrition/tracking': typeof NutritionTrackingRoute
+  '/bulls/': typeof BullsIndexRoute
   '/coach/': typeof CoachIndexRoute
   '/nutrition/': typeof NutritionIndexRoute
   '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
@@ -216,10 +258,16 @@ export interface FileRoutesByTo {
   '/progress': typeof ProgressRoute
   '/training': typeof TrainingRoute
   '/welcome': typeof WelcomeRoute
+  '/bulls/benchmarks': typeof BullsBenchmarksRoute
+  '/bulls/nutrition': typeof BullsNutritionRoute
+  '/bulls/photos': typeof BullsPhotosRoute
+  '/bulls/training': typeof BullsTrainingRoute
+  '/bulls/weight': typeof BullsWeightRoute
   '/coach/$clientId': typeof CoachClientIdRoute
   '/coach/leads': typeof CoachLeadsRoute
   '/coach/package-requests': typeof CoachPackageRequestsRoute
   '/nutrition/tracking': typeof NutritionTrackingRoute
+  '/bulls': typeof BullsIndexRoute
   '/coach': typeof CoachIndexRoute
   '/nutrition': typeof NutritionIndexRoute
   '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
@@ -245,11 +293,17 @@ export interface FileRoutesById {
   '/progress': typeof ProgressRoute
   '/training': typeof TrainingRoute
   '/welcome': typeof WelcomeRoute
+  '/bulls/benchmarks': typeof BullsBenchmarksRoute
+  '/bulls/nutrition': typeof BullsNutritionRoute
+  '/bulls/photos': typeof BullsPhotosRoute
+  '/bulls/training': typeof BullsTrainingRoute
+  '/bulls/weight': typeof BullsWeightRoute
   '/coach/$clientId': typeof CoachClientIdRoute
   '/coach/customers': typeof CoachCustomersRouteWithChildren
   '/coach/leads': typeof CoachLeadsRoute
   '/coach/package-requests': typeof CoachPackageRequestsRoute
   '/nutrition/tracking': typeof NutritionTrackingRoute
+  '/bulls/': typeof BullsIndexRoute
   '/coach/': typeof CoachIndexRoute
   '/nutrition/': typeof NutritionIndexRoute
   '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
@@ -276,11 +330,17 @@ export interface FileRouteTypes {
     | '/progress'
     | '/training'
     | '/welcome'
+    | '/bulls/benchmarks'
+    | '/bulls/nutrition'
+    | '/bulls/photos'
+    | '/bulls/training'
+    | '/bulls/weight'
     | '/coach/$clientId'
     | '/coach/customers'
     | '/coach/leads'
     | '/coach/package-requests'
     | '/nutrition/tracking'
+    | '/bulls/'
     | '/coach/'
     | '/nutrition/'
     | '/coach/customers/$userId'
@@ -303,10 +363,16 @@ export interface FileRouteTypes {
     | '/progress'
     | '/training'
     | '/welcome'
+    | '/bulls/benchmarks'
+    | '/bulls/nutrition'
+    | '/bulls/photos'
+    | '/bulls/training'
+    | '/bulls/weight'
     | '/coach/$clientId'
     | '/coach/leads'
     | '/coach/package-requests'
     | '/nutrition/tracking'
+    | '/bulls'
     | '/coach'
     | '/nutrition'
     | '/coach/customers/$userId'
@@ -331,11 +397,17 @@ export interface FileRouteTypes {
     | '/progress'
     | '/training'
     | '/welcome'
+    | '/bulls/benchmarks'
+    | '/bulls/nutrition'
+    | '/bulls/photos'
+    | '/bulls/training'
+    | '/bulls/weight'
     | '/coach/$clientId'
     | '/coach/customers'
     | '/coach/leads'
     | '/coach/package-requests'
     | '/nutrition/tracking'
+    | '/bulls/'
     | '/coach/'
     | '/nutrition/'
     | '/coach/customers/$userId'
@@ -361,6 +433,12 @@ export interface RootRouteChildren {
   ProgressRoute: typeof ProgressRoute
   TrainingRoute: typeof TrainingRoute
   WelcomeRoute: typeof WelcomeRoute
+  BullsBenchmarksRoute: typeof BullsBenchmarksRoute
+  BullsNutritionRoute: typeof BullsNutritionRoute
+  BullsPhotosRoute: typeof BullsPhotosRoute
+  BullsTrainingRoute: typeof BullsTrainingRoute
+  BullsWeightRoute: typeof BullsWeightRoute
+  BullsIndexRoute: typeof BullsIndexRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
@@ -480,6 +558,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CoachIndexRouteImport
       parentRoute: typeof CoachRoute
     }
+    '/bulls/': {
+      id: '/bulls/'
+      path: '/bulls'
+      fullPath: '/bulls/'
+      preLoaderRoute: typeof BullsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/nutrition/tracking': {
       id: '/nutrition/tracking'
       path: '/tracking'
@@ -514,6 +599,41 @@ declare module '@tanstack/react-router' {
       fullPath: '/coach/$clientId'
       preLoaderRoute: typeof CoachClientIdRouteImport
       parentRoute: typeof CoachRoute
+    }
+    '/bulls/weight': {
+      id: '/bulls/weight'
+      path: '/bulls/weight'
+      fullPath: '/bulls/weight'
+      preLoaderRoute: typeof BullsWeightRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bulls/training': {
+      id: '/bulls/training'
+      path: '/bulls/training'
+      fullPath: '/bulls/training'
+      preLoaderRoute: typeof BullsTrainingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bulls/photos': {
+      id: '/bulls/photos'
+      path: '/bulls/photos'
+      fullPath: '/bulls/photos'
+      preLoaderRoute: typeof BullsPhotosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bulls/nutrition': {
+      id: '/bulls/nutrition'
+      path: '/bulls/nutrition'
+      fullPath: '/bulls/nutrition'
+      preLoaderRoute: typeof BullsNutritionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bulls/benchmarks': {
+      id: '/bulls/benchmarks'
+      path: '/bulls/benchmarks'
+      fullPath: '/bulls/benchmarks'
+      preLoaderRoute: typeof BullsBenchmarksRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/coach/customers/': {
       id: '/coach/customers/'
@@ -623,6 +743,12 @@ const rootRouteChildren: RootRouteChildren = {
   ProgressRoute: ProgressRoute,
   TrainingRoute: TrainingRoute,
   WelcomeRoute: WelcomeRoute,
+  BullsBenchmarksRoute: BullsBenchmarksRoute,
+  BullsNutritionRoute: BullsNutritionRoute,
+  BullsPhotosRoute: BullsPhotosRoute,
+  BullsTrainingRoute: BullsTrainingRoute,
+  BullsWeightRoute: BullsWeightRoute,
+  BullsIndexRoute: BullsIndexRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
@@ -630,13 +756,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

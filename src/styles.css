@@ -113,3 +113,27 @@
   box-shadow: 0 10px 30px -10px oklch(0.72 0.18 148 / 0.4);
 }
 
+/* Bulls (Coesfeld Bulls) brand tokens */
+:root {
+  --bulls-red: oklch(0.62 0.22 25);
+  --bulls-red-bright: oklch(0.68 0.24 25);
+  --bulls-black: oklch(0.10 0.005 250);
+}
+
+@utility bg-bulls-red {
+  background-color: var(--bulls-red);
+}
+@utility text-bulls-red {
+  color: var(--bulls-red);
+}
+@utility border-bulls-red {
+  border-color: var(--bulls-red);
+}
+@utility bg-gradient-bulls {
+  background: linear-gradient(135deg, var(--bulls-red-bright) 0%, var(--bulls-red) 100%);
+}
+@utility shadow-bulls {
+  box-shadow: 0 10px 30px -10px var(--bulls-red);
+}
+
+
