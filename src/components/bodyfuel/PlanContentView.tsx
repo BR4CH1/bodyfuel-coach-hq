@@ -54,7 +54,7 @@ const pickRandom = <T,>(arr: T[]): T | null =>
 //   "Frühstück"                  -> null  (keine Tag-Info im Namen)
 function extractDayGroup(name: string): { group: string; label: string } | null {
   const m = name.match(
-    /^\s*(Trainingstag(?:\s+[A-Za-z0-9]+)?|Restday|Ruhetag|Pausentag|Tag\s*\d+|Montag|Dienstag|Mittwoch|Donnerstag|Freitag|Samstag|Sonntag)\b[\s\-–—:|·]*(.*)$/i,
+    /^\s*(Trainingstag(?:\s+[A-Za-z0-9]+)?|Restday(?:\s+[A-Za-z0-9]+)?|Ruhetag(?:\s+[A-Za-z0-9]+)?|Pausentag(?:\s+[A-Za-z0-9]+)?|Tag\s*\d+|Montag|Dienstag|Mittwoch|Donnerstag|Freitag|Samstag|Sonntag)\b[\s\-–—:|·]*(.*)$/i,
   );
   if (!m) return null;
   const group = m[1].replace(/\s+/g, " ").trim();
