@@ -10,6 +10,7 @@ import { TrainingBonusCard } from "@/components/bodyfuel/TrainingBonusCard";
 import { MacroTargetsCard } from "@/components/bodyfuel/MacroTargetsCard";
 import { DayTypePrompt } from "@/components/bodyfuel/DayTypePrompt";
 import { DailyMacroSummary } from "@/components/bodyfuel/DailyMacroSummary";
+import { PointsBreakdownCard } from "@/components/bodyfuel/PointsBreakdownCard";
 
 import { useSession } from "@/lib/bodyfuel/session";
 import { supabase } from "@/integrations/supabase/client";
@@ -178,6 +179,8 @@ function DashboardContent() {
           </div>
         </div>
       </div>
+
+      {supabaseUser && <PointsBreakdownCard userId={supabaseUser.id} />}
 
       {supabaseUser && <TrainingBonusCard userId={supabaseUser.id} />}
 
@@ -527,6 +530,8 @@ function RealUserDashboard() {
           </div>
         );
       })()}
+
+      {supabaseUser && <PointsBreakdownCard userId={supabaseUser.id} />}
 
       {supabaseUser && <TrainingBonusCard userId={supabaseUser.id} />}
 
