@@ -61,6 +61,11 @@ function TrialSignupPage() {
     try {
       const origin =
         typeof window !== "undefined" ? window.location.origin : "https://bodyfuel-coach-hq.lovable.app";
+      // Vor dem Signup markieren: wird nach E-Mail-Bestätigung beim Dashboard-Load
+      // verwendet, um den Trial automatisch zu starten.
+      if (typeof window !== "undefined") {
+        localStorage.setItem("bodyfuel.trial.pending", "1");
+      }
       const { data: signUp, error } = await supabase.auth.signUp({
         email: ev.data,
         password: pv.data,
@@ -75,6 +80,9 @@ function TrialSignupPage() {
       if (signUp.session) {
         try {
           await startTrialFn();
+          if (typeof window !== "undefined") {
+            localStorage.removeItem("bodyfuel.trial.pending");
+          }
         } catch (err) {
           console.error("startMyTrial failed", err);
         }
@@ -86,6 +94,7 @@ function TrialSignupPage() {
       } else {
         toast.success("Bitte bestätige deine E-Mail-Adresse, um zu starten.");
       }
+
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Registrierung fehlgeschlagen";
       toast.error(msg);
