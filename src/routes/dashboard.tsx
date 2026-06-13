@@ -714,14 +714,15 @@ function PendingPaymentBanner({ userId }: { userId: string }) {
 }
 
 const QUICK_ACTIONS = [
-  { key: "nutrition", to: "/nutrition/tracking", label: "Ernährung eintragen", Icon: Utensils },
   { key: "training", to: "/training", label: "Training eintragen", Icon: Dumbbell },
   { key: "measurement", to: "/measurements", label: "Messung eintragen", Icon: Plus },
 ] as const;
 
+type QuickActionKey = (typeof QUICK_ACTIONS)[number]["key"];
+
 const SEEN_STORAGE_KEY = "bf:dashboard:quickActionsSeen";
 
-function DashboardQuickActions() {
+function DashboardQuickActions({ excludeKeys = [] }: { excludeKeys?: readonly QuickActionKey[] }) {
   const [seen, setSeen] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
@@ -742,9 +743,12 @@ function DashboardQuickActions() {
     });
   };
 
+  const visible = QUICK_ACTIONS.filter((a) => !excludeKeys.includes(a.key));
+  if (visible.length === 0) return null;
+
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {QUICK_ACTIONS.map(({ key, to, label, Icon }) => (
+      {visible.map(({ key, to, label, Icon }) => (
         <Link
           key={key}
           to={to}
