@@ -7,6 +7,7 @@ import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import {
   getCustomerDetail,
   updateCustomerPackage,
+  updateCustomerCoachingInfo,
   confirmPayment,
   resendInvite,
   sendPasswordReset,
@@ -14,6 +15,7 @@ import {
   setCustomerPassword,
   deleteCustomer,
 } from "@/lib/coaching.functions";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
