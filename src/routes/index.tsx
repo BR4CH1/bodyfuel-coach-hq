@@ -76,6 +76,7 @@ function LandingPage() {
       <TrialBanner />
       <ForWhom />
       <WhatIs />
+      <NutritionTrackingUSP />
       <AppScreenshots />
       <SystemSteps />
       <Gamification />
@@ -86,6 +87,147 @@ function LandingPage() {
       <ContactForm />
       <Footer />
     </div>
+  );
+}
+
+function NutritionTrackingUSP() {
+  const benefits = [
+    {
+      icon: Zap,
+      title: "1-Klick-Tracking",
+      text: "Mahlzeit antippen — fertig. Kalorien & Makros landen automatisch im Tagesbudget.",
+    },
+    {
+      icon: Salad,
+      title: "Plan direkt in der App",
+      text: "Dein Ernährungsplan steht unter „Ernährung". Kein PDF, keine Suche — alles eingebettet.",
+    },
+    {
+      icon: Dumbbell,
+      title: "Trainingstag vs. Restday",
+      text: "Getrennte Kalorien- und Makroziele für Trainings- und Ruhetage. Wird automatisch erkannt oder manuell umgeschaltet.",
+    },
+    {
+      icon: Activity,
+      title: "Barcode-Scanner & Eigene Einträge",
+      text: "Was nicht im Plan steht, scannst du ein oder trägst es manuell ein. Komplette Kontrolle.",
+    },
+    {
+      icon: LineChart,
+      title: "Live-Auswertung",
+      text: "Tagesbilanz, Wochenverlauf und Eiweiß-Quote in Echtzeit — du siehst sofort, ob du im Ziel liegst.",
+    },
+    {
+      icon: ShieldCheck,
+      title: "Coach sieht mit",
+      text: "Dein Coach sieht deine Einträge und kann gezielt nachsteuern — keine Blackbox.",
+    },
+  ];
+  return (
+    <section className="relative py-20 sm:py-28">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <div className="flex flex-col items-start gap-3">
+          <span className="inline-flex items-center gap-2 rounded-full border border-gold/40 bg-gold/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-gold">
+            <Sparkles className="h-3 w-3" /> Alleinstellungsmerkmal
+          </span>
+          <h2 className="font-display text-3xl font-bold sm:text-4xl">
+            Ernährungstracking, das <span className="text-gradient-gold">wirklich genutzt</span> wird.
+          </h2>
+          <p className="max-w-2xl text-muted-foreground">
+            Die meisten Coachings geben dir ein PDF — und das war's. Bei BodyFuel steht
+            dein Plan direkt in der App, jede Mahlzeit ist mit <span className="text-foreground font-semibold">einem Klick</span> getrackt,
+            und Kalorien für <span className="text-foreground font-semibold">Trainings- und Restdays</span> werden getrennt geführt.
+          </p>
+        </div>
+
+        <div className="mt-10 grid gap-5 lg:grid-cols-[1.05fr_1fr]">
+          {/* Day-type toggle mockup */}
+          <div className="rounded-3xl border border-gold/30 bg-gradient-to-br from-card to-gold/5 p-6 sm:p-8">
+            <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Heutiger Tag</div>
+            <div className="mt-1 font-display text-xl font-bold">Trainingstag oder Restday?</div>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <div className="rounded-xl border border-gold/50 bg-gradient-gold px-4 py-4 text-center text-primary-foreground shadow-gold">
+                <Dumbbell className="mx-auto h-5 w-5" />
+                <div className="mt-1 text-sm font-bold">Trainingstag</div>
+                <div className="text-[10px] opacity-90">2.650 kcal · 190 P · 280 KH</div>
+              </div>
+              <div className="rounded-xl border border-border bg-background/40 px-4 py-4 text-center">
+                <Moon className="mx-auto h-5 w-5 text-blue-300" />
+                <div className="mt-1 text-sm font-bold">Restday</div>
+                <div className="text-[10px] text-muted-foreground">2.250 kcal · 190 P · 180 KH</div>
+              </div>
+            </div>
+
+            <div className="mt-6 space-y-2">
+              {[
+                { meal: "Frühstück", desc: "Skyr-Bowl mit Beeren & Haferflocken", kcal: 480, tracked: true },
+                { meal: "Mittag", desc: "Hähnchen, Reis & Gemüse", kcal: 720, tracked: true },
+                { meal: "Snack", desc: "Proteinriegel & Apfel", kcal: 320, tracked: false },
+                { meal: "Abendessen", desc: "Lachs, Süßkartoffel, Salat", kcal: 680, tracked: false },
+              ].map((m, i) => (
+                <div
+                  key={i}
+                  className={
+                    "flex items-center justify-between gap-3 rounded-xl border p-3 " +
+                    (m.tracked ? "border-gold/50 bg-gold/10" : "border-border bg-background/40")
+                  }
+                >
+                  <div className="min-w-0">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-gold">
+                      {m.meal}
+                    </div>
+                    <div className="truncate text-sm">{m.desc}</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-muted-foreground">{m.kcal} kcal</span>
+                    <span
+                      className={
+                        "grid h-7 w-7 place-items-center rounded-full " +
+                        (m.tracked ? "bg-gradient-gold" : "border border-border bg-background")
+                      }
+                    >
+                      <Check
+                        className={"h-4 w-4 " + (m.tracked ? "text-primary-foreground" : "text-muted-foreground")}
+                        strokeWidth={3}
+                      />
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="mt-4 text-[11px] text-muted-foreground">
+              So sieht's in der App aus — Plan steht, Häkchen rein, fertig.
+            </p>
+          </div>
+
+          {/* Benefits grid */}
+          <div className="grid gap-3 sm:grid-cols-2">
+            {benefits.map((b) => (
+              <div
+                key={b.title}
+                className="rounded-2xl border border-border bg-card p-5 transition hover:border-gold/40"
+              >
+                <div className="grid h-10 w-10 place-items-center rounded-xl bg-secondary text-gold">
+                  <b.icon className="h-5 w-5" />
+                </div>
+                <h3 className="mt-3 font-display text-base font-bold">{b.title}</h3>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{b.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-8 flex flex-wrap items-center gap-3">
+          <Link to="/trial">
+            <Button className="bg-gradient-gold text-primary-foreground shadow-gold hover:opacity-90">
+              Tracking 7 Tage gratis testen
+              <ArrowRight className="ml-1 h-4 w-4" />
+            </Button>
+          </Link>
+          <span className="text-xs text-muted-foreground">Keine Zahlungsdaten nötig.</span>
+        </div>
+      </div>
+    </section>
   );
 }
 
