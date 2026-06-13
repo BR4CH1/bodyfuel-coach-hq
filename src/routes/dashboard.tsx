@@ -531,6 +531,8 @@ function RealUserDashboard() {
         );
       })()}
 
+      {supabaseUser && <PointsBreakdownCard userId={supabaseUser.id} />}
+
       {supabaseUser && <TrainingBonusCard userId={supabaseUser.id} />}
 
 
