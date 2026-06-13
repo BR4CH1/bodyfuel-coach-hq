@@ -33,7 +33,10 @@ type Form = {
   body_fat_pct: string;
   waist_cm: string;
   chest_cm: string;
-  hip_cm: string;
+  thigh_left_cm: string;
+  thigh_right_cm: string;
+  biceps_left_cm: string;
+  biceps_right_cm: string;
   mood: number | null;
   energy: number | null;
   sleep_quality: number | null;
@@ -48,7 +51,10 @@ const empty: Form = {
   body_fat_pct: "",
   waist_cm: "",
   chest_cm: "",
-  hip_cm: "",
+  thigh_left_cm: "",
+  thigh_right_cm: "",
+  biceps_left_cm: "",
+  biceps_right_cm: "",
   mood: null,
   energy: null,
   sleep_quality: null,
