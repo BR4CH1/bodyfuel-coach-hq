@@ -404,6 +404,10 @@ function RealUserDashboard() {
 
   return (
     <div className="space-y-6">
+      <TrialWelcomeDialog />
+      <TrialStatusBanner />
+      {supabaseUser && <TrialChecklistGate userId={supabaseUser.id} />}
+
       {checkinInfo && (
         <Link
           to="/check-in"
