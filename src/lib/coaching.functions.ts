@@ -288,7 +288,7 @@ export const getCustomerDetail = createServerFn({ method: "POST" })
     await assertCoach(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const [profile, pkgs, payments, userRes, measurements] = await Promise.all([
+    const [profile, pkgs, payments, userRes, measurements, groups] = await Promise.all([
       supabaseAdmin.from("profiles").select("*").eq("id", data.user_id).maybeSingle(),
       supabaseAdmin
         .from("customer_packages")
@@ -306,6 +306,10 @@ export const getCustomerDetail = createServerFn({ method: "POST" })
         .select("*")
         .eq("user_id", data.user_id)
         .order("measured_at", { ascending: false }),
+      supabaseAdmin
+        .from("user_groups")
+        .select("group_name")
+        .eq("user_id", data.user_id),
     ]);
 
     const u = userRes.data.user as any;
@@ -324,6 +328,7 @@ export const getCustomerDetail = createServerFn({ method: "POST" })
       packages: pkgs.data ?? [],
       payments: payments.data ?? [],
       measurements: measurements.data ?? [],
+      groups: (groups.data ?? []).map((g: any) => g.group_name as string),
       coaching_goal: (profile.data as any)?.coaching_goal ?? null,
       next_checkin_date: (profile.data as any)?.next_checkin_date ?? null,
       auth: {
