@@ -33,6 +33,7 @@ import { Route as CoachCustomersRouteImport } from './routes/coach.customers'
 import { Route as CoachClientIdRouteImport } from './routes/coach.$clientId'
 import { Route as BullsWeightRouteImport } from './routes/bulls.weight'
 import { Route as BullsTrainingRouteImport } from './routes/bulls.training'
+import { Route as BullsRecoveryRouteImport } from './routes/bulls.recovery'
 import { Route as BullsPhotosRouteImport } from './routes/bulls.photos'
 import { Route as BullsNutritionRouteImport } from './routes/bulls.nutrition'
 import { Route as BullsBenchmarksRouteImport } from './routes/bulls.benchmarks'
@@ -163,6 +164,11 @@ const BullsTrainingRoute = BullsTrainingRouteImport.update({
   path: '/bulls/training',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BullsRecoveryRoute = BullsRecoveryRouteImport.update({
+  id: '/bulls/recovery',
+  path: '/bulls/recovery',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BullsPhotosRoute = BullsPhotosRouteImport.update({
   id: '/bulls/photos',
   path: '/bulls/photos',
@@ -228,6 +234,7 @@ export interface FileRoutesByFullPath {
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
   '/bulls/nutrition': typeof BullsNutritionRoute
   '/bulls/photos': typeof BullsPhotosRoute
+  '/bulls/recovery': typeof BullsRecoveryRoute
   '/bulls/training': typeof BullsTrainingRoute
   '/bulls/weight': typeof BullsWeightRoute
   '/coach/$clientId': typeof CoachClientIdRoute
@@ -261,6 +268,7 @@ export interface FileRoutesByTo {
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
   '/bulls/nutrition': typeof BullsNutritionRoute
   '/bulls/photos': typeof BullsPhotosRoute
+  '/bulls/recovery': typeof BullsRecoveryRoute
   '/bulls/training': typeof BullsTrainingRoute
   '/bulls/weight': typeof BullsWeightRoute
   '/coach/$clientId': typeof CoachClientIdRoute
@@ -296,6 +304,7 @@ export interface FileRoutesById {
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
   '/bulls/nutrition': typeof BullsNutritionRoute
   '/bulls/photos': typeof BullsPhotosRoute
+  '/bulls/recovery': typeof BullsRecoveryRoute
   '/bulls/training': typeof BullsTrainingRoute
   '/bulls/weight': typeof BullsWeightRoute
   '/coach/$clientId': typeof CoachClientIdRoute
@@ -333,6 +342,7 @@ export interface FileRouteTypes {
     | '/bulls/benchmarks'
     | '/bulls/nutrition'
     | '/bulls/photos'
+    | '/bulls/recovery'
     | '/bulls/training'
     | '/bulls/weight'
     | '/coach/$clientId'
@@ -366,6 +376,7 @@ export interface FileRouteTypes {
     | '/bulls/benchmarks'
     | '/bulls/nutrition'
     | '/bulls/photos'
+    | '/bulls/recovery'
     | '/bulls/training'
     | '/bulls/weight'
     | '/coach/$clientId'
@@ -400,6 +411,7 @@ export interface FileRouteTypes {
     | '/bulls/benchmarks'
     | '/bulls/nutrition'
     | '/bulls/photos'
+    | '/bulls/recovery'
     | '/bulls/training'
     | '/bulls/weight'
     | '/coach/$clientId'
@@ -436,6 +448,7 @@ export interface RootRouteChildren {
   BullsBenchmarksRoute: typeof BullsBenchmarksRoute
   BullsNutritionRoute: typeof BullsNutritionRoute
   BullsPhotosRoute: typeof BullsPhotosRoute
+  BullsRecoveryRoute: typeof BullsRecoveryRoute
   BullsTrainingRoute: typeof BullsTrainingRoute
   BullsWeightRoute: typeof BullsWeightRoute
   BullsIndexRoute: typeof BullsIndexRoute
@@ -614,6 +627,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BullsTrainingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/bulls/recovery': {
+      id: '/bulls/recovery'
+      path: '/bulls/recovery'
+      fullPath: '/bulls/recovery'
+      preLoaderRoute: typeof BullsRecoveryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/bulls/photos': {
       id: '/bulls/photos'
       path: '/bulls/photos'
@@ -746,6 +766,7 @@ const rootRouteChildren: RootRouteChildren = {
   BullsBenchmarksRoute: BullsBenchmarksRoute,
   BullsNutritionRoute: BullsNutritionRoute,
   BullsPhotosRoute: BullsPhotosRoute,
+  BullsRecoveryRoute: BullsRecoveryRoute,
   BullsTrainingRoute: BullsTrainingRoute,
   BullsWeightRoute: BullsWeightRoute,
   BullsIndexRoute: BullsIndexRoute,

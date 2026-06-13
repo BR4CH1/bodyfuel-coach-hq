@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Droplet, Beef, Target, Trophy, Scale, Image, FileText, Dumbbell, ChevronRight } from "lucide-react";
+import { Droplet, Beef, Target, Trophy, Scale, Image, FileText, Dumbbell, ChevronRight, HeartPulse } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { BullsGate } from "@/components/bodyfuel/BullsGate";
 import { BullsHero } from "@/components/bodyfuel/BullsHero";
@@ -217,6 +217,7 @@ function Dashboard({ profile }: { profile: { weight_kg: number; main_goal: Bulls
         <Tile to="/bulls/benchmarks" icon={Target} title="Positions-Benchmarks" />
         <Tile to="/bulls/weight" icon={Scale} title="Gewichtstracking" />
         <Tile to="/bulls/photos" icon={Image} title="Fortschrittsfotos" />
+        <Tile to="/bulls/recovery" icon={HeartPulse} title="Recovery & Prävention" />
       </div>
 
       <div className="rounded-2xl border border-border bg-secondary/40 p-5 text-sm text-muted-foreground">
