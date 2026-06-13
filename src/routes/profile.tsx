@@ -236,40 +236,34 @@ function ProfileContent() {
 
       <section className="rounded-2xl border border-border bg-card p-6">
         <h2 className="font-display text-lg font-bold">Coaching-Infos</h2>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label>Ziel</Label>
-            <Select
-              value={profile?.coaching_goal ?? ""}
-              onValueChange={(v) =>
-                setProfile((p) => (p ? { ...p, coaching_goal: v } : p))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Ziel wählen" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="abnehmen">Abnehmen</SelectItem>
-                <SelectItem value="muskelaufbau">Muskelaufbau</SelectItem>
-                <SelectItem value="performance">Performance</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>Nächster Check-in</Label>
-            <Input
-              type="date"
-              value={profile?.next_checkin_date ?? ""}
-              onChange={(e) =>
-                setProfile((p) =>
-                  p ? { ...p, next_checkin_date: e.target.value || null } : p,
-                )
-              }
-            />
-          </div>
-        </div>
-
+        <p className="mt-1 text-xs text-muted-foreground">
+          Ziel und Check-in werden von deinem Coach festgelegt.
+        </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <Info
+            icon={<Target className="h-4 w-4" />}
+            label="Ziel"
+            value={
+              profile?.coaching_goal
+                ? profile.coaching_goal === "abnehmen"
+                  ? "Abnehmen"
+                  : profile.coaching_goal === "muskelaufbau"
+                    ? "Muskelaufbau"
+                    : profile.coaching_goal === "performance"
+                      ? "Performance"
+                      : profile.coaching_goal
+                : "Noch nicht festgelegt"
+            }
+          />
+          <Info
+            icon={<CalendarCheck className="h-4 w-4" />}
+            label="Nächster Check-in"
+            value={
+              profile?.next_checkin_date
+                ? new Date(profile.next_checkin_date).toLocaleDateString("de-DE")
+                : "Noch nicht festgelegt"
+            }
+          />
           <Info
             icon={<Package className="h-4 w-4" />}
             label="Aktuelles Paket"
@@ -291,16 +285,8 @@ function ProfileContent() {
             </div>
           </div>
         </div>
-
-        <Button
-          onClick={saveCoaching}
-          disabled={saving}
-          className="mt-4 bg-gradient-gold text-primary-foreground"
-        >
-          <Save className="mr-1 h-4 w-4" />
-          Speichern
-        </Button>
       </section>
+
 
       {/* Account */}
       <section className="rounded-2xl border border-border bg-card p-6">

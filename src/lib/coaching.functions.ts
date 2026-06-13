@@ -302,6 +302,8 @@ export const getCustomerDetail = createServerFn({ method: "POST" })
       packages: pkgs.data ?? [],
       payments: payments.data ?? [],
       measurements: measurements.data ?? [],
+      coaching_goal: (profile.data as any)?.coaching_goal ?? null,
+      next_checkin_date: (profile.data as any)?.next_checkin_date ?? null,
       auth: {
         invited_at: u?.invited_at ?? null,
         confirmed_at: u?.email_confirmed_at ?? u?.confirmed_at ?? null,
@@ -311,6 +313,31 @@ export const getCustomerDetail = createServerFn({ method: "POST" })
     };
 
   });
+
+export const updateCustomerCoachingInfo = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (data: {
+      user_id: string;
+      coaching_goal?: string | null;
+      next_checkin_date?: string | null;
+    }) => data,
+  )
+  .handler(async ({ data, context }) => {
+    await assertCoach(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const patch: { coaching_goal?: string | null; next_checkin_date?: string | null } = {};
+    if (data.coaching_goal !== undefined) patch.coaching_goal = data.coaching_goal;
+    if (data.next_checkin_date !== undefined) patch.next_checkin_date = data.next_checkin_date;
+    const { error } = await supabaseAdmin
+      .from("profiles")
+      .update(patch)
+      .eq("id", data.user_id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+
 
 export const getCustomerRecentActivity = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

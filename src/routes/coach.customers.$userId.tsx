@@ -7,6 +7,7 @@ import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import {
   getCustomerDetail,
   updateCustomerPackage,
+  updateCustomerCoachingInfo,
   confirmPayment,
   resendInvite,
   sendPasswordReset,
@@ -14,14 +15,23 @@ import {
   setCustomerPassword,
   deleteCustomer,
 } from "@/lib/coaching.functions";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { CoachTrainingSummary } from "@/components/bodyfuel/TrainingTrends";
 import { NutritionTargetsEditor } from "@/components/bodyfuel/NutritionTargetsEditor";
 import { MacroTargetsCard } from "@/components/bodyfuel/MacroTargetsCard";
 import { TrainingBonusCard } from "@/components/bodyfuel/TrainingBonusCard";
 import { CustomerRecentActivityCard } from "@/components/bodyfuel/CustomerRecentActivityCard";
+
 
 
 export const Route = createFileRoute("/coach/customers/$userId")({
@@ -44,10 +54,12 @@ function CustomerDetail() {
   const activeFn = useServerFn(setCustomerActive);
   const setPwFn = useServerFn(setCustomerPassword);
   const deleteFn = useServerFn(deleteCustomer);
+  const coachingFn = useServerFn(updateCustomerCoachingInfo);
   const qc = useQueryClient();
 
   const [newPw, setNewPw] = useState("");
   const [showPwForm, setShowPwForm] = useState(false);
+
 
   const { data, isLoading } = useQuery({
     queryKey: ["customer", userId],
@@ -60,6 +72,8 @@ function CustomerDetail() {
   const [pkgKey, setPkgKey] = useState<string>("");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
+  const [coachingGoal, setCoachingGoal] = useState<string>("");
+  const [nextCheckin, setNextCheckin] = useState<string>("");
 
   useEffect(() => {
     if (activePkg) {
@@ -69,6 +83,30 @@ function CustomerDetail() {
       setEndDate(activePkg.end_date);
     }
   }, [activePkg]);
+
+  useEffect(() => {
+    if (data) {
+      setCoachingGoal((data as any).coaching_goal ?? "");
+      setNextCheckin((data as any).next_checkin_date ?? "");
+    }
+  }, [data]);
+
+  const saveCoaching = useMutation({
+    mutationFn: () =>
+      coachingFn({
+        data: {
+          user_id: userId,
+          coaching_goal: coachingGoal || null,
+          next_checkin_date: nextCheckin || null,
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Coaching-Infos gespeichert.");
+      qc.invalidateQueries({ queryKey: ["customer", userId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
 
   const update = useMutation({
     mutationFn: (patch: Parameters<typeof updFn>[0]["data"]) =>
@@ -327,6 +365,45 @@ function CustomerDetail() {
           </div>
         </div>
       )}
+
+      <div className="rounded-2xl border border-border bg-card p-6">
+        <h2 className="font-display text-lg font-bold">Coaching-Infos</h2>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Diese Werte werden im Kundenprofil angezeigt — der Kunde kann sie nicht ändern.
+        </p>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label>Ziel</Label>
+            <Select value={coachingGoal} onValueChange={setCoachingGoal}>
+              <SelectTrigger>
+                <SelectValue placeholder="Ziel wählen" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="abnehmen">Abnehmen</SelectItem>
+                <SelectItem value="muskelaufbau">Muskelaufbau</SelectItem>
+                <SelectItem value="performance">Performance</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Nächster Check-in</Label>
+            <Input
+              type="date"
+              value={nextCheckin}
+              onChange={(e) => setNextCheckin(e.target.value)}
+            />
+          </div>
+        </div>
+        <Button
+          onClick={() => saveCoaching.mutate()}
+          disabled={saveCoaching.isPending}
+          className="mt-4 bg-gradient-gold text-primary-foreground"
+        >
+          Speichern
+        </Button>
+      </div>
+
+
 
       <div className="rounded-2xl border border-border bg-card p-6">
         <h2 className="font-display text-lg font-bold">Zahlungshistorie</h2>
