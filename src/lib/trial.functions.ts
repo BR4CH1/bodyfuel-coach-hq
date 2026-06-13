@@ -139,6 +139,7 @@ export const startMyTrial = createServerFn({ method: "POST" })
     if (existing && existing.trial_status !== "none") {
       if (existing.trial_status === "trial") {
         try { await seedTrialTrainingPlanFor(context.userId); } catch (e) { console.error(e); }
+        try { await seedTrialNutritionTargetsFor(context.userId); } catch (e) { console.error(e); }
       }
       return {
         ok: true,
