@@ -15,6 +15,7 @@ import {
   setCustomerPassword,
   deleteCustomer,
 } from "@/lib/coaching.functions";
+import { setUserGroup } from "@/lib/admin-groups.functions";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,6 +56,7 @@ function CustomerDetail() {
   const setPwFn = useServerFn(setCustomerPassword);
   const deleteFn = useServerFn(deleteCustomer);
   const coachingFn = useServerFn(updateCustomerCoachingInfo);
+  const groupFn = useServerFn(setUserGroup);
   const qc = useQueryClient();
 
   const [newPw, setNewPw] = useState("");
@@ -290,6 +292,19 @@ function CustomerDetail() {
         )}
       </div>
 
+      <GroupsCard
+        userId={userId}
+        groups={(data as any).groups ?? []}
+        onToggle={async (group, enabled) => {
+          try {
+            await groupFn({ data: { user_id: userId, group, enabled } });
+            toast.success(enabled ? "Zugang aktiviert." : "Zugang entfernt.");
+            qc.invalidateQueries({ queryKey: ["customer", userId] });
+          } catch (e) {
+            toast.error((e as Error).message);
+          }
+        }}
+      />
 
       {activePkg && (
         <div className="rounded-2xl border border-border bg-card p-6">
@@ -562,5 +577,55 @@ function Stat({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+
+type GroupKey = "bulls" | "running_team" | "sgz" | "premium";
+
+function GroupsCard({
+  groups,
+  onToggle,
+}: {
+  userId: string;
+  groups: string[];
+  onToggle: (group: GroupKey, enabled: boolean) => void;
+}) {
+  const items: { key: GroupKey; label: string; desc: string }[] = [
+    {
+      key: "bulls",
+      label: "Bulls-Mitglied",
+      desc: "Zugriff auf den kostenlosen Bulls Performance Hub.",
+    },
+  ];
+  return (
+    <div className="rounded-2xl border border-border bg-card p-6">
+      <h2 className="font-display text-lg font-bold">Gruppen & Zugänge</h2>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Schalter sind unabhängig voneinander — ein Nutzer kann mehrere Zugänge gleichzeitig haben.
+      </p>
+      <div className="mt-4 space-y-2">
+        {items.map((it) => {
+          const enabled = groups.includes(it.key);
+          return (
+            <label
+              key={it.key}
+              className="flex items-start gap-3 rounded-xl border border-border bg-secondary/30 p-3 cursor-pointer"
+            >
+              <input
+                type="checkbox"
+                checked={enabled}
+                onChange={(e) => onToggle(it.key, e.target.checked)}
+                className="mt-0.5 h-4 w-4"
+              />
+              <div>
+                <div className="text-sm font-semibold">{it.label}</div>
+                <div className="text-xs text-muted-foreground">{it.desc}</div>
+              </div>
+            </label>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 
 

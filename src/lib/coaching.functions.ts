@@ -109,6 +109,17 @@ export const listCustomers = createServerFn({ method: "GET" })
       .select("user_id, status, amount_eur, created_at, payment_date")
       .in("user_id", userIds);
 
+    const { data: groupsData } = await supabaseAdmin
+      .from("user_groups")
+      .select("user_id, group_name")
+      .in("user_id", userIds);
+    const groupsByUser = new Map<string, string[]>();
+    for (const g of groupsData ?? []) {
+      const a = groupsByUser.get(g.user_id) ?? [];
+      a.push(g.group_name);
+      groupsByUser.set(g.user_id, a);
+    }
+
     const paymentsByUser = new Map<string, typeof payments>();
     for (const p of payments ?? []) {
       const arr = paymentsByUser.get(p.user_id) ?? [];
@@ -164,6 +175,7 @@ export const listCustomers = createServerFn({ method: "GET" })
         email: emailMap.get(p.user_id) ?? null,
         display_name: profileMap.get(p.user_id)?.display_name ?? null,
         phone: profileMap.get(p.user_id)?.phone ?? null,
+        groups: groupsByUser.get(p.user_id) ?? [],
         last_payment_date: confirmed[0]?.payment_date ?? null,
         pending_amount,
         payment_due_date,
@@ -257,6 +269,15 @@ export const createCustomer = createServerFn({ method: "POST" })
     });
     if (pkgErr) throw new Error(pkgErr.message);
 
+    if (data.bulls) {
+      await supabaseAdmin
+        .from("user_groups")
+        .upsert(
+          { user_id: newUserId, group_name: "bulls" },
+          { onConflict: "user_id,group_name" },
+        );
+    }
+
     return { ok: true, user_id: newUserId };
   });
 
@@ -267,7 +288,7 @@ export const getCustomerDetail = createServerFn({ method: "POST" })
     await assertCoach(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const [profile, pkgs, payments, userRes, measurements] = await Promise.all([
+    const [profile, pkgs, payments, userRes, measurements, groups] = await Promise.all([
       supabaseAdmin.from("profiles").select("*").eq("id", data.user_id).maybeSingle(),
       supabaseAdmin
         .from("customer_packages")
@@ -285,6 +306,10 @@ export const getCustomerDetail = createServerFn({ method: "POST" })
         .select("*")
         .eq("user_id", data.user_id)
         .order("measured_at", { ascending: false }),
+      supabaseAdmin
+        .from("user_groups")
+        .select("group_name")
+        .eq("user_id", data.user_id),
     ]);
 
     const u = userRes.data.user as any;
@@ -303,6 +328,7 @@ export const getCustomerDetail = createServerFn({ method: "POST" })
       packages: pkgs.data ?? [],
       payments: payments.data ?? [],
       measurements: measurements.data ?? [],
+      groups: (groups.data ?? []).map((g: any) => g.group_name as string),
       coaching_goal: (profile.data as any)?.coaching_goal ?? null,
       next_checkin_date: (profile.data as any)?.next_checkin_date ?? null,
       auth: {

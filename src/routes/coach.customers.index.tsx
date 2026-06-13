@@ -16,7 +16,7 @@ export const Route = createFileRoute("/coach/customers/")({
   ),
 });
 
-type Filter = "all" | "due" | "overdue";
+type Filter = "all" | "due" | "overdue" | "bulls";
 
 function CustomersList() {
   const fn = useServerFn(listCustomers);
@@ -29,12 +29,14 @@ function CustomersList() {
   const counts = useMemo(() => {
     const due = (data ?? []).filter((c: any) => c.payment_status === "due").length;
     const overdue = (data ?? []).filter((c: any) => c.payment_status === "overdue").length;
-    return { all: data?.length ?? 0, due, overdue };
+    const bulls = (data ?? []).filter((c: any) => (c.groups ?? []).includes("bulls")).length;
+    return { all: data?.length ?? 0, due, overdue, bulls };
   }, [data]);
 
   const filtered = useMemo(() => {
     if (!data) return [];
     if (filter === "all") return data;
+    if (filter === "bulls") return (data as any[]).filter((c) => (c.groups ?? []).includes("bulls"));
     return (data as any[]).filter((c) => c.payment_status === filter);
   }, [data, filter]);
 
@@ -105,6 +107,7 @@ function CustomersList() {
           ["all", `Alle (${counts.all})`],
           ["due", `Zahlung fällig (${counts.due})`],
           ["overdue", `Überfällig (${counts.overdue})`],
+          ["bulls", `Bulls (${counts.bulls})`],
         ] as [Filter, string][]).map(([key, label]) => (
           <button
             key={key}
@@ -154,7 +157,10 @@ function CustomersList() {
                 {(filtered as any[]).map((c) => (
                   <tr key={c.id} className="border-b border-border last:border-0 hover:bg-secondary/30">
                     <td className="px-4 py-3">
-                      <div className="font-semibold">{c.display_name ?? "—"}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold">{c.display_name ?? "—"}</span>
+                        {(c.groups ?? []).includes("bulls") && <BullsBadge />}
+                      </div>
                       <div className="text-xs text-muted-foreground">{c.email ?? "—"}</div>
                     </td>
                     <td className="px-4 py-3 uppercase tracking-wider text-gold">{c.package}</td>
@@ -199,7 +205,10 @@ function CustomersList() {
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold">{c.display_name ?? "—"}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="truncate font-semibold">{c.display_name ?? "—"}</p>
+                      {(c.groups ?? []).includes("bulls") && <BullsBadge />}
+                    </div>
                     <p className="truncate text-xs text-muted-foreground">{c.email ?? "—"}</p>
                   </div>
                   <PaymentBadge c={c} />
@@ -262,6 +271,14 @@ function PaymentBadge({ c }: { c: any }) {
   return (
     <span className="inline-flex rounded-full bg-emerald-500/10 px-2 py-1 text-[10px] font-bold uppercase text-emerald-500">
       OK
+    </span>
+  );
+}
+
+function BullsBadge() {
+  return (
+    <span className="inline-flex shrink-0 rounded-full border border-red-500/60 bg-red-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-red-500">
+      Bulls
     </span>
   );
 }
