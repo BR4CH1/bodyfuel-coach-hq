@@ -26,7 +26,10 @@ type Measurement = {
   muscle_mass_kg: number | null;
   waist_cm: number | null;
   chest_cm: number | null;
-  hip_cm: number | null;
+  thigh_left_cm: number | null;
+  thigh_right_cm: number | null;
+  biceps_left_cm: number | null;
+  biceps_right_cm: number | null;
   notes: string | null;
 };
 
