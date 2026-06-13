@@ -52,7 +52,7 @@ export function TrialNutritionPlan() {
       })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, [supabaseUser, getDayFn]);
+  }, [supabaseUser, getDayFn, ensureFn]);
 
   return (
     <div className="rounded-3xl border border-gold/30 bg-gradient-to-b from-card to-gold/5 p-5 sm:p-6">
