@@ -498,7 +498,10 @@ function MeasurementsCard({ measurements }: { measurements: any[] }) {
         <Stat label="Muskelmasse" value={fmt(latest.muscle_mass_kg, "kg")} />
         <Stat label="Taille" value={fmt(latest.waist_cm, "cm")} />
         <Stat label="Brust" value={fmt(latest.chest_cm, "cm")} />
-        <Stat label="Hüfte" value={fmt(latest.hip_cm, "cm")} />
+        <Stat label="Oberschenkel L" value={fmt(latest.thigh_left_cm, "cm")} />
+        <Stat label="Oberschenkel R" value={fmt(latest.thigh_right_cm, "cm")} />
+        <Stat label="Bizeps L" value={fmt(latest.biceps_left_cm, "cm")} />
+        <Stat label="Bizeps R" value={fmt(latest.biceps_right_cm, "cm")} />
       </div>
 
       <div className="mt-6 overflow-x-auto">
