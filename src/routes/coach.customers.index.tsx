@@ -2,9 +2,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
-import { ChevronRight, Plus, Inbox, AlertTriangle, Clock } from "lucide-react";
+import { ChevronRight, Plus, Inbox, AlertTriangle, Clock, Sparkles } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { listCustomers } from "@/lib/coaching.functions";
+import { listTrialUsers } from "@/lib/trial.functions";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/coach/customers/")({
@@ -16,22 +17,35 @@ export const Route = createFileRoute("/coach/customers/")({
   ),
 });
 
-type Filter = "all" | "due" | "overdue" | "bulls";
+type Filter = "all" | "due" | "overdue" | "bulls" | "trial" | "trial_expired";
+
+function daysLeft(end: string | null): number | null {
+  if (!end) return null;
+  return Math.ceil((new Date(`${end}T23:59:59Z`).getTime() - Date.now()) / 86_400_000);
+}
 
 function CustomersList() {
   const fn = useServerFn(listCustomers);
+  const trialFn = useServerFn(listTrialUsers);
   const { data, isLoading } = useQuery({
     queryKey: ["customers"],
     queryFn: () => fn(),
   });
+  const { data: trials } = useQuery({
+    queryKey: ["trial-users"],
+    queryFn: () => trialFn(),
+  });
   const [filter, setFilter] = useState<Filter>("all");
+
+  const trialCount = (trials ?? []).filter((t: any) => t.trial_status === "trial").length;
+  const trialExpiredCount = (trials ?? []).filter((t: any) => t.trial_status === "trial_expired").length;
 
   const counts = useMemo(() => {
     const due = (data ?? []).filter((c: any) => c.payment_status === "due").length;
     const overdue = (data ?? []).filter((c: any) => c.payment_status === "overdue").length;
     const bulls = (data ?? []).filter((c: any) => (c.groups ?? []).includes("bulls")).length;
-    return { all: data?.length ?? 0, due, overdue, bulls };
-  }, [data]);
+    return { all: data?.length ?? 0, due, overdue, bulls, trial: trialCount, trial_expired: trialExpiredCount };
+  }, [data, trialCount, trialExpiredCount]);
 
   const filtered = useMemo(() => {
     if (!data) return [];
@@ -39,6 +53,7 @@ function CustomersList() {
     if (filter === "bulls") return (data as any[]).filter((c) => (c.groups ?? []).includes("bulls"));
     return (data as any[]).filter((c) => c.payment_status === filter);
   }, [data, filter]);
+
 
   return (
     <div className="space-y-6">
