@@ -98,15 +98,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const value: SessionCtx = {
-    user: effectiveUser,
-    isCoach: effectiveCoach,
-    supabaseUser,
-    profile,
-    loading,
-    groups,
-    hasGroup: (gname: string) => groups.includes(gname),
-
   const persist = (id: string | null, coach: boolean) => {
     if (id) localStorage.setItem(KEY, JSON.stringify({ userId: id, isCoach: coach }));
     else localStorage.removeItem(KEY);
@@ -121,6 +112,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     supabaseUser,
     profile,
     loading,
+    groups,
+    hasGroup: (gname: string) => groups.includes(gname),
     loginAs: (id, coach = false) => {
       setDemoUserId(id);
       setDemoCoach(coach);
