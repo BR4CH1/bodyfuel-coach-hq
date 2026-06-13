@@ -180,6 +180,8 @@ function DashboardContent() {
         </div>
       </div>
 
+      {supabaseUser && <PointsBreakdownCard userId={supabaseUser.id} />}
+
       {supabaseUser && <TrainingBonusCard userId={supabaseUser.id} />}
 
 
