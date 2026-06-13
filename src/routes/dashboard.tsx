@@ -622,3 +622,54 @@ function PendingPaymentBanner({ userId }: { userId: string }) {
     </div>
   );
 }
+
+const QUICK_ACTIONS = [
+  { key: "nutrition", to: "/nutrition/tracking", label: "Ernährung eintragen", Icon: Utensils },
+  { key: "training", to: "/training", label: "Training eintragen", Icon: Dumbbell },
+  { key: "measurement", to: "/measurements", label: "Messung eintragen", Icon: Plus },
+] as const;
+
+const SEEN_STORAGE_KEY = "bf:dashboard:quickActionsSeen";
+
+function DashboardQuickActions() {
+  const [seen, setSeen] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(SEEN_STORAGE_KEY);
+      if (raw) setSeen(JSON.parse(raw));
+    } catch {}
+  }, []);
+
+  const markSeen = (key: string) => {
+    setSeen((prev) => {
+      if (prev[key]) return prev;
+      const next = { ...prev, [key]: true };
+      try {
+        localStorage.setItem(SEEN_STORAGE_KEY, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {QUICK_ACTIONS.map(({ key, to, label, Icon }) => (
+        <Link
+          key={key}
+          to={to}
+          onClick={() => markSeen(key)}
+          className="relative inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-gold px-5 py-3 text-sm font-semibold text-primary-foreground shadow-gold transition hover:opacity-90"
+        >
+          <Icon className="h-4 w-4" /> {label}
+          {!seen[key] && (
+            <span className="absolute -right-1.5 -top-1.5 rounded-full bg-destructive px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-destructive-foreground shadow">
+              Neu
+            </span>
+          )}
+        </Link>
+      ))}
+    </div>
+  );
+}
+
