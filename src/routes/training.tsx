@@ -52,7 +52,7 @@ function TrainingPage() {
           <PlanContentView clientId={clientId || supabaseUser.id} planType="training" />
         )
       )}
-      {supabaseUser && !isTrial && !isExpired && (
+      {supabaseUser && !isExpired && (
         <section className="space-y-4">
           {isCoach && (
             <div className="rounded-2xl border border-border bg-card p-4">
