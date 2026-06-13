@@ -439,7 +439,7 @@ function WhatIs() {
     {
       icon: Salad,
       title: "Ernährungsplan mit 1-Klick-Tracking",
-      text: "Dein persönlicher Plan steht direkt unter „Ernährung" in der App — jede Mahlzeit mit einem Klick getrackt. Kein PDF, kein Excel, kein Zettel.",
+      text: 'Dein persönlicher Plan steht direkt unter „Ernährung" in der App — jede Mahlzeit mit einem Klick getrackt. Kein PDF, kein Excel, kein Zettel.',
     },
     {
       icon: Dumbbell,
