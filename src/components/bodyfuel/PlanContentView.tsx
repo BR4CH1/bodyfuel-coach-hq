@@ -374,7 +374,7 @@ export function PlanContentView({ clientId, planType }: Props) {
                   ? dayKind === "rest" ? "Heute: Restday" : "Heute: Trainingstag"
                   : "Tag wählen"}
               </label>
-              {isSelf && planType === "nutrition" && days.length > 1 && (
+              {isSelf && planType === "nutrition" && virtualDays.length > 1 && (
                 <button
                   onClick={pickAnotherDay}
                   className="inline-flex items-center gap-1 rounded-md border border-border bg-background/40 px-2 py-1 text-[11px] text-muted-foreground hover:text-gold"
@@ -391,7 +391,7 @@ export function PlanContentView({ clientId, planType }: Props) {
               }}
               className="mt-2 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             >
-              {days.map((d) => (
+              {virtualDays.map((d) => (
                 <option key={d.id} value={d.id}>{d.name}</option>
               ))}
             </select>
