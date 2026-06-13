@@ -323,6 +323,50 @@ function CoachDashboard() {
               />
             ))}
           </Panel>
+
+          {/* Letzte Eintragung Ernährung */}
+          <Panel
+            icon={<Utensils className="h-5 w-5" />}
+            title="Letzte Eintragung Ernährung"
+            empty={recentNutrition.length === 0}
+            emptyText="Noch keine Ernährungs-Einträge"
+          >
+            {recentNutrition.map((c) => (
+              <CustomerRow
+                key={c.id}
+                id={c.id}
+                name={c.display_name ?? "Ohne Namen"}
+                meta={`${c.last_nutrition_name ?? "Eintrag"} · ${new Date(
+                  c.last_nutrition_at!,
+                ).toLocaleDateString("de-DE")}`}
+                tone="info"
+              />
+            ))}
+          </Panel>
+
+          {/* Letzte Eintragung Training */}
+          <Panel
+            icon={<Dumbbell className="h-5 w-5" />}
+            title="Letzte Eintragung Training"
+            empty={recentTraining.length === 0}
+            emptyText="Noch keine Trainings-Einträge"
+          >
+            {recentTraining.map((c) => (
+              <CustomerRow
+                key={c.id}
+                id={c.id}
+                name={c.display_name ?? "Ohne Namen"}
+                meta={new Date(c.last_training_at!).toLocaleDateString("de-DE", {
+                  weekday: "short",
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric",
+                })}
+                tone="info"
+              />
+            ))}
+          </Panel>
+
         </div>
       )}
     </div>
