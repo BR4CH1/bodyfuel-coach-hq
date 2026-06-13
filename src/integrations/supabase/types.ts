@@ -61,6 +61,8 @@ export type Database = {
       }
       body_measurements: {
         Row: {
+          biceps_left_cm: number | null
+          biceps_right_cm: number | null
           body_fat_pct: number | null
           chest_cm: number | null
           created_at: string
@@ -69,12 +71,16 @@ export type Database = {
           measured_at: string
           muscle_mass_kg: number | null
           notes: string | null
+          thigh_left_cm: number | null
+          thigh_right_cm: number | null
           updated_at: string
           user_id: string
           waist_cm: number | null
           weight_kg: number | null
         }
         Insert: {
+          biceps_left_cm?: number | null
+          biceps_right_cm?: number | null
           body_fat_pct?: number | null
           chest_cm?: number | null
           created_at?: string
@@ -83,12 +89,16 @@ export type Database = {
           measured_at?: string
           muscle_mass_kg?: number | null
           notes?: string | null
+          thigh_left_cm?: number | null
+          thigh_right_cm?: number | null
           updated_at?: string
           user_id: string
           waist_cm?: number | null
           weight_kg?: number | null
         }
         Update: {
+          biceps_left_cm?: number | null
+          biceps_right_cm?: number | null
           body_fat_pct?: number | null
           chest_cm?: number | null
           created_at?: string
@@ -97,6 +107,8 @@ export type Database = {
           measured_at?: string
           muscle_mass_kg?: number | null
           notes?: string | null
+          thigh_left_cm?: number | null
+          thigh_right_cm?: number | null
           updated_at?: string
           user_id?: string
           waist_cm?: number | null
@@ -907,6 +919,8 @@ export type Database = {
       }
       weekly_checkins: {
         Row: {
+          biceps_left_cm: number | null
+          biceps_right_cm: number | null
           body_fat_pct: number | null
           chest_cm: number | null
           coach_notes: string | null
@@ -920,6 +934,8 @@ export type Database = {
           sleep_quality: number | null
           struggles: string | null
           submitted_at: string
+          thigh_left_cm: number | null
+          thigh_right_cm: number | null
           training_adherence: number | null
           updated_at: string
           user_id: string
@@ -929,6 +945,8 @@ export type Database = {
           wins: string | null
         }
         Insert: {
+          biceps_left_cm?: number | null
+          biceps_right_cm?: number | null
           body_fat_pct?: number | null
           chest_cm?: number | null
           coach_notes?: string | null
@@ -942,6 +960,8 @@ export type Database = {
           sleep_quality?: number | null
           struggles?: string | null
           submitted_at?: string
+          thigh_left_cm?: number | null
+          thigh_right_cm?: number | null
           training_adherence?: number | null
           updated_at?: string
           user_id: string
@@ -951,6 +971,8 @@ export type Database = {
           wins?: string | null
         }
         Update: {
+          biceps_left_cm?: number | null
+          biceps_right_cm?: number | null
           body_fat_pct?: number | null
           chest_cm?: number | null
           coach_notes?: string | null
@@ -964,6 +986,8 @@ export type Database = {
           sleep_quality?: number | null
           struggles?: string | null
           submitted_at?: string
+          thigh_left_cm?: number | null
+          thigh_right_cm?: number | null
           training_adherence?: number | null
           updated_at?: string
           user_id?: string
