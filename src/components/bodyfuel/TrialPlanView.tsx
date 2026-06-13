@@ -31,6 +31,8 @@ export function TrialNutritionPlan() {
   // Automatisch Trainings- vs. Restday wählen (anhand heutiger Trainings-Logs / Override)
   useEffect(() => {
     if (!supabaseUser) return;
+    // Trial-Seeds (Trainingsplan + Nutrition-Targets) idempotent sicherstellen.
+    ensureFn().catch(() => {});
     let cancelled = false;
     const date = new Date().toISOString().slice(0, 10);
     getDayFn({ data: { user_id: supabaseUser.id, date } })
