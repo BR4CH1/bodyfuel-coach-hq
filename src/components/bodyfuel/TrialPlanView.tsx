@@ -1,7 +1,18 @@
 import { useState } from "react";
-import { Utensils, Dumbbell, Sparkles, Lock } from "lucide-react";
+import { Utensils, Dumbbell, Sparkles, Lock, Check, Plus } from "lucide-react";
 import { Link } from "@tanstack/react-router";
-import { TRIAL_NUTRITION, TRIAL_TRAINING } from "@/lib/bodyfuel/trialPlans";
+import { toast } from "sonner";
+import { TRIAL_NUTRITION, TRIAL_TRAINING, type TrialMeal } from "@/lib/bodyfuel/trialPlans";
+import { supabase } from "@/integrations/supabase/client";
+import { useSession } from "@/lib/bodyfuel/session";
+
+function mapMealCategory(name: string): "breakfast" | "lunch" | "dinner" | "snack" {
+  const n = name.toLowerCase();
+  if (n.includes("frühstück")) return "breakfast";
+  if (n.includes("mittag")) return "lunch";
+  if (n.includes("abend")) return "dinner";
+  return "snack";
+}
 
 /** Liest Read-only-Starterpläne für den Trial – keine DB-Abhängigkeit. */
 export function TrialNutritionPlan() {
