@@ -111,6 +111,7 @@ function Onboarding() {
   return (
     <div className="space-y-6">
       <BullsHero
+        showLogo
         title="Willkommen im Bulls Performance Hub"
         subtitle="Kurze Einrichtung — danach steht dir der gesamte Bereich zur Verfügung."
       />
@@ -184,6 +185,7 @@ function Dashboard({ profile }: { profile: { weight_kg: number; main_goal: Bulls
   return (
     <div className="space-y-6">
       <BullsHero
+        showLogo
         title={`Willkommen zurück, ${profile.first_name}`}
         subtitle="Dein kostenloser Starter-Bereich für Ernährung, Training und Football Performance."
       />
