@@ -47,8 +47,17 @@ export const parseTrainingPlan = createServerFn({ method: "POST" })
     const b64 = btoa(bin);
 
     const prompt = `Du bekommst einen Trainingsplan als PDF. Extrahiere ALLE Trainingstage und die Übungen jedes Tages.
-Für jede Übung extrahiere: Name, Soll-Sätze (Zahl), Soll-Wiederholungen (z.B. "8-12" oder "10"), evtl. Notizen (Tempo, Pause, Hinweise).
-Gib ausschließlich gültiges JSON in der Form { "days": [ { "name": "Tag A — Push", "exercises": [ { "name": "...", "target_sets": 4, "target_reps": "8-12", "notes": "..." } ] } ] } zurück. Keine Erklärungen.`;
+
+Pro Übung extrahiere:
+- name: Übungsname
+- target_sets: Anzahl Sätze (Zahl). Beispiel "15x40kg | 12x50kg | 10x60kg | 8x60kg | Vollgas 60kg" → 5 Sätze.
+- target_reps: Wiederholungen pro Satz, Komma-getrennt in Satz-Reihenfolge. Beispiel oben → "15, 12, 10, 8, max". Wenn nur ein Wert vorgegeben ist (z.B. "4×10"), gib "10" zurück.
+- target_weights: Gewichte pro Satz IN KG, Komma-getrennt in Satz-Reihenfolge, OHNE Einheit. Beispiel oben → "40, 50, 60, 60, 60". Wenn ein Satz "Vollgas", "Burnout", "max" o.ä. ohne Gewicht ist, übernimm das Gewicht des vorherigen Satzes. Wenn gar keine Gewichte vorgegeben sind (z.B. nur Wiederholungen wie Klimmzüge "5 | 5 | 5 | max | max"), gib null zurück.
+- notes: zusätzliche Hinweise wie "Vollgas", "Burnout", "Tempo 3-1-1", "Pause 90s" — alles was nicht Sätze/Reps/Gewicht ist. Sonst null.
+
+Gib ausschließlich gültiges JSON zurück:
+{ "days": [ { "name": "Push", "exercises": [ { "name": "Bankdrücken", "target_sets": 5, "target_reps": "15, 12, 10, 8, max", "target_weights": "40, 50, 60, 60, 60", "notes": "Vollgas letzter Satz" } ] } ] }
+Keine Erklärungen.`;
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
