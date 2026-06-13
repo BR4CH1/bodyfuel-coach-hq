@@ -56,6 +56,7 @@ function CustomerDetail() {
   const setPwFn = useServerFn(setCustomerPassword);
   const deleteFn = useServerFn(deleteCustomer);
   const coachingFn = useServerFn(updateCustomerCoachingInfo);
+  const groupFn = useServerFn(setUserGroup);
   const qc = useQueryClient();
 
   const [newPw, setNewPw] = useState("");
