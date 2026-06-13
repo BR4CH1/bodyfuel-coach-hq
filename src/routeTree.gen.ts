@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WelcomeRouteImport } from './routes/welcome'
+import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
 import { Route as TrialRouteImport } from './routes/trial'
 import { Route as TrainingRouteImport } from './routes/training'
 import { Route as ProgressRouteImport } from './routes/progress'
@@ -52,6 +53,11 @@ import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/em
 const WelcomeRoute = WelcomeRouteImport.update({
   id: '/welcome',
   path: '/welcome',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UnsubscribeRoute = UnsubscribeRouteImport.update({
+  id: '/unsubscribe',
+  path: '/unsubscribe',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TrialRoute = TrialRouteImport.update({
@@ -263,6 +269,7 @@ export interface FileRoutesByFullPath {
   '/progress': typeof ProgressRoute
   '/training': typeof TrainingRoute
   '/trial': typeof TrialRoute
+  '/unsubscribe': typeof UnsubscribeRoute
   '/welcome': typeof WelcomeRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
   '/bulls/nutrition': typeof BullsNutritionRoute
@@ -302,6 +309,7 @@ export interface FileRoutesByTo {
   '/progress': typeof ProgressRoute
   '/training': typeof TrainingRoute
   '/trial': typeof TrialRoute
+  '/unsubscribe': typeof UnsubscribeRoute
   '/welcome': typeof WelcomeRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
   '/bulls/nutrition': typeof BullsNutritionRoute
@@ -343,6 +351,7 @@ export interface FileRoutesById {
   '/progress': typeof ProgressRoute
   '/training': typeof TrainingRoute
   '/trial': typeof TrialRoute
+  '/unsubscribe': typeof UnsubscribeRoute
   '/welcome': typeof WelcomeRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
   '/bulls/nutrition': typeof BullsNutritionRoute
@@ -386,6 +395,7 @@ export interface FileRouteTypes {
     | '/progress'
     | '/training'
     | '/trial'
+    | '/unsubscribe'
     | '/welcome'
     | '/bulls/benchmarks'
     | '/bulls/nutrition'
@@ -425,6 +435,7 @@ export interface FileRouteTypes {
     | '/progress'
     | '/training'
     | '/trial'
+    | '/unsubscribe'
     | '/welcome'
     | '/bulls/benchmarks'
     | '/bulls/nutrition'
@@ -465,6 +476,7 @@ export interface FileRouteTypes {
     | '/progress'
     | '/training'
     | '/trial'
+    | '/unsubscribe'
     | '/welcome'
     | '/bulls/benchmarks'
     | '/bulls/nutrition'
@@ -507,6 +519,7 @@ export interface RootRouteChildren {
   ProgressRoute: typeof ProgressRoute
   TrainingRoute: typeof TrainingRoute
   TrialRoute: typeof TrialRoute
+  UnsubscribeRoute: typeof UnsubscribeRoute
   WelcomeRoute: typeof WelcomeRoute
   BullsBenchmarksRoute: typeof BullsBenchmarksRoute
   BullsNutritionRoute: typeof BullsNutritionRoute
@@ -531,6 +544,13 @@ declare module '@tanstack/react-router' {
       path: '/welcome'
       fullPath: '/welcome'
       preLoaderRoute: typeof WelcomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/unsubscribe': {
+      id: '/unsubscribe'
+      path: '/unsubscribe'
+      fullPath: '/unsubscribe'
+      preLoaderRoute: typeof UnsubscribeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/trial': {
@@ -865,6 +885,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProgressRoute: ProgressRoute,
   TrainingRoute: TrainingRoute,
   TrialRoute: TrialRoute,
+  UnsubscribeRoute: UnsubscribeRoute,
   WelcomeRoute: WelcomeRoute,
   BullsBenchmarksRoute: BullsBenchmarksRoute,
   BullsNutritionRoute: BullsNutritionRoute,
@@ -884,13 +905,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
