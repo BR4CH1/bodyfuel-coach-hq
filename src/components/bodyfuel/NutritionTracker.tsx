@@ -477,7 +477,7 @@ export function NutritionTracker() {
           </div>
         </div>
         <div className="grid grid-cols-4 gap-2">
-          <Ring label="kcal" value={totals.kcal} target={targets.kcal} color="hsl(var(--gold))" unit="" />
+          <Ring label="kcal" value={totals.kcal} target={targets.kcal} color="var(--gold)" unit="" />
           <Ring label="Protein" value={totals.protein_g} target={targets.protein_g} color="#ef4444" unit="g" />
           <Ring label="Carbs" value={totals.carbs_g} target={targets.carbs_g} color="#3b82f6" unit="g" />
           <Ring label="Fett" value={totals.fat_g} target={targets.fat_g} color="#f59e0b" unit="g" />
