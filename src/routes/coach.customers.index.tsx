@@ -123,6 +123,8 @@ function CustomersList() {
           ["due", `Zahlung fällig (${counts.due})`],
           ["overdue", `Überfällig (${counts.overdue})`],
           ["bulls", `Bulls (${counts.bulls})`],
+          ["trial", `Trial (${counts.trial})`],
+          ["trial_expired", `Trial abgelaufen (${counts.trial_expired})`],
         ] as [Filter, string][]).map(([key, label]) => (
           <button
             key={key}
@@ -130,10 +132,8 @@ function CustomersList() {
             className={
               "rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition " +
               (filter === key
-                ? key === "overdue"
+                ? key === "overdue" || key === "trial_expired"
                   ? "border-destructive bg-destructive/15 text-destructive"
-                  : key === "due"
-                  ? "border-gold bg-gold/15 text-gold"
                   : "border-gold bg-gold/15 text-gold"
                 : "border-border text-muted-foreground hover:border-gold/40")
             }
@@ -143,14 +143,23 @@ function CustomersList() {
         ))}
       </div>
 
-      {isLoading && <p className="text-sm text-muted-foreground">Lade…</p>}
-      {data && filtered.length === 0 && (
+      {(filter === "trial" || filter === "trial_expired") && (
+        <TrialList
+          users={(trials ?? []).filter((t: any) => t.trial_status === filter)}
+        />
+      )}
+
+      {filter !== "trial" && filter !== "trial_expired" && isLoading && (
+        <p className="text-sm text-muted-foreground">Lade…</p>
+      )}
+      {filter !== "trial" && filter !== "trial_expired" && data && filtered.length === 0 && (
         <p className="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground">
           {filter === "all"
             ? "Noch keine Kunden angelegt."
             : "Keine Kunden in dieser Ansicht."}
         </p>
       )}
+
 
       {filtered.length > 0 && (
         <>
