@@ -498,7 +498,7 @@ function RealUserDashboard() {
               </div>
               <div className="grid grid-cols-3 gap-3 sm:grid-cols-1 sm:gap-2">
                 <Stat label="Gesamt" value={points} suffix="Pkt" />
-                <Stat label="Daily" value={userPts.daily} suffix="Pkt" />
+                <Stat label="Heute" value={todayDbPoints} suffix={`/ ${MAX_DAILY_POINTS}`} />
                 <Stat label="Training" value={userPts.perf} suffix="Pkt" accent={userPts.perf > 0} />
               </div>
             </div>
