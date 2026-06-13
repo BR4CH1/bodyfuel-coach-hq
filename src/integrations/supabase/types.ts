@@ -116,6 +116,120 @@ export type Database = {
         }
         Relationships: []
       }
+      bulls_hub_events: {
+        Row: {
+          id: string
+          kind: string
+          occurred_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          kind: string
+          occurred_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          kind?: string
+          occurred_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      bulls_profiles: {
+        Row: {
+          email: string
+          first_name: string
+          height_cm: number
+          last_name: string
+          main_goal: Database["public"]["Enums"]["bulls_goal"]
+          onboarded_at: string
+          position: Database["public"]["Enums"]["bulls_position"]
+          updated_at: string
+          user_id: string
+          weight_kg: number
+        }
+        Insert: {
+          email: string
+          first_name: string
+          height_cm: number
+          last_name: string
+          main_goal: Database["public"]["Enums"]["bulls_goal"]
+          onboarded_at?: string
+          position: Database["public"]["Enums"]["bulls_position"]
+          updated_at?: string
+          user_id: string
+          weight_kg: number
+        }
+        Update: {
+          email?: string
+          first_name?: string
+          height_cm?: number
+          last_name?: string
+          main_goal?: Database["public"]["Enums"]["bulls_goal"]
+          onboarded_at?: string
+          position?: Database["public"]["Enums"]["bulls_position"]
+          updated_at?: string
+          user_id?: string
+          weight_kg?: number
+        }
+        Relationships: []
+      }
+      bulls_progress_photos: {
+        Row: {
+          back_path: string | null
+          created_at: string
+          front_path: string | null
+          id: string
+          photo_date: string
+          side_path: string | null
+          user_id: string
+        }
+        Insert: {
+          back_path?: string | null
+          created_at?: string
+          front_path?: string | null
+          id?: string
+          photo_date?: string
+          side_path?: string | null
+          user_id: string
+        }
+        Update: {
+          back_path?: string | null
+          created_at?: string
+          front_path?: string | null
+          id?: string
+          photo_date?: string
+          side_path?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      bulls_weight_logs: {
+        Row: {
+          created_at: string
+          id: string
+          log_date: string
+          user_id: string
+          weight_kg: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          log_date?: string
+          user_id: string
+          weight_kg: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          log_date?: string
+          user_id?: string
+          weight_kg?: number
+        }
+        Relationships: []
+      }
       customer_packages: {
         Row: {
           created_at: string
@@ -836,6 +950,27 @@ export type Database = {
           },
         ]
       }
+      user_groups: {
+        Row: {
+          granted_at: string
+          group_name: Database["public"]["Enums"]["app_group"]
+          id: string
+          user_id: string
+        }
+        Insert: {
+          granted_at?: string
+          group_name: Database["public"]["Enums"]["app_group"]
+          id?: string
+          user_id: string
+        }
+        Update: {
+          granted_at?: string
+          group_name?: Database["public"]["Enums"]["app_group"]
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_points: {
         Row: {
           created_at: string
@@ -1011,6 +1146,13 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      has_group: {
+        Args: {
+          _group: Database["public"]["Enums"]["app_group"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1038,7 +1180,20 @@ export type Database = {
       recompute_user_points: { Args: { _user_id: string }; Returns: undefined }
     }
     Enums: {
+      app_group: "bulls" | "running_team" | "sgz" | "premium"
       app_role: "coach" | "client"
+      bulls_goal: "fat_loss" | "muscle_gain" | "performance" | "general_fitness"
+      bulls_position:
+        | "QB"
+        | "RB"
+        | "WR"
+        | "TE"
+        | "OL"
+        | "DL"
+        | "LB"
+        | "DB"
+        | "KP"
+        | "COACH"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1166,7 +1321,21 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_group: ["bulls", "running_team", "sgz", "premium"],
       app_role: ["coach", "client"],
+      bulls_goal: ["fat_loss", "muscle_gain", "performance", "general_fitness"],
+      bulls_position: [
+        "QB",
+        "RB",
+        "WR",
+        "TE",
+        "OL",
+        "DL",
+        "LB",
+        "DB",
+        "KP",
+        "COACH",
+      ],
     },
   },
 } as const
