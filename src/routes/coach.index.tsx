@@ -8,7 +8,10 @@ import {
   Users,
   CheckCircle2,
   Clock,
+  Utensils,
+  Dumbbell,
 } from "lucide-react";
+
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 
