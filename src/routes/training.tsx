@@ -20,6 +20,7 @@ export const Route = createFileRoute("/training")({
 
 function TrainingPage() {
   const { isCoach, supabaseUser } = useSession();
+  const { isTrial, isExpired } = useTrial();
   const [clientId, setClientId] = useState<string>("");
   const [clients, setClients] = useState<{ id: string; display_name: string | null }[]>([]);
 
