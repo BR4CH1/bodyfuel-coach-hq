@@ -54,10 +54,12 @@ function CustomerDetail() {
   const activeFn = useServerFn(setCustomerActive);
   const setPwFn = useServerFn(setCustomerPassword);
   const deleteFn = useServerFn(deleteCustomer);
+  const coachingFn = useServerFn(updateCustomerCoachingInfo);
   const qc = useQueryClient();
 
   const [newPw, setNewPw] = useState("");
   const [showPwForm, setShowPwForm] = useState(false);
+
 
   const { data, isLoading } = useQuery({
     queryKey: ["customer", userId],
