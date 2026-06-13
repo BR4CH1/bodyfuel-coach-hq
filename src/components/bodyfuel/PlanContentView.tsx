@@ -215,31 +215,34 @@ export function PlanContentView({ clientId, planType }: Props) {
     return () => { cancelled = true; };
   }, [clientId, planType, isSelf, getDayTypeFn]);
 
-  // Auto-pick a random matching plan day for today if no manual pick is stored yet.
+  // Auto-pick a matching virtual day for today; respect saved manual pick.
   useEffect(() => {
-    if (!days.length || !dayKind) return;
+    if (!virtualDays.length) return;
     let saved = "";
     try { saved = localStorage.getItem(pickStorageKey) ?? ""; } catch {}
-    if (saved && days.find((d) => d.id === saved)) return;
-    const matches = days.filter((d) =>
-      dayKind === "rest" ? isRestDay(d.name) : !isRestDay(d.name),
-    );
-    const pool = matches.length ? matches : days;
-    const pick = pickRandom(pool);
-    if (pick) {
-      setActiveDay(pick.id);
-      try { localStorage.setItem(pickStorageKey, pick.id); } catch {}
+    if (saved && virtualDays.find((d) => d.id === saved)) {
+      setActiveDay((cur) => (cur === saved ? cur : saved));
+      return;
     }
+    if (activeDay && virtualDays.find((d) => d.id === activeDay)) return;
+    const matches = dayKind
+      ? virtualDays.filter((d) =>
+          dayKind === "rest" ? isRestDay(d.name) : !isRestDay(d.name),
+        )
+      : [];
+    const pool = matches.length ? matches : virtualDays;
+    const pick = pickRandom(pool) ?? virtualDays[0];
+    if (pick) setActiveDay(pick.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [days, dayKind]);
+  }, [virtualDays, dayKind]);
 
   const pickAnotherDay = () => {
-    if (!days.length) return;
-    const matches = days.filter((d) =>
+    if (!virtualDays.length) return;
+    const matches = virtualDays.filter((d) =>
       dayKind === "rest" ? isRestDay(d.name) : !isRestDay(d.name),
     );
-    const pool = (matches.length ? matches : days).filter((d) => d.id !== activeDay);
-    const pick = pickRandom(pool.length ? pool : days);
+    const pool = (matches.length ? matches : virtualDays).filter((d) => d.id !== activeDay);
+    const pick = pickRandom(pool.length ? pool : virtualDays);
     if (pick) {
       setActiveDay(pick.id);
       try { localStorage.setItem(pickStorageKey, pick.id); } catch {}
