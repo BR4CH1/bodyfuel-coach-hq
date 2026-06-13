@@ -50,20 +50,10 @@ export function TrialNutritionPlan() {
 
       <div className="mt-4 space-y-3">
         {variant.meals.map((m, i) => (
-          <div key={i} className="rounded-2xl border border-border bg-background/40 p-4">
-            <div className="flex items-baseline justify-between gap-3">
-              <div className="text-xs font-bold uppercase tracking-wider text-gold">{m.name}</div>
-              <div className="text-[11px] text-muted-foreground">{m.kcal} kcal</div>
-            </div>
-            <p className="mt-1 text-sm">{m.description}</p>
-            <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-              <span>P {m.protein_g}g</span>
-              <span>· KH {m.carbs_g}g</span>
-              <span>· F {m.fat_g}g</span>
-            </div>
-          </div>
+          <TrialMealCard key={`${dayId}-${variantId}-${i}`} meal={m} />
         ))}
       </div>
+
 
       <UpgradeHint
         text="Dein individueller Plan – abgestimmt auf Ziel, Vorlieben & Trainingstage – wird mit deiner Mitgliedschaft freigeschaltet."
