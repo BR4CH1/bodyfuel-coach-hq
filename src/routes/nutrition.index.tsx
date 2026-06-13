@@ -59,7 +59,7 @@ function NutritionIndex() {
             <MacroTargetsCard userId={supabaseUser?.id} />
           </>
         )}
-        <PlansView planType="nutrition" />
+        {isCoach && <PlansView planType="nutrition" />}
         {isCoach && clients.length > 0 && (
           <div className="rounded-2xl border border-border bg-card p-4">
             <label className="text-xs uppercase tracking-wider text-muted-foreground">Inhalte ansehen für</label>
