@@ -222,10 +222,24 @@ function UpgradeHint({ text }: { text: string }) {
   );
 }
 
-function TrialMealCard({ meal }: { meal: TrialMeal }) {
+function TrialMealCard({
+  meal,
+  entryKey,
+  initiallyTracked,
+  onTracked,
+}: {
+  meal: TrialMeal;
+  entryKey: string;
+  initiallyTracked: boolean;
+  onTracked: () => void;
+}) {
   const { supabaseUser } = useSession();
   const [busy, setBusy] = useState(false);
-  const [tracked, setTracked] = useState(false);
+  const [tracked, setTracked] = useState(initiallyTracked);
+
+  useEffect(() => {
+    setTracked(initiallyTracked);
+  }, [initiallyTracked]);
 
   const track = async () => {
     if (!supabaseUser || busy || tracked) return;
@@ -234,7 +248,7 @@ function TrialMealCard({ meal }: { meal: TrialMeal }) {
       user_id: supabaseUser.id,
       entry_date: new Date().toISOString().slice(0, 10),
       meal: mapMealCategory(meal.name),
-      name: `${meal.name} — ${meal.description}`.slice(0, 200),
+      name: entryKey,
       serving_g: 100,
       kcal: meal.kcal,
       protein_g: meal.protein_g,
@@ -248,8 +262,10 @@ function TrialMealCard({ meal }: { meal: TrialMeal }) {
       return;
     }
     setTracked(true);
+    onTracked();
     toast.success(`${meal.name} getrackt`);
   };
+
 
   return (
     <button
