@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import {
   AlertTriangle,
   ChevronRight,
@@ -10,9 +12,20 @@ import {
   Clock,
   Utensils,
   Dumbbell,
+  Trophy,
 } from "lucide-react";
 
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
+import { supabase } from "@/integrations/supabase/client";
+import { getRanking, type RankingPeriod } from "@/lib/coaching.functions";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/coach/")({
