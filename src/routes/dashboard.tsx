@@ -780,3 +780,10 @@ function DashboardQuickActions({ excludeKeys = [] }: { excludeKeys?: readonly Qu
   );
 }
 
+function TrialChecklistGate({ userId }: { userId: string }) {
+  const { isTrial } = useTrial();
+  if (!isTrial) return null;
+  return <TrialChecklist userId={userId} />;
+}
+
+
