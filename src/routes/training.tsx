@@ -93,7 +93,7 @@ function TrainingPage() {
               </select>
             </div>
           )}
-          {clientId && <TrainingTracker clientId={clientId} />}
+          {clientId && <TrainingTracker key={trackerKey} clientId={clientId} />}
         </section>
       )}
     </div>
