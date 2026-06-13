@@ -27,11 +27,19 @@ export const parseNutritionPlan = createServerFn({ method: "POST" })
 
     const { data: plan, error: pErr } = await supabase
       .from("nutrition_plans")
-      .select("id, file_path, plan_type")
+      .select("id, file_path, plan_type, client_id")
       .eq("id", data.plan_id)
       .single();
     if (pErr || !plan) throw new Error(pErr?.message || "Plan nicht gefunden");
     if (plan.plan_type !== "nutrition") throw new Error("Kein Ernährungsplan");
+
+    const { data: tgt } = await supabase
+      .from("nutrition_targets")
+      .select("kcal, kcal_rest")
+      .eq("user_id", plan.client_id)
+      .maybeSingle();
+    const targetTraining = tgt?.kcal ?? null;
+    const targetRest = tgt?.kcal_rest ?? tgt?.kcal ?? null;
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: file, error: dlErr } = await supabaseAdmin.storage
@@ -44,18 +52,35 @@ export const parseNutritionPlan = createServerFn({ method: "POST" })
     for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
     const b64 = btoa(bin);
 
+    const targetLine = targetTraining
+      ? `Zielwerte des Kunden: Trainingstag ≈ ${targetTraining} kcal${targetRest && targetRest !== targetTraining ? `, Restday ≈ ${targetRest} kcal` : ""}.`
+      : `Keine Zielwerte hinterlegt — orientiere dich an den im Plan angegebenen kcal.`;
+
     const prompt = `Du bekommst einen Ernährungsplan als PDF.
 Extrahiere ALLE Tage und je Tag ALLE Mahlzeiten.
 
 WICHTIG zur Tag-Aufteilung:
-- Jede Trainingstag-Variante ist ein EIGENER Tag. Wenn der Plan z.B. "Trainingstag A", "Trainingstag B", "Trainingstag C" enthält, gib drei separate Tage mit genau diesen Namen zurück ("Trainingstag A", "Trainingstag B", "Trainingstag C").
+- Jede Trainingstag-Variante ist ein EIGENER Tag (z.B. "Trainingstag A/B/C" → drei Tage mit genau diesen Namen).
 - "Restday" / "Ruhetag" / "Pause" ist ein eigener Tag.
-- Wochentage ("Montag", "Dienstag", …) oder "Tag 1/2/3" sind ebenfalls je ein eigener Tag.
-- Mahlzeiten gehören NUR zu dem Tag, unter dem sie im Plan stehen. Nicht über mehrere Tage duplizieren.
-- Wenn der Plan nur EINEN Tag enthält, gib genau diesen einen Tag zurück.
+- Wochentage oder "Tag 1/2/3" sind je ein eigener Tag.
+- Mahlzeiten gehören NUR zu dem Tag, unter dem sie im Plan stehen. Nicht duplizieren.
 
-Mahlzeit-Name: kurz und ohne Tag-Bezeichnung (z.B. "Frühstück", "Mittag", "Snack", "Abendessen", "Pre-Workout", "Mahlzeit 1"). Schreibe NICHT "Trainingstag A Mahlzeit 1" in den Mahlzeit-Namen — der Tag steht schon im Tag-Namen.
-Beschreibung: eine zusammenhängende Zeile mit den Lebensmitteln, Komma-getrennt.
+WICHTIG zu den Mahlzeit-Namen — verwende AUSSCHLIESSLICH diese sprechenden Namen, NIEMALS "Mahlzeit 1/2/3":
+- 1 Mahlzeit: Frühstück
+- 2: Frühstück, Abendessen
+- 3: Frühstück, Mittag, Abendessen
+- 4: Frühstück, Mittag, Snack, Abendessen
+- 5: Frühstück, Snack, Mittag, Snack, Abendessen
+- 6: Frühstück, Snack, Mittag, Snack, Abendessen, Spätsnack
+- 7+: Frühstück, Snack, Mittag, Snack, Abendessen, Snack, Spätsnack …
+Reihenfolge nach Tageszeit. Klar erkennbare Sonderfälle ("Pre-Workout", "Post-Workout", "Shake") darfst du als Namen behalten.
+Schreibe NIE den Tag-Namen in den Mahlzeit-Namen.
+
+KALORIEN-CHECK:
+${targetLine}
+Wenn die Summe der kcal eines Tages das jeweilige Ziel um mehr als 200 kcal überschreitet, lasse einen Snack (bevorzugt den kleinsten) WEG, damit die Summe näher am Ziel liegt. Hauptmahlzeiten (Frühstück, Mittag, Abendessen) NIE weglassen.
+
+Beschreibung: eine Zeile, Lebensmittel komma-getrennt.
 kcal/Protein/Kohlenhydrate/Fett: ganze Zahlen wenn angegeben, sonst null.
 
 Antworte ausschließlich mit gültigem JSON:
