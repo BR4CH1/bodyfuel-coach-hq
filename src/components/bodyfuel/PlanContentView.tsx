@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Loader2, Sparkles, Utensils, Dumbbell, Check, Shuffle } from "lucide-react";
@@ -47,6 +47,71 @@ const isRestDay = (name: string) => /rest|ruh|pause|off|frei/i.test(name);
 const pickRandom = <T,>(arr: T[]): T | null =>
   arr.length ? arr[Math.floor(Math.random() * arr.length)] : null;
 
+// Leite aus einem Mahlzeit-Namen einen "Tag-Gruppen-Schlüssel" ab.
+// Beispiele:
+//   "Trainingstag A Mahlzeit 1" -> { group: "Trainingstag A", label: "Mahlzeit 1" }
+//   "Restday Mahlzeit 2"        -> { group: "Restday",       label: "Mahlzeit 2" }
+//   "Frühstück"                  -> null  (keine Tag-Info im Namen)
+function extractDayGroup(name: string): { group: string; label: string } | null {
+  const m = name.match(
+    /^\s*(Trainingstag(?:\s+[A-Za-z0-9]+)?|Restday|Ruhetag|Pausentag|Tag\s*\d+|Montag|Dienstag|Mittwoch|Donnerstag|Freitag|Samstag|Sonntag)\b[\s\-–—:|·]*(.*)$/i,
+  );
+  if (!m) return null;
+  const group = m[1].replace(/\s+/g, " ").trim();
+  const rest = (m[2] ?? "").trim();
+  return { group, label: rest || group };
+}
+
+type VirtualDay = { id: string; name: string; realDayId: string };
+
+type DayLike = { id: string; name: string; sort_order: number };
+type ItemLike = { id: string; day_id: string; name: string; sort_order: number };
+
+function buildVirtualDays<T extends ItemLike>(days: DayLike[], items: T[]): {
+  virtualDays: VirtualDay[];
+  itemToVirtual: Record<string, string>;
+  itemDisplayName: Record<string, string>;
+} {
+  const virtualDays: VirtualDay[] = [];
+  const itemToVirtual: Record<string, string> = {};
+  const itemDisplayName: Record<string, string> = {};
+
+  for (const day of days) {
+    const dayItems = items
+      .filter((m) => m.day_id === day.id)
+      .sort((a, b) => a.sort_order - b.sort_order);
+
+    const groups = new Map<string, { items: T[]; firstIndex: number }>();
+    let allHaveGroup = dayItems.length > 0;
+    dayItems.forEach((m, idx) => {
+      const g = extractDayGroup(m.name);
+      if (!g) { allHaveGroup = false; return; }
+      const key = g.group;
+      if (!groups.has(key)) groups.set(key, { items: [], firstIndex: idx });
+      groups.get(key)!.items.push(m);
+      itemDisplayName[m.id] = g.label;
+    });
+
+    if (allHaveGroup && groups.size > 1) {
+      const sorted = [...groups.entries()].sort(
+        (a, b) => a[1].firstIndex - b[1].firstIndex,
+      );
+      for (const [groupName, info] of sorted) {
+        const vid = `${day.id}::${groupName}`;
+        virtualDays.push({ id: vid, name: groupName, realDayId: day.id });
+        info.items.forEach((m) => { itemToVirtual[m.id] = vid; });
+      }
+    } else {
+      virtualDays.push({ id: day.id, name: day.name, realDayId: day.id });
+      dayItems.forEach((m) => {
+        itemToVirtual[m.id] = day.id;
+        if (!itemDisplayName[m.id]) itemDisplayName[m.id] = m.name;
+      });
+    }
+  }
+  return { virtualDays, itemToVirtual, itemDisplayName };
+}
+
 export function PlanContentView({ clientId, planType }: Props) {
   const { isCoach, supabaseUser } = useSession();
   const parseNutrition = useServerFn(parseNutritionPlan);
@@ -72,6 +137,13 @@ export function PlanContentView({ clientId, planType }: Props) {
   const canTrack = planType === "nutrition" && isSelf;
   const pickStorageKey = `bf:plan:${planType}:${clientId}:${todayKey()}`;
 
+  // Virtuelle Tage: splittet einen echten "Day" anhand der Item-Namen
+  // (z.B. "Trainingstag A Mahlzeit 1") in mehrere Dropdown-Einträge auf.
+  const { virtualDays, itemToVirtual, itemDisplayName } = useMemo(() => {
+    const items: ItemLike[] = planType === "nutrition" ? meals : exercises;
+    return buildVirtualDays(days, items);
+  }, [days, meals, exercises, planType]);
+
   const reload = async () => {
     if (!clientId) return;
     setLoading(true);
@@ -94,14 +166,6 @@ export function PlanContentView({ clientId, planType }: Props) {
       .order("sort_order");
     const dayList = (dayRows as Day[]) ?? [];
     setDays(dayList);
-    setActiveDay((cur) => {
-      if (dayList.find((d) => d.id === cur)) return cur;
-      const saved = (() => {
-        try { return localStorage.getItem(pickStorageKey) ?? ""; } catch { return ""; }
-      })();
-      if (saved && dayList.find((d) => d.id === saved)) return saved;
-      return dayList[0]?.id ?? "";
-    });
 
     if (dayList.length) {
       const { data: itemRows } = await supabase
@@ -151,31 +215,34 @@ export function PlanContentView({ clientId, planType }: Props) {
     return () => { cancelled = true; };
   }, [clientId, planType, isSelf, getDayTypeFn]);
 
-  // Auto-pick a random matching plan day for today if no manual pick is stored yet.
+  // Auto-pick a matching virtual day for today; respect saved manual pick.
   useEffect(() => {
-    if (!days.length || !dayKind) return;
+    if (!virtualDays.length) return;
     let saved = "";
     try { saved = localStorage.getItem(pickStorageKey) ?? ""; } catch {}
-    if (saved && days.find((d) => d.id === saved)) return;
-    const matches = days.filter((d) =>
-      dayKind === "rest" ? isRestDay(d.name) : !isRestDay(d.name),
-    );
-    const pool = matches.length ? matches : days;
-    const pick = pickRandom(pool);
-    if (pick) {
-      setActiveDay(pick.id);
-      try { localStorage.setItem(pickStorageKey, pick.id); } catch {}
+    if (saved && virtualDays.find((d) => d.id === saved)) {
+      setActiveDay((cur) => (cur === saved ? cur : saved));
+      return;
     }
+    if (activeDay && virtualDays.find((d) => d.id === activeDay)) return;
+    const matches = dayKind
+      ? virtualDays.filter((d) =>
+          dayKind === "rest" ? isRestDay(d.name) : !isRestDay(d.name),
+        )
+      : [];
+    const pool = matches.length ? matches : virtualDays;
+    const pick = pickRandom(pool) ?? virtualDays[0];
+    if (pick) setActiveDay(pick.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [days, dayKind]);
+  }, [virtualDays, dayKind]);
 
   const pickAnotherDay = () => {
-    if (!days.length) return;
-    const matches = days.filter((d) =>
+    if (!virtualDays.length) return;
+    const matches = virtualDays.filter((d) =>
       dayKind === "rest" ? isRestDay(d.name) : !isRestDay(d.name),
     );
-    const pool = (matches.length ? matches : days).filter((d) => d.id !== activeDay);
-    const pick = pickRandom(pool.length ? pool : days);
+    const pool = (matches.length ? matches : virtualDays).filter((d) => d.id !== activeDay);
+    const pick = pickRandom(pool.length ? pool : virtualDays);
     if (pick) {
       setActiveDay(pick.id);
       try { localStorage.setItem(pickStorageKey, pick.id); } catch {}
@@ -307,7 +374,7 @@ export function PlanContentView({ clientId, planType }: Props) {
                   ? dayKind === "rest" ? "Heute: Restday" : "Heute: Trainingstag"
                   : "Tag wählen"}
               </label>
-              {isSelf && planType === "nutrition" && days.length > 1 && (
+              {isSelf && planType === "nutrition" && virtualDays.length > 1 && (
                 <button
                   onClick={pickAnotherDay}
                   className="inline-flex items-center gap-1 rounded-md border border-border bg-background/40 px-2 py-1 text-[11px] text-muted-foreground hover:text-gold"
@@ -324,7 +391,7 @@ export function PlanContentView({ clientId, planType }: Props) {
               }}
               className="mt-2 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             >
-              {days.map((d) => (
+              {virtualDays.map((d) => (
                 <option key={d.id} value={d.id}>{d.name}</option>
               ))}
             </select>
@@ -339,14 +406,15 @@ export function PlanContentView({ clientId, planType }: Props) {
 
           <div className="mt-3 space-y-3">
             {planType === "nutrition"
-              ? meals.filter((m) => m.day_id === activeDay).map((m) => {
+              ? meals.filter((m) => itemToVirtual[m.id] === activeDay).map((m) => {
                   const isTracked = !!tracked[m.id];
                   const busy = togglingId === m.id;
+                  const displayName = itemDisplayName[m.id] ?? m.name;
                   const inner = (
                     <>
                       <div className="flex items-baseline justify-between gap-3">
                         <div className="flex items-center gap-2">
-                          <div className="text-xs font-bold uppercase tracking-wider text-gold">{m.name}</div>
+                          <div className="text-xs font-bold uppercase tracking-wider text-gold">{displayName}</div>
                           {canTrack && isTracked && (
                             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
                               <Check className="h-3 w-3" /> getrackt
@@ -386,10 +454,10 @@ export function PlanContentView({ clientId, planType }: Props) {
                     <div key={m.id} className={`${base} ${style}`}>{inner}</div>
                   );
                 })
-              : exercises.filter((e) => e.day_id === activeDay).map((e) => (
+              : exercises.filter((e) => itemToVirtual[e.id] === activeDay).map((e) => (
                   <div key={e.id} className="rounded-2xl border border-border bg-background/40 p-4">
                     <div className="flex items-baseline justify-between gap-3">
-                      <div className="text-sm font-semibold">{e.name}</div>
+                      <div className="text-sm font-semibold">{itemDisplayName[e.id] ?? e.name}</div>
                       <div className="text-xs text-muted-foreground">
                         {e.target_sets ?? "—"}×{e.target_reps ?? "—"}
                       </div>
@@ -398,7 +466,7 @@ export function PlanContentView({ clientId, planType }: Props) {
                   </div>
                 ))}
             {((planType === "nutrition" ? meals : exercises).filter(
-              (x: any) => x.day_id === activeDay,
+              (x: any) => itemToVirtual[x.id] === activeDay,
             ).length === 0) && (
               <p className="text-sm text-muted-foreground">Keine {empty} für diesen Tag.</p>
             )}
