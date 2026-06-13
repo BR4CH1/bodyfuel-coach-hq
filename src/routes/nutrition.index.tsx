@@ -17,6 +17,7 @@ export const Route = createFileRoute("/nutrition/")({
 
 function NutritionIndex() {
   const { isCoach, supabaseUser } = useSession();
+  const { isTrial, isExpired } = useTrial();
   const [coachClientId, setCoachClientId] = useState<string>("");
   const [clients, setClients] = useState<{ id: string; display_name: string | null }[]>([]);
 
