@@ -204,3 +204,102 @@ Antworte ausschließlich mit gültigem JSON in dieser Form (ganzzahlige Werte, k
 
     return out;
   });
+
+export const generateMealRecipe = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { meal_id: string; force?: boolean }) => data)
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+
+    const { data: meal, error: mErr } = await supabase
+      .from("nutrition_plan_meals")
+      .select(
+        "id, name, description, kcal, protein_g, carbs_g, fat_g, day_id, recipe_ingredients, recipe_steps, recipe_generated_at",
+      )
+      .eq("id", data.meal_id)
+      .maybeSingle();
+    if (mErr || !meal) throw new Error(mErr?.message || "Mahlzeit nicht gefunden");
+
+    // Authorization: meal must belong to the caller's plan, or caller is coach
+    const { data: dayRow } = await supabase
+      .from("nutrition_plan_days")
+      .select("plan_id, nutrition_plans!inner(client_id)")
+      .eq("id", meal.day_id)
+      .maybeSingle();
+    const clientId = (dayRow as any)?.nutrition_plans?.client_id;
+    const { data: isCoach } = await supabase.rpc("has_role", { _user_id: userId, _role: "coach" });
+    if (clientId !== userId && !isCoach) throw new Error("Forbidden");
+
+    // Cache hit
+    if (!data.force && Array.isArray(meal.recipe_ingredients) && meal.recipe_ingredients.length > 0) {
+      return {
+        ingredients: meal.recipe_ingredients as string[],
+        steps: (meal.recipe_steps as string[]) ?? [],
+        cached: true,
+      };
+    }
+
+    const apiKey = process.env.LOVABLE_API_KEY;
+    if (!apiKey) throw new Error("LOVABLE_API_KEY fehlt");
+
+    const macros = [
+      meal.kcal != null ? `${meal.kcal} kcal` : null,
+      meal.protein_g != null ? `${meal.protein_g}g Eiweiß` : null,
+      meal.carbs_g != null ? `${meal.carbs_g}g Kohlenhydrate` : null,
+      meal.fat_g != null ? `${meal.fat_g}g Fett` : null,
+    ].filter(Boolean).join(", ");
+
+    const prompt = `Du bist Ernährungsberater. Erstelle ein einfaches, alltagstaugliches Rezept für genau EINE Person für die folgende Mahlzeit.
+
+Mahlzeit: ${meal.name}${meal.description ? ` — ${meal.description}` : ""}
+${macros ? `Zielwerte (möglichst treffen): ${macros}` : ""}
+
+Anforderungen:
+- Zutaten mit konkreten Mengen in Gramm/ml/Stück, so dass die Zielwerte ungefähr passen.
+- Wenn in der Beschreibung schon Lebensmittel + Mengen stehen, nutze GENAU diese.
+- 3 bis 6 kurze Zubereitungsschritte, jeder Schritt 1 Satz.
+- Auf Deutsch.
+
+Antworte ausschließlich mit gültigem JSON in diesem Format:
+{"ingredients": ["250 g Magerquark", "1 Banane (ca. 120 g)", "30 g Haferflocken"], "steps": ["Quark in eine Schüssel geben.", "Banane zerdrücken und unterheben."]}`;
+
+    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        response_format: { type: "json_object" },
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+    if (aiRes.status === 429) throw new Error("Rate-Limit erreicht — bitte gleich nochmal versuchen.");
+    if (aiRes.status === 402) throw new Error("KI-Guthaben aufgebraucht — bitte im Workspace aufladen.");
+    if (!aiRes.ok) {
+      const txt = await aiRes.text();
+      throw new Error(`KI-Fehler [${aiRes.status}]: ${txt.slice(0, 200)}`);
+    }
+    const aiJson = await aiRes.json();
+    const raw = aiJson?.choices?.[0]?.message?.content ?? "{}";
+    let parsed: { ingredients?: unknown; steps?: unknown } = {};
+    try { parsed = typeof raw === "string" ? JSON.parse(raw) : raw; } catch { parsed = {}; }
+
+    const ingredients = Array.isArray(parsed.ingredients)
+      ? parsed.ingredients.map((s) => String(s).trim()).filter(Boolean).slice(0, 30)
+      : [];
+    const steps = Array.isArray(parsed.steps)
+      ? parsed.steps.map((s) => String(s).trim()).filter(Boolean).slice(0, 20)
+      : [];
+    if (!ingredients.length) throw new Error("Rezept konnte nicht erstellt werden");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin
+      .from("nutrition_plan_meals")
+      .update({
+        recipe_ingredients: ingredients,
+        recipe_steps: steps,
+        recipe_generated_at: new Date().toISOString(),
+      })
+      .eq("id", meal.id);
+
+    return { ingredients, steps, cached: false };
+  });
