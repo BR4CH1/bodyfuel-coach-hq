@@ -434,7 +434,10 @@ function MeasurementsContent() {
                     <td className="py-2 pr-3">{i.muscle_mass_kg ?? "—"}</td>
                     <td className="py-2 pr-3">{i.waist_cm ?? "—"}</td>
                     <td className="py-2 pr-3">{i.chest_cm ?? "—"}</td>
-                    <td className="py-2 pr-3">{i.hip_cm ?? "—"}</td>
+                    <td className="py-2 pr-3">{i.thigh_left_cm ?? "—"}</td>
+                    <td className="py-2 pr-3">{i.thigh_right_cm ?? "—"}</td>
+                    <td className="py-2 pr-3">{i.biceps_left_cm ?? "—"}</td>
+                    <td className="py-2 pr-3">{i.biceps_right_cm ?? "—"}</td>
                     <td className="py-2 pr-3 text-right">
                       <button
                         onClick={() => removeMeasurement(i.id)}
