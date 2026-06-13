@@ -72,6 +72,8 @@ function CustomerDetail() {
   const [pkgKey, setPkgKey] = useState<string>("");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
+  const [coachingGoal, setCoachingGoal] = useState<string>("");
+  const [nextCheckin, setNextCheckin] = useState<string>("");
 
   useEffect(() => {
     if (activePkg) {
@@ -81,6 +83,30 @@ function CustomerDetail() {
       setEndDate(activePkg.end_date);
     }
   }, [activePkg]);
+
+  useEffect(() => {
+    if (data) {
+      setCoachingGoal((data as any).coaching_goal ?? "");
+      setNextCheckin((data as any).next_checkin_date ?? "");
+    }
+  }, [data]);
+
+  const saveCoaching = useMutation({
+    mutationFn: () =>
+      coachingFn({
+        data: {
+          user_id: userId,
+          coaching_goal: coachingGoal || null,
+          next_checkin_date: nextCheckin || null,
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Coaching-Infos gespeichert.");
+      qc.invalidateQueries({ queryKey: ["customer", userId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
 
   const update = useMutation({
     mutationFn: (patch: Parameters<typeof updFn>[0]["data"]) =>
