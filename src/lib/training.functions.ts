@@ -5,6 +5,7 @@ type ParsedExercise = {
   name: string;
   target_sets?: number | null;
   target_reps?: string | null;
+  target_weights?: string | null;
   notes?: string | null;
 };
 type ParsedDay = { name: string; exercises: ParsedExercise[] };
