@@ -381,10 +381,16 @@ function CoachDashboard() {
             ))}
           </Panel>
 
+          {/* Trial-Übersicht */}
+          <div className="lg:col-span-2">
+            <CoachTrialOverview />
+          </div>
+
           {/* Ranking */}
           <div className="lg:col-span-2">
             <RankingPanel />
           </div>
+
 
         </div>
       )}
