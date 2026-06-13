@@ -34,11 +34,11 @@ export function TrialNutritionPlan() {
     const today = new Date().toISOString().slice(0, 10);
     const { data } = await supabase
       .from("food_entries")
-      .select("name")
+      .select("source")
       .eq("user_id", supabaseUser.id)
       .eq("entry_date", today)
-      .eq("source", "trial-plan");
-    setTrackedKeys(new Set(((data as { name: string }[]) ?? []).map((r) => r.name)));
+      .like("source", "trial-plan:%");
+    setTrackedKeys(new Set(((data as { source: string }[]) ?? []).map((r) => r.source)));
   };
 
   useEffect(() => {
@@ -105,7 +105,7 @@ export function TrialNutritionPlan() {
 
       <div className="mt-4 space-y-3">
         {variant.meals.map((m, i) => {
-          const key = `${m.name} — ${m.description}`.slice(0, 200);
+          const key = `trial-plan:${dayId}:${variantId}:${i}`;
           return (
             <TrialMealCard
               key={`${dayId}-${variantId}-${i}`}
@@ -248,13 +248,13 @@ function TrialMealCard({
       user_id: supabaseUser.id,
       entry_date: new Date().toISOString().slice(0, 10),
       meal: mapMealCategory(meal.name),
-      name: entryKey,
+      name: `${meal.name} — ${meal.description}`.slice(0, 200),
       serving_g: 100,
       kcal: meal.kcal,
       protein_g: meal.protein_g,
       carbs_g: meal.carbs_g,
       fat_g: meal.fat_g,
-      source: "trial-plan",
+      source: entryKey,
     });
     setBusy(false);
     if (error) {
