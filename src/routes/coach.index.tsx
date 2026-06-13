@@ -76,7 +76,7 @@ function CoachDashboard() {
 
       let clientRows: Client[] = [];
       if (ids.length > 0) {
-        const [profiles, checkins, measurements] = await Promise.all([
+        const [profiles, checkins, measurements, foods, sets] = await Promise.all([
           supabase.from("profiles").select("id, display_name").in("id", ids),
           supabase
             .from("weekly_checkins")
@@ -88,6 +88,18 @@ function CoachDashboard() {
             .select("user_id, weight_kg, measured_at")
             .in("user_id", ids)
             .order("measured_at", { ascending: false }),
+          supabase
+            .from("food_entries")
+            .select("user_id, name, created_at")
+            .in("user_id", ids)
+            .order("created_at", { ascending: false })
+            .limit(200),
+          supabase
+            .from("training_set_logs")
+            .select("client_id, performed_at")
+            .in("client_id", ids)
+            .order("performed_at", { ascending: false })
+            .limit(200),
         ]);
 
         const lastCheckin = new Map<string, string>();
@@ -99,6 +111,15 @@ function CoachDashboard() {
           if (!lastWeight.has(m.user_id))
             lastWeight.set(m.user_id, { w: m.weight_kg, at: m.measured_at });
         });
+        const lastFood = new Map<string, { at: string; name: string }>();
+        (foods.data ?? []).forEach((f) => {
+          if (!lastFood.has(f.user_id))
+            lastFood.set(f.user_id, { at: f.created_at, name: f.name });
+        });
+        const lastTraining = new Map<string, string>();
+        (sets.data ?? []).forEach((s) => {
+          if (!lastTraining.has(s.client_id)) lastTraining.set(s.client_id, s.performed_at);
+        });
 
         clientRows = (profiles.data ?? []).map((p) => ({
           id: p.id,
@@ -106,8 +127,12 @@ function CoachDashboard() {
           last_checkin: lastCheckin.get(p.id) ?? null,
           last_weight: lastWeight.get(p.id)?.w ?? null,
           last_weight_at: lastWeight.get(p.id)?.at ?? null,
+          last_nutrition_at: lastFood.get(p.id)?.at ?? null,
+          last_nutrition_name: lastFood.get(p.id)?.name ?? null,
+          last_training_at: lastTraining.get(p.id) ?? null,
         }));
       }
+
       setClients(clientRows);
 
       const { data: leadsData } = await supabase
