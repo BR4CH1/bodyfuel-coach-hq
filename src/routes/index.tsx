@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useConsent } from "@/lib/consent";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import appDashboardAsset from "@/assets/app-dashboard.png.asset.json";
@@ -1441,5 +1442,12 @@ function SectionLabel({ children, center }: { children: React.ReactNode; center?
       <span className="h-1.5 w-1.5 rounded-full bg-gold" />
       {children}
     </div>
+  );
+}
+
+function CookieSettingsLink() {
+  const { openSettings } = useConsent();
+  return (
+    <button onClick={openSettings} className="text-left hover:text-foreground">Cookie-Einstellungen</button>
   );
 }
