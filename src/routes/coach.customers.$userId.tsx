@@ -379,6 +379,8 @@ function CustomerDetail() {
         )}
       </div>
 
+      <CustomerRecentActivityCard userId={userId} />
+
       <MeasurementsCard measurements={data.measurements ?? []} />
 
       <MacroTargetsCard userId={userId} />
