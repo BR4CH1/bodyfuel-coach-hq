@@ -195,13 +195,14 @@ export const createCustomer = createServerFn({ method: "POST" })
       last_name: string;
       email: string;
       phone?: string;
-      package: PackageKey;
+      package: PackageKey | "trial";
       price_eur: number;
       start_date: string;
       duration_days: number;
       notes?: string;
       origin?: string;
       bulls?: boolean;
+      trial_days?: number;
     }) => data,
   )
   .handler(async ({ data, context }) => {
@@ -210,6 +211,9 @@ export const createCustomer = createServerFn({ method: "POST" })
     if (!data.first_name?.trim() || !data.last_name?.trim() || !data.email?.trim()) {
       throw new Error("Vorname, Nachname und E-Mail erforderlich.");
     }
+
+    const isTrial = data.package === "trial";
+    const trialDays = Math.max(1, Math.min(365, Number(data.trial_days ?? 7)));
 
     // Immer die veröffentlichte URL nutzen, nie die Preview-Origin – sonst landen
     // Empfänger auf der Lovable-Preview, die einen Lovable-Login verlangt.
@@ -226,7 +230,7 @@ export const createCustomer = createServerFn({ method: "POST" })
       name: displayName,
       email,
       phone: data.phone || null,
-      desired_package: data.package,
+      desired_package: isTrial ? "trial" : data.package,
       status: "converted",
       message: data.notes || null,
     });
@@ -248,26 +252,41 @@ export const createCustomer = createServerFn({ method: "POST" })
     if (invErr) throw new Error(invErr.message);
     const newUserId = invited.user.id;
 
-    // Im Coaching-Profil den vollständigen Namen und optional Telefon speichern.
-    await supabaseAdmin
-      .from("profiles")
-      .update({ display_name: displayName, phone: data.phone || null })
-      .eq("id", newUserId);
+    if (isTrial) {
+      const today = new Date().toISOString().slice(0, 10);
+      const endDate = new Date();
+      endDate.setUTCDate(endDate.getUTCDate() + trialDays);
+      await supabaseAdmin
+        .from("profiles")
+        .update({
+          display_name: displayName,
+          phone: data.phone || null,
+          trial_status: "trial",
+          trial_start: today,
+          trial_end: endDate.toISOString().slice(0, 10),
+        })
+        .eq("id", newUserId);
+    } else {
+      await supabaseAdmin
+        .from("profiles")
+        .update({ display_name: displayName, phone: data.phone || null })
+        .eq("id", newUserId);
 
-    const start = new Date(data.start_date);
-    const end = new Date(start);
-    end.setDate(end.getDate() + Number(data.duration_days || 30));
+      const start = new Date(data.start_date);
+      const end = new Date(start);
+      end.setDate(end.getDate() + Number(data.duration_days || 30));
 
-    const { error: pkgErr } = await supabaseAdmin.from("customer_packages").insert({
-      user_id: newUserId,
-      package: data.package,
-      price_eur: data.price_eur,
-      start_date: data.start_date,
-      end_date: end.toISOString().slice(0, 10),
-      is_active: true,
-      notes: data.notes ?? null,
-    });
-    if (pkgErr) throw new Error(pkgErr.message);
+      const { error: pkgErr } = await supabaseAdmin.from("customer_packages").insert({
+        user_id: newUserId,
+        package: data.package as PackageKey,
+        price_eur: data.price_eur,
+        start_date: data.start_date,
+        end_date: end.toISOString().slice(0, 10),
+        is_active: true,
+        notes: data.notes ?? null,
+      });
+      if (pkgErr) throw new Error(pkgErr.message);
+    }
 
     if (data.bulls) {
       await supabaseAdmin
@@ -278,7 +297,7 @@ export const createCustomer = createServerFn({ method: "POST" })
         );
     }
 
-    return { ok: true, user_id: newUserId };
+    return { ok: true, user_id: newUserId, trial: isTrial };
   });
 
 export const getCustomerDetail = createServerFn({ method: "POST" })
