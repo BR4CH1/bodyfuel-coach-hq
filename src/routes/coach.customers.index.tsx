@@ -16,7 +16,7 @@ export const Route = createFileRoute("/coach/customers/")({
   ),
 });
 
-type Filter = "all" | "due" | "overdue";
+type Filter = "all" | "due" | "overdue" | "bulls";
 
 function CustomersList() {
   const fn = useServerFn(listCustomers);
@@ -29,12 +29,14 @@ function CustomersList() {
   const counts = useMemo(() => {
     const due = (data ?? []).filter((c: any) => c.payment_status === "due").length;
     const overdue = (data ?? []).filter((c: any) => c.payment_status === "overdue").length;
-    return { all: data?.length ?? 0, due, overdue };
+    const bulls = (data ?? []).filter((c: any) => (c.groups ?? []).includes("bulls")).length;
+    return { all: data?.length ?? 0, due, overdue, bulls };
   }, [data]);
 
   const filtered = useMemo(() => {
     if (!data) return [];
     if (filter === "all") return data;
+    if (filter === "bulls") return (data as any[]).filter((c) => (c.groups ?? []).includes("bulls"));
     return (data as any[]).filter((c) => c.payment_status === filter);
   }, [data, filter]);
 
