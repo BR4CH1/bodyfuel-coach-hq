@@ -32,6 +32,7 @@ import { NutritionTargetsEditor } from "@/components/bodyfuel/NutritionTargetsEd
 import { MacroTargetsCard } from "@/components/bodyfuel/MacroTargetsCard";
 import { TrainingBonusCard } from "@/components/bodyfuel/TrainingBonusCard";
 import { CustomerRecentActivityCard } from "@/components/bodyfuel/CustomerRecentActivityCard";
+import { CoachTrialCard } from "@/components/bodyfuel/CoachTrialCard";
 
 
 
@@ -291,6 +292,8 @@ function CustomerDetail() {
           </form>
         )}
       </div>
+
+      <CoachTrialCard userId={userId} />
 
       <GroupsCard
         userId={userId}

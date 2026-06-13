@@ -11,6 +11,7 @@ import { MacroTargetsCard } from "@/components/bodyfuel/MacroTargetsCard";
 import { DayTypePrompt } from "@/components/bodyfuel/DayTypePrompt";
 import { DailyMacroSummary } from "@/components/bodyfuel/DailyMacroSummary";
 import { PointsBreakdownCard } from "@/components/bodyfuel/PointsBreakdownCard";
+import { TrialStatusBanner, TrialWelcomeDialog } from "@/components/bodyfuel/Trial";
 
 import { useSession } from "@/lib/bodyfuel/session";
 import { supabase } from "@/integrations/supabase/client";
@@ -85,6 +86,9 @@ function DashboardContent() {
 
   return (
     <div className="space-y-6">
+      <TrialWelcomeDialog />
+      <TrialStatusBanner />
+
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>

@@ -2,9 +2,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
-import { ChevronRight, Plus, Inbox, AlertTriangle, Clock } from "lucide-react";
+import { ChevronRight, Plus, Inbox, AlertTriangle, Clock, Sparkles } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { listCustomers } from "@/lib/coaching.functions";
+import { listTrialUsers } from "@/lib/trial.functions";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/coach/customers/")({
@@ -16,22 +17,35 @@ export const Route = createFileRoute("/coach/customers/")({
   ),
 });
 
-type Filter = "all" | "due" | "overdue" | "bulls";
+type Filter = "all" | "due" | "overdue" | "bulls" | "trial" | "trial_expired";
+
+function daysLeft(end: string | null): number | null {
+  if (!end) return null;
+  return Math.ceil((new Date(`${end}T23:59:59Z`).getTime() - Date.now()) / 86_400_000);
+}
 
 function CustomersList() {
   const fn = useServerFn(listCustomers);
+  const trialFn = useServerFn(listTrialUsers);
   const { data, isLoading } = useQuery({
     queryKey: ["customers"],
     queryFn: () => fn(),
   });
+  const { data: trials } = useQuery({
+    queryKey: ["trial-users"],
+    queryFn: () => trialFn(),
+  });
   const [filter, setFilter] = useState<Filter>("all");
+
+  const trialCount = (trials ?? []).filter((t: any) => t.trial_status === "trial").length;
+  const trialExpiredCount = (trials ?? []).filter((t: any) => t.trial_status === "trial_expired").length;
 
   const counts = useMemo(() => {
     const due = (data ?? []).filter((c: any) => c.payment_status === "due").length;
     const overdue = (data ?? []).filter((c: any) => c.payment_status === "overdue").length;
     const bulls = (data ?? []).filter((c: any) => (c.groups ?? []).includes("bulls")).length;
-    return { all: data?.length ?? 0, due, overdue, bulls };
-  }, [data]);
+    return { all: data?.length ?? 0, due, overdue, bulls, trial: trialCount, trial_expired: trialExpiredCount };
+  }, [data, trialCount, trialExpiredCount]);
 
   const filtered = useMemo(() => {
     if (!data) return [];
@@ -39,6 +53,7 @@ function CustomersList() {
     if (filter === "bulls") return (data as any[]).filter((c) => (c.groups ?? []).includes("bulls"));
     return (data as any[]).filter((c) => c.payment_status === filter);
   }, [data, filter]);
+
 
   return (
     <div className="space-y-6">
@@ -108,6 +123,8 @@ function CustomersList() {
           ["due", `Zahlung fällig (${counts.due})`],
           ["overdue", `Überfällig (${counts.overdue})`],
           ["bulls", `Bulls (${counts.bulls})`],
+          ["trial", `Trial (${counts.trial})`],
+          ["trial_expired", `Trial abgelaufen (${counts.trial_expired})`],
         ] as [Filter, string][]).map(([key, label]) => (
           <button
             key={key}
@@ -115,10 +132,8 @@ function CustomersList() {
             className={
               "rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition " +
               (filter === key
-                ? key === "overdue"
+                ? key === "overdue" || key === "trial_expired"
                   ? "border-destructive bg-destructive/15 text-destructive"
-                  : key === "due"
-                  ? "border-gold bg-gold/15 text-gold"
                   : "border-gold bg-gold/15 text-gold"
                 : "border-border text-muted-foreground hover:border-gold/40")
             }
@@ -128,8 +143,16 @@ function CustomersList() {
         ))}
       </div>
 
-      {isLoading && <p className="text-sm text-muted-foreground">Lade…</p>}
-      {data && filtered.length === 0 && (
+      {(filter === "trial" || filter === "trial_expired") && (
+        <TrialList
+          users={(trials ?? []).filter((t: any) => t.trial_status === filter)}
+        />
+      )}
+
+      {filter !== "trial" && filter !== "trial_expired" && isLoading && (
+        <p className="text-sm text-muted-foreground">Lade…</p>
+      )}
+      {filter !== "trial" && filter !== "trial_expired" && data && filtered.length === 0 && (
         <p className="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground">
           {filter === "all"
             ? "Noch keine Kunden angelegt."
@@ -137,7 +160,8 @@ function CustomersList() {
         </p>
       )}
 
-      {filtered.length > 0 && (
+
+      {filter !== "trial" && filter !== "trial_expired" && filtered.length > 0 && (
         <>
           {/* Desktop table */}
           <div className="hidden overflow-x-auto rounded-2xl border border-border bg-card sm:block">
@@ -282,3 +306,59 @@ function BullsBadge() {
     </span>
   );
 }
+
+function TrialList({ users }: { users: any[] }) {
+  if (users.length === 0) {
+    return (
+      <p className="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground">
+        Keine Nutzer in dieser Ansicht.
+      </p>
+    );
+  }
+  return (
+    <div className="space-y-2">
+      {users.map((u) => {
+        const dl = u.trial_end
+          ? Math.ceil(
+              (new Date(`${u.trial_end}T23:59:59Z`).getTime() - Date.now()) / 86_400_000,
+            )
+          : null;
+        const expired = u.trial_status === "trial_expired";
+        return (
+          <Link
+            key={u.id}
+            to="/coach/customers/$userId"
+            params={{ userId: u.id }}
+            className="flex items-center justify-between rounded-2xl border border-border bg-card p-4 transition hover:border-gold/40"
+          >
+            <div>
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-gold" />
+                <span className="font-semibold">{u.display_name ?? "—"}</span>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Trial-Ende: {u.trial_end ? new Date(u.trial_end).toLocaleDateString("de-DE") : "—"}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span
+                className={
+                  "rounded-full px-2 py-1 text-[10px] font-bold uppercase " +
+                  (expired
+                    ? "bg-destructive/15 text-destructive"
+                    : "bg-gold/15 text-gold")
+                }
+              >
+                {expired
+                  ? "Abgelaufen"
+                  : `${Math.max(0, dl ?? 0)} ${dl === 1 ? "Tag" : "Tage"} verbleibend`}
+              </span>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </div>
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
+
