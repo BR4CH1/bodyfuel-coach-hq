@@ -444,8 +444,16 @@ function RealUserDashboard() {
             Pflege deine Körpermaße, damit dein Coach deinen Fortschritt sieht.
           </p>
         </div>
-        <DashboardQuickActions />
+        <DashboardQuickActions
+          excludeKeys={[
+            ...(trainedToday ? (["training"] as const) : []),
+            ...(measuredToday ? (["measurement"] as const) : []),
+          ]}
+        />
       </div>
+
+      {supabaseUser && <DayTypePrompt userId={supabaseUser.id} />}
+      {supabaseUser && <DailyMacroSummary userId={supabaseUser.id} />}
 
 
       {todayDbPoints < MAX_DAILY_POINTS && (
