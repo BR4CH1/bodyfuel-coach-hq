@@ -27,6 +27,7 @@ type Exercise = {
   name: string;
   target_sets: number | null;
   target_reps: string | null;
+  target_weights: string | null;
   notes: string | null;
   sort_order: number;
 };
@@ -454,17 +455,26 @@ export function PlanContentView({ clientId, planType }: Props) {
                     <div key={m.id} className={`${base} ${style}`}>{inner}</div>
                   );
                 })
-              : exercises.filter((e) => itemToVirtual[e.id] === activeDay).map((e) => (
-                  <div key={e.id} className="rounded-2xl border border-border bg-background/40 p-4">
-                    <div className="flex items-baseline justify-between gap-3">
-                      <div className="text-sm font-semibold">{itemDisplayName[e.id] ?? e.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {e.target_sets ?? "—"}×{e.target_reps ?? "—"}
+              : exercises.filter((e) => itemToVirtual[e.id] === activeDay).map((e) => {
+                  const reps = (e.target_reps ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+                  const weights = (e.target_weights ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+                  return (
+                    <div key={e.id} className="rounded-2xl border border-border bg-background/40 p-4">
+                      <div className="flex items-baseline justify-between gap-3">
+                        <div className="text-sm font-semibold">{itemDisplayName[e.id] ?? e.name}</div>
+                        <div className="text-xs text-muted-foreground text-right">
+                          {e.target_sets ?? "—"}×{reps.length ? reps.join(", ") : "—"}
+                        </div>
                       </div>
+                      {weights.length > 0 && (
+                        <div className="mt-1 text-xs text-gold/90">
+                          {weights.map((w, i) => /^\d/.test(w) ? `${w} kg` : w).join(" · ")}
+                        </div>
+                      )}
+                      {e.notes && <p className="mt-1 text-xs text-muted-foreground">{e.notes}</p>}
                     </div>
-                    {e.notes && <p className="mt-1 text-xs text-muted-foreground">{e.notes}</p>}
-                  </div>
-                ))}
+                  );
+                })}
             {((planType === "nutrition" ? meals : exercises).filter(
               (x: any) => itemToVirtual[x.id] === activeDay,
             ).length === 0) && (
