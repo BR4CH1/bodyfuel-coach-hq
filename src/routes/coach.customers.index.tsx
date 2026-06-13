@@ -107,6 +107,7 @@ function CustomersList() {
           ["all", `Alle (${counts.all})`],
           ["due", `Zahlung fällig (${counts.due})`],
           ["overdue", `Überfällig (${counts.overdue})`],
+          ["bulls", `Bulls (${counts.bulls})`],
         ] as [Filter, string][]).map(([key, label]) => (
           <button
             key={key}
