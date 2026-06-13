@@ -19,15 +19,24 @@ function mapOff(p: any): FoodResult | null {
   const n = p?.nutriments;
   if (!n) return null;
   const kcal = Number(n["energy-kcal_100g"] ?? n["energy-kcal"] ?? 0);
-  if (!kcal && !n["proteins_100g"]) return null;
+  const protein = Number(n["proteins_100g"] ?? 0);
+  // Quality filter: must have at least kcal AND (protein or carbs/fat)
+  if (!kcal || (!protein && !Number(n["carbohydrates_100g"]) && !Number(n["fat_100g"]))) {
+    return null;
+  }
   const sq = Number(p.serving_quantity);
   const serving_g = isFinite(sq) && sq > 0 ? sq : null;
   return {
-    name: p.product_name || p.generic_name || "Unbekannt",
+    name:
+      p.product_name_de ||
+      p.product_name ||
+      p.generic_name_de ||
+      p.generic_name ||
+      "Unbekannt",
     brand: p.brands || null,
     barcode: p.code || null,
     kcal_per_100g: kcal,
-    protein_per_100g: Number(n["proteins_100g"] ?? 0),
+    protein_per_100g: protein,
     carbs_per_100g: Number(n["carbohydrates_100g"] ?? 0),
     fat_per_100g: Number(n["fat_100g"] ?? 0),
     serving_g,
@@ -35,6 +44,20 @@ function mapOff(p: any): FoodResult | null {
   };
 }
 
+function scoreResult(r: FoodResult, q: string): number {
+  const name = r.name.toLowerCase();
+  const term = q.toLowerCase();
+  let score = 0;
+  if (name === term) score += 100;
+  else if (name.startsWith(term)) score += 60;
+  else if (name.includes(term)) score += 30;
+  if (r.serving_g) score += 15; // hat Portionsgröße
+  if (r.protein_per_100g > 0 && r.carbs_per_100g >= 0 && r.fat_per_100g >= 0) score += 10;
+  if (r.brand) score += 3;
+  // Kürzere Namen meist generischer / relevanter
+  score -= Math.min(20, Math.max(0, name.length - term.length) / 4);
+  return score;
+}
 
 /** Barcode lookup via OpenFoodFacts */
 export const lookupBarcode = createServerFn({ method: "POST" })
@@ -51,48 +74,71 @@ export const lookupBarcode = createServerFn({ method: "POST" })
     return mapped;
   });
 
-/** Search via OpenFoodFacts (German-language hint, no country filter to maximise matches) */
+/** Search foods: Search-a-licious (smart relevance) + legacy OFF fallback. */
 export const searchFoods = createServerFn({ method: "POST" })
   .inputValidator((d: { query: string }) => d)
   .handler(async ({ data }) => {
     const q = data.query.trim();
     if (!q) return [] as FoodResult[];
-    const fields =
-      "code,product_name,product_name_de,generic_name,brands,nutriments,serving_size,serving_quantity";
-    const tryUrls = [
-      // German DB first — most German products are indexed here
-      `https://de.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=25&fields=${fields}`,
-      // World DB as fallback
-      `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=25&fields=${fields}`,
-    ];
+
     const seen = new Set<string>();
     const arr: FoodResult[] = [];
-    for (const url of tryUrls) {
-      try {
-        const res = await fetch(url, {
-          headers: { "User-Agent": "BodyFuelCoaching/1.0" },
-        });
-        if (!res.ok) continue;
+    const pushUnique = (m: FoodResult | null) => {
+      if (!m) return;
+      const key = (m.barcode || m.name.toLowerCase()) + "|" + (m.brand ?? "").toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      arr.push(m);
+    };
+
+    // 1) Search-a-licious — neue OFF-Suche, deutlich bessere Relevanz
+    try {
+      const url =
+        `https://search.openfoodfacts.org/search?` +
+        `q=${encodeURIComponent(q)}` +
+        `&langs=de,en&page_size=30&fields=code,product_name,product_name_de,generic_name,generic_name_de,brands,nutriments,serving_size,serving_quantity` +
+        `&sort_by=-popularity_key&countries_tags=germany,switzerland,austria`;
+      const res = await fetch(url, {
+        headers: { "User-Agent": "BodyFuelCoaching/1.0 (coach app)" },
+      });
+      if (res.ok) {
         const json = (await res.json()) as any;
-        for (const p of json.products ?? []) {
-          const m = mapOff({
-            ...p,
-            product_name: p.product_name_de || p.product_name || p.generic_name,
-          });
-          if (!m) continue;
-          const key = (m.barcode || m.name) + "|" + (m.brand ?? "");
-          if (seen.has(key)) continue;
-          seen.add(key);
-          arr.push(m);
-          if (arr.length >= 20) break;
+        for (const p of json.hits ?? json.products ?? []) {
+          pushUnique(mapOff(p));
         }
-        if (arr.length) break;
-      } catch {
-        /* try next */
+      }
+    } catch {
+      /* fall through */
+    }
+
+    // 2) Fallback: klassische Suche (DE, dann World), falls Search-a-licious zu wenig liefert
+    if (arr.length < 8) {
+      const fields =
+        "code,product_name,product_name_de,generic_name,generic_name_de,brands,nutriments,serving_size,serving_quantity";
+      const urls = [
+        `https://de.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=25&sort_by=unique_scans_n&fields=${fields}`,
+        `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=25&sort_by=unique_scans_n&fields=${fields}`,
+      ];
+      for (const url of urls) {
+        try {
+          const res = await fetch(url, {
+            headers: { "User-Agent": "BodyFuelCoaching/1.0 (coach app)" },
+          });
+          if (!res.ok) continue;
+          const json = (await res.json()) as any;
+          for (const p of json.products ?? []) pushUnique(mapOff(p));
+          if (arr.length >= 15) break;
+        } catch {
+          /* try next */
+        }
       }
     }
-    return arr;
+
+    // Eigene Relevanz-Sortierung
+    arr.sort((a, b) => scoreResult(b, q) - scoreResult(a, q));
+    return arr.slice(0, 25);
   });
+
 
 /* ----------- Targets (coach only) ----------- */
 
