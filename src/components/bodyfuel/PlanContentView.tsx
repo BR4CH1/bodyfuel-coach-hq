@@ -307,7 +307,7 @@ export function PlanContentView({ clientId, planType }: Props) {
         // Prefer "Mahlzeit N" number from the name when present
         const mn = m.name.match(/Mahlzeit\s*(\d+)/i);
         if (mn) idx = Math.max(0, parseInt(mn[1], 10) - 1);
-        const slot = mealSlot(idx, list.length);
+        const slot = slotFromName(m.name) ?? slotFromName(itemDisplayName[m.id] ?? "") ?? mealSlot(idx, list.length);
 
         let kcal = m.kcal ?? 0;
         let p = m.protein_g ?? 0;
