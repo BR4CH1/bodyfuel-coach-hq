@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { PlansView } from "@/components/bodyfuel/PlansView";
 import { TrainingTracker } from "@/components/bodyfuel/TrainingTracker";
@@ -8,6 +9,7 @@ import { useSession } from "@/lib/bodyfuel/session";
 import { supabase } from "@/integrations/supabase/client";
 import { useTrial } from "@/hooks/use-trial";
 import { TrialTrainingPlan } from "@/components/bodyfuel/TrialPlanView";
+import { ensureTrialTrainingPlan } from "@/lib/trial.functions";
 
 export const Route = createFileRoute("/training")({
   head: () => ({ meta: [{ title: "Trainingsplan — BODYFUEL" }] }),
