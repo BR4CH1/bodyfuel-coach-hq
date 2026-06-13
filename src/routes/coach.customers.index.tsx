@@ -274,3 +274,11 @@ function PaymentBadge({ c }: { c: any }) {
     </span>
   );
 }
+
+function BullsBadge() {
+  return (
+    <span className="inline-flex shrink-0 rounded-full border border-red-500/60 bg-red-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-red-500">
+      Bulls
+    </span>
+  );
+}
