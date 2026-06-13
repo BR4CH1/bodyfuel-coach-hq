@@ -341,12 +341,36 @@ function MeasurementsContent() {
               onChange={(e) => setM({ ...m, chest_cm: e.target.value })}
             />
           </Field>
-          <Field label="Hüfte (cm)">
+          <Field label="Oberschenkel L (cm)">
             <Input
               type="number"
               step="0.1"
-              value={m.hip_cm}
-              onChange={(e) => setM({ ...m, hip_cm: e.target.value })}
+              value={m.thigh_left_cm}
+              onChange={(e) => setM({ ...m, thigh_left_cm: e.target.value })}
+            />
+          </Field>
+          <Field label="Oberschenkel R (cm)">
+            <Input
+              type="number"
+              step="0.1"
+              value={m.thigh_right_cm}
+              onChange={(e) => setM({ ...m, thigh_right_cm: e.target.value })}
+            />
+          </Field>
+          <Field label="Bizeps L (cm)">
+            <Input
+              type="number"
+              step="0.1"
+              value={m.biceps_left_cm}
+              onChange={(e) => setM({ ...m, biceps_left_cm: e.target.value })}
+            />
+          </Field>
+          <Field label="Bizeps R (cm)">
+            <Input
+              type="number"
+              step="0.1"
+              value={m.biceps_right_cm}
+              onChange={(e) => setM({ ...m, biceps_right_cm: e.target.value })}
             />
           </Field>
           <Field label="Notizen" className="sm:col-span-2">
