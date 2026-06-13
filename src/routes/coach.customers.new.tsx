@@ -25,7 +25,9 @@ export const Route = createFileRoute("/coach/customers/new")({
   ),
 });
 
-const DEFAULT_PRICE = { starter: 79, coaching: 129, premium: 199 } as const;
+const DEFAULT_PRICE = { starter: 79, coaching: 129, premium: 199, trial: 0 } as const;
+
+type PackageOption = "starter" | "coaching" | "premium" | "trial";
 
 function NewCustomerForm() {
   const fn = useServerFn(createCustomer);
@@ -36,13 +38,15 @@ function NewCustomerForm() {
     last_name: "",
     email: "",
     phone: "",
-    package: "coaching" as "starter" | "coaching" | "premium",
+    package: "coaching" as PackageOption,
     price_eur: 129,
     start_date: new Date().toISOString().slice(0, 10),
     duration_days: 30,
+    trial_days: 7,
     notes: "",
     bulls: false,
   });
+  const isTrial = form.package === "trial";
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
