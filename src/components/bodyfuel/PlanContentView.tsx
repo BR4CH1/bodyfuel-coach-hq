@@ -137,6 +137,13 @@ export function PlanContentView({ clientId, planType }: Props) {
   const canTrack = planType === "nutrition" && isSelf;
   const pickStorageKey = `bf:plan:${planType}:${clientId}:${todayKey()}`;
 
+  // Virtuelle Tage: splittet einen echten "Day" anhand der Item-Namen
+  // (z.B. "Trainingstag A Mahlzeit 1") in mehrere Dropdown-Einträge auf.
+  const { virtualDays, itemToVirtual, itemDisplayName } = useMemo(() => {
+    const items = planType === "nutrition" ? meals : exercises;
+    return buildVirtualDays(days, items);
+  }, [days, meals, exercises, planType]);
+
   const reload = async () => {
     if (!clientId) return;
     setLoading(true);
