@@ -326,7 +326,7 @@ export const updateCustomerCoachingInfo = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertCoach(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const patch: Record<string, any> = {};
+    const patch: { coaching_goal?: string | null; next_checkin_date?: string | null } = {};
     if (data.coaching_goal !== undefined) patch.coaching_goal = data.coaching_goal;
     if (data.next_checkin_date !== undefined) patch.next_checkin_date = data.next_checkin_date;
     const { error } = await supabaseAdmin
@@ -336,6 +336,7 @@ export const updateCustomerCoachingInfo = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
 
 
 export const getCustomerRecentActivity = createServerFn({ method: "POST" })
