@@ -52,6 +52,7 @@ export function PlanContentView({ clientId, planType }: Props) {
   const parseNutrition = useServerFn(parseNutritionPlan);
   const parseTraining = useServerFn(parseTrainingPlan);
   const getDayTypeFn = useServerFn(getDayType);
+  const estimateMacros = useServerFn(estimateMealMacros);
 
   const [plan, setPlan] = useState<Plan | null>(null);
   const [days, setDays] = useState<Day[]>([]);
