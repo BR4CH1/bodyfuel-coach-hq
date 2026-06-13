@@ -1,12 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { BullsGate } from "@/components/bodyfuel/BullsGate";
 import { BullsHero } from "@/components/bodyfuel/BullsHero";
-import { CoachingUpsell } from "@/components/bodyfuel/CoachingUpsell";
-import { trackHubEvent } from "@/lib/bulls.functions";
+import { getBullsProfile, trackHubEvent, type BullsPosition } from "@/lib/bulls.functions";
 
 export const Route = createFileRoute("/bulls/benchmarks")({
   head: () => ({ meta: [{ title: "Positions-Benchmarks — Bulls Hub" }] }),
@@ -19,22 +19,26 @@ export const Route = createFileRoute("/bulls/benchmarks")({
   ),
 });
 
-const BENCHMARKS = [
-  ["QB", "Beweglichkeit, Schultergesundheit, Core und Energieversorgung."],
-  ["RB", "Explosivität, Beinpower und Regeneration."],
-  ["WR", "Geschwindigkeit, Sprungkraft und niedriger Körperfettanteil."],
-  ["TE", "Kraft, Athletik und Beweglichkeit."],
-  ["OL", "Maximalkraft, Mobilität und Körperzusammensetzung."],
-  ["DL", "Explosivität, Kraft und schnelle erste Schritte."],
-  ["LB", "Kraft, Geschwindigkeit, Richtungswechsel und Core."],
-  ["DB", "Speed, Beweglichkeit und Richtungswechsel."],
-  ["Kicker / Punter", "Hüftmobilität, Beinexplosivität und Core."],
-  ["Coach / Sonstiges", "Gesundheit, Energie und bessere Gewohnheiten."],
-] as const;
+const BENCHMARKS: Record<BullsPosition, { label: string; focus: string }> = {
+  QB: { label: "QB — Quarterback", focus: "Beweglichkeit, Schultergesundheit, Core und Energieversorgung." },
+  RB: { label: "RB — Running Back", focus: "Explosivität, Beinpower und Regeneration." },
+  WR: { label: "WR — Wide Receiver", focus: "Geschwindigkeit, Sprungkraft und niedriger Körperfettanteil." },
+  TE: { label: "TE — Tight End", focus: "Kraft, Athletik und Beweglichkeit." },
+  OL: { label: "OL — Offensive Line", focus: "Maximalkraft, Mobilität und Körperzusammensetzung." },
+  DL: { label: "DL — Defensive Line", focus: "Explosivität, Kraft und schnelle erste Schritte." },
+  LB: { label: "LB — Linebacker", focus: "Kraft, Geschwindigkeit, Richtungswechsel und Core." },
+  DB: { label: "DB — Defensive Back", focus: "Speed, Beweglichkeit und Richtungswechsel." },
+  KP: { label: "Kicker / Punter", focus: "Hüftmobilität, Beinexplosivität und Core." },
+  COACH: { label: "Coach / Sonstiges", focus: "Gesundheit, Energie und bessere Gewohnheiten." },
+};
 
 function BenchmarksPage() {
   const fn = useServerFn(trackHubEvent);
+  const profileQ = useQuery({ queryKey: ["bulls-profile"], queryFn: useServerFn(getBullsProfile) });
   useEffect(() => { fn({ data: { kind: "benchmarks_opened" } }).catch(() => {}); }, [fn]);
+
+  const position = (profileQ.data as any)?.position as BullsPosition | undefined;
+  const bm = position ? BENCHMARKS[position] : null;
 
   return (
     <div className="space-y-6">
@@ -44,19 +48,15 @@ function BenchmarksPage() {
       <BullsHero
         eyebrow="Position Benchmarks"
         title="Worauf es auf deiner Position ankommt"
-        subtitle="Die wichtigsten Schwerpunkte pro Position — als Orientierung für dein Training."
+        subtitle={bm ? `Schwerpunkte für deine Position: ${bm.label}.` : "Lade …"}
       />
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {BENCHMARKS.map(([pos, focus]) => (
-          <div key={pos} className="rounded-2xl border border-border bg-card p-5">
-            <div className="font-display text-2xl font-bold text-bulls-red">{pos}</div>
-            <p className="mt-2 text-sm text-foreground/90">{focus}</p>
-          </div>
-        ))}
-      </div>
-
-      <CoachingUpsell />
+      {bm && (
+        <div className="rounded-2xl border border-border bg-card p-6">
+          <div className="font-display text-3xl font-bold text-bulls-red">{bm.label}</div>
+          <p className="mt-3 text-base text-foreground/90">{bm.focus}</p>
+        </div>
+      )}
     </div>
   );
 }
