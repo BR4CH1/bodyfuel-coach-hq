@@ -93,7 +93,14 @@ export function PlanContentView({ clientId, planType }: Props) {
       .order("sort_order");
     const dayList = (dayRows as Day[]) ?? [];
     setDays(dayList);
-    setActiveDay((cur) => (dayList.find((d) => d.id === cur) ? cur : dayList[0]?.id ?? ""));
+    setActiveDay((cur) => {
+      if (dayList.find((d) => d.id === cur)) return cur;
+      const saved = (() => {
+        try { return localStorage.getItem(pickStorageKey) ?? ""; } catch { return ""; }
+      })();
+      if (saved && dayList.find((d) => d.id === saved)) return saved;
+      return dayList[0]?.id ?? "";
+    });
 
     if (dayList.length) {
       const { data: itemRows } = await supabase
