@@ -161,7 +161,7 @@ function CustomersList() {
       )}
 
 
-      {filtered.length > 0 && (
+      {filter !== "trial" && filter !== "trial_expired" && filtered.length > 0 && (
         <>
           {/* Desktop table */}
           <div className="hidden overflow-x-auto rounded-2xl border border-border bg-card sm:block">
