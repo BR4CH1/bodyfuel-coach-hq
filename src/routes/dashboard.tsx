@@ -297,6 +297,7 @@ function RealUserDashboard() {
   const [latest, setLatest] = useState<LatestMeasurement | null>(null);
   const [count, setCount] = useState(0);
   const [todayDbPoints, setTodayDbPoints] = useState(0);
+  const [nextCheckin, setNextCheckin] = useState<string | null>(null);
   const [userPts, setUserPts] = useState<{
     total: number;
     daily: number;
@@ -343,14 +344,80 @@ function RealUserDashboard() {
         level: up?.level ?? 1,
       });
 
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("next_checkin_date")
+        .eq("id", supabaseUser.id)
+        .maybeSingle();
+      setNextCheckin((prof as any)?.next_checkin_date ?? null);
+
       setLoading(false);
     })();
   }, [supabaseUser, todayStr]);
 
   const name = profile?.display_name?.split(" ")[0] ?? supabaseUser?.email?.split("@")[0] ?? "";
 
+  const checkinInfo = (() => {
+    if (!nextCheckin) return null;
+    const today = new Date(todayStr);
+    const target = new Date(nextCheckin);
+    const diffDays = Math.round((target.getTime() - today.getTime()) / 86400000);
+    if (diffDays < 0) {
+      return { tone: "overdue" as const, label: `Check-In überfällig seit ${Math.abs(diffDays)} Tag${Math.abs(diffDays) === 1 ? "" : "en"}` };
+    }
+    if (diffDays === 0) {
+      return { tone: "today" as const, label: "Check-in heute fällig" };
+    }
+    if (diffDays <= 3) {
+      return { tone: "soon" as const, label: `Nächster Check-in: in ${diffDays} Tag${diffDays === 1 ? "" : "en"}` };
+    }
+    return {
+      tone: "future" as const,
+      label: `Nächster Check-in: am ${target.toLocaleDateString("de-DE")}`,
+    };
+  })();
+
   return (
     <div className="space-y-6">
+      {checkinInfo && (
+        <Link
+          to="/check-in"
+          className={
+            "flex items-center justify-between rounded-2xl border p-4 transition " +
+            (checkinInfo.tone === "overdue"
+              ? "border-destructive/60 bg-destructive/10 hover:border-destructive"
+              : checkinInfo.tone === "today"
+                ? "border-gold/60 bg-gradient-to-br from-gold/15 to-transparent hover:border-gold"
+                : "border-border bg-card hover:border-gold/40")
+          }
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className={
+                "grid h-10 w-10 place-items-center rounded-xl " +
+                (checkinInfo.tone === "overdue"
+                  ? "bg-destructive text-destructive-foreground"
+                  : "bg-gradient-gold text-primary-foreground")
+              }
+            >
+              <CalendarCheck className="h-5 w-5" />
+            </div>
+            <div>
+              <div
+                className={
+                  "text-xs uppercase tracking-wider " +
+                  (checkinInfo.tone === "overdue" ? "text-destructive" : "text-gold")
+                }
+              >
+                Check-in
+              </div>
+              <div className="font-display text-base font-bold">{checkinInfo.label}</div>
+            </div>
+          </div>
+          <ArrowRight className="h-5 w-5 text-muted-foreground" />
+        </Link>
+      )}
+
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
@@ -365,6 +432,7 @@ function RealUserDashboard() {
         </div>
         <DashboardQuickActions />
       </div>
+
 
       {todayDbPoints < MAX_DAILY_POINTS && (
         <Link
