@@ -21,6 +21,7 @@ function mapMealCategory(name: string): "breakfast" | "lunch" | "dinner" | "snac
 export function TrialNutritionPlan() {
   const { supabaseUser } = useSession();
   const getDayFn = useServerFn(getDayType);
+  const ensureFn = useServerFn(ensureTrialTrainingPlan);
   const [dayId, setDayId] = useState<string>(TRIAL_NUTRITION[0].id);
   const [autoNote, setAutoNote] = useState<string | null>(null);
   const day = TRIAL_NUTRITION.find((d) => d.id === dayId)!;
