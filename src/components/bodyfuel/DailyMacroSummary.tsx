@@ -4,10 +4,25 @@ import { ArrowRight } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { getNutritionTargets, getDayType } from "@/lib/nutrition.functions";
-import { entryMatchesActiveTrialDay } from "@/lib/bodyfuel/trialTracking";
+import {
+  entryMatchesActiveDay,
+  getPlanMealDayKind,
+  planMealIdFromEntry,
+} from "@/lib/bodyfuel/trialTracking";
 
-type Totals = { kcal: number; protein_g: number; carbs_g: number; fat_g: number; source?: string | null };
+type Totals = {
+  kcal: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  source?: string | null;
+};
 type Targets = { kcal: number; protein_g: number; carbs_g: number; fat_g: number };
+type PlanMealDayRow = {
+  id: string;
+  name: string;
+  nutrition_plan_days?: { name: string } | { name: string }[] | null;
+};
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -42,7 +57,25 @@ export function DailyMacroSummary({ userId }: { userId: string }) {
         });
       }
       const activeKind = d?.kind === "rest" ? "rest" : "training";
-      const list = ((entries.data as Totals[]) ?? []).filter((entry) => entryMatchesActiveTrialDay(entry, activeKind));
+      const rows = (entries.data as Totals[]) ?? [];
+      const planMealIds = [
+        ...new Set(rows.map(planMealIdFromEntry).filter((id): id is string => !!id)),
+      ];
+      const planMealKinds: Record<string, "training" | "rest"> = {};
+      if (planMealIds.length) {
+        const { data: planMeals } = await supabase
+          .from("nutrition_plan_meals")
+          .select("id, name, nutrition_plan_days(name)")
+          .in("id", planMealIds);
+        ((planMeals as PlanMealDayRow[]) ?? []).forEach((meal) => {
+          const dayName = Array.isArray(meal.nutrition_plan_days)
+            ? meal.nutrition_plan_days[0]?.name
+            : meal.nutrition_plan_days?.name;
+          const kind = getPlanMealDayKind([meal.name, dayName]);
+          if (kind) planMealKinds[meal.id] = kind;
+        });
+      }
+      const list = rows.filter((entry) => entryMatchesActiveDay(entry, activeKind, planMealKinds));
       setTotals(
         list.reduce(
           (s, e) => ({

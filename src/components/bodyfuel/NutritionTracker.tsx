@@ -17,7 +17,11 @@ import {
   type DayType,
 } from "@/lib/nutrition.functions";
 import { LOCAL_FOODS } from "@/lib/bodyfuel/localFoods";
-import { entryMatchesActiveTrialDay } from "@/lib/bodyfuel/trialTracking";
+import {
+  entryMatchesActiveDay,
+  getPlanMealDayKind,
+  planMealIdFromEntry,
+} from "@/lib/bodyfuel/trialTracking";
 import { Dumbbell, Moon } from "lucide-react";
 
 type Meal = "breakfast" | "lunch" | "dinner" | "snack";
@@ -47,6 +51,12 @@ type Targets = {
   carbs_g: number;
   fat_g: number;
   water_glasses: number;
+};
+
+type PlanMealDayRow = {
+  id: string;
+  name: string;
+  nutrition_plan_days?: { name: string } | { name: string }[] | null;
 };
 
 const DEFAULT_TARGETS: Targets = {
@@ -125,9 +135,10 @@ export function NutritionTracker() {
     dayType === "rest" && restTargets ? restTargets : baseTargets;
 
   const [allEntries, setAllEntries] = useState<FoodEntry[]>([]);
+  const [planMealKinds, setPlanMealKinds] = useState<Record<string, DayType>>({});
   const entries = useMemo(
-    () => allEntries.filter((entry) => entryMatchesActiveTrialDay(entry, dayType)),
-    [allEntries, dayType],
+    () => allEntries.filter((entry) => entryMatchesActiveDay(entry, dayType, planMealKinds)),
+    [allEntries, dayType, planMealKinds],
   );
   const [waterGlasses, setWaterGlasses] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -190,7 +201,26 @@ export function NutritionTracker() {
           setRestTargets(null);
         }
       }
-      setAllEntries(((e.data as FoodEntry[]) ?? []).map((r) => ({ ...r })));
+      const rows = ((e.data as FoodEntry[]) ?? []).map((r) => ({ ...r }));
+      const planMealIds = [
+        ...new Set(rows.map(planMealIdFromEntry).filter((id): id is string => !!id)),
+      ];
+      const nextPlanMealKinds: Record<string, DayType> = {};
+      if (planMealIds.length) {
+        const { data: planMeals } = await supabase
+          .from("nutrition_plan_meals")
+          .select("id, name, nutrition_plan_days(name)")
+          .in("id", planMealIds);
+        ((planMeals as PlanMealDayRow[]) ?? []).forEach((meal) => {
+          const dayName = Array.isArray(meal.nutrition_plan_days)
+            ? meal.nutrition_plan_days[0]?.name
+            : meal.nutrition_plan_days?.name;
+          const kind = getPlanMealDayKind([meal.name, dayName]);
+          if (kind) nextPlanMealKinds[meal.id] = kind;
+        });
+      }
+      setPlanMealKinds(nextPlanMealKinds);
+      setAllEntries(rows);
       setWaterGlasses(w.data?.glasses ?? 0);
       setDayTypeState(d.kind);
       setDayTypeSource(d.source);
@@ -552,7 +582,7 @@ export function NutritionTracker() {
             {list.length > 0 && (
               <ul className="mt-3 divide-y divide-border">
                 {list.map((e) => {
-                  const isPlan = typeof (e as any).source === "string" && (e as any).source.startsWith("plan:");
+                  const isPlan = typeof e.source === "string" && e.source.startsWith("plan:");
                   const cleanName = isPlan
                     ? e.name.replace(/^\s*(Frühstück|Mittagessen|Mittag|Abendessen|Abend|Snack|Spätsnack|Late[- ]?Night|Pre[- ]?Workout|Post[- ]?Workout|Shake|Mahlzeit\s*\d+)\s*[—–\-:]\s*/i, "")
                     : e.name;

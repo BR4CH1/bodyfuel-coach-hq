@@ -60,6 +60,31 @@ export function entryMatchesActiveTrialDay(entry: TrialFoodEntryLike, activeKind
   return getTrialMealMeta(entry)?.kind === activeKind;
 }
 
+export function planMealIdFromEntry(entry: TrialFoodEntryLike) {
+  const source = entry.source ?? "";
+  if (!source.startsWith("plan:")) return null;
+  return source.slice("plan:".length).split(":")[0] || null;
+}
+
+export function getPlanMealDayKind(labels: Array<string | null | undefined>): TrialDayKind | null {
+  const text = normalize(labels.filter(Boolean).join(" "));
+  if (/restday|ruhetag|pausentag|\bpause\b|\boff\b|\bfrei\b/.test(text)) return "rest";
+  if (/trainingstag|training day|workout|\btrain\b|push|pull|legs|oberk[oö]rper|unterk[oö]rper/.test(text)) return "training";
+  return null;
+}
+
+export function entryMatchesActiveDay(
+  entry: TrialFoodEntryLike,
+  activeKind: TrialDayKind,
+  planMealKinds: Record<string, TrialDayKind> = {},
+) {
+  if (!entryMatchesActiveTrialDay(entry, activeKind)) return false;
+  const planMealId = planMealIdFromEntry(entry);
+  if (!planMealId) return true;
+  const planKind = planMealKinds[planMealId];
+  return !planKind || planKind === activeKind;
+}
+
 function normalize(value?: string | null) {
   return (value ?? "").toLowerCase().replace(/\s+/g, " ").trim();
 }
