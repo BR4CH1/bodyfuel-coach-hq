@@ -3,6 +3,9 @@ import { Utensils, ChevronRight } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { PlansView } from "@/components/bodyfuel/PlansView";
 import { MacroTargetsCard } from "@/components/bodyfuel/MacroTargetsCard";
+import { PlanContentView } from "@/components/bodyfuel/PlanContentView";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
 
 export const Route = createFileRoute("/nutrition/")({
