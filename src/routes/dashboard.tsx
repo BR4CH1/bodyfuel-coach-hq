@@ -323,8 +323,10 @@ function RealUserDashboard() {
         .eq("user_id", supabaseUser.id)
         .order("measured_at", { ascending: false })
         .limit(1);
-      setLatest((data?.[0] as LatestMeasurement | undefined) ?? null);
+      const latestRow = (data?.[0] as LatestMeasurement | undefined) ?? null;
+      setLatest(latestRow);
       setCount(c ?? 0);
+      setMeasuredToday(!!latestRow && latestRow.measured_at.slice(0, 10) === todayStr);
 
       const { data: checkData } = await supabase
         .from("daily_checks")
@@ -354,6 +356,14 @@ function RealUserDashboard() {
         .eq("id", supabaseUser.id)
         .maybeSingle();
       setNextCheckin((prof as any)?.next_checkin_date ?? null);
+
+      const { count: tCount } = await supabase
+        .from("training_set_logs")
+        .select("id", { count: "exact", head: true })
+        .eq("client_id", supabaseUser.id)
+        .gte("performed_at", `${todayStr}T00:00:00`)
+        .lte("performed_at", `${todayStr}T23:59:59.999`);
+      setTrainedToday((tCount ?? 0) > 0);
 
       setLoading(false);
     })();
