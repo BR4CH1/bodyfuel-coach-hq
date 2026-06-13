@@ -12,6 +12,7 @@ import {
   LogOut,
   Inbox,
   UserCircle,
+  Shield,
 } from "lucide-react";
 import { useSession } from "@/lib/bodyfuel/session";
 import { Logo } from "./Logo";
@@ -26,6 +27,8 @@ const clientNav = [
   { to: "/achievements", label: "Erfolge", icon: Trophy },
   { to: "/profile", label: "Profil", icon: UserCircle },
 ];
+
+const bullsNavItem = { to: "/bulls", label: "Bulls Hub", icon: Shield };
 
 const coachNav = [
   { to: "/coach", label: "Dashboard", icon: LayoutDashboard },
