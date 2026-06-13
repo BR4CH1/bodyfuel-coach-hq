@@ -144,7 +144,7 @@ export function PlanContentView({ clientId, planType }: Props) {
       {!days.length ? (
         <p className="mt-4 text-sm text-muted-foreground">
           {isCoach
-            ? "Noch nicht extrahiert — klicke „Aus PDF lesen", um die Inhalte des aktuellen Plans zu übernehmen."
+            ? "Noch nicht extrahiert — klicke ‚Aus PDF lesen‘, um die Inhalte des aktuellen Plans zu übernehmen."
             : "Dein Coach hat die Inhalte noch nicht freigeschaltet — du kannst den Plan jederzeit als PDF herunterladen."}
         </p>
       ) : (
