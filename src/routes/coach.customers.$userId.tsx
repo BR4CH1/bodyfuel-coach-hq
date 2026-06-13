@@ -186,8 +186,10 @@ function CustomerDetail() {
           {data.auth?.invited_at && (
             <div>Eingeladen am: {new Date(data.auth.invited_at).toLocaleDateString("de-DE")}</div>
           )}
-          {data.auth?.last_sign_in_at && (
-            <div>Zuletzt eingeloggt: {new Date(data.auth.last_sign_in_at).toLocaleString("de-DE")}</div>
+          {(data.auth as any)?.last_activity_at ? (
+            <div>Letzte Aktivität: {new Date((data.auth as any).last_activity_at).toLocaleString("de-DE")}</div>
+          ) : data.auth?.last_sign_in_at && (
+            <div>Letzte Aktivität: {new Date(data.auth.last_sign_in_at).toLocaleString("de-DE")}</div>
           )}
         </div>
         <div className="mt-4 flex flex-wrap gap-2">

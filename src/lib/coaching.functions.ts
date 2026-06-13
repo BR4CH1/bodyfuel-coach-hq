@@ -307,7 +307,7 @@ export const getCustomerDetail = createServerFn({ method: "POST" })
     await assertCoach(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const [profile, pkgs, payments, userRes, measurements, groups] = await Promise.all([
+    const [profile, pkgs, payments, userRes, measurements, groups, lastFood, lastSet, lastCheck, lastWater, lastMeas] = await Promise.all([
       supabaseAdmin.from("profiles").select("*").eq("id", data.user_id).maybeSingle(),
       supabaseAdmin
         .from("customer_packages")
@@ -329,6 +329,11 @@ export const getCustomerDetail = createServerFn({ method: "POST" })
         .from("user_groups")
         .select("group_name")
         .eq("user_id", data.user_id),
+      supabaseAdmin.from("food_entries").select("created_at").eq("user_id", data.user_id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      supabaseAdmin.from("training_set_logs").select("performed_at").eq("client_id", data.user_id).order("performed_at", { ascending: false }).limit(1).maybeSingle(),
+      supabaseAdmin.from("daily_checks").select("updated_at, created_at").eq("user_id", data.user_id).order("updated_at", { ascending: false }).limit(1).maybeSingle(),
+      supabaseAdmin.from("water_logs").select("created_at").eq("user_id", data.user_id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      supabaseAdmin.from("body_measurements").select("created_at").eq("user_id", data.user_id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
     ]);
 
     const u = userRes.data.user as any;
@@ -340,6 +345,18 @@ export const getCustomerDetail = createServerFn({ method: "POST" })
       : u?.last_sign_in_at
         ? "active"
         : "invited";
+
+    const activityCandidates = [
+      (lastFood.data as any)?.created_at,
+      (lastSet.data as any)?.performed_at,
+      (lastCheck.data as any)?.updated_at ?? (lastCheck.data as any)?.created_at,
+      (lastWater.data as any)?.created_at,
+      (lastMeas.data as any)?.created_at,
+      u?.last_sign_in_at,
+    ].filter(Boolean) as string[];
+    const last_activity_at = activityCandidates.length
+      ? activityCandidates.reduce((a, b) => (new Date(a).getTime() > new Date(b).getTime() ? a : b))
+      : null;
 
     return {
       profile: profile.data,
@@ -354,9 +371,11 @@ export const getCustomerDetail = createServerFn({ method: "POST" })
         invited_at: u?.invited_at ?? null,
         confirmed_at: u?.email_confirmed_at ?? u?.confirmed_at ?? null,
         last_sign_in_at: u?.last_sign_in_at ?? null,
+        last_activity_at,
         status,
       },
     };
+
 
   });
 
