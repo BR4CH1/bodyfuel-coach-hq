@@ -2,6 +2,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import appDashboardAsset from "@/assets/app-dashboard.png.asset.json";
+import nutritionPlanAsset from "@/assets/nutrition-plan.jpeg.asset.json";
+import nutritionMacrosAsset from "@/assets/nutrition-macros.jpeg.asset.json";
+import nutritionTrackerAsset from "@/assets/nutrition-tracker.jpeg.asset.json";
 import {
   ArrowRight,
   Activity,
@@ -141,64 +144,51 @@ function NutritionTrackingUSP() {
         </div>
 
         <div className="mt-10 grid gap-5 lg:grid-cols-[1.05fr_1fr]">
-          {/* Day-type toggle mockup */}
+          {/* Real app screenshots */}
           <div className="rounded-3xl border border-gold/30 bg-gradient-to-br from-card to-gold/5 p-6 sm:p-8">
-            <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Heutiger Tag</div>
-            <div className="mt-1 font-display text-xl font-bold">Trainingstag oder Restday?</div>
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <div className="rounded-xl border border-gold/50 bg-gradient-gold px-4 py-4 text-center text-primary-foreground shadow-gold">
-                <Dumbbell className="mx-auto h-5 w-5" />
-                <div className="mt-1 text-sm font-bold">Trainingstag</div>
-                <div className="text-[10px] opacity-90">2.650 kcal · 190 P · 280 KH</div>
-              </div>
-              <div className="rounded-xl border border-border bg-background/40 px-4 py-4 text-center">
-                <Moon className="mx-auto h-5 w-5 text-blue-300" />
-                <div className="mt-1 text-sm font-bold">Restday</div>
-                <div className="text-[10px] text-muted-foreground">2.250 kcal · 190 P · 180 KH</div>
-              </div>
-            </div>
+            <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Echte Screenshots aus der App</div>
+            <div className="mt-1 font-display text-xl font-bold">Plan, Makros & 1-Klick-Tracking</div>
 
-            <div className="mt-6 space-y-2">
-              {[
-                { meal: "Frühstück", desc: "Skyr-Bowl mit Beeren & Haferflocken", kcal: 480, tracked: true },
-                { meal: "Mittag", desc: "Hähnchen, Reis & Gemüse", kcal: 720, tracked: true },
-                { meal: "Snack", desc: "Proteinriegel & Apfel", kcal: 320, tracked: false },
-                { meal: "Abendessen", desc: "Lachs, Süßkartoffel, Salat", kcal: 680, tracked: false },
-              ].map((m, i) => (
-                <div
-                  key={i}
-                  className={
-                    "flex items-center justify-between gap-3 rounded-xl border p-3 " +
-                    (m.tracked ? "border-gold/50 bg-gold/10" : "border-border bg-background/40")
-                  }
-                >
-                  <div className="min-w-0">
-                    <div className="text-[10px] font-bold uppercase tracking-wider text-gold">
-                      {m.meal}
-                    </div>
-                    <div className="truncate text-sm">{m.desc}</div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] text-muted-foreground">{m.kcal} kcal</span>
-                    <span
-                      className={
-                        "grid h-7 w-7 place-items-center rounded-full " +
-                        (m.tracked ? "bg-gradient-gold" : "border border-border bg-background")
-                      }
-                    >
-                      <Check
-                        className={"h-4 w-4 " + (m.tracked ? "text-primary-foreground" : "text-muted-foreground")}
-                        strokeWidth={3}
-                      />
-                    </span>
-                  </div>
-                </div>
-              ))}
+            <div className="mt-5 grid grid-cols-2 gap-3 sm:gap-4">
+              <figure className="col-span-2 overflow-hidden rounded-2xl border border-gold/30 bg-background shadow-gold">
+                <img
+                  src={nutritionTrackerAsset.url}
+                  alt="BodyFuel Ernährungstracking: Tagesbilanz mit Kalorien, Protein, Carbs und Fett"
+                  loading="lazy"
+                  className="w-full"
+                />
+                <figcaption className="px-4 py-2 text-[11px] text-muted-foreground">
+                  Live-Tagesbilanz mit Trainings-/Restday-Umschalter
+                </figcaption>
+              </figure>
+              <figure className="overflow-hidden rounded-2xl border border-border bg-background">
+                <img
+                  src={nutritionMacrosAsset.url}
+                  alt="BodyFuel Tageswerte: getrennte Makros für Trainings- und Restday"
+                  loading="lazy"
+                  className="w-full"
+                />
+                <figcaption className="px-3 py-2 text-[10px] text-muted-foreground">
+                  Trainingstag vs. Restday
+                </figcaption>
+              </figure>
+              <figure className="overflow-hidden rounded-2xl border border-border bg-background">
+                <img
+                  src={nutritionPlanAsset.url}
+                  alt="BodyFuel Ernährungsplan: Mahlzeiten mit 1-Klick-Tracking"
+                  loading="lazy"
+                  className="w-full"
+                />
+                <figcaption className="px-3 py-2 text-[10px] text-muted-foreground">
+                  Plan mit 1-Klick-Tracking
+                </figcaption>
+              </figure>
             </div>
             <p className="mt-4 text-[11px] text-muted-foreground">
-              So sieht's in der App aus — Plan steht, Häkchen rein, fertig.
+              So sieht's wirklich in der App aus — Plan steht, Häkchen rein, fertig.
             </p>
           </div>
+
 
           {/* Benefits grid */}
           <div className="grid gap-3 sm:grid-cols-2">
