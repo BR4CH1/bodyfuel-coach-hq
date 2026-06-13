@@ -230,7 +230,7 @@ export const createCustomer = createServerFn({ method: "POST" })
       name: displayName,
       email,
       phone: data.phone || null,
-      desired_package: isTrial ? "trial" : data.package,
+      desired_package: isTrial ? null : data.package,
       status: "converted",
       message: data.notes || null,
     });
