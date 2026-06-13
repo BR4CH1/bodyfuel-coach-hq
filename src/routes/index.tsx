@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useConsent } from "@/lib/consent";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import appDashboardAsset from "@/assets/app-dashboard.png.asset.json";
@@ -1395,8 +1396,9 @@ function Footer() {
             <a href="#level" className="hover:text-foreground">Level</a>
           </FooterCol>
           <FooterCol title="Rechtliches">
-            <a href="#" className="hover:text-foreground">Impressum</a>
-            <a href="#" className="hover:text-foreground">Datenschutz</a>
+            <Link to="/impressum" className="hover:text-foreground">Impressum</Link>
+            <Link to="/datenschutz" className="hover:text-foreground">Datenschutz</Link>
+            <CookieSettingsLink />
           </FooterCol>
           <FooterCol title="Kontakt">
             <a href="#kontakt" className="inline-flex items-center gap-2 hover:text-foreground">
@@ -1440,5 +1442,12 @@ function SectionLabel({ children, center }: { children: React.ReactNode; center?
       <span className="h-1.5 w-1.5 rounded-full bg-gold" />
       {children}
     </div>
+  );
+}
+
+function CookieSettingsLink() {
+  const { openSettings } = useConsent();
+  return (
+    <button onClick={openSettings} className="text-left hover:text-foreground">Cookie-Einstellungen</button>
   );
 }
