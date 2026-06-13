@@ -1,7 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Sparkles, Clock, AlertTriangle, TrendingUp, ArrowRight } from "lucide-react";
+import { Sparkles, Clock, AlertTriangle, TrendingUp, ArrowRight, Copy, ExternalLink } from "lucide-react";
+import { toast } from "sonner";
 import { listTrialUsers } from "@/lib/trial.functions";
 import { supabase } from "@/integrations/supabase/client";
 
