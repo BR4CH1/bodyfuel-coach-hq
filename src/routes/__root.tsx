@@ -12,6 +12,8 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { SessionProvider } from "../lib/bodyfuel/session";
 import { Toaster } from "../components/ui/sonner";
+import { ConsentProvider } from "../lib/consent";
+import { CookieConsent } from "../components/bodyfuel/CookieConsent";
 
 function NotFoundComponent() {
   return (
@@ -107,10 +109,13 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <QueryClientProvider client={queryClient}>
-      <SessionProvider>
-        <Outlet />
-        <Toaster theme="dark" />
-      </SessionProvider>
+      <ConsentProvider>
+        <SessionProvider>
+          <Outlet />
+          <CookieConsent />
+          <Toaster theme="dark" />
+        </SessionProvider>
+      </ConsentProvider>
     </QueryClientProvider>
   );
 }

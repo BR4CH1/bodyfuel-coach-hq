@@ -1395,8 +1395,9 @@ function Footer() {
             <a href="#level" className="hover:text-foreground">Level</a>
           </FooterCol>
           <FooterCol title="Rechtliches">
-            <a href="#" className="hover:text-foreground">Impressum</a>
-            <a href="#" className="hover:text-foreground">Datenschutz</a>
+            <Link to="/impressum" className="hover:text-foreground">Impressum</Link>
+            <Link to="/datenschutz" className="hover:text-foreground">Datenschutz</Link>
+            <CookieSettingsLink />
           </FooterCol>
           <FooterCol title="Kontakt">
             <a href="#kontakt" className="inline-flex items-center gap-2 hover:text-foreground">
