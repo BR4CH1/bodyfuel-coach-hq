@@ -6,7 +6,7 @@ import { PlansView } from "@/components/bodyfuel/PlansView";
 import { TrainingTracker } from "@/components/bodyfuel/TrainingTracker";
 import { PlanContentView } from "@/components/bodyfuel/PlanContentView";
 import { useSession } from "@/lib/bodyfuel/session";
-import { supabase } from "@/integrations/supabase/client";
+
 import { useTrial } from "@/hooks/use-trial";
 import { TrialTrainingPlan } from "@/components/bodyfuel/TrialPlanView";
 import { ensureTrialTrainingPlan } from "@/lib/trial.functions";
