@@ -30,6 +30,7 @@ import { Route as CoachIndexRouteImport } from './routes/coach.index'
 import { Route as BullsIndexRouteImport } from './routes/bulls.index'
 import { Route as NutritionTrackingRouteImport } from './routes/nutrition.tracking'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
+import { Route as CoachReviewsRouteImport } from './routes/coach.reviews'
 import { Route as CoachPackageRequestsRouteImport } from './routes/coach.package-requests'
 import { Route as CoachLeadsRouteImport } from './routes/coach.leads'
 import { Route as CoachCustomersRouteImport } from './routes/coach.customers'
@@ -155,6 +156,11 @@ const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
   id: '/email/unsubscribe',
   path: '/email/unsubscribe',
   getParentRoute: () => rootRouteImport,
+} as any)
+const CoachReviewsRoute = CoachReviewsRouteImport.update({
+  id: '/reviews',
+  path: '/reviews',
+  getParentRoute: () => CoachRoute,
 } as any)
 const CoachPackageRequestsRoute = CoachPackageRequestsRouteImport.update({
   id: '/package-requests',
@@ -288,6 +294,7 @@ export interface FileRoutesByFullPath {
   '/coach/customers': typeof CoachCustomersRouteWithChildren
   '/coach/leads': typeof CoachLeadsRoute
   '/coach/package-requests': typeof CoachPackageRequestsRoute
+  '/coach/reviews': typeof CoachReviewsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/nutrition/tracking': typeof NutritionTrackingRoute
   '/bulls/': typeof BullsIndexRoute
@@ -328,6 +335,7 @@ export interface FileRoutesByTo {
   '/coach/$clientId': typeof CoachClientIdRoute
   '/coach/leads': typeof CoachLeadsRoute
   '/coach/package-requests': typeof CoachPackageRequestsRoute
+  '/coach/reviews': typeof CoachReviewsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/nutrition/tracking': typeof NutritionTrackingRoute
   '/bulls': typeof BullsIndexRoute
@@ -372,6 +380,7 @@ export interface FileRoutesById {
   '/coach/customers': typeof CoachCustomersRouteWithChildren
   '/coach/leads': typeof CoachLeadsRoute
   '/coach/package-requests': typeof CoachPackageRequestsRoute
+  '/coach/reviews': typeof CoachReviewsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/nutrition/tracking': typeof NutritionTrackingRoute
   '/bulls/': typeof BullsIndexRoute
@@ -417,6 +426,7 @@ export interface FileRouteTypes {
     | '/coach/customers'
     | '/coach/leads'
     | '/coach/package-requests'
+    | '/coach/reviews'
     | '/email/unsubscribe'
     | '/nutrition/tracking'
     | '/bulls/'
@@ -457,6 +467,7 @@ export interface FileRouteTypes {
     | '/coach/$clientId'
     | '/coach/leads'
     | '/coach/package-requests'
+    | '/coach/reviews'
     | '/email/unsubscribe'
     | '/nutrition/tracking'
     | '/bulls'
@@ -500,6 +511,7 @@ export interface FileRouteTypes {
     | '/coach/customers'
     | '/coach/leads'
     | '/coach/package-requests'
+    | '/coach/reviews'
     | '/email/unsubscribe'
     | '/nutrition/tracking'
     | '/bulls/'
@@ -700,6 +712,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EmailUnsubscribeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/coach/reviews': {
+      id: '/coach/reviews'
+      path: '/reviews'
+      fullPath: '/coach/reviews'
+      preLoaderRoute: typeof CoachReviewsRouteImport
+      parentRoute: typeof CoachRoute
+    }
     '/coach/package-requests': {
       id: '/coach/package-requests'
       path: '/package-requests'
@@ -864,6 +883,7 @@ interface CoachRouteChildren {
   CoachCustomersRoute: typeof CoachCustomersRouteWithChildren
   CoachLeadsRoute: typeof CoachLeadsRoute
   CoachPackageRequestsRoute: typeof CoachPackageRequestsRoute
+  CoachReviewsRoute: typeof CoachReviewsRoute
   CoachIndexRoute: typeof CoachIndexRoute
 }
 
@@ -872,6 +892,7 @@ const CoachRouteChildren: CoachRouteChildren = {
   CoachCustomersRoute: CoachCustomersRouteWithChildren,
   CoachLeadsRoute: CoachLeadsRoute,
   CoachPackageRequestsRoute: CoachPackageRequestsRoute,
+  CoachReviewsRoute: CoachReviewsRoute,
   CoachIndexRoute: CoachIndexRoute,
 }
 
@@ -927,13 +948,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

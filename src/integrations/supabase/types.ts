@@ -59,6 +59,45 @@ export type Database = {
         }
         Relationships: []
       }
+      app_reviews: {
+        Row: {
+          approved_for_public: boolean
+          comment: string | null
+          created_at: string
+          first_name: string | null
+          hidden: boolean
+          id: string
+          publish_with_name: boolean
+          rating: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          approved_for_public?: boolean
+          comment?: string | null
+          created_at?: string
+          first_name?: string | null
+          hidden?: boolean
+          id?: string
+          publish_with_name?: boolean
+          rating: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          approved_for_public?: boolean
+          comment?: string | null
+          created_at?: string
+          first_name?: string | null
+          hidden?: boolean
+          id?: string
+          publish_with_name?: boolean
+          rating?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       body_measurements: {
         Row: {
           biceps_left_cm: number | null

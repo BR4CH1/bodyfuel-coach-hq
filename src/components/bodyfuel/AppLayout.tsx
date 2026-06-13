@@ -18,6 +18,7 @@ import { useSession } from "@/lib/bodyfuel/session";
 import { Logo } from "./Logo";
 import { getLevel } from "@/lib/bodyfuel/data";
 import { totalPoints } from "@/lib/bodyfuel/data";
+import { ReviewPrompt } from "./ReviewPrompt";
 
 const clientNav = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -34,6 +35,7 @@ const coachNav = [
   { to: "/coach", label: "Dashboard", icon: LayoutDashboard },
   { to: "/coach/customers", label: "Kunden", icon: Users },
   { to: "/coach/leads", label: "Anfragen", icon: Inbox },
+  { to: "/coach/reviews", label: "Bewertungen", icon: Trophy },
   { to: "/nutrition", label: "Ernährung", icon: FileText },
   { to: "/training", label: "Training", icon: Dumbbell },
 ];
@@ -155,6 +157,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
           })}
         </div>
       </nav>
+
+      <ReviewPrompt />
     </div>
   );
 }
