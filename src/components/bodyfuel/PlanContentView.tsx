@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, Sparkles, Utensils, Dumbbell } from "lucide-react";
+import { Loader2, Sparkles, Utensils, Dumbbell, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
 import { parseNutritionPlan } from "@/lib/nutrition-plan.functions";
@@ -35,8 +35,16 @@ type Props = {
   planType: "nutrition" | "training";
 };
 
+const todayKey = () => new Date().toISOString().slice(0, 10);
+const mealSlot = (idx: number, total: number): "breakfast" | "lunch" | "dinner" | "snack" => {
+  if (idx === 0) return "breakfast";
+  if (idx === total - 1 && total > 1) return "dinner";
+  if (idx === 1 && total > 2) return "lunch";
+  return "snack";
+};
+
 export function PlanContentView({ clientId, planType }: Props) {
-  const { isCoach } = useSession();
+  const { isCoach, supabaseUser } = useSession();
   const parseNutrition = useServerFn(parseNutritionPlan);
   const parseTraining = useServerFn(parseTrainingPlan);
 
@@ -47,9 +55,14 @@ export function PlanContentView({ clientId, planType }: Props) {
   const [activeDay, setActiveDay] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [parsing, setParsing] = useState(false);
+  const [tracked, setTracked] = useState<Record<string, string>>({}); // meal_id -> food_entry.id
+  const [togglingId, setTogglingId] = useState<string>("");
 
   const dayTable = planType === "nutrition" ? "nutrition_plan_days" : "training_days";
   const itemTable = planType === "nutrition" ? "nutrition_plan_meals" : "training_exercises";
+
+  const canTrack =
+    planType === "nutrition" && !!supabaseUser && supabaseUser.id === clientId && !isCoach;
 
   const reload = async () => {
     if (!clientId) return;
@@ -89,7 +102,24 @@ export function PlanContentView({ clientId, planType }: Props) {
     setLoading(false);
   };
 
+  const reloadTracked = async () => {
+    if (!canTrack) { setTracked({}); return; }
+    const { data } = await supabase
+      .from("food_entries")
+      .select("id, source")
+      .eq("user_id", clientId)
+      .eq("entry_date", todayKey())
+      .like("source", "plan:%");
+    const map: Record<string, string> = {};
+    ((data as { id: string; source: string }[]) ?? []).forEach((r) => {
+      const mealId = r.source.slice("plan:".length);
+      map[mealId] = r.id;
+    });
+    setTracked(map);
+  };
+
   useEffect(() => { reload(); /* eslint-disable-next-line */ }, [clientId, planType]);
+  useEffect(() => { reloadTracked(); /* eslint-disable-next-line */ }, [clientId, planType, supabaseUser?.id]);
 
   const handleParse = async () => {
     if (!plan) return;
@@ -107,6 +137,49 @@ export function PlanContentView({ clientId, planType }: Props) {
       toast.error(e?.message ?? "Lesen fehlgeschlagen");
     } finally {
       setParsing(false);
+    }
+  };
+
+  const toggleMeal = async (m: Meal) => {
+    if (!canTrack) return;
+    setTogglingId(m.id);
+    try {
+      const existing = tracked[m.id];
+      if (existing) {
+        const { error } = await supabase.from("food_entries").delete().eq("id", existing);
+        if (error) throw error;
+        setTracked((t) => { const n = { ...t }; delete n[m.id]; return n; });
+        toast.success(`${m.name} entfernt`);
+      } else {
+        const dayMeals = meals
+          .filter((x) => x.day_id === m.day_id)
+          .sort((a, b) => a.sort_order - b.sort_order);
+        const idx = dayMeals.findIndex((x) => x.id === m.id);
+        const slot = mealSlot(idx, dayMeals.length);
+        const { data, error } = await supabase
+          .from("food_entries")
+          .insert({
+            user_id: clientId,
+            entry_date: todayKey(),
+            meal: slot,
+            name: m.name + (m.description ? ` — ${m.description}` : ""),
+            serving_g: 1,
+            kcal: m.kcal ?? 0,
+            protein_g: m.protein_g ?? 0,
+            carbs_g: m.carbs_g ?? 0,
+            fat_g: m.fat_g ?? 0,
+            source: `plan:${m.id}`,
+          })
+          .select("id")
+          .single();
+        if (error) throw error;
+        setTracked((t) => ({ ...t, [m.id]: (data as { id: string }).id }));
+        toast.success(`${m.name} getrackt`);
+      }
+    } catch (e: any) {
+      toast.error(e?.message ?? "Tracken fehlgeschlagen");
+    } finally {
+      setTogglingId("");
     }
   };
 
@@ -162,28 +235,61 @@ export function PlanContentView({ clientId, planType }: Props) {
             </select>
           </div>
 
-          <div className="mt-5 space-y-3">
+          {canTrack && (
+            <p className="mt-3 text-[11px] text-muted-foreground">
+              Tippe eine Mahlzeit an, um sie für heute zu tracken.
+            </p>
+          )}
+
+          <div className="mt-3 space-y-3">
             {planType === "nutrition"
-              ? meals.filter((m) => m.day_id === activeDay).map((m) => (
-                  <div key={m.id} className="rounded-2xl border border-border bg-background/40 p-4">
-                    <div className="flex items-baseline justify-between gap-3">
-                      <div className="text-xs font-bold uppercase tracking-wider text-gold">{m.name}</div>
-                      {m.kcal != null && (
-                        <div className="text-[11px] text-muted-foreground">{m.kcal} kcal</div>
-                      )}
-                    </div>
-                    {m.description && (
-                      <p className="mt-1 text-sm text-foreground/90">{m.description}</p>
-                    )}
-                    {(m.protein_g != null || m.carbs_g != null || m.fat_g != null) && (
-                      <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-                        {m.protein_g != null && <span>P {m.protein_g}g</span>}
-                        {m.carbs_g != null && <span>· KH {m.carbs_g}g</span>}
-                        {m.fat_g != null && <span>· F {m.fat_g}g</span>}
+              ? meals.filter((m) => m.day_id === activeDay).map((m) => {
+                  const isTracked = !!tracked[m.id];
+                  const busy = togglingId === m.id;
+                  const inner = (
+                    <>
+                      <div className="flex items-baseline justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                          <div className="text-xs font-bold uppercase tracking-wider text-gold">{m.name}</div>
+                          {canTrack && isTracked && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
+                              <Check className="h-3 w-3" /> getrackt
+                            </span>
+                          )}
+                        </div>
+                        {m.kcal != null && (
+                          <div className="text-[11px] text-muted-foreground">{m.kcal} kcal</div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                ))
+                      {m.description && (
+                        <p className="mt-1 text-sm text-foreground/90">{m.description}</p>
+                      )}
+                      {(m.protein_g != null || m.carbs_g != null || m.fat_g != null) && (
+                        <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                          {m.protein_g != null && <span>P {m.protein_g}g</span>}
+                          {m.carbs_g != null && <span>· KH {m.carbs_g}g</span>}
+                          {m.fat_g != null && <span>· F {m.fat_g}g</span>}
+                        </div>
+                      )}
+                    </>
+                  );
+                  const base = "w-full text-left rounded-2xl border p-4 transition";
+                  const style = isTracked
+                    ? "border-emerald-500/40 bg-emerald-500/5"
+                    : "border-border bg-background/40";
+                  return canTrack ? (
+                    <button
+                      key={m.id}
+                      onClick={() => toggleMeal(m)}
+                      disabled={busy}
+                      className={`${base} ${style} hover:border-gold/50 disabled:opacity-60`}
+                    >
+                      {inner}
+                    </button>
+                  ) : (
+                    <div key={m.id} className={`${base} ${style}`}>{inner}</div>
+                  );
+                })
               : exercises.filter((e) => e.day_id === activeDay).map((e) => (
                   <div key={e.id} className="rounded-2xl border border-border bg-background/40 p-4">
                     <div className="flex items-baseline justify-between gap-3">
