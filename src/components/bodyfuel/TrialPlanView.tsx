@@ -7,6 +7,7 @@ import { TRIAL_NUTRITION, TRIAL_TRAINING, type TrialMeal } from "@/lib/bodyfuel/
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
 import { getDayType } from "@/lib/nutrition.functions";
+import { ensureTrialTrainingPlan } from "@/lib/trial.functions";
 
 function mapMealCategory(name: string): "breakfast" | "lunch" | "dinner" | "snack" {
   const n = name.toLowerCase();
