@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Loader2, Sparkles, Utensils, Dumbbell, Check, Shuffle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
-import { parseNutritionPlan } from "@/lib/nutrition-plan.functions";
+import { parseNutritionPlan, estimateMealMacros } from "@/lib/nutrition-plan.functions";
 import { parseTrainingPlan } from "@/lib/training.functions";
 import { getDayType } from "@/lib/nutrition.functions";
 
@@ -52,6 +52,7 @@ export function PlanContentView({ clientId, planType }: Props) {
   const parseNutrition = useServerFn(parseNutritionPlan);
   const parseTraining = useServerFn(parseTrainingPlan);
   const getDayTypeFn = useServerFn(getDayType);
+  const estimateMacros = useServerFn(estimateMealMacros);
 
   const [plan, setPlan] = useState<Plan | null>(null);
   const [days, setDays] = useState<Day[]>([]);
@@ -217,6 +218,22 @@ export function PlanContentView({ clientId, planType }: Props) {
           .sort((a, b) => a.sort_order - b.sort_order);
         const idx = dayMeals.findIndex((x) => x.id === m.id);
         const slot = mealSlot(idx, dayMeals.length);
+
+        let kcal = m.kcal ?? 0;
+        let p = m.protein_g ?? 0;
+        let c = m.carbs_g ?? 0;
+        let f = m.fat_g ?? 0;
+        if (!kcal && !p && !c && !f) {
+          try {
+            const est = await estimateMacros({ data: { meal_id: m.id } });
+            kcal = est.kcal; p = est.protein_g; c = est.carbs_g; f = est.fat_g;
+            setMeals((arr) => arr.map((x) => x.id === m.id ? { ...x, kcal, protein_g: p, carbs_g: c, fat_g: f } : x));
+          } catch (e: any) {
+            toast.error("Nährwerte konnten nicht geschätzt werden");
+            return;
+          }
+        }
+
         const { data, error } = await supabase
           .from("food_entries")
           .insert({
@@ -224,11 +241,11 @@ export function PlanContentView({ clientId, planType }: Props) {
             entry_date: todayKey(),
             meal: slot,
             name: m.name + (m.description ? ` — ${m.description}` : ""),
-            serving_g: 1,
-            kcal: m.kcal ?? 0,
-            protein_g: m.protein_g ?? 0,
-            carbs_g: m.carbs_g ?? 0,
-            fat_g: m.fat_g ?? 0,
+            serving_g: 100,
+            kcal,
+            protein_g: p,
+            carbs_g: c,
+            fat_g: f,
             source: `plan:${m.id}`,
           })
           .select("id")
