@@ -6,6 +6,8 @@ import { TrainingTracker } from "@/components/bodyfuel/TrainingTracker";
 import { PlanContentView } from "@/components/bodyfuel/PlanContentView";
 import { useSession } from "@/lib/bodyfuel/session";
 import { supabase } from "@/integrations/supabase/client";
+import { useTrial } from "@/hooks/use-trial";
+import { TrialTrainingPlan } from "@/components/bodyfuel/TrialPlanView";
 
 export const Route = createFileRoute("/training")({
   head: () => ({ meta: [{ title: "Trainingsplan — BODYFUEL" }] }),
@@ -18,6 +20,7 @@ export const Route = createFileRoute("/training")({
 
 function TrainingPage() {
   const { isCoach, supabaseUser } = useSession();
+  const { isTrial, isExpired } = useTrial();
   const [clientId, setClientId] = useState<string>("");
   const [clients, setClients] = useState<{ id: string; display_name: string | null }[]>([]);
 
@@ -42,10 +45,14 @@ function TrainingPage() {
   return (
     <div className="space-y-8">
       {isCoach && <PlansView planType="training" />}
-      {supabaseUser && (clientId || !isCoach) && (
-        <PlanContentView clientId={clientId || supabaseUser.id} planType="training" />
+      {!isCoach && (isTrial || isExpired) ? (
+        <TrialTrainingPlan />
+      ) : (
+        supabaseUser && (clientId || !isCoach) && (
+          <PlanContentView clientId={clientId || supabaseUser.id} planType="training" />
+        )
       )}
-      {supabaseUser && (
+      {supabaseUser && !isTrial && !isExpired && (
         <section className="space-y-4">
           {isCoach && (
             <div className="rounded-2xl border border-border bg-card p-4">

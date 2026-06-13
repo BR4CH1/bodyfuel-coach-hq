@@ -12,6 +12,8 @@ import { DayTypePrompt } from "@/components/bodyfuel/DayTypePrompt";
 import { DailyMacroSummary } from "@/components/bodyfuel/DailyMacroSummary";
 import { PointsBreakdownCard } from "@/components/bodyfuel/PointsBreakdownCard";
 import { TrialStatusBanner, TrialWelcomeDialog } from "@/components/bodyfuel/Trial";
+import { TrialChecklist } from "@/components/bodyfuel/TrialChecklist";
+import { useTrial } from "@/hooks/use-trial";
 
 import { useSession } from "@/lib/bodyfuel/session";
 import { supabase } from "@/integrations/supabase/client";
@@ -88,6 +90,8 @@ function DashboardContent() {
     <div className="space-y-6">
       <TrialWelcomeDialog />
       <TrialStatusBanner />
+      {supabaseUser && <TrialChecklistGate userId={supabaseUser.id} />}
+
 
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -400,6 +404,10 @@ function RealUserDashboard() {
 
   return (
     <div className="space-y-6">
+      <TrialWelcomeDialog />
+      <TrialStatusBanner />
+      {supabaseUser && <TrialChecklistGate userId={supabaseUser.id} />}
+
       {checkinInfo && (
         <Link
           to="/check-in"
@@ -775,4 +783,11 @@ function DashboardQuickActions({ excludeKeys = [] }: { excludeKeys?: readonly Qu
     </div>
   );
 }
+
+function TrialChecklistGate({ userId }: { userId: string }) {
+  const { isTrial } = useTrial();
+  if (!isTrial) return null;
+  return <TrialChecklist userId={userId} />;
+}
+
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Flame, Check, Sparkles, Lock } from "lucide-react";
+import { Flame, Check, Sparkles, Lock, Trophy } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useTrial } from "@/hooks/use-trial";
+import { useSession } from "@/lib/bodyfuel/session";
+import { supabase } from "@/integrations/supabase/client";
 
 const KEY = "bodyfuel.trial.welcome";
 
@@ -92,49 +94,79 @@ export function TrialWelcomeDialog() {
   );
 }
 
-/** Banner oben auf dem Dashboard – Countdown oder Ablauf-Hinweis. */
+/** Banner oben auf dem Dashboard – Countdown oder reiches Abschluss-Panel. */
 export function TrialStatusBanner() {
   const { isTrial, isExpired, daysLeft } = useTrial();
+  const { supabaseUser } = useSession();
+  const [stats, setStats] = useState<{ total: number; streak: number; checks: number; meals: number; sets: number } | null>(null);
+
+  useEffect(() => {
+    if (!isExpired || !supabaseUser) return;
+    (async () => {
+      const [{ data: up }, { count: checks }, { count: meals }, { count: sets }] = await Promise.all([
+        supabase.from("user_points").select("total_points, longest_streak").eq("user_id", supabaseUser.id).maybeSingle(),
+        supabase.from("daily_checks").select("id", { count: "exact", head: true }).eq("user_id", supabaseUser.id),
+        supabase.from("food_entries").select("id", { count: "exact", head: true }).eq("user_id", supabaseUser.id),
+        supabase.from("training_set_logs").select("id", { count: "exact", head: true }).eq("client_id", supabaseUser.id),
+      ]);
+      setStats({
+        total: (up as any)?.total_points ?? 0,
+        streak: (up as any)?.longest_streak ?? 0,
+        checks: checks ?? 0,
+        meals: meals ?? 0,
+        sets: sets ?? 0,
+      });
+    })();
+  }, [isExpired, supabaseUser]);
 
   if (isExpired) {
     return (
-      <div className="rounded-2xl border border-destructive/40 bg-destructive/10 p-5">
-        <div className="flex items-start gap-3">
-          <Lock className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
-          <div className="flex-1">
-            <p className="text-xs font-bold uppercase tracking-wider text-destructive">
-              Test abgelaufen
-            </p>
-            <p className="mt-1 font-display text-lg font-bold">
-              Dein kostenloser Testzeitraum ist abgelaufen.
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Aktiviere deine Mitgliedschaft, um mit deinem individuellen Plan weiterzumachen.
-            </p>
-            <Button
-              asChild
-              className="mt-3 bg-gradient-gold text-primary-foreground"
-            >
-              <Link to="/profile">Mitgliedschaft aktivieren</Link>
-            </Button>
-          </div>
+      <div className="overflow-hidden rounded-3xl border border-gold/40 bg-gradient-to-br from-gold/10 via-card to-card p-6">
+        <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-gold">
+          <Trophy className="h-3 w-3" /> Dein 7-Tage-Test ist abgeschlossen
         </div>
+        <h2 className="mt-2 font-display text-2xl font-bold sm:text-3xl">
+          Stark gemacht — bereit für den nächsten Schritt?
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Hier ist, was du in deinem Trial erreicht hast:
+        </p>
+
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <SummaryStat label="Punkte" value={stats?.total ?? 0} />
+          <SummaryStat label="Längste Streak" value={`${stats?.streak ?? 0} T`} />
+          <SummaryStat label="Tagesziele" value={stats?.checks ?? 0} />
+          <SummaryStat label="Tracking-Einträge" value={(stats?.meals ?? 0) + (stats?.sets ?? 0)} />
+        </div>
+
+        <div className="mt-5 rounded-2xl border border-border bg-background/40 p-4">
+          <p className="text-sm">
+            Mit deiner Mitgliedschaft bekommst du <strong>individuelle Pläne</strong>,{" "}
+            <strong>persönliches Coaching</strong>, <strong>WhatsApp-Support</strong> und
+            <strong> KI-Anpassungen</strong> — basierend auf allem, was du im Trial schon getrackt hast.
+          </p>
+        </div>
+
+        <Button asChild className="mt-4 h-11 w-full bg-gradient-gold font-bold text-primary-foreground sm:w-auto">
+          <Link to="/profile">Mitgliedschaft aktivieren</Link>
+        </Button>
       </div>
     );
   }
 
   if (!isTrial) return null;
 
+  const urgent = (daysLeft ?? 7) <= 2;
   return (
-    <div className="rounded-2xl border border-gold/40 bg-gradient-to-r from-gold/15 via-gold/5 to-transparent p-5">
+    <div className={`rounded-2xl border p-5 ${urgent ? "border-warning/50 bg-warning/10" : "border-gold/40 bg-gradient-to-r from-gold/15 via-gold/5 to-transparent"}`}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gold/20">
-            <Flame className="h-6 w-6 text-gold" />
+          <div className={`flex h-12 w-12 items-center justify-center rounded-full ${urgent ? "bg-warning/20" : "bg-gold/20"}`}>
+            <Flame className={`h-6 w-6 ${urgent ? "text-warning" : "text-gold"}`} />
           </div>
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gold">
-              Kostenloser Test
+            <p className={`text-[10px] font-bold uppercase tracking-[0.2em] ${urgent ? "text-warning" : "text-gold"}`}>
+              {urgent ? "Trial endet bald" : "Kostenloser Test"}
             </p>
             <p className="font-display text-xl font-bold">
               Noch {daysLeft ?? 7} {daysLeft === 1 ? "Tag" : "Tage"} kostenlos testen
@@ -148,6 +180,15 @@ export function TrialStatusBanner() {
           <Link to="/profile">Mitgliedschaft aktivieren</Link>
         </Button>
       </div>
+    </div>
+  );
+}
+
+function SummaryStat({ label, value }: { label: string; value: number | string }) {
+  return (
+    <div className="rounded-xl border border-border bg-background/40 px-3 py-2 text-center">
+      <div className="font-display text-2xl font-bold text-gold">{value}</div>
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
     </div>
   );
 }

@@ -7,6 +7,8 @@ import { MacroTargetsCard } from "@/components/bodyfuel/MacroTargetsCard";
 import { PlanContentView } from "@/components/bodyfuel/PlanContentView";
 import { useSession } from "@/lib/bodyfuel/session";
 import { supabase } from "@/integrations/supabase/client";
+import { useTrial } from "@/hooks/use-trial";
+import { TrialNutritionPlan } from "@/components/bodyfuel/TrialPlanView";
 
 export const Route = createFileRoute("/nutrition/")({
   head: () => ({ meta: [{ title: "Ernährungsplan — BODYFUEL" }] }),
@@ -15,6 +17,7 @@ export const Route = createFileRoute("/nutrition/")({
 
 function NutritionIndex() {
   const { isCoach, supabaseUser } = useSession();
+  const { isTrial, isExpired } = useTrial();
   const [coachClientId, setCoachClientId] = useState<string>("");
   const [clients, setClients] = useState<{ id: string; display_name: string | null }[]>([]);
 
@@ -74,7 +77,11 @@ function NutritionIndex() {
             </select>
           </div>
         )}
-        {viewClientId && <PlanContentView clientId={viewClientId} planType="nutrition" />}
+        {!isCoach && (isTrial || isExpired) ? (
+          <TrialNutritionPlan />
+        ) : (
+          viewClientId && <PlanContentView clientId={viewClientId} planType="nutrition" />
+        )}
       </div>
     </AppLayout>
   );

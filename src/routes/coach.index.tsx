@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
+import { CoachTrialOverview } from "@/components/bodyfuel/CoachTrialOverview";
 import { supabase } from "@/integrations/supabase/client";
 import { getRanking, type RankingPeriod } from "@/lib/coaching.functions";
 import {
@@ -380,10 +381,16 @@ function CoachDashboard() {
             ))}
           </Panel>
 
+          {/* Trial-Übersicht */}
+          <div className="lg:col-span-2">
+            <CoachTrialOverview />
+          </div>
+
           {/* Ranking */}
           <div className="lg:col-span-2">
             <RankingPanel />
           </div>
+
 
         </div>
       )}
