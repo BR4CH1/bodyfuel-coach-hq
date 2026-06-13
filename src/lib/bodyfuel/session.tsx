@@ -15,6 +15,8 @@ type SessionCtx = {
   supabaseUser: User | null;
   profile: Profile | null;
   loading: boolean;
+  groups: string[];
+  hasGroup: (g: string) => boolean;
   loginAs: (id: string, coach?: boolean) => void;
   logout: () => Promise<void>;
   updateTodayCheck: (tasks: DailyCheck["tasks"]) => void;
