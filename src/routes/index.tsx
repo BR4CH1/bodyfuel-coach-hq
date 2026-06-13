@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import appDashboardAsset from "@/assets/app-dashboard.png.asset.json";
 import {
   ArrowRight,
   Activity,
@@ -71,8 +73,10 @@ function LandingPage() {
     <div className="min-h-screen bg-background text-foreground">
       <Header />
       <Hero />
+      <TrialBanner />
       <ForWhom />
       <WhatIs />
+      <AppScreenshots />
       <SystemSteps />
       <Gamification />
       <Results />
@@ -82,6 +86,99 @@ function LandingPage() {
       <ContactForm />
       <Footer />
     </div>
+  );
+}
+
+function TrialBanner() {
+  return (
+    <section className="relative py-10 sm:py-14">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <div className="relative overflow-hidden rounded-3xl border border-gold/40 bg-gradient-to-r from-gold/20 via-gold/10 to-transparent p-6 sm:p-10">
+          <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-gold/20 blur-3xl" />
+          <div className="relative flex flex-col items-start justify-between gap-5 sm:flex-row sm:items-center">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-gold/40 bg-background/60 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-gold">
+                <Sparkles className="h-3 w-3" /> 7 Tage gratis testen
+              </div>
+              <h2 className="mt-3 font-display text-2xl font-bold sm:text-3xl">
+                Probier BODYFUEL <span className="text-gradient-gold">kostenlos.</span>
+              </h2>
+              <p className="mt-2 max-w-xl text-sm text-muted-foreground">
+                Starter-Trainingsplan, Starter-Ernährungsplan, Tracking, Level-System &
+                Fortschritt — 7 Tage kostenlos. Keine Zahlungsdaten nötig.
+              </p>
+            </div>
+            <Link to="/trial">
+              <Button
+                size="lg"
+                className="bg-gradient-gold text-primary-foreground shadow-gold hover:opacity-90"
+              >
+                Jetzt 7 Tage gratis starten
+                <ArrowRight className="ml-1 h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function AppScreenshots() {
+  const features = [
+    { icon: Trophy, title: "Level & XP", text: "Vom Rookie zum Legend — jeder Tag zählt." },
+    { icon: Flame, title: "Streaks", text: "Tägliche Konstanz wird sichtbar belohnt." },
+    { icon: TrendingUp, title: "Fortschritt", text: "Punkte pro Tag, Wochen-Trend, Bestleistungen." },
+    { icon: Apple, title: "Tracking", text: "Ernährung, Wasser, Schlaf — alles an einem Ort." },
+  ];
+  return (
+    <section className="relative py-20 sm:py-28">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <div className="grid items-center gap-10 lg:grid-cols-[1fr_1.1fr]">
+          <div className="relative mx-auto w-full max-w-[320px]">
+            <div className="absolute -inset-6 rounded-[3rem] bg-gradient-gold opacity-15 blur-3xl" />
+            <div className="relative overflow-hidden rounded-[2.2rem] border-[10px] border-black bg-black shadow-2xl">
+              <img
+                src={appDashboardAsset.url}
+                alt="BODYFUEL Dashboard mit Level, Punkten, Streak und Wochenverlauf"
+                className="block h-auto w-full"
+                loading="lazy"
+              />
+            </div>
+          </div>
+          <div>
+            <SectionLabel>In der App</SectionLabel>
+            <h2 className="mt-3 font-display text-3xl font-bold sm:text-4xl">
+              Dein <span className="text-gradient-gold">Dashboard.</span> Jeden Tag.
+            </h2>
+            <p className="mt-3 max-w-xl text-muted-foreground">
+              Ein Blick und du weißt, wo du stehst. Tagespunkte, aktuelles Level, Streak
+              und Wochenverlauf — direkt nach dem Login.
+            </p>
+            <div className="mt-8 grid gap-4 sm:grid-cols-2">
+              {features.map((f) => (
+                <div
+                  key={f.title}
+                  className="rounded-2xl border border-border bg-card p-5 transition hover:border-gold/40"
+                >
+                  <div className="grid h-10 w-10 place-items-center rounded-xl bg-secondary text-gold">
+                    <f.icon className="h-5 w-5" />
+                  </div>
+                  <h3 className="mt-3 font-display text-base font-bold">{f.title}</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">{f.text}</p>
+                </div>
+              ))}
+            </div>
+            <Link to="/trial" className="mt-7 inline-flex">
+              <Button className="bg-gradient-gold text-primary-foreground shadow-gold hover:opacity-90">
+                Selbst ausprobieren — 7 Tage gratis
+                <ArrowRight className="ml-1 h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
