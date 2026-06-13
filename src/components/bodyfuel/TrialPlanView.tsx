@@ -27,6 +27,24 @@ export function TrialNutritionPlan() {
   const day = TRIAL_NUTRITION.find((d) => d.id === dayId)!;
   const [variantId, setVariantId] = useState<string>(day.variants[0].id);
   const variant = day.variants.find((v) => v.id === variantId) ?? day.variants[0];
+  const [trackedKeys, setTrackedKeys] = useState<Set<string>>(new Set());
+
+  const loadTracked = async () => {
+    if (!supabaseUser) return;
+    const today = new Date().toISOString().slice(0, 10);
+    const { data } = await supabase
+      .from("food_entries")
+      .select("name")
+      .eq("user_id", supabaseUser.id)
+      .eq("entry_date", today)
+      .eq("source", "trial-plan");
+    setTrackedKeys(new Set(((data as { name: string }[]) ?? []).map((r) => r.name)));
+  };
+
+  useEffect(() => {
+    loadTracked();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supabaseUser?.id]);
 
   // Automatisch Trainings- vs. Restday wählen (anhand heutiger Trainings-Logs / Override)
   useEffect(() => {
@@ -86,9 +104,18 @@ export function TrialNutritionPlan() {
       )}
 
       <div className="mt-4 space-y-3">
-        {variant.meals.map((m, i) => (
-          <TrialMealCard key={`${dayId}-${variantId}-${i}`} meal={m} />
-        ))}
+        {variant.meals.map((m, i) => {
+          const key = `${m.name} — ${m.description}`.slice(0, 200);
+          return (
+            <TrialMealCard
+              key={`${dayId}-${variantId}-${i}`}
+              meal={m}
+              entryKey={key}
+              initiallyTracked={trackedKeys.has(key)}
+              onTracked={() => setTrackedKeys((prev) => new Set(prev).add(key))}
+            />
+          );
+        })}
       </div>
 
 
@@ -195,10 +222,24 @@ function UpgradeHint({ text }: { text: string }) {
   );
 }
 
-function TrialMealCard({ meal }: { meal: TrialMeal }) {
+function TrialMealCard({
+  meal,
+  entryKey,
+  initiallyTracked,
+  onTracked,
+}: {
+  meal: TrialMeal;
+  entryKey: string;
+  initiallyTracked: boolean;
+  onTracked: () => void;
+}) {
   const { supabaseUser } = useSession();
   const [busy, setBusy] = useState(false);
-  const [tracked, setTracked] = useState(false);
+  const [tracked, setTracked] = useState(initiallyTracked);
+
+  useEffect(() => {
+    setTracked(initiallyTracked);
+  }, [initiallyTracked]);
 
   const track = async () => {
     if (!supabaseUser || busy || tracked) return;
@@ -207,7 +248,7 @@ function TrialMealCard({ meal }: { meal: TrialMeal }) {
       user_id: supabaseUser.id,
       entry_date: new Date().toISOString().slice(0, 10),
       meal: mapMealCategory(meal.name),
-      name: `${meal.name} — ${meal.description}`.slice(0, 200),
+      name: entryKey,
       serving_g: 100,
       kcal: meal.kcal,
       protein_g: meal.protein_g,
@@ -221,8 +262,10 @@ function TrialMealCard({ meal }: { meal: TrialMeal }) {
       return;
     }
     setTracked(true);
+    onTracked();
     toast.success(`${meal.name} getrackt`);
   };
+
 
   return (
     <button
