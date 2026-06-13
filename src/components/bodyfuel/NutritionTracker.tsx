@@ -551,12 +551,17 @@ export function NutritionTracker() {
             </div>
             {list.length > 0 && (
               <ul className="mt-3 divide-y divide-border">
-                {list.map((e) => (
+                {list.map((e) => {
+                  const isPlan = typeof (e as any).source === "string" && (e as any).source.startsWith("plan:");
+                  const cleanName = isPlan
+                    ? e.name.replace(/^\s*(Frühstück|Mittagessen|Mittag|Abendessen|Abend|Snack|Spätsnack|Late[- ]?Night|Pre[- ]?Workout|Post[- ]?Workout|Shake|Mahlzeit\s*\d+)\s*[—–\-:]\s*/i, "")
+                    : e.name;
+                  return (
                   <li key={e.id} className="flex items-center gap-3 py-2">
                     <div className="min-w-0 flex-1">
-                      <div className="text-sm font-medium break-words">{e.name}</div>
+                      <div className="text-sm font-medium break-words">{cleanName}</div>
                       <div className="text-[11px] text-muted-foreground">
-                        {e.brand ? `${e.brand} · ` : ""}{Number(e.serving_g)} g · {Math.round(Number(e.kcal))} kcal · P {Number(e.protein_g)} · K {Number(e.carbs_g)} · F {Number(e.fat_g)}
+                        {e.brand ? `${e.brand} · ` : ""}{isPlan ? "" : `${Number(e.serving_g)} g · `}{Math.round(Number(e.kcal))} kcal · P {Number(e.protein_g)} · K {Number(e.carbs_g)} · F {Number(e.fat_g)}
                       </div>
                     </div>
                     <button
@@ -567,7 +572,8 @@ export function NutritionTracker() {
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             )}
           </div>
