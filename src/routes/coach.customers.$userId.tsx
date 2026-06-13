@@ -367,6 +367,45 @@ function CustomerDetail() {
       )}
 
       <div className="rounded-2xl border border-border bg-card p-6">
+        <h2 className="font-display text-lg font-bold">Coaching-Infos</h2>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Diese Werte werden im Kundenprofil angezeigt — der Kunde kann sie nicht ändern.
+        </p>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label>Ziel</Label>
+            <Select value={coachingGoal} onValueChange={setCoachingGoal}>
+              <SelectTrigger>
+                <SelectValue placeholder="Ziel wählen" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="abnehmen">Abnehmen</SelectItem>
+                <SelectItem value="muskelaufbau">Muskelaufbau</SelectItem>
+                <SelectItem value="performance">Performance</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Nächster Check-in</Label>
+            <Input
+              type="date"
+              value={nextCheckin}
+              onChange={(e) => setNextCheckin(e.target.value)}
+            />
+          </div>
+        </div>
+        <Button
+          onClick={() => saveCoaching.mutate()}
+          disabled={saveCoaching.isPending}
+          className="mt-4 bg-gradient-gold text-primary-foreground"
+        >
+          Speichern
+        </Button>
+      </div>
+
+
+
+      <div className="rounded-2xl border border-border bg-card p-6">
         <h2 className="font-display text-lg font-bold">Zahlungshistorie</h2>
         {data.payments.length === 0 ? (
           <p className="mt-3 text-sm text-muted-foreground">Noch keine Zahlungen.</p>
