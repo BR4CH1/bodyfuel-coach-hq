@@ -45,10 +45,14 @@ function TrainingPage() {
   return (
     <div className="space-y-8">
       {isCoach && <PlansView planType="training" />}
-      {supabaseUser && (clientId || !isCoach) && (
-        <PlanContentView clientId={clientId || supabaseUser.id} planType="training" />
+      {!isCoach && (isTrial || isExpired) ? (
+        <TrialTrainingPlan />
+      ) : (
+        supabaseUser && (clientId || !isCoach) && (
+          <PlanContentView clientId={clientId || supabaseUser.id} planType="training" />
+        )
       )}
-      {supabaseUser && (
+      {supabaseUser && !isTrial && !isExpired && (
         <section className="space-y-4">
           {isCoach && (
             <div className="rounded-2xl border border-border bg-card p-4">
