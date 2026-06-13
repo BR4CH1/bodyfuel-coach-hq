@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { PlansView } from "@/components/bodyfuel/PlansView";
 import { TrainingTracker } from "@/components/bodyfuel/TrainingTracker";
+import { PlanContentView } from "@/components/bodyfuel/PlanContentView";
 import { useSession } from "@/lib/bodyfuel/session";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -41,6 +42,9 @@ function TrainingPage() {
   return (
     <div className="space-y-8">
       <PlansView planType="training" />
+      {supabaseUser && (clientId || !isCoach) && (
+        <PlanContentView clientId={clientId || supabaseUser.id} planType="training" />
+      )}
       {supabaseUser && (
         <section className="space-y-4">
           {isCoach && (

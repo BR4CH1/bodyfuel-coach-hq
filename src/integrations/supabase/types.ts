@@ -506,6 +506,85 @@ export type Database = {
         }
         Relationships: []
       }
+      nutrition_plan_days: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          plan_id: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          plan_id: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          plan_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nutrition_plan_days_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "nutrition_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nutrition_plan_meals: {
+        Row: {
+          carbs_g: number | null
+          created_at: string
+          day_id: string
+          description: string | null
+          fat_g: number | null
+          id: string
+          kcal: number | null
+          name: string
+          protein_g: number | null
+          sort_order: number
+        }
+        Insert: {
+          carbs_g?: number | null
+          created_at?: string
+          day_id: string
+          description?: string | null
+          fat_g?: number | null
+          id?: string
+          kcal?: number | null
+          name: string
+          protein_g?: number | null
+          sort_order?: number
+        }
+        Update: {
+          carbs_g?: number | null
+          created_at?: string
+          day_id?: string
+          description?: string | null
+          fat_g?: number | null
+          id?: string
+          kcal?: number | null
+          name?: string
+          protein_g?: number | null
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nutrition_plan_meals_day_id_fkey"
+            columns: ["day_id"]
+            isOneToOne: false
+            referencedRelation: "nutrition_plan_days"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       nutrition_plans: {
         Row: {
           client_id: string
