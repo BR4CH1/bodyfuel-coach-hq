@@ -293,6 +293,8 @@ function CustomerDetail() {
         )}
       </div>
 
+      <CoachTrialCard userId={userId} />
+
       <GroupsCard
         userId={userId}
         groups={(data as any).groups ?? []}
