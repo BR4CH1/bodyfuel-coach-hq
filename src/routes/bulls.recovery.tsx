@@ -125,7 +125,7 @@ function RecoveryPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {BASICS.map((b) => (
             <div key={b.title} className="rounded-2xl border border-border bg-card p-5">
-              <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-bulls-green">
+              <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-emerald-400">
                 <b.icon className="h-4 w-4" /> {b.title}
               </div>
               <p className="mt-2 font-display text-2xl font-bold text-white">{b.goal}</p>
@@ -181,7 +181,7 @@ function IssueBlock({ card }: { card: IssueCard }) {
 function Sub({ label, items, tone }: { label: string; items: string[]; tone?: "green" }) {
   return (
     <div>
-      <div className={`text-[11px] font-bold uppercase tracking-wider ${tone === "green" ? "text-bulls-green" : "text-muted-foreground"}`}>
+      <div className={`text-[11px] font-bold uppercase tracking-wider ${tone === "green" ? "text-emerald-400" : "text-muted-foreground"}`}>
         {label}
       </div>
       <ul className="mt-1 list-disc pl-5 text-sm text-foreground/90 space-y-0.5">
