@@ -77,6 +77,10 @@ export function TrialNutritionPlan() {
         />
       </div>
 
+      {autoNote && (
+        <p className="mt-3 text-[11px] text-muted-foreground">{autoNote}</p>
+      )}
+
       <div className="mt-4 space-y-3">
         {variant.meals.map((m, i) => (
           <TrialMealCard key={`${dayId}-${variantId}-${i}`} meal={m} />
