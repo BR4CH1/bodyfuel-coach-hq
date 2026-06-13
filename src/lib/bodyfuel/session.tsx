@@ -55,6 +55,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       if (!session?.user) {
         setProfile(null);
         setRole(null);
+        setGroups([]);
       } else {
         // defer DB reads off the callback
         setTimeout(() => loadProfile(session.user.id), 0);
