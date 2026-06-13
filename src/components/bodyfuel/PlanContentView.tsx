@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Loader2, Sparkles, Utensils, Dumbbell, Check, Shuffle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
-import { parseNutritionPlan } from "@/lib/nutrition-plan.functions";
+import { parseNutritionPlan, estimateMealMacros } from "@/lib/nutrition-plan.functions";
 import { parseTrainingPlan } from "@/lib/training.functions";
 import { getDayType } from "@/lib/nutrition.functions";
 
