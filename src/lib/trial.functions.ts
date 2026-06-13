@@ -157,6 +157,7 @@ export const startMyTrial = createServerFn({ method: "POST" })
       .eq("id", context.userId);
     if (error) throw new Error(error.message);
     try { await seedTrialTrainingPlanFor(context.userId); } catch (e) { console.error(e); }
+    try { await seedTrialNutritionTargetsFor(context.userId); } catch (e) { console.error(e); }
     return { ok: true, trial_status: "trial" as const, trial_start: start, trial_end: end };
   });
 
