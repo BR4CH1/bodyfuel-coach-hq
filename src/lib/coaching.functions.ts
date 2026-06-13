@@ -312,6 +312,112 @@ export const getCustomerDetail = createServerFn({ method: "POST" })
 
   });
 
+export const getCustomerRecentActivity = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { user_id: string; days?: number }) => data)
+  .handler(async ({ data, context }) => {
+    await assertCoach(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const days = Math.max(1, Math.min(7, data.days ?? 3));
+    const today = new Date();
+    const dateList: string[] = [];
+    for (let i = 0; i < days; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      dateList.push(d.toISOString().slice(0, 10));
+    }
+    const fromDate = dateList[dateList.length - 1];
+    const toDate = dateList[0];
+    const fromIso = `${fromDate}T00:00:00.000Z`;
+    const toEndIso = `${toDate}T23:59:59.999Z`;
+
+    const [checks, foods, sets] = await Promise.all([
+      supabaseAdmin
+        .from("daily_checks")
+        .select("check_date, points, tasks")
+        .eq("user_id", data.user_id)
+        .gte("check_date", fromDate)
+        .lte("check_date", toDate),
+      supabaseAdmin
+        .from("food_entries")
+        .select("entry_date, meal, name, kcal, protein_g, carbs_g, fat_g, serving_g")
+        .eq("user_id", data.user_id)
+        .gte("entry_date", fromDate)
+        .lte("entry_date", toDate)
+        .order("created_at", { ascending: true }),
+      supabaseAdmin
+        .from("training_set_logs")
+        .select("performed_at, weight_kg, reps, set_number, exercise_id, training_exercises(name)")
+        .eq("client_id", data.user_id)
+        .gte("performed_at", fromIso)
+        .lte("performed_at", toEndIso)
+        .order("performed_at", { ascending: true }),
+    ]);
+
+    const byDay = dateList.map((date) => {
+      const check = (checks.data ?? []).find((c: any) => c.check_date === date) ?? null;
+      const dayFoods = (foods.data ?? []).filter((f: any) => f.entry_date === date);
+      const totals = dayFoods.reduce(
+        (a: any, f: any) => ({
+          kcal: a.kcal + Number(f.kcal || 0),
+          protein_g: a.protein_g + Number(f.protein_g || 0),
+          carbs_g: a.carbs_g + Number(f.carbs_g || 0),
+          fat_g: a.fat_g + Number(f.fat_g || 0),
+        }),
+        { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0 },
+      );
+      const daySets = (sets.data ?? []).filter(
+        (s: any) => new Date(s.performed_at).toISOString().slice(0, 10) === date,
+      );
+      const exMap = new Map<string, { name: string; sets: any[]; volume: number }>();
+      for (const s of daySets) {
+        const name = (s.training_exercises as any)?.name ?? "—";
+        const key = s.exercise_id as string;
+        const cur = exMap.get(key) ?? { name, sets: [] as any[], volume: 0 };
+        cur.sets.push({
+          set_number: s.set_number,
+          weight_kg: s.weight_kg,
+          reps: s.reps,
+        });
+        cur.volume += Number(s.weight_kg || 0) * Number(s.reps || 0);
+        exMap.set(key, cur);
+      }
+      const exercises = Array.from(exMap.values()).map((e) => ({
+        name: e.name,
+        sets: e.sets.sort((a, b) => (a.set_number ?? 0) - (b.set_number ?? 0)),
+        volume: Math.round(e.volume),
+        total_sets: e.sets.length,
+      }));
+      const total_sets = daySets.length;
+      const total_volume = exercises.reduce((s, e) => s + e.volume, 0);
+
+      return {
+        date,
+        check: check ? { points: check.points, tasks: check.tasks } : null,
+        nutrition: {
+          totals,
+          entries: dayFoods.map((f: any) => ({
+            meal: f.meal,
+            name: f.name,
+            kcal: Number(f.kcal || 0),
+            protein_g: Number(f.protein_g || 0),
+            carbs_g: Number(f.carbs_g || 0),
+            fat_g: Number(f.fat_g || 0),
+            serving_g: Number(f.serving_g || 0),
+          })),
+        },
+        training: {
+          total_sets,
+          total_volume,
+          exercises,
+        },
+      };
+    });
+
+    return { days: byDay };
+  });
+
 /* ---------------- INVITE / PASSWORT / DEAKTIVIEREN ---------------- */
 
 export const resendInvite = createServerFn({ method: "POST" })
