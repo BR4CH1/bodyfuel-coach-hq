@@ -125,7 +125,8 @@ Keine Erklärungen.`;
           typeof e.target_sets === "number" && Number.isFinite(e.target_sets)
             ? Math.max(1, Math.min(20, Math.round(e.target_sets)))
             : null,
-        target_reps: e.target_reps ? String(e.target_reps).slice(0, 40) : null,
+        target_reps: e.target_reps ? String(e.target_reps).slice(0, 80) : null,
+        target_weights: e.target_weights ? String(e.target_weights).slice(0, 120) : null,
         notes: e.notes ? String(e.notes).slice(0, 500) : null,
         sort_order: i,
       })).filter((r) => r.name);
