@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, Sparkles, Utensils, Dumbbell, Check, Shuffle } from "lucide-react";
+import { Loader2, Sparkles, Utensils, Dumbbell, Check, Shuffle, BookOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
 import { parseNutritionPlan, estimateMealMacros } from "@/lib/nutrition-plan.functions";
 import { parseTrainingPlan } from "@/lib/training.functions";
 import { getDayType } from "@/lib/nutrition.functions";
+import { RecipeDialog } from "./RecipeDialog";
 
 type Plan = { id: string; client_id: string; title: string };
 type Day = { id: string; name: string; sort_order: number };
@@ -130,6 +131,8 @@ export function PlanContentView({ clientId, planType }: Props) {
   const [tracked, setTracked] = useState<Record<string, string>>({}); // meal_id -> food_entry.id
   const [togglingId, setTogglingId] = useState<string>("");
   const [dayKind, setDayKind] = useState<"training" | "rest" | null>(null);
+  const [recipeMeal, setRecipeMeal] = useState<Meal | null>(null);
+
 
   const dayTable = planType === "nutrition" ? "nutrition_plan_days" : "training_days";
   const itemTable = planType === "nutrition" ? "nutrition_plan_meals" : "training_exercises";
@@ -449,21 +452,33 @@ export function PlanContentView({ clientId, planType }: Props) {
                       )}
                     </>
                   );
-                  const base = "w-full text-left rounded-2xl border p-4 transition";
+                  const base = "rounded-2xl border p-4 transition";
                   const style = isTracked
                     ? "border-emerald-500/40 bg-emerald-500/5"
                     : "border-border bg-background/40";
-                  return canTrack ? (
-                    <button
-                      key={m.id}
-                      onClick={() => toggleMeal(m)}
-                      disabled={busy}
-                      className={`${base} ${style} hover:border-gold/50 disabled:opacity-60`}
-                    >
-                      {inner}
-                    </button>
-                  ) : (
-                    <div key={m.id} className={`${base} ${style}`}>{inner}</div>
+                  return (
+                    <div key={m.id} className={`${base} ${style} relative`}>
+                      <button
+                        type="button"
+                        onClick={() => setRecipeMeal(m)}
+                        className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-md border border-border bg-background/60 px-2 py-1 text-[10px] font-semibold text-muted-foreground hover:border-gold/50 hover:text-gold"
+                        aria-label="Rezept anzeigen"
+                      >
+                        <BookOpen className="h-3 w-3" /> Rezept
+                      </button>
+                      {canTrack ? (
+                        <button
+                          type="button"
+                          onClick={() => toggleMeal(m)}
+                          disabled={busy}
+                          className="block w-full pr-20 text-left hover:opacity-90 disabled:opacity-60"
+                        >
+                          {inner}
+                        </button>
+                      ) : (
+                        <div className="pr-20">{inner}</div>
+                      )}
+                    </div>
                   );
                 })
               : exercises.filter((e) => itemToVirtual[e.id] === activeDay).map((e) => {
@@ -493,6 +508,14 @@ export function PlanContentView({ clientId, planType }: Props) {
             )}
           </div>
         </>
+      )}
+      {recipeMeal && (
+        <RecipeDialog
+          meal={recipeMeal}
+          displayName={itemDisplayName[recipeMeal.id] ?? recipeMeal.name}
+          isCoach={isCoach}
+          onClose={() => setRecipeMeal(null)}
+        />
       )}
     </div>
   );
