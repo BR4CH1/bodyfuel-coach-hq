@@ -365,7 +365,6 @@ function RealUserDashboard() {
         </div>
         <DashboardQuickActions />
       </div>
-      </div>
 
       {todayDbPoints < MAX_DAILY_POINTS && (
         <Link
