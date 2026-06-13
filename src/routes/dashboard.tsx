@@ -8,6 +8,8 @@ import { DailyChecklist } from "@/components/bodyfuel/DailyChecklist";
 import { AchievementsCard } from "@/components/bodyfuel/AchievementsCard";
 import { TrainingBonusCard } from "@/components/bodyfuel/TrainingBonusCard";
 import { MacroTargetsCard } from "@/components/bodyfuel/MacroTargetsCard";
+import { DayTypePrompt } from "@/components/bodyfuel/DayTypePrompt";
+import { DailyMacroSummary } from "@/components/bodyfuel/DailyMacroSummary";
 
 import { useSession } from "@/lib/bodyfuel/session";
 import { supabase } from "@/integrations/supabase/client";
