@@ -34,7 +34,7 @@ export function DailyMacroSummary({ userId }: { userId: string }) {
       if (t) {
         const useRest = d?.kind === "rest" && t.kcal_rest != null;
         setTargets({
-          kcal: useRest ? t.kcal_rest : t.kcal,
+          kcal: useRest ? (t.kcal_rest as number) : t.kcal,
           protein_g: useRest ? (t.protein_g_rest ?? t.protein_g) : t.protein_g,
           carbs_g: useRest ? (t.carbs_g_rest ?? t.carbs_g) : t.carbs_g,
           fat_g: useRest ? (t.fat_g_rest ?? t.fat_g) : t.fat_g,
