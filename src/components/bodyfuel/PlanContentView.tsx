@@ -47,6 +47,70 @@ const isRestDay = (name: string) => /rest|ruh|pause|off|frei/i.test(name);
 const pickRandom = <T,>(arr: T[]): T | null =>
   arr.length ? arr[Math.floor(Math.random() * arr.length)] : null;
 
+// Leite aus einem Mahlzeit-Namen einen "Tag-Gruppen-Schlüssel" ab.
+// Beispiele:
+//   "Trainingstag A Mahlzeit 1" -> { group: "Trainingstag A", label: "Mahlzeit 1" }
+//   "Restday Mahlzeit 2"        -> { group: "Restday",       label: "Mahlzeit 2" }
+//   "Frühstück"                  -> null  (keine Tag-Info im Namen)
+function extractDayGroup(name: string): { group: string; label: string } | null {
+  const m = name.match(
+    /^\s*(Trainingstag(?:\s+[A-Za-z0-9]+)?|Restday|Ruhetag|Pausentag|Tag\s*\d+|Montag|Dienstag|Mittwoch|Donnerstag|Freitag|Samstag|Sonntag)\b[\s\-–—:|·]*(.*)$/i,
+  );
+  if (!m) return null;
+  const group = m[1].replace(/\s+/g, " ").trim();
+  const rest = (m[2] ?? "").trim();
+  return { group, label: rest || group };
+}
+
+type VirtualDay = { id: string; name: string; realDayId: string };
+
+function buildVirtualDays(days: Day[], meals: Meal[]): {
+  virtualDays: VirtualDay[];
+  mealToVirtual: Record<string, string>;
+  mealDisplayName: Record<string, string>;
+} {
+  const virtualDays: VirtualDay[] = [];
+  const mealToVirtual: Record<string, string> = {};
+  const mealDisplayName: Record<string, string> = {};
+
+  for (const day of days) {
+    const dayMeals = meals
+      .filter((m) => m.day_id === day.id)
+      .sort((a, b) => a.sort_order - b.sort_order);
+
+    // Versuche Mahlzeiten anhand des Namens in Gruppen aufzuteilen
+    const groups = new Map<string, { meals: Meal[]; firstIndex: number }>();
+    let allHaveGroup = dayMeals.length > 0;
+    dayMeals.forEach((m, idx) => {
+      const g = extractDayGroup(m.name);
+      if (!g) { allHaveGroup = false; return; }
+      const key = g.group;
+      if (!groups.has(key)) groups.set(key, { meals: [], firstIndex: idx });
+      groups.get(key)!.meals.push(m);
+      mealDisplayName[m.id] = g.label;
+    });
+
+    if (allHaveGroup && groups.size > 1) {
+      const sorted = [...groups.entries()].sort(
+        (a, b) => a[1].firstIndex - b[1].firstIndex,
+      );
+      for (const [groupName, info] of sorted) {
+        const vid = `${day.id}::${groupName}`;
+        virtualDays.push({ id: vid, name: groupName, realDayId: day.id });
+        info.meals.forEach((m) => { mealToVirtual[m.id] = vid; });
+      }
+    } else {
+      // Fallback: ein virtueller Tag = echter Tag
+      virtualDays.push({ id: day.id, name: day.name, realDayId: day.id });
+      dayMeals.forEach((m) => {
+        mealToVirtual[m.id] = day.id;
+        if (!mealDisplayName[m.id]) mealDisplayName[m.id] = m.name;
+      });
+    }
+  }
+  return { virtualDays, mealToVirtual, mealDisplayName };
+}
+
 export function PlanContentView({ clientId, planType }: Props) {
   const { isCoach, supabaseUser } = useSession();
   const parseNutrition = useServerFn(parseNutritionPlan);
