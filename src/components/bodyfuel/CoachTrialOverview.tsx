@@ -51,6 +51,10 @@ export function CoachTrialOverview() {
         </Link>
       </div>
 
+      <TrialPermalink />
+
+
+
       <div className="grid grid-cols-3 gap-3">
         <Stat icon={<Clock className="h-4 w-4" />} label="Aktiv" value={active.length} tone="gold" />
         <Stat icon={<AlertTriangle className="h-4 w-4" />} label="Abgelaufen" value={expired.length} tone="warn" />
