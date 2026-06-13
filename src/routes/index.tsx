@@ -100,7 +100,7 @@ function NutritionTrackingUSP() {
     {
       icon: Salad,
       title: "Plan direkt in der App",
-      text: "Dein Ernährungsplan steht unter „Ernährung". Kein PDF, keine Suche — alles eingebettet.",
+      text: 'Dein Ernährungsplan steht unter „Ernährung". Kein PDF, keine Suche — alles eingebettet.',
     },
     {
       icon: Dumbbell,
