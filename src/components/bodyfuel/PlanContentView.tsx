@@ -135,6 +135,53 @@ export function PlanContentView({ clientId, planType }: Props) {
   useEffect(() => { reload(); /* eslint-disable-next-line */ }, [clientId, planType]);
   useEffect(() => { reloadTracked(); /* eslint-disable-next-line */ }, [clientId, planType, supabaseUser?.id]);
 
+  // Fetch today's day type (only for self / nutrition); used to auto-pick a matching day.
+  useEffect(() => {
+    if (!isSelf || planType !== "nutrition") { setDayKind(null); return; }
+    let cancelled = false;
+    (async () => {
+      try {
+        const d = await getDayTypeFn({ data: { user_id: clientId, date: todayKey() } });
+        if (!cancelled) setDayKind(d.kind);
+      } catch {
+        if (!cancelled) setDayKind(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [clientId, planType, isSelf, getDayTypeFn]);
+
+  // Auto-pick a random matching plan day for today if no manual pick is stored yet.
+  useEffect(() => {
+    if (!days.length || !dayKind) return;
+    let saved = "";
+    try { saved = localStorage.getItem(pickStorageKey) ?? ""; } catch {}
+    if (saved && days.find((d) => d.id === saved)) return;
+    const matches = days.filter((d) =>
+      dayKind === "rest" ? isRestDay(d.name) : !isRestDay(d.name),
+    );
+    const pool = matches.length ? matches : days;
+    const pick = pickRandom(pool);
+    if (pick) {
+      setActiveDay(pick.id);
+      try { localStorage.setItem(pickStorageKey, pick.id); } catch {}
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [days, dayKind]);
+
+  const pickAnotherDay = () => {
+    if (!days.length) return;
+    const matches = days.filter((d) =>
+      dayKind === "rest" ? isRestDay(d.name) : !isRestDay(d.name),
+    );
+    const pool = (matches.length ? matches : days).filter((d) => d.id !== activeDay);
+    const pick = pickRandom(pool.length ? pool : days);
+    if (pick) {
+      setActiveDay(pick.id);
+      try { localStorage.setItem(pickStorageKey, pick.id); } catch {}
+    }
+  };
+
+
   const handleParse = async () => {
     if (!plan) return;
     setParsing(true);
