@@ -77,7 +77,11 @@ function NutritionIndex() {
             </select>
           </div>
         )}
-        {viewClientId && <PlanContentView clientId={viewClientId} planType="nutrition" />}
+        {!isCoach && (isTrial || isExpired) ? (
+          <TrialNutritionPlan />
+        ) : (
+          viewClientId && <PlanContentView clientId={viewClientId} planType="nutrition" />
+        )}
       </div>
     </AppLayout>
   );
