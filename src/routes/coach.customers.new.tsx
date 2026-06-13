@@ -172,6 +172,21 @@ function NewCustomerForm() {
           />
         </div>
 
+        <label className="flex items-start gap-3 rounded-xl border border-border bg-secondary/30 p-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={form.bulls}
+            onChange={(e) => setForm({ ...form, bulls: e.target.checked })}
+            className="mt-0.5 h-4 w-4"
+          />
+          <div>
+            <div className="text-sm font-semibold">Bulls Performance Hub freischalten</div>
+            <div className="text-xs text-muted-foreground">
+              Spieler der Coesfeld Bulls erhalten Zugriff auf den kostenlosen Bulls-Bereich.
+            </div>
+          </div>
+        </label>
+
         <Button
           type="submit"
           disabled={busy}
