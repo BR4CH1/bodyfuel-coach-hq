@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WelcomeRouteImport } from './routes/welcome'
+import { Route as TrialRouteImport } from './routes/trial'
 import { Route as TrainingRouteImport } from './routes/training'
 import { Route as ProgressRouteImport } from './routes/progress'
 import { Route as ProfileRouteImport } from './routes/profile'
@@ -47,6 +48,11 @@ import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/em
 const WelcomeRoute = WelcomeRouteImport.update({
   id: '/welcome',
   path: '/welcome',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TrialRoute = TrialRouteImport.update({
+  id: '/trial',
+  path: '/trial',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TrainingRoute = TrainingRouteImport.update({
@@ -230,6 +236,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRoute
   '/progress': typeof ProgressRoute
   '/training': typeof TrainingRoute
+  '/trial': typeof TrialRoute
   '/welcome': typeof WelcomeRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
   '/bulls/nutrition': typeof BullsNutritionRoute
@@ -264,6 +271,7 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/progress': typeof ProgressRoute
   '/training': typeof TrainingRoute
+  '/trial': typeof TrialRoute
   '/welcome': typeof WelcomeRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
   '/bulls/nutrition': typeof BullsNutritionRoute
@@ -300,6 +308,7 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRoute
   '/progress': typeof ProgressRoute
   '/training': typeof TrainingRoute
+  '/trial': typeof TrialRoute
   '/welcome': typeof WelcomeRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
   '/bulls/nutrition': typeof BullsNutritionRoute
@@ -338,6 +347,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/progress'
     | '/training'
+    | '/trial'
     | '/welcome'
     | '/bulls/benchmarks'
     | '/bulls/nutrition'
@@ -372,6 +382,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/progress'
     | '/training'
+    | '/trial'
     | '/welcome'
     | '/bulls/benchmarks'
     | '/bulls/nutrition'
@@ -407,6 +418,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/progress'
     | '/training'
+    | '/trial'
     | '/welcome'
     | '/bulls/benchmarks'
     | '/bulls/nutrition'
@@ -444,6 +456,7 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRoute
   ProgressRoute: typeof ProgressRoute
   TrainingRoute: typeof TrainingRoute
+  TrialRoute: typeof TrialRoute
   WelcomeRoute: typeof WelcomeRoute
   BullsBenchmarksRoute: typeof BullsBenchmarksRoute
   BullsNutritionRoute: typeof BullsNutritionRoute
@@ -464,6 +477,13 @@ declare module '@tanstack/react-router' {
       path: '/welcome'
       fullPath: '/welcome'
       preLoaderRoute: typeof WelcomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/trial': {
+      id: '/trial'
+      path: '/trial'
+      fullPath: '/trial'
+      preLoaderRoute: typeof TrialRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/training': {
@@ -762,6 +782,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   ProgressRoute: ProgressRoute,
   TrainingRoute: TrainingRoute,
+  TrialRoute: TrialRoute,
   WelcomeRoute: WelcomeRoute,
   BullsBenchmarksRoute: BullsBenchmarksRoute,
   BullsNutritionRoute: BullsNutritionRoute,
