@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Flame, Target, Calendar, TrendingUp, ArrowRight, Scale, Plus, CalendarCheck, ListChecks } from "lucide-react";
+import { Flame, Target, Calendar, TrendingUp, ArrowRight, Scale, Plus, CalendarCheck, ListChecks, Utensils, Dumbbell } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { MyPackagePanel } from "@/components/bodyfuel/MyPackagePanel";
 import { TrainingDevelopmentCard } from "@/components/bodyfuel/TrainingTrends";
