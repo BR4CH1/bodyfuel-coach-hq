@@ -654,12 +654,39 @@ function Gamification() {
 
 /* ------------------------------------------------------------------ */
 
+type Testimonial = { quote: string; name: string; role: string; rating: number };
+
 function Results() {
-  const testimonials = [
-    { quote: "Ich hatte endlich einen Plan, den ich wirklich durchziehen konnte.", name: "Andreas", role: "−12 kg in 5 Monaten" },
-    { quote: "Die Punkte haben mir geholfen, täglich dranzubleiben.", name: "Patrick", role: "Muskelaufbau + Struktur" },
-    { quote: "Es fühlt sich nicht wie Diät an, sondern wie ein System.", name: "Luisa", role: "−8 cm Bauchumfang" },
+  const fallback: Testimonial[] = [
+    { quote: "Ich hatte endlich einen Plan, den ich wirklich durchziehen konnte.", name: "Andreas", role: "−12 kg in 5 Monaten", rating: 5 },
+    { quote: "Die Punkte haben mir geholfen, täglich dranzubleiben.", name: "Patrick", role: "Muskelaufbau + Struktur", rating: 5 },
+    { quote: "Es fühlt sich nicht wie Diät an, sondern wie ein System.", name: "Luisa", role: "−8 cm Bauchumfang", rating: 5 },
   ];
+  const [testimonials, setTestimonials] = useState<Testimonial[]>(fallback);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("app_reviews")
+        .select("rating, comment, first_name")
+        .eq("publish_with_name", true)
+        .eq("approved_for_public", true)
+        .eq("hidden", false)
+        .not("comment", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(6);
+      const live = (data ?? [])
+        .filter((r: any) => r.comment && r.first_name)
+        .map((r: any) => ({
+          quote: r.comment as string,
+          name: r.first_name as string,
+          role: `${r.rating}/5 Sterne`,
+          rating: r.rating as number,
+        }));
+      if (live.length > 0) setTestimonials(live);
+    })();
+  }, []);
+
 
   return (
     <section className="relative py-20 sm:py-28">
