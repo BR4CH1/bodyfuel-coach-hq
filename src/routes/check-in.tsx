@@ -212,12 +212,36 @@ function WeeklyCheckIn() {
                   onChange={(e) => setForm({ ...form, chest_cm: e.target.value })}
                 />
               </Field>
-              <Field label="Hüfte (cm)">
+              <Field label="Oberschenkel L (cm)">
                 <Input
                   type="number"
                   step="0.1"
-                  value={form.hip_cm}
-                  onChange={(e) => setForm({ ...form, hip_cm: e.target.value })}
+                  value={form.thigh_left_cm}
+                  onChange={(e) => setForm({ ...form, thigh_left_cm: e.target.value })}
+                />
+              </Field>
+              <Field label="Oberschenkel R (cm)">
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={form.thigh_right_cm}
+                  onChange={(e) => setForm({ ...form, thigh_right_cm: e.target.value })}
+                />
+              </Field>
+              <Field label="Bizeps L (cm)">
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={form.biceps_left_cm}
+                  onChange={(e) => setForm({ ...form, biceps_left_cm: e.target.value })}
+                />
+              </Field>
+              <Field label="Bizeps R (cm)">
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={form.biceps_right_cm}
+                  onChange={(e) => setForm({ ...form, biceps_right_cm: e.target.value })}
                 />
               </Field>
             </div>
