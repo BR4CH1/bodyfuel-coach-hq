@@ -17,6 +17,7 @@ import {
   type DayType,
 } from "@/lib/nutrition.functions";
 import { LOCAL_FOODS } from "@/lib/bodyfuel/localFoods";
+import { entryMatchesActiveTrialDay } from "@/lib/bodyfuel/trialTracking";
 import { Dumbbell, Moon } from "lucide-react";
 
 type Meal = "breakfast" | "lunch" | "dinner" | "snack";
@@ -37,6 +38,7 @@ type FoodEntry = {
   protein_g: number;
   carbs_g: number;
   fat_g: number;
+  source: string | null;
 };
 
 type Targets = {
@@ -122,7 +124,11 @@ export function NutritionTracker() {
   const targets: Targets =
     dayType === "rest" && restTargets ? restTargets : baseTargets;
 
-  const [entries, setEntries] = useState<FoodEntry[]>([]);
+  const [allEntries, setAllEntries] = useState<FoodEntry[]>([]);
+  const entries = useMemo(
+    () => allEntries.filter((entry) => entryMatchesActiveTrialDay(entry, dayType)),
+    [allEntries, dayType],
+  );
   const [waterGlasses, setWaterGlasses] = useState(0);
   const [loading, setLoading] = useState(true);
 
@@ -151,7 +157,7 @@ export function NutritionTracker() {
         getTargetsFn({ data: { user_id: userId } }),
         supabase
           .from("food_entries")
-          .select("id, meal, name, brand, serving_g, kcal, protein_g, carbs_g, fat_g")
+          .select("id, meal, name, brand, serving_g, kcal, protein_g, carbs_g, fat_g, source")
           .eq("user_id", userId)
           .eq("entry_date", date)
           .order("created_at", { ascending: true }),
@@ -184,7 +190,7 @@ export function NutritionTracker() {
           setRestTargets(null);
         }
       }
-      setEntries(((e.data as FoodEntry[]) ?? []).map((r) => ({ ...r })));
+      setAllEntries(((e.data as FoodEntry[]) ?? []).map((r) => ({ ...r })));
       setWaterGlasses(w.data?.glasses ?? 0);
       setDayTypeState(d.kind);
       setDayTypeSource(d.source);
@@ -360,10 +366,10 @@ export function NutritionTracker() {
     const { data, error } = await supabase
       .from("food_entries")
       .insert(payload)
-      .select("id, meal, name, brand, serving_g, kcal, protein_g, carbs_g, fat_g")
+      .select("id, meal, name, brand, serving_g, kcal, protein_g, carbs_g, fat_g, source")
       .single();
     if (error) return toast.error(error.message);
-    setEntries((e) => [...e, data as FoodEntry]);
+    setAllEntries((e) => [...e, data as FoodEntry]);
     setPicking(null);
     setQuery("");
     setResults([]);
@@ -372,11 +378,11 @@ export function NutritionTracker() {
   };
 
   const removeEntry = async (id: string) => {
-    const prev = entries;
-    setEntries((e) => e.filter((x) => x.id !== id));
+    const prev = allEntries;
+    setAllEntries((e) => e.filter((x) => x.id !== id));
     const { error } = await supabase.from("food_entries").delete().eq("id", id);
     if (error) {
-      setEntries(prev);
+      setAllEntries(prev);
       toast.error(error.message);
     }
   };
