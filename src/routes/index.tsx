@@ -438,8 +438,8 @@ function WhatIs() {
   const features = [
     {
       icon: Salad,
-      title: "Individueller Ernährungsplan",
-      text: "Dein persönlicher Ernährungsplan als PDF — auf dich, dein Leben und dein Ziel zugeschnitten.",
+      title: "Ernährungsplan mit 1-Klick-Tracking",
+      text: "Dein persönlicher Plan steht direkt unter „Ernährung" in der App — jede Mahlzeit mit einem Klick getrackt. Kein PDF, kein Excel, kein Zettel.",
     },
     {
       icon: Dumbbell,
