@@ -45,11 +45,21 @@ export const parseNutritionPlan = createServerFn({ method: "POST" })
     const b64 = btoa(bin);
 
     const prompt = `Du bekommst einen Ernährungsplan als PDF.
-Extrahiere ALLE Tage (z.B. "Trainingstag", "Restday", "Tag 1", "Montag", …) und je Tag ALLE Mahlzeiten.
-Wenn der Plan nur EINEN Tag enthält, gib genau diesen einen Tag zurück.
-Für jede Mahlzeit: Name (Frühstück, Mittag, Snack, Abendessen, Pre-Workout, …) sowie eine kurze Beschreibung der Lebensmittel (eine zusammenhängende Zeile, Komma-getrennt). Wenn kcal/Protein/Kohlenhydrate/Fett angegeben sind, übernimm diese als ganze Zahlen, sonst null.
+Extrahiere ALLE Tage und je Tag ALLE Mahlzeiten.
+
+WICHTIG zur Tag-Aufteilung:
+- Jede Trainingstag-Variante ist ein EIGENER Tag. Wenn der Plan z.B. "Trainingstag A", "Trainingstag B", "Trainingstag C" enthält, gib drei separate Tage mit genau diesen Namen zurück ("Trainingstag A", "Trainingstag B", "Trainingstag C").
+- "Restday" / "Ruhetag" / "Pause" ist ein eigener Tag.
+- Wochentage ("Montag", "Dienstag", …) oder "Tag 1/2/3" sind ebenfalls je ein eigener Tag.
+- Mahlzeiten gehören NUR zu dem Tag, unter dem sie im Plan stehen. Nicht über mehrere Tage duplizieren.
+- Wenn der Plan nur EINEN Tag enthält, gib genau diesen einen Tag zurück.
+
+Mahlzeit-Name: kurz und ohne Tag-Bezeichnung (z.B. "Frühstück", "Mittag", "Snack", "Abendessen", "Pre-Workout", "Mahlzeit 1"). Schreibe NICHT "Trainingstag A Mahlzeit 1" in den Mahlzeit-Namen — der Tag steht schon im Tag-Namen.
+Beschreibung: eine zusammenhängende Zeile mit den Lebensmitteln, Komma-getrennt.
+kcal/Protein/Kohlenhydrate/Fett: ganze Zahlen wenn angegeben, sonst null.
+
 Antworte ausschließlich mit gültigem JSON:
-{ "days": [ { "name": "Trainingstag", "meals": [ { "name": "Frühstück", "description": "250g Skyr, 1 Banane, 30g Haferflocken", "kcal": 420, "protein_g": 35, "carbs_g": 55, "fat_g": 6 } ] } ] }`;
+{ "days": [ { "name": "Trainingstag A", "meals": [ { "name": "Frühstück", "description": "250g Skyr, 1 Banane, 30g Haferflocken", "kcal": 420, "protein_g": 35, "carbs_g": 55, "fat_g": 6 } ] } ] }`;
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
