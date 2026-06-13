@@ -40,7 +40,7 @@ const coachNav = [
 
 
 export function AppLayout({ children }: { children: ReactNode }) {
-  const { user, isCoach, supabaseUser, profile, loading, logout } = useSession();
+  const { user, isCoach, supabaseUser, profile, loading, logout, hasGroup } = useSession();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
