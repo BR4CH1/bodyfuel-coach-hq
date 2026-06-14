@@ -114,6 +114,18 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
     const skipReasons = (skips ?? [])
       .filter((s: any) => s.meal_name)
       .map((s: any) => `${s.meal_name} (${s.reason})`);
+    const swappedNames = (swaps ?? [])
+      .map((s: any) => s.meal?.name)
+      .filter(Boolean);
+    // Top swapped (frequency)
+    const swapFreq = swappedNames.reduce<Record<string, number>>((acc, n) => {
+      acc[n] = (acc[n] ?? 0) + 1;
+      return acc;
+    }, {});
+    const topSwapped = Object.entries(swapFreq)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([n, c]) => `${n} (${c}×)`);
 
     const prepHint = p.meal_prep_style === "low_effort" ? "Sehr einfache Rezepte (max 15 Min)." :
       p.meal_prep_style === "meal_prep" ? "Meal-Prep-tauglich." :
@@ -143,12 +155,14 @@ ${favFoods.length ? "Lieblings-Foods: " + favFoods.join(", ") : ""}
 ${favoriteNames.length ? "Favorisierte Rezepte: " + favoriteNames.slice(0, 10).join(", ") : ""}
 ${liked.length ? "Mag (4-5★): " + liked.slice(0, 10).join(", ") : ""}
 ${disliked.length ? "Mag NICHT — vermeiden: " + disliked.slice(0, 10).join(", ") : ""}
+${topSwapped.length ? "Häufig getauscht (lieber meiden): " + topSwapped.join(", ") : ""}
 ${skipReasons.length ? "Häufig übersprungen: " + skipReasons.slice(0, 8).join("; ") : ""}
 ${prepHint} ${budgetHint}
 
 Antworte AUSSCHLIESSLICH mit gültigem JSON:
 {"days":[{"name":"Tag 1","meals":[{"slot":"breakfast","name":"…","description":"Zutaten + Mengen","kcal":500,"protein_g":35,"carbs_g":55,"fat_g":15}]}]}
 Genau ${planDays} Tage, je 4 Mahlzeiten. Tagesnamen "Tag 1"…"Tag ${planDays}" oder Wochentage. Tagessummen müssen die Ziele treffen.`;
+
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
