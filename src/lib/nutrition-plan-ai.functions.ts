@@ -403,7 +403,7 @@ WICHTIG zu name/description:
       },
       { kcal: 0, p: 0, c: 0, f: 0 },
     );
-    const avgKcal = Math.round(sums.kcal / totalDays);
+    const avgKcal = roundKcal50(sums.kcal / totalDays);
     const avgP = Math.round(sums.p / totalDays);
     const avgC = Math.round(sums.c / totalDays);
     const avgF = Math.round(sums.f / totalDays);
