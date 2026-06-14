@@ -415,12 +415,20 @@ function MeasurementsContent() {
         </div>
       </form>
 
+      {/* Weight progress chart */}
+      <WeightProgressChart
+        measurements={items as any}
+        goalWeight={profile?.goal_weight_kg ?? null}
+        title="Deine Gewichtsentwicklung"
+      />
+
       {/* History */}
       <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
         <div className="mb-4 flex items-center gap-2 text-gold">
           <Scale className="h-5 w-5" />
           <h2 className="font-display text-lg font-bold text-foreground">Verlauf</h2>
         </div>
+
         {loading ? (
           <p className="text-sm text-muted-foreground">Lade…</p>
         ) : items.length === 0 ? (
