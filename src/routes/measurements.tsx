@@ -40,6 +40,7 @@ type ProfileExt = {
   birthdate: string | null;
   gender: string | null;
   goal_weight_kg: number | null;
+  goal_target_date: string | null;
   activity_level: string | null;
   training_goal: string | null;
 };
