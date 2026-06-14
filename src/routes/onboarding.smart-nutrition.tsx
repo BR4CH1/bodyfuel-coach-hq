@@ -80,8 +80,10 @@ function Wizard() {
       setShopDays(existing.shopping_days?.length ? existing.shopping_days : (existing.shopping_day ? [existing.shopping_day] : []));
       setLeadDays(existing.shopping_lead_days ?? 1);
       setBudget(existing.budget_band ?? "");
+      setTrainDays((existing as any).training_weekdays ?? []);
     }
   }, [existing]);
+
 
   const save = useMutation({
     mutationFn: (complete: boolean) =>
