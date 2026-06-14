@@ -169,18 +169,31 @@ export const setNutritionTargets = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const nz = (v: number | null | undefined) =>
       v == null || !isFinite(Number(v)) ? null : Math.max(0, Math.round(Number(v)));
+
+    let kcal = Math.max(0, Math.round(data.kcal));
+    let protein_g = Math.max(0, Math.round(data.protein_g));
+    let carbs_g = Math.max(0, Math.round(data.carbs_g));
+    let fat_g = Math.max(0, Math.round(data.fat_g));
+    let kcal_rest = nz(data.kcal_rest);
+    let protein_g_rest = nz(data.protein_g_rest);
+    let carbs_g_rest = nz(data.carbs_g_rest);
+    let fat_g_rest = nz(data.fat_g_rest);
+
+    // Sanity: Trainingstag muss mehr kcal als Restday haben (Carb-Cycling).
+    // Falls die Werte vertauscht sind, drehen wir sie.
+    if (kcal_rest != null && kcal_rest > kcal) {
+      [kcal, kcal_rest] = [kcal_rest, kcal];
+      [protein_g, protein_g_rest] = [protein_g_rest ?? protein_g, protein_g];
+      [carbs_g, carbs_g_rest] = [carbs_g_rest ?? carbs_g, carbs_g];
+      [fat_g, fat_g_rest] = [fat_g_rest ?? fat_g, fat_g];
+    }
+
     const { error } = await supabaseAdmin.from("nutrition_targets").upsert(
       {
         user_id: data.user_id,
-        kcal: Math.max(0, Math.round(data.kcal)),
-        protein_g: Math.max(0, Math.round(data.protein_g)),
-        carbs_g: Math.max(0, Math.round(data.carbs_g)),
-        fat_g: Math.max(0, Math.round(data.fat_g)),
+        kcal, protein_g, carbs_g, fat_g,
         water_glasses: Math.max(1, Math.round(data.water_glasses)),
-        kcal_rest: nz(data.kcal_rest),
-        protein_g_rest: nz(data.protein_g_rest),
-        carbs_g_rest: nz(data.carbs_g_rest),
-        fat_g_rest: nz(data.fat_g_rest),
+        kcal_rest, protein_g_rest, carbs_g_rest, fat_g_rest,
         updated_by: context.userId,
       },
       { onConflict: "user_id" },
