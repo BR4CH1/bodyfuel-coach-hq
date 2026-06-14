@@ -89,6 +89,10 @@ export const suggestMealSwaps = createServerFn({ method: "POST" })
       .slice(0, 10);
     const favoriteNames = (favs ?? []).map((f: any) => f.meal?.name).filter(Boolean);
     const swappedNames = (swapped ?? []).map((s: any) => s.meal?.name).filter(Boolean);
+    const skipReasons = (skips ?? [])
+      .filter((s: any) => s.meal_name)
+      .map((s: any) => `${s.meal_name} (${s.reason})`)
+      .slice(0, 10);
 
     const p: any = profile ?? {};
     const allergyList = [
