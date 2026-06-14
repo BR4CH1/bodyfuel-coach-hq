@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { WeightProgressChart } from "@/components/bodyfuel/WeightProgressChart";
 
 export const Route = createFileRoute("/measurements")({
   head: () => ({ meta: [{ title: "Körpermaße — BODYFUEL" }] }),
