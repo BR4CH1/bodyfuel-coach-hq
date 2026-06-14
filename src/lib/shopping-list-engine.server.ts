@@ -36,13 +36,17 @@ function fallbackItemsFromLines(lines: string[]): ShoppingItem[] {
       : line.includes(" | ")
         ? line.split(" | ")[1]
         : "";
-    for (const rawPart of partsText.split(",")) {
+    for (const rawPart of partsText.split(/,(?!\d)/)) {
       const part = rawPart.trim();
       if (!part) continue;
-      const match = part.match(/^(\d+(?:[,.]\d+)?)\s*(g|kg|ml|l|el|tl|scheiben|stück|eier|ei)?\s*(.+)$/i);
+      const match = part.match(/^(\d+(?:[,.]\d+)?)\s*(kg|g|ml|l|el|tl|scheiben|stück|stk\.?|eier|ei)?\s*(.*)$/i);
       const amount = match ? Number(match[1].replace(",", ".")) : 1;
-      const unit = (match?.[2] ?? "Stück").replace(/^el$/i, "EL").replace(/^tl$/i, "TL");
-      const name = normalizeIngredientName(match?.[3] ?? part);
+      let unit = (match?.[2] ?? "Stück").replace(/^el$/i, "EL").replace(/^tl$/i, "TL").replace(/^stk\.?$/i, "Stück");
+      let name = normalizeIngredientName(match?.[3] || part);
+      if (/^eier?$/i.test(unit) && !name) {
+        name = "Eier";
+        unit = "Stück";
+      }
       if (!name) continue;
       const key = `${name.toLowerCase()}|${unit.toLowerCase()}`;
       const existing = grouped.get(key);
