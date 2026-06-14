@@ -45,12 +45,6 @@ export function SmartNutritionInsightsCard({ userId }: { userId: string }) {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const generate = useMutation({
-    mutationFn: () => genFn({ data: { user_id: userId } }),
-    onSuccess: () => toast.success("Plan-Entwurf erstellt."),
-    onError: (e: Error) => toast.error(e.message),
-  });
-
   const p = profile.data?.profile ?? null;
   const flags = risk.data?.flags ?? [];
   const stats = risk.data?.stats;
