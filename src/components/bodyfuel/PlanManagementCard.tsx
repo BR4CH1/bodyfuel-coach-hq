@@ -65,12 +65,18 @@ export function PlanManagementCard({ userId }: { userId: string }) {
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["plan-overview", userId] });
+    qc.invalidateQueries({ queryKey: ["nutrition-targets", userId] });
   };
 
   const gen = useMutation({
-    mutationFn: () => genFn({ data: { user_id: userId } }),
-    onSuccess: () => {
-      toast.success("Plan-Entwurf erstellt.");
+    mutationFn: (start_mode: "today" | "next_shopping") =>
+      genFn({ data: { user_id: userId, start_mode } }),
+    onSuccess: (_d, mode) => {
+      toast.success(
+        mode === "today"
+          ? "Plan-Entwurf ab heute erstellt."
+          : "Plan-Entwurf ab nächstem Einkauf erstellt.",
+      );
       invalidate();
     },
     onError: (e: any) => toast.error(e?.message ?? "Fehler beim Erstellen"),
@@ -81,7 +87,9 @@ export function PlanManagementCard({ userId }: { userId: string }) {
       transFn({ data: { plan_id: id, to } }),
     onSuccess: (_, vars) => {
       toast.success(
-        vars.to === "active" ? "Plan aktiviert." : `Status: ${STATUS_LABEL[vars.to]}`,
+        vars.to === "active"
+          ? "Plan aktiviert — Ziele wurden automatisch übernommen."
+          : `Status: ${STATUS_LABEL[vars.to]}`,
       );
       invalidate();
     },
