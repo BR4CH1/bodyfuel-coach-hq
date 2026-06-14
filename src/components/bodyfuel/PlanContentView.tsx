@@ -493,9 +493,11 @@ export function PlanContentView({ clientId, planType }: Props) {
                           </span>
                         )}
                       </div>
-                      {m.description && (
-                        <p className="mt-1 text-sm text-foreground/90">{m.description}</p>
-                      )}
+                      {(() => {
+                        const text = cleanDescription(m.description);
+                        if (!text) return null;
+                        return <p className="mt-1 text-sm text-foreground/90">{text}</p>;
+                      })()}
                       {(m.protein_g != null || m.carbs_g != null || m.fat_g != null || m.kcal != null) && (
                         <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
                           {m.kcal != null && <span>{m.kcal} kcal</span>}
