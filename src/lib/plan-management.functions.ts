@@ -161,7 +161,7 @@ export const transitionPlanStatus = createServerFn({ method: "POST" })
 
     const { data: plan } = await supabase
       .from("nutrition_plans")
-      .select("id, client_id, plan_type, status, kcal, protein_g, carbs_g, fat_g")
+      .select("id, client_id, plan_type, status, source, kcal, protein_g, carbs_g, fat_g")
       .eq("id", data.plan_id)
       .maybeSingle();
     if (!plan) throw new Error("Plan nicht gefunden");
@@ -195,7 +195,12 @@ export const transitionPlanStatus = createServerFn({ method: "POST" })
           kcal = t.kcal; protein_g = t.protein_g; carbs_g = t.carbs_g; fat_g = t.fat_g;
           kcal_rest = t.kcal_rest; protein_g_rest = t.protein_g_rest;
           carbs_g_rest = t.carbs_g_rest; fat_g_rest = t.fat_g_rest;
-          if (kcal_rest == null || kcal_rest >= kcal || (carbs_g_rest ?? 0) >= carbs_g) {
+          const shouldDeriveRest =
+            (plan as any).source === "smart_ai" ||
+            kcal_rest == null ||
+            kcal_rest >= kcal ||
+            (carbs_g_rest ?? 0) >= carbs_g;
+          if (shouldDeriveRest) {
             const rest = deriveRestFromTraining({ kcal, protein_g, carbs_g, fat_g });
             kcal_rest = rest.kcal; protein_g_rest = rest.protein_g;
             carbs_g_rest = rest.carbs_g; fat_g_rest = rest.fat_g;
