@@ -20,7 +20,36 @@ export type PlanSummary = {
   created_at: string;
   days_count: number;
   meals_count: number;
+  compliance: { score: number; tone: "green" | "yellow" | "red"; days_tracked: number } | null;
 };
+
+// Max daily check score = 15 (matches compute_daily_check_points trigger weights).
+const MAX_DAILY_POINTS = 15;
+
+async function computeCompliance(
+  supabase: any,
+  clientId: string,
+  fromIso: string | null,
+  toIso: string | null,
+): Promise<PlanSummary["compliance"]> {
+  if (!fromIso) return null;
+  const from = fromIso.slice(0, 10);
+  const to = (toIso ?? new Date().toISOString()).slice(0, 10);
+  const { data: checks } = await supabase
+    .from("daily_checks")
+    .select("points, check_date")
+    .eq("user_id", clientId)
+    .gte("check_date", from)
+    .lte("check_date", to);
+  const rows = (checks ?? []) as any[];
+  if (!rows.length) return { score: 0, tone: "red", days_tracked: 0 };
+  const avg =
+    rows.reduce((s, r) => s + (Number(r.points) || 0), 0) / rows.length;
+  const score = Math.round(Math.min(100, (avg / MAX_DAILY_POINTS) * 100));
+  const tone: "green" | "yellow" | "red" =
+    score >= 75 ? "green" : score >= 50 ? "yellow" : "red";
+  return { score, tone, days_tracked: rows.length };
+}
 
 async function requireCoach(supabase: any, userId: string) {
   const { data } = await supabase.rpc("has_role", { _user_id: userId, _role: "coach" });

@@ -57,6 +57,7 @@ import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/e
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as ApiPublicHooksTrialRemindersRouteImport } from './routes/api/public/hooks/trial-reminders'
+import { Route as ApiPublicHooksPlanRotationRouteImport } from './routes/api/public/hooks/plan-rotation'
 
 const WelcomeRoute = WelcomeRouteImport.update({
   id: '/welcome',
@@ -304,6 +305,12 @@ const ApiPublicHooksTrialRemindersRoute =
     path: '/api/public/hooks/trial-reminders',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksPlanRotationRoute =
+  ApiPublicHooksPlanRotationRouteImport.update({
+    id: '/api/public/hooks/plan-rotation',
+    path: '/api/public/hooks/plan-rotation',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -348,6 +355,7 @@ export interface FileRoutesByFullPath {
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/coach/customers/': typeof CoachCustomersIndexRoute
+  '/api/public/hooks/plan-rotation': typeof ApiPublicHooksPlanRotationRoute
   '/api/public/hooks/trial-reminders': typeof ApiPublicHooksTrialRemindersRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -395,6 +403,7 @@ export interface FileRoutesByTo {
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/coach/customers': typeof CoachCustomersIndexRoute
+  '/api/public/hooks/plan-rotation': typeof ApiPublicHooksPlanRotationRoute
   '/api/public/hooks/trial-reminders': typeof ApiPublicHooksTrialRemindersRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -446,6 +455,7 @@ export interface FileRoutesById {
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/coach/customers/': typeof CoachCustomersIndexRoute
+  '/api/public/hooks/plan-rotation': typeof ApiPublicHooksPlanRotationRoute
   '/api/public/hooks/trial-reminders': typeof ApiPublicHooksTrialRemindersRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -498,6 +508,7 @@ export interface FileRouteTypes {
     | '/coach/customers/new'
     | '/lovable/email/suppression'
     | '/coach/customers/'
+    | '/api/public/hooks/plan-rotation'
     | '/api/public/hooks/trial-reminders'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -545,6 +556,7 @@ export interface FileRouteTypes {
     | '/coach/customers/new'
     | '/lovable/email/suppression'
     | '/coach/customers'
+    | '/api/public/hooks/plan-rotation'
     | '/api/public/hooks/trial-reminders'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -595,6 +607,7 @@ export interface FileRouteTypes {
     | '/coach/customers/new'
     | '/lovable/email/suppression'
     | '/coach/customers/'
+    | '/api/public/hooks/plan-rotation'
     | '/api/public/hooks/trial-reminders'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -632,6 +645,7 @@ export interface RootRouteChildren {
   OnboardingSmartNutritionRoute: typeof OnboardingSmartNutritionRoute
   BullsIndexRoute: typeof BullsIndexRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
+  ApiPublicHooksPlanRotationRoute: typeof ApiPublicHooksPlanRotationRoute
   ApiPublicHooksTrialRemindersRoute: typeof ApiPublicHooksTrialRemindersRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
@@ -978,6 +992,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksTrialRemindersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/plan-rotation': {
+      id: '/api/public/hooks/plan-rotation'
+      path: '/api/public/hooks/plan-rotation'
+      fullPath: '/api/public/hooks/plan-rotation'
+      preLoaderRoute: typeof ApiPublicHooksPlanRotationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -1066,6 +1087,7 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingSmartNutritionRoute: OnboardingSmartNutritionRoute,
   BullsIndexRoute: BullsIndexRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
+  ApiPublicHooksPlanRotationRoute: ApiPublicHooksPlanRotationRoute,
   ApiPublicHooksTrialRemindersRoute: ApiPublicHooksTrialRemindersRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
