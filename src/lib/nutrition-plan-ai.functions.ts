@@ -169,7 +169,7 @@ Genau ${planDays} Tage, je 4 Mahlzeiten. Tagesnamen "Tag 1"…"Tag ${planDays}" 
     } catch {
       throw new Error("KI-Antwort konnte nicht gelesen werden.");
     }
-    const days = (parsed.days ?? []).slice(0, 7);
+    const days = (parsed.days ?? []).slice(0, planDays);
     if (!days.length) throw new Error("Keine Tage generiert.");
 
     // Hard filter: drop any meal containing a forbidden substring
