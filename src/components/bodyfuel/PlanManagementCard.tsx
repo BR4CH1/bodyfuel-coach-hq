@@ -65,12 +65,18 @@ export function PlanManagementCard({ userId }: { userId: string }) {
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["plan-overview", userId] });
+    qc.invalidateQueries({ queryKey: ["nutrition-targets", userId] });
   };
 
   const gen = useMutation({
-    mutationFn: () => genFn({ data: { user_id: userId } }),
-    onSuccess: () => {
-      toast.success("Plan-Entwurf erstellt.");
+    mutationFn: (start_mode: "today" | "next_shopping") =>
+      genFn({ data: { user_id: userId, start_mode } }),
+    onSuccess: (_d, mode) => {
+      toast.success(
+        mode === "today"
+          ? "Plan-Entwurf ab heute erstellt."
+          : "Plan-Entwurf ab nächstem Einkauf erstellt.",
+      );
       invalidate();
     },
     onError: (e: any) => toast.error(e?.message ?? "Fehler beim Erstellen"),
@@ -81,7 +87,9 @@ export function PlanManagementCard({ userId }: { userId: string }) {
       transFn({ data: { plan_id: id, to } }),
     onSuccess: (_, vars) => {
       toast.success(
-        vars.to === "active" ? "Plan aktiviert." : `Status: ${STATUS_LABEL[vars.to]}`,
+        vars.to === "active"
+          ? "Plan aktiviert — Ziele wurden automatisch übernommen."
+          : `Status: ${STATUS_LABEL[vars.to]}`,
       );
       invalidate();
     },
@@ -112,14 +120,24 @@ export function PlanManagementCard({ userId }: { userId: string }) {
           </p>
           <h2 className="font-display text-xl font-bold">Plan Management</h2>
         </div>
-        <button
-          onClick={() => gen.mutate()}
-          disabled={gen.isPending}
-          className="inline-flex items-center gap-2 rounded-lg bg-gradient-gold px-3 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
-        >
-          <Sparkles className="h-4 w-4" />
-          {gen.isPending ? "Erstelle…" : "Plan erstellen"}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => gen.mutate("today")}
+            disabled={gen.isPending}
+            className="inline-flex items-center gap-2 rounded-lg bg-gradient-gold px-3 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+          >
+            <Sparkles className="h-4 w-4" />
+            {gen.isPending ? "Erstelle…" : "Plan ab heute"}
+          </button>
+          <button
+            onClick={() => gen.mutate("next_shopping")}
+            disabled={gen.isPending}
+            className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm font-semibold hover:bg-accent disabled:opacity-60"
+          >
+            <Sparkles className="h-4 w-4" />
+            {gen.isPending ? "Erstelle…" : "Plan ab nächstem Einkauf"}
+          </button>
+        </div>
       </div>
 
       {isLoading && (

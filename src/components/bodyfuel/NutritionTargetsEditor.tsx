@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Sparkles, Loader2, Dumbbell, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,12 @@ export function NutritionTargetsEditor({ userId }: { userId: string }) {
   const getFn = useServerFn(getNutritionTargets);
   const setFn = useServerFn(setNutritionTargets);
   const extractFn = useServerFn(extractTargetsFromPlan);
+  const qc = useQueryClient();
+
+  const { data: loaded, isLoading: loading } = useQuery({
+    queryKey: ["nutrition-targets", userId],
+    queryFn: () => getFn({ data: { user_id: userId } }),
+  });
 
   const [kcal, setKcal] = useState(2200);
   const [protein, setProtein] = useState(150);
@@ -29,36 +36,28 @@ export function NutritionTargetsEditor({ userId }: { userId: string }) {
   const [carbsR, setCarbsR] = useState(170);
   const [fatR, setFatR] = useState(65);
 
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [extracting, setExtracting] = useState(false);
 
+  // Sync form state when DB values load or are auto-updated (z. B. nach Plan-Aktivierung).
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const t = await getFn({ data: { user_id: userId } });
-        if (cancelled || !t) return;
-        setKcal(t.kcal);
-        setProtein(t.protein_g);
-        setCarbs(t.carbs_g);
-        setFat(t.fat_g);
-        setWater(t.water_glasses);
-        if (t.kcal_rest != null) {
-          setUseRest(true);
-          setKcalR(t.kcal_rest);
-          setProteinR(t.protein_g_rest ?? t.protein_g);
-          setCarbsR(t.carbs_g_rest ?? t.carbs_g);
-          setFatR(t.fat_g_rest ?? t.fat_g);
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [userId, getFn]);
+    const t: any = loaded;
+    if (!t) return;
+    setKcal(t.kcal);
+    setProtein(t.protein_g);
+    setCarbs(t.carbs_g);
+    setFat(t.fat_g);
+    setWater(t.water_glasses);
+    if (t.kcal_rest != null) {
+      setUseRest(true);
+      setKcalR(t.kcal_rest);
+      setProteinR(t.protein_g_rest ?? t.protein_g);
+      setCarbsR(t.carbs_g_rest ?? t.carbs_g);
+      setFatR(t.fat_g_rest ?? t.fat_g);
+    } else {
+      setUseRest(false);
+    }
+  }, [loaded]);
 
   const extractFromPlan = async () => {
     setExtracting(true);
@@ -103,6 +102,7 @@ export function NutritionTargetsEditor({ userId }: { userId: string }) {
           fat_g_rest: useRest ? fatR : null,
         },
       });
+      await qc.invalidateQueries({ queryKey: ["nutrition-targets", userId] });
       toast.success("Ziele gespeichert.");
     } catch (e) {
       toast.error((e as Error).message);
@@ -115,7 +115,7 @@ export function NutritionTargetsEditor({ userId }: { userId: string }) {
     <div className="rounded-2xl border border-border bg-card p-6">
       <h2 className="font-display text-lg font-bold">Ernährungsziele</h2>
       <p className="mt-1 text-xs text-muted-foreground">
-        Vorgaben für Kalorien, Makros und Wasser. Wenn Trainings- und Restday unterschiedlich sind, kannst du beide hinterlegen.
+        Vorgaben für Kalorien, Makros und Wasser. Kalorien werden auf 50-er-Schritte gerundet.
       </p>
       {loading ? (
         <p className="mt-4 text-sm text-muted-foreground">Lade…</p>
@@ -205,9 +205,8 @@ export function NutritionTargetsEditor({ userId }: { userId: string }) {
             </Button>
           </div>
           <p className="mt-2 text-[11px] text-muted-foreground">
-            Bei Smart-Plänen werden Trainings- und Restday-Werte automatisch übernommen,
-            sobald ein neuer Plan aktiv wird. Du kannst sie hier jederzeit anpassen
-            oder mit dem Button neu aus dem aktuellen Plan einlesen.
+            Sobald ein Smart-Plan aktiv wird, werden Trainings- und Restday-Werte automatisch
+            hier übernommen — du kannst sie jederzeit anpassen.
           </p>
         </>
       )}

@@ -27,7 +27,13 @@ type MacroTarget = { kcal: number; protein_g: number; carbs_g: number; fat_g: nu
 export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
-    (d: { user_id: string; scheduled_start_date?: string | null; title?: string }) => d,
+    (d: {
+      user_id: string;
+      scheduled_start_date?: string | null;
+      title?: string;
+      /** "today" = ab heute bis nächster Einkauf, "next_shopping" = ab nächstem Einkauf für einen vollen Zyklus. */
+      start_mode?: "today" | "next_shopping";
+    }) => d,
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
@@ -215,17 +221,22 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
       p.budget_band === "50_75" ? "Mittleres Budget." :
       p.budget_band === ">100" ? "Großzügiges Budget." : "";
 
-    // Plan length = days until the customer's next shopping day (1–7).
-    const planDays = daysUntilNextShopping(p.shopping_days);
-
-    // Compute the actual start date now so we can align day types with weekdays.
+    // Plan length & start date abhängig vom Modus.
+    // - "today" (Default): Plan ab HEUTE bis zum nächsten Einkaufstag (Lücken-Plan).
+    // - "next_shopping": Plan beginnt am nächsten Einkaufstag und deckt einen ganzen Einkaufszyklus ab.
+    const startMode: "today" | "next_shopping" = data.start_mode ?? "today";
+    const daysToNextShopping = daysUntilNextShopping(p.shopping_days);
     const start = data.scheduled_start_date
       ? new Date(data.scheduled_start_date)
       : (() => {
           const d = new Date();
-          d.setDate(d.getDate() + planDays);
+          if (startMode === "next_shopping") d.setDate(d.getDate() + daysToNextShopping);
           return d;
         })();
+    const planDays = startMode === "next_shopping"
+      ? daysUntilNextShopping(p.shopping_days, start)
+      : daysToNextShopping;
+
 
     const WEEKDAY_KEYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
     const WEEKDAY_LABELS_DE = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"] as const;
@@ -392,7 +403,7 @@ WICHTIG zu name/description:
       },
       { kcal: 0, p: 0, c: 0, f: 0 },
     );
-    const avgKcal = Math.round(sums.kcal / totalDays);
+    const avgKcal = roundKcal50(sums.kcal / totalDays);
     const avgP = Math.round(sums.p / totalDays);
     const avgC = Math.round(sums.c / totalDays);
     const avgF = Math.round(sums.f / totalDays);
@@ -492,9 +503,14 @@ function labelForSlot(slot: string): string {
   }
 }
 
+/** Auf 50-kcal-Schritte runden (z. B. 2237 → 2250). */
+function roundKcal50(value: number): number {
+  return Math.max(0, Math.round(value / 50) * 50);
+}
+
 function buildIssnCarbCyclingTargets(trainingInput: MacroTarget): { training: MacroTarget; rest: MacroTarget } {
   const training = {
-    kcal: Math.max(1, Math.round(trainingInput.kcal)),
+    kcal: Math.max(50, roundKcal50(trainingInput.kcal)),
     protein_g: Math.max(1, Math.round(trainingInput.protein_g)),
     carbs_g: Math.max(1, Math.round(trainingInput.carbs_g)),
     fat_g: Math.max(1, Math.round(trainingInput.fat_g)),
@@ -508,7 +524,7 @@ function buildIssnCarbCyclingTargets(trainingInput: MacroTarget): { training: Ma
     fat_g: Math.max(1, Math.round(training.fat_g * 1.1)),
     kcal: 0,
   };
-  rest.kcal = Math.round(rest.protein_g * 4 + rest.carbs_g * 4 + rest.fat_g * 9);
+  rest.kcal = roundKcal50(rest.protein_g * 4 + rest.carbs_g * 4 + rest.fat_g * 9);
 
   if (rest.kcal >= training.kcal || rest.carbs_g >= training.carbs_g) {
     rest = {
@@ -518,13 +534,14 @@ function buildIssnCarbCyclingTargets(trainingInput: MacroTarget): { training: Ma
       kcal: 0,
     };
     rest.kcal = Math.max(
-      1,
-      Math.min(training.kcal - 100, Math.round(rest.protein_g * 4 + rest.carbs_g * 4 + rest.fat_g * 9)),
+      50,
+      Math.min(training.kcal - 100, roundKcal50(rest.protein_g * 4 + rest.carbs_g * 4 + rest.fat_g * 9)),
     );
   }
 
   return { training, rest };
 }
+
 
 function normalizeMealsToTargets(meals: GeneratedMeal[], target: MacroTarget): GeneratedMeal[] {
   if (!meals.length) return meals;

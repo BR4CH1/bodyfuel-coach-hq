@@ -170,11 +170,12 @@ export const setNutritionTargets = createServerFn({ method: "POST" })
     const nz = (v: number | null | undefined) =>
       v == null || !isFinite(Number(v)) ? null : Math.max(0, Math.round(Number(v)));
 
-    let kcal = Math.max(0, Math.round(data.kcal));
+    const round50 = (v: number) => Math.max(0, Math.round(v / 50) * 50);
+    let kcal = round50(data.kcal);
     let protein_g = Math.max(0, Math.round(data.protein_g));
     let carbs_g = Math.max(0, Math.round(data.carbs_g));
     let fat_g = Math.max(0, Math.round(data.fat_g));
-    let kcal_rest = nz(data.kcal_rest);
+    let kcal_rest = data.kcal_rest == null ? null : round50(Number(data.kcal_rest));
     let protein_g_rest = nz(data.protein_g_rest);
     let carbs_g_rest = nz(data.carbs_g_rest);
     let fat_g_rest = nz(data.fat_g_rest);
@@ -384,16 +385,17 @@ export async function computeTargetsFromPlanDB(
 export function deriveRestFromTraining(t: {
   kcal: number; protein_g: number; carbs_g: number; fat_g: number;
 }) {
+  const round50 = (v: number) => Math.max(50, Math.round(v / 50) * 50);
   const protein_g = t.protein_g;
   let carbs_g = Math.round(t.carbs_g * 0.65);
   let fat_g = Math.round(t.fat_g * 1.1);
-  let kcal = Math.round(protein_g * 4 + carbs_g * 4 + fat_g * 9);
+  let kcal = round50(protein_g * 4 + carbs_g * 4 + fat_g * 9);
   if (kcal >= t.kcal || carbs_g >= t.carbs_g) {
     carbs_g = Math.round(t.carbs_g * 0.55);
     fat_g = Math.round(t.fat_g * 1.05);
     kcal = Math.max(
-      1,
-      Math.min(t.kcal - 100, Math.round(protein_g * 4 + carbs_g * 4 + fat_g * 9)),
+      50,
+      Math.min(round50(t.kcal - 100), round50(protein_g * 4 + carbs_g * 4 + fat_g * 9)),
     );
   }
   return { kcal, protein_g, carbs_g, fat_g };
