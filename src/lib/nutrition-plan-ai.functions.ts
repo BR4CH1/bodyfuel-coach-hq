@@ -185,7 +185,7 @@ Genau 7 Tage, je 4 Mahlzeiten. Tagesnamen "Tag 1"…"Tag 7" oder Wochentage. Tag
       .from("nutrition_plans")
       .insert({
         client_id: target,
-        title: `KI-Plan Entwurf — ${new Date().toLocaleDateString("de-DE")}`,
+        title: `Smart-Plan Entwurf — ${new Date().toLocaleDateString("de-DE")}`,
         plan_type: "nutrition",
         is_active: false,
         status: p.auto_publish ? "active" : "draft",

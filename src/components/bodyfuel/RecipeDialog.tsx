@@ -286,7 +286,7 @@ export function RecipeDialog({
               )}
 
               <p className="text-[11px] text-muted-foreground">
-                Vorschlag von der KI — Mengen können je nach Produkt leicht abweichen.
+                Vorschlag von uns — Mengen können je nach Produkt leicht abweichen.
               </p>
             </div>
           )}

@@ -139,7 +139,7 @@ function TrialSignupPage() {
               🔒 Nicht im Test enthalten
             </p>
             <p className="mt-1">
-              Individuelle Pläne, Coach Check-ins, WhatsApp-Support und KI-Anpassungen werden erst
+              Individuelle Pläne, Coach Check-ins, WhatsApp-Support und Smart-Anpassungen werden erst
               nach Aktivierung deiner Mitgliedschaft freigeschaltet.
             </p>
           </div>

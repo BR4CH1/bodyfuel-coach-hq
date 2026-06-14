@@ -147,7 +147,7 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
       {!days.length && (
         <div className="rounded-2xl border border-border bg-card p-5 text-sm text-muted-foreground">
           {isCoach
-            ? "Klick auf „Übungen extrahieren“, damit die KI Tage und Übungen aus dem PDF liest."
+            ? "Klick auf „Übungen extrahieren“, damit Tage und Übungen aus dem PDF gelesen werden."
             : "Dein Coach hat die Übungen noch nicht freigeschaltet."}
         </div>
 

@@ -144,7 +144,7 @@ export function MealSwapDialog({
           {loading ? (
             <div className="flex flex-col items-center gap-2 py-10 text-sm text-muted-foreground">
               <Loader2 className="h-5 w-5 animate-spin text-gold" />
-              <span>KI sucht passende Alternativen…</span>
+              <span>Wir suchen passende Alternativen…</span>
             </div>
           ) : error ? (
             <div className="space-y-3 py-6 text-center text-sm">

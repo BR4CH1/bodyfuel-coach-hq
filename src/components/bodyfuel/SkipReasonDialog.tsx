@@ -24,7 +24,7 @@ export function SkipReasonDialog({ mealId, mealName, onClose, onSkipped }: Props
       await skipFn({
         data: { meal_id: mealId, meal_name: mealName, reason, note: note.trim() || undefined },
       });
-      toast.success("Übersprungen. Die KI lernt daraus.");
+      toast.success("Übersprungen. Wir passen deinen Plan an.");
       onSkipped();
       onClose();
     } catch (e: any) {

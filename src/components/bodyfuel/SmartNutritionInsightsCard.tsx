@@ -47,7 +47,7 @@ export function SmartNutritionInsightsCard({ userId }: { userId: string }) {
 
   const generate = useMutation({
     mutationFn: () => genFn({ data: { user_id: userId } }),
-    onSuccess: () => toast.success("KI-Plan-Entwurf erstellt."),
+    onSuccess: () => toast.success("Plan-Entwurf erstellt."),
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -70,7 +70,7 @@ export function SmartNutritionInsightsCard({ userId }: { userId: string }) {
           className="inline-flex items-center gap-2 rounded-lg border border-gold/40 bg-accent/30 px-3 py-2 text-xs font-semibold text-gold hover:bg-accent/50 disabled:opacity-60"
         >
           {generate.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-          KI-Plan-Entwurf
+          Plan-Entwurf
         </button>
       </div>
 
@@ -139,7 +139,7 @@ export function SmartNutritionInsightsCard({ userId }: { userId: string }) {
                 className="h-4 w-4"
               />
               <label htmlFor={`auto-${userId}`} className="text-xs">
-                Auto-Publish: KI-Pläne automatisch aktivieren (sonst Coach-Freigabe nötig)
+                Auto-Publish: Pläne automatisch aktivieren (sonst Coach-Freigabe nötig)
               </label>
             </div>
           </div>
