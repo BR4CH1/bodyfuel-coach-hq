@@ -262,15 +262,18 @@ function Wizard() {
         </Button>
         {!last ? (
           <div className="flex gap-2">
-            <Button
-              variant="ghost"
-              onClick={() => navigate({ to: "/nutrition" })}
-              disabled={save.isPending}
-            >
-              Später
-            </Button>
+            {step !== 6 && (
+              <Button
+                variant="ghost"
+                onClick={() => navigate({ to: "/nutrition" })}
+                disabled={save.isPending}
+              >
+                Später
+              </Button>
+            )}
             <Button
               onClick={() => setStep((s) => s + 1)}
+              disabled={step === 6 && trainDays.length === 0}
               className="bg-gradient-gold text-primary-foreground"
             >
               Weiter <ChevronRight className="ml-1 h-4 w-4" />
