@@ -36,6 +36,7 @@ function CustomersList() {
     queryFn: () => trialFn(),
   });
   const [filter, setFilter] = useState<Filter>("all");
+  const [search, setSearch] = useState("");
 
   const trialCount = (trials ?? []).filter((t: any) => t.trial_status === "trial").length;
   const trialExpiredCount = (trials ?? []).filter((t: any) => t.trial_status === "trial_expired").length;
