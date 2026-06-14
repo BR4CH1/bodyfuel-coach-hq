@@ -112,6 +112,11 @@ export function SmartNutritionInsightsCard({ userId }: { userId: string }) {
             <Row label="Lieblings-Foods" value={joinList(p.favorite_foods, p.extra_favorites)} muted="—" />
             <Row label="Meal-Prep-Stil" value={p.meal_prep_style ?? "—"} />
             <Row label="Einkaufstage" value={(p.shopping_days && p.shopping_days.length) ? p.shopping_days.join(", ") : (p.shopping_day ?? "—")} />
+            <Row
+              label="Trainingstage"
+              value={(p as any).training_weekdays?.length ? (p as any).training_weekdays.join(", ") : ""}
+              muted="⚠ noch nicht gesetzt"
+            />
             <Row label="Budget" value={p.budget_band ?? "—"} />
             <div className="flex items-center gap-2 pt-2">
               <input
