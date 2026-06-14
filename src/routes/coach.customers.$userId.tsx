@@ -35,6 +35,7 @@ import { CustomerRecentActivityCard } from "@/components/bodyfuel/CustomerRecent
 import { CoachTrialCard } from "@/components/bodyfuel/CoachTrialCard";
 import { RecipeInsightsCard } from "@/components/bodyfuel/RecipeInsightsCard";
 import { SmartNutritionInsightsCard } from "@/components/bodyfuel/SmartNutritionInsightsCard";
+import { CustomerCheckinsCard } from "@/components/bodyfuel/CustomerCheckinsCard";
 import { PlanManagementCard } from "@/components/bodyfuel/PlanManagementCard";
 
 
@@ -483,6 +484,8 @@ function CustomerDetail() {
       <CustomerRecentActivityCard userId={userId} />
 
       <MeasurementsCard measurements={data.measurements ?? []} />
+
+      <CustomerCheckinsCard userId={userId} />
 
       <MacroTargetsCard userId={userId} />
       <NutritionTargetsEditor userId={userId} />

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Check, Flame, Loader2 } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { CalendarCheck, Check, ChevronRight, Flame, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { TASKS, MAX_DAILY_POINTS, type CheckTaskKey } from "@/lib/bodyfuel/data";
@@ -8,6 +9,13 @@ type TaskState = Partial<Record<CheckTaskKey, boolean>>;
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+function mondayOf(d: Date): string {
+  const x = new Date(d);
+  const day = (x.getDay() + 6) % 7;
+  x.setDate(x.getDate() - day);
+  return x.toISOString().slice(0, 10);
 }
 
 function calcPoints(state: TaskState): number {
@@ -21,26 +29,38 @@ export function DailyChecklist({ userId }: { userId: string }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  const [checkinDone, setCheckinDone] = useState(false);
+  const weekStart = mondayOf(new Date());
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { data } = await supabase
-        .from("daily_checks")
-        .select("id, tasks")
-        .eq("user_id", userId)
-        .eq("check_date", date)
-        .maybeSingle();
+      const [{ data }, { data: ci }] = await Promise.all([
+        supabase
+          .from("daily_checks")
+          .select("id, tasks")
+          .eq("user_id", userId)
+          .eq("check_date", date)
+          .maybeSingle(),
+        supabase
+          .from("weekly_checkins")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("week_start", weekStart)
+          .maybeSingle(),
+      ]);
       if (cancelled) return;
       if (data) {
         setRowId(data.id);
         setTasks((data.tasks as TaskState) ?? {});
       }
+      setCheckinDone(!!ci);
       setLoading(false);
     })();
     return () => {
       cancelled = true;
     };
-  }, [userId, date]);
+  }, [userId, date, weekStart]);
 
   const toggle = async (key: CheckTaskKey) => {
     const next = { ...tasks, [key]: !tasks[key] };
@@ -159,6 +179,47 @@ export function DailyChecklist({ userId }: { userId: string }) {
               );
             })}
       </ul>
+
+      {!loading && (
+        <Link
+          to="/check-in"
+          className={`mt-3 flex items-center justify-between gap-3 rounded-xl border px-3 py-3 transition ${
+            checkinDone
+              ? "border-gold/60 bg-gold/10"
+              : "border-border bg-background/40 hover:border-gold/40"
+          }`}
+        >
+          <div className="flex min-w-0 items-center gap-3">
+            <span
+              className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${
+                checkinDone ? "bg-gradient-gold" : "bg-secondary"
+              }`}
+            >
+              {checkinDone ? (
+                <Check className="h-4 w-4 text-primary-foreground" />
+              ) : (
+                <CalendarCheck className="h-4 w-4 text-gold" />
+              )}
+            </span>
+            <div className="min-w-0">
+              <div className="truncate text-sm font-medium">
+                Check-in eingetragen
+              </div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Diese Woche
+              </div>
+            </div>
+          </div>
+          <span
+            className={`flex shrink-0 items-center gap-1 text-xs font-semibold ${
+              checkinDone ? "text-gold" : "text-muted-foreground"
+            }`}
+          >
+            {checkinDone ? "Erledigt" : "Offen"}
+            {!checkinDone && <ChevronRight className="h-3 w-3" />}
+          </span>
+        </Link>
+      )}
     </div>
   );
 }
