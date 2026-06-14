@@ -61,7 +61,7 @@ export const suggestMealSwaps = createServerFn({ method: "POST" })
           .limit(20),
         supabase
           .from("nutrition_targets")
-          .select("notes")
+          .select("kcal, protein_g, carbs_g, fat_g")
           .eq("user_id", userId)
           .maybeSingle(),
       ]);
@@ -78,7 +78,7 @@ export const suggestMealSwaps = createServerFn({ method: "POST" })
       .slice(0, 10);
     const favoriteNames = (favs ?? []).map((f: any) => f.meal?.name).filter(Boolean);
     const swappedNames = (swapped ?? []).map((s: any) => s.meal?.name).filter(Boolean);
-    const userNotes = (targets as any)?.notes ?? "";
+    const userNotes = "";
 
     const prompt = `Du bist Ernährungsberater. Schlage 5 alternative Gerichte vor, die als 1:1-Tausch für die untenstehende Mahlzeit dienen.
 
