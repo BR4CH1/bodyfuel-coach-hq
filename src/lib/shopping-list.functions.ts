@@ -65,7 +65,8 @@ export const generateShoppingList = createServerFn({ method: "POST" })
       }
     }
 
-    return await generateForPlan({ supabase, apiKey, planId: planId as string, windowDays });
+    const { generateShoppingListForPlan } = await import("./shopping-list-engine.server");
+    return await generateShoppingListForPlan({ supabase, apiKey, planId: planId as string, windowDays });
   });
 
 /**
