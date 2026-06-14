@@ -220,8 +220,8 @@ function Wizard() {
         )}
         {step === 6 && (
           <StepBlock
-            title="An welchen Tagen trainierst du?"
-            sub="Wir bauen den Plan so, dass an Trainingstagen die Trainings-Makros und sonst die Restday-Makros greifen."
+            title="An welchen Tagen trainierst du? *"
+            sub="Pflichtfeld — daraus ergeben sich automatisch Trainings- und Restdays in deinem Plan und der Einkaufsliste."
           >
             <ChipGrid
               options={TRAINING_DAYS.map((d) => d.l)}
