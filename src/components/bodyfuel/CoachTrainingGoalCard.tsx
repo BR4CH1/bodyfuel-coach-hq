@@ -57,6 +57,14 @@ export function CoachTrainingGoalCard({
         ? "+100 bis +200 kcal"
         : "±100 kcal nach Bedarf";
 
+  const rate = weeklyRate(latest?.weight_kg ?? null, goalWeight ?? null, goalTargetDate ?? null);
+  const intensityLabel: Record<string, string> = {
+    moderate: "moderat",
+    ambitious: "ambitioniert",
+    aggressive: "aggressiv",
+    capped: "auf Sicherheitslimit begrenzt",
+  };
+
   const t = targets ?? {};
   const has = t.kcal != null;
 
