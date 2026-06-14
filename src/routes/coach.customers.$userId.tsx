@@ -38,6 +38,9 @@ import { SmartNutritionInsightsCard } from "@/components/bodyfuel/SmartNutrition
 import { CustomerCheckinsCard } from "@/components/bodyfuel/CustomerCheckinsCard";
 import { PlanManagementCard } from "@/components/bodyfuel/PlanManagementCard";
 import { PartnerLinkCard } from "@/components/bodyfuel/PartnerLinkCard";
+import { CoachTrainingGoalCard } from "@/components/bodyfuel/CoachTrainingGoalCard";
+import { labelForTrainingGoal } from "@/lib/training-goals";
+
 
 
 
