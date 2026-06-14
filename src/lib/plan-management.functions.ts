@@ -182,6 +182,55 @@ export const transitionPlanStatus = createServerFn({ method: "POST" })
       .update({ status: data.to })
       .eq("id", data.plan_id);
     if (error) throw new Error(error.message);
+
+    // Auto-apply nutrition targets when a plan becomes active
+    if (data.to === "active") {
+      try {
+        const { computeTargetsFromPlanDB } = await import("./nutrition.functions");
+        const t = await computeTargetsFromPlanDB(supabase, data.plan_id);
+        let kcal: number | null = null, protein_g = 0, carbs_g = 0, fat_g = 0;
+        let kcal_rest: number | null = null, protein_g_rest: number | null = null;
+        let carbs_g_rest: number | null = null, fat_g_rest: number | null = null;
+        if (t && t.kcal > 0) {
+          kcal = t.kcal; protein_g = t.protein_g; carbs_g = t.carbs_g; fat_g = t.fat_g;
+          kcal_rest = t.kcal_rest; protein_g_rest = t.protein_g_rest;
+          carbs_g_rest = t.carbs_g_rest; fat_g_rest = t.fat_g_rest;
+        } else if ((plan as any).kcal && Number((plan as any).kcal) > 0) {
+          const { data: pRow } = await supabase
+            .from("nutrition_plans")
+            .select("kcal, protein_g, carbs_g, fat_g")
+            .eq("id", data.plan_id)
+            .maybeSingle();
+          if (pRow && (pRow as any).kcal) {
+            kcal = Number((pRow as any).kcal);
+            protein_g = Number((pRow as any).protein_g) || 0;
+            carbs_g = Number((pRow as any).carbs_g) || 0;
+            fat_g = Number((pRow as any).fat_g) || 0;
+          }
+        }
+        if (kcal && kcal > 0) {
+          // Preserve existing water_glasses if present
+          const { data: existing } = await supabase
+            .from("nutrition_targets")
+            .select("water_glasses")
+            .eq("user_id", (plan as any).client_id)
+            .maybeSingle();
+          await supabase.from("nutrition_targets").upsert(
+            {
+              user_id: (plan as any).client_id,
+              kcal, protein_g, carbs_g, fat_g,
+              water_glasses: (existing as any)?.water_glasses ?? 8,
+              kcal_rest, protein_g_rest, carbs_g_rest, fat_g_rest,
+              updated_by: userId,
+            },
+            { onConflict: "user_id" },
+          );
+        }
+      } catch (e) {
+        console.warn("auto-apply targets failed", e);
+      }
+    }
+
     return { ok: true, status: data.to };
   });
 
