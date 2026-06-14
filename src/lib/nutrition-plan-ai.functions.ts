@@ -503,9 +503,14 @@ function labelForSlot(slot: string): string {
   }
 }
 
+/** Auf 50-kcal-Schritte runden (z. B. 2237 → 2250). */
+function roundKcal50(value: number): number {
+  return Math.max(0, Math.round(value / 50) * 50);
+}
+
 function buildIssnCarbCyclingTargets(trainingInput: MacroTarget): { training: MacroTarget; rest: MacroTarget } {
   const training = {
-    kcal: Math.max(1, Math.round(trainingInput.kcal)),
+    kcal: Math.max(50, roundKcal50(trainingInput.kcal)),
     protein_g: Math.max(1, Math.round(trainingInput.protein_g)),
     carbs_g: Math.max(1, Math.round(trainingInput.carbs_g)),
     fat_g: Math.max(1, Math.round(trainingInput.fat_g)),
@@ -519,7 +524,7 @@ function buildIssnCarbCyclingTargets(trainingInput: MacroTarget): { training: Ma
     fat_g: Math.max(1, Math.round(training.fat_g * 1.1)),
     kcal: 0,
   };
-  rest.kcal = Math.round(rest.protein_g * 4 + rest.carbs_g * 4 + rest.fat_g * 9);
+  rest.kcal = roundKcal50(rest.protein_g * 4 + rest.carbs_g * 4 + rest.fat_g * 9);
 
   if (rest.kcal >= training.kcal || rest.carbs_g >= training.carbs_g) {
     rest = {
@@ -529,13 +534,14 @@ function buildIssnCarbCyclingTargets(trainingInput: MacroTarget): { training: Ma
       kcal: 0,
     };
     rest.kcal = Math.max(
-      1,
-      Math.min(training.kcal - 100, Math.round(rest.protein_g * 4 + rest.carbs_g * 4 + rest.fat_g * 9)),
+      50,
+      Math.min(training.kcal - 100, roundKcal50(rest.protein_g * 4 + rest.carbs_g * 4 + rest.fat_g * 9)),
     );
   }
 
   return { training, rest };
 }
+
 
 function normalizeMealsToTargets(meals: GeneratedMeal[], target: MacroTarget): GeneratedMeal[] {
   if (!meals.length) return meals;
