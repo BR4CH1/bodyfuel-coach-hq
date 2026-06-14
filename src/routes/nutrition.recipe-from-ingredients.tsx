@@ -1,13 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { ChevronLeft, Carrot, Loader2 } from "lucide-react";
+import { ChevronLeft, Carrot, Loader2, Check } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { supabase } from "@/integrations/supabase/client";
+import { useSession } from "@/lib/bodyfuel/session";
 import { generateRecipeFromIngredients } from "@/lib/recipe-from-ingredients.functions";
 
 export const Route = createFileRoute("/nutrition/recipe-from-ingredients")({
@@ -31,17 +33,115 @@ type Recipe = {
   steps?: string[];
 };
 
+type Slot = "breakfast" | "lunch" | "dinner" | "snack";
+const SLOT_LABELS: Record<Slot, string> = {
+  breakfast: "Frühstück",
+  lunch: "Mittag",
+  dinner: "Abend",
+  snack: "Snack",
+};
+
+function slotFromHour(h: number): Slot {
+  if (h >= 4 && h < 10) return "breakfast";
+  if (h >= 10 && h < 15) return "lunch";
+  if (h >= 15 && h < 22) return "dinner";
+  return "snack";
+}
+function slotFromName(name: string): Slot {
+  const n = (name || "").toLowerCase();
+  if (/fr(ü|u)hst(ü|u)ck|breakfast/.test(n)) return "breakfast";
+  if (/mittag|lunch/.test(n)) return "lunch";
+  if (/abend|dinner|sp(ä|a)t/.test(n)) return "dinner";
+  return "snack";
+}
+const todayKey = () => new Date().toISOString().slice(0, 10);
+
 function RecipePage() {
+  const { supabaseUser } = useSession();
   const fn = useServerFn(generateRecipeFromIngredients);
   const [ingredients, setIngredients] = useState("");
   const [goal, setGoal] = useState("");
   const [recipe, setRecipe] = useState<Recipe | null>(null);
+  const defaultSlot = useMemo<Slot>(() => slotFromHour(new Date().getHours()), [recipe]);
+  const [slot, setSlot] = useState<Slot>(defaultSlot);
+  const [tracking, setTracking] = useState(false);
+  const [tracked, setTracked] = useState(false);
 
   const gen = useMutation({
     mutationFn: () => fn({ data: { ingredients, goal: goal || undefined } }),
-    onSuccess: (d) => setRecipe(d as Recipe),
+    onSuccess: (d) => {
+      setRecipe(d as Recipe);
+      setSlot(slotFromHour(new Date().getHours()));
+      setTracked(false);
+    },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const track = async () => {
+    if (!recipe || !supabaseUser) return;
+    setTracking(true);
+    try {
+      // Find today's plan meal in the chosen slot (if user has an active nutrition plan)
+      let replacedPlanMealId: string | null = null;
+      const { data: plan } = await supabase
+        .from("nutrition_plans")
+        .select("id")
+        .eq("client_id", supabaseUser.id)
+        .eq("plan_type", "nutrition")
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (plan?.id) {
+        const { data: dayRows } = await supabase
+          .from("nutrition_plan_days")
+          .select("id")
+          .eq("plan_id", plan.id);
+        const dayIds = (dayRows ?? []).map((d: any) => d.id);
+        if (dayIds.length) {
+          const { data: planMeals } = await supabase
+            .from("nutrition_plan_meals")
+            .select("id, name")
+            .in("day_id", dayIds);
+          const match = (planMeals ?? []).find((m: any) => slotFromName(m.name) === slot);
+          if (match) {
+            replacedPlanMealId = match.id;
+            // Clear any existing tracked plan entry for that meal today
+            await supabase
+              .from("food_entries")
+              .delete()
+              .eq("user_id", supabaseUser.id)
+              .eq("entry_date", todayKey())
+              .or(`source.eq.plan:${match.id},source.eq.swap:${match.id},source.eq.custom:${match.id}`);
+          }
+        }
+      }
+
+      const sourceTag = replacedPlanMealId ? `custom:${replacedPlanMealId}` : "custom:freeform";
+      const { error } = await supabase.from("food_entries").insert({
+        user_id: supabaseUser.id,
+        entry_date: todayKey(),
+        meal: slot,
+        name: `${recipe.name ?? "Eigenes Rezept"}${recipe.description ? " — " + recipe.description : ""}`,
+        serving_g: 100,
+        kcal: Math.round(recipe.kcal ?? 0),
+        protein_g: Math.round(recipe.protein_g ?? 0),
+        carbs_g: Math.round(recipe.carbs_g ?? 0),
+        fat_g: Math.round(recipe.fat_g ?? 0),
+        source: sourceTag,
+      });
+      if (error) throw error;
+      setTracked(true);
+      toast.success(
+        replacedPlanMealId
+          ? `${SLOT_LABELS[slot]} im Plan ersetzt und getrackt`
+          : `Als ${SLOT_LABELS[slot]} getrackt`,
+      );
+    } catch (e: any) {
+      toast.error(e?.message ?? "Tracken fehlgeschlagen");
+    } finally {
+      setTracking(false);
+    }
+  };
 
   return (
     <div className="space-y-5">
@@ -143,6 +243,56 @@ function RecipePage() {
                   </li>
                 ))}
               </ol>
+            </div>
+          )}
+
+          {supabaseUser && (
+            <div className="rounded-xl border border-border bg-background/40 p-3 space-y-3">
+              <div className="text-xs font-bold uppercase tracking-wider text-gold">
+                Als Mahlzeit tracken
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {(Object.keys(SLOT_LABELS) as Slot[]).map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setSlot(s)}
+                    className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition ${
+                      slot === s
+                        ? "border-gold bg-gold/10 text-gold"
+                        : "border-border text-muted-foreground hover:border-gold/50"
+                    }`}
+                  >
+                    {SLOT_LABELS[s]}
+                    {s === defaultSlot && (
+                      <span className="ml-1 text-[10px] opacity-70">(jetzt)</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+              <Button
+                onClick={track}
+                disabled={tracking || tracked}
+                className="w-full bg-gradient-gold text-primary-foreground"
+              >
+                {tracking ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Tracke…
+                  </>
+                ) : tracked ? (
+                  <>
+                    <Check className="mr-2 h-4 w-4" /> Getrackt
+                  </>
+                ) : (
+                  <>
+                    <Check className="mr-2 h-4 w-4" /> Als {SLOT_LABELS[slot]} tracken
+                  </>
+                )}
+              </Button>
+              <p className="text-[11px] text-muted-foreground">
+                Wenn du heute einen Plan hast, ersetzt das automatisch dein geplantes{" "}
+                {SLOT_LABELS[slot]}.
+              </p>
             </div>
           )}
         </div>
