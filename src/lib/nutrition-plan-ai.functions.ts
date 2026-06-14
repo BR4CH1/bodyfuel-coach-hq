@@ -45,6 +45,8 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
 
     const [
       { data: profile },
+      { data: clientProfile },
+      { data: latestWeight },
       { data: targets },
       { data: ratings },
       { data: favs },
@@ -55,6 +57,19 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
         .from("smart_nutrition_profile")
         .select("*")
         .eq("user_id", target)
+        .maybeSingle(),
+      supabase
+        .from("profiles")
+        .select("display_name, height_cm, birthdate, gender, goal_weight_kg, activity_level, coaching_goal")
+        .eq("id", target)
+        .maybeSingle(),
+      supabase
+        .from("body_measurements")
+        .select("weight_kg, measured_at")
+        .eq("user_id", target)
+        .not("weight_kg", "is", null)
+        .order("measured_at", { ascending: false })
+        .limit(1)
         .maybeSingle(),
       supabase
         .from("nutrition_targets")
@@ -83,6 +98,7 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
         .eq("kind", "swapped")
         .limit(30),
     ]);
+
 
 
     const t = (targets as any) ?? {};
