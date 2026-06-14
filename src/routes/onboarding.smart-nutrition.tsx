@@ -36,6 +36,8 @@ const SHOPPING_DAYS = [
   { v: "friday", l: "Freitag" }, { v: "saturday", l: "Samstag" },
   { v: "sunday", l: "Sonntag" },
 ] as const;
+const TRAINING_DAYS = SHOPPING_DAYS;
+
 const BUDGETS = [
   { v: "<50", l: "Unter 50 €" },
   { v: "50_75", l: "50–75 €" },
