@@ -61,6 +61,7 @@ function ShoppingListPage() {
         data: {
           plan_id: (current as any)?.id,
           force: true,
+          scope: scope === "combined" ? "combined" : "individual",
         },
       }),
     onSuccess: () => {
@@ -137,7 +138,7 @@ function ShoppingListPage() {
               {partner && (
                 <option
                   value="combined"
-                  disabled={!((data?.active as any)?.combined || (data?.next as any)?.combined)}
+                  disabled={!(data?.active || data?.next)}
                 >
                   Gemeinsame Einkaufsliste
                 </option>
