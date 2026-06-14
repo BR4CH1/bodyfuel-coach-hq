@@ -29,11 +29,26 @@ export function DailyChecklist({ userId }: { userId: string }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  const [checkinDone, setCheckinDone] = useState(false);
+  const weekStart = mondayOf(new Date());
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { data } = await supabase
-        .from("daily_checks")
+      const [{ data }, { data: ci }] = await Promise.all([
+        supabase
+          .from("daily_checks")
+          .select("id, tasks")
+          .eq("user_id", userId)
+          .eq("check_date", date)
+          .maybeSingle(),
+        supabase
+          .from("weekly_checkins")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("week_start", weekStart)
+          .maybeSingle(),
+      ]);
         .select("id, tasks")
         .eq("user_id", userId)
         .eq("check_date", date)
