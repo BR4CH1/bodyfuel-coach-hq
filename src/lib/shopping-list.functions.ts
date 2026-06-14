@@ -60,7 +60,7 @@ export const generateShoppingList = createServerFn({ method: "POST" })
       })
       .join("\n");
 
-    const prompt = `Du bist Ernährungsassistent. Erstelle aus den folgenden Mahlzeiten EINE konsolidierte Einkaufsliste für ${data.days ?? 7} Tage. Fasse identische Zutaten zusammen und summiere Mengen sinnvoll. Gruppiere nach Kategorie (Obst & Gemüse, Fleisch & Fisch, Milchprodukte, Getreide & Beilagen, Vorrat & Gewürze, Sonstiges).
+    const prompt = `Du bist Ernährungsassistent. Erstelle aus den folgenden Mahlzeiten EINE konsolidierte Einkaufsliste für ${windowDays} Tage. Fasse identische Zutaten zusammen und summiere Mengen sinnvoll. Gruppiere nach Kategorie (Obst & Gemüse, Fleisch & Fisch, Milchprodukte, Getreide & Beilagen, Vorrat & Gewürze, Sonstiges).
 
 MAHLZEITEN:
 ${mealsText}
