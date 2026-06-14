@@ -28,7 +28,7 @@ export const generateShoppingList = createServerFn({ method: "POST" })
 
     const { data: days } = await supabase
       .from("nutrition_plan_days")
-      .select("id, day_label, sort_order")
+      .select("id, name, sort_order")
       .eq("plan_id", plan.id)
       .order("sort_order");
     const dayIds = (days ?? []).slice(0, data.days ?? 7).map((d) => d.id);

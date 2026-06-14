@@ -14,7 +14,7 @@ export const generateRecipeFromIngredients = createServerFn({ method: "POST" })
 
     const { data: targets } = await supabase
       .from("nutrition_targets")
-      .select("kcal_target, protein_g_target, carbs_g_target, fat_g_target, notes")
+      .select("kcal, protein_g, carbs_g, fat_g")
       .eq("user_id", userId)
       .maybeSingle();
 
@@ -22,7 +22,7 @@ export const generateRecipeFromIngredients = createServerFn({ method: "POST" })
 
 ZUTATEN DES KUNDEN: ${data.ingredients}
 ${data.goal ? "ZIEL: " + data.goal : ""}
-${targets?.notes ? "HINWEISE/UNVERTRÄGLICHKEITEN: " + targets.notes : ""}
+${targets ? `TAGES-ZIELE (Orientierung): ${targets.kcal} kcal · ${targets.protein_g}P/${targets.carbs_g}C/${targets.fat_g}F g` : ""}
 
 Antworte ausschließlich mit gültigem JSON in dieser Form:
 {"name":"Hähnchen-Reis-Bowl","description":"Kurze Beschreibung","kcal":650,"protein_g":45,"carbs_g":70,"fat_g":18,"servings":1,"ingredients":["200g Hähnchen","80g Reis"],"steps":["Reis kochen","Hähnchen würzen und braten"]}`;
