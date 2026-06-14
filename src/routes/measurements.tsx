@@ -40,6 +40,7 @@ type ProfileExt = {
   gender: string | null;
   goal_weight_kg: number | null;
   activity_level: string | null;
+  training_goal: string | null;
 };
 
 const num = (v: string) => (v.trim() === "" ? null : Number(v.replace(",", ".")));
