@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
-import { ChevronRight, Plus, Inbox, AlertTriangle, Clock, Sparkles } from "lucide-react";
+import { ChevronRight, Plus, Inbox, AlertTriangle, Clock, Sparkles, Search } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { listCustomers } from "@/lib/coaching.functions";
 import { listTrialUsers } from "@/lib/trial.functions";
