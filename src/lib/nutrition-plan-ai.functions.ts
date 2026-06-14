@@ -186,8 +186,11 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
       .map((s, i) => `Tag ${i + 1} (${s.wkLabel}): ${s.type === "training" ? "TRAININGSTAG" : "RESTDAY"}`)
       .join("\n");
 
-    const targetsBlock = hasRest
-      ? `Es gibt ZWEI verschiedene Tagesziele — jeder Tag MUSS dem Typ aus dem Tagesplan unten folgen:
+    const targetsBlock = `Es gibt ZWEI verschiedene Tagesziele — jeder Tag MUSS dem Typ aus dem Tagesplan unten folgen.
+
+📌 GRUNDREGEL Sportwissenschaft (Carb-Cycling):
+Trainingstage haben IMMER mehr Kalorien & Kohlenhydrate als Restdays (höherer Glykogen-/Energiebedarf).
+Protein bleibt an beiden Tagen ähnlich. Fett darf am Restday leicht höher sein.
 
 TRAININGSTAG-Ziel (für "type":"training", ±5 % treffen):
 - kcal: ${kcal}
@@ -202,7 +205,7 @@ RESTDAY-Ziel (für "type":"rest", ±5 % treffen):
 - Fett: ${fatR} g
 
 VORGEGEBENER TAGESPLAN (Reihenfolge ist verbindlich, ${trainingCount}× Training / ${restCount}× Rest):
-${scheduleLines}`
+${scheduleLines}`;
       : `TAGESZIEL (jeder Tag soll diese Werte ±5 % treffen):
 - kcal: ${kcal}
 - Protein: ${protein} g
