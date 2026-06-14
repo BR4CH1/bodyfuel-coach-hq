@@ -688,6 +688,30 @@ export type Database = {
           },
         ]
       }
+      nutrition_partners: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          user_a: string
+          user_b: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          user_a: string
+          user_b: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          user_a?: string
+          user_b?: string
+        }
+        Relationships: []
+      }
       nutrition_plan_days: {
         Row: {
           created_at: string
@@ -728,8 +752,10 @@ export type Database = {
           description: string | null
           fat_g: number | null
           id: string
+          is_shared: boolean
           kcal: number | null
           name: string
+          partner_meal_id: string | null
           protein_g: number | null
           recipe_generated_at: string | null
           recipe_ingredients: string[] | null
@@ -743,8 +769,10 @@ export type Database = {
           description?: string | null
           fat_g?: number | null
           id?: string
+          is_shared?: boolean
           kcal?: number | null
           name: string
+          partner_meal_id?: string | null
           protein_g?: number | null
           recipe_generated_at?: string | null
           recipe_ingredients?: string[] | null
@@ -758,8 +786,10 @@ export type Database = {
           description?: string | null
           fat_g?: number | null
           id?: string
+          is_shared?: boolean
           kcal?: number | null
           name?: string
+          partner_meal_id?: string | null
           protein_g?: number | null
           recipe_generated_at?: string | null
           recipe_ingredients?: string[] | null
@@ -772,6 +802,13 @@ export type Database = {
             columns: ["day_id"]
             isOneToOne: false
             referencedRelation: "nutrition_plan_days"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nutrition_plan_meals_partner_meal_id_fkey"
+            columns: ["partner_meal_id"]
+            isOneToOne: false
+            referencedRelation: "nutrition_plan_meals"
             referencedColumns: ["id"]
           },
         ]
@@ -789,7 +826,9 @@ export type Database = {
           generated_by: string | null
           id: string
           is_active: boolean
+          is_partner_plan: boolean
           kcal: number | null
+          partner_plan_id: string | null
           plan_type: string
           protein_g: number | null
           scheduled_activation_date: string | null
@@ -812,7 +851,9 @@ export type Database = {
           generated_by?: string | null
           id?: string
           is_active?: boolean
+          is_partner_plan?: boolean
           kcal?: number | null
+          partner_plan_id?: string | null
           plan_type?: string
           protein_g?: number | null
           scheduled_activation_date?: string | null
@@ -835,7 +876,9 @@ export type Database = {
           generated_by?: string | null
           id?: string
           is_active?: boolean
+          is_partner_plan?: boolean
           kcal?: number | null
+          partner_plan_id?: string | null
           plan_type?: string
           protein_g?: number | null
           scheduled_activation_date?: string | null
@@ -846,7 +889,15 @@ export type Database = {
           title?: string
           uploaded_by?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "nutrition_plans_partner_plan_id_fkey"
+            columns: ["partner_plan_id"]
+            isOneToOne: false
+            referencedRelation: "nutrition_plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       nutrition_targets: {
         Row: {
@@ -1104,27 +1155,33 @@ export type Database = {
           days: number
           generated_at: string
           items: Json
+          partner_user_id: string | null
           plan_id: string
+          scope: string
         }
         Insert: {
           created_at?: string
           days?: number
           generated_at?: string
           items?: Json
+          partner_user_id?: string | null
           plan_id: string
+          scope?: string
         }
         Update: {
           created_at?: string
           days?: number
           generated_at?: string
           items?: Json
+          partner_user_id?: string | null
           plan_id?: string
+          scope?: string
         }
         Relationships: [
           {
             foreignKeyName: "shopping_lists_plan_id_fkey"
             columns: ["plan_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "nutrition_plans"
             referencedColumns: ["id"]
           },
