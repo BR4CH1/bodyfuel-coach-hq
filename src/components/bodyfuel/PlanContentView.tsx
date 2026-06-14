@@ -142,6 +142,8 @@ export function PlanContentView({ clientId, planType }: Props) {
   const [togglingId, setTogglingId] = useState<string>("");
   const [dayKind, setDayKind] = useState<"training" | "rest" | null>(null);
   const [recipeMeal, setRecipeMeal] = useState<Meal | null>(null);
+  const [swapMeal, setSwapMeal] = useState<Meal | null>(null);
+  const logFn = useServerFn(logInteraction);
 
 
   const dayTable = planType === "nutrition" ? "nutrition_plan_days" : "training_days";
