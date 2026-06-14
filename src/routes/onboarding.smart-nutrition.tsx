@@ -100,10 +100,12 @@ function Wizard() {
           shopping_days: shopDays,
           shopping_lead_days: leadDays,
           budget_band: budget as any || null,
+          training_weekdays: trainDays,
           complete,
         },
       }),
   });
+
 
   if (isLoading) return <p className="text-sm text-muted-foreground">Lade…</p>;
 
