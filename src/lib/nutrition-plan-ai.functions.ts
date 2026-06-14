@@ -45,6 +45,8 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
 
     const [
       { data: profile },
+      { data: clientProfile },
+      { data: latestWeight },
       { data: targets },
       { data: ratings },
       { data: favs },
@@ -55,6 +57,19 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
         .from("smart_nutrition_profile")
         .select("*")
         .eq("user_id", target)
+        .maybeSingle(),
+      supabase
+        .from("profiles")
+        .select("display_name, height_cm, birthdate, gender, goal_weight_kg, activity_level, coaching_goal")
+        .eq("id", target)
+        .maybeSingle(),
+      supabase
+        .from("body_measurements")
+        .select("weight_kg, measured_at")
+        .eq("user_id", target)
+        .not("weight_kg", "is", null)
+        .order("measured_at", { ascending: false })
+        .limit(1)
         .maybeSingle(),
       supabase
         .from("nutrition_targets")
@@ -85,12 +100,63 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
     ]);
 
 
+
+    // ---- Individuelles Ziel & Körperdaten ----
+    const cp: any = clientProfile ?? {};
+    const currentWeight: number | null = (latestWeight as any)?.weight_kg ?? null;
+    const goalWeight: number | null = cp.goal_weight_kg ?? null;
+    const height: number | null = cp.height_cm ?? null;
+    const gender: string | null = cp.gender ?? null;
+    const ageYears: number | null = cp.birthdate
+      ? Math.floor((Date.now() - new Date(cp.birthdate).getTime()) / (365.25 * 24 * 3600 * 1000))
+      : null;
+    const activityLevel: string | null = cp.activity_level ?? null;
+    const coachingGoal: string | null = cp.coaching_goal ?? null;
+
+    // Goal direction: cut / bulk / maintain anhand Zielgewicht vs aktuelles Gewicht
+    let goalDirection: "cut" | "bulk" | "maintain" = "maintain";
+    if (currentWeight && goalWeight) {
+      const diff = goalWeight - currentWeight;
+      if (diff <= -1) goalDirection = "cut";
+      else if (diff >= 1) goalDirection = "bulk";
+    } else if (coachingGoal) {
+      const g = coachingGoal.toLowerCase();
+      if (/(abnehm|fett|cut|diät|diet|lose)/.test(g)) goalDirection = "cut";
+      else if (/(aufbau|muskel|bulk|gain|zunehm)/.test(g)) goalDirection = "bulk";
+    }
+
+    // Fallback-Targets via Mifflin-St Jeor wenn keine nutrition_targets gepflegt
     const t = (targets as any) ?? {};
+    let baseKcal: number | undefined = t.kcal;
+    let baseProtein: number | undefined = t.protein_g;
+    let baseCarbs: number | undefined = t.carbs_g;
+    let baseFat: number | undefined = t.fat_g;
+
+    if (!baseKcal && currentWeight && height && ageYears) {
+      const bmr = gender === "female"
+        ? 10 * currentWeight + 6.25 * height - 5 * ageYears - 161
+        : 10 * currentWeight + 6.25 * height - 5 * ageYears + 5;
+      const actFactor =
+        activityLevel === "sedentary" ? 1.3 :
+        activityLevel === "light" ? 1.45 :
+        activityLevel === "very_active" ? 1.75 :
+        activityLevel === "athlete" ? 1.9 : 1.6;
+      let tdee = bmr * actFactor;
+      if (goalDirection === "cut") tdee -= 400;
+      else if (goalDirection === "bulk") tdee += 300;
+      baseKcal = Math.round(tdee / 10) * 10;
+      const proteinPerKg = goalDirection === "cut" ? 2.2 : goalDirection === "bulk" ? 2.0 : 1.8;
+      baseProtein = Math.round(currentWeight * proteinPerKg);
+      baseFat = Math.round((baseKcal * 0.27) / 9);
+      const remainingKcal = baseKcal - baseProtein * 4 - baseFat * 9;
+      baseCarbs = Math.max(80, Math.round(remainingKcal / 4));
+    }
+
     const { training: trainingTargets, rest: restTargets } = buildIssnCarbCyclingTargets({
-      kcal: t.kcal ?? 2200,
-      protein_g: t.protein_g ?? 150,
-      carbs_g: t.carbs_g ?? 240,
-      fat_g: t.fat_g ?? 70,
+      kcal: baseKcal ?? 2200,
+      protein_g: baseProtein ?? 150,
+      carbs_g: baseCarbs ?? 240,
+      fat_g: baseFat ?? 70,
     });
     const kcal = trainingTargets.kcal;
     const protein = trainingTargets.protein_g;
@@ -100,6 +166,7 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
     const proteinR = restTargets.protein_g;
     const carbsR = restTargets.carbs_g;
     const fatR = restTargets.fat_g;
+
 
 
     const p: any = profile ?? {};
@@ -209,9 +276,27 @@ RESTDAY-Ziel (für "type":"rest", ±5 % treffen):
 VORGEGEBENER TAGESPLAN (Reihenfolge ist verbindlich, ${trainingCount}× Training / ${restCount}× Rest):
 ${scheduleLines}`;
 
+    const goalLabel = goalDirection === "cut" ? "FETTABBAU (moderates Kaloriendefizit, hohes Protein)" :
+      goalDirection === "bulk" ? "MUSKELAUFBAU (leichter Kalorienüberschuss, hohes Protein, ausreichend Carbs)" :
+      "GEWICHT HALTEN / Recomp";
+
+    const goalBlock = `👤 INDIVIDUELLES KUNDENZIEL — Plan MUSS hierauf abgestimmt sein:
+- Ziel: ${goalLabel}${coachingGoal ? ` (Eigenangabe: "${coachingGoal}")` : ""}
+${currentWeight ? `- Aktuelles Gewicht: ${currentWeight} kg` : ""}
+${goalWeight ? `- Zielgewicht: ${goalWeight} kg${currentWeight ? ` (Differenz: ${(goalWeight - currentWeight).toFixed(1)} kg)` : ""}` : ""}
+${height ? `- Größe: ${height} cm` : ""}
+${ageYears ? `- Alter: ${ageYears} J.` : ""}
+${gender ? `- Geschlecht: ${gender}` : ""}
+${activityLevel ? `- Aktivitätslevel: ${activityLevel}` : ""}
+
+Die unten genannten Kalorien-/Makro-Ziele sind bereits auf dieses Ziel kalibriert. Wähle Lebensmittel & Portionsgrößen, die das Ziel optimal unterstützen (Sättigung bei Cut, energiedichte Carbs bei Bulk, ausgewogen bei Maintain).`;
+
     const prompt = `Erstelle einen ${planDays}-Tage-Ernährungsplan mit 4 Mahlzeiten pro Tag (Frühstück, Mittag, Abend, Snack). Der Plan soll genau bis zum nächsten Einkaufstag reichen.
 
+${goalBlock}
+
 ${targetsBlock}
+
 
 🚨 ABSOLUTE AUSSCHLÜSSE — niemals verwenden:
 ${allergyList.length ? "ALLERGIEN: " + allergyList.join(", ") : "(keine)"}
