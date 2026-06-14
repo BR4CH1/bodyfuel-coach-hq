@@ -120,14 +120,24 @@ export function PlanManagementCard({ userId }: { userId: string }) {
           </p>
           <h2 className="font-display text-xl font-bold">Plan Management</h2>
         </div>
-        <button
-          onClick={() => gen.mutate()}
-          disabled={gen.isPending}
-          className="inline-flex items-center gap-2 rounded-lg bg-gradient-gold px-3 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
-        >
-          <Sparkles className="h-4 w-4" />
-          {gen.isPending ? "Erstelle…" : "Plan erstellen"}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => gen.mutate("today")}
+            disabled={gen.isPending}
+            className="inline-flex items-center gap-2 rounded-lg bg-gradient-gold px-3 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
+          >
+            <Sparkles className="h-4 w-4" />
+            {gen.isPending ? "Erstelle…" : "Plan ab heute"}
+          </button>
+          <button
+            onClick={() => gen.mutate("next_shopping")}
+            disabled={gen.isPending}
+            className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm font-semibold hover:bg-accent disabled:opacity-60"
+          >
+            <Sparkles className="h-4 w-4" />
+            {gen.isPending ? "Erstelle…" : "Plan ab nächstem Einkauf"}
+          </button>
+        </div>
       </div>
 
       {isLoading && (
