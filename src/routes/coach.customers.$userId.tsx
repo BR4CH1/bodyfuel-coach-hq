@@ -306,15 +306,6 @@ function CustomerDetail() {
 
       {(() => {
         const p: any = data.profile ?? {};
-        const goals: Record<string, string> = {
-          muscle_gain: "Muskelaufbau",
-          fat_loss: "Abnehmen / Fettabbau",
-          recomposition: "Recomposition",
-          maintenance: "Gewicht halten",
-          strength: "Kraftsteigerung",
-          performance: "Leistungssteigerung",
-          health: "Gesundheit & Wohlbefinden",
-        };
         const activity: Record<string, string> = {
           sedentary: "Sitzend",
           light: "Leicht aktiv",
@@ -333,7 +324,7 @@ function CustomerDetail() {
           <div className="rounded-2xl border border-border bg-card p-6">
             <h2 className="font-display text-lg font-bold">Stammdaten</h2>
             <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
-              {row("Trainingsziel", goals[p.training_goal] ?? p.training_goal)}
+              {row("Trainingsziel", labelForTrainingGoal(p.training_goal))}
               {row("Wunschgewicht", p.goal_weight_kg ? `${p.goal_weight_kg} kg` : null)}
               {row("Aktivitätslevel", activity[p.activity_level] ?? p.activity_level)}
               {row("Größe", p.height_cm ? `${p.height_cm} cm` : null)}
@@ -343,6 +334,13 @@ function CustomerDetail() {
           </div>
         );
       })()}
+
+      <CoachTrainingGoalCard
+        trainingGoal={(data.profile as any)?.training_goal ?? null}
+        targets={(data as any).targets ?? null}
+        measurements={(data.measurements ?? []) as any}
+      />
+
 
       <CoachTrialCard userId={userId} />
 
