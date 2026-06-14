@@ -388,3 +388,31 @@ function Macro({ label, value, suffix }: { label: string; value: number | null; 
     </div>
   );
 }
+
+function ComplianceDot({
+  c,
+}: {
+  c: { score: number; tone: "green" | "yellow" | "red"; days_tracked: number };
+}) {
+  const color =
+    c.tone === "green"
+      ? "bg-emerald-500"
+      : c.tone === "yellow"
+        ? "bg-amber-500"
+        : "bg-rose-500";
+  const label =
+    c.tone === "green"
+      ? "Stark dabei"
+      : c.tone === "yellow"
+        ? "Geht so"
+        : "Wenig aktiv";
+  return (
+    <span
+      title={`${label} · ${c.score}% · ${c.days_tracked} Check-ins`}
+      className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-muted-foreground"
+    >
+      <span className={`h-2.5 w-2.5 rounded-full ${color}`} />
+      {c.score}%
+    </span>
+  );
+}
