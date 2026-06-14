@@ -29,24 +29,37 @@ function ShoppingListPage() {
     queryFn: () => getFn(),
   });
 
-  const [scope, setScope] = useState<"active" | "next">("active");
+  type Scope = "active" | "next" | "partner" | "combined";
+  const [scope, setScope] = useState<Scope>("active");
   const [checked, setChecked] = useState<Record<string, boolean>>({});
 
-  // Default to whichever exists
   useEffect(() => {
     if (!data) return;
     if (!data.active && data.next) setScope("next");
     else if (data.active && !data.next) setScope("active");
   }, [data]);
 
-  const current = scope === "active" ? data?.active : data?.next;
-  const items: Item[] = (current?.list?.items as Item[]) ?? [];
+  const partner = (data as any)?.partner;
+  const current =
+    scope === "active"
+      ? data?.active
+      : scope === "next"
+        ? data?.next
+        : scope === "partner"
+          ? partner?.plan
+          : data?.active ?? data?.next;
+  const items: Item[] =
+    scope === "combined"
+      ? (((data?.active as any)?.combined?.items ?? (data?.next as any)?.combined?.items ?? []) as Item[])
+      : scope === "partner"
+        ? ((partner?.list?.items as Item[]) ?? [])
+        : (((current as any)?.list?.items as Item[]) ?? []);
 
   const gen = useMutation({
     mutationFn: () =>
       genFn({
         data: {
-          plan_id: current?.id,
+          plan_id: (current as any)?.id,
           force: true,
         },
       }),
@@ -64,7 +77,8 @@ function ShoppingListPage() {
     return acc;
   }, {});
 
-  const hasAny = !!(data?.active || data?.next);
+  const hasAny = !!(data?.active || data?.next || partner);
+
 
   return (
     <div className="space-y-5">
@@ -104,22 +118,36 @@ function ShoppingListPage() {
             <select
               value={scope}
               onChange={(e) => {
-                setScope(e.target.value as "active" | "next");
+                setScope(e.target.value as any);
                 setChecked({});
               }}
-              className="rounded-md border border-input bg-background px-3 py-2 text-sm min-w-[14rem]"
+              className="rounded-md border border-input bg-background px-3 py-2 text-sm min-w-[16rem]"
             >
               <option value="active" disabled={!data?.active}>
-                Aktuelle Einkaufsliste{data?.active ? "" : " (keine)"}
+                Meine Einkaufsliste{data?.active ? "" : " (keine)"}
               </option>
               <option value="next" disabled={!data?.next}>
                 Nächste Einkaufsliste{data?.next ? "" : " (keine)"}
               </option>
+              {partner && (
+                <option value="partner" disabled={!partner.plan}>
+                  Partner-Liste ({partner.name}){partner.plan ? "" : " (keine)"}
+                </option>
+              )}
+              {partner && (
+                <option
+                  value="combined"
+                  disabled={!((data?.active as any)?.combined || (data?.next as any)?.combined)}
+                >
+                  Gemeinsame Einkaufsliste
+                </option>
+              )}
             </select>
             {current && (
-              <p className="text-[11px] text-muted-foreground">{current.title}</p>
+              <p className="text-[11px] text-muted-foreground">{(current as any).title}</p>
             )}
           </div>
+
 
           <Button
             onClick={() => gen.mutate()}
