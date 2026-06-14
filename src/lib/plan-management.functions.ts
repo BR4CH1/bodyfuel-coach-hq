@@ -249,3 +249,38 @@ export const setAutoPublish = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export const getPlanPreview = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { plan_id: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: plan } = await supabase
+      .from("nutrition_plans")
+      .select(
+        "id, client_id, title, status, source, scheduled_start_date, scheduled_end_date, kcal, protein_g, carbs_g, fat_g, created_at",
+      )
+      .eq("id", data.plan_id)
+      .maybeSingle();
+    if (!plan) throw new Error("Plan nicht gefunden");
+    if ((plan as any).client_id !== userId) await requireCoach(supabase, userId);
+
+    const { data: days } = await supabase
+      .from("nutrition_plan_days")
+      .select("id, name, sort_order")
+      .eq("plan_id", data.plan_id)
+      .order("sort_order");
+    const dayList = (days ?? []) as any[];
+
+    let meals: any[] = [];
+    if (dayList.length) {
+      const { data: m } = await supabase
+        .from("nutrition_plan_meals")
+        .select("id, day_id, name, description, kcal, protein_g, carbs_g, fat_g, sort_order")
+        .in("day_id", dayList.map((d) => d.id))
+        .order("sort_order");
+      meals = (m ?? []) as any[];
+    }
+
+    return { plan, days: dayList, meals };
+  });
