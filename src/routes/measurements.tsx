@@ -256,6 +256,18 @@ function MeasurementsContent() {
               }
             />
           </Field>
+          <Field label="Wunschgewicht erreichen bis">
+            <Input
+              type="date"
+              value={profile?.goal_target_date ?? ""}
+              onChange={(e) =>
+                setProfile((p) => ({
+                  ...(p ?? emptyProfile()),
+                  goal_target_date: e.target.value || null,
+                }))
+              }
+            />
+          </Field>
           <Field label="Aktivitätslevel">
             <select
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
