@@ -49,21 +49,18 @@ export function DailyChecklist({ userId }: { userId: string }) {
           .eq("week_start", weekStart)
           .maybeSingle(),
       ]);
-        .select("id, tasks")
-        .eq("user_id", userId)
-        .eq("check_date", date)
-        .maybeSingle();
       if (cancelled) return;
       if (data) {
         setRowId(data.id);
         setTasks((data.tasks as TaskState) ?? {});
       }
+      setCheckinDone(!!ci);
       setLoading(false);
     })();
     return () => {
       cancelled = true;
     };
-  }, [userId, date]);
+  }, [userId, date, weekStart]);
 
   const toggle = async (key: CheckTaskKey) => {
     const next = { ...tasks, [key]: !tasks[key] };
