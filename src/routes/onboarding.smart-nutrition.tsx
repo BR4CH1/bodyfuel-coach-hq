@@ -73,7 +73,7 @@ function Wizard() {
       setAllergies(existing.allergies ?? []);
       setExtraAllergy(existing.extra_allergies ?? "");
       setPrep(existing.meal_prep_style ?? "");
-      setShopDay(existing.shopping_day ?? "");
+      setShopDays(existing.shopping_days?.length ? existing.shopping_days : (existing.shopping_day ? [existing.shopping_day] : []));
       setLeadDays(existing.shopping_lead_days ?? 1);
       setBudget(existing.budget_band ?? "");
     }
