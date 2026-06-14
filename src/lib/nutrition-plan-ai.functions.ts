@@ -57,7 +57,7 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
         .maybeSingle(),
       supabase
         .from("nutrition_targets")
-        .select("kcal, protein_g, carbs_g, fat_g")
+        .select("kcal, protein_g, carbs_g, fat_g, kcal_rest, protein_g_rest, carbs_g_rest, fat_g_rest")
         .eq("user_id", target)
         .maybeSingle(),
       supabase
@@ -89,6 +89,12 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
     const protein = t.protein_g ?? 150;
     const carbs = t.carbs_g ?? 240;
     const fat = t.fat_g ?? 70;
+    const hasRest = t.kcal_rest != null;
+    const kcalR = t.kcal_rest ?? kcal;
+    const proteinR = t.protein_g_rest ?? protein;
+    const carbsR = t.carbs_g_rest ?? carbs;
+    const fatR = t.fat_g_rest ?? fat;
+
 
     const p: any = profile ?? {};
     const allergyList = [
