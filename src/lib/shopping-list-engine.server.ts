@@ -13,9 +13,98 @@ type ShoppingItem = { name: string; quantity: string; category: string };
 function normalizeIngredientName(name: string) {
   return name
     .replace(/\([^)]*\)/g, "")
-    .replace(/\b(ca\.|ungekocht|gekocht|light|fettarm|zuckerarm|magere)\b/gi, "")
+    .replace(/\b(ca\.|ungekocht|gekocht|roh|trocken|light|fettarm|zuckerarm|magere?r?)\b/gi, "")
+    .replace(/\s+als\s+(dip|topping|beilage|snack)\b.*/gi, "")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+/** Canonical key + display for merging duplicates ("Skyr"/"Skyr als Dip", "Reis (gekocht)"/"Reis"). */
+function canonicalize(rawName: string): { key: string; display: string } {
+  let n = normalizeIngredientName(rawName);
+  n = n.replace(/^\d+(?:[,.]\d+)?\s*(stk\.?|stück|scheiben|el|tl|kg|g|ml|l)?\s+/i, "").trim();
+  const lower = n.toLowerCase();
+  const synonyms: Array<[RegExp, string]> = [
+    [/^skyr\b.*/, "Skyr"],
+    [/^reis\b.*/, "Reis"],
+    [/^nudeln?\b.*/, "Nudeln"],
+    [/^spaghetti\b.*/, "Nudeln"],
+    [/^kartoffeln?\b.*/, "Kartoffeln"],
+    [/^süßkartoffeln?\b.*/, "Süßkartoffeln"],
+    [/^haferflocken\b.*/, "Haferflocken"],
+    [/^müsli\b.*/, "Müsli"],
+    [/^magerquark\b.*/, "Magerquark"],
+    [/^(griechischer\s+)?joghurt\b.*/, "Griechischer Joghurt"],
+    [/^proteinpudding\b.*/, "Proteinpudding"],
+    [/^eier?\b.*/, "Eier"],
+    [/^hähnchen(brust)?\b.*/, "Hähnchenbrust"],
+    [/^pute(nbrust)?\b.*/, "Putenbrust"],
+    [/^lachs\b.*/, "Lachs"],
+    [/^thunfisch\b.*/, "Thunfisch"],
+    [/^vollkornbrot\b.*/, "Vollkornbrot"],
+    [/^reiswaffeln?\b.*/, "Reiswaffeln"],
+    [/^käse\b.*/, "Käse"],
+    [/^feta\b.*/, "Feta"],
+    [/^butter\b.*/, "Butter"],
+    [/^olivenöl\b.*/, "Olivenöl"],
+    [/^rapsöl\b.*/, "Rapsöl"],
+  ];
+  for (const [re, label] of synonyms) {
+    if (re.test(lower)) return { key: label.toLowerCase(), display: label };
+  }
+  return { key: lower, display: n };
+}
+
+function parseQuantity(q: string): { amount: number; unit: string } | null {
+  const m = q.trim().match(/^(\d+(?:[,.]\d+)?)\s*(.*)$/);
+  if (!m) return null;
+  const amount = Number(m[1].replace(",", "."));
+  let unit = (m[2] ?? "").trim();
+  if (/^stk\.?$/i.test(unit)) unit = "Stück";
+  if (/^eier?$/i.test(unit)) unit = "Stück";
+  if (!unit) unit = "Stück";
+  return { amount, unit };
+}
+
+function formatAmount(n: number) {
+  if (Number.isInteger(n)) return String(n);
+  return n.toFixed(1).replace(".", ",");
+}
+
+/** Merge items by canonical name; sum quantities where units are compatible. */
+function mergeItems(items: ShoppingItem[]): ShoppingItem[] {
+  const groups = new Map<string, { display: string; category: string; units: Map<string, number>; raws: string[] }>();
+  for (const it of items) {
+    if (!it.name) continue;
+    const { key, display } = canonicalize(it.name);
+    const g = groups.get(key) ?? { display, category: it.category, units: new Map<string, number>(), raws: [] as string[] };
+    const parsed = parseQuantity(it.quantity);
+    if (parsed) {
+      let { amount, unit } = parsed;
+      const ul = unit.toLowerCase();
+      if (ul === "kg") { amount *= 1000; unit = "g"; }
+      else if (ul === "l") { amount *= 1000; unit = "ml"; }
+      g.units.set(unit, (g.units.get(unit) ?? 0) + amount);
+    } else if (it.quantity) {
+      g.raws.push(it.quantity);
+    }
+    if (!g.category || g.category === "Sonstiges") g.category = it.category || g.category;
+    groups.set(key, g);
+  }
+  const out: ShoppingItem[] = [];
+  for (const g of groups.values()) {
+    const parts: string[] = [];
+    for (const [unit, amount] of g.units.entries()) {
+      let amt = amount;
+      let u = unit;
+      if (u === "g" && amt >= 1000) { amt = amt / 1000; u = "kg"; }
+      else if (u === "ml" && amt >= 1000) { amt = amt / 1000; u = "l"; }
+      parts.push(`${formatAmount(amt)} ${u}`);
+    }
+    parts.push(...g.raws);
+    out.push({ name: g.display, quantity: parts.join(" + "), category: g.category || categoryFor(g.display) });
+  }
+  return out;
 }
 
 function categoryFor(name: string) {
@@ -166,7 +255,7 @@ Antworte ausschließlich mit gültigem JSON:
 {"items":[{"name":"Hähnchenbrust","quantity":"1.4 kg","category":"Fleisch & Fisch"}]}`;
 
   const parsedItems = fallbackItemsFromLines(lines);
-  const items = parsedItems.length ? parsedItems : await callAi(prompt, apiKey);
+  const items = mergeItems(parsedItems.length ? parsedItems : await callAi(prompt, apiKey));
 
   await supabaseAdmin
     .from("shopping_lists")
@@ -227,7 +316,7 @@ Antworte ausschließlich mit gültigem JSON:
 {"items":[{"name":"Hähnchenbrust","quantity":"1.4 kg","category":"Fleisch & Fisch"}]}`;
 
   const parsedItems = fallbackItemsFromLines([...linesA, ...linesB]);
-  const items = parsedItems.length ? parsedItems : await callAi(prompt, apiKey);
+  const items = mergeItems(parsedItems.length ? parsedItems : await callAi(prompt, apiKey));
 
   const now = new Date().toISOString();
   await supabaseAdmin.from("shopping_lists").upsert(
