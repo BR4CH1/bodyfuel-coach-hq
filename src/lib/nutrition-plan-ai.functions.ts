@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { daysUntilNextShopping } from "./shopping-cycle";
 
 type GeneratedMeal = {
   slot: "breakfast" | "lunch" | "dinner" | "snack";
