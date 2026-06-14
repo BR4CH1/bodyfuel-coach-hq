@@ -160,8 +160,17 @@ Antworte ausschließlich mit gültigem JSON in dieser Form:
     const withinTolerance = (orig: number, val: number) =>
       val >= orig * 0.95 && val <= orig * 1.05;
 
+    const forbidden = [...allergyList, ...nogoList]
+      .map((s) => s.toLowerCase().trim())
+      .filter(Boolean);
+    const containsForbidden = (s: Suggestion) => {
+      const hay = `${s.name} ${s.description ?? ""}`.toLowerCase();
+      return forbidden.some((f) => hay.includes(f));
+    };
+
     const suggestions = (parsed.suggestions ?? [])
       .filter((s) => s && typeof s.name === "string" && s.kcal && s.protein_g && s.carbs_g && s.fat_g)
+      .filter((s) => !containsForbidden(s))
       .filter(
         (s) =>
           withinTolerance(meal.kcal!, s.kcal) &&
