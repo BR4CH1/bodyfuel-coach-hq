@@ -18,7 +18,9 @@ export type SmartNutritionProfile = {
   budget_band: "<50" | "50_75" | "75_100" | ">100" | null;
   auto_publish: boolean;
   completed_at: string | null;
+  training_weekdays: string[];
 };
+
 
 export const getMySmartProfile = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
