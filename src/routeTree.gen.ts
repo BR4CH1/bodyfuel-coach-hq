@@ -49,6 +49,7 @@ import { Route as BullsNutritionRouteImport } from './routes/bulls.nutrition'
 import { Route as BullsBenchmarksRouteImport } from './routes/bulls.benchmarks'
 import { Route as CoachCustomersIndexRouteImport } from './routes/coach.customers.index'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
+import { Route as CoachPlanPreviewPlanIdRouteImport } from './routes/coach.plan-preview.$planId'
 import { Route as CoachCustomersNewRouteImport } from './routes/coach.customers.new'
 import { Route as CoachCustomersUserIdRouteImport } from './routes/coach.customers.$userId'
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
@@ -261,6 +262,11 @@ const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
   path: '/lovable/email/suppression',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CoachPlanPreviewPlanIdRoute = CoachPlanPreviewPlanIdRouteImport.update({
+  id: '/plan-preview/$planId',
+  path: '/plan-preview/$planId',
+  getParentRoute: () => CoachRoute,
+} as any)
 const CoachCustomersNewRoute = CoachCustomersNewRouteImport.update({
   id: '/new',
   path: '/new',
@@ -353,6 +359,7 @@ export interface FileRoutesByFullPath {
   '/nutrition/': typeof NutritionIndexRoute
   '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
   '/coach/customers/new': typeof CoachCustomersNewRoute
+  '/coach/plan-preview/$planId': typeof CoachPlanPreviewPlanIdRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/coach/customers/': typeof CoachCustomersIndexRoute
   '/api/public/hooks/plan-rotation': typeof ApiPublicHooksPlanRotationRoute
@@ -401,6 +408,7 @@ export interface FileRoutesByTo {
   '/nutrition': typeof NutritionIndexRoute
   '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
   '/coach/customers/new': typeof CoachCustomersNewRoute
+  '/coach/plan-preview/$planId': typeof CoachPlanPreviewPlanIdRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/coach/customers': typeof CoachCustomersIndexRoute
   '/api/public/hooks/plan-rotation': typeof ApiPublicHooksPlanRotationRoute
@@ -453,6 +461,7 @@ export interface FileRoutesById {
   '/nutrition/': typeof NutritionIndexRoute
   '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
   '/coach/customers/new': typeof CoachCustomersNewRoute
+  '/coach/plan-preview/$planId': typeof CoachPlanPreviewPlanIdRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/coach/customers/': typeof CoachCustomersIndexRoute
   '/api/public/hooks/plan-rotation': typeof ApiPublicHooksPlanRotationRoute
@@ -506,6 +515,7 @@ export interface FileRouteTypes {
     | '/nutrition/'
     | '/coach/customers/$userId'
     | '/coach/customers/new'
+    | '/coach/plan-preview/$planId'
     | '/lovable/email/suppression'
     | '/coach/customers/'
     | '/api/public/hooks/plan-rotation'
@@ -554,6 +564,7 @@ export interface FileRouteTypes {
     | '/nutrition'
     | '/coach/customers/$userId'
     | '/coach/customers/new'
+    | '/coach/plan-preview/$planId'
     | '/lovable/email/suppression'
     | '/coach/customers'
     | '/api/public/hooks/plan-rotation'
@@ -605,6 +616,7 @@ export interface FileRouteTypes {
     | '/nutrition/'
     | '/coach/customers/$userId'
     | '/coach/customers/new'
+    | '/coach/plan-preview/$planId'
     | '/lovable/email/suppression'
     | '/coach/customers/'
     | '/api/public/hooks/plan-rotation'
@@ -936,6 +948,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailSuppressionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/coach/plan-preview/$planId': {
+      id: '/coach/plan-preview/$planId'
+      path: '/plan-preview/$planId'
+      fullPath: '/coach/plan-preview/$planId'
+      preLoaderRoute: typeof CoachPlanPreviewPlanIdRouteImport
+      parentRoute: typeof CoachRoute
+    }
     '/coach/customers/new': {
       id: '/coach/customers/new'
       path: '/new'
@@ -1025,6 +1044,7 @@ interface CoachRouteChildren {
   CoachPackageRequestsRoute: typeof CoachPackageRequestsRoute
   CoachReviewsRoute: typeof CoachReviewsRoute
   CoachIndexRoute: typeof CoachIndexRoute
+  CoachPlanPreviewPlanIdRoute: typeof CoachPlanPreviewPlanIdRoute
 }
 
 const CoachRouteChildren: CoachRouteChildren = {
@@ -1034,6 +1054,7 @@ const CoachRouteChildren: CoachRouteChildren = {
   CoachPackageRequestsRoute: CoachPackageRequestsRoute,
   CoachReviewsRoute: CoachReviewsRoute,
   CoachIndexRoute: CoachIndexRoute,
+  CoachPlanPreviewPlanIdRoute: CoachPlanPreviewPlanIdRoute,
 }
 
 const CoachRouteWithChildren = CoachRoute._addFileChildren(CoachRouteChildren)

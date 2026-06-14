@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { AlertTriangle, ShieldAlert, Sparkles, Loader2 } from "lucide-react";
+import { AlertTriangle, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import {
   getCustomerSmartProfile,
@@ -8,8 +8,8 @@ import {
   getCustomerSkipBreakdown,
   setCustomerAutoPublish,
 } from "@/lib/coach-smart-insights.functions";
-import { generateAiNutritionPlanDraft } from "@/lib/nutrition-plan-ai.functions";
 import { SKIP_REASONS } from "@/lib/meal-skips.functions";
+
 
 const REASON_LABEL: Record<string, string> = Object.fromEntries(
   SKIP_REASONS.map((r) => [r.key, r.label]),
@@ -21,7 +21,7 @@ export function SmartNutritionInsightsCard({ userId }: { userId: string }) {
   const riskFn = useServerFn(getCustomerRiskFlags);
   const skipFn = useServerFn(getCustomerSkipBreakdown);
   const autoFn = useServerFn(setCustomerAutoPublish);
-  const genFn = useServerFn(generateAiNutritionPlanDraft);
+  
 
   const profile = useQuery({
     queryKey: ["smart-profile", userId],
@@ -45,33 +45,17 @@ export function SmartNutritionInsightsCard({ userId }: { userId: string }) {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const generate = useMutation({
-    mutationFn: () => genFn({ data: { user_id: userId } }),
-    onSuccess: () => toast.success("Plan-Entwurf erstellt."),
-    onError: (e: Error) => toast.error(e.message),
-  });
-
   const p = profile.data?.profile ?? null;
   const flags = risk.data?.flags ?? [];
   const stats = risk.data?.stats;
 
   return (
     <div className="rounded-2xl border border-border bg-card p-6 space-y-5">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="font-display text-lg font-bold">Smart-Nutrition</h2>
-          <p className="text-xs text-muted-foreground">
-            Profil, Vorlieben und Risiko-Flags der letzten 14 Tage.
-          </p>
-        </div>
-        <button
-          onClick={() => generate.mutate()}
-          disabled={generate.isPending}
-          className="inline-flex items-center gap-2 rounded-lg border border-gold/40 bg-accent/30 px-3 py-2 text-xs font-semibold text-gold hover:bg-accent/50 disabled:opacity-60"
-        >
-          {generate.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-          Plan-Entwurf
-        </button>
+      <div>
+        <h2 className="font-display text-lg font-bold">Smart-Nutrition</h2>
+        <p className="text-xs text-muted-foreground">
+          Profil, Vorlieben und Risiko-Flags der letzten 14 Tage.
+        </p>
       </div>
 
       {/* Risk flags */}
