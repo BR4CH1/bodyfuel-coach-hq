@@ -11,7 +11,8 @@ type GeneratedMeal = {
   carbs_g: number;
   fat_g: number;
 };
-type GeneratedDay = { name: string; meals: GeneratedMeal[] };
+type GeneratedDay = { name: string; type?: "training" | "rest"; meals: GeneratedMeal[] };
+
 
 /**
  * Generate a 7-day nutrition plan draft using AI, respecting:
@@ -56,7 +57,7 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
         .maybeSingle(),
       supabase
         .from("nutrition_targets")
-        .select("kcal, protein_g, carbs_g, fat_g")
+        .select("kcal, protein_g, carbs_g, fat_g, kcal_rest, protein_g_rest, carbs_g_rest, fat_g_rest")
         .eq("user_id", target)
         .maybeSingle(),
       supabase
@@ -88,6 +89,12 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
     const protein = t.protein_g ?? 150;
     const carbs = t.carbs_g ?? 240;
     const fat = t.fat_g ?? 70;
+    const hasRest = t.kcal_rest != null;
+    const kcalR = t.kcal_rest ?? kcal;
+    const proteinR = t.protein_g_rest ?? protein;
+    const carbsR = t.carbs_g_rest ?? carbs;
+    const fatR = t.fat_g_rest ?? fat;
+
 
     const p: any = profile ?? {};
     const allergyList = [
@@ -138,13 +145,35 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
     // Plan length = days until the customer's next shopping day (1–7).
     const planDays = daysUntilNextShopping(p.shopping_days);
 
-    const prompt = `Erstelle einen ${planDays}-Tage-Ernährungsplan mit 4 Mahlzeiten pro Tag (Frühstück, Mittag, Abend, Snack). Der Plan soll genau bis zum nächsten Einkaufstag reichen.
+    // Decide training/rest distribution roughly 4:3 over a week, scaled to planDays.
+    const restCount = hasRest ? Math.max(1, Math.round(planDays * 3 / 7)) : 0;
+    const trainingCount = planDays - restCount;
 
-TAGESZIEL (jeder Tag soll diese Werte ±5 % treffen):
+    const targetsBlock = hasRest
+      ? `Es gibt ZWEI verschiedene Tagesziele — ordne jedem Tag den passenden Typ zu:
+
+TRAININGSTAG (für "type":"training", jeder solche Tag ±5 % treffen):
 - kcal: ${kcal}
 - Protein: ${protein} g
 - Kohlenhydrate: ${carbs} g
 - Fett: ${fat} g
+
+RESTDAY (für "type":"rest", jeder solche Tag ±5 % treffen):
+- kcal: ${kcalR}
+- Protein: ${proteinR} g
+- Kohlenhydrate: ${carbsR} g
+- Fett: ${fatR} g
+
+Verteilung über die ${planDays} Tage: ${trainingCount}× Trainingstag, ${restCount}× Restday. Mische sie sinnvoll (z. B. abwechselnd) — nicht alle Restdays am Ende.`
+      : `TAGESZIEL (jeder Tag soll diese Werte ±5 % treffen):
+- kcal: ${kcal}
+- Protein: ${protein} g
+- Kohlenhydrate: ${carbs} g
+- Fett: ${fat} g`;
+
+    const prompt = `Erstelle einen ${planDays}-Tage-Ernährungsplan mit 4 Mahlzeiten pro Tag (Frühstück, Mittag, Abend, Snack). Der Plan soll genau bis zum nächsten Einkaufstag reichen.
+
+${targetsBlock}
 
 🚨 ABSOLUTE AUSSCHLÜSSE — niemals verwenden:
 ${allergyList.length ? "ALLERGIEN: " + allergyList.join(", ") : "(keine)"}
@@ -160,8 +189,9 @@ ${skipReasons.length ? "Häufig übersprungen: " + skipReasons.slice(0, 8).join(
 ${prepHint} ${budgetHint}
 
 Antworte AUSSCHLIESSLICH mit gültigem JSON:
-{"days":[{"name":"Tag 1","meals":[{"slot":"breakfast","name":"…","description":"Zutaten + Mengen","kcal":500,"protein_g":35,"carbs_g":55,"fat_g":15}]}]}
-Genau ${planDays} Tage, je 4 Mahlzeiten. Tagesnamen "Tag 1"…"Tag ${planDays}" oder Wochentage. Tagessummen müssen die Ziele treffen.`;
+{"days":[{"name":"Tag 1","type":"${hasRest ? "training" : "training"}","meals":[{"slot":"breakfast","name":"…","description":"Zutaten + Mengen","kcal":500,"protein_g":35,"carbs_g":55,"fat_g":15}]}]}
+Genau ${planDays} Tage, je 4 Mahlzeiten. ${hasRest ? `Jeder Tag MUSS ein Feld "type" mit "training" ODER "rest" enthalten. Im "name" soll " — Trainingstag" oder " — Restday" stehen (Beispiel: "Tag 1 — Trainingstag", "Tag 2 — Restday"), damit die App den Tagestyp erkennt.` : `Tagesnamen "Tag 1"…"Tag ${planDays}".`} Tagessummen müssen die jeweiligen Ziele treffen.`;
+
 
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -194,13 +224,29 @@ Genau ${planDays} Tage, je 4 Mahlzeiten. Tagesnamen "Tag 1"…"Tag ${planDays}" 
     const forbidden = [...allergyList, ...nogoList]
       .map((s) => s.toLowerCase().trim())
       .filter(Boolean);
-    const cleaned = days.map((d) => ({
-      name: d.name || "Tag",
-      meals: (d.meals ?? []).filter((m) => {
-        const hay = `${m.name} ${m.description ?? ""}`.toLowerCase();
-        return !forbidden.some((f) => hay.includes(f));
-      }),
-    }));
+    const cleaned = days.map((d, i) => {
+      const inferredType: "training" | "rest" =
+        d.type === "rest" || /rest|ruh|pause|off|frei/i.test(d.name ?? "")
+          ? "rest"
+          : d.type === "training" || /training/i.test(d.name ?? "")
+            ? "training"
+            : hasRest && i >= trainingCount
+              ? "rest"
+              : "training";
+      const baseName = (d.name ?? `Tag ${i + 1}`).trim();
+      const hasMarker = /trainingstag|restday|rest|ruh|pause|off|frei/i.test(baseName);
+      const name = hasRest && !hasMarker
+        ? `${baseName} — ${inferredType === "rest" ? "Restday" : "Trainingstag"}`
+        : baseName;
+      return {
+        name,
+        meals: (d.meals ?? []).filter((m) => {
+          const hay = `${m.name} ${m.description ?? ""}`.toLowerCase();
+          return !forbidden.some((f) => hay.includes(f));
+        }),
+      };
+    });
+
 
     // Archive any existing draft/approved/published plan so the unique
     // "one next plan per client" constraint stays satisfied.
