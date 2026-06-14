@@ -432,7 +432,10 @@ function buildIssnCarbCyclingTargets(trainingInput: MacroTarget): { training: Ma
       fat_g: Math.max(1, Math.round(training.fat_g * 1.05)),
       kcal: 0,
     };
-    rest.kcal = Math.max(1, Math.min(training.kcal - 100, Math.round(rest.protein_g * 4 + rest.carbs_g * 4 + rest.fat_g * 9)));
+    rest.kcal = Math.max(
+      1,
+      Math.min(training.kcal - 100, Math.round(rest.protein_g * 4 + rest.carbs_g * 4 + rest.fat_g * 9)),
+    );
   }
 
   return { training, rest };
@@ -449,7 +452,8 @@ function normalizeMealsToTargets(meals: GeneratedMeal[], target: MacroTarget): G
     }),
     { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0 },
   );
-  const scale = (value: number, from: number, to: number) => Math.max(0, Math.round(value * (to / Math.max(1, from))));
+  const scale = (value: number, from: number, to: number) =>
+    Math.max(0, Math.round(value * (to / Math.max(1, from))));
   const adjusted = meals.map((meal) => ({
     ...meal,
     kcal: scale(Number(meal.kcal) || 0, sums.kcal, target.kcal),
