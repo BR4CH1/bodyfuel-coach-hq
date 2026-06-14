@@ -61,6 +61,31 @@ const isRestDay = (name: string) => /rest|ruh|pause|off|frei/i.test(name);
 const pickRandom = <T,>(arr: T[]): T | null =>
   arr.length ? arr[Math.floor(Math.random() * arr.length)] : null;
 
+const INSTRUCTION_SIGNALS = [
+  "Alles", "Zubereitung", "Zubereiten", "Anleitung", "Zusammen", "Mischen",
+  "Kochen", "Backen", "Braten", "Garen", "Dünsten", "Dämpfen", "Grillen",
+  "Zubereitungs", "Vorbereitung", "Vorbereiten", "Schneiden", "Würfeln",
+  "Rühren", "Unterheben", "Vermengen", "Zusammenfügen", "In eine", "In den",
+  "In die", "Auf dem", "Im Ofen", "Aufwärmen", "Erhitzen", "Abkühlen",
+  "Kaltstellen", "Kühlschrank", "Über Nacht", "Mindestens", "Ca.", "Ca ",
+  "Min.", "Minuten", "Stunden", "Lassen", "Kühl", "Warm", "Heiß",
+  "Pfanne", "Topf", "Schüssel", "Ofen", "Herd", "Mikrowelle", "Dampfgarer",
+  "Grill", "Mixen", "Pürieren", "Aufschlagen", "Verrühren",
+];
+
+function cleanDescription(desc: string | null): string | null {
+  if (!desc) return null;
+  const sentences = desc.split(/(?<=[.!?])\s+/);
+  for (let i = 0; i < sentences.length; i++) {
+    const t = sentences[i].trim();
+    if (INSTRUCTION_SIGNALS.some((s) => t.toLowerCase().startsWith(s.toLowerCase()))) {
+      const kept = sentences.slice(0, i).join(" ").trim();
+      return kept || desc;
+    }
+  }
+  return desc;
+}
+
 // Leite aus einem Mahlzeit-Namen einen "Tag-Gruppen-Schlüssel" ab.
 // Beispiele:
 //   "Trainingstag A Mahlzeit 1" -> { group: "Trainingstag A", label: "Mahlzeit 1" }
@@ -468,9 +493,11 @@ export function PlanContentView({ clientId, planType }: Props) {
                           </span>
                         )}
                       </div>
-                      {m.description && (
-                        <p className="mt-1 text-sm text-foreground/90">{m.description}</p>
-                      )}
+                      {(() => {
+                        const text = cleanDescription(m.description);
+                        if (!text) return null;
+                        return <p className="mt-1 text-sm text-foreground/90">{text}</p>;
+                      })()}
                       {(m.protein_g != null || m.carbs_g != null || m.fat_g != null || m.kcal != null) && (
                         <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
                           {m.kcal != null && <span>{m.kcal} kcal</span>}
