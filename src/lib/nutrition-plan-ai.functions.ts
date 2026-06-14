@@ -27,7 +27,13 @@ type MacroTarget = { kcal: number; protein_g: number; carbs_g: number; fat_g: nu
 export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
-    (d: { user_id: string; scheduled_start_date?: string | null; title?: string }) => d,
+    (d: {
+      user_id: string;
+      scheduled_start_date?: string | null;
+      title?: string;
+      /** "today" = ab heute bis nächster Einkauf, "next_shopping" = ab nächstem Einkauf für einen vollen Zyklus. */
+      start_mode?: "today" | "next_shopping";
+    }) => d,
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
