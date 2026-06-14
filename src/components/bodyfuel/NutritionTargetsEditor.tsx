@@ -205,8 +205,9 @@ export function NutritionTargetsEditor({ userId }: { userId: string }) {
             </Button>
           </div>
           <p className="mt-2 text-[11px] text-muted-foreground">
-            Wir versuchen, Trainings- und Restday-Werte aus dem aktiven PDF zu extrahieren.
-            Danach bitte prüfen und speichern.
+            Bei Smart-Plänen werden Trainings- und Restday-Werte automatisch übernommen,
+            sobald ein neuer Plan aktiv wird. Du kannst sie hier jederzeit anpassen
+            oder mit dem Button neu aus dem aktuellen Plan einlesen.
           </p>
         </>
       )}
