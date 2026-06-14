@@ -301,6 +301,46 @@ function CustomerDetail() {
         )}
       </div>
 
+      {(() => {
+        const p: any = data.profile ?? {};
+        const goals: Record<string, string> = {
+          muscle_gain: "Muskelaufbau",
+          fat_loss: "Abnehmen / Fettabbau",
+          recomposition: "Recomposition",
+          maintenance: "Gewicht halten",
+          strength: "Kraftsteigerung",
+          performance: "Leistungssteigerung",
+          health: "Gesundheit & Wohlbefinden",
+        };
+        const activity: Record<string, string> = {
+          sedentary: "Sitzend",
+          light: "Leicht aktiv",
+          moderate: "Moderat aktiv",
+          active: "Sehr aktiv",
+          athlete: "Leistungssport",
+        };
+        const gender: Record<string, string> = { male: "Männlich", female: "Weiblich", other: "Divers" };
+        const row = (label: string, value: any) => (
+          <div className="space-y-0.5">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
+            <p className="text-sm font-medium text-foreground">{value || "—"}</p>
+          </div>
+        );
+        return (
+          <div className="rounded-2xl border border-border bg-card p-6">
+            <h2 className="font-display text-lg font-bold">Stammdaten</h2>
+            <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
+              {row("Trainingsziel", goals[p.training_goal] ?? p.training_goal)}
+              {row("Wunschgewicht", p.goal_weight_kg ? `${p.goal_weight_kg} kg` : null)}
+              {row("Aktivitätslevel", activity[p.activity_level] ?? p.activity_level)}
+              {row("Größe", p.height_cm ? `${p.height_cm} cm` : null)}
+              {row("Geschlecht", gender[p.gender] ?? p.gender)}
+              {row("Geburtsdatum", p.birthdate ? new Date(p.birthdate).toLocaleDateString("de-DE") : null)}
+            </div>
+          </div>
+        );
+      })()}
+
       <CoachTrialCard userId={userId} />
 
       <GroupsCard
