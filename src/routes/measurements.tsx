@@ -108,6 +108,7 @@ function MeasurementsContent() {
         gender: profile.gender,
         goal_weight_kg: profile.goal_weight_kg,
         activity_level: profile.activity_level,
+        training_goal: profile.training_goal,
       })
       .eq("id", uid);
     setSavingProfile(false);
