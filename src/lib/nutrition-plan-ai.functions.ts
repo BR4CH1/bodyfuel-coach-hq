@@ -233,7 +233,8 @@ Genau ${planDays} Tage in der vorgegebenen Reihenfolge, je 4 Mahlzeiten. Jeder T
 
 WICHTIG zu name/description:
 - "name" = konkreter Gerichtsname (z. B. Overnight Oats, Hähnchen-Reis-Bowl).
-- "description" = NUR kommagetrennte Zutaten mit Mengen (z. B. 80g Haferflocken, 250ml Milch). NIEMALS Zubereitungsanweisungen.`;
+- "description" = NUR kommagetrennte Zutaten mit Mengen (z. B. 80g Haferflocken, 250ml Milch). NIEMALS Zubereitungsanweisungen.
+- JEDE Zutat MUSS eine konkrete Menge in g, ml, Stück oder EL/TL haben — NIEMALS "Portion", "etwas", "nach Geschmack" o. ä. Auch Salat, Gemüse, Beilagen und Toppings IMMER in Gramm angeben (z. B. "150g Blattsalat", "200g Brokkoli", "30g Feldsalat").`;
 
 
 
