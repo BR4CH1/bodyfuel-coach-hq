@@ -130,6 +130,27 @@ export function CoachTrainingGoalCard({
         </div>
       )}
 
+      {(goalWeight != null || goalTargetDate) && (
+        <div className="rounded-lg border border-border bg-background p-3 text-sm">
+          <p className="font-semibold">Zielplan</p>
+          <p className="text-muted-foreground">
+            Wunschgewicht: {goalWeight != null ? `${goalWeight} kg` : "—"}
+            {goalTargetDate ? ` bis ${new Date(goalTargetDate).toLocaleDateString("de-DE")}` : ""}
+          </p>
+          {rate ? (
+            <p className="mt-1 text-muted-foreground">
+              Erforderlich: {rate.kgPerWeek > 0 ? "+" : ""}
+              {rate.kgPerWeek} kg/Woche ({rate.kcalPerDay > 0 ? "+" : ""}
+              {rate.kcalPerDay} kcal/Tag, {intensityLabel[rate.intensity]})
+            </p>
+          ) : goalTargetDate ? null : (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Kein Zieldatum gesetzt – Standardberechnung nach Trainingsziel aktiv.
+            </p>
+          )}
+        </div>
+      )}
+
       {plateau && (
         <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
           <p className="font-semibold text-amber-900 dark:text-amber-200">
