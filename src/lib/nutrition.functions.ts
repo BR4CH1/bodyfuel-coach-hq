@@ -385,9 +385,14 @@ export function deriveRestFromTraining(t: {
   kcal: number; protein_g: number; carbs_g: number; fat_g: number;
 }) {
   const protein_g = t.protein_g;
-  const carbs_g = Math.round(t.carbs_g * 0.65);
-  const fat_g = Math.round(t.fat_g * 1.1);
-  const kcal = Math.round(protein_g * 4 + carbs_g * 4 + fat_g * 9);
+  let carbs_g = Math.round(t.carbs_g * 0.65);
+  let fat_g = Math.round(t.fat_g * 1.1);
+  let kcal = Math.round(protein_g * 4 + carbs_g * 4 + fat_g * 9);
+  if (kcal >= t.kcal || carbs_g >= t.carbs_g) {
+    carbs_g = Math.round(t.carbs_g * 0.55);
+    fat_g = Math.round(t.fat_g * 1.05);
+    kcal = Math.max(1, Math.min(t.kcal - 100, Math.round(protein_g * 4 + carbs_g * 4 + fat_g * 9)));
+  }
   return { kcal, protein_g, carbs_g, fat_g };
 }
 
