@@ -11,6 +11,13 @@ function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+function mondayOf(d: Date): string {
+  const x = new Date(d);
+  const day = (x.getDay() + 6) % 7;
+  x.setDate(x.getDate() - day);
+  return x.toISOString().slice(0, 10);
+}
+
 function calcPoints(state: TaskState): number {
   return TASKS.reduce((s, t) => s + (state[t.key] ? t.points : 0), 0);
 }
