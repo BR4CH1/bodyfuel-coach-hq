@@ -10,6 +10,66 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 type ShoppingItem = { name: string; quantity: string; category: string };
 
+function normalizeIngredientName(name: string) {
+  return name
+    .replace(/\([^)]*\)/g, "")
+    .replace(/\b(ca\.|ungekocht|gekocht|light|fettarm|zuckerarm|magere)\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function categoryFor(name: string) {
+  const n = name.toLowerCase();
+  if (/hähnchen|pute|rind|hack|filet|fisch|lachs|thunfisch/.test(n)) return "Fleisch & Fisch";
+  if (/skyr|quark|joghurt|käse|feta|whey|proteinpudding/.test(n)) return "Milchprodukte";
+  if (/reis|nudel|kartoffel|brot|tortilla|hafer|müsli|reiswaffel|süßkartoffel/.test(n)) return "Getreide & Beilagen";
+  if (/salat|gemüse|brokkoli|karotte|paprika|spargel|beeren|erdbeer|banane|apfel/.test(n)) return "Obst & Gemüse";
+  if (/öl|butter|nuss|mandel|cashew|walnuss|erdnuss|kern|kokosmilch/.test(n)) return "Vorrat & Gewürze";
+  return "Sonstiges";
+}
+
+function fallbackItemsFromLines(lines: string[]): ShoppingItem[] {
+  const grouped = new Map<string, { amount: number; unit: string; name: string; category: string }>();
+  for (const line of lines) {
+    const partsText = line.includes(" | Zutaten: ")
+      ? line.split(" | Zutaten: ")[1]
+      : line.includes(" | ")
+        ? line.split(" | ")[1]
+        : "";
+    for (const rawPart of partsText.split(",")) {
+      const part = rawPart.trim();
+      if (!part) continue;
+      const match = part.match(/^(\d+(?:[,.]\d+)?)\s*(g|kg|ml|l|el|tl|scheiben|stück|eier|ei)?\s*(.+)$/i);
+      const amount = match ? Number(match[1].replace(",", ".")) : 1;
+      const unit = (match?.[2] ?? "Stück").replace(/^el$/i, "EL").replace(/^tl$/i, "TL");
+      const name = normalizeIngredientName(match?.[3] ?? part);
+      if (!name) continue;
+      const key = `${name.toLowerCase()}|${unit.toLowerCase()}`;
+      const existing = grouped.get(key);
+      if (existing) existing.amount += amount;
+      else grouped.set(key, { amount, unit, name, category: categoryFor(name) });
+    }
+  }
+  return Array.from(grouped.values()).map((item) => ({
+    name: item.name,
+    quantity: `${Number.isInteger(item.amount) ? item.amount : item.amount.toFixed(1).replace(".", ",")} ${item.unit}`,
+    category: item.category,
+  }));
+}
+
+function extractItems(parsed: any): ShoppingItem[] {
+  const candidate = Array.isArray(parsed)
+    ? parsed
+    : parsed?.items ?? parsed?.shopping_list ?? parsed?.einkaufsliste ?? parsed?.list ?? [];
+  return (Array.isArray(candidate) ? candidate : [])
+    .map((item: any) => ({
+      name: String(item?.name ?? item?.ingredient ?? item?.zutat ?? "").trim(),
+      quantity: String(item?.quantity ?? item?.amount ?? item?.menge ?? "").trim(),
+      category: String(item?.category ?? item?.kategorie ?? "Sonstiges").trim() || "Sonstiges",
+    }))
+    .filter((item) => item.name);
+}
+
 async function fetchMealLines(planId: string, windowDays: number): Promise<string[]> {
   const { data: days } = await supabaseAdmin
     .from("nutrition_plan_days")
@@ -20,9 +80,11 @@ async function fetchMealLines(planId: string, windowDays: number): Promise<strin
   if (!dayIds.length) return [];
   const { data: meals } = await supabaseAdmin
     .from("nutrition_plan_meals")
-    .select("name, description, recipe_ingredients")
-    .in("day_id", dayIds);
-  return (meals ?? []).map((m: any) => {
+    .select("day_id, name, description, recipe_ingredients, sort_order")
+    .in("day_id", dayIds)
+    .order("sort_order");
+  const dayOrder = new Map(dayIds.map((id, index) => [id, index]));
+  return (meals ?? []).sort((a: any, b: any) => (dayOrder.get(a.day_id) ?? 0) - (dayOrder.get(b.day_id) ?? 0) || (a.sort_order ?? 0) - (b.sort_order ?? 0)).map((m: any) => {
     const ing = (m.recipe_ingredients ?? []).join(", ");
     return `- ${m.name}${ing ? " | Zutaten: " + ing : m.description ? " | " + m.description : ""}`;
   });
@@ -43,8 +105,9 @@ async function callAi(prompt: string, apiKey: string): Promise<ShoppingItem[]> {
   if (!res.ok) throw new Error(`KI-Fehler [${res.status}]`);
   const raw = (await res.json())?.choices?.[0]?.message?.content ?? "{}";
   try {
-    const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
-    return (parsed?.items as ShoppingItem[]) ?? [];
+    const clean = typeof raw === "string" ? raw.replace(/^```(?:json)?\s*/i, "").replace(/```$/i, "").trim() : raw;
+    const parsed = typeof clean === "string" ? JSON.parse(clean) : clean;
+    return extractItems(parsed);
   } catch {
     return [];
   }
@@ -75,7 +138,8 @@ ${lines.join("\n")}
 Antworte ausschließlich mit gültigem JSON:
 {"items":[{"name":"Hähnchenbrust","quantity":"1.4 kg","category":"Fleisch & Fisch"}]}`;
 
-  const items = await callAi(prompt, apiKey);
+  const aiItems = await callAi(prompt, apiKey);
+  const items = aiItems.length ? aiItems : fallbackItemsFromLines(lines);
 
   await supabaseAdmin
     .from("shopping_lists")
@@ -135,7 +199,8 @@ ${mealsText}
 Antworte ausschließlich mit gültigem JSON:
 {"items":[{"name":"Hähnchenbrust","quantity":"1.4 kg","category":"Fleisch & Fisch"}]}`;
 
-  const items = await callAi(prompt, apiKey);
+  const aiItems = await callAi(prompt, apiKey);
+  const items = aiItems.length ? aiItems : fallbackItemsFromLines([...linesA, ...linesB]);
 
   const now = new Date().toISOString();
   await supabaseAdmin.from("shopping_lists").upsert(
