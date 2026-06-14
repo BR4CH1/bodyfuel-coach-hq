@@ -323,6 +323,10 @@ export function PlanContentView({ clientId, planType }: Props) {
             return;
           }
         }
+        // Fallback: derive kcal from macros if missing (Atwater: 4/4/9)
+        if (!kcal && (p || c || f)) {
+          kcal = Math.round(p * 4 + c * 4 + f * 9);
+        }
 
         const { data, error } = await supabase
           .from("food_entries")
