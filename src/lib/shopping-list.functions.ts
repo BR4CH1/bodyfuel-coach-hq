@@ -118,6 +118,7 @@ export const getMyShoppingLists = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const { data: prof } = await supabase
       .from("smart_nutrition_profile")
@@ -168,22 +169,22 @@ export const getMyShoppingLists = createServerFn({ method: "GET" })
     let partnerPlan: any = null;
     let partnerList: any = null;
     if (partnerUserId) {
-      const { data: pp } = await supabase
+      const { data: pp } = await supabaseAdmin
         .from("profiles")
         .select("display_name")
         .eq("id", partnerUserId)
         .maybeSingle();
       partnerName = (pp as any)?.display_name ?? "Partner";
-      const { data: pPlans } = await supabase
+      const { data: pPlans } = await supabaseAdmin
         .from("nutrition_plans")
-        .select("id, title, status, scheduled_start_date, scheduled_end_date")
+        .select("id, title, status, scheduled_start_date, scheduled_end_date, partner_plan_id")
         .eq("client_id", partnerUserId)
         .eq("plan_type", "nutrition")
         .in("status", ["active", "draft", "approved", "published"])
         .order("created_at", { ascending: false });
       partnerPlan = (pPlans ?? []).find((p: any) => p.status === "active") ?? (pPlans ?? [])[0] ?? null;
       if (partnerPlan) {
-        const { data: row } = await supabase
+        const { data: row } = await supabaseAdmin
           .from("shopping_lists")
           .select("items, days, generated_at")
           .eq("plan_id", partnerPlan.id)
