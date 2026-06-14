@@ -36,6 +36,8 @@ const SHOPPING_DAYS = [
   { v: "friday", l: "Freitag" }, { v: "saturday", l: "Samstag" },
   { v: "sunday", l: "Sonntag" },
 ] as const;
+const TRAINING_DAYS = SHOPPING_DAYS;
+
 const BUDGETS = [
   { v: "<50", l: "Unter 50 €" },
   { v: "50_75", l: "50–75 €" },
@@ -63,6 +65,8 @@ function Wizard() {
   const [shopDays, setShopDays] = useState<string[]>([]);
   const [leadDays, setLeadDays] = useState(1);
   const [budget, setBudget] = useState<string>("");
+  const [trainDays, setTrainDays] = useState<string[]>([]);
+
 
   useEffect(() => {
     if (existing) {
@@ -76,8 +80,10 @@ function Wizard() {
       setShopDays(existing.shopping_days?.length ? existing.shopping_days : (existing.shopping_day ? [existing.shopping_day] : []));
       setLeadDays(existing.shopping_lead_days ?? 1);
       setBudget(existing.budget_band ?? "");
+      setTrainDays((existing as any).training_weekdays ?? []);
     }
   }, [existing]);
+
 
   const save = useMutation({
     mutationFn: (complete: boolean) =>
@@ -94,15 +100,18 @@ function Wizard() {
           shopping_days: shopDays,
           shopping_lead_days: leadDays,
           budget_band: budget as any || null,
+          training_weekdays: trainDays,
           complete,
         },
       }),
   });
 
+
   if (isLoading) return <p className="text-sm text-muted-foreground">Lade…</p>;
 
-  const STEPS = 6;
+  const STEPS = 7;
   const last = step === STEPS;
+
 
   const toggle = (list: string[], set: (l: string[]) => void, v: string) =>
     set(list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
@@ -209,6 +218,26 @@ function Wizard() {
             />
           </StepBlock>
         )}
+        {step === 6 && (
+          <StepBlock
+            title="An welchen Tagen trainierst du?"
+            sub="Wir bauen den Plan so, dass an Trainingstagen die Trainings-Makros und sonst die Restday-Makros greifen."
+          >
+            <ChipGrid
+              options={TRAINING_DAYS.map((d) => d.l)}
+              value={trainDays.map((v) => TRAINING_DAYS.find((d) => d.v === v)?.l ?? v)}
+              onToggle={(label) => {
+                const opt = TRAINING_DAYS.find((d) => d.l === label);
+                if (!opt) return;
+                toggle(trainDays, setTrainDays, opt.v);
+              }}
+            />
+            <p className="mt-3 text-xs text-muted-foreground">
+              Tipp: Du kannst täglich auch ad-hoc zwischen Trainings- und Restday wechseln.
+            </p>
+          </StepBlock>
+        )}
+
         {last && (
           <div className="text-center py-6 space-y-3">
             <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-gradient-gold text-primary-foreground">

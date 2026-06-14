@@ -1146,6 +1146,7 @@ export type Database = {
           shopping_day: string | null
           shopping_days: string[]
           shopping_lead_days: number
+          training_weekdays: string[]
           updated_at: string
           user_id: string
         }
@@ -1164,6 +1165,7 @@ export type Database = {
           shopping_day?: string | null
           shopping_days?: string[]
           shopping_lead_days?: number
+          training_weekdays?: string[]
           updated_at?: string
           user_id: string
         }
@@ -1182,6 +1184,7 @@ export type Database = {
           shopping_day?: string | null
           shopping_days?: string[]
           shopping_lead_days?: number
+          training_weekdays?: string[]
           updated_at?: string
           user_id?: string
         }
