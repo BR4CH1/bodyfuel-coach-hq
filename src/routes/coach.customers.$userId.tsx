@@ -485,6 +485,8 @@ function CustomerDetail() {
 
       <MeasurementsCard measurements={data.measurements ?? []} />
 
+      <CustomerCheckinsCard userId={userId} />
+
       <MacroTargetsCard userId={userId} />
       <NutritionTargetsEditor userId={userId} />
       <SmartNutritionInsightsCard userId={userId} />
