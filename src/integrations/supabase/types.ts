@@ -1102,6 +1102,7 @@ export type Database = {
           next_checkin_date: string | null
           notifications_enabled: boolean
           phone: string | null
+          training_goal: string | null
           trial_end: string | null
           trial_start: string | null
           trial_status: string
@@ -1122,6 +1123,7 @@ export type Database = {
           next_checkin_date?: string | null
           notifications_enabled?: boolean
           phone?: string | null
+          training_goal?: string | null
           trial_end?: string | null
           trial_start?: string | null
           trial_status?: string
@@ -1142,6 +1144,7 @@ export type Database = {
           next_checkin_date?: string | null
           notifications_enabled?: boolean
           phone?: string | null
+          training_goal?: string | null
           trial_end?: string | null
           trial_start?: string | null
           trial_status?: string
