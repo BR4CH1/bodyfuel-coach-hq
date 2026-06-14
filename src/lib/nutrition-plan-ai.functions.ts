@@ -11,7 +11,8 @@ type GeneratedMeal = {
   carbs_g: number;
   fat_g: number;
 };
-type GeneratedDay = { name: string; meals: GeneratedMeal[] };
+type GeneratedDay = { name: string; type?: "training" | "rest"; meals: GeneratedMeal[] };
+
 
 /**
  * Generate a 7-day nutrition plan draft using AI, respecting:
