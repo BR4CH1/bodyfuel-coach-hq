@@ -305,16 +305,29 @@ ${scheduleLines}`;
       goalDirection === "bulk" ? "MUSKELAUFBAU (leichter Kalorienüberschuss, hohes Protein, ausreichend Carbs)" :
       "GEWICHT HALTEN / Recomp";
 
+    const trainingGoalLabel: Record<string, string> = {
+      muscle_gain: "Muskelaufbau",
+      weight_loss: "Abnehmen / Fettabbau",
+      recomp: "Recomposition (Fett↓ / Muskel↑)",
+      maintain: "Gewicht halten",
+      strength: "Kraftsteigerung",
+      performance: "Leistungssteigerung",
+      health: "Gesundheit & Wohlbefinden",
+    };
+    const weightDiff = currentWeight && goalWeight ? goalWeight - currentWeight : null;
+
     const goalBlock = `👤 INDIVIDUELLES KUNDENZIEL — Plan MUSS hierauf abgestimmt sein:
-- Ziel: ${goalLabel}${coachingGoal ? ` (Eigenangabe: "${coachingGoal}")` : ""}
-${currentWeight ? `- Aktuelles Gewicht: ${currentWeight} kg` : ""}
-${goalWeight ? `- Zielgewicht: ${goalWeight} kg${currentWeight ? ` (Differenz: ${(goalWeight - currentWeight).toFixed(1)} kg)` : ""}` : ""}
+- Ausrichtung: ${goalLabel}
+${trainingGoal ? `- Trainingsziel (Kunde): ${trainingGoalLabel[trainingGoal] ?? trainingGoal}` : ""}
+${coachingGoal ? `- Coaching-Eigenangabe: "${coachingGoal}"` : ""}
+${currentWeight ? `- Aktuelles Gewicht: ${currentWeight} kg (jüngste Messung — Portionen darauf abstimmen)` : "- Aktuelles Gewicht: unbekannt"}
+${goalWeight ? `- Wunschgewicht: ${goalWeight} kg${weightDiff !== null ? ` (Differenz: ${weightDiff > 0 ? "+" : ""}${weightDiff.toFixed(1)} kg → ${weightDiff < 0 ? "abnehmen" : weightDiff > 0 ? "zunehmen" : "halten"})` : ""}` : ""}
 ${height ? `- Größe: ${height} cm` : ""}
 ${ageYears ? `- Alter: ${ageYears} J.` : ""}
 ${gender ? `- Geschlecht: ${gender}` : ""}
 ${activityLevel ? `- Aktivitätslevel: ${activityLevel}` : ""}
 
-Die unten genannten Kalorien-/Makro-Ziele sind bereits auf dieses Ziel kalibriert. Wähle Lebensmittel & Portionsgrößen, die das Ziel optimal unterstützen (Sättigung bei Cut, energiedichte Carbs bei Bulk, ausgewogen bei Maintain).`;
+Die Kalorien-/Makro-Ziele sind auf aktuelles Gewicht, Wunschgewicht und Trainingsziel kalibriert. Wähle Lebensmittel & Portionsgrößen, die genau dieses Ziel unterstützen: bei Abnehmen sättigend & proteinreich, bei Aufbau energiedicht mit ausreichend Carbs, bei Recomp/Halten ausgewogen.`;
 
     const prompt = `Erstelle einen ${planDays}-Tage-Ernährungsplan mit 4 Mahlzeiten pro Tag (Frühstück, Mittag, Abend, Snack). Der Plan soll genau bis zum nächsten Einkaufstag reichen.
 
