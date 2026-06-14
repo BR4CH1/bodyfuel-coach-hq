@@ -306,17 +306,11 @@ Genau ${planDays} Tage in der vorgegebenen Reihenfolge, je 4 Mahlzeiten. Jeder T
     const avgC = Math.round(sums.c / totalDays);
     const avgF = Math.round(sums.f / totalDays);
 
-    // Default scheduled window: start = next shopping day, end = day before the one after
-    const start = data.scheduled_start_date
-      ? new Date(data.scheduled_start_date)
-      : (() => {
-          const d = new Date();
-          d.setDate(d.getDate() + planDays);
-          return d;
-        })();
+    // Scheduled window: start already computed above for weekday alignment.
     const end = new Date(start);
     end.setDate(end.getDate() + totalDays - 1);
     const isoDate = (d: Date) => d.toISOString().slice(0, 10);
+
 
     // Create the draft plan
     const { data: planRow, error: planErr } = await supabase
