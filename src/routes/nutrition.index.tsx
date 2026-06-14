@@ -33,6 +33,7 @@ function NutritionIndex() {
     enabled: !isCoach && !!supabaseUser?.id,
   });
   const needsOnboarding = !isCoach && profile !== undefined && !profile?.completed_at;
+  const needsTrainingDays = !isCoach && !!profile?.completed_at && !(profile?.training_weekdays?.length);
 
   return (
     <AppLayout>
