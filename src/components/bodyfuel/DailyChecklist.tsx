@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Check, Flame, Loader2 } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { CalendarCheck, Check, ChevronRight, Flame, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { TASKS, MAX_DAILY_POINTS, type CheckTaskKey } from "@/lib/bodyfuel/data";
