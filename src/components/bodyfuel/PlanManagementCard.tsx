@@ -236,13 +236,16 @@ function PlanColumn(props: {
         <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
           {label}
         </p>
-        {plan && (
-          <span
-            className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase ${STATUS_COLOR[plan.status as PlanStatus]}`}
-          >
-            {STATUS_LABEL[plan.status as PlanStatus]}
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {plan?.compliance && <ComplianceDot c={plan.compliance} />}
+          {plan && (
+            <span
+              className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase ${STATUS_COLOR[plan.status as PlanStatus]}`}
+            >
+              {STATUS_LABEL[plan.status as PlanStatus]}
+            </span>
+          )}
+        </div>
       </div>
 
       {!plan && (
