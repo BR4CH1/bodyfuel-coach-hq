@@ -79,7 +79,7 @@ function MeasurementsContent() {
     const [p, ms] = await Promise.all([
       supabase
         .from("profiles")
-        .select("display_name, height_cm, birthdate, gender, goal_weight_kg, activity_level, training_goal")
+        .select("display_name, height_cm, birthdate, gender, goal_weight_kg, goal_target_date, activity_level, training_goal")
         .eq("id", uid)
         .maybeSingle(),
       supabase
