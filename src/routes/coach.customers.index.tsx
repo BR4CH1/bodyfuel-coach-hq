@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
-import { ChevronRight, Plus, Inbox, AlertTriangle, Clock, Sparkles } from "lucide-react";
+import { ChevronRight, Plus, Inbox, AlertTriangle, Clock, Sparkles, Search } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { listCustomers } from "@/lib/coaching.functions";
 import { listTrialUsers } from "@/lib/trial.functions";
@@ -36,6 +36,7 @@ function CustomersList() {
     queryFn: () => trialFn(),
   });
   const [filter, setFilter] = useState<Filter>("all");
+  const [search, setSearch] = useState("");
 
   const trialCount = (trials ?? []).filter((t: any) => t.trial_status === "trial").length;
   const trialExpiredCount = (trials ?? []).filter((t: any) => t.trial_status === "trial_expired").length;
@@ -49,10 +50,21 @@ function CustomersList() {
 
   const filtered = useMemo(() => {
     if (!data) return [];
-    if (filter === "all") return data;
-    if (filter === "bulls") return (data as any[]).filter((c) => (c.groups ?? []).includes("bulls"));
-    return (data as any[]).filter((c) => c.payment_status === filter);
-  }, [data, filter]);
+    let list = data as any[];
+    if (filter !== "all") {
+      if (filter === "bulls") list = list.filter((c) => (c.groups ?? []).includes("bulls"));
+      else list = list.filter((c) => c.payment_status === filter);
+    }
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      list = list.filter(
+        (c) =>
+          (c.display_name ?? "").toLowerCase().includes(q) ||
+          (c.email ?? "").toLowerCase().includes(q),
+      );
+    }
+    return list;
+  }, [data, filter, search]);
 
 
   return (
@@ -115,6 +127,18 @@ function CustomersList() {
           )}
         </div>
       )}
+
+      {/* Search */}
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Kunden suchen…"
+          className="w-full rounded-full border border-border bg-card py-2 pl-9 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold"
+        />
+      </div>
 
       {/* Filter-Chips */}
       <div className="flex flex-wrap gap-2">
