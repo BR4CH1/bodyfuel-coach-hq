@@ -172,12 +172,19 @@ function Wizard() {
           </StepBlock>
         )}
         {step === 4 && (
-          <StepBlock title="Wann kaufst du normalerweise ein?" sub="Plan & Einkaufsliste werden darauf abgestimmt">
-            <RadioList
-              options={SHOPPING_DAYS.map((d) => ({ v: d.v, l: d.l }))}
-              value={shopDay}
-              onChange={setShopDay}
+          <StepBlock title="Wann kaufst du normalerweise ein?" sub="Mehrfachauswahl möglich — Plan & Einkaufsliste passen sich an">
+            <ChipGrid
+              options={SHOPPING_DAYS.map((d) => d.l)}
+              value={shopDays.map((v) => SHOPPING_DAYS.find((d) => d.v === v)?.l ?? v)}
+              onToggle={(label) => {
+                const opt = SHOPPING_DAYS.find((d) => d.l === label);
+                if (!opt) return;
+                toggle(shopDays, setShopDays, opt.v);
+              }}
             />
+            <p className="mt-3 text-xs text-muted-foreground">
+              Wir bauen deinen Plan automatisch so, dass er bis zum nächsten Einkaufstag reicht.
+            </p>
             <div className="mt-4 flex items-center gap-3">
               <span className="text-sm">Einkaufsliste</span>
               <select
