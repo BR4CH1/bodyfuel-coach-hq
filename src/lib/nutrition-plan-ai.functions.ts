@@ -66,7 +66,7 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
         .maybeSingle(),
       supabase
         .from("profiles")
-        .select("display_name, height_cm, birthdate, gender, goal_weight_kg, activity_level, coaching_goal")
+        .select("display_name, height_cm, birthdate, gender, goal_weight_kg, activity_level, coaching_goal, training_goal")
         .eq("id", target)
         .maybeSingle(),
       supabase
