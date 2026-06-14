@@ -467,6 +467,7 @@ function emptyProfile(): ProfileExt {
     gender: null,
     goal_weight_kg: null,
     activity_level: null,
+    training_goal: null,
   };
 }
 
