@@ -128,6 +128,18 @@ function CustomersList() {
         </div>
       )}
 
+      {/* Search */}
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Kunden suchen…"
+          className="w-full rounded-full border border-border bg-card py-2 pl-9 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold"
+        />
+      </div>
+
       {/* Filter-Chips */}
       <div className="flex flex-wrap gap-2">
         {([
