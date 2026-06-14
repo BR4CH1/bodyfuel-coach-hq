@@ -12,6 +12,7 @@ type GeneratedMeal = {
   fat_g: number;
 };
 type GeneratedDay = { name: string; type?: "training" | "rest"; meals: GeneratedMeal[] };
+type MacroTarget = { kcal: number; protein_g: number; carbs_g: number; fat_g: number };
 
 
 /**
@@ -85,17 +86,20 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
 
 
     const t = (targets as any) ?? {};
-    const kcal = t.kcal ?? 2200;
-    const protein = t.protein_g ?? 150;
-    const carbs = t.carbs_g ?? 240;
-    const fat = t.fat_g ?? 70;
-    // Restday-Werte: wenn vom Coach gesetzt → übernehmen, sonst sportwissenschaftlich ableiten
-    // (Carb-Cycling: Protein konstant, Carbs ~65 %, Fett ~110 %).
-    // Smart-Plan unterscheidet IMMER Trainings-/Restdays
-    const carbsR = t.carbs_g_rest ?? Math.round(carbs * 0.65);
-    const proteinR = t.protein_g_rest ?? protein;
-    const fatR = t.fat_g_rest ?? Math.round(fat * 1.1);
-    const kcalR = t.kcal_rest ?? Math.round(proteinR * 4 + carbsR * 4 + fatR * 9);
+    const { training: trainingTargets, rest: restTargets } = buildIssnCarbCyclingTargets({
+      kcal: t.kcal ?? 2200,
+      protein_g: t.protein_g ?? 150,
+      carbs_g: t.carbs_g ?? 240,
+      fat_g: t.fat_g ?? 70,
+    });
+    const kcal = trainingTargets.kcal;
+    const protein = trainingTargets.protein_g;
+    const carbs = trainingTargets.carbs_g;
+    const fat = trainingTargets.fat_g;
+    const kcalR = restTargets.kcal;
+    const proteinR = restTargets.protein_g;
+    const carbsR = restTargets.carbs_g;
+    const fatR = restTargets.fat_g;
 
 
     const p: any = profile ?? {};
@@ -267,12 +271,14 @@ WICHTIG zu name/description:
       const s = schedule[i] ?? schedule[schedule.length - 1];
       const typeLabel = s.type === "rest" ? "Restday" : "Trainingstag";
       const name = `${s.wkLabel} — ${typeLabel}`;
+      const targetForDay = s.type === "rest" ? restTargets : trainingTargets;
+      const allowedMeals = (d.meals ?? []).filter((m) => {
+        const hay = `${m.name} ${m.description ?? ""}`.toLowerCase();
+        return !forbidden.some((f) => hay.includes(f));
+      });
       return {
         name,
-        meals: (d.meals ?? []).filter((m) => {
-          const hay = `${m.name} ${m.description ?? ""}`.toLowerCase();
-          return !forbidden.some((f) => hay.includes(f));
-        }),
+        meals: normalizeMealsToTargets(allowedMeals, targetForDay),
       };
     });
 
@@ -399,4 +405,68 @@ function labelForSlot(slot: string): string {
     case "snack": return "Snack";
     default: return "Mahlzeit";
   }
+}
+
+function buildIssnCarbCyclingTargets(trainingInput: MacroTarget): { training: MacroTarget; rest: MacroTarget } {
+  const training = {
+    kcal: Math.max(1, Math.round(trainingInput.kcal)),
+    protein_g: Math.max(1, Math.round(trainingInput.protein_g)),
+    carbs_g: Math.max(1, Math.round(trainingInput.carbs_g)),
+    fat_g: Math.max(1, Math.round(trainingInput.fat_g)),
+  };
+
+  // ISSN-orientiert: Protein bleibt gleich, Kohlenhydrate am Restday deutlich runter,
+  // Fett leicht rauf. Kalorien ergeben sich aus den Makros und liegen dadurch niedriger.
+  let rest: MacroTarget = {
+    protein_g: training.protein_g,
+    carbs_g: Math.max(1, Math.round(training.carbs_g * 0.65)),
+    fat_g: Math.max(1, Math.round(training.fat_g * 1.1)),
+    kcal: 0,
+  };
+  rest.kcal = Math.round(rest.protein_g * 4 + rest.carbs_g * 4 + rest.fat_g * 9);
+
+  if (rest.kcal >= training.kcal || rest.carbs_g >= training.carbs_g) {
+    rest = {
+      protein_g: training.protein_g,
+      carbs_g: Math.max(1, Math.round(training.carbs_g * 0.55)),
+      fat_g: Math.max(1, Math.round(training.fat_g * 1.05)),
+      kcal: 0,
+    };
+    rest.kcal = Math.max(
+      1,
+      Math.min(training.kcal - 100, Math.round(rest.protein_g * 4 + rest.carbs_g * 4 + rest.fat_g * 9)),
+    );
+  }
+
+  return { training, rest };
+}
+
+function normalizeMealsToTargets(meals: GeneratedMeal[], target: MacroTarget): GeneratedMeal[] {
+  if (!meals.length) return meals;
+  const sums = meals.reduce(
+    (acc, meal) => ({
+      kcal: acc.kcal + (Number(meal.kcal) || 0),
+      protein_g: acc.protein_g + (Number(meal.protein_g) || 0),
+      carbs_g: acc.carbs_g + (Number(meal.carbs_g) || 0),
+      fat_g: acc.fat_g + (Number(meal.fat_g) || 0),
+    }),
+    { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0 },
+  );
+  const scale = (value: number, from: number, to: number) =>
+    Math.max(0, Math.round(value * (to / Math.max(1, from))));
+  const adjusted = meals.map((meal) => ({
+    ...meal,
+    kcal: scale(Number(meal.kcal) || 0, sums.kcal, target.kcal),
+    protein_g: scale(Number(meal.protein_g) || 0, sums.protein_g, target.protein_g),
+    carbs_g: scale(Number(meal.carbs_g) || 0, sums.carbs_g, target.carbs_g),
+    fat_g: scale(Number(meal.fat_g) || 0, sums.fat_g, target.fat_g),
+  }));
+
+  const last = adjusted[adjusted.length - 1];
+  last.kcal += target.kcal - adjusted.reduce((sum, meal) => sum + meal.kcal, 0);
+  last.protein_g += target.protein_g - adjusted.reduce((sum, meal) => sum + meal.protein_g, 0);
+  last.carbs_g += target.carbs_g - adjusted.reduce((sum, meal) => sum + meal.carbs_g, 0);
+  last.fat_g += target.fat_g - adjusted.reduce((sum, meal) => sum + meal.fat_g, 0);
+
+  return adjusted;
 }

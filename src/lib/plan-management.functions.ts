@@ -161,7 +161,7 @@ export const transitionPlanStatus = createServerFn({ method: "POST" })
 
     const { data: plan } = await supabase
       .from("nutrition_plans")
-      .select("id, client_id, plan_type, status")
+      .select("id, client_id, plan_type, status, source, kcal, protein_g, carbs_g, fat_g")
       .eq("id", data.plan_id)
       .maybeSingle();
     if (!plan) throw new Error("Plan nicht gefunden");
@@ -186,7 +186,7 @@ export const transitionPlanStatus = createServerFn({ method: "POST" })
     // Auto-apply nutrition targets when a plan becomes active
     if (data.to === "active") {
       try {
-        const { computeTargetsFromPlanDB } = await import("./nutrition.functions");
+        const { computeTargetsFromPlanDB, deriveRestFromTraining } = await import("./nutrition.functions");
         const t = await computeTargetsFromPlanDB(supabase, data.plan_id);
         let kcal: number | null = null, protein_g = 0, carbs_g = 0, fat_g = 0;
         let kcal_rest: number | null = null, protein_g_rest: number | null = null;
@@ -195,6 +195,16 @@ export const transitionPlanStatus = createServerFn({ method: "POST" })
           kcal = t.kcal; protein_g = t.protein_g; carbs_g = t.carbs_g; fat_g = t.fat_g;
           kcal_rest = t.kcal_rest; protein_g_rest = t.protein_g_rest;
           carbs_g_rest = t.carbs_g_rest; fat_g_rest = t.fat_g_rest;
+          const shouldDeriveRest =
+            (plan as any).source === "smart_ai" ||
+            kcal_rest == null ||
+            kcal_rest >= kcal ||
+            (carbs_g_rest ?? 0) >= carbs_g;
+          if (shouldDeriveRest) {
+            const rest = deriveRestFromTraining({ kcal, protein_g, carbs_g, fat_g });
+            kcal_rest = rest.kcal; protein_g_rest = rest.protein_g;
+            carbs_g_rest = rest.carbs_g; fat_g_rest = rest.fat_g;
+          }
         } else if ((plan as any).kcal && Number((plan as any).kcal) > 0) {
           const { data: pRow } = await supabase
             .from("nutrition_plans")
@@ -206,6 +216,9 @@ export const transitionPlanStatus = createServerFn({ method: "POST" })
             protein_g = Number((pRow as any).protein_g) || 0;
             carbs_g = Number((pRow as any).carbs_g) || 0;
             fat_g = Number((pRow as any).fat_g) || 0;
+            const rest = deriveRestFromTraining({ kcal, protein_g, carbs_g, fat_g });
+            kcal_rest = rest.kcal; protein_g_rest = rest.protein_g;
+            carbs_g_rest = rest.carbs_g; fat_g_rest = rest.fat_g;
           }
         }
         if (kcal && kcal > 0) {
