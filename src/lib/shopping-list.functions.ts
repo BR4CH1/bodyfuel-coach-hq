@@ -88,7 +88,7 @@ export const getMyShoppingLists = createServerFn({ method: "GET" })
     const { data: plans } = await supabase
       .from("nutrition_plans")
       .select(
-        "id, title, status, scheduled_start_date, scheduled_end_date",
+        "id, title, status, scheduled_start_date, scheduled_end_date, is_partner_plan, partner_plan_id",
       )
       .eq("client_id", userId)
       .eq("plan_type", "nutrition")
@@ -101,27 +101,62 @@ export const getMyShoppingLists = createServerFn({ method: "GET" })
       all.find((p) => ["draft", "approved", "published"].includes(p.status)) ?? null;
 
     const ids = [active?.id, next?.id].filter(Boolean) as string[];
-    let lists: Record<string, { items: ShoppingItem[]; days: number; generated_at: string }> = {};
+    let listsByPlan: Record<string, any> = {};
+    let combinedByPlan: Record<string, any> = {};
     if (ids.length) {
       const { data: rows } = await supabase
         .from("shopping_lists")
-        .select("plan_id, items, days, generated_at")
+        .select("plan_id, scope, items, days, generated_at, partner_user_id")
         .in("plan_id", ids);
-      lists = Object.fromEntries(
-        (rows ?? []).map((r: any) => [
-          r.plan_id,
-          { items: r.items ?? [], days: r.days ?? 7, generated_at: r.generated_at },
-        ]),
-      );
+      for (const r of rows ?? []) {
+        const entry = { items: (r as any).items ?? [], days: (r as any).days ?? 7, generated_at: (r as any).generated_at, partner_user_id: (r as any).partner_user_id };
+        if ((r as any).scope === "partner_combined") combinedByPlan[(r as any).plan_id] = entry;
+        else listsByPlan[(r as any).plan_id] = entry;
+      }
+    }
+
+    // Detect partner link & resolve partner's plan + name.
+    const { data: link } = await supabase
+      .from("nutrition_partners")
+      .select("user_a, user_b")
+      .or(`user_a.eq.${userId},user_b.eq.${userId}`)
+      .maybeSingle();
+    const partnerUserId = link ? ((link as any).user_a === userId ? (link as any).user_b : (link as any).user_a) : null;
+
+    let partnerName: string | null = null;
+    let partnerPlan: any = null;
+    let partnerList: any = null;
+    if (partnerUserId) {
+      const { data: pp } = await supabase
+        .from("profiles")
+        .select("display_name")
+        .eq("id", partnerUserId)
+        .maybeSingle();
+      partnerName = (pp as any)?.display_name ?? "Partner";
+      const { data: pPlans } = await supabase
+        .from("nutrition_plans")
+        .select("id, title, status, scheduled_start_date, scheduled_end_date")
+        .eq("client_id", partnerUserId)
+        .eq("plan_type", "nutrition")
+        .in("status", ["active", "draft", "approved", "published"])
+        .order("created_at", { ascending: false });
+      partnerPlan = (pPlans ?? []).find((p: any) => p.status === "active") ?? (pPlans ?? [])[0] ?? null;
+      if (partnerPlan) {
+        const { data: row } = await supabase
+          .from("shopping_lists")
+          .select("items, days, generated_at")
+          .eq("plan_id", partnerPlan.id)
+          .eq("scope", "individual")
+          .maybeSingle();
+        partnerList = row ? { items: (row as any).items ?? [], days: (row as any).days ?? 7, generated_at: (row as any).generated_at } : null;
+      }
     }
 
     return {
-      active: active
-        ? { ...active, list: lists[active.id] ?? null }
-        : null,
-      next: next
-        ? { ...next, list: lists[next.id] ?? null }
-        : null,
+      active: active ? { ...active, list: listsByPlan[active.id] ?? null, combined: combinedByPlan[active.id] ?? null } : null,
+      next: next ? { ...next, list: listsByPlan[next.id] ?? null, combined: combinedByPlan[next.id] ?? null } : null,
       window_days: window,
+      partner: partnerUserId ? { user_id: partnerUserId, name: partnerName, plan: partnerPlan, list: partnerList } : null,
     };
   });
+

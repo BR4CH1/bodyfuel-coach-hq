@@ -37,6 +37,7 @@ import { RecipeInsightsCard } from "@/components/bodyfuel/RecipeInsightsCard";
 import { SmartNutritionInsightsCard } from "@/components/bodyfuel/SmartNutritionInsightsCard";
 import { CustomerCheckinsCard } from "@/components/bodyfuel/CustomerCheckinsCard";
 import { PlanManagementCard } from "@/components/bodyfuel/PlanManagementCard";
+import { PartnerLinkCard } from "@/components/bodyfuel/PartnerLinkCard";
 
 
 
@@ -491,6 +492,7 @@ function CustomerDetail() {
       <NutritionTargetsEditor userId={userId} />
       <SmartNutritionInsightsCard userId={userId} />
       <PlanManagementCard userId={userId} />
+      <PartnerLinkCard userId={userId} />
 
       <RecipeInsightsCard userId={userId} />
       <TrainingBonusCard userId={userId} isCoach />
