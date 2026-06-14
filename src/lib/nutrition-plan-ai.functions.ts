@@ -206,14 +206,6 @@ RESTDAY-Ziel (für "type":"rest", ±5 % treffen):
 
 VORGEGEBENER TAGESPLAN (Reihenfolge ist verbindlich, ${trainingCount}× Training / ${restCount}× Rest):
 ${scheduleLines}`;
-      : `TAGESZIEL (jeder Tag soll diese Werte ±5 % treffen):
-- kcal: ${kcal}
-- Protein: ${protein} g
-- Kohlenhydrate: ${carbs} g
-- Fett: ${fat} g
-
-VORGEGEBENER TAGESPLAN (Wochentage):
-${scheduleLines}`;
 
     const prompt = `Erstelle einen ${planDays}-Tage-Ernährungsplan mit 4 Mahlzeiten pro Tag (Frühstück, Mittag, Abend, Snack). Der Plan soll genau bis zum nächsten Einkaufstag reichen.
 
