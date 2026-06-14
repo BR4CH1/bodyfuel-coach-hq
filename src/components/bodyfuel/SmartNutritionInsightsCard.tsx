@@ -57,21 +57,11 @@ export function SmartNutritionInsightsCard({ userId }: { userId: string }) {
 
   return (
     <div className="rounded-2xl border border-border bg-card p-6 space-y-5">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="font-display text-lg font-bold">Smart-Nutrition</h2>
-          <p className="text-xs text-muted-foreground">
-            Profil, Vorlieben und Risiko-Flags der letzten 14 Tage.
-          </p>
-        </div>
-        <button
-          onClick={() => generate.mutate()}
-          disabled={generate.isPending}
-          className="inline-flex items-center gap-2 rounded-lg border border-gold/40 bg-accent/30 px-3 py-2 text-xs font-semibold text-gold hover:bg-accent/50 disabled:opacity-60"
-        >
-          {generate.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-          Plan-Entwurf
-        </button>
+      <div>
+        <h2 className="font-display text-lg font-bold">Smart-Nutrition</h2>
+        <p className="text-xs text-muted-foreground">
+          Profil, Vorlieben und Risiko-Flags der letzten 14 Tage.
+        </p>
       </div>
 
       {/* Risk flags */}
