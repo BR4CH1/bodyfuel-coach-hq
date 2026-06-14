@@ -1,24 +1,13 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { Camera, Plus, Scale, Ruler } from "lucide-react";
-import { toast } from "sonner";
-import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-} from "recharts";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { ArrowLeft, Scale, Ruler, Activity } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { useSession } from "@/lib/bodyfuel/session";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { WeightProgressChart } from "@/components/bodyfuel/WeightProgressChart";
 
 export const Route = createFileRoute("/progress")({
-  head: () => ({ meta: [{ title: "Fortschritt — BODYFUEL" }] }),
+  head: () => ({ meta: [{ title: "Verlauf & Diagramme — BODYFUEL" }] }),
   component: () => (
     <AppLayout>
       <ProgressContent />
@@ -26,174 +15,108 @@ export const Route = createFileRoute("/progress")({
   ),
 });
 
+type Measurement = {
+  id: string;
+  measured_at: string;
+  weight_kg: number | null;
+  body_fat_pct: number | null;
+  waist_cm: number | null;
+};
+
 function ProgressContent() {
-  const { user } = useSession();
-  const [weight, setWeight] = useState("");
-  const [waist, setWaist] = useState("");
-  if (!user) return null;
+  const { supabaseUser } = useSession();
+  const uid = supabaseUser?.id;
 
-  const data = user.weightHistory.map((w) => ({
-    date: new Date(w.date).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }),
-    Gewicht: w.weight,
-    Bauchumfang: w.waist,
-  }));
+  const [items, setItems] = useState<Measurement[]>([]);
+  const [goalWeight, setGoalWeight] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const latest = user.weightHistory[user.weightHistory.length - 1];
-  const first = user.weightHistory[0];
+  useEffect(() => {
+    if (!uid) return;
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const [ms, p] = await Promise.all([
+        supabase
+          .from("body_measurements")
+          .select("id, measured_at, weight_kg, body_fat_pct, waist_cm")
+          .eq("user_id", uid)
+          .order("measured_at", { ascending: true }),
+        supabase
+          .from("profiles")
+          .select("goal_weight_kg")
+          .eq("id", uid)
+          .maybeSingle(),
+      ]);
+      if (cancelled) return;
+      if (ms.data) setItems(ms.data as Measurement[]);
+      if (p.data) setGoalWeight((p.data as { goal_weight_kg: number | null }).goal_weight_kg);
+      setLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [uid]);
 
-  const save = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!weight) return;
-    user.weightHistory.push({
-      date: new Date().toISOString().slice(0, 10),
-      weight: parseFloat(weight),
-      waist: waist ? parseFloat(waist) : undefined,
-    });
-    setWeight("");
-    setWaist("");
-    toast.success("Messung gespeichert");
-  };
+  const weights = items.filter((i) => i.weight_kg != null);
+  const latest = weights[weights.length - 1];
+  const first = weights[0];
 
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Fortschritt</p>
-        <h1 className="font-display text-3xl font-bold sm:text-4xl">Deine Entwicklung</h1>
+        <Link
+          to="/measurements"
+          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="h-3 w-3" /> Zurück zu Körpermaße
+        </Link>
+        <p className="mt-2 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+          Fortschritt
+        </p>
+        <h1 className="font-display text-3xl font-bold sm:text-4xl">
+          Verlauf & Diagramme
+        </h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          So entwickeln sich dein Gewicht und deine Körpermaße über die Zeit.
+        </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Metric
           icon={<Scale className="h-5 w-5" />}
           label="Aktuelles Gewicht"
-          value={`${latest.weight} kg`}
-          delta={`${(latest.weight - first.weight).toFixed(1)} kg`}
-          positive={latest.weight <= first.weight}
+          value={latest?.weight_kg != null ? `${latest.weight_kg} kg` : "—"}
+          delta={
+            latest && first && latest.weight_kg != null && first.weight_kg != null
+              ? `${(latest.weight_kg - first.weight_kg > 0 ? "+" : "")}${(latest.weight_kg - first.weight_kg).toFixed(1)} kg gesamt`
+              : ""
+          }
         />
         <Metric
           icon={<Ruler className="h-5 w-5" />}
           label="Bauchumfang"
-          value={`${latest.waist} cm`}
-          delta={`${(((latest.waist ?? 0) - (first.waist ?? 0))).toFixed(1)} cm`}
-          positive={(latest.waist ?? 0) <= (first.waist ?? 0)}
+          value={latest?.waist_cm != null ? `${latest.waist_cm} cm` : "—"}
         />
         <Metric
-          icon={<Camera className="h-5 w-5" />}
-          label="Fortschrittsfotos"
-          value={`${user.photos.length}`}
-          delta="hochgeladen"
+          icon={<Activity className="h-5 w-5" />}
+          label="Einträge"
+          value={`${items.length}`}
+          delta="Messungen"
         />
       </div>
 
-      {/* Chart */}
-      <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-display text-lg font-bold">Verlauf</h2>
-          <div className="flex gap-3 text-xs">
-            <Legend color="var(--gold)" label="Gewicht (kg)" />
-            <Legend color="var(--success)" label="Bauchumfang (cm)" />
-          </div>
+      {loading ? (
+        <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground">
+          Lade deine Daten…
         </div>
-        <div className="h-64 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data}>
-              <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="date" stroke="var(--muted-foreground)" fontSize={11} />
-              <YAxis stroke="var(--muted-foreground)" fontSize={11} />
-              <Tooltip
-                contentStyle={{
-                  background: "var(--card)",
-                  border: "1px solid var(--border)",
-                  borderRadius: 8,
-                  fontSize: 12,
-                }}
-              />
-              <Line
-                type="monotone"
-                dataKey="Gewicht"
-                stroke="var(--gold)"
-                strokeWidth={2.5}
-                dot={{ r: 3, fill: "var(--gold)" }}
-              />
-              <Line
-                type="monotone"
-                dataKey="Bauchumfang"
-                stroke="var(--success)"
-                strokeWidth={2}
-                dot={{ r: 3 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* New entry */}
-      <form
-        onSubmit={save}
-        className="rounded-2xl border border-border bg-card p-5 sm:p-6"
-      >
-        <h2 className="mb-4 font-display text-lg font-bold">Neue Messung</h2>
-        <div className="grid gap-4 sm:grid-cols-[1fr_1fr_auto]">
-          <div className="space-y-2">
-            <Label>Gewicht (kg)</Label>
-            <Input
-              type="number"
-              step="0.1"
-              value={weight}
-              onChange={(e) => setWeight(e.target.value)}
-              placeholder="z.B. 84.5"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Bauchumfang (cm)</Label>
-            <Input
-              type="number"
-              step="0.1"
-              value={waist}
-              onChange={(e) => setWaist(e.target.value)}
-              placeholder="z.B. 78"
-            />
-          </div>
-          <div className="flex items-end">
-            <Button
-              type="submit"
-              className="w-full bg-gradient-gold text-primary-foreground hover:opacity-90 sm:w-auto"
-            >
-              <Plus className="mr-1 h-4 w-4" /> Speichern
-            </Button>
-          </div>
-        </div>
-      </form>
-
-      {/* Photos */}
-      <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-display text-lg font-bold">Fortschrittsfotos</h2>
-          <button
-            onClick={() => toast("Foto-Upload (Demo)")}
-            className="inline-flex items-center gap-2 rounded-lg border border-border bg-secondary px-3 py-2 text-xs font-medium hover:bg-accent"
-          >
-            <Camera className="h-4 w-4" /> Hochladen
-          </button>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-3">
-          {user.photos.map((p, i) => (
-            <div
-              key={i}
-              className="group relative aspect-[3/4] overflow-hidden rounded-xl border border-border bg-gradient-to-br from-secondary to-background"
-            >
-              <div className="absolute inset-0 grid place-items-center text-muted-foreground">
-                <Camera className="h-10 w-10 opacity-30" />
-              </div>
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-3">
-                <div className="text-xs font-semibold">{p.label}</div>
-                <div className="text-[10px] text-muted-foreground">
-                  {new Date(p.date).toLocaleDateString("de-DE")}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      ) : (
+        <WeightProgressChart
+          measurements={items}
+          goalWeight={goalWeight}
+          title="Gewichtsverlauf"
+        />
+      )}
     </div>
   );
 }
@@ -203,33 +126,20 @@ function Metric({
   label,
   value,
   delta,
-  positive,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
-  delta: string;
-  positive?: boolean;
+  delta?: string;
 }) {
   return (
     <div className="rounded-2xl border border-border bg-card p-5">
-      <div className="flex items-center gap-2 text-gold">
+      <div className="flex items-center gap-2 text-primary">
         {icon}
         <span className="text-xs uppercase tracking-wider">{label}</span>
       </div>
       <div className="mt-3 font-display text-2xl font-bold">{value}</div>
-      <div className={`mt-1 text-xs ${positive ? "text-success" : "text-muted-foreground"}`}>
-        {delta}
-      </div>
+      {delta && <div className="mt-1 text-xs text-muted-foreground">{delta}</div>}
     </div>
-  );
-}
-
-function Legend({ color, label }: { color: string; label: string }) {
-  return (
-    <span className="flex items-center gap-1.5 text-muted-foreground">
-      <span className="h-2 w-2 rounded-full" style={{ background: color }} />
-      {label}
-    </span>
   );
 }
