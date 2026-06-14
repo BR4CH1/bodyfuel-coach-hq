@@ -169,18 +169,31 @@ export const setNutritionTargets = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const nz = (v: number | null | undefined) =>
       v == null || !isFinite(Number(v)) ? null : Math.max(0, Math.round(Number(v)));
+
+    let kcal = Math.max(0, Math.round(data.kcal));
+    let protein_g = Math.max(0, Math.round(data.protein_g));
+    let carbs_g = Math.max(0, Math.round(data.carbs_g));
+    let fat_g = Math.max(0, Math.round(data.fat_g));
+    let kcal_rest = nz(data.kcal_rest);
+    let protein_g_rest = nz(data.protein_g_rest);
+    let carbs_g_rest = nz(data.carbs_g_rest);
+    let fat_g_rest = nz(data.fat_g_rest);
+
+    // Sanity: Trainingstag muss mehr kcal als Restday haben (Carb-Cycling).
+    // Falls die Werte vertauscht sind, drehen wir sie.
+    if (kcal_rest != null && kcal_rest > kcal) {
+      [kcal, kcal_rest] = [kcal_rest, kcal];
+      [protein_g, protein_g_rest] = [protein_g_rest ?? protein_g, protein_g];
+      [carbs_g, carbs_g_rest] = [carbs_g_rest ?? carbs_g, carbs_g];
+      [fat_g, fat_g_rest] = [fat_g_rest ?? fat_g, fat_g];
+    }
+
     const { error } = await supabaseAdmin.from("nutrition_targets").upsert(
       {
         user_id: data.user_id,
-        kcal: Math.max(0, Math.round(data.kcal)),
-        protein_g: Math.max(0, Math.round(data.protein_g)),
-        carbs_g: Math.max(0, Math.round(data.carbs_g)),
-        fat_g: Math.max(0, Math.round(data.fat_g)),
+        kcal, protein_g, carbs_g, fat_g,
         water_glasses: Math.max(1, Math.round(data.water_glasses)),
-        kcal_rest: nz(data.kcal_rest),
-        protein_g_rest: nz(data.protein_g_rest),
-        carbs_g_rest: nz(data.carbs_g_rest),
-        fat_g_rest: nz(data.fat_g_rest),
+        kcal_rest, protein_g_rest, carbs_g_rest, fat_g_rest,
         updated_by: context.userId,
       },
       { onConflict: "user_id" },
@@ -340,9 +353,16 @@ export async function computeTargetsFromPlanDB(
   };
 
   // If no Trainingstag rows exist, treat all days as training
-  const base = train.length ? avg(train) : avg([...train, ...rest]);
-  const restAvg = train.length ? avg(rest) : null;
+  let base = train.length ? avg(train) : avg([...train, ...rest]);
+  let restAvg = train.length ? avg(rest) : null;
   if (!base) return null;
+
+  // Sportwissenschaftlicher Sanity-Check: Trainingstag MUSS mehr kcal als Restday haben
+  // (Carb-Cycling: höherer Carb-Bedarf an Trainingstagen). Wenn die Labels offenbar vertauscht
+  // sind (z. B. AI hat Tagesnamen falsch zugeordnet), drehen wir die beiden Sätze.
+  if (restAvg && restAvg.kcal > base.kcal) {
+    [base, restAvg] = [restAvg, base];
+  }
 
   return {
     ...base,
@@ -351,6 +371,24 @@ export async function computeTargetsFromPlanDB(
     carbs_g_rest: restAvg?.carbs_g ?? null,
     fat_g_rest: restAvg?.fat_g ?? null,
   };
+}
+
+/**
+ * Sportwissenschaftlich abgeleitete Restday-Werte, wenn der Coach nur Trainingstag-Werte gesetzt hat.
+ * Quelle: ISSN Position Stand on Nutrient Timing & Carb-Cycling-Empfehlungen
+ *   - Protein: konstant (≈ 1.8–2.2 g/kg, anabole Schwelle ganztägig).
+ *   - Fett: an Restdays leicht höher (Energieersatz für reduzierte Carbs), ~+10 %.
+ *   - Kohlenhydrate: Trainingstag 4–6 g/kg, Restday 2–3 g/kg → Restday ≈ 65 % der Trainingstag-Carbs.
+ *   - Kalorien: ergeben sich aus den Makros (P*4 + C*4 + F*9).
+ */
+export function deriveRestFromTraining(t: {
+  kcal: number; protein_g: number; carbs_g: number; fat_g: number;
+}) {
+  const protein_g = t.protein_g;
+  const carbs_g = Math.round(t.carbs_g * 0.65);
+  const fat_g = Math.round(t.fat_g * 1.1);
+  const kcal = Math.round(protein_g * 4 + carbs_g * 4 + fat_g * 9);
+  return { kcal, protein_g, carbs_g, fat_g };
 }
 
 /** Extract daily kcal/macros from the user's active nutrition plan (DB first, PDF fallback) */

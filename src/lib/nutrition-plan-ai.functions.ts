@@ -89,11 +89,13 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
     const protein = t.protein_g ?? 150;
     const carbs = t.carbs_g ?? 240;
     const fat = t.fat_g ?? 70;
-    const hasRest = t.kcal_rest != null;
-    const kcalR = t.kcal_rest ?? kcal;
+    // Restday-Werte: wenn vom Coach gesetzt → übernehmen, sonst sportwissenschaftlich ableiten
+    // (Carb-Cycling: Protein konstant, Carbs ~65 %, Fett ~110 %).
+    // Smart-Plan unterscheidet IMMER Trainings-/Restdays
+    const carbsR = t.carbs_g_rest ?? Math.round(carbs * 0.65);
     const proteinR = t.protein_g_rest ?? protein;
-    const carbsR = t.carbs_g_rest ?? carbs;
-    const fatR = t.fat_g_rest ?? fat;
+    const fatR = t.fat_g_rest ?? Math.round(fat * 1.1);
+    const kcalR = t.kcal_rest ?? Math.round(proteinR * 4 + carbsR * 4 + fatR * 9);
 
 
     const p: any = profile ?? {};
@@ -167,9 +169,7 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
       const wkKey = WEEKDAY_KEYS[wkIdx];
       const wkLabel = WEEKDAY_LABELS_DE[wkIdx];
       let type: "training" | "rest";
-      if (!hasRest) {
-        type = "training";
-      } else if (hasTrainingConfig) {
+      if (hasTrainingConfig) {
         type = trainingSet.has(wkKey) ? "training" : "rest";
       } else {
         type = i % 7 < 4 ? "training" : "rest";
@@ -184,8 +184,11 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
       .map((s, i) => `Tag ${i + 1} (${s.wkLabel}): ${s.type === "training" ? "TRAININGSTAG" : "RESTDAY"}`)
       .join("\n");
 
-    const targetsBlock = hasRest
-      ? `Es gibt ZWEI verschiedene Tagesziele — jeder Tag MUSS dem Typ aus dem Tagesplan unten folgen:
+    const targetsBlock = `Es gibt ZWEI verschiedene Tagesziele — jeder Tag MUSS dem Typ aus dem Tagesplan unten folgen.
+
+📌 GRUNDREGEL Sportwissenschaft (Carb-Cycling):
+Trainingstage haben IMMER mehr Kalorien & Kohlenhydrate als Restdays (höherer Glykogen-/Energiebedarf).
+Protein bleibt an beiden Tagen ähnlich. Fett darf am Restday leicht höher sein.
 
 TRAININGSTAG-Ziel (für "type":"training", ±5 % treffen):
 - kcal: ${kcal}
@@ -200,14 +203,6 @@ RESTDAY-Ziel (für "type":"rest", ±5 % treffen):
 - Fett: ${fatR} g
 
 VORGEGEBENER TAGESPLAN (Reihenfolge ist verbindlich, ${trainingCount}× Training / ${restCount}× Rest):
-${scheduleLines}`
-      : `TAGESZIEL (jeder Tag soll diese Werte ±5 % treffen):
-- kcal: ${kcal}
-- Protein: ${protein} g
-- Kohlenhydrate: ${carbs} g
-- Fett: ${fat} g
-
-VORGEGEBENER TAGESPLAN (Wochentage):
 ${scheduleLines}`;
 
     const prompt = `Erstelle einen ${planDays}-Tage-Ernährungsplan mit 4 Mahlzeiten pro Tag (Frühstück, Mittag, Abend, Snack). Der Plan soll genau bis zum nächsten Einkaufstag reichen.
