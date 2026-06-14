@@ -190,14 +190,15 @@ export function PlanManagementCard({ userId }: { userId: string }) {
           </summary>
           <ul className="mt-3 divide-y divide-border text-sm">
             {data.archive.map((p: any) => (
-              <li key={p.id} className="flex items-center justify-between py-2">
+              <li key={p.id} className="flex items-center justify-between gap-2 py-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
                   <span className="truncate">{p.title}</span>
                 </div>
-                <span className="text-xs text-muted-foreground shrink-0">
-                  {fmtDate(p.created_at)}
-                </span>
+                <div className="flex items-center gap-3 shrink-0">
+                  {p.compliance && <ComplianceDot c={p.compliance} />}
+                  <span className="text-xs text-muted-foreground">{fmtDate(p.created_at)}</span>
+                </div>
               </li>
             ))}
           </ul>
@@ -235,13 +236,16 @@ function PlanColumn(props: {
         <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
           {label}
         </p>
-        {plan && (
-          <span
-            className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase ${STATUS_COLOR[plan.status as PlanStatus]}`}
-          >
-            {STATUS_LABEL[plan.status as PlanStatus]}
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {plan?.compliance && <ComplianceDot c={plan.compliance} />}
+          {plan && (
+            <span
+              className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase ${STATUS_COLOR[plan.status as PlanStatus]}`}
+            >
+              {STATUS_LABEL[plan.status as PlanStatus]}
+            </span>
+          )}
+        </div>
       </div>
 
       {!plan && (
@@ -382,5 +386,33 @@ function Macro({ label, value, suffix }: { label: string; value: number | null; 
         {suffix ?? ""}
       </div>
     </div>
+  );
+}
+
+function ComplianceDot({
+  c,
+}: {
+  c: { score: number; tone: "green" | "yellow" | "red"; days_tracked: number };
+}) {
+  const color =
+    c.tone === "green"
+      ? "bg-emerald-500"
+      : c.tone === "yellow"
+        ? "bg-amber-500"
+        : "bg-rose-500";
+  const label =
+    c.tone === "green"
+      ? "Stark dabei"
+      : c.tone === "yellow"
+        ? "Geht so"
+        : "Wenig aktiv";
+  return (
+    <span
+      title={`${label} · ${c.score}% · ${c.days_tracked} Check-ins`}
+      className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-muted-foreground"
+    >
+      <span className={`h-2.5 w-2.5 rounded-full ${color}`} />
+      {c.score}%
+    </span>
   );
 }

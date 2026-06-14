@@ -20,7 +20,36 @@ export type PlanSummary = {
   created_at: string;
   days_count: number;
   meals_count: number;
+  compliance: { score: number; tone: "green" | "yellow" | "red"; days_tracked: number } | null;
 };
+
+// Max daily check score = 15 (matches compute_daily_check_points trigger weights).
+const MAX_DAILY_POINTS = 15;
+
+async function computeCompliance(
+  supabase: any,
+  clientId: string,
+  fromIso: string | null,
+  toIso: string | null,
+): Promise<PlanSummary["compliance"]> {
+  if (!fromIso) return null;
+  const from = fromIso.slice(0, 10);
+  const to = (toIso ?? new Date().toISOString()).slice(0, 10);
+  const { data: checks } = await supabase
+    .from("daily_checks")
+    .select("points, check_date")
+    .eq("user_id", clientId)
+    .gte("check_date", from)
+    .lte("check_date", to);
+  const rows = (checks ?? []) as any[];
+  if (!rows.length) return { score: 0, tone: "red", days_tracked: 0 };
+  const avg =
+    rows.reduce((s, r) => s + (Number(r.points) || 0), 0) / rows.length;
+  const score = Math.round(Math.min(100, (avg / MAX_DAILY_POINTS) * 100));
+  const tone: "green" | "yellow" | "red" =
+    score >= 75 ? "green" : score >= 50 ? "yellow" : "red";
+  return { score, tone, days_tracked: rows.length };
+}
 
 async function requireCoach(supabase: any, userId: string) {
   const { data } = await supabase.rpc("has_role", { _user_id: userId, _role: "coach" });
@@ -31,7 +60,7 @@ async function loadPlan(supabase: any, id: string): Promise<PlanSummary | null> 
   const { data: plan } = await supabase
     .from("nutrition_plans")
     .select(
-      "id, title, status, source, scheduled_start_date, scheduled_end_date, activated_at, archived_at, kcal, protein_g, carbs_g, fat_g, created_at",
+      "id, client_id, title, status, source, scheduled_start_date, scheduled_end_date, activated_at, archived_at, kcal, protein_g, carbs_g, fat_g, created_at",
     )
     .eq("id", id)
     .maybeSingle();
@@ -49,7 +78,22 @@ async function loadPlan(supabase: any, id: string): Promise<PlanSummary | null> 
       .in("day_id", dayIds);
     mealsCount = count ?? 0;
   }
-  return { ...(plan as any), days_count: dayIds.length, meals_count: mealsCount };
+  const p: any = plan;
+  let compliance: PlanSummary["compliance"] = null;
+  if (p.status === "active" || p.status === "archived") {
+    compliance = await computeCompliance(
+      supabase,
+      p.client_id,
+      p.activated_at,
+      p.archived_at,
+    );
+  }
+  return {
+    ...p,
+    days_count: dayIds.length,
+    meals_count: mealsCount,
+    compliance,
+  };
 }
 
 export const getCustomerPlanOverview = createServerFn({ method: "GET" })
@@ -89,7 +133,19 @@ export const getCustomerPlanOverview = createServerFn({ method: "GET" })
     return {
       active: activeFull,
       next: nextFull,
-      archive: archive.map((p) => ({ ...p, days_count: 0, meals_count: 0 })),
+      archive: await Promise.all(
+        archive.map(async (p) => ({
+          ...p,
+          days_count: 0,
+          meals_count: 0,
+          compliance: await computeCompliance(
+            supabase,
+            data.user_id,
+            p.activated_at,
+            p.archived_at,
+          ),
+        })),
+      ),
       shopping_days: (prof as any)?.shopping_days ?? [],
       auto_publish: (prof as any)?.auto_publish ?? false,
       days_until_next_shopping: daysUntilNextShopping((prof as any)?.shopping_days),
