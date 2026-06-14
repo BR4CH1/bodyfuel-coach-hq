@@ -40,6 +40,7 @@ type ProfileExt = {
   gender: string | null;
   goal_weight_kg: number | null;
   activity_level: string | null;
+  training_goal: string | null;
 };
 
 const num = (v: string) => (v.trim() === "" ? null : Number(v.replace(",", ".")));
@@ -76,7 +77,7 @@ function MeasurementsContent() {
     const [p, ms] = await Promise.all([
       supabase
         .from("profiles")
-        .select("display_name, height_cm, birthdate, gender, goal_weight_kg, activity_level")
+        .select("display_name, height_cm, birthdate, gender, goal_weight_kg, activity_level, training_goal")
         .eq("id", uid)
         .maybeSingle(),
       supabase
@@ -107,6 +108,7 @@ function MeasurementsContent() {
         gender: profile.gender,
         goal_weight_kg: profile.goal_weight_kg,
         activity_level: profile.activity_level,
+        training_goal: profile.training_goal,
       })
       .eq("id", uid);
     setSavingProfile(false);
@@ -268,6 +270,27 @@ function MeasurementsContent() {
               <option value="moderate">Moderat aktiv</option>
               <option value="active">Sehr aktiv</option>
               <option value="athlete">Leistungssport</option>
+            </select>
+          </Field>
+          <Field label="Trainingsziel">
+            <select
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              value={profile?.training_goal ?? ""}
+              onChange={(e) =>
+                setProfile((p) => ({
+                  ...(p ?? emptyProfile()),
+                  training_goal: e.target.value || null,
+                }))
+              }
+            >
+              <option value="">—</option>
+              <option value="muscle_gain">Muskelaufbau</option>
+              <option value="fat_loss">Abnehmen / Fettabbau</option>
+              <option value="recomposition">Recomposition</option>
+              <option value="maintenance">Gewicht halten</option>
+              <option value="strength">Kraftsteigerung</option>
+              <option value="performance">Leistungssteigerung</option>
+              <option value="health">Gesundheit & Wohlbefinden</option>
             </select>
           </Field>
         </div>
@@ -466,6 +489,7 @@ function emptyProfile(): ProfileExt {
     gender: null,
     goal_weight_kg: null,
     activity_level: null,
+    training_goal: null,
   };
 }
 
