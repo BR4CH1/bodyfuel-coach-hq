@@ -61,7 +61,7 @@ export const generateShoppingList = createServerFn({ method: "POST" })
       const { data: prof } = await supabase
         .from("smart_nutrition_profile")
         .select("shopping_days")
-        .eq("user_id", userId)
+        .eq("user_id", (ownerPlan as any).client_id)
         .maybeSingle();
       windowDays = daysUntilNextShopping((prof as any)?.shopping_days);
     }
