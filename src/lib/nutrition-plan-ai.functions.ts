@@ -145,31 +145,70 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
     // Plan length = days until the customer's next shopping day (1–7).
     const planDays = daysUntilNextShopping(p.shopping_days);
 
-    // Decide training/rest distribution roughly 4:3 over a week, scaled to planDays.
-    const restCount = hasRest ? Math.max(1, Math.round(planDays * 3 / 7)) : 0;
-    const trainingCount = planDays - restCount;
+    // Compute the actual start date now so we can align day types with weekdays.
+    const start = data.scheduled_start_date
+      ? new Date(data.scheduled_start_date)
+      : (() => {
+          const d = new Date();
+          d.setDate(d.getDate() + planDays);
+          return d;
+        })();
+
+    const WEEKDAY_KEYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
+    const WEEKDAY_LABELS_DE = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"] as const;
+    const trainingSet = new Set<string>((p.training_weekdays ?? []).map((s: string) => s.toLowerCase()));
+    const hasTrainingConfig = trainingSet.size > 0;
+
+    // Build the per-day schedule: real weekday + type for each plan day.
+    const schedule = Array.from({ length: planDays }, (_, i) => {
+      const d = new Date(start);
+      d.setDate(d.getDate() + i);
+      const wkIdx = d.getDay();
+      const wkKey = WEEKDAY_KEYS[wkIdx];
+      const wkLabel = WEEKDAY_LABELS_DE[wkIdx];
+      let type: "training" | "rest";
+      if (!hasRest) {
+        type = "training";
+      } else if (hasTrainingConfig) {
+        type = trainingSet.has(wkKey) ? "training" : "rest";
+      } else {
+        type = i % 7 < 4 ? "training" : "rest";
+      }
+      return { wkKey, wkLabel, type };
+    });
+
+    const trainingCount = schedule.filter((s) => s.type === "training").length;
+    const restCount = schedule.length - trainingCount;
+
+    const scheduleLines = schedule
+      .map((s, i) => `Tag ${i + 1} (${s.wkLabel}): ${s.type === "training" ? "TRAININGSTAG" : "RESTDAY"}`)
+      .join("\n");
 
     const targetsBlock = hasRest
-      ? `Es gibt ZWEI verschiedene Tagesziele — ordne jedem Tag den passenden Typ zu:
+      ? `Es gibt ZWEI verschiedene Tagesziele — jeder Tag MUSS dem Typ aus dem Tagesplan unten folgen:
 
-TRAININGSTAG (für "type":"training", jeder solche Tag ±5 % treffen):
+TRAININGSTAG-Ziel (für "type":"training", ±5 % treffen):
 - kcal: ${kcal}
 - Protein: ${protein} g
 - Kohlenhydrate: ${carbs} g
 - Fett: ${fat} g
 
-RESTDAY (für "type":"rest", jeder solche Tag ±5 % treffen):
+RESTDAY-Ziel (für "type":"rest", ±5 % treffen):
 - kcal: ${kcalR}
 - Protein: ${proteinR} g
 - Kohlenhydrate: ${carbsR} g
 - Fett: ${fatR} g
 
-Verteilung über die ${planDays} Tage: ${trainingCount}× Trainingstag, ${restCount}× Restday. Mische sie sinnvoll (z. B. abwechselnd) — nicht alle Restdays am Ende.`
+VORGEGEBENER TAGESPLAN (Reihenfolge ist verbindlich, ${trainingCount}× Training / ${restCount}× Rest):
+${scheduleLines}`
       : `TAGESZIEL (jeder Tag soll diese Werte ±5 % treffen):
 - kcal: ${kcal}
 - Protein: ${protein} g
 - Kohlenhydrate: ${carbs} g
-- Fett: ${fat} g`;
+- Fett: ${fat} g
+
+VORGEGEBENER TAGESPLAN (Wochentage):
+${scheduleLines}`;
 
     const prompt = `Erstelle einen ${planDays}-Tage-Ernährungsplan mit 4 Mahlzeiten pro Tag (Frühstück, Mittag, Abend, Snack). Der Plan soll genau bis zum nächsten Einkaufstag reichen.
 
@@ -189,8 +228,8 @@ ${skipReasons.length ? "Häufig übersprungen: " + skipReasons.slice(0, 8).join(
 ${prepHint} ${budgetHint}
 
 Antworte AUSSCHLIESSLICH mit gültigem JSON:
-{"days":[{"name":"Tag 1","type":"${hasRest ? "training" : "training"}","meals":[{"slot":"breakfast","name":"…","description":"Zutaten + Mengen","kcal":500,"protein_g":35,"carbs_g":55,"fat_g":15}]}]}
-Genau ${planDays} Tage, je 4 Mahlzeiten. ${hasRest ? `Jeder Tag MUSS ein Feld "type" mit "training" ODER "rest" enthalten. Im "name" soll " — Trainingstag" oder " — Restday" stehen (Beispiel: "Tag 1 — Trainingstag", "Tag 2 — Restday"), damit die App den Tagestyp erkennt.` : `Tagesnamen "Tag 1"…"Tag ${planDays}".`} Tagessummen müssen die jeweiligen Ziele treffen.`;
+{"days":[{"name":"Tag 1","type":"training","meals":[{"slot":"breakfast","name":"…","description":"Zutaten + Mengen","kcal":500,"protein_g":35,"carbs_g":55,"fat_g":15}]}]}
+Genau ${planDays} Tage in der vorgegebenen Reihenfolge, je 4 Mahlzeiten. Jeder Tag MUSS ein Feld "type" mit "training" ODER "rest" enthalten (passend zum Tagesplan oben). Tagessummen müssen die jeweiligen Ziele treffen.`;
 
 
 
@@ -220,24 +259,14 @@ Genau ${planDays} Tage, je 4 Mahlzeiten. ${hasRest ? `Jeder Tag MUSS ein Feld "t
     const days = (parsed.days ?? []).slice(0, planDays);
     if (!days.length) throw new Error("Keine Tage generiert.");
 
-    // Hard filter: drop any meal containing a forbidden substring
+    // Hard filter + authoritative day type from `schedule`.
     const forbidden = [...allergyList, ...nogoList]
       .map((s) => s.toLowerCase().trim())
       .filter(Boolean);
     const cleaned = days.map((d, i) => {
-      const inferredType: "training" | "rest" =
-        d.type === "rest" || /rest|ruh|pause|off|frei/i.test(d.name ?? "")
-          ? "rest"
-          : d.type === "training" || /training/i.test(d.name ?? "")
-            ? "training"
-            : hasRest && i >= trainingCount
-              ? "rest"
-              : "training";
-      const baseName = (d.name ?? `Tag ${i + 1}`).trim();
-      const hasMarker = /trainingstag|restday|rest|ruh|pause|off|frei/i.test(baseName);
-      const name = hasRest && !hasMarker
-        ? `${baseName} — ${inferredType === "rest" ? "Restday" : "Trainingstag"}`
-        : baseName;
+      const s = schedule[i] ?? schedule[schedule.length - 1];
+      const typeLabel = s.type === "rest" ? "Restday" : "Trainingstag";
+      const name = `${s.wkLabel} — ${typeLabel}`;
       return {
         name,
         meals: (d.meals ?? []).filter((m) => {
@@ -246,6 +275,7 @@ Genau ${planDays} Tage, je 4 Mahlzeiten. ${hasRest ? `Jeder Tag MUSS ein Feld "t
         }),
       };
     });
+
 
 
     // Archive any existing draft/approved/published plan so the unique
