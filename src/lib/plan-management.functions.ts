@@ -161,7 +161,7 @@ export const transitionPlanStatus = createServerFn({ method: "POST" })
 
     const { data: plan } = await supabase
       .from("nutrition_plans")
-      .select("id, client_id, plan_type, status")
+      .select("id, client_id, plan_type, status, kcal, protein_g, carbs_g, fat_g")
       .eq("id", data.plan_id)
       .maybeSingle();
     if (!plan) throw new Error("Plan nicht gefunden");
