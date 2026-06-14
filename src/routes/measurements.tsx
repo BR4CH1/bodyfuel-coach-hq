@@ -272,6 +272,27 @@ function MeasurementsContent() {
               <option value="athlete">Leistungssport</option>
             </select>
           </Field>
+          <Field label="Trainingsziel">
+            <select
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              value={profile?.training_goal ?? ""}
+              onChange={(e) =>
+                setProfile((p) => ({
+                  ...(p ?? emptyProfile()),
+                  training_goal: e.target.value || null,
+                }))
+              }
+            >
+              <option value="">—</option>
+              <option value="muscle_gain">Muskelaufbau</option>
+              <option value="fat_loss">Abnehmen / Fettabbau</option>
+              <option value="recomposition">Recomposition</option>
+              <option value="maintenance">Gewicht halten</option>
+              <option value="strength">Kraftsteigerung</option>
+              <option value="performance">Leistungssteigerung</option>
+              <option value="health">Gesundheit & Wohlbefinden</option>
+            </select>
+          </Field>
         </div>
         <div className="mt-4">
           <Button
