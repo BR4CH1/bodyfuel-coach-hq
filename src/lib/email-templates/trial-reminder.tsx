@@ -62,7 +62,7 @@ const TrialReminderEmail = ({
             <Text style={cardTitle}>Mit deiner Mitgliedschaft bekommst du:</Text>
             <Text style={item}>✓ Individueller Ernährungsplan auf dein Ziel</Text>
             <Text style={item}>✓ Individueller Trainingsplan</Text>
-            <Text style={item}>✓ Wöchentliche Check-Ins & KI-Anpassungen</Text>
+            <Text style={item}>✓ Wöchentliche Check-Ins & Smart-Anpassungen</Text>
             <Text style={item}>✓ Persönlicher WhatsApp-Support</Text>
             <Text style={item}>✓ Alle Premium-Funktionen freigeschaltet</Text>
           </Section>

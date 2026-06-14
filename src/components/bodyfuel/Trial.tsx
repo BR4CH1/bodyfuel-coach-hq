@@ -143,7 +143,7 @@ export function TrialStatusBanner() {
           <p className="text-sm">
             Mit deiner Mitgliedschaft bekommst du <strong>individuelle Pläne</strong>,{" "}
             <strong>persönliches Coaching</strong>, <strong>WhatsApp-Support</strong> und
-            <strong> KI-Anpassungen</strong> — basierend auf allem, was du im Trial schon getrackt hast.
+            <strong>Smart-Anpassungen</strong> — basierend auf allem, was du im Trial schon getrackt hast.
           </p>
         </div>
 

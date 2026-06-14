@@ -201,11 +201,11 @@ export function NutritionTargetsEditor({ userId }: { userId: string }) {
               ) : (
                 <Sparkles className="h-4 w-4" />
               )}
-              {extracting ? "Lese Plan…" : "Aus aktuellem Plan extrahieren (KI)"}
+              {extracting ? "Lese Plan…" : "Aus aktuellem Plan extrahieren (Smart)"}
             </Button>
           </div>
           <p className="mt-2 text-[11px] text-muted-foreground">
-            Die KI versucht, Trainings- und Restday-Werte aus dem aktiven PDF zu extrahieren.
+            Wir versuchen, Trainings- und Restday-Werte aus dem aktiven PDF zu extrahieren.
             Danach bitte prüfen und speichern.
           </p>
         </>

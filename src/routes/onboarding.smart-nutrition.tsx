@@ -138,7 +138,7 @@ function Wizard() {
           </StepBlock>
         )}
         {step === 1 && (
-          <StepBlock title="Welche Lebensmittel möchtest du niemals essen?" sub="No-Go's — die KI plant sie nie ein">
+          <StepBlock title="Welche Lebensmittel möchtest du niemals essen?" sub="No-Go's — wir planen sie nie ein">
             <ChipGrid options={FAVORITES} value={nogos} onToggle={(v) => toggle(nogos, setNogos, v)} />
             <Textarea
               placeholder="Weitere No-Go's (kommagetrennt)"
@@ -193,7 +193,7 @@ function Wizard() {
           </StepBlock>
         )}
         {step === 5 && (
-          <StepBlock title="Wochenbudget für Lebensmittel?" sub="Hilft der KI, passende Rezepte zu wählen">
+          <StepBlock title="Wochenbudget für Lebensmittel?" sub="Hilft uns, passende Rezepte zu wählen">
             <RadioList
               options={BUDGETS.map((b) => ({ v: b.v, l: b.l }))}
               value={budget}
