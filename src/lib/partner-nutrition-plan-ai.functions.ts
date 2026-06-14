@@ -415,7 +415,8 @@ Genau ${planDays} Tage. Pro Person je 4 Slots (breakfast/lunch/dinner/snack). Be
           .insert({ plan_id: planRow.id, name: d.name, sort_order: i })
           .select("id")
           .single();
-        dayIds.push(dayRow?.id);
+        if (!dayRow?.id) throw new Error("Day-Insert fehlgeschlagen");
+        dayIds.push(dayRow.id as string);
         mealsByDay.push(d.meals);
       }
       return { planId: planRow.id, dayIds, mealsByDay };
