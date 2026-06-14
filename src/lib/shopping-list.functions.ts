@@ -106,8 +106,10 @@ export const generateShoppingList = createServerFn({ method: "POST" })
         .eq("status", "active")
         .maybeSingle();
       if (!plan) throw new Error("Kein aktiver Ernährungsplan gefunden.");
-      planId = (plan as any).id;
+      planId = (plan as any).id as string;
     }
+    if (!planId) throw new Error("Kein Plan gefunden.");
+
 
     // Determine window
     let windowDays = data.days;
