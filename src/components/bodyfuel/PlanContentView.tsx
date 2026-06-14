@@ -460,24 +460,20 @@ export function PlanContentView({ clientId, planType }: Props) {
                   const displayName = itemDisplayName[m.id] ?? m.name;
                   const inner = (
                     <>
-                      <div className="flex items-baseline justify-between gap-3">
-                        <div className="flex items-center gap-2">
-                          <div className="text-xs font-bold uppercase tracking-wider text-gold">{displayName}</div>
-                          {canTrack && isTracked && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
-                              <Check className="h-3 w-3" /> getrackt
-                            </span>
-                          )}
-                        </div>
-                        {m.kcal != null && (
-                          <div className="text-[11px] text-muted-foreground">{m.kcal} kcal</div>
+                      <div className="flex items-center gap-2">
+                        <div className="text-xs font-bold uppercase tracking-wider text-gold">{displayName}</div>
+                        {canTrack && isTracked && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
+                            <Check className="h-3 w-3" /> getrackt
+                          </span>
                         )}
                       </div>
                       {m.description && (
                         <p className="mt-1 text-sm text-foreground/90">{m.description}</p>
                       )}
-                      {(m.protein_g != null || m.carbs_g != null || m.fat_g != null) && (
+                      {(m.protein_g != null || m.carbs_g != null || m.fat_g != null || m.kcal != null) && (
                         <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                          {m.kcal != null && <span>{m.kcal} kcal</span>}
                           {m.protein_g != null && <span>P {m.protein_g}g</span>}
                           {m.carbs_g != null && <span>· KH {m.carbs_g}g</span>}
                           {m.fat_g != null && <span>· F {m.fat_g}g</span>}
