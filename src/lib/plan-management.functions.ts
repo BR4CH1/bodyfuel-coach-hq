@@ -221,6 +221,10 @@ export const transitionPlanStatus = createServerFn({ method: "POST" })
             carbs_g_rest = rest.carbs_g; fat_g_rest = rest.fat_g;
           }
         }
+        // Auf 50-kcal-Schritte runden, damit die UI runde Werte zeigt.
+        const round50 = (v: number | null) => v == null ? null : Math.max(0, Math.round(v / 50) * 50);
+        if (kcal) kcal = round50(kcal)!;
+        if (kcal_rest != null) kcal_rest = round50(kcal_rest);
         if (kcal && kcal > 0) {
           // Preserve existing water_glasses if present
           const { data: existing } = await supabase
