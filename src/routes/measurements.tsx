@@ -284,13 +284,12 @@ function MeasurementsContent() {
               }
             >
               <option value="">—</option>
-              <option value="muscle_gain">Muskelaufbau</option>
-              <option value="fat_loss">Abnehmen / Fettabbau</option>
-              <option value="recomposition">Recomposition</option>
-              <option value="maintenance">Gewicht halten</option>
-              <option value="strength">Kraftsteigerung</option>
-              <option value="performance">Leistungssteigerung</option>
-              <option value="health">Gesundheit & Wohlbefinden</option>
+              <option value="performance">Performance (Athlet)</option>
+              <option value="lean_bulk">Lean Bulk (Muskelaufbau)</option>
+              <option value="fat_loss">Fettabbau</option>
+              <option value="aggressive_cut">Aggressiver Cut</option>
+              <option value="recovery">Regeneration / Verletzung</option>
+
             </select>
           </Field>
         </div>

@@ -307,7 +307,7 @@ export const getCustomerDetail = createServerFn({ method: "POST" })
     await assertCoach(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const [profile, pkgs, payments, userRes, measurements, groups, lastFood, lastSet, lastCheck, lastWater, lastMeas] = await Promise.all([
+    const [profile, pkgs, payments, userRes, measurements, groups, lastFood, lastSet, lastCheck, lastWater, lastMeas, targets] = await Promise.all([
       supabaseAdmin.from("profiles").select("*").eq("id", data.user_id).maybeSingle(),
       supabaseAdmin
         .from("customer_packages")
@@ -334,7 +334,9 @@ export const getCustomerDetail = createServerFn({ method: "POST" })
       supabaseAdmin.from("daily_checks").select("updated_at, created_at").eq("user_id", data.user_id).order("updated_at", { ascending: false }).limit(1).maybeSingle(),
       supabaseAdmin.from("water_logs").select("created_at").eq("user_id", data.user_id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
       supabaseAdmin.from("body_measurements").select("created_at").eq("user_id", data.user_id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      supabaseAdmin.from("nutrition_targets").select("kcal, protein_g, carbs_g, fat_g, kcal_rest, protein_g_rest, carbs_g_rest, fat_g_rest").eq("user_id", data.user_id).maybeSingle(),
     ]);
+
 
     const u = userRes.data.user as any;
     const banned = u?.banned_until
@@ -367,6 +369,7 @@ export const getCustomerDetail = createServerFn({ method: "POST" })
       groups: (groups.data ?? []).map((g: any) => g.group_name as string),
       coaching_goal: (profile.data as any)?.coaching_goal ?? null,
       next_checkin_date: (profile.data as any)?.next_checkin_date ?? null,
+      targets: targets.data ?? null,
       auth: {
         invited_at: u?.invited_at ?? null,
         confirmed_at: u?.email_confirmed_at ?? u?.confirmed_at ?? null,
@@ -375,6 +378,7 @@ export const getCustomerDetail = createServerFn({ method: "POST" })
         status,
       },
     };
+
 
 
   });
