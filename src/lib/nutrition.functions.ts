@@ -170,11 +170,12 @@ export const setNutritionTargets = createServerFn({ method: "POST" })
     const nz = (v: number | null | undefined) =>
       v == null || !isFinite(Number(v)) ? null : Math.max(0, Math.round(Number(v)));
 
-    let kcal = Math.max(0, Math.round(data.kcal));
+    const round50 = (v: number) => Math.max(0, Math.round(v / 50) * 50);
+    let kcal = round50(data.kcal);
     let protein_g = Math.max(0, Math.round(data.protein_g));
     let carbs_g = Math.max(0, Math.round(data.carbs_g));
     let fat_g = Math.max(0, Math.round(data.fat_g));
-    let kcal_rest = nz(data.kcal_rest);
+    let kcal_rest = data.kcal_rest == null ? null : round50(Number(data.kcal_rest));
     let protein_g_rest = nz(data.protein_g_rest);
     let carbs_g_rest = nz(data.carbs_g_rest);
     let fat_g_rest = nz(data.fat_g_rest);
