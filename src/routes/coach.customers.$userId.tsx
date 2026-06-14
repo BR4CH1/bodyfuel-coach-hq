@@ -484,6 +484,7 @@ function CustomerDetail() {
 
       <MacroTargetsCard userId={userId} />
       <NutritionTargetsEditor userId={userId} />
+      <SmartNutritionInsightsCard userId={userId} />
       <RecipeInsightsCard userId={userId} />
       <TrainingBonusCard userId={userId} isCoach />
       <CoachTrainingSummary clientId={userId} />
