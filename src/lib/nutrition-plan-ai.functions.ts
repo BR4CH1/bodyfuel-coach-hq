@@ -145,13 +145,35 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
     // Plan length = days until the customer's next shopping day (1–7).
     const planDays = daysUntilNextShopping(p.shopping_days);
 
-    const prompt = `Erstelle einen ${planDays}-Tage-Ernährungsplan mit 4 Mahlzeiten pro Tag (Frühstück, Mittag, Abend, Snack). Der Plan soll genau bis zum nächsten Einkaufstag reichen.
+    // Decide training/rest distribution roughly 4:3 over a week, scaled to planDays.
+    const restCount = hasRest ? Math.max(1, Math.round(planDays * 3 / 7)) : 0;
+    const trainingCount = planDays - restCount;
 
-TAGESZIEL (jeder Tag soll diese Werte ±5 % treffen):
+    const targetsBlock = hasRest
+      ? `Es gibt ZWEI verschiedene Tagesziele — ordne jedem Tag den passenden Typ zu:
+
+TRAININGSTAG (für "type":"training", jeder solche Tag ±5 % treffen):
 - kcal: ${kcal}
 - Protein: ${protein} g
 - Kohlenhydrate: ${carbs} g
 - Fett: ${fat} g
+
+RESTDAY (für "type":"rest", jeder solche Tag ±5 % treffen):
+- kcal: ${kcalR}
+- Protein: ${proteinR} g
+- Kohlenhydrate: ${carbsR} g
+- Fett: ${fatR} g
+
+Verteilung über die ${planDays} Tage: ${trainingCount}× Trainingstag, ${restCount}× Restday. Mische sie sinnvoll (z. B. abwechselnd) — nicht alle Restdays am Ende.`
+      : `TAGESZIEL (jeder Tag soll diese Werte ±5 % treffen):
+- kcal: ${kcal}
+- Protein: ${protein} g
+- Kohlenhydrate: ${carbs} g
+- Fett: ${fat} g`;
+
+    const prompt = `Erstelle einen ${planDays}-Tage-Ernährungsplan mit 4 Mahlzeiten pro Tag (Frühstück, Mittag, Abend, Snack). Der Plan soll genau bis zum nächsten Einkaufstag reichen.
+
+${targetsBlock}
 
 🚨 ABSOLUTE AUSSCHLÜSSE — niemals verwenden:
 ${allergyList.length ? "ALLERGIEN: " + allergyList.join(", ") : "(keine)"}
@@ -167,8 +189,9 @@ ${skipReasons.length ? "Häufig übersprungen: " + skipReasons.slice(0, 8).join(
 ${prepHint} ${budgetHint}
 
 Antworte AUSSCHLIESSLICH mit gültigem JSON:
-{"days":[{"name":"Tag 1","meals":[{"slot":"breakfast","name":"…","description":"Zutaten + Mengen","kcal":500,"protein_g":35,"carbs_g":55,"fat_g":15}]}]}
-Genau ${planDays} Tage, je 4 Mahlzeiten. Tagesnamen "Tag 1"…"Tag ${planDays}" oder Wochentage. Tagessummen müssen die Ziele treffen.`;
+{"days":[{"name":"Tag 1","type":"${hasRest ? "training" : "training"}","meals":[{"slot":"breakfast","name":"…","description":"Zutaten + Mengen","kcal":500,"protein_g":35,"carbs_g":55,"fat_g":15}]}]}
+Genau ${planDays} Tage, je 4 Mahlzeiten. ${hasRest ? `Jeder Tag MUSS ein Feld "type" mit "training" ODER "rest" enthalten. Im "name" soll " — Trainingstag" oder " — Restday" stehen (Beispiel: "Tag 1 — Trainingstag", "Tag 2 — Restday"), damit die App den Tagestyp erkennt.` : `Tagesnamen "Tag 1"…"Tag ${planDays}".`} Tagessummen müssen die jeweiligen Ziele treffen.`;
+
 
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
