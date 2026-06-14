@@ -109,8 +109,9 @@ function Wizard() {
 
   if (isLoading) return <p className="text-sm text-muted-foreground">Lade…</p>;
 
-  const STEPS = 6;
+  const STEPS = 7;
   const last = step === STEPS;
+
 
   const toggle = (list: string[], set: (l: string[]) => void, v: string) =>
     set(list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
