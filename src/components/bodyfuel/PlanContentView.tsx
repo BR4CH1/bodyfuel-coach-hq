@@ -486,12 +486,39 @@ export function PlanContentView({ clientId, planType }: Props) {
                     </>
                   );
                   const base = "rounded-2xl border p-4 transition";
+                  const isSkipped = !!skipped[m.id];
                   const style = isTracked
                     ? "border-emerald-500/40 bg-emerald-500/5"
-                    : "border-border bg-background/40";
+                    : isSkipped
+                      ? "border-amber-500/40 bg-amber-500/5 opacity-80"
+                      : "border-border bg-background/40";
                   return (
                     <div key={m.id} className={`${base} ${style} relative`}>
                       <div className="absolute right-2 top-2 flex items-center gap-1">
+                        {canTrack && !isTracked && (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (isSkipped) {
+                                try {
+                                  await removeSkipFn({ data: { meal_id: m.id } });
+                                  setSkipped((s) => { const n = { ...s }; delete n[m.id]; return n; });
+                                } catch {}
+                              } else {
+                                setSkipMeal(m);
+                              }
+                            }}
+                            className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[10px] font-semibold ${
+                              isSkipped
+                                ? "border-amber-500/50 bg-amber-500/10 text-amber-500"
+                                : "border-border bg-background/60 text-muted-foreground hover:border-amber-500/50 hover:text-amber-500"
+                            }`}
+                            aria-label="Mahlzeit überspringen"
+                            title="Übersprungen markieren"
+                          >
+                            <SkipForward className="h-3 w-3" /> {isSkipped ? "Übersp." : "Skip"}
+                          </button>
+                        )}
                         {canTrack && m.kcal && m.protein_g && m.carbs_g && m.fat_g && (
                           <button
                             type="button"
