@@ -58,6 +58,7 @@ import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/e
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as ApiPublicHooksTrialRemindersRouteImport } from './routes/api/public/hooks/trial-reminders'
+import { Route as ApiPublicHooksSendFeatureNewsRouteImport } from './routes/api/public/hooks/send-feature-news'
 import { Route as ApiPublicHooksPlanRotationRouteImport } from './routes/api/public/hooks/plan-rotation'
 
 const WelcomeRoute = WelcomeRouteImport.update({
@@ -311,6 +312,12 @@ const ApiPublicHooksTrialRemindersRoute =
     path: '/api/public/hooks/trial-reminders',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksSendFeatureNewsRoute =
+  ApiPublicHooksSendFeatureNewsRouteImport.update({
+    id: '/api/public/hooks/send-feature-news',
+    path: '/api/public/hooks/send-feature-news',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksPlanRotationRoute =
   ApiPublicHooksPlanRotationRouteImport.update({
     id: '/api/public/hooks/plan-rotation',
@@ -363,6 +370,7 @@ export interface FileRoutesByFullPath {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/coach/customers/': typeof CoachCustomersIndexRoute
   '/api/public/hooks/plan-rotation': typeof ApiPublicHooksPlanRotationRoute
+  '/api/public/hooks/send-feature-news': typeof ApiPublicHooksSendFeatureNewsRoute
   '/api/public/hooks/trial-reminders': typeof ApiPublicHooksTrialRemindersRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -412,6 +420,7 @@ export interface FileRoutesByTo {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/coach/customers': typeof CoachCustomersIndexRoute
   '/api/public/hooks/plan-rotation': typeof ApiPublicHooksPlanRotationRoute
+  '/api/public/hooks/send-feature-news': typeof ApiPublicHooksSendFeatureNewsRoute
   '/api/public/hooks/trial-reminders': typeof ApiPublicHooksTrialRemindersRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -465,6 +474,7 @@ export interface FileRoutesById {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/coach/customers/': typeof CoachCustomersIndexRoute
   '/api/public/hooks/plan-rotation': typeof ApiPublicHooksPlanRotationRoute
+  '/api/public/hooks/send-feature-news': typeof ApiPublicHooksSendFeatureNewsRoute
   '/api/public/hooks/trial-reminders': typeof ApiPublicHooksTrialRemindersRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -519,6 +529,7 @@ export interface FileRouteTypes {
     | '/lovable/email/suppression'
     | '/coach/customers/'
     | '/api/public/hooks/plan-rotation'
+    | '/api/public/hooks/send-feature-news'
     | '/api/public/hooks/trial-reminders'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -568,6 +579,7 @@ export interface FileRouteTypes {
     | '/lovable/email/suppression'
     | '/coach/customers'
     | '/api/public/hooks/plan-rotation'
+    | '/api/public/hooks/send-feature-news'
     | '/api/public/hooks/trial-reminders'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -620,6 +632,7 @@ export interface FileRouteTypes {
     | '/lovable/email/suppression'
     | '/coach/customers/'
     | '/api/public/hooks/plan-rotation'
+    | '/api/public/hooks/send-feature-news'
     | '/api/public/hooks/trial-reminders'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -658,6 +671,7 @@ export interface RootRouteChildren {
   BullsIndexRoute: typeof BullsIndexRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiPublicHooksPlanRotationRoute: typeof ApiPublicHooksPlanRotationRoute
+  ApiPublicHooksSendFeatureNewsRoute: typeof ApiPublicHooksSendFeatureNewsRoute
   ApiPublicHooksTrialRemindersRoute: typeof ApiPublicHooksTrialRemindersRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
@@ -1011,6 +1025,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksTrialRemindersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/send-feature-news': {
+      id: '/api/public/hooks/send-feature-news'
+      path: '/api/public/hooks/send-feature-news'
+      fullPath: '/api/public/hooks/send-feature-news'
+      preLoaderRoute: typeof ApiPublicHooksSendFeatureNewsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/plan-rotation': {
       id: '/api/public/hooks/plan-rotation'
       path: '/api/public/hooks/plan-rotation'
@@ -1109,6 +1130,7 @@ const rootRouteChildren: RootRouteChildren = {
   BullsIndexRoute: BullsIndexRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ApiPublicHooksPlanRotationRoute: ApiPublicHooksPlanRotationRoute,
+  ApiPublicHooksSendFeatureNewsRoute: ApiPublicHooksSendFeatureNewsRoute,
   ApiPublicHooksTrialRemindersRoute: ApiPublicHooksTrialRemindersRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
