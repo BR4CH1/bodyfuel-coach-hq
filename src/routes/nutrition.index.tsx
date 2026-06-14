@@ -7,6 +7,7 @@ import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { PlansView } from "@/components/bodyfuel/PlansView";
 import { MacroTargetsCard } from "@/components/bodyfuel/MacroTargetsCard";
 import { PlanContentView } from "@/components/bodyfuel/PlanContentView";
+import { WeekScheduleCard } from "@/components/bodyfuel/WeekScheduleCard";
 import { useSession } from "@/lib/bodyfuel/session";
 
 import { useTrial } from "@/hooks/use-trial";
@@ -125,6 +126,9 @@ function NutritionIndex() {
               </div>
               <ChevronRight className="h-5 w-5 text-muted-foreground" />
             </Link>
+            {supabaseUser?.id && profile?.completed_at && (
+              <WeekScheduleCard userId={supabaseUser.id} />
+            )}
             <MacroTargetsCard userId={supabaseUser?.id} />
           </>
         )}

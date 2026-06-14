@@ -220,8 +220,8 @@ function Wizard() {
         )}
         {step === 6 && (
           <StepBlock
-            title="An welchen Tagen trainierst du?"
-            sub="Wir bauen den Plan so, dass an Trainingstagen die Trainings-Makros und sonst die Restday-Makros greifen."
+            title="An welchen Tagen trainierst du? *"
+            sub="Pflichtfeld — daraus ergeben sich automatisch Trainings- und Restdays in deinem Plan und der Einkaufsliste."
           >
             <ChipGrid
               options={TRAINING_DAYS.map((d) => d.l)}
@@ -262,15 +262,18 @@ function Wizard() {
         </Button>
         {!last ? (
           <div className="flex gap-2">
-            <Button
-              variant="ghost"
-              onClick={() => navigate({ to: "/nutrition" })}
-              disabled={save.isPending}
-            >
-              Später
-            </Button>
+            {step !== 6 && (
+              <Button
+                variant="ghost"
+                onClick={() => navigate({ to: "/nutrition" })}
+                disabled={save.isPending}
+              >
+                Später
+              </Button>
+            )}
             <Button
               onClick={() => setStep((s) => s + 1)}
+              disabled={step === 6 && trainDays.length === 0}
               className="bg-gradient-gold text-primary-foreground"
             >
               Weiter <ChevronRight className="ml-1 h-4 w-4" />

@@ -226,6 +226,22 @@ export const getDayType = createServerFn({ method: "POST" })
     if (override?.kind) {
       return { kind: override.kind as DayType, source: "manual" as const };
     }
+    // Fallback: derive from the user's configured training weekdays.
+    const { data: prof } = await context.supabase
+      .from("smart_nutrition_profile")
+      .select("training_weekdays")
+      .eq("user_id", data.user_id)
+      .maybeSingle();
+    const weekdays: string[] = (prof as any)?.training_weekdays ?? [];
+    if (weekdays.length) {
+      const KEYS = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
+      const wkKey = KEYS[new Date(`${data.date}T12:00:00`).getDay()];
+      return {
+        kind: (weekdays.map((s) => s.toLowerCase()).includes(wkKey) ? "training" : "rest") as DayType,
+        source: "auto" as const,
+      };
+    }
+    // Final fallback: did the user log a training set on this date?
     const start = `${data.date}T00:00:00`;
     const end = `${data.date}T23:59:59.999`;
     const { count } = await context.supabase
@@ -239,6 +255,7 @@ export const getDayType = createServerFn({ method: "POST" })
       source: "auto" as const,
     };
   });
+
 
 export const setDayType = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
