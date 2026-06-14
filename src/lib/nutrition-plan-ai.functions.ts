@@ -12,6 +12,7 @@ type GeneratedMeal = {
   fat_g: number;
 };
 type GeneratedDay = { name: string; type?: "training" | "rest"; meals: GeneratedMeal[] };
+type MacroTarget = { kcal: number; protein_g: number; carbs_g: number; fat_g: number };
 
 
 /**
@@ -85,17 +86,20 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
 
 
     const t = (targets as any) ?? {};
-    const kcal = t.kcal ?? 2200;
-    const protein = t.protein_g ?? 150;
-    const carbs = t.carbs_g ?? 240;
-    const fat = t.fat_g ?? 70;
-    // Restday-Werte: wenn vom Coach gesetzt → übernehmen, sonst sportwissenschaftlich ableiten
-    // (Carb-Cycling: Protein konstant, Carbs ~65 %, Fett ~110 %).
-    // Smart-Plan unterscheidet IMMER Trainings-/Restdays
-    const carbsR = t.carbs_g_rest ?? Math.round(carbs * 0.65);
-    const proteinR = t.protein_g_rest ?? protein;
-    const fatR = t.fat_g_rest ?? Math.round(fat * 1.1);
-    const kcalR = t.kcal_rest ?? Math.round(proteinR * 4 + carbsR * 4 + fatR * 9);
+    const { training: trainingTargets, rest: restTargets } = buildIssnCarbCyclingTargets({
+      kcal: t.kcal ?? 2200,
+      protein_g: t.protein_g ?? 150,
+      carbs_g: t.carbs_g ?? 240,
+      fat_g: t.fat_g ?? 70,
+    });
+    const kcal = trainingTargets.kcal;
+    const protein = trainingTargets.protein_g;
+    const carbs = trainingTargets.carbs_g;
+    const fat = trainingTargets.fat_g;
+    const kcalR = restTargets.kcal;
+    const proteinR = restTargets.protein_g;
+    const carbsR = restTargets.carbs_g;
+    const fatR = restTargets.fat_g;
 
 
     const p: any = profile ?? {};
@@ -267,12 +271,14 @@ WICHTIG zu name/description:
       const s = schedule[i] ?? schedule[schedule.length - 1];
       const typeLabel = s.type === "rest" ? "Restday" : "Trainingstag";
       const name = `${s.wkLabel} — ${typeLabel}`;
+      const targetForDay = s.type === "rest" ? restTargets : trainingTargets;
+      const allowedMeals = (d.meals ?? []).filter((m) => {
+        const hay = `${m.name} ${m.description ?? ""}`.toLowerCase();
+        return !forbidden.some((f) => hay.includes(f));
+      });
       return {
         name,
-        meals: (d.meals ?? []).filter((m) => {
-          const hay = `${m.name} ${m.description ?? ""}`.toLowerCase();
-          return !forbidden.some((f) => hay.includes(f));
-        }),
+        meals: normalizeMealsToTargets(allowedMeals, targetForDay),
       };
     });
 
