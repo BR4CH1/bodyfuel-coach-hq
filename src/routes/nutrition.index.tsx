@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Utensils, ChevronRight, Heart, ShoppingCart, Carrot, Sparkles } from "lucide-react";
@@ -8,7 +8,7 @@ import { PlansView } from "@/components/bodyfuel/PlansView";
 import { MacroTargetsCard } from "@/components/bodyfuel/MacroTargetsCard";
 import { PlanContentView } from "@/components/bodyfuel/PlanContentView";
 import { useSession } from "@/lib/bodyfuel/session";
-import { supabase } from "@/integrations/supabase/client";
+
 import { useTrial } from "@/hooks/use-trial";
 import { TrialNutritionPlan } from "@/components/bodyfuel/TrialPlanView";
 import { getMySmartProfile } from "@/lib/smart-profile.functions";
