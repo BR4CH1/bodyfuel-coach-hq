@@ -1,15 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, Sparkles, Utensils, Dumbbell, Check, Shuffle, BookOpen, Repeat } from "lucide-react";
+import { Loader2, Sparkles, Utensils, Dumbbell, Check, Shuffle, BookOpen, Repeat, SkipForward } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
 import { parseNutritionPlan, estimateMealMacros } from "@/lib/nutrition-plan.functions";
 import { parseTrainingPlan } from "@/lib/training.functions";
 import { getDayType } from "@/lib/nutrition.functions";
 import { logInteraction } from "@/lib/meal-feedback.functions";
+import { getMySkipsForDate, removeMealSkip } from "@/lib/meal-skips.functions";
 import { RecipeDialog } from "./RecipeDialog";
 import { MealSwapDialog } from "./MealSwapDialog";
+import { SkipReasonDialog } from "./SkipReasonDialog";
 
 type Plan = { id: string; client_id: string; title: string };
 type Day = { id: string; name: string; sort_order: number };
@@ -143,7 +145,11 @@ export function PlanContentView({ clientId, planType }: Props) {
   const [dayKind, setDayKind] = useState<"training" | "rest" | null>(null);
   const [recipeMeal, setRecipeMeal] = useState<Meal | null>(null);
   const [swapMeal, setSwapMeal] = useState<Meal | null>(null);
+  const [skipMeal, setSkipMeal] = useState<Meal | null>(null);
+  const [skipped, setSkipped] = useState<Record<string, string>>({}); // meal_id -> reason
   const logFn = useServerFn(logInteraction);
+  const getSkipsFn = useServerFn(getMySkipsForDate);
+  const removeSkipFn = useServerFn(removeMealSkip);
 
 
   const dayTable = planType === "nutrition" ? "nutrition_plan_days" : "training_days";
@@ -213,8 +219,18 @@ export function PlanContentView({ clientId, planType }: Props) {
     setTracked(map);
   };
 
+  const reloadSkips = async () => {
+    if (!canTrack) { setSkipped({}); return; }
+    try {
+      const res = await getSkipsFn({ data: { skip_date: todayKey() } });
+      const map: Record<string, string> = {};
+      (res.items ?? []).forEach((s: any) => { if (s.meal_id) map[s.meal_id] = s.reason; });
+      setSkipped(map);
+    } catch {}
+  };
+
   useEffect(() => { reload(); /* eslint-disable-next-line */ }, [clientId, planType]);
-  useEffect(() => { reloadTracked(); /* eslint-disable-next-line */ }, [clientId, planType, supabaseUser?.id]);
+  useEffect(() => { reloadTracked(); reloadSkips(); /* eslint-disable-next-line */ }, [clientId, planType, supabaseUser?.id]);
 
   // Fetch today's day type (only for self / nutrition); used to auto-pick a matching day.
   useEffect(() => {
@@ -470,12 +486,39 @@ export function PlanContentView({ clientId, planType }: Props) {
                     </>
                   );
                   const base = "rounded-2xl border p-4 transition";
+                  const isSkipped = !!skipped[m.id];
                   const style = isTracked
                     ? "border-emerald-500/40 bg-emerald-500/5"
-                    : "border-border bg-background/40";
+                    : isSkipped
+                      ? "border-amber-500/40 bg-amber-500/5 opacity-80"
+                      : "border-border bg-background/40";
                   return (
                     <div key={m.id} className={`${base} ${style} relative`}>
                       <div className="absolute right-2 top-2 flex items-center gap-1">
+                        {canTrack && !isTracked && (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (isSkipped) {
+                                try {
+                                  await removeSkipFn({ data: { meal_id: m.id } });
+                                  setSkipped((s) => { const n = { ...s }; delete n[m.id]; return n; });
+                                } catch {}
+                              } else {
+                                setSkipMeal(m);
+                              }
+                            }}
+                            className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[10px] font-semibold ${
+                              isSkipped
+                                ? "border-amber-500/50 bg-amber-500/10 text-amber-500"
+                                : "border-border bg-background/60 text-muted-foreground hover:border-amber-500/50 hover:text-amber-500"
+                            }`}
+                            aria-label="Mahlzeit überspringen"
+                            title="Übersprungen markieren"
+                          >
+                            <SkipForward className="h-3 w-3" /> {isSkipped ? "Übersp." : "Skip"}
+                          </button>
+                        )}
                         {canTrack && m.kcal && m.protein_g && m.carbs_g && m.fat_g && (
                           <button
                             type="button"
@@ -554,6 +597,14 @@ export function PlanContentView({ clientId, planType }: Props) {
           userId={clientId}
           onClose={() => setSwapMeal(null)}
           onSwapped={() => { reloadTracked(); }}
+        />
+      )}
+      {skipMeal && isSelf && (
+        <SkipReasonDialog
+          mealId={skipMeal.id}
+          mealName={itemDisplayName[skipMeal.id] ?? skipMeal.name}
+          onClose={() => setSkipMeal(null)}
+          onSkipped={() => { reloadSkips(); }}
         />
       )}
     </div>

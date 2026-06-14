@@ -647,6 +647,47 @@ export type Database = {
           },
         ]
       }
+      meal_skips: {
+        Row: {
+          created_at: string
+          id: string
+          meal_id: string | null
+          meal_name: string | null
+          note: string | null
+          reason: string
+          skip_date: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          meal_id?: string | null
+          meal_name?: string | null
+          note?: string | null
+          reason: string
+          skip_date?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          meal_id?: string | null
+          meal_name?: string | null
+          note?: string | null
+          reason?: string
+          skip_date?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_skips_meal_id_fkey"
+            columns: ["meal_id"]
+            isOneToOne: false
+            referencedRelation: "nutrition_plan_meals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       nutrition_plan_days: {
         Row: {
           created_at: string
@@ -741,9 +782,12 @@ export type Database = {
           created_at: string
           file_name: string
           file_path: string
+          generated_by: string | null
           id: string
           is_active: boolean
           plan_type: string
+          scheduled_activation_date: string | null
+          status: string
           title: string
           uploaded_by: string | null
         }
@@ -752,9 +796,12 @@ export type Database = {
           created_at?: string
           file_name: string
           file_path: string
+          generated_by?: string | null
           id?: string
           is_active?: boolean
           plan_type?: string
+          scheduled_activation_date?: string | null
+          status?: string
           title: string
           uploaded_by?: string | null
         }
@@ -763,9 +810,12 @@ export type Database = {
           created_at?: string
           file_name?: string
           file_path?: string
+          generated_by?: string | null
           id?: string
           is_active?: boolean
           plan_type?: string
+          scheduled_activation_date?: string | null
+          status?: string
           title?: string
           uploaded_by?: string | null
         }

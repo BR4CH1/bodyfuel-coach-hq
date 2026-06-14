@@ -45,6 +45,7 @@ export const suggestMealSwaps = createServerFn({ method: "POST" })
       { data: favs },
       { data: swapped },
       { data: profile },
+      { data: skips },
     ] = await Promise.all([
       supabase
         .from("meal_ratings")
@@ -68,6 +69,12 @@ export const suggestMealSwaps = createServerFn({ method: "POST" })
         .select("favorite_foods, nogo_foods, allergies, extra_favorites, extra_nogos, extra_allergies, meal_prep_style, budget_band")
         .eq("user_id", userId)
         .maybeSingle(),
+      supabase
+        .from("meal_skips")
+        .select("meal_name, reason")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(20),
     ]);
 
     const liked = (ratings ?? [])
@@ -82,6 +89,10 @@ export const suggestMealSwaps = createServerFn({ method: "POST" })
       .slice(0, 10);
     const favoriteNames = (favs ?? []).map((f: any) => f.meal?.name).filter(Boolean);
     const swappedNames = (swapped ?? []).map((s: any) => s.meal?.name).filter(Boolean);
+    const skipReasons = (skips ?? [])
+      .filter((s: any) => s.meal_name)
+      .map((s: any) => `${s.meal_name} (${s.reason})`)
+      .slice(0, 10);
 
     const p: any = profile ?? {};
     const allergyList = [
@@ -127,6 +138,7 @@ ${favoriteNames.length ? "Favorisierte Rezepte: " + favoriteNames.join(", ") : "
 ${liked.length ? "Mag (4-5★): " + liked.join(", ") : ""}
 ${disliked.length ? "Mag NICHT (1-2★) — vermeiden: " + disliked.join(", ") : ""}
 ${swappedNames.length ? "Bereits abgelehnt — nicht erneut vorschlagen: " + swappedNames.join(", ") : ""}
+${skipReasons.length ? "Häufig übersprungen (Grund beachten): " + skipReasons.join("; ") : ""}
 ${prepHint}
 ${budgetHint}
 
