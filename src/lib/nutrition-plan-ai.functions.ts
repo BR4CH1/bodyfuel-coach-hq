@@ -66,7 +66,7 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
         .maybeSingle(),
       supabase
         .from("profiles")
-        .select("display_name, height_cm, birthdate, gender, goal_weight_kg, activity_level, coaching_goal")
+        .select("display_name, height_cm, birthdate, gender, goal_weight_kg, activity_level, coaching_goal, training_goal")
         .eq("id", target)
         .maybeSingle(),
       supabase
@@ -118,10 +118,17 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
       : null;
     const activityLevel: string | null = cp.activity_level ?? null;
     const coachingGoal: string | null = cp.coaching_goal ?? null;
+    const trainingGoal: string | null = cp.training_goal ?? null;
 
-    // Goal direction: cut / bulk / maintain anhand Zielgewicht vs aktuelles Gewicht
+    // Goal direction: 1) explizites training_goal, 2) Gewichtsdifferenz, 3) coaching_goal Text
     let goalDirection: "cut" | "bulk" | "maintain" = "maintain";
-    if (currentWeight && goalWeight) {
+    if (trainingGoal === "weight_loss" || trainingGoal === "cut") {
+      goalDirection = "cut";
+    } else if (trainingGoal === "muscle_gain" || trainingGoal === "bulk" || trainingGoal === "strength") {
+      goalDirection = "bulk";
+    } else if (trainingGoal === "maintain" || trainingGoal === "recomp" || trainingGoal === "health" || trainingGoal === "performance") {
+      goalDirection = "maintain";
+    } else if (currentWeight && goalWeight) {
       const diff = goalWeight - currentWeight;
       if (diff <= -1) goalDirection = "cut";
       else if (diff >= 1) goalDirection = "bulk";
@@ -129,6 +136,13 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
       const g = coachingGoal.toLowerCase();
       if (/(abnehm|fett|cut|diät|diet|lose)/.test(g)) goalDirection = "cut";
       else if (/(aufbau|muskel|bulk|gain|zunehm)/.test(g)) goalDirection = "bulk";
+    }
+
+    // Wenn Gewichts-Differenz vorhanden, Richtung präzisieren (überschreibt nur 'maintain')
+    if (goalDirection === "maintain" && currentWeight && goalWeight) {
+      const diff = goalWeight - currentWeight;
+      if (diff <= -2) goalDirection = "cut";
+      else if (diff >= 2) goalDirection = "bulk";
     }
 
     // Fallback-Targets via Mifflin-St Jeor wenn keine nutrition_targets gepflegt
@@ -291,16 +305,29 @@ ${scheduleLines}`;
       goalDirection === "bulk" ? "MUSKELAUFBAU (leichter Kalorienüberschuss, hohes Protein, ausreichend Carbs)" :
       "GEWICHT HALTEN / Recomp";
 
+    const trainingGoalLabel: Record<string, string> = {
+      muscle_gain: "Muskelaufbau",
+      weight_loss: "Abnehmen / Fettabbau",
+      recomp: "Recomposition (Fett↓ / Muskel↑)",
+      maintain: "Gewicht halten",
+      strength: "Kraftsteigerung",
+      performance: "Leistungssteigerung",
+      health: "Gesundheit & Wohlbefinden",
+    };
+    const weightDiff = currentWeight && goalWeight ? goalWeight - currentWeight : null;
+
     const goalBlock = `👤 INDIVIDUELLES KUNDENZIEL — Plan MUSS hierauf abgestimmt sein:
-- Ziel: ${goalLabel}${coachingGoal ? ` (Eigenangabe: "${coachingGoal}")` : ""}
-${currentWeight ? `- Aktuelles Gewicht: ${currentWeight} kg` : ""}
-${goalWeight ? `- Zielgewicht: ${goalWeight} kg${currentWeight ? ` (Differenz: ${(goalWeight - currentWeight).toFixed(1)} kg)` : ""}` : ""}
+- Ausrichtung: ${goalLabel}
+${trainingGoal ? `- Trainingsziel (Kunde): ${trainingGoalLabel[trainingGoal] ?? trainingGoal}` : ""}
+${coachingGoal ? `- Coaching-Eigenangabe: "${coachingGoal}"` : ""}
+${currentWeight ? `- Aktuelles Gewicht: ${currentWeight} kg (jüngste Messung — Portionen darauf abstimmen)` : "- Aktuelles Gewicht: unbekannt"}
+${goalWeight ? `- Wunschgewicht: ${goalWeight} kg${weightDiff !== null ? ` (Differenz: ${weightDiff > 0 ? "+" : ""}${weightDiff.toFixed(1)} kg → ${weightDiff < 0 ? "abnehmen" : weightDiff > 0 ? "zunehmen" : "halten"})` : ""}` : ""}
 ${height ? `- Größe: ${height} cm` : ""}
 ${ageYears ? `- Alter: ${ageYears} J.` : ""}
 ${gender ? `- Geschlecht: ${gender}` : ""}
 ${activityLevel ? `- Aktivitätslevel: ${activityLevel}` : ""}
 
-Die unten genannten Kalorien-/Makro-Ziele sind bereits auf dieses Ziel kalibriert. Wähle Lebensmittel & Portionsgrößen, die das Ziel optimal unterstützen (Sättigung bei Cut, energiedichte Carbs bei Bulk, ausgewogen bei Maintain).`;
+Die Kalorien-/Makro-Ziele sind auf aktuelles Gewicht, Wunschgewicht und Trainingsziel kalibriert. Wähle Lebensmittel & Portionsgrößen, die genau dieses Ziel unterstützen: bei Abnehmen sättigend & proteinreich, bei Aufbau energiedicht mit ausreichend Carbs, bei Recomp/Halten ausgewogen.`;
 
     const prompt = `Erstelle einen ${planDays}-Tage-Ernährungsplan mit 4 Mahlzeiten pro Tag (Frühstück, Mittag, Abend, Snack). Der Plan soll genau bis zum nächsten Einkaufstag reichen.
 
