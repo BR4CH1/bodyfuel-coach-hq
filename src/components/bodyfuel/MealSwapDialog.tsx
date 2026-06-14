@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Loader2, Shuffle, X, Check } from "lucide-react";
@@ -71,9 +71,10 @@ export function MealSwapDialog({
     }
   };
 
-  useState(() => {
+  useEffect(() => {
     load();
-  });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [meal.id]);
 
   const apply = async (s: Suggestion, idx: number) => {
     setApplyingIdx(idx);
