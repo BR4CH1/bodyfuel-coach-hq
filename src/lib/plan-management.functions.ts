@@ -60,7 +60,7 @@ async function loadPlan(supabase: any, id: string): Promise<PlanSummary | null> 
   const { data: plan } = await supabase
     .from("nutrition_plans")
     .select(
-      "id, title, status, source, scheduled_start_date, scheduled_end_date, activated_at, archived_at, kcal, protein_g, carbs_g, fat_g, created_at",
+      "id, client_id, title, status, source, scheduled_start_date, scheduled_end_date, activated_at, archived_at, kcal, protein_g, carbs_g, fat_g, created_at",
     )
     .eq("id", id)
     .maybeSingle();
@@ -78,7 +78,22 @@ async function loadPlan(supabase: any, id: string): Promise<PlanSummary | null> 
       .in("day_id", dayIds);
     mealsCount = count ?? 0;
   }
-  return { ...(plan as any), days_count: dayIds.length, meals_count: mealsCount };
+  const p: any = plan;
+  let compliance: PlanSummary["compliance"] = null;
+  if (p.status === "active" || p.status === "archived") {
+    compliance = await computeCompliance(
+      supabase,
+      p.client_id,
+      p.activated_at,
+      p.archived_at,
+    );
+  }
+  return {
+    ...p,
+    days_count: dayIds.length,
+    meals_count: mealsCount,
+    compliance,
+  };
 }
 
 export const getCustomerPlanOverview = createServerFn({ method: "GET" })
