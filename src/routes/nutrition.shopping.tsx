@@ -21,19 +21,23 @@ type Item = { name: string; quantity: string; category: string };
 
 function ShoppingListPage() {
   const fn = useServerFn(generateShoppingList);
-  const [days, setDays] = useState(7);
+  // 0 means "auto" → server derives from smart-profile shopping_days
+  const [days, setDays] = useState<number>(0);
   const [items, setItems] = useState<Item[]>([]);
+  const [usedDays, setUsedDays] = useState<number | null>(null);
   const [checked, setChecked] = useState<Record<string, boolean>>({});
 
   const gen = useMutation({
-    mutationFn: () => fn({ data: { days } }),
-    onSuccess: (d) => {
+    mutationFn: () => fn({ data: days ? { days } : {} }),
+    onSuccess: (d: any) => {
       setItems(d.items as Item[]);
+      setUsedDays(d.days ?? null);
       setChecked({});
       if (!d.items?.length) toast.info("Keine Zutaten gefunden.");
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   const grouped = items.reduce<Record<string, Item[]>>((acc, it) => {
     const c = it.category || "Sonstiges";
