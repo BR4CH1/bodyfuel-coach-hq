@@ -169,9 +169,7 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
       const wkKey = WEEKDAY_KEYS[wkIdx];
       const wkLabel = WEEKDAY_LABELS_DE[wkIdx];
       let type: "training" | "rest";
-      if (!hasRest) {
-        type = "training";
-      } else if (hasTrainingConfig) {
+      if (hasTrainingConfig) {
         type = trainingSet.has(wkKey) ? "training" : "rest";
       } else {
         type = i % 7 < 4 ? "training" : "rest";
