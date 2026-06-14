@@ -57,7 +57,8 @@ function ShoppingListPage() {
       <div>
         <h1 className="font-display text-2xl font-bold">Einkaufsliste</h1>
         <p className="text-sm text-muted-foreground">
-          Automatisch aus deinem aktiven Ernährungsplan erstellt.
+          Reicht automatisch bis zu deinem nächsten Einkaufstag.
+          {usedDays != null && ` (${usedDays} Tage)`}
         </p>
       </div>
 
@@ -71,6 +72,7 @@ function ShoppingListPage() {
             onChange={(e) => setDays(Number(e.target.value))}
             className="rounded-md border border-input bg-background px-3 py-2 text-sm"
           >
+            <option value={0}>Bis zum nächsten Einkauf</option>
             <option value={3}>3 Tage</option>
             <option value={7}>7 Tage</option>
             <option value={14}>14 Tage</option>
