@@ -77,7 +77,7 @@ function mergeItems(items: ShoppingItem[]): ShoppingItem[] {
   for (const it of items) {
     if (!it.name) continue;
     const { key, display } = canonicalize(it.name);
-    const g = groups.get(key) ?? { display, category: it.category, units: new Map(), raws: [] };
+    const g = groups.get(key) ?? { display, category: it.category, units: new Map<string, number>(), raws: [] as string[] };
     const parsed = parseQuantity(it.quantity);
     if (parsed) {
       let { amount, unit } = parsed;
