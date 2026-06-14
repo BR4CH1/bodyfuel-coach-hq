@@ -80,7 +80,7 @@ KALORIEN-CHECK:
 ${targetLine}
 Wenn die Summe der kcal eines Tages das jeweilige Ziel um mehr als 200 kcal überschreitet, lasse einen Snack (bevorzugt den kleinsten) WEG, damit die Summe näher am Ziel liegt. Hauptmahlzeiten (Frühstück, Mittag, Abendessen) NIE weglassen.
 
-Beschreibung: eine Zeile, NUR Lebensmittel komma-getrennt mit Mengen. KEINE Zubereitungsanweisungen.
+Beschreibung: eine Zeile, NUR Lebensmittel komma-getrennt mit Mengen. KEINE Zubereitungsanweisungen. JEDE Zutat braucht eine konkrete Menge in g, ml, Stück oder EL/TL — auch Salat, Gemüse, Beilagen und Toppings IMMER in Gramm (z. B. "150g Blattsalat", "200g Brokkoli"). NIE "Portion", "etwas" oder "nach Geschmack".
 kcal/Protein/Kohlenhydrate/Fett: ganze Zahlen wenn angegeben, sonst null.
 
 Antworte ausschließlich mit gültigem JSON:
