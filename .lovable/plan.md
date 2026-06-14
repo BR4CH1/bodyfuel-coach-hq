@@ -1,84 +1,66 @@
-# BodyFuel Smart Nutrition System (KI 2.0)
+# 👥 Partner-Modus für gekoppelte Ernährungspläne
 
-Großes Feature-Paket. Ich schlage 5 klar abgegrenzte Phasen vor, die aufeinander aufbauen. Sag mir am Ende, in welcher Reihenfolge / wie viel auf einmal — empfohlen ist **Phase 1 + 2 zuerst**, weil ohne Profil-Daten die KI nichts Neues lernen kann.
+Großes Feature — ich teile es in 5 Bauabschnitte, damit du nach jedem Schritt testen kannst. Hier der Gesamtplan.
 
----
+## 1. Datenmodell (Migration)
 
-## Phase 1 — Smart-Nutrition-Profil & 60-Sek-Onboarding
+Neue Tabelle `nutrition_partners` (1:1-Kopplung zwischen zwei Kunden):
+- `id`, `user_a`, `user_b` (uuid → profiles.id), `created_by` (Coach), `created_at`
+- Unique-Constraint auf normalisiertem Paar (least/greatest), damit eine Person nur einen Partner hat
+- RLS: Kunde darf eigene Kopplung lesen; Coach darf alles
 
-**Backend (neue Tabelle `smart_nutrition_profile`, 1 Zeile pro User):**
-- `favorite_foods text[]`, `nogo_foods text[]`, `allergies text[]`
-- `extra_favorites text`, `extra_nogos text`, `extra_allergies text`
-- `meal_prep_style` (`daily` / `2_3_week` / `meal_prep` / `low_effort`)
-- `shopping_day` (`monday`..`sunday`), `shopping_lead_days int default 1`
-- `budget_band` (`<50`, `50_75`, `75_100`, `>100`)
-- `auto_publish boolean default false` (Coach-Freigabe Standard)
-- `completed_at timestamptz` — nur gesetzt wenn Onboarding fertig
-- RLS: User liest/schreibt eigenes Profil; Coach liest alle
+Erweiterungen bestehender Tabellen:
+- `nutrition_plans`: `partner_plan_id uuid` (FK auf zweiten Plan), `is_partner_plan boolean`
+- `nutrition_plan_meals`: `partner_meal_id uuid` (verknüpft die zwei Portionen desselben Gerichts), `is_shared boolean`
+- `shopping_lists`: `scope text` (`'individual' | 'partner_combined'`), `partner_user_id uuid`
 
-**Frontend:**
-- Neuer Wizard `/onboarding/smart-nutrition` (6 Schritte, je < 10 Sek)
-- Auto-Trigger: Wenn eingeloggter Client **und** `completed_at IS NULL`, einmal Modal/Redirect anzeigen (überspringbar — kommt aber wieder)
-- Abschluss-Screen mit Bestätigung
+## 2. Coach-UI: Partner verknüpfen
 
----
+In `src/routes/coach.customers.$userId.tsx`:
+- Neue Karte `PartnerLinkCard` mit Status:
+  - **Nicht verknüpft** → Button „👥 Partner verknüpfen" + Dropdown (Suche über andere Kunden des Coaches)
+  - **Verknüpft** → Anzeige „Partner-Modus aktiv — verknüpft mit X" + Buttons „Partner ändern", „Partner entfernen", „Gemeinsamen Plan erstellen"
+- Server-Funktionen: `linkPartner`, `unlinkPartner`, `listLinkablePartners`
 
-## Phase 2 — KI berücksichtigt Profil-Daten (Mahlzeitentausch & Rezept-aus-Zutaten)
+## 3. KI-Generator für Partner-Pläne
 
-Erweitere bestehende `suggestMealSwaps` + `generateRecipeFromIngredients`:
-- **Harte Filter (Priorität 1-2)**: Allergien + No-Go's → vorher prompten, plus Post-Filter nach Name (Substring-Check) → wenn KI doch was Verbotenes vorschlägt, wird's serverseitig verworfen.
-- **Soft-Signals**: Lieblings-/Bewertungs-/Favoriten-Daten + Meal-Prep-Stil + Budget-Band fließen in den Prompt ein.
-- Hinzu: `mealPrepStyle` beeinflusst Aufwand-Hinweis ("schnell, max 15 Min" vs. "Meal-Prep-tauglich").
+Neue Server-Funktion `generatePartnerNutritionPlanDraft` (parallel zu bestehender `generateAiNutritionPlanDraft`):
 
----
+Eingaben:
+- beide `user_id`
+- `shared_slots`: { breakfast, lunch, dinner, snack } (Standard: nur dinner)
+- `start_mode` wie bisher
 
-## Phase 3 — Skip-Tracking ("Warum nicht gegessen?")
+Logik:
+1. Lade für **beide** Kunden parallel: Profil, Zielgewicht, Targets (Training+Rest via ISSN-Cycling), Allergien, No-Gos, Favoriten, Bewertungen, Trainings-Wochentage
+2. Baue für jeden Tag pro Person einen eigenen Typ (Training/Rest) — bleibt individuell
+3. Prompt an Gemini: Erzeuge JSON mit `days[]`, jeder Tag enthält `person_a` und `person_b` Mahlzeiten. Bei `shared`-Slots: gleiches Gericht (`name` identisch), aber individuelle Zutatenmengen, kcal & Makros pro Person. Harte Regel: Allergien BEIDER ausschließen; No-Gos bei shared meals vermeiden.
+4. Schreibe ZWEI `nutrition_plans` (Status draft), verknüpfe sie über `partner_plan_id`; bei shared meals beide `nutrition_plan_meals` per `partner_meal_id` koppeln und `is_shared=true`
+5. Auto-Shoppinglisten: individuelle Liste pro Plan + zusätzliche `partner_combined`-Liste, die Zutaten summiert (gleiche Einheit → addieren; sonst nebeneinander listen)
 
-**Backend (neue Tabelle `meal_skips`):**
-- `user_id`, `meal_id`, `skip_date`, `reason` (`no_time` / `disliked` / `no_ingredients` / `out` / `forgot` / `other`), `note text`
-- Indexiert über `meal_id` + `user_id`
+## 4. Gemeinsame Einkaufsliste
 
-**Frontend:**
-- In `PlanContentView`: pro Mahlzeit Button "Übersprungen" → Bottom-Sheet mit Grund-Auswahl
-- Skips fließen als weiteres Signal in den KI-Tausch-Prompt ein
+In `src/routes/nutrition.shopping.tsx`:
+- Dropdown: „Meine Liste" / „Partner-Liste" / „Gemeinsame Liste"
+- Nur sichtbar wenn Partner-Kopplung existiert
+- Aggregation in `shopping-list-engine.server.ts` erweitern: Funktion `generateCombinedShoppingList(planAId, planBId)`
 
----
+## 5. Kundenansicht für Partner-Mahlzeiten
 
-## Phase 4 — Coach Dashboard: Smart Insights + Risiko-Analyse
+In `PlanContentView.tsx` / `nutrition.index.tsx`:
+- Bei `is_shared=true` Mahlzeit als „🍽️ Gemeinsam mit {Partner-Name}" labeln
+- Aufklappbar: „Deine Portion" (eigene Zutaten/Makros) + „Partnerportion" (vom verknüpften Meal geladen)
 
-**Backend (neue Server-Fns):**
-- `getCustomerSmartProfile(user_id)` → Profil + Einkaufstag + nächste Liste + nächster Planwechsel
-- `getCustomerRiskFlags(user_id)` → berechnet aus den letzten 14 Tagen:
-  - viele Skips (> 30 % der Mahlzeiten)
-  - viele Swaps (> 30 %)
-  - Einkaufsliste nie geöffnet (Event-Log)
-  - Protein-Ziel-Verfehlung (aus `food_entries` vs `nutrition_targets.protein_g`)
-  - Wenig Aktivität (< 3 Tracking-Tage / 14)
+## Technische Details (für mich beim Bauen)
 
-**Frontend:**
-- Neue Karte `SmartNutritionInsightsCard` auf `/coach/customers/$userId` mit Profil-Daten + Risiko-Flags
-- Auto-Publish-Toggle pro Kunde (oder global im Coach-Settings)
+- **Dateien neu:** `src/lib/partner.functions.ts`, `src/lib/partner-nutrition-plan-ai.functions.ts`, `src/components/bodyfuel/PartnerLinkCard.tsx`
+- **Dateien geändert:** `src/routes/coach.customers.$userId.tsx`, `src/components/bodyfuel/PlanManagementCard.tsx`, `src/components/bodyfuel/PlanContentView.tsx`, `src/routes/nutrition.shopping.tsx`, `src/lib/shopping-list-engine.server.ts`
+- **Migration:** neue Tabelle + GRANTs + RLS-Policies via `has_role('coach')` und Eigentümer-Check; Spalten-Erweiterungen für `nutrition_plans`, `nutrition_plan_meals`, `shopping_lists`
+- Bestehende ISSN-Carb-Cycling-Logik wird wiederverwendet (kein Doppelcode), 50-kcal-Rundung greift weiter
+- Auto-Sync nach Aktivierung: `transitionPlanStatus` aktiviert ggf. den Partner-Plan mit, damit beide Pläne synchron live gehen — Targets je Person bleiben getrennt
 
----
+## Fragen vor dem Bauen
 
-## Phase 5 — Automatischer Planwechsel + Einkaufsliste pro Woche
-
-- pg_cron läuft täglich → für jeden User mit aktivem Plan + Smart-Profil:
-  - 2 Tage vor `shopping_day` → KI erzeugt neuen Plan-Entwurf (Status `draft`)
-  - 1 Tag vor `shopping_day` → Einkaufsliste wird sichtbar / Mail
-  - Am `shopping_day` → bei `auto_publish=true` neuer Plan automatisch aktiv; sonst wartet auf Coach-Freigabe
-- Neue Coach-Inbox "Pläne freigeben"
-- Community-Auswertung im Admin (`/coach/insights/community`): Top 10, Flop 10, Top Kategorien, häufigste Swaps (nutzt schon existierendes `getCommunityRecipeInsights` + Erweiterung)
-
----
-
-## Was schon existiert (wird wiederverwendet, nicht neu gebaut)
-- ❤️ Favoriten, ⭐ Bewertungen, 🔄 Mahlzeitentausch mit ±5 % Filter, Coach-Insights-Karte, manuelle Einkaufsliste, Rezept-aus-Zutaten → alles aus dem letzten Bundle.
-
----
-
-## Frage an dich
-**Wie weit soll ich gehen?**
-1. Nur **Phase 1 + 2** (Onboarding-Wizard + KI nutzt Profil-Daten — sofortiger spürbarer Effekt, kleine Änderung) ← **empfohlen**
-2. **Phase 1–4** (alles außer Cron-Automatik — Coach sieht Profil & Risiken)
-3. **Alles inkl. Phase 5** (auto Planwechsel, größer, mehr Edge-Cases mit pg_cron)
+1. Soll bei „Gemeinsamen Plan erstellen" der **Partner-Plan automatisch beim Partner ebenfalls als Draft landen** (Coach aktiviert dann beide), oder direkt für beide aktivieren?
+2. Wenn Person A schon einen aktiven Plan hat: soll der beim Generieren eines Partner-Plans automatisch archiviert werden (so wie bei Solo-Plänen heute)? Ich würde **ja** vorschlagen.
+3. Reihenfolge OK so (Schritte 1–5 nacheinander, je ein Commit) oder willst du etwas zuerst?
