@@ -293,6 +293,21 @@ Genau ${planDays} Tage, je 4 Mahlzeiten. Tagesnamen "Tag 1"…"Tag ${planDays}" 
       }
     }
 
+    // Auto-generate shopping list for this draft so the customer sees it under "Nächste Einkaufsliste".
+    try {
+      const { generateShoppingListForPlan } = await import("./shopping-list-engine.server");
+      await generateShoppingListForPlan({
+        supabase,
+        apiKey,
+        planId: planRow.id,
+        windowDays: planDays,
+      });
+    } catch (e) {
+      // Non-fatal: list can be generated on demand from the UI.
+      console.warn("Auto shopping list failed:", e);
+    }
+
+
     return {
       ok: true,
       plan_id: planRow.id,
