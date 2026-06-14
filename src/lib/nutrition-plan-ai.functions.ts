@@ -406,3 +406,63 @@ function labelForSlot(slot: string): string {
     default: return "Mahlzeit";
   }
 }
+
+function buildIssnCarbCyclingTargets(trainingInput: MacroTarget): { training: MacroTarget; rest: MacroTarget } {
+  const training = {
+    kcal: Math.max(1, Math.round(trainingInput.kcal)),
+    protein_g: Math.max(1, Math.round(trainingInput.protein_g)),
+    carbs_g: Math.max(1, Math.round(trainingInput.carbs_g)),
+    fat_g: Math.max(1, Math.round(trainingInput.fat_g)),
+  };
+
+  // ISSN-orientiert: Protein bleibt gleich, Kohlenhydrate am Restday deutlich runter,
+  // Fett leicht rauf. Kalorien ergeben sich aus den Makros und liegen dadurch niedriger.
+  let rest: MacroTarget = {
+    protein_g: training.protein_g,
+    carbs_g: Math.max(1, Math.round(training.carbs_g * 0.65)),
+    fat_g: Math.max(1, Math.round(training.fat_g * 1.1)),
+    kcal: 0,
+  };
+  rest.kcal = Math.round(rest.protein_g * 4 + rest.carbs_g * 4 + rest.fat_g * 9);
+
+  if (rest.kcal >= training.kcal || rest.carbs_g >= training.carbs_g) {
+    rest = {
+      protein_g: training.protein_g,
+      carbs_g: Math.max(1, Math.round(training.carbs_g * 0.55)),
+      fat_g: Math.max(1, Math.round(training.fat_g * 1.05)),
+      kcal: 0,
+    };
+    rest.kcal = Math.max(1, Math.min(training.kcal - 100, Math.round(rest.protein_g * 4 + rest.carbs_g * 4 + rest.fat_g * 9)));
+  }
+
+  return { training, rest };
+}
+
+function normalizeMealsToTargets(meals: GeneratedMeal[], target: MacroTarget): GeneratedMeal[] {
+  if (!meals.length) return meals;
+  const sums = meals.reduce(
+    (acc, meal) => ({
+      kcal: acc.kcal + (Number(meal.kcal) || 0),
+      protein_g: acc.protein_g + (Number(meal.protein_g) || 0),
+      carbs_g: acc.carbs_g + (Number(meal.carbs_g) || 0),
+      fat_g: acc.fat_g + (Number(meal.fat_g) || 0),
+    }),
+    { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0 },
+  );
+  const scale = (value: number, from: number, to: number) => Math.max(0, Math.round(value * (to / Math.max(1, from))));
+  const adjusted = meals.map((meal) => ({
+    ...meal,
+    kcal: scale(Number(meal.kcal) || 0, sums.kcal, target.kcal),
+    protein_g: scale(Number(meal.protein_g) || 0, sums.protein_g, target.protein_g),
+    carbs_g: scale(Number(meal.carbs_g) || 0, sums.carbs_g, target.carbs_g),
+    fat_g: scale(Number(meal.fat_g) || 0, sums.fat_g, target.fat_g),
+  }));
+
+  const last = adjusted[adjusted.length - 1];
+  last.kcal += target.kcal - adjusted.reduce((sum, meal) => sum + meal.kcal, 0);
+  last.protein_g += target.protein_g - adjusted.reduce((sum, meal) => sum + meal.protein_g, 0);
+  last.carbs_g += target.carbs_g - adjusted.reduce((sum, meal) => sum + meal.carbs_g, 0);
+  last.fat_g += target.fat_g - adjusted.reduce((sum, meal) => sum + meal.fat_g, 0);
+
+  return adjusted;
+}
