@@ -343,6 +343,14 @@ function CustomerDetail() {
         measurements={(data.measurements ?? []) as any}
       />
 
+      <WeightProgressChart
+        measurements={(data.measurements ?? []) as any}
+        goalWeight={(data.profile as any)?.goal_weight_kg ?? null}
+        title="Gewichtsentwicklung"
+        emptyHint="Sobald der Kunde sein erstes Gewicht einträgt, erscheint hier sein Verlauf."
+      />
+
+
 
       <CoachTrialCard userId={userId} />
 
