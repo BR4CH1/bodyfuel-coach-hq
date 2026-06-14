@@ -340,9 +340,16 @@ export async function computeTargetsFromPlanDB(
   };
 
   // If no Trainingstag rows exist, treat all days as training
-  const base = train.length ? avg(train) : avg([...train, ...rest]);
-  const restAvg = train.length ? avg(rest) : null;
+  let base = train.length ? avg(train) : avg([...train, ...rest]);
+  let restAvg = train.length ? avg(rest) : null;
   if (!base) return null;
+
+  // Sportwissenschaftlicher Sanity-Check: Trainingstag MUSS mehr kcal als Restday haben
+  // (Carb-Cycling: höherer Carb-Bedarf an Trainingstagen). Wenn die Labels offenbar vertauscht
+  // sind (z. B. AI hat Tagesnamen falsch zugeordnet), drehen wir die beiden Sätze.
+  if (restAvg && restAvg.kcal > base.kcal) {
+    [base, restAvg] = [restAvg, base];
+  }
 
   return {
     ...base,
@@ -351,6 +358,24 @@ export async function computeTargetsFromPlanDB(
     carbs_g_rest: restAvg?.carbs_g ?? null,
     fat_g_rest: restAvg?.fat_g ?? null,
   };
+}
+
+/**
+ * Sportwissenschaftlich abgeleitete Restday-Werte, wenn der Coach nur Trainingstag-Werte gesetzt hat.
+ * Quelle: ISSN Position Stand on Nutrient Timing & Carb-Cycling-Empfehlungen
+ *   - Protein: konstant (≈ 1.8–2.2 g/kg, anabole Schwelle ganztägig).
+ *   - Fett: an Restdays leicht höher (Energieersatz für reduzierte Carbs), ~+10 %.
+ *   - Kohlenhydrate: Trainingstag 4–6 g/kg, Restday 2–3 g/kg → Restday ≈ 65 % der Trainingstag-Carbs.
+ *   - Kalorien: ergeben sich aus den Makros (P*4 + C*4 + F*9).
+ */
+export function deriveRestFromTraining(t: {
+  kcal: number; protein_g: number; carbs_g: number; fat_g: number;
+}) {
+  const protein_g = t.protein_g;
+  const carbs_g = Math.round(t.carbs_g * 0.65);
+  const fat_g = Math.round(t.fat_g * 1.1);
+  const kcal = Math.round(protein_g * 4 + carbs_g * 4 + fat_g * 9);
+  return { kcal, protein_g, carbs_g, fat_g };
 }
 
 /** Extract daily kcal/macros from the user's active nutrition plan (DB first, PDF fallback) */
