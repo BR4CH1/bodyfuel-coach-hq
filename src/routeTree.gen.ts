@@ -30,6 +30,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as NutritionIndexRouteImport } from './routes/nutrition.index'
 import { Route as CoachIndexRouteImport } from './routes/coach.index'
 import { Route as BullsIndexRouteImport } from './routes/bulls.index'
+import { Route as OnboardingSmartNutritionRouteImport } from './routes/onboarding.smart-nutrition'
 import { Route as NutritionTrackingRouteImport } from './routes/nutrition.tracking'
 import { Route as NutritionShoppingRouteImport } from './routes/nutrition.shopping'
 import { Route as NutritionRecipeFromIngredientsRouteImport } from './routes/nutrition.recipe-from-ingredients'
@@ -162,6 +163,12 @@ const BullsIndexRoute = BullsIndexRouteImport.update({
   path: '/bulls/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OnboardingSmartNutritionRoute =
+  OnboardingSmartNutritionRouteImport.update({
+    id: '/onboarding/smart-nutrition',
+    path: '/onboarding/smart-nutrition',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const NutritionTrackingRoute = NutritionTrackingRouteImport.update({
   id: '/tracking',
   path: '/tracking',
@@ -333,6 +340,7 @@ export interface FileRoutesByFullPath {
   '/nutrition/recipe-from-ingredients': typeof NutritionRecipeFromIngredientsRoute
   '/nutrition/shopping': typeof NutritionShoppingRoute
   '/nutrition/tracking': typeof NutritionTrackingRoute
+  '/onboarding/smart-nutrition': typeof OnboardingSmartNutritionRoute
   '/bulls/': typeof BullsIndexRoute
   '/coach/': typeof CoachIndexRoute
   '/nutrition/': typeof NutritionIndexRoute
@@ -379,6 +387,7 @@ export interface FileRoutesByTo {
   '/nutrition/recipe-from-ingredients': typeof NutritionRecipeFromIngredientsRoute
   '/nutrition/shopping': typeof NutritionShoppingRoute
   '/nutrition/tracking': typeof NutritionTrackingRoute
+  '/onboarding/smart-nutrition': typeof OnboardingSmartNutritionRoute
   '/bulls': typeof BullsIndexRoute
   '/coach': typeof CoachIndexRoute
   '/nutrition': typeof NutritionIndexRoute
@@ -429,6 +438,7 @@ export interface FileRoutesById {
   '/nutrition/recipe-from-ingredients': typeof NutritionRecipeFromIngredientsRoute
   '/nutrition/shopping': typeof NutritionShoppingRoute
   '/nutrition/tracking': typeof NutritionTrackingRoute
+  '/onboarding/smart-nutrition': typeof OnboardingSmartNutritionRoute
   '/bulls/': typeof BullsIndexRoute
   '/coach/': typeof CoachIndexRoute
   '/nutrition/': typeof NutritionIndexRoute
@@ -480,6 +490,7 @@ export interface FileRouteTypes {
     | '/nutrition/recipe-from-ingredients'
     | '/nutrition/shopping'
     | '/nutrition/tracking'
+    | '/onboarding/smart-nutrition'
     | '/bulls/'
     | '/coach/'
     | '/nutrition/'
@@ -526,6 +537,7 @@ export interface FileRouteTypes {
     | '/nutrition/recipe-from-ingredients'
     | '/nutrition/shopping'
     | '/nutrition/tracking'
+    | '/onboarding/smart-nutrition'
     | '/bulls'
     | '/coach'
     | '/nutrition'
@@ -575,6 +587,7 @@ export interface FileRouteTypes {
     | '/nutrition/recipe-from-ingredients'
     | '/nutrition/shopping'
     | '/nutrition/tracking'
+    | '/onboarding/smart-nutrition'
     | '/bulls/'
     | '/coach/'
     | '/nutrition/'
@@ -616,6 +629,7 @@ export interface RootRouteChildren {
   BullsTrainingRoute: typeof BullsTrainingRoute
   BullsWeightRoute: typeof BullsWeightRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
+  OnboardingSmartNutritionRoute: typeof OnboardingSmartNutritionRoute
   BullsIndexRoute: typeof BullsIndexRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiPublicHooksTrialRemindersRoute: typeof ApiPublicHooksTrialRemindersRoute
@@ -773,6 +787,13 @@ declare module '@tanstack/react-router' {
       path: '/bulls'
       fullPath: '/bulls/'
       preLoaderRoute: typeof BullsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding/smart-nutrition': {
+      id: '/onboarding/smart-nutrition'
+      path: '/onboarding/smart-nutrition'
+      fullPath: '/onboarding/smart-nutrition'
+      preLoaderRoute: typeof OnboardingSmartNutritionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/nutrition/tracking': {
@@ -1042,6 +1063,7 @@ const rootRouteChildren: RootRouteChildren = {
   BullsTrainingRoute: BullsTrainingRoute,
   BullsWeightRoute: BullsWeightRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
+  OnboardingSmartNutritionRoute: OnboardingSmartNutritionRoute,
   BullsIndexRoute: BullsIndexRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ApiPublicHooksTrialRemindersRoute: ApiPublicHooksTrialRemindersRoute,

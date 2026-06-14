@@ -1021,6 +1021,60 @@ export type Database = {
         }
         Relationships: []
       }
+      smart_nutrition_profile: {
+        Row: {
+          allergies: string[]
+          auto_publish: boolean
+          budget_band: string | null
+          completed_at: string | null
+          created_at: string
+          extra_allergies: string | null
+          extra_favorites: string | null
+          extra_nogos: string | null
+          favorite_foods: string[]
+          meal_prep_style: string | null
+          nogo_foods: string[]
+          shopping_day: string | null
+          shopping_lead_days: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          allergies?: string[]
+          auto_publish?: boolean
+          budget_band?: string | null
+          completed_at?: string | null
+          created_at?: string
+          extra_allergies?: string | null
+          extra_favorites?: string | null
+          extra_nogos?: string | null
+          favorite_foods?: string[]
+          meal_prep_style?: string | null
+          nogo_foods?: string[]
+          shopping_day?: string | null
+          shopping_lead_days?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          allergies?: string[]
+          auto_publish?: boolean
+          budget_band?: string | null
+          completed_at?: string | null
+          created_at?: string
+          extra_allergies?: string | null
+          extra_favorites?: string | null
+          extra_nogos?: string | null
+          favorite_foods?: string[]
+          meal_prep_style?: string | null
+          nogo_foods?: string[]
+          shopping_day?: string | null
+          shopping_lead_days?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       suppressed_emails: {
         Row: {
           created_at: string
