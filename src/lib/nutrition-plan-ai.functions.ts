@@ -24,7 +24,9 @@ type GeneratedDay = { name: string; meals: GeneratedMeal[] };
  */
 export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { user_id: string }) => d)
+  .inputValidator(
+    (d: { user_id: string; scheduled_start_date?: string | null; title?: string }) => d,
+  )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const target = data.user_id;
@@ -45,7 +47,7 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
       { data: ratings },
       { data: favs },
       { data: skips },
-      { data: prof },
+      { data: swaps },
     ] = await Promise.all([
       supabase
         .from("smart_nutrition_profile")
@@ -73,11 +75,13 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
         .eq("user_id", target)
         .limit(20),
       supabase
-        .from("profiles")
-        .select("display_name")
-        .eq("id", target)
-        .maybeSingle(),
+        .from("meal_interactions")
+        .select("kind, meal:nutrition_plan_meals!inner(name)")
+        .eq("user_id", target)
+        .eq("kind", "swapped")
+        .limit(30),
     ]);
+
 
     const t = (targets as any) ?? {};
     const kcal = t.kcal ?? 2200;
