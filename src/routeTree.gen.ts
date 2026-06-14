@@ -47,6 +47,7 @@ import { Route as CoachCustomersIndexRouteImport } from './routes/coach.customer
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as CoachCustomersNewRouteImport } from './routes/coach.customers.new'
 import { Route as CoachCustomersUserIdRouteImport } from './routes/coach.customers.$userId'
+import { Route as AuthenticatedNutritionFavoritesRouteImport } from './routes/_authenticated/nutrition.favorites'
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
@@ -244,6 +245,12 @@ const CoachCustomersUserIdRoute = CoachCustomersUserIdRouteImport.update({
   path: '/$userId',
   getParentRoute: () => CoachCustomersRoute,
 } as any)
+const AuthenticatedNutritionFavoritesRoute =
+  AuthenticatedNutritionFavoritesRouteImport.update({
+    id: '/_authenticated/nutrition/favorites',
+    path: '/nutrition/favorites',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const LovableEmailTransactionalSendRoute =
   LovableEmailTransactionalSendRouteImport.update({
     id: '/lovable/email/transactional/send',
@@ -314,6 +321,7 @@ export interface FileRoutesByFullPath {
   '/bulls/': typeof BullsIndexRoute
   '/coach/': typeof CoachIndexRoute
   '/nutrition/': typeof NutritionIndexRoute
+  '/nutrition/favorites': typeof AuthenticatedNutritionFavoritesRoute
   '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
@@ -357,6 +365,7 @@ export interface FileRoutesByTo {
   '/bulls': typeof BullsIndexRoute
   '/coach': typeof CoachIndexRoute
   '/nutrition': typeof NutritionIndexRoute
+  '/nutrition/favorites': typeof AuthenticatedNutritionFavoritesRoute
   '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
@@ -404,6 +413,7 @@ export interface FileRoutesById {
   '/bulls/': typeof BullsIndexRoute
   '/coach/': typeof CoachIndexRoute
   '/nutrition/': typeof NutritionIndexRoute
+  '/_authenticated/nutrition/favorites': typeof AuthenticatedNutritionFavoritesRoute
   '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
@@ -452,6 +462,7 @@ export interface FileRouteTypes {
     | '/bulls/'
     | '/coach/'
     | '/nutrition/'
+    | '/nutrition/favorites'
     | '/coach/customers/$userId'
     | '/coach/customers/new'
     | '/lovable/email/suppression'
@@ -495,6 +506,7 @@ export interface FileRouteTypes {
     | '/bulls'
     | '/coach'
     | '/nutrition'
+    | '/nutrition/favorites'
     | '/coach/customers/$userId'
     | '/coach/customers/new'
     | '/lovable/email/suppression'
@@ -541,6 +553,7 @@ export interface FileRouteTypes {
     | '/bulls/'
     | '/coach/'
     | '/nutrition/'
+    | '/_authenticated/nutrition/favorites'
     | '/coach/customers/$userId'
     | '/coach/customers/new'
     | '/lovable/email/suppression'
@@ -580,6 +593,7 @@ export interface RootRouteChildren {
   BullsWeightRoute: typeof BullsWeightRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   BullsIndexRoute: typeof BullsIndexRoute
+  AuthenticatedNutritionFavoritesRoute: typeof AuthenticatedNutritionFavoritesRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiPublicHooksTrialRemindersRoute: typeof ApiPublicHooksTrialRemindersRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
@@ -857,6 +871,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CoachCustomersUserIdRouteImport
       parentRoute: typeof CoachCustomersRoute
     }
+    '/_authenticated/nutrition/favorites': {
+      id: '/_authenticated/nutrition/favorites'
+      path: '/nutrition/favorites'
+      fullPath: '/nutrition/favorites'
+      preLoaderRoute: typeof AuthenticatedNutritionFavoritesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lovable/email/transactional/send': {
       id: '/lovable/email/transactional/send'
       path: '/lovable/email/transactional/send'
@@ -979,6 +1000,7 @@ const rootRouteChildren: RootRouteChildren = {
   BullsWeightRoute: BullsWeightRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   BullsIndexRoute: BullsIndexRoute,
+  AuthenticatedNutritionFavoritesRoute: AuthenticatedNutritionFavoritesRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ApiPublicHooksTrialRemindersRoute: ApiPublicHooksTrialRemindersRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
