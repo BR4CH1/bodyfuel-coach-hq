@@ -21,11 +21,28 @@ function normalizeIngredientName(name: string) {
 function categoryFor(name: string) {
   const n = name.toLowerCase();
   if (/hähnchen|pute|rind|hack|filet|fisch|lachs|thunfisch/.test(n)) return "Fleisch & Fisch";
-  if (/skyr|quark|joghurt|käse|feta|whey|proteinpudding/.test(n)) return "Milchprodukte";
+  if (/skyr|quark|joghurt|käse|feta|whey|proteinpudding|eier?/.test(n)) return "Milchprodukte";
   if (/reis|nudel|kartoffel|brot|tortilla|hafer|müsli|reiswaffel|süßkartoffel/.test(n)) return "Getreide & Beilagen";
   if (/salat|gemüse|brokkoli|karotte|paprika|spargel|beeren|erdbeer|banane|apfel/.test(n)) return "Obst & Gemüse";
-  if (/öl|butter|nuss|mandel|cashew|walnuss|erdnuss|kern|kokosmilch/.test(n)) return "Vorrat & Gewürze";
+  if (/öl|butter|nuss|nüss|mandel|cashew|walnuss|erdnuss|kern|kokosmilch/.test(n)) return "Vorrat & Gewürze";
   return "Sonstiges";
+}
+
+function splitIngredientParts(text: string) {
+  const parts: string[] = [];
+  let current = "";
+  let depth = 0;
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    if (char === "(") depth++;
+    if (char === ")") depth = Math.max(0, depth - 1);
+    if (char === "," && depth === 0 && !/\d/.test(text[i + 1] ?? "")) {
+      parts.push(current.trim());
+      current = "";
+    } else current += char;
+  }
+  if (current.trim()) parts.push(current.trim());
+  return parts;
 }
 
 function fallbackItemsFromLines(lines: string[]): ShoppingItem[] {
@@ -36,13 +53,18 @@ function fallbackItemsFromLines(lines: string[]): ShoppingItem[] {
       : line.includes(" | ")
         ? line.split(" | ")[1]
         : "";
-    for (const rawPart of partsText.split(",")) {
+    for (const rawPart of splitIngredientParts(partsText)) {
       const part = rawPart.trim();
       if (!part) continue;
-      const match = part.match(/^(\d+(?:[,.]\d+)?)\s*(g|kg|ml|l|el|tl|scheiben|stück|eier|ei)?\s*(.+)$/i);
+      const match = part.match(/^(\d+(?:[,.]\d+)?)\s*(kg|g|ml|l|el|tl|scheiben|stück|stk\.?|eier|ei)?\s*(.*)$/i);
       const amount = match ? Number(match[1].replace(",", ".")) : 1;
-      const unit = (match?.[2] ?? "Stück").replace(/^el$/i, "EL").replace(/^tl$/i, "TL");
-      const name = normalizeIngredientName(match?.[3] ?? part);
+      let unit = (match?.[2] ?? "Stück").replace(/^el$/i, "EL").replace(/^tl$/i, "TL").replace(/^stk\.?$/i, "Stück");
+      let name = normalizeIngredientName(match ? (match[3] ?? "") : part);
+      if (/^gemüse$/i.test(name)) name = part.includes("(") ? part.replace(/^\d+(?:[,.]\d+)?\s*(kg|g|ml|l)?\s*/i, "") : name;
+      if (/^eier?$/i.test(unit) && !name) {
+        name = "Eier";
+        unit = "Stück";
+      }
       if (!name) continue;
       const key = `${name.toLowerCase()}|${unit.toLowerCase()}`;
       const existing = grouped.get(key);
@@ -62,11 +84,16 @@ function extractItems(parsed: any): ShoppingItem[] {
     ? parsed
     : parsed?.items ?? parsed?.shopping_list ?? parsed?.einkaufsliste ?? parsed?.list ?? [];
   return (Array.isArray(candidate) ? candidate : [])
-    .map((item: any) => ({
-      name: String(item?.name ?? item?.ingredient ?? item?.zutat ?? "").trim(),
-      quantity: String(item?.quantity ?? item?.amount ?? item?.menge ?? "").trim(),
-      category: String(item?.category ?? item?.kategorie ?? "Sonstiges").trim() || "Sonstiges",
-    }))
+    .map((item: any) => {
+      let name = String(item?.name ?? item?.ingredient ?? item?.zutat ?? "").trim();
+      let quantity = String(item?.quantity ?? item?.amount ?? item?.menge ?? "").trim();
+      const egg = name.match(/^(\d+)\s+eier?$/i);
+      if (egg) {
+        name = "Eier";
+        quantity = `${egg[1]} Stück`;
+      }
+      return { name, quantity, category: String(item?.category ?? item?.kategorie ?? categoryFor(name)).trim() || categoryFor(name) };
+    })
     .filter((item) => item.name);
 }
 
@@ -138,8 +165,8 @@ ${lines.join("\n")}
 Antworte ausschließlich mit gültigem JSON:
 {"items":[{"name":"Hähnchenbrust","quantity":"1.4 kg","category":"Fleisch & Fisch"}]}`;
 
-  const aiItems = await callAi(prompt, apiKey);
-  const items = aiItems.length ? aiItems : fallbackItemsFromLines(lines);
+  const parsedItems = fallbackItemsFromLines(lines);
+  const items = parsedItems.length ? parsedItems : await callAi(prompt, apiKey);
 
   await supabaseAdmin
     .from("shopping_lists")
@@ -199,8 +226,8 @@ ${mealsText}
 Antworte ausschließlich mit gültigem JSON:
 {"items":[{"name":"Hähnchenbrust","quantity":"1.4 kg","category":"Fleisch & Fisch"}]}`;
 
-  const aiItems = await callAi(prompt, apiKey);
-  const items = aiItems.length ? aiItems : fallbackItemsFromLines([...linesA, ...linesB]);
+  const parsedItems = fallbackItemsFromLines([...linesA, ...linesB]);
+  const items = parsedItems.length ? parsedItems : await callAi(prompt, apiKey);
 
   const now = new Date().toISOString();
   await supabaseAdmin.from("shopping_lists").upsert(
