@@ -255,7 +255,7 @@ Antworte ausschließlich mit gültigem JSON:
 {"items":[{"name":"Hähnchenbrust","quantity":"1.4 kg","category":"Fleisch & Fisch"}]}`;
 
   const parsedItems = fallbackItemsFromLines(lines);
-  const items = parsedItems.length ? parsedItems : await callAi(prompt, apiKey);
+  const items = mergeItems(parsedItems.length ? parsedItems : await callAi(prompt, apiKey));
 
   await supabaseAdmin
     .from("shopping_lists")
