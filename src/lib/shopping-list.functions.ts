@@ -136,7 +136,7 @@ export const generateShoppingList = createServerFn({ method: "POST" })
       }
     }
 
-    return await generateForPlan({ supabase, apiKey, planId: planId!, windowDays });
+    return await generateForPlan({ supabase, apiKey, planId: planId as string, windowDays });
   });
 
 /**
