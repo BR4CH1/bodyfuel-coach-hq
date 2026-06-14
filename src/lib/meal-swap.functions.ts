@@ -45,6 +45,7 @@ export const suggestMealSwaps = createServerFn({ method: "POST" })
       { data: favs },
       { data: swapped },
       { data: profile },
+      { data: skips },
     ] = await Promise.all([
       supabase
         .from("meal_ratings")
@@ -68,6 +69,12 @@ export const suggestMealSwaps = createServerFn({ method: "POST" })
         .select("favorite_foods, nogo_foods, allergies, extra_favorites, extra_nogos, extra_allergies, meal_prep_style, budget_band")
         .eq("user_id", userId)
         .maybeSingle(),
+      supabase
+        .from("meal_skips")
+        .select("meal_name, reason")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(20),
     ]);
 
     const liked = (ratings ?? [])
