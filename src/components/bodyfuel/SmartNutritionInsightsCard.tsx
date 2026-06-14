@@ -21,7 +21,7 @@ export function SmartNutritionInsightsCard({ userId }: { userId: string }) {
   const riskFn = useServerFn(getCustomerRiskFlags);
   const skipFn = useServerFn(getCustomerSkipBreakdown);
   const autoFn = useServerFn(setCustomerAutoPublish);
-  const genFn = useServerFn(generateAiNutritionPlanDraft);
+  
 
   const profile = useQuery({
     queryKey: ["smart-profile", userId],
