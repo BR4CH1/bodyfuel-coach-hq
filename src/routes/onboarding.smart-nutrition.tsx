@@ -60,7 +60,7 @@ function Wizard() {
   const [allergies, setAllergies] = useState<string[]>([]);
   const [extraAllergy, setExtraAllergy] = useState("");
   const [prep, setPrep] = useState<string>("");
-  const [shopDay, setShopDay] = useState<string>("");
+  const [shopDays, setShopDays] = useState<string[]>([]);
   const [leadDays, setLeadDays] = useState(1);
   const [budget, setBudget] = useState<string>("");
 
