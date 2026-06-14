@@ -40,31 +40,25 @@ export const suggestMealSwaps = createServerFn({ method: "POST" })
     }
 
     // Build personalization context
-    const [{ data: ratings }, { data: favs }, { data: swapped }, { data: targets }] =
-      await Promise.all([
-        supabase
-          .from("meal_ratings")
-          .select("stars, meal:nutrition_plan_meals!inner(name)")
-          .eq("user_id", userId)
-          .order("updated_at", { ascending: false })
-          .limit(30),
-        supabase
-          .from("meal_favorites")
-          .select("meal:nutrition_plan_meals!inner(name)")
-          .eq("user_id", userId)
-          .limit(20),
-        supabase
-          .from("meal_interactions")
-          .select("meal:nutrition_plan_meals!inner(name)")
-          .eq("user_id", userId)
-          .eq("kind", "swapped")
-          .limit(20),
-        supabase
-          .from("nutrition_targets")
-          .select("notes")
-          .eq("user_id", userId)
-          .maybeSingle(),
-      ]);
+    const [{ data: ratings }, { data: favs }, { data: swapped }] = await Promise.all([
+      supabase
+        .from("meal_ratings")
+        .select("stars, meal:nutrition_plan_meals!inner(name)")
+        .eq("user_id", userId)
+        .order("updated_at", { ascending: false })
+        .limit(30),
+      supabase
+        .from("meal_favorites")
+        .select("meal:nutrition_plan_meals!inner(name)")
+        .eq("user_id", userId)
+        .limit(20),
+      supabase
+        .from("meal_interactions")
+        .select("meal:nutrition_plan_meals!inner(name)")
+        .eq("user_id", userId)
+        .eq("kind", "swapped")
+        .limit(20),
+    ]);
 
     const liked = (ratings ?? [])
       .filter((r: any) => r.stars >= 4)
@@ -78,7 +72,7 @@ export const suggestMealSwaps = createServerFn({ method: "POST" })
       .slice(0, 10);
     const favoriteNames = (favs ?? []).map((f: any) => f.meal?.name).filter(Boolean);
     const swappedNames = (swapped ?? []).map((s: any) => s.meal?.name).filter(Boolean);
-    const userNotes = (targets as any)?.notes ?? "";
+    const userNotes = "";
 
     const prompt = `Du bist Ernährungsberater. Schlage 5 alternative Gerichte vor, die als 1:1-Tausch für die untenstehende Mahlzeit dienen.
 
