@@ -59,7 +59,7 @@ function fallbackItemsFromLines(lines: string[]): ShoppingItem[] {
       const match = part.match(/^(\d+(?:[,.]\d+)?)\s*(kg|g|ml|l|el|tl|scheiben|stück|stk\.?|eier|ei)?\s*(.*)$/i);
       const amount = match ? Number(match[1].replace(",", ".")) : 1;
       let unit = (match?.[2] ?? "Stück").replace(/^el$/i, "EL").replace(/^tl$/i, "TL").replace(/^stk\.?$/i, "Stück");
-      let name = normalizeIngredientName(match?.[3] || part);
+      let name = normalizeIngredientName(match ? (match[3] ?? "") : part);
       if (/^gemüse$/i.test(name)) name = part.includes("(") ? part.replace(/^\d+(?:[,.]\d+)?\s*(kg|g|ml|l)?\s*/i, "") : name;
       if (/^eier?$/i.test(unit) && !name) {
         name = "Eier";
