@@ -1098,6 +1098,38 @@ export type Database = {
         }
         Relationships: []
       }
+      shopping_lists: {
+        Row: {
+          created_at: string
+          days: number
+          generated_at: string
+          items: Json
+          plan_id: string
+        }
+        Insert: {
+          created_at?: string
+          days?: number
+          generated_at?: string
+          items?: Json
+          plan_id: string
+        }
+        Update: {
+          created_at?: string
+          days?: number
+          generated_at?: string
+          items?: Json
+          plan_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shopping_lists_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: true
+            referencedRelation: "nutrition_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       smart_nutrition_profile: {
         Row: {
           allergies: string[]
