@@ -179,6 +179,47 @@ export function DailyChecklist({ userId }: { userId: string }) {
               );
             })}
       </ul>
+
+      {!loading && (
+        <Link
+          to="/check-in"
+          className={`mt-3 flex items-center justify-between gap-3 rounded-xl border px-3 py-3 transition ${
+            checkinDone
+              ? "border-gold/60 bg-gold/10"
+              : "border-border bg-background/40 hover:border-gold/40"
+          }`}
+        >
+          <div className="flex min-w-0 items-center gap-3">
+            <span
+              className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${
+                checkinDone ? "bg-gradient-gold" : "bg-secondary"
+              }`}
+            >
+              {checkinDone ? (
+                <Check className="h-4 w-4 text-primary-foreground" />
+              ) : (
+                <CalendarCheck className="h-4 w-4 text-gold" />
+              )}
+            </span>
+            <div className="min-w-0">
+              <div className="truncate text-sm font-medium">
+                Check-in eingetragen
+              </div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Diese Woche
+              </div>
+            </div>
+          </div>
+          <span
+            className={`flex shrink-0 items-center gap-1 text-xs font-semibold ${
+              checkinDone ? "text-gold" : "text-muted-foreground"
+            }`}
+          >
+            {checkinDone ? "Erledigt" : "Offen"}
+            {!checkinDone && <ChevronRight className="h-3 w-3" />}
+          </span>
+        </Link>
+      )}
     </div>
   );
 }
