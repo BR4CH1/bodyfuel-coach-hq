@@ -50,10 +50,21 @@ function CustomersList() {
 
   const filtered = useMemo(() => {
     if (!data) return [];
-    if (filter === "all") return data;
-    if (filter === "bulls") return (data as any[]).filter((c) => (c.groups ?? []).includes("bulls"));
-    return (data as any[]).filter((c) => c.payment_status === filter);
-  }, [data, filter]);
+    let list = data as any[];
+    if (filter !== "all") {
+      if (filter === "bulls") list = list.filter((c) => (c.groups ?? []).includes("bulls"));
+      else list = list.filter((c) => c.payment_status === filter);
+    }
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      list = list.filter(
+        (c) =>
+          (c.display_name ?? "").toLowerCase().includes(q) ||
+          (c.email ?? "").toLowerCase().includes(q),
+      );
+    }
+    return list;
+  }, [data, filter, search]);
 
 
   return (
