@@ -547,6 +547,15 @@ export function PlanContentView({ clientId, planType }: Props) {
           onClose={() => setRecipeMeal(null)}
         />
       )}
+      {swapMeal && isSelf && (
+        <MealSwapDialog
+          meal={swapMeal}
+          displayName={itemDisplayName[swapMeal.id] ?? swapMeal.name}
+          userId={clientId}
+          onClose={() => setSwapMeal(null)}
+          onSwapped={() => { reloadTracked(); }}
+        />
+      )}
     </div>
   );
 }
