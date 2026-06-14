@@ -5,11 +5,16 @@ import {
   Head,
   Heading,
   Html,
+  Img,
   Preview,
   Section,
   Text,
 } from '@react-email/components'
 import type { TemplateEntry } from './registry'
+
+const LOGO_URL =
+  'https://bodyfuel-coaching.com/__l5e/assets-v1/c7ce7e8e-9165-4dbe-9ce5-41237bee1db9/bodyfuel-coaching-logo.png'
+
 
 interface FeatureNewsProps {
   name?: string
@@ -25,8 +30,12 @@ const FeatureNewsEmail = ({ name = '', siteName = 'BodyFuel' }: FeatureNewsProps
       <Preview>Neue Funktionen in {siteName} — exklusiv für die FuelCrew 💚</Preview>
       <Body style={main}>
         <Container style={container}>
+          <Section style={{ textAlign: 'center', margin: '0 0 16px' }}>
+            <Img src={LOGO_URL} alt="BodyFuel Coaching" width="140" height="140" style={{ display: 'inline-block' }} />
+          </Section>
           <Text style={badge}>💚 FUELCREW UPDATE</Text>
           <Heading style={h1}>Neue Funktionen für deinen Alltag</Heading>
+
 
           <Text style={text}>{greeting}</Text>
           <Text style={text}>
