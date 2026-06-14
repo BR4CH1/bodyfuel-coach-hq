@@ -120,13 +120,32 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
     const coachingGoal: string | null = cp.coaching_goal ?? null;
     const trainingGoal: string | null = cp.training_goal ?? null;
 
-    // Goal direction: 1) explizites training_goal, 2) Gewichtsdifferenz, 3) coaching_goal Text
+    // Goal direction (für KI-Promptformulierung). Die eigentlichen kcal/Makros
+    // kommen aus nutrition_targets (Trigger-berechnet aus training_goal + Gewicht).
     let goalDirection: "cut" | "bulk" | "maintain" = "maintain";
-    if (trainingGoal === "weight_loss" || trainingGoal === "cut") {
+    if (
+      trainingGoal === "fat_loss" ||
+      trainingGoal === "aggressive_cut" ||
+      trainingGoal === "weight_loss" ||
+      trainingGoal === "cut"
+    ) {
       goalDirection = "cut";
-    } else if (trainingGoal === "muscle_gain" || trainingGoal === "bulk" || trainingGoal === "strength") {
+    } else if (
+      trainingGoal === "lean_bulk" ||
+      trainingGoal === "muscle_gain" ||
+      trainingGoal === "bulk"
+    ) {
       goalDirection = "bulk";
-    } else if (trainingGoal === "maintain" || trainingGoal === "recomp" || trainingGoal === "health" || trainingGoal === "performance") {
+    } else if (
+      trainingGoal === "performance" ||
+      trainingGoal === "recovery" ||
+      trainingGoal === "maintain" ||
+      trainingGoal === "recomp" ||
+      trainingGoal === "health" ||
+      trainingGoal === "strength" ||
+      trainingGoal === "maintenance" ||
+      trainingGoal === "recomposition"
+    ) {
       goalDirection = "maintain";
     } else if (currentWeight && goalWeight) {
       const diff = goalWeight - currentWeight;
@@ -138,25 +157,19 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
       else if (/(aufbau|muskel|bulk|gain|zunehm)/.test(g)) goalDirection = "bulk";
     }
 
-    // Gewichts-Differenz hat IMMER Mitspracherecht – auch bei "maintain"/"performance"
-    // soll ein deutlich abweichendes Wunschgewicht die Richtung ziehen.
-    if (currentWeight && goalWeight) {
-      const diff = goalWeight - currentWeight;
-      if (diff <= -3) goalDirection = "cut";
-      else if (diff >= 3) goalDirection = "bulk";
-    }
-
-    // IMMER Mifflin-St Jeor anhand aktueller Körperdaten rechnen.
-    // Gespeicherte nutrition_targets nur verwenden, wenn sie plausibel sind
-    // (innerhalb ±20 % der Berechnung) – sonst sind sie veraltete Defaults.
+    // 1. PRIMÄR: nutrition_targets (per DB-Trigger aus training_goal + Gewicht berechnet)
+    // 2. FALLBACK: Mifflin-St-Jeor, falls noch keine Targets existieren
     const t = (targets as any) ?? {};
-    let baseKcal: number | undefined;
-    let baseProtein: number | undefined;
-    let baseCarbs: number | undefined;
-    let baseFat: number | undefined;
-    let computedKcal: number | undefined;
+    let baseKcal: number | undefined = t.kcal ?? undefined;
+    let baseProtein: number | undefined = t.protein_g ?? undefined;
+    let baseCarbs: number | undefined = t.carbs_g ?? undefined;
+    let baseFat: number | undefined = t.fat_g ?? undefined;
+    let restKcal: number | undefined = t.kcal_rest ?? undefined;
+    let restProtein: number | undefined = t.protein_g_rest ?? undefined;
+    let restCarbs: number | undefined = t.carbs_g_rest ?? undefined;
+    let restFat: number | undefined = t.fat_g_rest ?? undefined;
 
-    if (currentWeight && height && ageYears) {
+    if (!baseKcal && currentWeight && height && ageYears) {
       const bmr = gender === "female"
         ? 10 * currentWeight + 6.25 * height - 5 * ageYears - 161
         : 10 * currentWeight + 6.25 * height - 5 * ageYears + 5;
@@ -168,9 +181,7 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
       let tdee = bmr * actFactor;
       if (goalDirection === "cut") tdee -= 400;
       else if (goalDirection === "bulk") tdee += 300;
-      else if (trainingGoal === "performance") tdee += 100; // leichter Überschuss für Leistung
-      computedKcal = Math.round(tdee / 10) * 10;
-      baseKcal = computedKcal;
+      baseKcal = Math.round(tdee / 10) * 10;
       const proteinPerKg = goalDirection === "cut" ? 2.2 : goalDirection === "bulk" ? 2.0 : 1.8;
       baseProtein = Math.round(currentWeight * proteinPerKg);
       baseFat = Math.round((baseKcal * 0.27) / 9);
@@ -178,28 +189,21 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
       baseCarbs = Math.max(80, Math.round(remainingKcal / 4));
     }
 
-    // Gespeicherte Targets nur übernehmen, wenn sie plausibel zur Berechnung passen.
-    if (t.kcal && computedKcal) {
-      const deviation = Math.abs(t.kcal - computedKcal) / computedKcal;
-      if (deviation <= 0.2) {
-        baseKcal = t.kcal;
-        baseProtein = t.protein_g ?? baseProtein;
-        baseCarbs = t.carbs_g ?? baseCarbs;
-        baseFat = t.fat_g ?? baseFat;
-      }
-    } else if (t.kcal && !computedKcal) {
-      baseKcal = t.kcal;
-      baseProtein = t.protein_g;
-      baseCarbs = t.carbs_g;
-      baseFat = t.fat_g;
-    }
-
-    const { training: trainingTargets, rest: restTargets } = buildIssnCarbCyclingTargets({
+    // Restday-Targets: DB-Werte bevorzugen, sonst über Carb-Cycling ableiten.
+    let trainingTargets = {
       kcal: baseKcal ?? 2200,
       protein_g: baseProtein ?? 150,
       carbs_g: baseCarbs ?? 240,
       fat_g: baseFat ?? 70,
-    });
+    };
+    let restTargets: MacroTarget;
+    if (restKcal != null && restProtein != null && restCarbs != null && restFat != null) {
+      restTargets = { kcal: restKcal, protein_g: restProtein, carbs_g: restCarbs, fat_g: restFat };
+    } else {
+      const built = buildIssnCarbCyclingTargets(trainingTargets);
+      trainingTargets = built.training;
+      restTargets = built.rest;
+    }
     const kcal = trainingTargets.kcal;
     const protein = trainingTargets.protein_g;
     const carbs = trainingTargets.carbs_g;
@@ -208,6 +212,7 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
     const proteinR = restTargets.protein_g;
     const carbsR = restTargets.carbs_g;
     const fatR = restTargets.fat_g;
+
 
 
 
