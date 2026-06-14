@@ -219,8 +219,18 @@ export function PlanContentView({ clientId, planType }: Props) {
     setTracked(map);
   };
 
+  const reloadSkips = async () => {
+    if (!canTrack) { setSkipped({}); return; }
+    try {
+      const res = await getSkipsFn({ data: { skip_date: todayKey() } });
+      const map: Record<string, string> = {};
+      (res.items ?? []).forEach((s: any) => { if (s.meal_id) map[s.meal_id] = s.reason; });
+      setSkipped(map);
+    } catch {}
+  };
+
   useEffect(() => { reload(); /* eslint-disable-next-line */ }, [clientId, planType]);
-  useEffect(() => { reloadTracked(); /* eslint-disable-next-line */ }, [clientId, planType, supabaseUser?.id]);
+  useEffect(() => { reloadTracked(); reloadSkips(); /* eslint-disable-next-line */ }, [clientId, planType, supabaseUser?.id]);
 
   // Fetch today's day type (only for self / nutrition); used to auto-pick a matching day.
   useEffect(() => {
