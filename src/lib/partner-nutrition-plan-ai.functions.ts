@@ -486,15 +486,17 @@ Genau ${planDays} Tage. Pro Person je 4 Slots (breakfast/lunch/dinner/snack). Be
       }
     }
 
-    // Build shopping lists (individual for each + combined).
+    // Build shopping lists (individual for each + combined). The engine uses
+    // the admin client internally, so partner-plan writes succeed even when
+    // the caller is not the partner's plan owner.
+    let shoppingListWarning: string | null = null;
     try {
       const { generateShoppingListForPlan, generateCombinedShoppingList } = await import(
         "./shopping-list-engine.server"
       );
-      await generateShoppingListForPlan({ supabase, apiKey, planId: A.planId, windowDays: planDays });
-      await generateShoppingListForPlan({ supabase, apiKey, planId: B.planId, windowDays: planDays });
+      await generateShoppingListForPlan({ apiKey, planId: A.planId, windowDays: planDays });
+      await generateShoppingListForPlan({ apiKey, planId: B.planId, windowDays: planDays });
       await generateCombinedShoppingList({
-        supabase,
         apiKey,
         planAId: A.planId,
         planBId: B.planId,
@@ -502,9 +504,10 @@ Genau ${planDays} Tage. Pro Person je 4 Slots (breakfast/lunch/dinner/snack). Be
         userB: data.user_b,
         windowDays: planDays,
       });
-    } catch (e) {
-      console.warn("Partner shopping list failed:", e);
+    } catch (e: any) {
+      console.error("Partner shopping list failed:", e);
+      shoppingListWarning = e?.message ?? "Einkaufsliste konnte nicht erstellt werden.";
     }
 
-    return { ok: true, plan_a: A.planId, plan_b: B.planId, days: planDays };
+    return { ok: true, plan_a: A.planId, plan_b: B.planId, days: planDays, shopping_list_warning: shoppingListWarning };
   });
