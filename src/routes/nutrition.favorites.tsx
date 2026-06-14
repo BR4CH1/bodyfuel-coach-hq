@@ -7,7 +7,7 @@ import { listMyFavorites } from "@/lib/meal-feedback.functions";
 import { RecipeDialog } from "@/components/bodyfuel/RecipeDialog";
 import { useSession } from "@/lib/bodyfuel/session";
 
-export const Route = createFileRoute("/_authenticated/nutrition/favorites")({
+export const Route = createFileRoute("/nutrition/favorites")({
   head: () => ({ meta: [{ title: "Meine Favoriten — BODYFUEL" }] }),
   component: FavoritesPage,
 });

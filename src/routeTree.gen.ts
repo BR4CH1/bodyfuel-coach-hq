@@ -31,6 +31,7 @@ import { Route as NutritionIndexRouteImport } from './routes/nutrition.index'
 import { Route as CoachIndexRouteImport } from './routes/coach.index'
 import { Route as BullsIndexRouteImport } from './routes/bulls.index'
 import { Route as NutritionTrackingRouteImport } from './routes/nutrition.tracking'
+import { Route as NutritionFavoritesRouteImport } from './routes/nutrition.favorites'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as CoachReviewsRouteImport } from './routes/coach.reviews'
 import { Route as CoachPackageRequestsRouteImport } from './routes/coach.package-requests'
@@ -47,7 +48,6 @@ import { Route as CoachCustomersIndexRouteImport } from './routes/coach.customer
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as CoachCustomersNewRouteImport } from './routes/coach.customers.new'
 import { Route as CoachCustomersUserIdRouteImport } from './routes/coach.customers.$userId'
-import { Route as AuthenticatedNutritionFavoritesRouteImport } from './routes/_authenticated/nutrition.favorites'
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
@@ -165,6 +165,11 @@ const NutritionTrackingRoute = NutritionTrackingRouteImport.update({
   path: '/tracking',
   getParentRoute: () => NutritionRoute,
 } as any)
+const NutritionFavoritesRoute = NutritionFavoritesRouteImport.update({
+  id: '/favorites',
+  path: '/favorites',
+  getParentRoute: () => NutritionRoute,
+} as any)
 const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
   id: '/email/unsubscribe',
   path: '/email/unsubscribe',
@@ -245,12 +250,6 @@ const CoachCustomersUserIdRoute = CoachCustomersUserIdRouteImport.update({
   path: '/$userId',
   getParentRoute: () => CoachCustomersRoute,
 } as any)
-const AuthenticatedNutritionFavoritesRoute =
-  AuthenticatedNutritionFavoritesRouteImport.update({
-    id: '/_authenticated/nutrition/favorites',
-    path: '/nutrition/favorites',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const LovableEmailTransactionalSendRoute =
   LovableEmailTransactionalSendRouteImport.update({
     id: '/lovable/email/transactional/send',
@@ -317,11 +316,11 @@ export interface FileRoutesByFullPath {
   '/coach/package-requests': typeof CoachPackageRequestsRoute
   '/coach/reviews': typeof CoachReviewsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/nutrition/favorites': typeof NutritionFavoritesRoute
   '/nutrition/tracking': typeof NutritionTrackingRoute
   '/bulls/': typeof BullsIndexRoute
   '/coach/': typeof CoachIndexRoute
   '/nutrition/': typeof NutritionIndexRoute
-  '/nutrition/favorites': typeof AuthenticatedNutritionFavoritesRoute
   '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
@@ -361,11 +360,11 @@ export interface FileRoutesByTo {
   '/coach/package-requests': typeof CoachPackageRequestsRoute
   '/coach/reviews': typeof CoachReviewsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/nutrition/favorites': typeof NutritionFavoritesRoute
   '/nutrition/tracking': typeof NutritionTrackingRoute
   '/bulls': typeof BullsIndexRoute
   '/coach': typeof CoachIndexRoute
   '/nutrition': typeof NutritionIndexRoute
-  '/nutrition/favorites': typeof AuthenticatedNutritionFavoritesRoute
   '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
@@ -409,11 +408,11 @@ export interface FileRoutesById {
   '/coach/package-requests': typeof CoachPackageRequestsRoute
   '/coach/reviews': typeof CoachReviewsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/nutrition/favorites': typeof NutritionFavoritesRoute
   '/nutrition/tracking': typeof NutritionTrackingRoute
   '/bulls/': typeof BullsIndexRoute
   '/coach/': typeof CoachIndexRoute
   '/nutrition/': typeof NutritionIndexRoute
-  '/_authenticated/nutrition/favorites': typeof AuthenticatedNutritionFavoritesRoute
   '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
@@ -458,11 +457,11 @@ export interface FileRouteTypes {
     | '/coach/package-requests'
     | '/coach/reviews'
     | '/email/unsubscribe'
+    | '/nutrition/favorites'
     | '/nutrition/tracking'
     | '/bulls/'
     | '/coach/'
     | '/nutrition/'
-    | '/nutrition/favorites'
     | '/coach/customers/$userId'
     | '/coach/customers/new'
     | '/lovable/email/suppression'
@@ -502,11 +501,11 @@ export interface FileRouteTypes {
     | '/coach/package-requests'
     | '/coach/reviews'
     | '/email/unsubscribe'
+    | '/nutrition/favorites'
     | '/nutrition/tracking'
     | '/bulls'
     | '/coach'
     | '/nutrition'
-    | '/nutrition/favorites'
     | '/coach/customers/$userId'
     | '/coach/customers/new'
     | '/lovable/email/suppression'
@@ -549,11 +548,11 @@ export interface FileRouteTypes {
     | '/coach/package-requests'
     | '/coach/reviews'
     | '/email/unsubscribe'
+    | '/nutrition/favorites'
     | '/nutrition/tracking'
     | '/bulls/'
     | '/coach/'
     | '/nutrition/'
-    | '/_authenticated/nutrition/favorites'
     | '/coach/customers/$userId'
     | '/coach/customers/new'
     | '/lovable/email/suppression'
@@ -593,7 +592,6 @@ export interface RootRouteChildren {
   BullsWeightRoute: typeof BullsWeightRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   BullsIndexRoute: typeof BullsIndexRoute
-  AuthenticatedNutritionFavoritesRoute: typeof AuthenticatedNutritionFavoritesRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiPublicHooksTrialRemindersRoute: typeof ApiPublicHooksTrialRemindersRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
@@ -759,6 +757,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NutritionTrackingRouteImport
       parentRoute: typeof NutritionRoute
     }
+    '/nutrition/favorites': {
+      id: '/nutrition/favorites'
+      path: '/favorites'
+      fullPath: '/nutrition/favorites'
+      preLoaderRoute: typeof NutritionFavoritesRouteImport
+      parentRoute: typeof NutritionRoute
+    }
     '/email/unsubscribe': {
       id: '/email/unsubscribe'
       path: '/email/unsubscribe'
@@ -871,13 +876,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CoachCustomersUserIdRouteImport
       parentRoute: typeof CoachCustomersRoute
     }
-    '/_authenticated/nutrition/favorites': {
-      id: '/_authenticated/nutrition/favorites'
-      path: '/nutrition/favorites'
-      fullPath: '/nutrition/favorites'
-      preLoaderRoute: typeof AuthenticatedNutritionFavoritesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/lovable/email/transactional/send': {
       id: '/lovable/email/transactional/send'
       path: '/lovable/email/transactional/send'
@@ -960,11 +958,13 @@ const CoachRouteChildren: CoachRouteChildren = {
 const CoachRouteWithChildren = CoachRoute._addFileChildren(CoachRouteChildren)
 
 interface NutritionRouteChildren {
+  NutritionFavoritesRoute: typeof NutritionFavoritesRoute
   NutritionTrackingRoute: typeof NutritionTrackingRoute
   NutritionIndexRoute: typeof NutritionIndexRoute
 }
 
 const NutritionRouteChildren: NutritionRouteChildren = {
+  NutritionFavoritesRoute: NutritionFavoritesRoute,
   NutritionTrackingRoute: NutritionTrackingRoute,
   NutritionIndexRoute: NutritionIndexRoute,
 }
@@ -1000,7 +1000,6 @@ const rootRouteChildren: RootRouteChildren = {
   BullsWeightRoute: BullsWeightRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   BullsIndexRoute: BullsIndexRoute,
-  AuthenticatedNutritionFavoritesRoute: AuthenticatedNutritionFavoritesRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ApiPublicHooksTrialRemindersRoute: ApiPublicHooksTrialRemindersRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
@@ -1012,3 +1011,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
