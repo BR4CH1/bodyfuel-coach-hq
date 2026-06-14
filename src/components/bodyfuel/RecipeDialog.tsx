@@ -1,8 +1,16 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, RefreshCw, X, Sparkles } from "lucide-react";
+import { Loader2, RefreshCw, X, Sparkles, Heart, Star } from "lucide-react";
 import { generateMealRecipe } from "@/lib/nutrition-plan.functions";
+import {
+  toggleFavorite,
+  getFavoriteStatus,
+  setRating,
+  getMyRating,
+  logInteraction,
+} from "@/lib/meal-feedback.functions";
+import { useSession } from "@/lib/bodyfuel/session";
 
 type Meal = {
   id: string;
@@ -25,12 +33,28 @@ export function RecipeDialog({
   isCoach: boolean;
   onClose: () => void;
 }) {
+  const { supabaseUser } = useSession();
   const generate = useServerFn(generateMealRecipe);
+  const toggleFavFn = useServerFn(toggleFavorite);
+  const getFavFn = useServerFn(getFavoriteStatus);
+  const setRatingFn = useServerFn(setRating);
+  const getRatingFn = useServerFn(getMyRating);
+  const logFn = useServerFn(logInteraction);
+
+  const isCustomer = !!supabaseUser && !isCoach;
+
   const [loading, setLoading] = useState(true);
   const [regenerating, setRegenerating] = useState(false);
   const [ingredients, setIngredients] = useState<string[]>([]);
   const [steps, setSteps] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  const [favorited, setFavorited] = useState(false);
+  const [favBusy, setFavBusy] = useState(false);
+  const [stars, setStars] = useState<number>(0);
+  const [hoverStars, setHoverStars] = useState<number>(0);
+  const [comment, setComment] = useState("");
+  const [ratingSaving, setRatingSaving] = useState(false);
 
   const load = async (force = false) => {
     if (force) setRegenerating(true); else setLoading(true);
@@ -49,6 +73,23 @@ export function RecipeDialog({
 
   useEffect(() => {
     load(false);
+    // Load fav + rating state for customers, and log "shown"
+    if (isCustomer) {
+      (async () => {
+        try {
+          const [f, r] = await Promise.all([
+            getFavFn({ data: { meal_id: meal.id } }),
+            getRatingFn({ data: { meal_id: meal.id } }),
+          ]);
+          setFavorited(f.favorited);
+          setStars(r.stars ?? 0);
+          setComment(r.comment ?? "");
+        } catch {}
+        try {
+          await logFn({ data: { meal_id: meal.id, kind: "shown" } });
+        } catch {}
+      })();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [meal.id]);
 
@@ -57,7 +98,48 @@ export function RecipeDialog({
       await load(true);
       toast.success("Rezept neu erstellt");
     } catch {
-      // already handled
+      /* already handled */
+    }
+  };
+
+  const handleToggleFav = async () => {
+    if (!isCustomer) return;
+    setFavBusy(true);
+    try {
+      const res = await toggleFavFn({ data: { meal_id: meal.id } });
+      setFavorited(res.favorited);
+      toast.success(res.favorited ? "Zu Favoriten gespeichert ❤️" : "Aus Favoriten entfernt");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Fehler");
+    } finally {
+      setFavBusy(false);
+    }
+  };
+
+  const handleSetStars = async (n: number) => {
+    if (!isCustomer) return;
+    setStars(n);
+    setRatingSaving(true);
+    try {
+      await setRatingFn({ data: { meal_id: meal.id, stars: n, comment: comment || null } });
+      toast.success(`${n} Stern${n === 1 ? "" : "e"} gespeichert`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Bewertung fehlgeschlagen");
+    } finally {
+      setRatingSaving(false);
+    }
+  };
+
+  const handleSaveComment = async () => {
+    if (!isCustomer || !stars) return;
+    setRatingSaving(true);
+    try {
+      await setRatingFn({ data: { meal_id: meal.id, stars, comment: comment || null } });
+      toast.success("Kommentar gespeichert");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Fehler");
+    } finally {
+      setRatingSaving(false);
     }
   };
 
@@ -86,13 +168,30 @@ export function RecipeDialog({
               </div>
             )}
           </div>
-          <button
-            onClick={onClose}
-            className="shrink-0 rounded-md p-2 text-muted-foreground hover:bg-secondary"
-            aria-label="Schließen"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <div className="flex shrink-0 items-center gap-1">
+            {isCustomer && (
+              <button
+                onClick={handleToggleFav}
+                disabled={favBusy}
+                className={`rounded-md p-2 transition ${
+                  favorited
+                    ? "text-rose-500 hover:bg-rose-500/10"
+                    : "text-muted-foreground hover:bg-secondary"
+                }`}
+                aria-label={favorited ? "Aus Favoriten entfernen" : "Zu Favoriten hinzufügen"}
+                title={favorited ? "In Favoriten ❤️" : "Zu Favoriten hinzufügen"}
+              >
+                <Heart className={`h-5 w-5 ${favorited ? "fill-current" : ""}`} />
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="rounded-md p-2 text-muted-foreground hover:bg-secondary"
+              aria-label="Schließen"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
@@ -139,6 +238,50 @@ export function RecipeDialog({
                       </li>
                     ))}
                   </ol>
+                </section>
+              )}
+
+              {isCustomer && (
+                <section className="rounded-xl border border-border bg-background/40 p-3">
+                  <div className="text-xs font-bold uppercase tracking-wider text-gold">
+                    Wie hat dir dieses Rezept geschmeckt?
+                  </div>
+                  <div className="mt-2 flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((n) => {
+                      const active = (hoverStars || stars) >= n;
+                      return (
+                        <button
+                          key={n}
+                          type="button"
+                          disabled={ratingSaving}
+                          onMouseEnter={() => setHoverStars(n)}
+                          onMouseLeave={() => setHoverStars(0)}
+                          onClick={() => handleSetStars(n)}
+                          className="p-1"
+                          aria-label={`${n} Stern${n === 1 ? "" : "e"}`}
+                        >
+                          <Star
+                            className={`h-6 w-6 transition ${
+                              active ? "fill-gold text-gold" : "text-muted-foreground"
+                            }`}
+                          />
+                        </button>
+                      );
+                    })}
+                    {stars > 0 && (
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        {stars}/5 gespeichert
+                      </span>
+                    )}
+                  </div>
+                  <textarea
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    onBlur={handleSaveComment}
+                    placeholder="Was hat dir gefallen oder gefehlt? (optional)"
+                    rows={2}
+                    className="mt-2 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  />
                 </section>
               )}
 

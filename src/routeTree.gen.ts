@@ -31,6 +31,7 @@ import { Route as NutritionIndexRouteImport } from './routes/nutrition.index'
 import { Route as CoachIndexRouteImport } from './routes/coach.index'
 import { Route as BullsIndexRouteImport } from './routes/bulls.index'
 import { Route as NutritionTrackingRouteImport } from './routes/nutrition.tracking'
+import { Route as NutritionFavoritesRouteImport } from './routes/nutrition.favorites'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as CoachReviewsRouteImport } from './routes/coach.reviews'
 import { Route as CoachPackageRequestsRouteImport } from './routes/coach.package-requests'
@@ -162,6 +163,11 @@ const BullsIndexRoute = BullsIndexRouteImport.update({
 const NutritionTrackingRoute = NutritionTrackingRouteImport.update({
   id: '/tracking',
   path: '/tracking',
+  getParentRoute: () => NutritionRoute,
+} as any)
+const NutritionFavoritesRoute = NutritionFavoritesRouteImport.update({
+  id: '/favorites',
+  path: '/favorites',
   getParentRoute: () => NutritionRoute,
 } as any)
 const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
@@ -310,6 +316,7 @@ export interface FileRoutesByFullPath {
   '/coach/package-requests': typeof CoachPackageRequestsRoute
   '/coach/reviews': typeof CoachReviewsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/nutrition/favorites': typeof NutritionFavoritesRoute
   '/nutrition/tracking': typeof NutritionTrackingRoute
   '/bulls/': typeof BullsIndexRoute
   '/coach/': typeof CoachIndexRoute
@@ -353,6 +360,7 @@ export interface FileRoutesByTo {
   '/coach/package-requests': typeof CoachPackageRequestsRoute
   '/coach/reviews': typeof CoachReviewsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/nutrition/favorites': typeof NutritionFavoritesRoute
   '/nutrition/tracking': typeof NutritionTrackingRoute
   '/bulls': typeof BullsIndexRoute
   '/coach': typeof CoachIndexRoute
@@ -400,6 +408,7 @@ export interface FileRoutesById {
   '/coach/package-requests': typeof CoachPackageRequestsRoute
   '/coach/reviews': typeof CoachReviewsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/nutrition/favorites': typeof NutritionFavoritesRoute
   '/nutrition/tracking': typeof NutritionTrackingRoute
   '/bulls/': typeof BullsIndexRoute
   '/coach/': typeof CoachIndexRoute
@@ -448,6 +457,7 @@ export interface FileRouteTypes {
     | '/coach/package-requests'
     | '/coach/reviews'
     | '/email/unsubscribe'
+    | '/nutrition/favorites'
     | '/nutrition/tracking'
     | '/bulls/'
     | '/coach/'
@@ -491,6 +501,7 @@ export interface FileRouteTypes {
     | '/coach/package-requests'
     | '/coach/reviews'
     | '/email/unsubscribe'
+    | '/nutrition/favorites'
     | '/nutrition/tracking'
     | '/bulls'
     | '/coach'
@@ -537,6 +548,7 @@ export interface FileRouteTypes {
     | '/coach/package-requests'
     | '/coach/reviews'
     | '/email/unsubscribe'
+    | '/nutrition/favorites'
     | '/nutrition/tracking'
     | '/bulls/'
     | '/coach/'
@@ -745,6 +757,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NutritionTrackingRouteImport
       parentRoute: typeof NutritionRoute
     }
+    '/nutrition/favorites': {
+      id: '/nutrition/favorites'
+      path: '/favorites'
+      fullPath: '/nutrition/favorites'
+      preLoaderRoute: typeof NutritionFavoritesRouteImport
+      parentRoute: typeof NutritionRoute
+    }
     '/email/unsubscribe': {
       id: '/email/unsubscribe'
       path: '/email/unsubscribe'
@@ -939,11 +958,13 @@ const CoachRouteChildren: CoachRouteChildren = {
 const CoachRouteWithChildren = CoachRoute._addFileChildren(CoachRouteChildren)
 
 interface NutritionRouteChildren {
+  NutritionFavoritesRoute: typeof NutritionFavoritesRoute
   NutritionTrackingRoute: typeof NutritionTrackingRoute
   NutritionIndexRoute: typeof NutritionIndexRoute
 }
 
 const NutritionRouteChildren: NutritionRouteChildren = {
+  NutritionFavoritesRoute: NutritionFavoritesRoute,
   NutritionTrackingRoute: NutritionTrackingRoute,
   NutritionIndexRoute: NutritionIndexRoute,
 }
@@ -990,13 +1011,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

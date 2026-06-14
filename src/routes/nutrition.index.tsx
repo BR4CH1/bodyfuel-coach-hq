@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Utensils, ChevronRight } from "lucide-react";
+import { Utensils, ChevronRight, Heart } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { PlansView } from "@/components/bodyfuel/PlansView";
 import { MacroTargetsCard } from "@/components/bodyfuel/MacroTargetsCard";
@@ -43,6 +43,23 @@ function NutritionIndex() {
                 </div>
               </div>
               <ChevronRight className="h-5 w-5 text-gold" />
+            </Link>
+            <Link
+              to="/nutrition/favorites"
+              className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4 transition hover:border-rose-500/50"
+            >
+              <div className="flex items-center gap-3">
+                <div className="grid h-11 w-11 place-items-center rounded-xl bg-rose-500/15 text-rose-500">
+                  <Heart className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="text-sm font-bold">Meine Favoriten</div>
+                  <div className="text-xs text-muted-foreground">
+                    Gespeicherte Rezepte & Bewertungen
+                  </div>
+                </div>
+              </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
             </Link>
             <MacroTargetsCard userId={supabaseUser?.id} />
           </>

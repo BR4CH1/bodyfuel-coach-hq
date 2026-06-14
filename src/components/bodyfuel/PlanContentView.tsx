@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, Sparkles, Utensils, Dumbbell, Check, Shuffle, BookOpen } from "lucide-react";
+import { Loader2, Sparkles, Utensils, Dumbbell, Check, Shuffle, BookOpen, Repeat } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
 import { parseNutritionPlan, estimateMealMacros } from "@/lib/nutrition-plan.functions";
 import { parseTrainingPlan } from "@/lib/training.functions";
 import { getDayType } from "@/lib/nutrition.functions";
+import { logInteraction } from "@/lib/meal-feedback.functions";
 import { RecipeDialog } from "./RecipeDialog";
+import { MealSwapDialog } from "./MealSwapDialog";
 
 type Plan = { id: string; client_id: string; title: string };
 type Day = { id: string; name: string; sort_order: number };
@@ -140,6 +142,8 @@ export function PlanContentView({ clientId, planType }: Props) {
   const [togglingId, setTogglingId] = useState<string>("");
   const [dayKind, setDayKind] = useState<"training" | "rest" | null>(null);
   const [recipeMeal, setRecipeMeal] = useState<Meal | null>(null);
+  const [swapMeal, setSwapMeal] = useState<Meal | null>(null);
+  const logFn = useServerFn(logInteraction);
 
 
   const dayTable = planType === "nutrition" ? "nutrition_plan_days" : "training_days";
@@ -347,6 +351,7 @@ export function PlanContentView({ clientId, planType }: Props) {
         if (error) throw error;
         setTracked((t) => ({ ...t, [m.id]: (data as { id: string }).id }));
         toast.success(`${m.name} getrackt`);
+        try { await logFn({ data: { meal_id: m.id, kind: "eaten" } }); } catch {}
       }
     } catch (e: any) {
       toast.error(e?.message ?? "Tracken fehlgeschlagen");
@@ -470,25 +475,38 @@ export function PlanContentView({ clientId, planType }: Props) {
                     : "border-border bg-background/40";
                   return (
                     <div key={m.id} className={`${base} ${style} relative`}>
-                      <button
-                        type="button"
-                        onClick={() => setRecipeMeal(m)}
-                        className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-md border border-border bg-background/60 px-2 py-1 text-[10px] font-semibold text-muted-foreground hover:border-gold/50 hover:text-gold"
-                        aria-label="Rezept anzeigen"
-                      >
-                        <BookOpen className="h-3 w-3" /> Rezept
-                      </button>
+                      <div className="absolute right-2 top-2 flex items-center gap-1">
+                        {canTrack && m.kcal && m.protein_g && m.carbs_g && m.fat_g && (
+                          <button
+                            type="button"
+                            onClick={() => setSwapMeal(m)}
+                            className="inline-flex items-center gap-1 rounded-md border border-border bg-background/60 px-2 py-1 text-[10px] font-semibold text-muted-foreground hover:border-gold/50 hover:text-gold"
+                            aria-label="Mahlzeit tauschen"
+                            title="KI-Vorschläge (±5 % Makros)"
+                          >
+                            <Repeat className="h-3 w-3" /> Tausch
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setRecipeMeal(m)}
+                          className="inline-flex items-center gap-1 rounded-md border border-border bg-background/60 px-2 py-1 text-[10px] font-semibold text-muted-foreground hover:border-gold/50 hover:text-gold"
+                          aria-label="Rezept anzeigen"
+                        >
+                          <BookOpen className="h-3 w-3" /> Rezept
+                        </button>
+                      </div>
                       {canTrack ? (
                         <button
                           type="button"
                           onClick={() => toggleMeal(m)}
                           disabled={busy}
-                          className="block w-full pr-20 text-left hover:opacity-90 disabled:opacity-60"
+                          className="block w-full pr-32 text-left hover:opacity-90 disabled:opacity-60"
                         >
                           {inner}
                         </button>
                       ) : (
-                        <div className="pr-20">{inner}</div>
+                        <div className="pr-32">{inner}</div>
                       )}
                     </div>
                   );
@@ -527,6 +545,15 @@ export function PlanContentView({ clientId, planType }: Props) {
           displayName={itemDisplayName[recipeMeal.id] ?? recipeMeal.name}
           isCoach={isCoach}
           onClose={() => setRecipeMeal(null)}
+        />
+      )}
+      {swapMeal && isSelf && (
+        <MealSwapDialog
+          meal={swapMeal}
+          displayName={itemDisplayName[swapMeal.id] ?? swapMeal.name}
+          userId={clientId}
+          onClose={() => setSwapMeal(null)}
+          onSwapped={() => { reloadTracked(); }}
         />
       )}
     </div>
