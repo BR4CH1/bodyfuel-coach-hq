@@ -369,6 +369,7 @@ export const getCustomerDetail = createServerFn({ method: "POST" })
       groups: (groups.data ?? []).map((g: any) => g.group_name as string),
       coaching_goal: (profile.data as any)?.coaching_goal ?? null,
       next_checkin_date: (profile.data as any)?.next_checkin_date ?? null,
+      targets: targets.data ?? null,
       auth: {
         invited_at: u?.invited_at ?? null,
         confirmed_at: u?.email_confirmed_at ?? u?.confirmed_at ?? null,
@@ -377,6 +378,7 @@ export const getCustomerDetail = createServerFn({ method: "POST" })
         status,
       },
     };
+
 
 
   });
