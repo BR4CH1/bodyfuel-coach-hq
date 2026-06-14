@@ -84,5 +84,5 @@ Antworte ausschließlich mit gültigem JSON in dieser Form:
     const raw = json?.choices?.[0]?.message?.content ?? "{}";
     let parsed: { items?: ShoppingItem[] } = {};
     try { parsed = typeof raw === "string" ? JSON.parse(raw) : raw; } catch { parsed = {}; }
-    return { items: parsed.items ?? [] };
+    return { items: parsed.items ?? [], days: windowDays };
   });
