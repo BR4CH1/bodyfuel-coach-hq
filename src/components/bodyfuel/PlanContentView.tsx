@@ -525,7 +525,7 @@ export function PlanContentView({ clientId, planType }: Props) {
                             onClick={() => setSwapMeal(m)}
                             className="inline-flex items-center gap-1 rounded-md border border-border bg-background/60 px-2 py-1 text-[10px] font-semibold text-muted-foreground hover:border-gold/50 hover:text-gold"
                             aria-label="Mahlzeit tauschen"
-                            title="KI-Vorschläge (±5 % Makros)"
+                            title="Smart-Vorschläge (±5 % Makros)"
                           >
                             <Repeat className="h-3 w-3" /> Tausch
                           </button>

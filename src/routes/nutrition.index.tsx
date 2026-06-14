@@ -50,7 +50,7 @@ function NutritionIndex() {
                   <div>
                     <div className="text-sm font-bold">Smart Nutrition aktivieren ✨</div>
                     <div className="text-xs text-muted-foreground">
-                      60 Sek. — danach passt die KI deinen Plan an deine Vorlieben an
+                      60 Sek. — danach passt sich dein Plan automatisch an deine Vorlieben an
                     </div>
                   </div>
                 </div>
@@ -102,7 +102,7 @@ function NutritionIndex() {
                 <div>
                   <div className="text-sm font-bold">Einkaufsliste</div>
                   <div className="text-xs text-muted-foreground">
-                    KI generiert aus deinem Plan
+                    Automatisch aus deinem Plan erstellt
                   </div>
                 </div>
               </div>
@@ -119,7 +119,7 @@ function NutritionIndex() {
                 <div>
                   <div className="text-sm font-bold">Rezept aus Zutaten</div>
                   <div className="text-xs text-muted-foreground">
-                    Sag was du hast — KI baut ein Rezept
+                    Sag was du hast — wir bauen dir ein Rezept
                   </div>
                 </div>
               </div>

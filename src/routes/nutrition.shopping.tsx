@@ -53,7 +53,7 @@ function ShoppingListPage() {
       <div>
         <h1 className="font-display text-2xl font-bold">Einkaufsliste</h1>
         <p className="text-sm text-muted-foreground">
-          KI-generiert aus deinem aktiven Ernährungsplan.
+          Automatisch aus deinem aktiven Ernährungsplan erstellt.
         </p>
       </div>
 

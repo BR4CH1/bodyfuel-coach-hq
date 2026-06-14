@@ -55,7 +55,7 @@ function RecipePage() {
       <div>
         <h1 className="font-display text-2xl font-bold">Rezept aus meinen Zutaten</h1>
         <p className="text-sm text-muted-foreground">
-          Sag uns, was du da hast — die KI baut daraus ein Rezept.
+          Sag uns, was du da hast — wir bauen dir daraus ein Rezept.
         </p>
       </div>
 
