@@ -31,6 +31,8 @@ import { Route as NutritionIndexRouteImport } from './routes/nutrition.index'
 import { Route as CoachIndexRouteImport } from './routes/coach.index'
 import { Route as BullsIndexRouteImport } from './routes/bulls.index'
 import { Route as NutritionTrackingRouteImport } from './routes/nutrition.tracking'
+import { Route as NutritionShoppingRouteImport } from './routes/nutrition.shopping'
+import { Route as NutritionRecipeFromIngredientsRouteImport } from './routes/nutrition.recipe-from-ingredients'
 import { Route as NutritionFavoritesRouteImport } from './routes/nutrition.favorites'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as CoachReviewsRouteImport } from './routes/coach.reviews'
@@ -165,6 +167,17 @@ const NutritionTrackingRoute = NutritionTrackingRouteImport.update({
   path: '/tracking',
   getParentRoute: () => NutritionRoute,
 } as any)
+const NutritionShoppingRoute = NutritionShoppingRouteImport.update({
+  id: '/shopping',
+  path: '/shopping',
+  getParentRoute: () => NutritionRoute,
+} as any)
+const NutritionRecipeFromIngredientsRoute =
+  NutritionRecipeFromIngredientsRouteImport.update({
+    id: '/recipe-from-ingredients',
+    path: '/recipe-from-ingredients',
+    getParentRoute: () => NutritionRoute,
+  } as any)
 const NutritionFavoritesRoute = NutritionFavoritesRouteImport.update({
   id: '/favorites',
   path: '/favorites',
@@ -317,6 +330,8 @@ export interface FileRoutesByFullPath {
   '/coach/reviews': typeof CoachReviewsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/nutrition/favorites': typeof NutritionFavoritesRoute
+  '/nutrition/recipe-from-ingredients': typeof NutritionRecipeFromIngredientsRoute
+  '/nutrition/shopping': typeof NutritionShoppingRoute
   '/nutrition/tracking': typeof NutritionTrackingRoute
   '/bulls/': typeof BullsIndexRoute
   '/coach/': typeof CoachIndexRoute
@@ -361,6 +376,8 @@ export interface FileRoutesByTo {
   '/coach/reviews': typeof CoachReviewsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/nutrition/favorites': typeof NutritionFavoritesRoute
+  '/nutrition/recipe-from-ingredients': typeof NutritionRecipeFromIngredientsRoute
+  '/nutrition/shopping': typeof NutritionShoppingRoute
   '/nutrition/tracking': typeof NutritionTrackingRoute
   '/bulls': typeof BullsIndexRoute
   '/coach': typeof CoachIndexRoute
@@ -409,6 +426,8 @@ export interface FileRoutesById {
   '/coach/reviews': typeof CoachReviewsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/nutrition/favorites': typeof NutritionFavoritesRoute
+  '/nutrition/recipe-from-ingredients': typeof NutritionRecipeFromIngredientsRoute
+  '/nutrition/shopping': typeof NutritionShoppingRoute
   '/nutrition/tracking': typeof NutritionTrackingRoute
   '/bulls/': typeof BullsIndexRoute
   '/coach/': typeof CoachIndexRoute
@@ -458,6 +477,8 @@ export interface FileRouteTypes {
     | '/coach/reviews'
     | '/email/unsubscribe'
     | '/nutrition/favorites'
+    | '/nutrition/recipe-from-ingredients'
+    | '/nutrition/shopping'
     | '/nutrition/tracking'
     | '/bulls/'
     | '/coach/'
@@ -502,6 +523,8 @@ export interface FileRouteTypes {
     | '/coach/reviews'
     | '/email/unsubscribe'
     | '/nutrition/favorites'
+    | '/nutrition/recipe-from-ingredients'
+    | '/nutrition/shopping'
     | '/nutrition/tracking'
     | '/bulls'
     | '/coach'
@@ -549,6 +572,8 @@ export interface FileRouteTypes {
     | '/coach/reviews'
     | '/email/unsubscribe'
     | '/nutrition/favorites'
+    | '/nutrition/recipe-from-ingredients'
+    | '/nutrition/shopping'
     | '/nutrition/tracking'
     | '/bulls/'
     | '/coach/'
@@ -757,6 +782,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NutritionTrackingRouteImport
       parentRoute: typeof NutritionRoute
     }
+    '/nutrition/shopping': {
+      id: '/nutrition/shopping'
+      path: '/shopping'
+      fullPath: '/nutrition/shopping'
+      preLoaderRoute: typeof NutritionShoppingRouteImport
+      parentRoute: typeof NutritionRoute
+    }
+    '/nutrition/recipe-from-ingredients': {
+      id: '/nutrition/recipe-from-ingredients'
+      path: '/recipe-from-ingredients'
+      fullPath: '/nutrition/recipe-from-ingredients'
+      preLoaderRoute: typeof NutritionRecipeFromIngredientsRouteImport
+      parentRoute: typeof NutritionRoute
+    }
     '/nutrition/favorites': {
       id: '/nutrition/favorites'
       path: '/favorites'
@@ -959,12 +998,16 @@ const CoachRouteWithChildren = CoachRoute._addFileChildren(CoachRouteChildren)
 
 interface NutritionRouteChildren {
   NutritionFavoritesRoute: typeof NutritionFavoritesRoute
+  NutritionRecipeFromIngredientsRoute: typeof NutritionRecipeFromIngredientsRoute
+  NutritionShoppingRoute: typeof NutritionShoppingRoute
   NutritionTrackingRoute: typeof NutritionTrackingRoute
   NutritionIndexRoute: typeof NutritionIndexRoute
 }
 
 const NutritionRouteChildren: NutritionRouteChildren = {
   NutritionFavoritesRoute: NutritionFavoritesRoute,
+  NutritionRecipeFromIngredientsRoute: NutritionRecipeFromIngredientsRoute,
+  NutritionShoppingRoute: NutritionShoppingRoute,
   NutritionTrackingRoute: NutritionTrackingRoute,
   NutritionIndexRoute: NutritionIndexRoute,
 }
