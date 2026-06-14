@@ -221,17 +221,22 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
       p.budget_band === "50_75" ? "Mittleres Budget." :
       p.budget_band === ">100" ? "Großzügiges Budget." : "";
 
-    // Plan length = days until the customer's next shopping day (1–7).
-    const planDays = daysUntilNextShopping(p.shopping_days);
-
-    // Compute the actual start date now so we can align day types with weekdays.
+    // Plan length & start date abhängig vom Modus.
+    // - "today" (Default): Plan ab HEUTE bis zum nächsten Einkaufstag (Lücken-Plan).
+    // - "next_shopping": Plan beginnt am nächsten Einkaufstag und deckt einen ganzen Einkaufszyklus ab.
+    const startMode: "today" | "next_shopping" = data.start_mode ?? "today";
+    const daysToNextShopping = daysUntilNextShopping(p.shopping_days);
     const start = data.scheduled_start_date
       ? new Date(data.scheduled_start_date)
       : (() => {
           const d = new Date();
-          d.setDate(d.getDate() + planDays);
+          if (startMode === "next_shopping") d.setDate(d.getDate() + daysToNextShopping);
           return d;
         })();
+    const planDays = startMode === "next_shopping"
+      ? daysUntilNextShopping(p.shopping_days, start)
+      : daysToNextShopping;
+
 
     const WEEKDAY_KEYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
     const WEEKDAY_LABELS_DE = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"] as const;
