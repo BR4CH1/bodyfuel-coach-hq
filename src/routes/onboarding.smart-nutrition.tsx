@@ -81,6 +81,10 @@ function Wizard() {
       setLeadDays(existing.shopping_lead_days ?? 1);
       setBudget(existing.budget_band ?? "");
       setTrainDays((existing as any).training_weekdays ?? []);
+      // Existing users who completed onboarding before training-days existed → jump straight to that step
+      if (existing.completed_at && !((existing as any).training_weekdays?.length)) {
+        setStep(6);
+      }
     }
   }, [existing]);
 
