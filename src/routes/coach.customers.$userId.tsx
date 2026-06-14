@@ -39,7 +39,9 @@ import { CustomerCheckinsCard } from "@/components/bodyfuel/CustomerCheckinsCard
 import { PlanManagementCard } from "@/components/bodyfuel/PlanManagementCard";
 import { PartnerLinkCard } from "@/components/bodyfuel/PartnerLinkCard";
 import { CoachTrainingGoalCard } from "@/components/bodyfuel/CoachTrainingGoalCard";
+import { WeightProgressChart } from "@/components/bodyfuel/WeightProgressChart";
 import { labelForTrainingGoal } from "@/lib/training-goals";
+
 
 
 
