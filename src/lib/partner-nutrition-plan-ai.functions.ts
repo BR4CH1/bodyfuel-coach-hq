@@ -509,5 +509,5 @@ Genau ${planDays} Tage. Pro Person je 4 Slots (breakfast/lunch/dinner/snack). Be
       shoppingListWarning = e?.message ?? "Einkaufsliste konnte nicht erstellt werden.";
     }
 
-    return { ok: true, plan_a: A.planId, plan_b: B.planId, days: planDays };
+    return { ok: true, plan_a: A.planId, plan_b: B.planId, days: planDays, shopping_list_warning: shoppingListWarning };
   });
