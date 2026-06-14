@@ -1,4 +1,4 @@
-import { labelForTrainingGoal, TRAINING_GOAL_DESCRIPTIONS } from "@/lib/training-goals";
+import { labelForTrainingGoal, TRAINING_GOAL_DESCRIPTIONS, weeklyRate } from "@/lib/training-goals";
 
 type Targets = {
   kcal?: number | null;
@@ -17,10 +17,14 @@ export function CoachTrainingGoalCard({
   trainingGoal,
   targets,
   measurements,
+  goalWeight,
+  goalTargetDate,
 }: {
   trainingGoal?: string | null;
   targets: Targets;
   measurements: Measurement[];
+  goalWeight?: number | null;
+  goalTargetDate?: string | null;
 }) {
   const weights = (measurements ?? [])
     .filter((m) => m.weight_kg != null)
