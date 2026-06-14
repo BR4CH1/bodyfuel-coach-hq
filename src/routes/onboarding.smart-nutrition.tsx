@@ -218,6 +218,26 @@ function Wizard() {
             />
           </StepBlock>
         )}
+        {step === 6 && (
+          <StepBlock
+            title="An welchen Tagen trainierst du?"
+            sub="Wir bauen den Plan so, dass an Trainingstagen die Trainings-Makros und sonst die Restday-Makros greifen."
+          >
+            <ChipGrid
+              options={TRAINING_DAYS.map((d) => d.l)}
+              value={trainDays.map((v) => TRAINING_DAYS.find((d) => d.v === v)?.l ?? v)}
+              onToggle={(label) => {
+                const opt = TRAINING_DAYS.find((d) => d.l === label);
+                if (!opt) return;
+                toggle(trainDays, setTrainDays, opt.v);
+              }}
+            />
+            <p className="mt-3 text-xs text-muted-foreground">
+              Tipp: Du kannst täglich auch ad-hoc zwischen Trainings- und Restday wechseln.
+            </p>
+          </StepBlock>
+        )}
+
         {last && (
           <div className="text-center py-6 space-y-3">
             <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-gradient-gold text-primary-foreground">
