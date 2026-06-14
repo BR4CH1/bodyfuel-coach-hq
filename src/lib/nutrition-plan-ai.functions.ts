@@ -91,7 +91,7 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
     const fat = t.fat_g ?? 70;
     // Restday-Werte: wenn vom Coach gesetzt → übernehmen, sonst sportwissenschaftlich ableiten
     // (Carb-Cycling: Protein konstant, Carbs ~65 %, Fett ~110 %).
-    const hasRest = true; // Smart-Plan unterscheidet IMMER Trainings-/Restdays
+    // Smart-Plan unterscheidet IMMER Trainings-/Restdays
     const carbsR = t.carbs_g_rest ?? Math.round(carbs * 0.65);
     const proteinR = t.protein_g_rest ?? protein;
     const fatR = t.fat_g_rest ?? Math.round(fat * 1.1);
