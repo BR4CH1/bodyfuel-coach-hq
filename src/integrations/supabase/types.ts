@@ -1096,6 +1096,7 @@ export type Database = {
           demo_client_key: string | null
           display_name: string | null
           gender: string | null
+          goal_target_date: string | null
           goal_weight_kg: number | null
           height_cm: number | null
           id: string
@@ -1117,6 +1118,7 @@ export type Database = {
           demo_client_key?: string | null
           display_name?: string | null
           gender?: string | null
+          goal_target_date?: string | null
           goal_weight_kg?: number | null
           height_cm?: number | null
           id: string
@@ -1138,6 +1140,7 @@ export type Database = {
           demo_client_key?: string | null
           display_name?: string | null
           gender?: string | null
+          goal_target_date?: string | null
           goal_weight_kg?: number | null
           height_cm?: number | null
           id?: string
