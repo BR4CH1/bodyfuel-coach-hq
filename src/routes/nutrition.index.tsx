@@ -59,6 +59,25 @@ function NutritionIndex() {
                 <ChevronRight className="h-5 w-5 text-gold" />
               </Link>
             )}
+            {needsTrainingDays && (
+              <Link
+                to="/onboarding/smart-nutrition"
+                className="flex items-center justify-between gap-3 rounded-2xl border border-amber-500/60 bg-gradient-to-br from-amber-500/15 to-card p-4 transition hover:border-amber-500"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="grid h-11 w-11 place-items-center rounded-xl bg-amber-500/20 text-amber-500">
+                    <Sparkles className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-bold">Trainingstage festlegen 💪</div>
+                    <div className="text-xs text-muted-foreground">
+                      Damit dein Plan zwischen Trainings- und Restdays unterscheiden kann
+                    </div>
+                  </div>
+                </div>
+                <ChevronRight className="h-5 w-5 text-amber-500" />
+              </Link>
+            )}
             <Link
               to="/nutrition/tracking"
               className="flex items-center justify-between gap-3 rounded-2xl border border-gold/50 bg-gradient-to-br from-accent/40 to-card p-4 transition hover:border-gold"
