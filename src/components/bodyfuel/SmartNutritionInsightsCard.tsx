@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { AlertTriangle, ShieldAlert, Sparkles, Loader2 } from "lucide-react";
+import { AlertTriangle, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import {
   getCustomerSmartProfile,
@@ -8,8 +8,8 @@ import {
   getCustomerSkipBreakdown,
   setCustomerAutoPublish,
 } from "@/lib/coach-smart-insights.functions";
-import { generateAiNutritionPlanDraft } from "@/lib/nutrition-plan-ai.functions";
 import { SKIP_REASONS } from "@/lib/meal-skips.functions";
+
 
 const REASON_LABEL: Record<string, string> = Object.fromEntries(
   SKIP_REASONS.map((r) => [r.key, r.label]),
