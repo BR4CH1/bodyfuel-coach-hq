@@ -138,21 +138,25 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
       else if (/(aufbau|muskel|bulk|gain|zunehm)/.test(g)) goalDirection = "bulk";
     }
 
-    // Wenn Gewichts-Differenz vorhanden, Richtung präzisieren (überschreibt nur 'maintain')
-    if (goalDirection === "maintain" && currentWeight && goalWeight) {
+    // Gewichts-Differenz hat IMMER Mitspracherecht – auch bei "maintain"/"performance"
+    // soll ein deutlich abweichendes Wunschgewicht die Richtung ziehen.
+    if (currentWeight && goalWeight) {
       const diff = goalWeight - currentWeight;
-      if (diff <= -2) goalDirection = "cut";
-      else if (diff >= 2) goalDirection = "bulk";
+      if (diff <= -3) goalDirection = "cut";
+      else if (diff >= 3) goalDirection = "bulk";
     }
 
-    // Fallback-Targets via Mifflin-St Jeor wenn keine nutrition_targets gepflegt
+    // IMMER Mifflin-St Jeor anhand aktueller Körperdaten rechnen.
+    // Gespeicherte nutrition_targets nur verwenden, wenn sie plausibel sind
+    // (innerhalb ±20 % der Berechnung) – sonst sind sie veraltete Defaults.
     const t = (targets as any) ?? {};
-    let baseKcal: number | undefined = t.kcal;
-    let baseProtein: number | undefined = t.protein_g;
-    let baseCarbs: number | undefined = t.carbs_g;
-    let baseFat: number | undefined = t.fat_g;
+    let baseKcal: number | undefined;
+    let baseProtein: number | undefined;
+    let baseCarbs: number | undefined;
+    let baseFat: number | undefined;
+    let computedKcal: number | undefined;
 
-    if (!baseKcal && currentWeight && height && ageYears) {
+    if (currentWeight && height && ageYears) {
       const bmr = gender === "female"
         ? 10 * currentWeight + 6.25 * height - 5 * ageYears - 161
         : 10 * currentWeight + 6.25 * height - 5 * ageYears + 5;
@@ -164,12 +168,30 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
       let tdee = bmr * actFactor;
       if (goalDirection === "cut") tdee -= 400;
       else if (goalDirection === "bulk") tdee += 300;
-      baseKcal = Math.round(tdee / 10) * 10;
+      else if (trainingGoal === "performance") tdee += 100; // leichter Überschuss für Leistung
+      computedKcal = Math.round(tdee / 10) * 10;
+      baseKcal = computedKcal;
       const proteinPerKg = goalDirection === "cut" ? 2.2 : goalDirection === "bulk" ? 2.0 : 1.8;
       baseProtein = Math.round(currentWeight * proteinPerKg);
       baseFat = Math.round((baseKcal * 0.27) / 9);
       const remainingKcal = baseKcal - baseProtein * 4 - baseFat * 9;
       baseCarbs = Math.max(80, Math.round(remainingKcal / 4));
+    }
+
+    // Gespeicherte Targets nur übernehmen, wenn sie plausibel zur Berechnung passen.
+    if (t.kcal && computedKcal) {
+      const deviation = Math.abs(t.kcal - computedKcal) / computedKcal;
+      if (deviation <= 0.2) {
+        baseKcal = t.kcal;
+        baseProtein = t.protein_g ?? baseProtein;
+        baseCarbs = t.carbs_g ?? baseCarbs;
+        baseFat = t.fat_g ?? baseFat;
+      }
+    } else if (t.kcal && !computedKcal) {
+      baseKcal = t.kcal;
+      baseProtein = t.protein_g;
+      baseCarbs = t.carbs_g;
+      baseFat = t.fat_g;
     }
 
     const { training: trainingTargets, rest: restTargets } = buildIssnCarbCyclingTargets({
