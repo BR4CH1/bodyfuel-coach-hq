@@ -110,7 +110,6 @@ function MeasurementsContent() {
         activity_level: profile.activity_level,
         training_goal: profile.training_goal,
       })
-      })
       .eq("id", uid);
     setSavingProfile(false);
     if (error) toast.error(error.message);
