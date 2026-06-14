@@ -173,6 +173,77 @@ function MeasurementsContent() {
     return latest.weight_kg / (m * m);
   }, [profile?.height_cm, latest?.weight_kg]);
 
+  const goalHint = useMemo(() => {
+    const w = latest?.weight_kg;
+    const gw = profile?.goal_weight_kg;
+    const td = profile?.goal_target_date;
+    if (!w || !gw || !td) return null;
+    const target = new Date(td);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const days = (target.getTime() - today.getTime()) / 86400000;
+    if (days <= 0) return null;
+    const weeks = Math.max(2, days / 7);
+    const kgDiff = Number(gw) - Number(w);
+    if (Math.abs(kgDiff) < 0.1) return null;
+    const rate = kgDiff / weeks; // kg/week
+    let delta = (rate * 7700) / 7; // kcal/day
+    const maxDeficit = -(Number(w) * 0.01) * 7700 / 7;
+    const maxSurplus = (Number(w) * 0.005) * 7700 / 7;
+    let clamped = false;
+    if (delta < maxDeficit) { delta = maxDeficit; clamped = true; }
+    if (delta > maxSurplus) { delta = maxSurplus; clamped = true; }
+
+    // TDEE estimate
+    const age = profile?.birthdate
+      ? Math.floor((Date.now() - new Date(profile.birthdate).getTime()) / (365.25 * 86400000))
+      : null;
+    let tdee: number | null = null;
+    if (profile?.height_cm && age && profile?.gender) {
+      const bmr =
+        profile.gender === "female"
+          ? 10 * w + 6.25 * profile.height_cm - 5 * age - 161
+          : 10 * w + 6.25 * profile.height_cm - 5 * age + 5;
+      const act =
+        profile.activity_level === "sedentary" ? 1.3 :
+        profile.activity_level === "light" ? 1.45 :
+        profile.activity_level === "moderate" ? 1.6 :
+        profile.activity_level === "active" ? 1.75 :
+        profile.activity_level === "athlete" ? 1.9 : 1.55;
+      tdee = bmr * act;
+    } else {
+      tdee = w * 33;
+    }
+    const minKcal = profile?.gender === "female" ? 1200 : 1500;
+    let kcal = Math.round((tdee + delta) / 50) * 50;
+    if (kcal < minKcal) kcal = Math.round(minKcal / 50) * 50;
+
+    const ratePctWeek = Math.abs(rate) / Number(w) * 100;
+    const isLoss = kgDiff < 0;
+    let intensity: "moderat" | "ambitioniert" | "aggressiv" = "moderat";
+    if (ratePctWeek >= 0.75) intensity = "aggressiv";
+    else if (ratePctWeek >= 0.5) intensity = "ambitioniert";
+
+    return {
+      rate,
+      kcal,
+      delta: Math.round(delta),
+      weeks: Math.round(weeks),
+      intensity,
+      clamped,
+      isLoss,
+      ratePctWeek,
+    };
+  }, [
+    latest?.weight_kg,
+    profile?.goal_weight_kg,
+    profile?.goal_target_date,
+    profile?.height_cm,
+    profile?.birthdate,
+    profile?.gender,
+    profile?.activity_level,
+  ]);
+
   if (!uid) return null;
 
   return (
@@ -308,6 +379,40 @@ function MeasurementsContent() {
             </select>
           </Field>
         </div>
+        {goalHint && (
+          <div
+            className={`mt-4 rounded-lg border p-3 text-sm ${
+              goalHint.intensity === "aggressiv"
+                ? "border-red-500/40 bg-red-500/10 text-red-200"
+                : goalHint.intensity === "ambitioniert"
+                ? "border-amber-500/40 bg-amber-500/10 text-amber-200"
+                : "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
+            }`}
+          >
+            <p className="font-semibold">
+              Geschätztes Kalorienziel: ~{goalHint.kcal} kcal/Tag
+              {" · "}
+              {goalHint.isLoss ? "Abnahme" : "Aufbau"} ca. {Math.abs(goalHint.rate).toFixed(2)} kg/Woche
+              {" ("}{goalHint.ratePctWeek.toFixed(2)}% KG{")"}
+              {" · "}Intensität: {goalHint.intensity}
+            </p>
+            {goalHint.intensity === "aggressiv" && (
+              <p className="mt-1 text-xs opacity-90">
+                ⚠️ Bei diesem Zeitraum liegst du im aggressiven Bereich (~{goalHint.delta} kcal/Tag {goalHint.isLoss ? "Defizit" : "Überschuss"}).
+                Verlängere das Zieldatum, wenn du nicht so hart in den Cut willst – das macht die Diät leichter durchhaltbar.
+              </p>
+            )}
+            {goalHint.clamped && (
+              <p className="mt-1 text-xs opacity-90">
+                Hinweis: Dein Zeitraum wäre rechnerisch noch härter – wir haben das Defizit/Überschuss auf ein sicheres Maximum begrenzt.
+                Für ein realistisches Ergebnis bitte das Datum nach hinten verschieben.
+              </p>
+            )}
+            <p className="mt-1 text-xs opacity-80">
+              Zeitraum: ca. {goalHint.weeks} Wochen · Tagesdelta: {goalHint.delta > 0 ? "+" : ""}{goalHint.delta} kcal
+            </p>
+          </div>
+        )}
         <div className="mt-4">
           <Button
             type="submit"
