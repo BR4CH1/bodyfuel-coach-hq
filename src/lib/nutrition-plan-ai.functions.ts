@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { daysUntilNextShopping } from "./shopping-cycle";
 
 type GeneratedMeal = {
   slot: "breakfast" | "lunch" | "dinner" | "snack";
@@ -118,7 +119,10 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
       p.budget_band === "50_75" ? "Mittleres Budget." :
       p.budget_band === ">100" ? "Großzügiges Budget." : "";
 
-    const prompt = `Erstelle einen 7-Tage-Ernährungsplan mit 4 Mahlzeiten pro Tag (Frühstück, Mittag, Abend, Snack).
+    // Plan length = days until the customer's next shopping day (1–7).
+    const planDays = daysUntilNextShopping(p.shopping_days);
+
+    const prompt = `Erstelle einen ${planDays}-Tage-Ernährungsplan mit 4 Mahlzeiten pro Tag (Frühstück, Mittag, Abend, Snack). Der Plan soll genau bis zum nächsten Einkaufstag reichen.
 
 TAGESZIEL (jeder Tag soll diese Werte ±5 % treffen):
 - kcal: ${kcal}
@@ -140,7 +144,7 @@ ${prepHint} ${budgetHint}
 
 Antworte AUSSCHLIESSLICH mit gültigem JSON:
 {"days":[{"name":"Tag 1","meals":[{"slot":"breakfast","name":"…","description":"Zutaten + Mengen","kcal":500,"protein_g":35,"carbs_g":55,"fat_g":15}]}]}
-Genau 7 Tage, je 4 Mahlzeiten. Tagesnamen "Tag 1"…"Tag 7" oder Wochentage. Tagessummen müssen die Ziele treffen.`;
+Genau ${planDays} Tage, je 4 Mahlzeiten. Tagesnamen "Tag 1"…"Tag ${planDays}" oder Wochentage. Tagessummen müssen die Ziele treffen.`;
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -165,7 +169,7 @@ Genau 7 Tage, je 4 Mahlzeiten. Tagesnamen "Tag 1"…"Tag 7" oder Wochentage. Tag
     } catch {
       throw new Error("KI-Antwort konnte nicht gelesen werden.");
     }
-    const days = (parsed.days ?? []).slice(0, 7);
+    const days = (parsed.days ?? []).slice(0, planDays);
     if (!days.length) throw new Error("Keine Tage generiert.");
 
     // Hard filter: drop any meal containing a forbidden substring

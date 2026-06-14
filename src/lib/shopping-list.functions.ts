@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { daysUntilNextShopping } from "./shopping-cycle";
 
 type ShoppingItem = {
   name: string;
@@ -14,6 +15,18 @@ export const generateShoppingList = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY fehlt");
+
+    // Determine plan window: explicit days param wins, otherwise derive from
+    // the user's selected shopping days.
+    let windowDays = data.days;
+    if (!windowDays) {
+      const { data: prof } = await supabase
+        .from("smart_nutrition_profile")
+        .select("shopping_days")
+        .eq("user_id", userId)
+        .maybeSingle();
+      windowDays = daysUntilNextShopping((prof as any)?.shopping_days);
+    }
 
     // Load active plan
     const { data: plan } = await supabase
@@ -31,8 +44,9 @@ export const generateShoppingList = createServerFn({ method: "POST" })
       .select("id, name, sort_order")
       .eq("plan_id", plan.id)
       .order("sort_order");
-    const dayIds = (days ?? []).slice(0, data.days ?? 7).map((d) => d.id);
+    const dayIds = (days ?? []).slice(0, windowDays).map((d) => d.id);
     if (!dayIds.length) throw new Error("Plan enthält keine Tage.");
+
 
     const { data: meals } = await supabase
       .from("nutrition_plan_meals")
@@ -46,7 +60,7 @@ export const generateShoppingList = createServerFn({ method: "POST" })
       })
       .join("\n");
 
-    const prompt = `Du bist Ernährungsassistent. Erstelle aus den folgenden Mahlzeiten EINE konsolidierte Einkaufsliste für ${data.days ?? 7} Tage. Fasse identische Zutaten zusammen und summiere Mengen sinnvoll. Gruppiere nach Kategorie (Obst & Gemüse, Fleisch & Fisch, Milchprodukte, Getreide & Beilagen, Vorrat & Gewürze, Sonstiges).
+    const prompt = `Du bist Ernährungsassistent. Erstelle aus den folgenden Mahlzeiten EINE konsolidierte Einkaufsliste für ${windowDays} Tage. Fasse identische Zutaten zusammen und summiere Mengen sinnvoll. Gruppiere nach Kategorie (Obst & Gemüse, Fleisch & Fisch, Milchprodukte, Getreide & Beilagen, Vorrat & Gewürze, Sonstiges).
 
 MAHLZEITEN:
 ${mealsText}
@@ -70,5 +84,5 @@ Antworte ausschließlich mit gültigem JSON in dieser Form:
     const raw = json?.choices?.[0]?.message?.content ?? "{}";
     let parsed: { items?: ShoppingItem[] } = {};
     try { parsed = typeof raw === "string" ? JSON.parse(raw) : raw; } catch { parsed = {}; }
-    return { items: parsed.items ?? [] };
+    return { items: parsed.items ?? [], days: windowDays };
   });

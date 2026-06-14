@@ -21,19 +21,23 @@ type Item = { name: string; quantity: string; category: string };
 
 function ShoppingListPage() {
   const fn = useServerFn(generateShoppingList);
-  const [days, setDays] = useState(7);
+  // 0 means "auto" → server derives from smart-profile shopping_days
+  const [days, setDays] = useState<number>(0);
   const [items, setItems] = useState<Item[]>([]);
+  const [usedDays, setUsedDays] = useState<number | null>(null);
   const [checked, setChecked] = useState<Record<string, boolean>>({});
 
   const gen = useMutation({
-    mutationFn: () => fn({ data: { days } }),
-    onSuccess: (d) => {
+    mutationFn: () => fn({ data: days ? { days } : {} }),
+    onSuccess: (d: any) => {
       setItems(d.items as Item[]);
+      setUsedDays(d.days ?? null);
       setChecked({});
       if (!d.items?.length) toast.info("Keine Zutaten gefunden.");
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   const grouped = items.reduce<Record<string, Item[]>>((acc, it) => {
     const c = it.category || "Sonstiges";
@@ -53,7 +57,8 @@ function ShoppingListPage() {
       <div>
         <h1 className="font-display text-2xl font-bold">Einkaufsliste</h1>
         <p className="text-sm text-muted-foreground">
-          Automatisch aus deinem aktiven Ernährungsplan erstellt.
+          Reicht automatisch bis zu deinem nächsten Einkaufstag.
+          {usedDays != null && ` (${usedDays} Tage)`}
         </p>
       </div>
 
@@ -67,6 +72,7 @@ function ShoppingListPage() {
             onChange={(e) => setDays(Number(e.target.value))}
             className="rounded-md border border-input bg-background px-3 py-2 text-sm"
           >
+            <option value={0}>Bis zum nächsten Einkauf</option>
             <option value={3}>3 Tage</option>
             <option value={7}>7 Tage</option>
             <option value={14}>14 Tage</option>

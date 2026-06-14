@@ -60,7 +60,7 @@ function Wizard() {
   const [allergies, setAllergies] = useState<string[]>([]);
   const [extraAllergy, setExtraAllergy] = useState("");
   const [prep, setPrep] = useState<string>("");
-  const [shopDay, setShopDay] = useState<string>("");
+  const [shopDays, setShopDays] = useState<string[]>([]);
   const [leadDays, setLeadDays] = useState(1);
   const [budget, setBudget] = useState<string>("");
 
@@ -73,7 +73,7 @@ function Wizard() {
       setAllergies(existing.allergies ?? []);
       setExtraAllergy(existing.extra_allergies ?? "");
       setPrep(existing.meal_prep_style ?? "");
-      setShopDay(existing.shopping_day ?? "");
+      setShopDays(existing.shopping_days?.length ? existing.shopping_days : (existing.shopping_day ? [existing.shopping_day] : []));
       setLeadDays(existing.shopping_lead_days ?? 1);
       setBudget(existing.budget_band ?? "");
     }
@@ -90,7 +90,8 @@ function Wizard() {
           extra_nogos: extraNogo || null,
           extra_allergies: extraAllergy || null,
           meal_prep_style: prep as any || null,
-          shopping_day: shopDay as any || null,
+          shopping_day: (shopDays[0] as any) || null,
+          shopping_days: shopDays,
           shopping_lead_days: leadDays,
           budget_band: budget as any || null,
           complete,
@@ -171,12 +172,19 @@ function Wizard() {
           </StepBlock>
         )}
         {step === 4 && (
-          <StepBlock title="Wann kaufst du normalerweise ein?" sub="Plan & Einkaufsliste werden darauf abgestimmt">
-            <RadioList
-              options={SHOPPING_DAYS.map((d) => ({ v: d.v, l: d.l }))}
-              value={shopDay}
-              onChange={setShopDay}
+          <StepBlock title="Wann kaufst du normalerweise ein?" sub="Mehrfachauswahl möglich — Plan & Einkaufsliste passen sich an">
+            <ChipGrid
+              options={SHOPPING_DAYS.map((d) => d.l)}
+              value={shopDays.map((v) => SHOPPING_DAYS.find((d) => d.v === v)?.l ?? v)}
+              onToggle={(label) => {
+                const opt = SHOPPING_DAYS.find((d) => d.l === label);
+                if (!opt) return;
+                toggle(shopDays, setShopDays, opt.v);
+              }}
             />
+            <p className="mt-3 text-xs text-muted-foreground">
+              Wir bauen deinen Plan automatisch so, dass er bis zum nächsten Einkaufstag reicht.
+            </p>
             <div className="mt-4 flex items-center gap-3">
               <span className="text-sm">Einkaufsliste</span>
               <select

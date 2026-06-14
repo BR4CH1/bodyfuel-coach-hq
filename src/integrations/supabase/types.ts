@@ -1085,6 +1085,7 @@ export type Database = {
           meal_prep_style: string | null
           nogo_foods: string[]
           shopping_day: string | null
+          shopping_days: string[]
           shopping_lead_days: number
           updated_at: string
           user_id: string
@@ -1102,6 +1103,7 @@ export type Database = {
           meal_prep_style?: string | null
           nogo_foods?: string[]
           shopping_day?: string | null
+          shopping_days?: string[]
           shopping_lead_days?: number
           updated_at?: string
           user_id: string
@@ -1119,6 +1121,7 @@ export type Database = {
           meal_prep_style?: string | null
           nogo_foods?: string[]
           shopping_day?: string | null
+          shopping_days?: string[]
           shopping_lead_days?: number
           updated_at?: string
           user_id?: string
