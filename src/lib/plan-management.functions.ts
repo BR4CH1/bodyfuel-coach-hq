@@ -133,7 +133,19 @@ export const getCustomerPlanOverview = createServerFn({ method: "GET" })
     return {
       active: activeFull,
       next: nextFull,
-      archive: archive.map((p) => ({ ...p, days_count: 0, meals_count: 0 })),
+      archive: await Promise.all(
+        archive.map(async (p) => ({
+          ...p,
+          days_count: 0,
+          meals_count: 0,
+          compliance: await computeCompliance(
+            supabase,
+            data.user_id,
+            p.activated_at,
+            p.archived_at,
+          ),
+        })),
+      ),
       shopping_days: (prof as any)?.shopping_days ?? [],
       auto_publish: (prof as any)?.auto_publish ?? false,
       days_until_next_shopping: daysUntilNextShopping((prof as any)?.shopping_days),
