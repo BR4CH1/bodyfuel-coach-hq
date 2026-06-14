@@ -190,14 +190,15 @@ export function PlanManagementCard({ userId }: { userId: string }) {
           </summary>
           <ul className="mt-3 divide-y divide-border text-sm">
             {data.archive.map((p: any) => (
-              <li key={p.id} className="flex items-center justify-between py-2">
+              <li key={p.id} className="flex items-center justify-between gap-2 py-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
                   <span className="truncate">{p.title}</span>
                 </div>
-                <span className="text-xs text-muted-foreground shrink-0">
-                  {fmtDate(p.created_at)}
-                </span>
+                <div className="flex items-center gap-3 shrink-0">
+                  {p.compliance && <ComplianceDot c={p.compliance} />}
+                  <span className="text-xs text-muted-foreground">{fmtDate(p.created_at)}</span>
+                </div>
               </li>
             ))}
           </ul>
