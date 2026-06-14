@@ -118,10 +118,17 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
       : null;
     const activityLevel: string | null = cp.activity_level ?? null;
     const coachingGoal: string | null = cp.coaching_goal ?? null;
+    const trainingGoal: string | null = cp.training_goal ?? null;
 
-    // Goal direction: cut / bulk / maintain anhand Zielgewicht vs aktuelles Gewicht
+    // Goal direction: 1) explizites training_goal, 2) Gewichtsdifferenz, 3) coaching_goal Text
     let goalDirection: "cut" | "bulk" | "maintain" = "maintain";
-    if (currentWeight && goalWeight) {
+    if (trainingGoal === "weight_loss" || trainingGoal === "cut") {
+      goalDirection = "cut";
+    } else if (trainingGoal === "muscle_gain" || trainingGoal === "bulk" || trainingGoal === "strength") {
+      goalDirection = "bulk";
+    } else if (trainingGoal === "maintain" || trainingGoal === "recomp" || trainingGoal === "health" || trainingGoal === "performance") {
+      goalDirection = "maintain";
+    } else if (currentWeight && goalWeight) {
       const diff = goalWeight - currentWeight;
       if (diff <= -1) goalDirection = "cut";
       else if (diff >= 1) goalDirection = "bulk";
@@ -129,6 +136,13 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
       const g = coachingGoal.toLowerCase();
       if (/(abnehm|fett|cut|diät|diet|lose)/.test(g)) goalDirection = "cut";
       else if (/(aufbau|muskel|bulk|gain|zunehm)/.test(g)) goalDirection = "bulk";
+    }
+
+    // Wenn Gewichts-Differenz vorhanden, Richtung präzisieren (überschreibt nur 'maintain')
+    if (goalDirection === "maintain" && currentWeight && goalWeight) {
+      const diff = goalWeight - currentWeight;
+      if (diff <= -2) goalDirection = "cut";
+      else if (diff >= 2) goalDirection = "bulk";
     }
 
     // Fallback-Targets via Mifflin-St Jeor wenn keine nutrition_targets gepflegt
