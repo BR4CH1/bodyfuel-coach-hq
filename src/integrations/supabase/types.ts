@@ -545,6 +545,108 @@ export type Database = {
         }
         Relationships: []
       }
+      meal_favorites: {
+        Row: {
+          created_at: string
+          id: string
+          meal_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          meal_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          meal_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_favorites_meal_id_fkey"
+            columns: ["meal_id"]
+            isOneToOne: false
+            referencedRelation: "nutrition_plan_meals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meal_interactions: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          meal_id: string
+          meta: Json | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: string
+          meal_id: string
+          meta?: Json | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          meal_id?: string
+          meta?: Json | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_interactions_meal_id_fkey"
+            columns: ["meal_id"]
+            isOneToOne: false
+            referencedRelation: "nutrition_plan_meals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meal_ratings: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          meal_id: string
+          stars: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          meal_id: string
+          stars: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          meal_id?: string
+          stars?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_ratings_meal_id_fkey"
+            columns: ["meal_id"]
+            isOneToOne: false
+            referencedRelation: "nutrition_plan_meals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       nutrition_plan_days: {
         Row: {
           created_at: string
