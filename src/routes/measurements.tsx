@@ -40,6 +40,7 @@ type ProfileExt = {
   birthdate: string | null;
   gender: string | null;
   goal_weight_kg: number | null;
+  goal_target_date: string | null;
   activity_level: string | null;
   training_goal: string | null;
 };
@@ -78,7 +79,7 @@ function MeasurementsContent() {
     const [p, ms] = await Promise.all([
       supabase
         .from("profiles")
-        .select("display_name, height_cm, birthdate, gender, goal_weight_kg, activity_level, training_goal")
+        .select("display_name, height_cm, birthdate, gender, goal_weight_kg, goal_target_date, activity_level, training_goal")
         .eq("id", uid)
         .maybeSingle(),
       supabase
@@ -108,6 +109,7 @@ function MeasurementsContent() {
         birthdate: profile.birthdate,
         gender: profile.gender,
         goal_weight_kg: profile.goal_weight_kg,
+        goal_target_date: profile.goal_target_date,
         activity_level: profile.activity_level,
         training_goal: profile.training_goal,
       })
@@ -250,6 +252,18 @@ function MeasurementsContent() {
                 setProfile((p) => ({
                   ...(p ?? emptyProfile()),
                   goal_weight_kg: num(e.target.value),
+                }))
+              }
+            />
+          </Field>
+          <Field label="Wunschgewicht erreichen bis">
+            <Input
+              type="date"
+              value={profile?.goal_target_date ?? ""}
+              onChange={(e) =>
+                setProfile((p) => ({
+                  ...(p ?? emptyProfile()),
+                  goal_target_date: e.target.value || null,
                 }))
               }
             />
@@ -496,6 +510,7 @@ function emptyProfile(): ProfileExt {
     birthdate: null,
     gender: null,
     goal_weight_kg: null,
+    goal_target_date: null,
     activity_level: null,
     training_goal: null,
   };

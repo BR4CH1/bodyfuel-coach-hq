@@ -1,4 +1,4 @@
-import { labelForTrainingGoal, TRAINING_GOAL_DESCRIPTIONS } from "@/lib/training-goals";
+import { labelForTrainingGoal, TRAINING_GOAL_DESCRIPTIONS, weeklyRate } from "@/lib/training-goals";
 
 type Targets = {
   kcal?: number | null;
@@ -17,10 +17,14 @@ export function CoachTrainingGoalCard({
   trainingGoal,
   targets,
   measurements,
+  goalWeight,
+  goalTargetDate,
 }: {
   trainingGoal?: string | null;
   targets: Targets;
   measurements: Measurement[];
+  goalWeight?: number | null;
+  goalTargetDate?: string | null;
 }) {
   const weights = (measurements ?? [])
     .filter((m) => m.weight_kg != null)
@@ -52,6 +56,14 @@ export function CoachTrainingGoalCard({
       : trainingGoal === "lean_bulk"
         ? "+100 bis +200 kcal"
         : "±100 kcal nach Bedarf";
+
+  const rate = weeklyRate(latest?.weight_kg ?? null, goalWeight ?? null, goalTargetDate ?? null);
+  const intensityLabel: Record<string, string> = {
+    moderate: "moderat",
+    ambitious: "ambitioniert",
+    aggressive: "aggressiv",
+    capped: "auf Sicherheitslimit begrenzt",
+  };
 
   const t = targets ?? {};
   const has = t.kcal != null;
@@ -115,6 +127,27 @@ export function CoachTrainingGoalCard({
             c={t.carbs_g_rest ?? t.carbs_g}
             f={t.fat_g_rest ?? t.fat_g}
           />
+        </div>
+      )}
+
+      {(goalWeight != null || goalTargetDate) && (
+        <div className="rounded-lg border border-border bg-background p-3 text-sm">
+          <p className="font-semibold">Zielplan</p>
+          <p className="text-muted-foreground">
+            Wunschgewicht: {goalWeight != null ? `${goalWeight} kg` : "—"}
+            {goalTargetDate ? ` bis ${new Date(goalTargetDate).toLocaleDateString("de-DE")}` : ""}
+          </p>
+          {rate ? (
+            <p className="mt-1 text-muted-foreground">
+              Erforderlich: {rate.kgPerWeek > 0 ? "+" : ""}
+              {rate.kgPerWeek} kg/Woche ({rate.kcalPerDay > 0 ? "+" : ""}
+              {rate.kcalPerDay} kcal/Tag, {intensityLabel[rate.intensity]})
+            </p>
+          ) : goalTargetDate ? null : (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Kein Zieldatum gesetzt – Standardberechnung nach Trainingsziel aktiv.
+            </p>
+          )}
         </div>
       )}
 

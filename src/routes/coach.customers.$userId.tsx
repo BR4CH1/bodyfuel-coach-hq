@@ -328,6 +328,7 @@ function CustomerDetail() {
             <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
               {row("Trainingsziel", labelForTrainingGoal(p.training_goal))}
               {row("Wunschgewicht", p.goal_weight_kg ? `${p.goal_weight_kg} kg` : null)}
+              {row("Wunschgewicht bis", (p as any).goal_target_date ? new Date((p as any).goal_target_date).toLocaleDateString("de-DE") : null)}
               {row("Aktivitätslevel", activity[p.activity_level] ?? p.activity_level)}
               {row("Größe", p.height_cm ? `${p.height_cm} cm` : null)}
               {row("Geschlecht", gender[p.gender] ?? p.gender)}
@@ -341,6 +342,8 @@ function CustomerDetail() {
         trainingGoal={(data.profile as any)?.training_goal ?? null}
         targets={(data as any).targets ?? null}
         measurements={(data.measurements ?? []) as any}
+        goalWeight={(data.profile as any)?.goal_weight_kg ?? null}
+        goalTargetDate={(data.profile as any)?.goal_target_date ?? null}
       />
 
       <WeightProgressChart
