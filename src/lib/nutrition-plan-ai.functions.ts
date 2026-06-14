@@ -224,13 +224,29 @@ Genau ${planDays} Tage, je 4 Mahlzeiten. ${hasRest ? `Jeder Tag MUSS ein Feld "t
     const forbidden = [...allergyList, ...nogoList]
       .map((s) => s.toLowerCase().trim())
       .filter(Boolean);
-    const cleaned = days.map((d) => ({
-      name: d.name || "Tag",
-      meals: (d.meals ?? []).filter((m) => {
-        const hay = `${m.name} ${m.description ?? ""}`.toLowerCase();
-        return !forbidden.some((f) => hay.includes(f));
-      }),
-    }));
+    const cleaned = days.map((d, i) => {
+      const inferredType: "training" | "rest" =
+        d.type === "rest" || /rest|ruh|pause|off|frei/i.test(d.name ?? "")
+          ? "rest"
+          : d.type === "training" || /training/i.test(d.name ?? "")
+            ? "training"
+            : hasRest && i >= trainingCount
+              ? "rest"
+              : "training";
+      const baseName = (d.name ?? `Tag ${i + 1}`).trim();
+      const hasMarker = /trainingstag|restday|rest|ruh|pause|off|frei/i.test(baseName);
+      const name = hasRest && !hasMarker
+        ? `${baseName} — ${inferredType === "rest" ? "Restday" : "Trainingstag"}`
+        : baseName;
+      return {
+        name,
+        meals: (d.meals ?? []).filter((m) => {
+          const hay = `${m.name} ${m.description ?? ""}`.toLowerCase();
+          return !forbidden.some((f) => hay.includes(f));
+        }),
+      };
+    });
+
 
     // Archive any existing draft/approved/published plan so the unique
     // "one next plan per client" constraint stays satisfied.
