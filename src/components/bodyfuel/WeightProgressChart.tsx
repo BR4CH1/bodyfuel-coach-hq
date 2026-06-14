@@ -143,18 +143,18 @@ export function WeightProgressChart({
       <div className="h-56 w-full sm:h-64">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
-            <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="label" stroke="hsl(var(--muted-foreground))" fontSize={11} />
+            <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+            <XAxis dataKey="label" stroke="var(--muted-foreground)" fontSize={11} />
             <YAxis
-              stroke="hsl(var(--muted-foreground))"
+              stroke="var(--muted-foreground)"
               fontSize={11}
               domain={yDomain}
               tickFormatter={(v: number) => `${v}`}
             />
             <Tooltip
               contentStyle={{
-                background: "hsl(var(--card))",
-                border: "1px solid hsl(var(--border))",
+                background: "var(--card)",
+                border: "1px solid var(--border)",
                 borderRadius: 8,
                 fontSize: 12,
               }}
@@ -163,12 +163,12 @@ export function WeightProgressChart({
             {goalWeight != null && (
               <ReferenceLine
                 y={goalWeight}
-                stroke="hsl(var(--primary))"
+                stroke="var(--primary)"
                 strokeDasharray="4 4"
                 label={{
                   value: `Ziel ${goalWeight} kg`,
                   position: "insideTopRight",
-                  fill: "hsl(var(--primary))",
+                  fill: "var(--primary)",
                   fontSize: 10,
                 }}
               />
@@ -176,9 +176,9 @@ export function WeightProgressChart({
             <Line
               type="monotone"
               dataKey="Gewicht"
-              stroke="hsl(var(--primary))"
+              stroke="var(--primary)"
               strokeWidth={2.5}
-              dot={{ r: 3, fill: "hsl(var(--primary))" }}
+              dot={{ r: 3, fill: "var(--primary)" }}
               activeDot={{ r: 5 }}
             />
           </LineChart>
