@@ -285,31 +285,123 @@ export const setDayType = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-/** Extract daily kcal/macros from the user's active nutrition plan PDF via Lovable AI */
+/** Aggregate per-day kcal/macros from plan meals in the DB. Splits by day name (Restday vs Trainingstag). */
+export async function computeTargetsFromPlanDB(
+  supabase: any,
+  planId: string,
+): Promise<{
+  kcal: number; protein_g: number; carbs_g: number; fat_g: number;
+  kcal_rest: number | null; protein_g_rest: number | null;
+  carbs_g_rest: number | null; fat_g_rest: number | null;
+} | null> {
+  const { data: days } = await supabase
+    .from("nutrition_plan_days")
+    .select("id, name")
+    .eq("plan_id", planId);
+  const dayRows = (days ?? []) as Array<{ id: string; name: string }>;
+  if (!dayRows.length) return null;
+
+  const { data: meals } = await supabase
+    .from("nutrition_plan_meals")
+    .select("day_id, kcal, protein_g, carbs_g, fat_g")
+    .in("day_id", dayRows.map((d) => d.id));
+  const mealRows = (meals ?? []) as any[];
+  if (!mealRows.length) return null;
+
+  // sum per day
+  const perDay = new Map<string, { kcal: number; p: number; c: number; f: number }>();
+  for (const m of mealRows) {
+    const cur = perDay.get(m.day_id) ?? { kcal: 0, p: 0, c: 0, f: 0 };
+    cur.kcal += Number(m.kcal) || 0;
+    cur.p += Number(m.protein_g) || 0;
+    cur.c += Number(m.carbs_g) || 0;
+    cur.f += Number(m.fat_g) || 0;
+    perDay.set(m.day_id, cur);
+  }
+
+  const train: { kcal: number; p: number; c: number; f: number }[] = [];
+  const rest: { kcal: number; p: number; c: number; f: number }[] = [];
+  for (const d of dayRows) {
+    const totals = perDay.get(d.id);
+    if (!totals || totals.kcal <= 0) continue;
+    const isRest = /rest|regen|off|frei/i.test(d.name);
+    (isRest ? rest : train).push(totals);
+  }
+
+  const avg = (arr: typeof train) => {
+    if (!arr.length) return null;
+    const n = arr.length;
+    return {
+      kcal: Math.round(arr.reduce((s, x) => s + x.kcal, 0) / n),
+      protein_g: Math.round(arr.reduce((s, x) => s + x.p, 0) / n),
+      carbs_g: Math.round(arr.reduce((s, x) => s + x.c, 0) / n),
+      fat_g: Math.round(arr.reduce((s, x) => s + x.f, 0) / n),
+    };
+  };
+
+  // If no Trainingstag rows exist, treat all days as training
+  const base = train.length ? avg(train) : avg([...train, ...rest]);
+  const restAvg = train.length ? avg(rest) : null;
+  if (!base) return null;
+
+  return {
+    ...base,
+    kcal_rest: restAvg?.kcal ?? null,
+    protein_g_rest: restAvg?.protein_g ?? null,
+    carbs_g_rest: restAvg?.carbs_g ?? null,
+    fat_g_rest: restAvg?.fat_g ?? null,
+  };
+}
+
+/** Extract daily kcal/macros from the user's active nutrition plan (DB first, PDF fallback) */
 export const extractTargetsFromPlan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { user_id: string }) => d)
   .handler(async ({ data, context }) => {
     await assertCoach(context.supabase, context.userId);
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY fehlt");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: plan, error: pErr } = await supabaseAdmin
+    const { data: plan } = await supabaseAdmin
       .from("nutrition_plans")
-      .select("file_path")
+      .select("id, file_path, source, kcal, protein_g, carbs_g, fat_g")
       .eq("client_id", data.user_id)
       .eq("plan_type", "nutrition")
-      .eq("is_active", true)
+      .eq("status", "active")
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    if (pErr) throw new Error(pErr.message);
     if (!plan) throw new Error("Kein aktiver Ernährungsplan vorhanden");
+
+    // 1) DB aggregation (works for Smart-Plans and any plan with meals)
+    const dbTargets = await computeTargetsFromPlanDB(supabaseAdmin, (plan as any).id);
+    if (dbTargets && dbTargets.kcal > 0) {
+      return { ...dbTargets, water_glasses: null as number | null };
+    }
+
+    // 2) Plan row totals (Smart-Plan often stores aggregate macros directly)
+    const pk = Number((plan as any).kcal) || 0;
+    if (pk > 0) {
+      return {
+        kcal: pk,
+        protein_g: Math.round(Number((plan as any).protein_g) || 0),
+        carbs_g: Math.round(Number((plan as any).carbs_g) || 0),
+        fat_g: Math.round(Number((plan as any).fat_g) || 0),
+        kcal_rest: null,
+        protein_g_rest: null,
+        carbs_g_rest: null,
+        fat_g_rest: null,
+        water_glasses: null as number | null,
+      };
+    }
+
+    // 3) PDF fallback
+    const apiKey = process.env.LOVABLE_API_KEY;
+    if (!apiKey) throw new Error("Keine Werte im Plan und kein LOVABLE_API_KEY für PDF-Fallback");
+    if (!(plan as any).file_path) throw new Error("Keine Werte im Plan gefunden. Bitte manuell eintragen.");
 
     const { data: file, error: dlErr } = await supabaseAdmin.storage
       .from("nutrition-plans")
-      .download(plan.file_path);
+      .download((plan as any).file_path);
     if (dlErr || !file) throw new Error(dlErr?.message || "Plan konnte nicht geladen werden");
 
     const bytes = new Uint8Array(await file.arrayBuffer());
@@ -328,11 +420,6 @@ Wenn der Plan BEIDE Varianten enthält, gib BEIDE Sätze zurück. Nutze bevorzug
 WERTBEREICHE:
 Bei Bereichen (z.B. "3200–3400 kcal" oder "255–265 g") nimm den MITTELWERT und runde auf ganze Zahlen (3300, 260). Ignoriere "~" / "ca.".
 
-Felder:
-- kcal, protein_g, carbs_g, fat_g: TRAININGSTAG (oder Standardtag).
-- kcal_rest, protein_g_rest, carbs_g_rest, fat_g_rest: RESTDAY, sonst null.
-- water_l: Wasser in Litern pro Tag, oder null.
-
 Antworte ausschließlich mit gültigem JSON:
 { "kcal": <int>, "protein_g": <int>, "carbs_g": <int>, "fat_g": <int>,
   "kcal_rest": <int|null>, "protein_g_rest": <int|null>, "carbs_g_rest": <int|null>, "fat_g_rest": <int|null>,
@@ -344,21 +431,10 @@ Antworte ausschließlich mit gültigem JSON:
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         response_format: { type: "json_object" },
-        messages: [
-          {
-            role: "user",
-            content: [
-              { type: "text", text: prompt },
-              {
-                type: "file",
-                file: {
-                  filename: "plan.pdf",
-                  file_data: `data:application/pdf;base64,${b64}`,
-                },
-              },
-            ],
-          },
-        ],
+        messages: [{ role: "user", content: [
+          { type: "text", text: prompt },
+          { type: "file", file: { filename: "plan.pdf", file_data: `data:application/pdf;base64,${b64}` } },
+        ] }],
       }),
     });
     if (!aiRes.ok) {
@@ -368,11 +444,8 @@ Antworte ausschließlich mit gültigem JSON:
     const aiJson = await aiRes.json();
     const raw = aiJson?.choices?.[0]?.message?.content ?? "";
     let parsed: any;
-    try {
-      parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
-    } catch {
-      throw new Error("KI-Antwort konnte nicht gelesen werden");
-    }
+    try { parsed = typeof raw === "string" ? JSON.parse(raw) : raw; }
+    catch { throw new Error("KI-Antwort konnte nicht gelesen werden"); }
 
     const nz = (v: any) => {
       const n = Number(v);
@@ -382,10 +455,6 @@ Antworte ausschließlich mit gültigem JSON:
     const protein_g = Math.max(0, Math.round(Number(parsed.protein_g) || 0));
     const carbs_g = Math.max(0, Math.round(Number(parsed.carbs_g) || 0));
     const fat_g = Math.max(0, Math.round(Number(parsed.fat_g) || 0));
-    const kcal_rest = nz(parsed.kcal_rest);
-    const protein_g_rest = nz(parsed.protein_g_rest);
-    const carbs_g_rest = nz(parsed.carbs_g_rest);
-    const fat_g_rest = nz(parsed.fat_g_rest);
     const water_l = Number(parsed.water_l);
     const water_glasses = isFinite(water_l) && water_l > 0
       ? Math.max(4, Math.round((water_l * 1000) / 250))
@@ -396,7 +465,11 @@ Antworte ausschließlich mit gültigem JSON:
     }
     return {
       kcal, protein_g, carbs_g, fat_g,
-      kcal_rest, protein_g_rest, carbs_g_rest, fat_g_rest,
+      kcal_rest: nz(parsed.kcal_rest),
+      protein_g_rest: nz(parsed.protein_g_rest),
+      carbs_g_rest: nz(parsed.carbs_g_rest),
+      fat_g_rest: nz(parsed.fat_g_rest),
       water_glasses,
     };
   });
+
