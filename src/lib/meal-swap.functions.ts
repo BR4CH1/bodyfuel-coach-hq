@@ -40,7 +40,12 @@ export const suggestMealSwaps = createServerFn({ method: "POST" })
     }
 
     // Build personalization context
-    const [{ data: ratings }, { data: favs }, { data: swapped }] = await Promise.all([
+    const [
+      { data: ratings },
+      { data: favs },
+      { data: swapped },
+      { data: profile },
+    ] = await Promise.all([
       supabase
         .from("meal_ratings")
         .select("stars, meal:nutrition_plan_meals!inner(name)")
@@ -58,6 +63,11 @@ export const suggestMealSwaps = createServerFn({ method: "POST" })
         .eq("user_id", userId)
         .eq("kind", "swapped")
         .limit(20),
+      supabase
+        .from("smart_nutrition_profile")
+        .select("favorite_foods, nogo_foods, allergies, extra_favorites, extra_nogos, extra_allergies, meal_prep_style, budget_band")
+        .eq("user_id", userId)
+        .maybeSingle(),
     ]);
 
     const liked = (ratings ?? [])
@@ -72,7 +82,29 @@ export const suggestMealSwaps = createServerFn({ method: "POST" })
       .slice(0, 10);
     const favoriteNames = (favs ?? []).map((f: any) => f.meal?.name).filter(Boolean);
     const swappedNames = (swapped ?? []).map((s: any) => s.meal?.name).filter(Boolean);
-    const userNotes = "";
+
+    const p: any = profile ?? {};
+    const allergyList = [
+      ...(p.allergies ?? []),
+      ...((p.extra_allergies ?? "").split(",").map((s: string) => s.trim()).filter(Boolean)),
+    ];
+    const nogoList = [
+      ...(p.nogo_foods ?? []),
+      ...((p.extra_nogos ?? "").split(",").map((s: string) => s.trim()).filter(Boolean)),
+    ];
+    const favFoods = [
+      ...(p.favorite_foods ?? []),
+      ...((p.extra_favorites ?? "").split(",").map((s: string) => s.trim()).filter(Boolean)),
+    ];
+    const prepHint =
+      p.meal_prep_style === "low_effort" ? "Sehr einfache, schnelle Rezepte (max 15 Min)." :
+      p.meal_prep_style === "meal_prep" ? "Meal-Prep-tauglich, gut vorbereitbar." :
+      p.meal_prep_style === "2_3_week" ? "Rezepte die für 2-3 Tage halten." :
+      p.meal_prep_style === "daily" ? "Frisch kochbar, alltagstauglich." : "";
+    const budgetHint =
+      p.budget_band === "<50" ? "Günstige Zutaten bevorzugen." :
+      p.budget_band === "50_75" ? "Mittleres Budget." :
+      p.budget_band === ">100" ? "Budget ist großzügig." : "";
 
     const prompt = `Du bist Ernährungsberater. Schlage 5 alternative Gerichte vor, die als 1:1-Tausch für die untenstehende Mahlzeit dienen.
 
@@ -85,12 +117,18 @@ HARTE REGEL — ABWEICHUNG MAX ±5%:
 - Kohlenhydrate: ${Math.round(meal.carbs_g * 0.95)}–${Math.round(meal.carbs_g * 1.05)} g
 - Fett: ${Math.round(meal.fat_g * 0.95)}–${Math.round(meal.fat_g * 1.05)} g
 
+🚨 ABSOLUTE AUSSCHLÜSSE (höchste Priorität, NIEMALS verwenden!):
+${allergyList.length ? "ALLERGIEN/UNVERTRÄGLICHKEITEN: " + allergyList.join(", ") : "(keine)"}
+${nogoList.length ? "NO-GO LEBENSMITTEL: " + nogoList.join(", ") : "(keine)"}
+
 KUNDEN-VORLIEBEN (berücksichtigen!):
-${favoriteNames.length ? "Favoriten: " + favoriteNames.join(", ") : ""}
+${favFoods.length ? "Lieblings-Lebensmittel (Profil): " + favFoods.join(", ") : ""}
+${favoriteNames.length ? "Favorisierte Rezepte: " + favoriteNames.join(", ") : ""}
 ${liked.length ? "Mag (4-5★): " + liked.join(", ") : ""}
 ${disliked.length ? "Mag NICHT (1-2★) — vermeiden: " + disliked.join(", ") : ""}
 ${swappedNames.length ? "Bereits abgelehnt — nicht erneut vorschlagen: " + swappedNames.join(", ") : ""}
-${userNotes ? "Hinweise/Unverträglichkeiten: " + userNotes : ""}
+${prepHint}
+${budgetHint}
 
 Antworte ausschließlich mit gültigem JSON in dieser Form:
 {"suggestions":[{"name":"Chicken Burger Bowl","description":"180g Hähnchen, 60g Reis, …","kcal":800,"protein_g":50,"carbs_g":90,"fat_g":25,"category":"Burger Bowl"}]}`;
