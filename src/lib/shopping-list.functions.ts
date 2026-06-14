@@ -72,6 +72,7 @@ export const generateShoppingList = createServerFn({ method: "POST" })
         .from("shopping_lists")
         .select("items, days, generated_at")
         .eq("plan_id", planId)
+        .eq("scope", data.scope === "combined" ? "partner_combined" : "individual")
         .maybeSingle();
       if (cached && (cached as any).items?.length) {
         return {
@@ -146,7 +147,7 @@ export const getMyShoppingLists = createServerFn({ method: "GET" })
     let listsByPlan: Record<string, any> = {};
     let combinedByPlan: Record<string, any> = {};
     if (ids.length) {
-      const { data: rows } = await supabase
+      const { data: rows } = await supabaseAdmin
         .from("shopping_lists")
         .select("plan_id, scope, items, days, generated_at, partner_user_id")
         .in("plan_id", ids);
