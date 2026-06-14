@@ -145,7 +145,11 @@ export function PlanContentView({ clientId, planType }: Props) {
   const [dayKind, setDayKind] = useState<"training" | "rest" | null>(null);
   const [recipeMeal, setRecipeMeal] = useState<Meal | null>(null);
   const [swapMeal, setSwapMeal] = useState<Meal | null>(null);
+  const [skipMeal, setSkipMeal] = useState<Meal | null>(null);
+  const [skipped, setSkipped] = useState<Record<string, string>>({}); // meal_id -> reason
   const logFn = useServerFn(logInteraction);
+  const getSkipsFn = useServerFn(getMySkipsForDate);
+  const removeSkipFn = useServerFn(removeMealSkip);
 
 
   const dayTable = planType === "nutrition" ? "nutrition_plan_days" : "training_days";
