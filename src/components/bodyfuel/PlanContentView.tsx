@@ -599,6 +599,14 @@ export function PlanContentView({ clientId, planType }: Props) {
           onSwapped={() => { reloadTracked(); }}
         />
       )}
+      {skipMeal && isSelf && (
+        <SkipReasonDialog
+          mealId={skipMeal.id}
+          mealName={itemDisplayName[skipMeal.id] ?? skipMeal.name}
+          onClose={() => setSkipMeal(null)}
+          onSkipped={() => { reloadSkips(); }}
+        />
+      )}
     </div>
   );
 }
