@@ -39,7 +39,9 @@ import { CustomerCheckinsCard } from "@/components/bodyfuel/CustomerCheckinsCard
 import { PlanManagementCard } from "@/components/bodyfuel/PlanManagementCard";
 import { PartnerLinkCard } from "@/components/bodyfuel/PartnerLinkCard";
 import { CoachTrainingGoalCard } from "@/components/bodyfuel/CoachTrainingGoalCard";
+import { WeightProgressChart } from "@/components/bodyfuel/WeightProgressChart";
 import { labelForTrainingGoal } from "@/lib/training-goals";
+
 
 
 
@@ -340,6 +342,14 @@ function CustomerDetail() {
         targets={(data as any).targets ?? null}
         measurements={(data.measurements ?? []) as any}
       />
+
+      <WeightProgressChart
+        measurements={(data.measurements ?? []) as any}
+        goalWeight={(data.profile as any)?.goal_weight_kg ?? null}
+        title="Gewichtsentwicklung"
+        emptyHint="Sobald der Kunde sein erstes Gewicht einträgt, erscheint hier sein Verlauf."
+      />
+
 
 
       <CoachTrialCard userId={userId} />
