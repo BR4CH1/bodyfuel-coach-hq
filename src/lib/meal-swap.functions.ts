@@ -138,6 +138,7 @@ ${favoriteNames.length ? "Favorisierte Rezepte: " + favoriteNames.join(", ") : "
 ${liked.length ? "Mag (4-5★): " + liked.join(", ") : ""}
 ${disliked.length ? "Mag NICHT (1-2★) — vermeiden: " + disliked.join(", ") : ""}
 ${swappedNames.length ? "Bereits abgelehnt — nicht erneut vorschlagen: " + swappedNames.join(", ") : ""}
+${skipReasons.length ? "Häufig übersprungen (Grund beachten): " + skipReasons.join("; ") : ""}
 ${prepHint}
 ${budgetHint}
 
