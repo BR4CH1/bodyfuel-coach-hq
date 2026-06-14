@@ -778,43 +778,70 @@ export type Database = {
       }
       nutrition_plans: {
         Row: {
+          activated_at: string | null
+          archived_at: string | null
+          carbs_g: number | null
           client_id: string
           created_at: string
+          fat_g: number | null
           file_name: string
           file_path: string
           generated_by: string | null
           id: string
           is_active: boolean
+          kcal: number | null
           plan_type: string
+          protein_g: number | null
           scheduled_activation_date: string | null
+          scheduled_end_date: string | null
+          scheduled_start_date: string | null
+          source: string
           status: string
           title: string
           uploaded_by: string | null
         }
         Insert: {
+          activated_at?: string | null
+          archived_at?: string | null
+          carbs_g?: number | null
           client_id: string
           created_at?: string
+          fat_g?: number | null
           file_name: string
           file_path: string
           generated_by?: string | null
           id?: string
           is_active?: boolean
+          kcal?: number | null
           plan_type?: string
+          protein_g?: number | null
           scheduled_activation_date?: string | null
+          scheduled_end_date?: string | null
+          scheduled_start_date?: string | null
+          source?: string
           status?: string
           title: string
           uploaded_by?: string | null
         }
         Update: {
+          activated_at?: string | null
+          archived_at?: string | null
+          carbs_g?: number | null
           client_id?: string
           created_at?: string
+          fat_g?: number | null
           file_name?: string
           file_path?: string
           generated_by?: string | null
           id?: string
           is_active?: boolean
+          kcal?: number | null
           plan_type?: string
+          protein_g?: number | null
           scheduled_activation_date?: string | null
+          scheduled_end_date?: string | null
+          scheduled_start_date?: string | null
+          source?: string
           status?: string
           title?: string
           uploaded_by?: string | null
