@@ -65,6 +65,8 @@ function Wizard() {
   const [shopDays, setShopDays] = useState<string[]>([]);
   const [leadDays, setLeadDays] = useState(1);
   const [budget, setBudget] = useState<string>("");
+  const [trainDays, setTrainDays] = useState<string[]>([]);
+
 
   useEffect(() => {
     if (existing) {
