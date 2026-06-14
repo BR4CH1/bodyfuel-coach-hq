@@ -276,9 +276,27 @@ RESTDAY-Ziel (für "type":"rest", ±5 % treffen):
 VORGEGEBENER TAGESPLAN (Reihenfolge ist verbindlich, ${trainingCount}× Training / ${restCount}× Rest):
 ${scheduleLines}`;
 
+    const goalLabel = goalDirection === "cut" ? "FETTABBAU (moderates Kaloriendefizit, hohes Protein)" :
+      goalDirection === "bulk" ? "MUSKELAUFBAU (leichter Kalorienüberschuss, hohes Protein, ausreichend Carbs)" :
+      "GEWICHT HALTEN / Recomp";
+
+    const goalBlock = `👤 INDIVIDUELLES KUNDENZIEL — Plan MUSS hierauf abgestimmt sein:
+- Ziel: ${goalLabel}${coachingGoal ? ` (Eigenangabe: "${coachingGoal}")` : ""}
+${currentWeight ? `- Aktuelles Gewicht: ${currentWeight} kg` : ""}
+${goalWeight ? `- Zielgewicht: ${goalWeight} kg${currentWeight ? ` (Differenz: ${(goalWeight - currentWeight).toFixed(1)} kg)` : ""}` : ""}
+${height ? `- Größe: ${height} cm` : ""}
+${ageYears ? `- Alter: ${ageYears} J.` : ""}
+${gender ? `- Geschlecht: ${gender}` : ""}
+${activityLevel ? `- Aktivitätslevel: ${activityLevel}` : ""}
+
+Die unten genannten Kalorien-/Makro-Ziele sind bereits auf dieses Ziel kalibriert. Wähle Lebensmittel & Portionsgrößen, die das Ziel optimal unterstützen (Sättigung bei Cut, energiedichte Carbs bei Bulk, ausgewogen bei Maintain).`;
+
     const prompt = `Erstelle einen ${planDays}-Tage-Ernährungsplan mit 4 Mahlzeiten pro Tag (Frühstück, Mittag, Abend, Snack). Der Plan soll genau bis zum nächsten Einkaufstag reichen.
 
+${goalBlock}
+
 ${targetsBlock}
+
 
 🚨 ABSOLUTE AUSSCHLÜSSE — niemals verwenden:
 ${allergyList.length ? "ALLERGIEN: " + allergyList.join(", ") : "(keine)"}
