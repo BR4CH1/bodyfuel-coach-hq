@@ -109,6 +109,7 @@ function MeasurementsContent() {
         birthdate: profile.birthdate,
         gender: profile.gender,
         goal_weight_kg: profile.goal_weight_kg,
+        goal_target_date: profile.goal_target_date,
         activity_level: profile.activity_level,
         training_goal: profile.training_goal,
       })
