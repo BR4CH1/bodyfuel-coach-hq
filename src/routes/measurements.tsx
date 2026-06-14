@@ -379,6 +379,40 @@ function MeasurementsContent() {
             </select>
           </Field>
         </div>
+        {goalHint && (
+          <div
+            className={`mt-4 rounded-lg border p-3 text-sm ${
+              goalHint.intensity === "aggressiv"
+                ? "border-red-500/40 bg-red-500/10 text-red-200"
+                : goalHint.intensity === "ambitioniert"
+                ? "border-amber-500/40 bg-amber-500/10 text-amber-200"
+                : "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
+            }`}
+          >
+            <p className="font-semibold">
+              Geschätztes Kalorienziel: ~{goalHint.kcal} kcal/Tag
+              {" · "}
+              {goalHint.isLoss ? "Abnahme" : "Aufbau"} ca. {Math.abs(goalHint.rate).toFixed(2)} kg/Woche
+              {" ("}{goalHint.ratePctWeek.toFixed(2)}% KG{")"}
+              {" · "}Intensität: {goalHint.intensity}
+            </p>
+            {goalHint.intensity === "aggressiv" && (
+              <p className="mt-1 text-xs opacity-90">
+                ⚠️ Bei diesem Zeitraum liegst du im aggressiven Bereich (~{goalHint.delta} kcal/Tag {goalHint.isLoss ? "Defizit" : "Überschuss"}).
+                Verlängere das Zieldatum, wenn du nicht so hart in den Cut willst – das macht die Diät leichter durchhaltbar.
+              </p>
+            )}
+            {goalHint.clamped && (
+              <p className="mt-1 text-xs opacity-90">
+                Hinweis: Dein Zeitraum wäre rechnerisch noch härter – wir haben das Defizit/Überschuss auf ein sicheres Maximum begrenzt.
+                Für ein realistisches Ergebnis bitte das Datum nach hinten verschieben.
+              </p>
+            )}
+            <p className="mt-1 text-xs opacity-80">
+              Zeitraum: ca. {goalHint.weeks} Wochen · Tagesdelta: {goalHint.delta > 0 ? "+" : ""}{goalHint.delta} kcal
+            </p>
+          </div>
+        )}
         <div className="mt-4">
           <Button
             type="submit"
