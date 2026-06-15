@@ -43,16 +43,39 @@ async function fetchTrends(clientId: string, win: WindowKey): Promise<ExerciseTr
     .in("day_id", dayList.map((d) => d.id));
   const exList = (exes as ExerciseRow[]) ?? [];
   if (!exList.length) return [];
+
+  // Include historic exercises across all of this client's training plans
+  // so trend analysis covers data from prior plans when names match.
+  const { data: histPlans } = await supabase
+    .from("nutrition_plans")
+    .select("id, training_days(id, training_exercises(id, name))")
+    .eq("client_id", clientId)
+    .eq("plan_type", "training");
+  const histExercises: { id: string; name: string }[] = [];
+  for (const p of (histPlans as any[]) ?? []) {
+    for (const d of p?.training_days ?? []) {
+      for (const e of d?.training_exercises ?? []) {
+        if (e?.id && e?.name) histExercises.push({ id: e.id, name: e.name });
+      }
+    }
+  }
+  const allIds = Array.from(new Set(histExercises.map((h) => h.id).concat(exList.map((e) => e.id))));
   const { data: logs } = await supabase
     .from("training_set_logs")
     .select("id, exercise_id, set_number, weight_kg, reps, performed_at")
-    .in("exercise_id", exList.map((e) => e.id))
+    .in("exercise_id", allIds)
     .eq("client_id", clientId);
   const logList = (logs as SetLog[]) ?? [];
 
   const dayMap = new Map(dayList.map((d) => [d.id, d]));
+  // For each current exercise, collect logs whose exercise_id matches OR
+  // whose historic exercise normalizes to the same name.
+  const histById = new Map(histExercises.map((h) => [h.id, normalizeExerciseName(h.name)]));
   return exList.map((e) => {
-    const exLogs = logList.filter((l) => l.exercise_id === e.id);
+    const targetName = normalizeExerciseName(e.name);
+    const exLogs = logList.filter(
+      (l) => l.exercise_id === e.id || histById.get(l.exercise_id) === targetName,
+    );
     const pts = filterByWindow(groupByDay(exLogs), win);
     return { exercise: e, day: dayMap.get(e.day_id) ?? null, trend: classifyTrend(pts) };
   });
