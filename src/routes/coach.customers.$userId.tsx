@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CoachTrainingSummary } from "@/components/bodyfuel/TrainingTrends";
+import { CoachStrengthCheckCard } from "@/components/bodyfuel/CoachStrengthCheckCard";
 import { NutritionTargetsEditor } from "@/components/bodyfuel/NutritionTargetsEditor";
 import { MacroTargetsCard } from "@/components/bodyfuel/MacroTargetsCard";
 import { TrainingBonusCard } from "@/components/bodyfuel/TrainingBonusCard";
