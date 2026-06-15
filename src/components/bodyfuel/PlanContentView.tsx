@@ -196,7 +196,7 @@ export function PlanContentView({ clientId, planType }: Props) {
     setLoading(true);
     const { data: planRow } = await supabase
       .from("nutrition_plans")
-      .select("id, client_id, title")
+      .select("id, client_id, title, weeks_count, scheduled_start_date")
       .eq("client_id", clientId)
       .eq("plan_type", planType)
       .eq("is_active", true)
@@ -211,7 +211,21 @@ export function PlanContentView({ clientId, planType }: Props) {
       .select("*")
       .eq("plan_id", planRow.id)
       .order("sort_order");
-    const dayList = (dayRows as Day[]) ?? [];
+    let dayList = (dayRows as Day[]) ?? [];
+    // For multi-week training plans, only expose the current week's days in the dropdown.
+    if (planType === "training") {
+      const wc = (planRow as any).weeks_count ?? 1;
+      const start = (planRow as any).scheduled_start_date
+        ? new Date((planRow as any).scheduled_start_date)
+        : null;
+      let activeWeek = 1;
+      if (start && wc > 1) {
+        const diffDays = Math.floor((Date.now() - start.getTime()) / 86400000);
+        activeWeek = Math.min(wc, Math.max(1, Math.floor(diffDays / 7) + 1));
+      }
+      const filtered = dayList.filter((d) => (d.week_number ?? 1) === activeWeek);
+      if (filtered.length) dayList = filtered;
+    }
     setDays(dayList);
 
     if (dayList.length) {
