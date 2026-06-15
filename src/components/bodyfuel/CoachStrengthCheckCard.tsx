@@ -50,6 +50,7 @@ export function CoachStrengthCheckCard({ userId }: { userId: string }) {
   const strongest = scores.length ? scores.reduce((a, b) => (a.val >= b.val ? a : b)) : null;
   const weakest = scores.length ? scores.reduce((a, b) => (a.val <= b.val ? a : b)) : null;
   const dysbalance = strongest && weakest ? strongest.val - weakest.val : 0;
+  const [showExplanation, setShowExplanation] = useState(false);
 
   const prev = history.length >= 2 ? history[history.length - 2] : null;
   const totalDelta =
