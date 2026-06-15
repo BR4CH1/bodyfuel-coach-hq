@@ -7,6 +7,8 @@ import { useSession } from "@/lib/bodyfuel/session";
 import { parseTrainingPlan, logSet, deleteSetLog } from "@/lib/training.functions";
 import { ExerciseAnalytics } from "./ExerciseAnalytics";
 import { normalizeExerciseName } from "@/lib/exercise-name-match";
+import { AddTrainingSessionButton } from "./AddTrainingSessionDialog";
+import { TrainingSessionsList } from "./TrainingSessionsList";
 
 
 type Plan = { id: string; client_id: string; title: string; weeks_count?: number | null; scheduled_start_date?: string | null };
