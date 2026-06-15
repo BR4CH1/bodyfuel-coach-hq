@@ -411,7 +411,7 @@ GENAU 4 Wochen. Jede Woche GENAU 7 Tage (Mo, Di, Mi, Do, Fr, Sa, So in dieser Re
   if (!weeks.length) throw new Error("Keine Trainingswochen generiert.");
 
   for (const w of weeks) {
-    w.days = (w.days ?? []).slice(0, numDays).map((d) => ({
+    w.days = (w.days ?? []).slice(0, 7).map((d) => ({
       ...d,
       exercises: (d.exercises ?? []).map((e) => ({
         ...e,
