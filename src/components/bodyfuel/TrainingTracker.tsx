@@ -42,6 +42,8 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
   const [openDay, setOpenDay] = useState<string | null>(null);
   const [parsing, setParsing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [activeWeek, setActiveWeek] = useState(1);
+  const [weeksCount, setWeeksCount] = useState(1);
 
   const reload = async () => {
     if (!clientId) return;
