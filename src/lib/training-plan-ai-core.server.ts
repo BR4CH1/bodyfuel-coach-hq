@@ -434,7 +434,8 @@ GENAU 4 Wochen. Jede Woche GENAU ${numDays} Tage. Mind. 5 Übungen pro Tag.`;
   for (const w of weeks) {
     for (let i = 0; i < w.days.length; i++) {
       const d = w.days[i];
-      const dayName = d.focus ? `${d.name} — ${d.focus}` : d.name;
+      const baseName = (d.name && String(d.name).trim()) || `Tag ${i + 1}`;
+      const dayName = d.focus ? `${baseName} — ${d.focus}` : baseName;
       const { data: dayRow, error: dayErr } = await supabase
         .from("training_days")
         .insert({
