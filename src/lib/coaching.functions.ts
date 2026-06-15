@@ -394,6 +394,14 @@ export const updateCustomerCoachingInfo = createServerFn({ method: "POST" })
       sport?: string | null;
       injuries?: string | null;
       training_experience?: "beginner" | "intermediate" | "advanced" | null;
+      // Stammdaten
+      height_cm?: number | null;
+      birthdate?: string | null;
+      gender?: "male" | "female" | "other" | null;
+      goal_weight_kg?: number | null;
+      goal_target_date?: string | null;
+      activity_level?: "sedentary" | "light" | "moderate" | "active" | "athlete" | null;
+      training_goal?: string | null;
     }) => data,
   )
   .handler(async ({ data, context }) => {
@@ -409,6 +417,18 @@ export const updateCustomerCoachingInfo = createServerFn({ method: "POST" })
     if (data.sport !== undefined) patch.sport = data.sport ? data.sport.slice(0, 80) : null;
     if (data.injuries !== undefined) patch.injuries = data.injuries ? data.injuries.slice(0, 500) : null;
     if (data.training_experience !== undefined) patch.training_experience = data.training_experience;
+    if (data.height_cm !== undefined) {
+      patch.height_cm = data.height_cm == null ? null : Math.max(80, Math.min(260, Number(data.height_cm)));
+    }
+    if (data.birthdate !== undefined) patch.birthdate = data.birthdate || null;
+    if (data.gender !== undefined) patch.gender = data.gender;
+    if (data.goal_weight_kg !== undefined) {
+      patch.goal_weight_kg =
+        data.goal_weight_kg == null ? null : Math.max(30, Math.min(300, Number(data.goal_weight_kg)));
+    }
+    if (data.goal_target_date !== undefined) patch.goal_target_date = data.goal_target_date || null;
+    if (data.activity_level !== undefined) patch.activity_level = data.activity_level;
+    if (data.training_goal !== undefined) patch.training_goal = data.training_goal;
     const { error } = await supabaseAdmin
       .from("profiles")
       .update(patch as any)
