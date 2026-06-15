@@ -1123,6 +1123,7 @@ export type Database = {
           sport: string | null
           sport_level: string | null
           sport_position: string | null
+          sport_weekdays: string[] | null
           team_sport: boolean
           training_experience: string | null
           training_goal: string | null
@@ -1161,6 +1162,7 @@ export type Database = {
           sport?: string | null
           sport_level?: string | null
           sport_position?: string | null
+          sport_weekdays?: string[] | null
           team_sport?: boolean
           training_experience?: string | null
           training_goal?: string | null
@@ -1199,6 +1201,7 @@ export type Database = {
           sport?: string | null
           sport_level?: string | null
           sport_position?: string | null
+          sport_weekdays?: string[] | null
           team_sport?: boolean
           training_experience?: string | null
           training_goal?: string | null
