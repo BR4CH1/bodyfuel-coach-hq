@@ -469,7 +469,7 @@ function RealUserDashboard() {
       </div>
 
       {supabaseUser && <SmartAnalysisCTA />}
-      {supabaseUser && !isCoach && <StrengthCheckStatus variant="card" />}
+      {supabaseUser && <StrengthCheckStatus variant="card" />}
       {supabaseUser && <DailyMacroSummary userId={supabaseUser.id} />}
 
 
