@@ -98,14 +98,55 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
       setExercises(exList);
 
       if (exList.length) {
+        // Pull historic exercises across ALL of this client's training plans,
+        // so logs from previous plans still feed into PRs / trend analysis
+        // when names match (e.g. "Bankdrücken Langhantel" from a prior plan).
+        const { data: histPlans } = await supabase
+          .from("nutrition_plans")
+          .select("id, training_days(id, training_exercises(id, name))")
+          .eq("client_id", clientId)
+          .eq("plan_type", "training");
+        const histExercises: { id: string; name: string }[] = [];
+        for (const p of (histPlans as any[]) ?? []) {
+          for (const d of p?.training_days ?? []) {
+            for (const e of d?.training_exercises ?? []) {
+              if (e?.id && e?.name) histExercises.push({ id: e.id, name: e.name });
+            }
+          }
+        }
+        // name-group → all exercise ids that share that normalized name
+        const idsByName = new Map<string, string[]>();
+        for (const h of histExercises) {
+          const k = normalizeExerciseName(h.name);
+          if (!k) continue;
+          const arr = idsByName.get(k) ?? [];
+          arr.push(h.id);
+          idsByName.set(k, arr);
+        }
+        const allIds = Array.from(new Set(histExercises.map((h) => h.id).concat(exList.map((e) => e.id))));
         const { data: logRows } = await supabase
           .from("training_set_logs")
           .select("*")
-          .in("exercise_id", exList.map((e) => e.id))
+          .in("exercise_id", allIds)
           .eq("client_id", clientId)
           .order("performed_at", { ascending: false })
-          .limit(500);
-        setLogs((logRows as SetLog[]) ?? []);
+          .limit(2000);
+        // Rewrite log.exercise_id to a current-plan exercise id when the
+        // historic log belongs to a name-matched exercise. That lets the
+        // existing `logs.filter(l => l.exercise_id === ex.id)` keep working
+        // unchanged for both display and analytics.
+        const currentByName = new Map<string, string>();
+        for (const e of exList) currentByName.set(normalizeExerciseName(e.name), e.id);
+        const remapped = ((logRows as SetLog[]) ?? []).map((l) => {
+          // already current? keep.
+          if (exList.some((e) => e.id === l.exercise_id)) return l;
+          // find name of the historic exercise this log belongs to
+          const h = histExercises.find((x) => x.id === l.exercise_id);
+          if (!h) return l;
+          const target = currentByName.get(normalizeExerciseName(h.name));
+          return target ? { ...l, exercise_id: target } : l;
+        });
+        setLogs(remapped);
       } else {
         setLogs([]);
       }
