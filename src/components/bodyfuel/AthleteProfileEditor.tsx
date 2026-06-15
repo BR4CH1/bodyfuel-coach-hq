@@ -145,6 +145,8 @@ export function AthleteProfileEditor({
 
   const toggleClass = (c: string) =>
     setClassTypes((cur) => (cur.includes(c) ? cur.filter((x) => x !== c) : [...cur, c]));
+  const toggleWeekday = (d: string) =>
+    setSportWeekdays((cur) => (cur.includes(d) ? cur.filter((x) => x !== d) : [...cur, d]));
 
   return (
     <div className="rounded-2xl border border-border bg-card p-5">
