@@ -293,6 +293,22 @@ export function PlanContentView({ clientId, planType }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [virtualDays, dayKind]);
 
+  // Notify the Training Tracker (separate component on the /training page) so
+  // it auto-expands the matching day section when the user picks one above.
+  useEffect(() => {
+    if (planType !== "training" || !activeDay) return;
+    const vd = virtualDays.find((d) => d.id === activeDay);
+    const name = vd?.name;
+    if (!name) return;
+    const key = `bf:training:active-day-name:${clientId}`;
+    try { localStorage.setItem(key, name); } catch {}
+    try {
+      window.dispatchEvent(
+        new CustomEvent("bf:training-active-day", { detail: { clientId, name } }),
+      );
+    } catch {}
+  }, [planType, activeDay, virtualDays, clientId]);
+
   const pickAnotherDay = () => {
     if (!virtualDays.length) return;
     const matches = virtualDays.filter((d) =>
