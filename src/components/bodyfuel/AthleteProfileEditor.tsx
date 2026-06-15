@@ -233,6 +233,26 @@ export function AthleteProfileEditor({
           </div>
         )}
 
+        {/* Wochentage der Sportart / Kurse — verhindert Übertraining */}
+        {(sport.trim() || teamSport || classTypes.length > 0) && (
+          <Field label="An welchen Wochentagen findet Sport / Mannschaftstraining / Kurs statt?">
+            <div className="flex flex-wrap gap-2">
+              {WEEKDAYS.map((d) => (
+                <Pill
+                  key={d.v}
+                  active={sportWeekdays.includes(d.v)}
+                  onClick={() => toggleWeekday(d.v)}
+                >
+                  {d.l}
+                </Pill>
+              ))}
+            </div>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Die KI plant an diesen Tagen leichteres oder kein Beintraining ein, um Übertraining zu vermeiden.
+            </p>
+          </Field>
+        )}
+
         {/* Kurse */}
         <Field label="Kurse, die du besuchst (oder leitest)">
           <div className="flex flex-wrap gap-2">
