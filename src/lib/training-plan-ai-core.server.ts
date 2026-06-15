@@ -478,8 +478,18 @@ function alignExerciseName(name: string, priorList: string[]): string {
   return best && best.score >= 55 ? best.name : raw;
 }
 function normalize(s: string): string {
-  return s.toLowerCase()
+  const SYN: Record<string, string> = {
+    kh: "kurzhantel", db: "kurzhantel", dumbbell: "kurzhantel",
+    lh: "langhantel", barbell: "langhantel",
+    masch: "maschine", machine: "maschine",
+    multi: "multipresse", smith: "multipresse", multipress: "multipresse",
+    seilzug: "kabel", cable: "kabel",
+    pulldown: "latzug", row: "rudern", press: "drucken",
+  };
+  let v = s.toLowerCase()
     .replace(/[äöü]/g, (c) => ({ ä: "a", ö: "o", ü: "u" })[c] as string)
     .replace(/ß/g, "ss").replace(/[^a-z0-9 ]+/g, " ")
     .replace(/\s+/g, " ").trim();
+  v = v.split(" ").map((t) => SYN[t] ?? t).join(" ");
+  return v;
 }
