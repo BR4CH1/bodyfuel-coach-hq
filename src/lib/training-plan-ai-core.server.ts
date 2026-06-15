@@ -294,6 +294,7 @@ ${lastCheck ? `Gesamt: ${lastCheck.score_total}/100 · Unter ${lastCheck.score_l
 ${startWeightsBlock}
 ${targetsBlock}
 ${adherenceBlock}
+${equipBlock}
 
 📐 STRUKTUR
 - Split: ${splitHint}
