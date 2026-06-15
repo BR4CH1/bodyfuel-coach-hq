@@ -350,9 +350,23 @@ function CustomerDetail() {
 
       <AthleteProfileEditor
         userId={userId}
-        initialSport={(data.profile as any)?.sport ?? null}
-        initialInjuries={(data.profile as any)?.injuries ?? null}
-        initialExperience={(data.profile as any)?.training_experience ?? null}
+        mode="coach"
+        initial={{
+          sport: (data.profile as any)?.sport ?? null,
+          sport_position: (data.profile as any)?.sport_position ?? null,
+          sport_level: (data.profile as any)?.sport_level ?? null,
+          team_sport: (data.profile as any)?.team_sport ?? false,
+          match_days_per_week: (data.profile as any)?.match_days_per_week ?? null,
+          practice_days_per_week: (data.profile as any)?.practice_days_per_week ?? null,
+          season_phase: (data.profile as any)?.season_phase ?? null,
+          class_types: (data.profile as any)?.class_types ?? [],
+          class_days_per_week: (data.profile as any)?.class_days_per_week ?? null,
+          mobility_frequency: (data.profile as any)?.mobility_frequency ?? null,
+          mobility_focus: (data.profile as any)?.mobility_focus ?? null,
+          cardio_outside_gym: (data.profile as any)?.cardio_outside_gym ?? null,
+          injuries: (data.profile as any)?.injuries ?? null,
+          training_experience: (data.profile as any)?.training_experience ?? null,
+        }}
       />
 
       <CoachStrengthCheckCard userId={userId} />
