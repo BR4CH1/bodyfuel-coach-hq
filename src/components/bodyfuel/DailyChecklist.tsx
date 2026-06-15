@@ -170,7 +170,11 @@ export function DailyChecklist({ userId }: { userId: string }) {
                         )}
                       </span>
                       <div className="min-w-0">
-                        <div className="truncate text-sm font-medium">{t.label}</div>
+                        <div className="truncate text-sm font-medium">
+                          {t.key === "steps"
+                            ? `Schrittziel erreicht (${stepGoal.toLocaleString("de-DE")})`
+                            : t.label}
+                        </div>
                         <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
                           +{t.points} Punkte
                         </div>
