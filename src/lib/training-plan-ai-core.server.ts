@@ -514,6 +514,12 @@ GENAU 4 Wochen. Jede Woche GENAU 7 Tage (Mo, Di, Mi, Do, Fr, Sa, So in dieser Re
   };
 }
 
+function stripAkzessoires(s: string): string {
+  return s
+    .replace(/akzessoires?/gi, "Zusatzübungen")
+    .replace(/accessoires?/gi, "Zusatzübungen");
+}
+
 function validCategory(c: unknown): string | null {
   const allowed = ["barbell","dumbbell","machine","cardio","core","bodyweight","cable"];
   if (typeof c !== "string") return null;
