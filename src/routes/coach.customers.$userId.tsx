@@ -52,6 +52,7 @@ import { AthleteProfileEditor } from "@/components/bodyfuel/AthleteProfileEditor
 import { TrainingSessionsList } from "@/components/bodyfuel/TrainingSessionsList";
 import { CoachTrainingAlertsCard } from "@/components/bodyfuel/CoachTrainingAlertsCard";
 import { WeightProgressChart } from "@/components/bodyfuel/WeightProgressChart";
+import { GoalProjectionCard } from "@/components/bodyfuel/GoalProjectionCard";
 import { labelForTrainingGoal } from "@/lib/training-goals";
 
 
@@ -358,6 +359,12 @@ function CustomerDetail() {
                 </div>
               );
             })()}
+
+            <GoalProjectionCard
+              profile={(data.profile as any) ?? {}}
+              currentWeight={(data.measurements?.[0] as any)?.weight_kg ?? null}
+            />
+
 
             <AthleteProfileEditor
               userId={userId}
