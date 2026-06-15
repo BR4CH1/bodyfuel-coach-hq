@@ -57,7 +57,9 @@ export async function generateTrainingPlanCore(
     supabase.from("profiles")
       .select(
         "display_name, height_cm, birthdate, gender, training_goal, coaching_goal, " +
-        "sport, injuries, training_experience, activity_level, goal_weight_kg",
+        "sport, injuries, training_experience, activity_level, goal_weight_kg, " +
+        "sport_position, sport_level, team_sport, match_days_per_week, practice_days_per_week, " +
+        "season_phase, class_types, class_days_per_week, mobility_frequency, mobility_focus, cardio_outside_gym",
       )
       .eq("id", target).maybeSingle(),
     supabase.from("body_measurements")
