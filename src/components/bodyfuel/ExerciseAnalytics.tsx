@@ -83,20 +83,21 @@ export function ExerciseAnalytics({ logs }: { logs: SetLog[] }) {
         <div className="h-44 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={points} margin={{ top: 6, right: 8, left: -16, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis
                 dataKey="date"
-                stroke="hsl(var(--muted-foreground))"
+                stroke="var(--muted-foreground)"
                 fontSize={10}
                 tickFormatter={(d) => d.slice(5).replace("-", ".")}
               />
-              <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} width={36} />
+              <YAxis stroke="var(--muted-foreground)" fontSize={10} width={36} />
               <Tooltip
                 contentStyle={{
-                  background: "hsl(var(--card))",
-                  border: "1px solid hsl(var(--border))",
+                  background: "var(--card)",
+                  border: "1px solid var(--border)",
                   borderRadius: 8,
                   fontSize: 12,
+                  color: "var(--card-foreground)",
                 }}
                 formatter={(v: number) => [`${v} ${metricLabel.unit}`, metricLabel.label]}
                 labelFormatter={(l) => new Date(l).toLocaleDateString("de-DE")}
@@ -104,11 +105,12 @@ export function ExerciseAnalytics({ logs }: { logs: SetLog[] }) {
               <Line
                 type="monotone"
                 dataKey={metric}
-                stroke="hsl(var(--gold, 45 95% 55%))"
+                stroke="var(--gold)"
                 strokeWidth={2}
-                dot={{ r: 3 }}
-                activeDot={{ r: 5 }}
+                dot={{ r: 3, fill: "var(--gold)" }}
+                activeDot={{ r: 5, fill: "var(--gold)" }}
               />
+
             </LineChart>
           </ResponsiveContainer>
         </div>
