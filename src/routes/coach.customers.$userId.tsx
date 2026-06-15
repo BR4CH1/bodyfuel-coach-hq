@@ -41,6 +41,7 @@ import { PlanManagementCard } from "@/components/bodyfuel/PlanManagementCard";
 import { TrainingPlanManagementCard } from "@/components/bodyfuel/TrainingPlanManagementCard";
 import { PartnerLinkCard } from "@/components/bodyfuel/PartnerLinkCard";
 import { CoachTrainingGoalCard } from "@/components/bodyfuel/CoachTrainingGoalCard";
+import { StepGoalEditor } from "@/components/bodyfuel/StepGoalEditor";
 import { WeightProgressChart } from "@/components/bodyfuel/WeightProgressChart";
 import { labelForTrainingGoal } from "@/lib/training-goals";
 
