@@ -53,6 +53,7 @@ function TrainingPage() {
 
   return (
     <div className="space-y-8">
+      {!isCoach && <StrengthCheckStatus variant="block" />}
       {isCoach && <PlansView planType="training" onClientChange={setClientId} />}
       {!isCoach && (isTrial || isExpired) ? (
         <TrialTrainingPlan />
