@@ -258,15 +258,34 @@ export async function generateTrainingPlanCore(
   const mobLabel: Record<string, string> = {
     none: "keine", "1_2x": "1–2× Woche", "3_4x": "3–4× Woche", daily: "täglich",
   };
+  const weekdayLabel: Record<string, string> = {
+    monday: "Mo", tuesday: "Di", wednesday: "Mi", thursday: "Do",
+    friday: "Fr", saturday: "Sa", sunday: "So",
+  };
+  const sportDaysList: string[] = Array.isArray(cp.sport_weekdays) ? cp.sport_weekdays : [];
+  const sportDaysHuman = sportDaysList.map((d) => weekdayLabel[d] ?? d).join(", ");
+  const trainDaysHuman = trainingDayKeys.map((d) => weekdayLabel[d] ?? d).join(", ");
+  const overlapDays = sportDaysList.filter((d) => trainingDayKeys.includes(d))
+    .map((d) => weekdayLabel[d] ?? d);
+
   const sportBlock = cp.sport || cp.class_types?.length || cp.team_sport
     ? `\n🏈 SPORT-/ATHLETEN-PROFIL${cp.sport ? `\n- Sportart: ${cp.sport}${cp.sport_position ? ` (${cp.sport_position})` : ""}` : ""}${cp.sport_level ? `\n- Niveau: ${sportLevelLabel[cp.sport_level] ?? cp.sport_level}` : ""}${cp.team_sport ? `\n- Mannschaftssport: ja${cp.match_days_per_week != null ? ` · ${cp.match_days_per_week} Spieltag(e)/Wo` : ""}${cp.practice_days_per_week != null ? ` · ${cp.practice_days_per_week} Mannschafts-Training(s)/Wo` : ""}` : ""}${cp.season_phase ? `\n- Saisonphase: ${seasonLabel[cp.season_phase] ?? cp.season_phase}` : ""}${cp.class_types?.length ? `\n- Kurse: ${cp.class_types.join(", ")}${cp.class_days_per_week != null ? ` (${cp.class_days_per_week}× Wo)` : ""}` : ""}${cp.cardio_outside_gym ? `\n- Cardio außerhalb des Studios: ${cp.cardio_outside_gym}` : ""}
-- Plane Regeneration zwischen Trainings-, Kurs- und Spieltagen ein (mind. 24 h nach intensiven Beinheiten vor Spiel-/Kurstag).
+${sportDaysHuman ? `- Sport-/Kurs-/Spieltage: ${sportDaysHuman}` : ""}
+- Gym-Trainingstage: ${trainDaysHuman}
+${overlapDays.length ? `⚠️ ÜBERLAPPUNG an: ${overlapDays.join(", ")} — an diesen Tagen Sportart UND Gym. Plane KEIN schweres Bein-/Ganzkörper-Workout an diesen Tagen, sondern Push/Pull-Oberkörper oder kurze Akzessoir-Einheit (max. 45 Min, RPE 6–7). KEINE schweren Kniebeugen/Kreuzheben.` : ""}
+- Vor Spiel-/Kurstagen (Tag davor) KEIN schweres Beintraining mit hohem CNS-Stress (Squat/Deadlift schwer). Nutze stattdessen Oberkörper-Akzessoires oder Mobility.
+- Nach Spiel-/Kurstagen: Regenerationsfokus (leichtes Cardio, Mobility, Foam Rolling) oder Oberkörper.
 - Bei Mannschaftssport: in-season Volumen reduzieren, Fokus auf Erhalt, Schnellkraft & Verletzungsprophylaxe; off-/pre-season Volumen hoch.
 - Sportartspezifisch: Football → Explosivität, Wurfschulter, Sprintkraft; Fußball → Beinkraft, Hüftmobilität, Hamstrings; Kursleiter → Schulter-/Rumpfausdauer, Mobility.
 - Bei vielen Kursen/Cardio: weniger Cardio-Einheiten im Plan, dafür mehr gezielte Kraft- und Mobility-Anteile.`
     : "";
   const mobilityBlock = cp.mobility_frequency || cp.mobility_focus
-    ? `\n🧘 MOBILITY${cp.mobility_frequency ? `\n- Frequenz: ${mobLabel[cp.mobility_frequency] ?? cp.mobility_frequency}` : ""}${cp.mobility_focus ? `\n- Schwerpunkt: ${cp.mobility_focus}` : ""}\n- Baue 5–10 Min Mobility/Warm-up pro Einheit ein, besonders für genannte Bereiche.`
+    ? `\n🧘 MOBILITY / STRETCHING (PFLICHT in den Plan einbauen!)
+${cp.mobility_frequency ? `- Frequenz vom Kunden gewünscht: ${mobLabel[cp.mobility_frequency] ?? cp.mobility_frequency}` : ""}
+${cp.mobility_focus ? `- Schwerpunkt: ${cp.mobility_focus}` : ""}
+- WICHTIG: Füge an JEDEM Trainingstag mindestens 1 dedizierte Mobility-/Stretch-Übung als EIGENE Übung ein (category: "core" oder "bodyweight"), die genau diese Schwerpunkt-Bereiche adressiert. Beispiele für Hüfte: "90/90 Hüftrotation" (3×8/Seite), "Couch Stretch" (2×45s/Seite), "World's Greatest Stretch" (2×6/Seite), "Hüftbeuger-Dehnung kniend" (2×60s/Seite). Für Schultern: "Wand-Slides" (3×10), "Banded Pull-Apart" (3×15), "Thoracic Extensions auf der Foam Roll" (2×8). Für BWS: "Cat-Cow" (2×10), "Open Book" (2×8/Seite).
+- Dies ist KEIN bloßer Warm-up-Hinweis — die Mobility-Übung MUSS in der exercises-Liste erscheinen mit Sätzen, Wdh/Sekunden und Pause.
+- Bei "3-4x" oder "daily" Frequenz: zusätzlich 1 reiner Mobility-Tag pro Woche als optionales Add-on im Notizfeld erwähnen.`
     : "";
   const injuryBlock = cp.injuries
     ? `\n⚠️ VERLETZUNGEN/EINSCHRÄNKUNGEN: ${cp.injuries}\n- VERMEIDE belastende Übungen für diese Bereiche, biete alternative Varianten an.`
