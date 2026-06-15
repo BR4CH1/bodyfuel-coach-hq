@@ -13,8 +13,8 @@ import { RecipeDialog } from "./RecipeDialog";
 import { MealSwapDialog } from "./MealSwapDialog";
 import { SkipReasonDialog } from "./SkipReasonDialog";
 
-type Plan = { id: string; client_id: string; title: string };
-type Day = { id: string; name: string; sort_order: number };
+type Plan = { id: string; client_id: string; title: string; weeks_count?: number | null; scheduled_start_date?: string | null };
+type Day = { id: string; name: string; sort_order: number; week_number?: number | null };
 type Meal = {
   id: string;
   day_id: string;
