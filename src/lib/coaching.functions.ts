@@ -390,14 +390,23 @@ export const updateCustomerCoachingInfo = createServerFn({ method: "POST" })
       user_id: string;
       coaching_goal?: string | null;
       next_checkin_date?: string | null;
+      daily_step_goal?: number | null;
     }) => data,
   )
   .handler(async ({ data, context }) => {
     await assertCoach(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const patch: { coaching_goal?: string | null; next_checkin_date?: string | null } = {};
+    const patch: {
+      coaching_goal?: string | null;
+      next_checkin_date?: string | null;
+      daily_step_goal?: number;
+    } = {};
     if (data.coaching_goal !== undefined) patch.coaching_goal = data.coaching_goal;
     if (data.next_checkin_date !== undefined) patch.next_checkin_date = data.next_checkin_date;
+    if (data.daily_step_goal !== undefined && data.daily_step_goal !== null) {
+      const n = Math.max(1000, Math.min(40000, Math.round(data.daily_step_goal)));
+      patch.daily_step_goal = n;
+    }
     const { error } = await supabaseAdmin
       .from("profiles")
       .update(patch)
