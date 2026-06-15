@@ -492,18 +492,13 @@ function ResultScreen({ check, previous, onClose }: { check: StrengthCheck; prev
 }
 
 function ScoreTile({ label, value, previous }: { label: string; value: number | null; previous: number | null }) {
-  const lamp = value == null ? "" : value >= 75 ? "🟢" : value >= 50 ? "🟡" : "🔴";
   const delta = value != null && previous != null ? value - previous : null;
   return (
-    <div className="rounded-xl border border-border bg-card p-4">
-      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className="mt-1 flex items-baseline gap-2">
-        <div className="font-display text-2xl font-bold">{value ?? "—"}</div>
-        <div className="text-xs text-muted-foreground">/100</div>
-        <div className="ml-auto text-base">{lamp}</div>
-      </div>
+    <div className="flex flex-col items-center gap-2 rounded-xl border border-border bg-card p-4">
+      <StrengthScoreDonut value={value} size={84} stroke={9} />
+      <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</div>
       {delta != null && (
-        <div className={`mt-0.5 text-[11px] ${delta >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+        <div className={`text-[11px] ${delta >= 0 ? "text-emerald-400" : "text-red-400"}`}>
           {delta >= 0 ? "+" : ""}{delta} ggü. vorher
         </div>
       )}
