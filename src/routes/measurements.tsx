@@ -167,14 +167,16 @@ function MeasurementsContent() {
   };
 
   const latest = items[0];
+  const latestWeightMeasurement = items.find((item) => item.weight_kg != null);
+  const latestBodyFatMeasurement = items.find((item) => item.body_fat_pct != null);
   const bmi = useMemo(() => {
-    if (!profile?.height_cm || !latest?.weight_kg) return null;
+    if (!profile?.height_cm || !latestWeightMeasurement?.weight_kg) return null;
     const m = profile.height_cm / 100;
-    return latest.weight_kg / (m * m);
-  }, [profile?.height_cm, latest?.weight_kg]);
+    return latestWeightMeasurement.weight_kg / (m * m);
+  }, [profile?.height_cm, latestWeightMeasurement?.weight_kg]);
 
   const goalHint = useMemo(() => {
-    const w = latest?.weight_kg;
+    const w = latestWeightMeasurement?.weight_kg;
     const gw = profile?.goal_weight_kg;
     const td = profile?.goal_target_date;
     if (!w || !gw || !td) return null;
@@ -235,7 +237,7 @@ function MeasurementsContent() {
       ratePctWeek,
     };
   }, [
-    latest?.weight_kg,
+    latestWeightMeasurement?.weight_kg,
     profile?.goal_weight_kg,
     profile?.goal_target_date,
     profile?.height_cm,
@@ -266,8 +268,8 @@ function MeasurementsContent() {
 
       {/* Summary */}
       <div className="grid gap-4 sm:grid-cols-3">
-        <SummaryCard label="Aktuelles Gewicht" value={latest?.weight_kg ? `${latest.weight_kg} kg` : "—"} />
-        <SummaryCard label="Körperfett" value={latest?.body_fat_pct ? `${latest.body_fat_pct} %` : "—"} />
+        <SummaryCard label="Aktuelles Gewicht" value={latestWeightMeasurement?.weight_kg ? `${latestWeightMeasurement.weight_kg} kg` : "—"} />
+        <SummaryCard label="Körperfett" value={latestBodyFatMeasurement?.body_fat_pct ? `${latestBodyFatMeasurement.body_fat_pct} %` : "—"} />
         <SummaryCard label="BMI" value={bmi ? bmi.toFixed(1) : "—"} />
       </div>
 

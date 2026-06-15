@@ -185,6 +185,7 @@ function CustomerDetail() {
       : status === "deactivated"
         ? "bg-destructive/10 text-destructive"
         : "bg-warning/20 text-warning";
+  const latestWeightMeasurement = data.measurements?.find((item: any) => item.weight_kg != null) ?? null;
 
   return (
     <div className="space-y-6">
@@ -349,6 +350,7 @@ function CustomerDetail() {
                   <h2 className="font-display text-lg font-bold">Stammdaten</h2>
                   <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
                     {row("Trainingsziel", labelForTrainingGoal(p.training_goal))}
+                    {row("Aktuelles Gewicht", latestWeightMeasurement?.weight_kg ? `${latestWeightMeasurement.weight_kg} kg` : null)}
                     {row("Wunschgewicht", p.goal_weight_kg ? `${p.goal_weight_kg} kg` : null)}
                     {row("Wunschgewicht bis", (p as any).goal_target_date ? new Date((p as any).goal_target_date).toLocaleDateString("de-DE") : null)}
                     {row("Aktivitätslevel", activity[p.activity_level] ?? p.activity_level)}
@@ -362,7 +364,7 @@ function CustomerDetail() {
 
             <GoalProjectionCard
               profile={(data.profile as any) ?? {}}
-              currentWeight={(data.measurements?.[0] as any)?.weight_kg ?? null}
+              currentWeight={(latestWeightMeasurement as any)?.weight_kg ?? null}
             />
 
 
