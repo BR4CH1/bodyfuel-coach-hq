@@ -324,12 +324,35 @@ export const getPlanPreview = createServerFn({ method: "GET" })
     const { data: plan } = await supabase
       .from("nutrition_plans")
       .select(
-        "id, client_id, title, status, source, scheduled_start_date, scheduled_end_date, kcal, protein_g, carbs_g, fat_g, created_at",
+        "id, client_id, title, status, source, plan_type, scheduled_start_date, scheduled_end_date, kcal, protein_g, carbs_g, fat_g, created_at",
       )
       .eq("id", data.plan_id)
       .maybeSingle();
     if (!plan) throw new Error("Plan nicht gefunden");
     if ((plan as any).client_id !== userId) await requireCoach(supabase, userId);
+
+    const planType = (plan as any).plan_type ?? "nutrition";
+
+    if (planType === "training") {
+      const { data: days } = await supabase
+        .from("training_days")
+        .select("id, name, sort_order")
+        .eq("plan_id", data.plan_id)
+        .order("sort_order");
+      const dayList = (days ?? []) as any[];
+      let exercises: any[] = [];
+      if (dayList.length) {
+        const { data: ex } = await supabase
+          .from("training_exercises")
+          .select(
+            "id, day_id, name, category, target_sets, target_reps, target_weights, rest_seconds, notes, sort_order",
+          )
+          .in("day_id", dayList.map((d) => d.id))
+          .order("sort_order");
+        exercises = (ex ?? []) as any[];
+      }
+      return { plan, days: dayList, meals: [], exercises, planType };
+    }
 
     const { data: days } = await supabase
       .from("nutrition_plan_days")
@@ -348,5 +371,5 @@ export const getPlanPreview = createServerFn({ method: "GET" })
       meals = (m ?? []) as any[];
     }
 
-    return { plan, days: dayList, meals };
+    return { plan, days: dayList, meals, exercises: [], planType };
   });

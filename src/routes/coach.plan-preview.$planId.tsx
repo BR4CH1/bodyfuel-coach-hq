@@ -58,9 +58,12 @@ function PreviewContent() {
   }
   if (!data) return null;
 
-  const { plan, days, meals } = data as any;
+  const { plan, days, meals, exercises = [], planType = "nutrition" } = data as any;
+  const isTraining = planType === "training";
   const mealsByDay = (dayId: string) =>
     meals.filter((m: any) => m.day_id === dayId).sort((a: any, b: any) => a.sort_order - b.sort_order);
+  const exByDay = (dayId: string) =>
+    exercises.filter((e: any) => e.day_id === dayId).sort((a: any, b: any) => a.sort_order - b.sort_order);
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 py-6 print:py-0">
@@ -90,10 +93,10 @@ function PreviewContent() {
           </span>
           <span className="inline-flex items-center gap-1.5">
             <ListChecks className="h-3.5 w-3.5" />
-            {days.length} Tage · {meals.length} Mahlzeiten
+            {days.length} Tage · {isTraining ? `${exercises.length} Übungen` : `${meals.length} Mahlzeiten`}
           </span>
         </div>
-        {(plan.kcal || plan.protein_g) && (
+        {!isTraining && (plan.kcal || plan.protein_g) && (
           <div className="mt-4 grid grid-cols-4 gap-2 text-center text-xs">
             <Macro label="kcal" value={plan.kcal} />
             <Macro label="P" value={plan.protein_g} suffix="g" />
@@ -107,29 +110,66 @@ function PreviewContent() {
         {days.map((d: any) => (
           <section key={d.id} className="rounded-2xl border border-border bg-card p-5 print:break-inside-avoid">
             <h2 className="font-display text-lg font-bold">{d.name}</h2>
-            <ul className="mt-3 space-y-3">
-              {mealsByDay(d.id).map((m: any) => (
-                <li key={m.id} className="rounded-xl border border-border bg-background/40 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <h3 className="font-semibold">{m.name}</h3>
-                  </div>
-                  {m.description && (
-                    <p className="mt-1 text-sm text-muted-foreground whitespace-pre-line">
-                      {m.description}
-                    </p>
-                  )}
-                  <div className="mt-2 flex flex-wrap gap-3 text-[11px] text-muted-foreground">
-                    {m.kcal != null && <span><strong className="text-foreground">{m.kcal}</strong> kcal</span>}
-                    {m.protein_g != null && <span>P <strong className="text-foreground">{m.protein_g}g</strong></span>}
-                    {m.carbs_g != null && <span>KH <strong className="text-foreground">{m.carbs_g}g</strong></span>}
-                    {m.fat_g != null && <span>F <strong className="text-foreground">{m.fat_g}g</strong></span>}
-                  </div>
-                </li>
-              ))}
-              {mealsByDay(d.id).length === 0 && (
-                <li className="text-sm text-muted-foreground">Keine Mahlzeiten.</li>
-              )}
-            </ul>
+            {isTraining ? (
+              <ul className="mt-3 space-y-3">
+                {exByDay(d.id).map((e: any) => (
+                  <li key={e.id} className="rounded-xl border border-border bg-background/40 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className="font-semibold">{e.name}</h3>
+                      {e.category && (
+                        <span className="rounded-md bg-muted px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                          {e.category}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-3 text-[11px] text-muted-foreground">
+                      {e.target_sets != null && (
+                        <span><strong className="text-foreground">{e.target_sets}</strong> Sätze</span>
+                      )}
+                      {e.target_reps && (
+                        <span>Wdh: <strong className="text-foreground">{e.target_reps}</strong></span>
+                      )}
+                      {e.target_weights && (
+                        <span>Gewicht: <strong className="text-foreground">{e.target_weights} kg</strong></span>
+                      )}
+                      {e.rest_seconds != null && (
+                        <span>Pause: <strong className="text-foreground">{e.rest_seconds}s</strong></span>
+                      )}
+                    </div>
+                    {e.notes && (
+                      <p className="mt-2 text-xs text-muted-foreground whitespace-pre-line">{e.notes}</p>
+                    )}
+                  </li>
+                ))}
+                {exByDay(d.id).length === 0 && (
+                  <li className="text-sm text-muted-foreground">Keine Übungen.</li>
+                )}
+              </ul>
+            ) : (
+              <ul className="mt-3 space-y-3">
+                {mealsByDay(d.id).map((m: any) => (
+                  <li key={m.id} className="rounded-xl border border-border bg-background/40 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className="font-semibold">{m.name}</h3>
+                    </div>
+                    {m.description && (
+                      <p className="mt-1 text-sm text-muted-foreground whitespace-pre-line">
+                        {m.description}
+                      </p>
+                    )}
+                    <div className="mt-2 flex flex-wrap gap-3 text-[11px] text-muted-foreground">
+                      {m.kcal != null && <span><strong className="text-foreground">{m.kcal}</strong> kcal</span>}
+                      {m.protein_g != null && <span>P <strong className="text-foreground">{m.protein_g}g</strong></span>}
+                      {m.carbs_g != null && <span>KH <strong className="text-foreground">{m.carbs_g}g</strong></span>}
+                      {m.fat_g != null && <span>F <strong className="text-foreground">{m.fat_g}g</strong></span>}
+                    </div>
+                  </li>
+                ))}
+                {mealsByDay(d.id).length === 0 && (
+                  <li className="text-sm text-muted-foreground">Keine Mahlzeiten.</li>
+                )}
+              </ul>
+            )}
           </section>
         ))}
         {days.length === 0 && (
