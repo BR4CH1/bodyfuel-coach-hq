@@ -280,14 +280,24 @@ function ExerciseCard({
 
   const nextSet = (todaysLogs.length ?? 0) + 1;
   const [weight, setWeight] = useState("");
-  const [reps, setReps] = useState(ex.target_reps?.split(/[-–]/)[0] ?? "");
+  const [reps, setReps] = useState("");
 
-  // Suggest last weight as default
+  // Suggest last weight + planned reps as defaults — only when inputs are empty
+  // and only when the previous suggestion changes (no stale traps).
   useEffect(() => {
     if (!weight && logs[0]?.weight_kg != null) {
-      setWeight(String(logs[0].weight_kg));
+      setWeight(String(logs[0].weight_kg).replace(".", ","));
     }
-  }, [logs, weight]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [logs[0]?.id]);
+  useEffect(() => {
+    if (!reps) {
+      const planned = ex.target_reps?.split(/[,|]/)[Math.min(nextSet - 1, (ex.target_reps?.split(/[,|]/).length ?? 1) - 1)]?.trim() ?? ex.target_reps?.split(/[-–]/)[0];
+      const n = planned ? planned.match(/\d+/)?.[0] : "";
+      if (n) setReps(n);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nextSet, ex.target_reps]);
 
   const save = () => {
     const w = weight.trim() === "" ? null : Number(weight.replace(",", "."));
@@ -295,7 +305,10 @@ function ExerciseCard({
     if (w !== null && (Number.isNaN(w) || w < 0)) return toast.error("Gewicht ungültig");
     if (r !== null && (Number.isNaN(r) || r < 0)) return toast.error("Wdh. ungültig");
     onLog(nextSet, w, r);
+    // Clear so the next set starts fresh and prefill logic refills cleanly.
+    setReps("");
   };
+
 
   return (
     <div className="rounded-xl border border-border/60 bg-background/40 p-3">
