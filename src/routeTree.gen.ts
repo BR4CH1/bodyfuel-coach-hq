@@ -13,6 +13,7 @@ import { Route as WelcomeRouteImport } from './routes/welcome'
 import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
 import { Route as TrialRouteImport } from './routes/trial'
 import { Route as TrainingRouteImport } from './routes/training'
+import { Route as StrengthCheckRouteImport } from './routes/strength-check'
 import { Route as ProgressRouteImport } from './routes/progress'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as NutritionRouteImport } from './routes/nutrition'
@@ -79,6 +80,11 @@ const TrialRoute = TrialRouteImport.update({
 const TrainingRoute = TrainingRouteImport.update({
   id: '/training',
   path: '/training',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StrengthCheckRoute = StrengthCheckRouteImport.update({
+  id: '/strength-check',
+  path: '/strength-check',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProgressRoute = ProgressRouteImport.update({
@@ -340,6 +346,7 @@ export interface FileRoutesByFullPath {
   '/nutrition': typeof NutritionRouteWithChildren
   '/profile': typeof ProfileRoute
   '/progress': typeof ProgressRoute
+  '/strength-check': typeof StrengthCheckRoute
   '/training': typeof TrainingRoute
   '/trial': typeof TrialRoute
   '/unsubscribe': typeof UnsubscribeRoute
@@ -391,6 +398,7 @@ export interface FileRoutesByTo {
   '/measurements': typeof MeasurementsRoute
   '/profile': typeof ProfileRoute
   '/progress': typeof ProgressRoute
+  '/strength-check': typeof StrengthCheckRoute
   '/training': typeof TrainingRoute
   '/trial': typeof TrialRoute
   '/unsubscribe': typeof UnsubscribeRoute
@@ -444,6 +452,7 @@ export interface FileRoutesById {
   '/nutrition': typeof NutritionRouteWithChildren
   '/profile': typeof ProfileRoute
   '/progress': typeof ProgressRoute
+  '/strength-check': typeof StrengthCheckRoute
   '/training': typeof TrainingRoute
   '/trial': typeof TrialRoute
   '/unsubscribe': typeof UnsubscribeRoute
@@ -499,6 +508,7 @@ export interface FileRouteTypes {
     | '/nutrition'
     | '/profile'
     | '/progress'
+    | '/strength-check'
     | '/training'
     | '/trial'
     | '/unsubscribe'
@@ -550,6 +560,7 @@ export interface FileRouteTypes {
     | '/measurements'
     | '/profile'
     | '/progress'
+    | '/strength-check'
     | '/training'
     | '/trial'
     | '/unsubscribe'
@@ -602,6 +613,7 @@ export interface FileRouteTypes {
     | '/nutrition'
     | '/profile'
     | '/progress'
+    | '/strength-check'
     | '/training'
     | '/trial'
     | '/unsubscribe'
@@ -656,6 +668,7 @@ export interface RootRouteChildren {
   NutritionRoute: typeof NutritionRouteWithChildren
   ProfileRoute: typeof ProfileRoute
   ProgressRoute: typeof ProgressRoute
+  StrengthCheckRoute: typeof StrengthCheckRoute
   TrainingRoute: typeof TrainingRoute
   TrialRoute: typeof TrialRoute
   UnsubscribeRoute: typeof UnsubscribeRoute
@@ -708,6 +721,13 @@ declare module '@tanstack/react-router' {
       path: '/training'
       fullPath: '/training'
       preLoaderRoute: typeof TrainingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/strength-check': {
+      id: '/strength-check'
+      path: '/strength-check'
+      fullPath: '/strength-check'
+      preLoaderRoute: typeof StrengthCheckRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/progress': {
@@ -1115,6 +1135,7 @@ const rootRouteChildren: RootRouteChildren = {
   NutritionRoute: NutritionRouteWithChildren,
   ProfileRoute: ProfileRoute,
   ProgressRoute: ProgressRoute,
+  StrengthCheckRoute: StrengthCheckRoute,
   TrainingRoute: TrainingRoute,
   TrialRoute: TrialRoute,
   UnsubscribeRoute: UnsubscribeRoute,
