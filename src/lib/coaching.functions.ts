@@ -411,7 +411,7 @@ export const updateCustomerCoachingInfo = createServerFn({ method: "POST" })
     if (data.training_experience !== undefined) patch.training_experience = data.training_experience;
     const { error } = await supabaseAdmin
       .from("profiles")
-      .update(patch)
+      .update(patch as any)
       .eq("id", data.user_id);
     if (error) throw new Error(error.message);
     return { ok: true };
