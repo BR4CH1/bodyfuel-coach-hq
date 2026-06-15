@@ -10,6 +10,7 @@ import { useSession } from "@/lib/bodyfuel/session";
 import { StrengthCheckStatus } from "@/components/bodyfuel/StrengthCheckStatus";
 import { StrengthSummaryCard } from "@/components/bodyfuel/StrengthSummaryCard";
 import { getMyStrengthStatus } from "@/lib/strength-check.functions";
+import { AthleteProfileBanner } from "@/components/bodyfuel/AthleteProfileBanner";
 
 import { useTrial } from "@/hooks/use-trial";
 import { TrialTrainingPlan } from "@/components/bodyfuel/TrialPlanView";
