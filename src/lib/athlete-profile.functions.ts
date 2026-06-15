@@ -8,6 +8,7 @@ export type AthleteProfileInput = {
   team_sport?: boolean | null;
   match_days_per_week?: number | null;
   practice_days_per_week?: number | null;
+  sport_weekdays?: string[] | null;
   season_phase?: "off_season" | "pre_season" | "in_season" | "post_season" | null;
   class_types?: string[] | null;
   class_days_per_week?: number | null;
@@ -17,6 +18,10 @@ export type AthleteProfileInput = {
   injuries?: string | null;
   training_experience?: "beginner" | "intermediate" | "advanced" | null;
 };
+
+const VALID_WEEKDAYS = new Set([
+  "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
+]);
 
 function sanitize(input: AthleteProfileInput): Record<string, unknown> {
   const patch: Record<string, unknown> = {};
