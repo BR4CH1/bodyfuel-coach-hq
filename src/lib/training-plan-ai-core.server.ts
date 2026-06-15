@@ -247,8 +247,26 @@ export async function generateTrainingPlanCore(
       : "Oberkörper / Unterkörper";
   })();
 
-  const sportBlock = cp.sport
-    ? `\n🏈 SPORTART: ${cp.sport}\n- Berücksichtige Spieltage / Saisonphase: zwischen Trainings- und Spieltagen ausreichend Regeneration einplanen.\n- Kraft-Schwerpunkt sportartspezifisch (Explosivität, Schnellkraft, Wurfschulter, Stabilität).`
+  const sportLevelLabel: Record<string, string> = {
+    recreational: "Hobby", amateur: "Amateur", semi_pro: "Semi-Pro",
+    pro: "Profi", coach: "Trainer/Kursleiter",
+  };
+  const seasonLabel: Record<string, string> = {
+    off_season: "Off-Season", pre_season: "Vorbereitung",
+    in_season: "Saison (Wettkampfphase)", post_season: "Nachsaison",
+  };
+  const mobLabel: Record<string, string> = {
+    none: "keine", "1_2x": "1–2× Woche", "3_4x": "3–4× Woche", daily: "täglich",
+  };
+  const sportBlock = cp.sport || cp.class_types?.length || cp.team_sport
+    ? `\n🏈 SPORT-/ATHLETEN-PROFIL${cp.sport ? `\n- Sportart: ${cp.sport}${cp.sport_position ? ` (${cp.sport_position})` : ""}` : ""}${cp.sport_level ? `\n- Niveau: ${sportLevelLabel[cp.sport_level] ?? cp.sport_level}` : ""}${cp.team_sport ? `\n- Mannschaftssport: ja${cp.match_days_per_week != null ? ` · ${cp.match_days_per_week} Spieltag(e)/Wo` : ""}${cp.practice_days_per_week != null ? ` · ${cp.practice_days_per_week} Mannschafts-Training(s)/Wo` : ""}` : ""}${cp.season_phase ? `\n- Saisonphase: ${seasonLabel[cp.season_phase] ?? cp.season_phase}` : ""}${cp.class_types?.length ? `\n- Kurse: ${cp.class_types.join(", ")}${cp.class_days_per_week != null ? ` (${cp.class_days_per_week}× Wo)` : ""}` : ""}${cp.cardio_outside_gym ? `\n- Cardio außerhalb des Studios: ${cp.cardio_outside_gym}` : ""}
+- Plane Regeneration zwischen Trainings-, Kurs- und Spieltagen ein (mind. 24 h nach intensiven Beinheiten vor Spiel-/Kurstag).
+- Bei Mannschaftssport: in-season Volumen reduzieren, Fokus auf Erhalt, Schnellkraft & Verletzungsprophylaxe; off-/pre-season Volumen hoch.
+- Sportartspezifisch: Football → Explosivität, Wurfschulter, Sprintkraft; Fußball → Beinkraft, Hüftmobilität, Hamstrings; Kursleiter → Schulter-/Rumpfausdauer, Mobility.
+- Bei vielen Kursen/Cardio: weniger Cardio-Einheiten im Plan, dafür mehr gezielte Kraft- und Mobility-Anteile.`
+    : "";
+  const mobilityBlock = cp.mobility_frequency || cp.mobility_focus
+    ? `\n🧘 MOBILITY${cp.mobility_frequency ? `\n- Frequenz: ${mobLabel[cp.mobility_frequency] ?? cp.mobility_frequency}` : ""}${cp.mobility_focus ? `\n- Schwerpunkt: ${cp.mobility_focus}` : ""}\n- Baue 5–10 Min Mobility/Warm-up pro Einheit ein, besonders für genannte Bereiche.`
     : "";
   const injuryBlock = cp.injuries
     ? `\n⚠️ VERLETZUNGEN/EINSCHRÄNKUNGEN: ${cp.injuries}\n- VERMEIDE belastende Übungen für diese Bereiche, biete alternative Varianten an.`
