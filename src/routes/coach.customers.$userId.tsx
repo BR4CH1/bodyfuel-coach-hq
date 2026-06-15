@@ -27,6 +27,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { CoachTrainingSummary } from "@/components/bodyfuel/TrainingTrends";
 import { CoachStrengthCheckCard } from "@/components/bodyfuel/CoachStrengthCheckCard";
 import { NutritionTargetsEditor } from "@/components/bodyfuel/NutritionTargetsEditor";
