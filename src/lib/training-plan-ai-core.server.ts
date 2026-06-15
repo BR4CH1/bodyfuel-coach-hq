@@ -376,7 +376,7 @@ ${priorList.length ? `- BEVORZUGE bereits genutzte Übungsnamen für saubere PR-
 📤 ANTWORT
 NUR gültiges JSON, KEINE Erklärung außerhalb:
 {"weeks":[{"week_number":1,"focus":"Anpassung","days":[{"name":"Push","focus":"Brust/Schulter/Trizeps","exercises":[{"name":"Bankdrücken Langhantel","category":"barbell","target_sets":4,"target_reps":"8,8,8,10","target_weights":"60,60,60,50","rest_seconds":120,"notes":"Tempo 3-1-1"}]}]}]}
-GENAU 4 Wochen. Jede Woche GENAU ${numDays} Tage. Mind. 5 Übungen pro Tag.`;
+GENAU 4 Wochen. Jede Woche GENAU 7 Tage (Mo, Di, Mi, Do, Fr, Sa, So in dieser Reihenfolge) — Gym-Tage als Krafttraining, Sport-/Spieltage NUR mit Sport-Eintrag + Mobility (KEINE Kraftübungen), Restdays als Recovery/Mobility oder "Rest — frei". An Gym-Tagen mind. 5 Übungen, an Sport-/Restdays 1–4 Einträge. NIEMALS das Wort "Akzessoires" verwenden.`;
 
   const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
