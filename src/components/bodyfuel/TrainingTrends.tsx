@@ -11,6 +11,7 @@ import {
   type WindowKey,
   WINDOWS,
 } from "@/lib/training-analytics";
+import { normalizeExerciseName } from "@/lib/exercise-name-match";
 
 type ExerciseRow = { id: string; name: string; day_id: string };
 type DayRow = { id: string; name: string };
