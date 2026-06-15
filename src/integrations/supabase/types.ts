@@ -1093,6 +1093,7 @@ export type Database = {
           checkin_reminder: boolean
           coaching_goal: string | null
           created_at: string
+          daily_step_goal: number
           demo_client_key: string | null
           display_name: string | null
           gender: string | null
@@ -1115,6 +1116,7 @@ export type Database = {
           checkin_reminder?: boolean
           coaching_goal?: string | null
           created_at?: string
+          daily_step_goal?: number
           demo_client_key?: string | null
           display_name?: string | null
           gender?: string | null
@@ -1137,6 +1139,7 @@ export type Database = {
           checkin_reminder?: boolean
           coaching_goal?: string | null
           created_at?: string
+          daily_step_goal?: number
           demo_client_key?: string | null
           display_name?: string | null
           gender?: string | null
