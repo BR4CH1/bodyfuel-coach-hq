@@ -191,6 +191,34 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
         )}
       </div>
 
+      {weeksCount > 1 && days.length > 0 && (() => {
+        const phase =
+          activeWeek === 1 ? "Anpassung"
+          : activeWeek === weeksCount ? "Deload"
+          : activeWeek === weeksCount - 1 ? "Belastungsspitze"
+          : "Aufbau";
+        return (
+          <div className="rounded-2xl border border-gold/30 bg-gold/5 px-4 py-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-[10px] uppercase tracking-[0.2em] text-gold">Trainingsphase</div>
+                <div className="font-display text-base font-bold">
+                  Woche {activeWeek} von {weeksCount} · {phase}
+                </div>
+              </div>
+              <div className="flex gap-1">
+                {Array.from({ length: weeksCount }).map((_, i) => (
+                  <div
+                    key={i}
+                    className={`h-1.5 w-6 rounded-full ${i + 1 === activeWeek ? "bg-gold" : i + 1 < activeWeek ? "bg-gold/40" : "bg-border"}`}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {!days.length && (
         <div className="rounded-2xl border border-border bg-card p-5 text-sm text-muted-foreground">
           {isCoach
