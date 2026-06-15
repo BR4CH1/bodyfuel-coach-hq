@@ -151,7 +151,44 @@ export async function generateTrainingPlanCore(
       }
     }
   }
-  const priorList = Array.from(priorNames).slice(0, 80);
+  const priorList = Array.from(priorNames).slice(0, 120);
+
+  // Equipment usage stats from recent sets (last 60 days) → tells the AI
+  // which variant (Maschine / Multipresse / Kurzhantel / Langhantel / Kabel)
+  // the client actually uses, so it picks matching variants for new plans.
+  const exNameById = new Map<string, string>();
+  for (const p of (priorPlans as any[]) ?? []) {
+    for (const d of p?.training_days ?? []) {
+      for (const ex of d?.training_exercises ?? []) {
+        if (ex?.id && ex?.name) exNameById.set(String(ex.id), String(ex.name));
+      }
+    }
+  }
+  const equipCounts: Record<string, number> = {
+    maschine: 0, multipresse: 0, kurzhantel: 0, langhantel: 0, kabel: 0, bodyweight: 0,
+  };
+  for (const s of (recentSets as any[]) ?? []) {
+    const nm = exNameById.get(String(s.exercise_id))?.toLowerCase() ?? "";
+    if (!nm) continue;
+    if (/maschine|machine/.test(nm)) equipCounts.maschine++;
+    else if (/multi|smith/.test(nm)) equipCounts.multipresse++;
+    else if (/kurzhantel|dumbbell|\bkh\b|\bdb\b/.test(nm)) equipCounts.kurzhantel++;
+    else if (/langhantel|barbell|\blh\b/.test(nm)) equipCounts.langhantel++;
+    else if (/kabel|seilzug|cable/.test(nm)) equipCounts.kabel++;
+    else equipCounts.bodyweight++;
+  }
+  const equipBlock = `\n🛠️ GERÄTE-PRÄFERENZ (aus den letzten 60 Tagen)
+- Maschine: ${equipCounts.maschine} · Multipresse: ${equipCounts.multipresse} · Kurzhantel: ${equipCounts.kurzhantel} · Langhantel: ${equipCounts.langhantel} · Kabel: ${equipCounts.kabel}
+→ Wähle die Geräte-VARIANTE jeder Übung entsprechend dieser Daten:
+   • Schulterdrücken: Maschine / Multipresse / Kurzhantel
+   • Bankdrücken: Langhantel / Kurzhantel / Maschine
+   • Rudern: Langhantel / Kurzhantel / Kabel / Maschine
+   • Curls: Langhantel / Kurzhantel / Kabel
+   • Seitheben: Kurzhantel / Kabel / Maschine
+   • Beinpresse / Beinbeuger / Beinstrecker: Maschine
+- Falls der Kunde diese Übung schon gemacht hat, BEHALTE die gleiche Variante (für PR-Kontinuität).
+- Anfänger ohne Daten → bevorzugt Maschine / Multipresse (sicherer). Fortgeschrittene → Lang-/Kurzhantel.
+- Bei Verletzungen Schulter/Rücken → keine schweren Lang­hantel-Varianten über Kopf bzw. ohne Stütze.`;
 
   const sessionDates = new Set<string>();
   for (const s of (recentSets as any[]) ?? []) {
