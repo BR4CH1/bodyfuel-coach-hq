@@ -3,6 +3,7 @@ import * as React from "react";
 import { render } from "@react-email/components";
 import { createClient } from "@supabase/supabase-js";
 import { TEMPLATES } from "@/lib/email-templates/registry";
+import { verifyCronAuth } from "@/lib/cron-auth.server";
 
 const SITE_NAME = "BodyFuel";
 const SENDER_DOMAIN = "notify.bodyfuel-coaching.com";
@@ -26,12 +27,8 @@ export const Route = createFileRoute("/api/public/hooks/send-feature-news")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const anonKey =
-          process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.SUPABASE_ANON_KEY;
-        const apikey = request.headers.get("apikey");
-        if (!anonKey || apikey !== anonKey) {
-          return Response.json({ error: "Unauthorized" }, { status: 401 });
-        }
+        const auth = verifyCronAuth(request);
+        if (!auth.ok) return auth.response;
 
         let body: any = {};
         try {
