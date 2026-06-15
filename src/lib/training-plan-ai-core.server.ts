@@ -491,7 +491,7 @@ GENAU 4 Wochen. Jede Woche GENAU 7 Tage (Mo, Di, Mi, Do, Fr, Sa, So in dieser Re
             typeof e.rest_seconds === "number" && Number.isFinite(e.rest_seconds)
               ? Math.max(15, Math.min(600, Math.round(e.rest_seconds)))
               : null,
-          notes: e.notes ? String(e.notes).slice(0, 500) : null,
+          notes: e.notes ? stripAkzessoires(String(e.notes)).slice(0, 500) : null,
           sort_order: idx,
         }))
         .filter((r) => r.name);
