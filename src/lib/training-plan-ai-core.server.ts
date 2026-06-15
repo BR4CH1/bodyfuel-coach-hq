@@ -476,7 +476,7 @@ GENAU 4 Wochen. Jede Woche GENAU 7 Tage (Mo, Di, Mi, Do, Fr, Sa, So in dieser Re
       const rows = (d.exercises ?? [])
         .map((e, idx) => ({
           day_id: dayRow.id,
-          name: String(e.name ?? "").trim().slice(0, 200),
+          name: stripAkzessoires(String(e.name ?? "").trim()).slice(0, 200),
           category: validCategory(e.category),
           target_sets:
             typeof e.target_sets === "number" && Number.isFinite(e.target_sets)
