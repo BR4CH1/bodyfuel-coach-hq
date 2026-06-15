@@ -370,6 +370,14 @@ function CustomerDetail() {
         }}
       />
 
+      <section className="rounded-2xl border border-border bg-card p-5">
+        <h3 className="font-display text-base font-bold mb-3">Freie Trainingseinheiten</h3>
+        <p className="text-xs text-muted-foreground mb-3">
+          Kurse, Sport, Mobility und andere Einheiten, die der Kunde außerhalb des Plans geloggt hat.
+        </p>
+        <TrainingSessionsList clientId={userId} days={30} />
+      </section>
+
       <CoachStrengthCheckCard userId={userId} />
 
       <CoachTrainingAlertsCard userId={userId} />
