@@ -339,6 +339,10 @@ function CustomerDetail() {
         );
       })()}
 
+      <CoachStrengthCheckCard userId={userId} />
+
+
+
       <CoachTrainingGoalCard
         trainingGoal={(data.profile as any)?.training_goal ?? null}
         targets={(data as any).targets ?? null}
