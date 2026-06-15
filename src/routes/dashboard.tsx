@@ -90,7 +90,6 @@ function DashboardContent() {
 
   return (
     <div className="space-y-6">
-      <SportWeekdaysPrompt />
       <TrialWelcomeDialog />
       <TrialStatusBanner />
       {supabaseUser && <TrialChecklistGate userId={supabaseUser.id} />}
