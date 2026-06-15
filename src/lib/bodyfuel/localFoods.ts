@@ -65,4 +65,18 @@ export const LOCAL_FOODS: LocalFood[] = [
 
   { name: "Zucker", brand: null, barcode: null, kcal_per_100g: 387, protein_per_100g: 0, carbs_per_100g: 100, fat_per_100g: 0, serving_g: null, serving_label: null, aliases: ["zucker"] },
   { name: "Honig", brand: null, barcode: null, kcal_per_100g: 304, protein_per_100g: 0.3, carbs_per_100g: 82, fat_per_100g: 0, serving_g: null, serving_label: null, aliases: ["honig"] },
+
+  // Bäckerei / SB-Theke (Aldi, Lidl, etc.)
+  { name: "Käse-Laugenstange (Aldi SB-Theke)", brand: "Aldi", barcode: null, kcal_per_100g: 320, protein_per_100g: 12, carbs_per_100g: 38, fat_per_100g: 13, serving_g: 90, serving_label: "1 Stück ≈ 90 g", aliases: ["käselaugenstange", "käse laugenstange", "käse-laugenstange", "laugenstange käse", "aldi käselaugenstange"] },
+  { name: "Laugenstange (natur)", brand: null, barcode: null, kcal_per_100g: 270, protein_per_100g: 9, carbs_per_100g: 50, fat_per_100g: 3.5, serving_g: 80, serving_label: "1 Stück ≈ 80 g", aliases: ["laugenstange", "laugenstangen"] },
+  { name: "Laugenbrezel", brand: null, barcode: null, kcal_per_100g: 280, protein_per_100g: 9, carbs_per_100g: 53, fat_per_100g: 3, serving_g: 80, serving_label: "1 Stück ≈ 80 g", aliases: ["brezel", "brezn", "laugenbrezel"] },
+  { name: "Croissant (Butter)", brand: null, barcode: null, kcal_per_100g: 406, protein_per_100g: 8, carbs_per_100g: 42, fat_per_100g: 22, serving_g: 60, serving_label: "1 Stück ≈ 60 g", aliases: ["croissant", "hörnchen"] },
+  { name: "Schoko-Croissant", brand: null, barcode: null, kcal_per_100g: 430, protein_per_100g: 7, carbs_per_100g: 47, fat_per_100g: 23, serving_g: 75, serving_label: "1 Stück ≈ 75 g", aliases: ["schokocroissant", "schoko croissant", "pain au chocolat"] },
+  { name: "Franzbrötchen", brand: null, barcode: null, kcal_per_100g: 410, protein_per_100g: 6, carbs_per_100g: 50, fat_per_100g: 20, serving_g: 85, serving_label: "1 Stück ≈ 85 g", aliases: ["franzbrötchen"] },
+  { name: "Berliner / Krapfen", brand: null, barcode: null, kcal_per_100g: 360, protein_per_100g: 6, carbs_per_100g: 47, fat_per_100g: 16, serving_g: 75, serving_label: "1 Stück ≈ 75 g", aliases: ["berliner", "krapfen", "pfannkuchen"] },
+  { name: "Käsebrötchen (überbacken)", brand: null, barcode: null, kcal_per_100g: 310, protein_per_100g: 13, carbs_per_100g: 38, fat_per_100g: 11, serving_g: 90, serving_label: "1 Stück ≈ 90 g", aliases: ["käsebrötchen", "käse brötchen"] },
+  { name: "Mohnbrötchen", brand: null, barcode: null, kcal_per_100g: 280, protein_per_100g: 9, carbs_per_100g: 52, fat_per_100g: 3.5, serving_g: 60, serving_label: "1 Stück ≈ 60 g", aliases: ["mohnbrötchen"] },
+  { name: "Sesambrötchen", brand: null, barcode: null, kcal_per_100g: 285, protein_per_100g: 9, carbs_per_100g: 51, fat_per_100g: 4, serving_g: 60, serving_label: "1 Stück ≈ 60 g", aliases: ["sesambrötchen"] },
+  { name: "Roggenbrötchen", brand: null, barcode: null, kcal_per_100g: 255, protein_per_100g: 8, carbs_per_100g: 50, fat_per_100g: 1.5, serving_g: 60, serving_label: "1 Stück ≈ 60 g", aliases: ["roggenbrötchen"] },
+  { name: "Körnerbrötchen", brand: null, barcode: null, kcal_per_100g: 290, protein_per_100g: 10, carbs_per_100g: 45, fat_per_100g: 6, serving_g: 75, serving_label: "1 Stück ≈ 75 g", aliases: ["körnerbrötchen", "mehrkornbrötchen"] },
 ];
