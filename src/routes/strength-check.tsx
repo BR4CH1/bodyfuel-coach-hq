@@ -17,6 +17,7 @@ import {
   type StrengthResult,
   type StrengthTestKey,
 } from "@/lib/strength-check.functions";
+import { AthleteProfileBanner } from "@/components/bodyfuel/AthleteProfileBanner";
 
 export const Route = createFileRoute("/strength-check")({
   head: () => ({ meta: [{ title: "BODYFUEL Strength Check" }] }),
