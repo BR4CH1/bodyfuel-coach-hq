@@ -467,7 +467,7 @@ function RealUserDashboard() {
         />
       </div>
 
-      {supabaseUser && <DayTypePrompt userId={supabaseUser.id} />}
+      {supabaseUser && <SmartAnalysisCTA />}
       {supabaseUser && <DailyMacroSummary userId={supabaseUser.id} />}
 
 
