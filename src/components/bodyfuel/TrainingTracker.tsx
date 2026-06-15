@@ -73,15 +73,17 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
     const allDays = (dayRows as Day[]) ?? [];
 
     // For multi-week plans, only show the current week's days.
-    const weeksCount = (planRow as any).weeks_count ?? 1;
+    const wc = (planRow as any).weeks_count ?? 1;
     const startStr = (planRow as any).scheduled_start_date as string | null;
-    let activeWeek = 1;
-    if (startStr && weeksCount > 1) {
+    let aw = 1;
+    if (startStr && wc > 1) {
       const start = new Date(startStr + "T00:00:00");
       const diffDays = Math.floor((Date.now() - start.getTime()) / 86400000);
-      activeWeek = Math.max(1, Math.min(weeksCount, Math.floor(diffDays / 7) + 1));
+      aw = Math.max(1, Math.min(wc, Math.floor(diffDays / 7) + 1));
     }
-    const dayList = allDays.filter((d) => (d.week_number ?? 1) === activeWeek);
+    setActiveWeek(aw);
+    setWeeksCount(wc);
+    const dayList = allDays.filter((d) => (d.week_number ?? 1) === aw);
     setDays(dayList);
     setOpenDay((cur) => cur ?? dayList[0]?.id ?? null);
 
