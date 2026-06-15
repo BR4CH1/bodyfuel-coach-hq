@@ -202,7 +202,7 @@ export const completeStrengthCheck = createServerFn({ method: "POST" })
       .eq("check_id", data.check_id);
     if (!results || results.length < 4) throw new Error("Bitte mindestens 4 Tests eintragen.");
 
-    const update: Record<string, unknown> = { status: "completed" };
+    const update: { status: "completed"; bodyweight_kg?: number | null; notes?: string | null } = { status: "completed" };
     if (data.bodyweight_kg != null) update.bodyweight_kg = data.bodyweight_kg;
     if (data.notes != null) update.notes = data.notes.slice(0, 1000);
     const { data: row, error } = await supabase
