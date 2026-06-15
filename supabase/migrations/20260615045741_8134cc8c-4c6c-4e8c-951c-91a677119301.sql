@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS daily_step_goal integer NOT NULL DEFAULT 10000 CHECK (daily_step_goal BETWEEN 1000 AND 40000);

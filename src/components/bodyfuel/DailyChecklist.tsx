@@ -30,12 +30,13 @@ export function DailyChecklist({ userId }: { userId: string }) {
   const [saving, setSaving] = useState(false);
 
   const [checkinDone, setCheckinDone] = useState(false);
+  const [stepGoal, setStepGoal] = useState<number>(10000);
   const weekStart = mondayOf(new Date());
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [{ data }, { data: ci }] = await Promise.all([
+      const [{ data }, { data: ci }, { data: prof }] = await Promise.all([
         supabase
           .from("daily_checks")
           .select("id, tasks")
@@ -48,6 +49,11 @@ export function DailyChecklist({ userId }: { userId: string }) {
           .eq("user_id", userId)
           .eq("week_start", weekStart)
           .maybeSingle(),
+        supabase
+          .from("profiles")
+          .select("daily_step_goal")
+          .eq("id", userId)
+          .maybeSingle(),
       ]);
       if (cancelled) return;
       if (data) {
@@ -55,6 +61,9 @@ export function DailyChecklist({ userId }: { userId: string }) {
         setTasks((data.tasks as TaskState) ?? {});
       }
       setCheckinDone(!!ci);
+      if (prof && (prof as any).daily_step_goal) {
+        setStepGoal((prof as any).daily_step_goal);
+      }
       setLoading(false);
     })();
     return () => {
@@ -161,7 +170,11 @@ export function DailyChecklist({ userId }: { userId: string }) {
                         )}
                       </span>
                       <div className="min-w-0">
-                        <div className="truncate text-sm font-medium">{t.label}</div>
+                        <div className="truncate text-sm font-medium">
+                          {t.key === "steps"
+                            ? `Schrittziel erreicht (${stepGoal.toLocaleString("de-DE")})`
+                            : t.label}
+                        </div>
                         <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
                           +{t.points} Punkte
                         </div>
