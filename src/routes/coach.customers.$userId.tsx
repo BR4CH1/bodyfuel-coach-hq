@@ -53,6 +53,7 @@ import { TrainingSessionsList } from "@/components/bodyfuel/TrainingSessionsList
 import { CoachTrainingAlertsCard } from "@/components/bodyfuel/CoachTrainingAlertsCard";
 import { WeightProgressChart } from "@/components/bodyfuel/WeightProgressChart";
 import { GoalProjectionCard } from "@/components/bodyfuel/GoalProjectionCard";
+import { CoachBaseDataEditor } from "@/components/bodyfuel/CoachBaseDataEditor";
 import { labelForTrainingGoal } from "@/lib/training-goals";
 
 
