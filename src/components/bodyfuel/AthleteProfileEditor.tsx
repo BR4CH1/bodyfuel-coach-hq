@@ -34,6 +34,15 @@ const MOBILITY: { v: MobilityFreq; l: string }[] = [
   { v: "daily", l: "Täglich" },
 ];
 const CLASS_PRESETS = ["Yoga", "Pilates", "Spinning", "HIIT", "Bodypump", "CrossFit", "Boxen", "Functional"];
+const WEEKDAYS: { v: string; l: string }[] = [
+  { v: "monday", l: "Mo" },
+  { v: "tuesday", l: "Di" },
+  { v: "wednesday", l: "Mi" },
+  { v: "thursday", l: "Do" },
+  { v: "friday", l: "Fr" },
+  { v: "saturday", l: "Sa" },
+  { v: "sunday", l: "So" },
+];
 
 export type AthleteProfileInitial = AthleteProfileInput & {
   sport?: string | null;
