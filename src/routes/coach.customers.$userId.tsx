@@ -552,6 +552,7 @@ function CustomerDetail() {
       <NutritionTargetsEditor userId={userId} />
       <SmartNutritionInsightsCard userId={userId} />
       <PlanManagementCard userId={userId} />
+      <TrainingPlanManagementCard userId={userId} />
       <PartnerLinkCard userId={userId} />
 
       <RecipeInsightsCard userId={userId} />
