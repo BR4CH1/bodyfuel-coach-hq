@@ -226,7 +226,7 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
                             .eq("user_id", clientId)
                             .eq("check_date", date)
                             .maybeSingle();
-                          const tasks = { ...((existing?.tasks as Record<string, boolean>) ?? {}), training: true };
+                          const tasks: Record<string, boolean> = { ...((existing?.tasks as Record<string, boolean>) ?? {}), training: true };
                           const { TASKS } = await import("@/lib/bodyfuel/data");
                           const points = TASKS.reduce((s, t) => s + (tasks[t.key] ? t.points : 0), 0);
                           await supabase.from("daily_checks").upsert(
