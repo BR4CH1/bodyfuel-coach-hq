@@ -217,10 +217,28 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
                         });
                         setLogs((cur) => [row as SetLog, ...cur]);
                         toast.success("Gespeichert");
+                        // Auto-check the daily "Training" task
+                        try {
+                          const date = new Date().toISOString().slice(0, 10);
+                          const { data: existing } = await supabase
+                            .from("daily_checks")
+                            .select("id, tasks, points")
+                            .eq("user_id", clientId)
+                            .eq("check_date", date)
+                            .maybeSingle();
+                          const tasks = { ...((existing?.tasks as Record<string, boolean>) ?? {}), training: true };
+                          const { TASKS } = await import("@/lib/bodyfuel/data");
+                          const points = TASKS.reduce((s, t) => s + (tasks[t.key] ? t.points : 0), 0);
+                          await supabase.from("daily_checks").upsert(
+                            { user_id: clientId, check_date: date, tasks, points },
+                            { onConflict: "user_id,check_date" },
+                          );
+                        } catch {}
                       } catch (e: unknown) {
                         toast.error(e instanceof Error ? e.message : "Fehler");
                       }
                     }}
+
                     onDelete={async (id) => {
                       try {
                         await deleteLogFn({ data: { id } });
