@@ -467,6 +467,9 @@ function ResultScreen({ check, previous, onClose }: { check: StrengthCheck; prev
         })}
       </div>
 
+
+      <AthleteProfileBanner force />
+
       <div className="flex flex-col gap-2 sm:flex-row">
         <button
           type="button"
