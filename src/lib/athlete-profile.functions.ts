@@ -43,6 +43,14 @@ function sanitize(input: AthleteProfileInput): Record<string, unknown> {
   if (input.practice_days_per_week !== undefined)
     patch.practice_days_per_week = num(input.practice_days_per_week, 0, 7);
   if (input.season_phase !== undefined) patch.season_phase = input.season_phase ?? null;
+  if (input.sport_weekdays !== undefined)
+    patch.sport_weekdays = Array.isArray(input.sport_weekdays)
+      ? Array.from(new Set(
+          input.sport_weekdays
+            .map((d) => String(d).toLowerCase().trim())
+            .filter((d) => VALID_WEEKDAYS.has(d)),
+        ))
+      : [];
   if (input.class_types !== undefined)
     patch.class_types = Array.isArray(input.class_types)
       ? input.class_types
