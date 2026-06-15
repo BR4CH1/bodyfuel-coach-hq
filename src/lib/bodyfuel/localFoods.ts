@@ -18,6 +18,8 @@ export const LOCAL_FOODS: LocalFood[] = [
   { name: "Orange", brand: null, barcode: null, kcal_per_100g: 47, protein_per_100g: 0.9, carbs_per_100g: 12, fat_per_100g: 0.1, serving_g: 140, serving_label: "1 Stück ≈ 140 g", aliases: ["orange", "apfelsine"] },
   { name: "Erdbeeren", brand: null, barcode: null, kcal_per_100g: 32, protein_per_100g: 0.7, carbs_per_100g: 7.7, fat_per_100g: 0.3, serving_g: null, serving_label: null, aliases: ["erdbeere", "erdbeeren"] },
   { name: "Heidelbeeren", brand: null, barcode: null, kcal_per_100g: 57, protein_per_100g: 0.7, carbs_per_100g: 14, fat_per_100g: 0.3, serving_g: null, serving_label: null, aliases: ["blaubeeren", "heidelbeeren"] },
+  { name: "Himbeeren", brand: null, barcode: null, kcal_per_100g: 43, protein_per_100g: 1.2, carbs_per_100g: 5.4, fat_per_100g: 0.3, serving_g: null, serving_label: null, aliases: ["himbeere", "himbeeren", "raspberry", "raspberries"] },
+  { name: "Brombeeren", brand: null, barcode: null, kcal_per_100g: 43, protein_per_100g: 1.4, carbs_per_100g: 6.2, fat_per_100g: 0.5, serving_g: null, serving_label: null, aliases: ["brombeere", "brombeeren", "blackberry", "blackberries"] },
   { name: "Avocado", brand: null, barcode: null, kcal_per_100g: 160, protein_per_100g: 2, carbs_per_100g: 9, fat_per_100g: 15, serving_g: 150, serving_label: "1/2 Stück ≈ 150 g", aliases: ["avocado"] },
 
   { name: "Haferflocken", brand: null, barcode: null, kcal_per_100g: 372, protein_per_100g: 13.5, carbs_per_100g: 59, fat_per_100g: 7, serving_g: null, serving_label: null, aliases: ["haferflocken", "oats"] },
