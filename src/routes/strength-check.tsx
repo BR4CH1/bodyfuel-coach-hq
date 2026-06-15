@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { ArrowLeft, ArrowRight, Check, Dumbbell, Loader2, ShieldAlert, Sparkles, TimerReset, Trophy } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
+import { StrengthScoreDonut } from "@/components/bodyfuel/StrengthScoreDonut";
 import { useSession } from "@/lib/bodyfuel/session";
 import {
   STRENGTH_TESTS,
