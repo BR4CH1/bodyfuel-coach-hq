@@ -43,6 +43,7 @@ import { PartnerLinkCard } from "@/components/bodyfuel/PartnerLinkCard";
 import { CoachTrainingGoalCard } from "@/components/bodyfuel/CoachTrainingGoalCard";
 import { StepGoalEditor } from "@/components/bodyfuel/StepGoalEditor";
 import { AthleteProfileEditor } from "@/components/bodyfuel/AthleteProfileEditor";
+import { TrainingSessionsList } from "@/components/bodyfuel/TrainingSessionsList";
 import { CoachTrainingAlertsCard } from "@/components/bodyfuel/CoachTrainingAlertsCard";
 import { WeightProgressChart } from "@/components/bodyfuel/WeightProgressChart";
 import { labelForTrainingGoal } from "@/lib/training-goals";
