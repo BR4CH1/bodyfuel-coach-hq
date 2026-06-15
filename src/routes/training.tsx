@@ -68,6 +68,7 @@ function TrainingPage() {
   return (
     <div className="space-y-8">
       {!isCoach && <StrengthCheckStatus variant="block" />}
+      {!isCoach && supabaseUser && <AthleteProfileBanner />}
       {hasCompleted && (
         <StrengthSummaryCard
           total={last.score_total}
