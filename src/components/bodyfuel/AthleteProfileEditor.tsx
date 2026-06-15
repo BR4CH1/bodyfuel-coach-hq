@@ -83,6 +83,7 @@ export function AthleteProfileEditor({
   const [mobilityFreq, setMobilityFreq] = useState<MobilityFreq | "">(
     (initial.mobility_frequency as MobilityFreq) ?? "",
   );
+  const [sportWeekdays, setSportWeekdays] = useState<string[]>(initial.sport_weekdays ?? []);
   const [mobilityFocus, setMobilityFocus] = useState(initial.mobility_focus ?? "");
   const [cardioOutside, setCardioOutside] = useState(initial.cardio_outside_gym ?? "");
   const [injuries, setInjuries] = useState(initial.injuries ?? "");
