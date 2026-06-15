@@ -104,6 +104,37 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
 
+  // Sync open day with PlanContentView selection (top of /training page).
+  // PlanContentView writes the active virtual-day NAME to localStorage and
+  // dispatches "bf:training-active-day" when the user picks a day.
+  useEffect(() => {
+    if (!days.length) return;
+    const key = `bf:training:active-day-name:${clientId}`;
+    const applyName = (name: string | null) => {
+      if (!name) return;
+      const norm = name.trim().toLowerCase();
+      const hit = days.find(
+        (d) => d.name.trim().toLowerCase() === norm || norm.includes(d.name.trim().toLowerCase()) || d.name.trim().toLowerCase().includes(norm),
+      );
+      if (hit) setOpenDay(hit.id);
+    };
+    try { applyName(localStorage.getItem(key)); } catch {}
+    const onEvt = (e: Event) => {
+      const detail = (e as CustomEvent<{ clientId: string; name: string }>).detail;
+      if (detail?.clientId === clientId) applyName(detail.name);
+    };
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === key) applyName(e.newValue);
+    };
+    window.addEventListener("bf:training-active-day", onEvt as EventListener);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener("bf:training-active-day", onEvt as EventListener);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, [days, clientId]);
+
+
   const extract = async () => {
     if (!plan) return;
     setParsing(true);
