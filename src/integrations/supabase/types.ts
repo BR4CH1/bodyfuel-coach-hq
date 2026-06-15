@@ -1253,6 +1253,137 @@ export type Database = {
         }
         Relationships: []
       }
+      strength_check_reminders: {
+        Row: {
+          created_at: string
+          due_at: string
+          id: string
+          kind: Database["public"]["Enums"]["strength_reminder_kind"]
+          resolved_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          due_at: string
+          id?: string
+          kind: Database["public"]["Enums"]["strength_reminder_kind"]
+          resolved_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          due_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["strength_reminder_kind"]
+          resolved_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      strength_check_results: {
+        Row: {
+          check_id: string
+          created_at: string
+          duration_seconds: number | null
+          e1rm_kg: number | null
+          id: string
+          pain_note: string | null
+          reps: number | null
+          rpe: number | null
+          test_key: Database["public"]["Enums"]["strength_test_key"]
+          updated_at: string
+          user_id: string
+          weight_kg: number | null
+        }
+        Insert: {
+          check_id: string
+          created_at?: string
+          duration_seconds?: number | null
+          e1rm_kg?: number | null
+          id?: string
+          pain_note?: string | null
+          reps?: number | null
+          rpe?: number | null
+          test_key: Database["public"]["Enums"]["strength_test_key"]
+          updated_at?: string
+          user_id: string
+          weight_kg?: number | null
+        }
+        Update: {
+          check_id?: string
+          created_at?: string
+          duration_seconds?: number | null
+          e1rm_kg?: number | null
+          id?: string
+          pain_note?: string | null
+          reps?: number | null
+          rpe?: number | null
+          test_key?: Database["public"]["Enums"]["strength_test_key"]
+          updated_at?: string
+          user_id?: string
+          weight_kg?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "strength_check_results_check_id_fkey"
+            columns: ["check_id"]
+            isOneToOne: false
+            referencedRelation: "strength_checks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      strength_checks: {
+        Row: {
+          bodyweight_kg: number | null
+          completed_at: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          performed_at: string
+          score_core: number | null
+          score_lower: number | null
+          score_pull: number | null
+          score_push: number | null
+          score_total: number | null
+          status: Database["public"]["Enums"]["strength_check_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bodyweight_kg?: number | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          performed_at?: string
+          score_core?: number | null
+          score_lower?: number | null
+          score_pull?: number | null
+          score_push?: number | null
+          score_total?: number | null
+          status?: Database["public"]["Enums"]["strength_check_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bodyweight_kg?: number | null
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          performed_at?: string
+          score_core?: number | null
+          score_lower?: number | null
+          score_pull?: number | null
+          score_push?: number | null
+          score_total?: number | null
+          status?: Database["public"]["Enums"]["strength_check_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       suppressed_emails: {
         Row: {
           created_at: string
@@ -1652,6 +1783,20 @@ export type Database = {
         }[]
       }
       recompute_user_points: { Args: { _user_id: string }; Returns: undefined }
+      sc_interp: {
+        Args: { _anchors: number[]; _value: number }
+        Returns: number
+      }
+      sc_score_for_test: {
+        Args: {
+          _bodyweight: number
+          _duration_seconds: number
+          _e1rm: number
+          _gender: string
+          _test: Database["public"]["Enums"]["strength_test_key"]
+        }
+        Returns: number
+      }
     }
     Enums: {
       app_group: "bulls" | "running_team" | "sgz" | "premium"
@@ -1668,6 +1813,16 @@ export type Database = {
         | "DB"
         | "KP"
         | "COACH"
+      strength_check_status: "draft" | "completed"
+      strength_reminder_kind: "upcoming" | "due"
+      strength_test_key:
+        | "leg_press"
+        | "leg_curl"
+        | "chest_press"
+        | "shoulder_press"
+        | "lat_pulldown"
+        | "cable_row"
+        | "plank"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1809,6 +1964,17 @@ export const Constants = {
         "DB",
         "KP",
         "COACH",
+      ],
+      strength_check_status: ["draft", "completed"],
+      strength_reminder_kind: ["upcoming", "due"],
+      strength_test_key: [
+        "leg_press",
+        "leg_curl",
+        "chest_press",
+        "shoulder_press",
+        "lat_pulldown",
+        "cable_row",
+        "plank",
       ],
     },
   },

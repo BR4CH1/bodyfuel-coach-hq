@@ -9,6 +9,7 @@ import { AchievementsCard } from "@/components/bodyfuel/AchievementsCard";
 import { TrainingBonusCard } from "@/components/bodyfuel/TrainingBonusCard";
 import { MacroTargetsCard } from "@/components/bodyfuel/MacroTargetsCard";
 import { SmartAnalysisCTA } from "@/components/bodyfuel/SmartAnalysisCTA";
+import { StrengthCheckStatus } from "@/components/bodyfuel/StrengthCheckStatus";
 import { DailyMacroSummary } from "@/components/bodyfuel/DailyMacroSummary";
 import { PointsBreakdownCard } from "@/components/bodyfuel/PointsBreakdownCard";
 import { TrialStatusBanner, TrialWelcomeDialog } from "@/components/bodyfuel/Trial";
@@ -468,6 +469,7 @@ function RealUserDashboard() {
       </div>
 
       {supabaseUser && <SmartAnalysisCTA />}
+      {supabaseUser && <StrengthCheckStatus variant="card" />}
       {supabaseUser && <DailyMacroSummary userId={supabaseUser.id} />}
 
 

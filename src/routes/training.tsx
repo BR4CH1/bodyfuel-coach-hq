@@ -6,6 +6,7 @@ import { PlansView } from "@/components/bodyfuel/PlansView";
 import { TrainingTracker } from "@/components/bodyfuel/TrainingTracker";
 import { PlanContentView } from "@/components/bodyfuel/PlanContentView";
 import { useSession } from "@/lib/bodyfuel/session";
+import { StrengthCheckStatus } from "@/components/bodyfuel/StrengthCheckStatus";
 
 import { useTrial } from "@/hooks/use-trial";
 import { TrialTrainingPlan } from "@/components/bodyfuel/TrialPlanView";
@@ -52,6 +53,7 @@ function TrainingPage() {
 
   return (
     <div className="space-y-8">
+      {!isCoach && <StrengthCheckStatus variant="block" />}
       {isCoach && <PlansView planType="training" onClientChange={setClientId} />}
       {!isCoach && (isTrial || isExpired) ? (
         <TrialTrainingPlan />
