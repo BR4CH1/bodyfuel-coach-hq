@@ -363,10 +363,25 @@ function CustomerDetail() {
               );
             })()}
 
+            <CoachBaseDataEditor
+              userId={userId}
+              currentWeightKg={(latestWeightMeasurement as any)?.weight_kg ?? null}
+              initial={{
+                height_cm: (data.profile as any)?.height_cm ?? null,
+                birthdate: (data.profile as any)?.birthdate ?? null,
+                gender: (data.profile as any)?.gender ?? null,
+                goal_weight_kg: (data.profile as any)?.goal_weight_kg ?? null,
+                goal_target_date: (data.profile as any)?.goal_target_date ?? null,
+                activity_level: (data.profile as any)?.activity_level ?? null,
+                training_goal: (data.profile as any)?.training_goal ?? null,
+              }}
+            />
+
             <GoalProjectionCard
               profile={(data.profile as any) ?? {}}
               currentWeight={(latestWeightMeasurement as any)?.weight_kg ?? null}
             />
+
 
 
             <AthleteProfileEditor
