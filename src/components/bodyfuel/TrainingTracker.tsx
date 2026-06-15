@@ -281,6 +281,10 @@ function ExerciseCard({
   const nextSet = (todaysLogs.length ?? 0) + 1;
   const [weight, setWeight] = useState("");
   const [reps, setReps] = useState("");
+  const isPerSide = /kurzhantel|dumbbell|\bkh\b|\bdb\b|einarmig|one[- ]?arm|single[- ]?arm/i.test(
+    `${ex.name} ${ex.notes ?? ""}`,
+  );
+  const weightHint = isPerSide ? "pro Seite" : "Gesamtgewicht";
 
   // Suggest last weight + planned reps as defaults — only when inputs are empty
   // and only when the previous suggestion changes (no stale traps).
