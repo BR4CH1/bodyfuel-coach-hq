@@ -115,7 +115,7 @@ export const getMyAthleteProfile = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("profiles")
       .select(
-        "sport, sport_position, sport_level, team_sport, match_days_per_week, practice_days_per_week, season_phase, class_types, class_days_per_week, mobility_frequency, mobility_focus, cardio_outside_gym, injuries, training_experience, athlete_profile_updated_at",
+        "sport, sport_position, sport_level, team_sport, match_days_per_week, practice_days_per_week, sport_weekdays, season_phase, class_types, class_days_per_week, mobility_frequency, mobility_focus, cardio_outside_gym, injuries, training_experience, athlete_profile_updated_at",
       )
       .eq("id", context.userId)
       .maybeSingle();
