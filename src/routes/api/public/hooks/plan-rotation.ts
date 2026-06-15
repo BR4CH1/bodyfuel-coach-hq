@@ -1,26 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
+import { verifyCronAuth } from "@/lib/cron-auth.server";
 
 // Daily rotation hook: activates scheduled/published "next" plans whose
 // scheduled_start_date has arrived (when client opted into auto_publish),
 // and archives any active plan whose scheduled_end_date has passed.
 //
-// Triggered by pg_cron. Authenticated via Supabase publishable apikey header.
+// Triggered by pg_cron. Authenticated via CRON_HOOK_SECRET bearer header.
 export const Route = createFileRoute("/api/public/hooks/plan-rotation")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const apikey = request.headers.get("apikey") || "";
-        const expected =
-          process.env.SUPABASE_PUBLISHABLE_KEY ||
-          process.env.SUPABASE_ANON_KEY ||
-          "";
-        if (!apikey || apikey !== expected) {
-          return new Response(JSON.stringify({ error: "Unauthorized" }), {
-            status: 401,
-            headers: { "Content-Type": "application/json" },
-          });
-        }
+        const auth = verifyCronAuth(request);
+        if (!auth.ok) return auth.response;
 
         const url = process.env.SUPABASE_URL!;
         const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
