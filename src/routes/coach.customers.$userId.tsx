@@ -42,6 +42,7 @@ import { TrainingPlanManagementCard } from "@/components/bodyfuel/TrainingPlanMa
 import { PartnerLinkCard } from "@/components/bodyfuel/PartnerLinkCard";
 import { CoachTrainingGoalCard } from "@/components/bodyfuel/CoachTrainingGoalCard";
 import { StepGoalEditor } from "@/components/bodyfuel/StepGoalEditor";
+import { AthleteProfileEditor } from "@/components/bodyfuel/AthleteProfileEditor";
 import { WeightProgressChart } from "@/components/bodyfuel/WeightProgressChart";
 import { labelForTrainingGoal } from "@/lib/training-goals";
 
@@ -344,6 +345,13 @@ function CustomerDetail() {
       <StepGoalEditor
         userId={userId}
         initial={(data.profile as any)?.daily_step_goal ?? 10000}
+      />
+
+      <AthleteProfileEditor
+        userId={userId}
+        initialSport={(data.profile as any)?.sport ?? null}
+        initialInjuries={(data.profile as any)?.injuries ?? null}
+        initialExperience={(data.profile as any)?.training_experience ?? null}
       />
 
       <CoachStrengthCheckCard userId={userId} />

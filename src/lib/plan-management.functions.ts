@@ -336,8 +336,9 @@ export const getPlanPreview = createServerFn({ method: "GET" })
     if (planType === "training") {
       const { data: days } = await supabase
         .from("training_days")
-        .select("id, name, sort_order")
+        .select("id, name, sort_order, week_number")
         .eq("plan_id", data.plan_id)
+        .order("week_number")
         .order("sort_order");
       const dayList = (days ?? []) as any[];
       let exercises: any[] = [];

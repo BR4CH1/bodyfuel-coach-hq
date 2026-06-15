@@ -828,6 +828,7 @@ export type Database = {
           is_active: boolean
           is_partner_plan: boolean
           kcal: number | null
+          last_auto_generated_at: string | null
           partner_plan_id: string | null
           plan_type: string
           protein_g: number | null
@@ -838,6 +839,7 @@ export type Database = {
           status: string
           title: string
           uploaded_by: string | null
+          weeks_count: number
         }
         Insert: {
           activated_at?: string | null
@@ -853,6 +855,7 @@ export type Database = {
           is_active?: boolean
           is_partner_plan?: boolean
           kcal?: number | null
+          last_auto_generated_at?: string | null
           partner_plan_id?: string | null
           plan_type?: string
           protein_g?: number | null
@@ -863,6 +866,7 @@ export type Database = {
           status?: string
           title: string
           uploaded_by?: string | null
+          weeks_count?: number
         }
         Update: {
           activated_at?: string | null
@@ -878,6 +882,7 @@ export type Database = {
           is_active?: boolean
           is_partner_plan?: boolean
           kcal?: number | null
+          last_auto_generated_at?: string | null
           partner_plan_id?: string | null
           plan_type?: string
           protein_g?: number | null
@@ -888,6 +893,7 @@ export type Database = {
           status?: string
           title?: string
           uploaded_by?: string | null
+          weeks_count?: number
         }
         Relationships: [
           {
@@ -1101,9 +1107,12 @@ export type Database = {
           goal_weight_kg: number | null
           height_cm: number | null
           id: string
+          injuries: string | null
           next_checkin_date: string | null
           notifications_enabled: boolean
           phone: string | null
+          sport: string | null
+          training_experience: string | null
           training_goal: string | null
           trial_end: string | null
           trial_start: string | null
@@ -1124,9 +1133,12 @@ export type Database = {
           goal_weight_kg?: number | null
           height_cm?: number | null
           id: string
+          injuries?: string | null
           next_checkin_date?: string | null
           notifications_enabled?: boolean
           phone?: string | null
+          sport?: string | null
+          training_experience?: string | null
           training_goal?: string | null
           trial_end?: string | null
           trial_start?: string | null
@@ -1147,9 +1159,12 @@ export type Database = {
           goal_weight_kg?: number | null
           height_cm?: number | null
           id?: string
+          injuries?: string | null
           next_checkin_date?: string | null
           notifications_enabled?: boolean
           phone?: string | null
+          sport?: string | null
+          training_experience?: string | null
           training_goal?: string | null
           trial_end?: string | null
           trial_start?: string | null
@@ -1424,6 +1439,7 @@ export type Database = {
           name: string
           plan_id: string
           sort_order: number
+          week_number: number
         }
         Insert: {
           created_at?: string
@@ -1431,6 +1447,7 @@ export type Database = {
           name: string
           plan_id: string
           sort_order?: number
+          week_number?: number
         }
         Update: {
           created_at?: string
@@ -1438,6 +1455,7 @@ export type Database = {
           name?: string
           plan_id?: string
           sort_order?: number
+          week_number?: number
         }
         Relationships: [
           {
