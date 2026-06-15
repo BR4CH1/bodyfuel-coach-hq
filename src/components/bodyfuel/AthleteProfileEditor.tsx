@@ -100,6 +100,7 @@ export function AthleteProfileEditor({
     setClassTypes(initial.class_types ?? []);
     setClassDays(initial.class_days_per_week == null ? "" : String(initial.class_days_per_week));
     setMobilityFreq((initial.mobility_frequency as MobilityFreq) ?? "");
+    setSportWeekdays(initial.sport_weekdays ?? []);
     setMobilityFocus(initial.mobility_focus ?? "");
     setCardioOutside(initial.cardio_outside_gym ?? "");
     setInjuries(initial.injuries ?? "");
