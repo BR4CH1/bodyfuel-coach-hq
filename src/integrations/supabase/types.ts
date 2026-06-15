@@ -1095,8 +1095,12 @@ export type Database = {
       profiles: {
         Row: {
           activity_level: string | null
+          athlete_profile_updated_at: string | null
           birthdate: string | null
+          cardio_outside_gym: string | null
           checkin_reminder: boolean
+          class_days_per_week: number | null
+          class_types: string[]
           coaching_goal: string | null
           created_at: string
           daily_step_goal: number
@@ -1108,10 +1112,18 @@ export type Database = {
           height_cm: number | null
           id: string
           injuries: string | null
+          match_days_per_week: number | null
+          mobility_focus: string | null
+          mobility_frequency: string | null
           next_checkin_date: string | null
           notifications_enabled: boolean
           phone: string | null
+          practice_days_per_week: number | null
+          season_phase: string | null
           sport: string | null
+          sport_level: string | null
+          sport_position: string | null
+          team_sport: boolean
           training_experience: string | null
           training_goal: string | null
           trial_end: string | null
@@ -1121,8 +1133,12 @@ export type Database = {
         }
         Insert: {
           activity_level?: string | null
+          athlete_profile_updated_at?: string | null
           birthdate?: string | null
+          cardio_outside_gym?: string | null
           checkin_reminder?: boolean
+          class_days_per_week?: number | null
+          class_types?: string[]
           coaching_goal?: string | null
           created_at?: string
           daily_step_goal?: number
@@ -1134,10 +1150,18 @@ export type Database = {
           height_cm?: number | null
           id: string
           injuries?: string | null
+          match_days_per_week?: number | null
+          mobility_focus?: string | null
+          mobility_frequency?: string | null
           next_checkin_date?: string | null
           notifications_enabled?: boolean
           phone?: string | null
+          practice_days_per_week?: number | null
+          season_phase?: string | null
           sport?: string | null
+          sport_level?: string | null
+          sport_position?: string | null
+          team_sport?: boolean
           training_experience?: string | null
           training_goal?: string | null
           trial_end?: string | null
@@ -1147,8 +1171,12 @@ export type Database = {
         }
         Update: {
           activity_level?: string | null
+          athlete_profile_updated_at?: string | null
           birthdate?: string | null
+          cardio_outside_gym?: string | null
           checkin_reminder?: boolean
+          class_days_per_week?: number | null
+          class_types?: string[]
           coaching_goal?: string | null
           created_at?: string
           daily_step_goal?: number
@@ -1160,10 +1188,18 @@ export type Database = {
           height_cm?: number | null
           id?: string
           injuries?: string | null
+          match_days_per_week?: number | null
+          mobility_focus?: string | null
+          mobility_frequency?: string | null
           next_checkin_date?: string | null
           notifications_enabled?: boolean
           phone?: string | null
+          practice_days_per_week?: number | null
+          season_phase?: string | null
           sport?: string | null
+          sport_level?: string | null
+          sport_position?: string | null
+          team_sport?: boolean
           training_experience?: string | null
           training_goal?: string | null
           trial_end?: string | null
@@ -1516,6 +1552,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      training_sessions: {
+        Row: {
+          client_id: string
+          created_at: string
+          duration_minutes: number | null
+          id: string
+          intensity: number | null
+          name: string
+          notes: string | null
+          reps: string | null
+          session_date: string
+          session_type: string
+          sets: number | null
+          updated_at: string
+          weight_kg: number | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          duration_minutes?: number | null
+          id?: string
+          intensity?: number | null
+          name: string
+          notes?: string | null
+          reps?: string | null
+          session_date?: string
+          session_type: string
+          sets?: number | null
+          updated_at?: string
+          weight_kg?: number | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          duration_minutes?: number | null
+          id?: string
+          intensity?: number | null
+          name?: string
+          notes?: string | null
+          reps?: string | null
+          session_date?: string
+          session_type?: string
+          sets?: number | null
+          updated_at?: string
+          weight_kg?: number | null
+        }
+        Relationships: []
       }
       training_set_logs: {
         Row: {
