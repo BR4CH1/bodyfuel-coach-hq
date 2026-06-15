@@ -268,16 +268,27 @@ export async function generateTrainingPlanCore(
   const overlapDays = sportDaysList.filter((d) => trainingDayKeys.includes(d))
     .map((d) => weekdayLabel[d] ?? d);
 
+  const dayMap = trainingDayKeys
+    .map((k, i) => `Tag ${i + 1} = ${weekdayLabel[k] ?? k}`)
+    .join(", ");
   const sportBlock = cp.sport || cp.class_types?.length || cp.team_sport
-    ? `\n🏈 SPORT-/ATHLETEN-PROFIL${cp.sport ? `\n- Sportart: ${cp.sport}${cp.sport_position ? ` (${cp.sport_position})` : ""}` : ""}${cp.sport_level ? `\n- Niveau: ${sportLevelLabel[cp.sport_level] ?? cp.sport_level}` : ""}${cp.team_sport ? `\n- Mannschaftssport: ja${cp.match_days_per_week != null ? ` · ${cp.match_days_per_week} Spieltag(e)/Wo` : ""}${cp.practice_days_per_week != null ? ` · ${cp.practice_days_per_week} Mannschafts-Training(s)/Wo` : ""}` : ""}${cp.season_phase ? `\n- Saisonphase: ${seasonLabel[cp.season_phase] ?? cp.season_phase}` : ""}${cp.class_types?.length ? `\n- Kurse: ${cp.class_types.join(", ")}${cp.class_days_per_week != null ? ` (${cp.class_days_per_week}× Wo)` : ""}` : ""}${cp.cardio_outside_gym ? `\n- Cardio außerhalb des Studios: ${cp.cardio_outside_gym}` : ""}
+    ? `\n🏈 SPORT-/ATHLETEN-PROFIL${cp.sport ? `\n- Sportart: ${cp.sport}${cp.sport_position ? ` (Position: ${cp.sport_position})` : ""}` : ""}${cp.sport_level ? `\n- Niveau: ${sportLevelLabel[cp.sport_level] ?? cp.sport_level}` : ""}${cp.team_sport ? `\n- Mannschaftssport: ja${cp.match_days_per_week != null ? ` · ${cp.match_days_per_week} Spieltag(e)/Wo` : ""}${cp.practice_days_per_week != null ? ` · ${cp.practice_days_per_week} Mannschafts-Training(s)/Wo` : ""}` : ""}${cp.season_phase ? `\n- Saisonphase: ${seasonLabel[cp.season_phase] ?? cp.season_phase}` : ""}${cp.class_types?.length ? `\n- Kurse: ${cp.class_types.join(", ")}${cp.class_days_per_week != null ? ` (${cp.class_days_per_week}× Wo)` : ""}` : ""}${cp.cardio_outside_gym ? `\n- Cardio außerhalb des Studios: ${cp.cardio_outside_gym}` : ""}
 ${sportDaysHuman ? `- Sport-/Kurs-/Spieltage: ${sportDaysHuman}` : ""}
-- Gym-Trainingstage: ${trainDaysHuman}
-${overlapDays.length ? `⚠️ ÜBERLAPPUNG an: ${overlapDays.join(", ")} — an diesen Tagen Sportart UND Gym. Plane KEIN schweres Bein-/Ganzkörper-Workout an diesen Tagen, sondern Push/Pull-Oberkörper oder kurze Akzessoir-Einheit (max. 45 Min, RPE 6–7). KEINE schweren Kniebeugen/Kreuzheben.` : ""}
-- Vor Spiel-/Kurstagen (Tag davor) KEIN schweres Beintraining mit hohem CNS-Stress (Squat/Deadlift schwer). Nutze stattdessen Oberkörper-Akzessoires oder Mobility.
-- Nach Spiel-/Kurstagen: Regenerationsfokus (leichtes Cardio, Mobility, Foam Rolling) oder Oberkörper.
-- Bei Mannschaftssport: in-season Volumen reduzieren, Fokus auf Erhalt, Schnellkraft & Verletzungsprophylaxe; off-/pre-season Volumen hoch.
-- Sportartspezifisch: Football → Explosivität, Wurfschulter, Sprintkraft; Fußball → Beinkraft, Hüftmobilität, Hamstrings; Kursleiter → Schulter-/Rumpfausdauer, Mobility.
-- Bei vielen Kursen/Cardio: weniger Cardio-Einheiten im Plan, dafür mehr gezielte Kraft- und Mobility-Anteile.`
+- Gym-Trainingstage in dieser Reihenfolge: ${dayMap}
+- WICHTIG: Schreibe den Wochentag VORN in "day.name" (z. B. "Di — Oberkörper Push"). Reihenfolge der Tage muss exakt der Wochentag-Reihenfolge oben entsprechen.
+${overlapDays.length ? `⚠️ ÜBERLAPPUNG mit Sport an: ${overlapDays.join(", ")} — an diesen Tagen läuft Sportart UND Gym. KEIN schweres Bein-/Ganzkörper-Workout (max. 45 Min, RPE 6–7, KEINE schweren Kniebeugen/Kreuzheben). Stattdessen kurze Oberkörper-Akzessoires oder Mobility. ÜBERTRAINING VERMEIDEN.` : ""}
+- Tag VOR Spiel-/Sporttag: KEIN schweres Beintraining/CNS-Stress (kein schweres Squat/Deadlift). Stattdessen Oberkörper-Akzessoires oder Mobility.
+- Tag NACH Spiel-/Sporttag: Regenerationsfokus (leichtes Cardio, Mobility, Foam Rolling) oder lockerer Oberkörper.
+- Mannschaftssport: in-season Volumen reduzieren, Fokus auf Erhalt, Schnellkraft & Verletzungsprophylaxe; off-/pre-season Volumen hoch.
+- POSITIONS-/SPORTART-SPEZIFISCHE PFLICHTÜBUNGEN — füge an MIND. 2 Gym-Tagen pro Woche eine als positions-spezifisch erkennbare Übung ein. Benenne sie eindeutig (z. B. Sportart/Position im Übungsnamen) und schreibe im notes-Feld eine 1-Satz-Ausführungsanleitung (kein YouTube nötig). Beispiele:
+   • American Football Quarterback (QB): "QB Cuban Press Kurzhantel — Wurfschulter" (3×12, Notiz: "KH neben Körper, Ellbogen 90°, außen rotieren, dann über Kopf drücken"), "QB Rotations-Wurf Medizinball gegen Wand" (3×8/Seite, Notiz: "Seitlich zur Wand, aus der Hüfte rotieren und werfen"), "Pallof Press Kabel — Anti-Rotation" (3×10/Seite, Notiz: "Seitlich zum Kabel, Griff vor Brust geradeaus strecken, NICHT mitdrehen"), "Landmine Press einarmig" (3×8/Seite, Notiz: "Langhantelende vor Schulter, schräg nach oben drücken — Wurfbewegung").
+   • Football Lineman: "Prowler/Schlitten schieben" (5×15 m, Notiz: "tiefe Position, kurze schnelle Schritte"), "Zercher Squat" (4×6, Notiz: "LH in Armbeuge, aufrecht hocken").
+   • Football WR/RB: "Single-Leg RDL Kurzhantel" (3×8/Seite, Notiz: "KH auf Standbein-Seite, gestrecktes Bein nach hinten, Hüfte beugen"), "Box Jumps" (4×4).
+   • Fußball: "Bulgarian Split Squat KH" (3×8/Seite, Notiz: "hinteres Bein erhöht auf Bank, vorderes Knie über Fuß"), "Nordic Hamstring Curl" (3×6, Notiz: "Kniend, Füße fixiert, langsam nach vorn senken"), "Copenhagen Plank — Adduktoren" (3×30s/Seite, Notiz: "Seitstütz, oberes Bein auf Bank, unteres frei").
+   • Basketball/Volleyball: "Depth Jump 30-cm-Kasten + Sprung" (4×4, Notiz: "Vom Kasten springen, sofort explosiv hoch"), "Wadenheben einbeinig" (3×12/Seite).
+   • Kampfsport/BJJ: "Turkish Get-Up KH" (3×3/Seite), "Farmer's Walk KH" (3×30 m).
+   • Kursleiter/Cardio-heavy: Schulter-/Rumpfausdauer + Mobility priorisieren, KEIN zusätzliches Cardio im Plan.
+- Wenn keine Position angegeben ist, nutze sportartspezifische Akzessoires (Football → Explosivität & Wurfschulter; Fußball → Hüfte/Hamstrings; etc.).`
     : "";
   const mobilityBlock = cp.mobility_frequency || cp.mobility_focus
     ? `\n🧘 MOBILITY / STRETCHING (PFLICHT in den Plan einbauen!)
@@ -345,7 +356,8 @@ ${equipBlock}
 - Pro Tag: 1–2 Hauptübungen (compound), 2–3 Nebenübungen, 1 Kabel-/Maschine, 1 Core, optional Cardio (5–15 Min)
 - Übungsnamen wie im deutschen Studio: "Bankdrücken Langhantel", "Latzug eng", "Beinpresse", "Kurzhantel-Schulterdrücken", "Cable Row", "Beinbeuger liegend", "Plank"
 ${priorList.length ? `- BEVORZUGE bereits genutzte Übungsnamen für saubere PR-Historie:\n${priorList.map((n) => `  • ${n}`).join("\n")}` : ""}
-- Pro Übung: Sätze, Wiederholungen (z.B. "8" oder "8,8,10,12"), Startgewichte je Satz in kg (komma-getrennt, nur Zahlen), Pause in Sek, Notiz wenn nötig
+- Pro Übung: Sätze, Wiederholungen (z.B. "8" oder "8,8,10,12"), Startgewichte je Satz in kg (komma-getrennt, nur Zahlen), Pause in Sek.
+- NOTES-FELD: Schreibe IMMER eine 1-Satz-Ausführungsanleitung in einfachem Deutsch (Setup + Bewegung), sodass die Übung OHNE YouTube sofort verständlich ist. Beispiel: "Couch Stretch — kniend, Fuß an Wand, Hüfte nach vorn schieben, 60s halten". Keine Fachjargon-Abkürzungen ohne Erklärung.
 - Kategorie: barbell | dumbbell | machine | cable | cardio | core | bodyweight
 
 📤 ANTWORT
