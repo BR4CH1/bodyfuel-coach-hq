@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { ArrowLeft, ArrowRight, Check, Dumbbell, Loader2, ShieldAlert, Sparkles, TimerReset, Trophy } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
+import { StrengthScoreDonut } from "@/components/bodyfuel/StrengthScoreDonut";
 import { useSession } from "@/lib/bodyfuel/session";
 import {
   STRENGTH_TESTS,
@@ -441,13 +442,13 @@ function ResultScreen({ check, previous, onClose }: { check: StrengthCheck; prev
         <h1 className="mt-1 font-display text-3xl font-bold">Dein Strength Score</h1>
       </div>
 
-      <div className="rounded-2xl border border-gold/40 bg-gradient-to-br from-gold/15 to-transparent p-6 text-center">
-        <div className="text-xs uppercase tracking-wider text-gold">🔥 BodyFuel Strength Score</div>
-        <div className="mt-2 font-display text-5xl font-bold">
-          {check.score_total ?? "—"}<span className="text-2xl text-muted-foreground">/100</span>
+      <div className="rounded-2xl border border-gold/40 bg-gradient-to-br from-gold/15 to-transparent p-6">
+        <div className="text-center text-xs uppercase tracking-wider text-gold">🔥 BodyFuel Strength Score</div>
+        <div className="mt-3 flex justify-center">
+          <StrengthScoreDonut value={check.score_total} size={160} stroke={14} />
         </div>
         {previous?.score_total != null && check.score_total != null && (
-          <div className="mt-1 text-xs text-muted-foreground">
+          <div className="mt-2 text-center text-xs text-muted-foreground">
             vorher {previous.score_total} ·{" "}
             <span className={check.score_total >= previous.score_total ? "text-emerald-400" : "text-red-400"}>
               {check.score_total - previous.score_total >= 0 ? "+" : ""}
@@ -457,7 +458,7 @@ function ResultScreen({ check, previous, onClose }: { check: StrengthCheck; prev
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {groups.map((g) => {
           const val = check[g.key];
           const prev = previous?.[g.key] ?? null;
@@ -491,18 +492,13 @@ function ResultScreen({ check, previous, onClose }: { check: StrengthCheck; prev
 }
 
 function ScoreTile({ label, value, previous }: { label: string; value: number | null; previous: number | null }) {
-  const lamp = value == null ? "" : value >= 75 ? "🟢" : value >= 50 ? "🟡" : "🔴";
   const delta = value != null && previous != null ? value - previous : null;
   return (
-    <div className="rounded-xl border border-border bg-card p-4">
-      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className="mt-1 flex items-baseline gap-2">
-        <div className="font-display text-2xl font-bold">{value ?? "—"}</div>
-        <div className="text-xs text-muted-foreground">/100</div>
-        <div className="ml-auto text-base">{lamp}</div>
-      </div>
+    <div className="flex flex-col items-center gap-2 rounded-xl border border-border bg-card p-4">
+      <StrengthScoreDonut value={value} size={84} stroke={9} />
+      <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</div>
       {delta != null && (
-        <div className={`mt-0.5 text-[11px] ${delta >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+        <div className={`text-[11px] ${delta >= 0 ? "text-emerald-400" : "text-red-400"}`}>
           {delta >= 0 ? "+" : ""}{delta} ggü. vorher
         </div>
       )}
