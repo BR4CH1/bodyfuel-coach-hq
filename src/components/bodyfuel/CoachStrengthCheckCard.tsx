@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Trophy, AlertTriangle } from "lucide-react";
+import { Trophy, AlertTriangle, Info, ChevronDown, ChevronUp } from "lucide-react";
 import { getCustomerStrengthOverview, STRENGTH_TESTS, type StrengthTestKey } from "@/lib/strength-check.functions";
 import { StrengthScoreDonut } from "./StrengthScoreDonut";
 
