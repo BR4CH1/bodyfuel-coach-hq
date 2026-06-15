@@ -281,6 +281,10 @@ function ExerciseCard({
   const nextSet = (todaysLogs.length ?? 0) + 1;
   const [weight, setWeight] = useState("");
   const [reps, setReps] = useState("");
+  const isPerSide = /kurzhantel|dumbbell|\bkh\b|\bdb\b|einarmig|one[- ]?arm|single[- ]?arm/i.test(
+    `${ex.name} ${ex.notes ?? ""}`,
+  );
+  const weightHint = isPerSide ? "pro Seite" : "Gesamtgewicht";
 
   // Suggest last weight + planned reps as defaults — only when inputs are empty
   // and only when the previous suggestion changes (no stale traps).
@@ -318,6 +322,9 @@ function ExerciseCard({
           <div className="text-[11px] text-muted-foreground">
             Soll: {ex.target_sets ?? "?"} × {ex.target_reps ?? "?"}
             {ex.notes ? ` · ${ex.notes}` : ""}
+          </div>
+          <div className={`mt-0.5 text-[10px] font-medium ${isPerSide ? "text-primary" : "text-muted-foreground/80"}`}>
+            ⚖️ Gewicht {weightHint}
           </div>
         </div>
       </div>
@@ -373,8 +380,9 @@ function ExerciseCard({
           pattern="[0-9.,]*"
           value={weight}
           onChange={(e) => setWeight(e.target.value.replace(/[^0-9.,]/g, ""))}
-          placeholder="kg"
-          className="w-20 rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+          placeholder={isPerSide ? "kg/Seite" : "kg ges."}
+          title={isPerSide ? "Gewicht pro Seite (Kurzhantel)" : "Gesamtgewicht (Langhantel/Maschine)"}
+          className="w-24 rounded-md border border-input bg-background px-2 py-1.5 text-sm"
         />
         <input
           type="text"
