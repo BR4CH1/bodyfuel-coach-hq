@@ -475,7 +475,7 @@ function alignExerciseName(name: string, priorList: string[]): string {
     }
     if (!best || score > best.score) best = { name: p, score };
   }
-  return best && best.score >= 65 ? best.name : raw;
+  return best && best.score >= 55 ? best.name : raw;
 }
 function normalize(s: string): string {
   return s.toLowerCase()
