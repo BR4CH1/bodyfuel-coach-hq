@@ -341,6 +341,11 @@ function CustomerDetail() {
         );
       })()}
 
+      <StepGoalEditor
+        userId={userId}
+        initial={(data.profile as any)?.daily_step_goal ?? 10000}
+      />
+
       <CoachStrengthCheckCard userId={userId} />
 
 
