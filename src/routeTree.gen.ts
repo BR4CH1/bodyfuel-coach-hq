@@ -60,6 +60,7 @@ import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/em
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as ApiPublicHooksTrialRemindersRouteImport } from './routes/api/public/hooks/trial-reminders'
 import { Route as ApiPublicHooksSendFeatureNewsRouteImport } from './routes/api/public/hooks/send-feature-news'
+import { Route as ApiPublicHooksRegenTrainingPlansRouteImport } from './routes/api/public/hooks/regen-training-plans'
 import { Route as ApiPublicHooksPlanRotationRouteImport } from './routes/api/public/hooks/plan-rotation'
 
 const WelcomeRoute = WelcomeRouteImport.update({
@@ -324,6 +325,12 @@ const ApiPublicHooksSendFeatureNewsRoute =
     path: '/api/public/hooks/send-feature-news',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksRegenTrainingPlansRoute =
+  ApiPublicHooksRegenTrainingPlansRouteImport.update({
+    id: '/api/public/hooks/regen-training-plans',
+    path: '/api/public/hooks/regen-training-plans',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksPlanRotationRoute =
   ApiPublicHooksPlanRotationRouteImport.update({
     id: '/api/public/hooks/plan-rotation',
@@ -377,6 +384,7 @@ export interface FileRoutesByFullPath {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/coach/customers/': typeof CoachCustomersIndexRoute
   '/api/public/hooks/plan-rotation': typeof ApiPublicHooksPlanRotationRoute
+  '/api/public/hooks/regen-training-plans': typeof ApiPublicHooksRegenTrainingPlansRoute
   '/api/public/hooks/send-feature-news': typeof ApiPublicHooksSendFeatureNewsRoute
   '/api/public/hooks/trial-reminders': typeof ApiPublicHooksTrialRemindersRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -428,6 +436,7 @@ export interface FileRoutesByTo {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/coach/customers': typeof CoachCustomersIndexRoute
   '/api/public/hooks/plan-rotation': typeof ApiPublicHooksPlanRotationRoute
+  '/api/public/hooks/regen-training-plans': typeof ApiPublicHooksRegenTrainingPlansRoute
   '/api/public/hooks/send-feature-news': typeof ApiPublicHooksSendFeatureNewsRoute
   '/api/public/hooks/trial-reminders': typeof ApiPublicHooksTrialRemindersRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -483,6 +492,7 @@ export interface FileRoutesById {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/coach/customers/': typeof CoachCustomersIndexRoute
   '/api/public/hooks/plan-rotation': typeof ApiPublicHooksPlanRotationRoute
+  '/api/public/hooks/regen-training-plans': typeof ApiPublicHooksRegenTrainingPlansRoute
   '/api/public/hooks/send-feature-news': typeof ApiPublicHooksSendFeatureNewsRoute
   '/api/public/hooks/trial-reminders': typeof ApiPublicHooksTrialRemindersRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -539,6 +549,7 @@ export interface FileRouteTypes {
     | '/lovable/email/suppression'
     | '/coach/customers/'
     | '/api/public/hooks/plan-rotation'
+    | '/api/public/hooks/regen-training-plans'
     | '/api/public/hooks/send-feature-news'
     | '/api/public/hooks/trial-reminders'
     | '/lovable/email/auth/preview'
@@ -590,6 +601,7 @@ export interface FileRouteTypes {
     | '/lovable/email/suppression'
     | '/coach/customers'
     | '/api/public/hooks/plan-rotation'
+    | '/api/public/hooks/regen-training-plans'
     | '/api/public/hooks/send-feature-news'
     | '/api/public/hooks/trial-reminders'
     | '/lovable/email/auth/preview'
@@ -644,6 +656,7 @@ export interface FileRouteTypes {
     | '/lovable/email/suppression'
     | '/coach/customers/'
     | '/api/public/hooks/plan-rotation'
+    | '/api/public/hooks/regen-training-plans'
     | '/api/public/hooks/send-feature-news'
     | '/api/public/hooks/trial-reminders'
     | '/lovable/email/auth/preview'
@@ -684,6 +697,7 @@ export interface RootRouteChildren {
   BullsIndexRoute: typeof BullsIndexRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiPublicHooksPlanRotationRoute: typeof ApiPublicHooksPlanRotationRoute
+  ApiPublicHooksRegenTrainingPlansRoute: typeof ApiPublicHooksRegenTrainingPlansRoute
   ApiPublicHooksSendFeatureNewsRoute: typeof ApiPublicHooksSendFeatureNewsRoute
   ApiPublicHooksTrialRemindersRoute: typeof ApiPublicHooksTrialRemindersRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
@@ -1052,6 +1066,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksSendFeatureNewsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/regen-training-plans': {
+      id: '/api/public/hooks/regen-training-plans'
+      path: '/api/public/hooks/regen-training-plans'
+      fullPath: '/api/public/hooks/regen-training-plans'
+      preLoaderRoute: typeof ApiPublicHooksRegenTrainingPlansRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/plan-rotation': {
       id: '/api/public/hooks/plan-rotation'
       path: '/api/public/hooks/plan-rotation'
@@ -1151,6 +1172,7 @@ const rootRouteChildren: RootRouteChildren = {
   BullsIndexRoute: BullsIndexRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ApiPublicHooksPlanRotationRoute: ApiPublicHooksPlanRotationRoute,
+  ApiPublicHooksRegenTrainingPlansRoute: ApiPublicHooksRegenTrainingPlansRoute,
   ApiPublicHooksSendFeatureNewsRoute: ApiPublicHooksSendFeatureNewsRoute,
   ApiPublicHooksTrialRemindersRoute: ApiPublicHooksTrialRemindersRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
@@ -1162,13 +1184,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

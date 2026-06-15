@@ -42,6 +42,8 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
   const [openDay, setOpenDay] = useState<string | null>(null);
   const [parsing, setParsing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [activeWeek, setActiveWeek] = useState(1);
+  const [weeksCount, setWeeksCount] = useState(1);
 
   const reload = async () => {
     if (!clientId) return;
@@ -71,15 +73,17 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
     const allDays = (dayRows as Day[]) ?? [];
 
     // For multi-week plans, only show the current week's days.
-    const weeksCount = (planRow as any).weeks_count ?? 1;
+    const wc = (planRow as any).weeks_count ?? 1;
     const startStr = (planRow as any).scheduled_start_date as string | null;
-    let activeWeek = 1;
-    if (startStr && weeksCount > 1) {
+    let aw = 1;
+    if (startStr && wc > 1) {
       const start = new Date(startStr + "T00:00:00");
       const diffDays = Math.floor((Date.now() - start.getTime()) / 86400000);
-      activeWeek = Math.max(1, Math.min(weeksCount, Math.floor(diffDays / 7) + 1));
+      aw = Math.max(1, Math.min(wc, Math.floor(diffDays / 7) + 1));
     }
-    const dayList = allDays.filter((d) => (d.week_number ?? 1) === activeWeek);
+    setActiveWeek(aw);
+    setWeeksCount(wc);
+    const dayList = allDays.filter((d) => (d.week_number ?? 1) === aw);
     setDays(dayList);
     setOpenDay((cur) => cur ?? dayList[0]?.id ?? null);
 
@@ -186,6 +190,34 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
           </button>
         )}
       </div>
+
+      {weeksCount > 1 && days.length > 0 && (() => {
+        const phase =
+          activeWeek === 1 ? "Anpassung"
+          : activeWeek === weeksCount ? "Deload"
+          : activeWeek === weeksCount - 1 ? "Belastungsspitze"
+          : "Aufbau";
+        return (
+          <div className="rounded-2xl border border-gold/30 bg-gold/5 px-4 py-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-[10px] uppercase tracking-[0.2em] text-gold">Trainingsphase</div>
+                <div className="font-display text-base font-bold">
+                  Woche {activeWeek} von {weeksCount} · {phase}
+                </div>
+              </div>
+              <div className="flex gap-1">
+                {Array.from({ length: weeksCount }).map((_, i) => (
+                  <div
+                    key={i}
+                    className={`h-1.5 w-6 rounded-full ${i + 1 === activeWeek ? "bg-gold" : i + 1 < activeWeek ? "bg-gold/40" : "bg-border"}`}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {!days.length && (
         <div className="rounded-2xl border border-border bg-card p-5 text-sm text-muted-foreground">
