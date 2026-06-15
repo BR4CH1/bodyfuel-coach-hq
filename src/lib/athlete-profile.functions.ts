@@ -8,6 +8,7 @@ export type AthleteProfileInput = {
   team_sport?: boolean | null;
   match_days_per_week?: number | null;
   practice_days_per_week?: number | null;
+  sport_weekdays?: string[] | null;
   season_phase?: "off_season" | "pre_season" | "in_season" | "post_season" | null;
   class_types?: string[] | null;
   class_days_per_week?: number | null;
@@ -17,6 +18,10 @@ export type AthleteProfileInput = {
   injuries?: string | null;
   training_experience?: "beginner" | "intermediate" | "advanced" | null;
 };
+
+const VALID_WEEKDAYS = new Set([
+  "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
+]);
 
 function sanitize(input: AthleteProfileInput): Record<string, unknown> {
   const patch: Record<string, unknown> = {};
@@ -38,6 +43,14 @@ function sanitize(input: AthleteProfileInput): Record<string, unknown> {
   if (input.practice_days_per_week !== undefined)
     patch.practice_days_per_week = num(input.practice_days_per_week, 0, 7);
   if (input.season_phase !== undefined) patch.season_phase = input.season_phase ?? null;
+  if (input.sport_weekdays !== undefined)
+    patch.sport_weekdays = Array.isArray(input.sport_weekdays)
+      ? Array.from(new Set(
+          input.sport_weekdays
+            .map((d) => String(d).toLowerCase().trim())
+            .filter((d) => VALID_WEEKDAYS.has(d)),
+        ))
+      : [];
   if (input.class_types !== undefined)
     patch.class_types = Array.isArray(input.class_types)
       ? input.class_types
@@ -102,7 +115,7 @@ export const getMyAthleteProfile = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("profiles")
       .select(
-        "sport, sport_position, sport_level, team_sport, match_days_per_week, practice_days_per_week, season_phase, class_types, class_days_per_week, mobility_frequency, mobility_focus, cardio_outside_gym, injuries, training_experience, athlete_profile_updated_at",
+        "sport, sport_position, sport_level, team_sport, match_days_per_week, practice_days_per_week, sport_weekdays, season_phase, class_types, class_days_per_week, mobility_frequency, mobility_focus, cardio_outside_gym, injuries, training_experience, athlete_profile_updated_at",
       )
       .eq("id", context.userId)
       .maybeSingle();

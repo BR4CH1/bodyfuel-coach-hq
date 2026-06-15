@@ -34,9 +34,19 @@ const MOBILITY: { v: MobilityFreq; l: string }[] = [
   { v: "daily", l: "Täglich" },
 ];
 const CLASS_PRESETS = ["Yoga", "Pilates", "Spinning", "HIIT", "Bodypump", "CrossFit", "Boxen", "Functional"];
+const WEEKDAYS: { v: string; l: string }[] = [
+  { v: "monday", l: "Mo" },
+  { v: "tuesday", l: "Di" },
+  { v: "wednesday", l: "Mi" },
+  { v: "thursday", l: "Do" },
+  { v: "friday", l: "Fr" },
+  { v: "saturday", l: "Sa" },
+  { v: "sunday", l: "So" },
+];
 
 export type AthleteProfileInitial = AthleteProfileInput & {
   sport?: string | null;
+  sport_weekdays?: string[] | null;
   training_experience?: Experience | null;
 };
 
@@ -73,6 +83,7 @@ export function AthleteProfileEditor({
   const [mobilityFreq, setMobilityFreq] = useState<MobilityFreq | "">(
     (initial.mobility_frequency as MobilityFreq) ?? "",
   );
+  const [sportWeekdays, setSportWeekdays] = useState<string[]>(initial.sport_weekdays ?? []);
   const [mobilityFocus, setMobilityFocus] = useState(initial.mobility_focus ?? "");
   const [cardioOutside, setCardioOutside] = useState(initial.cardio_outside_gym ?? "");
   const [injuries, setInjuries] = useState(initial.injuries ?? "");
@@ -89,6 +100,7 @@ export function AthleteProfileEditor({
     setClassTypes(initial.class_types ?? []);
     setClassDays(initial.class_days_per_week == null ? "" : String(initial.class_days_per_week));
     setMobilityFreq((initial.mobility_frequency as MobilityFreq) ?? "");
+    setSportWeekdays(initial.sport_weekdays ?? []);
     setMobilityFocus(initial.mobility_focus ?? "");
     setCardioOutside(initial.cardio_outside_gym ?? "");
     setInjuries(initial.injuries ?? "");
@@ -108,6 +120,7 @@ export function AthleteProfileEditor({
         team_sport: teamSport,
         match_days_per_week: matchDays === "" ? null : Number(matchDays),
         practice_days_per_week: practiceDays === "" ? null : Number(practiceDays),
+        sport_weekdays: sportWeekdays,
         season_phase: (seasonPhase || null) as SeasonPhase | null,
         class_types: classTypes,
         class_days_per_week: classDays === "" ? null : Number(classDays),
@@ -132,6 +145,8 @@ export function AthleteProfileEditor({
 
   const toggleClass = (c: string) =>
     setClassTypes((cur) => (cur.includes(c) ? cur.filter((x) => x !== c) : [...cur, c]));
+  const toggleWeekday = (d: string) =>
+    setSportWeekdays((cur) => (cur.includes(d) ? cur.filter((x) => x !== d) : [...cur, d]));
 
   return (
     <div className="rounded-2xl border border-border bg-card p-5">
@@ -216,6 +231,26 @@ export function AthleteProfileEditor({
               </select>
             </Field>
           </div>
+        )}
+
+        {/* Wochentage der Sportart / Kurse — verhindert Übertraining */}
+        {(sport.trim() || teamSport || classTypes.length > 0) && (
+          <Field label="An welchen Wochentagen findet Sport / Mannschaftstraining / Kurs statt?">
+            <div className="flex flex-wrap gap-2">
+              {WEEKDAYS.map((d) => (
+                <Pill
+                  key={d.v}
+                  active={sportWeekdays.includes(d.v)}
+                  onClick={() => toggleWeekday(d.v)}
+                >
+                  {d.l}
+                </Pill>
+              ))}
+            </div>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Die KI plant an diesen Tagen leichteres oder kein Beintraining ein, um Übertraining zu vermeiden.
+            </p>
+          </Field>
         )}
 
         {/* Kurse */}
