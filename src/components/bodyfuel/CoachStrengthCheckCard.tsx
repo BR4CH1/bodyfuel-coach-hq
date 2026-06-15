@@ -97,9 +97,20 @@ export function CoachStrengthCheckCard({ userId }: { userId: string }) {
             </div>
           )}
           {dysbalance > 20 && (
-            <div className="flex items-center gap-2 text-amber-400">
-              <AlertTriangle className="h-3.5 w-3.5" />
-              Dysbalance erkannt (Δ {dysbalance})
+            <div className="flex items-start gap-2 text-amber-400">
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <span>Dysbalance erkannt (Δ {dysbalance})</span>
+                <button
+                  type="button"
+                  onClick={() => setShowExplanation((v) => !v)}
+                  className="ml-2 inline-flex items-center gap-0.5 text-[11px] text-muted-foreground hover:text-foreground underline"
+                >
+                  <Info className="h-3 w-3" />
+                  Was bedeutet das?
+                  {showExplanation ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                </button>
+              </div>
             </div>
           )}
         </div>
