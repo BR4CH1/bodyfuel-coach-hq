@@ -268,19 +268,31 @@ export async function generateTrainingPlanCore(
   const overlapDays = sportDaysList.filter((d) => trainingDayKeys.includes(d))
     .map((d) => weekdayLabel[d] ?? d);
 
+  const allWeekdayOrder = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"];
   const dayMap = trainingDayKeys
     .map((k, i) => `Tag ${i + 1} = ${weekdayLabel[k] ?? k}`)
     .join(", ");
+  const weekPlanMap = allWeekdayOrder.map((k) => {
+    const isGym = trainingDayKeys.includes(k);
+    const isSport = sportDaysList.includes(k);
+    let kind = "Rest";
+    if (isGym && isSport) kind = "Gym + Sport (Überlappung)";
+    else if (isGym) kind = "Gym";
+    else if (isSport) kind = "Sport/Mannschaftstraining/Spieltag";
+    return `${weekdayLabel[k]}: ${kind}`;
+  }).join(" | ");
   const sportBlock = cp.sport || cp.class_types?.length || cp.team_sport
     ? `\n🏈 SPORT-/ATHLETEN-PROFIL${cp.sport ? `\n- Sportart: ${cp.sport}${cp.sport_position ? ` (Position: ${cp.sport_position})` : ""}` : ""}${cp.sport_level ? `\n- Niveau: ${sportLevelLabel[cp.sport_level] ?? cp.sport_level}` : ""}${cp.team_sport ? `\n- Mannschaftssport: ja${cp.match_days_per_week != null ? ` · ${cp.match_days_per_week} Spieltag(e)/Wo` : ""}${cp.practice_days_per_week != null ? ` · ${cp.practice_days_per_week} Mannschafts-Training(s)/Wo` : ""}` : ""}${cp.season_phase ? `\n- Saisonphase: ${seasonLabel[cp.season_phase] ?? cp.season_phase}` : ""}${cp.class_types?.length ? `\n- Kurse: ${cp.class_types.join(", ")}${cp.class_days_per_week != null ? ` (${cp.class_days_per_week}× Wo)` : ""}` : ""}${cp.cardio_outside_gym ? `\n- Cardio außerhalb des Studios: ${cp.cardio_outside_gym}` : ""}
 ${sportDaysHuman ? `- Sport-/Kurs-/Spieltage: ${sportDaysHuman}` : ""}
-- Gym-Trainingstage in dieser Reihenfolge: ${dayMap}
-- WICHTIG: Schreibe den Wochentag VORN in "day.name" (z. B. "Di — Oberkörper Push"). Reihenfolge der Tage muss exakt der Wochentag-Reihenfolge oben entsprechen.
-${overlapDays.length ? `⚠️ ÜBERLAPPUNG mit Sport an: ${overlapDays.join(", ")} — an diesen Tagen läuft Sportart UND Gym. KEIN schweres Bein-/Ganzkörper-Workout (max. 45 Min, RPE 6–7, KEINE schweren Kniebeugen/Kreuzheben). Stattdessen kurze Oberkörper-Akzessoires oder Mobility. ÜBERTRAINING VERMEIDEN.` : ""}
-- Tag VOR Spiel-/Sporttag: KEIN schweres Beintraining/CNS-Stress (kein schweres Squat/Deadlift). Stattdessen Oberkörper-Akzessoires oder Mobility.
-- Tag NACH Spiel-/Sporttag: Regenerationsfokus (leichtes Cardio, Mobility, Foam Rolling) oder lockerer Oberkörper.
+- Gym-Trainingstage: ${trainDaysHuman} (${dayMap})
+- WOCHENÜBERSICHT (Pflicht — JEDER der 7 Wochentage MUSS als eigener day-Eintrag erscheinen, in dieser Reihenfolge Mo→So, mit Wochentag VORN in day.name, z. B. "Mo — Push" oder "Di — Mannschaftstraining" oder "So — Rest/Recovery"): ${weekPlanMap}
+- SPORT-/MANNSCHAFTSTRAININGS-/SPIELTAGE: KEINE Kraftübungen einfügen! Stattdessen 1 Eintrag "Mannschaftstraining" bzw. "Spieltag" (category "cardio", target_sets 1, target_reps "60–90 Min", Notiz zur erwarteten Belastung) + 2–3 kurze Mobility-/Aktivierungsübungen (vor) oder Cool-down-Mobility (nach, 5–10 Min). Keine Kniebeugen, kein Bankdrücken, kein Kreuzheben an diesen Tagen.
+- RESTDAYS NACH einem Sport-/Spieltag: REGENERATIONSTAG — Foam Rolling Beine/Rücken, lockeres Gehen 20–30 Min, statisches Dehnen Hüfte/Beine/Brust, Atemübung. KEINE schweren Lasten. (3–5 leichte Mobility-/Recovery-Einträge, category "bodyweight"/"core"/"cardio".)
+- REINE RESTDAYS (kein Sport am Vortag): optionaler leichter Mobility-Flow 10–15 Min (2–3 Übungen) ODER 1 Eintrag "Rest — frei" (category "bodyweight", target_sets 1, target_reps "—", Notiz "Vollständige Erholung — Schlaf & Ernährung priorisieren").
+- ÜBERLAPPUNG Gym+Sport am selben Tag: max. 45 Min Gym, RPE 6–7, KEINE schweren Kniebeugen/Kreuzheben, Fokus Oberkörper-Zusatzübungen oder Mobility. Übertraining vermeiden.
+- Tag VOR Spiel-/Sporttag: KEIN schweres Beintraining/CNS-Stress. Stattdessen Oberkörper-Zusatzübungen oder Mobility.
 - Mannschaftssport: in-season Volumen reduzieren, Fokus auf Erhalt, Schnellkraft & Verletzungsprophylaxe; off-/pre-season Volumen hoch.
-- POSITIONS-/SPORTART-SPEZIFISCHE PFLICHTÜBUNGEN — füge an MIND. 2 Gym-Tagen pro Woche eine als positions-spezifisch erkennbare Übung ein. Benenne sie eindeutig (z. B. Sportart/Position im Übungsnamen) und schreibe im notes-Feld eine 1-Satz-Ausführungsanleitung (kein YouTube nötig). Beispiele:
+- POSITIONS-/SPORTART-SPEZIFISCHE PFLICHTÜBUNGEN — füge an MIND. 2 Gym-Tagen pro Woche eine als positions-spezifisch erkennbare Übung ein. Benenne sie eindeutig (Sportart/Position im Übungsnamen) und schreibe im notes-Feld eine 1-Satz-Ausführungsanleitung (kein YouTube nötig). Beispiele:
    • American Football Quarterback (QB): "QB Cuban Press Kurzhantel — Wurfschulter" (3×12, Notiz: "KH neben Körper, Ellbogen 90°, außen rotieren, dann über Kopf drücken"), "QB Rotations-Wurf Medizinball gegen Wand" (3×8/Seite, Notiz: "Seitlich zur Wand, aus der Hüfte rotieren und werfen"), "Pallof Press Kabel — Anti-Rotation" (3×10/Seite, Notiz: "Seitlich zum Kabel, Griff vor Brust geradeaus strecken, NICHT mitdrehen"), "Landmine Press einarmig" (3×8/Seite, Notiz: "Langhantelende vor Schulter, schräg nach oben drücken — Wurfbewegung").
    • Football Lineman: "Prowler/Schlitten schieben" (5×15 m, Notiz: "tiefe Position, kurze schnelle Schritte"), "Zercher Squat" (4×6, Notiz: "LH in Armbeuge, aufrecht hocken").
    • Football WR/RB: "Single-Leg RDL Kurzhantel" (3×8/Seite, Notiz: "KH auf Standbein-Seite, gestrecktes Bein nach hinten, Hüfte beugen"), "Box Jumps" (4×4).
@@ -288,7 +300,8 @@ ${overlapDays.length ? `⚠️ ÜBERLAPPUNG mit Sport an: ${overlapDays.join(", 
    • Basketball/Volleyball: "Depth Jump 30-cm-Kasten + Sprung" (4×4, Notiz: "Vom Kasten springen, sofort explosiv hoch"), "Wadenheben einbeinig" (3×12/Seite).
    • Kampfsport/BJJ: "Turkish Get-Up KH" (3×3/Seite), "Farmer's Walk KH" (3×30 m).
    • Kursleiter/Cardio-heavy: Schulter-/Rumpfausdauer + Mobility priorisieren, KEIN zusätzliches Cardio im Plan.
-- Wenn keine Position angegeben ist, nutze sportartspezifische Akzessoires (Football → Explosivität & Wurfschulter; Fußball → Hüfte/Hamstrings; etc.).`
+- Wenn keine Position angegeben ist, nutze sportartspezifische Zusatzübungen (Football → Explosivität & Wurfschulter; Fußball → Hüfte/Hamstrings; etc.).
+- ⛔ VERBOTENES WORT: Schreibe NIEMALS "Akzessoires" oder "Accessoires" in day.name, day.focus oder exercise.name/notes. Nutze stattdessen "Zusatzübungen", "Ergänzung" oder "Feinschliff".`
     : "";
   const mobilityBlock = cp.mobility_frequency || cp.mobility_focus
     ? `\n🧘 MOBILITY / STRETCHING (PFLICHT in den Plan einbauen!)
