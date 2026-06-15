@@ -356,7 +356,8 @@ ${equipBlock}
 - Pro Tag: 1–2 Hauptübungen (compound), 2–3 Nebenübungen, 1 Kabel-/Maschine, 1 Core, optional Cardio (5–15 Min)
 - Übungsnamen wie im deutschen Studio: "Bankdrücken Langhantel", "Latzug eng", "Beinpresse", "Kurzhantel-Schulterdrücken", "Cable Row", "Beinbeuger liegend", "Plank"
 ${priorList.length ? `- BEVORZUGE bereits genutzte Übungsnamen für saubere PR-Historie:\n${priorList.map((n) => `  • ${n}`).join("\n")}` : ""}
-- Pro Übung: Sätze, Wiederholungen (z.B. "8" oder "8,8,10,12"), Startgewichte je Satz in kg (komma-getrennt, nur Zahlen), Pause in Sek, Notiz wenn nötig
+- Pro Übung: Sätze, Wiederholungen (z.B. "8" oder "8,8,10,12"), Startgewichte je Satz in kg (komma-getrennt, nur Zahlen), Pause in Sek.
+- NOTES-FELD: Schreibe IMMER eine 1-Satz-Ausführungsanleitung in einfachem Deutsch (Setup + Bewegung), sodass die Übung OHNE YouTube sofort verständlich ist. Beispiel: "Couch Stretch — kniend, Fuß an Wand, Hüfte nach vorn schieben, 60s halten". Keine Fachjargon-Abkürzungen ohne Erklärung.
 - Kategorie: barbell | dumbbell | machine | cable | cardio | core | bodyweight
 
 📤 ANTWORT
