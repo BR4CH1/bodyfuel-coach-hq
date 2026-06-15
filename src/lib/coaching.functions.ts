@@ -391,22 +391,24 @@ export const updateCustomerCoachingInfo = createServerFn({ method: "POST" })
       coaching_goal?: string | null;
       next_checkin_date?: string | null;
       daily_step_goal?: number | null;
+      sport?: string | null;
+      injuries?: string | null;
+      training_experience?: "beginner" | "intermediate" | "advanced" | null;
     }) => data,
   )
   .handler(async ({ data, context }) => {
     await assertCoach(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const patch: {
-      coaching_goal?: string | null;
-      next_checkin_date?: string | null;
-      daily_step_goal?: number;
-    } = {};
+    const patch: Record<string, unknown> = {};
     if (data.coaching_goal !== undefined) patch.coaching_goal = data.coaching_goal;
     if (data.next_checkin_date !== undefined) patch.next_checkin_date = data.next_checkin_date;
     if (data.daily_step_goal !== undefined && data.daily_step_goal !== null) {
       const n = Math.max(1000, Math.min(40000, Math.round(data.daily_step_goal)));
       patch.daily_step_goal = n;
     }
+    if (data.sport !== undefined) patch.sport = data.sport ? data.sport.slice(0, 80) : null;
+    if (data.injuries !== undefined) patch.injuries = data.injuries ? data.injuries.slice(0, 500) : null;
+    if (data.training_experience !== undefined) patch.training_experience = data.training_experience;
     const { error } = await supabaseAdmin
       .from("profiles")
       .update(patch)
