@@ -48,6 +48,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { useQuery } from "@tanstack/react-query";
+import { getMyAthleteProfile } from "@/lib/athlete-profile.functions";
+import { AthleteProfileEditor } from "@/components/bodyfuel/AthleteProfileEditor";
 import {
   Select,
   SelectContent,
