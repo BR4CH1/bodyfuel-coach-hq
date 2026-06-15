@@ -411,6 +411,7 @@ function RealUserDashboard() {
       
       <TrialWelcomeDialog />
       <TrialStatusBanner />
+      <SportWeekdaysPrompt />
       {supabaseUser && <TrialChecklistGate userId={supabaseUser.id} />}
 
       {checkinInfo && (
