@@ -48,7 +48,7 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
     setLoading(true);
     const { data: planRow } = await supabase
       .from("nutrition_plans")
-      .select("id, client_id, title")
+      .select("id, client_id, title, weeks_count, scheduled_start_date")
       .eq("client_id", clientId)
       .eq("plan_type", "training")
       .eq("is_active", true)
@@ -66,8 +66,20 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
       .from("training_days")
       .select("*")
       .eq("plan_id", planRow.id)
+      .order("week_number")
       .order("sort_order");
-    const dayList = (dayRows as Day[]) ?? [];
+    const allDays = (dayRows as Day[]) ?? [];
+
+    // For multi-week plans, only show the current week's days.
+    const weeksCount = (planRow as any).weeks_count ?? 1;
+    const startStr = (planRow as any).scheduled_start_date as string | null;
+    let activeWeek = 1;
+    if (startStr && weeksCount > 1) {
+      const start = new Date(startStr + "T00:00:00");
+      const diffDays = Math.floor((Date.now() - start.getTime()) / 86400000);
+      activeWeek = Math.max(1, Math.min(weeksCount, Math.floor(diffDays / 7) + 1));
+    }
+    const dayList = allDays.filter((d) => (d.week_number ?? 1) === activeWeek);
     setDays(dayList);
     setOpenDay((cur) => cur ?? dayList[0]?.id ?? null);
 
