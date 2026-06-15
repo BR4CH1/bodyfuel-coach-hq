@@ -198,414 +198,461 @@ function CustomerDetail() {
         )}
       </div>
 
-      <div className="rounded-2xl border border-border bg-card p-6">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="font-display text-lg font-bold">Zugang</h2>
-          <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${statusClass}`}>
-            {statusLabel}
-          </span>
-        </div>
-        <div className="mt-3 text-xs text-muted-foreground space-y-0.5">
-          {data.auth?.invited_at && (
-            <div>Eingeladen am: {new Date(data.auth.invited_at).toLocaleDateString("de-DE")}</div>
-          )}
-          {(data.auth as any)?.last_activity_at ? (
-            <div>Letzte Aktivität: {new Date((data.auth as any).last_activity_at).toLocaleString("de-DE")}</div>
-          ) : data.auth?.last_sign_in_at && (
-            <div>Letzte Aktivität: {new Date(data.auth.last_sign_in_at).toLocaleString("de-DE")}</div>
-          )}
-        </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Button
-            size="sm"
-            onClick={() => accessAction.mutate("invite")}
-            disabled={accessAction.isPending}
-            className="bg-gradient-gold text-primary-foreground"
-          >
-            {status === "invited" ? "Einladung erneut senden" : "Einladung senden"}
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => accessAction.mutate("reset")}
-            disabled={accessAction.isPending}
-          >
-            Passwort zurücksetzen
-          </Button>
-          {status === "deactivated" ? (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => accessAction.mutate("activate")}
-              disabled={accessAction.isPending}
-            >
-              Zugang aktivieren
-            </Button>
-          ) : (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                if (window.confirm("Zugang wirklich deaktivieren? Der Kunde kann sich nicht mehr einloggen.")) {
-                  accessAction.mutate("deactivate");
+      <Accordion type="multiple" defaultValue={["stammdaten"]} className="space-y-3">
+        <AccordionItem
+          value="stammdaten"
+          className="rounded-2xl border border-border bg-card px-4"
+        >
+          <AccordionTrigger className="font-display text-base font-bold">
+            Stammdaten & Zugang
+          </AccordionTrigger>
+          <AccordionContent className="space-y-6 pt-2">
+            <div className="rounded-2xl border border-border bg-card p-6">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="font-display text-lg font-bold">Zugang</h2>
+                <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${statusClass}`}>
+                  {statusLabel}
+                </span>
+              </div>
+              <div className="mt-3 text-xs text-muted-foreground space-y-0.5">
+                {data.auth?.invited_at && (
+                  <div>Eingeladen am: {new Date(data.auth.invited_at).toLocaleDateString("de-DE")}</div>
+                )}
+                {(data.auth as any)?.last_activity_at ? (
+                  <div>Letzte Aktivität: {new Date((data.auth as any).last_activity_at).toLocaleString("de-DE")}</div>
+                ) : data.auth?.last_sign_in_at && (
+                  <div>Letzte Aktivität: {new Date(data.auth.last_sign_in_at).toLocaleString("de-DE")}</div>
+                )}
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => accessAction.mutate("invite")}
+                  disabled={accessAction.isPending}
+                  className="bg-gradient-gold text-primary-foreground"
+                >
+                  {status === "invited" ? "Einladung erneut senden" : "Einladung senden"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => accessAction.mutate("reset")}
+                  disabled={accessAction.isPending}
+                >
+                  Passwort zurücksetzen
+                </Button>
+                {status === "deactivated" ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => accessAction.mutate("activate")}
+                    disabled={accessAction.isPending}
+                  >
+                    Zugang aktivieren
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      if (window.confirm("Zugang wirklich deaktivieren? Der Kunde kann sich nicht mehr einloggen.")) {
+                        accessAction.mutate("deactivate");
+                      }
+                    }}
+                    disabled={accessAction.isPending}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    Zugang deaktivieren
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowPwForm((v) => !v)}
+                >
+                  Passwort selbst setzen
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={async () => {
+                    const name = data.profile?.display_name ?? data.email ?? "diesen Kunden";
+                    if (!window.confirm(`Konto von ${name} unwiderruflich löschen? Alle Pakete und Zahlungen werden ebenfalls entfernt.`)) return;
+                    try {
+                      await deleteFn({ data: { user_id: userId } });
+                      toast.success("Kunde gelöscht.");
+                      navigate({ to: "/coach/customers" });
+                    } catch (e) {
+                      toast.error((e as Error).message);
+                    }
+                  }}
+                  className="text-destructive hover:text-destructive"
+                >
+                  Konto löschen
+                </Button>
+              </div>
+
+              {showPwForm && (
+                <form
+                  className="mt-4 flex flex-wrap items-end gap-2"
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (newPw.length < 8) return toast.error("Mindestens 8 Zeichen.");
+                    try {
+                      await setPwFn({ data: { user_id: userId, password: newPw } });
+                      toast.success("Passwort gesetzt.");
+                      setNewPw("");
+                      setShowPwForm(false);
+                    } catch (err) {
+                      toast.error((err as Error).message);
+                    }
+                  }}
+                >
+                  <div className="space-y-1">
+                    <Label htmlFor="manual-pw">Neues Passwort</Label>
+                    <Input
+                      id="manual-pw"
+                      type="text"
+                      value={newPw}
+                      onChange={(e) => setNewPw(e.target.value)}
+                      placeholder="Mind. 8 Zeichen"
+                      className="w-56"
+                      autoComplete="new-password"
+                    />
+                  </div>
+                  <Button type="submit" size="sm" className="bg-gradient-gold text-primary-foreground">
+                    Speichern
+                  </Button>
+                </form>
+              )}
+            </div>
+
+            {(() => {
+              const p: any = data.profile ?? {};
+              const activity: Record<string, string> = {
+                sedentary: "Sitzend",
+                light: "Leicht aktiv",
+                moderate: "Moderat aktiv",
+                active: "Sehr aktiv",
+                athlete: "Leistungssport",
+              };
+              const gender: Record<string, string> = { male: "Männlich", female: "Weiblich", other: "Divers" };
+              const row = (label: string, value: any) => (
+                <div className="space-y-0.5">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
+                  <p className="text-sm font-medium text-foreground">{value || "—"}</p>
+                </div>
+              );
+              return (
+                <div className="rounded-2xl border border-border bg-card p-6">
+                  <h2 className="font-display text-lg font-bold">Stammdaten</h2>
+                  <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
+                    {row("Trainingsziel", labelForTrainingGoal(p.training_goal))}
+                    {row("Wunschgewicht", p.goal_weight_kg ? `${p.goal_weight_kg} kg` : null)}
+                    {row("Wunschgewicht bis", (p as any).goal_target_date ? new Date((p as any).goal_target_date).toLocaleDateString("de-DE") : null)}
+                    {row("Aktivitätslevel", activity[p.activity_level] ?? p.activity_level)}
+                    {row("Größe", p.height_cm ? `${p.height_cm} cm` : null)}
+                    {row("Geschlecht", gender[p.gender] ?? p.gender)}
+                    {row("Geburtsdatum", p.birthdate ? new Date(p.birthdate).toLocaleDateString("de-DE") : null)}
+                  </div>
+                </div>
+              );
+            })()}
+
+            <AthleteProfileEditor
+              userId={userId}
+              mode="coach"
+              initial={{
+                sport: (data.profile as any)?.sport ?? null,
+                sport_position: (data.profile as any)?.sport_position ?? null,
+                sport_level: (data.profile as any)?.sport_level ?? null,
+                team_sport: (data.profile as any)?.team_sport ?? false,
+                match_days_per_week: (data.profile as any)?.match_days_per_week ?? null,
+                practice_days_per_week: (data.profile as any)?.practice_days_per_week ?? null,
+                season_phase: (data.profile as any)?.season_phase ?? null,
+                class_types: (data.profile as any)?.class_types ?? [],
+                class_days_per_week: (data.profile as any)?.class_days_per_week ?? null,
+                mobility_frequency: (data.profile as any)?.mobility_frequency ?? null,
+                mobility_focus: (data.profile as any)?.mobility_focus ?? null,
+                cardio_outside_gym: (data.profile as any)?.cardio_outside_gym ?? null,
+                injuries: (data.profile as any)?.injuries ?? null,
+                training_experience: (data.profile as any)?.training_experience ?? null,
+              }}
+            />
+
+            <GroupsCard
+              userId={userId}
+              groups={(data as any).groups ?? []}
+              onToggle={async (group, enabled) => {
+                try {
+                  await groupFn({ data: { user_id: userId, group, enabled } });
+                  toast.success(enabled ? "Zugang aktiviert." : "Zugang entfernt.");
+                  qc.invalidateQueries({ queryKey: ["customer", userId] });
+                } catch (e) {
+                  toast.error((e as Error).message);
                 }
               }}
-              disabled={accessAction.isPending}
-              className="text-destructive hover:text-destructive"
-            >
-              Zugang deaktivieren
-            </Button>
-          )}
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setShowPwForm((v) => !v)}
-          >
-            Passwort selbst setzen
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={async () => {
-              const name = data.profile?.display_name ?? data.email ?? "diesen Kunden";
-              if (!window.confirm(`Konto von ${name} unwiderruflich löschen? Alle Pakete und Zahlungen werden ebenfalls entfernt.`)) return;
-              try {
-                await deleteFn({ data: { user_id: userId } });
-                toast.success("Kunde gelöscht.");
-                navigate({ to: "/coach/customers" });
-              } catch (e) {
-                toast.error((e as Error).message);
-              }
-            }}
-            className="text-destructive hover:text-destructive"
-          >
-            Konto löschen
-          </Button>
-        </div>
-
-        {showPwForm && (
-          <form
-            className="mt-4 flex flex-wrap items-end gap-2"
-            onSubmit={async (e) => {
-              e.preventDefault();
-              if (newPw.length < 8) return toast.error("Mindestens 8 Zeichen.");
-              try {
-                await setPwFn({ data: { user_id: userId, password: newPw } });
-                toast.success("Passwort gesetzt.");
-                setNewPw("");
-                setShowPwForm(false);
-              } catch (err) {
-                toast.error((err as Error).message);
-              }
-            }}
-          >
-            <div className="space-y-1">
-              <Label htmlFor="manual-pw">Neues Passwort</Label>
-              <Input
-                id="manual-pw"
-                type="text"
-                value={newPw}
-                onChange={(e) => setNewPw(e.target.value)}
-                placeholder="Mind. 8 Zeichen"
-                className="w-56"
-                autoComplete="new-password"
-              />
-            </div>
-            <Button type="submit" size="sm" className="bg-gradient-gold text-primary-foreground">
-              Speichern
-            </Button>
-          </form>
-        )}
-      </div>
-
-      {(() => {
-        const p: any = data.profile ?? {};
-        const activity: Record<string, string> = {
-          sedentary: "Sitzend",
-          light: "Leicht aktiv",
-          moderate: "Moderat aktiv",
-          active: "Sehr aktiv",
-          athlete: "Leistungssport",
-        };
-        const gender: Record<string, string> = { male: "Männlich", female: "Weiblich", other: "Divers" };
-        const row = (label: string, value: any) => (
-          <div className="space-y-0.5">
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
-            <p className="text-sm font-medium text-foreground">{value || "—"}</p>
-          </div>
-        );
-        return (
-          <div className="rounded-2xl border border-border bg-card p-6">
-            <h2 className="font-display text-lg font-bold">Stammdaten</h2>
-            <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
-              {row("Trainingsziel", labelForTrainingGoal(p.training_goal))}
-              {row("Wunschgewicht", p.goal_weight_kg ? `${p.goal_weight_kg} kg` : null)}
-              {row("Wunschgewicht bis", (p as any).goal_target_date ? new Date((p as any).goal_target_date).toLocaleDateString("de-DE") : null)}
-              {row("Aktivitätslevel", activity[p.activity_level] ?? p.activity_level)}
-              {row("Größe", p.height_cm ? `${p.height_cm} cm` : null)}
-              {row("Geschlecht", gender[p.gender] ?? p.gender)}
-              {row("Geburtsdatum", p.birthdate ? new Date(p.birthdate).toLocaleDateString("de-DE") : null)}
-            </div>
-          </div>
-        );
-      })()}
-
-      <StepGoalEditor
-        userId={userId}
-        initial={(data.profile as any)?.daily_step_goal ?? 10000}
-      />
-
-      <AthleteProfileEditor
-        userId={userId}
-        mode="coach"
-        initial={{
-          sport: (data.profile as any)?.sport ?? null,
-          sport_position: (data.profile as any)?.sport_position ?? null,
-          sport_level: (data.profile as any)?.sport_level ?? null,
-          team_sport: (data.profile as any)?.team_sport ?? false,
-          match_days_per_week: (data.profile as any)?.match_days_per_week ?? null,
-          practice_days_per_week: (data.profile as any)?.practice_days_per_week ?? null,
-          season_phase: (data.profile as any)?.season_phase ?? null,
-          class_types: (data.profile as any)?.class_types ?? [],
-          class_days_per_week: (data.profile as any)?.class_days_per_week ?? null,
-          mobility_frequency: (data.profile as any)?.mobility_frequency ?? null,
-          mobility_focus: (data.profile as any)?.mobility_focus ?? null,
-          cardio_outside_gym: (data.profile as any)?.cardio_outside_gym ?? null,
-          injuries: (data.profile as any)?.injuries ?? null,
-          training_experience: (data.profile as any)?.training_experience ?? null,
-        }}
-      />
-
-      <section className="rounded-2xl border border-border bg-card p-5">
-        <h3 className="font-display text-base font-bold mb-3">Freie Trainingseinheiten</h3>
-        <p className="text-xs text-muted-foreground mb-3">
-          Kurse, Sport, Mobility und andere Einheiten, die der Kunde außerhalb des Plans geloggt hat.
-        </p>
-        <TrainingSessionsList clientId={userId} days={30} />
-      </section>
-
-      <CoachStrengthCheckCard userId={userId} />
-
-      <CoachTrainingAlertsCard userId={userId} />
-
-
-
-
-
-      <CoachTrainingGoalCard
-        trainingGoal={(data.profile as any)?.training_goal ?? null}
-        targets={(data as any).targets ?? null}
-        measurements={(data.measurements ?? []) as any}
-        goalWeight={(data.profile as any)?.goal_weight_kg ?? null}
-        goalTargetDate={(data.profile as any)?.goal_target_date ?? null}
-      />
-
-      <WeightProgressChart
-        measurements={(data.measurements ?? []) as any}
-        goalWeight={(data.profile as any)?.goal_weight_kg ?? null}
-        title="Gewichtsentwicklung"
-        emptyHint="Sobald der Kunde sein erstes Gewicht einträgt, erscheint hier sein Verlauf."
-      />
-
-
-
-      <CoachTrialCard userId={userId} />
-
-      <GroupsCard
-        userId={userId}
-        groups={(data as any).groups ?? []}
-        onToggle={async (group, enabled) => {
-          try {
-            await groupFn({ data: { user_id: userId, group, enabled } });
-            toast.success(enabled ? "Zugang aktiviert." : "Zugang entfernt.");
-            qc.invalidateQueries({ queryKey: ["customer", userId] });
-          } catch (e) {
-            toast.error((e as Error).message);
-          }
-        }}
-      />
-
-      {activePkg && (
-        <div className="rounded-2xl border border-border bg-card p-6">
-          <h2 className="font-display text-lg font-bold">Aktives Paket</h2>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Paket</Label>
-              <select
-                value={pkgKey}
-                onChange={(e) => setPkgKey(e.target.value)}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              >
-                <option value="starter">Starter</option>
-                <option value="coaching">Coaching</option>
-                <option value="premium">Premium</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label>Preis (€)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={price}
-                onChange={(e) => setPrice(Number(e.target.value))}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Startdatum</Label>
-              <Input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
-              <p className="text-[11px] text-muted-foreground">
-                Vertragsbeginn — auch in der Zukunft möglich (z.B. 01.07.).
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label>Ablaufdatum</Label>
-              <Input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Button
-              onClick={() =>
-                update.mutate({
-                  package_id: activePkg.id,
-                  package: pkgKey as "starter" | "coaching" | "premium",
-                  price_eur: price,
-                  start_date: startDate || undefined,
-                  end_date: endDate,
-                })
-              }
-              className="bg-gradient-gold text-primary-foreground"
-            >
-              Speichern
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() =>
-                update.mutate({
-                  package_id: activePkg.id,
-                  is_active: !activePkg.is_active,
-                })
-              }
-            >
-              {activePkg.is_active ? "Deaktivieren" : "Aktivieren"}
-            </Button>
-          </div>
-        </div>
-      )}
-
-      <div className="rounded-2xl border border-border bg-card p-6">
-        <h2 className="font-display text-lg font-bold">Coaching-Infos</h2>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Diese Werte werden im Kundenprofil angezeigt — der Kunde kann sie nicht ändern.
-        </p>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label>Ziel</Label>
-            <Select value={coachingGoal} onValueChange={setCoachingGoal}>
-              <SelectTrigger>
-                <SelectValue placeholder="Ziel wählen" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="abnehmen">Abnehmen</SelectItem>
-                <SelectItem value="muskelaufbau">Muskelaufbau</SelectItem>
-                <SelectItem value="performance">Performance</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>Nächster Check-in</Label>
-            <Input
-              type="date"
-              value={nextCheckin}
-              onChange={(e) => setNextCheckin(e.target.value)}
             />
-          </div>
-        </div>
-        <Button
-          onClick={() => saveCoaching.mutate()}
-          disabled={saveCoaching.isPending}
-          className="mt-4 bg-gradient-gold text-primary-foreground"
+          </AccordionContent>
+        </AccordionItem>
+
+        <AccordionItem
+          value="mitgliedschaft"
+          className="rounded-2xl border border-border bg-card px-4"
         >
-          Speichern
-        </Button>
-      </div>
+          <AccordionTrigger className="font-display text-base font-bold">
+            Mitgliedschaft & Zahlungen
+          </AccordionTrigger>
+          <AccordionContent className="space-y-6 pt-2">
+            <CoachTrialCard userId={userId} />
 
-
-
-      <div className="rounded-2xl border border-border bg-card p-6">
-        <h2 className="font-display text-lg font-bold">Zahlungshistorie</h2>
-        {data.payments.length === 0 ? (
-          <p className="mt-3 text-sm text-muted-foreground">Noch keine Zahlungen.</p>
-        ) : (
-          <table className="mt-4 w-full text-sm">
-            <thead className="text-left text-[11px] uppercase tracking-wider text-muted-foreground">
-              <tr>
-                <th className="py-2">Datum</th>
-                <th>Betrag</th>
-                <th>Methode</th>
-                <th>Status</th>
-                <th>Notiz</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.payments.map((p) => (
-                <tr key={p.id} className="border-t border-border">
-                  <td className="py-2">{p.payment_date}</td>
-                  <td>{Number(p.amount_eur).toFixed(2)} €</td>
-                  <td>{p.method}</td>
-                  <td>
-                    <span
-                      className={
-                        "rounded-full px-2 py-0.5 text-[10px] font-bold uppercase " +
-                        (p.status === "confirmed"
-                          ? "bg-gold/10 text-gold"
-                          : p.status === "pending"
-                            ? "bg-warning/20 text-warning"
-                            : "bg-muted text-muted-foreground")
-                      }
+            {activePkg && (
+              <div className="rounded-2xl border border-border bg-card p-6">
+                <h2 className="font-display text-lg font-bold">Aktives Paket</h2>
+                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Paket</Label>
+                    <select
+                      value={pkgKey}
+                      onChange={(e) => setPkgKey(e.target.value)}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                     >
-                      {p.status}
-                    </span>
-                  </td>
-                  <td className="text-muted-foreground">{p.note ?? "—"}</td>
-                  <td className="text-right">
-                    {p.status === "pending" && (
-                      <Button size="sm" onClick={() => confirm.mutate(p.id)}>
-                        Bestätigen
-                      </Button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+                      <option value="starter">Starter</option>
+                      <option value="coaching">Coaching</option>
+                      <option value="premium">Premium</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Preis (€)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={price}
+                      onChange={(e) => setPrice(Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Startdatum</Label>
+                    <Input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      Vertragsbeginn — auch in der Zukunft möglich (z.B. 01.07.).
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Ablaufdatum</Label>
+                    <Input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Button
+                    onClick={() =>
+                      update.mutate({
+                        package_id: activePkg.id,
+                        package: pkgKey as "starter" | "coaching" | "premium",
+                        price_eur: price,
+                        start_date: startDate || undefined,
+                        end_date: endDate,
+                      })
+                    }
+                    className="bg-gradient-gold text-primary-foreground"
+                  >
+                    Speichern
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      update.mutate({
+                        package_id: activePkg.id,
+                        is_active: !activePkg.is_active,
+                      })
+                    }
+                  >
+                    {activePkg.is_active ? "Deaktivieren" : "Aktivieren"}
+                  </Button>
+                </div>
+              </div>
+            )}
 
-      <CustomerRecentActivityCard userId={userId} />
+            <div className="rounded-2xl border border-border bg-card p-6">
+              <h2 className="font-display text-lg font-bold">Coaching-Infos</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Diese Werte werden im Kundenprofil angezeigt — der Kunde kann sie nicht ändern.
+              </p>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Ziel</Label>
+                  <Select value={coachingGoal} onValueChange={setCoachingGoal}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Ziel wählen" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="abnehmen">Abnehmen</SelectItem>
+                      <SelectItem value="muskelaufbau">Muskelaufbau</SelectItem>
+                      <SelectItem value="performance">Performance</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Nächster Check-in</Label>
+                  <Input
+                    type="date"
+                    value={nextCheckin}
+                    onChange={(e) => setNextCheckin(e.target.value)}
+                  />
+                </div>
+              </div>
+              <Button
+                onClick={() => saveCoaching.mutate()}
+                disabled={saveCoaching.isPending}
+                className="mt-4 bg-gradient-gold text-primary-foreground"
+              >
+                Speichern
+              </Button>
+            </div>
 
-      <MeasurementsCard measurements={data.measurements ?? []} />
+            <div className="rounded-2xl border border-border bg-card p-6">
+              <h2 className="font-display text-lg font-bold">Zahlungshistorie</h2>
+              {data.payments.length === 0 ? (
+                <p className="mt-3 text-sm text-muted-foreground">Noch keine Zahlungen.</p>
+              ) : (
+                <table className="mt-4 w-full text-sm">
+                  <thead className="text-left text-[11px] uppercase tracking-wider text-muted-foreground">
+                    <tr>
+                      <th className="py-2">Datum</th>
+                      <th>Betrag</th>
+                      <th>Methode</th>
+                      <th>Status</th>
+                      <th>Notiz</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.payments.map((p) => (
+                      <tr key={p.id} className="border-t border-border">
+                        <td className="py-2">{p.payment_date}</td>
+                        <td>{Number(p.amount_eur).toFixed(2)} €</td>
+                        <td>{p.method}</td>
+                        <td>
+                          <span
+                            className={
+                              "rounded-full px-2 py-0.5 text-[10px] font-bold uppercase " +
+                              (p.status === "confirmed"
+                                ? "bg-gold/10 text-gold"
+                                : p.status === "pending"
+                                  ? "bg-warning/20 text-warning"
+                                  : "bg-muted text-muted-foreground")
+                            }
+                          >
+                            {p.status}
+                          </span>
+                        </td>
+                        <td className="text-muted-foreground">{p.note ?? "—"}</td>
+                        <td className="text-right">
+                          {p.status === "pending" && (
+                            <Button size="sm" onClick={() => confirm.mutate(p.id)}>
+                              Bestätigen
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
 
-      <CustomerCheckinsCard userId={userId} />
+        <AccordionItem
+          value="ernaehrung"
+          className="rounded-2xl border border-border bg-card px-4"
+        >
+          <AccordionTrigger className="font-display text-base font-bold">
+            Ernährung
+          </AccordionTrigger>
+          <AccordionContent className="space-y-6 pt-2">
+            <MacroTargetsCard userId={userId} />
+            <NutritionTargetsEditor userId={userId} />
+            <SmartNutritionInsightsCard userId={userId} />
+            <PlanManagementCard userId={userId} />
+            <RecipeInsightsCard userId={userId} />
+          </AccordionContent>
+        </AccordionItem>
 
-      <MacroTargetsCard userId={userId} />
-      <NutritionTargetsEditor userId={userId} />
-      <SmartNutritionInsightsCard userId={userId} />
-      <PlanManagementCard userId={userId} />
-      <TrainingPlanManagementCard userId={userId} />
-      <PartnerLinkCard userId={userId} />
+        <AccordionItem
+          value="training"
+          className="rounded-2xl border border-border bg-card px-4"
+        >
+          <AccordionTrigger className="font-display text-base font-bold">
+            Training
+          </AccordionTrigger>
+          <AccordionContent className="space-y-6 pt-2">
+            <StepGoalEditor
+              userId={userId}
+              initial={(data.profile as any)?.daily_step_goal ?? 10000}
+            />
+            <CoachTrainingGoalCard
+              trainingGoal={(data.profile as any)?.training_goal ?? null}
+              targets={(data as any).targets ?? null}
+              measurements={(data.measurements ?? []) as any}
+              goalWeight={(data.profile as any)?.goal_weight_kg ?? null}
+              goalTargetDate={(data.profile as any)?.goal_target_date ?? null}
+            />
+            <TrainingPlanManagementCard userId={userId} />
+            <CoachStrengthCheckCard userId={userId} />
+            <CoachTrainingAlertsCard userId={userId} />
+            <section className="rounded-2xl border border-border bg-card p-5">
+              <h3 className="font-display text-base font-bold mb-3">Freie Trainingseinheiten</h3>
+              <p className="text-xs text-muted-foreground mb-3">
+                Kurse, Sport, Mobility und andere Einheiten, die der Kunde außerhalb des Plans geloggt hat.
+              </p>
+              <TrainingSessionsList clientId={userId} days={30} />
+            </section>
+            <TrainingBonusCard userId={userId} isCoach />
+            <CoachTrainingSummary clientId={userId} />
+          </AccordionContent>
+        </AccordionItem>
 
-      <RecipeInsightsCard userId={userId} />
-      <TrainingBonusCard userId={userId} isCoach />
-      <CoachTrainingSummary clientId={userId} />
+        <AccordionItem
+          value="fortschritt"
+          className="rounded-2xl border border-border bg-card px-4"
+        >
+          <AccordionTrigger className="font-display text-base font-bold">
+            Fortschritt & Check-ins
+          </AccordionTrigger>
+          <AccordionContent className="space-y-6 pt-2">
+            <WeightProgressChart
+              measurements={(data.measurements ?? []) as any}
+              goalWeight={(data.profile as any)?.goal_weight_kg ?? null}
+              title="Gewichtsentwicklung"
+              emptyHint="Sobald der Kunde sein erstes Gewicht einträgt, erscheint hier sein Verlauf."
+            />
+            <MeasurementsCard measurements={data.measurements ?? []} />
+            <CustomerCheckinsCard userId={userId} />
+            <CustomerRecentActivityCard userId={userId} />
+          </AccordionContent>
+        </AccordionItem>
+
+        <AccordionItem
+          value="partner"
+          className="rounded-2xl border border-border bg-card px-4"
+        >
+          <AccordionTrigger className="font-display text-base font-bold">
+            Partner & Verknüpfungen
+          </AccordionTrigger>
+          <AccordionContent className="space-y-6 pt-2">
+            <PartnerLinkCard userId={userId} />
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </div>
   );
 }
