@@ -38,6 +38,7 @@ import { RecipeInsightsCard } from "@/components/bodyfuel/RecipeInsightsCard";
 import { SmartNutritionInsightsCard } from "@/components/bodyfuel/SmartNutritionInsightsCard";
 import { CustomerCheckinsCard } from "@/components/bodyfuel/CustomerCheckinsCard";
 import { PlanManagementCard } from "@/components/bodyfuel/PlanManagementCard";
+import { TrainingPlanManagementCard } from "@/components/bodyfuel/TrainingPlanManagementCard";
 import { PartnerLinkCard } from "@/components/bodyfuel/PartnerLinkCard";
 import { CoachTrainingGoalCard } from "@/components/bodyfuel/CoachTrainingGoalCard";
 import { WeightProgressChart } from "@/components/bodyfuel/WeightProgressChart";
@@ -551,6 +552,7 @@ function CustomerDetail() {
       <NutritionTargetsEditor userId={userId} />
       <SmartNutritionInsightsCard userId={userId} />
       <PlanManagementCard userId={userId} />
+      <TrainingPlanManagementCard userId={userId} />
       <PartnerLinkCard userId={userId} />
 
       <RecipeInsightsCard userId={userId} />

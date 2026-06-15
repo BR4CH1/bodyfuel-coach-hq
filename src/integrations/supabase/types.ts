@@ -1197,6 +1197,7 @@ export type Database = {
         Row: {
           allergies: string[]
           auto_publish: boolean
+          auto_publish_training: boolean
           budget_band: string | null
           completed_at: string | null
           created_at: string
@@ -1209,6 +1210,7 @@ export type Database = {
           shopping_day: string | null
           shopping_days: string[]
           shopping_lead_days: number
+          training_session_minutes: number | null
           training_weekdays: string[]
           updated_at: string
           user_id: string
@@ -1216,6 +1218,7 @@ export type Database = {
         Insert: {
           allergies?: string[]
           auto_publish?: boolean
+          auto_publish_training?: boolean
           budget_band?: string | null
           completed_at?: string | null
           created_at?: string
@@ -1228,6 +1231,7 @@ export type Database = {
           shopping_day?: string | null
           shopping_days?: string[]
           shopping_lead_days?: number
+          training_session_minutes?: number | null
           training_weekdays?: string[]
           updated_at?: string
           user_id: string
@@ -1235,6 +1239,7 @@ export type Database = {
         Update: {
           allergies?: string[]
           auto_publish?: boolean
+          auto_publish_training?: boolean
           budget_band?: string | null
           completed_at?: string | null
           created_at?: string
@@ -1247,6 +1252,7 @@ export type Database = {
           shopping_day?: string | null
           shopping_days?: string[]
           shopping_lead_days?: number
+          training_session_minutes?: number | null
           training_weekdays?: string[]
           updated_at?: string
           user_id?: string
@@ -1442,33 +1448,39 @@ export type Database = {
       }
       training_exercises: {
         Row: {
+          category: string | null
           created_at: string
           day_id: string
           id: string
           name: string
           notes: string | null
+          rest_seconds: number | null
           sort_order: number
           target_reps: string | null
           target_sets: number | null
           target_weights: string | null
         }
         Insert: {
+          category?: string | null
           created_at?: string
           day_id: string
           id?: string
           name: string
           notes?: string | null
+          rest_seconds?: number | null
           sort_order?: number
           target_reps?: string | null
           target_sets?: number | null
           target_weights?: string | null
         }
         Update: {
+          category?: string | null
           created_at?: string
           day_id?: string
           id?: string
           name?: string
           notes?: string | null
+          rest_seconds?: number | null
           sort_order?: number
           target_reps?: string | null
           target_sets?: number | null
