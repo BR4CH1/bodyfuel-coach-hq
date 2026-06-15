@@ -46,6 +46,7 @@ const WEEKDAYS: { v: string; l: string }[] = [
 
 export type AthleteProfileInitial = AthleteProfileInput & {
   sport?: string | null;
+  sport_weekdays?: string[] | null;
   training_experience?: Experience | null;
 };
 
