@@ -306,7 +306,7 @@ ${bw ? `- Körpergewicht: ${bw} kg` : ""}${bfPct ? ` · KFA: ${bfPct}%` : ""}
 ${cp.height_cm ? `- Größe: ${cp.height_cm} cm` : ""}${ageYears ? ` · Alter: ${ageYears} J.` : ""}${cp.gender ? ` · ${cp.gender}` : ""}
 - Trainings-Erfahrung: ${experience}
 - Sessionlänge: ca. ${sessionMinutes} Min · ${numDays} Trainingstage/Woche
-${sportBlock}${injuryBlock}
+${sportBlock}${mobilityBlock}${injuryBlock}
 
 🏋️ LETZTER STRENGTH CHECK
 ${lastCheck ? `Gesamt: ${lastCheck.score_total}/100 · Unter ${lastCheck.score_lower} · Push ${lastCheck.score_push} · Pull ${lastCheck.score_pull} · Core ${lastCheck.score_core}
