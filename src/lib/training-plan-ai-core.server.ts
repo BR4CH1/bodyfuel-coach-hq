@@ -459,8 +459,8 @@ GENAU 4 Wochen. Jede Woche GENAU 7 Tage (Mo, Di, Mi, Do, Fr, Sa, So in dieser Re
   for (const w of weeks) {
     for (let i = 0; i < w.days.length; i++) {
       const d = w.days[i];
-      const baseName = (d.name && String(d.name).trim()) || `Tag ${i + 1}`;
-      const dayName = d.focus ? `${baseName} — ${d.focus}` : baseName;
+      const baseName = stripAkzessoires((d.name && String(d.name).trim()) || `Tag ${i + 1}`);
+      const dayName = d.focus ? `${baseName} — ${stripAkzessoires(String(d.focus))}` : baseName;
       const { data: dayRow, error: dayErr } = await supabase
         .from("training_days")
         .insert({
