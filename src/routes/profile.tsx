@@ -291,6 +291,11 @@ function ProfileContent() {
       </section>
 
 
+      {/* Athleten- / Sportprofil (Self-Service) */}
+      <section id="athlete-profile" className="scroll-mt-20">
+        <AthleteSelfSection />
+      </section>
+
       {/* Account */}
       <section className="rounded-2xl border border-border bg-card p-6">
         <h2 className="font-display text-lg font-bold">Account</h2>
