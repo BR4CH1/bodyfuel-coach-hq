@@ -36,7 +36,6 @@ const coachNav = [
   { to: "/coach/customers", label: "Kunden", icon: Users },
   { to: "/coach/leads", label: "Anfragen", icon: Inbox },
   { to: "/coach/reviews", label: "Bewertungen", icon: Trophy },
-  { to: "/training", label: "Training", icon: Dumbbell },
 ];
 
 
