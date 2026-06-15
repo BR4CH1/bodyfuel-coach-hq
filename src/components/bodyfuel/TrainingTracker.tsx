@@ -368,22 +368,24 @@ function ExerciseCard({
       <div className="mt-3 flex items-center gap-2">
         <span className="text-[11px] text-muted-foreground">+ Satz {nextSet}</span>
         <input
-          type="number"
+          type="text"
           inputMode="decimal"
-          step="0.5"
+          pattern="[0-9.,]*"
           value={weight}
-          onChange={(e) => setWeight(e.target.value)}
+          onChange={(e) => setWeight(e.target.value.replace(/[^0-9.,]/g, ""))}
           placeholder="kg"
           className="w-20 rounded-md border border-input bg-background px-2 py-1.5 text-sm"
         />
         <input
-          type="number"
+          type="text"
           inputMode="numeric"
+          pattern="[0-9]*"
           value={reps}
-          onChange={(e) => setReps(e.target.value)}
+          onChange={(e) => setReps(e.target.value.replace(/[^0-9]/g, ""))}
           placeholder="Wdh."
           className="w-20 rounded-md border border-input bg-background px-2 py-1.5 text-sm"
         />
+
         <button
           onClick={save}
           className="inline-flex items-center gap-1 rounded-md bg-gradient-gold px-3 py-1.5 text-xs font-semibold text-primary-foreground"
