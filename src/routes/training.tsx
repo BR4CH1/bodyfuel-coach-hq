@@ -28,9 +28,16 @@ function TrainingPage() {
   const { isCoach, supabaseUser } = useSession();
   const { isTrial, isExpired } = useTrial();
   const ensureFn = useServerFn(ensureTrialTrainingPlan);
+  const statusFn = useServerFn(getMyStrengthStatus);
   const [clientId, setClientId] = useState<string>("");
   const [trackerKey, setTrackerKey] = useState(0);
   const seededRef = useRef(false);
+
+  const { data: strengthStatus } = useQuery({
+    queryKey: ["my-strength-status"],
+    queryFn: () => statusFn(),
+    enabled: !!supabaseUser && !isCoach,
+  });
 
   // Trial-Nutzer: Starter-Trainingsplan idempotent anlegen, damit der Tracker
   // sofort Übungen anzeigt und Sätze geloggt werden können.
@@ -54,9 +61,25 @@ function TrainingPage() {
 
   const effectiveId = clientId || (!isCoach ? supabaseUser?.id ?? "" : "");
 
+  const last = strengthStatus?.last;
+  const hasCompleted = !!last && !!last.score_total;
+
   return (
     <div className="space-y-8">
       {!isCoach && <StrengthCheckStatus variant="block" />}
+      {hasCompleted && (
+        <StrengthSummaryCard
+          total={last.score_total}
+          performedAt={last.performed_at}
+          bodyweightKg={last.bodyweight_kg}
+          groups={[
+            { key: "score_lower", label: "Unterkörper", val: last.score_lower },
+            { key: "score_push", label: "Push", val: last.score_push },
+            { key: "score_pull", label: "Pull", val: last.score_pull },
+            { key: "score_core", label: "Core", val: last.score_core },
+          ]}
+        />
+      )}
       {isCoach && <PlansView planType="training" onClientChange={setClientId} />}
       {!isCoach && (isTrial || isExpired) ? (
         <TrialTrainingPlan />
