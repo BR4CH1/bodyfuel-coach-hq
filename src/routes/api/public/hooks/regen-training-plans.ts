@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { verifyCronAuth } from "@/lib/cron-auth.server";
 
 /**
  * Cron-Endpoint: Findet aktive Trainingspläne, deren Zeitraum (4 Wochen)
@@ -6,19 +7,14 @@ import { createFileRoute } from "@tanstack/react-router";
  * Smart-Plan als Entwurf. Coach bekommt diesen über die normale
  * Plan-Vorschau zur Freigabe.
  *
- * Aufruf per pg_cron mit `apikey`-Header (anon key) — bypassed Auth durch
- * den `/api/public/*` Prefix; Schutz erfolgt über zusätzlichen Vergleich
- * mit `VITE_SUPABASE_PUBLISHABLE_KEY`.
+ * Aufruf per pg_cron mit `Authorization: Bearer <CRON_HOOK_SECRET>`.
  */
 export const Route = createFileRoute("/api/public/hooks/regen-training-plans")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const auth = request.headers.get("apikey") ?? request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-        const expected = process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-        if (!auth || !expected || auth !== expected) {
-          return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
-        }
+        const auth = verifyCronAuth(request);
+        if (!auth.ok) return auth.response;
 
         const apiKey = process.env.LOVABLE_API_KEY;
         if (!apiKey) {
