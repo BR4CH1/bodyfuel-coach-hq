@@ -104,6 +104,37 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
 
+  // Sync open day with PlanContentView selection (top of /training page).
+  // PlanContentView writes the active virtual-day NAME to localStorage and
+  // dispatches "bf:training-active-day" when the user picks a day.
+  useEffect(() => {
+    if (!days.length) return;
+    const key = `bf:training:active-day-name:${clientId}`;
+    const applyName = (name: string | null) => {
+      if (!name) return;
+      const norm = name.trim().toLowerCase();
+      const hit = days.find(
+        (d) => d.name.trim().toLowerCase() === norm || norm.includes(d.name.trim().toLowerCase()) || d.name.trim().toLowerCase().includes(norm),
+      );
+      if (hit) setOpenDay(hit.id);
+    };
+    try { applyName(localStorage.getItem(key)); } catch {}
+    const onEvt = (e: Event) => {
+      const detail = (e as CustomEvent<{ clientId: string; name: string }>).detail;
+      if (detail?.clientId === clientId) applyName(detail.name);
+    };
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === key) applyName(e.newValue);
+    };
+    window.addEventListener("bf:training-active-day", onEvt as EventListener);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener("bf:training-active-day", onEvt as EventListener);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, [days, clientId]);
+
+
   const extract = async () => {
     if (!plan) return;
     setParsing(true);
@@ -186,10 +217,28 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
                         });
                         setLogs((cur) => [row as SetLog, ...cur]);
                         toast.success("Gespeichert");
+                        // Auto-check the daily "Training" task
+                        try {
+                          const date = new Date().toISOString().slice(0, 10);
+                          const { data: existing } = await supabase
+                            .from("daily_checks")
+                            .select("id, tasks, points")
+                            .eq("user_id", clientId)
+                            .eq("check_date", date)
+                            .maybeSingle();
+                          const tasks: Record<string, boolean> = { ...((existing?.tasks as Record<string, boolean>) ?? {}), training: true };
+                          const { TASKS } = await import("@/lib/bodyfuel/data");
+                          const points = TASKS.reduce((s, t) => s + (tasks[t.key] ? t.points : 0), 0);
+                          await supabase.from("daily_checks").upsert(
+                            { user_id: clientId, check_date: date, tasks, points },
+                            { onConflict: "user_id,check_date" },
+                          );
+                        } catch {}
                       } catch (e: unknown) {
                         toast.error(e instanceof Error ? e.message : "Fehler");
                       }
                     }}
+
                     onDelete={async (id) => {
                       try {
                         await deleteLogFn({ data: { id } });
@@ -231,14 +280,24 @@ function ExerciseCard({
 
   const nextSet = (todaysLogs.length ?? 0) + 1;
   const [weight, setWeight] = useState("");
-  const [reps, setReps] = useState(ex.target_reps?.split(/[-–]/)[0] ?? "");
+  const [reps, setReps] = useState("");
 
-  // Suggest last weight as default
+  // Suggest last weight + planned reps as defaults — only when inputs are empty
+  // and only when the previous suggestion changes (no stale traps).
   useEffect(() => {
     if (!weight && logs[0]?.weight_kg != null) {
-      setWeight(String(logs[0].weight_kg));
+      setWeight(String(logs[0].weight_kg).replace(".", ","));
     }
-  }, [logs, weight]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [logs[0]?.id]);
+  useEffect(() => {
+    if (!reps) {
+      const planned = ex.target_reps?.split(/[,|]/)[Math.min(nextSet - 1, (ex.target_reps?.split(/[,|]/).length ?? 1) - 1)]?.trim() ?? ex.target_reps?.split(/[-–]/)[0];
+      const n = planned ? planned.match(/\d+/)?.[0] : "";
+      if (n) setReps(n);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nextSet, ex.target_reps]);
 
   const save = () => {
     const w = weight.trim() === "" ? null : Number(weight.replace(",", "."));
@@ -246,7 +305,10 @@ function ExerciseCard({
     if (w !== null && (Number.isNaN(w) || w < 0)) return toast.error("Gewicht ungültig");
     if (r !== null && (Number.isNaN(r) || r < 0)) return toast.error("Wdh. ungültig");
     onLog(nextSet, w, r);
+    // Clear so the next set starts fresh and prefill logic refills cleanly.
+    setReps("");
   };
+
 
   return (
     <div className="rounded-xl border border-border/60 bg-background/40 p-3">
@@ -306,22 +368,24 @@ function ExerciseCard({
       <div className="mt-3 flex items-center gap-2">
         <span className="text-[11px] text-muted-foreground">+ Satz {nextSet}</span>
         <input
-          type="number"
+          type="text"
           inputMode="decimal"
-          step="0.5"
+          pattern="[0-9.,]*"
           value={weight}
-          onChange={(e) => setWeight(e.target.value)}
+          onChange={(e) => setWeight(e.target.value.replace(/[^0-9.,]/g, ""))}
           placeholder="kg"
           className="w-20 rounded-md border border-input bg-background px-2 py-1.5 text-sm"
         />
         <input
-          type="number"
+          type="text"
           inputMode="numeric"
+          pattern="[0-9]*"
           value={reps}
-          onChange={(e) => setReps(e.target.value)}
+          onChange={(e) => setReps(e.target.value.replace(/[^0-9]/g, ""))}
           placeholder="Wdh."
           className="w-20 rounded-md border border-input bg-background px-2 py-1.5 text-sm"
         />
+
         <button
           onClick={save}
           className="inline-flex items-center gap-1 rounded-md bg-gradient-gold px-3 py-1.5 text-xs font-semibold text-primary-foreground"
