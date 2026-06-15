@@ -113,6 +113,27 @@ export function CoachStrengthCheckCard({ userId }: { userId: string }) {
               </div>
             </div>
           )}
+          {showExplanation && (
+            <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-xs space-y-2 mt-2">
+              <p>
+                <strong className="text-amber-300">Dysbalance</strong> = muskuläres Ungleichgewicht. 
+                Δ {dysbalance} ist die Differenz zwischen der stärksten Gruppe ({strongest?.label}, {strongest?.val}) 
+                und der schwächsten Gruppe ({weakest?.label}, {weakest?.val}).
+              </p>
+              <p className="text-muted-foreground">
+                <strong>Coaching-Hinweis:</strong> Plane für die schwächere Gruppe ({weakest?.label}) 
+                gezielte Priorisierung ein — z. B. mehr Sätze, höhere Frequenz oder eine isolierte Übung mehr pro Woche. 
+                Das reduziert Verletzungsrisiken und beschleunigt den Kraftzuwachs insgesamt.
+              </p>
+              {dysbalance > 30 && (
+                <p className="text-red-300">
+                  <strong>Achtung:</strong> Differenz &gt; 30 Punkte — hier empfiehlt sich eine deutliche 
+                  Schwerpunktsetzung auf {weakest?.label}, evtl. auch ein zusätzlicher Trainingstag oder 
+                  eine Modifikation des Splits zugunsten der schwächeren Kette.
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
