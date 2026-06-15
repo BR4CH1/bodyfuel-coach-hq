@@ -3,6 +3,7 @@ import * as React from "react";
 import { render } from "@react-email/components";
 import { createClient } from "@supabase/supabase-js";
 import { TEMPLATES } from "@/lib/email-templates/registry";
+import { verifyCronAuth } from "@/lib/cron-auth.server";
 
 // Reminder-Trigger: Tage VOR Ablauf, an denen eine E-Mail gehen soll.
 const REMIND_DAYS = [3, 1, 0] as const;
@@ -26,11 +27,8 @@ export const Route = createFileRoute("/api/public/hooks/trial-reminders")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const anonKey = process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.SUPABASE_ANON_KEY;
-        const apikey = request.headers.get("apikey");
-        if (!anonKey || apikey !== anonKey) {
-          return Response.json({ error: "Unauthorized" }, { status: 401 });
-        }
+        const auth = verifyCronAuth(request);
+        if (!auth.ok) return auth.response;
 
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
