@@ -14,6 +14,7 @@ import { DailyMacroSummary } from "@/components/bodyfuel/DailyMacroSummary";
 import { PointsBreakdownCard } from "@/components/bodyfuel/PointsBreakdownCard";
 import { TrialStatusBanner, TrialWelcomeDialog } from "@/components/bodyfuel/Trial";
 import { TrialChecklist } from "@/components/bodyfuel/TrialChecklist";
+import { SportWeekdaysPrompt } from "@/components/bodyfuel/SportWeekdaysPrompt";
 
 import { useTrial } from "@/hooks/use-trial";
 
@@ -92,6 +93,7 @@ function DashboardContent() {
     <div className="space-y-6">
       <TrialWelcomeDialog />
       <TrialStatusBanner />
+      <SportWeekdaysPrompt />
       {supabaseUser && <TrialChecklistGate userId={supabaseUser.id} />}
 
 
@@ -409,6 +411,7 @@ function RealUserDashboard() {
       
       <TrialWelcomeDialog />
       <TrialStatusBanner />
+      <SportWeekdaysPrompt />
       {supabaseUser && <TrialChecklistGate userId={supabaseUser.id} />}
 
       {checkinInfo && (
