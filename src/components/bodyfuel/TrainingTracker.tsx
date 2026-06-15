@@ -7,6 +7,8 @@ import { useSession } from "@/lib/bodyfuel/session";
 import { parseTrainingPlan, logSet, deleteSetLog } from "@/lib/training.functions";
 import { ExerciseAnalytics } from "./ExerciseAnalytics";
 import { normalizeExerciseName } from "@/lib/exercise-name-match";
+import { AddTrainingSessionButton } from "./AddTrainingSessionDialog";
+import { TrainingSessionsList } from "./TrainingSessionsList";
 
 
 type Plan = { id: string; client_id: string; title: string; weeks_count?: number | null; scheduled_start_date?: string | null };
@@ -221,17 +223,24 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <h2 className="font-display text-lg font-bold">Übungen tracken</h2>
-        {isCoach && (
-          <button
-            onClick={extract}
-            disabled={parsing}
-            className="inline-flex items-center gap-2 rounded-md bg-gradient-gold px-3 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-60"
-          >
-            {parsing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-            {days.length ? "Neu aus PDF extrahieren" : "Übungen aus PDF extrahieren"}
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {!isCoach && (
+            <AddTrainingSessionButton onLogged={() => { /* list auto-refreshes via query */ }} />
+          )}
+          {isCoach && (
+            <button
+              onClick={extract}
+              disabled={parsing}
+              className="inline-flex items-center gap-2 rounded-md bg-gradient-gold px-3 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-60"
+            >
+              {parsing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              {days.length ? "Neu aus PDF extrahieren" : "Übungen aus PDF extrahieren"}
+            </button>
+          )}
+        </div>
       </div>
+
+      <TrainingSessionsList clientId={clientId} selfEdit={!isCoach} days={14} />
 
       {weeksCount > 1 && days.length > 0 && (() => {
         const phase =
