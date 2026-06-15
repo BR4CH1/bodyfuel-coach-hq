@@ -380,8 +380,9 @@ function ExerciseCard({
           pattern="[0-9.,]*"
           value={weight}
           onChange={(e) => setWeight(e.target.value.replace(/[^0-9.,]/g, ""))}
-          placeholder="kg"
-          className="w-20 rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+          placeholder={isPerSide ? "kg/Seite" : "kg ges."}
+          title={isPerSide ? "Gewicht pro Seite (Kurzhantel)" : "Gesamtgewicht (Langhantel/Maschine)"}
+          className="w-24 rounded-md border border-input bg-background px-2 py-1.5 text-sm"
         />
         <input
           type="text"
