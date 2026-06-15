@@ -48,6 +48,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { useQuery } from "@tanstack/react-query";
+import { getMyAthleteProfile } from "@/lib/athlete-profile.functions";
+import { AthleteProfileEditor } from "@/components/bodyfuel/AthleteProfileEditor";
 import {
   Select,
   SelectContent,
@@ -288,6 +291,11 @@ function ProfileContent() {
       </section>
 
 
+      {/* Athleten- / Sportprofil (Self-Service) */}
+      <section id="athlete-profile" className="scroll-mt-20">
+        <AthleteSelfSection />
+      </section>
+
       {/* Account */}
       <section className="rounded-2xl border border-border bg-card p-6">
         <h2 className="font-display text-lg font-bold">Account</h2>
@@ -351,6 +359,36 @@ function ProfileContent() {
         </Button>
       </section>
     </div>
+  );
+}
+
+function AthleteSelfSection() {
+  const getFn = useServerFn(getMyAthleteProfile);
+  const { data, isLoading } = useQuery({
+    queryKey: ["my-athlete-profile"],
+    queryFn: () => getFn(),
+  });
+  if (isLoading) return null;
+  return (
+    <AthleteProfileEditor
+      mode="self"
+      initial={{
+        sport: (data as any)?.sport ?? null,
+        sport_position: (data as any)?.sport_position ?? null,
+        sport_level: (data as any)?.sport_level ?? null,
+        team_sport: (data as any)?.team_sport ?? false,
+        match_days_per_week: (data as any)?.match_days_per_week ?? null,
+        practice_days_per_week: (data as any)?.practice_days_per_week ?? null,
+        season_phase: (data as any)?.season_phase ?? null,
+        class_types: (data as any)?.class_types ?? [],
+        class_days_per_week: (data as any)?.class_days_per_week ?? null,
+        mobility_frequency: (data as any)?.mobility_frequency ?? null,
+        mobility_focus: (data as any)?.mobility_focus ?? null,
+        cardio_outside_gym: (data as any)?.cardio_outside_gym ?? null,
+        injuries: (data as any)?.injuries ?? null,
+        training_experience: (data as any)?.training_experience ?? null,
+      }}
+    />
   );
 }
 

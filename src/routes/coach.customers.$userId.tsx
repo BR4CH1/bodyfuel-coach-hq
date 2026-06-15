@@ -43,6 +43,7 @@ import { PartnerLinkCard } from "@/components/bodyfuel/PartnerLinkCard";
 import { CoachTrainingGoalCard } from "@/components/bodyfuel/CoachTrainingGoalCard";
 import { StepGoalEditor } from "@/components/bodyfuel/StepGoalEditor";
 import { AthleteProfileEditor } from "@/components/bodyfuel/AthleteProfileEditor";
+import { TrainingSessionsList } from "@/components/bodyfuel/TrainingSessionsList";
 import { CoachTrainingAlertsCard } from "@/components/bodyfuel/CoachTrainingAlertsCard";
 import { WeightProgressChart } from "@/components/bodyfuel/WeightProgressChart";
 import { labelForTrainingGoal } from "@/lib/training-goals";
@@ -368,6 +369,14 @@ function CustomerDetail() {
           training_experience: (data.profile as any)?.training_experience ?? null,
         }}
       />
+
+      <section className="rounded-2xl border border-border bg-card p-5">
+        <h3 className="font-display text-base font-bold mb-3">Freie Trainingseinheiten</h3>
+        <p className="text-xs text-muted-foreground mb-3">
+          Kurse, Sport, Mobility und andere Einheiten, die der Kunde außerhalb des Plans geloggt hat.
+        </p>
+        <TrainingSessionsList clientId={userId} days={30} />
+      </section>
 
       <CoachStrengthCheckCard userId={userId} />
 

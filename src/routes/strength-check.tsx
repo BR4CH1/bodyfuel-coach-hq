@@ -17,6 +17,7 @@ import {
   type StrengthResult,
   type StrengthTestKey,
 } from "@/lib/strength-check.functions";
+import { AthleteProfileBanner } from "@/components/bodyfuel/AthleteProfileBanner";
 
 export const Route = createFileRoute("/strength-check")({
   head: () => ({ meta: [{ title: "BODYFUEL Strength Check" }] }),
@@ -465,6 +466,9 @@ function ResultScreen({ check, previous, onClose }: { check: StrengthCheck; prev
           return <ScoreTile key={g.key} label={g.label} value={val} previous={prev} />;
         })}
       </div>
+
+
+      <AthleteProfileBanner force />
 
       <div className="flex flex-col gap-2 sm:flex-row">
         <button
