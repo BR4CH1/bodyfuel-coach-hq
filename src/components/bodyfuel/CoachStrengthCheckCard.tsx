@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Trophy, AlertTriangle } from "lucide-react";
+import { Trophy, AlertTriangle, Info, ChevronDown, ChevronUp } from "lucide-react";
 import { getCustomerStrengthOverview, STRENGTH_TESTS, type StrengthTestKey } from "@/lib/strength-check.functions";
 import { StrengthScoreDonut } from "./StrengthScoreDonut";
 
@@ -49,6 +50,7 @@ export function CoachStrengthCheckCard({ userId }: { userId: string }) {
   const strongest = scores.length ? scores.reduce((a, b) => (a.val >= b.val ? a : b)) : null;
   const weakest = scores.length ? scores.reduce((a, b) => (a.val <= b.val ? a : b)) : null;
   const dysbalance = strongest && weakest ? strongest.val - weakest.val : 0;
+  const [showExplanation, setShowExplanation] = useState(false);
 
   const prev = history.length >= 2 ? history[history.length - 2] : null;
   const totalDelta =
@@ -95,9 +97,41 @@ export function CoachStrengthCheckCard({ userId }: { userId: string }) {
             </div>
           )}
           {dysbalance > 20 && (
-            <div className="flex items-center gap-2 text-amber-400">
-              <AlertTriangle className="h-3.5 w-3.5" />
-              Dysbalance erkannt (Δ {dysbalance})
+            <div className="flex items-start gap-2 text-amber-400">
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <span>Dysbalance erkannt (Δ {dysbalance})</span>
+                <button
+                  type="button"
+                  onClick={() => setShowExplanation((v) => !v)}
+                  className="ml-2 inline-flex items-center gap-0.5 text-[11px] text-muted-foreground hover:text-foreground underline"
+                >
+                  <Info className="h-3 w-3" />
+                  Was bedeutet das?
+                  {showExplanation ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                </button>
+              </div>
+            </div>
+          )}
+          {showExplanation && (
+            <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-xs space-y-2 mt-2">
+              <p>
+                <strong className="text-amber-300">Dysbalance</strong> = muskuläres Ungleichgewicht. 
+                Δ {dysbalance} ist die Differenz zwischen der stärksten Gruppe ({strongest?.label}, {strongest?.val}) 
+                und der schwächsten Gruppe ({weakest?.label}, {weakest?.val}).
+              </p>
+              <p className="text-muted-foreground">
+                <strong>Coaching-Hinweis:</strong> Plane für die schwächere Gruppe ({weakest?.label}) 
+                gezielte Priorisierung ein — z. B. mehr Sätze, höhere Frequenz oder eine isolierte Übung mehr pro Woche. 
+                Das reduziert Verletzungsrisiken und beschleunigt den Kraftzuwachs insgesamt.
+              </p>
+              {dysbalance > 30 && (
+                <p className="text-red-300">
+                  <strong>Achtung:</strong> Differenz &gt; 30 Punkte — hier empfiehlt sich eine deutliche 
+                  Schwerpunktsetzung auf {weakest?.label}, evtl. auch ein zusätzlicher Trainingstag oder 
+                  eine Modifikation des Splits zugunsten der schwächeren Kette.
+                </p>
+              )}
             </div>
           )}
         </div>
