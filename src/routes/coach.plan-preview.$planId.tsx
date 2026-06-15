@@ -106,72 +106,93 @@ function PreviewContent() {
         )}
       </header>
 
-      <div className="space-y-4">
-        {days.map((d: any) => (
-          <section key={d.id} className="rounded-2xl border border-border bg-card p-5 print:break-inside-avoid">
-            <h2 className="font-display text-lg font-bold">{d.name}</h2>
-            {isTraining ? (
-              <ul className="mt-3 space-y-3">
-                {exByDay(d.id).map((e: any) => (
-                  <li key={e.id} className="rounded-xl border border-border bg-background/40 p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <h3 className="font-semibold">{e.name}</h3>
-                      {e.category && (
-                        <span className="rounded-md bg-muted px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
-                          {e.category}
-                        </span>
+      <div className="space-y-6">
+        {isTraining
+          ? (() => {
+              const weeks = Array.from(
+                new Set(days.map((d: any) => d.week_number ?? 1)),
+              ).sort((a, b) => (a as number) - (b as number));
+              return weeks.map((wk) => (
+                <div key={String(wk)} className="space-y-3">
+                  <h2 className="px-1 text-xs font-bold uppercase tracking-[0.2em] text-gold">
+                    Woche {wk as number}
+                    {wk === 4 ? " · Deload" : ""}
+                  </h2>
+                  {days
+                    .filter((d: any) => (d.week_number ?? 1) === wk)
+                    .map((d: any) => (
+                      <section
+                        key={d.id}
+                        className="rounded-2xl border border-border bg-card p-5 print:break-inside-avoid"
+                      >
+                        <h3 className="font-display text-lg font-bold">{d.name}</h3>
+                        <ul className="mt-3 space-y-3">
+                          {exByDay(d.id).map((e: any) => (
+                            <li key={e.id} className="rounded-xl border border-border bg-background/40 p-4">
+                              <div className="flex items-start justify-between gap-3">
+                                <h4 className="font-semibold">{e.name}</h4>
+                                {e.category && (
+                                  <span className="rounded-md bg-muted px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                                    {e.category}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="mt-2 flex flex-wrap gap-3 text-[11px] text-muted-foreground">
+                                {e.target_sets != null && (
+                                  <span><strong className="text-foreground">{e.target_sets}</strong> Sätze</span>
+                                )}
+                                {e.target_reps && (
+                                  <span>Wdh: <strong className="text-foreground">{e.target_reps}</strong></span>
+                                )}
+                                {e.target_weights && (
+                                  <span>Gewicht: <strong className="text-foreground">{e.target_weights} kg</strong></span>
+                                )}
+                                {e.rest_seconds != null && (
+                                  <span>Pause: <strong className="text-foreground">{e.rest_seconds}s</strong></span>
+                                )}
+                              </div>
+                              {e.notes && (
+                                <p className="mt-2 text-xs text-muted-foreground whitespace-pre-line">{e.notes}</p>
+                              )}
+                            </li>
+                          ))}
+                          {exByDay(d.id).length === 0 && (
+                            <li className="text-sm text-muted-foreground">Keine Übungen.</li>
+                          )}
+                        </ul>
+                      </section>
+                    ))}
+                </div>
+              ));
+            })()
+          : days.map((d: any) => (
+              <section key={d.id} className="rounded-2xl border border-border bg-card p-5 print:break-inside-avoid">
+                <h2 className="font-display text-lg font-bold">{d.name}</h2>
+                <ul className="mt-3 space-y-3">
+                  {mealsByDay(d.id).map((m: any) => (
+                    <li key={m.id} className="rounded-xl border border-border bg-background/40 p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <h3 className="font-semibold">{m.name}</h3>
+                      </div>
+                      {m.description && (
+                        <p className="mt-1 text-sm text-muted-foreground whitespace-pre-line">
+                          {m.description}
+                        </p>
                       )}
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-3 text-[11px] text-muted-foreground">
-                      {e.target_sets != null && (
-                        <span><strong className="text-foreground">{e.target_sets}</strong> Sätze</span>
-                      )}
-                      {e.target_reps && (
-                        <span>Wdh: <strong className="text-foreground">{e.target_reps}</strong></span>
-                      )}
-                      {e.target_weights && (
-                        <span>Gewicht: <strong className="text-foreground">{e.target_weights} kg</strong></span>
-                      )}
-                      {e.rest_seconds != null && (
-                        <span>Pause: <strong className="text-foreground">{e.rest_seconds}s</strong></span>
-                      )}
-                    </div>
-                    {e.notes && (
-                      <p className="mt-2 text-xs text-muted-foreground whitespace-pre-line">{e.notes}</p>
-                    )}
-                  </li>
-                ))}
-                {exByDay(d.id).length === 0 && (
-                  <li className="text-sm text-muted-foreground">Keine Übungen.</li>
-                )}
-              </ul>
-            ) : (
-              <ul className="mt-3 space-y-3">
-                {mealsByDay(d.id).map((m: any) => (
-                  <li key={m.id} className="rounded-xl border border-border bg-background/40 p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <h3 className="font-semibold">{m.name}</h3>
-                    </div>
-                    {m.description && (
-                      <p className="mt-1 text-sm text-muted-foreground whitespace-pre-line">
-                        {m.description}
-                      </p>
-                    )}
-                    <div className="mt-2 flex flex-wrap gap-3 text-[11px] text-muted-foreground">
-                      {m.kcal != null && <span><strong className="text-foreground">{m.kcal}</strong> kcal</span>}
-                      {m.protein_g != null && <span>P <strong className="text-foreground">{m.protein_g}g</strong></span>}
-                      {m.carbs_g != null && <span>KH <strong className="text-foreground">{m.carbs_g}g</strong></span>}
-                      {m.fat_g != null && <span>F <strong className="text-foreground">{m.fat_g}g</strong></span>}
-                    </div>
-                  </li>
-                ))}
-                {mealsByDay(d.id).length === 0 && (
-                  <li className="text-sm text-muted-foreground">Keine Mahlzeiten.</li>
-                )}
-              </ul>
-            )}
-          </section>
-        ))}
+                      <div className="mt-2 flex flex-wrap gap-3 text-[11px] text-muted-foreground">
+                        {m.kcal != null && <span><strong className="text-foreground">{m.kcal}</strong> kcal</span>}
+                        {m.protein_g != null && <span>P <strong className="text-foreground">{m.protein_g}g</strong></span>}
+                        {m.carbs_g != null && <span>KH <strong className="text-foreground">{m.carbs_g}g</strong></span>}
+                        {m.fat_g != null && <span>F <strong className="text-foreground">{m.fat_g}g</strong></span>}
+                      </div>
+                    </li>
+                  ))}
+                  {mealsByDay(d.id).length === 0 && (
+                    <li className="text-sm text-muted-foreground">Keine Mahlzeiten.</li>
+                  )}
+                </ul>
+              </section>
+            ))}
         {days.length === 0 && (
           <div className="rounded-2xl border border-border bg-card p-6 text-center text-muted-foreground">
             Dieser Plan enthält noch keine Tage.
