@@ -586,10 +586,13 @@ export function PlanContentView({ clientId, planType }: Props) {
               : exercises.filter((e) => itemToVirtual[e.id] === activeDay).map((e) => {
                   const reps = (e.target_reps ?? "").split(",").map((s) => s.trim()).filter(Boolean);
                   const weights = (e.target_weights ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+                  const exName = itemDisplayName[e.id] ?? e.name;
+                  const isNonExercise = /rest|ruh|pause|frei|mobility|foam|dehn|stretch|recovery|spiel|game|training bei|mannschaft/i.test(exName);
+                  const demoUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(exName + " Übung Ausführung")}`;
                   return (
                     <div key={e.id} className="rounded-2xl border border-border bg-background/40 p-4">
                       <div className="flex items-baseline justify-between gap-3">
-                        <div className="text-sm font-semibold">{itemDisplayName[e.id] ?? e.name}</div>
+                        <div className="text-sm font-semibold">{exName}</div>
                         <div className="text-xs text-muted-foreground text-right">
                           {e.target_sets ?? "—"}×{reps.length ? reps.join(", ") : "—"}
                         </div>
@@ -600,6 +603,16 @@ export function PlanContentView({ clientId, planType }: Props) {
                         </div>
                       )}
                       {e.notes && <p className="mt-1 text-xs text-muted-foreground">{e.notes}</p>}
+                      {!isNonExercise && (
+                        <a
+                          href={demoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-2 inline-flex items-center gap-1 rounded-md border border-border bg-background/60 px-2 py-1 text-[10px] font-semibold text-muted-foreground hover:border-gold/50 hover:text-gold"
+                        >
+                          <PlayCircle className="h-3 w-3" /> Demo ansehen
+                        </a>
+                      )}
                     </div>
                   );
                 })}
