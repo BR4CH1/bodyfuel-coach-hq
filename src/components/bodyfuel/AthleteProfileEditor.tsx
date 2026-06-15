@@ -120,6 +120,7 @@ export function AthleteProfileEditor({
         team_sport: teamSport,
         match_days_per_week: matchDays === "" ? null : Number(matchDays),
         practice_days_per_week: practiceDays === "" ? null : Number(practiceDays),
+        sport_weekdays: sportWeekdays,
         season_phase: (seasonPhase || null) as SeasonPhase | null,
         class_types: classTypes,
         class_days_per_week: classDays === "" ? null : Number(classDays),
