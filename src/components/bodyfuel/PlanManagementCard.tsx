@@ -153,6 +153,50 @@ export function PlanManagementCard({ userId }: { userId: string }) {
         </div>
       </div>
 
+      <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-dashed border-border bg-background/40 px-4 py-3 text-xs">
+        <span className="font-semibold uppercase tracking-wider text-muted-foreground">
+          Dauer
+        </span>
+        <label className="inline-flex items-center gap-1.5 cursor-pointer">
+          <input
+            type="radio"
+            name="plan-duration"
+            className="h-3.5 w-3.5 accent-current"
+            checked={durationMode === "shopping"}
+            onChange={() => setDurationMode("shopping")}
+          />
+          <span>Bis nächster Einkaufstag</span>
+          {data && (
+            <span className="text-muted-foreground">
+              (~{data.days_until_next_shopping} Tag{data.days_until_next_shopping === 1 ? "" : "e"})
+            </span>
+          )}
+        </label>
+        <label className="inline-flex items-center gap-1.5 cursor-pointer">
+          <input
+            type="radio"
+            name="plan-duration"
+            className="h-3.5 w-3.5 accent-current"
+            checked={durationMode === "fixed"}
+            onChange={() => setDurationMode("fixed")}
+          />
+          <span>Feste Dauer:</span>
+          <input
+            type="number"
+            min={1}
+            max={21}
+            value={fixedDays}
+            onFocus={() => setDurationMode("fixed")}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              if (Number.isFinite(v)) setFixedDays(Math.max(1, Math.min(21, Math.round(v))));
+            }}
+            className="w-14 rounded-md border border-input bg-background px-2 py-1 text-xs"
+          />
+          <span>Tage</span>
+        </label>
+      </div>
+
       {isLoading && (
         <div className="mt-4 text-sm text-muted-foreground">Lade…</div>
       )}
