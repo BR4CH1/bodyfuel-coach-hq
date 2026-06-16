@@ -40,10 +40,19 @@ function AuthPage() {
     })();
   }, [supabaseUser, isCoach, navigate]);
 
-  const submit = async (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const ev = emailSchema.safeParse(email);
-    const pv = pwSchema.safeParse(password);
+    // Read directly from the form to catch browser-autofilled values that
+    // sometimes don't trigger React's onChange (Chrome/Safari password manager).
+    const form = e.currentTarget;
+    const fd = new FormData(form);
+    const rawEmail = (fd.get("email") ?? email ?? "").toString();
+    const rawPw = (fd.get("password") ?? password ?? "").toString();
+    const normalizedEmail = rawEmail.trim().toLowerCase();
+    const normalizedPw = rawPw; // do not trim — passwords may contain spaces intentionally
+
+    const ev = emailSchema.safeParse(normalizedEmail);
+    const pv = pwSchema.safeParse(normalizedPw);
     if (!ev.success) return toast.error(ev.error.issues[0].message);
     if (!pv.success) return toast.error(pv.error.issues[0].message);
 
@@ -56,7 +65,10 @@ function AuthPage() {
       if (error) throw error;
       toast.success("Willkommen zurück!");
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Login fehlgeschlagen";
+      const raw = err instanceof Error ? err.message : "Login fehlgeschlagen";
+      const msg = /invalid login credentials/i.test(raw)
+        ? "E-Mail oder Passwort falsch. Tipp: E-Mail bitte neu eintippen (Autofill kann fehlerhaft sein)."
+        : raw;
       toast.error(msg);
     } finally {
       setBusy(false);
