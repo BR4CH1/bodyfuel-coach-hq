@@ -426,12 +426,13 @@ function ExerciseCard({
   };
 
   const logSetFor = (n: number) => {
-    const wStr = valueFor(n, "w");
+    const wStr = isTimeBased ? "" : valueFor(n, "w");
     const rStr = valueFor(n, "r");
     const w = wStr === "" ? null : Number(wStr.replace(",", "."));
     const r = rStr === "" ? null : Number(rStr);
     if (w !== null && (Number.isNaN(w) || w < 0)) return toast.error("Gewicht ungültig");
-    if (r !== null && (Number.isNaN(r) || r < 0)) return toast.error("Wdh. ungültig");
+    if (r !== null && (Number.isNaN(r) || r < 0))
+      return toast.error(isTimeBased ? "Sek. ungültig" : "Wdh. ungültig");
     onLog(n, w, r);
   };
 
