@@ -390,6 +390,9 @@ function ExerciseCard({
   const isPerSide = /kurzhantel|dumbbell|\bkh\b|\bdb\b|einarmig|one[- ]?arm|single[- ]?arm/i.test(
     `${ex.name} ${ex.notes ?? ""}`,
   );
+  const isTimeBased = /plank|unterarmst(ü|ue)tz|halten|hold|isometr|wandsitz|wall[- ]?sit|hollow|dead[- ]?hang|h(ä|ae)ngen|l[- ]?sit|side ?bridge|seitst(ü|ue)tz|bridge halten/i.test(
+    `${ex.name} ${ex.notes ?? ""}`,
+  );
   const weightHint = isPerSide ? "pro Seite" : "Gesamtgewicht";
 
   // Per-set targets (from coach's plan); fall back to single value or last log.
@@ -423,12 +426,13 @@ function ExerciseCard({
   };
 
   const logSetFor = (n: number) => {
-    const wStr = valueFor(n, "w");
+    const wStr = isTimeBased ? "" : valueFor(n, "w");
     const rStr = valueFor(n, "r");
     const w = wStr === "" ? null : Number(wStr.replace(",", "."));
     const r = rStr === "" ? null : Number(rStr);
     if (w !== null && (Number.isNaN(w) || w < 0)) return toast.error("Gewicht ungültig");
-    if (r !== null && (Number.isNaN(r) || r < 0)) return toast.error("Wdh. ungültig");
+    if (r !== null && (Number.isNaN(r) || r < 0))
+      return toast.error(isTimeBased ? "Sek. ungültig" : "Wdh. ungültig");
     onLog(n, w, r);
   };
 
@@ -482,18 +486,30 @@ function ExerciseCard({
             Soll: {ex.target_sets ?? "?"} × {ex.target_reps ?? "?"}
             {ex.notes ? ` · ${ex.notes}` : ""}
           </div>
-          <div className={`mt-0.5 text-[10px] font-medium ${isPerSide ? "text-primary" : "text-muted-foreground/80"}`}>
-            ⚖️ Gewicht {weightHint}
+          <div className={`mt-0.5 text-[10px] font-medium ${isTimeBased ? "text-primary" : isPerSide ? "text-primary" : "text-muted-foreground/80"}`}>
+            {isTimeBased ? "⏱️ Zeit in Sekunden" : `⚖️ Gewicht ${weightHint}`}
           </div>
         </div>
       </div>
 
       {/* Per-set rows: pre-filled greyed defaults, tap to overwrite, check to log */}
       <div className="mt-3 space-y-2">
-        <div className="grid grid-cols-[2.25rem_1fr_1fr_2.25rem] items-center gap-2 px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <div
+          className={`grid items-center gap-2 px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground ${
+            isTimeBased
+              ? "grid-cols-[2.25rem_1fr_2.25rem]"
+              : "grid-cols-[2.25rem_1fr_1fr_2.25rem]"
+          }`}
+        >
           <div>Satz</div>
-          <div>Wdh.</div>
-          <div>{isPerSide ? "kg/Seite" : "kg"}</div>
+          {isTimeBased ? (
+            <div>Sek.</div>
+          ) : (
+            <>
+              <div>Wdh.</div>
+              <div>{isPerSide ? "kg/Seite" : "kg"}</div>
+            </>
+          )}
           <div className="text-right">✓</div>
         </div>
         {Array.from({ length: Math.max(targetSets, todaysLogs.length) }).map((_, i) => {
@@ -507,9 +523,11 @@ function ExerciseCard({
           return (
             <div
               key={setNum}
-              className={`grid grid-cols-[2.25rem_1fr_1fr_2.25rem] items-center gap-2 rounded-lg border px-2 py-1.5 ${
-                done ? "border-gold/40 bg-gold/5" : "border-border/60 bg-background/60"
-              }`}
+              className={`grid items-center gap-2 rounded-lg border px-2 py-1.5 ${
+                isTimeBased
+                  ? "grid-cols-[2.25rem_1fr_2.25rem]"
+                  : "grid-cols-[2.25rem_1fr_1fr_2.25rem]"
+              } ${done ? "border-gold/40 bg-gold/5" : "border-border/60 bg-background/60"}`}
             >
               <div className="text-center text-sm font-bold text-muted-foreground">{setNum}</div>
               <input
@@ -523,7 +541,6 @@ function ExerciseCard({
                 onFocus={(e) => {
                   if (!overrides[setNum]?.r && rPh) {
                     setOverride(setNum, "r", rPh);
-                    // place caret at end after value applies
                     requestAnimationFrame(() => {
                       const el = e.target as HTMLInputElement;
                       el.setSelectionRange(el.value.length, el.value.length);
@@ -532,25 +549,27 @@ function ExerciseCard({
                 }}
                 className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-center text-sm placeholder:text-muted-foreground/50 disabled:opacity-100"
               />
-              <input
-                type="text"
-                inputMode="decimal"
-                pattern="[0-9.,]*"
-                value={wVal}
-                placeholder={wPh}
-                disabled={done}
-                onChange={(e) => setOverride(setNum, "w", e.target.value.replace(/[^0-9.,]/g, ""))}
-                onFocus={(e) => {
-                  if (!overrides[setNum]?.w && wPh) {
-                    setOverride(setNum, "w", wPh);
-                    requestAnimationFrame(() => {
-                      const el = e.target as HTMLInputElement;
-                      el.setSelectionRange(el.value.length, el.value.length);
-                    });
-                  }
-                }}
-                className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-center text-sm placeholder:text-muted-foreground/50 disabled:opacity-100"
-              />
+              {!isTimeBased && (
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  pattern="[0-9.,]*"
+                  value={wVal}
+                  placeholder={wPh}
+                  disabled={done}
+                  onChange={(e) => setOverride(setNum, "w", e.target.value.replace(/[^0-9.,]/g, ""))}
+                  onFocus={(e) => {
+                    if (!overrides[setNum]?.w && wPh) {
+                      setOverride(setNum, "w", wPh);
+                      requestAnimationFrame(() => {
+                        const el = e.target as HTMLInputElement;
+                        el.setSelectionRange(el.value.length, el.value.length);
+                      });
+                    }
+                  }}
+                  className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-center text-sm placeholder:text-muted-foreground/50 disabled:opacity-100"
+                />
+              )}
               <div className="flex justify-end">
                 {done ? (
                   <button
@@ -598,7 +617,7 @@ function ExerciseCard({
                   {l.performed_at.slice(0, 10)} · Satz {l.set_number}
                 </span>
                 <span className="font-medium">
-                  {l.weight_kg ?? "—"} kg × {l.reps ?? "—"}
+                  {isTimeBased ? `${l.reps ?? "—"} Sek.` : `${l.weight_kg ?? "—"} kg × ${l.reps ?? "—"}`}
                 </span>
               </li>
             ))}
