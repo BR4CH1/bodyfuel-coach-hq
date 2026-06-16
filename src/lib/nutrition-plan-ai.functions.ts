@@ -33,6 +33,8 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
       title?: string;
       /** "today" = ab heute bis nächster Einkauf, "next_shopping" = ab nächstem Einkauf für einen vollen Zyklus. */
       start_mode?: "today" | "next_shopping";
+      /** Optional override: feste Plan-Länge in Tagen (1–21). Überschreibt die Einkaufstag-Logik. */
+      plan_days?: number | null;
     }) => d,
   )
   .handler(async ({ data, context }) => {
