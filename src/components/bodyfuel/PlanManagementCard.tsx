@@ -68,14 +68,27 @@ export function PlanManagementCard({ userId }: { userId: string }) {
     qc.invalidateQueries({ queryKey: ["nutrition-targets", userId] });
   };
 
+  const [durationMode, setDurationMode] = useState<"shopping" | "fixed">("shopping");
+  const [fixedDays, setFixedDays] = useState<number>(7);
+
   const gen = useMutation({
     mutationFn: (start_mode: "today" | "next_shopping") =>
-      genFn({ data: { user_id: userId, start_mode } }),
+      genFn({
+        data: {
+          user_id: userId,
+          start_mode,
+          plan_days: durationMode === "fixed" ? fixedDays : null,
+        },
+      }),
     onSuccess: (_d, mode) => {
+      const dauerHint =
+        durationMode === "fixed"
+          ? ` für ${fixedDays} Tag${fixedDays === 1 ? "" : "e"}`
+          : "";
       toast.success(
         mode === "today"
-          ? "Plan-Entwurf ab heute erstellt."
-          : "Plan-Entwurf ab nächstem Einkauf erstellt.",
+          ? `Plan-Entwurf ab heute${dauerHint} erstellt.`
+          : `Plan-Entwurf ab nächstem Einkauf${dauerHint} erstellt.`,
       );
       invalidate();
     },
