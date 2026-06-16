@@ -354,61 +354,124 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
   );
 }
 
+function parsePlanList(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  return String(raw)
+    .split(/[,|;\/]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function firstNumber(s: string | undefined): string {
+  if (!s) return "";
+  const m = s.match(/\d+(?:[.,]\d+)?/);
+  return m ? m[0].replace(".", ",") : "";
+}
+
 function ExerciseCard({
   ex,
+  clientId,
   logs,
   onLog,
   onDelete,
 }: {
   ex: Exercise;
+  clientId: string;
   logs: SetLog[];
   onLog: (set_number: number, weight_kg: number | null, reps: number | null) => void;
   onDelete: (id: string) => void;
 }) {
   const targetSets = ex.target_sets ?? 3;
+  const todayStr = new Date().toISOString().slice(0, 10);
   const lastSession = logs[0]?.performed_at?.slice(0, 10);
-  const todaysLogs = logs.filter(
-    (l) => l.performed_at.slice(0, 10) === new Date().toISOString().slice(0, 10),
-  );
-  const previousLogs = logs.filter(
-    (l) => l.performed_at.slice(0, 10) !== new Date().toISOString().slice(0, 10),
-  );
+  const todaysLogs = logs.filter((l) => l.performed_at.slice(0, 10) === todayStr);
+  const previousLogs = logs.filter((l) => l.performed_at.slice(0, 10) !== todayStr);
 
-  const nextSet = (todaysLogs.length ?? 0) + 1;
-  const [weight, setWeight] = useState("");
-  const [reps, setReps] = useState("");
   const isPerSide = /kurzhantel|dumbbell|\bkh\b|\bdb\b|einarmig|one[- ]?arm|single[- ]?arm/i.test(
     `${ex.name} ${ex.notes ?? ""}`,
   );
   const weightHint = isPerSide ? "pro Seite" : "Gesamtgewicht";
 
-  // Suggest last weight + planned reps as defaults — only when inputs are empty
-  // and only when the previous suggestion changes (no stale traps).
-  useEffect(() => {
-    if (!weight && logs[0]?.weight_kg != null) {
-      setWeight(String(logs[0].weight_kg).replace(".", ","));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [logs[0]?.id]);
-  useEffect(() => {
-    if (!reps) {
-      const planned = ex.target_reps?.split(/[,|]/)[Math.min(nextSet - 1, (ex.target_reps?.split(/[,|]/).length ?? 1) - 1)]?.trim() ?? ex.target_reps?.split(/[-–]/)[0];
-      const n = planned ? planned.match(/\d+/)?.[0] : "";
-      if (n) setReps(n);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nextSet, ex.target_reps]);
+  // Per-set targets (from coach's plan); fall back to single value or last log.
+  const repList = parsePlanList(ex.target_reps);
+  const wList = parsePlanList((ex as unknown as { target_weights?: string | null }).target_weights ?? null);
 
-  const save = () => {
-    const w = weight.trim() === "" ? null : Number(weight.replace(",", "."));
-    const r = reps.trim() === "" ? null : Number(reps);
-    if (w !== null && (Number.isNaN(w) || w < 0)) return toast.error("Gewicht ungültig");
-    if (r !== null && (Number.isNaN(r) || r < 0)) return toast.error("Wdh. ungültig");
-    onLog(nextSet, w, r);
-    // Clear so the next set starts fresh and prefill logic refills cleanly.
-    setReps("");
+  const defaultRepsFor = (n: number): string => {
+    const planned = repList[Math.min(n - 1, repList.length - 1)] ?? ex.target_reps ?? "";
+    return firstNumber(planned);
+  };
+  const defaultWeightFor = (n: number): string => {
+    const planned = wList[Math.min(n - 1, wList.length - 1)];
+    if (planned) return firstNumber(planned);
+    // fall back to last session's same-set weight, then most recent log
+    const lastSame = previousLogs.find((l) => l.set_number === n && l.weight_kg != null);
+    if (lastSame?.weight_kg != null) return String(lastSame.weight_kg).replace(".", ",");
+    const anyLast = logs.find((l) => l.weight_kg != null);
+    if (anyLast?.weight_kg != null) return String(anyLast.weight_kg).replace(".", ",");
+    return "";
   };
 
+  // Per-set editable values (user overrides). Empty string = use placeholder/default.
+  const [overrides, setOverrides] = useState<Record<number, { w: string; r: string }>>({});
+  const setOverride = (n: number, key: "w" | "r", val: string) =>
+    setOverrides((cur) => ({ ...cur, [n]: { w: cur[n]?.w ?? "", r: cur[n]?.r ?? "", [key]: val } }));
+
+  const valueFor = (n: number, key: "w" | "r"): string => {
+    const o = overrides[n]?.[key];
+    if (o !== undefined && o !== "") return o;
+    return key === "w" ? defaultWeightFor(n) : defaultRepsFor(n);
+  };
+
+  const logSetFor = (n: number) => {
+    const wStr = valueFor(n, "w");
+    const rStr = valueFor(n, "r");
+    const w = wStr === "" ? null : Number(wStr.replace(",", "."));
+    const r = rStr === "" ? null : Number(rStr);
+    if (w !== null && (Number.isNaN(w) || w < 0)) return toast.error("Gewicht ungültig");
+    if (r !== null && (Number.isNaN(r) || r < 0)) return toast.error("Wdh. ungültig");
+    onLog(n, w, r);
+  };
+
+  // Notes per exercise per day
+  const [note, setNote] = useState("");
+  const [noteLoaded, setNoteLoaded] = useState(false);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const { data } = await supabase
+        .from("training_exercise_notes")
+        .select("note")
+        .eq("exercise_id", ex.id)
+        .eq("client_id", clientId)
+        .eq("note_date", todayStr)
+        .maybeSingle();
+      if (!alive) return;
+      setNote((data?.note as string | undefined) ?? "");
+      setNoteLoaded(true);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [ex.id, clientId, todayStr]);
+
+  const onNoteChange = (val: string) => {
+    setNote(val);
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      try {
+        await supabase
+          .from("training_exercise_notes")
+          .upsert(
+            { exercise_id: ex.id, client_id: clientId, note_date: todayStr, note: val },
+            { onConflict: "exercise_id,client_id,note_date" },
+          );
+      } catch {
+        /* silent */
+      }
+    }, 600);
+  };
 
   return (
     <div className="rounded-xl border border-border/60 bg-background/40 p-3">
@@ -425,40 +488,85 @@ function ExerciseCard({
         </div>
       </div>
 
-      {/* Today's sets */}
-      <div className="mt-3 grid grid-cols-[auto_1fr_1fr_auto] items-center gap-2 text-xs">
+      {/* Per-set rows: pre-filled greyed defaults, tap to overwrite, check to log */}
+      <div className="mt-3 space-y-2">
+        <div className="grid grid-cols-[2.25rem_1fr_1fr_2.25rem] items-center gap-2 px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <div>Satz</div>
+          <div>Wdh.</div>
+          <div>{isPerSide ? "kg/Seite" : "kg"}</div>
+          <div className="text-right">✓</div>
+        </div>
         {Array.from({ length: Math.max(targetSets, todaysLogs.length) }).map((_, i) => {
           const setNum = i + 1;
           const log = todaysLogs.find((l) => l.set_number === setNum);
+          const done = !!log;
+          const wVal = done ? String(log!.weight_kg ?? "") : overrides[setNum]?.w ?? "";
+          const rVal = done ? String(log!.reps ?? "") : overrides[setNum]?.r ?? "";
+          const wPh = defaultWeightFor(setNum);
+          const rPh = defaultRepsFor(setNum);
           return (
-            <div key={setNum} className="contents">
-              <div className="text-muted-foreground">Satz {setNum}</div>
-              <div>
-                {log ? (
-                  <span className="rounded bg-secondary px-2 py-1 font-medium">
-                    {log.weight_kg ?? "—"} kg
-                  </span>
-                ) : (
-                  <span className="text-muted-foreground/60">—</span>
-                )}
-              </div>
-              <div>
-                {log ? (
-                  <span className="rounded bg-secondary px-2 py-1 font-medium">
-                    {log.reps ?? "—"} Wdh.
-                  </span>
-                ) : (
-                  <span className="text-muted-foreground/60">—</span>
-                )}
-              </div>
-              <div>
-                {log && (
+            <div
+              key={setNum}
+              className={`grid grid-cols-[2.25rem_1fr_1fr_2.25rem] items-center gap-2 rounded-lg border px-2 py-1.5 ${
+                done ? "border-gold/40 bg-gold/5" : "border-border/60 bg-background/60"
+              }`}
+            >
+              <div className="text-center text-sm font-bold text-muted-foreground">{setNum}</div>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={rVal}
+                placeholder={rPh}
+                disabled={done}
+                onChange={(e) => setOverride(setNum, "r", e.target.value.replace(/[^0-9]/g, ""))}
+                onFocus={(e) => {
+                  if (!overrides[setNum]?.r && rPh) {
+                    setOverride(setNum, "r", rPh);
+                    // place caret at end after value applies
+                    requestAnimationFrame(() => {
+                      const el = e.target as HTMLInputElement;
+                      el.setSelectionRange(el.value.length, el.value.length);
+                    });
+                  }
+                }}
+                className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-center text-sm placeholder:text-muted-foreground/50 disabled:opacity-100"
+              />
+              <input
+                type="text"
+                inputMode="decimal"
+                pattern="[0-9.,]*"
+                value={wVal}
+                placeholder={wPh}
+                disabled={done}
+                onChange={(e) => setOverride(setNum, "w", e.target.value.replace(/[^0-9.,]/g, ""))}
+                onFocus={(e) => {
+                  if (!overrides[setNum]?.w && wPh) {
+                    setOverride(setNum, "w", wPh);
+                    requestAnimationFrame(() => {
+                      const el = e.target as HTMLInputElement;
+                      el.setSelectionRange(el.value.length, el.value.length);
+                    });
+                  }
+                }}
+                className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-center text-sm placeholder:text-muted-foreground/50 disabled:opacity-100"
+              />
+              <div className="flex justify-end">
+                {done ? (
                   <button
-                    onClick={() => onDelete(log.id)}
-                    className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                    aria-label="Löschen"
+                    onClick={() => onDelete(log!.id)}
+                    className="rounded-full p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                    aria-label="Satz löschen"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => logSetFor(setNum)}
+                    className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-gold text-gold hover:bg-gold hover:text-primary-foreground"
+                    aria-label={`Satz ${setNum} abhaken`}
+                  >
+                    <Check className="h-3.5 w-3.5" />
                   </button>
                 )}
               </div>
@@ -467,35 +575,15 @@ function ExerciseCard({
         })}
       </div>
 
-      {/* Quick add */}
-      <div className="mt-3 flex items-center gap-2">
-        <span className="text-[11px] text-muted-foreground">+ Satz {nextSet}</span>
-        <input
-          type="text"
-          inputMode="decimal"
-          pattern="[0-9.,]*"
-          value={weight}
-          onChange={(e) => setWeight(e.target.value.replace(/[^0-9.,]/g, ""))}
-          placeholder={isPerSide ? "kg/Seite" : "kg ges."}
-          title={isPerSide ? "Gewicht pro Seite (Kurzhantel)" : "Gesamtgewicht (Langhantel/Maschine)"}
-          className="w-24 rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+      {/* Per-exercise note for today */}
+      <div className="mt-3">
+        <textarea
+          value={note}
+          onChange={(e) => onNoteChange(e.target.value)}
+          placeholder={noteLoaded ? "Notiz zur Übung (z. B. Gefühl, Technik, Pause)…" : "Lade Notiz…"}
+          rows={2}
+          className="w-full resize-none rounded-md border border-input bg-background/60 px-2 py-1.5 text-xs placeholder:text-muted-foreground/60"
         />
-        <input
-          type="text"
-          inputMode="numeric"
-          pattern="[0-9]*"
-          value={reps}
-          onChange={(e) => setReps(e.target.value.replace(/[^0-9]/g, ""))}
-          placeholder="Wdh."
-          className="w-20 rounded-md border border-input bg-background px-2 py-1.5 text-sm"
-        />
-
-        <button
-          onClick={save}
-          className="inline-flex items-center gap-1 rounded-md bg-gradient-gold px-3 py-1.5 text-xs font-semibold text-primary-foreground"
-        >
-          <Plus className="h-3.5 w-3.5" /> Eintrag
-        </button>
       </div>
 
       {previousLogs.length > 0 && (
@@ -529,4 +617,5 @@ function ExerciseCard({
     </div>
   );
 }
+
 
