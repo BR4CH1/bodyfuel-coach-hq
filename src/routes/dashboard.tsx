@@ -417,6 +417,13 @@ function RealUserDashboard() {
   const name = profile?.display_name?.split(" ")[0] ?? supabaseUser?.email?.split("@")[0] ?? "";
 
   const checkinInfo = (() => {
+    // Check-in dieser Woche bereits eingetragen, aber Maße fehlen → freundlicher Hinweis
+    if (checkinMissingMeasures) {
+      return {
+        tone: "soon" as const,
+        label: "Maße für Check-in ergänzen",
+      };
+    }
     if (!nextCheckin) return null;
     const today = new Date(todayStr);
     const target = new Date(nextCheckin);
