@@ -33,6 +33,8 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
       title?: string;
       /** "today" = ab heute bis nächster Einkauf, "next_shopping" = ab nächstem Einkauf für einen vollen Zyklus. */
       start_mode?: "today" | "next_shopping";
+      /** Optional override: feste Plan-Länge in Tagen (1–21). Überschreibt die Einkaufstag-Logik. */
+      plan_days?: number | null;
     }) => d,
   )
   .handler(async ({ data, context }) => {
@@ -274,9 +276,13 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
           if (startMode === "next_shopping") d.setDate(d.getDate() + daysToNextShopping);
           return d;
         })();
-    const planDays = startMode === "next_shopping"
+    const computedPlanDays = startMode === "next_shopping"
       ? daysUntilNextShopping(p.shopping_days, start)
       : daysToNextShopping;
+    const overrideDays = data.plan_days != null
+      ? Math.max(1, Math.min(21, Math.round(data.plan_days)))
+      : null;
+    const planDays = overrideDays ?? computedPlanDays;
 
 
     const WEEKDAY_KEYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
