@@ -493,10 +493,22 @@ function ExerciseCard({
 
       {/* Per-set rows: pre-filled greyed defaults, tap to overwrite, check to log */}
       <div className="mt-3 space-y-2">
-        <div className="grid grid-cols-[2.25rem_1fr_1fr_2.25rem] items-center gap-2 px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <div
+          className={`grid items-center gap-2 px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground ${
+            isTimeBased
+              ? "grid-cols-[2.25rem_1fr_2.25rem]"
+              : "grid-cols-[2.25rem_1fr_1fr_2.25rem]"
+          }`}
+        >
           <div>Satz</div>
-          <div>Wdh.</div>
-          <div>{isPerSide ? "kg/Seite" : "kg"}</div>
+          {isTimeBased ? (
+            <div>Sek.</div>
+          ) : (
+            <>
+              <div>Wdh.</div>
+              <div>{isPerSide ? "kg/Seite" : "kg"}</div>
+            </>
+          )}
           <div className="text-right">✓</div>
         </div>
         {Array.from({ length: Math.max(targetSets, todaysLogs.length) }).map((_, i) => {
@@ -510,9 +522,11 @@ function ExerciseCard({
           return (
             <div
               key={setNum}
-              className={`grid grid-cols-[2.25rem_1fr_1fr_2.25rem] items-center gap-2 rounded-lg border px-2 py-1.5 ${
-                done ? "border-gold/40 bg-gold/5" : "border-border/60 bg-background/60"
-              }`}
+              className={`grid items-center gap-2 rounded-lg border px-2 py-1.5 ${
+                isTimeBased
+                  ? "grid-cols-[2.25rem_1fr_2.25rem]"
+                  : "grid-cols-[2.25rem_1fr_1fr_2.25rem]"
+              } ${done ? "border-gold/40 bg-gold/5" : "border-border/60 bg-background/60"}`}
             >
               <div className="text-center text-sm font-bold text-muted-foreground">{setNum}</div>
               <input
@@ -526,7 +540,6 @@ function ExerciseCard({
                 onFocus={(e) => {
                   if (!overrides[setNum]?.r && rPh) {
                     setOverride(setNum, "r", rPh);
-                    // place caret at end after value applies
                     requestAnimationFrame(() => {
                       const el = e.target as HTMLInputElement;
                       el.setSelectionRange(el.value.length, el.value.length);
@@ -535,25 +548,27 @@ function ExerciseCard({
                 }}
                 className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-center text-sm placeholder:text-muted-foreground/50 disabled:opacity-100"
               />
-              <input
-                type="text"
-                inputMode="decimal"
-                pattern="[0-9.,]*"
-                value={wVal}
-                placeholder={wPh}
-                disabled={done}
-                onChange={(e) => setOverride(setNum, "w", e.target.value.replace(/[^0-9.,]/g, ""))}
-                onFocus={(e) => {
-                  if (!overrides[setNum]?.w && wPh) {
-                    setOverride(setNum, "w", wPh);
-                    requestAnimationFrame(() => {
-                      const el = e.target as HTMLInputElement;
-                      el.setSelectionRange(el.value.length, el.value.length);
-                    });
-                  }
-                }}
-                className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-center text-sm placeholder:text-muted-foreground/50 disabled:opacity-100"
-              />
+              {!isTimeBased && (
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  pattern="[0-9.,]*"
+                  value={wVal}
+                  placeholder={wPh}
+                  disabled={done}
+                  onChange={(e) => setOverride(setNum, "w", e.target.value.replace(/[^0-9.,]/g, ""))}
+                  onFocus={(e) => {
+                    if (!overrides[setNum]?.w && wPh) {
+                      setOverride(setNum, "w", wPh);
+                      requestAnimationFrame(() => {
+                        const el = e.target as HTMLInputElement;
+                        el.setSelectionRange(el.value.length, el.value.length);
+                      });
+                    }
+                  }}
+                  className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-center text-sm placeholder:text-muted-foreground/50 disabled:opacity-100"
+                />
+              )}
               <div className="flex justify-end">
                 {done ? (
                   <button
