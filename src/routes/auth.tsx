@@ -40,10 +40,19 @@ function AuthPage() {
     })();
   }, [supabaseUser, isCoach, navigate]);
 
-  const submit = async (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const ev = emailSchema.safeParse(email);
-    const pv = pwSchema.safeParse(password);
+    // Read directly from the form to catch browser-autofilled values that
+    // sometimes don't trigger React's onChange (Chrome/Safari password manager).
+    const form = e.currentTarget;
+    const fd = new FormData(form);
+    const rawEmail = (fd.get("email") ?? email ?? "").toString();
+    const rawPw = (fd.get("password") ?? password ?? "").toString();
+    const normalizedEmail = rawEmail.trim().toLowerCase();
+    const normalizedPw = rawPw; // do not trim — passwords may contain spaces intentionally
+
+    const ev = emailSchema.safeParse(normalizedEmail);
+    const pv = pwSchema.safeParse(normalizedPw);
     if (!ev.success) return toast.error(ev.error.issues[0].message);
     if (!pv.success) return toast.error(pv.error.issues[0].message);
 
@@ -56,7 +65,10 @@ function AuthPage() {
       if (error) throw error;
       toast.success("Willkommen zurück!");
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Login fehlgeschlagen";
+      const raw = err instanceof Error ? err.message : "Login fehlgeschlagen";
+      const msg = /invalid login credentials/i.test(raw)
+        ? "E-Mail oder Passwort falsch. Tipp: E-Mail bitte neu eintippen (Autofill kann fehlerhaft sein)."
+        : raw;
       toast.error(msg);
     } finally {
       setBusy(false);
@@ -98,13 +110,18 @@ function AuthPage() {
               <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 id="email"
+                name="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="pl-9"
                 required
                 autoComplete="email"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
               />
+
             </div>
           </div>
 
@@ -114,6 +131,7 @@ function AuthPage() {
               <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 id="password"
+                name="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -121,6 +139,7 @@ function AuthPage() {
                 required
                 autoComplete="current-password"
               />
+
             </div>
           </div>
 
