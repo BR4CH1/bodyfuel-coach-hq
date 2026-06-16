@@ -373,6 +373,35 @@ function RealUserDashboard() {
         .maybeSingle();
       setNextCheckin((prof as any)?.next_checkin_date ?? null);
 
+      // Detect: did the user submit this week's check-in but leave the Maße empty?
+      const mondayStr = (() => {
+        const d = new Date(todayStr + "T00:00:00");
+        const day = (d.getDay() + 6) % 7;
+        d.setDate(d.getDate() - day);
+        return d.toISOString().slice(0, 10);
+      })();
+      const { data: thisWeekCi } = await supabase
+        .from("weekly_checkins")
+        .select("waist_cm, chest_cm, hip_cm, thigh_left_cm, thigh_right_cm, biceps_left_cm, biceps_right_cm")
+        .eq("user_id", supabaseUser.id)
+        .eq("week_start", mondayStr)
+        .maybeSingle();
+      if (thisWeekCi) {
+        const measures = [
+          thisWeekCi.waist_cm,
+          thisWeekCi.chest_cm,
+          thisWeekCi.hip_cm,
+          (thisWeekCi as any).thigh_left_cm,
+          (thisWeekCi as any).thigh_right_cm,
+          (thisWeekCi as any).biceps_left_cm,
+          (thisWeekCi as any).biceps_right_cm,
+        ];
+        const allMissing = measures.every((v) => v == null);
+        setCheckinMissingMeasures(allMissing);
+      } else {
+        setCheckinMissingMeasures(false);
+      }
+
       const { count: tCount } = await supabase
         .from("training_set_logs")
         .select("id", { count: "exact", head: true })
