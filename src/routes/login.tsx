@@ -44,19 +44,27 @@ function LoginPage() {
     if (supabaseUser) navigate({ to: isCoach ? "/coach" : "/dashboard" });
   }, [supabaseUser, isCoach, navigate]);
 
-  const submit = async (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!email || !password) return;
+    const fd = new FormData(e.currentTarget);
+    const rawEmail = (fd.get("email") ?? email ?? "").toString();
+    const rawPw = (fd.get("password") ?? password ?? "").toString();
+    const normalizedEmail = rawEmail.trim().toLowerCase();
+    if (!normalizedEmail || !rawPw) return;
     setBusy(true);
     try {
       const { error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
+        email: normalizedEmail,
+        password: rawPw,
       });
       if (error) throw error;
       toast.success("Willkommen zurück!");
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Login fehlgeschlagen");
+      const raw = err instanceof Error ? err.message : "Login fehlgeschlagen";
+      const msg = /invalid login credentials/i.test(raw)
+        ? "E-Mail oder Passwort falsch. Tipp: E-Mail bitte neu eintippen (Autofill kann fehlerhaft sein)."
+        : raw;
+      toast.error(msg);
     } finally {
       setBusy(false);
     }
@@ -140,11 +148,16 @@ function LoginPage() {
                 <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   id="email"
+                  name="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="pl-9"
                   required
+                  autoComplete="email"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                 />
               </div>
             </div>
@@ -154,11 +167,13 @@ function LoginPage() {
                 <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   id="password"
+                  name="password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="pl-9"
                   required
+                  autoComplete="current-password"
                 />
               </div>
             </div>
