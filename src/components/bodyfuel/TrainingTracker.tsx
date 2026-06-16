@@ -617,7 +617,7 @@ function ExerciseCard({
                   {l.performed_at.slice(0, 10)} · Satz {l.set_number}
                 </span>
                 <span className="font-medium">
-                  {l.weight_kg ?? "—"} kg × {l.reps ?? "—"}
+                  {isTimeBased ? `${l.reps ?? "—"} Sek.` : `${l.weight_kg ?? "—"} kg × ${l.reps ?? "—"}`}
                 </span>
               </li>
             ))}
