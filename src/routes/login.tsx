@@ -44,19 +44,27 @@ function LoginPage() {
     if (supabaseUser) navigate({ to: isCoach ? "/coach" : "/dashboard" });
   }, [supabaseUser, isCoach, navigate]);
 
-  const submit = async (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!email || !password) return;
+    const fd = new FormData(e.currentTarget);
+    const rawEmail = (fd.get("email") ?? email ?? "").toString();
+    const rawPw = (fd.get("password") ?? password ?? "").toString();
+    const normalizedEmail = rawEmail.trim().toLowerCase();
+    if (!normalizedEmail || !rawPw) return;
     setBusy(true);
     try {
       const { error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
+        email: normalizedEmail,
+        password: rawPw,
       });
       if (error) throw error;
       toast.success("Willkommen zurück!");
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Login fehlgeschlagen");
+      const raw = err instanceof Error ? err.message : "Login fehlgeschlagen";
+      const msg = /invalid login credentials/i.test(raw)
+        ? "E-Mail oder Passwort falsch. Tipp: E-Mail bitte neu eintippen (Autofill kann fehlerhaft sein)."
+        : raw;
+      toast.error(msg);
     } finally {
       setBusy(false);
     }
