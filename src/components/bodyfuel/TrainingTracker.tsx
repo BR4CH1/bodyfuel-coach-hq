@@ -304,6 +304,7 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
                   <ExerciseCard
                     key={ex.id}
                     ex={ex}
+                    clientId={clientId}
                     logs={logs.filter((l) => l.exercise_id === ex.id)}
                     onLog={async (set_number, weight_kg, reps) => {
                       try {
@@ -311,7 +312,6 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
                           data: { exercise_id: ex.id, set_number, weight_kg, reps },
                         });
                         setLogs((cur) => [row as SetLog, ...cur]);
-                        toast.success("Gespeichert");
                         // Auto-check the daily "Training" task
                         try {
                           const date = new Date().toISOString().slice(0, 10);
@@ -333,6 +333,7 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
                         toast.error(e instanceof Error ? e.message : "Fehler");
                       }
                     }}
+
 
                     onDelete={async (id) => {
                       try {
