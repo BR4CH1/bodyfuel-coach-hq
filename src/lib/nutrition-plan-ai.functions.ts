@@ -276,9 +276,13 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
           if (startMode === "next_shopping") d.setDate(d.getDate() + daysToNextShopping);
           return d;
         })();
-    const planDays = startMode === "next_shopping"
+    const computedPlanDays = startMode === "next_shopping"
       ? daysUntilNextShopping(p.shopping_days, start)
       : daysToNextShopping;
+    const overrideDays = data.plan_days != null
+      ? Math.max(1, Math.min(21, Math.round(data.plan_days)))
+      : null;
+    const planDays = overrideDays ?? computedPlanDays;
 
 
     const WEEKDAY_KEYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
