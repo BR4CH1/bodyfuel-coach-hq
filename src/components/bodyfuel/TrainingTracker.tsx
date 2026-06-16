@@ -485,8 +485,8 @@ function ExerciseCard({
             Soll: {ex.target_sets ?? "?"} × {ex.target_reps ?? "?"}
             {ex.notes ? ` · ${ex.notes}` : ""}
           </div>
-          <div className={`mt-0.5 text-[10px] font-medium ${isPerSide ? "text-primary" : "text-muted-foreground/80"}`}>
-            ⚖️ Gewicht {weightHint}
+          <div className={`mt-0.5 text-[10px] font-medium ${isTimeBased ? "text-primary" : isPerSide ? "text-primary" : "text-muted-foreground/80"}`}>
+            {isTimeBased ? "⏱️ Zeit in Sekunden" : `⚖️ Gewicht ${weightHint}`}
           </div>
         </div>
       </div>
