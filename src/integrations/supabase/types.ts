@@ -1506,6 +1506,44 @@ export type Database = {
           },
         ]
       }
+      training_exercise_notes: {
+        Row: {
+          client_id: string
+          created_at: string
+          exercise_id: string
+          id: string
+          note: string
+          note_date: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          exercise_id: string
+          id?: string
+          note?: string
+          note_date?: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          exercise_id?: string
+          id?: string
+          note?: string
+          note_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_exercise_notes_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "training_exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       training_exercises: {
         Row: {
           category: string | null
