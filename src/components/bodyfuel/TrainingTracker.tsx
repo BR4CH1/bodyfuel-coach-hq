@@ -390,6 +390,9 @@ function ExerciseCard({
   const isPerSide = /kurzhantel|dumbbell|\bkh\b|\bdb\b|einarmig|one[- ]?arm|single[- ]?arm/i.test(
     `${ex.name} ${ex.notes ?? ""}`,
   );
+  const isTimeBased = /plank|unterarmst(ü|ue)tz|halten|hold|isometr|wandsitz|wall[- ]?sit|hollow|dead[- ]?hang|h(ä|ae)ngen|l[- ]?sit|side ?bridge|seitst(ü|ue)tz|bridge halten/i.test(
+    `${ex.name} ${ex.notes ?? ""}`,
+  );
   const weightHint = isPerSide ? "pro Seite" : "Gesamtgewicht";
 
   // Per-set targets (from coach's plan); fall back to single value or last log.
