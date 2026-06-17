@@ -240,6 +240,13 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
       ...(p.favorite_foods ?? []),
       ...((p.extra_favorites ?? "").split(",").map((s: string) => s.trim()).filter(Boolean)),
     ];
+    const approvedWishes = ((wishesData as any[]) ?? [])
+      .map((w) => w.wish as string)
+      .filter(Boolean);
+    const approvedWishIds = ((wishesData as any[]) ?? [])
+      .map((w) => w.id as string)
+      .filter(Boolean);
+
     const liked = (ratings ?? [])
       .filter((r: any) => r.stars >= 4)
       .map((r: any) => r.meal?.name)
