@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Barcode, Plus, Trash2, Droplet, Loader2, Star } from "lucide-react";
+import { Barcode, Plus, Trash2, Droplet, Loader2, Star, BookmarkPlus } from "lucide-react";
+import { saveCustomMeal } from "@/lib/custom-meals.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
 import { Button } from "@/components/ui/button";
@@ -259,6 +260,39 @@ export function NutritionTracker() {
   const setDayTypeFn = useServerFn(setDayType);
   const searchFn = useServerFn(searchFoods);
   const lookupFn = useServerFn(lookupBarcode);
+  const saveCustomMealFn = useServerFn(saveCustomMeal);
+
+  const createMealFromEntries = async (
+    slot: Meal,
+    list: FoodEntry[],
+  ) => {
+    if (!list.length) return;
+    const suggested = list.map((e) => e.name).slice(0, 3).join(" & ");
+    const name = window.prompt(
+      "Name für die Mahlzeit (wird zum schnellen Tracken gespeichert):",
+      suggested,
+    );
+    if (!name || !name.trim()) return;
+    try {
+      await saveCustomMealFn({
+        data: {
+          name: name.trim(),
+          meal_slot: slot,
+          ingredients: list.map((e) => ({
+            name: e.name,
+            amount_g: Number(e.serving_g) || null,
+            kcal: Number(e.kcal) || null,
+            protein_g: Number(e.protein_g) || null,
+            carbs_g: Number(e.carbs_g) || null,
+            fat_g: Number(e.fat_g) || null,
+          })),
+        },
+      });
+      toast.success("Als eigene Mahlzeit gespeichert");
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  };
 
   // Load targets + entries + water + day type
   useEffect(() => {
@@ -721,18 +755,30 @@ export function NutritionTracker() {
                   <div className="text-xs text-muted-foreground">{Math.round(sub)} kcal</div>
                 </div>
               </div>
-              <Button
-                size="sm"
-                onClick={() => {
-                  setOpenMeal(m.key);
-                  setQuery("");
-                  setResults([]);
-                  setPicking(null);
-                }}
-                className="bg-gradient-gold text-primary-foreground"
-              >
-                <Plus className="h-4 w-4" /> Hinzufügen
-              </Button>
+              <div className="flex items-center gap-2">
+                {list.length > 0 && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => createMealFromEntries(m.key, list)}
+                    title="Diese Einträge als wiederverwendbare Mahlzeit speichern"
+                  >
+                    <BookmarkPlus className="h-4 w-4" /> Mahlzeit erstellen
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setOpenMeal(m.key);
+                    setQuery("");
+                    setResults([]);
+                    setPicking(null);
+                  }}
+                  className="bg-gradient-gold text-primary-foreground"
+                >
+                  <Plus className="h-4 w-4" /> Hinzufügen
+                </Button>
+              </div>
             </div>
             {list.length > 0 && (
               <ul className="mt-3 divide-y divide-border">
