@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Flame, Lock, Mail, Shield } from "lucide-react";
+import { Flame, Lock, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { CLIENTS, useSession } from "@/lib/bodyfuel/session";
 import { supabase } from "@/integrations/supabase/client";
