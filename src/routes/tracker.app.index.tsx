@@ -26,7 +26,7 @@ function TrackerHome() {
         <h1 className="font-display text-3xl font-bold sm:text-4xl">Hi {name} 👋</h1>
       </div>
 
-      <DailyChecklist userId={supabaseUser.id} />
+      <DailyChecklist userId={supabaseUser.id} hideCheckin />
 
       <div className="grid gap-3 sm:grid-cols-2">
         {tiles.map((t) => {
