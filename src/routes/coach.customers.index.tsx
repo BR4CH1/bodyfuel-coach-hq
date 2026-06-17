@@ -27,6 +27,7 @@ function daysLeft(end: string | null): number | null {
 function CustomersList() {
   const fn = useServerFn(listCustomers);
   const trialFn = useServerFn(listTrialUsers);
+  const freeFn = useServerFn(listFreeUsers);
   const { data, isLoading } = useQuery({
     queryKey: ["customers"],
     queryFn: () => fn(),
@@ -35,18 +36,25 @@ function CustomersList() {
     queryKey: ["trial-users"],
     queryFn: () => trialFn(),
   });
+  const { data: freeUsers } = useQuery({
+    queryKey: ["free-users"],
+    queryFn: () => freeFn(),
+  });
   const [filter, setFilter] = useState<Filter>("all");
   const [search, setSearch] = useState("");
 
   const trialCount = (trials ?? []).filter((t: any) => t.trial_status === "trial").length;
   const trialExpiredCount = (trials ?? []).filter((t: any) => t.trial_status === "trial_expired").length;
+  const freeCount = (freeUsers ?? []).length;
+  const convertedCount = (freeUsers ?? []).filter((u: any) => u.upgrade_clicked).length;
+  const conversionRate = freeCount > 0 ? Math.round((convertedCount / freeCount) * 100) : 0;
 
   const counts = useMemo(() => {
     const due = (data ?? []).filter((c: any) => c.payment_status === "due").length;
     const overdue = (data ?? []).filter((c: any) => c.payment_status === "overdue").length;
     const bulls = (data ?? []).filter((c: any) => (c.groups ?? []).includes("bulls")).length;
-    return { all: data?.length ?? 0, due, overdue, bulls, trial: trialCount, trial_expired: trialExpiredCount };
-  }, [data, trialCount, trialExpiredCount]);
+    return { all: data?.length ?? 0, due, overdue, bulls, trial: trialCount, trial_expired: trialExpiredCount, free: freeCount };
+  }, [data, trialCount, trialExpiredCount, freeCount]);
 
   const filtered = useMemo(() => {
     if (!data) return [];
