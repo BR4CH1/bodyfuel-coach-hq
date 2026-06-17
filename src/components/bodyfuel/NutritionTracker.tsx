@@ -45,6 +45,8 @@ type FoodEntry = {
   source: string | null;
 };
 
+type RecentFood = FoodResult & { last_amount_g: number };
+
 type Targets = {
   kcal: number;
   protein_g: number;
