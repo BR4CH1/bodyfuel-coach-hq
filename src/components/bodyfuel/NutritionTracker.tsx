@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Barcode, Plus, Trash2, Droplet, Loader2 } from "lucide-react";
+import { Barcode, Plus, Trash2, Droplet, Loader2, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
 import { Button } from "@/components/ui/button";
@@ -46,6 +46,7 @@ type FoodEntry = {
 };
 
 type RecentFood = FoodResult & { last_amount_g: number };
+type FavoriteFood = FoodResult & { fav_id: string; last_amount_g: number | null };
 
 type Targets = {
   kcal: number;
@@ -155,6 +156,103 @@ export function NutritionTracker() {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [recentFoods, setRecentFoods] = useState<RecentFood[]>([]);
   const [loadingRecent, setLoadingRecent] = useState(false);
+  const [favorites, setFavorites] = useState<FavoriteFood[]>([]);
+  const [loadingFavorites, setLoadingFavorites] = useState(false);
+
+  const favKey = (f: { barcode?: string | null; name: string; brand?: string | null }) =>
+    `${f.barcode ?? f.name}|${f.brand ?? ""}`;
+  const favIndex = useMemo(() => {
+    const m = new Map<string, string>();
+    favorites.forEach((f) => m.set(favKey(f), f.fav_id));
+    return m;
+  }, [favorites]);
+  const isFavorite = (f: { barcode?: string | null; name: string; brand?: string | null }) =>
+    favIndex.has(favKey(f));
+
+  const reloadFavorites = async () => {
+    if (!userId) return;
+    const { data } = await supabase
+      .from("food_favorites")
+      .select("id, name, brand, barcode, serving_g, serving_label, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, last_amount_g")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+    const rows = (data ?? []) as Array<{
+      id: string; name: string; brand: string | null; barcode: string | null;
+      serving_g: number | null; serving_label: string | null;
+      kcal_per_100g: number; protein_per_100g: number; carbs_per_100g: number; fat_per_100g: number;
+      last_amount_g: number | null;
+    }>;
+    setFavorites(rows.map((r) => ({
+      fav_id: r.id,
+      name: r.name,
+      brand: r.brand,
+      barcode: r.barcode,
+      serving_g: r.serving_g,
+      serving_label: r.serving_label,
+      kcal_per_100g: Number(r.kcal_per_100g),
+      protein_per_100g: Number(r.protein_per_100g),
+      carbs_per_100g: Number(r.carbs_per_100g),
+      fat_per_100g: Number(r.fat_per_100g),
+      last_amount_g: r.last_amount_g != null ? Number(r.last_amount_g) : null,
+    })));
+  };
+
+  const toggleFavorite = async (
+    food: FoodResult & { last_amount_g?: number | null },
+  ) => {
+    if (!userId) return;
+    const existingId = favIndex.get(favKey(food));
+    if (existingId) {
+      const prev = favorites;
+      setFavorites((xs) => xs.filter((x) => x.fav_id !== existingId));
+      const { error } = await supabase.from("food_favorites").delete().eq("id", existingId);
+      if (error) {
+        setFavorites(prev);
+        toast.error(error.message);
+      } else {
+        toast.success("Favorit entfernt");
+      }
+      return;
+    }
+    const { data, error } = await supabase
+      .from("food_favorites")
+      .insert({
+        user_id: userId,
+        name: food.name,
+        brand: food.brand,
+        barcode: food.barcode,
+        serving_g: food.serving_g,
+        serving_label: food.serving_label ?? null,
+        kcal_per_100g: food.kcal_per_100g,
+        protein_per_100g: food.protein_per_100g,
+        carbs_per_100g: food.carbs_per_100g,
+        fat_per_100g: food.fat_per_100g,
+        last_amount_g: food.last_amount_g ?? null,
+      })
+      .select("id")
+      .single();
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setFavorites((xs) => [
+      {
+        fav_id: (data as { id: string }).id,
+        name: food.name,
+        brand: food.brand,
+        barcode: food.barcode,
+        serving_g: food.serving_g,
+        serving_label: food.serving_label ?? null,
+        kcal_per_100g: food.kcal_per_100g,
+        protein_per_100g: food.protein_per_100g,
+        carbs_per_100g: food.carbs_per_100g,
+        fat_per_100g: food.fat_per_100g,
+        last_amount_g: food.last_amount_g ?? null,
+      },
+      ...xs,
+    ]);
+    toast.success("Als Favorit gespeichert");
+  };
 
   const getTargetsFn = useServerFn(getNutritionTargets);
   const getDayTypeFn = useServerFn(getDayType);
@@ -362,7 +460,14 @@ export function NutritionTracker() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, openMeal, picking]);
 
-  // Load recent unique foods when the add dialog opens
+  // Load recent unique foods + favorites when the add dialog opens
+  useEffect(() => {
+    if (!openMeal || picking || !userId) return;
+    setLoadingFavorites(true);
+    reloadFavorites().finally(() => setLoadingFavorites(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openMeal, picking, userId]);
+
   useEffect(() => {
     if (!openMeal || picking || !userId) return;
     let cancelled = false;
@@ -695,37 +800,87 @@ export function NutritionTracker() {
                 </div>
                 <div className="mt-3 min-h-0 flex-1 overflow-y-auto">
                   {query.trim() === "" && (
-                    recentFoods.length > 0 ? (
-                      <div>
-                        <div className="px-2 pb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                          Zuletzt getrackt
+                    <>
+                      {favorites.length > 0 && (
+                        <div className="mb-4">
+                          <div className="px-2 pb-2 text-[10px] font-semibold uppercase tracking-wider text-gold">
+                            ★ Favoriten
+                          </div>
+                          <ul className="divide-y divide-border">
+                            {favorites.map((r) => (
+                              <li key={`fav-${r.fav_id}`} className="flex items-center">
+                                <button
+                                  onClick={() => {
+                                    setPicking(r);
+                                    setUnit(r.serving_g ? "piece" : "g");
+                                    setAmountStr(
+                                      r.last_amount_g != null
+                                        ? String(Math.round(r.last_amount_g))
+                                        : r.serving_g ? "1" : "100",
+                                    );
+                                  }}
+                                  className="min-w-0 flex-1 px-2 py-3 text-left hover:bg-secondary"
+                                >
+                                  <div className="truncate text-sm font-medium">{r.name}</div>
+                                  <div className="text-[11px] text-muted-foreground">
+                                    {r.brand ? `${r.brand} · ` : ""}
+                                    {Math.round(r.kcal_per_100g)} kcal · P {r.protein_per_100g.toFixed(1)} · K {r.carbs_per_100g.toFixed(1)} · F {r.fat_per_100g.toFixed(1)} (/100g)
+                                  </div>
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); toggleFavorite(r); }}
+                                  className="shrink-0 p-3 text-gold hover:bg-secondary"
+                                  aria-label="Favorit entfernen"
+                                >
+                                  <Star className="h-4 w-4 fill-current" />
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
                         </div>
-                        <ul className="divide-y divide-border">
-                          {recentFoods.map((r, i) => (
-                            <li key={`recent-${i}`}>
-                              <button
-                                onClick={() => {
-                                  setPicking(r);
-                                  setUnit("g");
-                                  setAmountStr(String(Math.round(r.last_amount_g)));
-                                }}
-                                className="w-full px-2 py-3 text-left hover:bg-secondary"
-                              >
-                                <div className="truncate text-sm font-medium">{r.name}</div>
-                                <div className="text-[11px] text-muted-foreground">
-                                  {r.brand ? `${r.brand} · ` : ""}
-                                  {Math.round(r.kcal_per_100g)} kcal · P {r.protein_per_100g.toFixed(1)} · K {r.carbs_per_100g.toFixed(1)} · F {r.fat_per_100g.toFixed(1)} (/100g)
-                                </div>
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ) : (
-                      <p className="py-6 text-center text-xs text-muted-foreground">
-                        {loadingRecent ? "Lade Verlauf…" : "Tippe los — Vorschläge erscheinen automatisch"}
-                      </p>
-                    )
+                      )}
+                      {recentFoods.length > 0 ? (
+                        <div>
+                          <div className="px-2 pb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                            Zuletzt getrackt
+                          </div>
+                          <ul className="divide-y divide-border">
+                            {recentFoods.map((r, i) => {
+                              const fav = isFavorite(r);
+                              return (
+                              <li key={`recent-${i}`} className="flex items-center">
+                                <button
+                                  onClick={() => {
+                                    setPicking(r);
+                                    setUnit("g");
+                                    setAmountStr(String(Math.round(r.last_amount_g)));
+                                  }}
+                                  className="min-w-0 flex-1 px-2 py-3 text-left hover:bg-secondary"
+                                >
+                                  <div className="truncate text-sm font-medium">{r.name}</div>
+                                  <div className="text-[11px] text-muted-foreground">
+                                    {r.brand ? `${r.brand} · ` : ""}
+                                    {Math.round(r.kcal_per_100g)} kcal · P {r.protein_per_100g.toFixed(1)} · K {r.carbs_per_100g.toFixed(1)} · F {r.fat_per_100g.toFixed(1)} (/100g)
+                                  </div>
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); toggleFavorite(r); }}
+                                  className={`shrink-0 p-3 hover:bg-secondary ${fav ? "text-gold" : "text-muted-foreground"}`}
+                                  aria-label={fav ? "Favorit entfernen" : "Als Favorit speichern"}
+                                >
+                                  <Star className={`h-4 w-4 ${fav ? "fill-current" : ""}`} />
+                                </button>
+                              </li>
+                              );
+                            })}
+                          </ul>
+                        </div>
+                      ) : favorites.length === 0 ? (
+                        <p className="py-6 text-center text-xs text-muted-foreground">
+                          {loadingRecent || loadingFavorites ? "Lade…" : "Tippe los — Vorschläge erscheinen automatisch"}
+                        </p>
+                      ) : null}
+                    </>
                   )}
                   {query.trim() !== "" && results.length === 0 && (
                     <p className="flex items-center justify-center gap-2 py-6 text-center text-xs text-muted-foreground">
@@ -737,15 +892,17 @@ export function NutritionTracker() {
                     </p>
                   )}
                   <ul className="divide-y divide-border">
-                    {results.map((r, i) => (
-                      <li key={i}>
+                    {results.map((r, i) => {
+                      const fav = isFavorite(r);
+                      return (
+                      <li key={i} className="flex items-center">
                         <button
                           onClick={() => {
                             setPicking(r);
                             setUnit(r.serving_g ? "piece" : "g");
                             setAmountStr(r.serving_g ? "1" : "100");
                           }}
-                          className="w-full px-2 py-3 text-left hover:bg-secondary"
+                          className="min-w-0 flex-1 px-2 py-3 text-left hover:bg-secondary"
                         >
                           <div className="truncate text-sm font-medium">{r.name}</div>
                           <div className="text-[11px] text-muted-foreground">
@@ -754,9 +911,18 @@ export function NutritionTracker() {
                             {r.serving_g ? ` · 1 Stück ≈ ${r.serving_g} g` : ""}
                           </div>
                         </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); toggleFavorite(r); }}
+                          className={`shrink-0 p-3 hover:bg-secondary ${fav ? "text-gold" : "text-muted-foreground"}`}
+                          aria-label={fav ? "Favorit entfernen" : "Als Favorit speichern"}
+                        >
+                          <Star className={`h-4 w-4 ${fav ? "fill-current" : ""}`} />
+                        </button>
                       </li>
-                    ))}
+                      );
+                    })}
                   </ul>
+
                 </div>
               </div>
             ) : (() => {
@@ -765,12 +931,22 @@ export function NutritionTracker() {
                 const factor = gramsCalc / 100;
                 return (
               <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
-                <div>
-                  <div className="text-sm font-semibold">{picking.name}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {picking.brand ?? "—"}
-                    {picking.serving_g ? ` · 1 Stück ≈ ${picking.serving_g} g` : ""}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold">{picking.name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {picking.brand ?? "—"}
+                      {picking.serving_g ? ` · 1 Stück ≈ ${picking.serving_g} g` : ""}
+                    </div>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => toggleFavorite({ ...picking, last_amount_g: parseFloat(amountStr.replace(",", ".")) || null })}
+                    className={`shrink-0 rounded-md border border-border p-2 ${isFavorite(picking) ? "text-gold" : "text-muted-foreground"} hover:bg-secondary`}
+                    aria-label={isFavorite(picking) ? "Favorit entfernen" : "Als Favorit speichern"}
+                  >
+                    <Star className={`h-4 w-4 ${isFavorite(picking) ? "fill-current" : ""}`} />
+                  </button>
                 </div>
                 {picking.serving_g && (
                   <div className="inline-flex rounded-md border border-border bg-background/40 p-0.5 text-xs">
