@@ -89,9 +89,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setGroups(g.data.map((x: any) => x.group_name as string));
     }
     if (r.data) {
-      const isCoach = r.data.some((x) => x.role === "coach");
-      setRole(isCoach ? "coach" : "client");
-      if (!isCoach) {
+      const rolesList = r.data.map((x: any) => x.role as string);
+      const effective: "coach" | "free" | "client" = rolesList.includes("coach")
+        ? "coach"
+        : rolesList.includes("free")
+        ? "free"
+        : "client";
+      setRole(effective);
+      if (effective !== "coach") {
         persist(p.data?.demo_client_key ?? uid);
       }
     }
@@ -105,10 +110,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const effectiveUser = demoUserId ? findClient(demoUserId) ?? null : null;
   // Coach status is derived ONLY from the server-validated role — never from localStorage.
   const effectiveCoach = role === "coach";
+  const effectiveFree = role === "free";
 
   const value: SessionCtx = {
     user: effectiveUser,
     isCoach: effectiveCoach,
+    isFreeUser: effectiveFree,
+    tier: role,
     supabaseUser,
     profile,
     loading,
