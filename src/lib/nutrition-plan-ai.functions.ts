@@ -109,7 +109,7 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
         .limit(30),
       supabase
         .from("meal_wishes")
-        .select("id, wish")
+        .select("id, wish, applies_to")
         .eq("user_id", target)
         .eq("status", "approved")
         .is("consumed_at", null),
@@ -282,6 +282,14 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
       p.budget_band === "50_75" ? "Mittleres Budget." :
       p.budget_band === ">100" ? "Großzügiges Budget." : "";
 
+    const equipmentList: string[] = Array.isArray(p.kitchen_equipment) ? p.kitchen_equipment : [];
+    const equipmentNotes: string = (p.kitchen_equipment_notes ?? "").toString().trim();
+    const equipmentBlock = equipmentList.length || equipmentNotes
+      ? `\n🍳 KÜCHENAUSSTATTUNG (HARTE EINSCHRÄNKUNG — nur Rezepte vorschlagen, die mit diesen Geräten zubereitbar sind):\n${
+          equipmentList.length ? "Verfügbare Geräte: " + equipmentList.join(", ") : "(keine Liste vom Coach)"
+        }${equipmentNotes ? "\nCoach-Notiz: " + equipmentNotes : ""}\nWenn z. B. KEIN HERD verfügbar ist, dürfen Rezepte nicht „in der Pfanne anbraten" o. ä. verlangen — Garmethode an Airfryer/Backofen/Mikrowelle anpassen.\n`
+      : "";
+
     // Plan length & start date abhängig vom Modus.
     // - "today" (Default): Plan ab HEUTE bis zum nächsten Einkaufstag (Lücken-Plan).
     // - "next_shopping": Plan beginnt am nächsten Einkaufstag und deckt einen ganzen Einkaufszyklus ab.
@@ -408,7 +416,7 @@ ${liked.length ? "Mag (4-5★): " + liked.slice(0, 10).join(", ") : ""}
 ${disliked.length ? "Mag NICHT — vermeiden: " + disliked.slice(0, 10).join(", ") : ""}
 ${topSwapped.length ? "Häufig getauscht (lieber meiden): " + topSwapped.join(", ") : ""}
 ${skipReasons.length ? "Häufig übersprungen: " + skipReasons.slice(0, 8).join("; ") : ""}
-${wishesBlock}${budgetBlock}
+${wishesBlock}${budgetBlock}${equipmentBlock}
 ${prepHint} ${budgetHint}
 
 
