@@ -23,16 +23,31 @@ export const listMealWishes = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const target = data.userId ?? userId;
+
+    // Auch Wünsche des verlinkten Partners einbeziehen.
+    const { data: link } = await supabase
+      .from("nutrition_partners")
+      .select("user_a, user_b")
+      .or(`user_a.eq.${target},user_b.eq.${target}`)
+      .maybeSingle();
+    const partnerId = link
+      ? link.user_a === target
+        ? link.user_b
+        : link.user_a
+      : null;
+    const userIds = partnerId ? [target, partnerId] : [target];
+
     let q = supabase
       .from("meal_wishes")
       .select("id, user_id, wish, meal_slot, for_person, status, coach_note, reviewed_at, consumed_at, created_at")
-      .eq("user_id", target)
+      .in("user_id", userIds)
       .order("created_at", { ascending: false });
     if (!data.includeHistory) q = q.is("consumed_at", null);
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
     return (rows as MealWish[]) ?? [];
   });
+
 
 export const addMealWish = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -58,6 +73,36 @@ export const addMealWish = createServerFn({ method: "POST" })
       .single();
     if (error) throw new Error(error.message);
     return row as MealWish;
+  });
+
+export const updateMealWishAssignment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: {
+    id: string;
+    meal_slot?: MealSlot;
+    for_person?: string | null;
+  }) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        meal_slot: z.enum(["breakfast", "lunch", "dinner", "snack", "any"]).optional(),
+        for_person: z.string().trim().max(60).nullable().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const patch: { meal_slot?: MealSlot; for_person?: string | null } = {};
+    if (data.meal_slot !== undefined) patch.meal_slot = data.meal_slot;
+    if (data.for_person !== undefined) {
+      patch.for_person = data.for_person && data.for_person.length > 0 ? data.for_person : null;
+    }
+    if (Object.keys(patch).length === 0) return { ok: true };
+    const { error } = await context.supabase
+      .from("meal_wishes")
+      .update(patch)
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
 
 

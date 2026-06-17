@@ -1,14 +1,16 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Sparkles, Trash2, Check, X, Plus, Clock, Loader2 } from "lucide-react";
+import { Sparkles, Trash2, Check, X, Plus, Clock, Loader2, UserCircle2 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 import {
   addMealWish,
   deleteMealWish,
   listMealWishes,
   reviewMealWish,
+  updateMealWishAssignment,
   type MealWish,
 } from "@/lib/meal-wishes.functions";
 
@@ -29,6 +31,7 @@ export function MealWishesCard({ userId, mode }: Props) {
   const addFn = useServerFn(addMealWish);
   const delFn = useServerFn(deleteMealWish);
   const reviewFn = useServerFn(reviewMealWish);
+  const assignFn = useServerFn(updateMealWishAssignment);
 
   const queryKey = ["meal-wishes", userId];
   const { data: wishes = [], isLoading } = useQuery({
@@ -36,6 +39,24 @@ export function MealWishesCard({ userId, mode }: Props) {
     queryFn: () => listFn({ data: { userId } }),
     enabled: !!userId,
   });
+
+  // Lookup display names for all wish authors (kann eigene + Partner sein)
+  const authorIds = Array.from(new Set(wishes.map((w) => w.user_id)));
+  const { data: authors = {} } = useQuery({
+    queryKey: ["meal-wishes-authors", authorIds.sort().join(",")],
+    queryFn: async () => {
+      if (authorIds.length === 0) return {} as Record<string, string>;
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, display_name")
+        .in("id", authorIds);
+      const m: Record<string, string> = {};
+      for (const p of data ?? []) m[p.id] = p.display_name ?? "Unbenannt";
+      return m;
+    },
+    enabled: authorIds.length > 0,
+  });
+
 
   const [text, setText] = useState("");
   const [slot, setSlot] = useState<"breakfast" | "lunch" | "dinner" | "snack" | "any">("any");
@@ -79,6 +100,26 @@ export function MealWishesCard({ userId, mode }: Props) {
     },
     onError: (e: any) => toast.error(e?.message ?? "Fehler"),
   });
+
+  const assign = useMutation({
+    mutationFn: (v: { id: string; meal_slot?: typeof slot; for_person?: string | null }) =>
+      assignFn({ data: v }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey });
+      toast.success("Zuordnung aktualisiert");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Fehler"),
+  });
+
+  // Vorschläge für „Für wen?" — eigene Namen + Partner-Namen (Display-Name) + bisher gesetzte Werte
+  const peopleSuggestions = Array.from(
+    new Set(
+      [
+        ...Object.values(authors),
+        ...wishes.map((w) => w.for_person).filter(Boolean),
+      ].filter(Boolean) as string[],
+    ),
+  );
 
   return (
     <div className="rounded-2xl border border-border bg-card p-5">
@@ -163,6 +204,12 @@ export function MealWishesCard({ userId, mode }: Props) {
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <div className="mb-1 flex flex-wrap items-center gap-1">
+                    {authors[w.user_id] && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-background/60 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                        <UserCircle2 className="h-3 w-3" />
+                        Von {authors[w.user_id]}
+                      </span>
+                    )}
                     {w.meal_slot && w.meal_slot !== "any" && (
                       <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gold">
                         {SLOT_LABEL[w.meal_slot as keyof typeof SLOT_LABEL]}
@@ -175,6 +222,38 @@ export function MealWishesCard({ userId, mode }: Props) {
                     )}
                   </div>
                   <div className="text-sm font-semibold">{w.wish}</div>
+
+                  {/* Inline-Zuordnung: nur bei offenen Wünschen, im Client-Mode */}
+                  {mode === "client" && w.status === "pending" && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      <select
+                        value={w.meal_slot ?? "any"}
+                        onChange={(e) =>
+                          assign.mutate({ id: w.id, meal_slot: e.target.value as any })
+                        }
+                        className="rounded-md border border-border bg-background px-2 py-1 text-[11px]"
+                      >
+                        {(Object.keys(SLOT_LABEL) as Array<keyof typeof SLOT_LABEL>).map((k) => (
+                          <option key={k} value={k}>{SLOT_LABEL[k]}</option>
+                        ))}
+                      </select>
+                      <select
+                        value={w.for_person ?? ""}
+                        onChange={(e) =>
+                          assign.mutate({
+                            id: w.id,
+                            for_person: e.target.value || null,
+                          })
+                        }
+                        className="rounded-md border border-border bg-background px-2 py-1 text-[11px]"
+                      >
+                        <option value="">— Für wen? —</option>
+                        {peopleSuggestions.map((p) => (
+                          <option key={p} value={p}>{p}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   <div
                     className={`mt-1 flex items-center gap-1 text-[11px] ${
                       w.status === "approved"
