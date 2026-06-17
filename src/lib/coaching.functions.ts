@@ -207,7 +207,7 @@ export const createCustomer = createServerFn({ method: "POST" })
       last_name: string;
       email: string;
       phone?: string;
-      package: PackageKey | "trial";
+      package: PackageKey | "trial" | "free";
       price_eur: number;
       start_date: string;
       duration_days: number;
@@ -225,6 +225,7 @@ export const createCustomer = createServerFn({ method: "POST" })
     }
 
     const isTrial = data.package === "trial";
+    const isFree = data.package === "free";
     const trialDays = Math.max(1, Math.min(365, Number(data.trial_days ?? 7)));
 
     // Immer die veröffentlichte URL nutzen, nie die Preview-Origin – sonst landen
