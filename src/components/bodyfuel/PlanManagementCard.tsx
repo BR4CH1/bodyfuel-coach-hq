@@ -23,6 +23,9 @@ import {
   type PlanStatus,
 } from "@/lib/plan-management.functions";
 import { generateAiNutritionPlanDraft } from "@/lib/nutrition-plan-ai.functions";
+import { getPartnerLink } from "@/lib/partner.functions";
+import { generatePartnerNutritionPlanDraft } from "@/lib/partner-nutrition-plan-ai.functions";
+import { Users } from "lucide-react";
 
 const STATUS_LABEL: Record<PlanStatus, string> = {
   draft: "Entwurf",
