@@ -25,9 +25,9 @@ export const Route = createFileRoute("/coach/customers/new")({
   ),
 });
 
-const DEFAULT_PRICE = { starter: 79, coaching: 129, premium: 199, trial: 0 } as const;
+const DEFAULT_PRICE = { starter: 79, coaching: 129, premium: 199, trial: 0, free: 0 } as const;
 
-type PackageOption = "starter" | "coaching" | "premium" | "trial";
+type PackageOption = "starter" | "coaching" | "premium" | "trial" | "free";
 
 function NewCustomerForm() {
   const fn = useServerFn(createCustomer);
