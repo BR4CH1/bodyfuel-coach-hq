@@ -18,7 +18,7 @@ const emailSchema = z.string().trim().email("Ungültige Email").max(255);
 const pwSchema = z.string().min(6, "Mindestens 6 Zeichen").max(100);
 
 function AuthPage() {
-  const { supabaseUser, profile, isCoach } = useSession();
+  const { supabaseUser, profile, isCoach, isFreeUser } = useSession();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -30,7 +30,10 @@ function AuthPage() {
       navigate({ to: "/coach" });
       return;
     }
-    // Clients: send first-time users directly to measurements
+    if (isFreeUser) {
+      navigate({ to: "/tracker/app" });
+      return;
+    }
     (async () => {
       const { count } = await supabase
         .from("body_measurements")
@@ -38,7 +41,7 @@ function AuthPage() {
         .eq("user_id", supabaseUser.id);
       navigate({ to: (count ?? 0) === 0 ? "/measurements" : "/dashboard" });
     })();
-  }, [supabaseUser, isCoach, navigate]);
+  }, [supabaseUser, isCoach, isFreeUser, navigate]);
 
   const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

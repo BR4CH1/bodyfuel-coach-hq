@@ -2,10 +2,11 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
-import { ChevronRight, Plus, Inbox, AlertTriangle, Clock, Sparkles, Search } from "lucide-react";
+import { ChevronRight, Plus, Inbox, AlertTriangle, Clock, Sparkles, Search, Flame } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { listCustomers } from "@/lib/coaching.functions";
 import { listTrialUsers } from "@/lib/trial.functions";
+import { listFreeUsers } from "@/lib/free-users.functions";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/coach/customers/")({
@@ -17,7 +18,7 @@ export const Route = createFileRoute("/coach/customers/")({
   ),
 });
 
-type Filter = "all" | "due" | "overdue" | "bulls" | "trial" | "trial_expired";
+type Filter = "all" | "due" | "overdue" | "bulls" | "trial" | "trial_expired" | "free";
 
 function daysLeft(end: string | null): number | null {
   if (!end) return null;
@@ -27,6 +28,7 @@ function daysLeft(end: string | null): number | null {
 function CustomersList() {
   const fn = useServerFn(listCustomers);
   const trialFn = useServerFn(listTrialUsers);
+  const freeFn = useServerFn(listFreeUsers);
   const { data, isLoading } = useQuery({
     queryKey: ["customers"],
     queryFn: () => fn(),
@@ -35,18 +37,25 @@ function CustomersList() {
     queryKey: ["trial-users"],
     queryFn: () => trialFn(),
   });
+  const { data: freeUsers } = useQuery({
+    queryKey: ["free-users"],
+    queryFn: () => freeFn(),
+  });
   const [filter, setFilter] = useState<Filter>("all");
   const [search, setSearch] = useState("");
 
   const trialCount = (trials ?? []).filter((t: any) => t.trial_status === "trial").length;
   const trialExpiredCount = (trials ?? []).filter((t: any) => t.trial_status === "trial_expired").length;
+  const freeCount = (freeUsers ?? []).length;
+  const convertedCount = (freeUsers ?? []).filter((u: any) => u.upgrade_clicked).length;
+  const conversionRate = freeCount > 0 ? Math.round((convertedCount / freeCount) * 100) : 0;
 
   const counts = useMemo(() => {
     const due = (data ?? []).filter((c: any) => c.payment_status === "due").length;
     const overdue = (data ?? []).filter((c: any) => c.payment_status === "overdue").length;
     const bulls = (data ?? []).filter((c: any) => (c.groups ?? []).includes("bulls")).length;
-    return { all: data?.length ?? 0, due, overdue, bulls, trial: trialCount, trial_expired: trialExpiredCount };
-  }, [data, trialCount, trialExpiredCount]);
+    return { all: data?.length ?? 0, due, overdue, bulls, trial: trialCount, trial_expired: trialExpiredCount, free: freeCount };
+  }, [data, trialCount, trialExpiredCount, freeCount]);
 
   const filtered = useMemo(() => {
     if (!data) return [];
@@ -140,6 +149,26 @@ function CustomersList() {
         />
       </div>
 
+      {/* Free Tracker KPIs */}
+      {freeCount > 0 && (
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/5 p-4">
+            <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-emerald-500">
+              <Flame className="h-4 w-4" /> Free Tracker
+            </div>
+            <div className="mt-1 font-display text-2xl font-bold">{freeCount}</div>
+          </div>
+          <div className="rounded-2xl border border-gold/40 bg-gold/5 p-4">
+            <div className="text-xs uppercase tracking-wider text-gold">Upgrade-Klicks</div>
+            <div className="mt-1 font-display text-2xl font-bold">{convertedCount}</div>
+          </div>
+          <div className="rounded-2xl border border-border bg-card p-4">
+            <div className="text-xs uppercase tracking-wider text-muted-foreground">Conversion Rate</div>
+            <div className="mt-1 font-display text-2xl font-bold">{conversionRate}%</div>
+          </div>
+        </div>
+      )}
+
       {/* Filter-Chips */}
       <div className="flex flex-wrap gap-2">
         {([
@@ -149,6 +178,7 @@ function CustomersList() {
           ["bulls", `Bulls (${counts.bulls})`],
           ["trial", `Trial (${counts.trial})`],
           ["trial_expired", `Trial abgelaufen (${counts.trial_expired})`],
+          ["free", `Free (${counts.free})`],
         ] as [Filter, string][]).map(([key, label]) => (
           <button
             key={key}
@@ -158,7 +188,9 @@ function CustomersList() {
               (filter === key
                 ? key === "overdue" || key === "trial_expired"
                   ? "border-destructive bg-destructive/15 text-destructive"
-                  : "border-gold bg-gold/15 text-gold"
+                  : key === "free"
+                    ? "border-emerald-500 bg-emerald-500/15 text-emerald-500"
+                    : "border-gold bg-gold/15 text-gold"
                 : "border-border text-muted-foreground hover:border-gold/40")
             }
           >
@@ -173,16 +205,19 @@ function CustomersList() {
         />
       )}
 
-      {filter !== "trial" && filter !== "trial_expired" && isLoading && (
+      {filter === "free" && <FreeList users={freeUsers ?? []} />}
+
+      {filter !== "trial" && filter !== "trial_expired" && filter !== "free" && isLoading && (
         <p className="text-sm text-muted-foreground">Lade…</p>
       )}
-      {filter !== "trial" && filter !== "trial_expired" && data && filtered.length === 0 && (
+      {filter !== "trial" && filter !== "trial_expired" && filter !== "free" && data && filtered.length === 0 && (
         <p className="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground">
           {filter === "all"
             ? "Noch keine Kunden angelegt."
             : "Keine Kunden in dieser Ansicht."}
         </p>
       )}
+
 
 
       {filter !== "trial" && filter !== "trial_expired" && filtered.length > 0 && (
@@ -385,4 +420,47 @@ function TrialList({ users }: { users: any[] }) {
     </div>
   );
 }
+
+function FreeList({ users }: { users: any[] }) {
+  if (users.length === 0) {
+    return (
+      <p className="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground">
+        Noch keine Free Tracker Nutzer.
+      </p>
+    );
+  }
+  return (
+    <div className="space-y-2">
+      {users.map((u) => {
+        const lastActive = u.last_check_date ?? u.last_event_at ?? u.signup_at;
+        const lastActiveLabel = lastActive ? new Date(lastActive).toLocaleDateString("de-DE") : "—";
+        return (
+          <Link
+            key={u.user_id}
+            to="/coach/customers/$userId"
+            params={{ userId: u.user_id }}
+            className="flex items-center justify-between rounded-2xl border border-border bg-card p-4 transition hover:border-emerald-500/40"
+          >
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <Flame className="h-4 w-4 text-emerald-500" />
+                <span className="truncate font-semibold">{u.display_name ?? "—"}</span>
+                {u.upgrade_clicked && (
+                  <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-bold uppercase text-gold">
+                    Upgrade-Interesse
+                  </span>
+                )}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Level {u.level} · {u.total_points} Pkt · Streak {u.streak} · zuletzt {lastActiveLabel}
+              </div>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
+
 
