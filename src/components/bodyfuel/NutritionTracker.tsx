@@ -260,6 +260,39 @@ export function NutritionTracker() {
   const setDayTypeFn = useServerFn(setDayType);
   const searchFn = useServerFn(searchFoods);
   const lookupFn = useServerFn(lookupBarcode);
+  const saveCustomMealFn = useServerFn(saveCustomMeal);
+
+  const createMealFromEntries = async (
+    slot: Meal,
+    list: FoodEntry[],
+  ) => {
+    if (!list.length) return;
+    const suggested = list.map((e) => e.name).slice(0, 3).join(" & ");
+    const name = window.prompt(
+      "Name für die Mahlzeit (wird zum schnellen Tracken gespeichert):",
+      suggested,
+    );
+    if (!name || !name.trim()) return;
+    try {
+      await saveCustomMealFn({
+        data: {
+          name: name.trim(),
+          meal_slot: slot,
+          ingredients: list.map((e) => ({
+            name: e.name,
+            amount_g: Number(e.serving_g) || null,
+            kcal: Number(e.kcal) || null,
+            protein_g: Number(e.protein_g) || null,
+            carbs_g: Number(e.carbs_g) || null,
+            fat_g: Number(e.fat_g) || null,
+          })),
+        },
+      });
+      toast.success("Als eigene Mahlzeit gespeichert");
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  };
 
   // Load targets + entries + water + day type
   useEffect(() => {
