@@ -152,7 +152,11 @@ function NutritionIndex() {
               <WeekScheduleCard userId={supabaseUser.id} />
             )}
             <MacroTargetsCard userId={supabaseUser?.id} />
+            {supabaseUser?.id && (
+              <MealWishesCard userId={supabaseUser.id} mode="client" />
+            )}
           </>
+
         )}
         {isCoach && <PlansView planType="nutrition" onClientChange={setCoachClientId} />}
         {!isCoach && (isTrial || isExpired) ? (
