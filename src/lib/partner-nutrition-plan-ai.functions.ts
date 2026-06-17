@@ -168,6 +168,9 @@ async function loadPerson(supabase: any, userId: string) {
   const disliked = (ratings ?? []).filter((r: any) => r.stars <= 2).map((r: any) => r.meal?.name).filter(Boolean);
   const favoriteNames = (favs ?? []).map((f: any) => f.meal?.name).filter(Boolean);
   const skipNames = (skips ?? []).map((s: any) => s.meal_name).filter(Boolean);
+  const approvedWishes = ((wishesData as any[]) ?? []).map((w) => w.wish as string).filter(Boolean);
+  const approvedWishIds = ((wishesData as any[]) ?? []).map((w) => w.id as string).filter(Boolean);
+  const weeklyBudget: number | null = p.weekly_budget_eur != null ? Number(p.weekly_budget_eur) : null;
 
   return {
     name: cp.display_name ?? "Person",
@@ -181,6 +184,9 @@ async function loadPerson(supabase: any, userId: string) {
     disliked,
     favoriteNames,
     skipNames,
+    approvedWishes,
+    approvedWishIds,
+    weeklyBudget,
     trainingSet: new Set<string>((p.training_weekdays ?? []).map((s: string) => s.toLowerCase())),
     shoppingDays: p.shopping_days as string[] | null,
   };
