@@ -280,20 +280,23 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
     let selfPartner: Partner | null = null;
     let otherPartner: Partner | null = null;
     if (meal.partner_meal_id) {
-      const { data: pMeal } = await supabase
+      // Use admin client: RLS otherwise prevents the caller from reading the
+      // partner's plan/day/profile.
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: pMeal } = await supabaseAdmin
         .from("nutrition_plan_meals")
         .select("kcal, protein_g, carbs_g, fat_g, day_id, description")
         .eq("id", meal.partner_meal_id)
         .maybeSingle();
       if (pMeal) {
-        const { data: pDay } = await supabase
+        const { data: pDay } = await supabaseAdmin
           .from("nutrition_plan_days")
           .select("nutrition_plans!inner(client_id)")
           .eq("id", (pMeal as any).day_id)
           .maybeSingle();
         const otherClientId = (pDay as any)?.nutrition_plans?.client_id;
         if (clientId && otherClientId) {
-          const { data: profs } = await supabase
+          const { data: profs } = await supabaseAdmin
             .from("profiles")
             .select("id, display_name, first_name")
             .in("id", [clientId, otherClientId]);
