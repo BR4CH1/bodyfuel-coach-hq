@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Trophy, Flame, Star, Sparkles, Crown, Medal, Check, Lock } from "lucide-react";
+import { getLevel } from "@/lib/bodyfuel/data";
 
 type Achievement = {
   id: string;
@@ -64,10 +65,11 @@ export function AchievementsCard({ userId }: { userId: string }) {
   }, [userId]);
 
   const total = points?.total_points ?? 0;
-  const level = points?.level ?? 1;
-  const pointsInLevel = total % 100;
-  const pointsToNext = 100 - pointsInLevel;
-  const levelProgress = pointsInLevel; // 0-99
+  const rank = getLevel(total);
+  const rankName = rank.level.name;
+  const nextName = rank.next?.name;
+  const pointsToNext = rank.next ? rank.next.min - total : 0;
+  const levelProgress = rank.progress;
 
   if (loading) {
     return (
@@ -86,10 +88,10 @@ export function AchievementsCard({ userId }: { userId: string }) {
             <span className="text-xs uppercase tracking-wider">Level & Erfolge</span>
           </div>
           <h2 className="mt-1 font-display text-xl font-bold">
-            Level {level}
+            {rankName}
           </h2>
           <p className="text-xs text-muted-foreground">
-            {total} Punkte gesamt · noch {pointsToNext} bis Level {level + 1}
+            {total} Punkte gesamt{nextName ? ` · noch ${pointsToNext} bis ${nextName}` : " · Maximaler Rang erreicht"}
           </p>
         </div>
         <div className="text-right">

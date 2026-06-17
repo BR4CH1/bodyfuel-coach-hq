@@ -21,10 +21,10 @@ const schema = z.object({
   last_name: z.string().trim().min(1, "Nachname erforderlich").max(60),
   email: z.string().trim().email("Ungültige E-Mail").max(255),
   password: z.string().min(8, "Mindestens 8 Zeichen").max(100),
-  height_cm: z.coerce.number().int().positive().max(260).optional().or(z.literal("").transform(() => undefined)),
-  weight_kg: z.coerce.number().positive().max(400).optional().or(z.literal("").transform(() => undefined)),
-  gender: z.enum(["male", "female", "other"]).optional().or(z.literal("").transform(() => undefined)),
-  birthdate: z.string().optional().or(z.literal("").transform(() => undefined)),
+  height_cm: z.coerce.number({ invalid_type_error: "Größe erforderlich" }).int().positive("Größe erforderlich").max(260),
+  weight_kg: z.coerce.number({ invalid_type_error: "Gewicht erforderlich" }).positive("Gewicht erforderlich").max(400),
+  gender: z.enum(["male", "female", "other"], { errorMap: () => ({ message: "Geschlecht wählen" }) }),
+  birthdate: z.string().min(8, "Geburtsdatum erforderlich"),
 });
 
 function TrackerSignup() {
@@ -32,7 +32,6 @@ function TrackerSignup() {
   const navigate = useNavigate();
   const seedTargets = useServerFn(seedMyNutritionTargets);
   const [busy, setBusy] = useState(false);
-  const [showOptional, setShowOptional] = useState(false);
 
   useEffect(() => {
     if (supabaseUser && isFreeUser) navigate({ to: "/tracker/app" });
@@ -64,28 +63,23 @@ function TrackerSignup() {
       if (error) throw error;
       const userId = data.user?.id;
       if (userId) {
-        // Save optional profile + measurement data
-        const profileUpdate: any = {};
-        if (v.height_cm) profileUpdate.height_cm = v.height_cm;
-        if (v.gender) profileUpdate.gender = v.gender;
-        if (v.birthdate) profileUpdate.birthdate = v.birthdate;
-        if (Object.keys(profileUpdate).length) {
-          await supabase.from("profiles").update(profileUpdate).eq("id", userId);
-        }
-        if (v.weight_kg) {
-          await supabase.from("body_measurements").insert({
-            user_id: userId,
-            weight_kg: v.weight_kg,
-            measured_at: new Date().toISOString(),
+        try {
+          await seedTargets({
+            data: {
+              height_cm: v.height_cm,
+              weight_kg: v.weight_kg,
+              gender: v.gender,
+              birthdate: v.birthdate,
+            },
           });
+        } catch (e) {
+          console.error("seedTargets failed", e);
         }
         await supabase.from("free_user_events").insert({
           user_id: userId,
           event: "signup",
-          details: { has_optional: showOptional },
+          details: {},
         });
-        // Trainings- + Restday-Targets aus Profil + Gewicht ableiten (best effort)
-        try { await seedTargets({}); } catch (e) { console.error(e); }
       }
       toast.success("Willkommen bei BodyFuel!");
       navigate({ to: "/tracker/app" });
@@ -112,7 +106,7 @@ function TrackerSignup() {
           </div>
         </div>
         <h2 className="font-display text-2xl font-bold">Account erstellen</h2>
-        <p className="mt-1 text-sm text-muted-foreground">In unter 60 Sekunden startklar.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Damit wir deine Makros korrekt berechnen können, brauchen wir ein paar Eckdaten.</p>
 
         <form onSubmit={submit} className="mt-5 space-y-4">
           <div className="grid grid-cols-2 gap-3">
@@ -135,47 +129,37 @@ function TrackerSignup() {
             <p className="text-[11px] text-muted-foreground">Mindestens 8 Zeichen.</p>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setShowOptional((s) => !s)}
-            className="text-xs font-semibold uppercase tracking-wider text-primary hover:underline"
-          >
-            {showOptional ? "− Optionale Daten ausblenden" : "+ Optionale Daten (für genauere Auswertungen)"}
-          </button>
-
-          {showOptional && (
-            <div className="space-y-3 rounded-xl border border-border bg-background/40 p-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="weight_kg">Gewicht (kg)</Label>
-                  <Input id="weight_kg" name="weight_kg" type="number" step="0.1" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="height_cm">Größe (cm)</Label>
-                  <Input id="height_cm" name="height_cm" type="number" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="gender">Geschlecht</Label>
-                  <select
-                    id="gender"
-                    name="gender"
-                    className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-                  >
-                    <option value="">—</option>
-                    <option value="male">Männlich</option>
-                    <option value="female">Weiblich</option>
-                    <option value="other">Divers</option>
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="birthdate">Geburtsdatum</Label>
-                  <Input id="birthdate" name="birthdate" type="date" />
-                </div>
-              </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="weight_kg">Gewicht (kg)</Label>
+              <Input id="weight_kg" name="weight_kg" type="number" step="0.1" required />
             </div>
-          )}
+            <div className="space-y-1.5">
+              <Label htmlFor="height_cm">Größe (cm)</Label>
+              <Input id="height_cm" name="height_cm" type="number" required />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="gender">Geschlecht</Label>
+              <select
+                id="gender"
+                name="gender"
+                required
+                defaultValue=""
+                className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+              >
+                <option value="" disabled>—</option>
+                <option value="male">Männlich</option>
+                <option value="female">Weiblich</option>
+                <option value="other">Divers</option>
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="birthdate">Geburtsdatum</Label>
+              <Input id="birthdate" name="birthdate" type="date" required />
+            </div>
+          </div>
 
           <Button
             type="submit"

@@ -1,55 +1,49 @@
 import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+const schema = z.object({
+  height_cm: z.coerce.number().int().positive().max(260),
+  weight_kg: z.coerce.number().positive().max(400),
+  gender: z.enum(["male", "female", "other"]),
+  birthdate: z.string().min(8),
+});
+
 /**
- * Berechnet & speichert Trainings- + Restday-Makro-Targets
- * für den eingeloggten User (Free oder Coaching) auf Basis von
- * Profil (Größe, Geschlecht, Geburtsdatum) + letztem Gewicht.
- *
- * Formel: Mifflin-St Jeor BMR.
- * Trainingstag = BMR * 1.6, Restday = BMR * 1.4.
- * Protein 1.8 g/kg, Fett 0.9 g/kg (Training) bzw. 1.0 g/kg (Rest),
- * Carbs = Rest aus kcal.
+ * Persist profile + measurement (server-side, bypasses RLS) and compute
+ * Trainings- + Restday Makro-Targets via Mifflin-St Jeor.
+ * Always overwrites — caller is the signup flow.
  */
 export const seedMyNutritionTargets = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((data: unknown) => schema.parse(data))
+  .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const userId = context.userId;
 
-    // Schon vorhanden? Nicht überschreiben (Coach pflegt sonst manuell).
-    const { data: existing } = await supabaseAdmin
-      .from("nutrition_targets")
-      .select("user_id, kcal_rest")
-      .eq("user_id", context.userId)
-      .maybeSingle();
-    if (existing && existing.kcal_rest != null) return { ok: true, created: false };
-
-    const { data: prof } = await supabaseAdmin
+    await supabaseAdmin
       .from("profiles")
-      .select("height_cm, gender, birthdate")
-      .eq("id", context.userId)
-      .maybeSingle();
-    const { data: bm } = await supabaseAdmin
-      .from("body_measurements")
-      .select("weight_kg, measured_at")
-      .eq("user_id", context.userId)
-      .order("measured_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .update({
+        height_cm: data.height_cm,
+        gender: data.gender,
+        birthdate: data.birthdate,
+      })
+      .eq("id", userId);
 
-    const w = Number(bm?.weight_kg ?? 0);
-    const h = Number((prof as any)?.height_cm ?? 0);
-    const gender = (prof as any)?.gender as string | undefined;
-    const bd = (prof as any)?.birthdate as string | undefined;
-    if (!w || !h || !gender || !bd) {
-      return { ok: false, reason: "missing-profile" as const };
-    }
+    await supabaseAdmin.from("body_measurements").insert({
+      user_id: userId,
+      weight_kg: data.weight_kg,
+      measured_at: new Date().toISOString(),
+    });
+
+    const w = data.weight_kg;
+    const h = data.height_cm;
     const age = Math.max(
       15,
-      Math.floor((Date.now() - new Date(bd).getTime()) / 31557600000),
+      Math.floor((Date.now() - new Date(data.birthdate).getTime()) / 31557600000),
     );
     const bmr =
-      gender === "female"
+      data.gender === "female"
         ? 10 * w + 6.25 * h - 5 * age - 161
         : 10 * w + 6.25 * h - 5 * age + 5;
 
@@ -62,23 +56,21 @@ export const seedMyNutritionTargets = createServerFn({ method: "POST" })
     const carbs_t = Math.max(0, Math.round((kcal_t - protein * 4 - fat_t * 9) / 4));
     const carbs_r = Math.max(0, Math.round((kcal_r - protein * 4 - fat_r * 9) / 4));
 
-    const { error } = await supabaseAdmin
-      .from("nutrition_targets")
-      .upsert(
-        {
-          user_id: context.userId,
-          kcal: kcal_t,
-          protein_g: protein,
-          carbs_g: carbs_t,
-          fat_g: fat_t,
-          kcal_rest: kcal_r,
-          protein_g_rest: protein,
-          carbs_g_rest: carbs_r,
-          fat_g_rest: fat_r,
-          water_glasses: 8,
-        },
-        { onConflict: "user_id" },
-      );
+    const { error } = await supabaseAdmin.from("nutrition_targets").upsert(
+      {
+        user_id: userId,
+        kcal: kcal_t,
+        protein_g: protein,
+        carbs_g: carbs_t,
+        fat_g: fat_t,
+        kcal_rest: kcal_r,
+        protein_g_rest: protein,
+        carbs_g_rest: carbs_r,
+        fat_g_rest: fat_r,
+        water_glasses: 8,
+      },
+      { onConflict: "user_id" },
+    );
     if (error) throw new Error(error.message);
-    return { ok: true, created: true };
+    return { ok: true, kcal_t, kcal_r };
   });
