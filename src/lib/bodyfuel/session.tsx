@@ -28,7 +28,6 @@ const KEY = "bodyfuel.session";
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [demoUserId, setDemoUserId] = useState<string | null>(null);
-  const [demoCoach, setDemoCoach] = useState(false);
   const [supabaseUser, setSupabaseUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [role, setRole] = useState<"coach" | "client" | null>(null);
@@ -36,14 +35,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [, setTick] = useState(0);
 
-  // hydrate demo
+  // hydrate demo client id (UI helper only — never coach role)
   useEffect(() => {
     try {
       const raw = localStorage.getItem(KEY);
       if (raw) {
         const s = JSON.parse(raw);
-        setDemoUserId(s.userId);
-        setDemoCoach(!!s.isCoach);
+        if (s && typeof s.userId === "string") setDemoUserId(s.userId);
       }
     } catch {}
   }, []);
