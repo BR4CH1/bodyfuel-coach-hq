@@ -1310,6 +1310,7 @@ export type Database = {
           training_weekdays: string[]
           updated_at: string
           user_id: string
+          weekly_budget_eur: number | null
         }
         Insert: {
           allergies?: string[]
@@ -1331,6 +1332,7 @@ export type Database = {
           training_weekdays?: string[]
           updated_at?: string
           user_id: string
+          weekly_budget_eur?: number | null
         }
         Update: {
           allergies?: string[]
@@ -1352,6 +1354,7 @@ export type Database = {
           training_weekdays?: string[]
           updated_at?: string
           user_id?: string
+          weekly_budget_eur?: number | null
         }
         Relationships: []
       }
