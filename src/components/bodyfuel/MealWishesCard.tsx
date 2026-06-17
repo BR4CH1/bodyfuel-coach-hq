@@ -1,14 +1,16 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Sparkles, Trash2, Check, X, Plus, Clock, Loader2 } from "lucide-react";
+import { Sparkles, Trash2, Check, X, Plus, Clock, Loader2, UserCircle2 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 import {
   addMealWish,
   deleteMealWish,
   listMealWishes,
   reviewMealWish,
+  updateMealWishAssignment,
   type MealWish,
 } from "@/lib/meal-wishes.functions";
 
@@ -29,6 +31,7 @@ export function MealWishesCard({ userId, mode }: Props) {
   const addFn = useServerFn(addMealWish);
   const delFn = useServerFn(deleteMealWish);
   const reviewFn = useServerFn(reviewMealWish);
+  const assignFn = useServerFn(updateMealWishAssignment);
 
   const queryKey = ["meal-wishes", userId];
   const { data: wishes = [], isLoading } = useQuery({
@@ -36,6 +39,24 @@ export function MealWishesCard({ userId, mode }: Props) {
     queryFn: () => listFn({ data: { userId } }),
     enabled: !!userId,
   });
+
+  // Lookup display names for all wish authors (kann eigene + Partner sein)
+  const authorIds = Array.from(new Set(wishes.map((w) => w.user_id)));
+  const { data: authors = {} } = useQuery({
+    queryKey: ["meal-wishes-authors", authorIds.sort().join(",")],
+    queryFn: async () => {
+      if (authorIds.length === 0) return {} as Record<string, string>;
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, display_name")
+        .in("id", authorIds);
+      const m: Record<string, string> = {};
+      for (const p of data ?? []) m[p.id] = p.display_name ?? "Unbenannt";
+      return m;
+    },
+    enabled: authorIds.length > 0,
+  });
+
 
   const [text, setText] = useState("");
   const [slot, setSlot] = useState<"breakfast" | "lunch" | "dinner" | "snack" | "any">("any");
