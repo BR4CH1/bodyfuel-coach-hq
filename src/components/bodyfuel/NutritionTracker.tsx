@@ -390,6 +390,7 @@ export function NutritionTracker() {
           brand: r.brand,
           barcode: r.barcode,
           serving_g: null,
+          serving_label: null,
           kcal_per_100g: Number(r.kcal) * f,
           protein_per_100g: Number(r.protein_g) * f,
           carbs_per_100g: Number(r.carbs_g) * f,
