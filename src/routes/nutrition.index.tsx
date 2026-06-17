@@ -13,6 +13,8 @@ import { useSession } from "@/lib/bodyfuel/session";
 import { useTrial } from "@/hooks/use-trial";
 import { TrialNutritionPlan } from "@/components/bodyfuel/TrialPlanView";
 import { getMySmartProfile } from "@/lib/smart-profile.functions";
+import { MealWishesCard } from "@/components/bodyfuel/MealWishesCard";
+
 
 export const Route = createFileRoute("/nutrition/")({
   head: () => ({ meta: [{ title: "Ernährungsplan — BODYFUEL" }] }),
