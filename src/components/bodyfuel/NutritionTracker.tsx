@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Barcode, Plus, Trash2, Droplet, Loader2 } from "lucide-react";
+import { Barcode, Plus, Trash2, Droplet, Loader2, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
 import { Button } from "@/components/ui/button";
@@ -46,6 +46,7 @@ type FoodEntry = {
 };
 
 type RecentFood = FoodResult & { last_amount_g: number };
+type FavoriteFood = FoodResult & { fav_id: string; last_amount_g: number | null };
 
 type Targets = {
   kcal: number;
@@ -155,6 +156,103 @@ export function NutritionTracker() {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [recentFoods, setRecentFoods] = useState<RecentFood[]>([]);
   const [loadingRecent, setLoadingRecent] = useState(false);
+  const [favorites, setFavorites] = useState<FavoriteFood[]>([]);
+  const [loadingFavorites, setLoadingFavorites] = useState(false);
+
+  const favKey = (f: { barcode?: string | null; name: string; brand?: string | null }) =>
+    `${f.barcode ?? f.name}|${f.brand ?? ""}`;
+  const favIndex = useMemo(() => {
+    const m = new Map<string, string>();
+    favorites.forEach((f) => m.set(favKey(f), f.fav_id));
+    return m;
+  }, [favorites]);
+  const isFavorite = (f: { barcode?: string | null; name: string; brand?: string | null }) =>
+    favIndex.has(favKey(f));
+
+  const reloadFavorites = async () => {
+    if (!userId) return;
+    const { data } = await supabase
+      .from("food_favorites")
+      .select("id, name, brand, barcode, serving_g, serving_label, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, last_amount_g")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+    const rows = (data ?? []) as Array<{
+      id: string; name: string; brand: string | null; barcode: string | null;
+      serving_g: number | null; serving_label: string | null;
+      kcal_per_100g: number; protein_per_100g: number; carbs_per_100g: number; fat_per_100g: number;
+      last_amount_g: number | null;
+    }>;
+    setFavorites(rows.map((r) => ({
+      fav_id: r.id,
+      name: r.name,
+      brand: r.brand,
+      barcode: r.barcode,
+      serving_g: r.serving_g,
+      serving_label: r.serving_label,
+      kcal_per_100g: Number(r.kcal_per_100g),
+      protein_per_100g: Number(r.protein_per_100g),
+      carbs_per_100g: Number(r.carbs_per_100g),
+      fat_per_100g: Number(r.fat_per_100g),
+      last_amount_g: r.last_amount_g != null ? Number(r.last_amount_g) : null,
+    })));
+  };
+
+  const toggleFavorite = async (
+    food: FoodResult & { last_amount_g?: number | null },
+  ) => {
+    if (!userId) return;
+    const existingId = favIndex.get(favKey(food));
+    if (existingId) {
+      const prev = favorites;
+      setFavorites((xs) => xs.filter((x) => x.fav_id !== existingId));
+      const { error } = await supabase.from("food_favorites").delete().eq("id", existingId);
+      if (error) {
+        setFavorites(prev);
+        toast.error(error.message);
+      } else {
+        toast.success("Favorit entfernt");
+      }
+      return;
+    }
+    const { data, error } = await supabase
+      .from("food_favorites")
+      .insert({
+        user_id: userId,
+        name: food.name,
+        brand: food.brand,
+        barcode: food.barcode,
+        serving_g: food.serving_g,
+        serving_label: food.serving_label ?? null,
+        kcal_per_100g: food.kcal_per_100g,
+        protein_per_100g: food.protein_per_100g,
+        carbs_per_100g: food.carbs_per_100g,
+        fat_per_100g: food.fat_per_100g,
+        last_amount_g: food.last_amount_g ?? null,
+      })
+      .select("id")
+      .single();
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setFavorites((xs) => [
+      {
+        fav_id: (data as { id: string }).id,
+        name: food.name,
+        brand: food.brand,
+        barcode: food.barcode,
+        serving_g: food.serving_g,
+        serving_label: food.serving_label ?? null,
+        kcal_per_100g: food.kcal_per_100g,
+        protein_per_100g: food.protein_per_100g,
+        carbs_per_100g: food.carbs_per_100g,
+        fat_per_100g: food.fat_per_100g,
+        last_amount_g: food.last_amount_g ?? null,
+      },
+      ...xs,
+    ]);
+    toast.success("Als Favorit gespeichert");
+  };
 
   const getTargetsFn = useServerFn(getNutritionTargets);
   const getDayTypeFn = useServerFn(getDayType);
