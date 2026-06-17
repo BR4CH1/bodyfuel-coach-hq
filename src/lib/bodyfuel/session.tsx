@@ -9,9 +9,13 @@ export type Profile = {
   demo_client_key: string | null;
 };
 
+export type AppTier = "coach" | "client" | "free" | null;
+
 type SessionCtx = {
   user: Client | null;
   isCoach: boolean;
+  isFreeUser: boolean;
+  tier: AppTier;
   supabaseUser: User | null;
   profile: Profile | null;
   loading: boolean;
@@ -30,7 +34,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [demoUserId, setDemoUserId] = useState<string | null>(null);
   const [supabaseUser, setSupabaseUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [role, setRole] = useState<"coach" | "client" | null>(null);
+  const [role, setRole] = useState<"coach" | "client" | "free" | null>(null);
   const [groups, setGroups] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [, setTick] = useState(0);
