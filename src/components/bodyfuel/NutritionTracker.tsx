@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Barcode, Plus, Trash2, Droplet, Loader2, Star, BookmarkPlus } from "lucide-react";
-import { saveCustomMeal } from "@/lib/custom-meals.functions";
+import { Barcode, Plus, Trash2, Droplet, Loader2, Star, ChefHat } from "lucide-react";
+
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BarcodeScanner } from "./BarcodeScanner";
+import { MealBuilderDialog } from "./MealBuilderDialog";
+import { CustomMealsCard } from "./CustomMealsCard";
 import {
   searchFoods,
   lookupBarcode,
@@ -155,6 +157,7 @@ export function NutritionTracker() {
   const [unit, setUnit] = useState<"g" | "piece">("g");
   const [amountStr, setAmountStr] = useState<string>("100");
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [builderOpen, setBuilderOpen] = useState(false);
   const [recentFoods, setRecentFoods] = useState<RecentFood[]>([]);
   const [loadingRecent, setLoadingRecent] = useState(false);
   const [favorites, setFavorites] = useState<FavoriteFood[]>([]);
@@ -260,51 +263,6 @@ export function NutritionTracker() {
   const setDayTypeFn = useServerFn(setDayType);
   const searchFn = useServerFn(searchFoods);
   const lookupFn = useServerFn(lookupBarcode);
-  const saveCustomMealFn = useServerFn(saveCustomMeal);
-
-  const createMealFromEntries = async (
-    slot: Meal,
-    list: FoodEntry[],
-  ) => {
-    if (!list.length) {
-      toast.error("Erst Zutaten tracken, dann als Mahlzeit speichern");
-      return;
-    }
-    const mealLabel = MEALS.find((x) => x.key === slot)?.label ?? "Mahlzeit";
-    const suggested = list.map((e) => e.name).slice(0, 3).join(" & ");
-    let name = suggested || mealLabel;
-    if (typeof window !== "undefined") {
-      const input = window.prompt(
-        "Name für die Mahlzeit (Abbrechen = Standardname):",
-        suggested,
-      );
-      if (input === null) {
-        // User cancelled — use suggested name automatically
-        name = suggested || mealLabel;
-      } else if (input.trim()) {
-        name = input.trim();
-      }
-    }
-    try {
-      await saveCustomMealFn({
-        data: {
-          name,
-          meal_slot: slot,
-          ingredients: list.map((e) => ({
-            name: e.name,
-            amount_g: Number(e.serving_g) || null,
-            kcal: Number(e.kcal) || null,
-            protein_g: Number(e.protein_g) || null,
-            carbs_g: Number(e.carbs_g) || null,
-            fat_g: Number(e.fat_g) || null,
-          })),
-        },
-      });
-      toast.success(`„${name}" als eigene Mahlzeit gespeichert`);
-    } catch (err) {
-      toast.error((err as Error).message);
-    }
-  };
 
   // Load targets + entries + water + day type
   useEffect(() => {
@@ -753,6 +711,28 @@ export function NutritionTracker() {
         </div>
       </div>
 
+      {/* Eigene Mahlzeit erstellen */}
+      <div className="rounded-2xl border border-gold/40 bg-gradient-to-br from-accent/30 to-card p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-sm font-bold">Eigene Mahlzeit erstellen</div>
+            <div className="text-[11px] text-muted-foreground">
+              Stell dir aus mehreren Lebensmitteln eine eigene Mahlzeit zusammen und tracke sie später mit einem Klick.
+            </div>
+          </div>
+          <Button
+            size="sm"
+            onClick={() => setBuilderOpen(true)}
+            className="shrink-0 bg-gradient-gold text-primary-foreground"
+          >
+            <ChefHat className="h-4 w-4" /> Erstellen
+          </Button>
+        </div>
+      </div>
+
+      {/* Deine Mahlzeiten */}
+      <CustomMealsCard userId={userId} />
+
       {/* Meals */}
       {MEALS.map((m) => {
         const list = entries.filter((e) => e.meal === m.key);
@@ -768,16 +748,6 @@ export function NutritionTracker() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {list.length > 0 && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => createMealFromEntries(m.key, list)}
-                    title="Diese Einträge als wiederverwendbare Mahlzeit speichern"
-                  >
-                    <BookmarkPlus className="h-4 w-4" /> Mahlzeit erstellen
-                  </Button>
-                )}
                 <Button
                   size="sm"
                   onClick={() => {
@@ -1096,6 +1066,12 @@ export function NutritionTracker() {
       {scannerOpen && (
         <BarcodeScanner onDetected={handleBarcode} onClose={() => setScannerOpen(false)} />
       )}
+
+      <MealBuilderDialog
+        userId={userId}
+        open={builderOpen}
+        onClose={() => setBuilderOpen(false)}
+      />
     </div>
   );
 }
