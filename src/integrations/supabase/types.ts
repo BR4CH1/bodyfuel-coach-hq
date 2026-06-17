@@ -503,6 +503,54 @@ export type Database = {
         }
         Relationships: []
       }
+      food_favorites: {
+        Row: {
+          barcode: string | null
+          brand: string | null
+          carbs_per_100g: number
+          created_at: string
+          fat_per_100g: number
+          id: string
+          kcal_per_100g: number
+          last_amount_g: number | null
+          name: string
+          protein_per_100g: number
+          serving_g: number | null
+          serving_label: string | null
+          user_id: string
+        }
+        Insert: {
+          barcode?: string | null
+          brand?: string | null
+          carbs_per_100g?: number
+          created_at?: string
+          fat_per_100g?: number
+          id?: string
+          kcal_per_100g?: number
+          last_amount_g?: number | null
+          name: string
+          protein_per_100g?: number
+          serving_g?: number | null
+          serving_label?: string | null
+          user_id: string
+        }
+        Update: {
+          barcode?: string | null
+          brand?: string | null
+          carbs_per_100g?: number
+          created_at?: string
+          fat_per_100g?: number
+          id?: string
+          kcal_per_100g?: number
+          last_amount_g?: number | null
+          name?: string
+          protein_per_100g?: number
+          serving_g?: number | null
+          serving_label?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       leads: {
         Row: {
           created_at: string
