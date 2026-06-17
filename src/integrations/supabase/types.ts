@@ -837,6 +837,7 @@ export type Database = {
       }
       meal_wishes: {
         Row: {
+          applies_to: string
           coach_note: string | null
           consumed_at: string | null
           created_at: string
@@ -851,6 +852,7 @@ export type Database = {
           wish: string
         }
         Insert: {
+          applies_to?: string
           coach_note?: string | null
           consumed_at?: string | null
           created_at?: string
@@ -865,6 +867,7 @@ export type Database = {
           wish: string
         }
         Update: {
+          applies_to?: string
           coach_note?: string | null
           consumed_at?: string | null
           created_at?: string
@@ -1565,6 +1568,8 @@ export type Database = {
           extra_favorites: string | null
           extra_nogos: string | null
           favorite_foods: string[]
+          kitchen_equipment: string[]
+          kitchen_equipment_notes: string | null
           meal_prep_style: string | null
           nogo_foods: string[]
           shopping_day: string | null
@@ -1587,6 +1592,8 @@ export type Database = {
           extra_favorites?: string | null
           extra_nogos?: string | null
           favorite_foods?: string[]
+          kitchen_equipment?: string[]
+          kitchen_equipment_notes?: string | null
           meal_prep_style?: string | null
           nogo_foods?: string[]
           shopping_day?: string | null
@@ -1609,6 +1616,8 @@ export type Database = {
           extra_favorites?: string | null
           extra_nogos?: string | null
           favorite_foods?: string[]
+          kitchen_equipment?: string[]
+          kitchen_equipment_notes?: string | null
           meal_prep_style?: string | null
           nogo_foods?: string[]
           shopping_day?: string | null

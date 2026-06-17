@@ -20,6 +20,8 @@ export type SmartNutritionProfile = {
   auto_publish: boolean;
   completed_at: string | null;
   training_weekdays: string[];
+  kitchen_equipment: string[];
+  kitchen_equipment_notes: string | null;
 };
 
 
@@ -106,3 +108,37 @@ export const setCustomerWeeklyBudget = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true, weekly_budget_eur: value, applied_to: Array.from(targetIds) };
   });
+
+// Coach sets the kitchen equipment a client has available, plus optional notes
+// (e.g. "nur Airfryer, kein Herd"). Used by the AI prompt to constrain recipes.
+export const setCustomerKitchenEquipment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: {
+    user_id: string;
+    kitchen_equipment?: string[];
+    kitchen_equipment_notes?: string | null;
+  }) => d)
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: isCoach } = await supabase.rpc("has_role", {
+      _user_id: userId,
+      _role: "coach",
+    });
+    if (!isCoach) throw new Error("Forbidden");
+    const payload: any = { user_id: data.user_id };
+    if (data.kitchen_equipment !== undefined) {
+      payload.kitchen_equipment = Array.from(
+        new Set((data.kitchen_equipment ?? []).map((s) => String(s).trim()).filter(Boolean)),
+      );
+    }
+    if (data.kitchen_equipment_notes !== undefined) {
+      const t = (data.kitchen_equipment_notes ?? "").toString().trim();
+      payload.kitchen_equipment_notes = t.length > 0 ? t.slice(0, 600) : null;
+    }
+    const { error } = await supabase
+      .from("smart_nutrition_profile")
+      .upsert(payload, { onConflict: "user_id" });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+

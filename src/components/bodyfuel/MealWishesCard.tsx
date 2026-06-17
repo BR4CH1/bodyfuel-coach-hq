@@ -1,7 +1,17 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Sparkles, Trash2, Check, X, Plus, Clock, Loader2, UserCircle2 } from "lucide-react";
+import {
+  Sparkles,
+  Trash2,
+  Check,
+  X,
+  Plus,
+  Clock,
+  Loader2,
+  UserCircle2,
+  Users,
+} from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -11,6 +21,7 @@ import {
   listMealWishes,
   reviewMealWish,
   updateMealWishAssignment,
+  type AppliesTo,
   type MealWish,
 } from "@/lib/meal-wishes.functions";
 
@@ -24,6 +35,14 @@ const STATUS_LABEL: Record<MealWish["status"], string> = {
   approved: "Vom Coach freigegeben",
   rejected: "Vom Coach abgelehnt",
 };
+
+const SLOT_LABEL = {
+  any: "Egal",
+  breakfast: "Frühstück",
+  lunch: "Mittag",
+  dinner: "Abend",
+  snack: "Snack",
+} as const;
 
 export function MealWishesCard({ userId, mode }: Props) {
   const qc = useQueryClient();
@@ -40,7 +59,29 @@ export function MealWishesCard({ userId, mode }: Props) {
     enabled: !!userId,
   });
 
-  // Lookup display names for all wish authors (kann eigene + Partner sein)
+  // Partner-Lookup: gibt es eine verlinkte Partner-Person?
+  const { data: partnerLink } = useQuery({
+    queryKey: ["meal-wishes-partner", userId],
+    queryFn: async () => {
+      const { data: link } = await supabase
+        .from("nutrition_partners")
+        .select("user_a, user_b")
+        .or(`user_a.eq.${userId},user_b.eq.${userId}`)
+        .maybeSingle();
+      if (!link) return null;
+      const partnerId = link.user_a === userId ? link.user_b : link.user_a;
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("id, display_name")
+        .eq("id", partnerId)
+        .maybeSingle();
+      return { partnerId, partnerName: prof?.display_name ?? "Partner" };
+    },
+    enabled: !!userId,
+  });
+  const hasPartner = !!partnerLink;
+
+  // Display names for wish authors
   const authorIds = Array.from(new Set(wishes.map((w) => w.user_id)));
   const { data: authors = {} } = useQuery({
     queryKey: ["meal-wishes-authors", authorIds.sort().join(",")],
@@ -57,17 +98,14 @@ export function MealWishesCard({ userId, mode }: Props) {
     enabled: authorIds.length > 0,
   });
 
+  const customerName = authors[userId] ?? "Kunde";
+  const partnerName = partnerLink?.partnerName ?? "Partner";
 
   const [text, setText] = useState("");
   const [slot, setSlot] = useState<"breakfast" | "lunch" | "dinner" | "snack" | "any">("any");
   const [forPerson, setForPerson] = useState("");
-  const SLOT_LABEL = {
-    any: "Egal",
-    breakfast: "Frühstück",
-    lunch: "Mittag",
-    dinner: "Abend",
-    snack: "Snack",
-  } as const;
+  const [appliesTo, setAppliesTo] = useState<AppliesTo>("self");
+
   const add = useMutation({
     mutationFn: () =>
       addFn({
@@ -75,13 +113,16 @@ export function MealWishesCard({ userId, mode }: Props) {
           wish: text.trim(),
           meal_slot: slot,
           for_person: forPerson.trim() || undefined,
+          applies_to: appliesTo,
+          target_user_id: mode === "coach" ? userId : undefined,
         },
       }),
     onSuccess: () => {
       setText("");
       setForPerson("");
+      setAppliesTo("self");
       qc.invalidateQueries({ queryKey });
-      toast.success("Wunsch gespeichert");
+      toast.success(mode === "coach" ? "Wunschgericht für Kunde eingetragen" : "Wunsch gespeichert");
     },
     onError: (e: any) => toast.error(e?.message ?? "Fehler"),
   });
@@ -102,16 +143,18 @@ export function MealWishesCard({ userId, mode }: Props) {
   });
 
   const assign = useMutation({
-    mutationFn: (v: { id: string; meal_slot?: typeof slot; for_person?: string | null }) =>
-      assignFn({ data: v }),
+    mutationFn: (v: {
+      id: string;
+      meal_slot?: typeof slot;
+      for_person?: string | null;
+      applies_to?: AppliesTo;
+    }) => assignFn({ data: v }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey });
-      toast.success("Zuordnung aktualisiert");
     },
     onError: (e: any) => toast.error(e?.message ?? "Fehler"),
   });
 
-  // Vorschläge für „Für wen?" — eigene Namen + Partner-Namen (Display-Name) + bisher gesetzte Werte
   const peopleSuggestions = Array.from(
     new Set(
       [
@@ -120,6 +163,15 @@ export function MealWishesCard({ userId, mode }: Props) {
       ].filter(Boolean) as string[],
     ),
   );
+
+  const appliesLabel = (a: AppliesTo) =>
+    a === "both"
+      ? `Für beide (${customerName} & ${partnerName})`
+      : a === "partner"
+        ? `Nur für ${partnerName}`
+        : `Nur für ${customerName}`;
+
+  const showForm = mode === "client" || mode === "coach";
 
   return (
     <div className="rounded-2xl border border-border bg-card p-5">
@@ -130,10 +182,10 @@ export function MealWishesCard({ userId, mode }: Props) {
       <p className="mb-4 text-xs text-muted-foreground">
         {mode === "client"
           ? "Trag hier Gerichte ein, ordne sie einer Mahlzeit zu (Frühstück/Mittag/Abend/Snack) und – bei Partner-Plänen – wem sie gehören."
-          : "Wünsche dieses Kunden — gib frei, was der Smart Plan im nächsten Lauf berücksichtigen darf."}
+          : `Wünsche dieses Kunden — gib frei, was der Smart Plan im nächsten Lauf berücksichtigen darf. Du kannst hier auch selbst Gerichte für ${customerName} eintragen (sind dann automatisch freigegeben).`}
       </p>
 
-      {mode === "client" && (
+      {showForm && (
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -147,7 +199,11 @@ export function MealWishesCard({ userId, mode }: Props) {
             value={text}
             maxLength={300}
             onChange={(e) => setText(e.target.value)}
-            placeholder="z. B. Hähnchen-Reis-Bowl mit Süßkartoffel"
+            placeholder={
+              mode === "coach"
+                ? "z. B. Lachs aus dem Airfryer mit Süßkartoffel"
+                : "z. B. Hähnchen-Reis-Bowl mit Süßkartoffel"
+            }
             className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-gold"
           />
           <div className="flex flex-wrap gap-2">
@@ -160,14 +216,27 @@ export function MealWishesCard({ userId, mode }: Props) {
                 <option key={k} value={k}>{SLOT_LABEL[k]}</option>
               ))}
             </select>
-            <input
-              type="text"
-              value={forPerson}
-              maxLength={60}
-              onChange={(e) => setForPerson(e.target.value)}
-              placeholder="Für wen? (optional)"
-              className="min-w-[7rem] flex-1 rounded-xl border border-border bg-background px-3 py-2 text-sm"
-            />
+            {hasPartner ? (
+              <select
+                value={appliesTo}
+                onChange={(e) => setAppliesTo(e.target.value as AppliesTo)}
+                className="min-w-[10rem] flex-1 rounded-xl border border-border bg-background px-3 py-2 text-sm"
+                title="Für wen ist das Gericht?"
+              >
+                <option value="self">Nur für {customerName}</option>
+                <option value="partner">Nur für {partnerName}</option>
+                <option value="both">Für beide</option>
+              </select>
+            ) : (
+              <input
+                type="text"
+                value={forPerson}
+                maxLength={60}
+                onChange={(e) => setForPerson(e.target.value)}
+                placeholder="Für wen? (optional)"
+                className="min-w-[7rem] flex-1 rounded-xl border border-border bg-background px-3 py-2 text-sm"
+              />
+            )}
             <button
               type="submit"
               disabled={add.isPending || text.trim().length === 0}
@@ -215,7 +284,13 @@ export function MealWishesCard({ userId, mode }: Props) {
                         {SLOT_LABEL[w.meal_slot as keyof typeof SLOT_LABEL]}
                       </span>
                     )}
-                    {w.for_person && (
+                    {hasPartner && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-accent/40 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                        <Users className="h-3 w-3" />
+                        {appliesLabel(w.applies_to)}
+                      </span>
+                    )}
+                    {!hasPartner && w.for_person && (
                       <span className="rounded-full bg-accent/40 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
                         Für: {w.for_person}
                       </span>
@@ -223,8 +298,8 @@ export function MealWishesCard({ userId, mode }: Props) {
                   </div>
                   <div className="text-sm font-semibold">{w.wish}</div>
 
-                  {/* Inline-Zuordnung: nur bei offenen Wünschen, im Client-Mode */}
-                  {mode === "client" && w.status === "pending" && (
+                  {/* Inline edit: slot + applies_to */}
+                  {(mode === "coach" || w.status === "pending") && (
                     <div className="mt-2 flex flex-wrap gap-1">
                       <select
                         value={w.meal_slot ?? "any"}
@@ -237,21 +312,36 @@ export function MealWishesCard({ userId, mode }: Props) {
                           <option key={k} value={k}>{SLOT_LABEL[k]}</option>
                         ))}
                       </select>
-                      <select
-                        value={w.for_person ?? ""}
-                        onChange={(e) =>
-                          assign.mutate({
-                            id: w.id,
-                            for_person: e.target.value || null,
-                          })
-                        }
-                        className="rounded-md border border-border bg-background px-2 py-1 text-[11px]"
-                      >
-                        <option value="">— Für wen? —</option>
-                        {peopleSuggestions.map((p) => (
-                          <option key={p} value={p}>{p}</option>
-                        ))}
-                      </select>
+                      {hasPartner ? (
+                        <select
+                          value={w.applies_to}
+                          onChange={(e) =>
+                            assign.mutate({ id: w.id, applies_to: e.target.value as AppliesTo })
+                          }
+                          className="rounded-md border border-border bg-background px-2 py-1 text-[11px]"
+                          title="Gilt für…"
+                        >
+                          <option value="self">Nur {customerName}</option>
+                          <option value="partner">Nur {partnerName}</option>
+                          <option value="both">Beide</option>
+                        </select>
+                      ) : (
+                        <select
+                          value={w.for_person ?? ""}
+                          onChange={(e) =>
+                            assign.mutate({
+                              id: w.id,
+                              for_person: e.target.value || null,
+                            })
+                          }
+                          className="rounded-md border border-border bg-background px-2 py-1 text-[11px]"
+                        >
+                          <option value="">— Für wen? —</option>
+                          {peopleSuggestions.map((p) => (
+                            <option key={p} value={p}>{p}</option>
+                          ))}
+                        </select>
+                      )}
                     </div>
                   )}
                   <div

@@ -218,7 +218,6 @@ function PoseUpload({ pose, onPick }: { pose: ProgressPose; onPick: (f: File) =>
         ref={ref}
         type="file"
         accept="image/*"
-        capture="environment"
         onChange={handle}
         className="hidden"
       />
