@@ -396,7 +396,10 @@ ${liked.length ? "Mag (4-5★): " + liked.slice(0, 10).join(", ") : ""}
 ${disliked.length ? "Mag NICHT — vermeiden: " + disliked.slice(0, 10).join(", ") : ""}
 ${topSwapped.length ? "Häufig getauscht (lieber meiden): " + topSwapped.join(", ") : ""}
 ${skipReasons.length ? "Häufig übersprungen: " + skipReasons.slice(0, 8).join("; ") : ""}
+${approvedWishes.length ? "⭐ COACH-FREIGEGEBENE WUNSCHGERICHTE — falls Makros/Allergien es erlauben, jeweils mindestens 1× im Plan einbauen: " + approvedWishes.join("; ") : ""}
 ${prepHint} ${budgetHint}
+
+
 
 Antworte AUSSCHLIESSLICH mit gültigem JSON:
 {"days":[{"name":"Tag 1","type":"training","meals":[{"slot":"breakfast","name":"Overnight Oats","description":"80g Haferflocken, 250ml fettarme Milch, 150g Skyr, 100g Beeren, 1 EL Chiasamen, 1 EL Mandelsplitter","kcal":500,"protein_g":35,"carbs_g":55,"fat_g":15}]}]}
