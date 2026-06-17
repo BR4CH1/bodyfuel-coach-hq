@@ -151,6 +151,8 @@ export function NutritionTracker() {
   const [unit, setUnit] = useState<"g" | "piece">("g");
   const [amountStr, setAmountStr] = useState<string>("100");
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [recentFoods, setRecentFoods] = useState<FoodResult[]>([]);
+  const [loadingRecent, setLoadingRecent] = useState(false);
 
   const getTargetsFn = useServerFn(getNutritionTargets);
   const getDayTypeFn = useServerFn(getDayType);
@@ -357,6 +359,51 @@ export function NutritionTracker() {
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, openMeal, picking]);
+
+  // Load recent unique foods when the add dialog opens
+  useEffect(() => {
+    if (!openMeal || picking || !userId) return;
+    let cancelled = false;
+    (async () => {
+      setLoadingRecent(true);
+      const { data } = await supabase
+        .from("food_entries")
+        .select("name, brand, barcode, serving_g, kcal, protein_g, carbs_g, fat_g, created_at")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (cancelled) return;
+      const seen = new Set<string>();
+      const out: FoodResult[] = [];
+      for (const r of (data ?? []) as Array<{
+        name: string; brand: string | null; barcode: string | null;
+        serving_g: number; kcal: number; protein_g: number; carbs_g: number; fat_g: number;
+      }>) {
+        const key = (r.barcode || r.name) + "|" + (r.brand ?? "");
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const sg = Number(r.serving_g) || 0;
+        if (sg <= 0) continue;
+        const f = 100 / sg;
+        out.push({
+          name: r.name,
+          brand: r.brand,
+          barcode: r.barcode,
+          serving_g: null,
+          serving_label: null,
+          kcal_per_100g: Number(r.kcal) * f,
+          protein_per_100g: Number(r.protein_g) * f,
+          carbs_per_100g: Number(r.carbs_g) * f,
+          fat_per_100g: Number(r.fat_g) * f,
+        });
+        if (out.length >= 15) break;
+      }
+      setRecentFoods(out);
+      setLoadingRecent(false);
+    })();
+    return () => { cancelled = true; };
+  }, [openMeal, picking, userId, allEntries.length]);
+
 
   const handleBarcode = async (code: string) => {
     setScannerOpen(false);
@@ -645,9 +692,37 @@ export function NutritionTracker() {
                 </div>
                 <div className="mt-3 min-h-0 flex-1 overflow-y-auto">
                   {query.trim() === "" && (
-                    <p className="py-6 text-center text-xs text-muted-foreground">
-                      Tippe los — Vorschläge erscheinen automatisch
-                    </p>
+                    recentFoods.length > 0 ? (
+                      <div>
+                        <div className="px-2 pb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          Zuletzt getrackt
+                        </div>
+                        <ul className="divide-y divide-border">
+                          {recentFoods.map((r, i) => (
+                            <li key={`recent-${i}`}>
+                              <button
+                                onClick={() => {
+                                  setPicking(r);
+                                  setUnit("g");
+                                  setAmountStr("100");
+                                }}
+                                className="w-full px-2 py-3 text-left hover:bg-secondary"
+                              >
+                                <div className="truncate text-sm font-medium">{r.name}</div>
+                                <div className="text-[11px] text-muted-foreground">
+                                  {r.brand ? `${r.brand} · ` : ""}
+                                  {Math.round(r.kcal_per_100g)} kcal · P {r.protein_per_100g.toFixed(1)} · K {r.carbs_per_100g.toFixed(1)} · F {r.fat_per_100g.toFixed(1)} (/100g)
+                                </div>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : (
+                      <p className="py-6 text-center text-xs text-muted-foreground">
+                        {loadingRecent ? "Lade Verlauf…" : "Tippe los — Vorschläge erscheinen automatisch"}
+                      </p>
+                    )
                   )}
                   {query.trim() !== "" && results.length === 0 && (
                     <p className="flex items-center justify-center gap-2 py-6 text-center text-xs text-muted-foreground">
