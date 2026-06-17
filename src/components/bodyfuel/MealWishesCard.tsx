@@ -101,6 +101,26 @@ export function MealWishesCard({ userId, mode }: Props) {
     onError: (e: any) => toast.error(e?.message ?? "Fehler"),
   });
 
+  const assign = useMutation({
+    mutationFn: (v: { id: string; meal_slot?: typeof slot; for_person?: string | null }) =>
+      assignFn({ data: v }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey });
+      toast.success("Zuordnung aktualisiert");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Fehler"),
+  });
+
+  // Vorschläge für „Für wen?" — eigene Namen + Partner-Namen (Display-Name) + bisher gesetzte Werte
+  const peopleSuggestions = Array.from(
+    new Set(
+      [
+        ...Object.values(authors),
+        ...wishes.map((w) => w.for_person).filter(Boolean),
+      ].filter(Boolean) as string[],
+    ),
+  );
+
   return (
     <div className="rounded-2xl border border-border bg-card p-5">
       <div className="mb-3 flex items-center gap-2">
