@@ -138,6 +138,33 @@ export function PlanManagementCard({ userId }: { userId: string }) {
     mutationFn: (v: boolean) =>
       autoFn({ data: { user_id: userId, auto_publish: v } }),
     onSuccess: () => invalidate(),
+    onError: (e: any) => toast.error(e?.message ?? "Fehler"),
+  });
+
+  const partnerGen = useMutation({
+    mutationFn: (start_mode: "today" | "next_shopping") => {
+      const planDays =
+        durationMode === "fixed"
+          ? Math.max(1, Math.min(21, parseInt(fixedDays, 10) || 7))
+          : null;
+      return partnerGenFn({
+        data: {
+          user_a: userId,
+          user_b: partnerLink.data!.partner_id,
+          start_mode,
+          plan_days: planDays,
+        },
+      });
+    },
+    onSuccess: (_d, mode) => {
+      toast.success(
+        mode === "today"
+          ? "Gemeinsamer Plan ab heute erstellt (für beide Personen)."
+          : "Gemeinsamer Plan ab nächstem Einkauf erstellt (für beide Personen).",
+      );
+      invalidate();
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Fehler beim Gemeinsamen Plan"),
   });
 
   return (
