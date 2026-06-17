@@ -524,7 +524,7 @@ Genau ${planDays} Tage. Pro Person je 4 Slots (breakfast/lunch/dinner/snack). Be
           const m = meals[idx];
           const isShared = sharedSlots[m.slot] === true;
           const prefix = isShared ? `🍽️ Gemeinsam mit ${otherName} — ${slotLabel(m.slot)}` : slotLabel(m.slot);
-          const { data: mealRow } = await supabase
+          const { data: mealRow, error: mealErr } = await supabase
             .from("nutrition_plan_meals")
             .insert({
               day_id: dayId,
@@ -539,7 +539,11 @@ Genau ${planDays} Tage. Pro Person je 4 Slots (breakfast/lunch/dinner/snack). Be
             })
             .select("id")
             .single();
-          rows.push(mealRow?.id ?? "");
+          if (mealErr || !mealRow?.id) {
+            console.error("[partner-plan] meal insert failed", { who, dayId, mealErr, meal: m });
+            throw new Error(`Mahlzeit konnte nicht gespeichert werden: ${mealErr?.message ?? "unbekannt"}`);
+          }
+          rows.push(mealRow.id);
         }
         ids.push(rows);
       }
