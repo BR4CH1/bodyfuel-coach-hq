@@ -931,12 +931,22 @@ export function NutritionTracker() {
                 const factor = gramsCalc / 100;
                 return (
               <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
-                <div>
-                  <div className="text-sm font-semibold">{picking.name}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {picking.brand ?? "—"}
-                    {picking.serving_g ? ` · 1 Stück ≈ ${picking.serving_g} g` : ""}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold">{picking.name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {picking.brand ?? "—"}
+                      {picking.serving_g ? ` · 1 Stück ≈ ${picking.serving_g} g` : ""}
+                    </div>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => toggleFavorite({ ...picking, last_amount_g: parseFloat(amountStr.replace(",", ".")) || null })}
+                    className={`shrink-0 rounded-md border border-border p-2 ${isFavorite(picking) ? "text-gold" : "text-muted-foreground"} hover:bg-secondary`}
+                    aria-label={isFavorite(picking) ? "Favorit entfernen" : "Als Favorit speichern"}
+                  >
+                    <Star className={`h-4 w-4 ${isFavorite(picking) ? "fill-current" : ""}`} />
+                  </button>
                 </div>
                 {picking.serving_g && (
                   <div className="inline-flex rounded-md border border-border bg-background/40 p-0.5 text-xs">
