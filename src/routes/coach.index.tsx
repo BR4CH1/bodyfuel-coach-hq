@@ -227,6 +227,8 @@ function CoachDashboard() {
           last_training_at: lastTraining.get(p.id) ?? null,
           nutrition_plan_end: nutritionEnd.get(p.id) ?? null,
           training_plan_end: trainingEnd.get(p.id) ?? null,
+          kcal_dev: kcalDev.get(p.id)?.dev ?? null,
+          kcal_dev_dir: kcalDev.get(p.id)?.dir ?? null,
         }));
       }
 
