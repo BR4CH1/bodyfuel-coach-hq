@@ -46,6 +46,8 @@ import { CustomerCheckinsCard } from "@/components/bodyfuel/CustomerCheckinsCard
 import { PlanManagementCard } from "@/components/bodyfuel/PlanManagementCard";
 import { TrainingPlanManagementCard } from "@/components/bodyfuel/TrainingPlanManagementCard";
 import { MealWishesCard } from "@/components/bodyfuel/MealWishesCard";
+import { ProgressPhotosCard } from "@/components/bodyfuel/ProgressPhotosCard";
+import { PhotoAssessmentCard } from "@/components/bodyfuel/PhotoAssessmentCard";
 
 import { PartnerLinkCard } from "@/components/bodyfuel/PartnerLinkCard";
 import { CoachTrainingGoalCard } from "@/components/bodyfuel/CoachTrainingGoalCard";
