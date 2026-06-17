@@ -57,6 +57,7 @@ async function loadPerson(supabase: any, userId: string) {
     { data: ratings },
     { data: favs },
     { data: skips },
+    { data: wishesData },
   ] = await Promise.all([
     supabase.from("smart_nutrition_profile").select("*").eq("user_id", userId).maybeSingle(),
     supabase
@@ -88,6 +89,12 @@ async function loadPerson(supabase: any, userId: string) {
       .eq("user_id", userId)
       .limit(20),
     supabase.from("meal_skips").select("meal_name, reason").eq("user_id", userId).limit(20),
+    supabase
+      .from("meal_wishes")
+      .select("id, wish")
+      .eq("user_id", userId)
+      .eq("status", "approved")
+      .is("consumed_at", null),
   ]);
 
   const p: any = profile ?? {};
