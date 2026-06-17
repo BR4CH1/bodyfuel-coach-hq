@@ -1,59 +1,95 @@
-# Smart Training Plan
 
-Analog zum bestehenden Smart-Ernährungsplan: Die KI erzeugt einen Trainingsplan-Entwurf, sobald der Kunde den Strength Check abgeschlossen hat. Der Coach kann ihn im Coaching-Menü prüfen, freigeben, veröffentlichen und aktivieren — danach läuft das bestehende Tracking + Fortschritt + Punkte-System unverändert weiter.
+## Ziel
+Eine kostenlose, eigenständig wirkende Tracker-App unter `/tracker` als Lead-Magnet. Free User leben in ihrem eigenen Bereich, sind im Coach-Dashboard sichtbar, und werden über Trigger-Banner zu Coaching-Kunden konvertiert.
 
-## Was der Kunde davon hat
+## 1. Rollen & Datenmodell (Migration)
 
-- Nach dem Strength Check erscheint im Training automatisch ein „Smart Trainingsplan wird erstellt"-Bereich. Sobald der Coach freigegeben hat (oder Auto-Publish aktiv ist), wird der Plan aktiv und im gewohnten Tracker angezeigt.
-- Plan enthält alles, was ein Standard-Studio bietet: Langhantel-Übungen, Kurzhantel-Übungen, Geräte/Maschinen, Cardio-Block, Core-Block. Jede Übung mit Sätzen, Wiederholungen, Startgewicht (basierend auf Strength-Check-e1RM) und Notizen.
-- Übungsnamen werden zusätzlich an bereits vorhandene Übungsnamen des Kunden angeglichen (Aliase wie „Bankdrücken Langhantel" → „Bankdrücken"), damit Historie, PRs und Charts ohne Bruch weiterlaufen.
+Neue Rolle in `app_role`-Enum: `'free'`. Bestehende Trennung:
+- `'coach'` → Coach
+- `'client'` → bezahlter Coaching-Kunde
+- `'free'` → kostenloser Tracker-User (NEU)
 
-## Was der Coach davon hat
+Neue Tabellen (mit GRANTs + RLS scoped auf `auth.uid()`):
+- `water_logs` ist bereits vorhanden → wiederverwenden.
+- `activity_logs` (NEU): `user_id`, `date`, `steps`, `training_done bool`.
+- `free_user_events` (NEU): `user_id`, `event` (`'signup'`, `'first_track'`, `'upgrade_clicked'`, `'converted'`), `created_at` — fürs Conversion-Tracking.
 
-Auf der Kunden-Detailseite (`/coach/customers/:userId`) neue Karte **„Trainingsplan Management"** direkt unter der bestehenden Ernährungs-Karte. Identisches Layout & Verhalten:
+Helper:
+- Funktion `is_free_user(uid)` / nutze `has_role(uid,'free')`.
+- Trigger `handle_new_user` erweitern: wenn `raw_user_meta_data->>'tier' = 'free'`, dann Rolle `free` statt `client`.
 
-- Buttons: **„Smart-Plan generieren"** / **„Plan ab nächster Woche"**.
-- Zwei Spalten: Aktiver Plan / Nächster Plan, mit Status-Badges (Entwurf · Freigegeben · Veröffentlicht · Aktiv · Archiviert).
-- Aktionen pro Plan: Bearbeiten · Vorschau · Termine · Freigeben · Veröffentlichen · Jetzt aktivieren · Löschen · Archivieren.
-- Checkbox „Automatisch aktivieren" (wenn aus → Coach-Freigabe nötig).
-- Planarchiv darunter.
+Punkte: bestehendes `daily_checks` + `performance_points` + `recompute_user_points` System wiederverwenden. Free-User dürfen daily_checks schreiben (RLS prüfen — heute schon `user_id = auth.uid()`).
+
+## 2. Public Landingpage `/tracker`
+
+Neue Route `src/routes/tracker.tsx` (öffentlich, SSR, eigene SEO-Metadaten, og:image).
+- Hero: „BODYFUEL TRACKER – KOSTENLOS" mit grün/schwarz/weiß BodyFuel-Design.
+- Feature-Grid: Kalorien, Protein, Carbs, Fat, Wasser, Gewicht, Punkte, Level.
+- Sekundärer CTA: „Du willst mehr? → Coaching anfragen".
+- Primärer CTA: „Kostenlos starten" → `/tracker/signup`.
+
+## 3. Free-User Signup/Login
+
+- `src/routes/tracker.signup.tsx`: Form mit Vorname, Nachname, E-Mail, Passwort (Pflicht) + optional Gewicht, Größe, Geschlecht, Geburtsdatum (collapsible).
+- Validierung mit Zod.
+- `supabase.auth.signUp` mit `data: { display_name, first_name, last_name, tier: 'free', height_cm, gender, birthdate }`.
+- Trigger `handle_new_user` legt Profil + Rolle `free` an; optionale Body-Maße schreibt der Client nach Signup in `body_measurements` / `profiles`.
+- `src/routes/tracker.login.tsx`: schlankes Login (oder Wiederverwendung von `/auth` mit Redirect-Logik).
+- Nach Login: Free-User → `/tracker/app`, Coaching-User → `/dashboard`, Coach → `/coach`.
+
+## 4. Free-User App-Bereich `/tracker/app/*`
+
+Neue pathless Layout-Route `src/routes/_free.tsx` (Gate: Rolle muss `free` sein, sonst Redirect zur passenden Welt). Routen:
+- `tracker.app.tsx` — Dashboard: Heute, Streak, Level/XP, Wasser, Kalorien-Donut.
+- `tracker.app.nutrition.tsx` — kompakter NutritionTracker (Wiederverwendung der bestehenden Komponente in „free mode": ohne Coaching-Plan, nur freies Tracking).
+- `tracker.app.weight.tsx` — Gewicht eintragen + Verlauf (WeightProgressChart wiederverwenden).
+- `tracker.app.water.tsx` — Wasserziel + Fortschritt.
+- `tracker.app.activity.tsx` — Schritte + Training-Toggle.
+- `tracker.app.achievements.tsx` — Level, XP, Streaks, Achievements.
+- `tracker.app.profile.tsx` — Stammdaten + Logout.
+
+Bottom-Tab-Nav (mobile-first) für die 5 Hauptbereiche. Eigene App-Shell `FreeAppLayout` (analog `AppLayout` aber stripped-down).
+
+Gating der bestehenden Coaching-Routen: in `_authenticated/route.tsx` oder via per-Route `beforeLoad`: wenn Rolle `free` → Redirect auf `/tracker/app`. Coach-Routen bleiben für Coach-Rolle.
+
+## 5. Punkte / Level / Achievements
+
+Wiederverwendung des bestehenden Systems (`daily_checks`, `user_points`, `achievements`, `process_daily_check`).
+- Eigene schlanke `FreeDailyCheck`-Komponente, die Tasks setzt (Protein/Kalorien/Wasser/Gewicht/Training/Schritte) und in `daily_checks.tasks` schreibt.
+- Punkte/Level-Anzeige nutzt `user_points` (XP = total_points, Level = `1 + total_points/100`).
+- Achievements: bestehende Tabelle, plus Seed-Inserts für „100 L Wasser", „10 kg verloren" via Migration.
+
+## 6. Coach-Dashboard Integration
+
+Datei: `src/routes/coach.customers.index.tsx` erweitern.
+- Status-Badge: 🟢 Free / 🔥 Coaching anhand Rolle.
+- Filter-Tabs: Alle | Coaching | Free | Aktiv | Inaktiv (Inaktiv = kein `daily_checks` in 14 Tagen).
+- Spalten: Name, Email, Registriert, Aktuelles Gewicht, Level, Punkte, Streak, Letzter Login (aus `auth.users.last_sign_in_at` via server fn mit `supabaseAdmin`), Ø Nutzung (Checks/Woche).
+- Neue KPI-Karte oben: Free Users, Coaching Users, Conversion Rate (= coaching / (free+coaching)).
+- Neue Server-Funktion `getFreeUserStats` (`createServerFn` + `requireSupabaseAuth` + has_role(coach)-Check + supabaseAdmin im Handler).
+
+## 7. Conversion-Prompts
+
+Neue Komponente `FreeUpsellBanner` in FreeAppLayout. Trigger via Server-Funktion `getFreeUserUpsellState` (auth, RLS):
+- Tage seit Signup ≥ 7 → „7-Tage"-Banner.
+- Tage seit Signup ≥ 30 → „30-Tage"-Banner.
+- Anteil Tage in letzten 14 mit verfehltem Proteinziel ≥ 50 % → „Protein"-Banner.
+- Dismissible (gespeichert in `free_user_events` mit `event='banner_dismissed_X'`).
+- Klick auf CTA → `event='upgrade_clicked'` insert + Link auf Coaching-Anfrage (`/`).
+
+## 8. Design
+
+Bestehendes BodyFuel-Design (gold/schwarz für Coaching). Für Tracker zusätzliche Akzentfarbe „BodyFuel Grün" als CSS-Token `--tracker-green` in `src/styles.css` (semantic). Hochwertig: große Zahlen, klare Hierarchie, dunkle Cards, sanfte Gradients, gleiche Komponenten-Sprache wie Coaching-App. Mobile-first.
 
 ## Technische Details
 
-### Datenbank
-Es wird kein neuer Status oder neue Tabelle gebraucht — `nutrition_plans` hat bereits `plan_type='training'`, und `training_days` / `training_exercises` sind vollständig vorhanden. Eine kleine Migration ergänzt nur:
+- Migration: enum extend `app_role` add `'free'`; `handle_new_user` updaten; `activity_logs`, `free_user_events` Tabellen + GRANTs + RLS; Seed neue Achievements.
+- Alle DB-Reads in Free-Routen via authenticated `supabase` client (RLS schützt Daten).
+- Coach-Dashboard-Reads via `createServerFn` mit `requireSupabaseAuth` + `has_role(coach)`-Gate; `supabaseAdmin` nur für `auth.users.last_sign_in_at`.
+- Tracker-Routen sind public (Landing, Signup, Login). App-Bereich `tracker.app.*` liegt logisch unter einem Gate-Layout, das `has_role(user,'free')` erzwingt.
+- SEO: Landingpage hat eigenes head() mit Title, Description, OG-Tags + generiertem og:image.
 
-- Spalte `smart_training_profile` in `profiles` ist nicht nötig — Settings wie Auto-Publish-Training landen direkt im bestehenden `smart_nutrition_profile` als neue Spalten `auto_publish_training boolean` und `training_session_minutes int` (Standard-Dauer pro Einheit).
-- Wir fügen pro Übungszeile zwei optionale Spalten in `training_exercises` hinzu: `rest_seconds int` und `category text` ('barbell' | 'dumbbell' | 'machine' | 'cardio' | 'core' | 'bodyweight'), damit Coach-/Filter-/Anzeige-Logik sauber bleibt.
-
-### Server-Funktionen
-- `src/lib/training-plan-ai.functions.ts` neu — `generateAiTrainingPlanDraft({ user_id, start_mode })`:
-  1. Lädt Profil + Strength-Check (letzter) + Trainingsziel + Trainingswochentage (aus `smart_nutrition_profile.training_weekdays`) + bisherige Übungsnamen (für Alignment).
-  2. Berechnet Startgewichte je Übungstyp aus Strength-Check-e1RM (z. B. Bankdrücken-Startgewicht ≈ `chest_press_e1rm × 0,75` bei 8 Wdh., Kniebeuge ≈ `leg_press_e1rm × 0,35`, etc.).
-  3. Ruft Lovable AI Gateway mit detailliertem Prompt auf: liefert JSON `{ days: [{ name, focus, exercises: [{ name, category, target_sets, target_reps, target_weights, rest_seconds, notes }] }] }`.
-  4. Aligniert Übungsnamen gegen bestehende `training_exercises` des Kunden (Levenshtein/Substring + Synonym-Liste).
-  5. Archiviert vorherigen draft/approved/published Training-Plan; legt neuen `nutrition_plans`-Eintrag mit `plan_type='training'`, `source='smart_ai'`, `status='draft'` an; befüllt `training_days` + `training_exercises`.
-- `src/lib/training-plan-management.functions.ts` neu — spiegelt `plan-management.functions.ts`, aber für `plan_type='training'`. Funktionen: `getCustomerTrainingPlanOverview`, `transitionTrainingPlanStatus`, `deleteTrainingPlanDraft`, `updateTrainingPlanScheduling`, `setAutoPublishTraining`. Beim Aktivieren wird der vorherige aktive Trainingsplan archiviert (analog Ernährung), aber keine Makro-Targets gesetzt.
-
-### UI
-- `src/components/bodyfuel/TrainingPlanManagementCard.tsx` neu — analog `PlanManagementCard.tsx`, aber für Training. Eingebaut in `coach.customers.$userId.tsx` direkt unter der Ernährungs-Karte.
-- `src/components/bodyfuel/StrengthCheckStatus.tsx`: nach absolviertem Check zusätzlich kleine Karte „Dein Smart-Trainingsplan wird vorbereitet" (zeigt Status: in Bearbeitung / freigegeben / aktiv).
-- Vorschau (`/coach/plan-preview/:planId`) unterstützt bereits beide Plantypen — kein Eingriff nötig, prüfen, dass Training-Days/Exercises angezeigt werden.
-
-### Tracking & Fortschritt
-Da AI-Übungen in `training_exercises` landen und der bestehende `TrainingTracker` direkt diese Tabelle liest, funktionieren Tracking, Punkte (Trigger `process_training_set`), Fortschritts-Charts und Strength-Check-Updates automatisch weiter. Durch das Namens-Alignment bleiben PRs/Historie über Plan-Wechsel hinweg verknüpft.
-
-## Reihenfolge der Umsetzung
-
-1. Migration: neue Spalten in `smart_nutrition_profile` und `training_exercises`.
-2. `training-plan-ai.functions.ts` (Generierung inkl. Namens-Alignment).
-3. `training-plan-management.functions.ts` (Coach-CRUD).
-4. `TrainingPlanManagementCard` + Einbau in Coach-Kundenansicht.
-5. Hinweis-Karte im Kundenbereich nach Strength Check.
-6. Smoketest: Strength Check abschließen → Coach erstellt Plan → freigeben → aktivieren → Kunde sieht Plan im Tracker → Satz loggen → PR-Punkte werden vergeben.
-
-## Bewusst nicht enthalten
-
-- Eigene Einkaufslisten-/PDF-Logik für Training (gibt es bei Training nicht).
-- Auto-Progression / Deload-Logik in der KI-Generierung — wird mit künftigen Strength-Checks Schritt für Schritt nachgezogen (Daten dafür sind bereits gespeichert).
-- Bestehender PDF-Upload-Workflow (`parseTrainingPlan`) bleibt unverändert nutzbar.
+## Out of Scope (für diesen Durchgang)
+- Push-Notifications, E-Mail-Drip-Kampagnen für Free User.
+- Detaillierte CRM-Notizen/Tags pro Free User.
+- Stripe-Checkout fürs Coaching-Upgrade (CTA verweist auf bestehendes Anfrage-Formular).

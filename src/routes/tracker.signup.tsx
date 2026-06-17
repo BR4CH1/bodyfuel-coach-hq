@@ -1,0 +1,193 @@
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { z } from "zod";
+import { toast } from "sonner";
+import { Flame } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useSession } from "@/lib/bodyfuel/session";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
+export const Route = createFileRoute("/tracker/signup")({
+  head: () => ({ meta: [{ title: "Kostenlos starten — BodyFuel Tracker" }] }),
+  component: TrackerSignup,
+});
+
+const schema = z.object({
+  first_name: z.string().trim().min(1, "Vorname erforderlich").max(60),
+  last_name: z.string().trim().min(1, "Nachname erforderlich").max(60),
+  email: z.string().trim().email("Ungültige E-Mail").max(255),
+  password: z.string().min(8, "Mindestens 8 Zeichen").max(100),
+  height_cm: z.coerce.number().int().positive().max(260).optional().or(z.literal("").transform(() => undefined)),
+  weight_kg: z.coerce.number().positive().max(400).optional().or(z.literal("").transform(() => undefined)),
+  gender: z.enum(["male", "female", "other"]).optional().or(z.literal("").transform(() => undefined)),
+  birthdate: z.string().optional().or(z.literal("").transform(() => undefined)),
+});
+
+function TrackerSignup() {
+  const { supabaseUser, isFreeUser } = useSession();
+  const navigate = useNavigate();
+  const [busy, setBusy] = useState(false);
+  const [showOptional, setShowOptional] = useState(false);
+
+  useEffect(() => {
+    if (supabaseUser && isFreeUser) navigate({ to: "/tracker/app" });
+  }, [supabaseUser, isFreeUser, navigate]);
+
+  const submit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const raw = Object.fromEntries(fd.entries());
+    const parsed = schema.safeParse(raw);
+    if (!parsed.success) return toast.error(parsed.error.issues[0].message);
+    const v = parsed.data;
+    setBusy(true);
+    try {
+      const display_name = `${v.first_name} ${v.last_name}`.trim();
+      const { data, error } = await supabase.auth.signUp({
+        email: v.email.toLowerCase(),
+        password: v.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/tracker/app`,
+          data: {
+            tier: "free",
+            display_name,
+            first_name: v.first_name,
+            last_name: v.last_name,
+          },
+        },
+      });
+      if (error) throw error;
+      const userId = data.user?.id;
+      if (userId) {
+        // Save optional profile + measurement data
+        const profileUpdate: any = {};
+        if (v.height_cm) profileUpdate.height_cm = v.height_cm;
+        if (v.gender) profileUpdate.gender = v.gender;
+        if (v.birthdate) profileUpdate.birthdate = v.birthdate;
+        if (Object.keys(profileUpdate).length) {
+          await supabase.from("profiles").update(profileUpdate).eq("id", userId);
+        }
+        if (v.weight_kg) {
+          await supabase.from("body_measurements").insert({
+            user_id: userId,
+            weight_kg: v.weight_kg,
+            measured_at: new Date().toISOString(),
+          });
+        }
+        await supabase.from("free_user_events").insert({
+          user_id: userId,
+          event: "signup",
+          details: { has_optional: showOptional },
+        });
+      }
+      toast.success("Willkommen bei BodyFuel!");
+      navigate({ to: "/tracker/app" });
+    } catch (err: any) {
+      toast.error(err?.message ?? "Registrierung fehlgeschlagen");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="relative flex min-h-screen items-center justify-center bg-background px-4 py-10">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -left-32 top-10 h-96 w-96 rounded-full bg-primary/15 blur-3xl" />
+      </div>
+      <div className="relative w-full max-w-md rounded-3xl border border-border bg-card p-7 shadow-gold sm:p-9">
+        <div className="mb-5 flex items-center gap-3">
+          <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-gold">
+            <Flame className="h-5 w-5 text-primary-foreground" strokeWidth={2.5} />
+          </div>
+          <div>
+            <div className="font-display text-lg font-bold tracking-wider">BODYFUEL TRACKER</div>
+            <div className="text-[10px] uppercase tracking-[0.2em] text-primary">Kostenlos starten</div>
+          </div>
+        </div>
+        <h2 className="font-display text-2xl font-bold">Account erstellen</h2>
+        <p className="mt-1 text-sm text-muted-foreground">In unter 60 Sekunden startklar.</p>
+
+        <form onSubmit={submit} className="mt-5 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="first_name">Vorname</Label>
+              <Input id="first_name" name="first_name" required autoComplete="given-name" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="last_name">Nachname</Label>
+              <Input id="last_name" name="last_name" required autoComplete="family-name" />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="email">E-Mail</Label>
+            <Input id="email" name="email" type="email" required autoComplete="email" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="password">Passwort</Label>
+            <Input id="password" name="password" type="password" required minLength={8} autoComplete="new-password" />
+            <p className="text-[11px] text-muted-foreground">Mindestens 8 Zeichen.</p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowOptional((s) => !s)}
+            className="text-xs font-semibold uppercase tracking-wider text-primary hover:underline"
+          >
+            {showOptional ? "− Optionale Daten ausblenden" : "+ Optionale Daten (für genauere Auswertungen)"}
+          </button>
+
+          {showOptional && (
+            <div className="space-y-3 rounded-xl border border-border bg-background/40 p-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="weight_kg">Gewicht (kg)</Label>
+                  <Input id="weight_kg" name="weight_kg" type="number" step="0.1" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="height_cm">Größe (cm)</Label>
+                  <Input id="height_cm" name="height_cm" type="number" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="gender">Geschlecht</Label>
+                  <select
+                    id="gender"
+                    name="gender"
+                    className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                  >
+                    <option value="">—</option>
+                    <option value="male">Männlich</option>
+                    <option value="female">Weiblich</option>
+                    <option value="other">Divers</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="birthdate">Geburtsdatum</Label>
+                  <Input id="birthdate" name="birthdate" type="date" />
+                </div>
+              </div>
+            </div>
+          )}
+
+          <Button
+            type="submit"
+            disabled={busy}
+            className="w-full bg-gradient-gold text-primary-foreground hover:opacity-90"
+          >
+            {busy ? "…" : "Kostenlos starten"}
+          </Button>
+        </form>
+
+        <p className="mt-5 text-center text-xs text-muted-foreground">
+          Schon dabei?{" "}
+          <Link to="/tracker/login" className="text-primary hover:underline">
+            Einloggen
+          </Link>
+        </p>
+      </div>
+    </div>
+  );
+}
