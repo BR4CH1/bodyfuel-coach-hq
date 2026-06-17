@@ -204,6 +204,12 @@ export function MealWishesCard({ userId, mode }: Props) {
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <div className="mb-1 flex flex-wrap items-center gap-1">
+                    {authors[w.user_id] && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-background/60 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                        <UserCircle2 className="h-3 w-3" />
+                        Von {authors[w.user_id]}
+                      </span>
+                    )}
                     {w.meal_slot && w.meal_slot !== "any" && (
                       <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gold">
                         {SLOT_LABEL[w.meal_slot as keyof typeof SLOT_LABEL]}
@@ -216,6 +222,38 @@ export function MealWishesCard({ userId, mode }: Props) {
                     )}
                   </div>
                   <div className="text-sm font-semibold">{w.wish}</div>
+
+                  {/* Inline-Zuordnung: nur bei offenen Wünschen, im Client-Mode */}
+                  {mode === "client" && w.status === "pending" && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      <select
+                        value={w.meal_slot ?? "any"}
+                        onChange={(e) =>
+                          assign.mutate({ id: w.id, meal_slot: e.target.value as any })
+                        }
+                        className="rounded-md border border-border bg-background px-2 py-1 text-[11px]"
+                      >
+                        {(Object.keys(SLOT_LABEL) as Array<keyof typeof SLOT_LABEL>).map((k) => (
+                          <option key={k} value={k}>{SLOT_LABEL[k]}</option>
+                        ))}
+                      </select>
+                      <select
+                        value={w.for_person ?? ""}
+                        onChange={(e) =>
+                          assign.mutate({
+                            id: w.id,
+                            for_person: e.target.value || null,
+                          })
+                        }
+                        className="rounded-md border border-border bg-background px-2 py-1 text-[11px]"
+                      >
+                        <option value="">— Für wen? —</option>
+                        {peopleSuggestions.map((p) => (
+                          <option key={p} value={p}>{p}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   <div
                     className={`mt-1 flex items-center gap-1 text-[11px] ${
                       w.status === "approved"
