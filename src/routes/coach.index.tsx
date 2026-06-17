@@ -211,6 +211,50 @@ function CoachDashboard() {
     )
     .slice(0, 6);
 
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const WARN_DAYS = 5;
+  const expiringPlans = clients
+    .flatMap((c) => {
+      const out: Array<{ id: string; name: string; kind: "nutrition" | "training"; end: string; days: number }> = [];
+      if (c.nutrition_plan_end) {
+        out.push({
+          id: c.id,
+          name: c.display_name ?? "Ohne Namen",
+          kind: "nutrition",
+          end: c.nutrition_plan_end,
+          days: Math.ceil((new Date(c.nutrition_plan_end).getTime() - new Date(todayIso).getTime()) / 86400000),
+        });
+      }
+      if (c.training_plan_end) {
+        out.push({
+          id: c.id,
+          name: c.display_name ?? "Ohne Namen",
+          kind: "training",
+          end: c.training_plan_end,
+          days: Math.ceil((new Date(c.training_plan_end).getTime() - new Date(todayIso).getTime()) / 86400000),
+        });
+      }
+      return out;
+    })
+    .filter((p) => p.days <= WARN_DAYS)
+    .sort((a, b) => a.days - b.days);
+
+  const planOverview = [...clients]
+    .filter((c) => c.nutrition_plan_end || c.training_plan_end)
+    .sort((a, b) => {
+      const ae = Math.min(
+        a.nutrition_plan_end ? new Date(a.nutrition_plan_end).getTime() : Infinity,
+        a.training_plan_end ? new Date(a.training_plan_end).getTime() : Infinity,
+      );
+      const be = Math.min(
+        b.nutrition_plan_end ? new Date(b.nutrition_plan_end).getTime() : Infinity,
+        b.training_plan_end ? new Date(b.training_plan_end).getTime() : Infinity,
+      );
+      return ae - be;
+    });
+
+
+
 
   return (
     <div className="space-y-6">
