@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Barcode, Plus, Trash2, Droplet, Loader2, Star } from "lucide-react";
+import { Barcode, Plus, Trash2, Droplet, Loader2, Star, BookmarkPlus } from "lucide-react";
+import { saveCustomMeal } from "@/lib/custom-meals.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
 import { Button } from "@/components/ui/button";
