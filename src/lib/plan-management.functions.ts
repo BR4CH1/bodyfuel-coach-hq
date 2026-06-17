@@ -161,92 +161,133 @@ export const transitionPlanStatus = createServerFn({ method: "POST" })
 
     const { data: plan } = await supabase
       .from("nutrition_plans")
-      .select("id, client_id, plan_type, status, source, kcal, protein_g, carbs_g, fat_g")
+      .select("id, client_id, plan_type, status, source, kcal, protein_g, carbs_g, fat_g, is_partner_plan, scheduled_start_date, scheduled_end_date")
       .eq("id", data.plan_id)
       .maybeSingle();
     if (!plan) throw new Error("Plan nicht gefunden");
 
-    // If transitioning to active, archive the currently active plan first
+    // For partner plans, mirror the status change on the linked partner's matching plan
+    // so both clients see the plan as active (or archived) simultaneously.
+    const partnerPlanIds: string[] = [];
+    if ((plan as any).is_partner_plan) {
+      const clientId = (plan as any).client_id;
+      const { data: link } = await supabase
+        .from("nutrition_partners")
+        .select("user_a, user_b")
+        .or(`user_a.eq.${clientId},user_b.eq.${clientId}`)
+        .maybeSingle();
+      const partnerId = link
+        ? ((link as any).user_a === clientId ? (link as any).user_b : (link as any).user_a)
+        : null;
+      if (partnerId) {
+        const startIso = (plan as any).scheduled_start_date;
+        let q = supabase
+          .from("nutrition_plans")
+          .select("id")
+          .eq("client_id", partnerId)
+          .eq("plan_type", (plan as any).plan_type)
+          .eq("is_partner_plan", true);
+        if (startIso) q = q.eq("scheduled_start_date", startIso);
+        const { data: matches } = await q
+          .order("created_at", { ascending: false })
+          .limit(1);
+        for (const m of (matches ?? []) as any[]) partnerPlanIds.push(m.id);
+      }
+    }
+
+    const affectedIds = [data.plan_id, ...partnerPlanIds];
+
+    // If transitioning to active, archive the currently active plan(s) for each affected client first
     if (data.to === "active") {
-      await supabase
+      const { data: affected } = await supabase
         .from("nutrition_plans")
-        .update({ status: "archived" })
-        .eq("client_id", (plan as any).client_id)
-        .eq("plan_type", (plan as any).plan_type)
-        .eq("status", "active")
-        .neq("id", data.plan_id);
+        .select("client_id")
+        .in("id", affectedIds);
+      const clientIds = Array.from(
+        new Set(((affected ?? []) as any[]).map((r) => r.client_id)),
+      );
+      if (clientIds.length) {
+        await supabase
+          .from("nutrition_plans")
+          .update({ status: "archived" })
+          .in("client_id", clientIds)
+          .eq("plan_type", (plan as any).plan_type)
+          .eq("status", "active")
+          .not("id", "in", `(${affectedIds.map((i) => `"${i}"`).join(",")})`);
+      }
     }
 
     const { error } = await supabase
       .from("nutrition_plans")
       .update({ status: data.to })
-      .eq("id", data.plan_id);
+      .in("id", affectedIds);
     if (error) throw new Error(error.message);
 
-    // Auto-apply nutrition targets when a plan becomes active
+    // Auto-apply nutrition targets when a plan becomes active (for each affected plan / client)
     if (data.to === "active") {
-      try {
-        const { computeTargetsFromPlanDB, deriveRestFromTraining } = await import("./nutrition.functions");
-        const t = await computeTargetsFromPlanDB(supabase, data.plan_id);
-        let kcal: number | null = null, protein_g = 0, carbs_g = 0, fat_g = 0;
-        let kcal_rest: number | null = null, protein_g_rest: number | null = null;
-        let carbs_g_rest: number | null = null, fat_g_rest: number | null = null;
-        if (t && t.kcal > 0) {
-          kcal = t.kcal; protein_g = t.protein_g; carbs_g = t.carbs_g; fat_g = t.fat_g;
-          kcal_rest = t.kcal_rest; protein_g_rest = t.protein_g_rest;
-          carbs_g_rest = t.carbs_g_rest; fat_g_rest = t.fat_g_rest;
-          const shouldDeriveRest =
-            (plan as any).source === "smart_ai" ||
-            kcal_rest == null ||
-            kcal_rest >= kcal ||
-            (carbs_g_rest ?? 0) >= carbs_g;
-          if (shouldDeriveRest) {
-            const rest = deriveRestFromTraining({ kcal, protein_g, carbs_g, fat_g });
-            kcal_rest = rest.kcal; protein_g_rest = rest.protein_g;
-            carbs_g_rest = rest.carbs_g; fat_g_rest = rest.fat_g;
-          }
-        } else if ((plan as any).kcal && Number((plan as any).kcal) > 0) {
-          const { data: pRow } = await supabase
+      const { computeTargetsFromPlanDB, deriveRestFromTraining } = await import("./nutrition.functions");
+      for (const pid of affectedIds) {
+        try {
+          const { data: pRowMeta } = await supabase
             .from("nutrition_plans")
-            .select("kcal, protein_g, carbs_g, fat_g")
-            .eq("id", data.plan_id)
+            .select("client_id, source, kcal, protein_g, carbs_g, fat_g")
+            .eq("id", pid)
             .maybeSingle();
-          if (pRow && (pRow as any).kcal) {
-            kcal = Number((pRow as any).kcal);
-            protein_g = Number((pRow as any).protein_g) || 0;
-            carbs_g = Number((pRow as any).carbs_g) || 0;
-            fat_g = Number((pRow as any).fat_g) || 0;
+          if (!pRowMeta) continue;
+          const clientId = (pRowMeta as any).client_id;
+          const t = await computeTargetsFromPlanDB(supabase, pid);
+          let kcal: number | null = null, protein_g = 0, carbs_g = 0, fat_g = 0;
+          let kcal_rest: number | null = null, protein_g_rest: number | null = null;
+          let carbs_g_rest: number | null = null, fat_g_rest: number | null = null;
+          if (t && t.kcal > 0) {
+            kcal = t.kcal; protein_g = t.protein_g; carbs_g = t.carbs_g; fat_g = t.fat_g;
+            kcal_rest = t.kcal_rest; protein_g_rest = t.protein_g_rest;
+            carbs_g_rest = t.carbs_g_rest; fat_g_rest = t.fat_g_rest;
+            const shouldDeriveRest =
+              (pRowMeta as any).source === "smart_ai" ||
+              kcal_rest == null ||
+              kcal_rest >= kcal ||
+              (carbs_g_rest ?? 0) >= carbs_g;
+            if (shouldDeriveRest) {
+              const rest = deriveRestFromTraining({ kcal, protein_g, carbs_g, fat_g });
+              kcal_rest = rest.kcal; protein_g_rest = rest.protein_g;
+              carbs_g_rest = rest.carbs_g; fat_g_rest = rest.fat_g;
+            }
+          } else if ((pRowMeta as any).kcal && Number((pRowMeta as any).kcal) > 0) {
+            kcal = Number((pRowMeta as any).kcal);
+            protein_g = Number((pRowMeta as any).protein_g) || 0;
+            carbs_g = Number((pRowMeta as any).carbs_g) || 0;
+            fat_g = Number((pRowMeta as any).fat_g) || 0;
             const rest = deriveRestFromTraining({ kcal, protein_g, carbs_g, fat_g });
             kcal_rest = rest.kcal; protein_g_rest = rest.protein_g;
             carbs_g_rest = rest.carbs_g; fat_g_rest = rest.fat_g;
           }
+          const round50 = (v: number | null) => v == null ? null : Math.max(0, Math.round(v / 50) * 50);
+          if (kcal) kcal = round50(kcal)!;
+          if (kcal_rest != null) kcal_rest = round50(kcal_rest);
+          if (kcal && kcal > 0) {
+            const { data: existing } = await supabase
+              .from("nutrition_targets")
+              .select("water_glasses")
+              .eq("user_id", clientId)
+              .maybeSingle();
+            await supabase.from("nutrition_targets").upsert(
+              {
+                user_id: clientId,
+                kcal, protein_g, carbs_g, fat_g,
+                water_glasses: (existing as any)?.water_glasses ?? 8,
+                kcal_rest, protein_g_rest, carbs_g_rest, fat_g_rest,
+                updated_by: userId,
+              },
+              { onConflict: "user_id" },
+            );
+          }
+        } catch (e) {
+          console.warn("auto-apply targets failed for plan", pid, e);
         }
-        // Auf 50-kcal-Schritte runden, damit die UI runde Werte zeigt.
-        const round50 = (v: number | null) => v == null ? null : Math.max(0, Math.round(v / 50) * 50);
-        if (kcal) kcal = round50(kcal)!;
-        if (kcal_rest != null) kcal_rest = round50(kcal_rest);
-        if (kcal && kcal > 0) {
-          // Preserve existing water_glasses if present
-          const { data: existing } = await supabase
-            .from("nutrition_targets")
-            .select("water_glasses")
-            .eq("user_id", (plan as any).client_id)
-            .maybeSingle();
-          await supabase.from("nutrition_targets").upsert(
-            {
-              user_id: (plan as any).client_id,
-              kcal, protein_g, carbs_g, fat_g,
-              water_glasses: (existing as any)?.water_glasses ?? 8,
-              kcal_rest, protein_g_rest, carbs_g_rest, fat_g_rest,
-              updated_by: userId,
-            },
-            { onConflict: "user_id" },
-          );
-        }
-      } catch (e) {
-        console.warn("auto-apply targets failed", e);
       }
     }
+
 
     return { ok: true, status: data.to };
   });
