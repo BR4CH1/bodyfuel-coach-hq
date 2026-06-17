@@ -398,7 +398,7 @@ Genau ${planDays} Tage. Pro Person je 4 Slots (breakfast/lunch/dinner/snack). Be
           generated_by: "ai_auto",
           source: "smart_ai",
           uploaded_by: userId,
-          file_path: `ai-generated/partner/${clientId}/${Date.now()}.json`,
+          file_path: `ai-generated/${clientId}/partner-${Date.now()}.json`,
           file_name: "ai-partner.json",
           scheduled_start_date: isoDate(start),
           scheduled_end_date: isoDate(end),
