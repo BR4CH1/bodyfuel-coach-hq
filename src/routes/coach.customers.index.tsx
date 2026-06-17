@@ -421,3 +421,46 @@ function TrialList({ users }: { users: any[] }) {
   );
 }
 
+function FreeList({ users }: { users: any[] }) {
+  if (users.length === 0) {
+    return (
+      <p className="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground">
+        Noch keine Free Tracker Nutzer.
+      </p>
+    );
+  }
+  return (
+    <div className="space-y-2">
+      {users.map((u) => {
+        const lastActive = u.last_check_date ?? u.last_event_at ?? u.signup_at;
+        const lastActiveLabel = lastActive ? new Date(lastActive).toLocaleDateString("de-DE") : "—";
+        return (
+          <Link
+            key={u.user_id}
+            to="/coach/customers/$userId"
+            params={{ userId: u.user_id }}
+            className="flex items-center justify-between rounded-2xl border border-border bg-card p-4 transition hover:border-emerald-500/40"
+          >
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <Flame className="h-4 w-4 text-emerald-500" />
+                <span className="truncate font-semibold">{u.display_name ?? "—"}</span>
+                {u.upgrade_clicked && (
+                  <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-bold uppercase text-gold">
+                    Upgrade-Interesse
+                  </span>
+                )}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Level {u.level} · {u.total_points} Pkt · Streak {u.streak} · zuletzt {lastActiveLabel}
+              </div>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
+
+
