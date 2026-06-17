@@ -161,26 +161,66 @@ export const transitionPlanStatus = createServerFn({ method: "POST" })
 
     const { data: plan } = await supabase
       .from("nutrition_plans")
-      .select("id, client_id, plan_type, status, source, kcal, protein_g, carbs_g, fat_g")
+      .select("id, client_id, plan_type, status, source, kcal, protein_g, carbs_g, fat_g, is_partner_plan, scheduled_start_date, scheduled_end_date")
       .eq("id", data.plan_id)
       .maybeSingle();
     if (!plan) throw new Error("Plan nicht gefunden");
 
-    // If transitioning to active, archive the currently active plan first
+    // For partner plans, mirror the status change on the linked partner's matching plan
+    // so both clients see the plan as active (or archived) simultaneously.
+    const partnerPlanIds: string[] = [];
+    if ((plan as any).is_partner_plan) {
+      const clientId = (plan as any).client_id;
+      const { data: link } = await supabase
+        .from("nutrition_partners")
+        .select("user_a, user_b")
+        .or(`user_a.eq.${clientId},user_b.eq.${clientId}`)
+        .maybeSingle();
+      const partnerId = link
+        ? ((link as any).user_a === clientId ? (link as any).user_b : (link as any).user_a)
+        : null;
+      if (partnerId) {
+        const startIso = (plan as any).scheduled_start_date;
+        let q = supabase
+          .from("nutrition_plans")
+          .select("id")
+          .eq("client_id", partnerId)
+          .eq("plan_type", (plan as any).plan_type)
+          .eq("is_partner_plan", true);
+        if (startIso) q = q.eq("scheduled_start_date", startIso);
+        const { data: matches } = await q
+          .order("created_at", { ascending: false })
+          .limit(1);
+        for (const m of (matches ?? []) as any[]) partnerPlanIds.push(m.id);
+      }
+    }
+
+    const affectedIds = [data.plan_id, ...partnerPlanIds];
+
+    // If transitioning to active, archive the currently active plan(s) for each affected client first
     if (data.to === "active") {
-      await supabase
+      const { data: affected } = await supabase
         .from("nutrition_plans")
-        .update({ status: "archived" })
-        .eq("client_id", (plan as any).client_id)
-        .eq("plan_type", (plan as any).plan_type)
-        .eq("status", "active")
-        .neq("id", data.plan_id);
+        .select("client_id")
+        .in("id", affectedIds);
+      const clientIds = Array.from(
+        new Set(((affected ?? []) as any[]).map((r) => r.client_id)),
+      );
+      if (clientIds.length) {
+        await supabase
+          .from("nutrition_plans")
+          .update({ status: "archived" })
+          .in("client_id", clientIds)
+          .eq("plan_type", (plan as any).plan_type)
+          .eq("status", "active")
+          .not("id", "in", `(${affectedIds.map((i) => `"${i}"`).join(",")})`);
+      }
     }
 
     const { error } = await supabase
       .from("nutrition_plans")
       .update({ status: data.to })
-      .eq("id", data.plan_id);
+      .in("id", affectedIds);
     if (error) throw new Error(error.message);
 
     // Auto-apply nutrition targets when a plan becomes active
