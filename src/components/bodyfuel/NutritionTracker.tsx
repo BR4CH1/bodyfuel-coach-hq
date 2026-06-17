@@ -755,18 +755,30 @@ export function NutritionTracker() {
                   <div className="text-xs text-muted-foreground">{Math.round(sub)} kcal</div>
                 </div>
               </div>
-              <Button
-                size="sm"
-                onClick={() => {
-                  setOpenMeal(m.key);
-                  setQuery("");
-                  setResults([]);
-                  setPicking(null);
-                }}
-                className="bg-gradient-gold text-primary-foreground"
-              >
-                <Plus className="h-4 w-4" /> Hinzufügen
-              </Button>
+              <div className="flex items-center gap-2">
+                {list.length > 0 && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => createMealFromEntries(m.key, list)}
+                    title="Diese Einträge als wiederverwendbare Mahlzeit speichern"
+                  >
+                    <BookmarkPlus className="h-4 w-4" /> Mahlzeit erstellen
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setOpenMeal(m.key);
+                    setQuery("");
+                    setResults([]);
+                    setPicking(null);
+                  }}
+                  className="bg-gradient-gold text-primary-foreground"
+                >
+                  <Plus className="h-4 w-4" /> Hinzufügen
+                </Button>
+              </div>
             </div>
             {list.length > 0 && (
               <ul className="mt-3 divide-y divide-border">
