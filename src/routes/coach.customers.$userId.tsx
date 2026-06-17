@@ -637,6 +637,10 @@ function CustomerDetail() {
               goalWeight={(data.profile as any)?.goal_weight_kg ?? null}
               goalTargetDate={(data.profile as any)?.goal_target_date ?? null}
             />
+            <GoalProjectionCard
+              profile={(data.profile as any) ?? {}}
+              currentWeight={(latestWeightMeasurement as any)?.weight_kg ?? null}
+            />
             <TrainingPlanManagementCard userId={userId} />
             <CoachStrengthCheckCard userId={userId} />
             <CoachTrainingAlertsCard userId={userId} />
