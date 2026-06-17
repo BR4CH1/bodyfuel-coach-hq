@@ -354,6 +354,60 @@ function CoachDashboard() {
             ))}
           </Panel>
 
+          {/* Plan-Warnungen */}
+          <Panel
+            icon={<AlertTriangle className="h-5 w-5" />}
+            title="Pläne laufen aus (≤ 5 Tage)"
+            empty={expiringPlans.length === 0}
+            emptyText="Alle Pläne haben noch Laufzeit."
+          >
+            {expiringPlans.slice(0, 10).map((p, i) => (
+              <CustomerRow
+                key={`${p.id}-${p.kind}-${i}`}
+                id={p.id}
+                name={p.name}
+                warn
+                meta={`${p.kind === "training" ? "Trainingsplan" : "Ernährungsplan"} ${
+                  p.days < 0
+                    ? `seit ${Math.abs(p.days)} Tagen abgelaufen`
+                    : p.days === 0
+                      ? "läuft heute aus"
+                      : `läuft in ${p.days} Tagen aus (${new Date(p.end).toLocaleDateString("de-DE")})`
+                }`}
+              />
+            ))}
+          </Panel>
+
+          {/* Plan-Übersicht */}
+          <Panel
+            icon={<CalendarClock className="h-5 w-5" />}
+            title="Plan-Übersicht"
+            empty={planOverview.length === 0}
+            emptyText="Keine aktiven Pläne hinterlegt."
+          >
+            {planOverview.slice(0, 12).map((c) => (
+              <Link
+                key={c.id}
+                to="/coach/customers/$userId"
+                params={{ userId: c.id }}
+                className="block rounded-xl border border-border bg-background/40 p-3 transition hover:border-gold/40"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="truncate text-sm font-semibold">
+                    {c.display_name ?? "Ohne Namen"}
+                  </div>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                </div>
+                <div className="mt-1 grid grid-cols-2 gap-2 text-[11px]">
+                  <PlanValidity label="Training" end={c.training_plan_end} />
+                  <PlanValidity label="Ernährung" end={c.nutrition_plan_end} />
+                </div>
+              </Link>
+            ))}
+          </Panel>
+
+
+
           {/* Neue Leads */}
           <Panel
             icon={<Inbox className="h-5 w-5" />}
