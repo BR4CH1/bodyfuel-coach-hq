@@ -35,6 +35,8 @@ export function PartnerLinkCard({ userId }: { userId: string }) {
     dinner: true,
     snack: false,
   });
+  const [durationMode, setDurationMode] = useState<"shopping" | "fixed">("shopping");
+  const [fixedDays, setFixedDays] = useState<string>("7");
 
   const link = useQuery({
     queryKey: ["partner-link", userId],
@@ -70,15 +72,21 @@ export function PartnerLinkCard({ userId }: { userId: string }) {
   });
 
   const generate = useMutation({
-    mutationFn: (start_mode: "today" | "next_shopping") =>
-      genFn({
+    mutationFn: (start_mode: "today" | "next_shopping") => {
+      const planDays =
+        durationMode === "fixed"
+          ? Math.max(1, Math.min(21, parseInt(fixedDays, 10) || 7))
+          : null;
+      return genFn({
         data: {
           user_a: userId,
           user_b: link.data?.partner_id!,
           start_mode,
           shared_slots: shared,
+          plan_days: planDays,
         },
-      }),
+      });
+    },
     onSuccess: () => {
       toast.success("Gemeinsamer Plan-Entwurf erstellt (für beide Personen).");
       qc.invalidateQueries({ queryKey: ["plan-overview", userId] });
