@@ -402,7 +402,18 @@ Genau ${planDays} Tage. Pro Person je 4 Slots (breakfast/lunch/dinner/snack). Be
       throw new Error("KI-Antwort konnte nicht gelesen werden.");
     }
     const days = (parsed.days ?? []).slice(0, planDays);
-    if (!days.length) throw new Error("Keine Tage generiert.");
+    if (!days.length) {
+      console.error("[partner-plan] AI returned no days. raw=", raw);
+      throw new Error("Keine Tage generiert.");
+    }
+    const totalMealsReturned = days.reduce(
+      (s: number, g: GeneratedDay) => s + (g.person_a?.length ?? 0) + (g.person_b?.length ?? 0),
+      0,
+    );
+    if (totalMealsReturned === 0) {
+      console.error("[partner-plan] AI returned 0 meals across all days. raw=", raw);
+      throw new Error("KI hat keine Mahlzeiten geliefert. Bitte erneut versuchen.");
+    }
 
     const forbidden = mergedAllergies; // never tolerate, for anybody
     const filterMeals = (ms: PersonMeal[]) =>
