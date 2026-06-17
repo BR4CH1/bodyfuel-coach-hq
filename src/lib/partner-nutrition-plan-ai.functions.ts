@@ -506,8 +506,13 @@ Genau ${planDays} Tage. Pro Person je 4 Slots (breakfast/lunch/dinner/snack). Be
       return { planId: planRow.id, dayIds, mealsByDay };
     }
 
-    const A = await insertPlanFor(a, data.user_a, (i) => schedule[i].type_a, (g) => g.person_a ?? []);
-    const B = await insertPlanFor(b, data.user_b, (i) => schedule[i].type_b, (g) => g.person_b ?? []);
+    const personA = (g: any): PersonMeal[] =>
+      (g?.person_a ?? g?.personA ?? g?.a ?? g?.meals_a ?? g?.user_a ?? g?.meals ?? []) as PersonMeal[];
+    const personB = (g: any): PersonMeal[] =>
+      (g?.person_b ?? g?.personB ?? g?.b ?? g?.meals_b ?? g?.user_b ?? []) as PersonMeal[];
+
+    const A = await insertPlanFor(a, data.user_a, (i) => schedule[i].type_a, (g) => personA(g));
+    const B = await insertPlanFor(b, data.user_b, (i) => schedule[i].type_b, (g) => personB(g));
 
     // Insert meals; capture IDs to link shared pairs.
     const insertMealsFor = async (
