@@ -57,7 +57,7 @@ function NewCustomerForm() {
     setBusy(true);
     try {
       await fn({ data: { ...form, origin: window.location.origin } });
-      toast.success(isTrial ? "Trial-Kunde angelegt — Einladung verschickt." : "Kunde angelegt — Einladung verschickt.");
+      toast.success(isFree ? "Free-User angelegt — Einladung verschickt." : isTrial ? "Trial-Kunde angelegt — Einladung verschickt." : "Kunde angelegt — Einladung verschickt.");
       navigate({ to: "/coach/customers" });
     } catch (err) {
       toast.error((err as Error).message);
