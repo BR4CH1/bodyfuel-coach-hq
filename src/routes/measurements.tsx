@@ -607,6 +607,8 @@ function MeasurementsContent() {
           </div>
         )}
       </div>
+
+      {uid && <ProgressPhotosCard userId={uid} />}
     </div>
   );
 }
