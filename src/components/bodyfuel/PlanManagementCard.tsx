@@ -193,6 +193,28 @@ export function PlanManagementCard({ userId }: { userId: string }) {
             <Sparkles className="h-4 w-4" />
             {gen.isPending ? "Erstelle…" : "Plan ab nächstem Einkauf"}
           </button>
+          {partnerLink.data && (
+            <>
+              <button
+                onClick={() => partnerGen.mutate("today")}
+                disabled={partnerGen.isPending}
+                className="inline-flex items-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-600 hover:bg-emerald-500/20 disabled:opacity-60"
+                title={`Gemeinsam mit ${partnerLink.data.partner_name}`}
+              >
+                <Users className="h-4 w-4" />
+                {partnerGen.isPending ? "Erstelle…" : "Gemeinsamen Plan (ab heute)"}
+              </button>
+              <button
+                onClick={() => partnerGen.mutate("next_shopping")}
+                disabled={partnerGen.isPending}
+                className="inline-flex items-center gap-2 rounded-lg border border-emerald-500/40 bg-background px-3 py-2 text-sm font-semibold text-emerald-600 hover:bg-emerald-500/10 disabled:opacity-60"
+                title={`Gemeinsam mit ${partnerLink.data.partner_name}`}
+              >
+                <Users className="h-4 w-4" />
+                {partnerGen.isPending ? "Erstelle…" : "Gemeinsam ab Einkauf"}
+              </button>
+            </>
+          )}
         </div>
       </div>
 
