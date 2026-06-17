@@ -263,51 +263,6 @@ export function NutritionTracker() {
   const setDayTypeFn = useServerFn(setDayType);
   const searchFn = useServerFn(searchFoods);
   const lookupFn = useServerFn(lookupBarcode);
-  const saveCustomMealFn = useServerFn(saveCustomMeal);
-
-  const createMealFromEntries = async (
-    slot: Meal,
-    list: FoodEntry[],
-  ) => {
-    if (!list.length) {
-      toast.error("Erst Zutaten tracken, dann als Mahlzeit speichern");
-      return;
-    }
-    const mealLabel = MEALS.find((x) => x.key === slot)?.label ?? "Mahlzeit";
-    const suggested = list.map((e) => e.name).slice(0, 3).join(" & ");
-    let name = suggested || mealLabel;
-    if (typeof window !== "undefined") {
-      const input = window.prompt(
-        "Name für die Mahlzeit (Abbrechen = Standardname):",
-        suggested,
-      );
-      if (input === null) {
-        // User cancelled — use suggested name automatically
-        name = suggested || mealLabel;
-      } else if (input.trim()) {
-        name = input.trim();
-      }
-    }
-    try {
-      await saveCustomMealFn({
-        data: {
-          name,
-          meal_slot: slot,
-          ingredients: list.map((e) => ({
-            name: e.name,
-            amount_g: Number(e.serving_g) || null,
-            kcal: Number(e.kcal) || null,
-            protein_g: Number(e.protein_g) || null,
-            carbs_g: Number(e.carbs_g) || null,
-            fat_g: Number(e.fat_g) || null,
-          })),
-        },
-      });
-      toast.success(`„${name}" als eigene Mahlzeit gespeichert`);
-    } catch (err) {
-      toast.error((err as Error).message);
-    }
-  };
 
   // Load targets + entries + water + day type
   useEffect(() => {
