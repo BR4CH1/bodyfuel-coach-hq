@@ -239,7 +239,7 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
     const { data: meal, error: mErr } = await supabase
       .from("nutrition_plan_meals")
       .select(
-        "id, name, description, kcal, protein_g, carbs_g, fat_g, day_id, recipe_ingredients, recipe_steps, recipe_generated_at",
+        "id, name, description, kcal, protein_g, carbs_g, fat_g, day_id, partner_meal_id, recipe_ingredients, recipe_steps, recipe_generated_at",
       )
       .eq("id", data.meal_id)
       .maybeSingle();
@@ -264,6 +264,44 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
       };
     }
 
+    // Partner-meal lookup: if this meal is paired with a partner's meal, fetch
+    // the partner's macros + display name so the recipe can list per-person quantities.
+    type Partner = { name: string; kcal: number | null; protein_g: number | null; carbs_g: number | null; fat_g: number | null };
+    let selfPartner: Partner | null = null;
+    let otherPartner: Partner | null = null;
+    if (meal.partner_meal_id) {
+      const { data: pMeal } = await supabase
+        .from("nutrition_plan_meals")
+        .select("kcal, protein_g, carbs_g, fat_g, day_id")
+        .eq("id", meal.partner_meal_id)
+        .maybeSingle();
+      if (pMeal) {
+        const { data: pDay } = await supabase
+          .from("nutrition_plan_days")
+          .select("nutrition_plans!inner(client_id)")
+          .eq("id", (pMeal as any).day_id)
+          .maybeSingle();
+        const otherClientId = (pDay as any)?.nutrition_plans?.client_id;
+        if (clientId && otherClientId) {
+          const { data: profs } = await supabase
+            .from("profiles")
+            .select("id, name")
+            .in("id", [clientId, otherClientId]);
+          const nameOf = (id: string) =>
+            (profs ?? []).find((p: any) => p.id === id)?.name?.trim() || "Person";
+          selfPartner = {
+            name: nameOf(clientId),
+            kcal: meal.kcal, protein_g: meal.protein_g, carbs_g: meal.carbs_g, fat_g: meal.fat_g,
+          };
+          otherPartner = {
+            name: nameOf(otherClientId),
+            kcal: (pMeal as any).kcal, protein_g: (pMeal as any).protein_g,
+            carbs_g: (pMeal as any).carbs_g, fat_g: (pMeal as any).fat_g,
+          };
+        }
+      }
+    }
+
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY fehlt");
 
@@ -274,19 +312,37 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
       meal.fat_g != null ? `${meal.fat_g}g Fett` : null,
     ].filter(Boolean).join(", ");
 
-    const prompt = `Du bist Ernährungsberater. Erstelle ein einfaches, alltagstaugliches Rezept für genau EINE Person für die folgende Mahlzeit.
+    const partnerBlock = selfPartner && otherPartner
+      ? `
+WICHTIG — Partner-Mahlzeit (zwei Personen kochen gemeinsam):
+- Person A: ${selfPartner.name} — Ziel: ${[selfPartner.kcal && `${selfPartner.kcal} kcal`, selfPartner.protein_g && `${selfPartner.protein_g}g Eiweiß`, selfPartner.carbs_g && `${selfPartner.carbs_g}g KH`, selfPartner.fat_g && `${selfPartner.fat_g}g Fett`].filter(Boolean).join(", ")}
+- Person B: ${otherPartner.name} — Ziel: ${[otherPartner.kcal && `${otherPartner.kcal} kcal`, otherPartner.protein_g && `${otherPartner.protein_g}g Eiweiß`, otherPartner.carbs_g && `${otherPartner.carbs_g}g KH`, otherPartner.fat_g && `${otherPartner.fat_g}g Fett`].filter(Boolean).join(", ")}
+
+Skaliere jede Zutat passend zu den Makro-Zielen beider Personen und schreibe die Mengen pro Person + Gesamtmenge.
+Format pro Zutat genau so: "<Lebensmittel>: <Menge> für ${selfPartner.name}, <Menge> für ${otherPartner.name} — insgesamt <Summe>"
+Beispiel: "Hackfleisch: 200 g für ${selfPartner.name}, 100 g für ${otherPartner.name} — insgesamt 300 g"
+Schreibe die Zubereitungsschritte für die gemeinsame Zubereitung (eine Pfanne/Topf, am Ende auf zwei Teller portionieren).`
+      : "";
+
+    const onePersonBlock = !partnerBlock
+      ? `Erstelle das Rezept für genau EINE Person.
+- Zutaten mit konkreten Mengen in Gramm/ml/Stück, so dass die Zielwerte ungefähr passen.`
+      : "";
+
+    const prompt = `Du bist Ernährungsberater. Erstelle ein einfaches, alltagstaugliches Rezept für die folgende Mahlzeit.
 
 Mahlzeit: ${meal.name}${meal.description ? ` — ${meal.description}` : ""}
-${macros ? `Zielwerte (möglichst treffen): ${macros}` : ""}
+${macros ? `Zielwerte (Person A, möglichst treffen): ${macros}` : ""}
+${partnerBlock}
+${onePersonBlock}
 
 Anforderungen:
-- Zutaten mit konkreten Mengen in Gramm/ml/Stück, so dass die Zielwerte ungefähr passen.
-- Wenn in der Beschreibung schon Lebensmittel + Mengen stehen, nutze GENAU diese.
+- Wenn in der Beschreibung schon Lebensmittel + Mengen stehen, nutze GENAU diese (und skaliere sie ggf. anteilig).
 - 3 bis 6 kurze Zubereitungsschritte, jeder Schritt 1 Satz.
 - Auf Deutsch.
 
 Antworte ausschließlich mit gültigem JSON in diesem Format:
-{"ingredients": ["250 g Magerquark", "1 Banane (ca. 120 g)", "30 g Haferflocken"], "steps": ["Quark in eine Schüssel geben.", "Banane zerdrücken und unterheben."]}`;
+{"ingredients": ["..."], "steps": ["..."]}`;
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
