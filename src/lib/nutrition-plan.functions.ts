@@ -285,10 +285,12 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
         if (clientId && otherClientId) {
           const { data: profs } = await supabase
             .from("profiles")
-            .select("id, name")
+            .select("id, display_name, first_name")
             .in("id", [clientId, otherClientId]);
-          const nameOf = (id: string) =>
-            (profs ?? []).find((p: any) => p.id === id)?.name?.trim() || "Person";
+          const nameOf = (id: string) => {
+            const p: any = (profs ?? []).find((x: any) => x.id === id);
+            return (p?.display_name?.trim() || p?.first_name?.trim() || "Person");
+          };
           selfPartner = {
             name: nameOf(clientId),
             kcal: meal.kcal, protein_g: meal.protein_g, carbs_g: meal.carbs_g, fat_g: meal.fat_g,
