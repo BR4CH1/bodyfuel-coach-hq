@@ -193,7 +193,10 @@ async function loadPerson(supabase: any, userId: string) {
     skipNames,
     approvedWishes,
     approvedWishIds,
+    wishesRaw,
     weeklyBudget,
+    kitchenEquipment,
+    kitchenEquipmentNotes,
     trainingSet: new Set<string>((p.training_weekdays ?? []).map((s: string) => s.toLowerCase())),
     shoppingDays: p.shopping_days as string[] | null,
   };
@@ -309,14 +312,38 @@ export const generatePartnerNutritionPlanDraft = createServerFn({ method: "POST"
     const targetBlockFor = (n: string, tg: { training: MacroTarget; rest: MacroTarget }) =>
       `${n} — TRAINING: ${tg.training.kcal} kcal / P ${tg.training.protein_g} / KH ${tg.training.carbs_g} / F ${tg.training.fat_g}; REST: ${tg.rest.kcal} kcal / P ${tg.rest.protein_g} / KH ${tg.rest.carbs_g} / F ${tg.rest.fat_g}`;
 
-    const wishesA = a.approvedWishes ?? [];
-    const wishesB = b.approvedWishes ?? [];
+    // Wünsche per applies_to neu verteilen:
+    // - self  → bleibt bei der Person, die ihn eingereicht hat
+    // - partner → wandert komplett zur anderen Person
+    // - both  → bei beiden Personen
+    const aWishesFinal = [
+      ...a.wishesRaw.filter((w) => w.applies_to !== "partner").map((w) => w.wish),
+      ...b.wishesRaw.filter((w) => w.applies_to === "partner" || w.applies_to === "both").map((w) => w.wish),
+    ];
+    const bWishesFinal = [
+      ...b.wishesRaw.filter((w) => w.applies_to !== "partner").map((w) => w.wish),
+      ...a.wishesRaw.filter((w) => w.applies_to === "partner" || w.applies_to === "both").map((w) => w.wish),
+    ];
+    const wishesA = aWishesFinal;
+    const wishesB = bWishesFinal;
     const wishesBlock =
       wishesA.length || wishesB.length
         ? `\n⭐ COACH-FREIGEGEBENE WUNSCHGERICHTE (PFLICHT — JEDES muss mindestens einmal als Mahlzeit der jeweiligen Person im Plan vorkommen, "name" muss den Wunsch enthalten):
 ${wishesA.length ? `${a.name}: ${wishesA.map((w, i) => `${i + 1}. ${w}`).join("; ")}` : ""}
 ${wishesB.length ? `${b.name}: ${wishesB.map((w, i) => `${i + 1}. ${w}`).join("; ")}` : ""}\n`
         : "";
+
+    const equipmentUnion = Array.from(
+      new Set([...(a.kitchenEquipment ?? []), ...(b.kitchenEquipment ?? [])]),
+    );
+    const equipmentNotesCombined = [a.kitchenEquipmentNotes, b.kitchenEquipmentNotes]
+      .filter((s) => s && s.length > 0)
+      .join(" | ");
+    const equipmentBlock = equipmentUnion.length || equipmentNotesCombined
+      ? `\n🍳 KÜCHENAUSSTATTUNG (HARTE EINSCHRÄNKUNG — beide kochen gemeinsam; nur Rezepte vorschlagen, die mit DIESEN Geräten zubereitbar sind):\n${
+          equipmentUnion.length ? "Verfügbare Geräte: " + equipmentUnion.join(", ") : "(keine Liste vom Coach)"
+        }${equipmentNotesCombined ? "\nCoach-Notiz: " + equipmentNotesCombined : ""}\nWenn z. B. KEIN HERD verfügbar ist, dürfen Rezepte nicht „in der Pfanne anbraten" verlangen — Garmethode an Airfryer/Backofen/Mikrowelle anpassen.\n`
+      : "";
 
     const combinedBudget =
       (a.weeklyBudget ?? 0) + (b.weeklyBudget ?? 0) > 0
