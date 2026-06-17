@@ -667,6 +667,8 @@ function CustomerDetail() {
               emptyHint="Sobald der Kunde sein erstes Gewicht einträgt, erscheint hier sein Verlauf."
             />
             <MeasurementsCard measurements={data.measurements ?? []} />
+            <ProgressPhotosCard userId={userId} readOnly />
+            <PhotoAssessmentCard userId={userId} isCoach />
             <CustomerCheckinsCard userId={userId} />
             <CustomerRecentActivityCard userId={userId} />
           </AccordionContent>
