@@ -276,6 +276,8 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
       p.meal_prep_style === "meal_prep" ? "Meal-Prep-tauglich." :
       p.meal_prep_style === "2_3_week" ? "Hält 2-3 Tage." :
       p.meal_prep_style === "daily" ? "Frisch kochbar." : "";
+    const weeklyBudget: number | null =
+      p.weekly_budget_eur != null ? Number(p.weekly_budget_eur) : null;
     const budgetHint = p.budget_band === "<50" ? "Günstige Zutaten." :
       p.budget_band === "50_75" ? "Mittleres Budget." :
       p.budget_band === ">100" ? "Großzügiges Budget." : "";
