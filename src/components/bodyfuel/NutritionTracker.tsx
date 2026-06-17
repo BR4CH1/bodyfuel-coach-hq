@@ -151,6 +151,8 @@ export function NutritionTracker() {
   const [unit, setUnit] = useState<"g" | "piece">("g");
   const [amountStr, setAmountStr] = useState<string>("100");
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [recentFoods, setRecentFoods] = useState<FoodResult[]>([]);
+  const [loadingRecent, setLoadingRecent] = useState(false);
 
   const getTargetsFn = useServerFn(getNutritionTargets);
   const getDayTypeFn = useServerFn(getDayType);
