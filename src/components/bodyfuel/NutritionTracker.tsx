@@ -800,37 +800,87 @@ export function NutritionTracker() {
                 </div>
                 <div className="mt-3 min-h-0 flex-1 overflow-y-auto">
                   {query.trim() === "" && (
-                    recentFoods.length > 0 ? (
-                      <div>
-                        <div className="px-2 pb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                          Zuletzt getrackt
+                    <>
+                      {favorites.length > 0 && (
+                        <div className="mb-4">
+                          <div className="px-2 pb-2 text-[10px] font-semibold uppercase tracking-wider text-gold">
+                            ★ Favoriten
+                          </div>
+                          <ul className="divide-y divide-border">
+                            {favorites.map((r) => (
+                              <li key={`fav-${r.fav_id}`} className="flex items-center">
+                                <button
+                                  onClick={() => {
+                                    setPicking(r);
+                                    setUnit(r.serving_g ? "piece" : "g");
+                                    setAmountStr(
+                                      r.last_amount_g != null
+                                        ? String(Math.round(r.last_amount_g))
+                                        : r.serving_g ? "1" : "100",
+                                    );
+                                  }}
+                                  className="min-w-0 flex-1 px-2 py-3 text-left hover:bg-secondary"
+                                >
+                                  <div className="truncate text-sm font-medium">{r.name}</div>
+                                  <div className="text-[11px] text-muted-foreground">
+                                    {r.brand ? `${r.brand} · ` : ""}
+                                    {Math.round(r.kcal_per_100g)} kcal · P {r.protein_per_100g.toFixed(1)} · K {r.carbs_per_100g.toFixed(1)} · F {r.fat_per_100g.toFixed(1)} (/100g)
+                                  </div>
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); toggleFavorite(r); }}
+                                  className="shrink-0 p-3 text-gold hover:bg-secondary"
+                                  aria-label="Favorit entfernen"
+                                >
+                                  <Star className="h-4 w-4 fill-current" />
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
                         </div>
-                        <ul className="divide-y divide-border">
-                          {recentFoods.map((r, i) => (
-                            <li key={`recent-${i}`}>
-                              <button
-                                onClick={() => {
-                                  setPicking(r);
-                                  setUnit("g");
-                                  setAmountStr(String(Math.round(r.last_amount_g)));
-                                }}
-                                className="w-full px-2 py-3 text-left hover:bg-secondary"
-                              >
-                                <div className="truncate text-sm font-medium">{r.name}</div>
-                                <div className="text-[11px] text-muted-foreground">
-                                  {r.brand ? `${r.brand} · ` : ""}
-                                  {Math.round(r.kcal_per_100g)} kcal · P {r.protein_per_100g.toFixed(1)} · K {r.carbs_per_100g.toFixed(1)} · F {r.fat_per_100g.toFixed(1)} (/100g)
-                                </div>
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ) : (
-                      <p className="py-6 text-center text-xs text-muted-foreground">
-                        {loadingRecent ? "Lade Verlauf…" : "Tippe los — Vorschläge erscheinen automatisch"}
-                      </p>
-                    )
+                      )}
+                      {recentFoods.length > 0 ? (
+                        <div>
+                          <div className="px-2 pb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                            Zuletzt getrackt
+                          </div>
+                          <ul className="divide-y divide-border">
+                            {recentFoods.map((r, i) => {
+                              const fav = isFavorite(r);
+                              return (
+                              <li key={`recent-${i}`} className="flex items-center">
+                                <button
+                                  onClick={() => {
+                                    setPicking(r);
+                                    setUnit("g");
+                                    setAmountStr(String(Math.round(r.last_amount_g)));
+                                  }}
+                                  className="min-w-0 flex-1 px-2 py-3 text-left hover:bg-secondary"
+                                >
+                                  <div className="truncate text-sm font-medium">{r.name}</div>
+                                  <div className="text-[11px] text-muted-foreground">
+                                    {r.brand ? `${r.brand} · ` : ""}
+                                    {Math.round(r.kcal_per_100g)} kcal · P {r.protein_per_100g.toFixed(1)} · K {r.carbs_per_100g.toFixed(1)} · F {r.fat_per_100g.toFixed(1)} (/100g)
+                                  </div>
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); toggleFavorite(r); }}
+                                  className={`shrink-0 p-3 hover:bg-secondary ${fav ? "text-gold" : "text-muted-foreground"}`}
+                                  aria-label={fav ? "Favorit entfernen" : "Als Favorit speichern"}
+                                >
+                                  <Star className={`h-4 w-4 ${fav ? "fill-current" : ""}`} />
+                                </button>
+                              </li>
+                              );
+                            })}
+                          </ul>
+                        </div>
+                      ) : favorites.length === 0 ? (
+                        <p className="py-6 text-center text-xs text-muted-foreground">
+                          {loadingRecent || loadingFavorites ? "Lade…" : "Tippe los — Vorschläge erscheinen automatisch"}
+                        </p>
+                      ) : null}
+                    </>
                   )}
                   {query.trim() !== "" && results.length === 0 && (
                     <p className="flex items-center justify-center gap-2 py-6 text-center text-xs text-muted-foreground">
@@ -842,15 +892,17 @@ export function NutritionTracker() {
                     </p>
                   )}
                   <ul className="divide-y divide-border">
-                    {results.map((r, i) => (
-                      <li key={i}>
+                    {results.map((r, i) => {
+                      const fav = isFavorite(r);
+                      return (
+                      <li key={i} className="flex items-center">
                         <button
                           onClick={() => {
                             setPicking(r);
                             setUnit(r.serving_g ? "piece" : "g");
                             setAmountStr(r.serving_g ? "1" : "100");
                           }}
-                          className="w-full px-2 py-3 text-left hover:bg-secondary"
+                          className="min-w-0 flex-1 px-2 py-3 text-left hover:bg-secondary"
                         >
                           <div className="truncate text-sm font-medium">{r.name}</div>
                           <div className="text-[11px] text-muted-foreground">
@@ -859,9 +911,18 @@ export function NutritionTracker() {
                             {r.serving_g ? ` · 1 Stück ≈ ${r.serving_g} g` : ""}
                           </div>
                         </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); toggleFavorite(r); }}
+                          className={`shrink-0 p-3 hover:bg-secondary ${fav ? "text-gold" : "text-muted-foreground"}`}
+                          aria-label={fav ? "Favorit entfernen" : "Als Favorit speichern"}
+                        >
+                          <Star className={`h-4 w-4 ${fav ? "fill-current" : ""}`} />
+                        </button>
                       </li>
-                    ))}
+                      );
+                    })}
                   </ul>
+
                 </div>
               </div>
             ) : (() => {
