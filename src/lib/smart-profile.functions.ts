@@ -16,6 +16,7 @@ export type SmartNutritionProfile = {
   shopping_days: string[];
   shopping_lead_days: number;
   budget_band: "<50" | "50_75" | "75_100" | ">100" | null;
+  weekly_budget_eur: number | null;
   auto_publish: boolean;
   completed_at: string | null;
   training_weekdays: string[];
