@@ -255,11 +255,17 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
     const { data: isCoach } = await supabase.rpc("has_role", { _user_id: userId, _role: "coach" });
     if (clientId !== userId && !isCoach) throw new Error("Forbidden");
 
+    // Detect partner meal even if partner_meal_id is missing — look for the
+    // shared-meal prefix we set in partner-nutrition-plan-ai.functions.ts.
+    const nameLooksShared = /Gemeinsam mit\s+(.+?)\s+—/i.exec(meal.name || "");
+    const partnerNameFromTitle = nameLooksShared?.[1]?.trim() || null;
+    const isPartnerMeal = !!meal.partner_meal_id || !!partnerNameFromTitle;
+
     // Cache hit — but if this is a partner meal and the cached recipe was made
     // for one person only (no "für <name>"), fall through and regenerate.
     const cached = Array.isArray(meal.recipe_ingredients) ? (meal.recipe_ingredients as string[]) : [];
     const cachedLooksPartnerAware = cached.some((s) => /\bfür\s+\S/i.test(s));
-    const skipCache = !!meal.partner_meal_id && !cachedLooksPartnerAware;
+    const skipCache = isPartnerMeal && !cachedLooksPartnerAware;
     if (!data.force && !skipCache && cached.length > 0) {
       return {
         ingredients: cached,
@@ -270,13 +276,13 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
 
     // Partner-meal lookup: if this meal is paired with a partner's meal, fetch
     // the partner's macros + display name so the recipe can list per-person quantities.
-    type Partner = { name: string; kcal: number | null; protein_g: number | null; carbs_g: number | null; fat_g: number | null };
+    type Partner = { name: string; kcal: number | null; protein_g: number | null; carbs_g: number | null; fat_g: number | null; description?: string | null };
     let selfPartner: Partner | null = null;
     let otherPartner: Partner | null = null;
     if (meal.partner_meal_id) {
       const { data: pMeal } = await supabase
         .from("nutrition_plan_meals")
-        .select("kcal, protein_g, carbs_g, fat_g, day_id")
+        .select("kcal, protein_g, carbs_g, fat_g, day_id, description")
         .eq("id", meal.partner_meal_id)
         .maybeSingle();
       if (pMeal) {
@@ -298,11 +304,13 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
           selfPartner = {
             name: nameOf(clientId),
             kcal: meal.kcal, protein_g: meal.protein_g, carbs_g: meal.carbs_g, fat_g: meal.fat_g,
+            description: meal.description,
           };
           otherPartner = {
             name: nameOf(otherClientId),
             kcal: (pMeal as any).kcal, protein_g: (pMeal as any).protein_g,
             carbs_g: (pMeal as any).carbs_g, fat_g: (pMeal as any).fat_g,
+            description: (pMeal as any).description ?? null,
           };
         }
       }
@@ -320,30 +328,39 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
 
     const partnerBlock = selfPartner && otherPartner
       ? `
-WICHTIG — Partner-Mahlzeit (zwei Personen kochen gemeinsam):
-- Person A: ${selfPartner.name} — Ziel: ${[selfPartner.kcal && `${selfPartner.kcal} kcal`, selfPartner.protein_g && `${selfPartner.protein_g}g Eiweiß`, selfPartner.carbs_g && `${selfPartner.carbs_g}g KH`, selfPartner.fat_g && `${selfPartner.fat_g}g Fett`].filter(Boolean).join(", ")}
-- Person B: ${otherPartner.name} — Ziel: ${[otherPartner.kcal && `${otherPartner.kcal} kcal`, otherPartner.protein_g && `${otherPartner.protein_g}g Eiweiß`, otherPartner.carbs_g && `${otherPartner.carbs_g}g KH`, otherPartner.fat_g && `${otherPartner.fat_g}g Fett`].filter(Boolean).join(", ")}
+WICHTIG — Das ist eine PARTNER-MAHLZEIT, die zwei Personen GEMEINSAM kochen:
+- Person A: ${selfPartner.name} — Zielwerte: ${[selfPartner.kcal && `${selfPartner.kcal} kcal`, selfPartner.protein_g && `${selfPartner.protein_g}g Eiweiß`, selfPartner.carbs_g && `${selfPartner.carbs_g}g KH`, selfPartner.fat_g && `${selfPartner.fat_g}g Fett`].filter(Boolean).join(", ")}${selfPartner.description ? `\n  Portion laut Plan: ${selfPartner.description}` : ""}
+- Person B: ${otherPartner.name} — Zielwerte: ${[otherPartner.kcal && `${otherPartner.kcal} kcal`, otherPartner.protein_g && `${otherPartner.protein_g}g Eiweiß`, otherPartner.carbs_g && `${otherPartner.carbs_g}g KH`, otherPartner.fat_g && `${otherPartner.fat_g}g Fett`].filter(Boolean).join(", ")}${otherPartner.description ? `\n  Portion laut Plan: ${otherPartner.description}` : ""}
 
-Skaliere jede Zutat passend zu den Makro-Zielen beider Personen und schreibe die Mengen pro Person + Gesamtmenge.
-Format pro Zutat genau so: "<Lebensmittel>: <Menge> für ${selfPartner.name}, <Menge> für ${otherPartner.name} — insgesamt <Summe>"
-Beispiel: "Hackfleisch: 200 g für ${selfPartner.name}, 100 g für ${otherPartner.name} — insgesamt 300 g"
-Schreibe die Zubereitungsschritte für die gemeinsame Zubereitung (eine Pfanne/Topf, am Ende auf zwei Teller portionieren).`
+PFLICHT-FORMAT für JEDE Zutat (genau so, ohne Ausnahme):
+"<Lebensmittel>: <Menge> für ${selfPartner.name}, <Menge> für ${otherPartner.name} — insgesamt <Summe>"
+
+Beispiele:
+- "Rinderhackfleisch: 200 g für ${selfPartner.name}, 100 g für ${otherPartner.name} — insgesamt 300 g"
+- "Reis (ungekocht): 150 g für ${selfPartner.name}, 80 g für ${otherPartner.name} — insgesamt 230 g"
+- Bei Gewürzen / Öl, das geteilt wird: "Rapsöl: 1 EL für ${selfPartner.name}, 0,5 EL für ${otherPartner.name} — insgesamt 1,5 EL"
+
+Skaliere die Mengen pro Person passend zu den jeweiligen Makro-Zielen (Person B hat oft weniger kcal, also kleinere Portionen). Wenn in den Portion-Angaben oben schon Mengen pro Person stehen, übernimm GENAU diese und addiere die Summe.
+
+NIEMALS eine Zutat ohne "für ${selfPartner.name}" und "für ${otherPartner.name}" schreiben. NIEMALS nur die Gesamtmenge ohne Aufteilung schreiben.
+
+Zubereitungsschritte: gemeinsame Zubereitung in einem Topf/Pfanne, am Ende auf zwei Teller portionieren (in den passenden Mengen).`
       : "";
 
     const onePersonBlock = !partnerBlock
       ? `Erstelle das Rezept für genau EINE Person.
-- Zutaten mit konkreten Mengen in Gramm/ml/Stück, so dass die Zielwerte ungefähr passen.`
+- Zutaten mit konkreten Mengen in Gramm/ml/Stück, so dass die Zielwerte ungefähr passen.
+- Wenn in der Beschreibung schon Lebensmittel + Mengen stehen, nutze GENAU diese.`
       : "";
 
     const prompt = `Du bist Ernährungsberater. Erstelle ein einfaches, alltagstaugliches Rezept für die folgende Mahlzeit.
 
 Mahlzeit: ${meal.name}${meal.description ? ` — ${meal.description}` : ""}
-${macros ? `Zielwerte (Person A, möglichst treffen): ${macros}` : ""}
+${!partnerBlock && macros ? `Zielwerte: ${macros}` : ""}
 ${partnerBlock}
 ${onePersonBlock}
 
 Anforderungen:
-- Wenn in der Beschreibung schon Lebensmittel + Mengen stehen, nutze GENAU diese (und skaliere sie ggf. anteilig).
 - 3 bis 6 kurze Zubereitungsschritte, jeder Schritt 1 Satz.
 - Auf Deutsch.
 
