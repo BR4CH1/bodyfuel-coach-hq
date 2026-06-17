@@ -3,8 +3,10 @@ import { useEffect, useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
 import { Flame } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
+import { seedMyNutritionTargets } from "@/lib/free-targets.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,6 +30,7 @@ const schema = z.object({
 function TrackerSignup() {
   const { supabaseUser, isFreeUser } = useSession();
   const navigate = useNavigate();
+  const seedTargets = useServerFn(seedMyNutritionTargets);
   const [busy, setBusy] = useState(false);
   const [showOptional, setShowOptional] = useState(false);
 
@@ -81,6 +84,8 @@ function TrackerSignup() {
           event: "signup",
           details: { has_optional: showOptional },
         });
+        // Trainings- + Restday-Targets aus Profil + Gewicht ableiten (best effort)
+        try { await seedTargets({}); } catch (e) { console.error(e); }
       }
       toast.success("Willkommen bei BodyFuel!");
       navigate({ to: "/tracker/app" });
