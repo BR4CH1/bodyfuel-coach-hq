@@ -23,16 +23,31 @@ export const listMealWishes = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const target = data.userId ?? userId;
+
+    // Auch Wünsche des verlinkten Partners einbeziehen.
+    const { data: link } = await supabase
+      .from("nutrition_partners")
+      .select("user_a, user_b")
+      .or(`user_a.eq.${target},user_b.eq.${target}`)
+      .maybeSingle();
+    const partnerId = link
+      ? link.user_a === target
+        ? link.user_b
+        : link.user_a
+      : null;
+    const userIds = partnerId ? [target, partnerId] : [target];
+
     let q = supabase
       .from("meal_wishes")
       .select("id, user_id, wish, meal_slot, for_person, status, coach_note, reviewed_at, consumed_at, created_at")
-      .eq("user_id", target)
+      .in("user_id", userIds)
       .order("created_at", { ascending: false });
     if (!data.includeHistory) q = q.is("consumed_at", null);
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
     return (rows as MealWish[]) ?? [];
   });
+
 
 export const addMealWish = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
