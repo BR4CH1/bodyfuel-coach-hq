@@ -795,7 +795,9 @@ export type Database = {
           coach_note: string | null
           consumed_at: string | null
           created_at: string
+          for_person: string | null
           id: string
+          meal_slot: string
           reviewed_at: string | null
           reviewed_by: string | null
           status: string
@@ -807,7 +809,9 @@ export type Database = {
           coach_note?: string | null
           consumed_at?: string | null
           created_at?: string
+          for_person?: string | null
           id?: string
+          meal_slot?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
@@ -819,7 +823,9 @@ export type Database = {
           coach_note?: string | null
           consumed_at?: string | null
           created_at?: string
+          for_person?: string | null
           id?: string
+          meal_slot?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
@@ -834,6 +840,8 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          partner_a_name: string | null
+          partner_b_name: string | null
           user_a: string
           user_b: string
         }
@@ -841,6 +849,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          partner_a_name?: string | null
+          partner_b_name?: string | null
           user_a: string
           user_b: string
         }
@@ -848,6 +858,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          partner_a_name?: string | null
+          partner_b_name?: string | null
           user_a?: string
           user_b?: string
         }
@@ -887,6 +899,7 @@ export type Database = {
       }
       nutrition_plan_meals: {
         Row: {
+          assigned_to: string | null
           carbs_g: number | null
           created_at: string
           day_id: string
@@ -904,6 +917,7 @@ export type Database = {
           sort_order: number
         }
         Insert: {
+          assigned_to?: string | null
           carbs_g?: number | null
           created_at?: string
           day_id: string
@@ -921,6 +935,7 @@ export type Database = {
           sort_order?: number
         }
         Update: {
+          assigned_to?: string | null
           carbs_g?: number | null
           created_at?: string
           day_id?: string
@@ -972,6 +987,7 @@ export type Database = {
           last_auto_generated_at: string | null
           partner_plan_id: string | null
           plan_type: string
+          pre_plan_note: string | null
           protein_g: number | null
           scheduled_activation_date: string | null
           scheduled_end_date: string | null
@@ -999,6 +1015,7 @@ export type Database = {
           last_auto_generated_at?: string | null
           partner_plan_id?: string | null
           plan_type?: string
+          pre_plan_note?: string | null
           protein_g?: number | null
           scheduled_activation_date?: string | null
           scheduled_end_date?: string | null
@@ -1026,6 +1043,7 @@ export type Database = {
           last_auto_generated_at?: string | null
           partner_plan_id?: string | null
           plan_type?: string
+          pre_plan_note?: string | null
           protein_g?: number | null
           scheduled_activation_date?: string | null
           scheduled_end_date?: string | null
