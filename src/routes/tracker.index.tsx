@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Flame, Apple, Droplet, Scale, Trophy, Activity, ArrowRight, Check } from "lucide-react";
 import { Logo } from "@/components/bodyfuel/Logo";
 
-export const Route = createFileRoute("/tracker")({
+export const Route = createFileRoute("/tracker/")({
   head: () => ({
     meta: [
       { title: "BodyFuel Tracker — Kostenlos täglich tracken" },

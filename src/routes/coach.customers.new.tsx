@@ -25,9 +25,9 @@ export const Route = createFileRoute("/coach/customers/new")({
   ),
 });
 
-const DEFAULT_PRICE = { starter: 79, coaching: 129, premium: 199, trial: 0 } as const;
+const DEFAULT_PRICE = { starter: 79, coaching: 129, premium: 199, trial: 0, free: 0 } as const;
 
-type PackageOption = "starter" | "coaching" | "premium" | "trial";
+type PackageOption = "starter" | "coaching" | "premium" | "trial" | "free";
 
 function NewCustomerForm() {
   const fn = useServerFn(createCustomer);
@@ -47,6 +47,7 @@ function NewCustomerForm() {
     bulls: false,
   });
   const isTrial = form.package === "trial";
+  const isFree = form.package === "free";
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,7 +57,7 @@ function NewCustomerForm() {
     setBusy(true);
     try {
       await fn({ data: { ...form, origin: window.location.origin } });
-      toast.success(isTrial ? "Trial-Kunde angelegt — Einladung verschickt." : "Kunde angelegt — Einladung verschickt.");
+      toast.success(isFree ? "Free-User angelegt — Einladung verschickt." : isTrial ? "Trial-Kunde angelegt — Einladung verschickt." : "Kunde angelegt — Einladung verschickt.");
       navigate({ to: "/coach/customers" });
     } catch (err) {
       toast.error((err as Error).message);
@@ -130,6 +131,7 @@ function NewCustomerForm() {
             >
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
+                <SelectItem value="free">Free (Tracker)</SelectItem>
                 <SelectItem value="trial">Trial (7-Tage-Test)</SelectItem>
                 <SelectItem value="starter">Starter</SelectItem>
                 <SelectItem value="coaching">Coaching</SelectItem>
@@ -137,7 +139,7 @@ function NewCustomerForm() {
               </SelectContent>
             </Select>
           </div>
-          {!isTrial && (
+          {!isTrial && !isFree && (
             <div className="space-y-2">
               <Label>Individueller Preis (€)</Label>
               <Input
@@ -151,7 +153,13 @@ function NewCustomerForm() {
           )}
         </div>
 
-        {isTrial ? (
+        {isFree && (
+          <p className="rounded-xl border border-border bg-secondary/30 p-3 text-xs text-muted-foreground">
+            Free-User erhalten Zugriff auf den Tracker (Ernährung, Wasser, Gewicht, Aktivität, Punkte & Level). Kein Paket, keine Rechnung.
+          </p>
+        )}
+
+        {isFree ? null : isTrial ? (
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Trial-Dauer (Tage)</Label>

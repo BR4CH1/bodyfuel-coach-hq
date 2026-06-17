@@ -207,7 +207,7 @@ export const createCustomer = createServerFn({ method: "POST" })
       last_name: string;
       email: string;
       phone?: string;
-      package: PackageKey | "trial";
+      package: PackageKey | "trial" | "free";
       price_eur: number;
       start_date: string;
       duration_days: number;
@@ -225,6 +225,7 @@ export const createCustomer = createServerFn({ method: "POST" })
     }
 
     const isTrial = data.package === "trial";
+    const isFree = data.package === "free";
     const trialDays = Math.max(1, Math.min(365, Number(data.trial_days ?? 7)));
 
     // Immer die veröffentlichte URL nutzen, nie die Preview-Origin – sonst landen
@@ -242,7 +243,7 @@ export const createCustomer = createServerFn({ method: "POST" })
       name: displayName,
       email,
       phone: data.phone || null,
-      desired_package: isTrial ? null : data.package,
+      desired_package: isTrial || isFree ? null : data.package,
       status: "converted",
       message: data.notes || null,
     });
@@ -256,15 +257,20 @@ export const createCustomer = createServerFn({ method: "POST" })
           last_name: lastName,
           full_name: displayName,
           name: displayName,
-          role: "client",
+          ...(isFree ? { tier: "free" } : { role: "client" }),
         },
-        redirectTo: `${origin}/welcome`,
+        redirectTo: isFree ? `${origin}/tracker/app` : `${origin}/welcome`,
       });
 
     if (invErr) throw new Error(invErr.message);
     const newUserId = invited.user.id;
 
-    if (isTrial) {
+    if (isFree) {
+      await supabaseAdmin
+        .from("profiles")
+        .update({ display_name: displayName, phone: data.phone || null })
+        .eq("id", newUserId);
+    } else if (isTrial) {
       const today = new Date().toISOString().slice(0, 10);
       const endDate = new Date();
       endDate.setUTCDate(endDate.getUTCDate() + trialDays);
