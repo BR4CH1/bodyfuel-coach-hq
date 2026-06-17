@@ -402,7 +402,18 @@ Genau ${planDays} Tage. Pro Person je 4 Slots (breakfast/lunch/dinner/snack). Be
       throw new Error("KI-Antwort konnte nicht gelesen werden.");
     }
     const days = (parsed.days ?? []).slice(0, planDays);
-    if (!days.length) throw new Error("Keine Tage generiert.");
+    if (!days.length) {
+      console.error("[partner-plan] AI returned no days. raw=", raw);
+      throw new Error("Keine Tage generiert.");
+    }
+    const countMeals = (g: any) =>
+      ((g?.person_a ?? g?.personA ?? g?.a ?? g?.meals_a ?? g?.user_a ?? g?.meals ?? []).length) +
+      ((g?.person_b ?? g?.personB ?? g?.b ?? g?.meals_b ?? g?.user_b ?? []).length);
+    const totalMealsReturned = days.reduce((s: number, g: any) => s + countMeals(g), 0);
+    if (totalMealsReturned === 0) {
+      console.error("[partner-plan] AI returned 0 meals across all days. raw=", raw);
+      throw new Error("KI hat keine Mahlzeiten geliefert. Bitte erneut versuchen.");
+    }
 
     const forbidden = mergedAllergies; // never tolerate, for anybody
     const filterMeals = (ms: PersonMeal[]) =>
@@ -495,8 +506,13 @@ Genau ${planDays} Tage. Pro Person je 4 Slots (breakfast/lunch/dinner/snack). Be
       return { planId: planRow.id, dayIds, mealsByDay };
     }
 
-    const A = await insertPlanFor(a, data.user_a, (i) => schedule[i].type_a, (g) => g.person_a ?? []);
-    const B = await insertPlanFor(b, data.user_b, (i) => schedule[i].type_b, (g) => g.person_b ?? []);
+    const personA = (g: any): PersonMeal[] =>
+      (g?.person_a ?? g?.personA ?? g?.a ?? g?.meals_a ?? g?.user_a ?? g?.meals ?? []) as PersonMeal[];
+    const personB = (g: any): PersonMeal[] =>
+      (g?.person_b ?? g?.personB ?? g?.b ?? g?.meals_b ?? g?.user_b ?? []) as PersonMeal[];
+
+    const A = await insertPlanFor(a, data.user_a, (i) => schedule[i].type_a, (g) => personA(g));
+    const B = await insertPlanFor(b, data.user_b, (i) => schedule[i].type_b, (g) => personB(g));
 
     // Insert meals; capture IDs to link shared pairs.
     const insertMealsFor = async (
@@ -513,7 +529,7 @@ Genau ${planDays} Tage. Pro Person je 4 Slots (breakfast/lunch/dinner/snack). Be
           const m = meals[idx];
           const isShared = sharedSlots[m.slot] === true;
           const prefix = isShared ? `🍽️ Gemeinsam mit ${otherName} — ${slotLabel(m.slot)}` : slotLabel(m.slot);
-          const { data: mealRow } = await supabase
+          const { data: mealRow, error: mealErr } = await supabase
             .from("nutrition_plan_meals")
             .insert({
               day_id: dayId,
@@ -528,7 +544,11 @@ Genau ${planDays} Tage. Pro Person je 4 Slots (breakfast/lunch/dinner/snack). Be
             })
             .select("id")
             .single();
-          rows.push(mealRow?.id ?? "");
+          if (mealErr || !mealRow?.id) {
+            console.error("[partner-plan] meal insert failed", { who, dayId, mealErr, meal: m });
+            throw new Error(`Mahlzeit konnte nicht gespeichert werden: ${mealErr?.message ?? "unbekannt"}`);
+          }
+          rows.push(mealRow.id);
         }
         ids.push(rows);
       }
