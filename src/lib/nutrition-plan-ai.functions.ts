@@ -558,6 +558,16 @@ WICHTIG zu name/description:
       console.warn("Auto shopping list failed:", e);
     }
 
+    // Mark coach-approved wishes as consumed so the form resets for the next plan.
+    if (approvedWishIds.length) {
+      await supabase
+        .from("meal_wishes")
+        .update({ consumed_at: new Date().toISOString() })
+        .in("id", approvedWishIds);
+    }
+
+
+
 
     return {
       ok: true,
