@@ -66,3 +66,28 @@ export const getCustomerSmartProfile = createServerFn({ method: "GET" })
       .maybeSingle();
     return (row as SmartNutritionProfile | null) ?? null;
   });
+
+// Coach sets the weekly grocery budget (EUR) for any client.
+export const setCustomerWeeklyBudget = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { user_id: string; weekly_budget_eur: number | null }) => d)
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: isCoach } = await supabase.rpc("has_role", {
+      _user_id: userId,
+      _role: "coach",
+    });
+    if (!isCoach) throw new Error("Forbidden");
+    const value =
+      data.weekly_budget_eur == null || Number.isNaN(Number(data.weekly_budget_eur))
+        ? null
+        : Math.max(0, Math.round(Number(data.weekly_budget_eur)));
+    const { error } = await supabase
+      .from("smart_nutrition_profile")
+      .upsert(
+        { user_id: data.user_id, weekly_budget_eur: value },
+        { onConflict: "user_id" },
+      );
+    if (error) throw new Error(error.message);
+    return { ok: true, weekly_budget_eur: value };
+  });
