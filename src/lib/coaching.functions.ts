@@ -30,11 +30,23 @@ export const submitLead = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    if (!data.name || !data.email) throw new Error("Name und E-Mail erforderlich");
+    const name = (data.name ?? "").trim();
+    const email = (data.email ?? "").trim().toLowerCase();
+    if (!name || name.length < 2) throw new Error("Bitte einen gültigen Namen angeben.");
+    if (name.length > 120) throw new Error("Name zu lang.");
+    // RFC-pragmatic email format check + length cap.
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    if (!EMAIL_RE.test(email) || email.length > 200) {
+      throw new Error("Ungültige E-Mail-Adresse.");
+    }
+    const phone = data.phone?.trim();
+    if (phone && !/^[+0-9 ()\/.-]{4,40}$/.test(phone)) {
+      throw new Error("Ungültige Telefonnummer.");
+    }
     const { error } = await supabaseAdmin.from("leads").insert({
-      name: data.name.trim().slice(0, 120),
-      email: data.email.trim().slice(0, 200),
-      phone: data.phone?.slice(0, 60) || null,
+      name: name.slice(0, 120),
+      email: email.slice(0, 200),
+      phone: phone?.slice(0, 60) || null,
       goal: data.goal?.slice(0, 200) || null,
       current_weight: data.current_weight?.slice(0, 60) || null,
       desired_package: data.desired_package || null,

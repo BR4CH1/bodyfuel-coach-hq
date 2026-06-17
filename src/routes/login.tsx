@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Flame, Lock, Mail, Shield } from "lucide-react";
+import { Flame, Lock, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { CLIENTS, useSession } from "@/lib/bodyfuel/session";
 import { supabase } from "@/integrations/supabase/client";
@@ -217,24 +217,7 @@ function LoginPage() {
                     <span className="text-[10px] uppercase tracking-wider text-gold">Login →</span>
                   </button>
                 ))}
-                <button
-                  onClick={() => {
-                    loginAs("andreas", true);
-                    navigate({ to: "/coach" });
-                  }}
-                  className="flex w-full items-center gap-3 rounded-xl border border-gold/40 bg-accent/40 p-3 text-left transition hover:bg-accent"
-                >
-                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-background font-display text-sm font-bold text-gold">
-                    <Shield className="h-4 w-4" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-semibold">Coach-Modus</div>
-                    <div className="truncate text-xs text-muted-foreground">
-                      Übersicht aller Kunden öffnen
-                    </div>
-                  </div>
-                  <span className="text-[10px] uppercase tracking-wider text-gold">Coach →</span>
-                </button>
+                {/* Demo-Coach-Button entfernt: Coach-Modus erfordert echten Login mit Coach-Rolle. */}
                 <button
                   onClick={() => {
                     localStorage.removeItem(DEMO_FLAG_KEY);

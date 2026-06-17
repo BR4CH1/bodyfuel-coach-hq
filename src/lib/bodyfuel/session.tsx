@@ -28,7 +28,6 @@ const KEY = "bodyfuel.session";
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [demoUserId, setDemoUserId] = useState<string | null>(null);
-  const [demoCoach, setDemoCoach] = useState(false);
   const [supabaseUser, setSupabaseUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [role, setRole] = useState<"coach" | "client" | null>(null);
@@ -36,14 +35,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [, setTick] = useState(0);
 
-  // hydrate demo
+  // hydrate demo client id (UI helper only — never coach role)
   useEffect(() => {
     try {
       const raw = localStorage.getItem(KEY);
       if (raw) {
         const s = JSON.parse(raw);
-        setDemoUserId(s.userId);
-        setDemoCoach(!!s.isCoach);
+        if (s && typeof s.userId === "string") setDemoUserId(s.userId);
       }
     } catch {}
   }, []);
@@ -89,22 +87,20 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     if (r.data) {
       const isCoach = r.data.some((x) => x.role === "coach");
       setRole(isCoach ? "coach" : "client");
-      if (isCoach) {
-        setDemoCoach(true);
-      } else {
-        setDemoCoach(false);
-        persist(p.data?.demo_client_key ?? uid, false);
+      if (!isCoach) {
+        persist(p.data?.demo_client_key ?? uid);
       }
     }
   };
 
-  const persist = (id: string | null, coach: boolean) => {
-    if (id) localStorage.setItem(KEY, JSON.stringify({ userId: id, isCoach: coach }));
+  const persist = (id: string | null) => {
+    if (id) localStorage.setItem(KEY, JSON.stringify({ userId: id }));
     else localStorage.removeItem(KEY);
   };
 
   const effectiveUser = demoUserId ? findClient(demoUserId) ?? null : null;
-  const effectiveCoach = demoCoach || role === "coach";
+  // Coach status is derived ONLY from the server-validated role — never from localStorage.
+  const effectiveCoach = role === "coach";
 
   const value: SessionCtx = {
     user: effectiveUser,
@@ -114,15 +110,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     loading,
     groups,
     hasGroup: (gname: string) => groups.includes(gname),
-    loginAs: (id, coach = false) => {
+    loginAs: (id, _coach = false) => {
+      // Demo client switcher only — coach mode requires a real authenticated coach role.
       setDemoUserId(id);
-      setDemoCoach(coach);
-      persist(id, coach);
+      persist(id);
     },
     logout: async () => {
       setDemoUserId(null);
-      setDemoCoach(false);
-      persist(null, false);
+      persist(null);
       await supabase.auth.signOut();
     },
     updateTodayCheck: (tasks) => {
