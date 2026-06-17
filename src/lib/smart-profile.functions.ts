@@ -68,6 +68,7 @@ export const getCustomerSmartProfile = createServerFn({ method: "GET" })
   });
 
 // Coach sets the weekly grocery budget (EUR) for any client.
+// If the client has an active nutrition partner, the budget is mirrored to both.
 export const setCustomerWeeklyBudget = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { user_id: string; weekly_budget_eur: number | null }) => d)
@@ -82,12 +83,26 @@ export const setCustomerWeeklyBudget = createServerFn({ method: "POST" })
       data.weekly_budget_eur == null || Number.isNaN(Number(data.weekly_budget_eur))
         ? null
         : Math.max(0, Math.round(Number(data.weekly_budget_eur)));
+
+    // Mirror to nutrition partner if linked
+    const targetIds = new Set<string>([data.user_id]);
+    const { data: link } = await supabase
+      .from("nutrition_partners")
+      .select("user_a, user_b")
+      .or(`user_a.eq.${data.user_id},user_b.eq.${data.user_id}`)
+      .maybeSingle();
+    if (link) {
+      targetIds.add(link.user_a as string);
+      targetIds.add(link.user_b as string);
+    }
+
+    const rows = Array.from(targetIds).map((uid) => ({
+      user_id: uid,
+      weekly_budget_eur: value,
+    }));
     const { error } = await supabase
       .from("smart_nutrition_profile")
-      .upsert(
-        { user_id: data.user_id, weekly_budget_eur: value },
-        { onConflict: "user_id" },
-      );
+      .upsert(rows, { onConflict: "user_id" });
     if (error) throw new Error(error.message);
-    return { ok: true, weekly_budget_eur: value };
+    return { ok: true, weekly_budget_eur: value, applied_to: Array.from(targetIds) };
   });
