@@ -75,6 +75,36 @@ export const addMealWish = createServerFn({ method: "POST" })
     return row as MealWish;
   });
 
+export const updateMealWishAssignment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: {
+    id: string;
+    meal_slot?: MealSlot;
+    for_person?: string | null;
+  }) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        meal_slot: z.enum(["breakfast", "lunch", "dinner", "snack", "any"]).optional(),
+        for_person: z.string().trim().max(60).nullable().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const patch: Record<string, unknown> = {};
+    if (data.meal_slot !== undefined) patch.meal_slot = data.meal_slot;
+    if (data.for_person !== undefined) {
+      patch.for_person = data.for_person && data.for_person.length > 0 ? data.for_person : null;
+    }
+    if (Object.keys(patch).length === 0) return { ok: true };
+    const { error } = await context.supabase
+      .from("meal_wishes")
+      .update(patch)
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 
 export const deleteMealWish = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
