@@ -313,6 +313,8 @@ function WeeklyCheckIn() {
           </div>
         </form>
       )}
+
+      {uid && <ProgressPhotosCard userId={uid} />}
     </div>
   );
 }
