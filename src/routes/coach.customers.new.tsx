@@ -47,6 +47,7 @@ function NewCustomerForm() {
     bulls: false,
   });
   const isTrial = form.package === "trial";
+  const isFree = form.package === "free";
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
