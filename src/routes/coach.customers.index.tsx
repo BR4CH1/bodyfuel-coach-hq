@@ -18,7 +18,7 @@ export const Route = createFileRoute("/coach/customers/")({
   ),
 });
 
-type Filter = "all" | "due" | "overdue" | "bulls" | "trial" | "trial_expired";
+type Filter = "all" | "due" | "overdue" | "bulls" | "trial" | "trial_expired" | "free";
 
 function daysLeft(end: string | null): number | null {
   if (!end) return null;
