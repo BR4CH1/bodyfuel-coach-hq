@@ -62,7 +62,7 @@ export function MealBuilderDialog({
     const t = setTimeout(async () => {
       setSearching(true);
       try {
-        const rs = await searchFn({ data: { q: term } });
+        const rs = await searchFn({ data: { query: term } });
         setResults(rs);
       } catch (e) {
         toast.error((e as Error).message);
