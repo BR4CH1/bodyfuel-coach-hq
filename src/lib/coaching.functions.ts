@@ -265,7 +265,12 @@ export const createCustomer = createServerFn({ method: "POST" })
     if (invErr) throw new Error(invErr.message);
     const newUserId = invited.user.id;
 
-    if (isTrial) {
+    if (isFree) {
+      await supabaseAdmin
+        .from("profiles")
+        .update({ display_name: displayName, phone: data.phone || null })
+        .eq("id", newUserId);
+    } else if (isTrial) {
       const today = new Date().toISOString().slice(0, 10);
       const endDate = new Date();
       endDate.setUTCDate(endDate.getUTCDate() + trialDays);
