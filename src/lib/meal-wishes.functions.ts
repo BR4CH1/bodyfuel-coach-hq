@@ -91,7 +91,7 @@ export const updateMealWishAssignment = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    const patch: Record<string, unknown> = {};
+    const patch: { meal_slot?: MealSlot; for_person?: string | null } = {};
     if (data.meal_slot !== undefined) patch.meal_slot = data.meal_slot;
     if (data.for_person !== undefined) {
       patch.for_person = data.for_person && data.for_person.length > 0 ? data.for_person : null;
