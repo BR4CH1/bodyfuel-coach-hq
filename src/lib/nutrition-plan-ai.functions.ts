@@ -107,7 +107,14 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
         .eq("user_id", target)
         .eq("kind", "swapped")
         .limit(30),
+      supabase
+        .from("meal_wishes")
+        .select("id, wish")
+        .eq("user_id", target)
+        .eq("status", "approved")
+        .is("consumed_at", null),
     ]);
+
 
 
 
