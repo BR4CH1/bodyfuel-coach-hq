@@ -159,7 +159,7 @@ function NewCustomerForm() {
           </p>
         )}
 
-        {isTrial ? (
+        {isFree ? null : isTrial ? (
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Trial-Dauer (Tage)</Label>
