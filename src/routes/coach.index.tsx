@@ -13,7 +13,9 @@ import {
   Utensils,
   Dumbbell,
   Trophy,
+  CalendarClock,
 } from "lucide-react";
+
 
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { CoachTrialOverview } from "@/components/bodyfuel/CoachTrialOverview";
