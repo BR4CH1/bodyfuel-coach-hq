@@ -89,16 +89,11 @@ export function PlanManagementCard({ userId }: { userId: string }) {
     queryFn: () => smartProfileFn({ data: { user_id: userId } }),
   });
   const [budgetInput, setBudgetInput] = useState<string>("");
-  const initialBudget = smartProfile.data?.weekly_budget_eur;
-  // Sync local input when the loaded value changes (only when input is empty / matches prev).
-  if (
-    initialBudget != null &&
-    budgetInput === "" &&
-    smartProfile.isSuccess
-  ) {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    setBudgetInput(String(initialBudget));
-  }
+  useEffect(() => {
+    const v = smartProfile.data?.weekly_budget_eur;
+    if (v != null) setBudgetInput(String(v));
+    else setBudgetInput("");
+  }, [smartProfile.data?.weekly_budget_eur]);
 
   const saveBudget = useMutation({
     mutationFn: (val: number | null) =>
