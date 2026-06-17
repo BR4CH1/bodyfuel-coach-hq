@@ -60,10 +60,17 @@ export function PlanManagementCard({ userId }: { userId: string }) {
   const delFn = useServerFn(deletePlanDraft);
   const schedFn = useServerFn(updatePlanScheduling);
   const autoFn = useServerFn(setAutoPublish);
+  const partnerLinkFn = useServerFn(getPartnerLink);
+  const partnerGenFn = useServerFn(generatePartnerNutritionPlanDraft);
 
   const { data, isLoading } = useQuery({
     queryKey: ["plan-overview", userId],
     queryFn: () => getFn({ data: { user_id: userId } }),
+  });
+
+  const partnerLink = useQuery({
+    queryKey: ["partner-link", userId],
+    queryFn: () => partnerLinkFn({ data: { user_id: userId } }),
   });
 
   const invalidate = () => {
