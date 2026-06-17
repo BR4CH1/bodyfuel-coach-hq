@@ -548,5 +548,29 @@ Genau ${planDays} Tage. Pro Person je 4 Slots (breakfast/lunch/dinner/snack). Be
       shoppingListWarning = e?.message ?? "Einkaufsliste konnte nicht erstellt werden.";
     }
 
+    // Mark each user's approved wishes as consumed only if the AI actually used them.
+    const norm = (s: string) => s.toLowerCase().replace(/[^a-zäöüß0-9 ]+/g, " ").trim();
+    const consumeUsedWishes = async (person: typeof a, bundle: typeof A) => {
+      if (!person.approvedWishIds?.length) return;
+      const haystack = bundle.mealsByDay
+        .flat()
+        .map((m) => `${m.name} ${m.description ?? ""}`)
+        .join(" | ")
+        .toLowerCase();
+      const used: string[] = [];
+      person.approvedWishes.forEach((w, idx) => {
+        const key = norm(w);
+        if (key && haystack.includes(key)) used.push(person.approvedWishIds[idx]);
+      });
+      if (used.length) {
+        await supabase
+          .from("meal_wishes")
+          .update({ consumed_at: new Date().toISOString() })
+          .in("id", used);
+      }
+    };
+    await consumeUsedWishes(a, A);
+    await consumeUsedWishes(b, B);
+
     return { ok: true, plan_a: A.planId, plan_b: B.planId, days: planDays, shopping_list_warning: shoppingListWarning };
   });
