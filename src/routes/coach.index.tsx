@@ -95,7 +95,7 @@ function CoachDashboard() {
 
       let clientRows: Client[] = [];
       if (ids.length > 0) {
-        const [profiles, checkins, measurements, foods, sets] = await Promise.all([
+        const [profiles, checkins, measurements, foods, sets, plans] = await Promise.all([
           supabase.from("profiles").select("id, display_name").in("id", ids),
           supabase
             .from("weekly_checkins")
@@ -119,6 +119,11 @@ function CoachDashboard() {
             .in("client_id", ids)
             .order("performed_at", { ascending: false })
             .limit(200),
+          supabase
+            .from("nutrition_plans")
+            .select("client_id, plan_type, scheduled_end_date, status")
+            .in("client_id", ids)
+            .eq("status", "active"),
         ]);
 
         const lastCheckin = new Map<string, string>();
@@ -139,6 +144,16 @@ function CoachDashboard() {
         (sets.data ?? []).forEach((s) => {
           if (!lastTraining.has(s.client_id)) lastTraining.set(s.client_id, s.performed_at);
         });
+        const nutritionEnd = new Map<string, string>();
+        const trainingEnd = new Map<string, string>();
+        (plans.data ?? []).forEach((p: any) => {
+          if (!p.scheduled_end_date) return;
+          const map = p.plan_type === "training" ? trainingEnd : nutritionEnd;
+          const existing = map.get(p.client_id);
+          if (!existing || p.scheduled_end_date > existing) {
+            map.set(p.client_id, p.scheduled_end_date);
+          }
+        });
 
         clientRows = (profiles.data ?? []).map((p) => ({
           id: p.id,
@@ -149,8 +164,11 @@ function CoachDashboard() {
           last_nutrition_at: lastFood.get(p.id)?.at ?? null,
           last_nutrition_name: lastFood.get(p.id)?.name ?? null,
           last_training_at: lastTraining.get(p.id) ?? null,
+          nutrition_plan_end: nutritionEnd.get(p.id) ?? null,
+          training_plan_end: trainingEnd.get(p.id) ?? null,
         }));
       }
+
 
       setClients(clientRows);
 
