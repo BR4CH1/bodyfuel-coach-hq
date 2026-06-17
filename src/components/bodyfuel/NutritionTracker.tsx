@@ -756,6 +756,28 @@ export function NutritionTracker() {
         </div>
       </div>
 
+      {/* Eigene Mahlzeit erstellen */}
+      <div className="rounded-2xl border border-gold/40 bg-gradient-to-br from-accent/30 to-card p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-sm font-bold">Eigene Mahlzeit erstellen</div>
+            <div className="text-[11px] text-muted-foreground">
+              Stell dir aus mehreren Lebensmitteln eine eigene Mahlzeit zusammen und tracke sie später mit einem Klick.
+            </div>
+          </div>
+          <Button
+            size="sm"
+            onClick={() => setBuilderOpen(true)}
+            className="shrink-0 bg-gradient-gold text-primary-foreground"
+          >
+            <ChefHat className="h-4 w-4" /> Erstellen
+          </Button>
+        </div>
+      </div>
+
+      {/* Deine Mahlzeiten */}
+      <CustomMealsCard userId={userId} />
+
       {/* Meals */}
       {MEALS.map((m) => {
         const list = entries.filter((e) => e.meal === m.key);
