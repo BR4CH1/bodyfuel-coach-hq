@@ -22,7 +22,7 @@ function calcPoints(state: TaskState): number {
   return TASKS.reduce((s, t) => s + (state[t.key] ? t.points : 0), 0);
 }
 
-export function DailyChecklist({ userId }: { userId: string }) {
+export function DailyChecklist({ userId, hideCheckin = false }: { userId: string; hideCheckin?: boolean }) {
   const date = today();
   const [tasks, setTasks] = useState<TaskState>({});
   const [rowId, setRowId] = useState<string | null>(null);
@@ -193,7 +193,7 @@ export function DailyChecklist({ userId }: { userId: string }) {
             })}
       </ul>
 
-      {!loading && (
+      {!loading && !hideCheckin && (
         <Link
           to="/check-in"
           className={`mt-3 flex items-center justify-between gap-3 rounded-xl border px-3 py-3 transition ${
