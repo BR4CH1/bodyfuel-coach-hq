@@ -162,6 +162,18 @@ export function MealWishesCard({ userId, mode }: Props) {
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
+                  <div className="mb-1 flex flex-wrap items-center gap-1">
+                    {w.meal_slot && w.meal_slot !== "any" && (
+                      <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gold">
+                        {SLOT_LABEL[w.meal_slot as keyof typeof SLOT_LABEL]}
+                      </span>
+                    )}
+                    {w.for_person && (
+                      <span className="rounded-full bg-accent/40 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                        Für: {w.for_person}
+                      </span>
+                    )}
+                  </div>
                   <div className="text-sm font-semibold">{w.wish}</div>
                   <div
                     className={`mt-1 flex items-center gap-1 text-[11px] ${
