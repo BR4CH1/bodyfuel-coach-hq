@@ -144,10 +144,10 @@ export const trackCustomMeal = createServerFn({ method: "POST" })
       meal: slot,
       name: m.name,
       serving_g: 100,
-      kcal: Math.round((m.kcal ?? 0) * scale) || null,
-      protein_g: m.protein_g ? +(m.protein_g * scale).toFixed(1) : null,
-      carbs_g: m.carbs_g ? +(m.carbs_g * scale).toFixed(1) : null,
-      fat_g: m.fat_g ? +(m.fat_g * scale).toFixed(1) : null,
+      kcal: Math.round((m.kcal ?? 0) * scale) || undefined,
+      protein_g: m.protein_g ? +(m.protein_g * scale).toFixed(1) : undefined,
+      carbs_g: m.carbs_g ? +(m.carbs_g * scale).toFixed(1) : undefined,
+      fat_g: m.fat_g ? +(m.fat_g * scale).toFixed(1) : undefined,
       source: `custom:${m.id}`,
     });
     if (insErr) throw new Error(insErr.message);
