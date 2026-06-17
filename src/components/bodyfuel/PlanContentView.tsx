@@ -223,8 +223,15 @@ export function PlanContentView({ clientId, planType }: Props) {
         const diffDays = Math.floor((Date.now() - start.getTime()) / 86400000);
         activeWeek = Math.min(wc, Math.max(1, Math.floor(diffDays / 7) + 1));
       }
-      const filtered = dayList.filter((d) => (d.week_number ?? 1) === activeWeek);
-      if (filtered.length) dayList = filtered;
+      // Derive week_number from sort_order when the column is missing so that
+      // plans created before the week_number field still split correctly.
+      const withWeek = dayList.map((d) => ({
+        ...d,
+        week_number: d.week_number ?? Math.floor((d.sort_order - 1) / 7) + 1,
+      }));
+      const filtered = withWeek.filter((d) => d.week_number === activeWeek);
+      // Always restrict to the current week (fallback to week 1 if nothing matches)
+      dayList = filtered.length ? filtered : withWeek.filter((d) => d.week_number === 1);
     }
     setDays(dayList);
 
