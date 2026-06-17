@@ -69,21 +69,27 @@ export function PlanManagementCard({ userId }: { userId: string }) {
   };
 
   const [durationMode, setDurationMode] = useState<"shopping" | "fixed">("shopping");
-  const [fixedDays, setFixedDays] = useState<number>(7);
+  const [fixedDays, setFixedDays] = useState<string>("7");
 
   const gen = useMutation({
-    mutationFn: (start_mode: "today" | "next_shopping") =>
-      genFn({
+    mutationFn: (start_mode: "today" | "next_shopping") => {
+      const planDays =
+        durationMode === "fixed"
+          ? Math.max(1, Math.min(21, parseInt(fixedDays, 10) || 7))
+          : null;
+      return genFn({
         data: {
           user_id: userId,
           start_mode,
-          plan_days: durationMode === "fixed" ? fixedDays : null,
+          plan_days: planDays,
         },
-      }),
+      });
+    },
     onSuccess: (_d, mode) => {
+      const daysNum = Math.max(1, Math.min(21, parseInt(fixedDays, 10) || 7));
       const dauerHint =
         durationMode === "fixed"
-          ? ` für ${fixedDays} Tag${fixedDays === 1 ? "" : "e"}`
+          ? ` für ${daysNum} Tag${daysNum === 1 ? "" : "e"}`
           : "";
       toast.success(
         mode === "today"
@@ -182,14 +188,20 @@ export function PlanManagementCard({ userId }: { userId: string }) {
           />
           <span>Feste Dauer:</span>
           <input
-            type="number"
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
             min={1}
             max={21}
             value={fixedDays}
             onFocus={() => setDurationMode("fixed")}
             onChange={(e) => {
-              const v = Number(e.target.value);
-              if (Number.isFinite(v)) setFixedDays(Math.max(1, Math.min(21, Math.round(v))));
+              const raw = e.target.value.replace(/[^0-9]/g, "").slice(0, 2);
+              setFixedDays(raw);
+            }}
+            onBlur={() => {
+              const num = Math.max(1, Math.min(21, parseInt(fixedDays, 10) || 7));
+              setFixedDays(String(num));
             }}
             className="w-14 rounded-md border border-input bg-background px-2 py-1 text-xs"
           />
