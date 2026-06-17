@@ -45,6 +45,8 @@ type FoodEntry = {
   source: string | null;
 };
 
+type RecentFood = FoodResult & { last_amount_g: number };
+
 type Targets = {
   kcal: number;
   protein_g: number;
@@ -151,7 +153,7 @@ export function NutritionTracker() {
   const [unit, setUnit] = useState<"g" | "piece">("g");
   const [amountStr, setAmountStr] = useState<string>("100");
   const [scannerOpen, setScannerOpen] = useState(false);
-  const [recentFoods, setRecentFoods] = useState<FoodResult[]>([]);
+  const [recentFoods, setRecentFoods] = useState<RecentFood[]>([]);
   const [loadingRecent, setLoadingRecent] = useState(false);
 
   const getTargetsFn = useServerFn(getNutritionTargets);
@@ -374,7 +376,7 @@ export function NutritionTracker() {
         .limit(100);
       if (cancelled) return;
       const seen = new Set<string>();
-      const out: FoodResult[] = [];
+      const out: RecentFood[] = [];
       for (const r of (data ?? []) as Array<{
         name: string; brand: string | null; barcode: string | null;
         serving_g: number; kcal: number; protein_g: number; carbs_g: number; fat_g: number;
@@ -395,6 +397,7 @@ export function NutritionTracker() {
           protein_per_100g: Number(r.protein_g) * f,
           carbs_per_100g: Number(r.carbs_g) * f,
           fat_per_100g: Number(r.fat_g) * f,
+          last_amount_g: sg,
         });
         if (out.length >= 15) break;
       }
@@ -704,7 +707,7 @@ export function NutritionTracker() {
                                 onClick={() => {
                                   setPicking(r);
                                   setUnit("g");
-                                  setAmountStr("100");
+                                  setAmountStr(String(Math.round(r.last_amount_g)));
                                 }}
                                 className="w-full px-2 py-3 text-left hover:bg-secondary"
                               >
