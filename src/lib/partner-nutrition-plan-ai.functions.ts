@@ -57,6 +57,7 @@ async function loadPerson(supabase: any, userId: string) {
     { data: ratings },
     { data: favs },
     { data: skips },
+    { data: wishesData },
   ] = await Promise.all([
     supabase.from("smart_nutrition_profile").select("*").eq("user_id", userId).maybeSingle(),
     supabase
@@ -88,6 +89,12 @@ async function loadPerson(supabase: any, userId: string) {
       .eq("user_id", userId)
       .limit(20),
     supabase.from("meal_skips").select("meal_name, reason").eq("user_id", userId).limit(20),
+    supabase
+      .from("meal_wishes")
+      .select("id, wish")
+      .eq("user_id", userId)
+      .eq("status", "approved")
+      .is("consumed_at", null),
   ]);
 
   const p: any = profile ?? {};
@@ -161,6 +168,9 @@ async function loadPerson(supabase: any, userId: string) {
   const disliked = (ratings ?? []).filter((r: any) => r.stars <= 2).map((r: any) => r.meal?.name).filter(Boolean);
   const favoriteNames = (favs ?? []).map((f: any) => f.meal?.name).filter(Boolean);
   const skipNames = (skips ?? []).map((s: any) => s.meal_name).filter(Boolean);
+  const approvedWishes = ((wishesData as any[]) ?? []).map((w) => w.wish as string).filter(Boolean);
+  const approvedWishIds = ((wishesData as any[]) ?? []).map((w) => w.id as string).filter(Boolean);
+  const weeklyBudget: number | null = p.weekly_budget_eur != null ? Number(p.weekly_budget_eur) : null;
 
   return {
     name: cp.display_name ?? "Person",
@@ -174,6 +184,9 @@ async function loadPerson(supabase: any, userId: string) {
     disliked,
     favoriteNames,
     skipNames,
+    approvedWishes,
+    approvedWishIds,
+    weeklyBudget,
     trainingSet: new Set<string>((p.training_weekdays ?? []).map((s: string) => s.toLowerCase())),
     shoppingDays: p.shopping_days as string[] | null,
   };
@@ -289,6 +302,26 @@ export const generatePartnerNutritionPlanDraft = createServerFn({ method: "POST"
     const targetBlockFor = (n: string, tg: { training: MacroTarget; rest: MacroTarget }) =>
       `${n} — TRAINING: ${tg.training.kcal} kcal / P ${tg.training.protein_g} / KH ${tg.training.carbs_g} / F ${tg.training.fat_g}; REST: ${tg.rest.kcal} kcal / P ${tg.rest.protein_g} / KH ${tg.rest.carbs_g} / F ${tg.rest.fat_g}`;
 
+    const wishesA = a.approvedWishes ?? [];
+    const wishesB = b.approvedWishes ?? [];
+    const wishesBlock =
+      wishesA.length || wishesB.length
+        ? `\n⭐ COACH-FREIGEGEBENE WUNSCHGERICHTE (PFLICHT — JEDES muss mindestens einmal als Mahlzeit der jeweiligen Person im Plan vorkommen, "name" muss den Wunsch enthalten):
+${wishesA.length ? `${a.name}: ${wishesA.map((w, i) => `${i + 1}. ${w}`).join("; ")}` : ""}
+${wishesB.length ? `${b.name}: ${wishesB.map((w, i) => `${i + 1}. ${w}`).join("; ")}` : ""}\n`
+        : "";
+
+    const combinedBudget =
+      (a.weeklyBudget ?? 0) + (b.weeklyBudget ?? 0) > 0
+        ? (a.weeklyBudget ?? 0) + (b.weeklyBudget ?? 0)
+        : null;
+    const budgetForPeriod =
+      combinedBudget != null ? Math.round((combinedBudget * planDays) / 7) : null;
+    const budgetBlock =
+      budgetForPeriod != null
+        ? `\n💶 GEMEINSAMES WOCHEN-BUDGET vom Coach: ${combinedBudget} € / Woche (= ~${budgetForPeriod} € für diesen ${planDays}-Tage-Plan, Discounter-Preise DE). Plane Zutaten & Mengen für BEIDE Personen zusammen so, dass die gesamten Lebensmittelkosten dieses Budget NICHT überschreiten. Bevorzuge günstige Proteinquellen und Grundbeilagen; Premium-Zutaten sparsam.\n`
+        : "";
+
     const prompt = `Erstelle einen ${planDays}-Tage-Partner-Ernährungsplan für ZWEI Personen, die zusammen essen.
 
 🎯 INDIVIDUELLE ZIELE (NIE angleichen):
@@ -307,7 +340,7 @@ NO-GOS für gemeinsame Gerichte vermeiden: ${mergedNogos.join(", ") || "(keine)"
 
 VORLIEBEN ${a.name}: Lieblings ${[...a.favFoods, ...a.favoriteNames].slice(0, 8).join(", ") || "—"}; mag ${a.liked.slice(0, 6).join(", ") || "—"}; meiden ${[...a.disliked, ...a.skipNames].slice(0, 6).join(", ") || "—"}
 VORLIEBEN ${b.name}: Lieblings ${[...b.favFoods, ...b.favoriteNames].slice(0, 8).join(", ") || "—"}; mag ${b.liked.slice(0, 6).join(", ") || "—"}; meiden ${[...b.disliked, ...b.skipNames].slice(0, 6).join(", ") || "—"}
-
+${wishesBlock}${budgetBlock}
 TAGESPLAN:
 ${scheduleLines}
 
@@ -514,6 +547,30 @@ Genau ${planDays} Tage. Pro Person je 4 Slots (breakfast/lunch/dinner/snack). Be
       console.error("Partner shopping list failed:", e);
       shoppingListWarning = e?.message ?? "Einkaufsliste konnte nicht erstellt werden.";
     }
+
+    // Mark each user's approved wishes as consumed only if the AI actually used them.
+    const norm = (s: string) => s.toLowerCase().replace(/[^a-zäöüß0-9 ]+/g, " ").trim();
+    const consumeUsedWishes = async (person: typeof a, bundle: typeof A) => {
+      if (!person.approvedWishIds?.length) return;
+      const haystack = bundle.mealsByDay
+        .flat()
+        .map((m) => `${m.name} ${m.description ?? ""}`)
+        .join(" | ")
+        .toLowerCase();
+      const used: string[] = [];
+      person.approvedWishes.forEach((w, idx) => {
+        const key = norm(w);
+        if (key && haystack.includes(key)) used.push(person.approvedWishIds[idx]);
+      });
+      if (used.length) {
+        await supabase
+          .from("meal_wishes")
+          .update({ consumed_at: new Date().toISOString() })
+          .in("id", used);
+      }
+    };
+    await consumeUsedWishes(a, A);
+    await consumeUsedWishes(b, B);
 
     return { ok: true, plan_a: A.planId, plan_b: B.planId, days: planDays, shopping_list_warning: shoppingListWarning };
   });

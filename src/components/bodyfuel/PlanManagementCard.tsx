@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   Calendar,
@@ -25,6 +25,7 @@ import {
 import { generateAiNutritionPlanDraft } from "@/lib/nutrition-plan-ai.functions";
 import { getPartnerLink } from "@/lib/partner.functions";
 import { generatePartnerNutritionPlanDraft } from "@/lib/partner-nutrition-plan-ai.functions";
+import { getCustomerSmartProfile, setCustomerWeeklyBudget } from "@/lib/smart-profile.functions";
 import { Users } from "lucide-react";
 
 const STATUS_LABEL: Record<PlanStatus, string> = {
@@ -62,6 +63,8 @@ export function PlanManagementCard({ userId }: { userId: string }) {
   const autoFn = useServerFn(setAutoPublish);
   const partnerLinkFn = useServerFn(getPartnerLink);
   const partnerGenFn = useServerFn(generatePartnerNutritionPlanDraft);
+  const smartProfileFn = useServerFn(getCustomerSmartProfile);
+  const setBudgetFn = useServerFn(setCustomerWeeklyBudget);
 
   const { data, isLoading } = useQuery({
     queryKey: ["plan-overview", userId],
@@ -80,6 +83,27 @@ export function PlanManagementCard({ userId }: { userId: string }) {
 
   const [durationMode, setDurationMode] = useState<"shopping" | "fixed">("shopping");
   const [fixedDays, setFixedDays] = useState<string>("7");
+
+  const smartProfile = useQuery({
+    queryKey: ["smart-profile", userId],
+    queryFn: () => smartProfileFn({ data: { user_id: userId } }),
+  });
+  const [budgetInput, setBudgetInput] = useState<string>("");
+  useEffect(() => {
+    const v = smartProfile.data?.weekly_budget_eur;
+    if (v != null) setBudgetInput(String(v));
+    else setBudgetInput("");
+  }, [smartProfile.data?.weekly_budget_eur]);
+
+  const saveBudget = useMutation({
+    mutationFn: (val: number | null) =>
+      setBudgetFn({ data: { user_id: userId, weekly_budget_eur: val } }),
+    onSuccess: () => {
+      toast.success("Wochenbudget gespeichert.");
+      qc.invalidateQueries({ queryKey: ["smart-profile", userId] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Fehler beim Speichern"),
+  });
 
   const gen = useMutation({
     mutationFn: (start_mode: "today" | "next_shopping") => {
@@ -267,6 +291,40 @@ export function PlanManagementCard({ userId }: { userId: string }) {
           <span>Tage</span>
         </label>
       </div>
+
+      <div className="mt-2 flex flex-wrap items-center gap-3 rounded-xl border border-dashed border-border bg-background/40 px-4 py-3 text-xs">
+        <span className="font-semibold uppercase tracking-wider text-muted-foreground">
+          Wochenbudget
+        </span>
+        <div className="inline-flex items-center gap-1.5">
+          <input
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            placeholder="z. B. 80"
+            value={budgetInput}
+            onChange={(e) => setBudgetInput(e.target.value.replace(/[^0-9]/g, "").slice(0, 4))}
+            className="w-20 rounded-md border border-input bg-background px-2 py-1 text-xs"
+          />
+          <span>€ / Woche (pro Person)</span>
+        </div>
+        <button
+          onClick={() => {
+            const v = budgetInput.trim() === "" ? null : parseInt(budgetInput, 10);
+            saveBudget.mutate(Number.isNaN(v as number) ? null : v);
+          }}
+          disabled={saveBudget.isPending}
+          className="rounded-md bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground disabled:opacity-60"
+        >
+          {saveBudget.isPending ? "Speichere…" : "Speichern"}
+        </button>
+        {partnerLink.data && (smartProfile.data?.weekly_budget_eur ?? 0) > 0 && (
+          <span className="text-muted-foreground">
+            Gemeinsamer Plan rechnet mit Summe beider Budgets.
+          </span>
+        )}
+      </div>
+
 
       {isLoading && (
         <div className="mt-4 text-sm text-muted-foreground">Lade…</div>

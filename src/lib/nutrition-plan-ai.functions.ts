@@ -276,6 +276,8 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
       p.meal_prep_style === "meal_prep" ? "Meal-Prep-tauglich." :
       p.meal_prep_style === "2_3_week" ? "Hält 2-3 Tage." :
       p.meal_prep_style === "daily" ? "Frisch kochbar." : "";
+    const weeklyBudget: number | null =
+      p.weekly_budget_eur != null ? Number(p.weekly_budget_eur) : null;
     const budgetHint = p.budget_band === "<50" ? "Günstige Zutaten." :
       p.budget_band === "50_75" ? "Mittleres Budget." :
       p.budget_band === ">100" ? "Großzügiges Budget." : "";
@@ -378,6 +380,16 @@ ${activityLevel ? `- Aktivitätslevel: ${activityLevel}` : ""}
 
 Die Kalorien-/Makro-Ziele sind auf aktuelles Gewicht, Wunschgewicht und Trainingsziel kalibriert. Wähle Lebensmittel & Portionsgrößen, die genau dieses Ziel unterstützen: bei Abnehmen sättigend & proteinreich, bei Aufbau energiedicht mit ausreichend Carbs, bei Recomp/Halten ausgewogen.`;
 
+    const wishesBlock = approvedWishes.length
+      ? `\n⭐ COACH-FREIGEGEBENE WUNSCHGERICHTE (PFLICHT — JEDES MUSS mindestens einmal als eigenständige Mahlzeit im Plan vorkommen; der "name" der Mahlzeit muss den jeweiligen Wunsch enthalten; passe Beilagen/Portionen an die Makros an; sind es mehr Wünsche als Tage, kombiniere mehrere Wünsche pro Tag):\n${approvedWishes.map((w, i) => `  ${i + 1}. ${w}`).join("\n")}\n`
+      : "";
+
+    const budgetPerPeriod =
+      weeklyBudget != null ? Math.round((weeklyBudget * planDays) / 7) : null;
+    const budgetBlock = budgetPerPeriod != null
+      ? `\n💶 WOCHEN-BUDGET vom Coach: ${weeklyBudget} € / Woche → für diesen ${planDays}-Tage-Plan max. ~${budgetPerPeriod} € an Lebensmittelkosten (Discounter-Preise DE). Wähle Zutaten & Mengen so, dass die Gesamteinkaufskosten dieses Budget NICHT überschreiten. Bevorzuge saisonale/günstige Proteinquellen (Hähnchenbrust, Quark, Eier, Hülsenfrüchte, Thunfisch i. W., Hackfleisch), Grundbeilagen (Reis, Haferflocken, Kartoffeln, Nudeln) und tiefgekühltes Gemüse. Premium-Zutaten (Lachs, Rindersteak, Avocado, Nüsse) sparsam einsetzen.`
+      : "";
+
     const prompt = `Erstelle einen ${planDays}-Tage-Ernährungsplan mit 4 Mahlzeiten pro Tag (Frühstück, Mittag, Abend, Snack). Der Plan soll genau bis zum nächsten Einkaufstag reichen.
 
 ${goalBlock}
@@ -396,7 +408,7 @@ ${liked.length ? "Mag (4-5★): " + liked.slice(0, 10).join(", ") : ""}
 ${disliked.length ? "Mag NICHT — vermeiden: " + disliked.slice(0, 10).join(", ") : ""}
 ${topSwapped.length ? "Häufig getauscht (lieber meiden): " + topSwapped.join(", ") : ""}
 ${skipReasons.length ? "Häufig übersprungen: " + skipReasons.slice(0, 8).join("; ") : ""}
-${approvedWishes.length ? "⭐ COACH-FREIGEGEBENE WUNSCHGERICHTE — falls Makros/Allergien es erlauben, jeweils mindestens 1× im Plan einbauen: " + approvedWishes.join("; ") : ""}
+${wishesBlock}${budgetBlock}
 ${prepHint} ${budgetHint}
 
 
@@ -558,12 +570,26 @@ WICHTIG zu name/description:
       console.warn("Auto shopping list failed:", e);
     }
 
-    // Mark coach-approved wishes as consumed so the form resets for the next plan.
+    // Only mark wishes as consumed when the AI actually used them in the plan;
+    // unused wishes stay pending so they roll into the next plan.
     if (approvedWishIds.length) {
-      await supabase
-        .from("meal_wishes")
-        .update({ consumed_at: new Date().toISOString() })
-        .in("id", approvedWishIds);
+      const haystack = cleaned
+        .flatMap((d) => d.meals.map((m) => `${m.name} ${m.description ?? ""}`))
+        .join(" | ")
+        .toLowerCase();
+      const norm = (s: string) =>
+        s.toLowerCase().replace(/[^a-zäöüß0-9 ]+/g, " ").trim();
+      const usedIds: string[] = [];
+      (wishesData as any[] | null | undefined)?.forEach((w) => {
+        const key = norm(String(w.wish ?? ""));
+        if (key && haystack.includes(key)) usedIds.push(w.id as string);
+      });
+      if (usedIds.length) {
+        await supabase
+          .from("meal_wishes")
+          .update({ consumed_at: new Date().toISOString() })
+          .in("id", usedIds);
+      }
     }
 
 
