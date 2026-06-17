@@ -2203,7 +2203,30 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      public_app_reviews: {
+        Row: {
+          comment: string | null
+          created_at: string | null
+          first_name: string | null
+          id: string | null
+          rating: number | null
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string | null
+          first_name?: string | null
+          id?: string | null
+          rating?: number | null
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string | null
+          first_name?: string | null
+          id?: string | null
+          rating?: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       are_nutrition_partners: {
