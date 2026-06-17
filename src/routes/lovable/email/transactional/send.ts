@@ -59,6 +59,19 @@ export const Route = createFileRoute("/lovable/email/transactional/send")({
           return Response.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
+        // Restrict sending to coaches/admins to prevent spam/phishing abuse.
+        const { data: isCoach } = await supabase.rpc('has_role', {
+          _user_id: user.id,
+          _role: 'coach',
+        })
+        const { data: isAdmin } = await supabase.rpc('has_role', {
+          _user_id: user.id,
+          _role: 'admin',
+        })
+        if (!isCoach && !isAdmin) {
+          return Response.json({ error: 'Forbidden' }, { status: 403 })
+        }
+
         // Parse request body
         let templateName: string
         let recipientEmail: string
