@@ -610,7 +610,9 @@ function CustomerDetail() {
             <NutritionTargetsEditor userId={userId} />
             <SmartNutritionInsightsCard userId={userId} />
             <PlanManagementCard userId={userId} />
+            <MealWishesCard userId={userId} mode="coach" />
             <RecipeInsightsCard userId={userId} />
+
           </AccordionContent>
         </AccordionItem>
 
