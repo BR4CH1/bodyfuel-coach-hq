@@ -460,7 +460,14 @@ export function NutritionTracker() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, openMeal, picking]);
 
-  // Load recent unique foods when the add dialog opens
+  // Load recent unique foods + favorites when the add dialog opens
+  useEffect(() => {
+    if (!openMeal || picking || !userId) return;
+    setLoadingFavorites(true);
+    reloadFavorites().finally(() => setLoadingFavorites(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openMeal, picking, userId]);
+
   useEffect(() => {
     if (!openMeal || picking || !userId) return;
     let cancelled = false;
