@@ -60,7 +60,9 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
       { data: favs },
       { data: skips },
       { data: swaps },
+      { data: wishesData },
     ] = await Promise.all([
+
       supabase
         .from("smart_nutrition_profile")
         .select("*")
