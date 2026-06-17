@@ -243,7 +243,7 @@ export const createCustomer = createServerFn({ method: "POST" })
       name: displayName,
       email,
       phone: data.phone || null,
-      desired_package: isTrial ? null : data.package,
+      desired_package: isTrial || isFree ? null : data.package,
       status: "converted",
       message: data.notes || null,
     });
@@ -257,9 +257,9 @@ export const createCustomer = createServerFn({ method: "POST" })
           last_name: lastName,
           full_name: displayName,
           name: displayName,
-          role: "client",
+          ...(isFree ? { tier: "free" } : { role: "client" }),
         },
-        redirectTo: `${origin}/welcome`,
+        redirectTo: isFree ? `${origin}/tracker/app` : `${origin}/welcome`,
       });
 
     if (invErr) throw new Error(invErr.message);
