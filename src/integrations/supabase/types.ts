@@ -2206,6 +2206,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      are_nutrition_partners: {
+        Args: { _a: string; _b: string }
+        Returns: boolean
+      }
       compute_macro_targets: { Args: { _user_id: string }; Returns: undefined }
       delete_email: {
         Args: { message_id: number; queue_name: string }
