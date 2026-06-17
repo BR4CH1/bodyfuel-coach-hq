@@ -2,10 +2,14 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
+export type MealSlot = "breakfast" | "lunch" | "dinner" | "snack" | "any";
+
 export type MealWish = {
   id: string;
   user_id: string;
   wish: string;
+  meal_slot: MealSlot;
+  for_person: string | null;
   status: "pending" | "approved" | "rejected";
   coach_note: string | null;
   reviewed_at: string | null;
@@ -21,7 +25,7 @@ export const listMealWishes = createServerFn({ method: "GET" })
     const target = data.userId ?? userId;
     let q = supabase
       .from("meal_wishes")
-      .select("id, user_id, wish, status, coach_note, reviewed_at, consumed_at, created_at")
+      .select("id, user_id, wish, meal_slot, for_person, status, coach_note, reviewed_at, consumed_at, created_at")
       .eq("user_id", target)
       .order("created_at", { ascending: false });
     if (!data.includeHistory) q = q.is("consumed_at", null);
@@ -32,19 +36,30 @@ export const listMealWishes = createServerFn({ method: "GET" })
 
 export const addMealWish = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { wish: string }) =>
-    z.object({ wish: z.string().trim().min(1).max(300) }).parse(d),
+  .inputValidator((d: { wish: string; meal_slot?: MealSlot; for_person?: string }) =>
+    z.object({
+      wish: z.string().trim().min(1).max(300),
+      meal_slot: z.enum(["breakfast", "lunch", "dinner", "snack", "any"]).optional().default("any"),
+      for_person: z.string().trim().max(60).optional(),
+    }).parse(d),
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: row, error } = await supabase
       .from("meal_wishes")
-      .insert({ user_id: userId, wish: data.wish, status: "pending" })
+      .insert({
+        user_id: userId,
+        wish: data.wish,
+        meal_slot: data.meal_slot ?? "any",
+        for_person: data.for_person ?? null,
+        status: "pending",
+      })
       .select()
       .single();
     if (error) throw new Error(error.message);
     return row as MealWish;
   });
+
 
 export const deleteMealWish = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
