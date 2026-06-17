@@ -380,6 +380,16 @@ ${activityLevel ? `- Aktivitätslevel: ${activityLevel}` : ""}
 
 Die Kalorien-/Makro-Ziele sind auf aktuelles Gewicht, Wunschgewicht und Trainingsziel kalibriert. Wähle Lebensmittel & Portionsgrößen, die genau dieses Ziel unterstützen: bei Abnehmen sättigend & proteinreich, bei Aufbau energiedicht mit ausreichend Carbs, bei Recomp/Halten ausgewogen.`;
 
+    const wishesBlock = approvedWishes.length
+      ? `\n⭐ COACH-FREIGEGEBENE WUNSCHGERICHTE (PFLICHT — JEDES MUSS mindestens einmal als eigenständige Mahlzeit im Plan vorkommen; der "name" der Mahlzeit muss den jeweiligen Wunsch enthalten; passe Beilagen/Portionen an die Makros an; sind es mehr Wünsche als Tage, kombiniere mehrere Wünsche pro Tag):\n${approvedWishes.map((w, i) => `  ${i + 1}. ${w}`).join("\n")}\n`
+      : "";
+
+    const budgetPerPeriod =
+      weeklyBudget != null ? Math.round((weeklyBudget * planDays) / 7) : null;
+    const budgetBlock = budgetPerPeriod != null
+      ? `\n💶 WOCHEN-BUDGET vom Coach: ${weeklyBudget} € / Woche → für diesen ${planDays}-Tage-Plan max. ~${budgetPerPeriod} € an Lebensmittelkosten (Discounter-Preise DE). Wähle Zutaten & Mengen so, dass die Gesamteinkaufskosten dieses Budget NICHT überschreiten. Bevorzuge saisonale/günstige Proteinquellen (Hähnchenbrust, Quark, Eier, Hülsenfrüchte, Thunfisch i. W., Hackfleisch), Grundbeilagen (Reis, Haferflocken, Kartoffeln, Nudeln) und tiefgekühltes Gemüse. Premium-Zutaten (Lachs, Rindersteak, Avocado, Nüsse) sparsam einsetzen.`
+      : "";
+
     const prompt = `Erstelle einen ${planDays}-Tage-Ernährungsplan mit 4 Mahlzeiten pro Tag (Frühstück, Mittag, Abend, Snack). Der Plan soll genau bis zum nächsten Einkaufstag reichen.
 
 ${goalBlock}
@@ -398,7 +408,7 @@ ${liked.length ? "Mag (4-5★): " + liked.slice(0, 10).join(", ") : ""}
 ${disliked.length ? "Mag NICHT — vermeiden: " + disliked.slice(0, 10).join(", ") : ""}
 ${topSwapped.length ? "Häufig getauscht (lieber meiden): " + topSwapped.join(", ") : ""}
 ${skipReasons.length ? "Häufig übersprungen: " + skipReasons.slice(0, 8).join("; ") : ""}
-${approvedWishes.length ? "⭐ COACH-FREIGEGEBENE WUNSCHGERICHTE — falls Makros/Allergien es erlauben, jeweils mindestens 1× im Plan einbauen: " + approvedWishes.join("; ") : ""}
+${wishesBlock}${budgetBlock}
 ${prepHint} ${budgetHint}
 
 
