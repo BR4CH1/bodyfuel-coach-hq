@@ -25,14 +25,13 @@ function WaterPage() {
     (async () => {
       const { data } = await supabase
         .from("water_logs")
-        .select("glasses, target_glasses")
+        .select("glasses")
         .eq("user_id", supabaseUser.id)
-        .eq("log_date", today())
+        .eq("entry_date", today())
         .maybeSingle();
-      if (data) {
-        setGlasses(data.glasses ?? 0);
-        setTarget(data.target_glasses ?? 8);
-      }
+      if (data) setGlasses(data.glasses ?? 0);
+      const storedTarget = Number(localStorage.getItem("tracker:waterTarget") || "8");
+      if (storedTarget > 0) setTarget(storedTarget);
     })();
   }, [supabaseUser]);
 
@@ -40,14 +39,15 @@ function WaterPage() {
     if (!supabaseUser) return;
     const g = Math.max(0, newGlasses);
     setGlasses(g);
+    setTarget(newTarget);
+    localStorage.setItem("tracker:waterTarget", String(newTarget));
     const { error } = await supabase.from("water_logs").upsert(
       {
         user_id: supabaseUser.id,
-        log_date: today(),
+        entry_date: today(),
         glasses: g,
-        target_glasses: newTarget,
       },
-      { onConflict: "user_id,log_date" },
+      { onConflict: "user_id,entry_date" },
     );
     if (error) toast.error(error.message);
   };

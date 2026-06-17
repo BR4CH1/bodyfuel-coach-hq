@@ -41,17 +41,19 @@ const coachNav = [
 
 
 export function AppLayout({ children }: { children: ReactNode }) {
-  const { user, isCoach, supabaseUser, profile, loading, logout, hasGroup } = useSession();
+  const { user, isCoach, isFreeUser, supabaseUser, profile, loading, logout, hasGroup } = useSession();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   useEffect(() => {
     if (loading) return;
     if (!user && !supabaseUser) navigate({ to: "/login" });
-  }, [user, supabaseUser, loading, navigate]);
+    else if (isFreeUser && !pathname.startsWith("/tracker")) navigate({ to: "/tracker/app" });
+  }, [user, supabaseUser, loading, navigate, isFreeUser, pathname]);
 
   if (loading) return null;
   if (!user && !supabaseUser) return null;
+  if (isFreeUser) return null;
 
   const baseNav = isCoach ? coachNav : clientNav;
   const nav = !isCoach && hasGroup("bulls") ? [...baseNav, bullsNavItem] : baseNav;
