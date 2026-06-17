@@ -738,13 +738,19 @@ function CustomerRow({
   meta,
   warn,
   tone,
+  kcalDev,
+  kcalDir,
 }: {
   id: string;
   name: string;
   meta: string;
   warn?: boolean;
   tone?: "info";
+  kcalDev?: number | null;
+  kcalDir?: "over" | "under" | null;
 }) {
+  const kcalLevel: "ok" | "warn" | "bad" | null =
+    kcalDev == null ? null : kcalDev <= 200 ? "ok" : kcalDev <= 500 ? "warn" : "bad";
   return (
     <Link
       to="/coach/customers/$userId"
@@ -757,7 +763,22 @@ function CustomerRow({
         {name.slice(0, 2).toUpperCase()}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-semibold">{name}</div>
+        <div className="flex items-center gap-2">
+          <div className="truncate text-sm font-semibold">{name}</div>
+          {kcalLevel && kcalLevel !== "ok" && (
+            <span
+              className={`shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold ${
+                kcalLevel === "warn"
+                  ? "border-yellow-500/40 bg-yellow-500/10 text-yellow-400"
+                  : "border-red-500/40 bg-red-500/10 text-red-400"
+              }`}
+              title={`Plan ${kcalDir === "over" ? "über" : "unter"} Kalorienziel`}
+            >
+              {kcalDir === "over" ? "+" : "−"}
+              {kcalDev} kcal
+            </span>
+          )}
+        </div>
         <div
           className={`truncate text-xs ${
             warn ? "text-warning" : tone === "info" ? "text-gold" : "text-muted-foreground"
