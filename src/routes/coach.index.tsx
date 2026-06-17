@@ -51,6 +51,8 @@ type Client = {
   last_training_at: string | null;
   nutrition_plan_end: string | null;
   training_plan_end: string | null;
+  kcal_dev: number | null;
+  kcal_dev_dir: "over" | "under" | null;
 };
 
 
@@ -121,10 +123,69 @@ function CoachDashboard() {
             .limit(200),
           supabase
             .from("nutrition_plans")
-            .select("client_id, plan_type, scheduled_end_date, status")
+            .select("id, client_id, plan_type, scheduled_end_date, status")
             .in("client_id", ids)
             .eq("status", "active"),
         ]);
+
+        // Compute kcal deviation per client from active nutrition plans
+        const activeNutritionPlans = (plans.data ?? []).filter(
+          (p: any) => p.plan_type === "nutrition",
+        );
+        const nutritionPlanIds = activeNutritionPlans.map((p: any) => p.id);
+        const planToClient = new Map<string, string>();
+        activeNutritionPlans.forEach((p: any) => planToClient.set(p.id, p.client_id));
+
+        const [targetsRes, daysRes] = await Promise.all([
+          supabase
+            .from("nutrition_targets")
+            .select("user_id, kcal, kcal_rest")
+            .in("user_id", ids),
+          nutritionPlanIds.length
+            ? supabase
+                .from("nutrition_plan_days")
+                .select("id, plan_id, name")
+                .in("plan_id", nutritionPlanIds)
+            : Promise.resolve({ data: [] as any[] }),
+        ]);
+        const dayList = (daysRes.data ?? []) as Array<{ id: string; plan_id: string; name: string }>;
+        const dayIds = dayList.map((d) => d.id);
+        const mealsRes = dayIds.length
+          ? await supabase
+              .from("nutrition_plan_meals")
+              .select("day_id, kcal")
+              .in("day_id", dayIds)
+          : { data: [] as any[] };
+        const sumByDay = new Map<string, number>();
+        ((mealsRes.data ?? []) as any[]).forEach((m: any) => {
+          if (m.kcal == null) return;
+          sumByDay.set(m.day_id, (sumByDay.get(m.day_id) ?? 0) + Number(m.kcal));
+        });
+        const targetByUser = new Map<string, { t: number | null; r: number | null }>();
+        ((targetsRes.data ?? []) as any[]).forEach((t: any) => {
+          targetByUser.set(t.user_id, {
+            t: t.kcal ?? null,
+            r: t.kcal_rest ?? t.kcal ?? null,
+          });
+        });
+        const kcalDev = new Map<string, { dev: number; dir: "over" | "under" }>();
+        dayList.forEach((d) => {
+          const clientId = planToClient.get(d.plan_id);
+          if (!clientId) return;
+          const tgt = targetByUser.get(clientId);
+          if (!tgt) return;
+          const sum = sumByDay.get(d.id);
+          if (!sum) return;
+          const isRest = /(rest|ruhe|pause)/i.test(d.name || "");
+          const target = isRest ? tgt.r : tgt.t;
+          if (!target) return;
+          const diff = sum - target;
+          const abs = Math.abs(diff);
+          const prev = kcalDev.get(clientId);
+          if (!prev || abs > prev.dev) {
+            kcalDev.set(clientId, { dev: abs, dir: diff >= 0 ? "over" : "under" });
+          }
+        });
 
         const lastCheckin = new Map<string, string>();
         (checkins.data ?? []).forEach((c) => {
@@ -166,6 +227,8 @@ function CoachDashboard() {
           last_training_at: lastTraining.get(p.id) ?? null,
           nutrition_plan_end: nutritionEnd.get(p.id) ?? null,
           training_plan_end: trainingEnd.get(p.id) ?? null,
+          kcal_dev: kcalDev.get(p.id)?.dev ?? null,
+          kcal_dev_dir: kcalDev.get(p.id)?.dir ?? null,
         }));
       }
 
@@ -318,6 +381,8 @@ function CoachDashboard() {
                 key={c.id}
                 id={c.id}
                 name={c.display_name ?? "Ohne Namen"}
+                kcalDev={c.kcal_dev}
+                kcalDir={c.kcal_dev_dir}
                 meta={
                   c.last_checkin
                     ? `Letzter Check-in ${new Date(c.last_checkin).toLocaleDateString("de-DE")}`
@@ -345,6 +410,8 @@ function CoachDashboard() {
                 id={c.id}
                 name={c.display_name ?? "Ohne Namen"}
                 warn
+                kcalDev={c.kcal_dev}
+                kcalDir={c.kcal_dev_dir}
                 meta={
                   c.days === null
                     ? "Noch nie eingecheckt"
@@ -675,13 +742,19 @@ function CustomerRow({
   meta,
   warn,
   tone,
+  kcalDev,
+  kcalDir,
 }: {
   id: string;
   name: string;
   meta: string;
   warn?: boolean;
   tone?: "info";
+  kcalDev?: number | null;
+  kcalDir?: "over" | "under" | null;
 }) {
+  const kcalLevel: "ok" | "warn" | "bad" | null =
+    kcalDev == null ? null : kcalDev <= 200 ? "ok" : kcalDev <= 500 ? "warn" : "bad";
   return (
     <Link
       to="/coach/customers/$userId"
@@ -694,7 +767,22 @@ function CustomerRow({
         {name.slice(0, 2).toUpperCase()}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-semibold">{name}</div>
+        <div className="flex items-center gap-2">
+          <div className="truncate text-sm font-semibold">{name}</div>
+          {kcalLevel && kcalLevel !== "ok" && (
+            <span
+              className={`shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold ${
+                kcalLevel === "warn"
+                  ? "border-yellow-500/40 bg-yellow-500/10 text-yellow-400"
+                  : "border-red-500/40 bg-red-500/10 text-red-400"
+              }`}
+              title={`Plan ${kcalDir === "over" ? "über" : "unter"} Kalorienziel`}
+            >
+              {kcalDir === "over" ? "+" : "−"}
+              {kcalDev} kcal
+            </span>
+          )}
+        </div>
         <div
           className={`truncate text-xs ${
             warn ? "text-warning" : tone === "info" ? "text-gold" : "text-muted-foreground"
