@@ -1,6 +1,6 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
-import { LayoutDashboard, Apple, Droplet, Scale, Activity, Trophy, LogOut, Sparkles } from "lucide-react";
+import { LayoutDashboard, Apple, Scale, Trophy, LogOut, Sparkles } from "lucide-react";
 import { useSession } from "@/lib/bodyfuel/session";
 import { Logo } from "./Logo";
 import { FreeUpsellBanner } from "./FreeUpsellBanner";
@@ -8,9 +8,7 @@ import { FreeUpsellBanner } from "./FreeUpsellBanner";
 const nav: { to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean }[] = [
   { to: "/tracker/app", label: "Heute", icon: LayoutDashboard, exact: true },
   { to: "/tracker/app/nutrition", label: "Ernährung", icon: Apple },
-  { to: "/tracker/app/water", label: "Wasser", icon: Droplet },
   { to: "/tracker/app/weight", label: "Gewicht", icon: Scale },
-  { to: "/tracker/app/activity", label: "Aktivität", icon: Activity },
   { to: "/tracker/app/achievements", label: "Erfolge", icon: Trophy },
 ];
 
@@ -114,7 +112,7 @@ export function FreeAppLayout({ children }: { children: ReactNode }) {
 
       {/* Mobile bottom nav */}
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 backdrop-blur lg:hidden">
-        <div className="grid grid-cols-6">
+        <div className="grid grid-cols-4">
           {nav.map((item) => {
             const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
             const Icon = item.icon;
