@@ -156,6 +156,9 @@ function NutritionIndex() {
             {supabaseUser?.id && (
               <MealWishesCard userId={supabaseUser.id} mode="client" />
             )}
+            {supabaseUser?.id && (
+              <CustomMealsCard userId={supabaseUser.id} />
+            )}
           </>
 
         )}
