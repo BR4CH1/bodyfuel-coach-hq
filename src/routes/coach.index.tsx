@@ -381,6 +381,8 @@ function CoachDashboard() {
                 key={c.id}
                 id={c.id}
                 name={c.display_name ?? "Ohne Namen"}
+                kcalDev={c.kcal_dev}
+                kcalDir={c.kcal_dev_dir}
                 meta={
                   c.last_checkin
                     ? `Letzter Check-in ${new Date(c.last_checkin).toLocaleDateString("de-DE")}`
