@@ -519,17 +519,27 @@ export function PlanContentView({ clientId, planType }: Props) {
               ? meals.filter((m) => itemToVirtual[m.id] === activeDay).map((m) => {
                   const isTracked = !!tracked[m.id];
                   const busy = togglingId === m.id;
-                  const displayName = itemDisplayName[m.id] ?? m.name;
+                  const rawDisplayName = itemDisplayName[m.id] ?? m.name;
+                  // Wenn der Name "Frühstück: …" enthält → Slot als Eyebrow, Rest als Titel
+                  const colonIdx = rawDisplayName.indexOf(":");
+                  const slotLabel = colonIdx > 0 ? rawDisplayName.slice(0, colonIdx).trim() : null;
+                  const titleText = colonIdx > 0 ? rawDisplayName.slice(colonIdx + 1).trim() : rawDisplayName;
                   const inner = (
                     <>
+                      {slotLabel && (
+                        <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                          {slotLabel}
+                        </div>
+                      )}
                       <div className="flex items-center gap-2">
-                        <div className="text-xs font-bold uppercase tracking-wider text-gold">{displayName}</div>
+                        <div className="text-sm font-bold text-gold">{titleText}</div>
                         {canTrack && isTracked && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
                             <Check className="h-3 w-3" /> getrackt
                           </span>
                         )}
                       </div>
+
                       {(() => {
                         const text = cleanDescription(m.description);
                         if (!text) return null;

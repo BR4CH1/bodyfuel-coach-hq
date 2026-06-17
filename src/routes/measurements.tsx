@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { WeightProgressChart } from "@/components/bodyfuel/WeightProgressChart";
+import { ProgressPhotosCard } from "@/components/bodyfuel/ProgressPhotosCard";
 
 export const Route = createFileRoute("/measurements")({
   head: () => ({ meta: [{ title: "Körpermaße — BODYFUEL" }] }),
@@ -606,6 +607,8 @@ function MeasurementsContent() {
           </div>
         )}
       </div>
+
+      {uid && <ProgressPhotosCard userId={uid} />}
     </div>
   );
 }

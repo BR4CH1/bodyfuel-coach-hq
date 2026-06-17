@@ -38,10 +38,27 @@ export function MealWishesCard({ userId, mode }: Props) {
   });
 
   const [text, setText] = useState("");
+  const [slot, setSlot] = useState<"breakfast" | "lunch" | "dinner" | "snack" | "any">("any");
+  const [forPerson, setForPerson] = useState("");
+  const SLOT_LABEL = {
+    any: "Egal",
+    breakfast: "Frühstück",
+    lunch: "Mittag",
+    dinner: "Abend",
+    snack: "Snack",
+  } as const;
   const add = useMutation({
-    mutationFn: () => addFn({ data: { wish: text.trim() } }),
+    mutationFn: () =>
+      addFn({
+        data: {
+          wish: text.trim(),
+          meal_slot: slot,
+          for_person: forPerson.trim() || undefined,
+        },
+      }),
     onSuccess: () => {
       setText("");
+      setForPerson("");
       qc.invalidateQueries({ queryKey });
       toast.success("Wunsch gespeichert");
     },
@@ -71,7 +88,7 @@ export function MealWishesCard({ userId, mode }: Props) {
       </div>
       <p className="mb-4 text-xs text-muted-foreground">
         {mode === "client"
-          ? "Trag hier Gerichte ein, die dein Coach prüfen und der Smart Plan dann automatisch verwenden kann. Nach jedem neuen Plan wird die Liste zurückgesetzt."
+          ? "Trag hier Gerichte ein, ordne sie einer Mahlzeit zu (Frühstück/Mittag/Abend/Snack) und – bei Partner-Plänen – wem sie gehören."
           : "Wünsche dieses Kunden — gib frei, was der Smart Plan im nächsten Lauf berücksichtigen darf."}
       </p>
 
@@ -82,7 +99,7 @@ export function MealWishesCard({ userId, mode }: Props) {
             if (text.trim().length === 0) return;
             add.mutate();
           }}
-          className="mb-4 flex gap-2"
+          className="mb-4 space-y-2"
         >
           <input
             type="text"
@@ -90,16 +107,35 @@ export function MealWishesCard({ userId, mode }: Props) {
             maxLength={300}
             onChange={(e) => setText(e.target.value)}
             placeholder="z. B. Hähnchen-Reis-Bowl mit Süßkartoffel"
-            className="flex-1 rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-gold"
+            className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-gold"
           />
-          <button
-            type="submit"
-            disabled={add.isPending || text.trim().length === 0}
-            className="flex items-center gap-1 rounded-xl bg-gradient-gold px-3 py-2 text-sm font-bold text-primary-foreground disabled:opacity-50"
-          >
-            {add.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-            Hinzufügen
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <select
+              value={slot}
+              onChange={(e) => setSlot(e.target.value as any)}
+              className="min-w-[7rem] flex-1 rounded-xl border border-border bg-background px-3 py-2 text-sm"
+            >
+              {(Object.keys(SLOT_LABEL) as Array<keyof typeof SLOT_LABEL>).map((k) => (
+                <option key={k} value={k}>{SLOT_LABEL[k]}</option>
+              ))}
+            </select>
+            <input
+              type="text"
+              value={forPerson}
+              maxLength={60}
+              onChange={(e) => setForPerson(e.target.value)}
+              placeholder="Für wen? (optional)"
+              className="min-w-[7rem] flex-1 rounded-xl border border-border bg-background px-3 py-2 text-sm"
+            />
+            <button
+              type="submit"
+              disabled={add.isPending || text.trim().length === 0}
+              className="flex items-center gap-1 rounded-xl bg-gradient-gold px-3 py-2 text-sm font-bold text-primary-foreground disabled:opacity-50"
+            >
+              {add.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              Hinzufügen
+            </button>
+          </div>
         </form>
       )}
 
@@ -126,6 +162,18 @@ export function MealWishesCard({ userId, mode }: Props) {
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
+                  <div className="mb-1 flex flex-wrap items-center gap-1">
+                    {w.meal_slot && w.meal_slot !== "any" && (
+                      <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gold">
+                        {SLOT_LABEL[w.meal_slot as keyof typeof SLOT_LABEL]}
+                      </span>
+                    )}
+                    {w.for_person && (
+                      <span className="rounded-full bg-accent/40 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                        Für: {w.for_person}
+                      </span>
+                    )}
+                  </div>
                   <div className="text-sm font-semibold">{w.wish}</div>
                   <div
                     className={`mt-1 flex items-center gap-1 text-[11px] ${
