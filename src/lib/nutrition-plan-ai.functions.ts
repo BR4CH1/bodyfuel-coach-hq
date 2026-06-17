@@ -570,12 +570,26 @@ WICHTIG zu name/description:
       console.warn("Auto shopping list failed:", e);
     }
 
-    // Mark coach-approved wishes as consumed so the form resets for the next plan.
+    // Only mark wishes as consumed when the AI actually used them in the plan;
+    // unused wishes stay pending so they roll into the next plan.
     if (approvedWishIds.length) {
-      await supabase
-        .from("meal_wishes")
-        .update({ consumed_at: new Date().toISOString() })
-        .in("id", approvedWishIds);
+      const haystack = cleaned
+        .flatMap((d) => d.meals.map((m) => `${m.name} ${m.description ?? ""}`))
+        .join(" | ")
+        .toLowerCase();
+      const norm = (s: string) =>
+        s.toLowerCase().replace(/[^a-zäöüß0-9 ]+/g, " ").trim();
+      const usedIds: string[] = [];
+      (wishesData as any[] | null | undefined)?.forEach((w) => {
+        const key = norm(String(w.wish ?? ""));
+        if (key && haystack.includes(key)) usedIds.push(w.id as string);
+      });
+      if (usedIds.length) {
+        await supabase
+          .from("meal_wishes")
+          .update({ consumed_at: new Date().toISOString() })
+          .in("id", usedIds);
+      }
     }
 
 
