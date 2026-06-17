@@ -123,10 +123,69 @@ function CoachDashboard() {
             .limit(200),
           supabase
             .from("nutrition_plans")
-            .select("client_id, plan_type, scheduled_end_date, status")
+            .select("id, client_id, plan_type, scheduled_end_date, status")
             .in("client_id", ids)
             .eq("status", "active"),
         ]);
+
+        // Compute kcal deviation per client from active nutrition plans
+        const activeNutritionPlans = (plans.data ?? []).filter(
+          (p: any) => p.plan_type === "nutrition",
+        );
+        const nutritionPlanIds = activeNutritionPlans.map((p: any) => p.id);
+        const planToClient = new Map<string, string>();
+        activeNutritionPlans.forEach((p: any) => planToClient.set(p.id, p.client_id));
+
+        const [targetsRes, daysRes] = await Promise.all([
+          supabase
+            .from("nutrition_targets")
+            .select("user_id, kcal, kcal_rest")
+            .in("user_id", ids),
+          nutritionPlanIds.length
+            ? supabase
+                .from("nutrition_plan_days")
+                .select("id, plan_id, name")
+                .in("plan_id", nutritionPlanIds)
+            : Promise.resolve({ data: [] as any[] }),
+        ]);
+        const dayList = (daysRes.data ?? []) as Array<{ id: string; plan_id: string; name: string }>;
+        const dayIds = dayList.map((d) => d.id);
+        const mealsRes = dayIds.length
+          ? await supabase
+              .from("nutrition_plan_meals")
+              .select("day_id, kcal")
+              .in("day_id", dayIds)
+          : { data: [] as any[] };
+        const sumByDay = new Map<string, number>();
+        ((mealsRes.data ?? []) as any[]).forEach((m: any) => {
+          if (m.kcal == null) return;
+          sumByDay.set(m.day_id, (sumByDay.get(m.day_id) ?? 0) + Number(m.kcal));
+        });
+        const targetByUser = new Map<string, { t: number | null; r: number | null }>();
+        ((targetsRes.data ?? []) as any[]).forEach((t: any) => {
+          targetByUser.set(t.user_id, {
+            t: t.kcal ?? null,
+            r: t.kcal_rest ?? t.kcal ?? null,
+          });
+        });
+        const kcalDev = new Map<string, { dev: number; dir: "over" | "under" }>();
+        dayList.forEach((d) => {
+          const clientId = planToClient.get(d.plan_id);
+          if (!clientId) return;
+          const tgt = targetByUser.get(clientId);
+          if (!tgt) return;
+          const sum = sumByDay.get(d.id);
+          if (!sum) return;
+          const isRest = /(rest|ruhe|pause)/i.test(d.name || "");
+          const target = isRest ? tgt.r : tgt.t;
+          if (!target) return;
+          const diff = sum - target;
+          const abs = Math.abs(diff);
+          const prev = kcalDev.get(clientId);
+          if (!prev || abs > prev.dev) {
+            kcalDev.set(clientId, { dev: abs, dir: diff >= 0 ? "over" : "under" });
+          }
+        });
 
         const lastCheckin = new Map<string, string>();
         (checkins.data ?? []).forEach((c) => {
