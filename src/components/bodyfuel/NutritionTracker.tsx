@@ -707,7 +707,7 @@ export function NutritionTracker() {
                                 onClick={() => {
                                   setPicking(r);
                                   setUnit("g");
-                                  setAmountStr("100");
+                                  setAmountStr(String(Math.round(r.last_amount_g)));
                                 }}
                                 className="w-full px-2 py-3 text-left hover:bg-secondary"
                               >
