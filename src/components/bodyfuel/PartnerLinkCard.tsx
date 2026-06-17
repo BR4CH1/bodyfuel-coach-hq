@@ -35,6 +35,8 @@ export function PartnerLinkCard({ userId }: { userId: string }) {
     dinner: true,
     snack: false,
   });
+  const [durationMode, setDurationMode] = useState<"shopping" | "fixed">("shopping");
+  const [fixedDays, setFixedDays] = useState<string>("7");
 
   const link = useQuery({
     queryKey: ["partner-link", userId],
@@ -70,15 +72,21 @@ export function PartnerLinkCard({ userId }: { userId: string }) {
   });
 
   const generate = useMutation({
-    mutationFn: (start_mode: "today" | "next_shopping") =>
-      genFn({
+    mutationFn: (start_mode: "today" | "next_shopping") => {
+      const planDays =
+        durationMode === "fixed"
+          ? Math.max(1, Math.min(21, parseInt(fixedDays, 10) || 7))
+          : null;
+      return genFn({
         data: {
           user_a: userId,
           user_b: link.data?.partner_id!,
           start_mode,
           shared_slots: shared,
+          plan_days: planDays,
         },
-      }),
+      });
+    },
     onSuccess: () => {
       toast.success("Gemeinsamer Plan-Entwurf erstellt (für beide Personen).");
       qc.invalidateQueries({ queryKey: ["plan-overview", userId] });
@@ -182,6 +190,49 @@ export function PartnerLinkCard({ userId }: { userId: string }) {
                 </label>
               ))}
             </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-dashed border-border bg-background/40 px-4 py-3 text-xs">
+            <span className="font-semibold uppercase tracking-wider text-muted-foreground">
+              Dauer
+            </span>
+            <label className="inline-flex items-center gap-1.5 cursor-pointer">
+              <input
+                type="radio"
+                name={`partner-duration-${userId}`}
+                className="h-3.5 w-3.5 accent-current"
+                checked={durationMode === "shopping"}
+                onChange={() => setDurationMode("shopping")}
+              />
+              <span>Bis nächster Einkaufstag</span>
+            </label>
+            <label className="inline-flex items-center gap-1.5 cursor-pointer">
+              <input
+                type="radio"
+                name={`partner-duration-${userId}`}
+                className="h-3.5 w-3.5 accent-current"
+                checked={durationMode === "fixed"}
+                onChange={() => setDurationMode("fixed")}
+              />
+              <span>Feste Dauer:</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={fixedDays}
+                onFocus={() => setDurationMode("fixed")}
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/[^0-9]/g, "").slice(0, 2);
+                  setFixedDays(raw);
+                }}
+                onBlur={() => {
+                  const num = Math.max(1, Math.min(21, parseInt(fixedDays, 10) || 7));
+                  setFixedDays(String(num));
+                }}
+                className="w-14 rounded-md border border-input bg-background px-2 py-1 text-xs"
+              />
+              <span>Tage</span>
+            </label>
           </div>
 
           <div className="flex flex-wrap gap-2">

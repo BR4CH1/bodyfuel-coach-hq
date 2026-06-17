@@ -23,6 +23,9 @@ import {
   type PlanStatus,
 } from "@/lib/plan-management.functions";
 import { generateAiNutritionPlanDraft } from "@/lib/nutrition-plan-ai.functions";
+import { getPartnerLink } from "@/lib/partner.functions";
+import { generatePartnerNutritionPlanDraft } from "@/lib/partner-nutrition-plan-ai.functions";
+import { Users } from "lucide-react";
 
 const STATUS_LABEL: Record<PlanStatus, string> = {
   draft: "Entwurf",
@@ -57,10 +60,17 @@ export function PlanManagementCard({ userId }: { userId: string }) {
   const delFn = useServerFn(deletePlanDraft);
   const schedFn = useServerFn(updatePlanScheduling);
   const autoFn = useServerFn(setAutoPublish);
+  const partnerLinkFn = useServerFn(getPartnerLink);
+  const partnerGenFn = useServerFn(generatePartnerNutritionPlanDraft);
 
   const { data, isLoading } = useQuery({
     queryKey: ["plan-overview", userId],
     queryFn: () => getFn({ data: { user_id: userId } }),
+  });
+
+  const partnerLink = useQuery({
+    queryKey: ["partner-link", userId],
+    queryFn: () => partnerLinkFn({ data: { user_id: userId } }),
   });
 
   const invalidate = () => {
@@ -128,6 +138,33 @@ export function PlanManagementCard({ userId }: { userId: string }) {
     mutationFn: (v: boolean) =>
       autoFn({ data: { user_id: userId, auto_publish: v } }),
     onSuccess: () => invalidate(),
+    onError: (e: any) => toast.error(e?.message ?? "Fehler"),
+  });
+
+  const partnerGen = useMutation({
+    mutationFn: (start_mode: "today" | "next_shopping") => {
+      const planDays =
+        durationMode === "fixed"
+          ? Math.max(1, Math.min(21, parseInt(fixedDays, 10) || 7))
+          : null;
+      return partnerGenFn({
+        data: {
+          user_a: userId,
+          user_b: partnerLink.data!.partner_id,
+          start_mode,
+          plan_days: planDays,
+        },
+      });
+    },
+    onSuccess: (_d, mode) => {
+      toast.success(
+        mode === "today"
+          ? "Gemeinsamer Plan ab heute erstellt (für beide Personen)."
+          : "Gemeinsamer Plan ab nächstem Einkauf erstellt (für beide Personen).",
+      );
+      invalidate();
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Fehler beim Gemeinsamen Plan"),
   });
 
   return (
@@ -156,6 +193,28 @@ export function PlanManagementCard({ userId }: { userId: string }) {
             <Sparkles className="h-4 w-4" />
             {gen.isPending ? "Erstelle…" : "Plan ab nächstem Einkauf"}
           </button>
+          {partnerLink.data && (
+            <>
+              <button
+                onClick={() => partnerGen.mutate("today")}
+                disabled={partnerGen.isPending}
+                className="inline-flex items-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-600 hover:bg-emerald-500/20 disabled:opacity-60"
+                title={`Gemeinsam mit ${partnerLink.data.partner_name}`}
+              >
+                <Users className="h-4 w-4" />
+                {partnerGen.isPending ? "Erstelle…" : "Gemeinsamen Plan (ab heute)"}
+              </button>
+              <button
+                onClick={() => partnerGen.mutate("next_shopping")}
+                disabled={partnerGen.isPending}
+                className="inline-flex items-center gap-2 rounded-lg border border-emerald-500/40 bg-background px-3 py-2 text-sm font-semibold text-emerald-600 hover:bg-emerald-500/10 disabled:opacity-60"
+                title={`Gemeinsam mit ${partnerLink.data.partner_name}`}
+              >
+                <Users className="h-4 w-4" />
+                {partnerGen.isPending ? "Erstelle…" : "Gemeinsam ab Einkauf"}
+              </button>
+            </>
+          )}
         </div>
       </div>
 

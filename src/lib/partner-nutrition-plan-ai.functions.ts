@@ -217,6 +217,8 @@ export const generatePartnerNutritionPlanDraft = createServerFn({ method: "POST"
       user_b: string;
       start_mode?: "today" | "next_shopping";
       shared_slots?: { breakfast?: boolean; lunch?: boolean; dinner?: boolean; snack?: boolean };
+      /** Optional fixed plan length (1–21). Overrides the shopping-cycle logic. */
+      plan_days?: number | null;
     }) => d,
   )
   .handler(async ({ data, context }) => {
@@ -241,9 +243,13 @@ export const generatePartnerNutritionPlanDraft = createServerFn({ method: "POST"
     const daysB = daysUntilNextShopping(b.shoppingDays);
     const start = new Date();
     if (startMode === "next_shopping") start.setDate(start.getDate() + Math.min(daysA, daysB));
-    const planDays = startMode === "next_shopping"
-      ? Math.min(daysUntilNextShopping(a.shoppingDays, start), daysUntilNextShopping(b.shoppingDays, start))
-      : Math.min(daysA, daysB);
+    const fixedDays =
+      data.plan_days != null ? Math.max(1, Math.min(21, Math.round(data.plan_days))) : null;
+    const planDays =
+      fixedDays ??
+      (startMode === "next_shopping"
+        ? Math.min(daysUntilNextShopping(a.shoppingDays, start), daysUntilNextShopping(b.shoppingDays, start))
+        : Math.min(daysA, daysB));
 
     const dayTypeFor = (user: typeof a, idx: number, date: Date): "training" | "rest" => {
       const k = WEEKDAY_KEYS[date.getDay()];
@@ -392,7 +398,7 @@ Genau ${planDays} Tage. Pro Person je 4 Slots (breakfast/lunch/dinner/snack). Be
           generated_by: "ai_auto",
           source: "smart_ai",
           uploaded_by: userId,
-          file_path: `ai-generated/partner/${clientId}/${Date.now()}.json`,
+          file_path: `ai-generated/${clientId}/partner-${Date.now()}.json`,
           file_name: "ai-partner.json",
           scheduled_start_date: isoDate(start),
           scheduled_end_date: isoDate(end),
