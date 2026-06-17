@@ -771,16 +771,6 @@ export function NutritionTracker() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {list.length > 0 && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => createMealFromEntries(m.key, list)}
-                    title="Diese Einträge als wiederverwendbare Mahlzeit speichern"
-                  >
-                    <BookmarkPlus className="h-4 w-4" /> Mahlzeit erstellen
-                  </Button>
-                )}
                 <Button
                   size="sm"
                   onClick={() => {
