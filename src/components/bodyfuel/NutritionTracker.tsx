@@ -1111,6 +1111,12 @@ export function NutritionTracker() {
       {scannerOpen && (
         <BarcodeScanner onDetected={handleBarcode} onClose={() => setScannerOpen(false)} />
       )}
+
+      <MealBuilderDialog
+        userId={userId}
+        open={builderOpen}
+        onClose={() => setBuilderOpen(false)}
+      />
     </div>
   );
 }
