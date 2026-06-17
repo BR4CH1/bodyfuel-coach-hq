@@ -139,7 +139,7 @@ function NewCustomerForm() {
               </SelectContent>
             </Select>
           </div>
-          {!isTrial && (
+          {!isTrial && !isFree && (
             <div className="space-y-2">
               <Label>Individueller Preis (€)</Label>
               <Input
@@ -152,6 +152,12 @@ function NewCustomerForm() {
             </div>
           )}
         </div>
+
+        {isFree && (
+          <p className="rounded-xl border border-border bg-secondary/30 p-3 text-xs text-muted-foreground">
+            Free-User erhalten Zugriff auf den Tracker (Ernährung, Wasser, Gewicht, Aktivität, Punkte & Level). Kein Paket, keine Rechnung.
+          </p>
+        )}
 
         {isTrial ? (
           <div className="grid gap-4 sm:grid-cols-2">
