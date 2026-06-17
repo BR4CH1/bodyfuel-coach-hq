@@ -49,7 +49,10 @@ type Client = {
   last_nutrition_at: string | null;
   last_nutrition_name: string | null;
   last_training_at: string | null;
+  nutrition_plan_end: string | null;
+  training_plan_end: string | null;
 };
+
 
 
 type Lead = {
