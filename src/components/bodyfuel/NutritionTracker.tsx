@@ -376,7 +376,7 @@ export function NutritionTracker() {
         .limit(100);
       if (cancelled) return;
       const seen = new Set<string>();
-      const out: FoodResult[] = [];
+      const out: RecentFood[] = [];
       for (const r of (data ?? []) as Array<{
         name: string; brand: string | null; barcode: string | null;
         serving_g: number; kcal: number; protein_g: number; carbs_g: number; fat_g: number;
@@ -397,6 +397,7 @@ export function NutritionTracker() {
           protein_per_100g: Number(r.protein_g) * f,
           carbs_per_100g: Number(r.carbs_g) * f,
           fat_per_100g: Number(r.fat_g) * f,
+          last_amount_g: sg,
         });
         if (out.length >= 15) break;
       }
