@@ -406,10 +406,10 @@ Genau ${planDays} Tage. Pro Person je 4 Slots (breakfast/lunch/dinner/snack). Be
       console.error("[partner-plan] AI returned no days. raw=", raw);
       throw new Error("Keine Tage generiert.");
     }
-    const totalMealsReturned = days.reduce(
-      (s: number, g: GeneratedDay) => s + (g.person_a?.length ?? 0) + (g.person_b?.length ?? 0),
-      0,
-    );
+    const countMeals = (g: any) =>
+      ((g?.person_a ?? g?.personA ?? g?.a ?? g?.meals_a ?? g?.user_a ?? g?.meals ?? []).length) +
+      ((g?.person_b ?? g?.personB ?? g?.b ?? g?.meals_b ?? g?.user_b ?? []).length);
+    const totalMealsReturned = days.reduce((s: number, g: any) => s + countMeals(g), 0);
     if (totalMealsReturned === 0) {
       console.error("[partner-plan] AI returned 0 meals across all days. raw=", raw);
       throw new Error("KI hat keine Mahlzeiten geliefert. Bitte erneut versuchen.");
