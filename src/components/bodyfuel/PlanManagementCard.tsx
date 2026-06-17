@@ -25,6 +25,7 @@ import {
 import { generateAiNutritionPlanDraft } from "@/lib/nutrition-plan-ai.functions";
 import { getPartnerLink } from "@/lib/partner.functions";
 import { generatePartnerNutritionPlanDraft } from "@/lib/partner-nutrition-plan-ai.functions";
+import { getCustomerSmartProfile, setCustomerWeeklyBudget } from "@/lib/smart-profile.functions";
 import { Users } from "lucide-react";
 
 const STATUS_LABEL: Record<PlanStatus, string> = {
