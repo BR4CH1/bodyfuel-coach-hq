@@ -688,6 +688,45 @@ export type Database = {
           },
         ]
       }
+      meal_wishes: {
+        Row: {
+          coach_note: string | null
+          consumed_at: string | null
+          created_at: string
+          id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          wish: string
+        }
+        Insert: {
+          coach_note?: string | null
+          consumed_at?: string | null
+          created_at?: string
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          wish: string
+        }
+        Update: {
+          coach_note?: string | null
+          consumed_at?: string | null
+          created_at?: string
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          wish?: string
+        }
+        Relationships: []
+      }
       nutrition_partners: {
         Row: {
           created_at: string

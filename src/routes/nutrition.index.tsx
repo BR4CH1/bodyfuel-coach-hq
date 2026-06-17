@@ -13,6 +13,8 @@ import { useSession } from "@/lib/bodyfuel/session";
 import { useTrial } from "@/hooks/use-trial";
 import { TrialNutritionPlan } from "@/components/bodyfuel/TrialPlanView";
 import { getMySmartProfile } from "@/lib/smart-profile.functions";
+import { MealWishesCard } from "@/components/bodyfuel/MealWishesCard";
+
 
 export const Route = createFileRoute("/nutrition/")({
   head: () => ({ meta: [{ title: "Ernährungsplan — BODYFUEL" }] }),
@@ -150,7 +152,11 @@ function NutritionIndex() {
               <WeekScheduleCard userId={supabaseUser.id} />
             )}
             <MacroTargetsCard userId={supabaseUser?.id} />
+            {supabaseUser?.id && (
+              <MealWishesCard userId={supabaseUser.id} mode="client" />
+            )}
           </>
+
         )}
         {isCoach && <PlansView planType="nutrition" onClientChange={setCoachClientId} />}
         {!isCoach && (isTrial || isExpired) ? (
