@@ -13,7 +13,9 @@ import {
   Utensils,
   Dumbbell,
   Trophy,
+  CalendarClock,
 } from "lucide-react";
+
 
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { CoachTrialOverview } from "@/components/bodyfuel/CoachTrialOverview";
@@ -47,7 +49,10 @@ type Client = {
   last_nutrition_at: string | null;
   last_nutrition_name: string | null;
   last_training_at: string | null;
+  nutrition_plan_end: string | null;
+  training_plan_end: string | null;
 };
+
 
 
 type Lead = {
@@ -90,7 +95,7 @@ function CoachDashboard() {
 
       let clientRows: Client[] = [];
       if (ids.length > 0) {
-        const [profiles, checkins, measurements, foods, sets] = await Promise.all([
+        const [profiles, checkins, measurements, foods, sets, plans] = await Promise.all([
           supabase.from("profiles").select("id, display_name").in("id", ids),
           supabase
             .from("weekly_checkins")
@@ -114,6 +119,11 @@ function CoachDashboard() {
             .in("client_id", ids)
             .order("performed_at", { ascending: false })
             .limit(200),
+          supabase
+            .from("nutrition_plans")
+            .select("client_id, plan_type, scheduled_end_date, status")
+            .in("client_id", ids)
+            .eq("status", "active"),
         ]);
 
         const lastCheckin = new Map<string, string>();
@@ -134,6 +144,16 @@ function CoachDashboard() {
         (sets.data ?? []).forEach((s) => {
           if (!lastTraining.has(s.client_id)) lastTraining.set(s.client_id, s.performed_at);
         });
+        const nutritionEnd = new Map<string, string>();
+        const trainingEnd = new Map<string, string>();
+        (plans.data ?? []).forEach((p: any) => {
+          if (!p.scheduled_end_date) return;
+          const map = p.plan_type === "training" ? trainingEnd : nutritionEnd;
+          const existing = map.get(p.client_id);
+          if (!existing || p.scheduled_end_date > existing) {
+            map.set(p.client_id, p.scheduled_end_date);
+          }
+        });
 
         clientRows = (profiles.data ?? []).map((p) => ({
           id: p.id,
@@ -144,8 +164,11 @@ function CoachDashboard() {
           last_nutrition_at: lastFood.get(p.id)?.at ?? null,
           last_nutrition_name: lastFood.get(p.id)?.name ?? null,
           last_training_at: lastTraining.get(p.id) ?? null,
+          nutrition_plan_end: nutritionEnd.get(p.id) ?? null,
+          training_plan_end: trainingEnd.get(p.id) ?? null,
         }));
       }
+
 
       setClients(clientRows);
 
@@ -188,6 +211,50 @@ function CoachDashboard() {
     )
     .slice(0, 6);
 
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const WARN_DAYS = 5;
+  const expiringPlans = clients
+    .flatMap((c) => {
+      const out: Array<{ id: string; name: string; kind: "nutrition" | "training"; end: string; days: number }> = [];
+      if (c.nutrition_plan_end) {
+        out.push({
+          id: c.id,
+          name: c.display_name ?? "Ohne Namen",
+          kind: "nutrition",
+          end: c.nutrition_plan_end,
+          days: Math.ceil((new Date(c.nutrition_plan_end).getTime() - new Date(todayIso).getTime()) / 86400000),
+        });
+      }
+      if (c.training_plan_end) {
+        out.push({
+          id: c.id,
+          name: c.display_name ?? "Ohne Namen",
+          kind: "training",
+          end: c.training_plan_end,
+          days: Math.ceil((new Date(c.training_plan_end).getTime() - new Date(todayIso).getTime()) / 86400000),
+        });
+      }
+      return out;
+    })
+    .filter((p) => p.days <= WARN_DAYS)
+    .sort((a, b) => a.days - b.days);
+
+  const planOverview = [...clients]
+    .filter((c) => c.nutrition_plan_end || c.training_plan_end)
+    .sort((a, b) => {
+      const ae = Math.min(
+        a.nutrition_plan_end ? new Date(a.nutrition_plan_end).getTime() : Infinity,
+        a.training_plan_end ? new Date(a.training_plan_end).getTime() : Infinity,
+      );
+      const be = Math.min(
+        b.nutrition_plan_end ? new Date(b.nutrition_plan_end).getTime() : Infinity,
+        b.training_plan_end ? new Date(b.training_plan_end).getTime() : Infinity,
+      );
+      return ae - be;
+    });
+
+
+
 
   return (
     <div className="space-y-6">
@@ -208,6 +275,13 @@ function CoachDashboard() {
             label="Check-in offen"
             warn={openWeek.length > 0}
           />
+          <StatPill
+            icon={<CalendarClock className="h-4 w-4" />}
+            value={expiringPlans.length}
+            label="Pläne laufen aus"
+            warn={expiringPlans.length > 0}
+          />
+
           <Link
             to="/coach/package-requests"
             className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm hover:border-gold/40"
@@ -279,6 +353,60 @@ function CoachDashboard() {
               />
             ))}
           </Panel>
+
+          {/* Plan-Warnungen */}
+          <Panel
+            icon={<AlertTriangle className="h-5 w-5" />}
+            title="Pläne laufen aus (≤ 5 Tage)"
+            empty={expiringPlans.length === 0}
+            emptyText="Alle Pläne haben noch Laufzeit."
+          >
+            {expiringPlans.slice(0, 10).map((p, i) => (
+              <CustomerRow
+                key={`${p.id}-${p.kind}-${i}`}
+                id={p.id}
+                name={p.name}
+                warn
+                meta={`${p.kind === "training" ? "Trainingsplan" : "Ernährungsplan"} ${
+                  p.days < 0
+                    ? `seit ${Math.abs(p.days)} Tagen abgelaufen`
+                    : p.days === 0
+                      ? "läuft heute aus"
+                      : `läuft in ${p.days} Tagen aus (${new Date(p.end).toLocaleDateString("de-DE")})`
+                }`}
+              />
+            ))}
+          </Panel>
+
+          {/* Plan-Übersicht */}
+          <Panel
+            icon={<CalendarClock className="h-5 w-5" />}
+            title="Plan-Übersicht"
+            empty={planOverview.length === 0}
+            emptyText="Keine aktiven Pläne hinterlegt."
+          >
+            {planOverview.slice(0, 12).map((c) => (
+              <Link
+                key={c.id}
+                to="/coach/customers/$userId"
+                params={{ userId: c.id }}
+                className="block rounded-xl border border-border bg-background/40 p-3 transition hover:border-gold/40"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="truncate text-sm font-semibold">
+                    {c.display_name ?? "Ohne Namen"}
+                  </div>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                </div>
+                <div className="mt-1 grid grid-cols-2 gap-2 text-[11px]">
+                  <PlanValidity label="Training" end={c.training_plan_end} />
+                  <PlanValidity label="Ernährung" end={c.nutrition_plan_end} />
+                </div>
+              </Link>
+            ))}
+          </Panel>
+
+
 
           {/* Neue Leads */}
           <Panel
@@ -577,5 +705,37 @@ function CustomerRow({
       </div>
       <ChevronRight className="h-4 w-4 text-muted-foreground" />
     </Link>
+  );
+}
+
+function PlanValidity({ label, end }: { label: string; end: string | null }) {
+  if (!end) {
+    return (
+      <div className="rounded-lg border border-border/60 bg-background/40 px-2 py-1">
+        <div className="text-muted-foreground">{label}</div>
+        <div className="font-semibold text-muted-foreground">—</div>
+      </div>
+    );
+  }
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const endDate = new Date(end);
+  const days = Math.ceil((endDate.getTime() - today.getTime()) / 86400000);
+  const tone =
+    days < 0 ? "text-warning" : days <= 5 ? "text-warning" : "text-foreground";
+  const note =
+    days < 0
+      ? `abgelaufen (vor ${Math.abs(days)} T.)`
+      : days === 0
+        ? "läuft heute aus"
+        : `noch ${days} T.`;
+  return (
+    <div className="rounded-lg border border-border/60 bg-background/40 px-2 py-1">
+      <div className="text-muted-foreground">{label}</div>
+      <div className={`font-semibold ${tone}`}>
+        bis {endDate.toLocaleDateString("de-DE")}
+      </div>
+      <div className={`text-[10px] ${tone}`}>{note}</div>
+    </div>
   );
 }
