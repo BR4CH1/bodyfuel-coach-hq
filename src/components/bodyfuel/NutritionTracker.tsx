@@ -266,17 +266,29 @@ export function NutritionTracker() {
     slot: Meal,
     list: FoodEntry[],
   ) => {
-    if (!list.length) return;
+    if (!list.length) {
+      toast.error("Erst Zutaten tracken, dann als Mahlzeit speichern");
+      return;
+    }
+    const mealLabel = MEALS.find((x) => x.key === slot)?.label ?? "Mahlzeit";
     const suggested = list.map((e) => e.name).slice(0, 3).join(" & ");
-    const name = window.prompt(
-      "Name für die Mahlzeit (wird zum schnellen Tracken gespeichert):",
-      suggested,
-    );
-    if (!name || !name.trim()) return;
+    let name = suggested || mealLabel;
+    if (typeof window !== "undefined") {
+      const input = window.prompt(
+        "Name für die Mahlzeit (Abbrechen = Standardname):",
+        suggested,
+      );
+      if (input === null) {
+        // User cancelled — use suggested name automatically
+        name = suggested || mealLabel;
+      } else if (input.trim()) {
+        name = input.trim();
+      }
+    }
     try {
       await saveCustomMealFn({
         data: {
-          name: name.trim(),
+          name,
           meal_slot: slot,
           ingredients: list.map((e) => ({
             name: e.name,
@@ -288,7 +300,7 @@ export function NutritionTracker() {
           })),
         },
       });
-      toast.success("Als eigene Mahlzeit gespeichert");
+      toast.success(`„${name}" als eigene Mahlzeit gespeichert`);
     } catch (err) {
       toast.error((err as Error).message);
     }
