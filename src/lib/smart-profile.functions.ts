@@ -20,6 +20,8 @@ export type SmartNutritionProfile = {
   auto_publish: boolean;
   completed_at: string | null;
   training_weekdays: string[];
+  kitchen_equipment: string[];
+  kitchen_equipment_notes: string | null;
 };
 
 
