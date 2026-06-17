@@ -131,6 +131,7 @@ function NewCustomerForm() {
             >
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
+                <SelectItem value="free">Free (Tracker)</SelectItem>
                 <SelectItem value="trial">Trial (7-Tage-Test)</SelectItem>
                 <SelectItem value="starter">Starter</SelectItem>
                 <SelectItem value="coaching">Coaching</SelectItem>
