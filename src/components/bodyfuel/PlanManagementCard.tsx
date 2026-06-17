@@ -292,6 +292,40 @@ export function PlanManagementCard({ userId }: { userId: string }) {
         </label>
       </div>
 
+      <div className="mt-2 flex flex-wrap items-center gap-3 rounded-xl border border-dashed border-border bg-background/40 px-4 py-3 text-xs">
+        <span className="font-semibold uppercase tracking-wider text-muted-foreground">
+          Wochenbudget
+        </span>
+        <div className="inline-flex items-center gap-1.5">
+          <input
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            placeholder="z. B. 80"
+            value={budgetInput}
+            onChange={(e) => setBudgetInput(e.target.value.replace(/[^0-9]/g, "").slice(0, 4))}
+            className="w-20 rounded-md border border-input bg-background px-2 py-1 text-xs"
+          />
+          <span>€ / Woche (pro Person)</span>
+        </div>
+        <button
+          onClick={() => {
+            const v = budgetInput.trim() === "" ? null : parseInt(budgetInput, 10);
+            saveBudget.mutate(Number.isNaN(v as number) ? null : v);
+          }}
+          disabled={saveBudget.isPending}
+          className="rounded-md bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground disabled:opacity-60"
+        >
+          {saveBudget.isPending ? "Speichere…" : "Speichern"}
+        </button>
+        {partnerLink.data && (smartProfile.data?.weekly_budget_eur ?? 0) > 0 && (
+          <span className="text-muted-foreground">
+            Gemeinsamer Plan rechnet mit Summe beider Budgets.
+          </span>
+        )}
+      </div>
+
+
       {isLoading && (
         <div className="mt-4 text-sm text-muted-foreground">Lade…</div>
       )}
