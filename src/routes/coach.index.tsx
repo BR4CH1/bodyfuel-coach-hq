@@ -410,6 +410,8 @@ function CoachDashboard() {
                 id={c.id}
                 name={c.display_name ?? "Ohne Namen"}
                 warn
+                kcalDev={c.kcal_dev}
+                kcalDir={c.kcal_dev_dir}
                 meta={
                   c.days === null
                     ? "Noch nie eingecheckt"
