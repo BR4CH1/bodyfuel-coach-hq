@@ -84,6 +84,32 @@ export function PlanManagementCard({ userId }: { userId: string }) {
   const [durationMode, setDurationMode] = useState<"shopping" | "fixed">("shopping");
   const [fixedDays, setFixedDays] = useState<string>("7");
 
+  const smartProfile = useQuery({
+    queryKey: ["smart-profile", userId],
+    queryFn: () => smartProfileFn({ data: { user_id: userId } }),
+  });
+  const [budgetInput, setBudgetInput] = useState<string>("");
+  const initialBudget = smartProfile.data?.weekly_budget_eur;
+  // Sync local input when the loaded value changes (only when input is empty / matches prev).
+  if (
+    initialBudget != null &&
+    budgetInput === "" &&
+    smartProfile.isSuccess
+  ) {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    setBudgetInput(String(initialBudget));
+  }
+
+  const saveBudget = useMutation({
+    mutationFn: (val: number | null) =>
+      setBudgetFn({ data: { user_id: userId, weekly_budget_eur: val } }),
+    onSuccess: () => {
+      toast.success("Wochenbudget gespeichert.");
+      qc.invalidateQueries({ queryKey: ["smart-profile", userId] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Fehler beim Speichern"),
+  });
+
   const gen = useMutation({
     mutationFn: (start_mode: "today" | "next_shopping") => {
       const planDays =
