@@ -360,6 +360,50 @@ export function NutritionTracker() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, openMeal, picking]);
 
+  // Load recent unique foods when the add dialog opens
+  useEffect(() => {
+    if (!openMeal || picking || !userId) return;
+    let cancelled = false;
+    (async () => {
+      setLoadingRecent(true);
+      const { data } = await supabase
+        .from("food_entries")
+        .select("name, brand, barcode, serving_g, kcal, protein_g, carbs_g, fat_g, created_at")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (cancelled) return;
+      const seen = new Set<string>();
+      const out: FoodResult[] = [];
+      for (const r of (data ?? []) as Array<{
+        name: string; brand: string | null; barcode: string | null;
+        serving_g: number; kcal: number; protein_g: number; carbs_g: number; fat_g: number;
+      }>) {
+        const key = (r.barcode || r.name) + "|" + (r.brand ?? "");
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const sg = Number(r.serving_g) || 0;
+        if (sg <= 0) continue;
+        const f = 100 / sg;
+        out.push({
+          name: r.name,
+          brand: r.brand,
+          barcode: r.barcode,
+          serving_g: null,
+          kcal_per_100g: Number(r.kcal) * f,
+          protein_per_100g: Number(r.protein_g) * f,
+          carbs_per_100g: Number(r.carbs_g) * f,
+          fat_per_100g: Number(r.fat_g) * f,
+        });
+        if (out.length >= 15) break;
+      }
+      setRecentFoods(out);
+      setLoadingRecent(false);
+    })();
+    return () => { cancelled = true; };
+  }, [openMeal, picking, userId, allEntries.length]);
+
+
   const handleBarcode = async (code: string) => {
     setScannerOpen(false);
     try {
