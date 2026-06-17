@@ -299,6 +299,51 @@ export type Database = {
         }
         Relationships: []
       }
+      custom_meals: {
+        Row: {
+          carbs_g: number | null
+          created_at: string
+          fat_g: number | null
+          id: string
+          ingredients: Json
+          kcal: number | null
+          meal_slot: string
+          name: string
+          notes: string | null
+          protein_g: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          carbs_g?: number | null
+          created_at?: string
+          fat_g?: number | null
+          id?: string
+          ingredients?: Json
+          kcal?: number | null
+          meal_slot?: string
+          name: string
+          notes?: string | null
+          protein_g?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          carbs_g?: number | null
+          created_at?: string
+          fat_g?: number | null
+          id?: string
+          ingredients?: Json
+          kcal?: number | null
+          meal_slot?: string
+          name?: string
+          notes?: string | null
+          protein_g?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       customer_packages: {
         Row: {
           created_at: string
@@ -1251,6 +1296,75 @@ export type Database = {
           },
         ]
       }
+      photo_assessments: {
+        Row: {
+          after_date: string
+          ai_summary: string | null
+          before_date: string | null
+          coach_id: string | null
+          coach_note: string | null
+          created_at: string
+          fat_back: string | null
+          fat_belly: string | null
+          fat_hip: string | null
+          id: string
+          muscle_arms: string | null
+          muscle_back: string | null
+          muscle_chest: string | null
+          muscle_legs: string | null
+          muscle_shoulder: string | null
+          overall: string | null
+          released_at: string | null
+          released_to_client: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          after_date?: string
+          ai_summary?: string | null
+          before_date?: string | null
+          coach_id?: string | null
+          coach_note?: string | null
+          created_at?: string
+          fat_back?: string | null
+          fat_belly?: string | null
+          fat_hip?: string | null
+          id?: string
+          muscle_arms?: string | null
+          muscle_back?: string | null
+          muscle_chest?: string | null
+          muscle_legs?: string | null
+          muscle_shoulder?: string | null
+          overall?: string | null
+          released_at?: string | null
+          released_to_client?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          after_date?: string
+          ai_summary?: string | null
+          before_date?: string | null
+          coach_id?: string | null
+          coach_note?: string | null
+          created_at?: string
+          fat_back?: string | null
+          fat_belly?: string | null
+          fat_hip?: string | null
+          id?: string
+          muscle_arms?: string | null
+          muscle_back?: string | null
+          muscle_chest?: string | null
+          muscle_legs?: string | null
+          muscle_shoulder?: string | null
+          overall?: string | null
+          released_at?: string | null
+          released_to_client?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           activity_level: string | null
@@ -1368,6 +1482,36 @@ export type Database = {
           trial_start?: string | null
           trial_status?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      progress_photos: {
+        Row: {
+          created_at: string
+          file_path: string
+          id: string
+          note: string | null
+          pose: string
+          taken_on: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_path: string
+          id?: string
+          note?: string | null
+          pose: string
+          taken_on?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          file_path?: string
+          id?: string
+          note?: string | null
+          pose?: string
+          taken_on?: string
+          user_id?: string
         }
         Relationships: []
       }
