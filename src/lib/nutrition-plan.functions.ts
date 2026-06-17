@@ -255,10 +255,14 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
     const { data: isCoach } = await supabase.rpc("has_role", { _user_id: userId, _role: "coach" });
     if (clientId !== userId && !isCoach) throw new Error("Forbidden");
 
-    // Cache hit
-    if (!data.force && Array.isArray(meal.recipe_ingredients) && meal.recipe_ingredients.length > 0) {
+    // Cache hit — but if this is a partner meal and the cached recipe was made
+    // for one person only (no "für <name>"), fall through and regenerate.
+    const cached = Array.isArray(meal.recipe_ingredients) ? (meal.recipe_ingredients as string[]) : [];
+    const cachedLooksPartnerAware = cached.some((s) => /\bfür\s+\S/i.test(s));
+    const skipCache = !!meal.partner_meal_id && !cachedLooksPartnerAware;
+    if (!data.force && !skipCache && cached.length > 0) {
       return {
-        ingredients: meal.recipe_ingredients as string[],
+        ingredients: cached,
         steps: (meal.recipe_steps as string[]) ?? [],
         cached: true,
       };
