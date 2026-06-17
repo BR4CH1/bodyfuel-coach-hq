@@ -91,7 +91,7 @@ async function loadPerson(supabase: any, userId: string) {
     supabase.from("meal_skips").select("meal_name, reason").eq("user_id", userId).limit(20),
     supabase
       .from("meal_wishes")
-      .select("id, wish")
+      .select("id, wish, applies_to, user_id")
       .eq("user_id", userId)
       .eq("status", "approved")
       .is("consumed_at", null),
@@ -168,9 +168,16 @@ async function loadPerson(supabase: any, userId: string) {
   const disliked = (ratings ?? []).filter((r: any) => r.stars <= 2).map((r: any) => r.meal?.name).filter(Boolean);
   const favoriteNames = (favs ?? []).map((f: any) => f.meal?.name).filter(Boolean);
   const skipNames = (skips ?? []).map((s: any) => s.meal_name).filter(Boolean);
-  const approvedWishes = ((wishesData as any[]) ?? []).map((w) => w.wish as string).filter(Boolean);
-  const approvedWishIds = ((wishesData as any[]) ?? []).map((w) => w.id as string).filter(Boolean);
+  const wishesRaw = ((wishesData as any[]) ?? []).map((w) => ({
+    id: w.id as string,
+    wish: w.wish as string,
+    applies_to: (w.applies_to as "self" | "partner" | "both" | null) ?? "self",
+  }));
+  const approvedWishes = wishesRaw.map((w) => w.wish).filter(Boolean);
+  const approvedWishIds = wishesRaw.map((w) => w.id).filter(Boolean);
   const weeklyBudget: number | null = p.weekly_budget_eur != null ? Number(p.weekly_budget_eur) : null;
+  const kitchenEquipment: string[] = Array.isArray(p.kitchen_equipment) ? p.kitchen_equipment : [];
+  const kitchenEquipmentNotes: string = (p.kitchen_equipment_notes ?? "").toString().trim();
 
   return {
     name: cp.display_name ?? "Person",
