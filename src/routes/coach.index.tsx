@@ -707,3 +707,35 @@ function CustomerRow({
     </Link>
   );
 }
+
+function PlanValidity({ label, end }: { label: string; end: string | null }) {
+  if (!end) {
+    return (
+      <div className="rounded-lg border border-border/60 bg-background/40 px-2 py-1">
+        <div className="text-muted-foreground">{label}</div>
+        <div className="font-semibold text-muted-foreground">—</div>
+      </div>
+    );
+  }
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const endDate = new Date(end);
+  const days = Math.ceil((endDate.getTime() - today.getTime()) / 86400000);
+  const tone =
+    days < 0 ? "text-warning" : days <= 5 ? "text-warning" : "text-foreground";
+  const note =
+    days < 0
+      ? `abgelaufen (vor ${Math.abs(days)} T.)`
+      : days === 0
+        ? "läuft heute aus"
+        : `noch ${days} T.`;
+  return (
+    <div className="rounded-lg border border-border/60 bg-background/40 px-2 py-1">
+      <div className="text-muted-foreground">{label}</div>
+      <div className={`font-semibold ${tone}`}>
+        bis {endDate.toLocaleDateString("de-DE")}
+      </div>
+      <div className={`text-[10px] ${tone}`}>{note}</div>
+    </div>
+  );
+}
