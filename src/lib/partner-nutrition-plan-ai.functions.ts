@@ -302,6 +302,26 @@ export const generatePartnerNutritionPlanDraft = createServerFn({ method: "POST"
     const targetBlockFor = (n: string, tg: { training: MacroTarget; rest: MacroTarget }) =>
       `${n} — TRAINING: ${tg.training.kcal} kcal / P ${tg.training.protein_g} / KH ${tg.training.carbs_g} / F ${tg.training.fat_g}; REST: ${tg.rest.kcal} kcal / P ${tg.rest.protein_g} / KH ${tg.rest.carbs_g} / F ${tg.rest.fat_g}`;
 
+    const wishesA = a.approvedWishes ?? [];
+    const wishesB = b.approvedWishes ?? [];
+    const wishesBlock =
+      wishesA.length || wishesB.length
+        ? `\n⭐ COACH-FREIGEGEBENE WUNSCHGERICHTE (PFLICHT — JEDES muss mindestens einmal als Mahlzeit der jeweiligen Person im Plan vorkommen, "name" muss den Wunsch enthalten):
+${wishesA.length ? `${a.name}: ${wishesA.map((w, i) => `${i + 1}. ${w}`).join("; ")}` : ""}
+${wishesB.length ? `${b.name}: ${wishesB.map((w, i) => `${i + 1}. ${w}`).join("; ")}` : ""}\n`
+        : "";
+
+    const combinedBudget =
+      (a.weeklyBudget ?? 0) + (b.weeklyBudget ?? 0) > 0
+        ? (a.weeklyBudget ?? 0) + (b.weeklyBudget ?? 0)
+        : null;
+    const budgetForPeriod =
+      combinedBudget != null ? Math.round((combinedBudget * planDays) / 7) : null;
+    const budgetBlock =
+      budgetForPeriod != null
+        ? `\n💶 GEMEINSAMES WOCHEN-BUDGET vom Coach: ${combinedBudget} € / Woche (= ~${budgetForPeriod} € für diesen ${planDays}-Tage-Plan, Discounter-Preise DE). Plane Zutaten & Mengen für BEIDE Personen zusammen so, dass die gesamten Lebensmittelkosten dieses Budget NICHT überschreiten. Bevorzuge günstige Proteinquellen und Grundbeilagen; Premium-Zutaten sparsam.\n`
+        : "";
+
     const prompt = `Erstelle einen ${planDays}-Tage-Partner-Ernährungsplan für ZWEI Personen, die zusammen essen.
 
 🎯 INDIVIDUELLE ZIELE (NIE angleichen):
@@ -320,7 +340,7 @@ NO-GOS für gemeinsame Gerichte vermeiden: ${mergedNogos.join(", ") || "(keine)"
 
 VORLIEBEN ${a.name}: Lieblings ${[...a.favFoods, ...a.favoriteNames].slice(0, 8).join(", ") || "—"}; mag ${a.liked.slice(0, 6).join(", ") || "—"}; meiden ${[...a.disliked, ...a.skipNames].slice(0, 6).join(", ") || "—"}
 VORLIEBEN ${b.name}: Lieblings ${[...b.favFoods, ...b.favoriteNames].slice(0, 8).join(", ") || "—"}; mag ${b.liked.slice(0, 6).join(", ") || "—"}; meiden ${[...b.disliked, ...b.skipNames].slice(0, 6).join(", ") || "—"}
-
+${wishesBlock}${budgetBlock}
 TAGESPLAN:
 ${scheduleLines}
 
