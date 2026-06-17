@@ -63,6 +63,8 @@ export function PlanManagementCard({ userId }: { userId: string }) {
   const autoFn = useServerFn(setAutoPublish);
   const partnerLinkFn = useServerFn(getPartnerLink);
   const partnerGenFn = useServerFn(generatePartnerNutritionPlanDraft);
+  const smartProfileFn = useServerFn(getCustomerSmartProfile);
+  const setBudgetFn = useServerFn(setCustomerWeeklyBudget);
 
   const { data, isLoading } = useQuery({
     queryKey: ["plan-overview", userId],
