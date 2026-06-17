@@ -13,7 +13,6 @@ import { Route as WelcomeRouteImport } from './routes/welcome'
 import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
 import { Route as TrialRouteImport } from './routes/trial'
 import { Route as TrainingRouteImport } from './routes/training'
-import { Route as TrackerRouteImport } from './routes/tracker'
 import { Route as StrengthCheckRouteImport } from './routes/strength-check'
 import { Route as ProgressRouteImport } from './routes/progress'
 import { Route as ProfileRouteImport } from './routes/profile'
@@ -29,6 +28,7 @@ import { Route as CheckInRouteImport } from './routes/check-in'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AchievementsRouteImport } from './routes/achievements'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TrackerIndexRouteImport } from './routes/tracker.index'
 import { Route as NutritionIndexRouteImport } from './routes/nutrition.index'
 import { Route as CoachIndexRouteImport } from './routes/coach.index'
 import { Route as BullsIndexRouteImport } from './routes/bulls.index'
@@ -91,11 +91,6 @@ const TrialRoute = TrialRouteImport.update({
 const TrainingRoute = TrainingRouteImport.update({
   id: '/training',
   path: '/training',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TrackerRoute = TrackerRouteImport.update({
-  id: '/tracker',
-  path: '/tracker',
   getParentRoute: () => rootRouteImport,
 } as any)
 const StrengthCheckRoute = StrengthCheckRouteImport.update({
@@ -173,6 +168,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TrackerIndexRoute = TrackerIndexRouteImport.update({
+  id: '/tracker/',
+  path: '/tracker/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const NutritionIndexRoute = NutritionIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -189,19 +189,19 @@ const BullsIndexRoute = BullsIndexRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const TrackerSignupRoute = TrackerSignupRouteImport.update({
-  id: '/signup',
-  path: '/signup',
-  getParentRoute: () => TrackerRoute,
+  id: '/tracker/signup',
+  path: '/tracker/signup',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const TrackerLoginRoute = TrackerLoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => TrackerRoute,
+  id: '/tracker/login',
+  path: '/tracker/login',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const TrackerAppRoute = TrackerAppRouteImport.update({
-  id: '/app',
-  path: '/app',
-  getParentRoute: () => TrackerRoute,
+  id: '/tracker/app',
+  path: '/tracker/app',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const OnboardingSmartNutritionRoute =
   OnboardingSmartNutritionRouteImport.update({
@@ -414,7 +414,6 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRoute
   '/progress': typeof ProgressRoute
   '/strength-check': typeof StrengthCheckRoute
-  '/tracker': typeof TrackerRouteWithChildren
   '/training': typeof TrainingRoute
   '/trial': typeof TrialRoute
   '/unsubscribe': typeof UnsubscribeRoute
@@ -442,6 +441,7 @@ export interface FileRoutesByFullPath {
   '/bulls/': typeof BullsIndexRoute
   '/coach/': typeof CoachIndexRoute
   '/nutrition/': typeof NutritionIndexRoute
+  '/tracker/': typeof TrackerIndexRoute
   '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/coach/plan-preview/$planId': typeof CoachPlanPreviewPlanIdRoute
@@ -477,7 +477,6 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/progress': typeof ProgressRoute
   '/strength-check': typeof StrengthCheckRoute
-  '/tracker': typeof TrackerRouteWithChildren
   '/training': typeof TrainingRoute
   '/trial': typeof TrialRoute
   '/unsubscribe': typeof UnsubscribeRoute
@@ -503,6 +502,7 @@ export interface FileRoutesByTo {
   '/bulls': typeof BullsIndexRoute
   '/coach': typeof CoachIndexRoute
   '/nutrition': typeof NutritionIndexRoute
+  '/tracker': typeof TrackerIndexRoute
   '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/coach/plan-preview/$planId': typeof CoachPlanPreviewPlanIdRoute
@@ -541,7 +541,6 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRoute
   '/progress': typeof ProgressRoute
   '/strength-check': typeof StrengthCheckRoute
-  '/tracker': typeof TrackerRouteWithChildren
   '/training': typeof TrainingRoute
   '/trial': typeof TrialRoute
   '/unsubscribe': typeof UnsubscribeRoute
@@ -569,6 +568,7 @@ export interface FileRoutesById {
   '/bulls/': typeof BullsIndexRoute
   '/coach/': typeof CoachIndexRoute
   '/nutrition/': typeof NutritionIndexRoute
+  '/tracker/': typeof TrackerIndexRoute
   '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/coach/plan-preview/$planId': typeof CoachPlanPreviewPlanIdRoute
@@ -608,7 +608,6 @@ export interface FileRouteTypes {
     | '/profile'
     | '/progress'
     | '/strength-check'
-    | '/tracker'
     | '/training'
     | '/trial'
     | '/unsubscribe'
@@ -636,6 +635,7 @@ export interface FileRouteTypes {
     | '/bulls/'
     | '/coach/'
     | '/nutrition/'
+    | '/tracker/'
     | '/coach/customers/$userId'
     | '/coach/customers/new'
     | '/coach/plan-preview/$planId'
@@ -671,7 +671,6 @@ export interface FileRouteTypes {
     | '/profile'
     | '/progress'
     | '/strength-check'
-    | '/tracker'
     | '/training'
     | '/trial'
     | '/unsubscribe'
@@ -697,6 +696,7 @@ export interface FileRouteTypes {
     | '/bulls'
     | '/coach'
     | '/nutrition'
+    | '/tracker'
     | '/coach/customers/$userId'
     | '/coach/customers/new'
     | '/coach/plan-preview/$planId'
@@ -734,7 +734,6 @@ export interface FileRouteTypes {
     | '/profile'
     | '/progress'
     | '/strength-check'
-    | '/tracker'
     | '/training'
     | '/trial'
     | '/unsubscribe'
@@ -762,6 +761,7 @@ export interface FileRouteTypes {
     | '/bulls/'
     | '/coach/'
     | '/nutrition/'
+    | '/tracker/'
     | '/coach/customers/$userId'
     | '/coach/customers/new'
     | '/coach/plan-preview/$planId'
@@ -800,7 +800,6 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRoute
   ProgressRoute: typeof ProgressRoute
   StrengthCheckRoute: typeof StrengthCheckRoute
-  TrackerRoute: typeof TrackerRouteWithChildren
   TrainingRoute: typeof TrainingRoute
   TrialRoute: typeof TrialRoute
   UnsubscribeRoute: typeof UnsubscribeRoute
@@ -813,7 +812,11 @@ export interface RootRouteChildren {
   BullsWeightRoute: typeof BullsWeightRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   OnboardingSmartNutritionRoute: typeof OnboardingSmartNutritionRoute
+  TrackerAppRoute: typeof TrackerAppRouteWithChildren
+  TrackerLoginRoute: typeof TrackerLoginRoute
+  TrackerSignupRoute: typeof TrackerSignupRoute
   BullsIndexRoute: typeof BullsIndexRoute
+  TrackerIndexRoute: typeof TrackerIndexRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiPublicHooksPlanRotationRoute: typeof ApiPublicHooksPlanRotationRoute
   ApiPublicHooksRegenTrainingPlansRoute: typeof ApiPublicHooksRegenTrainingPlansRoute
@@ -854,13 +857,6 @@ declare module '@tanstack/react-router' {
       path: '/training'
       fullPath: '/training'
       preLoaderRoute: typeof TrainingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/tracker': {
-      id: '/tracker'
-      path: '/tracker'
-      fullPath: '/tracker'
-      preLoaderRoute: typeof TrackerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/strength-check': {
@@ -968,6 +964,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tracker/': {
+      id: '/tracker/'
+      path: '/tracker'
+      fullPath: '/tracker/'
+      preLoaderRoute: typeof TrackerIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/nutrition/': {
       id: '/nutrition/'
       path: '/'
@@ -991,24 +994,24 @@ declare module '@tanstack/react-router' {
     }
     '/tracker/signup': {
       id: '/tracker/signup'
-      path: '/signup'
+      path: '/tracker/signup'
       fullPath: '/tracker/signup'
       preLoaderRoute: typeof TrackerSignupRouteImport
-      parentRoute: typeof TrackerRoute
+      parentRoute: typeof rootRouteImport
     }
     '/tracker/login': {
       id: '/tracker/login'
-      path: '/login'
+      path: '/tracker/login'
       fullPath: '/tracker/login'
       preLoaderRoute: typeof TrackerLoginRouteImport
-      parentRoute: typeof TrackerRoute
+      parentRoute: typeof rootRouteImport
     }
     '/tracker/app': {
       id: '/tracker/app'
-      path: '/app'
+      path: '/tracker/app'
       fullPath: '/tracker/app'
       preLoaderRoute: typeof TrackerAppRouteImport
-      parentRoute: typeof TrackerRoute
+      parentRoute: typeof rootRouteImport
     }
     '/onboarding/smart-nutrition': {
       id: '/onboarding/smart-nutrition'
@@ -1352,21 +1355,6 @@ const TrackerAppRouteWithChildren = TrackerAppRoute._addFileChildren(
   TrackerAppRouteChildren,
 )
 
-interface TrackerRouteChildren {
-  TrackerAppRoute: typeof TrackerAppRouteWithChildren
-  TrackerLoginRoute: typeof TrackerLoginRoute
-  TrackerSignupRoute: typeof TrackerSignupRoute
-}
-
-const TrackerRouteChildren: TrackerRouteChildren = {
-  TrackerAppRoute: TrackerAppRouteWithChildren,
-  TrackerLoginRoute: TrackerLoginRoute,
-  TrackerSignupRoute: TrackerSignupRoute,
-}
-
-const TrackerRouteWithChildren =
-  TrackerRoute._addFileChildren(TrackerRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AchievementsRoute: AchievementsRoute,
@@ -1383,7 +1371,6 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   ProgressRoute: ProgressRoute,
   StrengthCheckRoute: StrengthCheckRoute,
-  TrackerRoute: TrackerRouteWithChildren,
   TrainingRoute: TrainingRoute,
   TrialRoute: TrialRoute,
   UnsubscribeRoute: UnsubscribeRoute,
@@ -1396,7 +1383,11 @@ const rootRouteChildren: RootRouteChildren = {
   BullsWeightRoute: BullsWeightRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   OnboardingSmartNutritionRoute: OnboardingSmartNutritionRoute,
+  TrackerAppRoute: TrackerAppRouteWithChildren,
+  TrackerLoginRoute: TrackerLoginRoute,
+  TrackerSignupRoute: TrackerSignupRoute,
   BullsIndexRoute: BullsIndexRoute,
+  TrackerIndexRoute: TrackerIndexRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ApiPublicHooksPlanRotationRoute: ApiPublicHooksPlanRotationRoute,
   ApiPublicHooksRegenTrainingPlansRoute: ApiPublicHooksRegenTrainingPlansRoute,
