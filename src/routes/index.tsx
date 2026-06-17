@@ -800,11 +800,8 @@ function Results() {
   useEffect(() => {
     (async () => {
       const { data } = await supabase
-        .from("app_reviews")
+        .from("public_app_reviews" as any)
         .select("rating, comment, first_name")
-        .eq("publish_with_name", true)
-        .eq("approved_for_public", true)
-        .eq("hidden", false)
         .not("comment", "is", null)
         .order("created_at", { ascending: false })
         .limit(6);
