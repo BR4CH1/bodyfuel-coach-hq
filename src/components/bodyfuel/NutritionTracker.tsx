@@ -692,9 +692,37 @@ export function NutritionTracker() {
                 </div>
                 <div className="mt-3 min-h-0 flex-1 overflow-y-auto">
                   {query.trim() === "" && (
-                    <p className="py-6 text-center text-xs text-muted-foreground">
-                      Tippe los — Vorschläge erscheinen automatisch
-                    </p>
+                    recentFoods.length > 0 ? (
+                      <div>
+                        <div className="px-2 pb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          Zuletzt getrackt
+                        </div>
+                        <ul className="divide-y divide-border">
+                          {recentFoods.map((r, i) => (
+                            <li key={`recent-${i}`}>
+                              <button
+                                onClick={() => {
+                                  setPicking(r);
+                                  setUnit("g");
+                                  setAmountStr("100");
+                                }}
+                                className="w-full px-2 py-3 text-left hover:bg-secondary"
+                              >
+                                <div className="truncate text-sm font-medium">{r.name}</div>
+                                <div className="text-[11px] text-muted-foreground">
+                                  {r.brand ? `${r.brand} · ` : ""}
+                                  {Math.round(r.kcal_per_100g)} kcal · P {r.protein_per_100g.toFixed(1)} · K {r.carbs_per_100g.toFixed(1)} · F {r.fat_per_100g.toFixed(1)} (/100g)
+                                </div>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : (
+                      <p className="py-6 text-center text-xs text-muted-foreground">
+                        {loadingRecent ? "Lade Verlauf…" : "Tippe los — Vorschläge erscheinen automatisch"}
+                      </p>
+                    )
                   )}
                   {query.trim() !== "" && results.length === 0 && (
                     <p className="flex items-center justify-center gap-2 py-6 text-center text-xs text-muted-foreground">
