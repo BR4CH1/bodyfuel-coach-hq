@@ -59,6 +59,36 @@ export type Database = {
         }
         Relationships: []
       }
+      activity_logs: {
+        Row: {
+          created_at: string
+          id: string
+          log_date: string
+          steps: number | null
+          training_done: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          log_date?: string
+          steps?: number | null
+          training_done?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          log_date?: string
+          steps?: number | null
+          training_done?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       app_reviews: {
         Row: {
           approved_for_public: boolean
@@ -547,6 +577,30 @@ export type Database = {
           protein_per_100g?: number
           serving_g?: number | null
           serving_label?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      free_user_events: {
+        Row: {
+          created_at: string
+          details: Json | null
+          event: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          details?: Json | null
+          event: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          details?: Json | null
+          event?: string
+          id?: string
           user_id?: string
         }
         Relationships: []
@@ -2048,7 +2102,7 @@ export type Database = {
     }
     Enums: {
       app_group: "bulls" | "running_team" | "sgz" | "premium"
-      app_role: "coach" | "client"
+      app_role: "coach" | "client" | "free"
       bulls_goal: "fat_loss" | "muscle_gain" | "performance" | "general_fitness"
       bulls_position:
         | "QB"
@@ -2199,7 +2253,7 @@ export const Constants = {
   public: {
     Enums: {
       app_group: ["bulls", "running_team", "sgz", "premium"],
-      app_role: ["coach", "client"],
+      app_role: ["coach", "client", "free"],
       bulls_goal: ["fat_loss", "muscle_gain", "performance", "general_fitness"],
       bulls_position: [
         "QB",
