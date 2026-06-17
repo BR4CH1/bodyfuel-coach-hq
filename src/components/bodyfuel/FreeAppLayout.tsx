@@ -5,14 +5,14 @@ import { useSession } from "@/lib/bodyfuel/session";
 import { Logo } from "./Logo";
 import { FreeUpsellBanner } from "./FreeUpsellBanner";
 
-const nav = [
+const nav: { to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean }[] = [
   { to: "/tracker/app", label: "Heute", icon: LayoutDashboard, exact: true },
   { to: "/tracker/app/nutrition", label: "Ernährung", icon: Apple },
   { to: "/tracker/app/water", label: "Wasser", icon: Droplet },
   { to: "/tracker/app/weight", label: "Gewicht", icon: Scale },
   { to: "/tracker/app/activity", label: "Aktivität", icon: Activity },
   { to: "/tracker/app/achievements", label: "Erfolge", icon: Trophy },
-] as const;
+];
 
 export function FreeAppLayout({ children }: { children: ReactNode }) {
   const { supabaseUser, loading, isFreeUser, isCoach, logout, profile } = useSession();
