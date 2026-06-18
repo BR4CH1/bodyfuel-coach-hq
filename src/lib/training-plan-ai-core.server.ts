@@ -352,17 +352,19 @@ ${cp.mobility_focus ? `- Schwerpunkt: ${cp.mobility_focus}` : ""}
 ${weightTrendKg !== null ? `- Gewichtstrend: ${weightTrendKg > 0 ? "+" : ""}${weightTrendKg} kg` : ""}
 ${sessionsLast30 < 4 ? "→ Kunde trainiert selten — Plan etwas konservativer starten, Einstiegshürden niedrig halten." : ""}
 ${sessionsLast30 >= 12 ? "→ Hohe Trainingsfrequenz — Volumen darf höher liegen, mehr Akzessoires." : ""}`;
-  const startWeightsBlock = `\n💪 VORGESCHLAGENE STARTGEWICHTE (Woche 1, ~8 Wdh, runden auf 2,5 kg)
-- Bankdrücken / Brustpresse: ${startWeights.bench_press_kg ?? "?"} kg
-- Schulterdrücken: ${startWeights.shoulder_press_kg ?? "?"} kg
-- Kniebeuge (LH): ${startWeights.squat_kg ?? "?"} kg
-- Kreuzheben (LH): ${startWeights.deadlift_kg ?? "?"} kg
-- Latzug: ${startWeights.lat_pulldown_kg ?? "?"} kg
-- Kabelrudern: ${startWeights.row_kg ?? "?"} kg
-- Beinpresse: ${startWeights.leg_press_kg ?? "?"} kg
-- Beinbeuger: ${startWeights.leg_curl_kg ?? "?"} kg
+  const startWeightsBlock = `\n💪 STARTGEWICHTE — VERBINDLICH (Woche 1, RPE 7, runden auf 2,5 kg)
+Diese Werte stammen aus dem letzten Strength-Check (e1RM × 0,75) und sind eine HARTE OBERGRENZE für Woche 1. Niemals höher ansetzen — auch nicht für ähnliche Varianten derselben Übung (z. B. Brustpresse Maschine ≈ Bankdrücken). Progression: W2 +2,5–5 kg, W3 +2,5–5 kg (RPE 8–9), W4 Deload ≈ 85 % von W3.
+- Bankdrücken / Brustpresse (Maschine/LH/KH): MAX ${startWeights.bench_press_kg ?? "?"} kg (e1RM ${e1rm.chest_press ?? "?"} kg)
+- Schulterdrücken / Schulterpresse (alle Varianten): MAX ${startWeights.shoulder_press_kg ?? "?"} kg (e1RM ${e1rm.shoulder_press ?? "?"} kg)
+- Kniebeuge (LH): MAX ${startWeights.squat_kg ?? "?"} kg
+- Kreuzheben (LH): MAX ${startWeights.deadlift_kg ?? "?"} kg
+- Latzug (alle Griffe): MAX ${startWeights.lat_pulldown_kg ?? "?"} kg (e1RM ${e1rm.lat_pulldown ?? "?"} kg)
+- Rudern (Kabel/Maschine/LH/KH): MAX ${startWeights.row_kg ?? "?"} kg (e1RM ${e1rm.cable_row ?? "?"} kg)
+- Beinpresse: MAX ${startWeights.leg_press_kg ?? "?"} kg (e1RM ${e1rm.leg_press ?? "?"} kg)
+- Beinbeuger (liegend/sitzend): MAX ${startWeights.leg_curl_kg ?? "?"} kg (e1RM ${e1rm.leg_curl ?? "?"} kg)
 - Plank-Niveau: ${plankSeconds ? plankSeconds + "s" : "unbekannt"}
 
+Für Isolationen ohne Test-Daten (Bizeps-Curl, Trizeps, Seitheben, Reverse Fly, Wadenheben usw.): konservativ starten und am SCHWÄCHSTEN e1RM oben orientieren. Werte über den oben genannten MAX-Grenzen werden automatisch nach unten gekappt.
 Kurzhantel-Übungen: Gewicht PRO SEITE angeben. Langhantel/Maschinen: GESAMTGEWICHT.`;
 
   const prompt = `Erstelle einen INDIVIDUELLEN 4-WOCHEN-TRAININGSPLAN für ein Standard-Fitnessstudio.
@@ -523,26 +525,32 @@ GENAU 4 Wochen. Jede Woche GENAU 7 Tage (Mo, Di, Mi, Do, Fr, Sa, So in dieser Re
       totalDays++;
 
       const rows = (d.exercises ?? [])
-        .map((e, idx) => ({
-          day_id: dayRow.id,
-          name: stripAkzessoires(String(e.name ?? "").trim()).slice(0, 200),
-          category: validCategory(e.category),
-          target_sets:
-            typeof e.target_sets === "number" && Number.isFinite(e.target_sets)
-              ? Math.max(1, Math.min(20, Math.round(e.target_sets)))
-              : null,
-          target_reps: e.target_reps ? String(e.target_reps).slice(0, 80) : null,
-          target_weights:
-            e.target_weights != null && String(e.target_weights).trim().length
-              ? String(e.target_weights).slice(0, 120)
-              : null,
-          rest_seconds:
-            typeof e.rest_seconds === "number" && Number.isFinite(e.rest_seconds)
-              ? Math.max(15, Math.min(600, Math.round(e.rest_seconds)))
-              : null,
-          notes: e.notes ? stripAkzessoires(String(e.notes)).slice(0, 500) : null,
-          sort_order: idx,
-        }))
+        .map((e, idx) => {
+          const cleanName = stripAkzessoires(String(e.name ?? "").trim()).slice(0, 200);
+          const clampedWeights = clampWeightsForExercise(
+            cleanName,
+            e.target_weights,
+            w.week_number,
+            startWeights,
+          );
+          return {
+            day_id: dayRow.id,
+            name: cleanName,
+            category: validCategory(e.category),
+            target_sets:
+              typeof e.target_sets === "number" && Number.isFinite(e.target_sets)
+                ? Math.max(1, Math.min(20, Math.round(e.target_sets)))
+                : null,
+            target_reps: e.target_reps ? String(e.target_reps).slice(0, 80) : null,
+            target_weights: clampedWeights,
+            rest_seconds:
+              typeof e.rest_seconds === "number" && Number.isFinite(e.rest_seconds)
+                ? Math.max(15, Math.min(600, Math.round(e.rest_seconds)))
+                : null,
+            notes: e.notes ? stripAkzessoires(String(e.notes)).slice(0, 500) : null,
+            sort_order: idx,
+          };
+        })
         .filter((r) => r.name);
       totalEx += rows.length;
       if (rows.length) {
@@ -574,6 +582,65 @@ function validCategory(c: unknown): string | null {
   if (typeof c !== "string") return null;
   const v = c.toLowerCase().trim();
   return allowed.includes(v) ? v : null;
+}
+
+type StartWeights = {
+  bench_press_kg: number | null;
+  shoulder_press_kg: number | null;
+  squat_kg: number | null;
+  deadlift_kg: number | null;
+  lat_pulldown_kg: number | null;
+  row_kg: number | null;
+  leg_press_kg: number | null;
+  leg_curl_kg: number | null;
+};
+
+function detectStartKey(name: string): keyof StartWeights | null {
+  const n = name.toLowerCase();
+  if (/(brustpresse|bankdr(ü|u)ck|bench[- ]?press|chest[- ]?press|brustdr(ü|u)ck)/.test(n)) return "bench_press_kg";
+  if (/(schulterpresse|schulterdr(ü|u)ck|shoulder[- ]?press|overhead[- ]?press|military[- ]?press)/.test(n)) return "shoulder_press_kg";
+  if (/(kniebeuge|squat\b|back ?squat|front ?squat|hack[- ]?squat)/.test(n)) return "squat_kg";
+  if (/(kreuzheb|deadlift|rdl|rom(a|á)nian)/.test(n)) return "deadlift_kg";
+  if (/(latzug|lat[- ]?pulldown|pull[- ]?down)/.test(n)) return "lat_pulldown_kg";
+  if (/(rudern|row\b|kabelruder|cable[- ]?row|seated[- ]?row|t[- ]?bar)/.test(n)) return "row_kg";
+  if (/beinpresse|leg[- ]?press/.test(n)) return "leg_press_kg";
+  if (/(beinbeuger|leg[- ]?curl|hamstring[- ]?curl)/.test(n)) return "leg_curl_kg";
+  return null;
+}
+
+// Progression-Caps relativ zur Woche-1-Empfehlung (e1RM × 0.75).
+function weekCapFactor(weekNumber: number): number {
+  switch (weekNumber) {
+    case 1: return 1.0;
+    case 2: return 1.08;
+    case 3: return 1.15;
+    case 4: return 1.0; // Deload
+    default: return 1.15;
+  }
+}
+
+function clampWeightsForExercise(
+  name: string,
+  raw: unknown,
+  weekNumber: number,
+  start: StartWeights,
+): string | null {
+  if (raw == null) return null;
+  const str = String(raw).trim();
+  if (!str.length) return null;
+  if (str.length > 120) return str.slice(0, 120);
+  const key = detectStartKey(name);
+  const baseline = key ? start[key] : null;
+  if (!baseline || baseline <= 0) return str;
+  const cap = Math.max(2.5, Math.round((baseline * weekCapFactor(weekNumber)) / 2.5) * 2.5);
+  const tokens = str.split(/[,;]/).map((t) => t.trim());
+  const nums: number[] = [];
+  for (const t of tokens) {
+    if (!/^-?\d+(?:[\.,]\d+)?$/.test(t)) return str;
+    nums.push(parseFloat(t.replace(",", ".")));
+  }
+  const clamped = nums.map((n) => (n > cap ? cap : n));
+  return clamped.map((n) => (Number.isInteger(n) ? String(n) : n.toFixed(1))).join(",");
 }
 
 function alignExerciseName(name: string, priorList: string[]): string {
