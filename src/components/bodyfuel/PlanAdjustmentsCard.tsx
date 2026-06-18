@@ -8,18 +8,10 @@ import {
   applyNutritionAdjustment,
   applyTrainingAdjustment,
   listPlanAdjustmentHistory,
-  type PlanAdjustmentSuggestion,
+  type PlanAdjustmentResponse,
+  type PlanAdjustmentVariant,
   type TrainingApplyAction,
 } from "@/lib/plan-adjustments.functions";
-
-type WithCurrent = PlanAdjustmentSuggestion & {
-  current: {
-    kcal: number;
-    protein_g: number;
-    carbs_g: number;
-    fat_g: number;
-  } | null;
-};
 
 export function PlanAdjustmentsCard({ userId }: { userId: string }) {
   const genFn = useServerFn(generatePlanAdjustments);
@@ -27,8 +19,9 @@ export function PlanAdjustmentsCard({ userId }: { userId: string }) {
   const applyTrainFn = useServerFn(applyTrainingAdjustment);
   const historyFn = useServerFn(listPlanAdjustmentHistory);
   const qc = useQueryClient();
-  const [data, setData] = useState<WithCurrent | null>(null);
-  const [applied, setApplied] = useState(false);
+  const [data, setData] = useState<PlanAdjustmentResponse | null>(null);
+  const [activeIdx, setActiveIdx] = useState<0 | 1>(0);
+  const [appliedNutritionFor, setAppliedNutritionFor] = useState<number | null>(null);
   const [showHistory, setShowHistory] = useState(false);
 
   const historyKey = ["plan-adj-history", userId];
@@ -41,18 +34,21 @@ export function PlanAdjustmentsCard({ userId }: { userId: string }) {
   const genMut = useMutation({
     mutationFn: () => genFn({ data: { user_id: userId } }),
     onSuccess: (res) => {
-      setData(res as WithCurrent);
-      setApplied(false);
+      setData(res as PlanAdjustmentResponse);
+      setActiveIdx(0);
+      setAppliedNutritionFor(null);
     },
     onError: (e: any) => toast.error(e?.message ?? "KI-Vorschlag fehlgeschlagen"),
   });
 
   const applyMut = useMutation({
-    mutationFn: (n: { kcal: number; protein_g: number; carbs_g: number; fat_g: number; rationale?: string }) =>
-      applyFn({ data: { user_id: userId, ...n } }),
-    onSuccess: () => {
+    mutationFn: (n: { kcal: number; protein_g: number; carbs_g: number; fat_g: number; rationale?: string; idx: number }) => {
+      const { idx, ...rest } = n;
+      return applyFn({ data: { user_id: userId, ...rest } }).then((r) => ({ r, idx }));
+    },
+    onSuccess: ({ idx }) => {
       toast.success("Ernährungsziele übernommen");
-      setApplied(true);
+      setAppliedNutritionFor(idx);
       qc.invalidateQueries({ queryKey: historyKey });
     },
     onError: (e: any) => toast.error(e?.message ?? "Übernahme fehlgeschlagen"),
@@ -68,10 +64,13 @@ export function PlanAdjustmentsCard({ userId }: { userId: string }) {
     onError: (e: any) => toast.error(e?.message ?? "Übernahme fehlgeschlagen"),
   });
 
+  const active: PlanAdjustmentVariant | null = data?.variants?.[activeIdx] ?? null;
+  const current = data?.current ?? null;
+
   const confidenceBadge =
-    data?.confidence === "high"
+    active?.confidence === "high"
       ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
-      : data?.confidence === "medium"
+      : active?.confidence === "medium"
         ? "border-amber-500/40 bg-amber-500/10 text-amber-300"
         : "border-muted-foreground/30 bg-muted/30 text-muted-foreground";
 
@@ -83,7 +82,7 @@ export function PlanAdjustmentsCard({ userId }: { userId: string }) {
           <div>
             <h3 className="font-display text-lg font-bold">KI Plan-Anpassungen</h3>
             <p className="text-xs text-muted-foreground">
-              Datenbasierte Vorschläge für kcal/Makros und Training
+              A/B-Vergleich: Konservativ vs. Aggressiv
             </p>
           </div>
         </div>
@@ -101,7 +100,7 @@ export function PlanAdjustmentsCard({ userId }: { userId: string }) {
           ) : (
             <>
               <Sparkles className="h-4 w-4" />
-              {data ? "Neu analysieren" : "Vorschlag generieren"}
+              {data ? "Neu analysieren" : "Varianten generieren"}
             </>
           )}
         </button>
@@ -109,25 +108,50 @@ export function PlanAdjustmentsCard({ userId }: { userId: string }) {
 
       {!data && !genMut.isPending && (
         <div className="rounded-xl border border-dashed border-border/60 p-4 text-sm text-muted-foreground">
-          Klicke „Vorschlag generieren", um eine KI-gestützte Plan-Anpassung zu erhalten.
+          Klicke „Varianten generieren", um zwei KI-Vorschläge (vorsichtig &amp; aggressiv) zum Vergleich zu erhalten.
         </div>
       )}
 
-      {data && (
+      {data && active && (
         <div className="space-y-4">
+          {/* Variant tabs */}
+          <div className="grid grid-cols-2 gap-2 rounded-xl border border-border bg-background/40 p-1">
+            {data.variants.map((v, i) => {
+              const isActive = i === activeIdx;
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setActiveIdx(i as 0 | 1)}
+                  className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${
+                    isActive
+                      ? "bg-gold/20 text-gold ring-1 ring-gold/50"
+                      : "text-muted-foreground hover:bg-muted/30"
+                  }`}
+                >
+                  {v.label}
+                  {v.nutrition && current?.kcal != null && (
+                    <span className="ml-2 text-[10px] font-normal opacity-80">
+                      {v.nutrition.kcal - Number(current.kcal) > 0 ? "+" : ""}
+                      {v.nutrition.kcal - Number(current.kcal)} kcal
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
           <div className="flex flex-wrap items-center gap-2">
             <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${confidenceBadge}`}>
-              Konfidenz: {data.confidence}
+              Konfidenz: {active.confidence}
             </span>
           </div>
 
-          {data.summary && (
-            <p className="text-sm text-foreground">{data.summary}</p>
-          )}
+          {active.summary && <p className="text-sm text-foreground">{active.summary}</p>}
 
-          {data.warnings.length > 0 && (
+          {active.warnings.length > 0 && (
             <div className="space-y-1 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
-              {data.warnings.map((w, i) => (
+              {active.warnings.map((w, i) => (
                 <div key={i} className="flex items-start gap-2 text-xs text-amber-200">
                   <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                   <span>{w}</span>
@@ -136,29 +160,35 @@ export function PlanAdjustmentsCard({ userId }: { userId: string }) {
             </div>
           )}
 
-          {data.nutrition && (
+          {active.nutrition && (
             <div className="rounded-xl border border-border bg-background/40 p-4">
               <div className="mb-3 flex items-center gap-2">
                 <Utensils className="h-4 w-4 text-gold" />
                 <h4 className="font-semibold">Ernährungsziele</h4>
               </div>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <MacroDelta label="kcal" current={data.current?.kcal ?? null} next={data.nutrition.kcal} unit="" />
-                <MacroDelta label="Protein" current={data.current?.protein_g ?? null} next={data.nutrition.protein_g} unit="g" />
-                <MacroDelta label="Kohlenhydrate" current={data.current?.carbs_g ?? null} next={data.nutrition.carbs_g} unit="g" />
-                <MacroDelta label="Fett" current={data.current?.fat_g ?? null} next={data.nutrition.fat_g} unit="g" />
+                <MacroDelta label="kcal" current={current?.kcal ?? null} next={active.nutrition.kcal} unit="" />
+                <MacroDelta label="Protein" current={current?.protein_g ?? null} next={active.nutrition.protein_g} unit="g" />
+                <MacroDelta label="Kohlenhydrate" current={current?.carbs_g ?? null} next={active.nutrition.carbs_g} unit="g" />
+                <MacroDelta label="Fett" current={current?.fat_g ?? null} next={active.nutrition.fat_g} unit="g" />
               </div>
-              {data.nutrition.rationale && (
-                <p className="mt-3 text-xs text-muted-foreground">{data.nutrition.rationale}</p>
+              {active.nutrition.rationale && (
+                <p className="mt-3 text-xs text-muted-foreground">{active.nutrition.rationale}</p>
               )}
               <div className="mt-4 flex justify-end">
                 <button
                   type="button"
-                  onClick={() => applyMut.mutate({ ...data.nutrition!, rationale: data.nutrition!.rationale })}
-                  disabled={applyMut.isPending || applied}
+                  onClick={() =>
+                    applyMut.mutate({
+                      ...active.nutrition!,
+                      rationale: `[${active.label}] ${active.nutrition!.rationale}`,
+                      idx: activeIdx,
+                    })
+                  }
+                  disabled={applyMut.isPending || appliedNutritionFor === activeIdx}
                   className="inline-flex items-center gap-2 rounded-xl bg-gold px-4 py-2 text-xs font-semibold text-primary-foreground transition hover:bg-gold/90 disabled:opacity-60"
                 >
-                  {applied ? (
+                  {appliedNutritionFor === activeIdx ? (
                     <>
                       <Check className="h-4 w-4" /> Übernommen
                     </>
@@ -167,21 +197,21 @@ export function PlanAdjustmentsCard({ userId }: { userId: string }) {
                       <Loader2 className="h-4 w-4 animate-spin" /> Übernehme…
                     </>
                   ) : (
-                    <>Ziele übernehmen</>
+                    <>{active.label} übernehmen</>
                   )}
                 </button>
               </div>
             </div>
           )}
 
-          {data.training.length > 0 && (
+          {active.training.length > 0 && (
             <div className="rounded-xl border border-border bg-background/40 p-4">
               <div className="mb-3 flex items-center gap-2">
                 <Dumbbell className="h-4 w-4 text-gold" />
                 <h4 className="font-semibold">Training</h4>
               </div>
               <ul className="space-y-3">
-                {data.training.map((t, i) => {
+                {active.training.map((t, i) => {
                   const action = trainingActionFor(t);
                   const applicable = action !== null;
                   return (
@@ -199,7 +229,12 @@ export function PlanAdjustmentsCard({ userId }: { userId: string }) {
                         {applicable ? (
                           <button
                             type="button"
-                            onClick={() => applyTrainMut.mutate(action!)}
+                            onClick={() =>
+                              applyTrainMut.mutate({
+                                ...action!,
+                                rationale: `[${active.label}] ${t.rationale}`,
+                              } as TrainingApplyAction)
+                            }
                             disabled={applyTrainMut.isPending}
                             className="inline-flex items-center gap-2 rounded-lg border border-gold/40 bg-gold/10 px-3 py-1.5 text-[11px] font-semibold text-gold transition hover:bg-gold/20 disabled:opacity-50"
                           >
@@ -269,13 +304,12 @@ export function PlanAdjustmentsCard({ userId }: { userId: string }) {
   );
 }
 
-function trainingActionFor(t: PlanAdjustmentSuggestion["training"][number]): TrainingApplyAction | null {
+function trainingActionFor(t: PlanAdjustmentVariant["training"][number]): TrainingApplyAction | null {
   const detail = (t.detail ?? "").toLowerCase();
   if (t.area === "deload") {
     return { type: "deload", scale: 0.6, detail: t.detail, rationale: t.rationale };
   }
   if (t.area === "volume") {
-    // Versuche +N / -N Sätze aus dem Detail zu lesen
     const m = detail.match(/([+-]?\d+)\s*(satz|sätze|set|sets)/);
     const delta = m ? Math.max(-2, Math.min(2, parseInt(m[1], 10))) : (detail.includes("reduzier") || detail.includes("weniger") ? -1 : 1);
     if (!delta) return null;
