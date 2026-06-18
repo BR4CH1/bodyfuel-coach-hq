@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { NutritionTracker } from "@/components/bodyfuel/NutritionTracker";
+import { CoachingLockTeaser } from "@/components/bodyfuel/CoachingLockTeaser";
 
 export const Route = createFileRoute("/tracker/app/nutrition")({
   head: () => ({ meta: [{ title: "Ernährung — BodyFuel Tracker" }] }),
@@ -10,6 +11,9 @@ export const Route = createFileRoute("/tracker/app/nutrition")({
         <h1 className="font-display text-3xl font-bold sm:text-4xl">Essen tracken</h1>
       </div>
       <NutritionTracker />
+      <CoachingLockTeaser
+        features={["KI-Ernährungsplan", "Rezepte", "Einkaufsliste", "Meal-Swap"]}
+      />
     </div>
   ),
 });

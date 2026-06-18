@@ -25,6 +25,7 @@ const schema = z.object({
   weight_kg: z.coerce.number({ invalid_type_error: "Gewicht erforderlich" }).positive("Gewicht erforderlich").max(400),
   gender: z.enum(["male", "female", "other"], { errorMap: () => ({ message: "Geschlecht wählen" }) }),
   birthdate: z.string().min(8, "Geburtsdatum erforderlich"),
+  goal: z.enum(["fat_loss", "maintain", "lean_bulk"], { errorMap: () => ({ message: "Ziel wählen" }) }),
 });
 
 function TrackerSignup() {
@@ -70,6 +71,7 @@ function TrackerSignup() {
               weight_kg: v.weight_kg,
               gender: v.gender,
               birthdate: v.birthdate,
+              goal: v.goal,
             },
           });
         } catch (e) {
@@ -159,6 +161,23 @@ function TrackerSignup() {
               <Label htmlFor="birthdate">Geburtsdatum</Label>
               <Input id="birthdate" name="birthdate" type="date" required />
             </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="goal">Dein Ziel</Label>
+            <select
+              id="goal"
+              name="goal"
+              required
+              defaultValue=""
+              className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+            >
+              <option value="" disabled>—</option>
+              <option value="fat_loss">Abnehmen</option>
+              <option value="maintain">Gewicht halten</option>
+              <option value="lean_bulk">Muskelaufbau</option>
+            </select>
+            <p className="text-[11px] text-muted-foreground">Bestimmt deine Train-/Restday-Kalorien.</p>
           </div>
 
           <Button

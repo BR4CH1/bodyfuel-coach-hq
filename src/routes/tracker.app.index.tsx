@@ -3,6 +3,7 @@ import { Apple, Scale, ArrowRight } from "lucide-react";
 import { useSession } from "@/lib/bodyfuel/session";
 import { DailyChecklist } from "@/components/bodyfuel/DailyChecklist";
 import { AchievementsCard } from "@/components/bodyfuel/AchievementsCard";
+import { CoachingLockTeaser } from "@/components/bodyfuel/CoachingLockTeaser";
 
 export const Route = createFileRoute("/tracker/app/")({
   head: () => ({ meta: [{ title: "Heute — BodyFuel Tracker" }] }),
@@ -51,6 +52,10 @@ function TrackerHome() {
           );
         })}
       </div>
+
+      <CoachingLockTeaser
+        features={["Trainingsplan-KI", "Ernährungsplan-KI", "Foto-Assessment", "Coach-Chat"]}
+      />
 
       <AchievementsCard userId={supabaseUser.id} />
     </div>

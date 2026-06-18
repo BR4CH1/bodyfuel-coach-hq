@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CoachingLockTeaser } from "@/components/bodyfuel/CoachingLockTeaser";
 
 export const Route = createFileRoute("/tracker/app/weight")({
   head: () => ({ meta: [{ title: "Gewicht — BodyFuel Tracker" }] }),
@@ -100,6 +101,10 @@ function WeightPage() {
           </ul>
         )}
       </div>
+
+      <CoachingLockTeaser
+        features={["Plateau-Warnung", "Foto-Check", "Individuelle Anpassung"]}
+      />
     </div>
   );
 }
