@@ -25,6 +25,7 @@ const schema = z.object({
   weight_kg: z.coerce.number({ invalid_type_error: "Gewicht erforderlich" }).positive("Gewicht erforderlich").max(400),
   gender: z.enum(["male", "female", "other"], { errorMap: () => ({ message: "Geschlecht wählen" }) }),
   birthdate: z.string().min(8, "Geburtsdatum erforderlich"),
+  goal: z.enum(["fat_loss", "maintain", "lean_bulk"], { errorMap: () => ({ message: "Ziel wählen" }) }),
 });
 
 function TrackerSignup() {
