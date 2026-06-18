@@ -1,12 +1,15 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Sparkles, Loader2, AlertCircle, Check, Dumbbell, Utensils } from "lucide-react";
+import { Sparkles, Loader2, AlertCircle, Check, Dumbbell, Utensils, History, Clock } from "lucide-react";
 import { toast } from "sonner";
 import {
   generatePlanAdjustments,
   applyNutritionAdjustment,
+  applyTrainingAdjustment,
+  listPlanAdjustmentHistory,
   type PlanAdjustmentSuggestion,
+  type TrainingApplyAction,
 } from "@/lib/plan-adjustments.functions";
 
 type WithCurrent = PlanAdjustmentSuggestion & {
@@ -21,8 +24,19 @@ type WithCurrent = PlanAdjustmentSuggestion & {
 export function PlanAdjustmentsCard({ userId }: { userId: string }) {
   const genFn = useServerFn(generatePlanAdjustments);
   const applyFn = useServerFn(applyNutritionAdjustment);
+  const applyTrainFn = useServerFn(applyTrainingAdjustment);
+  const historyFn = useServerFn(listPlanAdjustmentHistory);
+  const qc = useQueryClient();
   const [data, setData] = useState<WithCurrent | null>(null);
   const [applied, setApplied] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+
+  const historyKey = ["plan-adj-history", userId];
+  const historyQ = useQuery({
+    queryKey: historyKey,
+    queryFn: () => historyFn({ data: { user_id: userId, limit: 20 } }),
+    enabled: showHistory,
+  });
 
   const genMut = useMutation({
     mutationFn: () => genFn({ data: { user_id: userId } }),
@@ -34,11 +48,22 @@ export function PlanAdjustmentsCard({ userId }: { userId: string }) {
   });
 
   const applyMut = useMutation({
-    mutationFn: (n: { kcal: number; protein_g: number; carbs_g: number; fat_g: number }) =>
+    mutationFn: (n: { kcal: number; protein_g: number; carbs_g: number; fat_g: number; rationale?: string }) =>
       applyFn({ data: { user_id: userId, ...n } }),
     onSuccess: () => {
       toast.success("Ernährungsziele übernommen");
       setApplied(true);
+      qc.invalidateQueries({ queryKey: historyKey });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Übernahme fehlgeschlagen"),
+  });
+
+  const applyTrainMut = useMutation({
+    mutationFn: (action: TrainingApplyAction) =>
+      applyTrainFn({ data: { user_id: userId, action } }),
+    onSuccess: (r: any) => {
+      toast.success(r?.summary ?? "Trainings-Anpassung übernommen");
+      qc.invalidateQueries({ queryKey: historyKey });
     },
     onError: (e: any) => toast.error(e?.message ?? "Übernahme fehlgeschlagen"),
   });
