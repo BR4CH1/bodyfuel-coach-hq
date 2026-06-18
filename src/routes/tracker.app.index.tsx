@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Apple, Scale, ArrowRight } from "lucide-react";
+import { Apple, Scale, Dumbbell, ArrowRight } from "lucide-react";
 import { useSession } from "@/lib/bodyfuel/session";
 import { DailyChecklist } from "@/components/bodyfuel/DailyChecklist";
 import { AchievementsCard } from "@/components/bodyfuel/AchievementsCard";
