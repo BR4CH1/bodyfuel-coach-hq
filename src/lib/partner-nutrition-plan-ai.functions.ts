@@ -214,6 +214,7 @@ async function loadPerson(supabase: any, userId: string) {
     kitchenEquipmentNotes,
     trainingSet: new Set<string>((p.training_weekdays ?? []).map((s: string) => s.toLowerCase())),
     shoppingDays: p.shopping_days as string[] | null,
+    plateauNote,
   };
 }
 
