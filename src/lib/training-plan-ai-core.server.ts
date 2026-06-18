@@ -560,6 +560,11 @@ GENAU 4 Wochen. Jede Woche GENAU 7 Tage (Mo, Di, Mi, Do, Fr, Sa, So in dieser Re
     }
   }
 
+  if (totalEx === 0) {
+    await supabase.from("nutrition_plans").delete().eq("id", planRow.id);
+    throw new Error("KI hat keine Übungen geliefert (Antwort vermutlich abgeschnitten). Bitte erneut versuchen.");
+  }
+
   return {
     ok: true,
     plan_id: planRow.id,
