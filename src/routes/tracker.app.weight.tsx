@@ -101,6 +101,10 @@ function WeightPage() {
           </ul>
         )}
       </div>
+
+      <CoachingLockTeaser
+        features={["Plateau-Warnung", "Foto-Check", "Individuelle Anpassung"]}
+      />
     </div>
   );
 }
