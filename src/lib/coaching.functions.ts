@@ -455,6 +455,27 @@ export const updateCustomerCoachingInfo = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/**
+ * Coach trägt das aktuelle Gewicht für einen Kunden ein
+ * (falls Kunde es selbst noch nicht hinterlegt hat).
+ * Nutzt den Admin-Client, weil RLS sonst nur self-insert erlaubt.
+ */
+export const setCustomerWeight = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { user_id: string; weight_kg: number; measured_at?: string | null }) => data)
+  .handler(async ({ data, context }) => {
+    await assertCoach(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const w = Math.max(20, Math.min(400, Number(data.weight_kg)));
+    if (!Number.isFinite(w)) throw new Error("Ungültiges Gewicht");
+    const measured_at = data.measured_at || new Date().toISOString().slice(0, 10);
+    const { error } = await supabaseAdmin
+      .from("body_measurements")
+      .insert({ user_id: data.user_id, weight_kg: w, measured_at });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 
 
 export const getCustomerRecentActivity = createServerFn({ method: "POST" })
