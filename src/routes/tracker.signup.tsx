@@ -58,12 +58,21 @@ function TrackerSignup() {
             display_name,
             first_name: v.first_name,
             last_name: v.last_name,
+            // Eckdaten als Metadaten — werden beim ersten authentifizierten
+            // Aufruf in /tracker/app geseedet, falls hier noch keine Session
+            // existiert (z.B. wenn Email-Bestätigung aktiv ist).
+            seed_height_cm: v.height_cm,
+            seed_weight_kg: v.weight_kg,
+            seed_gender: v.gender,
+            seed_birthdate: v.birthdate,
+            seed_goal: v.goal,
           },
         },
       });
       if (error) throw error;
       const userId = data.user?.id;
-      if (userId) {
+      const hasSession = !!data.session;
+      if (userId && hasSession) {
         try {
           await seedTargets({
             data: {
@@ -83,7 +92,7 @@ function TrackerSignup() {
           details: {},
         });
       }
-      toast.success("Willkommen bei BodyFuel!");
+      toast.success(hasSession ? "Willkommen bei BodyFuel!" : "Bitte bestätige deine E-Mail, um zu starten.");
       navigate({ to: "/tracker/app" });
     } catch (err: any) {
       toast.error(err?.message ?? "Registrierung fehlgeschlagen");
