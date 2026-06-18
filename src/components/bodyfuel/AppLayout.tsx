@@ -48,12 +48,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (loading) return;
     if (!user && !supabaseUser) navigate({ to: "/login" });
-    else if (isFreeUser && !pathname.startsWith("/tracker")) navigate({ to: "/tracker/app" });
+    else if (isFreeUser && !pathname.startsWith("/tracker") && !pathname.startsWith("/bulls")) navigate({ to: "/tracker/app" });
   }, [user, supabaseUser, loading, navigate, isFreeUser, pathname]);
 
   if (loading) return null;
   if (!user && !supabaseUser) return null;
-  if (isFreeUser) return null;
+  if (isFreeUser && !pathname.startsWith("/bulls")) return null;
 
   const baseNav = isCoach ? coachNav : clientNav;
   const nav = !isCoach && hasGroup("bulls") ? [...baseNav, bullsNavItem] : baseNav;
