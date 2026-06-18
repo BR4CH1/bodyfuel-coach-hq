@@ -407,6 +407,7 @@ function CoachDashboard() {
                 name={c.display_name ?? "Ohne Namen"}
                 kcalDev={c.kcal_dev}
                 kcalDir={c.kcal_dev_dir}
+                plateauDays={c.plateau_days}
                 meta={
                   c.last_checkin
                     ? `Letzter Check-in ${new Date(c.last_checkin).toLocaleDateString("de-DE")}`
@@ -436,6 +437,7 @@ function CoachDashboard() {
                 warn
                 kcalDev={c.kcal_dev}
                 kcalDir={c.kcal_dev_dir}
+                plateauDays={c.plateau_days}
                 meta={
                   c.days === null
                     ? "Noch nie eingecheckt"
