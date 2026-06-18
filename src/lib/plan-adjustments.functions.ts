@@ -31,10 +31,19 @@ export type PlanAdjustmentSuggestion = {
   warnings: string[];
 };
 
+export type PlanAdjustmentVariant = PlanAdjustmentSuggestion & {
+  label: "Konservativ" | "Aggressiv";
+};
+
+export type PlanAdjustmentResponse = {
+  current: any;
+  variants: PlanAdjustmentVariant[];
+};
+
 export const generatePlanAdjustments = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { user_id: string }) => d)
-  .handler(async ({ data, context }): Promise<PlanAdjustmentSuggestion & { current: any }> => {
+  .handler(async ({ data, context }): Promise<PlanAdjustmentResponse> => {
     const { supabase, userId } = context;
     await assertCoach(supabase, userId);
 
@@ -117,15 +126,37 @@ export const generatePlanAdjustments = createServerFn({ method: "POST" })
           )
         : null;
 
+    const checkins = (checkinsRes.data ?? []) as any[];
+    const avgNum = (key: string) => {
+      const xs = checkins.map((c) => Number(c?.[key])).filter((n) => Number.isFinite(n));
+      return xs.length ? Math.round((xs.reduce((a, b) => a + b, 0) / xs.length) * 10) / 10 : null;
+    };
+
     const dataPackage = {
       profile: profileRes.data,
       current_targets: targetsRes.data,
-      checkins: checkinsRes.data ?? [],
+      checkins_last_4: {
+        count: checkins.length,
+        avg_training_adherence: avgNum("training_adherence"),
+        avg_nutrition_adherence: avgNum("nutrition_adherence"),
+        avg_energy: avgNum("energy"),
+        avg_sleep_quality: avgNum("sleep_quality"),
+        recent_struggles: checkins
+          .map((c) => c?.struggles)
+          .filter((s) => typeof s === "string" && s.trim().length > 0)
+          .slice(0, 4),
+      },
       weight: {
         latest_kg: weights[0]?.weight_kg ?? null,
         change_kg: weightTrend,
         over_days: trendDays,
         samples: weights.length,
+        change_pct_per_week:
+          weightTrend != null && trendDays && weights[0]?.weight_kg
+            ? Number(
+                ((weightTrend / Number(weights[0].weight_kg)) * (7 / trendDays) * 100).toFixed(2),
+              )
+            : null,
       },
       nutrition_intake_14d: {
         logged_days: loggedDays,
@@ -133,48 +164,66 @@ export const generatePlanAdjustments = createServerFn({ method: "POST" })
         avg_protein_g: avg("p"),
         avg_carbs_g: avg("c"),
         avg_fat_g: avg("f"),
+        target_vs_actual_kcal:
+          targetsRes.data?.kcal && loggedDays ? avg("kcal") - Number(targetsRes.data.kcal) : null,
       },
       training_14d: {
         sessions: (sessionsRes.data ?? []).length,
         completed: (sessionsRes.data ?? []).filter((s: any) => s.status === "completed").length,
+        completion_rate:
+          (sessionsRes.data ?? []).length > 0
+            ? Number(
+                (
+                  (sessionsRes.data ?? []).filter((s: any) => s.status === "completed").length /
+                  (sessionsRes.data ?? []).length
+                ).toFixed(2),
+              )
+            : null,
       },
     };
 
     const system =
-      "Du bist Senior-Coach-Assistent für BODYFUEL. Du schlägst konkrete, datenbasierte Anpassungen für Ernährungs- und Trainingsplan vor. Du bist konservativ: kcal-Änderungen typisch ±100–250 kcal, Protein in g/kg-Logik. Du nennst eine Konfidenz und Warnungen, wenn die Datenlage dünn ist.";
+      "Du bist Senior-Coach-Assistent für BODYFUEL. Du schlägst datenbasierte Anpassungen vor und lieferst IMMER zwei Varianten: 'Konservativ' (kleine, sichere Änderungen) und 'Aggressiv' (deutlich größere Änderungen für schnellere Ergebnisse, akzeptiert mehr Risiko). Du nennst Konfidenz pro Variante und Warnungen, wenn die Datenlage dünn ist.";
 
-    const prompt = `Schlage Plan-Anpassungen vor.
+    const prompt = `Generiere ZWEI Plan-Anpassungs-Varianten für denselben Kunden.
 
 KUNDENDATEN (JSON):
 ${JSON.stringify(dataPackage, null, 2)}
 
-REGELN:
-- Wenn nutrition_intake_14d.logged_days < 5 → confidence höchstens "low" und entsprechende Warnung.
-- Bei Gewichtsplateau (|change_kg| < 0.3 in 14+ Tagen) bei Cut → 100–200 kcal runter ODER Cardio/NEAT-Empfehlung im Training.
-- Bei Gewichtsverlust > 1% Körpergewicht/Woche → kcal anheben.
-- Protein-Empfehlung: ~1.8–2.2 g/kg Körpergewicht im Cut, ~1.6–2.0 im Aufbau.
-- Wenn current_targets fehlt: nutrition = null und Warnung.
-- training: 0–3 priorisierte Vorschläge.
+ALLGEMEINE REGELN:
+- Wenn nutrition_intake_14d.logged_days < 5 → confidence höchstens "low" + Warnung "Zu wenig Tracking-Tage".
+- Bei Gewichtsplateau (|change_pct_per_week| < 0.2) im Cut → kcal runter ODER Cardio/NEAT.
+- Bei Gewichtsverlust > 1%/Woche → kcal anheben (Muskelverlust-Risiko).
+- Protein: ~1.8–2.2 g/kg im Cut, ~1.6–2.0 im Aufbau.
+- Bei completion_rate < 0.6 → Volumen reduzieren oder Frequenz anpassen, NICHT erhöhen.
+- Bei avg_energy < 5 oder avg_sleep_quality < 5 → Deload oder kcal-Reserve berücksichtigen.
+- Wenn current_targets fehlt: nutrition=null + Warnung.
+- training pro Variante: 0–3 priorisierte Vorschläge.
 
-Antworte AUSSCHLIESSLICH mit gültigem JSON in genau dieser Form:
+VARIANTEN-UNTERSCHIED:
+- Konservativ: kcal-Änderung ±50–150, max +1/-1 Satz Volumen, vorsichtige Sprache.
+- Aggressiv: kcal-Änderung ±200–400, ±2 Sätze Volumen oder Deload, klarere Maßnahmen — aber innerhalb sicherer Grenzen (Protein nicht unter 1.6 g/kg, kcal nicht unter BMR*1.1).
+
+Antworte AUSSCHLIESSLICH mit gültigem JSON:
 {
-  "summary": "string (1–2 Sätze)",
-  "confidence": "high" | "medium" | "low",
-  "nutrition": null | {
-    "kcal": number,
-    "protein_g": number,
-    "carbs_g": number,
-    "fat_g": number,
-    "rationale": "string (1–2 Sätze, warum diese Zahlen)"
-  },
-  "training": [
+  "variants": [
     {
-      "area": "volume" | "intensity" | "frequency" | "exercise_swap" | "deload",
-      "detail": "string (konkrete Aktion)",
-      "rationale": "string (warum)"
+      "label": "Konservativ",
+      "summary": "string (1–2 Sätze)",
+      "confidence": "high" | "medium" | "low",
+      "nutrition": null | { "kcal": number, "protein_g": number, "carbs_g": number, "fat_g": number, "rationale": "string" },
+      "training": [ { "area": "volume"|"intensity"|"frequency"|"exercise_swap"|"deload", "detail": "string", "rationale": "string" } ],
+      "warnings": ["string"]
+    },
+    {
+      "label": "Aggressiv",
+      "summary": "...",
+      "confidence": "...",
+      "nutrition": ...,
+      "training": [...],
+      "warnings": [...]
     }
-  ],
-  "warnings": ["string", ...]
+  ]
 }`;
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -205,23 +254,26 @@ Antworte AUSSCHLIESSLICH mit gültigem JSON in genau dieser Form:
       throw new Error("KI-Antwort konnte nicht gelesen werden.");
     }
 
-    const result: PlanAdjustmentSuggestion = {
-      summary: typeof parsed.summary === "string" ? parsed.summary : "",
-      confidence: (["high", "medium", "low"].includes(parsed.confidence)
-        ? parsed.confidence
-        : "low") as "high" | "medium" | "low",
+    const normalizeVariant = (v: any, fallbackLabel: "Konservativ" | "Aggressiv"): PlanAdjustmentVariant => ({
+      label:
+        v?.label === "Konservativ" || v?.label === "Aggressiv" ? v.label : fallbackLabel,
+      summary: typeof v?.summary === "string" ? v.summary : "",
+      confidence: (["high", "medium", "low"].includes(v?.confidence) ? v.confidence : "low") as
+        | "high"
+        | "medium"
+        | "low",
       nutrition:
-        parsed.nutrition && typeof parsed.nutrition === "object"
+        v?.nutrition && typeof v.nutrition === "object"
           ? {
-              kcal: Math.round(Number(parsed.nutrition.kcal ?? 0)),
-              protein_g: Math.round(Number(parsed.nutrition.protein_g ?? 0)),
-              carbs_g: Math.round(Number(parsed.nutrition.carbs_g ?? 0)),
-              fat_g: Math.round(Number(parsed.nutrition.fat_g ?? 0)),
-              rationale: String(parsed.nutrition.rationale ?? ""),
+              kcal: Math.round(Number(v.nutrition.kcal ?? 0)),
+              protein_g: Math.round(Number(v.nutrition.protein_g ?? 0)),
+              carbs_g: Math.round(Number(v.nutrition.carbs_g ?? 0)),
+              fat_g: Math.round(Number(v.nutrition.fat_g ?? 0)),
+              rationale: String(v.nutrition.rationale ?? ""),
             }
           : null,
-      training: Array.isArray(parsed.training)
-        ? parsed.training.slice(0, 5).map((t: any) => ({
+      training: Array.isArray(v?.training)
+        ? v.training.slice(0, 5).map((t: any) => ({
             area: (["volume", "intensity", "frequency", "exercise_swap", "deload"].includes(t?.area)
               ? t.area
               : "volume") as TrainingAdjustment["area"],
@@ -229,10 +281,16 @@ Antworte AUSSCHLIESSLICH mit gültigem JSON in genau dieser Form:
             rationale: String(t?.rationale ?? ""),
           }))
         : [],
-      warnings: Array.isArray(parsed.warnings) ? parsed.warnings.slice(0, 6).map((w: any) => String(w)) : [],
-    };
+      warnings: Array.isArray(v?.warnings) ? v.warnings.slice(0, 6).map((w: any) => String(w)) : [],
+    });
 
-    return { ...result, current: targetsRes.data };
+    const rawVariants = Array.isArray(parsed?.variants) ? parsed.variants : [];
+    const variants: PlanAdjustmentVariant[] = [
+      normalizeVariant(rawVariants[0] ?? {}, "Konservativ"),
+      normalizeVariant(rawVariants[1] ?? {}, "Aggressiv"),
+    ];
+
+    return { current: targetsRes.data, variants };
   });
 
 export const applyNutritionAdjustment = createServerFn({ method: "POST" })
