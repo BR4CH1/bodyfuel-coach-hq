@@ -341,6 +341,69 @@ function CoachDashboard() {
       return ae - be;
     });
 
+  // ---- Coach Score per client (🟢 on track / 🟡 watch / 🔴 action needed) ----
+  const scoreById = new Map<string, { score: number; level: "green" | "yellow" | "red"; reasons: string[] }>();
+  clients.forEach((c) => {
+    let score = 100;
+    const reasons: string[] = [];
+
+    const checkinDays = daysAgo(c.last_checkin);
+    if (c.last_checkin !== weekStart) {
+      if (checkinDays === null) {
+        score -= 30; reasons.push("Noch nie eingecheckt");
+      } else if (checkinDays >= 14) {
+        score -= 35; reasons.push(`Check-in ${checkinDays}T alt`);
+      } else {
+        score -= 15; reasons.push("Wochen-Check-in offen");
+      }
+    }
+
+    const lastActivity = [c.last_training_at, c.last_nutrition_at, c.last_weight_at]
+      .filter(Boolean)
+      .map((d) => new Date(d!).getTime());
+    if (lastActivity.length === 0) {
+      score -= 20; reasons.push("Keine Aktivität");
+    } else {
+      const newest = Math.max(...lastActivity);
+      const days = Math.floor((Date.now() - newest) / 86400000);
+      if (days >= 14) { score -= 25; reasons.push(`Inaktiv ${days}T`); }
+      else if (days >= 7) { score -= 10; reasons.push(`Inaktiv ${days}T`); }
+    }
+
+    if (c.kcal_dev != null) {
+      if (c.kcal_dev > 500) { score -= 15; reasons.push(`kcal-Abweichung ${c.kcal_dev}`); }
+      else if (c.kcal_dev > 200) { score -= 5; }
+    }
+
+    if (c.plateau_days != null) {
+      score -= 10; reasons.push(`Plateau ${c.plateau_days}T`);
+    }
+
+    const planDays = [c.nutrition_plan_end, c.training_plan_end]
+      .filter(Boolean)
+      .map((d) => Math.ceil((new Date(d!).getTime() - new Date(todayIso).getTime()) / 86400000));
+    if (planDays.length) {
+      const minDays = Math.min(...planDays);
+      if (minDays < 0) { score -= 20; reasons.push("Plan abgelaufen"); }
+      else if (minDays <= 5) { score -= 10; reasons.push(`Plan läuft in ${minDays}T aus`); }
+    }
+
+    score = Math.max(0, Math.min(100, score));
+    const level: "green" | "yellow" | "red" = score >= 70 ? "green" : score >= 40 ? "yellow" : "red";
+    scoreById.set(c.id, { score, level, reasons });
+  });
+
+  const scoreCounts = {
+    green: clients.filter((c) => scoreById.get(c.id)?.level === "green").length,
+    yellow: clients.filter((c) => scoreById.get(c.id)?.level === "yellow").length,
+    red: clients.filter((c) => scoreById.get(c.id)?.level === "red").length,
+  };
+  const redClients = clients
+    .filter((c) => scoreById.get(c.id)?.level === "red")
+    .map((c) => ({ ...c, _score: scoreById.get(c.id)! }))
+    .sort((a, b) => a._score.score - b._score.score);
+
+
 
 
 
