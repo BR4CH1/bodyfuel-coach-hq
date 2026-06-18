@@ -238,11 +238,24 @@ Antworte AUSSCHLIESSLICH mit gültigem JSON in genau dieser Form:
 export const applyNutritionAdjustment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
-    (d: { user_id: string; kcal: number; protein_g: number; carbs_g: number; fat_g: number }) => d,
+    (d: {
+      user_id: string;
+      kcal: number;
+      protein_g: number;
+      carbs_g: number;
+      fat_g: number;
+      rationale?: string;
+    }) => d,
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     await assertCoach(supabase, userId);
+
+    const { data: before } = await supabase
+      .from("nutrition_targets")
+      .select("kcal, protein_g, carbs_g, fat_g")
+      .eq("user_id", data.user_id)
+      .maybeSingle();
 
     const patch = {
       user_id: data.user_id,
@@ -258,5 +271,114 @@ export const applyNutritionAdjustment = createServerFn({ method: "POST" })
       .from("nutrition_targets")
       .upsert(patch, { onConflict: "user_id" });
     if (error) throw new Error(error.message);
+
+    await supabase.from("plan_adjustment_history").insert({
+      client_id: data.user_id,
+      coach_id: userId,
+      kind: "nutrition",
+      area: "macros",
+      summary: `kcal ${patch.kcal} · P${patch.protein_g}/C${patch.carbs_g}/F${patch.fat_g}`,
+      before_json: before ?? null,
+      after_json: { kcal: patch.kcal, protein_g: patch.protein_g, carbs_g: patch.carbs_g, fat_g: patch.fat_g },
+      rationale: data.rationale ?? null,
+    });
+
     return { ok: true };
+  });
+
+export type TrainingApplyAction =
+  | { type: "volume_delta"; sets_delta: number; detail: string; rationale?: string }
+  | { type: "deload"; scale: number; detail: string; rationale?: string }
+  | { type: "note"; area: string; detail: string; rationale?: string };
+
+export const applyTrainingAdjustment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { user_id: string; action: TrainingApplyAction }) => d)
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    await assertCoach(supabase, userId);
+
+    const { data: plan } = await supabase
+      .from("training_plans")
+      .select("id")
+      .eq("client_id", data.user_id)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (!plan) throw new Error("Kein aktiver Trainingsplan gefunden.");
+
+    const { data: days } = await supabase
+      .from("training_days")
+      .select("id")
+      .eq("plan_id", plan.id);
+    const dayIds = (days ?? []).map((d: any) => d.id);
+
+    let summary = "";
+    let beforeSnapshot: any = null;
+    let afterSnapshot: any = null;
+
+    if (data.action.type === "volume_delta" && dayIds.length > 0) {
+      const { data: exs } = await supabase
+        .from("training_exercises")
+        .select("id, name, target_sets")
+        .in("day_id", dayIds);
+      const updates = (exs ?? []).map((e: any) => ({
+        id: e.id,
+        next: Math.max(1, Math.min(8, (e.target_sets ?? 3) + data.action.sets_delta)),
+        prev: e.target_sets ?? 3,
+      }));
+      for (const u of updates) {
+        await supabase.from("training_exercises").update({ target_sets: u.next }).eq("id", u.id);
+      }
+      beforeSnapshot = { exercises: (exs ?? []).map((e: any) => ({ name: e.name, sets: e.target_sets })) };
+      afterSnapshot = { sets_delta: data.action.sets_delta, affected: updates.length };
+      summary = `Volumen ${data.action.sets_delta > 0 ? "+" : ""}${data.action.sets_delta} Sätze auf ${updates.length} Übungen`;
+    } else if (data.action.type === "deload" && dayIds.length > 0) {
+      const scale = Math.max(0.4, Math.min(0.9, data.action.scale));
+      const { data: exs } = await supabase
+        .from("training_exercises")
+        .select("id, name, target_sets")
+        .in("day_id", dayIds);
+      const updates = (exs ?? []).map((e: any) => ({
+        id: e.id,
+        next: Math.max(1, Math.round((e.target_sets ?? 3) * scale)),
+      }));
+      for (const u of updates) {
+        await supabase.from("training_exercises").update({ target_sets: u.next }).eq("id", u.id);
+      }
+      beforeSnapshot = { exercises: (exs ?? []).map((e: any) => ({ name: e.name, sets: e.target_sets })) };
+      afterSnapshot = { scale, affected: updates.length };
+      summary = `Deload-Woche: Sätze × ${scale.toFixed(2)} (${updates.length} Übungen)`;
+    } else {
+      summary = data.action.detail;
+    }
+
+    await supabase.from("plan_adjustment_history").insert({
+      client_id: data.user_id,
+      coach_id: userId,
+      kind: "training",
+      area: data.action.type,
+      summary,
+      before_json: beforeSnapshot,
+      after_json: afterSnapshot,
+      rationale: data.action.rationale ?? null,
+    });
+
+    return { ok: true, summary };
+  });
+
+export const listPlanAdjustmentHistory = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { user_id: string; limit?: number }) => d)
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    await assertCoach(supabase, userId);
+    const { data: rows, error } = await supabase
+      .from("plan_adjustment_history")
+      .select("id, kind, area, summary, rationale, created_at, before_json, after_json")
+      .eq("client_id", data.user_id)
+      .order("created_at", { ascending: false })
+      .limit(Math.min(50, data.limit ?? 20));
+    if (error) throw new Error(error.message);
+    return { items: rows ?? [] };
   });
