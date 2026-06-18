@@ -100,7 +100,7 @@ export const generatePlanAdjustments = createServerFn({ method: "POST" })
       return Math.round(s / loggedDays);
     };
 
-    const weights = (weightsRes.data ?? []) as Array<{ logged_at: string; weight_kg: number }>;
+    const weights = (weightsRes.data ?? []) as Array<{ log_date: string; weight_kg: number }>;
     const weightTrend =
       weights.length >= 2
         ? Number((weights[0].weight_kg - weights[weights.length - 1].weight_kg).toFixed(2))
@@ -110,8 +110,8 @@ export const generatePlanAdjustments = createServerFn({ method: "POST" })
         ? Math.max(
             1,
             Math.round(
-              (new Date(weights[0].logged_at).getTime() -
-                new Date(weights[weights.length - 1].logged_at).getTime()) /
+              (new Date(weights[0].log_date).getTime() -
+                new Date(weights[weights.length - 1].log_date).getTime()) /
                 86400000,
             ),
           )
