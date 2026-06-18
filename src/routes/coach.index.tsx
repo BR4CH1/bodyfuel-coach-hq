@@ -84,7 +84,33 @@ function CoachDashboard() {
   const [clients, setClients] = useState<Client[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dismissedTasks, setDismissedTasks] = useState<Set<string>>(() => {
+    if (typeof window === "undefined") return new Set();
+    try {
+      const raw = window.sessionStorage.getItem("coach-task-inbox-dismissed");
+      return raw ? new Set(JSON.parse(raw) as string[]) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+  const toggleDismiss = (taskId: string) => {
+    setDismissedTasks((prev) => {
+      const next = new Set(prev);
+      if (next.has(taskId)) next.delete(taskId);
+      else next.add(taskId);
+      try {
+        window.sessionStorage.setItem(
+          "coach-task-inbox-dismissed",
+          JSON.stringify([...next]),
+        );
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  };
   const weekStart = mondayOf(new Date());
+
 
   useEffect(() => {
     (async () => {
@@ -460,7 +486,16 @@ function CoachDashboard() {
             newLeads={leads.length}
           />
 
+          <TaskInboxCard
+            openCheckins={openWeek}
+            expiringPlans={expiringPlans}
+            redClients={redClients}
+            dismissed={dismissedTasks}
+            onToggle={toggleDismiss}
+          />
+
           <SectionHeader title="Handlungsbedarf" subtitle="Was heute deine Aufmerksamkeit braucht" />
+
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Diese Woche offen */}
             <Panel
@@ -707,6 +742,170 @@ function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }
     </div>
   );
 }
+
+type ExpiringPlan = { id: string; name: string; kind: "nutrition" | "training"; end: string; days: number };
+type RedClient = Client & { _score: { score: number; level: "green" | "yellow" | "red"; reasons: string[] } };
+
+function TaskInboxCard({
+  openCheckins,
+  expiringPlans,
+  redClients,
+  dismissed,
+  onToggle,
+}: {
+  openCheckins: Client[];
+  expiringPlans: ExpiringPlan[];
+  redClients: RedClient[];
+  dismissed: Set<string>;
+  onToggle: (id: string) => void;
+}) {
+  type Task = {
+    id: string;
+    icon: React.ReactNode;
+    title: string;
+    meta: string;
+    tone: "warn" | "danger" | "info";
+    to: string;
+    params?: Record<string, string>;
+  };
+
+  const tasks: Task[] = [];
+
+  openCheckins.slice(0, 20).forEach((c) => {
+    tasks.push({
+      id: `checkin:${c.id}`,
+      icon: <Clock className="h-4 w-4" />,
+      title: `Check-in offen — ${c.display_name ?? "Ohne Namen"}`,
+      meta: c.last_checkin
+        ? `Letzter Check-in ${new Date(c.last_checkin).toLocaleDateString("de-DE")}`
+        : "Noch nie eingecheckt",
+      tone: "warn",
+      to: "/coach/customers/$userId",
+      params: { userId: c.id },
+    });
+  });
+
+  expiringPlans.slice(0, 20).forEach((p) => {
+    tasks.push({
+      id: `plan:${p.id}:${p.kind}:${p.end}`,
+      icon: p.kind === "nutrition" ? <Utensils className="h-4 w-4" /> : <Dumbbell className="h-4 w-4" />,
+      title: `${p.kind === "nutrition" ? "Ernährungsplan" : "Trainingsplan"} ${p.days < 0 ? "abgelaufen" : `läuft in ${p.days}T aus`} — ${p.name}`,
+      meta: `Ende ${new Date(p.end).toLocaleDateString("de-DE")}`,
+      tone: p.days < 0 ? "danger" : "warn",
+      to: "/coach/customers/$userId",
+      params: { userId: p.id },
+    });
+  });
+
+  redClients.slice(0, 10).forEach((c) => {
+    tasks.push({
+      id: `risk:${c.id}`,
+      icon: <AlertTriangle className="h-4 w-4" />,
+      title: `🔴 ${c.display_name ?? "Ohne Namen"} braucht Aufmerksamkeit`,
+      meta: c._score.reasons.slice(0, 2).join(" · ") || `Score ${c._score.score}`,
+      tone: "danger",
+      to: "/coach/customers/$userId",
+      params: { userId: c.id },
+    });
+  });
+
+  const open = tasks.filter((t) => !dismissed.has(t.id));
+  const done = tasks.filter((t) => dismissed.has(t.id));
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Inbox className="h-5 w-5 text-gold" />
+          <div>
+            <h3 className="font-display text-lg font-bold">Aufgaben-Inbox</h3>
+            <p className="text-xs text-muted-foreground">
+              {open.length} offen{done.length > 0 ? ` · ${done.length} erledigt` : ""}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {open.length === 0 && done.length === 0 && (
+        <div className="rounded-xl border border-dashed border-border/60 p-4 text-sm text-muted-foreground">
+          Keine offenen Aufgaben — alles erledigt 🎉
+        </div>
+      )}
+
+      {open.length === 0 && done.length > 0 && (
+        <div className="rounded-xl border border-dashed border-emerald-500/30 bg-emerald-500/5 p-4 text-sm text-emerald-300">
+          Alle Aufgaben für jetzt abgehakt 🎉
+        </div>
+      )}
+
+      <ul className="space-y-2">
+        {open.map((t) => (
+          <TaskRow key={t.id} task={t} done={false} onToggle={() => onToggle(t.id)} />
+        ))}
+        {done.map((t) => (
+          <TaskRow key={t.id} task={t} done onToggle={() => onToggle(t.id)} />
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function TaskRow({
+  task,
+  done,
+  onToggle,
+}: {
+  task: {
+    id: string;
+    icon: React.ReactNode;
+    title: string;
+    meta: string;
+    tone: "warn" | "danger" | "info";
+    to: string;
+    params?: Record<string, string>;
+  };
+  done: boolean;
+  onToggle: () => void;
+}) {
+  const toneClasses =
+    task.tone === "danger"
+      ? "border-red-500/30 bg-red-500/5"
+      : task.tone === "warn"
+      ? "border-amber-500/30 bg-amber-500/5"
+      : "border-border bg-background/30";
+  return (
+    <li
+      className={`flex items-start gap-3 rounded-xl border p-3 transition ${
+        done ? "border-border/40 bg-background/20 opacity-60" : toneClasses
+      }`}
+    >
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-label={done ? "Wieder öffnen" : "Als erledigt markieren"}
+        className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border transition ${
+          done
+            ? "border-emerald-500/60 bg-emerald-500/20 text-emerald-300"
+            : "border-border hover:border-gold/60"
+        }`}
+      >
+        {done && <CheckCircle2 className="h-4 w-4" />}
+      </button>
+      <div className="min-w-0 flex-1">
+        <p className={`text-sm font-semibold ${done ? "line-through" : ""}`}>{task.title}</p>
+        <p className="text-xs text-muted-foreground">{task.meta}</p>
+      </div>
+      <Link
+        to={task.to}
+        params={task.params as never}
+        className="flex flex-shrink-0 items-center gap-1 text-xs font-semibold text-gold hover:underline"
+      >
+        Öffnen <ChevronRight className="h-3 w-3" />
+      </Link>
+    </li>
+  );
+}
+
 
 function CoachScoreCard({
   counts,
