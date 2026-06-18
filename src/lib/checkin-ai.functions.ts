@@ -48,7 +48,7 @@ export const generateCheckinDraft = createServerFn({ method: "POST" })
       .select(
         "first_name, last_name, gender, height_cm, current_weight_kg, target_weight_kg, goal, activity_level, birthdate",
       )
-      .eq("user_id", target)
+      .eq("id", target)
       .maybeSingle();
 
     // Letzte Check-ins
@@ -115,7 +115,7 @@ export const generateCheckinDraft = createServerFn({ method: "POST" })
     const { data: sessions } = await supabase
       .from("training_sessions")
       .select("session_date, status")
-      .eq("user_id", target)
+      .eq("client_id", target)
       .gte("session_date", since14);
     const trainingSummary = {
       sessions_14d: (sessions ?? []).length,
