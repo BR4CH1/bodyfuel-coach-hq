@@ -537,7 +537,16 @@ function CoachDashboard() {
               mutateState.mutate({ task_key, action, snooze_hours })
             }
             mutating={mutateState.isPending}
+            onExtendPlan={(client_id, kind, task_key) =>
+              extendPlanMut.mutate({ client_id, kind, weeks: 4, task_key })
+            }
+            extendingKey={extendPlanMut.isPending ? extendPlanMut.variables?.task_key : null}
+            onGenerateDraft={(client_id, task_key) =>
+              genDraftMut.mutate({ client_id, task_key })
+            }
+            generatingKey={genDraftMut.isPending ? genDraftMut.variables?.task_key : null}
           />
+
 
 
           <PendingDraftsCard
