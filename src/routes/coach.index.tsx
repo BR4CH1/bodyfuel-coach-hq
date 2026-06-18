@@ -486,7 +486,16 @@ function CoachDashboard() {
             newLeads={leads.length}
           />
 
+          <TaskInboxCard
+            openCheckins={openWeek}
+            expiringPlans={expiringPlans}
+            redClients={redClients}
+            dismissed={dismissedTasks}
+            onToggle={toggleDismiss}
+          />
+
           <SectionHeader title="Handlungsbedarf" subtitle="Was heute deine Aufmerksamkeit braucht" />
+
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Diese Woche offen */}
             <Panel
