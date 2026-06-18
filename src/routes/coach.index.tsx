@@ -14,6 +14,7 @@ import {
   Dumbbell,
   Trophy,
   CalendarClock,
+  Zap,
 } from "lucide-react";
 
 
