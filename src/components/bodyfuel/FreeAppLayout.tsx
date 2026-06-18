@@ -5,7 +5,9 @@ import { useSession } from "@/lib/bodyfuel/session";
 import { Logo } from "./Logo";
 import { FreeUpsellBanner } from "./FreeUpsellBanner";
 
-const baseNav: { to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean }[] = [
+type FreeNavItem = { to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean };
+
+const baseNav: FreeNavItem[] = [
   { to: "/tracker/app", label: "Heute", icon: LayoutDashboard, exact: true },
   { to: "/tracker/app/nutrition", label: "Ernährung", icon: Apple },
   { to: "/tracker/app/training", label: "Training", icon: Dumbbell },
@@ -13,7 +15,7 @@ const baseNav: { to: string; label: string; icon: typeof LayoutDashboard; exact?
   { to: "/tracker/app/achievements", label: "Erfolge", icon: Trophy },
 ];
 
-const bullsNavItem = { to: "/bulls", label: "Bulls Hub", icon: Shield };
+const bullsNavItem: FreeNavItem = { to: "/bulls", label: "Bulls Hub", icon: Shield };
 
 export function FreeAppLayout({ children }: { children: ReactNode }) {
   const { supabaseUser, loading, isFreeUser, isCoach, logout, profile, hasGroup } = useSession();
