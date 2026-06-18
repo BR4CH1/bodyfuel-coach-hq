@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WelcomeRouteImport } from './routes/welcome'
 import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
+import { Route as TrustRouteImport } from './routes/trust'
 import { Route as TrialRouteImport } from './routes/trial'
 import { Route as TrainingRouteImport } from './routes/training'
 import { Route as StrengthCheckRouteImport } from './routes/strength-check'
@@ -80,6 +81,11 @@ const WelcomeRoute = WelcomeRouteImport.update({
 const UnsubscribeRoute = UnsubscribeRouteImport.update({
   id: '/unsubscribe',
   path: '/unsubscribe',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TrustRoute = TrustRouteImport.update({
+  id: '/trust',
+  path: '/trust',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TrialRoute = TrialRouteImport.update({
@@ -410,6 +416,7 @@ export interface FileRoutesByFullPath {
   '/strength-check': typeof StrengthCheckRoute
   '/training': typeof TrainingRoute
   '/trial': typeof TrialRoute
+  '/trust': typeof TrustRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/welcome': typeof WelcomeRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
@@ -472,6 +479,7 @@ export interface FileRoutesByTo {
   '/strength-check': typeof StrengthCheckRoute
   '/training': typeof TrainingRoute
   '/trial': typeof TrialRoute
+  '/trust': typeof TrustRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/welcome': typeof WelcomeRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
@@ -535,6 +543,7 @@ export interface FileRoutesById {
   '/strength-check': typeof StrengthCheckRoute
   '/training': typeof TrainingRoute
   '/trial': typeof TrialRoute
+  '/trust': typeof TrustRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/welcome': typeof WelcomeRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
@@ -601,6 +610,7 @@ export interface FileRouteTypes {
     | '/strength-check'
     | '/training'
     | '/trial'
+    | '/trust'
     | '/unsubscribe'
     | '/welcome'
     | '/bulls/benchmarks'
@@ -663,6 +673,7 @@ export interface FileRouteTypes {
     | '/strength-check'
     | '/training'
     | '/trial'
+    | '/trust'
     | '/unsubscribe'
     | '/welcome'
     | '/bulls/benchmarks'
@@ -725,6 +736,7 @@ export interface FileRouteTypes {
     | '/strength-check'
     | '/training'
     | '/trial'
+    | '/trust'
     | '/unsubscribe'
     | '/welcome'
     | '/bulls/benchmarks'
@@ -790,6 +802,7 @@ export interface RootRouteChildren {
   StrengthCheckRoute: typeof StrengthCheckRoute
   TrainingRoute: typeof TrainingRoute
   TrialRoute: typeof TrialRoute
+  TrustRoute: typeof TrustRoute
   UnsubscribeRoute: typeof UnsubscribeRoute
   WelcomeRoute: typeof WelcomeRoute
   BullsBenchmarksRoute: typeof BullsBenchmarksRoute
@@ -831,6 +844,13 @@ declare module '@tanstack/react-router' {
       path: '/unsubscribe'
       fullPath: '/unsubscribe'
       preLoaderRoute: typeof UnsubscribeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/trust': {
+      id: '/trust'
+      path: '/trust'
+      fullPath: '/trust'
+      preLoaderRoute: typeof TrustRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/trial': {
@@ -1352,6 +1372,7 @@ const rootRouteChildren: RootRouteChildren = {
   StrengthCheckRoute: StrengthCheckRoute,
   TrainingRoute: TrainingRoute,
   TrialRoute: TrialRoute,
+  TrustRoute: TrustRoute,
   UnsubscribeRoute: UnsubscribeRoute,
   WelcomeRoute: WelcomeRoute,
   BullsBenchmarksRoute: BullsBenchmarksRoute,
