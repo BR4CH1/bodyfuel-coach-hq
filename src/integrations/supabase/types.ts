@@ -338,6 +338,39 @@ export type Database = {
         }
         Relationships: []
       }
+      coach_task_state: {
+        Row: {
+          coach_id: string
+          completed_at: string | null
+          created_at: string
+          id: string
+          note: string | null
+          snoozed_until: string | null
+          task_key: string
+          updated_at: string
+        }
+        Insert: {
+          coach_id: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          note?: string | null
+          snoozed_until?: string | null
+          task_key: string
+          updated_at?: string
+        }
+        Update: {
+          coach_id?: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          note?: string | null
+          snoozed_until?: string | null
+          task_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       custom_meals: {
         Row: {
           carbs_g: number | null
