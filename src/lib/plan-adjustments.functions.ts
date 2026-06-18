@@ -373,7 +373,8 @@ export const listPlanAdjustmentHistory = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { user_id: string; limit?: number }) => d)
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+    const { userId } = context;
+    const supabase = context.supabase as any;
     await assertCoach(supabase, userId);
     const { data: rows, error } = await supabase
       .from("plan_adjustment_history")
@@ -382,5 +383,5 @@ export const listPlanAdjustmentHistory = createServerFn({ method: "POST" })
       .order("created_at", { ascending: false })
       .limit(Math.min(50, data.limit ?? 20));
     if (error) throw new Error(error.message);
-    return { items: rows ?? [] };
+    return { items: (rows ?? []) as any[] };
   });
