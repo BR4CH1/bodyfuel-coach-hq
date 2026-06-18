@@ -495,6 +495,11 @@ function CoachDashboard() {
             onToggle={toggleDismiss}
           />
 
+          <PendingDraftsCard
+            redClients={redClients.map((c) => ({ id: c.id, display_name: c.display_name }))}
+          />
+
+
           <SectionHeader title="Handlungsbedarf" subtitle="Was heute deine Aufmerksamkeit braucht" />
 
           <div className="grid gap-6 lg:grid-cols-2">
