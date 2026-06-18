@@ -1,12 +1,15 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Sparkles, Loader2, AlertCircle, Check, Dumbbell, Utensils } from "lucide-react";
+import { Sparkles, Loader2, AlertCircle, Check, Dumbbell, Utensils, History, Clock } from "lucide-react";
 import { toast } from "sonner";
 import {
   generatePlanAdjustments,
   applyNutritionAdjustment,
+  applyTrainingAdjustment,
+  listPlanAdjustmentHistory,
   type PlanAdjustmentSuggestion,
+  type TrainingApplyAction,
 } from "@/lib/plan-adjustments.functions";
 
 type WithCurrent = PlanAdjustmentSuggestion & {
@@ -21,8 +24,19 @@ type WithCurrent = PlanAdjustmentSuggestion & {
 export function PlanAdjustmentsCard({ userId }: { userId: string }) {
   const genFn = useServerFn(generatePlanAdjustments);
   const applyFn = useServerFn(applyNutritionAdjustment);
+  const applyTrainFn = useServerFn(applyTrainingAdjustment);
+  const historyFn = useServerFn(listPlanAdjustmentHistory);
+  const qc = useQueryClient();
   const [data, setData] = useState<WithCurrent | null>(null);
   const [applied, setApplied] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+
+  const historyKey = ["plan-adj-history", userId];
+  const historyQ = useQuery({
+    queryKey: historyKey,
+    queryFn: () => historyFn({ data: { user_id: userId, limit: 20 } }),
+    enabled: showHistory,
+  });
 
   const genMut = useMutation({
     mutationFn: () => genFn({ data: { user_id: userId } }),
@@ -34,11 +48,22 @@ export function PlanAdjustmentsCard({ userId }: { userId: string }) {
   });
 
   const applyMut = useMutation({
-    mutationFn: (n: { kcal: number; protein_g: number; carbs_g: number; fat_g: number }) =>
+    mutationFn: (n: { kcal: number; protein_g: number; carbs_g: number; fat_g: number; rationale?: string }) =>
       applyFn({ data: { user_id: userId, ...n } }),
     onSuccess: () => {
       toast.success("Ernährungsziele übernommen");
       setApplied(true);
+      qc.invalidateQueries({ queryKey: historyKey });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Übernahme fehlgeschlagen"),
+  });
+
+  const applyTrainMut = useMutation({
+    mutationFn: (action: TrainingApplyAction) =>
+      applyTrainFn({ data: { user_id: userId, action } }),
+    onSuccess: (r: any) => {
+      toast.success(r?.summary ?? "Trainings-Anpassung übernommen");
+      qc.invalidateQueries({ queryKey: historyKey });
     },
     onError: (e: any) => toast.error(e?.message ?? "Übernahme fehlgeschlagen"),
   });
@@ -129,7 +154,7 @@ export function PlanAdjustmentsCard({ userId }: { userId: string }) {
               <div className="mt-4 flex justify-end">
                 <button
                   type="button"
-                  onClick={() => applyMut.mutate(data.nutrition!)}
+                  onClick={() => applyMut.mutate({ ...data.nutrition!, rationale: data.nutrition!.rationale })}
                   disabled={applyMut.isPending || applied}
                   className="inline-flex items-center gap-2 rounded-xl bg-gold px-4 py-2 text-xs font-semibold text-primary-foreground transition hover:bg-gold/90 disabled:opacity-60"
                 >
@@ -156,29 +181,107 @@ export function PlanAdjustmentsCard({ userId }: { userId: string }) {
                 <h4 className="font-semibold">Training</h4>
               </div>
               <ul className="space-y-3">
-                {data.training.map((t, i) => (
-                  <li key={i} className="rounded-lg border border-border/60 bg-background/40 p-3">
-                    <div className="mb-1 flex items-center gap-2">
-                      <span className="rounded-md border border-border bg-muted/40 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
-                        {t.area}
-                      </span>
-                    </div>
-                    <p className="text-sm font-medium">{t.detail}</p>
-                    {t.rationale && (
-                      <p className="mt-1 text-xs text-muted-foreground">{t.rationale}</p>
-                    )}
-                  </li>
-                ))}
+                {data.training.map((t, i) => {
+                  const action = trainingActionFor(t);
+                  const applicable = action !== null;
+                  return (
+                    <li key={i} className="rounded-lg border border-border/60 bg-background/40 p-3">
+                      <div className="mb-1 flex items-center gap-2">
+                        <span className="rounded-md border border-border bg-muted/40 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+                          {t.area}
+                        </span>
+                      </div>
+                      <p className="text-sm font-medium">{t.detail}</p>
+                      {t.rationale && (
+                        <p className="mt-1 text-xs text-muted-foreground">{t.rationale}</p>
+                      )}
+                      <div className="mt-2 flex justify-end">
+                        {applicable ? (
+                          <button
+                            type="button"
+                            onClick={() => applyTrainMut.mutate(action!)}
+                            disabled={applyTrainMut.isPending}
+                            className="inline-flex items-center gap-2 rounded-lg border border-gold/40 bg-gold/10 px-3 py-1.5 text-[11px] font-semibold text-gold transition hover:bg-gold/20 disabled:opacity-50"
+                          >
+                            {applyTrainMut.isPending ? (
+                              <><Loader2 className="h-3 w-3 animate-spin" /> Übernehme…</>
+                            ) : (
+                              <>Auf Plan anwenden</>
+                            )}
+                          </button>
+                        ) : (
+                          <span className="text-[10px] text-muted-foreground">Coach-Eingriff nötig</span>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
-              <p className="mt-3 text-[11px] text-muted-foreground">
-                Trainings-Vorschläge werden nicht automatisch übernommen — Coach passt den Plan manuell an.
-              </p>
             </div>
           )}
         </div>
       )}
+
+      <div className="mt-5 border-t border-border/60 pt-4">
+        <button
+          type="button"
+          onClick={() => setShowHistory((s) => !s)}
+          className="inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-foreground"
+        >
+          <History className="h-3.5 w-3.5" />
+          {showHistory ? "Verlauf ausblenden" : "Anpassungs-Verlauf"}
+        </button>
+        {showHistory && (
+          <div className="mt-3 space-y-2">
+            {historyQ.isLoading && (
+              <p className="text-xs text-muted-foreground">Lade Verlauf…</p>
+            )}
+            {historyQ.data?.items?.length === 0 && (
+              <p className="text-xs text-muted-foreground">Noch keine Anpassungen aufgezeichnet.</p>
+            )}
+            {historyQ.data?.items?.map((it: any) => (
+              <div key={it.id} className="rounded-lg border border-border/60 bg-background/40 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    {it.kind === "nutrition" ? (
+                      <Utensils className="h-3.5 w-3.5 text-gold" />
+                    ) : (
+                      <Dumbbell className="h-3.5 w-3.5 text-gold" />
+                    )}
+                    <span className="text-xs font-semibold">{it.summary}</span>
+                  </div>
+                  <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+                    <Clock className="h-3 w-3" />
+                    {new Date(it.created_at).toLocaleString("de-DE", {
+                      day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit",
+                    })}
+                  </span>
+                </div>
+                {it.rationale && (
+                  <p className="mt-1 text-[11px] text-muted-foreground">{it.rationale}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
+}
+
+function trainingActionFor(t: PlanAdjustmentSuggestion["training"][number]): TrainingApplyAction | null {
+  const detail = (t.detail ?? "").toLowerCase();
+  if (t.area === "deload") {
+    return { type: "deload", scale: 0.6, detail: t.detail, rationale: t.rationale };
+  }
+  if (t.area === "volume") {
+    // Versuche +N / -N Sätze aus dem Detail zu lesen
+    const m = detail.match(/([+-]?\d+)\s*(satz|sätze|set|sets)/);
+    const delta = m ? Math.max(-2, Math.min(2, parseInt(m[1], 10))) : (detail.includes("reduzier") || detail.includes("weniger") ? -1 : 1);
+    if (!delta) return null;
+    return { type: "volume_delta", sets_delta: delta, detail: t.detail, rationale: t.rationale };
+  }
+  return null;
 }
 
 function MacroDelta({
