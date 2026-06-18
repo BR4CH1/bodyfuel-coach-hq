@@ -66,10 +66,10 @@ export const generatePlanAdjustments = createServerFn({ method: "POST" })
           .limit(4),
         supabase
           .from("bulls_weight_logs")
-          .select("logged_at, weight_kg")
+          .select("log_date, weight_kg")
           .eq("user_id", target)
-          .gte("logged_at", since30)
-          .order("logged_at", { ascending: false }),
+          .gte("log_date", since30)
+          .order("log_date", { ascending: false }),
         supabase
           .from("food_entries")
           .select("logged_at, kcal, protein_g, carbs_g, fat_g")
