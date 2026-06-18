@@ -525,26 +525,32 @@ GENAU 4 Wochen. Jede Woche GENAU 7 Tage (Mo, Di, Mi, Do, Fr, Sa, So in dieser Re
       totalDays++;
 
       const rows = (d.exercises ?? [])
-        .map((e, idx) => ({
-          day_id: dayRow.id,
-          name: stripAkzessoires(String(e.name ?? "").trim()).slice(0, 200),
-          category: validCategory(e.category),
-          target_sets:
-            typeof e.target_sets === "number" && Number.isFinite(e.target_sets)
-              ? Math.max(1, Math.min(20, Math.round(e.target_sets)))
-              : null,
-          target_reps: e.target_reps ? String(e.target_reps).slice(0, 80) : null,
-          target_weights:
-            e.target_weights != null && String(e.target_weights).trim().length
-              ? String(e.target_weights).slice(0, 120)
-              : null,
-          rest_seconds:
-            typeof e.rest_seconds === "number" && Number.isFinite(e.rest_seconds)
-              ? Math.max(15, Math.min(600, Math.round(e.rest_seconds)))
-              : null,
-          notes: e.notes ? stripAkzessoires(String(e.notes)).slice(0, 500) : null,
-          sort_order: idx,
-        }))
+        .map((e, idx) => {
+          const cleanName = stripAkzessoires(String(e.name ?? "").trim()).slice(0, 200);
+          const clampedWeights = clampWeightsForExercise(
+            cleanName,
+            e.target_weights,
+            w.week_number,
+            startWeights,
+          );
+          return {
+            day_id: dayRow.id,
+            name: cleanName,
+            category: validCategory(e.category),
+            target_sets:
+              typeof e.target_sets === "number" && Number.isFinite(e.target_sets)
+                ? Math.max(1, Math.min(20, Math.round(e.target_sets)))
+                : null,
+            target_reps: e.target_reps ? String(e.target_reps).slice(0, 80) : null,
+            target_weights: clampedWeights,
+            rest_seconds:
+              typeof e.rest_seconds === "number" && Number.isFinite(e.rest_seconds)
+                ? Math.max(15, Math.min(600, Math.round(e.rest_seconds)))
+                : null,
+            notes: e.notes ? stripAkzessoires(String(e.notes)).slice(0, 500) : null,
+            sort_order: idx,
+          };
+        })
         .filter((r) => r.name);
       totalEx += rows.length;
       if (rows.length) {
