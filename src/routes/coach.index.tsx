@@ -760,18 +760,22 @@ function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }
 type ExpiringPlan = { id: string; name: string; kind: "nutrition" | "training"; end: string; days: number };
 type RedClient = Client & { _score: { score: number; level: "green" | "yellow" | "red"; reasons: string[] } };
 
+type TaskAction = "complete" | "reopen" | "snooze";
+
 function TaskInboxCard({
   openCheckins,
   expiringPlans,
   redClients,
-  dismissed,
-  onToggle,
+  states,
+  onAction,
+  mutating,
 }: {
   openCheckins: Client[];
   expiringPlans: ExpiringPlan[];
   redClients: RedClient[];
-  dismissed: Set<string>;
-  onToggle: (id: string) => void;
+  states: Map<string, CoachTaskState>;
+  onAction: (task_key: string, action: TaskAction, snooze_hours?: number) => void;
+  mutating: boolean;
 }) {
   type Task = {
     id: string;
@@ -823,8 +827,18 @@ function TaskInboxCard({
     });
   });
 
-  const open = tasks.filter((t) => !dismissed.has(t.id));
-  const done = tasks.filter((t) => dismissed.has(t.id));
+  const nowMs = Date.now();
+  const classify = (t: Task): "open" | "snoozed" | "done" => {
+    const s = states.get(t.id);
+    if (!s) return "open";
+    if (s.completed_at) return "done";
+    if (s.snoozed_until && new Date(s.snoozed_until).getTime() > nowMs) return "snoozed";
+    return "open";
+  };
+
+  const open = tasks.filter((t) => classify(t) === "open");
+  const snoozed = tasks.filter((t) => classify(t) === "snoozed");
+  const done = tasks.filter((t) => classify(t) === "done");
 
   return (
     <div className="rounded-2xl border border-border bg-card p-5">
@@ -834,30 +848,62 @@ function TaskInboxCard({
           <div>
             <h3 className="font-display text-lg font-bold">Aufgaben-Inbox</h3>
             <p className="text-xs text-muted-foreground">
-              {open.length} offen{done.length > 0 ? ` · ${done.length} erledigt` : ""}
+              {open.length} offen
+              {snoozed.length > 0 ? ` · ${snoozed.length} später` : ""}
+              {done.length > 0 ? ` · ${done.length} erledigt` : ""}
             </p>
           </div>
         </div>
       </div>
 
-      {open.length === 0 && done.length === 0 && (
+      {tasks.length === 0 && (
         <div className="rounded-xl border border-dashed border-border/60 p-4 text-sm text-muted-foreground">
           Keine offenen Aufgaben — alles erledigt 🎉
         </div>
       )}
 
-      {open.length === 0 && done.length > 0 && (
-        <div className="rounded-xl border border-dashed border-emerald-500/30 bg-emerald-500/5 p-4 text-sm text-emerald-300">
+      {tasks.length > 0 && open.length === 0 && (
+        <div className="mb-3 rounded-xl border border-dashed border-emerald-500/30 bg-emerald-500/5 p-4 text-sm text-emerald-300">
           Alle Aufgaben für jetzt abgehakt 🎉
         </div>
       )}
 
       <ul className="space-y-2">
-        {open.map((t) => (
-          <TaskRow key={t.id} task={t} done={false} onToggle={() => onToggle(t.id)} />
-        ))}
+        {open.map((t) => {
+          const s = states.get(t.id);
+          return (
+            <TaskRow
+              key={t.id}
+              task={t}
+              state="open"
+              note={s?.note ?? null}
+              mutating={mutating}
+              onAction={(action, hours) => onAction(t.id, action, hours)}
+            />
+          );
+        })}
+        {snoozed.map((t) => {
+          const s = states.get(t.id);
+          return (
+            <TaskRow
+              key={t.id}
+              task={t}
+              state="snoozed"
+              note={s?.snoozed_until ?? null}
+              mutating={mutating}
+              onAction={(action, hours) => onAction(t.id, action, hours)}
+            />
+          );
+        })}
         {done.map((t) => (
-          <TaskRow key={t.id} task={t} done onToggle={() => onToggle(t.id)} />
+          <TaskRow
+            key={t.id}
+            task={t}
+            state="done"
+            note={null}
+            mutating={mutating}
+            onAction={(action, hours) => onAction(t.id, action, hours)}
+          />
         ))}
       </ul>
     </div>
@@ -866,8 +912,10 @@ function TaskInboxCard({
 
 function TaskRow({
   task,
-  done,
-  onToggle,
+  state,
+  note,
+  mutating,
+  onAction,
 }: {
   task: {
     id: string;
@@ -878,26 +926,35 @@ function TaskRow({
     to: string;
     params?: Record<string, string>;
   };
-  done: boolean;
-  onToggle: () => void;
+  state: "open" | "snoozed" | "done";
+  note: string | null;
+  mutating: boolean;
+  onAction: (action: TaskAction, snooze_hours?: number) => void;
 }) {
+  const done = state === "done";
+  const snoozed = state === "snoozed";
   const toneClasses =
     task.tone === "danger"
       ? "border-red-500/30 bg-red-500/5"
       : task.tone === "warn"
-      ? "border-amber-500/30 bg-amber-500/5"
-      : "border-border bg-background/30";
+        ? "border-amber-500/30 bg-amber-500/5"
+        : "border-border bg-background/30";
   return (
     <li
       className={`flex items-start gap-3 rounded-xl border p-3 transition ${
-        done ? "border-border/40 bg-background/20 opacity-60" : toneClasses
+        done
+          ? "border-border/40 bg-background/20 opacity-60"
+          : snoozed
+            ? "border-border/40 bg-background/30 opacity-70"
+            : toneClasses
       }`}
     >
       <button
         type="button"
-        onClick={onToggle}
+        onClick={() => onAction(done ? "reopen" : "complete")}
+        disabled={mutating}
         aria-label={done ? "Wieder öffnen" : "Als erledigt markieren"}
-        className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border transition ${
+        className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border transition disabled:opacity-50 ${
           done
             ? "border-emerald-500/60 bg-emerald-500/20 text-emerald-300"
             : "border-border hover:border-gold/60"
@@ -908,14 +965,43 @@ function TaskRow({
       <div className="min-w-0 flex-1">
         <p className={`text-sm font-semibold ${done ? "line-through" : ""}`}>{task.title}</p>
         <p className="text-xs text-muted-foreground">{task.meta}</p>
+        {snoozed && note && (
+          <p className="mt-0.5 text-[11px] text-muted-foreground/80">
+            <Moon className="mr-1 inline h-3 w-3" />
+            Wieder aktiv: {new Date(note).toLocaleString("de-DE")}
+          </p>
+        )}
       </div>
-      <Link
-        to={task.to}
-        params={task.params as never}
-        className="flex flex-shrink-0 items-center gap-1 text-xs font-semibold text-gold hover:underline"
-      >
-        Öffnen <ChevronRight className="h-3 w-3" />
-      </Link>
+      <div className="flex flex-shrink-0 items-center gap-2">
+        {!done && !snoozed && (
+          <button
+            type="button"
+            onClick={() => onAction("snooze", 24)}
+            disabled={mutating}
+            title="24 Stunden ausblenden"
+            className="rounded-md border border-border px-2 py-1 text-[11px] text-muted-foreground transition hover:border-gold/40 hover:text-foreground disabled:opacity-50"
+          >
+            <Moon className="inline h-3 w-3" /> 24h
+          </button>
+        )}
+        {snoozed && (
+          <button
+            type="button"
+            onClick={() => onAction("reopen")}
+            disabled={mutating}
+            className="rounded-md border border-border px-2 py-1 text-[11px] text-muted-foreground transition hover:border-gold/40 hover:text-foreground disabled:opacity-50"
+          >
+            Jetzt zeigen
+          </button>
+        )}
+        <Link
+          to={task.to}
+          params={task.params as never}
+          className="flex items-center gap-1 text-xs font-semibold text-gold hover:underline"
+        >
+          Öffnen <ChevronRight className="h-3 w-3" />
+        </Link>
+      </div>
     </li>
   );
 }
