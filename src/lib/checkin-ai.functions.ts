@@ -30,7 +30,7 @@ export type CheckinDraft = {
 export const generateCheckinDraft = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { user_id: string }) => d)
-  .handler(async ({ data, context }): Promise<{ draft: CheckinDraft; generated_at: string }> => {
+  .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     await assertCoach(supabase, userId);
 
@@ -266,7 +266,11 @@ export const decideCheckinDraft = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     await assertCoach(supabase, userId);
-    const patch: Record<string, unknown> = {
+    const patch: {
+      status: "approved" | "edited" | "rejected";
+      decided_at: string;
+      message_final?: string;
+    } = {
       status: data.decision,
       decided_at: new Date().toISOString(),
     };
