@@ -392,17 +392,40 @@ ${equipBlock}
   • Woche 2: +2,5–5 kg auf Hauptübungen oder +1 Wdh
   • Woche 3: Belastungsspitze, RPE 8–9, ggf. +1 Satz auf Hauptübung
   • Woche 4: Deload — Gewicht ~85%, Sätze -1, Fokus Technik & Regeneration
-- Pro Tag: 1–2 Hauptübungen (compound), 2–3 Nebenübungen, 1 Kabel-/Maschine, 1 Core, optional Cardio (5–15 Min)
+
+🔥 WARM-UP & COOL-DOWN (PFLICHT an JEDEM Gym-Tag)
+- JEDER Gym-Tag beginnt mit einem WARM-UP-BLOCK (2–3 Einträge, 5–10 Min gesamt):
+  1) Allgemeines Warm-up (category "cardio", target_sets 1, target_reps "5 Min", Notiz z. B. "Rudergerät / Crosstrainer / Laufband locker, Puls hochfahren").
+  2) Mobility-/Aktivierung passend zum Tagesfokus (category "core" oder "bodyweight"), z. B. Push-Tag → "Wand-Slides" 2×10 + "Band Pull-Apart" 2×15; Bein-Tag → "90/90 Hüftrotation" 2×8/Seite + "Body­weight Squat" 2×10; Pull-Tag → "Scapula Pull-Ups / Dead-Hang" 2×20s + "Cat-Cow" 2×10.
+  3) OPTIONAL: 1–2 Aufwärmsätze der ersten Hauptübung als eigene Übung NUR wenn pädagogisch sinnvoll — sonst im notes-Feld der Hauptübung erwähnen.
+- JEDER Gym-Tag endet mit einem COOL-DOWN-BLOCK (1–2 Einträge, 3–5 Min): statisches Dehnen der trainierten Muskelgruppen ODER Foam-Rolling ODER 5 Min lockeres Cardio zur Pulsabsenkung. Beispiele: "Brustdehnung Türrahmen" 2×30s/Seite, "Lat-Dehnung hängend" 2×30s/Seite, "Quadriceps-Dehnung stehend" 2×30s/Seite, "Foam Roll BWS" 1×60s.
+- An Sport-/Spieltagen: kurzes dynamisches Warm-up (2–3 Einträge) VOR dem Sport-Eintrag, Cool-down-Mobility NACH dem Sport-Eintrag.
+
+🧭 CHRONOLOGISCHE REIHENFOLGE pro Tag (sort_order entspricht Trainingsabfolge!)
+Die exercises-Liste MUSS in dieser Reihenfolge sein:
+  1. Warm-up Cardio
+  2. Mobility/Aktivierung
+  3. Hauptübung(en) (compound, schwer) — schwerste zuerst, große Muskelgruppen vor kleinen, mehrgelenkig vor eingelenkig
+  4. Nebenübungen (Hypertrophie, mittlere Last)
+  5. Isolation / Maschine / Kabel
+  6. Core
+  7. Optional Finisher / Conditioning-Cardio
+  8. Cool-down (Stretching / Foam Roll)
+Niemals Isolation vor Compound, niemals Core vor Kniebeugen/Kreuzheben, niemals Stretching am Anfang statt Mobility.
+
+- Pro Tag (Gym): Warm-up + 1–2 Hauptübungen (compound), 2–3 Nebenübungen, 1 Kabel-/Maschine, 1 Core, optional Cardio (5–15 Min), Cool-down
 - Übungsnamen wie im deutschen Studio: "Bankdrücken Langhantel", "Latzug eng", "Beinpresse", "Kurzhantel-Schulterdrücken", "Cable Row", "Beinbeuger liegend", "Plank"
 ${priorList.length ? `- BEVORZUGE bereits genutzte Übungsnamen für saubere PR-Historie:\n${priorList.map((n) => `  • ${n}`).join("\n")}` : ""}
 - Pro Übung: Sätze, Wiederholungen (z.B. "8" oder "8,8,10,12"), Startgewichte je Satz in kg (komma-getrennt, nur Zahlen), Pause in Sek.
+- Warm-up/Cool-down-Übungen: target_weights = null oder "—", rest_seconds 30–60.
 - NOTES-FELD: Schreibe IMMER eine 1-Satz-Ausführungsanleitung in einfachem Deutsch (Setup + Bewegung), sodass die Übung OHNE YouTube sofort verständlich ist. Beispiel: "Couch Stretch — kniend, Fuß an Wand, Hüfte nach vorn schieben, 60s halten". Keine Fachjargon-Abkürzungen ohne Erklärung.
 - Kategorie: barbell | dumbbell | machine | cable | cardio | core | bodyweight
+- NAMENS-PRÄFIX zur klaren Kennzeichnung: Warm-up-Einträge mit "Warm-up: …" beginnen, Cool-down-Einträge mit "Cool-down: …" beginnen.
 
 📤 ANTWORT
 NUR gültiges JSON, KEINE Erklärung außerhalb:
-{"weeks":[{"week_number":1,"focus":"Anpassung","days":[{"name":"Push","focus":"Brust/Schulter/Trizeps","exercises":[{"name":"Bankdrücken Langhantel","category":"barbell","target_sets":4,"target_reps":"8,8,8,10","target_weights":"60,60,60,50","rest_seconds":120,"notes":"Tempo 3-1-1"}]}]}]}
-GENAU 4 Wochen. Jede Woche GENAU 7 Tage (Mo, Di, Mi, Do, Fr, Sa, So in dieser Reihenfolge) — Gym-Tage als Krafttraining, Sport-/Spieltage NUR mit Sport-Eintrag + Mobility (KEINE Kraftübungen), Restdays als Recovery/Mobility oder "Rest — frei". An Gym-Tagen mind. 5 Übungen, an Sport-/Restdays 1–4 Einträge. NIEMALS das Wort "Akzessoires" verwenden.`;
+{"weeks":[{"week_number":1,"focus":"Anpassung","days":[{"name":"Push","focus":"Brust/Schulter/Trizeps","exercises":[{"name":"Warm-up: Rudergerät locker","category":"cardio","target_sets":1,"target_reps":"5 Min","target_weights":null,"rest_seconds":30,"notes":"Lockeres Rudern, Puls auf ~120 bringen"},{"name":"Warm-up: Band Pull-Apart","category":"bodyweight","target_sets":2,"target_reps":"15","target_weights":null,"rest_seconds":30,"notes":"Theraband auf Brusthöhe auseinanderziehen, Schulterblätter zusammen"},{"name":"Bankdrücken Langhantel","category":"barbell","target_sets":4,"target_reps":"8,8,8,10","target_weights":"60,60,60,50","rest_seconds":120,"notes":"Schulterblätter zusammen, Stange Richtung Brustmitte, Tempo 3-1-1"},{"name":"Cool-down: Brustdehnung Türrahmen","category":"bodyweight","target_sets":2,"target_reps":"30s/Seite","target_weights":null,"rest_seconds":30,"notes":"Arm 90° an Türrahmen, Oberkörper langsam nach vorne drehen"}]}]}]}
+GENAU 4 Wochen. Jede Woche GENAU 7 Tage (Mo, Di, Mi, Do, Fr, Sa, So in dieser Reihenfolge) — Gym-Tage als Krafttraining MIT Warm-up am Anfang und Cool-down am Ende, Sport-/Spieltage mit kurzem Warm-up + Sport-Eintrag + Cool-down (KEINE Kraftübungen), Restdays als Recovery/Mobility oder "Rest — frei". An Gym-Tagen mind. 7 Übungen (inkl. Warm-up + Cool-down), an Sport-/Restdays 1–5 Einträge. Übungen-Array IMMER in chronologischer Trainingsreihenfolge. NIEMALS das Wort "Akzessoires" verwenden.`;
 
   const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
