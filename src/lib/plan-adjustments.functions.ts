@@ -31,10 +31,19 @@ export type PlanAdjustmentSuggestion = {
   warnings: string[];
 };
 
+export type PlanAdjustmentVariant = PlanAdjustmentSuggestion & {
+  label: "Konservativ" | "Aggressiv";
+};
+
+export type PlanAdjustmentResponse = {
+  current: any;
+  variants: PlanAdjustmentVariant[];
+};
+
 export const generatePlanAdjustments = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { user_id: string }) => d)
-  .handler(async ({ data, context }): Promise<PlanAdjustmentSuggestion & { current: any }> => {
+  .handler(async ({ data, context }): Promise<PlanAdjustmentResponse> => {
     const { supabase, userId } = context;
     await assertCoach(supabase, userId);
 
