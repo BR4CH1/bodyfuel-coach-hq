@@ -780,7 +780,7 @@ function TaskInboxCard({
         ? `Letzter Check-in ${new Date(c.last_checkin).toLocaleDateString("de-DE")}`
         : "Noch nie eingecheckt",
       tone: "warn",
-      to: "/coach/clients/$userId",
+      to: "/coach/customers/$userId",
       params: { userId: c.id },
     });
   });
@@ -792,7 +792,7 @@ function TaskInboxCard({
       title: `${p.kind === "nutrition" ? "Ernährungsplan" : "Trainingsplan"} ${p.days < 0 ? "abgelaufen" : `läuft in ${p.days}T aus`} — ${p.name}`,
       meta: `Ende ${new Date(p.end).toLocaleDateString("de-DE")}`,
       tone: p.days < 0 ? "danger" : "warn",
-      to: "/coach/clients/$userId",
+      to: "/coach/customers/$userId",
       params: { userId: p.id },
     });
   });
@@ -804,7 +804,7 @@ function TaskInboxCard({
       title: `🔴 ${c.display_name ?? "Ohne Namen"} braucht Aufmerksamkeit`,
       meta: c._score.reasons.slice(0, 2).join(" · ") || `Score ${c._score.score}`,
       tone: "danger",
-      to: "/coach/clients/$userId",
+      to: "/coach/customers/$userId",
       params: { userId: c.id },
     });
   });
