@@ -27,8 +27,11 @@ import { getRanking, type RankingPeriod } from "@/lib/coaching.functions";
 import {
   listCoachTaskStates,
   setCoachTaskState,
+  extendClientPlan,
   type CoachTaskState,
 } from "@/lib/coach-tasks.functions";
+import { generateCheckinDraft } from "@/lib/checkin-ai.functions";
+import { toast } from "sonner";
 import {
   Select,
   SelectContent,
