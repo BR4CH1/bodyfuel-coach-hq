@@ -1,6 +1,6 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
-import { LayoutDashboard, Apple, Scale, Trophy, LogOut, Sparkles, Dumbbell } from "lucide-react";
+import { LayoutDashboard, Apple, Scale, Trophy, LogOut, Sparkles, Dumbbell, Shield } from "lucide-react";
 import { useSession } from "@/lib/bodyfuel/session";
 import { Logo } from "./Logo";
 import { FreeUpsellBanner } from "./FreeUpsellBanner";
@@ -10,6 +10,7 @@ const nav: { to: string; label: string; icon: typeof LayoutDashboard; exact?: bo
   { to: "/tracker/app/nutrition", label: "Ernährung", icon: Apple },
   { to: "/tracker/app/training", label: "Training", icon: Dumbbell },
   { to: "/tracker/app/weight", label: "Gewicht", icon: Scale },
+  { to: "/bulls", label: "Bulls Hub", icon: Shield },
   { to: "/tracker/app/achievements", label: "Erfolge", icon: Trophy },
 ];
 
