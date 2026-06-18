@@ -815,6 +815,10 @@ function TaskInboxCard({
   states,
   onAction,
   mutating,
+  onExtendPlan,
+  extendingKey,
+  onGenerateDraft,
+  generatingKey,
 }: {
   openCheckins: Client[];
   expiringPlans: ExpiringPlan[];
@@ -822,7 +826,16 @@ function TaskInboxCard({
   states: Map<string, CoachTaskState>;
   onAction: (task_key: string, action: TaskAction, snooze_hours?: number) => void;
   mutating: boolean;
+  onExtendPlan: (client_id: string, kind: "nutrition" | "training", task_key: string) => void;
+  extendingKey: string | null | undefined;
+  onGenerateDraft: (client_id: string, task_key: string) => void;
+  generatingKey: string | null | undefined;
 }) {
+  type QuickAction = {
+    label: string;
+    onClick: () => void;
+    loading: boolean;
+  };
   type Task = {
     id: string;
     icon: React.ReactNode;
@@ -831,6 +844,7 @@ function TaskInboxCard({
     tone: "warn" | "danger" | "info";
     to: string;
     params?: Record<string, string>;
+    quickAction?: QuickAction;
   };
 
   const tasks: Task[] = [];
@@ -846,18 +860,29 @@ function TaskInboxCard({
       tone: "warn",
       to: "/coach/customers/$userId",
       params: { userId: c.id },
+      quickAction: {
+        label: "✨ KI-Entwurf",
+        onClick: () => onGenerateDraft(c.id, `checkin:${c.id}`),
+        loading: generatingKey === `checkin:${c.id}`,
+      },
     });
   });
 
   expiringPlans.slice(0, 20).forEach((p) => {
+    const tk = `plan:${p.id}:${p.kind}:${p.end}`;
     tasks.push({
-      id: `plan:${p.id}:${p.kind}:${p.end}`,
+      id: tk,
       icon: p.kind === "nutrition" ? <Utensils className="h-4 w-4" /> : <Dumbbell className="h-4 w-4" />,
       title: `${p.kind === "nutrition" ? "Ernährungsplan" : "Trainingsplan"} ${p.days < 0 ? "abgelaufen" : `läuft in ${p.days}T aus`} — ${p.name}`,
       meta: `Ende ${new Date(p.end).toLocaleDateString("de-DE")}`,
       tone: p.days < 0 ? "danger" : "warn",
       to: "/coach/customers/$userId",
       params: { userId: p.id },
+      quickAction: {
+        label: "+4 Wochen",
+        onClick: () => onExtendPlan(p.id, p.kind, tk),
+        loading: extendingKey === tk,
+      },
     });
   });
 
@@ -870,6 +895,11 @@ function TaskInboxCard({
       tone: "danger",
       to: "/coach/customers/$userId",
       params: { userId: c.id },
+      quickAction: {
+        label: "✨ KI-Entwurf",
+        onClick: () => onGenerateDraft(c.id, `risk:${c.id}`),
+        loading: generatingKey === `risk:${c.id}`,
+      },
     });
   });
 
