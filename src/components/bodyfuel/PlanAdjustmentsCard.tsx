@@ -154,7 +154,7 @@ export function PlanAdjustmentsCard({ userId }: { userId: string }) {
               <div className="mt-4 flex justify-end">
                 <button
                   type="button"
-                  onClick={() => applyMut.mutate(data.nutrition!)}
+                  onClick={() => applyMut.mutate({ ...data.nutrition!, rationale: data.nutrition!.rationale })}
                   disabled={applyMut.isPending || applied}
                   className="inline-flex items-center gap-2 rounded-xl bg-gold px-4 py-2 text-xs font-semibold text-primary-foreground transition hover:bg-gold/90 disabled:opacity-60"
                 >
