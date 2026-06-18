@@ -27,8 +27,11 @@ import { getRanking, type RankingPeriod } from "@/lib/coaching.functions";
 import {
   listCoachTaskStates,
   setCoachTaskState,
+  extendClientPlan,
   type CoachTaskState,
 } from "@/lib/coach-tasks.functions";
+import { generateCheckinDraft } from "@/lib/checkin-ai.functions";
+import { toast } from "sonner";
 import {
   Select,
   SelectContent,
@@ -95,6 +98,8 @@ function CoachDashboard() {
 
   const listStatesFn = useServerFn(listCoachTaskStates);
   const setStateFn = useServerFn(setCoachTaskState);
+  const extendPlanFn = useServerFn(extendClientPlan);
+  const genDraftFn = useServerFn(generateCheckinDraft);
 
   const taskStatesQuery = useQuery({
     queryKey: ["coach-task-states"],
@@ -113,7 +118,39 @@ function CoachDashboard() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["coach-task-states"] }),
   });
 
+  const extendPlanMut = useMutation({
+    mutationFn: (input: { client_id: string; kind: "nutrition" | "training"; weeks: number; task_key: string }) =>
+      extendPlanFn({ data: { client_id: input.client_id, kind: input.kind, weeks: input.weeks } }).then((res) => ({
+        ...res,
+        task_key: input.task_key,
+        kind: input.kind,
+      })),
+    onSuccess: (res) => {
+      toast.success(
+        `${res.kind === "nutrition" ? "Ernährungsplan" : "Trainingsplan"} bis ${new Date(res.new_end).toLocaleDateString("de-DE")} verlängert`,
+      );
+      setStateFn({ data: { task_key: res.task_key, action: "complete" } }).then(() =>
+        qc.invalidateQueries({ queryKey: ["coach-task-states"] }),
+      );
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Verlängerung fehlgeschlagen"),
+  });
+
+  const genDraftMut = useMutation({
+    mutationFn: (input: { client_id: string; task_key: string }) =>
+      genDraftFn({ data: { user_id: input.client_id } }).then((res) => ({ ...res, task_key: input.task_key })),
+    onSuccess: (res) => {
+      toast.success("KI-Entwurf erstellt — im Kundenprofil prüfen");
+      qc.invalidateQueries({ queryKey: ["pending-checkin-drafts"] });
+      setStateFn({ data: { task_key: res.task_key, action: "complete" } }).then(() =>
+        qc.invalidateQueries({ queryKey: ["coach-task-states"] }),
+      );
+    },
+    onError: (e: any) => toast.error(e?.message ?? "KI-Entwurf fehlgeschlagen"),
+  });
+
   const weekStart = mondayOf(new Date());
+
 
 
 
@@ -500,7 +537,16 @@ function CoachDashboard() {
               mutateState.mutate({ task_key, action, snooze_hours })
             }
             mutating={mutateState.isPending}
+            onExtendPlan={(client_id, kind, task_key) =>
+              extendPlanMut.mutate({ client_id, kind, weeks: 4, task_key })
+            }
+            extendingKey={extendPlanMut.isPending ? extendPlanMut.variables?.task_key : null}
+            onGenerateDraft={(client_id, task_key) =>
+              genDraftMut.mutate({ client_id, task_key })
+            }
+            generatingKey={genDraftMut.isPending ? genDraftMut.variables?.task_key : null}
           />
+
 
 
           <PendingDraftsCard
@@ -769,6 +815,10 @@ function TaskInboxCard({
   states,
   onAction,
   mutating,
+  onExtendPlan,
+  extendingKey,
+  onGenerateDraft,
+  generatingKey,
 }: {
   openCheckins: Client[];
   expiringPlans: ExpiringPlan[];
@@ -776,7 +826,16 @@ function TaskInboxCard({
   states: Map<string, CoachTaskState>;
   onAction: (task_key: string, action: TaskAction, snooze_hours?: number) => void;
   mutating: boolean;
+  onExtendPlan: (client_id: string, kind: "nutrition" | "training", task_key: string) => void;
+  extendingKey: string | null | undefined;
+  onGenerateDraft: (client_id: string, task_key: string) => void;
+  generatingKey: string | null | undefined;
 }) {
+  type QuickAction = {
+    label: string;
+    onClick: () => void;
+    loading: boolean;
+  };
   type Task = {
     id: string;
     icon: React.ReactNode;
@@ -785,6 +844,7 @@ function TaskInboxCard({
     tone: "warn" | "danger" | "info";
     to: string;
     params?: Record<string, string>;
+    quickAction?: QuickAction;
   };
 
   const tasks: Task[] = [];
@@ -800,18 +860,29 @@ function TaskInboxCard({
       tone: "warn",
       to: "/coach/customers/$userId",
       params: { userId: c.id },
+      quickAction: {
+        label: "✨ KI-Entwurf",
+        onClick: () => onGenerateDraft(c.id, `checkin:${c.id}`),
+        loading: generatingKey === `checkin:${c.id}`,
+      },
     });
   });
 
   expiringPlans.slice(0, 20).forEach((p) => {
+    const tk = `plan:${p.id}:${p.kind}:${p.end}`;
     tasks.push({
-      id: `plan:${p.id}:${p.kind}:${p.end}`,
+      id: tk,
       icon: p.kind === "nutrition" ? <Utensils className="h-4 w-4" /> : <Dumbbell className="h-4 w-4" />,
       title: `${p.kind === "nutrition" ? "Ernährungsplan" : "Trainingsplan"} ${p.days < 0 ? "abgelaufen" : `läuft in ${p.days}T aus`} — ${p.name}`,
       meta: `Ende ${new Date(p.end).toLocaleDateString("de-DE")}`,
       tone: p.days < 0 ? "danger" : "warn",
       to: "/coach/customers/$userId",
       params: { userId: p.id },
+      quickAction: {
+        label: "+4 Wochen",
+        onClick: () => onExtendPlan(p.id, p.kind, tk),
+        loading: extendingKey === tk,
+      },
     });
   });
 
@@ -824,6 +895,11 @@ function TaskInboxCard({
       tone: "danger",
       to: "/coach/customers/$userId",
       params: { userId: c.id },
+      quickAction: {
+        label: "✨ KI-Entwurf",
+        onClick: () => onGenerateDraft(c.id, `risk:${c.id}`),
+        loading: generatingKey === `risk:${c.id}`,
+      },
     });
   });
 
@@ -925,6 +1001,7 @@ function TaskRow({
     tone: "warn" | "danger" | "info";
     to: string;
     params?: Record<string, string>;
+    quickAction?: { label: string; onClick: () => void; loading: boolean };
   };
   state: "open" | "snoozed" | "done";
   note: string | null;
@@ -973,6 +1050,16 @@ function TaskRow({
         )}
       </div>
       <div className="flex flex-shrink-0 items-center gap-2">
+        {!done && !snoozed && task.quickAction && (
+          <button
+            type="button"
+            onClick={task.quickAction.onClick}
+            disabled={mutating || task.quickAction.loading}
+            className="rounded-md border border-gold/40 bg-gold/10 px-2 py-1 text-[11px] font-semibold text-gold transition hover:bg-gold/20 disabled:opacity-50"
+          >
+            {task.quickAction.loading ? "…" : task.quickAction.label}
+          </button>
+        )}
         {!done && !snoozed && (
           <button
             type="button"
