@@ -433,8 +433,9 @@ GENAU 4 Wochen. Jede Woche GENAU 7 Tage (Mo, Di, Mi, Do, Fr, Sa, So in dieser Re
     method: "POST",
     headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
+      model: "google/gemini-2.5-pro",
       response_format: { type: "json_object" },
+      max_tokens: 32000,
       messages: [{ role: "user", content: prompt }],
     }),
   });
