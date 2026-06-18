@@ -3,8 +3,9 @@ import { useNavigate } from "@tanstack/react-router";
 import { useSession } from "@/lib/bodyfuel/session";
 
 export function BullsGate({ children }: { children: ReactNode }) {
-  const { hasGroup, loading, supabaseUser } = useSession();
+  const { hasGroup, isFreeUser, loading, supabaseUser } = useSession();
   const navigate = useNavigate();
+  const allowed = hasGroup("bulls") || isFreeUser;
 
   useEffect(() => {
     if (loading) return;
@@ -12,12 +13,12 @@ export function BullsGate({ children }: { children: ReactNode }) {
       navigate({ to: "/auth" });
       return;
     }
-    if (!hasGroup("bulls")) {
+    if (!allowed) {
       navigate({ to: "/dashboard" });
     }
-  }, [hasGroup, loading, supabaseUser, navigate]);
+  }, [allowed, loading, supabaseUser, navigate]);
 
   if (loading) return null;
-  if (!supabaseUser || !hasGroup("bulls")) return null;
+  if (!supabaseUser || !allowed) return null;
   return <div className="bulls-theme">{children}</div>;
 }
