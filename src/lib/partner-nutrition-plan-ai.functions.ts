@@ -67,12 +67,11 @@ async function loadPerson(supabase: any, userId: string) {
       .maybeSingle(),
     supabase
       .from("body_measurements")
-      .select("weight_kg")
+      .select("weight_kg, measured_at")
       .eq("user_id", userId)
       .not("weight_kg", "is", null)
       .order("measured_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
+      .limit(30),
     supabase
       .from("nutrition_targets")
       .select("kcal, protein_g, carbs_g, fat_g")
