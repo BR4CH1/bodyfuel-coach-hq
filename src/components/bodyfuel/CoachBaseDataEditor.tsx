@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Save, IdCard } from "lucide-react";
-import { updateCustomerCoachingInfo } from "@/lib/coaching.functions";
+import { updateCustomerCoachingInfo, setCustomerWeight } from "@/lib/coaching.functions";
 import { TRAINING_GOAL_LABELS } from "@/lib/training-goals";
 
 type Gender = "male" | "female" | "other";
@@ -51,6 +51,7 @@ export function CoachBaseDataEditor({
   const [goalDate, setGoalDate] = useState<string>(initial.goal_target_date ?? "");
   const [activity, setActivity] = useState<Activity | "">((initial.activity_level as Activity) ?? "");
   const [trainingGoal, setTrainingGoal] = useState<string>(initial.training_goal ?? "");
+  const [newWeight, setNewWeight] = useState<string>("");
 
   useEffect(() => {
     setHeight(initial.height_cm == null ? "" : String(initial.height_cm));
@@ -63,6 +64,7 @@ export function CoachBaseDataEditor({
   }, [initial]);
 
   const fn = useServerFn(updateCustomerCoachingInfo);
+  const weightFn = useServerFn(setCustomerWeight);
   const qc = useQueryClient();
 
   const mut = useMutation({
@@ -81,6 +83,17 @@ export function CoachBaseDataEditor({
       }),
     onSuccess: () => {
       toast.success("Stammdaten gespeichert");
+      qc.invalidateQueries({ queryKey: ["customer", userId] });
+      qc.invalidateQueries({ queryKey: ["customer-detail", userId] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Fehler"),
+  });
+
+  const weightMut = useMutation({
+    mutationFn: () => weightFn({ data: { user_id: userId, weight_kg: Number(newWeight) } }),
+    onSuccess: () => {
+      toast.success("Gewicht eingetragen");
+      setNewWeight("");
       qc.invalidateQueries({ queryKey: ["customer", userId] });
       qc.invalidateQueries({ queryKey: ["customer-detail", userId] });
     },
@@ -132,6 +145,39 @@ export function CoachBaseDataEditor({
             </select>
           </Field>
         </div>
+
+        <div className="rounded-lg border border-border bg-background p-3">
+          <label className="block text-xs font-medium text-muted-foreground mb-2">
+            Aktuelles Gewicht eintragen (kg) {currentWeightKg != null && (
+              <span className="text-[11px]">— zuletzt: {currentWeightKg} kg</span>
+            )}
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="number"
+              inputMode="decimal"
+              step="0.1"
+              min={20}
+              max={400}
+              placeholder={currentWeightKg != null ? `z. B. ${currentWeightKg}` : "z. B. 85,5"}
+              value={newWeight}
+              onChange={(e) => setNewWeight(e.target.value.replace(/[^0-9.,]/g, "").replace(",", "."))}
+              className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm"
+            />
+            <button
+              onClick={() => weightMut.mutate()}
+              disabled={weightMut.isPending || !newWeight}
+              className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+            >
+              Eintragen
+            </button>
+          </div>
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            Falls der Kunde sein Gewicht nicht selbst gepflegt hat — wird sofort für Zielprognose und KI-Pläne verwendet.
+          </p>
+        </div>
+
+
 
         <div className="grid gap-3 sm:grid-cols-3">
           <Field label="Wunschgewicht (kg)">

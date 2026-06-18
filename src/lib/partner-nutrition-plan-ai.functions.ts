@@ -67,12 +67,11 @@ async function loadPerson(supabase: any, userId: string) {
       .maybeSingle(),
     supabase
       .from("body_measurements")
-      .select("weight_kg")
+      .select("weight_kg, measured_at")
       .eq("user_id", userId)
       .not("weight_kg", "is", null)
       .order("measured_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
+      .limit(30),
     supabase
       .from("nutrition_targets")
       .select("kcal, protein_g, carbs_g, fat_g")
@@ -99,7 +98,23 @@ async function loadPerson(supabase: any, userId: string) {
 
   const p: any = profile ?? {};
   const cp: any = clientProfile ?? {};
-  const currentWeight: number | null = (latestWeight as any)?.weight_kg ?? null;
+  const weightSeries = (latestWeight as any[]) ?? [];
+  const currentWeight: number | null = weightSeries[0]?.weight_kg ?? null;
+  let plateauNote = "";
+  if (weightSeries.length >= 2 && currentWeight != null) {
+    const nowMs = Date.now();
+    const olderRef = weightSeries.find((m: any) => {
+      const ageDays = (nowMs - new Date(m.measured_at).getTime()) / 86400000;
+      return ageDays >= 10 && ageDays <= 21 && m.weight_kg != null;
+    });
+    if (olderRef) {
+      const diff = Number((currentWeight - olderRef.weight_kg).toFixed(2));
+      const days = Math.round((nowMs - new Date(olderRef.measured_at).getTime()) / 86400000);
+      if (Math.abs(diff) <= 0.3) {
+        plateauNote = `⚠️ GEWICHTSPLATEAU bei ${cp.display_name ?? "Kunde"}: Gewicht stagniert seit ~${days} Tagen (Δ ${diff > 0 ? "+" : ""}${diff} kg). Passe für diese Person Portionen/Kalorien um −100 bis −200 kcal/Tag (Fettabbau) bzw. +100 bis +200 kcal (Aufbau) an und wähle bewusst sättigendere bzw. energiedichtere Optionen. Tagesziele weiter innerhalb ±5 % halten.`;
+      }
+    }
+  }
   const goalWeight: number | null = cp.goal_weight_kg ?? null;
   const height: number | null = cp.height_cm ?? null;
   const gender: string | null = cp.gender ?? null;
@@ -199,6 +214,7 @@ async function loadPerson(supabase: any, userId: string) {
     kitchenEquipmentNotes,
     trainingSet: new Set<string>((p.training_weekdays ?? []).map((s: string) => s.toLowerCase())),
     shoppingDays: p.shopping_days as string[] | null,
+    plateauNote,
   };
 }
 
@@ -375,7 +391,7 @@ NO-GOS für gemeinsame Gerichte vermeiden: ${mergedNogos.join(", ") || "(keine)"
 VORLIEBEN ${a.name}: Lieblings ${[...a.favFoods, ...a.favoriteNames].slice(0, 8).join(", ") || "—"}; mag ${a.liked.slice(0, 6).join(", ") || "—"}; meiden ${[...a.disliked, ...a.skipNames].slice(0, 6).join(", ") || "—"}
 VORLIEBEN ${b.name}: Lieblings ${[...b.favFoods, ...b.favoriteNames].slice(0, 8).join(", ") || "—"}; mag ${b.liked.slice(0, 6).join(", ") || "—"}; meiden ${[...b.disliked, ...b.skipNames].slice(0, 6).join(", ") || "—"}
 ${wishesBlock}${budgetBlock}${equipmentBlock}
-TAGESPLAN:
+${a.plateauNote ? a.plateauNote + "\n" : ""}${b.plateauNote ? b.plateauNote + "\n" : ""}TAGESPLAN:
 ${scheduleLines}
 
 Antworte AUSSCHLIESSLICH mit gültigem JSON:

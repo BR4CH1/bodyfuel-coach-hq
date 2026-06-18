@@ -79,8 +79,7 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
         .eq("user_id", target)
         .not("weight_kg", "is", null)
         .order("measured_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
+        .limit(30),
       supabase
         .from("nutrition_targets")
         .select("kcal, protein_g, carbs_g, fat_g, kcal_rest, protein_g_rest, carbs_g_rest, fat_g_rest")
@@ -120,7 +119,26 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
 
     // ---- Individuelles Ziel & Körperdaten ----
     const cp: any = clientProfile ?? {};
-    const currentWeight: number | null = (latestWeight as any)?.weight_kg ?? null;
+    const weightSeries = (latestWeight as any[]) ?? [];
+    const currentWeight: number | null = weightSeries[0]?.weight_kg ?? null;
+
+    // Plateau / Trend gegen Zielrichtung erkennen (für KI-Adjustment)
+    let plateauNote = "";
+    if (weightSeries.length >= 2 && currentWeight != null) {
+      const nowMs = Date.now();
+      const olderRef = weightSeries.find((m: any) => {
+        const ageDays = (nowMs - new Date(m.measured_at).getTime()) / 86400000;
+        return ageDays >= 10 && ageDays <= 21 && m.weight_kg != null;
+      });
+      if (olderRef) {
+        const diff = Number((currentWeight - olderRef.weight_kg).toFixed(2));
+        const days = Math.round((nowMs - new Date(olderRef.measured_at).getTime()) / 86400000);
+        const absDiff = Math.abs(diff);
+        if (absDiff <= 0.3) {
+          plateauNote = `⚠️ GEWICHTSPLATEAU erkannt: Gewicht stagniert seit ~${days} Tagen (Δ ${diff > 0 ? "+" : ""}${diff} kg). Passe Kalorien & Portionen um −100 bis −200 kcal/Tag an (bei Fettabbau-Ziel) bzw. +100 bis +200 kcal/Tag (bei Aufbau). Wähle bewusst sättigendere/energieärmere Alternativen (mehr Volumen, mehr Protein, weniger versteckte Fette) bzw. energiedichtere Optionen bei Aufbau. Halte die unten genannten Tagesziele weiterhin innerhalb ±5 %.`;
+        }
+      }
+    }
     const goalWeight: number | null = cp.goal_weight_kg ?? null;
     const height: number | null = cp.height_cm ?? null;
     const gender: string | null = cp.gender ?? null;
@@ -400,6 +418,7 @@ Die Kalorien-/Makro-Ziele sind auf aktuelles Gewicht, Wunschgewicht und Training
 
     const prompt = `Erstelle einen ${planDays}-Tage-Ernährungsplan mit 4 Mahlzeiten pro Tag (Frühstück, Mittag, Abend, Snack). Der Plan soll genau bis zum nächsten Einkaufstag reichen.
 
+${plateauNote ? "\n" + plateauNote + "\n" : ""}
 ${goalBlock}
 
 ${targetsBlock}
