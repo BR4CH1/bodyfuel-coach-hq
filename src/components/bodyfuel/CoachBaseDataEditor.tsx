@@ -146,6 +146,39 @@ export function CoachBaseDataEditor({
           </Field>
         </div>
 
+        <div className="rounded-lg border border-border bg-background p-3">
+          <label className="block text-xs font-medium text-muted-foreground mb-2">
+            Aktuelles Gewicht eintragen (kg) {currentWeightKg != null && (
+              <span className="text-[11px]">— zuletzt: {currentWeightKg} kg</span>
+            )}
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="number"
+              inputMode="decimal"
+              step="0.1"
+              min={20}
+              max={400}
+              placeholder={currentWeightKg != null ? `z. B. ${currentWeightKg}` : "z. B. 85,5"}
+              value={newWeight}
+              onChange={(e) => setNewWeight(e.target.value.replace(/[^0-9.,]/g, "").replace(",", "."))}
+              className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm"
+            />
+            <button
+              onClick={() => weightMut.mutate()}
+              disabled={weightMut.isPending || !newWeight}
+              className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+            >
+              Eintragen
+            </button>
+          </div>
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            Falls der Kunde sein Gewicht nicht selbst gepflegt hat — wird sofort für Zielprognose und KI-Pläne verwendet.
+          </p>
+        </div>
+
+
+
         <div className="grid gap-3 sm:grid-cols-3">
           <Field label="Wunschgewicht (kg)">
             <input
