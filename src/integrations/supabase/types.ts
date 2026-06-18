@@ -1440,6 +1440,45 @@ export type Database = {
         }
         Relationships: []
       }
+      plan_adjustment_history: {
+        Row: {
+          after_json: Json | null
+          area: string | null
+          before_json: Json | null
+          client_id: string
+          coach_id: string
+          created_at: string
+          id: string
+          kind: string
+          rationale: string | null
+          summary: string
+        }
+        Insert: {
+          after_json?: Json | null
+          area?: string | null
+          before_json?: Json | null
+          client_id: string
+          coach_id: string
+          created_at?: string
+          id?: string
+          kind: string
+          rationale?: string | null
+          summary: string
+        }
+        Update: {
+          after_json?: Json | null
+          area?: string | null
+          before_json?: Json | null
+          client_id?: string
+          coach_id?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          rationale?: string | null
+          summary?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           activity_level: string | null
