@@ -72,9 +72,9 @@ export const generatePlanAdjustments = createServerFn({ method: "POST" })
           .order("log_date", { ascending: false }),
         supabase
           .from("food_entries")
-          .select("logged_at, kcal, protein_g, carbs_g, fat_g")
+          .select("entry_date, kcal, protein_g, carbs_g, fat_g")
           .eq("user_id", target)
-          .gte("logged_at", since14),
+          .gte("entry_date", since14),
         supabase
           .from("training_sessions")
           .select("session_date, status")
