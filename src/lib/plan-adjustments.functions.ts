@@ -84,7 +84,7 @@ export const generatePlanAdjustments = createServerFn({ method: "POST" })
 
     const dayMap = new Map<string, { kcal: number; p: number; c: number; f: number }>();
     (foodsRes.data ?? []).forEach((f: any) => {
-      const day = String(f.logged_at).slice(0, 10);
+      const day = String(f.entry_date).slice(0, 10);
       const m = dayMap.get(day) ?? { kcal: 0, p: 0, c: 0, f: 0 };
       m.kcal += Number(f.kcal ?? 0);
       m.p += Number(f.protein_g ?? 0);
