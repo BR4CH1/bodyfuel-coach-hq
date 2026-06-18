@@ -7,12 +7,12 @@ const schema = z.object({
   weight_kg: z.coerce.number().positive().max(400),
   gender: z.enum(["male", "female", "other"]),
   birthdate: z.string().min(8),
+  goal: z.enum(["fat_loss", "maintain", "lean_bulk"]).default("maintain"),
 });
 
 /**
  * Persist profile + measurement (server-side, bypasses RLS) and compute
- * Trainings- + Restday Makro-Targets via Mifflin-St Jeor.
- * Always overwrites — caller is the signup flow.
+ * Trainings- + Restday Makro-Targets via Mifflin-St Jeor, angepasst auf das Ziel.
  */
 export const seedMyNutritionTargets = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -27,6 +27,7 @@ export const seedMyNutritionTargets = createServerFn({ method: "POST" })
         height_cm: data.height_cm,
         gender: data.gender,
         birthdate: data.birthdate,
+        training_goal: data.goal,
       })
       .eq("id", userId);
 
@@ -47,12 +48,25 @@ export const seedMyNutritionTargets = createServerFn({ method: "POST" })
         ? 10 * w + 6.25 * h - 5 * age - 161
         : 10 * w + 6.25 * h - 5 * age + 5;
 
+    // Goal-Multiplikatoren: angewendet auf TDEE (Training × 1.6 / Rest × 1.4)
+    const goalMult: Record<typeof data.goal, { t: number; r: number }> = {
+      fat_loss: { t: 0.80, r: 0.78 },
+      maintain: { t: 1.00, r: 1.00 },
+      lean_bulk: { t: 1.10, r: 1.05 },
+    };
+    const gm = goalMult[data.goal];
+
     const round50 = (v: number) => Math.max(1000, Math.round(v / 50) * 50);
-    const kcal_t = round50(bmr * 1.6);
-    const kcal_r = round50(bmr * 1.4);
-    const protein = Math.round(w * 1.8);
-    const fat_t = Math.round(w * 0.9);
-    const fat_r = Math.round(w * 1.0);
+    const kcal_t = round50(bmr * 1.6 * gm.t);
+    const kcal_r = round50(bmr * 1.4 * gm.r);
+
+    // Protein leicht höher bei Cut, Standard sonst
+    const proteinPerKg =
+      data.goal === "fat_loss" ? 2.2 : data.goal === "lean_bulk" ? 2.0 : 1.8;
+    const protein = Math.round(w * proteinPerKg);
+
+    const fat_t = Math.round(w * (data.goal === "fat_loss" ? 0.8 : 0.9));
+    const fat_r = Math.round(w * (data.goal === "fat_loss" ? 0.9 : 1.0));
     const carbs_t = Math.max(0, Math.round((kcal_t - protein * 4 - fat_t * 9) / 4));
     const carbs_r = Math.max(0, Math.round((kcal_r - protein * 4 - fat_r * 9) / 4));
 
