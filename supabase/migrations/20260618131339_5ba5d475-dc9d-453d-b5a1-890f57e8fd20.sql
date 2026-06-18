@@ -1,0 +1,1 @@
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.body_measurements TO authenticated; GRANT ALL ON public.body_measurements TO service_role;
