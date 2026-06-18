@@ -341,6 +341,69 @@ function CoachDashboard() {
       return ae - be;
     });
 
+  // ---- Coach Score per client (🟢 on track / 🟡 watch / 🔴 action needed) ----
+  const scoreById = new Map<string, { score: number; level: "green" | "yellow" | "red"; reasons: string[] }>();
+  clients.forEach((c) => {
+    let score = 100;
+    const reasons: string[] = [];
+
+    const checkinDays = daysAgo(c.last_checkin);
+    if (c.last_checkin !== weekStart) {
+      if (checkinDays === null) {
+        score -= 30; reasons.push("Noch nie eingecheckt");
+      } else if (checkinDays >= 14) {
+        score -= 35; reasons.push(`Check-in ${checkinDays}T alt`);
+      } else {
+        score -= 15; reasons.push("Wochen-Check-in offen");
+      }
+    }
+
+    const lastActivity = [c.last_training_at, c.last_nutrition_at, c.last_weight_at]
+      .filter(Boolean)
+      .map((d) => new Date(d!).getTime());
+    if (lastActivity.length === 0) {
+      score -= 20; reasons.push("Keine Aktivität");
+    } else {
+      const newest = Math.max(...lastActivity);
+      const days = Math.floor((Date.now() - newest) / 86400000);
+      if (days >= 14) { score -= 25; reasons.push(`Inaktiv ${days}T`); }
+      else if (days >= 7) { score -= 10; reasons.push(`Inaktiv ${days}T`); }
+    }
+
+    if (c.kcal_dev != null) {
+      if (c.kcal_dev > 500) { score -= 15; reasons.push(`kcal-Abweichung ${c.kcal_dev}`); }
+      else if (c.kcal_dev > 200) { score -= 5; }
+    }
+
+    if (c.plateau_days != null) {
+      score -= 10; reasons.push(`Plateau ${c.plateau_days}T`);
+    }
+
+    const planDays = [c.nutrition_plan_end, c.training_plan_end]
+      .filter(Boolean)
+      .map((d) => Math.ceil((new Date(d!).getTime() - new Date(todayIso).getTime()) / 86400000));
+    if (planDays.length) {
+      const minDays = Math.min(...planDays);
+      if (minDays < 0) { score -= 20; reasons.push("Plan abgelaufen"); }
+      else if (minDays <= 5) { score -= 10; reasons.push(`Plan läuft in ${minDays}T aus`); }
+    }
+
+    score = Math.max(0, Math.min(100, score));
+    const level: "green" | "yellow" | "red" = score >= 70 ? "green" : score >= 40 ? "yellow" : "red";
+    scoreById.set(c.id, { score, level, reasons });
+  });
+
+  const scoreCounts = {
+    green: clients.filter((c) => scoreById.get(c.id)?.level === "green").length,
+    yellow: clients.filter((c) => scoreById.get(c.id)?.level === "yellow").length,
+    red: clients.filter((c) => scoreById.get(c.id)?.level === "red").length,
+  };
+  const redClients = clients
+    .filter((c) => scoreById.get(c.id)?.level === "red")
+    .map((c) => ({ ...c, _score: scoreById.get(c.id)! }))
+    .sort((a, b) => a._score.score - b._score.score);
+
+
 
 
 
@@ -419,6 +482,8 @@ function CoachDashboard() {
                   kcalDev={c.kcal_dev}
                   kcalDir={c.kcal_dev_dir}
                   plateauDays={c.plateau_days}
+                  scoreLevel={scoreById.get(c.id)?.level ?? null}
+                  scoreValue={scoreById.get(c.id)?.score ?? null}
                   meta={
                     c.last_checkin
                       ? `Letzter Check-in ${new Date(c.last_checkin).toLocaleDateString("de-DE")}`
@@ -473,6 +538,8 @@ function CoachDashboard() {
                   kcalDev={c.kcal_dev}
                   kcalDir={c.kcal_dev_dir}
                   plateauDays={c.plateau_days}
+                  scoreLevel={scoreById.get(c.id)?.level ?? null}
+                  scoreValue={scoreById.get(c.id)?.score ?? null}
                   meta={
                     c.days === null
                       ? "Noch nie eingecheckt"
@@ -519,6 +586,11 @@ function CoachDashboard() {
 
           {/* ===== 2. KUNDENÜBERSICHT ===== */}
           <SectionHeader title="Kundenübersicht" subtitle="Pläne, Messungen, Aktivität" />
+          <CoachScoreCard
+            counts={scoreCounts}
+            total={clients.length}
+            redClients={redClients}
+          />
           <div className="grid gap-6 lg:grid-cols-2">
             <Panel
               icon={<CalendarClock className="h-5 w-5" />}
@@ -632,6 +704,85 @@ function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }
         <h2 className="font-display text-xl font-bold sm:text-2xl">{title}</h2>
         {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
       </div>
+    </div>
+  );
+}
+
+function CoachScoreCard({
+  counts,
+  total,
+  redClients,
+}: {
+  counts: { green: number; yellow: number; red: number };
+  total: number;
+  redClients: Array<Client & { _score: { score: number; level: "green" | "yellow" | "red"; reasons: string[] } }>;
+}) {
+  if (total === 0) return null;
+  const pct = (n: number) => (total ? Math.round((n / total) * 100) : 0);
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5">
+      <div className="mb-4 flex items-center gap-2">
+        <span className="text-gold">📊</span>
+        <h2 className="font-display text-lg font-bold">Coach Score</h2>
+        <span className="text-xs text-muted-foreground">· {total} Kunden</span>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <ScoreStat color="emerald" emoji="🟢" label="Auf Kurs" value={counts.green} pct={pct(counts.green)} />
+        <ScoreStat color="yellow" emoji="🟡" label="Beobachten" value={counts.yellow} pct={pct(counts.yellow)} />
+        <ScoreStat color="red" emoji="🔴" label="Handlungsbedarf" value={counts.red} pct={pct(counts.red)} />
+      </div>
+      {redClients.length > 0 && (
+        <div className="mt-5">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Akut handeln
+          </p>
+          <div className="space-y-2">
+            {redClients.slice(0, 6).map((c) => (
+              <CustomerRow
+                key={c.id}
+                id={c.id}
+                name={c.display_name ?? "Ohne Namen"}
+                warn
+                scoreLevel="red"
+                scoreValue={c._score.score}
+                meta={c._score.reasons.slice(0, 3).join(" · ") || "Mehrere Risiken"}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ScoreStat({
+  color,
+  emoji,
+  label,
+  value,
+  pct,
+}: {
+  color: "emerald" | "yellow" | "red";
+  emoji: string;
+  label: string;
+  value: number;
+  pct: number;
+}) {
+  const bar =
+    color === "emerald" ? "bg-emerald-500" : color === "yellow" ? "bg-yellow-500" : "bg-red-500";
+  return (
+    <div className="rounded-xl border border-border bg-background/40 p-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-lg">{emoji}</span>
+          <span className="text-sm font-semibold">{label}</span>
+        </div>
+        <div className="font-display text-2xl font-bold">{value}</div>
+      </div>
+      <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-border/50">
+        <div className={`h-full ${bar}`} style={{ width: `${pct}%` }} />
+      </div>
+      <div className="mt-1 text-right text-[10px] text-muted-foreground">{pct}%</div>
     </div>
   );
 }
@@ -854,6 +1005,8 @@ function CustomerRow({
   kcalDev,
   kcalDir,
   plateauDays,
+  scoreLevel,
+  scoreValue,
 }: {
   id: string;
   name: string;
@@ -863,9 +1016,19 @@ function CustomerRow({
   kcalDev?: number | null;
   kcalDir?: "over" | "under" | null;
   plateauDays?: number | null;
+  scoreLevel?: "green" | "yellow" | "red" | null;
+  scoreValue?: number | null;
 }) {
   const kcalLevel: "ok" | "warn" | "bad" | null =
     kcalDev == null ? null : kcalDev <= 200 ? "ok" : kcalDev <= 500 ? "warn" : "bad";
+  const dotColor =
+    scoreLevel === "green"
+      ? "bg-emerald-500"
+      : scoreLevel === "yellow"
+        ? "bg-yellow-500"
+        : scoreLevel === "red"
+          ? "bg-red-500"
+          : null;
   return (
     <Link
       to="/coach/customers/$userId"
@@ -874,8 +1037,14 @@ function CustomerRow({
         warn ? "border-warning/30" : "border-border"
       }`}
     >
-      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-gold text-xs font-bold text-primary-foreground">
+      <div className="relative grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-gold text-xs font-bold text-primary-foreground">
         {name.slice(0, 2).toUpperCase()}
+        {dotColor && (
+          <span
+            className={`absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full ring-2 ring-card ${dotColor}`}
+            title={`Coach Score: ${scoreValue ?? "?"}/100`}
+          />
+        )}
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
@@ -914,6 +1083,7 @@ function CustomerRow({
     </Link>
   );
 }
+
 
 function PlanValidity({ label, end }: { label: string; end: string | null }) {
   if (!end) {
