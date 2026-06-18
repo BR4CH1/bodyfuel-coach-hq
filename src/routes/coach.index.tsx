@@ -53,6 +53,7 @@ type Client = {
   training_plan_end: string | null;
   kcal_dev: number | null;
   kcal_dev_dir: "over" | "under" | null;
+  plateau_days: number | null;
 };
 
 
