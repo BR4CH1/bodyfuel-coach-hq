@@ -299,3 +299,46 @@ export const deleteCheckinDraft = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export type PendingDraftRow = {
+  id: string;
+  client_id: string;
+  client_name: string | null;
+  status_level: "green" | "yellow" | "red";
+  status_summary: string;
+  generated_at: string;
+};
+
+export const listPendingDraftsForCoach = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<{ items: PendingDraftRow[] }> => {
+    const { supabase, userId } = context;
+    await assertCoach(supabase, userId);
+    const { data: rows, error } = await supabase
+      .from("ai_checkin_drafts")
+      .select("id, client_id, draft, generated_at")
+      .eq("status", "pending")
+      .order("generated_at", { ascending: false })
+      .limit(50);
+    if (error) throw new Error(error.message);
+    const clientIds = Array.from(new Set((rows ?? []).map((r: any) => r.client_id)));
+    const nameMap = new Map<string, string>();
+    if (clientIds.length) {
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id, display_name")
+        .in("id", clientIds);
+      (profs ?? []).forEach((p: any) => {
+        if (p.display_name) nameMap.set(p.id, p.display_name);
+      });
+    }
+    const items: PendingDraftRow[] = (rows ?? []).map((r: any) => ({
+      id: r.id,
+      client_id: r.client_id,
+      client_name: nameMap.get(r.client_id) ?? null,
+      status_level: r.draft?.status_level ?? "yellow",
+      status_summary: r.draft?.status_summary ?? "",
+      generated_at: r.generated_at,
+    }));
+    return { items };
+  });
+
