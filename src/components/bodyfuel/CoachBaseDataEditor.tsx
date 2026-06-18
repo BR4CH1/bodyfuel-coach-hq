@@ -51,6 +51,7 @@ export function CoachBaseDataEditor({
   const [goalDate, setGoalDate] = useState<string>(initial.goal_target_date ?? "");
   const [activity, setActivity] = useState<Activity | "">((initial.activity_level as Activity) ?? "");
   const [trainingGoal, setTrainingGoal] = useState<string>(initial.training_goal ?? "");
+  const [newWeight, setNewWeight] = useState<string>("");
 
   useEffect(() => {
     setHeight(initial.height_cm == null ? "" : String(initial.height_cm));
