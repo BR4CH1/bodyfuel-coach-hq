@@ -17,6 +17,7 @@ function TrackerHome() {
 
   const tiles = [
     { to: "/tracker/app/nutrition", label: "Ernährung", icon: Apple, desc: "Kalorien & Makros" },
+    { to: "/tracker/app/training", label: "Training", icon: Dumbbell, desc: "Plan & Tracking" },
     { to: "/tracker/app/weight", label: "Gewicht", icon: Scale, desc: "Verlauf" },
   ] as const;
 
