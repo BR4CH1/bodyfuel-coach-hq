@@ -482,6 +482,8 @@ function CoachDashboard() {
                   kcalDev={c.kcal_dev}
                   kcalDir={c.kcal_dev_dir}
                   plateauDays={c.plateau_days}
+                  scoreLevel={scoreById.get(c.id)?.level ?? null}
+                  scoreValue={scoreById.get(c.id)?.score ?? null}
                   meta={
                     c.last_checkin
                       ? `Letzter Check-in ${new Date(c.last_checkin).toLocaleDateString("de-DE")}`
