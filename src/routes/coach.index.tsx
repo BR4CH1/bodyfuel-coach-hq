@@ -98,6 +98,8 @@ function CoachDashboard() {
 
   const listStatesFn = useServerFn(listCoachTaskStates);
   const setStateFn = useServerFn(setCoachTaskState);
+  const extendPlanFn = useServerFn(extendClientPlan);
+  const genDraftFn = useServerFn(generateCheckinDraft);
 
   const taskStatesQuery = useQuery({
     queryKey: ["coach-task-states"],
@@ -116,7 +118,39 @@ function CoachDashboard() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["coach-task-states"] }),
   });
 
+  const extendPlanMut = useMutation({
+    mutationFn: (input: { client_id: string; kind: "nutrition" | "training"; weeks: number; task_key: string }) =>
+      extendPlanFn({ data: { client_id: input.client_id, kind: input.kind, weeks: input.weeks } }).then((res) => ({
+        ...res,
+        task_key: input.task_key,
+        kind: input.kind,
+      })),
+    onSuccess: (res) => {
+      toast.success(
+        `${res.kind === "nutrition" ? "Ernährungsplan" : "Trainingsplan"} bis ${new Date(res.new_end).toLocaleDateString("de-DE")} verlängert`,
+      );
+      setStateFn({ data: { task_key: res.task_key, action: "complete" } }).then(() =>
+        qc.invalidateQueries({ queryKey: ["coach-task-states"] }),
+      );
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Verlängerung fehlgeschlagen"),
+  });
+
+  const genDraftMut = useMutation({
+    mutationFn: (input: { client_id: string; task_key: string }) =>
+      genDraftFn({ data: { user_id: input.client_id } }).then((res) => ({ ...res, task_key: input.task_key })),
+    onSuccess: (res) => {
+      toast.success("KI-Entwurf erstellt — im Kundenprofil prüfen");
+      qc.invalidateQueries({ queryKey: ["pending-checkin-drafts"] });
+      setStateFn({ data: { task_key: res.task_key, action: "complete" } }).then(() =>
+        qc.invalidateQueries({ queryKey: ["coach-task-states"] }),
+      );
+    },
+    onError: (e: any) => toast.error(e?.message ?? "KI-Entwurf fehlgeschlagen"),
+  });
+
   const weekStart = mondayOf(new Date());
+
 
 
 
