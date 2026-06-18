@@ -281,6 +281,41 @@ export async function generateTrainingPlanCore(
     else if (isSport) kind = "Sport/Mannschaftstraining/Spieltag";
     return `${weekdayLabel[k]}: ${kind}`;
   }).join(" | ");
+  // Sportart-spezifische Beispiele NUR einfügen, wenn die Person diesen Sport tatsächlich macht.
+  // Verhindert z.B. American-Football-Übungen für Kunden ohne Football-Profil.
+  const sportLower = (cp.sport ?? "").toLowerCase();
+  const positionLower = (cp.sport_position ?? "").toLowerCase();
+  const sportExamples: string[] = [];
+  if (/football|nfl|american/.test(sportLower)) {
+    if (/qb|quarterback/.test(positionLower)) {
+      sportExamples.push(`• American Football Quarterback (QB): "QB Cuban Press Kurzhantel — Wurfschulter" (3×12, Notiz: "KH neben Körper, Ellbogen 90°, außen rotieren, dann über Kopf drücken"), "QB Rotations-Wurf Medizinball gegen Wand" (3×8/Seite), "Pallof Press Kabel — Anti-Rotation" (3×10/Seite), "Landmine Press einarmig" (3×8/Seite).`);
+    } else if (/lineman|line|ol|dl/.test(positionLower)) {
+      sportExamples.push(`• Football Lineman: "Prowler/Schlitten schieben" (5×15 m), "Zercher Squat" (4×6, Notiz: "LH in Armbeuge, aufrecht hocken").`);
+    } else if (/wr|rb|receiver|running/.test(positionLower)) {
+      sportExamples.push(`• Football WR/RB: "Single-Leg RDL Kurzhantel" (3×8/Seite), "Box Jumps" (4×4).`);
+    } else {
+      sportExamples.push(`• American Football allgemein: Explosivität, Sprintkraft & Wurfschulter — z.B. "Box Jumps" (4×4), "Landmine Press einarmig" (3×8/Seite), "Pallof Press" (3×10/Seite).`);
+    }
+  }
+  if (/fußball|fussball|soccer/.test(sportLower)) {
+    sportExamples.push(`• Fußball: "Bulgarian Split Squat KH" (3×8/Seite), "Nordic Hamstring Curl" (3×6), "Copenhagen Plank — Adduktoren" (3×30s/Seite).`);
+  }
+  if (/basket|volley/.test(sportLower)) {
+    sportExamples.push(`• Basketball/Volleyball: "Depth Jump 30-cm-Kasten + Sprung" (4×4), "Wadenheben einbeinig" (3×12/Seite).`);
+  }
+  if (/kampf|bjj|mma|box|judo|karate|ringen|wrestling/.test(sportLower)) {
+    sportExamples.push(`• Kampfsport/BJJ: "Turkish Get-Up KH" (3×3/Seite), "Farmer's Walk KH" (3×30 m).`);
+  }
+  if (/lauf|run|marathon|triath/.test(sportLower)) {
+    sportExamples.push(`• Laufsport: "Single-Leg RDL" (3×8/Seite), "Wadenheben" (3×15), "Hip Thrust" (3×10).`);
+  }
+  if (/rad|cycl|bike/.test(sportLower)) {
+    sportExamples.push(`• Radsport: "Bulgarian Split Squat" (3×8/Seite), "Glute Bridge" (3×12), "Plank-Varianten" (3×45s).`);
+  }
+  const sportSpecificBlock = sportExamples.length
+    ? `\n- POSITIONS-/SPORTART-SPEZIFISCHE PFLICHTÜBUNGEN — füge an MIND. 2 Gym-Tagen pro Woche eine als sportartspezifisch erkennbare Übung ein. Benenne sie eindeutig und schreibe im notes-Feld eine 1-Satz-Ausführungsanleitung. Erlaubte Beispiele NUR aus der Sportart "${cp.sport}":\n   ${sportExamples.join("\n   ")}`
+    : `\n- ⛔ KEIN AUSGEÜBTER SPORT/KEINE PASSENDE SPORTART-VORLAGE: Verwende AUSSCHLIESSLICH allgemeine Hypertrophie-/Kraft-/Mobility-Übungen. KEINE sportartspezifischen Übungen einbauen — insbesondere KEINE Football-/QB-/Lineman-/Wurfschulter-/Pallof-Wurf-Übungen, KEINE Fußball-/Soccer-spezifischen Übungen, KEINE Kampfsport-spezifischen Übungen. Im Übungsnamen darf keine Sportart auftauchen.`;
+
   const sportBlock = cp.sport || cp.class_types?.length || cp.team_sport
     ? `\n🏈 SPORT-/ATHLETEN-PROFIL${cp.sport ? `\n- Sportart: ${cp.sport}${cp.sport_position ? ` (Position: ${cp.sport_position})` : ""}` : ""}${cp.sport_level ? `\n- Niveau: ${sportLevelLabel[cp.sport_level] ?? cp.sport_level}` : ""}${cp.team_sport ? `\n- Mannschaftssport: ja${cp.match_days_per_week != null ? ` · ${cp.match_days_per_week} Spieltag(e)/Wo` : ""}${cp.practice_days_per_week != null ? ` · ${cp.practice_days_per_week} Mannschafts-Training(s)/Wo` : ""}` : ""}${cp.season_phase ? `\n- Saisonphase: ${seasonLabel[cp.season_phase] ?? cp.season_phase}` : ""}${cp.class_types?.length ? `\n- Kurse: ${cp.class_types.join(", ")}${cp.class_days_per_week != null ? ` (${cp.class_days_per_week}× Wo)` : ""}` : ""}${cp.cardio_outside_gym ? `\n- Cardio außerhalb des Studios: ${cp.cardio_outside_gym}` : ""}
 ${sportDaysHuman ? `- Sport-/Kurs-/Spieltage: ${sportDaysHuman}` : ""}
@@ -291,18 +326,9 @@ ${sportDaysHuman ? `- Sport-/Kurs-/Spieltage: ${sportDaysHuman}` : ""}
 - REINE RESTDAYS (kein Sport am Vortag): optionaler leichter Mobility-Flow 10–15 Min (2–3 Übungen) ODER 1 Eintrag "Rest — frei" (category "bodyweight", target_sets 1, target_reps "—", Notiz "Vollständige Erholung — Schlaf & Ernährung priorisieren").
 - ÜBERLAPPUNG Gym+Sport am selben Tag: max. 45 Min Gym, RPE 6–7, KEINE schweren Kniebeugen/Kreuzheben, Fokus Oberkörper-Zusatzübungen oder Mobility. Übertraining vermeiden.
 - Tag VOR Spiel-/Sporttag: KEIN schweres Beintraining/CNS-Stress. Stattdessen Oberkörper-Zusatzübungen oder Mobility.
-- Mannschaftssport: in-season Volumen reduzieren, Fokus auf Erhalt, Schnellkraft & Verletzungsprophylaxe; off-/pre-season Volumen hoch.
-- POSITIONS-/SPORTART-SPEZIFISCHE PFLICHTÜBUNGEN — füge an MIND. 2 Gym-Tagen pro Woche eine als positions-spezifisch erkennbare Übung ein. Benenne sie eindeutig (Sportart/Position im Übungsnamen) und schreibe im notes-Feld eine 1-Satz-Ausführungsanleitung (kein YouTube nötig). Beispiele:
-   • American Football Quarterback (QB): "QB Cuban Press Kurzhantel — Wurfschulter" (3×12, Notiz: "KH neben Körper, Ellbogen 90°, außen rotieren, dann über Kopf drücken"), "QB Rotations-Wurf Medizinball gegen Wand" (3×8/Seite, Notiz: "Seitlich zur Wand, aus der Hüfte rotieren und werfen"), "Pallof Press Kabel — Anti-Rotation" (3×10/Seite, Notiz: "Seitlich zum Kabel, Griff vor Brust geradeaus strecken, NICHT mitdrehen"), "Landmine Press einarmig" (3×8/Seite, Notiz: "Langhantelende vor Schulter, schräg nach oben drücken — Wurfbewegung").
-   • Football Lineman: "Prowler/Schlitten schieben" (5×15 m, Notiz: "tiefe Position, kurze schnelle Schritte"), "Zercher Squat" (4×6, Notiz: "LH in Armbeuge, aufrecht hocken").
-   • Football WR/RB: "Single-Leg RDL Kurzhantel" (3×8/Seite, Notiz: "KH auf Standbein-Seite, gestrecktes Bein nach hinten, Hüfte beugen"), "Box Jumps" (4×4).
-   • Fußball: "Bulgarian Split Squat KH" (3×8/Seite, Notiz: "hinteres Bein erhöht auf Bank, vorderes Knie über Fuß"), "Nordic Hamstring Curl" (3×6, Notiz: "Kniend, Füße fixiert, langsam nach vorn senken"), "Copenhagen Plank — Adduktoren" (3×30s/Seite, Notiz: "Seitstütz, oberes Bein auf Bank, unteres frei").
-   • Basketball/Volleyball: "Depth Jump 30-cm-Kasten + Sprung" (4×4, Notiz: "Vom Kasten springen, sofort explosiv hoch"), "Wadenheben einbeinig" (3×12/Seite).
-   • Kampfsport/BJJ: "Turkish Get-Up KH" (3×3/Seite), "Farmer's Walk KH" (3×30 m).
-   • Kursleiter/Cardio-heavy: Schulter-/Rumpfausdauer + Mobility priorisieren, KEIN zusätzliches Cardio im Plan.
-- Wenn keine Position angegeben ist, nutze sportartspezifische Zusatzübungen (Football → Explosivität & Wurfschulter; Fußball → Hüfte/Hamstrings; etc.).
+- Mannschaftssport: in-season Volumen reduzieren, Fokus auf Erhalt, Schnellkraft & Verletzungsprophylaxe; off-/pre-season Volumen hoch.${sportSpecificBlock}
 - ⛔ VERBOTENES WORT: Schreibe NIEMALS "Akzessoires" oder "Accessoires" in day.name, day.focus oder exercise.name/notes. Nutze stattdessen "Zusatzübungen", "Ergänzung" oder "Feinschliff".`
-    : "";
+    : `\n🚫 KEIN SPORT ANGEGEBEN: Der/die Kund:in betreibt KEINEN spezifischen Sport. Erstelle einen reinen Hypertrophie-/Kraft-/Mobility-Plan ohne sportartspezifische Übungen. KEINE Football-/QB-/Lineman-/Wurfschulter-Übungen, KEINE Soccer-/Fußball-spezifischen Übungen, KEINE Kampfsport-/BJJ-Übungen. Im Übungsnamen darf KEINE Sportart auftauchen.`;
   const mobilityBlock = cp.mobility_frequency || cp.mobility_focus
     ? `\n🧘 MOBILITY / STRETCHING (PFLICHT in den Plan einbauen!)
 ${cp.mobility_frequency ? `- Frequenz vom Kunden gewünscht: ${mobLabel[cp.mobility_frequency] ?? cp.mobility_frequency}` : ""}
