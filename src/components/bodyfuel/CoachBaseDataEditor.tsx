@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Save, IdCard } from "lucide-react";
-import { updateCustomerCoachingInfo } from "@/lib/coaching.functions";
+import { updateCustomerCoachingInfo, setCustomerWeight } from "@/lib/coaching.functions";
 import { TRAINING_GOAL_LABELS } from "@/lib/training-goals";
 
 type Gender = "male" | "female" | "other";
