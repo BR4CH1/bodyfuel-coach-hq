@@ -252,6 +252,7 @@ function CoachDashboard() {
           training_plan_end: trainingEnd.get(p.id) ?? null,
           kcal_dev: kcalDev.get(p.id)?.dev ?? null,
           kcal_dev_dir: kcalDev.get(p.id)?.dir ?? null,
+          plateau_days: plateauByUser.get(p.id) ?? null,
         }));
       }
 
