@@ -204,5 +204,94 @@ Antworte AUSSCHLIESSLICH mit gültigem JSON in genau dieser Form:
       training_adjustment: parsed.training_adjustment ?? null,
     };
 
-    return { draft, generated_at: new Date().toISOString() };
+    // Persist as pending draft
+    const { data: saved, error: saveErr } = await supabase
+      .from("ai_checkin_drafts")
+      .insert({
+        client_id: target,
+        coach_id: userId,
+        status: "pending",
+        draft: draft as any,
+        message_final: draft.coach_message,
+      })
+      .select("id, generated_at")
+      .single();
+    if (saveErr) throw new Error(`Entwurf konnte nicht gespeichert werden: ${saveErr.message}`);
+
+    return {
+      id: saved.id as string,
+      draft,
+      generated_at: saved.generated_at as string,
+      status: "pending" as const,
+      message_final: draft.coach_message,
+    };
   });
+
+export type CheckinDraftRecord = {
+  id: string;
+  client_id: string;
+  coach_id: string;
+  status: "pending" | "approved" | "edited" | "rejected";
+  draft: CheckinDraft;
+  message_final: string | null;
+  generated_at: string;
+  decided_at: string | null;
+};
+
+export const listCheckinDrafts = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { user_id: string; limit?: number }) => d)
+  .handler(async ({ data, context }): Promise<{ items: CheckinDraftRecord[] }> => {
+    const { supabase, userId } = context;
+    await assertCoach(supabase, userId);
+    const { data: rows, error } = await supabase
+      .from("ai_checkin_drafts")
+      .select("id, client_id, coach_id, status, draft, message_final, generated_at, decided_at")
+      .eq("client_id", data.user_id)
+      .order("generated_at", { ascending: false })
+      .limit(Math.min(50, data.limit ?? 10));
+    if (error) throw new Error(error.message);
+    return { items: (rows ?? []) as CheckinDraftRecord[] };
+  });
+
+export const decideCheckinDraft = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (d: {
+      draft_id: string;
+      decision: "approved" | "edited" | "rejected";
+      message_final?: string;
+    }) => d,
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    await assertCoach(supabase, userId);
+    const patch: Record<string, unknown> = {
+      status: data.decision,
+      decided_at: new Date().toISOString(),
+    };
+    if (typeof data.message_final === "string") {
+      patch.message_final = data.message_final;
+    }
+    const { error } = await supabase
+      .from("ai_checkin_drafts")
+      .update(patch)
+      .eq("id", data.draft_id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const deleteCheckinDraft = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { draft_id: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    await assertCoach(supabase, userId);
+    const { error } = await supabase
+      .from("ai_checkin_drafts")
+      .delete()
+      .eq("id", data.draft_id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
