@@ -768,6 +768,7 @@ function CustomerRow({
   tone,
   kcalDev,
   kcalDir,
+  plateauDays,
 }: {
   id: string;
   name: string;
@@ -776,6 +777,7 @@ function CustomerRow({
   tone?: "info";
   kcalDev?: number | null;
   kcalDir?: "over" | "under" | null;
+  plateauDays?: number | null;
 }) {
   const kcalLevel: "ok" | "warn" | "bad" | null =
     kcalDev == null ? null : kcalDev <= 200 ? "ok" : kcalDev <= 500 ? "warn" : "bad";
@@ -791,7 +793,7 @@ function CustomerRow({
         {name.slice(0, 2).toUpperCase()}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="truncate text-sm font-semibold">{name}</div>
           {kcalLevel && kcalLevel !== "ok" && (
             <span
@@ -804,6 +806,14 @@ function CustomerRow({
             >
               {kcalDir === "over" ? "+" : "−"}
               {kcalDev} kcal
+            </span>
+          )}
+          {plateauDays != null && (
+            <span
+              className="shrink-0 rounded-md border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-400"
+              title={`Gewicht stagniert seit ~${plateauDays} Tagen — Kalorien anpassen`}
+            >
+              ⚠️ Plateau {plateauDays}T
             </span>
           )}
         </div>
