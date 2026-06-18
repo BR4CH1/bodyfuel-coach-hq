@@ -84,7 +84,33 @@ function CoachDashboard() {
   const [clients, setClients] = useState<Client[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dismissedTasks, setDismissedTasks] = useState<Set<string>>(() => {
+    if (typeof window === "undefined") return new Set();
+    try {
+      const raw = window.sessionStorage.getItem("coach-task-inbox-dismissed");
+      return raw ? new Set(JSON.parse(raw) as string[]) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+  const toggleDismiss = (taskId: string) => {
+    setDismissedTasks((prev) => {
+      const next = new Set(prev);
+      if (next.has(taskId)) next.delete(taskId);
+      else next.add(taskId);
+      try {
+        window.sessionStorage.setItem(
+          "coach-task-inbox-dismissed",
+          JSON.stringify([...next]),
+        );
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  };
   const weekStart = mondayOf(new Date());
+
 
   useEffect(() => {
     (async () => {
