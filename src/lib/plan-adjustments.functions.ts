@@ -248,7 +248,8 @@ export const applyNutritionAdjustment = createServerFn({ method: "POST" })
     }) => d,
   )
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+    const { userId } = context;
+    const supabase = context.supabase as any;
     await assertCoach(supabase, userId);
 
     const { data: before } = await supabase
