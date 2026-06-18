@@ -1050,6 +1050,16 @@ function TaskRow({
         )}
       </div>
       <div className="flex flex-shrink-0 items-center gap-2">
+        {!done && !snoozed && task.quickAction && (
+          <button
+            type="button"
+            onClick={task.quickAction.onClick}
+            disabled={mutating || task.quickAction.loading}
+            className="rounded-md border border-gold/40 bg-gold/10 px-2 py-1 text-[11px] font-semibold text-gold transition hover:bg-gold/20 disabled:opacity-50"
+          >
+            {task.quickAction.loading ? "…" : task.quickAction.label}
+          </button>
+        )}
         {!done && !snoozed && (
           <button
             type="button"
