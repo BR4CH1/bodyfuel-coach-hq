@@ -586,6 +586,11 @@ function CoachDashboard() {
 
           {/* ===== 2. KUNDENÜBERSICHT ===== */}
           <SectionHeader title="Kundenübersicht" subtitle="Pläne, Messungen, Aktivität" />
+          <CoachScoreCard
+            counts={scoreCounts}
+            total={clients.length}
+            redClients={redClients}
+          />
           <div className="grid gap-6 lg:grid-cols-2">
             <Panel
               icon={<CalendarClock className="h-5 w-5" />}
