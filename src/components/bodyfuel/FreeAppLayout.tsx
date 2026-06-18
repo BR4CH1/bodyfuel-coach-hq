@@ -114,7 +114,7 @@ export function FreeAppLayout({ children }: { children: ReactNode }) {
 
       {/* Mobile bottom nav */}
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 backdrop-blur lg:hidden">
-        <div className="grid grid-cols-5">
+        <div className="grid grid-cols-6">
           {nav.map((item) => {
             const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
             const Icon = item.icon;
