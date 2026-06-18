@@ -71,6 +71,7 @@ function TrackerSignup() {
               weight_kg: v.weight_kg,
               gender: v.gender,
               birthdate: v.birthdate,
+              goal: v.goal,
             },
           });
         } catch (e) {
