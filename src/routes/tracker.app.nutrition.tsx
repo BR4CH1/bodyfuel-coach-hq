@@ -12,7 +12,12 @@ export const Route = createFileRoute("/tracker/app/nutrition")({
       </div>
       <NutritionTracker />
       <CoachingLockTeaser
-        features={["KI-Ernährungsplan", "Rezepte", "Einkaufsliste", "Meal-Swap"]}
+        features={[
+          "Persönlicher Ernährungsplan",
+          "Rezepte auf dich abgestimmt",
+          "Automatische Einkaufsliste",
+          "Mahlzeiten-Tausch",
+        ]}
       />
     </div>
   ),
