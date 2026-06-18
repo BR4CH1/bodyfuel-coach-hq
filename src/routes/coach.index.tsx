@@ -53,6 +53,7 @@ type Client = {
   training_plan_end: string | null;
   kcal_dev: number | null;
   kcal_dev_dir: "over" | "under" | null;
+  plateau_days: number | null;
 };
 
 
@@ -192,9 +193,31 @@ function CoachDashboard() {
           if (!lastCheckin.has(c.user_id)) lastCheckin.set(c.user_id, c.week_start);
         });
         const lastWeight = new Map<string, { w: number | null; at: string }>();
+        const weightsByUser = new Map<string, Array<{ w: number; at: string }>>();
         (measurements.data ?? []).forEach((m) => {
           if (!lastWeight.has(m.user_id))
             lastWeight.set(m.user_id, { w: m.weight_kg, at: m.measured_at });
+          if (m.weight_kg != null) {
+            const arr = weightsByUser.get(m.user_id) ?? [];
+            arr.push({ w: Number(m.weight_kg), at: m.measured_at });
+            weightsByUser.set(m.user_id, arr);
+          }
+        });
+        const nowMs = Date.now();
+        const plateauByUser = new Map<string, number>();
+        weightsByUser.forEach((series, uid) => {
+          if (series.length < 2) return;
+          const latest = series[0];
+          const olderRef = series.find((m) => {
+            const age = (nowMs - new Date(m.at).getTime()) / 86400000;
+            return age >= 10 && age <= 21;
+          });
+          if (olderRef && Math.abs(latest.w - olderRef.w) <= 0.3) {
+            plateauByUser.set(
+              uid,
+              Math.round((nowMs - new Date(olderRef.at).getTime()) / 86400000),
+            );
+          }
         });
         const lastFood = new Map<string, { at: string; name: string }>();
         (foods.data ?? []).forEach((f) => {
@@ -229,6 +252,7 @@ function CoachDashboard() {
           training_plan_end: trainingEnd.get(p.id) ?? null,
           kcal_dev: kcalDev.get(p.id)?.dev ?? null,
           kcal_dev_dir: kcalDev.get(p.id)?.dir ?? null,
+          plateau_days: plateauByUser.get(p.id) ?? null,
         }));
       }
 
@@ -383,6 +407,7 @@ function CoachDashboard() {
                 name={c.display_name ?? "Ohne Namen"}
                 kcalDev={c.kcal_dev}
                 kcalDir={c.kcal_dev_dir}
+                plateauDays={c.plateau_days}
                 meta={
                   c.last_checkin
                     ? `Letzter Check-in ${new Date(c.last_checkin).toLocaleDateString("de-DE")}`
@@ -412,6 +437,7 @@ function CoachDashboard() {
                 warn
                 kcalDev={c.kcal_dev}
                 kcalDir={c.kcal_dev_dir}
+                plateauDays={c.plateau_days}
                 meta={
                   c.days === null
                     ? "Noch nie eingecheckt"
@@ -744,6 +770,7 @@ function CustomerRow({
   tone,
   kcalDev,
   kcalDir,
+  plateauDays,
 }: {
   id: string;
   name: string;
@@ -752,6 +779,7 @@ function CustomerRow({
   tone?: "info";
   kcalDev?: number | null;
   kcalDir?: "over" | "under" | null;
+  plateauDays?: number | null;
 }) {
   const kcalLevel: "ok" | "warn" | "bad" | null =
     kcalDev == null ? null : kcalDev <= 200 ? "ok" : kcalDev <= 500 ? "warn" : "bad";
@@ -767,7 +795,7 @@ function CustomerRow({
         {name.slice(0, 2).toUpperCase()}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="truncate text-sm font-semibold">{name}</div>
           {kcalLevel && kcalLevel !== "ok" && (
             <span
@@ -780,6 +808,14 @@ function CustomerRow({
             >
               {kcalDir === "over" ? "+" : "−"}
               {kcalDev} kcal
+            </span>
+          )}
+          {plateauDays != null && (
+            <span
+              className="shrink-0 rounded-md border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-400"
+              title={`Gewicht stagniert seit ~${plateauDays} Tagen — Kalorien anpassen`}
+            >
+              ⚠️ Plateau {plateauDays}T
             </span>
           )}
         </div>
