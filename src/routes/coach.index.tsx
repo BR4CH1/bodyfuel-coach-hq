@@ -20,6 +20,7 @@ import {
 
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { CoachTrialOverview } from "@/components/bodyfuel/CoachTrialOverview";
+import { PendingDraftsCard } from "@/components/bodyfuel/PendingDraftsCard";
 import { supabase } from "@/integrations/supabase/client";
 import { getRanking, type RankingPeriod } from "@/lib/coaching.functions";
 import {
@@ -493,6 +494,11 @@ function CoachDashboard() {
             dismissed={dismissedTasks}
             onToggle={toggleDismiss}
           />
+
+          <PendingDraftsCard
+            redClients={redClients.map((c) => ({ id: c.id, display_name: c.display_name }))}
+          />
+
 
           <SectionHeader title="Handlungsbedarf" subtitle="Was heute deine Aufmerksamkeit braucht" />
 
