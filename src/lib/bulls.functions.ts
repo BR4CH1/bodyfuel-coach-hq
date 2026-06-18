@@ -5,9 +5,13 @@ export type BullsPosition = "QB" | "RB" | "WR" | "TE" | "OL" | "DL" | "LB" | "DB
 export type BullsGoal = "fat_loss" | "muscle_gain" | "performance" | "general_fitness";
 
 async function assertBulls(supabase: any, userId: string) {
-  const { data, error } = await supabase.rpc("has_group", { _user_id: userId, _group: "bulls" });
-  if (error) throw new Error(error.message);
-  if (!data) throw new Error("Kein Bulls-Zugang");
+  const [groupRes, roleRes] = await Promise.all([
+    supabase.rpc("has_group", { _user_id: userId, _group: "bulls" }),
+    supabase.rpc("has_role", { _user_id: userId, _role: "free" }),
+  ]);
+  if (groupRes.error) throw new Error(groupRes.error.message);
+  if (roleRes.error) throw new Error(roleRes.error.message);
+  if (!groupRes.data && !roleRes.data) throw new Error("Kein Bulls-Zugang");
 }
 
 export const getMyGroups = createServerFn({ method: "GET" })
