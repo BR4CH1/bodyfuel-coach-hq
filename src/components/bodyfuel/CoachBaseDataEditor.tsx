@@ -64,6 +64,7 @@ export function CoachBaseDataEditor({
   }, [initial]);
 
   const fn = useServerFn(updateCustomerCoachingInfo);
+  const weightFn = useServerFn(setCustomerWeight);
   const qc = useQueryClient();
 
   const mut = useMutation({
@@ -82,6 +83,17 @@ export function CoachBaseDataEditor({
       }),
     onSuccess: () => {
       toast.success("Stammdaten gespeichert");
+      qc.invalidateQueries({ queryKey: ["customer", userId] });
+      qc.invalidateQueries({ queryKey: ["customer-detail", userId] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Fehler"),
+  });
+
+  const weightMut = useMutation({
+    mutationFn: () => weightFn({ data: { user_id: userId, weight_kg: Number(newWeight) } }),
+    onSuccess: () => {
+      toast.success("Gewicht eingetragen");
+      setNewWeight("");
       qc.invalidateQueries({ queryKey: ["customer", userId] });
       qc.invalidateQueries({ queryKey: ["customer-detail", userId] });
     },
