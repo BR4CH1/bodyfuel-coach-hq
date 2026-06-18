@@ -1001,6 +1001,7 @@ function TaskRow({
     tone: "warn" | "danger" | "info";
     to: string;
     params?: Record<string, string>;
+    quickAction?: { label: string; onClick: () => void; loading: boolean };
   };
   state: "open" | "snoozed" | "done";
   note: string | null;
