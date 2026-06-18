@@ -98,7 +98,23 @@ async function loadPerson(supabase: any, userId: string) {
 
   const p: any = profile ?? {};
   const cp: any = clientProfile ?? {};
-  const currentWeight: number | null = (latestWeight as any)?.weight_kg ?? null;
+  const weightSeries = (latestWeight as any[]) ?? [];
+  const currentWeight: number | null = weightSeries[0]?.weight_kg ?? null;
+  let plateauNote = "";
+  if (weightSeries.length >= 2 && currentWeight != null) {
+    const nowMs = Date.now();
+    const olderRef = weightSeries.find((m: any) => {
+      const ageDays = (nowMs - new Date(m.measured_at).getTime()) / 86400000;
+      return ageDays >= 10 && ageDays <= 21 && m.weight_kg != null;
+    });
+    if (olderRef) {
+      const diff = Number((currentWeight - olderRef.weight_kg).toFixed(2));
+      const days = Math.round((nowMs - new Date(olderRef.measured_at).getTime()) / 86400000);
+      if (Math.abs(diff) <= 0.3) {
+        plateauNote = `⚠️ GEWICHTSPLATEAU bei ${cp.display_name ?? "Kunde"}: Gewicht stagniert seit ~${days} Tagen (Δ ${diff > 0 ? "+" : ""}${diff} kg). Passe für diese Person Portionen/Kalorien um −100 bis −200 kcal/Tag (Fettabbau) bzw. +100 bis +200 kcal (Aufbau) an und wähle bewusst sättigendere bzw. energiedichtere Optionen. Tagesziele weiter innerhalb ±5 % halten.`;
+      }
+    }
+  }
   const goalWeight: number | null = cp.goal_weight_kg ?? null;
   const height: number | null = cp.height_cm ?? null;
   const gender: string | null = cp.gender ?? null;
