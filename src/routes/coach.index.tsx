@@ -708,6 +708,85 @@ function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }
   );
 }
 
+function CoachScoreCard({
+  counts,
+  total,
+  redClients,
+}: {
+  counts: { green: number; yellow: number; red: number };
+  total: number;
+  redClients: Array<Client & { _score: { score: number; level: "green" | "yellow" | "red"; reasons: string[] } }>;
+}) {
+  if (total === 0) return null;
+  const pct = (n: number) => (total ? Math.round((n / total) * 100) : 0);
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5">
+      <div className="mb-4 flex items-center gap-2">
+        <span className="text-gold">📊</span>
+        <h2 className="font-display text-lg font-bold">Coach Score</h2>
+        <span className="text-xs text-muted-foreground">· {total} Kunden</span>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <ScoreStat color="emerald" emoji="🟢" label="Auf Kurs" value={counts.green} pct={pct(counts.green)} />
+        <ScoreStat color="yellow" emoji="🟡" label="Beobachten" value={counts.yellow} pct={pct(counts.yellow)} />
+        <ScoreStat color="red" emoji="🔴" label="Handlungsbedarf" value={counts.red} pct={pct(counts.red)} />
+      </div>
+      {redClients.length > 0 && (
+        <div className="mt-5">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Akut handeln
+          </p>
+          <div className="space-y-2">
+            {redClients.slice(0, 6).map((c) => (
+              <CustomerRow
+                key={c.id}
+                id={c.id}
+                name={c.display_name ?? "Ohne Namen"}
+                warn
+                scoreLevel="red"
+                scoreValue={c._score.score}
+                meta={c._score.reasons.slice(0, 3).join(" · ") || "Mehrere Risiken"}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ScoreStat({
+  color,
+  emoji,
+  label,
+  value,
+  pct,
+}: {
+  color: "emerald" | "yellow" | "red";
+  emoji: string;
+  label: string;
+  value: number;
+  pct: number;
+}) {
+  const bar =
+    color === "emerald" ? "bg-emerald-500" : color === "yellow" ? "bg-yellow-500" : "bg-red-500";
+  return (
+    <div className="rounded-xl border border-border bg-background/40 p-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-lg">{emoji}</span>
+          <span className="text-sm font-semibold">{label}</span>
+        </div>
+        <div className="font-display text-2xl font-bold">{value}</div>
+      </div>
+      <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-border/50">
+        <div className={`h-full ${bar}`} style={{ width: `${pct}%` }} />
+      </div>
+      <div className="mt-1 text-right text-[10px] text-muted-foreground">{pct}%</div>
+    </div>
+  );
+}
+
 function ActionNeededHero({
   openCheckins,
   expiringPlans,
