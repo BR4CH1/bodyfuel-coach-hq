@@ -678,6 +678,7 @@ function CustomerDetail() {
             <ProgressPhotosCard userId={userId} readOnly />
             <PhotoAssessmentCard userId={userId} isCoach />
             <AiCheckinDraftCard userId={userId} />
+            <PlanAdjustmentsCard userId={userId} />
             <CustomerCheckinsCard userId={userId} />
             <CustomerRecentActivityCard userId={userId} />
           </AccordionContent>
