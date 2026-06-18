@@ -53,20 +53,24 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   // hydrate supabase
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      setLoading(true);
       setSupabaseUser(session?.user ?? null);
       if (!session?.user) {
         setProfile(null);
         setRole(null);
         setGroups([]);
+        setLoading(false);
       } else {
         // defer DB reads off the callback
-        setTimeout(() => loadProfile(session.user.id), 0);
+        setTimeout(() => {
+          loadProfile(session.user.id).finally(() => setLoading(false));
+        }, 0);
       }
     });
 
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(async ({ data }) => {
       setSupabaseUser(data.session?.user ?? null);
-      if (data.session?.user) loadProfile(data.session.user.id);
+      if (data.session?.user) await loadProfile(data.session.user.id);
       setLoading(false);
     });
 
