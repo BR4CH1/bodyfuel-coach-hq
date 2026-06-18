@@ -391,7 +391,7 @@ NO-GOS für gemeinsame Gerichte vermeiden: ${mergedNogos.join(", ") || "(keine)"
 VORLIEBEN ${a.name}: Lieblings ${[...a.favFoods, ...a.favoriteNames].slice(0, 8).join(", ") || "—"}; mag ${a.liked.slice(0, 6).join(", ") || "—"}; meiden ${[...a.disliked, ...a.skipNames].slice(0, 6).join(", ") || "—"}
 VORLIEBEN ${b.name}: Lieblings ${[...b.favFoods, ...b.favoriteNames].slice(0, 8).join(", ") || "—"}; mag ${b.liked.slice(0, 6).join(", ") || "—"}; meiden ${[...b.disliked, ...b.skipNames].slice(0, 6).join(", ") || "—"}
 ${wishesBlock}${budgetBlock}${equipmentBlock}
-TAGESPLAN:
+${a.plateauNote ? a.plateauNote + "\n" : ""}${b.plateauNote ? b.plateauNote + "\n" : ""}TAGESPLAN:
 ${scheduleLines}
 
 Antworte AUSSCHLIESSLICH mit gültigem JSON:
