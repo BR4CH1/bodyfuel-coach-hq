@@ -116,70 +116,67 @@ export const seedFromUserMetadata = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const userId = context.userId;
 
-    // Schon geseedet?
     const { data: prof } = await supabaseAdmin
       .from("profiles")
-      .select("training_goal, height_cm, birthdate")
+      .select("training_goal, height_cm, birthdate, gender")
       .eq("id", userId)
       .maybeSingle();
-    if (prof?.training_goal && prof?.height_cm && prof?.birthdate) {
+    const { data: target } = await supabaseAdmin
+      .from("nutrition_targets")
+      .select("kcal, kcal_rest")
+      .eq("user_id", userId)
+      .maybeSingle();
+    const { data: latestMeasurement } = await supabaseAdmin
+      .from("body_measurements")
+      .select("weight_kg")
+      .eq("user_id", userId)
+      .not("weight_kg", "is", null)
+      .order("measured_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (target?.kcal && target?.kcal !== 2200 && latestMeasurement?.weight_kg) {
       return { ok: true, skipped: true as const };
     }
 
     // Metadaten vom Auth-User lesen
     const { data: userRes } = await supabaseAdmin.auth.admin.getUserById(userId);
     const meta = (userRes?.user?.user_metadata ?? {}) as Record<string, unknown>;
-    const height_cm = Number(meta.seed_height_cm);
-    const weight_kg = Number(meta.seed_weight_kg);
-    const gender = String(meta.seed_gender ?? "");
-    const birthdate = String(meta.seed_birthdate ?? "");
-    const goalRaw = String(meta.seed_goal ?? "");
-    const goal = (["fat_loss", "maintain", "lean_bulk"].includes(goalRaw) ? goalRaw : "maintain") as
-      | "fat_loss"
-      | "maintain"
-      | "lean_bulk";
+    const heightFromMeta = validNumber(meta.seed_height_cm);
+    const weightFromMeta = validNumber(meta.seed_weight_kg);
+    const profileHeight = validNumber((prof as any)?.height_cm);
+    const latestWeight = validNumber((latestMeasurement as any)?.weight_kg);
+    const height_cm = heightFromMeta ?? profileHeight;
+    const weight_kg = weightFromMeta ?? latestWeight;
+    const genderMeta = String(meta.seed_gender ?? "");
+    const gender = ["male", "female", "other"].includes(genderMeta) ? genderMeta : ((prof as any)?.gender ?? "other");
+    const birthdate = String(meta.seed_birthdate ?? (prof as any)?.birthdate ?? "");
+    const goal = asGoal(meta.seed_goal ?? (prof as any)?.training_goal);
 
-    if (!height_cm || !weight_kg || !gender || !birthdate) {
+    if (!weight_kg) {
       return { ok: false as const, reason: "missing_metadata" };
     }
 
     // Selbe Logik wie seedMyNutritionTargets — direkt hier, um Helper-Aufruf zu sparen
     await supabaseAdmin
       .from("profiles")
-      .update({ height_cm, gender, birthdate, training_goal: goal })
+      .update({ height_cm, gender, birthdate: birthdate || null, training_goal: goal })
       .eq("id", userId);
 
-    await supabaseAdmin.from("body_measurements").insert({
-      user_id: userId,
-      weight_kg,
-      measured_at: new Date().toISOString(),
-    });
+    if (!latestWeight || weightFromMeta) {
+      await supabaseAdmin.from("body_measurements").insert({
+        user_id: userId,
+        weight_kg,
+        measured_at: new Date().toISOString(),
+      });
+    }
 
-    const w = weight_kg;
-    const h = height_cm;
-    const age = Math.max(
-      15,
-      Math.floor((Date.now() - new Date(birthdate).getTime()) / 31557600000),
-    );
-    const bmr =
-      gender === "female"
-        ? 10 * w + 6.25 * h - 5 * age - 161
-        : 10 * w + 6.25 * h - 5 * age + 5;
-    const goalMult = {
-      fat_loss: { t: 0.8, r: 0.78 },
-      maintain: { t: 1.0, r: 1.0 },
-      lean_bulk: { t: 1.1, r: 1.05 },
-    } as const;
-    const gm = goalMult[goal];
-    const round50 = (v: number) => Math.max(1000, Math.round(v / 50) * 50);
-    const kcal_t = round50(bmr * 1.6 * gm.t);
-    const kcal_r = round50(bmr * 1.4 * gm.r);
-    const proteinPerKg = goal === "fat_loss" ? 2.2 : goal === "lean_bulk" ? 2.0 : 1.8;
-    const protein = Math.round(w * proteinPerKg);
-    const fat_t = Math.round(w * (goal === "fat_loss" ? 0.8 : 0.9));
-    const fat_r = Math.round(w * (goal === "fat_loss" ? 0.9 : 1.0));
-    const carbs_t = Math.max(0, Math.round((kcal_t - protein * 4 - fat_t * 9) / 4));
-    const carbs_r = Math.max(0, Math.round((kcal_r - protein * 4 - fat_r * 9) / 4));
+    const { kcal_t, kcal_r, protein, fat_t, fat_r, carbs_t, carbs_r } = calculateFreeTargets({
+      weight_kg,
+      height_cm,
+      gender,
+      birthdate,
+      goal,
+    });
 
     await supabaseAdmin.from("nutrition_targets").upsert(
       {
@@ -193,6 +190,7 @@ export const seedFromUserMetadata = createServerFn({ method: "POST" })
         carbs_g_rest: carbs_r,
         fat_g_rest: fat_r,
         water_glasses: 8,
+        updated_by: userId,
       },
       { onConflict: "user_id" },
     );
