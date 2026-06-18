@@ -29,8 +29,6 @@ import {
   setCoachTaskState,
   type CoachTaskState,
 } from "@/lib/coach-tasks.functions";
-import { supabase } from "@/integrations/supabase/client";
-import { getRanking, type RankingPeriod } from "@/lib/coaching.functions";
 import {
   Select,
   SelectContent,
