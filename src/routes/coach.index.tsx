@@ -15,12 +15,20 @@ import {
   Trophy,
   CalendarClock,
   Zap,
+  Moon,
 } from "lucide-react";
 
 
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { CoachTrialOverview } from "@/components/bodyfuel/CoachTrialOverview";
 import { PendingDraftsCard } from "@/components/bodyfuel/PendingDraftsCard";
+import { supabase } from "@/integrations/supabase/client";
+import { getRanking, type RankingPeriod } from "@/lib/coaching.functions";
+import {
+  listCoachTaskStates,
+  setCoachTaskState,
+  type CoachTaskState,
+} from "@/lib/coach-tasks.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { getRanking, type RankingPeriod } from "@/lib/coaching.functions";
 import {
