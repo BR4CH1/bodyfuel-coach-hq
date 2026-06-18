@@ -917,6 +917,8 @@ function CustomerRow({
   kcalDev,
   kcalDir,
   plateauDays,
+  scoreLevel,
+  scoreValue,
 }: {
   id: string;
   name: string;
@@ -926,9 +928,19 @@ function CustomerRow({
   kcalDev?: number | null;
   kcalDir?: "over" | "under" | null;
   plateauDays?: number | null;
+  scoreLevel?: "green" | "yellow" | "red" | null;
+  scoreValue?: number | null;
 }) {
   const kcalLevel: "ok" | "warn" | "bad" | null =
     kcalDev == null ? null : kcalDev <= 200 ? "ok" : kcalDev <= 500 ? "warn" : "bad";
+  const dotColor =
+    scoreLevel === "green"
+      ? "bg-emerald-500"
+      : scoreLevel === "yellow"
+        ? "bg-yellow-500"
+        : scoreLevel === "red"
+          ? "bg-red-500"
+          : null;
   return (
     <Link
       to="/coach/customers/$userId"
@@ -937,8 +949,14 @@ function CustomerRow({
         warn ? "border-warning/30" : "border-border"
       }`}
     >
-      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-gold text-xs font-bold text-primary-foreground">
+      <div className="relative grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-gold text-xs font-bold text-primary-foreground">
         {name.slice(0, 2).toUpperCase()}
+        {dotColor && (
+          <span
+            className={`absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full ring-2 ring-card ${dotColor}`}
+            title={`Coach Score: ${scoreValue ?? "?"}/100`}
+          />
+        )}
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
@@ -977,6 +995,7 @@ function CustomerRow({
     </Link>
   );
 }
+
 
 function PlanValidity({ label, end }: { label: string; end: string | null }) {
   if (!end) {
