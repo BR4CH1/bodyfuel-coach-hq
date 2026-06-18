@@ -53,6 +53,10 @@ function TrackerHome() {
         })}
       </div>
 
+      <CoachingLockTeaser
+        features={["Trainingsplan-KI", "Ernährungsplan-KI", "Foto-Assessment", "Coach-Chat"]}
+      />
+
       <AchievementsCard userId={supabaseUser.id} />
     </div>
   );
