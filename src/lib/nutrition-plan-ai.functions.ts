@@ -418,6 +418,7 @@ Die Kalorien-/Makro-Ziele sind auf aktuelles Gewicht, Wunschgewicht und Training
 
     const prompt = `Erstelle einen ${planDays}-Tage-Ernährungsplan mit 4 Mahlzeiten pro Tag (Frühstück, Mittag, Abend, Snack). Der Plan soll genau bis zum nächsten Einkaufstag reichen.
 
+${plateauNote ? "\n" + plateauNote + "\n" : ""}
 ${goalBlock}
 
 ${targetsBlock}
