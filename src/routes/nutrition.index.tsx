@@ -154,6 +154,7 @@ function NutritionIndex() {
               <WeekScheduleCard userId={supabaseUser.id} />
             )}
             <MacroTargetsCard userId={supabaseUser?.id} />
+            {supabaseUser?.id && <PlateauWarning userId={supabaseUser.id} />}
             {supabaseUser?.id && (
               <MealWishesCard userId={supabaseUser.id} mode="client" />
             )}
