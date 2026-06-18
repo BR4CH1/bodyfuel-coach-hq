@@ -295,8 +295,10 @@ export const applyTrainingAdjustment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { user_id: string; action: TrainingApplyAction }) => d)
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+    const { userId } = context;
+    const supabase = context.supabase as any;
     await assertCoach(supabase, userId);
+    const action = data.action;
 
     const { data: plan } = await supabase
       .from("training_plans")
@@ -317,24 +319,24 @@ export const applyTrainingAdjustment = createServerFn({ method: "POST" })
     let beforeSnapshot: any = null;
     let afterSnapshot: any = null;
 
-    if (data.action.type === "volume_delta" && dayIds.length > 0) {
+    if (action.type === "volume_delta" && dayIds.length > 0) {
       const { data: exs } = await supabase
         .from("training_exercises")
         .select("id, name, target_sets")
         .in("day_id", dayIds);
       const updates = (exs ?? []).map((e: any) => ({
         id: e.id,
-        next: Math.max(1, Math.min(8, (e.target_sets ?? 3) + data.action.sets_delta)),
+        next: Math.max(1, Math.min(8, (e.target_sets ?? 3) + action.sets_delta)),
         prev: e.target_sets ?? 3,
       }));
       for (const u of updates) {
         await supabase.from("training_exercises").update({ target_sets: u.next }).eq("id", u.id);
       }
       beforeSnapshot = { exercises: (exs ?? []).map((e: any) => ({ name: e.name, sets: e.target_sets })) };
-      afterSnapshot = { sets_delta: data.action.sets_delta, affected: updates.length };
-      summary = `Volumen ${data.action.sets_delta > 0 ? "+" : ""}${data.action.sets_delta} Sätze auf ${updates.length} Übungen`;
-    } else if (data.action.type === "deload" && dayIds.length > 0) {
-      const scale = Math.max(0.4, Math.min(0.9, data.action.scale));
+      afterSnapshot = { sets_delta: action.sets_delta, affected: updates.length };
+      summary = `Volumen ${action.sets_delta > 0 ? "+" : ""}${action.sets_delta} Sätze auf ${updates.length} Übungen`;
+    } else if (action.type === "deload" && dayIds.length > 0) {
+      const scale = Math.max(0.4, Math.min(0.9, action.scale));
       const { data: exs } = await supabase
         .from("training_exercises")
         .select("id, name, target_sets")
@@ -350,18 +352,18 @@ export const applyTrainingAdjustment = createServerFn({ method: "POST" })
       afterSnapshot = { scale, affected: updates.length };
       summary = `Deload-Woche: Sätze × ${scale.toFixed(2)} (${updates.length} Übungen)`;
     } else {
-      summary = data.action.detail;
+      summary = action.detail;
     }
 
     await supabase.from("plan_adjustment_history").insert({
       client_id: data.user_id,
       coach_id: userId,
       kind: "training",
-      area: data.action.type,
+      area: action.type,
       summary,
       before_json: beforeSnapshot,
       after_json: afterSnapshot,
-      rationale: data.action.rationale ?? null,
+      rationale: action.rationale ?? null,
     });
 
     return { ok: true, summary };
