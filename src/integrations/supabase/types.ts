@@ -89,6 +89,45 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_checkin_drafts: {
+        Row: {
+          client_id: string
+          coach_id: string
+          created_at: string
+          decided_at: string | null
+          draft: Json
+          generated_at: string
+          id: string
+          message_final: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          coach_id: string
+          created_at?: string
+          decided_at?: string | null
+          draft: Json
+          generated_at?: string
+          id?: string
+          message_final?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          coach_id?: string
+          created_at?: string
+          decided_at?: string | null
+          draft?: Json
+          generated_at?: string
+          id?: string
+          message_final?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       app_reviews: {
         Row: {
           approved_for_public: boolean
