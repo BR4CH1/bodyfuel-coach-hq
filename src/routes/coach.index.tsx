@@ -388,235 +388,317 @@ function CoachDashboard() {
       )}
 
       {!loading && (
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* Diese Woche offen */}
-          <Panel
-            icon={<Clock className="h-5 w-5" />}
-            title="Diese Woche noch offen"
-            empty={openWeek.length === 0}
-            emptyText="Alle Kunden haben ihren Wochen-Check-in abgegeben 🎉"
-            footer={
-              <Link to="/coach/customers" className="text-xs font-semibold text-gold hover:underline">
-                Alle Kunden ansehen →
-              </Link>
-            }
-          >
-            {openWeek.slice(0, 8).map((c) => (
-              <CustomerRow
-                key={c.id}
-                id={c.id}
-                name={c.display_name ?? "Ohne Namen"}
-                kcalDev={c.kcal_dev}
-                kcalDir={c.kcal_dev_dir}
-                plateauDays={c.plateau_days}
-                meta={
-                  c.last_checkin
-                    ? `Letzter Check-in ${new Date(c.last_checkin).toLocaleDateString("de-DE")}`
-                    : "Noch nie eingecheckt"
-                }
-              />
-            ))}
-            {openWeek.length > 8 && (
-              <div className="px-1 pt-1 text-xs text-muted-foreground">
-                +{openWeek.length - 8} weitere
-              </div>
-            )}
-          </Panel>
+        <div className="space-y-8">
+          {/* ===== 1. HANDLUNGSBEDARF ===== */}
+          <ActionNeededHero
+            openCheckins={openWeek.length}
+            expiringPlans={expiringPlans.length}
+            inactive={inactive.length}
+            newLeads={leads.length}
+          />
 
-          {/* Inaktiv-Warnung */}
-          <Panel
-            icon={<AlertTriangle className="h-5 w-5" />}
-            title="Inaktiv (14+ Tage)"
-            empty={inactive.length === 0}
-            emptyText="Niemand inaktiv. Top!"
-          >
-            {inactive.slice(0, 8).map((c) => (
-              <CustomerRow
-                key={c.id}
-                id={c.id}
-                name={c.display_name ?? "Ohne Namen"}
-                warn
-                kcalDev={c.kcal_dev}
-                kcalDir={c.kcal_dev_dir}
-                plateauDays={c.plateau_days}
-                meta={
-                  c.days === null
-                    ? "Noch nie eingecheckt"
-                    : `Vor ${c.days} Tagen zuletzt aktiv`
-                }
-              />
-            ))}
-          </Panel>
+          <SectionHeader title="Handlungsbedarf" subtitle="Was heute deine Aufmerksamkeit braucht" />
+          <div className="grid gap-6 lg:grid-cols-2">
+            {/* Diese Woche offen */}
+            <Panel
+              icon={<Clock className="h-5 w-5" />}
+              title="Offene Check-ins (diese Woche)"
+              empty={openWeek.length === 0}
+              emptyText="Alle Kunden haben ihren Wochen-Check-in abgegeben 🎉"
+              footer={
+                <Link to="/coach/customers" className="text-xs font-semibold text-gold hover:underline">
+                  Alle Kunden ansehen →
+                </Link>
+              }
+            >
+              {openWeek.slice(0, 8).map((c) => (
+                <CustomerRow
+                  key={c.id}
+                  id={c.id}
+                  name={c.display_name ?? "Ohne Namen"}
+                  kcalDev={c.kcal_dev}
+                  kcalDir={c.kcal_dev_dir}
+                  plateauDays={c.plateau_days}
+                  meta={
+                    c.last_checkin
+                      ? `Letzter Check-in ${new Date(c.last_checkin).toLocaleDateString("de-DE")}`
+                      : "Noch nie eingecheckt"
+                  }
+                />
+              ))}
+              {openWeek.length > 8 && (
+                <div className="px-1 pt-1 text-xs text-muted-foreground">
+                  +{openWeek.length - 8} weitere
+                </div>
+              )}
+            </Panel>
 
-          {/* Plan-Warnungen */}
-          <Panel
-            icon={<AlertTriangle className="h-5 w-5" />}
-            title="Pläne laufen aus (≤ 5 Tage)"
-            empty={expiringPlans.length === 0}
-            emptyText="Alle Pläne haben noch Laufzeit."
-          >
-            {expiringPlans.slice(0, 10).map((p, i) => (
-              <CustomerRow
-                key={`${p.id}-${p.kind}-${i}`}
-                id={p.id}
-                name={p.name}
-                warn
-                meta={`${p.kind === "training" ? "Trainingsplan" : "Ernährungsplan"} ${
-                  p.days < 0
-                    ? `seit ${Math.abs(p.days)} Tagen abgelaufen`
-                    : p.days === 0
-                      ? "läuft heute aus"
-                      : `läuft in ${p.days} Tagen aus (${new Date(p.end).toLocaleDateString("de-DE")})`
-                }`}
-              />
-            ))}
-          </Panel>
+            {/* Plan-Warnungen */}
+            <Panel
+              icon={<CalendarClock className="h-5 w-5" />}
+              title="Auslaufende Pläne (≤ 5 Tage)"
+              empty={expiringPlans.length === 0}
+              emptyText="Alle Pläne haben noch Laufzeit."
+            >
+              {expiringPlans.slice(0, 10).map((p, i) => (
+                <CustomerRow
+                  key={`${p.id}-${p.kind}-${i}`}
+                  id={p.id}
+                  name={p.name}
+                  warn
+                  meta={`${p.kind === "training" ? "Trainingsplan" : "Ernährungsplan"} ${
+                    p.days < 0
+                      ? `seit ${Math.abs(p.days)} Tagen abgelaufen`
+                      : p.days === 0
+                        ? "läuft heute aus"
+                        : `läuft in ${p.days} Tagen aus (${new Date(p.end).toLocaleDateString("de-DE")})`
+                  }`}
+                />
+              ))}
+            </Panel>
 
-          {/* Plan-Übersicht */}
-          <Panel
-            icon={<CalendarClock className="h-5 w-5" />}
-            title="Plan-Übersicht"
-            empty={planOverview.length === 0}
-            emptyText="Keine aktiven Pläne hinterlegt."
-          >
-            {planOverview.slice(0, 12).map((c) => (
-              <Link
-                key={c.id}
-                to="/coach/customers/$userId"
-                params={{ userId: c.id }}
-                className="block rounded-xl border border-border bg-background/40 p-3 transition hover:border-gold/40"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="truncate text-sm font-semibold">
-                    {c.display_name ?? "Ohne Namen"}
+            {/* Risiko / Inaktiv */}
+            <Panel
+              icon={<AlertTriangle className="h-5 w-5" />}
+              title="Risikowarnungen (Inaktiv 14+ Tage)"
+              empty={inactive.length === 0}
+              emptyText="Niemand inaktiv. Top!"
+            >
+              {inactive.slice(0, 8).map((c) => (
+                <CustomerRow
+                  key={c.id}
+                  id={c.id}
+                  name={c.display_name ?? "Ohne Namen"}
+                  warn
+                  kcalDev={c.kcal_dev}
+                  kcalDir={c.kcal_dev_dir}
+                  plateauDays={c.plateau_days}
+                  meta={
+                    c.days === null
+                      ? "Noch nie eingecheckt"
+                      : `Vor ${c.days} Tagen zuletzt aktiv`
+                  }
+                />
+              ))}
+            </Panel>
+
+            {/* Neue Leads */}
+            <Panel
+              icon={<Inbox className="h-5 w-5" />}
+              title="Neue Anfragen"
+              empty={leads.length === 0}
+              emptyText="Keine neuen Anfragen"
+              footer={
+                <Link to="/coach/leads" className="text-xs font-semibold text-gold hover:underline">
+                  Alle Anfragen →
+                </Link>
+              }
+            >
+              {leads.slice(0, 6).map((l) => (
+                <Link
+                  key={l.id}
+                  to="/coach/leads"
+                  className="flex items-center gap-3 rounded-xl border border-border bg-background/40 p-3 hover:border-gold/40"
+                >
+                  <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-gold text-xs font-bold text-primary-foreground">
+                    {l.name.slice(0, 2).toUpperCase()}
                   </div>
-                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-                </div>
-                <div className="mt-1 grid grid-cols-2 gap-2 text-[11px]">
-                  <PlanValidity label="Training" end={c.training_plan_end} />
-                  <PlanValidity label="Ernährung" end={c.nutrition_plan_end} />
-                </div>
-              </Link>
-            ))}
-          </Panel>
-
-
-
-          {/* Neue Leads */}
-          <Panel
-            icon={<Inbox className="h-5 w-5" />}
-            title="Neue Anfragen"
-            empty={leads.length === 0}
-            emptyText="Keine neuen Anfragen"
-            footer={
-              <Link to="/coach/leads" className="text-xs font-semibold text-gold hover:underline">
-                Alle Anfragen →
-              </Link>
-            }
-          >
-            {leads.slice(0, 6).map((l) => (
-              <Link
-                key={l.id}
-                to="/coach/leads"
-                className="flex items-center gap-3 rounded-xl border border-border bg-background/40 p-3 hover:border-gold/40"
-              >
-                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-gold text-xs font-bold text-primary-foreground">
-                  {l.name.slice(0, 2).toUpperCase()}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-semibold">{l.name}</div>
-                  <div className="truncate text-xs text-muted-foreground">
-                    {l.goal ?? l.email}
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-semibold">{l.name}</div>
+                    <div className="truncate text-xs text-muted-foreground">
+                      {l.goal ?? l.email}
+                    </div>
                   </div>
-                </div>
-                <div className="text-[11px] text-muted-foreground">
-                  {new Date(l.created_at).toLocaleDateString("de-DE")}
-                </div>
-              </Link>
-            ))}
-          </Panel>
-
-          {/* Aktuelle Maße */}
-          <Panel
-            icon={<Scale className="h-5 w-5" />}
-            title="Letzte Messungen"
-            empty={recentMeasurements.length === 0}
-            emptyText="Noch keine Messungen erfasst"
-          >
-            {recentMeasurements.map((c) => (
-              <CustomerRow
-                key={c.id}
-                id={c.id}
-                name={c.display_name ?? "Ohne Namen"}
-                meta={
-                  c.last_weight_at
-                    ? `${c.last_weight ?? "—"} kg · ${new Date(
-                        c.last_weight_at,
-                      ).toLocaleDateString("de-DE")}`
-                    : "—"
-                }
-                tone="info"
-              />
-            ))}
-          </Panel>
-
-          {/* Letzte Eintragung Ernährung */}
-          <Panel
-            icon={<Utensils className="h-5 w-5" />}
-            title="Letzte Eintragung Ernährung"
-            empty={recentNutrition.length === 0}
-            emptyText="Noch keine Ernährungs-Einträge"
-          >
-            {recentNutrition.map((c) => (
-              <CustomerRow
-                key={c.id}
-                id={c.id}
-                name={c.display_name ?? "Ohne Namen"}
-                meta={`${c.last_nutrition_name ?? "Eintrag"} · ${new Date(
-                  c.last_nutrition_at!,
-                ).toLocaleDateString("de-DE")}`}
-                tone="info"
-              />
-            ))}
-          </Panel>
-
-          {/* Letzte Eintragung Training */}
-          <Panel
-            icon={<Dumbbell className="h-5 w-5" />}
-            title="Letzte Eintragung Training"
-            empty={recentTraining.length === 0}
-            emptyText="Noch keine Trainings-Einträge"
-          >
-            {recentTraining.map((c) => (
-              <CustomerRow
-                key={c.id}
-                id={c.id}
-                name={c.display_name ?? "Ohne Namen"}
-                meta={new Date(c.last_training_at!).toLocaleDateString("de-DE", {
-                  weekday: "short",
-                  day: "2-digit",
-                  month: "2-digit",
-                  year: "numeric",
-                })}
-                tone="info"
-              />
-            ))}
-          </Panel>
-
-          {/* Trial-Übersicht */}
-          <div className="lg:col-span-2">
-            <CoachTrialOverview />
+                  <div className="text-[11px] text-muted-foreground">
+                    {new Date(l.created_at).toLocaleDateString("de-DE")}
+                  </div>
+                </Link>
+              ))}
+            </Panel>
           </div>
 
-          {/* Ranking */}
-          <div className="lg:col-span-2">
-            <RankingPanel />
+          {/* ===== 2. KUNDENÜBERSICHT ===== */}
+          <SectionHeader title="Kundenübersicht" subtitle="Pläne, Messungen, Aktivität" />
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Panel
+              icon={<CalendarClock className="h-5 w-5" />}
+              title="Plan-Übersicht"
+              empty={planOverview.length === 0}
+              emptyText="Keine aktiven Pläne hinterlegt."
+            >
+              {planOverview.slice(0, 12).map((c) => (
+                <Link
+                  key={c.id}
+                  to="/coach/customers/$userId"
+                  params={{ userId: c.id }}
+                  className="block rounded-xl border border-border bg-background/40 p-3 transition hover:border-gold/40"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="truncate text-sm font-semibold">
+                      {c.display_name ?? "Ohne Namen"}
+                    </div>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  </div>
+                  <div className="mt-1 grid grid-cols-2 gap-2 text-[11px]">
+                    <PlanValidity label="Training" end={c.training_plan_end} />
+                    <PlanValidity label="Ernährung" end={c.nutrition_plan_end} />
+                  </div>
+                </Link>
+              ))}
+            </Panel>
+
+            <Panel
+              icon={<Scale className="h-5 w-5" />}
+              title="Letzte Messungen"
+              empty={recentMeasurements.length === 0}
+              emptyText="Noch keine Messungen erfasst"
+            >
+              {recentMeasurements.map((c) => (
+                <CustomerRow
+                  key={c.id}
+                  id={c.id}
+                  name={c.display_name ?? "Ohne Namen"}
+                  meta={
+                    c.last_weight_at
+                      ? `${c.last_weight ?? "—"} kg · ${new Date(
+                          c.last_weight_at,
+                        ).toLocaleDateString("de-DE")}`
+                      : "—"
+                  }
+                  tone="info"
+                />
+              ))}
+            </Panel>
+
+            <Panel
+              icon={<Utensils className="h-5 w-5" />}
+              title="Letzte Eintragung Ernährung"
+              empty={recentNutrition.length === 0}
+              emptyText="Noch keine Ernährungs-Einträge"
+            >
+              {recentNutrition.map((c) => (
+                <CustomerRow
+                  key={c.id}
+                  id={c.id}
+                  name={c.display_name ?? "Ohne Namen"}
+                  meta={`${c.last_nutrition_name ?? "Eintrag"} · ${new Date(
+                    c.last_nutrition_at!,
+                  ).toLocaleDateString("de-DE")}`}
+                  tone="info"
+                />
+              ))}
+            </Panel>
+
+            <Panel
+              icon={<Dumbbell className="h-5 w-5" />}
+              title="Letzte Eintragung Training"
+              empty={recentTraining.length === 0}
+              emptyText="Noch keine Trainings-Einträge"
+            >
+              {recentTraining.map((c) => (
+                <CustomerRow
+                  key={c.id}
+                  id={c.id}
+                  name={c.display_name ?? "Ohne Namen"}
+                  meta={new Date(c.last_training_at!).toLocaleDateString("de-DE", {
+                    weekday: "short",
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                  })}
+                  tone="info"
+                />
+              ))}
+            </Panel>
           </div>
 
+          {/* ===== 3. UMSATZ & TRIAL ===== */}
+          <SectionHeader title="Umsatz & Conversion" subtitle="Trials und Paketanfragen" />
+          <CoachTrialOverview />
 
+          {/* ===== 4. COMMUNITY & RANKINGS ===== */}
+          <SectionHeader title="Community & Rankings" subtitle="Top-Athleten im Zeitraum" />
+          <RankingPanel />
         </div>
       )}
     </div>
+  );
+}
+
+function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }) {
+  return (
+    <div className="flex items-end justify-between gap-3 border-b border-border/60 pb-2">
+      <div>
+        <h2 className="font-display text-xl font-bold sm:text-2xl">{title}</h2>
+        {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
+      </div>
+    </div>
+  );
+}
+
+function ActionNeededHero({
+  openCheckins,
+  expiringPlans,
+  inactive,
+  newLeads,
+}: {
+  openCheckins: number;
+  expiringPlans: number;
+  inactive: number;
+  newLeads: number;
+}) {
+  const total = openCheckins + expiringPlans + inactive + newLeads;
+  const allClear = total === 0;
+  return (
+    <div
+      className={`rounded-2xl border p-5 ${
+        allClear
+          ? "border-gold/30 bg-gradient-to-br from-gold/5 to-transparent"
+          : "border-warning/40 bg-warning/5"
+      }`}
+    >
+      <div className="flex items-start gap-3">
+        <div
+          className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${
+            allClear ? "bg-gold/15 text-gold" : "bg-warning/15 text-warning"
+          }`}
+        >
+          {allClear ? <CheckCircle2 className="h-5 w-5" /> : <Zap className="h-5 w-5" />}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+            Handlungsbedarf
+          </p>
+          <h2 className="font-display text-2xl font-bold sm:text-3xl">
+            {allClear ? "Alles im grünen Bereich" : `${total} Aufgabe${total === 1 ? "" : "n"} offen`}
+          </h2>
+          <div className="mt-3 flex flex-wrap gap-2 text-sm">
+            <HeroChip label="Check-ins" value={openCheckins} warn />
+            <HeroChip label="Pläne laufen aus" value={expiringPlans} warn />
+            <HeroChip label="Inaktiv 14+ T." value={inactive} warn />
+            <HeroChip label="Neue Anfragen" value={newLeads} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HeroChip({ label, value, warn }: { label: string; value: number; warn?: boolean }) {
+  const active = value > 0;
+  return (
+    <span
+      className={`rounded-lg border px-2.5 py-1 text-xs ${
+        active && warn
+          ? "border-warning/40 bg-warning/10 text-warning"
+          : active
+            ? "border-gold/40 bg-gold/10 text-gold"
+            : "border-border bg-background/40 text-muted-foreground"
+      }`}
+    >
+      <span className="font-display text-sm font-bold">{value}</span>{" "}
+      <span className="opacity-80">{label}</span>
+    </span>
   );
 }
 
