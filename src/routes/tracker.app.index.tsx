@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Apple, Scale, ArrowRight } from "lucide-react";
+import { Apple, Scale, Dumbbell, ArrowRight } from "lucide-react";
 import { useSession } from "@/lib/bodyfuel/session";
 import { DailyChecklist } from "@/components/bodyfuel/DailyChecklist";
 import { AchievementsCard } from "@/components/bodyfuel/AchievementsCard";
@@ -17,6 +17,7 @@ function TrackerHome() {
 
   const tiles = [
     { to: "/tracker/app/nutrition", label: "Ernährung", icon: Apple, desc: "Kalorien & Makros" },
+    { to: "/tracker/app/training", label: "Training", icon: Dumbbell, desc: "Plan & Tracking" },
     { to: "/tracker/app/weight", label: "Gewicht", icon: Scale, desc: "Verlauf" },
   ] as const;
 
@@ -54,7 +55,12 @@ function TrackerHome() {
       </div>
 
       <CoachingLockTeaser
-        features={["Trainingsplan-KI", "Ernährungsplan-KI", "Foto-Assessment", "Coach-Chat"]}
+        features={[
+          "Individueller Trainingsplan",
+          "Persönlicher Ernährungsplan",
+          "Foto-Assessment",
+          "Coach-Chat",
+        ]}
       />
 
       <AchievementsCard userId={supabaseUser.id} />
