@@ -578,6 +578,11 @@ function stripAkzessoires(s: string): string {
 }
 
 function validCategory(c: unknown): string | null {
+  const allowed = ["barbell","dumbbell","machine","cardio","core","bodyweight","cable"];
+  if (typeof c !== "string") return null;
+  const v = c.toLowerCase().trim();
+  return allowed.includes(v) ? v : null;
+}
 
 type StartWeights = {
   bench_press_kg: number | null;
@@ -604,13 +609,12 @@ function detectStartKey(name: string): keyof StartWeights | null {
 }
 
 // Progression-Caps relativ zur Woche-1-Empfehlung (e1RM × 0.75).
-// W1 100 %, W2 ~107 %, W3 ~113 %, W4 Deload ~95 % von W3 (= ~107 %).
 function weekCapFactor(weekNumber: number): number {
   switch (weekNumber) {
     case 1: return 1.0;
     case 2: return 1.08;
     case 3: return 1.15;
-    case 4: return 1.0;
+    case 4: return 1.0; // Deload
     default: return 1.15;
   }
 }
@@ -629,7 +633,6 @@ function clampWeightsForExercise(
   const baseline = key ? start[key] : null;
   if (!baseline || baseline <= 0) return str;
   const cap = Math.max(2.5, Math.round((baseline * weekCapFactor(weekNumber)) / 2.5) * 2.5);
-  // Parse comma-separated numeric weights; if any token isn't a plain number, leave string untouched.
   const tokens = str.split(/[,;]/).map((t) => t.trim());
   const nums: number[] = [];
   for (const t of tokens) {
@@ -637,14 +640,7 @@ function clampWeightsForExercise(
     nums.push(parseFloat(t.replace(",", ".")));
   }
   const clamped = nums.map((n) => (n > cap ? cap : n));
-  // Re-emit as comma-separated, mirroring how the UI displays them.
   return clamped.map((n) => (Number.isInteger(n) ? String(n) : n.toFixed(1))).join(",");
-}
-
-  const allowed = ["barbell","dumbbell","machine","cardio","core","bodyweight","cable"];
-  if (typeof c !== "string") return null;
-  const v = c.toLowerCase().trim();
-  return allowed.includes(v) ? v : null;
 }
 
 function alignExerciseName(name: string, priorList: string[]): string {
