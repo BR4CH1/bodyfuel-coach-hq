@@ -44,6 +44,7 @@ import { RecipeInsightsCard } from "@/components/bodyfuel/RecipeInsightsCard";
 import { SmartNutritionInsightsCard } from "@/components/bodyfuel/SmartNutritionInsightsCard";
 import { CustomerCheckinsCard } from "@/components/bodyfuel/CustomerCheckinsCard";
 import { AiCheckinDraftCard } from "@/components/bodyfuel/AiCheckinDraftCard";
+import { PlanAdjustmentsCard } from "@/components/bodyfuel/PlanAdjustmentsCard";
 import { PlanManagementCard } from "@/components/bodyfuel/PlanManagementCard";
 import { TrainingPlanManagementCard } from "@/components/bodyfuel/TrainingPlanManagementCard";
 import { MealWishesCard } from "@/components/bodyfuel/MealWishesCard";
@@ -677,6 +678,7 @@ function CustomerDetail() {
             <ProgressPhotosCard userId={userId} readOnly />
             <PhotoAssessmentCard userId={userId} isCoach />
             <AiCheckinDraftCard userId={userId} />
+            <PlanAdjustmentsCard userId={userId} />
             <CustomerCheckinsCard userId={userId} />
             <CustomerRecentActivityCard userId={userId} />
           </AccordionContent>

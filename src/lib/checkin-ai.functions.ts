@@ -64,10 +64,10 @@ export const generateCheckinDraft = createServerFn({ method: "POST" })
     // Gewichtsverlauf
     const { data: weights } = await supabase
       .from("bulls_weight_logs")
-      .select("logged_at, weight_kg")
+      .select("log_date, weight_kg")
       .eq("user_id", target)
-      .gte("logged_at", since30)
-      .order("logged_at", { ascending: false })
+      .gte("log_date", since30)
+      .order("log_date", { ascending: false })
       .limit(30);
 
     // Aktuelle Ziele
@@ -80,13 +80,13 @@ export const generateCheckinDraft = createServerFn({ method: "POST" })
     // Letzte 14 Tage Food-Logs zusammengefasst
     const { data: foods } = await supabase
       .from("food_entries")
-      .select("logged_at, kcal, protein_g, carbs_g, fat_g")
+      .select("entry_date, kcal, protein_g, carbs_g, fat_g")
       .eq("user_id", target)
-      .gte("logged_at", since14);
+      .gte("entry_date", since14);
 
     const dayMap = new Map<string, { kcal: number; p: number; c: number; f: number }>();
     (foods ?? []).forEach((f: any) => {
-      const day = String(f.logged_at).slice(0, 10);
+      const day = String(f.entry_date).slice(0, 10);
       const m = dayMap.get(day) ?? { kcal: 0, p: 0, c: 0, f: 0 };
       m.kcal += Number(f.kcal ?? 0);
       m.p += Number(f.protein_g ?? 0);
