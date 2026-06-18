@@ -193,9 +193,31 @@ function CoachDashboard() {
           if (!lastCheckin.has(c.user_id)) lastCheckin.set(c.user_id, c.week_start);
         });
         const lastWeight = new Map<string, { w: number | null; at: string }>();
+        const weightsByUser = new Map<string, Array<{ w: number; at: string }>>();
         (measurements.data ?? []).forEach((m) => {
           if (!lastWeight.has(m.user_id))
             lastWeight.set(m.user_id, { w: m.weight_kg, at: m.measured_at });
+          if (m.weight_kg != null) {
+            const arr = weightsByUser.get(m.user_id) ?? [];
+            arr.push({ w: Number(m.weight_kg), at: m.measured_at });
+            weightsByUser.set(m.user_id, arr);
+          }
+        });
+        const nowMs = Date.now();
+        const plateauByUser = new Map<string, number>();
+        weightsByUser.forEach((series, uid) => {
+          if (series.length < 2) return;
+          const latest = series[0];
+          const olderRef = series.find((m) => {
+            const age = (nowMs - new Date(m.at).getTime()) / 86400000;
+            return age >= 10 && age <= 21;
+          });
+          if (olderRef && Math.abs(latest.w - olderRef.w) <= 0.3) {
+            plateauByUser.set(
+              uid,
+              Math.round((nowMs - new Date(olderRef.at).getTime()) / 86400000),
+            );
+          }
         });
         const lastFood = new Map<string, { at: string; name: string }>();
         (foods.data ?? []).forEach((f) => {
