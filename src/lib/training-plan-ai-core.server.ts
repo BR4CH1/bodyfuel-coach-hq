@@ -352,17 +352,19 @@ ${cp.mobility_focus ? `- Schwerpunkt: ${cp.mobility_focus}` : ""}
 ${weightTrendKg !== null ? `- Gewichtstrend: ${weightTrendKg > 0 ? "+" : ""}${weightTrendKg} kg` : ""}
 ${sessionsLast30 < 4 ? "→ Kunde trainiert selten — Plan etwas konservativer starten, Einstiegshürden niedrig halten." : ""}
 ${sessionsLast30 >= 12 ? "→ Hohe Trainingsfrequenz — Volumen darf höher liegen, mehr Akzessoires." : ""}`;
-  const startWeightsBlock = `\n💪 VORGESCHLAGENE STARTGEWICHTE (Woche 1, ~8 Wdh, runden auf 2,5 kg)
-- Bankdrücken / Brustpresse: ${startWeights.bench_press_kg ?? "?"} kg
-- Schulterdrücken: ${startWeights.shoulder_press_kg ?? "?"} kg
-- Kniebeuge (LH): ${startWeights.squat_kg ?? "?"} kg
-- Kreuzheben (LH): ${startWeights.deadlift_kg ?? "?"} kg
-- Latzug: ${startWeights.lat_pulldown_kg ?? "?"} kg
-- Kabelrudern: ${startWeights.row_kg ?? "?"} kg
-- Beinpresse: ${startWeights.leg_press_kg ?? "?"} kg
-- Beinbeuger: ${startWeights.leg_curl_kg ?? "?"} kg
+  const startWeightsBlock = `\n💪 STARTGEWICHTE — VERBINDLICH (Woche 1, RPE 7, runden auf 2,5 kg)
+Diese Werte stammen aus dem letzten Strength-Check (e1RM × 0,75) und sind eine HARTE OBERGRENZE für Woche 1. Niemals höher ansetzen — auch nicht für ähnliche Varianten derselben Übung (z. B. Brustpresse Maschine ≈ Bankdrücken). Progression: W2 +2,5–5 kg, W3 +2,5–5 kg (RPE 8–9), W4 Deload ≈ 85 % von W3.
+- Bankdrücken / Brustpresse (Maschine/LH/KH): MAX ${startWeights.bench_press_kg ?? "?"} kg (e1RM ${e1rm.chest_press ?? "?"} kg)
+- Schulterdrücken / Schulterpresse (alle Varianten): MAX ${startWeights.shoulder_press_kg ?? "?"} kg (e1RM ${e1rm.shoulder_press ?? "?"} kg)
+- Kniebeuge (LH): MAX ${startWeights.squat_kg ?? "?"} kg
+- Kreuzheben (LH): MAX ${startWeights.deadlift_kg ?? "?"} kg
+- Latzug (alle Griffe): MAX ${startWeights.lat_pulldown_kg ?? "?"} kg (e1RM ${e1rm.lat_pulldown ?? "?"} kg)
+- Rudern (Kabel/Maschine/LH/KH): MAX ${startWeights.row_kg ?? "?"} kg (e1RM ${e1rm.cable_row ?? "?"} kg)
+- Beinpresse: MAX ${startWeights.leg_press_kg ?? "?"} kg (e1RM ${e1rm.leg_press ?? "?"} kg)
+- Beinbeuger (liegend/sitzend): MAX ${startWeights.leg_curl_kg ?? "?"} kg (e1RM ${e1rm.leg_curl ?? "?"} kg)
 - Plank-Niveau: ${plankSeconds ? plankSeconds + "s" : "unbekannt"}
 
+Für Isolationen ohne Test-Daten (Bizeps-Curl, Trizeps, Seitheben, Reverse Fly, Wadenheben usw.): konservativ starten und am SCHWÄCHSTEN e1RM oben orientieren. Werte über den oben genannten MAX-Grenzen werden automatisch nach unten gekappt.
 Kurzhantel-Übungen: Gewicht PRO SEITE angeben. Langhantel/Maschinen: GESAMTGEWICHT.`;
 
   const prompt = `Erstelle einen INDIVIDUELLEN 4-WOCHEN-TRAININGSPLAN für ein Standard-Fitnessstudio.
