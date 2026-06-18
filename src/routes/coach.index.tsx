@@ -495,9 +495,13 @@ function CoachDashboard() {
             openCheckins={openWeek}
             expiringPlans={expiringPlans}
             redClients={redClients}
-            dismissed={dismissedTasks}
-            onToggle={toggleDismiss}
+            states={taskStateMap}
+            onAction={(task_key, action, snooze_hours) =>
+              mutateState.mutate({ task_key, action, snooze_hours })
+            }
+            mutating={mutateState.isPending}
           />
+
 
           <PendingDraftsCard
             redClients={redClients.map((c) => ({ id: c.id, display_name: c.display_name }))}
