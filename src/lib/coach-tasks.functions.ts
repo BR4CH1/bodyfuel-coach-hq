@@ -70,3 +70,46 @@ export const setCoachTaskState = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export const extendClientPlan = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (d: {
+      client_id: string;
+      kind: "nutrition" | "training";
+      weeks: number;
+    }) => d,
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    await assertCoach(supabase, userId);
+    const weeks = Math.max(1, Math.min(26, data.weeks));
+
+    const { data: plans, error: loadErr } = await supabase
+      .from("nutrition_plans")
+      .select("id, scheduled_end_date, weeks_count")
+      .eq("client_id", data.client_id)
+      .eq("plan_type", data.kind)
+      .eq("status", "active");
+    if (loadErr) throw new Error(loadErr.message);
+    if (!plans || plans.length === 0)
+      throw new Error("Kein aktiver Plan gefunden.");
+
+    const today = new Date();
+    let newEnd = "";
+    for (const p of plans) {
+      const base = p.scheduled_end_date ? new Date(p.scheduled_end_date) : today;
+      const ref = base.getTime() < today.getTime() ? today : base;
+      const next = new Date(ref.getTime() + weeks * 7 * 86400000);
+      newEnd = next.toISOString().slice(0, 10);
+      const { error: updErr } = await supabase
+        .from("nutrition_plans")
+        .update({
+          scheduled_end_date: newEnd,
+          weeks_count: (p.weeks_count ?? 0) + weeks,
+        })
+        .eq("id", p.id);
+      if (updErr) throw new Error(updErr.message);
+    }
+    return { ok: true, new_end: newEnd };
+  });
