@@ -79,8 +79,7 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
         .eq("user_id", target)
         .not("weight_kg", "is", null)
         .order("measured_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
+        .limit(30),
       supabase
         .from("nutrition_targets")
         .select("kcal, protein_g, carbs_g, fat_g, kcal_rest, protein_g_rest, carbs_g_rest, fat_g_rest")
