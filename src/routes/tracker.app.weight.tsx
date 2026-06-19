@@ -16,19 +16,20 @@ export const Route = createFileRoute("/tracker/app/weight")({
 function WeightPage() {
   const { supabaseUser } = useSession();
   const [weight, setWeight] = useState("");
-  const [history, setHistory] = useState<{ date: string; w: number }[]>([]);
+  const [history, setHistory] = useState<{ id: string; date: string; w: number }[]>([]);
 
   const load = async () => {
     if (!supabaseUser) return;
     const { data } = await supabase
       .from("body_measurements")
-      .select("weight_kg, measured_at")
+      .select("id, weight_kg, measured_at")
       .eq("user_id", supabaseUser.id)
       .not("weight_kg", "is", null)
       .order("measured_at", { ascending: false })
       .limit(30);
     setHistory(
       (data ?? []).map((r: any) => ({
+        id: r.id,
         date: new Date(r.measured_at).toLocaleDateString("de-DE"),
         w: Number(r.weight_kg),
       })),
@@ -49,6 +50,14 @@ function WeightPage() {
     if (error) return toast.error(error.message);
     toast.success("Gewicht gespeichert");
     setWeight("");
+    load();
+  };
+
+  const remove = async (id: string) => {
+    if (!confirm("Diesen Eintrag wirklich löschen?")) return;
+    const { error } = await supabase.from("body_measurements").delete().eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Eintrag gelöscht");
     load();
   };
 
