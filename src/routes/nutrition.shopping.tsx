@@ -133,6 +133,14 @@ function ShoppingListPage() {
     (acc[c] ??= []).push(it);
     return acc;
   }, {});
+  const catOrder = ["Obst & Gemüse", "Fleisch & Fisch", "Milchprodukte", "Getreide & Beilagen", "Vorrat & Gewürze", "Sonstiges"];
+  const groupedEntries = Object.entries(grouped)
+    .map(([cat, list]) => [cat, [...list].sort((a, b) => a.name.localeCompare(b.name, "de"))] as const)
+    .sort(([a], [b]) => {
+      const ia = catOrder.indexOf(a);
+      const ib = catOrder.indexOf(b);
+      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    });
 
   const hasAny = !!(data?.active || data?.next || partner || archive.length);
   const dateRange = formatDateRange(
