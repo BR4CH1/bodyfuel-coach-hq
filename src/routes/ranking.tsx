@@ -172,7 +172,7 @@ function RankingPage() {
                           {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : i + 1}
                         </td>
                         <td className="px-3 py-2.5 font-semibold">
-                          @{e.nickname}
+                          {e.nickname}
                           {isMe && <span className="ml-2 text-[10px] uppercase tracking-wider text-gold">Du</span>}
                         </td>
                         <td className="px-3 py-2.5 text-right font-display">{e.total_points}</td>
