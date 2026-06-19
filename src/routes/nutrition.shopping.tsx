@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ChevronLeft, ShoppingCart, Loader2, Printer, RefreshCw, ChevronDown, ChevronUp, CalendarRange } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
@@ -37,6 +37,44 @@ function ShoppingListPage() {
   const [partnerMode, setPartnerMode] = useState<PartnerMode>("mine");
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [showPlan, setShowPlan] = useState(false);
+
+  const checkedStorageKey = useMemo(() => {
+    const planId = periodScope === "active"
+      ? (data?.active as any)?.id
+      : periodScope === "next"
+        ? (data?.next as any)?.id
+        : periodScope.startsWith("archive:")
+          ? periodScope.slice("archive:".length)
+          : null;
+    if (!planId) return null;
+    return `bodyfuel.shopping.checked.${planId}.${partnerMode}`;
+  }, [periodScope, partnerMode, data]);
+
+  // Load persisted checked state when scope/plan/partnerMode changes
+  const loadedKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!checkedStorageKey) {
+      loadedKeyRef.current = null;
+      setChecked({});
+      return;
+    }
+    try {
+      const raw = localStorage.getItem(checkedStorageKey);
+      setChecked(raw ? JSON.parse(raw) : {});
+    } catch {
+      setChecked({});
+    }
+    loadedKeyRef.current = checkedStorageKey;
+  }, [checkedStorageKey]);
+
+  // Persist on change (only after load for current key has run)
+  useEffect(() => {
+    if (!checkedStorageKey) return;
+    if (loadedKeyRef.current !== checkedStorageKey) return;
+    try {
+      localStorage.setItem(checkedStorageKey, JSON.stringify(checked));
+    } catch {}
+  }, [checked, checkedStorageKey]);
 
   useEffect(() => {
     if (!data) return;
@@ -146,7 +184,6 @@ function ShoppingListPage() {
               value={periodScope}
               onChange={(e) => {
                 setPeriodScope(e.target.value as PeriodScope);
-                setChecked({});
                 setShowPlan(false);
               }}
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -185,14 +222,14 @@ function ShoppingListPage() {
               <div className="inline-flex w-full overflow-hidden rounded-md border border-input">
                 <button
                   type="button"
-                  onClick={() => { setPartnerMode("mine"); setChecked({}); }}
+                  onClick={() => { setPartnerMode("mine"); }}
                   className={`flex-1 px-3 py-2 text-sm font-semibold transition ${partnerMode === "mine" ? "bg-primary text-primary-foreground" : "bg-background text-foreground hover:bg-secondary"}`}
                 >
                   Meine Liste
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setPartnerMode("combined"); setChecked({}); }}
+                  onClick={() => { setPartnerMode("combined"); }}
                   className={`flex-1 px-3 py-2 text-sm font-semibold transition border-l border-input ${partnerMode === "combined" ? "bg-primary text-primary-foreground" : "bg-background text-foreground hover:bg-secondary"}`}
                 >
                   Gemeinsame Liste
