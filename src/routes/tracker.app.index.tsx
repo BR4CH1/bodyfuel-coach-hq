@@ -4,6 +4,7 @@ import { useSession } from "@/lib/bodyfuel/session";
 import { DailyChecklist } from "@/components/bodyfuel/DailyChecklist";
 import { AchievementsCard } from "@/components/bodyfuel/AchievementsCard";
 import { CoachingLockTeaser } from "@/components/bodyfuel/CoachingLockTeaser";
+import { RankingInvitePopup } from "@/components/bodyfuel/RankingInvitePopup";
 
 export const Route = createFileRoute("/tracker/app/")({
   head: () => ({ meta: [{ title: "Heute — BodyFuel Tracker" }] }),
