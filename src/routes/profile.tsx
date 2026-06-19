@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
@@ -20,6 +20,10 @@ import {
   MessageSquare,
   Check,
   Sparkles,
+  TrendingUp,
+  Ruler,
+  Camera,
+  ChevronRight,
 } from "lucide-react";
 import {
   createPackageRequest,
@@ -199,9 +203,18 @@ function ProfileContent() {
         <div className="text-xs uppercase tracking-[0.2em] text-gold">Mein Konto</div>
         <h1 className="mt-1 font-display text-3xl font-bold">Profil</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Deine Daten, dein Coaching und dein Account – alles an einem Ort.
+          Deine Daten, dein Fortschritt und dein Account – alles an einem Ort.
         </p>
       </header>
+
+      {/* Quick-Navigation zu Fortschritts-Bereichen */}
+      <section className="grid gap-3 sm:grid-cols-2">
+        <ProfileQuickLink to="/progress" icon={<TrendingUp className="h-5 w-5" />} title="Fortschritt" desc="Gewicht & Entwicklung" />
+        <ProfileQuickLink to="/measurements" icon={<Ruler className="h-5 w-5" />} title="Maße" desc="Körperfett, Umfänge, Muskel" />
+        <ProfileQuickLink to="/check-in" icon={<CalendarCheck className="h-5 w-5" />} title="Check-ins" desc="Wöchentliche Updates" />
+        <ProfileQuickLink to="/strength-check" icon={<Camera className="h-5 w-5" />} title="Fortschrittsfotos & Strength" desc="Fotos und Kraftwerte" />
+      </section>
+
 
       {/* Kundendaten */}
       <section className="rounded-2xl border border-border bg-card p-6">
@@ -714,5 +727,23 @@ function MyPackageSection({ pkg }: { pkg: Pkg | null }) {
         </DialogContent>
       </Dialog>
     </section>
+  );
+}
+
+function ProfileQuickLink({ to, icon, title, desc }: { to: string; icon: React.ReactNode; title: string; desc: string }) {
+  return (
+    <Link
+      to={to}
+      className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4 transition hover:border-gold/50"
+    >
+      <div className="flex items-center gap-3">
+        <div className="grid h-11 w-11 place-items-center rounded-xl bg-gold/15 text-gold">{icon}</div>
+        <div>
+          <div className="text-sm font-bold">{title}</div>
+          <div className="text-xs text-muted-foreground">{desc}</div>
+        </div>
+      </div>
+      <ChevronRight className="h-5 w-5 text-muted-foreground" />
+    </Link>
   );
 }

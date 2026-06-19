@@ -25,6 +25,7 @@ import { Route as ImpressumRouteImport } from './routes/impressum'
 import { Route as DatenschutzRouteImport } from './routes/datenschutz'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as DailyChecklistRouteImport } from './routes/daily-checklist'
+import { Route as CommunityRouteImport } from './routes/community'
 import { Route as CoachRouteImport } from './routes/coach'
 import { Route as CheckInRouteImport } from './routes/check-in'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -156,6 +157,11 @@ const DashboardRoute = DashboardRouteImport.update({
 const DailyChecklistRoute = DailyChecklistRouteImport.update({
   id: '/daily-checklist',
   path: '/daily-checklist',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CommunityRoute = CommunityRouteImport.update({
+  id: '/community',
+  path: '/community',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CoachRoute = CoachRouteImport.update({
@@ -435,6 +441,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/check-in': typeof CheckInRoute
   '/coach': typeof CoachRouteWithChildren
+  '/community': typeof CommunityRoute
   '/daily-checklist': typeof DailyChecklistRoute
   '/dashboard': typeof DashboardRoute
   '/datenschutz': typeof DatenschutzRoute
@@ -504,6 +511,7 @@ export interface FileRoutesByTo {
   '/achievements': typeof AchievementsRoute
   '/auth': typeof AuthRoute
   '/check-in': typeof CheckInRoute
+  '/community': typeof CommunityRoute
   '/daily-checklist': typeof DailyChecklistRoute
   '/dashboard': typeof DashboardRoute
   '/datenschutz': typeof DatenschutzRoute
@@ -572,6 +580,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/check-in': typeof CheckInRoute
   '/coach': typeof CoachRouteWithChildren
+  '/community': typeof CommunityRoute
   '/daily-checklist': typeof DailyChecklistRoute
   '/dashboard': typeof DashboardRoute
   '/datenschutz': typeof DatenschutzRoute
@@ -644,6 +653,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/check-in'
     | '/coach'
+    | '/community'
     | '/daily-checklist'
     | '/dashboard'
     | '/datenschutz'
@@ -713,6 +723,7 @@ export interface FileRouteTypes {
     | '/achievements'
     | '/auth'
     | '/check-in'
+    | '/community'
     | '/daily-checklist'
     | '/dashboard'
     | '/datenschutz'
@@ -780,6 +791,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/check-in'
     | '/coach'
+    | '/community'
     | '/daily-checklist'
     | '/dashboard'
     | '/datenschutz'
@@ -851,6 +863,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   CheckInRoute: typeof CheckInRoute
   CoachRoute: typeof CoachRouteWithChildren
+  CommunityRoute: typeof CommunityRoute
   DailyChecklistRoute: typeof DailyChecklistRoute
   DashboardRoute: typeof DashboardRoute
   DatenschutzRoute: typeof DatenschutzRoute
@@ -1005,6 +1018,13 @@ declare module '@tanstack/react-router' {
       path: '/daily-checklist'
       fullPath: '/daily-checklist'
       preLoaderRoute: typeof DailyChecklistRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/community': {
+      id: '/community'
+      path: '/community'
+      fullPath: '/community'
+      preLoaderRoute: typeof CommunityRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/coach': {
@@ -1464,6 +1484,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   CheckInRoute: CheckInRoute,
   CoachRoute: CoachRouteWithChildren,
+  CommunityRoute: CommunityRoute,
   DailyChecklistRoute: DailyChecklistRoute,
   DashboardRoute: DashboardRoute,
   DatenschutzRoute: DatenschutzRoute,

@@ -2,9 +2,6 @@ import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import {
   LayoutDashboard,
-  CheckSquare,
-  Scale,
-  TrendingUp,
   FileText,
   Dumbbell,
   Trophy,
@@ -22,11 +19,9 @@ import { ReviewPrompt } from "./ReviewPrompt";
 
 const clientNav = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/measurements", label: "Maße", icon: Scale },
   { to: "/nutrition", label: "Ernährung", icon: FileText },
   { to: "/training", label: "Training", icon: Dumbbell },
-  { to: "/achievements", label: "Erfolge", icon: Trophy },
-  { to: "/ranking", label: "Ranking", icon: Users },
+  { to: "/community", label: "Community", icon: Users },
   { to: "/profile", label: "Profil", icon: UserCircle },
 ];
 
