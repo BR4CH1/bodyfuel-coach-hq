@@ -31,41 +31,41 @@ function ShoppingListPage() {
     queryFn: () => getFn(),
   });
 
-  type Scope = "active" | "next" | "partner" | "combined" | `archive:${string}`;
-  const [scope, setScope] = useState<Scope>("active");
+  type PeriodScope = "active" | "next" | `archive:${string}`;
+  type PartnerMode = "mine" | "combined";
+  const [periodScope, setPeriodScope] = useState<PeriodScope>("active");
+  const [partnerMode, setPartnerMode] = useState<PartnerMode>("mine");
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [showPlan, setShowPlan] = useState(false);
 
   useEffect(() => {
     if (!data) return;
-    if (!data.active && data.next) setScope("next");
-    else if (data.active && !data.next) setScope("active");
+    if (!data.active && data.next) setPeriodScope("next");
+    else if (data.active && !data.next) setPeriodScope("active");
   }, [data]);
 
   const partner = (data as any)?.partner;
   const archive = (data?.archive ?? []) as any[];
 
   const selected = useMemo(() => {
-    if (scope === "active") return data?.active ?? null;
-    if (scope === "next") return data?.next ?? null;
-    if (scope === "partner") return partner?.plan ?? null;
-    if (scope === "combined") return data?.active ?? data?.next ?? null;
-    if (scope.startsWith("archive:")) {
-      const id = scope.slice("archive:".length);
+    if (periodScope === "active") return data?.active ?? null;
+    if (periodScope === "next") return data?.next ?? null;
+    if (periodScope.startsWith("archive:")) {
+      const id = periodScope.slice("archive:".length);
       return archive.find((p) => p.id === id) ?? null;
     }
     return null;
-  }, [scope, data, partner, archive]);
+  }, [periodScope, data, archive]);
 
-  const items: Item[] =
-    scope === "combined"
-      ? (((data?.active as any)?.combined?.items ?? (data?.next as any)?.combined?.items ?? []) as Item[])
-      : scope === "partner"
-        ? ((partner?.list?.items as Item[]) ?? [])
-        : (((selected as any)?.list?.items as Item[]) ?? []);
+  const isArchive = periodScope.startsWith("archive:");
+  const useCombined = !!partner && partnerMode === "combined" && !isArchive;
 
-  // Plan content fetch — only for current/next/partner/archive (not combined)
-  const planIdForView = scope === "combined" ? null : (selected as any)?.id ?? null;
+  const items: Item[] = useCombined
+    ? (((selected as any)?.combined?.items ?? []) as Item[])
+    : (((selected as any)?.list?.items as Item[]) ?? []);
+
+  // Plan content fetch
+  const planIdForView = (selected as any)?.id ?? null;
   const { data: planContent, isFetching: planLoading } = useQuery({
     queryKey: ["plan-content", planIdForView],
     queryFn: () => planFn({ data: { plan_id: planIdForView as string } }),
@@ -79,7 +79,7 @@ function ShoppingListPage() {
         data: {
           plan_id: (selected as any)?.id,
           force: true,
-          scope: scope === "combined" ? "combined" : "individual",
+          scope: useCombined ? "combined" : "individual",
         },
       }),
     onSuccess: () => {
@@ -114,11 +114,11 @@ function ShoppingListPage() {
       <div>
         <h1 className="font-display text-2xl font-bold">Einkaufsliste</h1>
         <p className="text-sm text-muted-foreground">
-          {scope === "active"
+          {periodScope === "active"
             ? "Gültig bis zum nächsten Einkaufstag."
-            : scope === "next"
+            : periodScope === "next"
               ? "Vorab — gültig ab Plan-Start."
-              : scope.startsWith("archive:")
+              : isArchive
                 ? "Archivierte Liste — nur zur Ansicht."
                 : "Gültig ab dem nächsten Einkaufstag."}
         </p>
@@ -136,60 +136,77 @@ function ShoppingListPage() {
       )}
 
       {hasAny && (
-        <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="space-y-1 flex-1 min-w-[16rem]">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Zeitraum
-              </label>
-              <select
-                value={scope}
-                onChange={(e) => {
-                  setScope(e.target.value as Scope);
-                  setChecked({});
-                  setShowPlan(false);
-                }}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              >
-                <option value="active" disabled={!data?.active}>
-                  Aktuell {data?.active && formatDateRange((data.active as any).scheduled_start_date, (data.active as any).scheduled_end_date)
-                    ? `(${formatDateRange((data.active as any).scheduled_start_date, (data.active as any).scheduled_end_date)})`
-                    : data?.active ? "" : "(keine)"}
-                </option>
-                <option value="next" disabled={!data?.next}>
-                  Nächste {data?.next && formatDateRange((data.next as any).scheduled_start_date, (data.next as any).scheduled_end_date)
-                    ? `(${formatDateRange((data.next as any).scheduled_start_date, (data.next as any).scheduled_end_date)})`
-                    : data?.next ? "" : "(keine)"}
-                </option>
-                {partner && (
-                  <option value="partner" disabled={!partner.plan}>
-                    Partner ({partner.name}){partner.plan ? "" : " (keine)"}
-                  </option>
-                )}
-                {partner && (
-                  <option
-                    value="combined"
-                    disabled={!(data?.active || data?.next)}
-                  >
-                    Gemeinsame Einkaufsliste
-                  </option>
-                )}
-                {archive.length > 0 && (
-                  <optgroup label="Archiv">
-                    {archive.map((p) => {
-                      const r = formatDateRange(p.scheduled_start_date, p.scheduled_end_date);
-                      return (
-                        <option key={p.id} value={`archive:${p.id}`}>
-                          {r ?? p.title}
-                        </option>
-                      );
-                    })}
-                  </optgroup>
-                )}
-              </select>
-            </div>
+        <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
+          {/* Zeitraum (Datum) */}
+          <div className="space-y-1">
+            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Zeitraum
+            </label>
+            <select
+              value={periodScope}
+              onChange={(e) => {
+                setPeriodScope(e.target.value as PeriodScope);
+                setChecked({});
+                setShowPlan(false);
+              }}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              <option value="active" disabled={!data?.active}>
+                {data?.active
+                  ? `Aktuell${formatDateRange((data.active as any).scheduled_start_date, (data.active as any).scheduled_end_date) ? ` — ${formatDateRange((data.active as any).scheduled_start_date, (data.active as any).scheduled_end_date)}` : ""}`
+                  : "Aktuell (keine)"}
+              </option>
+              <option value="next" disabled={!data?.next}>
+                {data?.next
+                  ? `Nächste${formatDateRange((data.next as any).scheduled_start_date, (data.next as any).scheduled_end_date) ? ` — ${formatDateRange((data.next as any).scheduled_start_date, (data.next as any).scheduled_end_date)}` : ""}`
+                  : "Nächste (keine)"}
+              </option>
+              {archive.length > 0 && (
+                <optgroup label="Archiv">
+                  {archive.map((p) => {
+                    const r = formatDateRange(p.scheduled_start_date, p.scheduled_end_date);
+                    return (
+                      <option key={p.id} value={`archive:${p.id}`}>
+                        {r ?? p.title}
+                      </option>
+                    );
+                  })}
+                </optgroup>
+              )}
+            </select>
+          </div>
 
-            {scope !== "combined" && !scope.startsWith("archive:") && (
+          {/* Partner-Modus */}
+          {partner && !isArchive && (
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Partnerprogramm
+              </label>
+              <div className="inline-flex w-full overflow-hidden rounded-md border border-input">
+                <button
+                  type="button"
+                  onClick={() => { setPartnerMode("mine"); setChecked({}); }}
+                  className={`flex-1 px-3 py-2 text-sm font-semibold transition ${partnerMode === "mine" ? "bg-primary text-primary-foreground" : "bg-background text-foreground hover:bg-secondary"}`}
+                >
+                  Meine Liste
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setPartnerMode("combined"); setChecked({}); }}
+                  className={`flex-1 px-3 py-2 text-sm font-semibold transition border-l border-input ${partnerMode === "combined" ? "bg-primary text-primary-foreground" : "bg-background text-foreground hover:bg-secondary"}`}
+                >
+                  Gemeinsame Liste
+                </button>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Partner: {partner.name}
+              </p>
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex flex-wrap items-center gap-3">
+            {!isArchive && (
               <Button
                 onClick={() => gen.mutate()}
                 disabled={gen.isPending || !selected}
@@ -228,7 +245,7 @@ function ShoppingListPage() {
       )}
 
       {/* Plan anzeigen dropdown */}
-      {selected && scope !== "combined" && (
+      {selected && (
         <div className="rounded-2xl border border-border bg-card">
           <button
             onClick={() => setShowPlan((v) => !v)}
@@ -250,13 +267,13 @@ function ShoppingListPage() {
         </div>
       )}
 
-      {hasAny && selected && !items.length && !gen.isPending && !scope.startsWith("archive:") && (
+      {hasAny && selected && !items.length && !gen.isPending && !isArchive && (
         <div className="rounded-2xl border border-dashed border-border bg-card/50 p-5 text-sm text-muted-foreground">
           Noch keine Liste für diesen Plan — klicke „Liste erstellen".
         </div>
       )}
 
-      {scope.startsWith("archive:") && !items.length && (
+      {isArchive && !items.length && (
         <div className="rounded-2xl border border-dashed border-border bg-card/50 p-5 text-sm text-muted-foreground">
           Für diesen archivierten Plan wurde keine Einkaufsliste gespeichert.
         </div>
@@ -267,7 +284,7 @@ function ShoppingListPage() {
           <h2 className="mb-3 font-display text-base font-bold">{cat}</h2>
           <ul className="space-y-2">
             {list.map((it, i) => {
-              const k = `${scope}-${cat}-${i}-${it.name}`;
+              const k = `${periodScope}-${partnerMode}-${cat}-${i}-${it.name}`;
               return (
                 <li key={k} className="flex items-center gap-3">
                   <input
