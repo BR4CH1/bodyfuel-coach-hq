@@ -15,6 +15,7 @@ const baseNav: FreeNavItem[] = [
   { to: "/tracker/app/water", label: "Wasser", icon: Droplet, desktopOnly: true },
   { to: "/tracker/app/activity", label: "Aktivität", icon: Footprints, desktopOnly: true },
   { to: "/tracker/app/achievements", label: "Erfolge", icon: Trophy },
+  { to: "/ranking", label: "Ranking", icon: Crown },
   { to: "/tracker/app/profile", label: "Profil", icon: User, desktopOnly: true },
 ];
 
