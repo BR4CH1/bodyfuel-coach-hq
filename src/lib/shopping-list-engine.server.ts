@@ -13,46 +13,114 @@ type ShoppingItem = { name: string; quantity: string; category: string };
 function normalizeIngredientName(name: string) {
   return name
     .replace(/\([^)]*\)/g, "")
-    .replace(/\b(ca\.|ungekocht|gekocht|roh|trocken|light|fettarm|zuckerarm|magere?r?)\b/gi, "")
-    .replace(/\s+als\s+(dip|topping|beilage|snack)\b.*/gi, "")
+    .replace(/\b(ca\.|ungekocht|gekocht|gegart|gebraten|gedünstet|roh|trocken|frisch|tiefgekühlt|tk|light|fettarm|zuckerarm|magere?r?|natur|pur|optional)\b/gi, "")
+    .replace(/\s+als\s+(dip|topping|beilage|snack|garnitur)\b.*/gi, "")
+    .replace(/\s+(zum|zur|für|mit|nach\s+geschmack|nach\s+belieben)\b.*/gi, "")
+    .replace(/^[-•·]\s*/, "")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function titleCase(s: string) {
+  if (!s) return s;
+  return s.charAt(0).toLocaleUpperCase("de-DE") + s.slice(1);
 }
 
 /** Canonical key + display for merging duplicates ("Skyr"/"Skyr als Dip", "Reis (gekocht)"/"Reis"). */
 function canonicalize(rawName: string): { key: string; display: string } {
   let n = normalizeIngredientName(rawName);
-  n = n.replace(/^\d+(?:[,.]\d+)?\s*(stk\.?|stück|scheiben|el|tl|kg|g|ml|l)?\s+/i, "").trim();
+  n = n.replace(/^\d+(?:[,.]\d+)?\s*(stk\.?|stück|scheiben|el|tl|kg|g|ml|l|prise|hand\s*voll)?\s+/i, "").trim();
+  n = n.replace(/^(eine?|ein|der|die|das|etwas|frische?r?|frisches?)\s+/i, "").trim();
   const lower = n.toLowerCase();
   const synonyms: Array<[RegExp, string]> = [
     [/^skyr\b.*/, "Skyr"],
     [/^reis\b.*/, "Reis"],
-    [/^nudeln?\b.*/, "Nudeln"],
+    [/^basmati(reis)?\b.*/, "Reis"],
+    [/^jasmin(reis)?\b.*/, "Reis"],
+    [/^(vollkorn)?nudeln?\b.*/, "Nudeln"],
     [/^spaghetti\b.*/, "Nudeln"],
+    [/^penne\b.*/, "Nudeln"],
+    [/^fusilli\b.*/, "Nudeln"],
     [/^kartoffeln?\b.*/, "Kartoffeln"],
     [/^süßkartoffeln?\b.*/, "Süßkartoffeln"],
+    [/^suesskartoffeln?\b.*/, "Süßkartoffeln"],
     [/^haferflocken\b.*/, "Haferflocken"],
     [/^müsli\b.*/, "Müsli"],
+    [/^muesli\b.*/, "Müsli"],
     [/^magerquark\b.*/, "Magerquark"],
+    [/^(körniger\s+)?(frisch)?käse\b.*/, "Käse"],
+    [/^hüttenkäse\b.*/, "Hüttenkäse"],
+    [/^huettenkaese\b.*/, "Hüttenkäse"],
     [/^(griechischer\s+)?joghurt\b.*/, "Griechischer Joghurt"],
     [/^proteinpudding\b.*/, "Proteinpudding"],
+    [/^protein(shake|pulver|riegel)?\b.*/, "Proteinpulver"],
+    [/^whey\b.*/, "Proteinpulver"],
     [/^eier?\b.*/, "Eier"],
-    [/^hähnchen(brust)?\b.*/, "Hähnchenbrust"],
-    [/^pute(nbrust)?\b.*/, "Putenbrust"],
-    [/^lachs\b.*/, "Lachs"],
+    [/^eiweiß\b.*/, "Eier"],
+    [/^hähnchen(brust|filet)?\b.*/, "Hähnchenbrust"],
+    [/^haehnchen(brust|filet)?\b.*/, "Hähnchenbrust"],
+    [/^pute(nbrust|nfilet)?\b.*/, "Putenbrust"],
+    [/^(rinder|puten|hähnchen)?hack(fleisch)?\b.*/, "Hackfleisch"],
+    [/^lachs(filet)?\b.*/, "Lachs"],
     [/^thunfisch\b.*/, "Thunfisch"],
+    [/^garnelen\b.*/, "Garnelen"],
     [/^vollkornbrot\b.*/, "Vollkornbrot"],
+    [/^(eiweiß|protein)brot\b.*/, "Eiweißbrot"],
     [/^reiswaffeln?\b.*/, "Reiswaffeln"],
-    [/^käse\b.*/, "Käse"],
     [/^feta\b.*/, "Feta"],
+    [/^mozzarella\b.*/, "Mozzarella"],
+    [/^parmesan\b.*/, "Parmesan"],
     [/^butter\b.*/, "Butter"],
     [/^olivenöl\b.*/, "Olivenöl"],
+    [/^oliven[öo]l\b.*/, "Olivenöl"],
     [/^rapsöl\b.*/, "Rapsöl"],
+    [/^kokos[öo]l\b.*/, "Kokosöl"],
+    [/^milch\b.*/, "Milch"],
+    [/^hafermilch\b.*/, "Hafermilch"],
+    [/^mandelmilch\b.*/, "Mandelmilch"],
+    [/^bananen?\b.*/, "Bananen"],
+    [/^[äa]pfel\b.*/, "Äpfel"],
+    [/^heidelbeeren?\b.*/, "Heidelbeeren"],
+    [/^erdbeeren?\b.*/, "Erdbeeren"],
+    [/^himbeeren?\b.*/, "Himbeeren"],
+    [/^beeren\b.*/, "Beeren"],
+    [/^brokkoli\b.*/, "Brokkoli"],
+    [/^blumenkohl\b.*/, "Blumenkohl"],
+    [/^(karotten?|möhren?|moehren?)\b.*/, "Karotten"],
+    [/^paprika\b.*/, "Paprika"],
+    [/^tomaten?\b.*/, "Tomaten"],
+    [/^kirschtomaten?\b.*/, "Kirschtomaten"],
+    [/^gurken?\b.*/, "Gurke"],
+    [/^zwiebeln?\b.*/, "Zwiebeln"],
+    [/^knoblauch\b.*/, "Knoblauch"],
+    [/^spinat\b.*/, "Spinat"],
+    [/^salat\b.*/, "Salat"],
+    [/^avocados?\b.*/, "Avocado"],
+    [/^zucchini\b.*/, "Zucchini"],
+    [/^aubergine\b.*/, "Aubergine"],
+    [/^mandeln?\b.*/, "Mandeln"],
+    [/^walnüsse|^walnuesse|^walnuss\b.*/, "Walnüsse"],
+    [/^cashews?\b.*/, "Cashews"],
+    [/^erdnüsse|^erdnuesse|^erdnuss\b.*/, "Erdnüsse"],
+    [/^(erdnuss|mandel)mus\b.*/, "Nussmus"],
+    [/^honig\b.*/, "Honig"],
+    [/^ahornsirup\b.*/, "Ahornsirup"],
+    [/^tortillas?\b.*|^wraps?\b.*/, "Wraps"],
+    [/^couscous\b.*/, "Couscous"],
+    [/^quinoa\b.*/, "Quinoa"],
+    [/^linsen\b.*/, "Linsen"],
+    [/^kichererbsen\b.*/, "Kichererbsen"],
+    [/^bohnen\b.*/, "Bohnen"],
+    [/^pesto\b.*/, "Pesto"],
+    [/^senf\b.*/, "Senf"],
+    [/^ketchup\b.*/, "Ketchup"],
+    [/^salz\b.*/, "Salz"],
+    [/^pfeffer\b.*/, "Pfeffer"],
   ];
   for (const [re, label] of synonyms) {
     if (re.test(lower)) return { key: label.toLowerCase(), display: label };
   }
-  return { key: lower, display: n };
+  return { key: lower, display: titleCase(n) };
 }
 
 function parseQuantity(q: string): { amount: number; unit: string } | null {
