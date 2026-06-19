@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Barcode, Plus, Trash2, Droplet, Loader2, Star, ChefHat } from "lucide-react";
+import { Barcode, Plus, Trash2, Droplet, Loader2, Star, ChefHat, Sparkles } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
