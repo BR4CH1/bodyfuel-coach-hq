@@ -3,10 +3,24 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { ChevronLeft, ShoppingCart, Loader2, Printer, RefreshCw, ChevronDown, ChevronUp, CalendarRange } from "lucide-react";
+import {
+  ChevronLeft,
+  ShoppingCart,
+  Loader2,
+  Printer,
+  RefreshCw,
+  ChevronDown,
+  ChevronUp,
+  CalendarRange,
+} from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { Button } from "@/components/ui/button";
-import { generateShoppingList, getMyShoppingLists, getPlanContent, setShoppingItemChecked } from "@/lib/shopping-list.functions";
+import {
+  generateShoppingList,
+  getMyShoppingLists,
+  getPlanContent,
+  setShoppingItemChecked,
+} from "@/lib/shopping-list.functions";
 import { formatDateRange } from "@/lib/format-date-range";
 
 export const Route = createFileRoute("/nutrition/shopping")({
@@ -25,7 +39,10 @@ function shoppingItemKey(name: string) {
     .replace(/\([^)]*\)/g, "")
     .replace(/:\s*\d+(?:[,.]\d+)?\s*(kg|g|ml|l|stk\.?|stück)?\s*$/i, "")
     .replace(/:\s*$/g, "")
-    .replace(/\b(ca\.|ungekocht|gekocht|gegart|gebraten|gedünstet|roh|trocken|frisch|tiefgekühlt|tk|light|fettarm|zuckerarm|magere?r?|natur|pur|optional)\b/gi, "")
+    .replace(
+      /\b(ca\.|ungekocht|gekocht|gegart|gebraten|gedünstet|roh|trocken|frisch|tiefgekühlt|tk|light|fettarm|zuckerarm|magere?r?|natur|pur|optional)\b/gi,
+      "",
+    )
     .replace(/^[-•·]\s*/, "")
     .replace(/^(eine?|ein|der|die|das|etwas|frische?r?|frisches?)\s+/i, "")
     .replace(/\s+/g, " ")
@@ -33,7 +50,13 @@ function shoppingItemKey(name: string) {
     .toLowerCase();
   if (/^paprikapulver\b/.test(clean)) return "paprikapulver";
   if (/^paprikaschoten?\b/.test(clean) || /^paprika\b/.test(clean)) return "paprika";
-  if (/^hähnchen(brust)?filet\b/.test(clean) || /^haehnchen(brust)?filet\b/.test(clean) || /^hähnchen(brust)?\b/.test(clean) || /^haehnchen(brust)?\b/.test(clean)) return "hähnchenbrust";
+  if (
+    /^hähnchen(brust)?filet\b/.test(clean) ||
+    /^haehnchen(brust)?filet\b/.test(clean) ||
+    /^hähnchen(brust)?\b/.test(clean) ||
+    /^haehnchen(brust)?\b/.test(clean)
+  )
+    return "hähnchenbrust";
   return clean;
 }
 
@@ -107,27 +130,45 @@ function ShoppingListPage() {
   });
 
   const setItemChecked = useMutation({
-    mutationFn: (payload: { itemKey: string; checked: boolean }) => setCheckedFn({
-      data: {
-        plan_id: (selected as any)?.id,
-        scope: useCombined ? "combined" : "individual",
-        item_key: payload.itemKey,
-        checked: payload.checked,
-      },
-    }),
+    mutationFn: (payload: { itemKey: string; checked: boolean }) =>
+      setCheckedFn({
+        data: {
+          plan_id: (selected as any)?.id,
+          scope: useCombined ? "combined" : "individual",
+          item_key: payload.itemKey,
+          checked: payload.checked,
+        },
+      }),
     onMutate: async ({ itemKey, checked }) => {
       await qc.cancelQueries({ queryKey: ["my-shopping-lists"] });
       const previous = qc.getQueryData(["my-shopping-lists"]);
       qc.setQueryData(["my-shopping-lists"], (old: any) => {
-        const patchList = (list: any) => list ? {
-          ...list,
-          items: (list.items ?? []).map((item: Item) => shoppingItemKey(item.name) === itemKey ? { ...item, checked } : item),
-        } : list;
-        const patchPlan = (plan: any) => plan ? {
-          ...plan,
-          [useCombined ? "combined" : "list"]: patchList(plan[useCombined ? "combined" : "list"]),
-        } : plan;
-        return old ? { ...old, active: patchPlan(old.active), next: patchPlan(old.next), archive: (old.archive ?? []).map(patchPlan) } : old;
+        const patchList = (list: any) =>
+          list
+            ? {
+                ...list,
+                items: (list.items ?? []).map((item: Item) =>
+                  shoppingItemKey(item.name) === itemKey ? { ...item, checked } : item,
+                ),
+              }
+            : list;
+        const patchPlan = (plan: any) =>
+          plan
+            ? {
+                ...plan,
+                [useCombined ? "combined" : "list"]: patchList(
+                  plan[useCombined ? "combined" : "list"],
+                ),
+              }
+            : plan;
+        return old
+          ? {
+              ...old,
+              active: patchPlan(old.active),
+              next: patchPlan(old.next),
+              archive: (old.archive ?? []).map(patchPlan),
+            }
+          : old;
       });
       return { previous };
     },
@@ -143,9 +184,18 @@ function ShoppingListPage() {
     (acc[c] ??= []).push(it);
     return acc;
   }, {});
-  const catOrder = ["Obst & Gemüse", "Fleisch & Fisch", "Milchprodukte", "Getreide & Beilagen", "Vorrat & Gewürze", "Sonstiges"];
+  const catOrder = [
+    "Obst & Gemüse",
+    "Fleisch & Fisch",
+    "Milchprodukte",
+    "Getreide & Beilagen",
+    "Vorrat & Gewürze",
+    "Sonstiges",
+  ];
   const groupedEntries = Object.entries(grouped)
-    .map(([cat, list]) => [cat, [...list].sort((a, b) => a.name.localeCompare(b.name, "de"))] as const)
+    .map(
+      ([cat, list]) => [cat, [...list].sort((a, b) => a.name.localeCompare(b.name, "de"))] as const,
+    )
     .sort(([a], [b]) => {
       const ia = catOrder.indexOf(a);
       const ib = catOrder.indexOf(b);
@@ -180,14 +230,12 @@ function ShoppingListPage() {
         </p>
       </div>
 
-      {isLoading && (
-        <div className="text-sm text-muted-foreground">Lade…</div>
-      )}
+      {isLoading && <div className="text-sm text-muted-foreground">Lade…</div>}
 
       {!isLoading && !hasAny && (
         <div className="rounded-2xl border border-border bg-card p-5 text-sm text-muted-foreground">
-          Noch kein Plan vorhanden. Sobald dein Coach einen Plan freigibt,
-          erscheint hier deine Einkaufsliste.
+          Noch kein Plan vorhanden. Sobald dein Coach einen Plan freigibt, erscheint hier deine
+          Einkaufsliste.
         </div>
       )}
 
@@ -240,22 +288,24 @@ function ShoppingListPage() {
               <div className="inline-flex w-full overflow-hidden rounded-md border border-input">
                 <button
                   type="button"
-                  onClick={() => { setPartnerMode("mine"); }}
+                  onClick={() => {
+                    setPartnerMode("mine");
+                  }}
                   className={`flex-1 px-3 py-2 text-sm font-semibold transition ${partnerMode === "mine" ? "bg-primary text-primary-foreground" : "bg-background text-foreground hover:bg-secondary"}`}
                 >
                   Meine Liste
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setPartnerMode("combined"); }}
+                  onClick={() => {
+                    setPartnerMode("combined");
+                  }}
                   className={`flex-1 px-3 py-2 text-sm font-semibold transition border-l border-input ${partnerMode === "combined" ? "bg-primary text-primary-foreground" : "bg-background text-foreground hover:bg-secondary"}`}
                 >
                   Gemeinsame Liste
                 </button>
               </div>
-              <p className="text-[11px] text-muted-foreground">
-                Partner: {partner.name}
-              </p>
+              <p className="text-[11px] text-muted-foreground">Partner: {partner.name}</p>
             </div>
           )}
 
@@ -268,11 +318,17 @@ function ShoppingListPage() {
                 className="bg-gradient-gold text-primary-foreground"
               >
                 {gen.isPending ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generiere…</>
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generiere…
+                  </>
                 ) : items.length ? (
-                  <><RefreshCw className="mr-2 h-4 w-4" /> Neu berechnen</>
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4" /> Neu berechnen
+                  </>
                 ) : (
-                  <><ShoppingCart className="mr-2 h-4 w-4" /> Liste erstellen</>
+                  <>
+                    <ShoppingCart className="mr-2 h-4 w-4" /> Liste erstellen
+                  </>
                 )}
               </Button>
             )}
@@ -306,17 +362,13 @@ function ShoppingListPage() {
             onClick={() => setShowPlan((v) => !v)}
             className="flex w-full items-center justify-between p-5 text-left"
           >
-            <span className="font-display text-base font-bold">
-              Plan zu dieser Liste anzeigen
-            </span>
+            <span className="font-display text-base font-bold">Plan zu dieser Liste anzeigen</span>
             {showPlan ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
           </button>
           {showPlan && (
             <div className="border-t border-border p-5 space-y-4">
               {planLoading && <p className="text-sm text-muted-foreground">Lade Plan…</p>}
-              {!planLoading && planContent && (
-                <PlanContentInline plan={planContent} />
-              )}
+              {!planLoading && planContent && <PlanContentInline plan={planContent} />}
             </div>
           )}
         </div>

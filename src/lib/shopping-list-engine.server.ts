@@ -254,9 +254,12 @@ function categoryFor(name: string) {
   const n = name.toLowerCase();
   if (/hähnchen|pute|rind|hack|filet|fisch|lachs|thunfisch/.test(n)) return "Fleisch & Fisch";
   if (/skyr|quark|joghurt|käse|feta|whey|proteinpudding|eier?/.test(n)) return "Milchprodukte";
-  if (/reis|nudel|kartoffel|brot|tortilla|hafer|müsli|reiswaffel|süßkartoffel/.test(n)) return "Getreide & Beilagen";
-  if (/paprikapulver|öl|butter|nuss|nüss|mandel|cashew|walnuss|erdnuss|kern|kokosmilch/.test(n)) return "Vorrat & Gewürze";
-  if (/salat|gemüse|brokkoli|karotte|paprika|spargel|beeren|erdbeer|banane|apfel/.test(n)) return "Obst & Gemüse";
+  if (/reis|nudel|kartoffel|brot|tortilla|hafer|müsli|reiswaffel|süßkartoffel/.test(n))
+    return "Getreide & Beilagen";
+  if (/paprikapulver|öl|butter|nuss|nüss|mandel|cashew|walnuss|erdnuss|kern|kokosmilch/.test(n))
+    return "Vorrat & Gewürze";
+  if (/salat|gemüse|brokkoli|karotte|paprika|spargel|beeren|erdbeer|banane|apfel/.test(n))
+    return "Obst & Gemüse";
   return "Sonstiges";
 }
 
@@ -307,9 +310,7 @@ function fallbackItemsFromLines(lines: string[]): ShoppingItem[] {
         .replace(/^stk\.?$/i, "Stück");
       let name = normalizeIngredientName(match ? (match[3] ?? "") : normalizedPart);
       if (/^gemüse$/i.test(name)) {
-        name = part.includes("(")
-          ? part.replace(/^\d+(?:[,.]\d+)?\s*(kg|g|ml|l)?\s*/i, "")
-          : name;
+        name = part.includes("(") ? part.replace(/^\d+(?:[,.]\d+)?\s*(kg|g|ml|l)?\s*/i, "") : name;
       }
       if (/^eier?$/i.test(unit) && !name) {
         name = "Eier";
@@ -332,7 +333,7 @@ function fallbackItemsFromLines(lines: string[]): ShoppingItem[] {
 function extractItems(parsed: any): ShoppingItem[] {
   const candidate = Array.isArray(parsed)
     ? parsed
-    : parsed?.items ?? parsed?.shopping_list ?? parsed?.einkaufsliste ?? parsed?.list ?? [];
+    : (parsed?.items ?? parsed?.shopping_list ?? parsed?.einkaufsliste ?? parsed?.list ?? []);
   return (Array.isArray(candidate) ? candidate : [])
     .map((item: any) => {
       let name = String(item?.name ?? item?.ingredient ?? item?.zutat ?? "").trim();
@@ -342,7 +343,13 @@ function extractItems(parsed: any): ShoppingItem[] {
         name = "Eier";
         quantity = `${egg[1]} Stück`;
       }
-      return { name, quantity, category: String(item?.category ?? item?.kategorie ?? categoryFor(name)).trim() || categoryFor(name) };
+      return {
+        name,
+        quantity,
+        category:
+          String(item?.category ?? item?.kategorie ?? categoryFor(name)).trim() ||
+          categoryFor(name),
+      };
     })
     .filter((item) => item.name);
 }
@@ -361,10 +368,16 @@ async function fetchMealLines(planId: string, windowDays: number): Promise<strin
     .in("day_id", dayIds)
     .order("sort_order");
   const dayOrder = new Map(dayIds.map((id, index) => [id, index]));
-  return (meals ?? []).sort((a: any, b: any) => (dayOrder.get(a.day_id) ?? 0) - (dayOrder.get(b.day_id) ?? 0) || (a.sort_order ?? 0) - (b.sort_order ?? 0)).map((m: any) => {
-    const ing = (m.recipe_ingredients ?? []).join(", ");
-    return `- ${m.name}${ing ? " | Zutaten: " + ing : m.description ? " | " + m.description : ""}`;
-  });
+  return (meals ?? [])
+    .sort(
+      (a: any, b: any) =>
+        (dayOrder.get(a.day_id) ?? 0) - (dayOrder.get(b.day_id) ?? 0) ||
+        (a.sort_order ?? 0) - (b.sort_order ?? 0),
+    )
+    .map((m: any) => {
+      const ing = (m.recipe_ingredients ?? []).join(", ");
+      return `- ${m.name}${ing ? " | Zutaten: " + ing : m.description ? " | " + m.description : ""}`;
+    });
 }
 
 async function callAi(prompt: string, apiKey: string): Promise<ShoppingItem[]> {
@@ -382,7 +395,13 @@ async function callAi(prompt: string, apiKey: string): Promise<ShoppingItem[]> {
   if (!res.ok) throw new Error(`KI-Fehler [${res.status}]`);
   const raw = (await res.json())?.choices?.[0]?.message?.content ?? "{}";
   try {
-    const clean = typeof raw === "string" ? raw.replace(/^```(?:json)?\s*/i, "").replace(/```$/i, "").trim() : raw;
+    const clean =
+      typeof raw === "string"
+        ? raw
+            .replace(/^```(?:json)?\s*/i, "")
+            .replace(/```$/i, "")
+            .trim()
+        : raw;
     const parsed = typeof clean === "string" ? JSON.parse(clean) : clean;
     return extractItems(parsed);
   } catch {
@@ -418,18 +437,16 @@ Antworte ausschließlich mit gültigem JSON:
   const parsedItems = fallbackItemsFromLines(lines);
   const items = mergeItems(parsedItems.length ? parsedItems : await callAi(prompt, apiKey));
 
-  await supabaseAdmin
-    .from("shopping_lists")
-    .upsert(
-      {
-        plan_id: planId,
-        scope: "individual",
-        items,
-        days: windowDays,
-        generated_at: new Date().toISOString(),
-      },
-      { onConflict: "plan_id,scope" },
-    );
+  await supabaseAdmin.from("shopping_lists").upsert(
+    {
+      plan_id: planId,
+      scope: "individual",
+      items,
+      days: windowDays,
+      generated_at: new Date().toISOString(),
+    },
+    { onConflict: "plan_id,scope" },
+  );
 
   return { items, days: windowDays };
 }
@@ -482,8 +499,22 @@ Antworte ausschließlich mit gültigem JSON:
   const now = new Date().toISOString();
   await supabaseAdmin.from("shopping_lists").upsert(
     [
-      { plan_id: planAId, scope: "partner_combined", partner_user_id: userB, items, days: windowDays, generated_at: now },
-      { plan_id: planBId, scope: "partner_combined", partner_user_id: userA, items, days: windowDays, generated_at: now },
+      {
+        plan_id: planAId,
+        scope: "partner_combined",
+        partner_user_id: userB,
+        items,
+        days: windowDays,
+        generated_at: now,
+      },
+      {
+        plan_id: planBId,
+        scope: "partner_combined",
+        partner_user_id: userA,
+        items,
+        days: windowDays,
+        generated_at: now,
+      },
     ],
     { onConflict: "plan_id,scope" },
   );

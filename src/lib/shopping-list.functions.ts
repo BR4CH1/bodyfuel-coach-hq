@@ -14,7 +14,10 @@ function normalizeShoppingItemKey(name: string) {
     .replace(/\([^)]*\)/g, "")
     .replace(/:\s*\d+(?:[,.]\d+)?\s*(kg|g|ml|l|stk\.?|stück)?\s*$/i, "")
     .replace(/:\s*$/g, "")
-    .replace(/\b(ca\.|ungekocht|gekocht|gegart|gebraten|gedünstet|roh|trocken|frisch|tiefgekühlt|tk|light|fettarm|zuckerarm|magere?r?|natur|pur|optional)\b/gi, "")
+    .replace(
+      /\b(ca\.|ungekocht|gekocht|gegart|gebraten|gedünstet|roh|trocken|frisch|tiefgekühlt|tk|light|fettarm|zuckerarm|magere?r?|natur|pur|optional)\b/gi,
+      "",
+    )
     .replace(/^[-•·]\s*/, "")
     .replace(/^(eine?|ein|der|die|das|etwas|frische?r?|frisches?)\s+/i, "")
     .replace(/\s+/g, " ")
@@ -22,16 +25,21 @@ function normalizeShoppingItemKey(name: string) {
     .toLowerCase();
   if (/^paprikapulver\b/.test(clean)) return "paprikapulver";
   if (/^paprikaschoten?\b/.test(clean) || /^paprika\b/.test(clean)) return "paprika";
-  if (/^hähnchen(brust)?filet\b/.test(clean) || /^haehnchen(brust)?filet\b/.test(clean) || /^hähnchen(brust)?\b/.test(clean) || /^haehnchen(brust)?\b/.test(clean)) return "hähnchenbrust";
+  if (
+    /^hähnchen(brust)?filet\b/.test(clean) ||
+    /^haehnchen(brust)?filet\b/.test(clean) ||
+    /^hähnchen(brust)?\b/.test(clean) ||
+    /^haehnchen(brust)?\b/.test(clean)
+  )
+    return "hähnchenbrust";
   return clean;
 }
 
 function applyCheckedToItems(items: ShoppingItem[], itemKey: string, checked: boolean) {
-  return items.map((item) => (
-    normalizeShoppingItemKey(item.name) === itemKey ? { ...item, checked } : item
-  ));
+  return items.map((item) =>
+    normalizeShoppingItemKey(item.name) === itemKey ? { ...item, checked } : item,
+  );
 }
-
 
 /**
  * Generate (and cache) a shopping list for the user's currently active plan.
@@ -40,7 +48,10 @@ function applyCheckedToItems(items: ShoppingItem[], itemKey: string, checked: bo
  */
 export const generateShoppingList = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { days?: number; plan_id?: string; force?: boolean; scope?: "individual" | "combined" }) => d)
+  .inputValidator(
+    (d: { days?: number; plan_id?: string; force?: boolean; scope?: "individual" | "combined" }) =>
+      d,
+  )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const apiKey = process.env.LOVABLE_API_KEY;
@@ -73,11 +84,12 @@ export const generateShoppingList = createServerFn({ method: "POST" })
       const { data: link } = await supabaseAdmin
         .from("nutrition_partners")
         .select("id")
-        .or(`and(user_a.eq.${userId},user_b.eq.${(ownerPlan as any).client_id}),and(user_b.eq.${userId},user_a.eq.${(ownerPlan as any).client_id})`)
+        .or(
+          `and(user_a.eq.${userId},user_b.eq.${(ownerPlan as any).client_id}),and(user_b.eq.${userId},user_a.eq.${(ownerPlan as any).client_id})`,
+        )
         .maybeSingle();
       if (!link) throw new Error("Kein Zugriff auf diesen Partner-Plan.");
     }
-
 
     // Determine window
     let windowDays = data.days;
@@ -108,7 +120,8 @@ export const generateShoppingList = createServerFn({ method: "POST" })
       }
     }
 
-    const { generateShoppingListForPlan, generateCombinedShoppingList } = await import("./shopping-list-engine.server");
+    const { generateShoppingListForPlan, generateCombinedShoppingList } =
+      await import("./shopping-list-engine.server");
     if (data.scope === "combined") {
       const { data: link } = await supabaseAdmin
         .from("nutrition_partners")
@@ -116,7 +129,8 @@ export const generateShoppingList = createServerFn({ method: "POST" })
         .or(`user_a.eq.${userId},user_b.eq.${userId}`)
         .maybeSingle();
       if (!link) throw new Error("Kein Partner verknüpft.");
-      const partnerUserId = (link as any).user_a === userId ? (link as any).user_b : (link as any).user_a;
+      const partnerUserId =
+        (link as any).user_a === userId ? (link as any).user_b : (link as any).user_a;
       let partnerPlanId = (ownerPlan as any).partner_plan_id as string | null;
       if (!partnerPlanId) {
         const { data: partnerPlan } = await supabaseAdmin
@@ -131,14 +145,33 @@ export const generateShoppingList = createServerFn({ method: "POST" })
         partnerPlanId = (partnerPlan as any)?.id ?? null;
       }
       if (!partnerPlanId) throw new Error("Kein Partner-Plan gefunden.");
-      return await generateCombinedShoppingList({ apiKey, planAId: planId as string, planBId: partnerPlanId, userA: userId, userB: partnerUserId, windowDays });
+      return await generateCombinedShoppingList({
+        apiKey,
+        planAId: planId as string,
+        planBId: partnerPlanId,
+        userA: userId,
+        userB: partnerUserId,
+        windowDays,
+      });
     }
-    return await generateShoppingListForPlan({ supabase, apiKey, planId: planId as string, windowDays });
+    return await generateShoppingListForPlan({
+      supabase,
+      apiKey,
+      planId: planId as string,
+      windowDays,
+    });
   });
 
 export const setShoppingItemChecked = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { plan_id: string; scope: "individual" | "combined"; item_key: string; checked: boolean }) => d)
+  .inputValidator(
+    (d: {
+      plan_id: string;
+      scope: "individual" | "combined";
+      item_key: string;
+      checked: boolean;
+    }) => d,
+  )
   .handler(async ({ data, context }) => {
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -154,10 +187,15 @@ export const setShoppingItemChecked = createServerFn({ method: "POST" })
       const { data: link } = await supabaseAdmin
         .from("nutrition_partners")
         .select("user_a, user_b")
-        .or(`and(user_a.eq.${userId},user_b.eq.${(plan as any).client_id}),and(user_b.eq.${userId},user_a.eq.${(plan as any).client_id})`)
+        .or(
+          `and(user_a.eq.${userId},user_b.eq.${(plan as any).client_id}),and(user_b.eq.${userId},user_a.eq.${(plan as any).client_id})`,
+        )
         .maybeSingle();
       if (!link) throw new Error("Kein Zugriff.");
-      partnerUserId = (link as any).user_a === (plan as any).client_id ? (link as any).user_b : (link as any).user_a;
+      partnerUserId =
+        (link as any).user_a === (plan as any).client_id
+          ? (link as any).user_b
+          : (link as any).user_a;
     }
 
     const planIds = [data.plan_id];
@@ -169,7 +207,11 @@ export const setShoppingItemChecked = createServerFn({ method: "POST" })
           .select("user_a, user_b")
           .or(`user_a.eq.${(plan as any).client_id},user_b.eq.${(plan as any).client_id}`)
           .maybeSingle();
-        partnerUserId = link ? ((link as any).user_a === (plan as any).client_id ? (link as any).user_b : (link as any).user_a) : null;
+        partnerUserId = link
+          ? (link as any).user_a === (plan as any).client_id
+            ? (link as any).user_b
+            : (link as any).user_a
+          : null;
       }
       let partnerPlanId = (plan as any).partner_plan_id as string | null;
       if (!partnerPlanId && partnerUserId) {
@@ -194,11 +236,17 @@ export const setShoppingItemChecked = createServerFn({ method: "POST" })
       .eq("scope", dbScope)
       .in("plan_id", planIds);
 
-    await Promise.all((rows ?? []).map((row: any) => supabaseAdmin
-      .from("shopping_lists")
-      .update({ items: applyCheckedToItems((row.items ?? []) as ShoppingItem[], itemKey, data.checked) })
-      .eq("plan_id", row.plan_id)
-      .eq("scope", row.scope)));
+    await Promise.all(
+      (rows ?? []).map((row: any) =>
+        supabaseAdmin
+          .from("shopping_lists")
+          .update({
+            items: applyCheckedToItems((row.items ?? []) as ShoppingItem[], itemKey, data.checked),
+          })
+          .eq("plan_id", row.plan_id)
+          .eq("scope", row.scope),
+      ),
+    );
 
     return { ok: true };
   });
@@ -232,17 +280,10 @@ export const getMyShoppingLists = createServerFn({ method: "GET" })
 
     const all = (plans ?? []) as any[];
     const active = all.find((p) => p.status === "active") ?? null;
-    const next =
-      all.find((p) => ["draft", "approved", "published"].includes(p.status)) ?? null;
-    const archive = all
-      .filter((p) => p.status === "archived")
-      .slice(0, 12);
+    const next = all.find((p) => ["draft", "approved", "published"].includes(p.status)) ?? null;
+    const archive = all.filter((p) => p.status === "archived").slice(0, 12);
 
-    const ids = [
-      active?.id,
-      next?.id,
-      ...archive.map((p) => p.id),
-    ].filter(Boolean) as string[];
+    const ids = [active?.id, next?.id, ...archive.map((p) => p.id)].filter(Boolean) as string[];
     let listsByPlan: Record<string, any> = {};
     let combinedByPlan: Record<string, any> = {};
     if (ids.length) {
@@ -268,7 +309,11 @@ export const getMyShoppingLists = createServerFn({ method: "GET" })
       .select("user_a, user_b")
       .or(`user_a.eq.${userId},user_b.eq.${userId}`)
       .maybeSingle();
-    const partnerUserId = link ? ((link as any).user_a === userId ? (link as any).user_b : (link as any).user_a) : null;
+    const partnerUserId = link
+      ? (link as any).user_a === userId
+        ? (link as any).user_b
+        : (link as any).user_a
+      : null;
 
     let partnerName: string | null = null;
     let partnerPlan: any = null;
@@ -287,7 +332,8 @@ export const getMyShoppingLists = createServerFn({ method: "GET" })
         .eq("plan_type", "nutrition")
         .in("status", ["active", "draft", "approved", "published"])
         .order("created_at", { ascending: false });
-      partnerPlan = (pPlans ?? []).find((p: any) => p.status === "active") ?? (pPlans ?? [])[0] ?? null;
+      partnerPlan =
+        (pPlans ?? []).find((p: any) => p.status === "active") ?? (pPlans ?? [])[0] ?? null;
       if (partnerPlan) {
         const { data: row } = await supabaseAdmin
           .from("shopping_lists")
@@ -295,16 +341,32 @@ export const getMyShoppingLists = createServerFn({ method: "GET" })
           .eq("plan_id", partnerPlan.id)
           .eq("scope", "individual")
           .maybeSingle();
-        partnerList = row ? { items: cleanShoppingItems(((row as any).items ?? []) as ShoppingItem[]), days: (row as any).days ?? 7, generated_at: (row as any).generated_at } : null;
+        partnerList = row
+          ? {
+              items: cleanShoppingItems(((row as any).items ?? []) as ShoppingItem[]),
+              days: (row as any).days ?? 7,
+              generated_at: (row as any).generated_at,
+            }
+          : null;
       }
     }
 
     return {
-      active: active ? { ...active, list: listsByPlan[active.id] ?? null, combined: combinedByPlan[active.id] ?? null } : null,
-      next: next ? { ...next, list: listsByPlan[next.id] ?? null, combined: combinedByPlan[next.id] ?? null } : null,
+      active: active
+        ? {
+            ...active,
+            list: listsByPlan[active.id] ?? null,
+            combined: combinedByPlan[active.id] ?? null,
+          }
+        : null,
+      next: next
+        ? { ...next, list: listsByPlan[next.id] ?? null, combined: combinedByPlan[next.id] ?? null }
+        : null,
       archive: archive.map((p) => ({ ...p, list: listsByPlan[p.id] ?? null })),
       window_days: window,
-      partner: partnerUserId ? { user_id: partnerUserId, name: partnerName, plan: partnerPlan, list: partnerList } : null,
+      partner: partnerUserId
+        ? { user_id: partnerUserId, name: partnerName, plan: partnerPlan, list: partnerList }
+        : null,
     };
   });
 
@@ -331,7 +393,9 @@ export const getPlanContent = createServerFn({ method: "GET" })
       const { data: link } = await supabaseAdmin
         .from("nutrition_partners")
         .select("id")
-        .or(`and(user_a.eq.${userId},user_b.eq.${(plan as any).client_id}),and(user_b.eq.${userId},user_a.eq.${(plan as any).client_id})`)
+        .or(
+          `and(user_a.eq.${userId},user_b.eq.${(plan as any).client_id}),and(user_b.eq.${userId},user_a.eq.${(plan as any).client_id})`,
+        )
         .maybeSingle();
       if (!link) throw new Error("Kein Zugriff");
     }
@@ -343,13 +407,16 @@ export const getPlanContent = createServerFn({ method: "GET" })
       .order("sort_order");
     const dayList = (days ?? []) as any[];
     const meals = dayList.length
-      ? (
+      ? ((
           await supabaseAdmin
             .from("nutrition_plan_meals")
             .select("id, day_id, name, description, kcal, protein_g, carbs_g, fat_g, sort_order")
-            .in("day_id", dayList.map((d: any) => d.id))
+            .in(
+              "day_id",
+              dayList.map((d: any) => d.id),
+            )
             .order("sort_order")
-        ).data ?? []
+        ).data ?? [])
       : [];
 
     return {
@@ -364,4 +431,3 @@ export const getPlanContent = createServerFn({ method: "GET" })
       meals,
     };
   });
-
