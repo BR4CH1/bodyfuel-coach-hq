@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ChevronLeft, ShoppingCart, Loader2, Printer, RefreshCw, ChevronDown, ChevronUp, CalendarRange } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
