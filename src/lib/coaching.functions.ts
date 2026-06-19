@@ -104,7 +104,7 @@ export const listCustomers = createServerFn({ method: "GET" })
 
     const { data: profiles } = await supabaseAdmin
       .from("profiles")
-      .select("id, display_name, phone")
+      .select("id, display_name, phone, nickname")
       .in("id", userIds);
 
     // Need emails too
