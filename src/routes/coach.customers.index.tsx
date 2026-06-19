@@ -242,6 +242,9 @@ function CustomersList() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <span className="font-semibold">{c.display_name ?? "—"}</span>
+                        {c.nickname && (
+                          <span className="rounded bg-secondary px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">@{c.nickname}</span>
+                        )}
                         {(c.groups ?? []).includes("bulls") && <BullsBadge />}
                       </div>
                       <div className="text-xs text-muted-foreground">{c.email ?? "—"}</div>
