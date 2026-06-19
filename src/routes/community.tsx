@@ -32,7 +32,7 @@ function CommunityHub() {
           <div>
             <div className="text-[11px] uppercase tracking-[0.2em] text-gold">Dein Community-Profil</div>
             <div className="mt-1 font-display text-xl font-bold">
-              {nickname ? `@${nickname}` : "Noch kein Nickname"}
+              {nickname ? nickname : "Noch kein Nickname"}
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
               In Rankings erscheinst du ausschließlich mit deinem Nickname.
