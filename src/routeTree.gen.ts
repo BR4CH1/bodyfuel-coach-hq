@@ -59,6 +59,7 @@ import { Route as TrackerAppWeightRouteImport } from './routes/tracker.app.weigh
 import { Route as TrackerAppWaterRouteImport } from './routes/tracker.app.water'
 import { Route as TrackerAppTrainingRouteImport } from './routes/tracker.app.training'
 import { Route as TrackerAppNutritionRouteImport } from './routes/tracker.app.nutrition'
+import { Route as TrackerAppActivityRouteImport } from './routes/tracker.app.activity'
 import { Route as TrackerAppAchievementsRouteImport } from './routes/tracker.app.achievements'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as CoachPlanPreviewPlanIdRouteImport } from './routes/coach.plan-preview.$planId'
@@ -327,6 +328,11 @@ const TrackerAppNutritionRoute = TrackerAppNutritionRouteImport.update({
   path: '/nutrition',
   getParentRoute: () => TrackerAppRoute,
 } as any)
+const TrackerAppActivityRoute = TrackerAppActivityRouteImport.update({
+  id: '/activity',
+  path: '/activity',
+  getParentRoute: () => TrackerAppRoute,
+} as any)
 const TrackerAppAchievementsRoute = TrackerAppAchievementsRouteImport.update({
   id: '/achievements',
   path: '/achievements',
@@ -461,6 +467,7 @@ export interface FileRoutesByFullPath {
   '/coach/plan-preview/$planId': typeof CoachPlanPreviewPlanIdRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/tracker/app/achievements': typeof TrackerAppAchievementsRoute
+  '/tracker/app/activity': typeof TrackerAppActivityRoute
   '/tracker/app/nutrition': typeof TrackerAppNutritionRoute
   '/tracker/app/training': typeof TrackerAppTrainingRoute
   '/tracker/app/water': typeof TrackerAppWaterRoute
@@ -524,6 +531,7 @@ export interface FileRoutesByTo {
   '/coach/plan-preview/$planId': typeof CoachPlanPreviewPlanIdRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/tracker/app/achievements': typeof TrackerAppAchievementsRoute
+  '/tracker/app/activity': typeof TrackerAppActivityRoute
   '/tracker/app/nutrition': typeof TrackerAppNutritionRoute
   '/tracker/app/training': typeof TrackerAppTrainingRoute
   '/tracker/app/water': typeof TrackerAppWaterRoute
@@ -592,6 +600,7 @@ export interface FileRoutesById {
   '/coach/plan-preview/$planId': typeof CoachPlanPreviewPlanIdRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/tracker/app/achievements': typeof TrackerAppAchievementsRoute
+  '/tracker/app/activity': typeof TrackerAppActivityRoute
   '/tracker/app/nutrition': typeof TrackerAppNutritionRoute
   '/tracker/app/training': typeof TrackerAppTrainingRoute
   '/tracker/app/water': typeof TrackerAppWaterRoute
@@ -661,6 +670,7 @@ export interface FileRouteTypes {
     | '/coach/plan-preview/$planId'
     | '/lovable/email/suppression'
     | '/tracker/app/achievements'
+    | '/tracker/app/activity'
     | '/tracker/app/nutrition'
     | '/tracker/app/training'
     | '/tracker/app/water'
@@ -724,6 +734,7 @@ export interface FileRouteTypes {
     | '/coach/plan-preview/$planId'
     | '/lovable/email/suppression'
     | '/tracker/app/achievements'
+    | '/tracker/app/activity'
     | '/tracker/app/nutrition'
     | '/tracker/app/training'
     | '/tracker/app/water'
@@ -791,6 +802,7 @@ export interface FileRouteTypes {
     | '/coach/plan-preview/$planId'
     | '/lovable/email/suppression'
     | '/tracker/app/achievements'
+    | '/tracker/app/activity'
     | '/tracker/app/nutrition'
     | '/tracker/app/training'
     | '/tracker/app/water'
@@ -1208,6 +1220,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TrackerAppNutritionRouteImport
       parentRoute: typeof TrackerAppRoute
     }
+    '/tracker/app/activity': {
+      id: '/tracker/app/activity'
+      path: '/activity'
+      fullPath: '/tracker/app/activity'
+      preLoaderRoute: typeof TrackerAppActivityRouteImport
+      parentRoute: typeof TrackerAppRoute
+    }
     '/tracker/app/achievements': {
       id: '/tracker/app/achievements'
       path: '/achievements'
@@ -1376,6 +1395,7 @@ const NutritionRouteWithChildren = NutritionRoute._addFileChildren(
 
 interface TrackerAppRouteChildren {
   TrackerAppAchievementsRoute: typeof TrackerAppAchievementsRoute
+  TrackerAppActivityRoute: typeof TrackerAppActivityRoute
   TrackerAppNutritionRoute: typeof TrackerAppNutritionRoute
   TrackerAppTrainingRoute: typeof TrackerAppTrainingRoute
   TrackerAppWaterRoute: typeof TrackerAppWaterRoute
@@ -1385,6 +1405,7 @@ interface TrackerAppRouteChildren {
 
 const TrackerAppRouteChildren: TrackerAppRouteChildren = {
   TrackerAppAchievementsRoute: TrackerAppAchievementsRoute,
+  TrackerAppActivityRoute: TrackerAppActivityRoute,
   TrackerAppNutritionRoute: TrackerAppNutritionRoute,
   TrackerAppTrainingRoute: TrackerAppTrainingRoute,
   TrackerAppWaterRoute: TrackerAppWaterRoute,
