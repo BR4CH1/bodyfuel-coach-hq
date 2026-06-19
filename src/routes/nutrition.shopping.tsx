@@ -38,6 +38,40 @@ function ShoppingListPage() {
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [showPlan, setShowPlan] = useState(false);
 
+  const checkedStorageKey = useMemo(() => {
+    const planId = periodScope === "active"
+      ? (data?.active as any)?.id
+      : periodScope === "next"
+        ? (data?.next as any)?.id
+        : periodScope.startsWith("archive:")
+          ? periodScope.slice("archive:".length)
+          : null;
+    if (!planId) return null;
+    return `bodyfuel.shopping.checked.${planId}.${partnerMode}`;
+  }, [periodScope, partnerMode, data]);
+
+  // Load persisted checked state when scope/plan/partnerMode changes
+  useEffect(() => {
+    if (!checkedStorageKey) {
+      setChecked({});
+      return;
+    }
+    try {
+      const raw = localStorage.getItem(checkedStorageKey);
+      setChecked(raw ? JSON.parse(raw) : {});
+    } catch {
+      setChecked({});
+    }
+  }, [checkedStorageKey]);
+
+  // Persist on change
+  useEffect(() => {
+    if (!checkedStorageKey) return;
+    try {
+      localStorage.setItem(checkedStorageKey, JSON.stringify(checked));
+    } catch {}
+  }, [checked, checkedStorageKey]);
+
   useEffect(() => {
     if (!data) return;
     if (!data.active && data.next) setPeriodScope("next");
