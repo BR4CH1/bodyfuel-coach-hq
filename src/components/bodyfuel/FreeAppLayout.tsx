@@ -1,18 +1,21 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
-import { LayoutDashboard, Apple, Scale, Trophy, LogOut, Sparkles, Dumbbell, Shield } from "lucide-react";
+import { LayoutDashboard, Apple, Scale, Trophy, LogOut, Sparkles, Dumbbell, Shield, Droplet, Footprints, User } from "lucide-react";
 import { useSession } from "@/lib/bodyfuel/session";
 import { Logo } from "./Logo";
 import { FreeUpsellBanner } from "./FreeUpsellBanner";
 
-type FreeNavItem = { to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean };
+type FreeNavItem = { to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean; desktopOnly?: boolean };
 
 const baseNav: FreeNavItem[] = [
   { to: "/tracker/app", label: "Heute", icon: LayoutDashboard, exact: true },
   { to: "/tracker/app/nutrition", label: "Ernährung", icon: Apple },
   { to: "/tracker/app/training", label: "Training", icon: Dumbbell },
   { to: "/tracker/app/weight", label: "Gewicht", icon: Scale },
+  { to: "/tracker/app/water", label: "Wasser", icon: Droplet, desktopOnly: true },
+  { to: "/tracker/app/activity", label: "Aktivität", icon: Footprints, desktopOnly: true },
   { to: "/tracker/app/achievements", label: "Erfolge", icon: Trophy },
+  { to: "/tracker/app/profile", label: "Profil", icon: User, desktopOnly: true },
 ];
 
 const bullsNavItem: FreeNavItem = { to: "/bulls", label: "Bulls Hub", icon: Shield };
@@ -116,26 +119,31 @@ export function FreeAppLayout({ children }: { children: ReactNode }) {
         </div>
       </main>
 
-      {/* Mobile bottom nav */}
+      {/* Mobile bottom nav — limited set */}
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 backdrop-blur lg:hidden">
-        <div className="grid" style={{ gridTemplateColumns: `repeat(${nav.length}, minmax(0, 1fr))` }}>
-          {nav.map((item) => {
-            const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.to}
-                to={item.to}
-                className={`flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium ${
-                  active ? "text-primary" : "text-muted-foreground"
-                }`}
-              >
-                <Icon className="h-5 w-5" />
-                {item.label}
-              </Link>
-            );
-          })}
-        </div>
+        {(() => {
+          const mobileNav = nav.filter((i) => !i.desktopOnly);
+          return (
+            <div className="grid" style={{ gridTemplateColumns: `repeat(${mobileNav.length}, minmax(0, 1fr))` }}>
+              {mobileNav.map((item) => {
+                const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    className={`flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium ${
+                      active ? "text-primary" : "text-muted-foreground"
+                    }`}
+                  >
+                    <Icon className="h-5 w-5" />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          );
+        })()}
       </nav>
     </div>
   );
