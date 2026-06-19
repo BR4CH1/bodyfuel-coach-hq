@@ -1057,6 +1057,51 @@ export function NutritionTracker() {
                   </ul>
 
                 </div>
+                </>
+                ) : (
+                <div className="mt-1 min-h-0 flex-1 overflow-y-auto">
+                  <div className="mb-2 flex items-center justify-between">
+                    <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Deine Mahlzeiten
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setBuilderOpen(true)}
+                      className="h-7 text-xs text-gold"
+                    >
+                      <ChefHat className="h-3.5 w-3.5" /> Neu
+                    </Button>
+                  </div>
+                  {loadingMeals ? (
+                    <p className="py-6 text-center text-xs text-muted-foreground">Lade…</p>
+                  ) : customMeals.length === 0 ? (
+                    <p className="py-6 text-center text-xs text-muted-foreground">
+                      Noch keine eigenen Mahlzeiten. Tippe oben auf „Neu", um eine anzulegen.
+                    </p>
+                  ) : (
+                    <ul className="divide-y divide-border">
+                      {customMeals.map((m) => (
+                        <li key={m.id}>
+                          <button
+                            onClick={() => addCustomMeal(m)}
+                            className="w-full px-2 py-3 text-left hover:bg-secondary"
+                          >
+                            <div className="truncate text-sm font-medium">{m.name}</div>
+                            <div className="text-[11px] text-muted-foreground">
+                              {m.kcal ? `${Math.round(m.kcal)} kcal` : "—"}
+                              {m.protein_g ? ` · P ${Number(m.protein_g).toFixed(1)}` : ""}
+                              {m.carbs_g ? ` · K ${Number(m.carbs_g).toFixed(1)}` : ""}
+                              {m.fat_g ? ` · F ${Number(m.fat_g).toFixed(1)}` : ""}
+                              {m.ingredients?.length ? ` · ${m.ingredients.length} Zutaten` : ""}
+                            </div>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                )}
               </div>
             ) : (() => {
                 const amt = parseFloat(amountStr.replace(",", ".")) || 0;
