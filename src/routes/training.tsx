@@ -106,3 +106,21 @@ function TrainingPage() {
     </div>
   );
 }
+
+function TrainingQuickLink({ to, icon, title, desc }: { to: string; icon: React.ReactNode; title: string; desc: string }) {
+  return (
+    <Link
+      to={to}
+      className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4 transition hover:border-gold/50"
+    >
+      <div className="flex items-center gap-3">
+        <div className="grid h-11 w-11 place-items-center rounded-xl bg-gold/15 text-gold">{icon}</div>
+        <div>
+          <div className="text-sm font-bold">{title}</div>
+          <div className="text-xs text-muted-foreground">{desc}</div>
+        </div>
+      </div>
+      <ChevronRight className="h-5 w-5 text-muted-foreground" />
+    </Link>
+  );
+}
