@@ -446,6 +446,11 @@ export function PlanContentView({ clientId, planType }: Props) {
   const eyebrow = planType === "nutrition" ? "Ernährungsplan" : "Trainingsplan";
   const empty = planType === "nutrition" ? "Mahlzeiten" : "Übungen";
 
+  const planDateRange = formatDateRange(
+    (plan as any)?.scheduled_start_date,
+    (plan as any)?.scheduled_end_date,
+  );
+
   return (
     <div className="rounded-3xl border border-border bg-card p-5 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -456,6 +461,12 @@ export function PlanContentView({ clientId, planType }: Props) {
           <div>
             <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">{eyebrow}</div>
             <div className="font-display text-base font-bold">Inhalt</div>
+            {planDateRange && (
+              <div className="mt-0.5 inline-flex items-center gap-1 text-[11px] font-semibold text-primary">
+                <CalendarRange className="h-3 w-3" />
+                {planDateRange}
+              </div>
+            )}
           </div>
         </div>
         {isCoach && (
