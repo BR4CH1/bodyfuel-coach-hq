@@ -292,7 +292,7 @@ function ShoppingListPage() {
   );
 }
 
-function PlanContentInline({ plan }: { plan: Awaited<ReturnType<ReturnType<typeof useServerFn<typeof getPlanContent>>>> }) {
+function PlanContentInline({ plan }: { plan: any }) {
   const dateRange = formatDateRange(plan.plan.scheduled_start_date, plan.plan.scheduled_end_date);
   return (
     <div className="space-y-4">
