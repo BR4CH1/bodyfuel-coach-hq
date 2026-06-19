@@ -110,7 +110,11 @@ export const generateShoppingList = createServerFn({ method: "POST" })
         .eq("plan_id", planId)
         .eq("scope", data.scope === "combined" ? "partner_combined" : "individual")
         .maybeSingle();
-      if (cached && (cached as any).items?.length) {
+      if (
+        cached &&
+        (cached as any).items?.length &&
+        (cached as any).days === windowDays
+      ) {
         const { cleanShoppingItems } = await import("./shopping-list-engine.server");
         return {
           items: cleanShoppingItems((cached as any).items as ShoppingItem[]),
