@@ -900,6 +900,25 @@ export function NutritionTracker() {
 
             {!picking ? (
               <div className="flex min-h-0 flex-1 flex-col p-4">
+                {/* Source toggle: Lebensmittel / Mahlzeiten */}
+                <div className="mb-3 inline-flex shrink-0 self-start rounded-md border border-border bg-background/40 p-0.5 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setSource("food")}
+                    className={`rounded px-3 py-1.5 ${source === "food" ? "bg-gold text-primary-foreground" : "text-muted-foreground"}`}
+                  >
+                    Lebensmittel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSource("meal")}
+                    className={`rounded px-3 py-1.5 ${source === "meal" ? "bg-gold text-primary-foreground" : "text-muted-foreground"}`}
+                  >
+                    Mahlzeiten {customMeals.length > 0 ? `(${customMeals.length})` : ""}
+                  </button>
+                </div>
+                {source === "food" ? (
+                <>
                 <div className="flex shrink-0 gap-2">
                   <Input
                     autoFocus
