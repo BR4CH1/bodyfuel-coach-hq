@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Scale } from "lucide-react";
+import { Scale, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
@@ -16,19 +16,20 @@ export const Route = createFileRoute("/tracker/app/weight")({
 function WeightPage() {
   const { supabaseUser } = useSession();
   const [weight, setWeight] = useState("");
-  const [history, setHistory] = useState<{ date: string; w: number }[]>([]);
+  const [history, setHistory] = useState<{ id: string; date: string; w: number }[]>([]);
 
   const load = async () => {
     if (!supabaseUser) return;
     const { data } = await supabase
       .from("body_measurements")
-      .select("weight_kg, measured_at")
+      .select("id, weight_kg, measured_at")
       .eq("user_id", supabaseUser.id)
       .not("weight_kg", "is", null)
       .order("measured_at", { ascending: false })
       .limit(30);
     setHistory(
       (data ?? []).map((r: any) => ({
+        id: r.id,
         date: new Date(r.measured_at).toLocaleDateString("de-DE"),
         w: Number(r.weight_kg),
       })),
@@ -49,6 +50,14 @@ function WeightPage() {
     if (error) return toast.error(error.message);
     toast.success("Gewicht gespeichert");
     setWeight("");
+    load();
+  };
+
+  const remove = async (id: string) => {
+    if (!confirm("Diesen Eintrag wirklich löschen?")) return;
+    const { error } = await supabase.from("body_measurements").delete().eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Eintrag gelöscht");
     load();
   };
 
@@ -92,10 +101,21 @@ function WeightPage() {
           <p className="mt-3 text-sm text-muted-foreground">Noch keine Einträge.</p>
         ) : (
           <ul className="mt-3 divide-y divide-border">
-            {history.map((h, i) => (
-              <li key={i} className="flex items-center justify-between py-2 text-sm">
+            {history.map((h) => (
+              <li key={h.id} className="flex items-center justify-between gap-2 py-2 text-sm">
                 <span className="text-muted-foreground">{h.date}</span>
-                <span className="font-display font-bold">{h.w.toFixed(1)} kg</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-display font-bold">{h.w.toFixed(1)} kg</span>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                    onClick={() => remove(h.id)}
+                    aria-label="Eintrag löschen"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </li>
             ))}
           </ul>
