@@ -286,22 +286,27 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
             .from("profiles")
             .select("id, display_name, first_name, email")
             .in("id", [clientId, otherClientId]);
-          const nameOf = (id: string) => {
+          const nameOf = (id: string, fallback: string) => {
             const p: any = (profs ?? []).find((x: any) => x.id === id);
             return (
               p?.display_name?.trim() ||
               p?.first_name?.trim() ||
               (p?.email ? p.email.split("@")[0] : null) ||
-              "Du"
+              fallback
             );
           };
+          // Prefer the name embedded in the meal title (set by the partner-plan
+          // generator from the partner's display_name) over a profile lookup
+          // that may return a stale/empty value for one side.
+          const otherName = partnerNameFromTitle || nameOf(otherClientId, "Partner");
+          const selfName = nameOf(clientId, "Ich");
           selfPartner = {
-            name: nameOf(clientId),
+            name: selfName,
             kcal: meal.kcal, protein_g: meal.protein_g, carbs_g: meal.carbs_g, fat_g: meal.fat_g,
             description: meal.description,
           };
           otherPartner = {
-            name: nameOf(otherClientId),
+            name: otherName,
             kcal: (pMeal as any).kcal, protein_g: (pMeal as any).protein_g,
             carbs_g: (pMeal as any).carbs_g, fat_g: (pMeal as any).fat_g,
             description: (pMeal as any).description ?? null,
@@ -312,24 +317,33 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
 
     const fixLabels = (arr: string[]) => {
       if (!selfPartner || !otherPartner) return arr;
-      const generic = /\bfür\s+Person\b/gi;
+      // Replace generic "für Person" AND duplicate "für Du, für Du" patterns
+      // that older cached recipes contain when both profiles had no name.
+      const patterns = [/\bfür\s+Person\b/gi, /\bfür\s+Du\b/g];
       return arr.map((s) => {
-        if (!generic.test(s)) return s;
-        // Distinguish first vs second occurrence when both are "Person"
-        let first = true;
-        return s.replace(generic, () => {
-          const name = first ? selfPartner!.name : otherPartner!.name;
-          first = false;
-          return `für ${name}`;
-        });
+        let out = s;
+        for (const re of patterns) {
+          if (!re.test(out)) continue;
+          let first = true;
+          out = out.replace(re, () => {
+            const name = first ? selfPartner!.name : otherPartner!.name;
+            first = false;
+            return `für ${name}`;
+          });
+        }
+        return out;
       });
     };
 
-    // Cache hit — but if this is a partner meal and the cached recipe was made
-    // for one person only (no "für <name>"), fall through and regenerate.
+    // Cache hit — regenerate when the cached recipe is missing partner names,
+    // still uses generic "Person"/"Du" placeholders, or doesn't mention the
+    // current partner's actual name.
     const cached = Array.isArray(meal.recipe_ingredients) ? (meal.recipe_ingredients as string[]) : [];
-    const cachedLooksPartnerAware = cached.some((s) => /\bfür\s+\S/i.test(s));
-    const skipCache = isPartnerMeal && !cachedLooksPartnerAware;
+    const joined = cached.join("\n");
+    const hasPerPerson = /\bfür\s+\S/i.test(joined);
+    const hasPlaceholder = /\bfür\s+(Person|Du)\b/i.test(joined);
+    const otherInText = otherPartner?.name && joined.toLowerCase().includes(otherPartner.name.toLowerCase());
+    const skipCache = isPartnerMeal && (!hasPerPerson || hasPlaceholder || !otherInText);
     if (!data.force && !skipCache && cached.length > 0) {
       return {
         ingredients: fixLabels(cached),
@@ -337,6 +351,8 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
         cached: true,
       };
     }
+
+
 
 
     const apiKey = process.env.LOVABLE_API_KEY;
