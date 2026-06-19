@@ -15,6 +15,7 @@ import { PointsBreakdownCard } from "@/components/bodyfuel/PointsBreakdownCard";
 import { TrialStatusBanner, TrialWelcomeDialog } from "@/components/bodyfuel/Trial";
 import { TrialChecklist } from "@/components/bodyfuel/TrialChecklist";
 import { SportWeekdaysPrompt } from "@/components/bodyfuel/SportWeekdaysPrompt";
+import { RankingInvitePopup } from "@/components/bodyfuel/RankingInvitePopup";
 
 import { useTrial } from "@/hooks/use-trial";
 
