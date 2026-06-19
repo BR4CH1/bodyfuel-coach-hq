@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Barcode, Plus, Trash2, Droplet, Loader2, Star, ChefHat } from "lucide-react";
+import { Barcode, Plus, Trash2, Droplet, Loader2, Star, ChefHat, Sparkles } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
@@ -12,6 +12,7 @@ import { MealBuilderDialog } from "./MealBuilderDialog";
 import {
   searchFoods,
   lookupBarcode,
+  estimateFoodFromText,
   getNutritionTargets,
   getDayType,
   setDayType,
@@ -268,6 +269,26 @@ export function NutritionTracker() {
   const setDayTypeFn = useServerFn(setDayType);
   const searchFn = useServerFn(searchFoods);
   const lookupFn = useServerFn(lookupBarcode);
+  const estimateFn = useServerFn(estimateFoodFromText);
+  const [aiEstimating, setAiEstimating] = useState(false);
+
+  const estimateWithAi = async () => {
+    const term = query.trim();
+    if (!term) return;
+    setAiEstimating(true);
+    try {
+      const r = await estimateFn({ data: { query: term } });
+      setResults((prev) => [r, ...prev]);
+      setPicking(r);
+      setUnit(r.serving_g ? "piece" : "g");
+      setAmountStr(r.serving_g ? "1" : "100");
+      toast.success("KI-Schätzung erstellt – Werte prüfen & speichern.");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setAiEstimating(false);
+    }
+  };
 
   // Load targets + entries + water + day type
   useEffect(() => {
@@ -1017,14 +1038,48 @@ export function NutritionTracker() {
                     </>
                   )}
                   {query.trim() !== "" && results.length === 0 && (
-                    <p className="flex items-center justify-center gap-2 py-6 text-center text-xs text-muted-foreground">
-                      {searching ? (
-                        <><Loader2 className="h-3 w-3 animate-spin" /> Suche…</>
-                      ) : (
-                        "Keine Treffer — anders schreiben oder Barcode scannen"
+                    <div className="flex flex-col items-center gap-3 py-6 text-center">
+                      <p className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                        {searching ? (
+                          <><Loader2 className="h-3 w-3 animate-spin" /> Suche…</>
+                        ) : (
+                          "Keine Treffer in der Datenbank"
+                        )}
+                      </p>
+                      {!searching && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={estimateWithAi}
+                          disabled={aiEstimating}
+                          className="gap-2 border-gold/40 text-gold hover:bg-gold/10"
+                        >
+                          {aiEstimating ? (
+                            <><Loader2 className="h-3.5 w-3.5 animate-spin" /> KI schätzt…</>
+                          ) : (
+                            <><Sparkles className="h-3.5 w-3.5" /> Nährwerte per KI schätzen</>
+                          )}
+                        </Button>
                       )}
-                    </p>
+                    </div>
                   )}
+                  {query.trim() !== "" && results.length > 0 && !searching && (
+                    <div className="flex justify-end pb-2">
+                      <button
+                        type="button"
+                        onClick={estimateWithAi}
+                        disabled={aiEstimating}
+                        className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-gold disabled:opacity-50"
+                      >
+                        {aiEstimating ? (
+                          <><Loader2 className="h-3 w-3 animate-spin" /> KI schätzt…</>
+                        ) : (
+                          <><Sparkles className="h-3 w-3" /> Nichts passt? KI-Schätzung</>
+                        )}
+                      </button>
+                    </div>
+                  )}
+
                   <ul className="divide-y divide-border">
                     {results.map((r, i) => {
                       const fav = isFavorite(r);

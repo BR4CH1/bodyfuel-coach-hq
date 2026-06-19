@@ -521,3 +521,76 @@ Antworte ausschließlich mit gültigem JSON:
     };
   });
 
+/* ----------- KI-Schätzung von Nährwerten ----------- */
+
+/**
+ * Schätzt Nährwerte (pro 100g) für ein Lebensmittel/Gericht per KI,
+ * wenn weder OpenFoodFacts noch unsere lokale DB einen Treffer liefern.
+ * Beispiele: "Döner Kalb mit Soße", "Pizza Salami", "Caesar Salat mit Hähnchen".
+ */
+export const estimateFoodFromText = createServerFn({ method: "POST" })
+  .inputValidator((d: { query: string }) => d)
+  .handler(async ({ data }): Promise<FoodResult> => {
+    const q = data.query.trim();
+    if (!q) throw new Error("Bitte gib ein Lebensmittel ein.");
+    const apiKey = process.env.LOVABLE_API_KEY;
+    if (!apiKey) throw new Error("KI-Schätzung nicht verfügbar (LOVABLE_API_KEY fehlt).");
+
+    const system = `Du bist Ernährungswissenschaftler. Schätze Nährwerte für ein vom Nutzer beschriebenes Lebensmittel oder Gericht (deutsche Esskultur, typische Zubereitung). Antworte ausschließlich mit JSON. Werte IMMER pro 100 g. Sei realistisch (z.B. Döner ~215 kcal/100g, Pizza Salami ~265 kcal/100g, Pommes ~290 kcal/100g). Wenn du dir gar nicht sicher bist, gib trotzdem die plausibelste Schätzung ab.
+
+JSON-Schema:
+{
+  "name": "klarer Name auf Deutsch",
+  "kcal_per_100g": <number>,
+  "protein_per_100g": <number>,
+  "carbs_per_100g": <number>,
+  "fat_per_100g": <number>,
+  "serving_g": <number|null>,
+  "serving_label": "<string|null, z.B. '1 Stück ca. 300 g'>"
+}`;
+
+    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: q },
+        ],
+      }),
+    });
+    if (aiRes.status === 429) throw new Error("Rate-Limit erreicht – kurz warten.");
+    if (aiRes.status === 402) throw new Error("KI-Guthaben aufgebraucht.");
+    if (!aiRes.ok) {
+      const txt = await aiRes.text();
+      throw new Error(`KI-Fehler [${aiRes.status}]: ${txt.slice(0, 200)}`);
+    }
+    const aiJson = await aiRes.json();
+    const raw = aiJson?.choices?.[0]?.message?.content ?? "{}";
+    let parsed: any;
+    try { parsed = typeof raw === "string" ? JSON.parse(raw) : raw; }
+    catch { throw new Error("KI-Antwort konnte nicht gelesen werden."); }
+
+    const num = (v: any) => {
+      const n = Number(v);
+      return isFinite(n) && n >= 0 ? Math.round(n * 10) / 10 : 0;
+    };
+    const kcal = num(parsed.kcal_per_100g);
+    if (!kcal) throw new Error("KI konnte keine Schätzung erzeugen – bitte präziser beschreiben.");
+    const sg = Number(parsed.serving_g);
+    return {
+      name: `${String(parsed.name || q)} (KI-Schätzung)`,
+      brand: null,
+      barcode: null,
+      kcal_per_100g: kcal,
+      protein_per_100g: num(parsed.protein_per_100g),
+      carbs_per_100g: num(parsed.carbs_per_100g),
+      fat_per_100g: num(parsed.fat_per_100g),
+      serving_g: isFinite(sg) && sg > 0 ? Math.round(sg) : null,
+      serving_label: parsed.serving_label || null,
+    };
+  });
+
+
