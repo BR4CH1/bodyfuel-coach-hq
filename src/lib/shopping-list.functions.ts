@@ -112,8 +112,8 @@ export const generateShoppingList = createServerFn({ method: "POST" })
   });
 
 /**
- * Returns active & next plan summary plus their cached shopping lists.
- * Used by the customer "Aktuelle vs Nächste" toggle.
+ * Returns active & next plan summary plus their cached shopping lists,
+ * plus an archive of previously activated/archived plans with their lists.
  */
 export const getMyShoppingLists = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -131,19 +131,25 @@ export const getMyShoppingLists = createServerFn({ method: "GET" })
     const { data: plans } = await supabase
       .from("nutrition_plans")
       .select(
-        "id, title, status, scheduled_start_date, scheduled_end_date, is_partner_plan, partner_plan_id",
+        "id, title, status, scheduled_start_date, scheduled_end_date, is_partner_plan, partner_plan_id, activated_at, archived_at, created_at",
       )
       .eq("client_id", userId)
       .eq("plan_type", "nutrition")
-      .in("status", ["active", "draft", "approved", "published"])
       .order("created_at", { ascending: false });
 
     const all = (plans ?? []) as any[];
     const active = all.find((p) => p.status === "active") ?? null;
     const next =
       all.find((p) => ["draft", "approved", "published"].includes(p.status)) ?? null;
+    const archive = all
+      .filter((p) => p.status === "archived")
+      .slice(0, 12);
 
-    const ids = [active?.id, next?.id].filter(Boolean) as string[];
+    const ids = [
+      active?.id,
+      next?.id,
+      ...archive.map((p) => p.id),
+    ].filter(Boolean) as string[];
     let listsByPlan: Record<string, any> = {};
     let combinedByPlan: Record<string, any> = {};
     if (ids.length) {
@@ -152,7 +158,12 @@ export const getMyShoppingLists = createServerFn({ method: "GET" })
         .select("plan_id, scope, items, days, generated_at, partner_user_id")
         .in("plan_id", ids);
       for (const r of rows ?? []) {
-        const entry = { items: (r as any).items ?? [], days: (r as any).days ?? 7, generated_at: (r as any).generated_at, partner_user_id: (r as any).partner_user_id };
+        const entry = {
+          items: (r as any).items ?? [],
+          days: (r as any).days ?? 7,
+          generated_at: (r as any).generated_at,
+          partner_user_id: (r as any).partner_user_id,
+        };
         if ((r as any).scope === "partner_combined") combinedByPlan[(r as any).plan_id] = entry;
         else listsByPlan[(r as any).plan_id] = entry;
       }
@@ -198,8 +209,66 @@ export const getMyShoppingLists = createServerFn({ method: "GET" })
     return {
       active: active ? { ...active, list: listsByPlan[active.id] ?? null, combined: combinedByPlan[active.id] ?? null } : null,
       next: next ? { ...next, list: listsByPlan[next.id] ?? null, combined: combinedByPlan[next.id] ?? null } : null,
+      archive: archive.map((p) => ({ ...p, list: listsByPlan[p.id] ?? null })),
       window_days: window,
       partner: partnerUserId ? { user_id: partnerUserId, name: partnerName, plan: partnerPlan, list: partnerList } : null,
+    };
+  });
+
+/**
+ * Returns the meal structure of a specific plan (must belong to the caller or
+ * their nutrition partner). Used by the customer "Plan anzeigen" dropdown.
+ */
+export const getPlanContent = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { plan_id: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: plan } = await supabaseAdmin
+      .from("nutrition_plans")
+      .select("id, client_id, title, scheduled_start_date, scheduled_end_date, status, plan_type")
+      .eq("id", data.plan_id)
+      .maybeSingle();
+    if (!plan) throw new Error("Plan nicht gefunden");
+    if ((plan as any).plan_type !== "nutrition") throw new Error("Ungültiger Plan-Typ");
+
+    if ((plan as any).client_id !== userId) {
+      const { data: link } = await supabaseAdmin
+        .from("nutrition_partners")
+        .select("id")
+        .or(`and(user_a.eq.${userId},user_b.eq.${(plan as any).client_id}),and(user_b.eq.${userId},user_a.eq.${(plan as any).client_id})`)
+        .maybeSingle();
+      if (!link) throw new Error("Kein Zugriff");
+    }
+
+    const { data: days } = await supabaseAdmin
+      .from("nutrition_plan_days")
+      .select("id, name, sort_order")
+      .eq("plan_id", data.plan_id)
+      .order("sort_order");
+    const dayList = (days ?? []) as any[];
+    const meals = dayList.length
+      ? (
+          await supabaseAdmin
+            .from("nutrition_plan_meals")
+            .select("id, day_id, name, description, kcal, protein_g, carbs_g, fat_g, sort_order")
+            .in("day_id", dayList.map((d: any) => d.id))
+            .order("sort_order")
+        ).data ?? []
+      : [];
+
+    return {
+      plan: {
+        id: (plan as any).id,
+        title: (plan as any).title,
+        scheduled_start_date: (plan as any).scheduled_start_date,
+        scheduled_end_date: (plan as any).scheduled_end_date,
+        status: (plan as any).status,
+      },
+      days: dayList,
+      meals,
     };
   });
 

@@ -183,6 +183,31 @@ export const transitionPlanStatus = createServerFn({ method: "POST" })
       .eq("id", data.plan_id);
     if (error) throw new Error(error.message);
 
+    // When a nutrition plan is approved, pre-generate the shopping list so
+    // the customer can already see it before the plan becomes active.
+    if (data.to === "approved" && (plan as any).plan_type === "nutrition") {
+      try {
+        const apiKey = process.env.LOVABLE_API_KEY;
+        if (apiKey) {
+          const { generateShoppingListForPlan } = await import("./shopping-list-engine.server");
+          const { data: prof } = await supabase
+            .from("smart_nutrition_profile")
+            .select("shopping_days")
+            .eq("user_id", (plan as any).client_id)
+            .maybeSingle();
+          const windowDays = daysUntilNextShopping((prof as any)?.shopping_days);
+          await generateShoppingListForPlan({
+            supabase,
+            apiKey,
+            planId: data.plan_id,
+            windowDays,
+          });
+        }
+      } catch (e) {
+        console.warn("auto shopping list on approval failed", e);
+      }
+    }
+
     // Auto-apply nutrition targets when a plan becomes active
     if (data.to === "active") {
       try {

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, Sparkles, Utensils, Dumbbell, Check, Shuffle, BookOpen, Repeat, PlayCircle } from "lucide-react";
+import { Loader2, Sparkles, Utensils, Dumbbell, Check, Shuffle, BookOpen, Repeat, PlayCircle, CalendarRange } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
 import { parseNutritionPlan, estimateMealMacros } from "@/lib/nutrition-plan.functions";
@@ -9,11 +9,12 @@ import { parseTrainingPlan } from "@/lib/training.functions";
 import { getDayType } from "@/lib/nutrition.functions";
 import { logInteraction } from "@/lib/meal-feedback.functions";
 import { getMySkipsForDate, removeMealSkip } from "@/lib/meal-skips.functions";
+import { formatDateRange } from "@/lib/format-date-range";
 import { RecipeDialog } from "./RecipeDialog";
 import { MealSwapDialog } from "./MealSwapDialog";
 import { SkipReasonDialog } from "./SkipReasonDialog";
 
-type Plan = { id: string; client_id: string; title: string; weeks_count?: number | null; scheduled_start_date?: string | null };
+type Plan = { id: string; client_id: string; title: string; weeks_count?: number | null; scheduled_start_date?: string | null; scheduled_end_date?: string | null };
 type Day = { id: string; name: string; sort_order: number; week_number?: number | null };
 type Meal = {
   id: string;
@@ -196,7 +197,7 @@ export function PlanContentView({ clientId, planType }: Props) {
     setLoading(true);
     const { data: planRow } = await supabase
       .from("nutrition_plans")
-      .select("id, client_id, title, weeks_count, scheduled_start_date")
+      .select("id, client_id, title, weeks_count, scheduled_start_date, scheduled_end_date")
       .eq("client_id", clientId)
       .eq("plan_type", planType)
       .eq("is_active", true)
@@ -445,6 +446,11 @@ export function PlanContentView({ clientId, planType }: Props) {
   const eyebrow = planType === "nutrition" ? "Ernährungsplan" : "Trainingsplan";
   const empty = planType === "nutrition" ? "Mahlzeiten" : "Übungen";
 
+  const planDateRange = formatDateRange(
+    (plan as any)?.scheduled_start_date,
+    (plan as any)?.scheduled_end_date,
+  );
+
   return (
     <div className="rounded-3xl border border-border bg-card p-5 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -455,6 +461,12 @@ export function PlanContentView({ clientId, planType }: Props) {
           <div>
             <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">{eyebrow}</div>
             <div className="font-display text-base font-bold">Inhalt</div>
+            {planDateRange && (
+              <div className="mt-0.5 inline-flex items-center gap-1 text-[11px] font-semibold text-primary">
+                <CalendarRange className="h-3 w-3" />
+                {planDateRange}
+              </div>
+            )}
           </div>
         </div>
         {isCoach && (

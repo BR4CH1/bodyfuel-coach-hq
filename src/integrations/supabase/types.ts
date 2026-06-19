@@ -2353,6 +2353,14 @@ export type Database = {
         Args: { _a: string; _b: string }
         Returns: boolean
       }
+      auto_activate_due_plans: {
+        Args: never
+        Returns: {
+          activated_plan_id: string
+          client_id: string
+          plan_type: string
+        }[]
+      }
       compute_macro_targets: { Args: { _user_id: string }; Returns: undefined }
       delete_email: {
         Args: { message_id: number; queue_name: string }
