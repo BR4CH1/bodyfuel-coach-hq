@@ -119,26 +119,31 @@ export function FreeAppLayout({ children }: { children: ReactNode }) {
         </div>
       </main>
 
-      {/* Mobile bottom nav */}
+      {/* Mobile bottom nav — limited set */}
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 backdrop-blur lg:hidden">
-        <div className="grid" style={{ gridTemplateColumns: `repeat(${nav.length}, minmax(0, 1fr))` }}>
-          {nav.map((item) => {
-            const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.to}
-                to={item.to}
-                className={`flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium ${
-                  active ? "text-primary" : "text-muted-foreground"
-                }`}
-              >
-                <Icon className="h-5 w-5" />
-                {item.label}
-              </Link>
-            );
-          })}
-        </div>
+        {(() => {
+          const mobileNav = nav.filter((i) => !i.desktopOnly);
+          return (
+            <div className="grid" style={{ gridTemplateColumns: `repeat(${mobileNav.length}, minmax(0, 1fr))` }}>
+              {mobileNav.map((item) => {
+                const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    className={`flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium ${
+                      active ? "text-primary" : "text-muted-foreground"
+                    }`}
+                  >
+                    <Icon className="h-5 w-5" />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          );
+        })()}
       </nav>
     </div>
   );
