@@ -449,6 +449,7 @@ function RealUserDashboard() {
     <div className="space-y-6">
       
       <TrialWelcomeDialog />
+      <RankingInvitePopup />
       <TrialStatusBanner />
       <SportWeekdaysPrompt />
       {supabaseUser && <TrialChecklistGate userId={supabaseUser.id} />}
