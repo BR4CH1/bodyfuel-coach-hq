@@ -15,6 +15,7 @@ import { Route as TrustRouteImport } from './routes/trust'
 import { Route as TrialRouteImport } from './routes/trial'
 import { Route as TrainingRouteImport } from './routes/training'
 import { Route as StrengthCheckRouteImport } from './routes/strength-check'
+import { Route as RankingRouteImport } from './routes/ranking'
 import { Route as ProgressRouteImport } from './routes/progress'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as NutritionRouteImport } from './routes/nutrition'
@@ -53,7 +54,6 @@ import { Route as BullsRecoveryRouteImport } from './routes/bulls.recovery'
 import { Route as BullsPhotosRouteImport } from './routes/bulls.photos'
 import { Route as BullsNutritionRouteImport } from './routes/bulls.nutrition'
 import { Route as BullsBenchmarksRouteImport } from './routes/bulls.benchmarks'
-import { Route as AuthenticatedRankingRouteImport } from './routes/_authenticated/ranking'
 import { Route as TrackerAppIndexRouteImport } from './routes/tracker.app.index'
 import { Route as CoachCustomersIndexRouteImport } from './routes/coach.customers.index'
 import { Route as TrackerAppWeightRouteImport } from './routes/tracker.app.weight'
@@ -106,6 +106,11 @@ const TrainingRoute = TrainingRouteImport.update({
 const StrengthCheckRoute = StrengthCheckRouteImport.update({
   id: '/strength-check',
   path: '/strength-check',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RankingRoute = RankingRouteImport.update({
+  id: '/ranking',
+  path: '/ranking',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProgressRoute = ProgressRouteImport.update({
@@ -300,11 +305,6 @@ const BullsBenchmarksRoute = BullsBenchmarksRouteImport.update({
   path: '/bulls/benchmarks',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedRankingRoute = AuthenticatedRankingRouteImport.update({
-  id: '/_authenticated/ranking',
-  path: '/ranking',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const TrackerAppIndexRoute = TrackerAppIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -444,13 +444,13 @@ export interface FileRoutesByFullPath {
   '/nutrition': typeof NutritionRouteWithChildren
   '/profile': typeof ProfileRoute
   '/progress': typeof ProgressRoute
+  '/ranking': typeof RankingRoute
   '/strength-check': typeof StrengthCheckRoute
   '/training': typeof TrainingRoute
   '/trial': typeof TrialRoute
   '/trust': typeof TrustRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/welcome': typeof WelcomeRoute
-  '/ranking': typeof AuthenticatedRankingRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
   '/bulls/nutrition': typeof BullsNutritionRoute
   '/bulls/photos': typeof BullsPhotosRoute
@@ -512,13 +512,13 @@ export interface FileRoutesByTo {
   '/measurements': typeof MeasurementsRoute
   '/profile': typeof ProfileRoute
   '/progress': typeof ProgressRoute
+  '/ranking': typeof RankingRoute
   '/strength-check': typeof StrengthCheckRoute
   '/training': typeof TrainingRoute
   '/trial': typeof TrialRoute
   '/trust': typeof TrustRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/welcome': typeof WelcomeRoute
-  '/ranking': typeof AuthenticatedRankingRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
   '/bulls/nutrition': typeof BullsNutritionRoute
   '/bulls/photos': typeof BullsPhotosRoute
@@ -581,13 +581,13 @@ export interface FileRoutesById {
   '/nutrition': typeof NutritionRouteWithChildren
   '/profile': typeof ProfileRoute
   '/progress': typeof ProgressRoute
+  '/ranking': typeof RankingRoute
   '/strength-check': typeof StrengthCheckRoute
   '/training': typeof TrainingRoute
   '/trial': typeof TrialRoute
   '/trust': typeof TrustRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/welcome': typeof WelcomeRoute
-  '/_authenticated/ranking': typeof AuthenticatedRankingRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
   '/bulls/nutrition': typeof BullsNutritionRoute
   '/bulls/photos': typeof BullsPhotosRoute
@@ -653,13 +653,13 @@ export interface FileRouteTypes {
     | '/nutrition'
     | '/profile'
     | '/progress'
+    | '/ranking'
     | '/strength-check'
     | '/training'
     | '/trial'
     | '/trust'
     | '/unsubscribe'
     | '/welcome'
-    | '/ranking'
     | '/bulls/benchmarks'
     | '/bulls/nutrition'
     | '/bulls/photos'
@@ -721,13 +721,13 @@ export interface FileRouteTypes {
     | '/measurements'
     | '/profile'
     | '/progress'
+    | '/ranking'
     | '/strength-check'
     | '/training'
     | '/trial'
     | '/trust'
     | '/unsubscribe'
     | '/welcome'
-    | '/ranking'
     | '/bulls/benchmarks'
     | '/bulls/nutrition'
     | '/bulls/photos'
@@ -789,13 +789,13 @@ export interface FileRouteTypes {
     | '/nutrition'
     | '/profile'
     | '/progress'
+    | '/ranking'
     | '/strength-check'
     | '/training'
     | '/trial'
     | '/trust'
     | '/unsubscribe'
     | '/welcome'
-    | '/_authenticated/ranking'
     | '/bulls/benchmarks'
     | '/bulls/nutrition'
     | '/bulls/photos'
@@ -860,13 +860,13 @@ export interface RootRouteChildren {
   NutritionRoute: typeof NutritionRouteWithChildren
   ProfileRoute: typeof ProfileRoute
   ProgressRoute: typeof ProgressRoute
+  RankingRoute: typeof RankingRoute
   StrengthCheckRoute: typeof StrengthCheckRoute
   TrainingRoute: typeof TrainingRoute
   TrialRoute: typeof TrialRoute
   TrustRoute: typeof TrustRoute
   UnsubscribeRoute: typeof UnsubscribeRoute
   WelcomeRoute: typeof WelcomeRoute
-  AuthenticatedRankingRoute: typeof AuthenticatedRankingRoute
   BullsBenchmarksRoute: typeof BullsBenchmarksRoute
   BullsNutritionRoute: typeof BullsNutritionRoute
   BullsPhotosRoute: typeof BullsPhotosRoute
@@ -935,6 +935,13 @@ declare module '@tanstack/react-router' {
       path: '/strength-check'
       fullPath: '/strength-check'
       preLoaderRoute: typeof StrengthCheckRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ranking': {
+      id: '/ranking'
+      path: '/ranking'
+      fullPath: '/ranking'
+      preLoaderRoute: typeof RankingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/progress': {
@@ -1203,13 +1210,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BullsBenchmarksRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/ranking': {
-      id: '/_authenticated/ranking'
-      path: '/ranking'
-      fullPath: '/ranking'
-      preLoaderRoute: typeof AuthenticatedRankingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/tracker/app/': {
       id: '/tracker/app/'
       path: '/'
@@ -1473,13 +1473,13 @@ const rootRouteChildren: RootRouteChildren = {
   NutritionRoute: NutritionRouteWithChildren,
   ProfileRoute: ProfileRoute,
   ProgressRoute: ProgressRoute,
+  RankingRoute: RankingRoute,
   StrengthCheckRoute: StrengthCheckRoute,
   TrainingRoute: TrainingRoute,
   TrialRoute: TrialRoute,
   TrustRoute: TrustRoute,
   UnsubscribeRoute: UnsubscribeRoute,
   WelcomeRoute: WelcomeRoute,
-  AuthenticatedRankingRoute: AuthenticatedRankingRoute,
   BullsBenchmarksRoute: BullsBenchmarksRoute,
   BullsNutritionRoute: BullsNutritionRoute,
   BullsPhotosRoute: BullsPhotosRoute,
