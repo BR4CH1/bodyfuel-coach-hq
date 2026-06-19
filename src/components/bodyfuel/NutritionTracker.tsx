@@ -773,8 +773,6 @@ export function NutritionTracker() {
         </div>
       </div>
 
-      {/* Deine Mahlzeiten */}
-      <CustomMealsCard userId={userId} />
 
       {/* Meals */}
       {MEALS.map((m) => {
