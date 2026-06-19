@@ -26,6 +26,7 @@ const clientNav = [
   { to: "/nutrition", label: "Ernährung", icon: FileText },
   { to: "/training", label: "Training", icon: Dumbbell },
   { to: "/achievements", label: "Erfolge", icon: Trophy },
+  { to: "/ranking", label: "Ranking", icon: Users },
   { to: "/profile", label: "Profil", icon: UserCircle },
 ];
 
