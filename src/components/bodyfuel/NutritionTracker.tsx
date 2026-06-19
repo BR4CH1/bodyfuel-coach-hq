@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BarcodeScanner } from "./BarcodeScanner";
 import { MealBuilderDialog } from "./MealBuilderDialog";
-import { CustomMealsCard } from "./CustomMealsCard";
 import {
   searchFoods,
   lookupBarcode,
@@ -19,6 +18,7 @@ import {
   type FoodResult,
   type DayType,
 } from "@/lib/nutrition.functions";
+import { listCustomMeals, type CustomMeal } from "@/lib/custom-meals.functions";
 import { LOCAL_FOODS } from "@/lib/bodyfuel/localFoods";
 import {
   entryMatchesActiveDay,
@@ -163,6 +163,10 @@ export function NutritionTracker() {
   const [loadingRecent, setLoadingRecent] = useState(false);
   const [favorites, setFavorites] = useState<FavoriteFood[]>([]);
   const [loadingFavorites, setLoadingFavorites] = useState(false);
+  const [source, setSource] = useState<"food" | "meal">("food");
+  const [customMeals, setCustomMeals] = useState<CustomMeal[]>([]);
+  const [loadingMeals, setLoadingMeals] = useState(false);
+  const listCustomMealsFn = useServerFn(listCustomMeals);
 
   const favKey = (f: { barcode?: string | null; name: string; brand?: string | null }) =>
     `${f.barcode ?? f.name}|${f.brand ?? ""}`;
@@ -517,6 +521,47 @@ export function NutritionTracker() {
     return () => { cancelled = true; };
   }, [openMeal, picking, userId, allEntries.length]);
 
+  // Load custom meals when dialog opens
+  useEffect(() => {
+    if (!openMeal || picking || !userId) return;
+    let cancelled = false;
+    setLoadingMeals(true);
+    listCustomMealsFn({ data: {} })
+      .then((rows) => {
+        if (!cancelled) setCustomMeals(rows ?? []);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoadingMeals(false);
+      });
+    return () => { cancelled = true; };
+  }, [openMeal, picking, userId, listCustomMealsFn, builderOpen]);
+
+  const addCustomMeal = async (m: CustomMeal) => {
+    if (!openMeal || !userId) return;
+    const payload = {
+      user_id: userId,
+      entry_date: date,
+      meal: openMeal,
+      name: m.name,
+      serving_g: 100,
+      kcal: Math.round(m.kcal ?? 0),
+      protein_g: m.protein_g ? +Number(m.protein_g).toFixed(1) : 0,
+      carbs_g: m.carbs_g ? +Number(m.carbs_g).toFixed(1) : 0,
+      fat_g: m.fat_g ? +Number(m.fat_g).toFixed(1) : 0,
+      source: `custom:${m.id}`,
+    };
+    const { data: row, error } = await supabase
+      .from("food_entries")
+      .insert(payload)
+      .select("id, meal, name, brand, serving_g, kcal, protein_g, carbs_g, fat_g, source")
+      .single();
+    if (error) return toast.error(error.message);
+    setAllEntries((e) => [...e, row as FoodEntry]);
+    setOpenMeal(null);
+    toast.success("Mahlzeit hinzugefügt");
+  };
+
 
   const handleBarcode = async (code: string) => {
     setScannerOpen(false);
@@ -773,8 +818,6 @@ export function NutritionTracker() {
         </div>
       </div>
 
-      {/* Deine Mahlzeiten */}
-      <CustomMealsCard userId={userId} />
 
       {/* Meals */}
       {MEALS.map((m) => {
@@ -798,6 +841,7 @@ export function NutritionTracker() {
                     setQuery("");
                     setResults([]);
                     setPicking(null);
+                    setSource("food");
                   }}
                   className="bg-gradient-gold text-primary-foreground"
                 >
@@ -857,6 +901,25 @@ export function NutritionTracker() {
 
             {!picking ? (
               <div className="flex min-h-0 flex-1 flex-col p-4">
+                {/* Source toggle: Lebensmittel / Mahlzeiten */}
+                <div className="mb-3 inline-flex shrink-0 self-start rounded-md border border-border bg-background/40 p-0.5 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setSource("food")}
+                    className={`rounded px-3 py-1.5 ${source === "food" ? "bg-gold text-primary-foreground" : "text-muted-foreground"}`}
+                  >
+                    Lebensmittel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSource("meal")}
+                    className={`rounded px-3 py-1.5 ${source === "meal" ? "bg-gold text-primary-foreground" : "text-muted-foreground"}`}
+                  >
+                    Mahlzeiten {customMeals.length > 0 ? `(${customMeals.length})` : ""}
+                  </button>
+                </div>
+                {source === "food" ? (
+                <>
                 <div className="flex shrink-0 gap-2">
                   <Input
                     autoFocus
@@ -995,6 +1058,51 @@ export function NutritionTracker() {
                   </ul>
 
                 </div>
+                </>
+                ) : (
+                <div className="mt-1 min-h-0 flex-1 overflow-y-auto">
+                  <div className="mb-2 flex items-center justify-between">
+                    <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Deine Mahlzeiten
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setBuilderOpen(true)}
+                      className="h-7 text-xs text-gold"
+                    >
+                      <ChefHat className="h-3.5 w-3.5" /> Neu
+                    </Button>
+                  </div>
+                  {loadingMeals ? (
+                    <p className="py-6 text-center text-xs text-muted-foreground">Lade…</p>
+                  ) : customMeals.length === 0 ? (
+                    <p className="py-6 text-center text-xs text-muted-foreground">
+                      Noch keine eigenen Mahlzeiten. Tippe oben auf „Neu", um eine anzulegen.
+                    </p>
+                  ) : (
+                    <ul className="divide-y divide-border">
+                      {customMeals.map((m) => (
+                        <li key={m.id}>
+                          <button
+                            onClick={() => addCustomMeal(m)}
+                            className="w-full px-2 py-3 text-left hover:bg-secondary"
+                          >
+                            <div className="truncate text-sm font-medium">{m.name}</div>
+                            <div className="text-[11px] text-muted-foreground">
+                              {m.kcal ? `${Math.round(m.kcal)} kcal` : "—"}
+                              {m.protein_g ? ` · P ${Number(m.protein_g).toFixed(1)}` : ""}
+                              {m.carbs_g ? ` · K ${Number(m.carbs_g).toFixed(1)}` : ""}
+                              {m.fat_g ? ` · F ${Number(m.fat_g).toFixed(1)}` : ""}
+                              {m.ingredients?.length ? ` · ${m.ingredients.length} Zutaten` : ""}
+                            </div>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                )}
               </div>
             ) : (() => {
                 const amt = parseFloat(amountStr.replace(",", ".")) || 0;
