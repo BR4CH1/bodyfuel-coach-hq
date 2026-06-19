@@ -53,6 +53,7 @@ import { Route as BullsRecoveryRouteImport } from './routes/bulls.recovery'
 import { Route as BullsPhotosRouteImport } from './routes/bulls.photos'
 import { Route as BullsNutritionRouteImport } from './routes/bulls.nutrition'
 import { Route as BullsBenchmarksRouteImport } from './routes/bulls.benchmarks'
+import { Route as AuthenticatedRankingRouteImport } from './routes/_authenticated/ranking'
 import { Route as TrackerAppIndexRouteImport } from './routes/tracker.app.index'
 import { Route as CoachCustomersIndexRouteImport } from './routes/coach.customers.index'
 import { Route as TrackerAppWeightRouteImport } from './routes/tracker.app.weight'
@@ -299,6 +300,11 @@ const BullsBenchmarksRoute = BullsBenchmarksRouteImport.update({
   path: '/bulls/benchmarks',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedRankingRoute = AuthenticatedRankingRouteImport.update({
+  id: '/_authenticated/ranking',
+  path: '/ranking',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TrackerAppIndexRoute = TrackerAppIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -444,6 +450,7 @@ export interface FileRoutesByFullPath {
   '/trust': typeof TrustRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/welcome': typeof WelcomeRoute
+  '/ranking': typeof AuthenticatedRankingRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
   '/bulls/nutrition': typeof BullsNutritionRoute
   '/bulls/photos': typeof BullsPhotosRoute
@@ -511,6 +518,7 @@ export interface FileRoutesByTo {
   '/trust': typeof TrustRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/welcome': typeof WelcomeRoute
+  '/ranking': typeof AuthenticatedRankingRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
   '/bulls/nutrition': typeof BullsNutritionRoute
   '/bulls/photos': typeof BullsPhotosRoute
@@ -579,6 +587,7 @@ export interface FileRoutesById {
   '/trust': typeof TrustRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/welcome': typeof WelcomeRoute
+  '/_authenticated/ranking': typeof AuthenticatedRankingRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
   '/bulls/nutrition': typeof BullsNutritionRoute
   '/bulls/photos': typeof BullsPhotosRoute
@@ -650,6 +659,7 @@ export interface FileRouteTypes {
     | '/trust'
     | '/unsubscribe'
     | '/welcome'
+    | '/ranking'
     | '/bulls/benchmarks'
     | '/bulls/nutrition'
     | '/bulls/photos'
@@ -717,6 +727,7 @@ export interface FileRouteTypes {
     | '/trust'
     | '/unsubscribe'
     | '/welcome'
+    | '/ranking'
     | '/bulls/benchmarks'
     | '/bulls/nutrition'
     | '/bulls/photos'
@@ -784,6 +795,7 @@ export interface FileRouteTypes {
     | '/trust'
     | '/unsubscribe'
     | '/welcome'
+    | '/_authenticated/ranking'
     | '/bulls/benchmarks'
     | '/bulls/nutrition'
     | '/bulls/photos'
@@ -854,6 +866,7 @@ export interface RootRouteChildren {
   TrustRoute: typeof TrustRoute
   UnsubscribeRoute: typeof UnsubscribeRoute
   WelcomeRoute: typeof WelcomeRoute
+  AuthenticatedRankingRoute: typeof AuthenticatedRankingRoute
   BullsBenchmarksRoute: typeof BullsBenchmarksRoute
   BullsNutritionRoute: typeof BullsNutritionRoute
   BullsPhotosRoute: typeof BullsPhotosRoute
@@ -1190,6 +1203,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BullsBenchmarksRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/ranking': {
+      id: '/_authenticated/ranking'
+      path: '/ranking'
+      fullPath: '/ranking'
+      preLoaderRoute: typeof AuthenticatedRankingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tracker/app/': {
       id: '/tracker/app/'
       path: '/'
@@ -1459,6 +1479,7 @@ const rootRouteChildren: RootRouteChildren = {
   TrustRoute: TrustRoute,
   UnsubscribeRoute: UnsubscribeRoute,
   WelcomeRoute: WelcomeRoute,
+  AuthenticatedRankingRoute: AuthenticatedRankingRoute,
   BullsBenchmarksRoute: BullsBenchmarksRoute,
   BullsNutritionRoute: BullsNutritionRoute,
   BullsPhotosRoute: BullsPhotosRoute,
