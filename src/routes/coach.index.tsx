@@ -878,6 +878,12 @@ function TaskInboxCard({
   extendingKey,
   onGenerateDraft,
   generatingKey,
+  onBulkExtend,
+  bulkExtendProgress,
+  bulkExtending,
+  onBulkDraft,
+  bulkDraftProgress,
+  bulkDrafting,
 }: {
   openCheckins: Client[];
   expiringPlans: ExpiringPlan[];
@@ -889,6 +895,12 @@ function TaskInboxCard({
   extendingKey: string | null | undefined;
   onGenerateDraft: (client_id: string, task_key: string) => void;
   generatingKey: string | null | undefined;
+  onBulkExtend: (items: Array<{ client_id: string; kind: "nutrition" | "training"; task_key: string }>) => void;
+  bulkExtendProgress: { done: number; total: number } | null;
+  bulkExtending: boolean;
+  onBulkDraft: (items: Array<{ client_id: string; task_key: string }>) => void;
+  bulkDraftProgress: { done: number; total: number } | null;
+  bulkDrafting: boolean;
 }) {
   type QuickAction = {
     label: string;
