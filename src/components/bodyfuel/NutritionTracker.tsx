@@ -841,6 +841,7 @@ export function NutritionTracker() {
                     setQuery("");
                     setResults([]);
                     setPicking(null);
+                    setSource("food");
                   }}
                   className="bg-gradient-gold text-primary-foreground"
                 >
