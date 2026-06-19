@@ -9,6 +9,7 @@ import {
   Dumbbell,
   Trophy,
   Users,
+  Trophy as TrophyIcon,
   LogOut,
   Inbox,
   UserCircle,
