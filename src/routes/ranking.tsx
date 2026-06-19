@@ -139,7 +139,7 @@ function RankingPage() {
           {myIdx >= 0 && (
             <div className="rounded-2xl border border-gold/40 bg-gold/5 p-4 text-sm">
               Deine Position: <span className="font-display text-lg text-gold">#{myIdx + 1}</span> von {sorted.length}
-              <span className="ml-2 text-muted-foreground">(als @{myNick?.nickname})</span>
+              <span className="ml-2 text-muted-foreground">(als {myNick?.nickname})</span>
             </div>
           )}
 
