@@ -42,6 +42,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isBullsRoute = pathname.startsWith("/bulls");
   const freeBullsAccess = isFreeUser && isBullsRoute && hasGroup("bulls");
+  const freeRankingAccess = isFreeUser && pathname.startsWith("/ranking");
 
   useEffect(() => {
     if (loading) return;
@@ -53,7 +54,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   if (loading) return null;
   if (!user && !supabaseUser) return null;
-  if (isFreeUser && !freeBullsAccess) return null;
+  if (isFreeUser && !freeBullsAccess && !freeRankingAccess) return null;
 
   const baseNav = isCoach ? coachNav : clientNav;
   const nav = !isCoach && hasGroup("bulls") ? [...baseNav, bullsNavItem] : baseNav;
