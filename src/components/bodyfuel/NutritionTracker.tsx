@@ -1038,14 +1038,48 @@ export function NutritionTracker() {
                     </>
                   )}
                   {query.trim() !== "" && results.length === 0 && (
-                    <p className="flex items-center justify-center gap-2 py-6 text-center text-xs text-muted-foreground">
-                      {searching ? (
-                        <><Loader2 className="h-3 w-3 animate-spin" /> Suche…</>
-                      ) : (
-                        "Keine Treffer — anders schreiben oder Barcode scannen"
+                    <div className="flex flex-col items-center gap-3 py-6 text-center">
+                      <p className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                        {searching ? (
+                          <><Loader2 className="h-3 w-3 animate-spin" /> Suche…</>
+                        ) : (
+                          "Keine Treffer in der Datenbank"
+                        )}
+                      </p>
+                      {!searching && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={estimateWithAi}
+                          disabled={aiEstimating}
+                          className="gap-2 border-gold/40 text-gold hover:bg-gold/10"
+                        >
+                          {aiEstimating ? (
+                            <><Loader2 className="h-3.5 w-3.5 animate-spin" /> KI schätzt…</>
+                          ) : (
+                            <><Sparkles className="h-3.5 w-3.5" /> Nährwerte per KI schätzen</>
+                          )}
+                        </Button>
                       )}
-                    </p>
+                    </div>
                   )}
+                  {query.trim() !== "" && results.length > 0 && !searching && (
+                    <div className="flex justify-end pb-2">
+                      <button
+                        type="button"
+                        onClick={estimateWithAi}
+                        disabled={aiEstimating}
+                        className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-gold disabled:opacity-50"
+                      >
+                        {aiEstimating ? (
+                          <><Loader2 className="h-3 w-3 animate-spin" /> KI schätzt…</>
+                        ) : (
+                          <><Sparkles className="h-3 w-3" /> Nichts passt? KI-Schätzung</>
+                        )}
+                      </button>
+                    </div>
+                  )}
+
                   <ul className="divide-y divide-border">
                     {results.map((r, i) => {
                       const fav = isFavorite(r);
