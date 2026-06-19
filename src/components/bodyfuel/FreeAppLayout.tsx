@@ -1,6 +1,6 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
-import { LayoutDashboard, Apple, Scale, Trophy, LogOut, Sparkles, Dumbbell, Shield, Droplet, Footprints, User } from "lucide-react";
+import { LayoutDashboard, Apple, Scale, Trophy, LogOut, Sparkles, Dumbbell, Shield, Droplet, Footprints, User, Crown } from "lucide-react";
 import { useSession } from "@/lib/bodyfuel/session";
 import { Logo } from "./Logo";
 import { FreeUpsellBanner } from "./FreeUpsellBanner";
