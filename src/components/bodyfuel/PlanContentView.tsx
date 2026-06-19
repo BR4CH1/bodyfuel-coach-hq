@@ -196,7 +196,7 @@ export function PlanContentView({ clientId, planType }: Props) {
     setLoading(true);
     const { data: planRow } = await supabase
       .from("nutrition_plans")
-      .select("id, client_id, title, weeks_count, scheduled_start_date")
+      .select("id, client_id, title, weeks_count, scheduled_start_date, scheduled_end_date")
       .eq("client_id", clientId)
       .eq("plan_type", planType)
       .eq("is_active", true)
