@@ -31,38 +31,38 @@ function ShoppingListPage() {
     queryFn: () => getFn(),
   });
 
-  type Scope = "active" | "next" | "partner" | "combined" | `archive:${string}`;
-  const [scope, setScope] = useState<Scope>("active");
+  type PeriodScope = "active" | "next" | `archive:${string}`;
+  type PartnerMode = "mine" | "combined";
+  const [periodScope, setPeriodScope] = useState<PeriodScope>("active");
+  const [partnerMode, setPartnerMode] = useState<PartnerMode>("mine");
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [showPlan, setShowPlan] = useState(false);
 
   useEffect(() => {
     if (!data) return;
-    if (!data.active && data.next) setScope("next");
-    else if (data.active && !data.next) setScope("active");
+    if (!data.active && data.next) setPeriodScope("next");
+    else if (data.active && !data.next) setPeriodScope("active");
   }, [data]);
 
   const partner = (data as any)?.partner;
   const archive = (data?.archive ?? []) as any[];
 
   const selected = useMemo(() => {
-    if (scope === "active") return data?.active ?? null;
-    if (scope === "next") return data?.next ?? null;
-    if (scope === "partner") return partner?.plan ?? null;
-    if (scope === "combined") return data?.active ?? data?.next ?? null;
-    if (scope.startsWith("archive:")) {
-      const id = scope.slice("archive:".length);
+    if (periodScope === "active") return data?.active ?? null;
+    if (periodScope === "next") return data?.next ?? null;
+    if (periodScope.startsWith("archive:")) {
+      const id = periodScope.slice("archive:".length);
       return archive.find((p) => p.id === id) ?? null;
     }
     return null;
-  }, [scope, data, partner, archive]);
+  }, [periodScope, data, archive]);
 
-  const items: Item[] =
-    scope === "combined"
-      ? (((data?.active as any)?.combined?.items ?? (data?.next as any)?.combined?.items ?? []) as Item[])
-      : scope === "partner"
-        ? ((partner?.list?.items as Item[]) ?? [])
-        : (((selected as any)?.list?.items as Item[]) ?? []);
+  const isArchive = periodScope.startsWith("archive:");
+  const useCombined = !!partner && partnerMode === "combined" && !isArchive;
+
+  const items: Item[] = useCombined
+    ? (((selected as any)?.combined?.items ?? []) as Item[])
+    : (((selected as any)?.list?.items as Item[]) ?? []);
 
   // Plan content fetch — only for current/next/partner/archive (not combined)
   const planIdForView = scope === "combined" ? null : (selected as any)?.id ?? null;
