@@ -269,6 +269,26 @@ export function NutritionTracker() {
   const setDayTypeFn = useServerFn(setDayType);
   const searchFn = useServerFn(searchFoods);
   const lookupFn = useServerFn(lookupBarcode);
+  const estimateFn = useServerFn(estimateFoodFromText);
+  const [aiEstimating, setAiEstimating] = useState(false);
+
+  const estimateWithAi = async () => {
+    const term = query.trim();
+    if (!term) return;
+    setAiEstimating(true);
+    try {
+      const r = await estimateFn({ data: { query: term } });
+      setResults((prev) => [r, ...prev]);
+      setPicking(r);
+      setUnit(r.serving_g ? "piece" : "g");
+      setAmountStr(r.serving_g ? "1" : "100");
+      toast.success("KI-Schätzung erstellt – Werte prüfen & speichern.");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setAiEstimating(false);
+    }
+  };
 
   // Load targets + entries + water + day type
   useEffect(() => {
