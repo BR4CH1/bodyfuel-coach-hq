@@ -163,6 +163,10 @@ export function NutritionTracker() {
   const [loadingRecent, setLoadingRecent] = useState(false);
   const [favorites, setFavorites] = useState<FavoriteFood[]>([]);
   const [loadingFavorites, setLoadingFavorites] = useState(false);
+  const [source, setSource] = useState<"food" | "meal">("food");
+  const [customMeals, setCustomMeals] = useState<CustomMeal[]>([]);
+  const [loadingMeals, setLoadingMeals] = useState(false);
+  const listCustomMealsFn = useServerFn(listCustomMeals);
 
   const favKey = (f: { barcode?: string | null; name: string; brand?: string | null }) =>
     `${f.barcode ?? f.name}|${f.brand ?? ""}`;
