@@ -218,14 +218,14 @@ function ShoppingListPage() {
               <div className="inline-flex w-full overflow-hidden rounded-md border border-input">
                 <button
                   type="button"
-                  onClick={() => { setPartnerMode("mine"); setChecked({}); }}
+                  onClick={() => { setPartnerMode("mine"); }}
                   className={`flex-1 px-3 py-2 text-sm font-semibold transition ${partnerMode === "mine" ? "bg-primary text-primary-foreground" : "bg-background text-foreground hover:bg-secondary"}`}
                 >
                   Meine Liste
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setPartnerMode("combined"); setChecked({}); }}
+                  onClick={() => { setPartnerMode("combined"); }}
                   className={`flex-1 px-3 py-2 text-sm font-semibold transition border-l border-input ${partnerMode === "combined" ? "bg-primary text-primary-foreground" : "bg-background text-foreground hover:bg-secondary"}`}
                 >
                   Gemeinsame Liste
