@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Apple, Scale, Dumbbell, ArrowRight } from "lucide-react";
+import { Apple, Scale, Dumbbell, ArrowRight, Droplet, Footprints, User } from "lucide-react";
 import { useSession } from "@/lib/bodyfuel/session";
 import { DailyChecklist } from "@/components/bodyfuel/DailyChecklist";
 import { AchievementsCard } from "@/components/bodyfuel/AchievementsCard";
@@ -19,6 +19,9 @@ function TrackerHome() {
     { to: "/tracker/app/nutrition", label: "Ernährung", icon: Apple, desc: "Kalorien & Makros" },
     { to: "/tracker/app/training", label: "Training", icon: Dumbbell, desc: "Plan & Tracking" },
     { to: "/tracker/app/weight", label: "Gewicht", icon: Scale, desc: "Verlauf" },
+    { to: "/tracker/app/water", label: "Wasser", icon: Droplet, desc: "Gläser pro Tag" },
+    { to: "/tracker/app/activity", label: "Aktivität", icon: Footprints, desc: "Schritte & Training" },
+    { to: "/tracker/app/profile", label: "Profil", icon: User, desc: "Einstellungen" },
   ] as const;
 
   return (
