@@ -27,6 +27,7 @@ function TrackerHome() {
 
   return (
     <div className="space-y-6">
+      <RankingInvitePopup />
       <div>
         <p className="text-xs uppercase tracking-[0.2em] text-primary">Heute</p>
         <h1 className="font-display text-3xl font-bold sm:text-4xl">Hi {name} 👋</h1>
