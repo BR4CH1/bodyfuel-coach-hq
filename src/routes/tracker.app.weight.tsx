@@ -101,10 +101,21 @@ function WeightPage() {
           <p className="mt-3 text-sm text-muted-foreground">Noch keine Einträge.</p>
         ) : (
           <ul className="mt-3 divide-y divide-border">
-            {history.map((h, i) => (
-              <li key={i} className="flex items-center justify-between py-2 text-sm">
+            {history.map((h) => (
+              <li key={h.id} className="flex items-center justify-between gap-2 py-2 text-sm">
                 <span className="text-muted-foreground">{h.date}</span>
-                <span className="font-display font-bold">{h.w.toFixed(1)} kg</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-display font-bold">{h.w.toFixed(1)} kg</span>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                    onClick={() => remove(h.id)}
+                    aria-label="Eintrag löschen"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </li>
             ))}
           </ul>
