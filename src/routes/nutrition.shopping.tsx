@@ -1,12 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ChevronLeft, ShoppingCart, Loader2, Printer, RefreshCw, ChevronDown, ChevronUp, CalendarRange } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { Button } from "@/components/ui/button";
-import { generateShoppingList, getMyShoppingLists, getPlanContent } from "@/lib/shopping-list.functions";
+import { generateShoppingList, getMyShoppingLists, getPlanContent, setShoppingItemChecked } from "@/lib/shopping-list.functions";
 import { formatDateRange } from "@/lib/format-date-range";
 
 export const Route = createFileRoute("/nutrition/shopping")({
@@ -18,13 +18,31 @@ export const Route = createFileRoute("/nutrition/shopping")({
   ),
 });
 
-type Item = { name: string; quantity: string; category: string };
+type Item = { name: string; quantity: string; category: string; checked?: boolean };
+
+function shoppingItemKey(name: string) {
+  const clean = name
+    .replace(/\([^)]*\)/g, "")
+    .replace(/:\s*\d+(?:[,.]\d+)?\s*(kg|g|ml|l|stk\.?|stück)?\s*$/i, "")
+    .replace(/:\s*$/g, "")
+    .replace(/\b(ca\.|ungekocht|gekocht|gegart|gebraten|gedünstet|roh|trocken|frisch|tiefgekühlt|tk|light|fettarm|zuckerarm|magere?r?|natur|pur|optional)\b/gi, "")
+    .replace(/^[-•·]\s*/, "")
+    .replace(/^(eine?|ein|der|die|das|etwas|frische?r?|frisches?)\s+/i, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+  if (/^paprikapulver\b/.test(clean)) return "paprikapulver";
+  if (/^paprikaschoten?\b/.test(clean) || /^paprika\b/.test(clean)) return "paprika";
+  if (/^hähnchen(brust)?filet\b/.test(clean) || /^haehnchen(brust)?filet\b/.test(clean) || /^hähnchen(brust)?\b/.test(clean) || /^haehnchen(brust)?\b/.test(clean)) return "hähnchenbrust";
+  return clean;
+}
 
 function ShoppingListPage() {
   const qc = useQueryClient();
   const getFn = useServerFn(getMyShoppingLists);
   const genFn = useServerFn(generateShoppingList);
   const planFn = useServerFn(getPlanContent);
+  const setCheckedFn = useServerFn(setShoppingItemChecked);
 
   const { data, isLoading } = useQuery({
     queryKey: ["my-shopping-lists"],
@@ -35,46 +53,7 @@ function ShoppingListPage() {
   type PartnerMode = "mine" | "combined";
   const [periodScope, setPeriodScope] = useState<PeriodScope>("active");
   const [partnerMode, setPartnerMode] = useState<PartnerMode>("mine");
-  const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [showPlan, setShowPlan] = useState(false);
-
-  const checkedStorageKey = useMemo(() => {
-    const planId = periodScope === "active"
-      ? (data?.active as any)?.id
-      : periodScope === "next"
-        ? (data?.next as any)?.id
-        : periodScope.startsWith("archive:")
-          ? periodScope.slice("archive:".length)
-          : null;
-    if (!planId) return null;
-    return `bodyfuel.shopping.checked.${planId}.${partnerMode}`;
-  }, [periodScope, partnerMode, data]);
-
-  // Load persisted checked state when scope/plan/partnerMode changes
-  const loadedKeyRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!checkedStorageKey) {
-      loadedKeyRef.current = null;
-      setChecked({});
-      return;
-    }
-    try {
-      const raw = localStorage.getItem(checkedStorageKey);
-      setChecked(raw ? JSON.parse(raw) : {});
-    } catch {
-      setChecked({});
-    }
-    loadedKeyRef.current = checkedStorageKey;
-  }, [checkedStorageKey]);
-
-  // Persist on change (only after load for current key has run)
-  useEffect(() => {
-    if (!checkedStorageKey) return;
-    if (loadedKeyRef.current !== checkedStorageKey) return;
-    try {
-      localStorage.setItem(checkedStorageKey, JSON.stringify(checked));
-    } catch {}
-  }, [checked, checkedStorageKey]);
 
   useEffect(() => {
     if (!data) return;
@@ -122,10 +101,41 @@ function ShoppingListPage() {
       }),
     onSuccess: () => {
       toast.success("Liste aktualisiert");
-      setChecked({});
       qc.invalidateQueries({ queryKey: ["my-shopping-lists"] });
     },
     onError: (e: Error) => toast.error(e.message),
+  });
+
+  const setItemChecked = useMutation({
+    mutationFn: (payload: { itemKey: string; checked: boolean }) => setCheckedFn({
+      data: {
+        plan_id: (selected as any)?.id,
+        scope: useCombined ? "combined" : "individual",
+        item_key: payload.itemKey,
+        checked: payload.checked,
+      },
+    }),
+    onMutate: async ({ itemKey, checked }) => {
+      await qc.cancelQueries({ queryKey: ["my-shopping-lists"] });
+      const previous = qc.getQueryData(["my-shopping-lists"]);
+      qc.setQueryData(["my-shopping-lists"], (old: any) => {
+        const patchList = (list: any) => list ? {
+          ...list,
+          items: (list.items ?? []).map((item: Item) => shoppingItemKey(item.name) === itemKey ? { ...item, checked } : item),
+        } : list;
+        const patchPlan = (plan: any) => plan ? {
+          ...plan,
+          [useCombined ? "combined" : "list"]: patchList(plan[useCombined ? "combined" : "list"]),
+        } : plan;
+        return old ? { ...old, active: patchPlan(old.active), next: patchPlan(old.next), archive: (old.archive ?? []).map(patchPlan) } : old;
+      });
+      return { previous };
+    },
+    onError: (_e, _payload, ctx) => {
+      if (ctx?.previous) qc.setQueryData(["my-shopping-lists"], ctx.previous);
+      toast.error("Haken konnte nicht gespeichert werden");
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["my-shopping-lists"] }),
   });
 
   const grouped = items.reduce<Record<string, Item[]>>((acc, it) => {
@@ -329,17 +339,18 @@ function ShoppingListPage() {
           <h2 className="mb-3 font-display text-base font-bold">{cat}</h2>
           <ul className="space-y-2">
             {list.map((it, i) => {
-              const k = `${periodScope}-${partnerMode}-${cat}-${i}-${it.name}`;
+              const itemKey = shoppingItemKey(it.name);
+              const k = `${periodScope}-${partnerMode}-${cat}-${i}-${itemKey}`;
               return (
                 <li key={k} className="flex items-center gap-3">
                   <input
                     type="checkbox"
-                    checked={!!checked[k]}
-                    onChange={(e) => setChecked((c) => ({ ...c, [k]: e.target.checked }))}
+                    checked={!!it.checked}
+                    onChange={(e) => setItemChecked.mutate({ itemKey, checked: e.target.checked })}
                     className="h-4 w-4"
                   />
                   <span
-                    className={`flex-1 text-sm ${checked[k] ? "line-through text-muted-foreground" : ""}`}
+                    className={`flex-1 text-sm ${it.checked ? "line-through text-muted-foreground" : ""}`}
                   >
                     {it.name}
                   </span>

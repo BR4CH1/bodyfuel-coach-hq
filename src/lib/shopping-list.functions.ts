@@ -6,7 +6,31 @@ type ShoppingItem = {
   name: string;
   quantity: string;
   category: string;
+  checked?: boolean;
 };
+
+function normalizeShoppingItemKey(name: string) {
+  const clean = name
+    .replace(/\([^)]*\)/g, "")
+    .replace(/:\s*\d+(?:[,.]\d+)?\s*(kg|g|ml|l|stk\.?|stück)?\s*$/i, "")
+    .replace(/:\s*$/g, "")
+    .replace(/\b(ca\.|ungekocht|gekocht|gegart|gebraten|gedünstet|roh|trocken|frisch|tiefgekühlt|tk|light|fettarm|zuckerarm|magere?r?|natur|pur|optional)\b/gi, "")
+    .replace(/^[-•·]\s*/, "")
+    .replace(/^(eine?|ein|der|die|das|etwas|frische?r?|frisches?)\s+/i, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+  if (/^paprikapulver\b/.test(clean)) return "paprikapulver";
+  if (/^paprikaschoten?\b/.test(clean) || /^paprika\b/.test(clean)) return "paprika";
+  if (/^hähnchen(brust)?filet\b/.test(clean) || /^haehnchen(brust)?filet\b/.test(clean) || /^hähnchen(brust)?\b/.test(clean) || /^haehnchen(brust)?\b/.test(clean)) return "hähnchenbrust";
+  return clean;
+}
+
+function applyCheckedToItems(items: ShoppingItem[], itemKey: string, checked: boolean) {
+  return items.map((item) => (
+    normalizeShoppingItemKey(item.name) === itemKey ? { ...item, checked } : item
+  ));
+}
 
 
 /**
@@ -75,8 +99,9 @@ export const generateShoppingList = createServerFn({ method: "POST" })
         .eq("scope", data.scope === "combined" ? "partner_combined" : "individual")
         .maybeSingle();
       if (cached && (cached as any).items?.length) {
+        const { cleanShoppingItems } = await import("./shopping-list-engine.server");
         return {
-          items: (cached as any).items as ShoppingItem[],
+          items: cleanShoppingItems((cached as any).items as ShoppingItem[]),
           days: (cached as any).days as number,
           cached: true,
         };
@@ -111,6 +136,73 @@ export const generateShoppingList = createServerFn({ method: "POST" })
     return await generateShoppingListForPlan({ supabase, apiKey, planId: planId as string, windowDays });
   });
 
+export const setShoppingItemChecked = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { plan_id: string; scope: "individual" | "combined"; item_key: string; checked: boolean }) => d)
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: plan } = await supabaseAdmin
+      .from("nutrition_plans")
+      .select("id, client_id, partner_plan_id, plan_type")
+      .eq("id", data.plan_id)
+      .maybeSingle();
+    if (!plan || (plan as any).plan_type !== "nutrition") throw new Error("Plan nicht gefunden.");
+
+    let partnerUserId: string | null = null;
+    if ((plan as any).client_id !== userId) {
+      const { data: link } = await supabaseAdmin
+        .from("nutrition_partners")
+        .select("user_a, user_b")
+        .or(`and(user_a.eq.${userId},user_b.eq.${(plan as any).client_id}),and(user_b.eq.${userId},user_a.eq.${(plan as any).client_id})`)
+        .maybeSingle();
+      if (!link) throw new Error("Kein Zugriff.");
+      partnerUserId = (link as any).user_a === (plan as any).client_id ? (link as any).user_b : (link as any).user_a;
+    }
+
+    const planIds = [data.plan_id];
+    const dbScope = data.scope === "combined" ? "partner_combined" : "individual";
+    if (data.scope === "combined") {
+      if (!partnerUserId) {
+        const { data: link } = await supabaseAdmin
+          .from("nutrition_partners")
+          .select("user_a, user_b")
+          .or(`user_a.eq.${(plan as any).client_id},user_b.eq.${(plan as any).client_id}`)
+          .maybeSingle();
+        partnerUserId = link ? ((link as any).user_a === (plan as any).client_id ? (link as any).user_b : (link as any).user_a) : null;
+      }
+      let partnerPlanId = (plan as any).partner_plan_id as string | null;
+      if (!partnerPlanId && partnerUserId) {
+        const { data: partnerPlan } = await supabaseAdmin
+          .from("nutrition_plans")
+          .select("id")
+          .eq("client_id", partnerUserId)
+          .eq("plan_type", "nutrition")
+          .in("status", ["active", "draft", "approved", "published"])
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        partnerPlanId = (partnerPlan as any)?.id ?? null;
+      }
+      if (partnerPlanId) planIds.push(partnerPlanId);
+    }
+
+    const itemKey = normalizeShoppingItemKey(data.item_key);
+    const { data: rows } = await supabaseAdmin
+      .from("shopping_lists")
+      .select("plan_id, scope, items")
+      .eq("scope", dbScope)
+      .in("plan_id", planIds);
+
+    await Promise.all((rows ?? []).map((row: any) => supabaseAdmin
+      .from("shopping_lists")
+      .update({ items: applyCheckedToItems((row.items ?? []) as ShoppingItem[], itemKey, data.checked) })
+      .eq("plan_id", row.plan_id)
+      .eq("scope", row.scope)));
+
+    return { ok: true };
+  });
+
 /**
  * Returns active & next plan summary plus their cached shopping lists,
  * plus an archive of previously activated/archived plans with their lists.
@@ -120,6 +212,7 @@ export const getMyShoppingLists = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { cleanShoppingItems } = await import("./shopping-list-engine.server");
 
     const { data: prof } = await supabase
       .from("smart_nutrition_profile")
@@ -159,7 +252,7 @@ export const getMyShoppingLists = createServerFn({ method: "GET" })
         .in("plan_id", ids);
       for (const r of rows ?? []) {
         const entry = {
-          items: (r as any).items ?? [],
+          items: cleanShoppingItems(((r as any).items ?? []) as ShoppingItem[]),
           days: (r as any).days ?? 7,
           generated_at: (r as any).generated_at,
           partner_user_id: (r as any).partner_user_id,
@@ -202,7 +295,7 @@ export const getMyShoppingLists = createServerFn({ method: "GET" })
           .eq("plan_id", partnerPlan.id)
           .eq("scope", "individual")
           .maybeSingle();
-        partnerList = row ? { items: (row as any).items ?? [], days: (row as any).days ?? 7, generated_at: (row as any).generated_at } : null;
+        partnerList = row ? { items: cleanShoppingItems(((row as any).items ?? []) as ShoppingItem[]), days: (row as any).days ?? 7, generated_at: (row as any).generated_at } : null;
       }
     }
 
