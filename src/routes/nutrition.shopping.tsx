@@ -133,6 +133,14 @@ function ShoppingListPage() {
     (acc[c] ??= []).push(it);
     return acc;
   }, {});
+  const catOrder = ["Obst & Gemüse", "Fleisch & Fisch", "Milchprodukte", "Getreide & Beilagen", "Vorrat & Gewürze", "Sonstiges"];
+  const groupedEntries = Object.entries(grouped)
+    .map(([cat, list]) => [cat, [...list].sort((a, b) => a.name.localeCompare(b.name, "de"))] as const)
+    .sort(([a], [b]) => {
+      const ia = catOrder.indexOf(a);
+      const ib = catOrder.indexOf(b);
+      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    });
 
   const hasAny = !!(data?.active || data?.next || partner || archive.length);
   const dateRange = formatDateRange(
@@ -316,7 +324,7 @@ function ShoppingListPage() {
         </div>
       )}
 
-      {Object.entries(grouped).map(([cat, list]) => (
+      {groupedEntries.map(([cat, list]) => (
         <div key={cat} className="rounded-2xl border border-border bg-card p-5">
           <h2 className="mb-3 font-display text-base font-bold">{cat}</h2>
           <ul className="space-y-2">
