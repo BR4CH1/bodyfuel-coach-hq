@@ -324,7 +324,7 @@ function ShoppingListPage() {
         </div>
       )}
 
-      {Object.entries(grouped).map(([cat, list]) => (
+      {groupedEntries.map(([cat, list]) => (
         <div key={cat} className="rounded-2xl border border-border bg-card p-5">
           <h2 className="mb-3 font-display text-base font-bold">{cat}</h2>
           <ul className="space-y-2">
