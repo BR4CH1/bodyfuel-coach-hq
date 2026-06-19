@@ -15,6 +15,7 @@ import { Route as TrustRouteImport } from './routes/trust'
 import { Route as TrialRouteImport } from './routes/trial'
 import { Route as TrainingRouteImport } from './routes/training'
 import { Route as StrengthCheckRouteImport } from './routes/strength-check'
+import { Route as RankingRouteImport } from './routes/ranking'
 import { Route as ProgressRouteImport } from './routes/progress'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as NutritionRouteImport } from './routes/nutrition'
@@ -105,6 +106,11 @@ const TrainingRoute = TrainingRouteImport.update({
 const StrengthCheckRoute = StrengthCheckRouteImport.update({
   id: '/strength-check',
   path: '/strength-check',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RankingRoute = RankingRouteImport.update({
+  id: '/ranking',
+  path: '/ranking',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProgressRoute = ProgressRouteImport.update({
@@ -438,6 +444,7 @@ export interface FileRoutesByFullPath {
   '/nutrition': typeof NutritionRouteWithChildren
   '/profile': typeof ProfileRoute
   '/progress': typeof ProgressRoute
+  '/ranking': typeof RankingRoute
   '/strength-check': typeof StrengthCheckRoute
   '/training': typeof TrainingRoute
   '/trial': typeof TrialRoute
@@ -505,6 +512,7 @@ export interface FileRoutesByTo {
   '/measurements': typeof MeasurementsRoute
   '/profile': typeof ProfileRoute
   '/progress': typeof ProgressRoute
+  '/ranking': typeof RankingRoute
   '/strength-check': typeof StrengthCheckRoute
   '/training': typeof TrainingRoute
   '/trial': typeof TrialRoute
@@ -573,6 +581,7 @@ export interface FileRoutesById {
   '/nutrition': typeof NutritionRouteWithChildren
   '/profile': typeof ProfileRoute
   '/progress': typeof ProgressRoute
+  '/ranking': typeof RankingRoute
   '/strength-check': typeof StrengthCheckRoute
   '/training': typeof TrainingRoute
   '/trial': typeof TrialRoute
@@ -644,6 +653,7 @@ export interface FileRouteTypes {
     | '/nutrition'
     | '/profile'
     | '/progress'
+    | '/ranking'
     | '/strength-check'
     | '/training'
     | '/trial'
@@ -711,6 +721,7 @@ export interface FileRouteTypes {
     | '/measurements'
     | '/profile'
     | '/progress'
+    | '/ranking'
     | '/strength-check'
     | '/training'
     | '/trial'
@@ -778,6 +789,7 @@ export interface FileRouteTypes {
     | '/nutrition'
     | '/profile'
     | '/progress'
+    | '/ranking'
     | '/strength-check'
     | '/training'
     | '/trial'
@@ -848,6 +860,7 @@ export interface RootRouteChildren {
   NutritionRoute: typeof NutritionRouteWithChildren
   ProfileRoute: typeof ProfileRoute
   ProgressRoute: typeof ProgressRoute
+  RankingRoute: typeof RankingRoute
   StrengthCheckRoute: typeof StrengthCheckRoute
   TrainingRoute: typeof TrainingRoute
   TrialRoute: typeof TrialRoute
@@ -922,6 +935,13 @@ declare module '@tanstack/react-router' {
       path: '/strength-check'
       fullPath: '/strength-check'
       preLoaderRoute: typeof StrengthCheckRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ranking': {
+      id: '/ranking'
+      path: '/ranking'
+      fullPath: '/ranking'
+      preLoaderRoute: typeof RankingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/progress': {
@@ -1453,6 +1473,7 @@ const rootRouteChildren: RootRouteChildren = {
   NutritionRoute: NutritionRouteWithChildren,
   ProfileRoute: ProfileRoute,
   ProgressRoute: ProgressRoute,
+  RankingRoute: RankingRoute,
   StrengthCheckRoute: StrengthCheckRoute,
   TrainingRoute: TrainingRoute,
   TrialRoute: TrialRoute,
@@ -1487,13 +1508,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
