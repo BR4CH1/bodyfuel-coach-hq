@@ -172,6 +172,15 @@ function mergeItems(items: ShoppingItem[]): ShoppingItem[] {
     parts.push(...g.raws);
     out.push({ name: g.display, quantity: parts.join(" + "), category: g.category || categoryFor(g.display) });
   }
+  const catOrder = ["Obst & Gemüse", "Fleisch & Fisch", "Milchprodukte", "Getreide & Beilagen", "Vorrat & Gewürze", "Sonstiges"];
+  out.sort((a, b) => {
+    const ca = catOrder.indexOf(a.category);
+    const cb = catOrder.indexOf(b.category);
+    const ra = ca === -1 ? 99 : ca;
+    const rb = cb === -1 ? 99 : cb;
+    if (ra !== rb) return ra - rb;
+    return a.name.localeCompare(b.name, "de");
+  });
   return out;
 }
 
