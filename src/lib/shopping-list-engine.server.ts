@@ -8,15 +8,19 @@
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-type ShoppingItem = { name: string; quantity: string; category: string };
+type ShoppingItem = { name: string; quantity: string; category: string; checked?: boolean };
 
 function normalizeIngredientName(name: string) {
   return name
     .replace(/\([^)]*\)/g, "")
-    .replace(/\b(ca\.|ungekocht|gekocht|gegart|gebraten|gedünstet|roh|trocken|frisch|tiefgekühlt|tk|light|fettarm|zuckerarm|magere?r?|natur|pur|optional)\b/gi, "")
+    .replace(
+      /\b(ca\.|ungekocht|gekocht|gegart|gebraten|gedünstet|roh|trocken|frisch|tiefgekühlt|tk|light|fettarm|zuckerarm|magere?r?|natur|pur|optional)\b/gi,
+      "",
+    )
     .replace(/\s+als\s+(dip|topping|beilage|snack|garnitur)\b.*/gi, "")
     .replace(/\s+(zum|zur|für|mit|nach\s+geschmack|nach\s+belieben)\b.*/gi, "")
     .replace(/^[-•·]\s*/, "")
+    .replace(/:\s*$/g, "")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -29,7 +33,12 @@ function titleCase(s: string) {
 /** Canonical key + display for merging duplicates ("Skyr"/"Skyr als Dip", "Reis (gekocht)"/"Reis"). */
 function canonicalize(rawName: string): { key: string; display: string } {
   let n = normalizeIngredientName(rawName);
-  n = n.replace(/^\d+(?:[,.]\d+)?\s*(stk\.?|stück|scheiben|el|tl|kg|g|ml|l|prise|hand\s*voll)?\s+/i, "").trim();
+  n = n
+    .replace(
+      /^\d+(?:[,.]\d+)?\s*(stk\.?|stück|scheiben|el|tl|kg|g|ml|l|prise|hand\s*voll)?\s+/i,
+      "",
+    )
+    .trim();
   n = n.replace(/^(eine?|ein|der|die|das|etwas|frische?r?|frisches?)\s+/i, "").trim();
   const lower = n.toLowerCase();
   const synonyms: Array<[RegExp, string]> = [
@@ -57,8 +66,10 @@ function canonicalize(rawName: string): { key: string; display: string } {
     [/^whey\b.*/, "Proteinpulver"],
     [/^eier?\b.*/, "Eier"],
     [/^eiweiß\b.*/, "Eier"],
-    [/^hähnchen(brust|filet)?\b.*/, "Hähnchenbrust"],
-    [/^haehnchen(brust|filet)?\b.*/, "Hähnchenbrust"],
+    [/^hähnchen(brust)?filet\b.*/, "Hähnchenbrust"],
+    [/^haehnchen(brust)?filet\b.*/, "Hähnchenbrust"],
+    [/^hähnchen(brust)?\b.*/, "Hähnchenbrust"],
+    [/^haehnchen(brust)?\b.*/, "Hähnchenbrust"],
     [/^pute(nbrust|nfilet)?\b.*/, "Putenbrust"],
     [/^(rinder|puten|hähnchen)?hack(fleisch)?\b.*/, "Hackfleisch"],
     [/^lachs(filet)?\b.*/, "Lachs"],
@@ -87,6 +98,8 @@ function canonicalize(rawName: string): { key: string; display: string } {
     [/^brokkoli\b.*/, "Brokkoli"],
     [/^blumenkohl\b.*/, "Blumenkohl"],
     [/^(karotten?|möhren?|moehren?)\b.*/, "Karotten"],
+    [/^paprikapulver\b.*/, "Paprikapulver"],
+    [/^paprikaschoten?\b.*/, "Paprika"],
     [/^paprika\b.*/, "Paprika"],
     [/^tomaten?\b.*/, "Tomaten"],
     [/^kirschtomaten?\b.*/, "Kirschtomaten"],
@@ -141,21 +154,53 @@ function formatAmount(n: number) {
 
 /** Merge items by canonical name; sum quantities where units are compatible. */
 function mergeItems(items: ShoppingItem[]): ShoppingItem[] {
-  const groups = new Map<string, { display: string; category: string; units: Map<string, number>; raws: string[] }>();
-  for (const it of items) {
+  const groups = new Map<
+    string,
+    {
+      display: string;
+      category: string;
+      units: Map<string, number>;
+      raws: string[];
+      checked: boolean;
+    }
+  >();
+  for (const source of items) {
+    const inlineQuantity = source.name.match(
+      /^(.+?):\s*(\d+(?:[,.]\d+)?)\s*(kg|g|ml|l|el|tl|scheiben|stück|stk\.?)?$/i,
+    );
+    const it =
+      inlineQuantity && (!source.quantity || /^1\s+stück$/i.test(source.quantity))
+        ? {
+            ...source,
+            name: inlineQuantity[1],
+            quantity: `${inlineQuantity[2]} ${inlineQuantity[3] ?? "g"}`,
+          }
+        : source;
     if (!it.name) continue;
     const { key, display } = canonicalize(it.name);
-    const g = groups.get(key) ?? { display, category: it.category, units: new Map<string, number>(), raws: [] as string[] };
+    const g = groups.get(key) ?? {
+      display,
+      category: it.category,
+      units: new Map<string, number>(),
+      raws: [] as string[],
+      checked: false,
+    };
     const parsed = parseQuantity(it.quantity);
     if (parsed) {
       let { amount, unit } = parsed;
       const ul = unit.toLowerCase();
-      if (ul === "kg") { amount *= 1000; unit = "g"; }
-      else if (ul === "l") { amount *= 1000; unit = "ml"; }
+      if (ul === "kg") {
+        amount *= 1000;
+        unit = "g";
+      } else if (ul === "l") {
+        amount *= 1000;
+        unit = "ml";
+      }
       g.units.set(unit, (g.units.get(unit) ?? 0) + amount);
     } else if (it.quantity) {
       g.raws.push(it.quantity);
     }
+    if (it.checked) g.checked = true;
     if (!g.category || g.category === "Sonstiges") g.category = it.category || g.category;
     groups.set(key, g);
   }
@@ -165,14 +210,31 @@ function mergeItems(items: ShoppingItem[]): ShoppingItem[] {
     for (const [unit, amount] of g.units.entries()) {
       let amt = amount;
       let u = unit;
-      if (u === "g" && amt >= 1000) { amt = amt / 1000; u = "kg"; }
-      else if (u === "ml" && amt >= 1000) { amt = amt / 1000; u = "l"; }
+      if (u === "g" && amt >= 1000) {
+        amt = amt / 1000;
+        u = "kg";
+      } else if (u === "ml" && amt >= 1000) {
+        amt = amt / 1000;
+        u = "l";
+      }
       parts.push(`${formatAmount(amt)} ${u}`);
     }
     parts.push(...g.raws);
-    out.push({ name: g.display, quantity: parts.join(" + "), category: g.category || categoryFor(g.display) });
+    out.push({
+      name: g.display,
+      quantity: parts.join(" + "),
+      category: g.category || categoryFor(g.display),
+      checked: g.checked || undefined,
+    });
   }
-  const catOrder = ["Obst & Gemüse", "Fleisch & Fisch", "Milchprodukte", "Getreide & Beilagen", "Vorrat & Gewürze", "Sonstiges"];
+  const catOrder = [
+    "Obst & Gemüse",
+    "Fleisch & Fisch",
+    "Milchprodukte",
+    "Getreide & Beilagen",
+    "Vorrat & Gewürze",
+    "Sonstiges",
+  ];
   out.sort((a, b) => {
     const ca = catOrder.indexOf(a.category);
     const cb = catOrder.indexOf(b.category);
@@ -184,13 +246,20 @@ function mergeItems(items: ShoppingItem[]): ShoppingItem[] {
   return out;
 }
 
+export function cleanShoppingItems(items: ShoppingItem[]): ShoppingItem[] {
+  return mergeItems(items);
+}
+
 function categoryFor(name: string) {
   const n = name.toLowerCase();
   if (/hähnchen|pute|rind|hack|filet|fisch|lachs|thunfisch/.test(n)) return "Fleisch & Fisch";
   if (/skyr|quark|joghurt|käse|feta|whey|proteinpudding|eier?/.test(n)) return "Milchprodukte";
-  if (/reis|nudel|kartoffel|brot|tortilla|hafer|müsli|reiswaffel|süßkartoffel/.test(n)) return "Getreide & Beilagen";
-  if (/salat|gemüse|brokkoli|karotte|paprika|spargel|beeren|erdbeer|banane|apfel/.test(n)) return "Obst & Gemüse";
-  if (/öl|butter|nuss|nüss|mandel|cashew|walnuss|erdnuss|kern|kokosmilch/.test(n)) return "Vorrat & Gewürze";
+  if (/reis|nudel|kartoffel|brot|tortilla|hafer|müsli|reiswaffel|süßkartoffel/.test(n))
+    return "Getreide & Beilagen";
+  if (/paprikapulver|öl|butter|nuss|nüss|mandel|cashew|walnuss|erdnuss|kern|kokosmilch/.test(n))
+    return "Vorrat & Gewürze";
+  if (/salat|gemüse|brokkoli|karotte|paprika|spargel|beeren|erdbeer|banane|apfel/.test(n))
+    return "Obst & Gemüse";
   return "Sonstiges";
 }
 
@@ -212,7 +281,10 @@ function splitIngredientParts(text: string) {
 }
 
 function fallbackItemsFromLines(lines: string[]): ShoppingItem[] {
-  const grouped = new Map<string, { amount: number; unit: string; name: string; category: string }>();
+  const grouped = new Map<
+    string,
+    { amount: number; unit: string; name: string; category: string }
+  >();
   for (const line of lines) {
     const partsText = line.includes(" | Zutaten: ")
       ? line.split(" | Zutaten: ")[1]
@@ -222,11 +294,24 @@ function fallbackItemsFromLines(lines: string[]): ShoppingItem[] {
     for (const rawPart of splitIngredientParts(partsText)) {
       const part = rawPart.trim();
       if (!part) continue;
-      const match = part.match(/^(\d+(?:[,.]\d+)?)\s*(kg|g|ml|l|el|tl|scheiben|stück|stk\.?|eier|ei)?\s*(.*)$/i);
+      const inlineQuantity = part.match(
+        /^(.+?):\s*(\d+(?:[,.]\d+)?)\s*(kg|g|ml|l|el|tl|scheiben|stück|stk\.?|eier|ei)?$/i,
+      );
+      const normalizedPart = inlineQuantity
+        ? `${inlineQuantity[2]} ${inlineQuantity[3] ?? ""} ${inlineQuantity[1]}`
+        : part;
+      const match = normalizedPart.match(
+        /^(\d+(?:[,.]\d+)?)\s*(kg|g|ml|l|el|tl|scheiben|stück|stk\.?|eier|ei)?\s*(.*)$/i,
+      );
       const amount = match ? Number(match[1].replace(",", ".")) : 1;
-      let unit = (match?.[2] ?? "Stück").replace(/^el$/i, "EL").replace(/^tl$/i, "TL").replace(/^stk\.?$/i, "Stück");
-      let name = normalizeIngredientName(match ? (match[3] ?? "") : part);
-      if (/^gemüse$/i.test(name)) name = part.includes("(") ? part.replace(/^\d+(?:[,.]\d+)?\s*(kg|g|ml|l)?\s*/i, "") : name;
+      let unit = (match?.[2] ?? "Stück")
+        .replace(/^el$/i, "EL")
+        .replace(/^tl$/i, "TL")
+        .replace(/^stk\.?$/i, "Stück");
+      let name = normalizeIngredientName(match ? (match[3] ?? "") : normalizedPart);
+      if (/^gemüse$/i.test(name)) {
+        name = part.includes("(") ? part.replace(/^\d+(?:[,.]\d+)?\s*(kg|g|ml|l)?\s*/i, "") : name;
+      }
       if (/^eier?$/i.test(unit) && !name) {
         name = "Eier";
         unit = "Stück";
@@ -248,7 +333,7 @@ function fallbackItemsFromLines(lines: string[]): ShoppingItem[] {
 function extractItems(parsed: any): ShoppingItem[] {
   const candidate = Array.isArray(parsed)
     ? parsed
-    : parsed?.items ?? parsed?.shopping_list ?? parsed?.einkaufsliste ?? parsed?.list ?? [];
+    : (parsed?.items ?? parsed?.shopping_list ?? parsed?.einkaufsliste ?? parsed?.list ?? []);
   return (Array.isArray(candidate) ? candidate : [])
     .map((item: any) => {
       let name = String(item?.name ?? item?.ingredient ?? item?.zutat ?? "").trim();
@@ -258,7 +343,13 @@ function extractItems(parsed: any): ShoppingItem[] {
         name = "Eier";
         quantity = `${egg[1]} Stück`;
       }
-      return { name, quantity, category: String(item?.category ?? item?.kategorie ?? categoryFor(name)).trim() || categoryFor(name) };
+      return {
+        name,
+        quantity,
+        category:
+          String(item?.category ?? item?.kategorie ?? categoryFor(name)).trim() ||
+          categoryFor(name),
+      };
     })
     .filter((item) => item.name);
 }
@@ -277,10 +368,16 @@ async function fetchMealLines(planId: string, windowDays: number): Promise<strin
     .in("day_id", dayIds)
     .order("sort_order");
   const dayOrder = new Map(dayIds.map((id, index) => [id, index]));
-  return (meals ?? []).sort((a: any, b: any) => (dayOrder.get(a.day_id) ?? 0) - (dayOrder.get(b.day_id) ?? 0) || (a.sort_order ?? 0) - (b.sort_order ?? 0)).map((m: any) => {
-    const ing = (m.recipe_ingredients ?? []).join(", ");
-    return `- ${m.name}${ing ? " | Zutaten: " + ing : m.description ? " | " + m.description : ""}`;
-  });
+  return (meals ?? [])
+    .sort(
+      (a: any, b: any) =>
+        (dayOrder.get(a.day_id) ?? 0) - (dayOrder.get(b.day_id) ?? 0) ||
+        (a.sort_order ?? 0) - (b.sort_order ?? 0),
+    )
+    .map((m: any) => {
+      const ing = (m.recipe_ingredients ?? []).join(", ");
+      return `- ${m.name}${ing ? " | Zutaten: " + ing : m.description ? " | " + m.description : ""}`;
+    });
 }
 
 async function callAi(prompt: string, apiKey: string): Promise<ShoppingItem[]> {
@@ -298,7 +395,13 @@ async function callAi(prompt: string, apiKey: string): Promise<ShoppingItem[]> {
   if (!res.ok) throw new Error(`KI-Fehler [${res.status}]`);
   const raw = (await res.json())?.choices?.[0]?.message?.content ?? "{}";
   try {
-    const clean = typeof raw === "string" ? raw.replace(/^```(?:json)?\s*/i, "").replace(/```$/i, "").trim() : raw;
+    const clean =
+      typeof raw === "string"
+        ? raw
+            .replace(/^```(?:json)?\s*/i, "")
+            .replace(/```$/i, "")
+            .trim()
+        : raw;
     const parsed = typeof clean === "string" ? JSON.parse(clean) : clean;
     return extractItems(parsed);
   } catch {
@@ -334,18 +437,16 @@ Antworte ausschließlich mit gültigem JSON:
   const parsedItems = fallbackItemsFromLines(lines);
   const items = mergeItems(parsedItems.length ? parsedItems : await callAi(prompt, apiKey));
 
-  await supabaseAdmin
-    .from("shopping_lists")
-    .upsert(
-      {
-        plan_id: planId,
-        scope: "individual",
-        items,
-        days: windowDays,
-        generated_at: new Date().toISOString(),
-      },
-      { onConflict: "plan_id,scope" },
-    );
+  await supabaseAdmin.from("shopping_lists").upsert(
+    {
+      plan_id: planId,
+      scope: "individual",
+      items,
+      days: windowDays,
+      generated_at: new Date().toISOString(),
+    },
+    { onConflict: "plan_id,scope" },
+  );
 
   return { items, days: windowDays };
 }
@@ -398,8 +499,22 @@ Antworte ausschließlich mit gültigem JSON:
   const now = new Date().toISOString();
   await supabaseAdmin.from("shopping_lists").upsert(
     [
-      { plan_id: planAId, scope: "partner_combined", partner_user_id: userB, items, days: windowDays, generated_at: now },
-      { plan_id: planBId, scope: "partner_combined", partner_user_id: userA, items, days: windowDays, generated_at: now },
+      {
+        plan_id: planAId,
+        scope: "partner_combined",
+        partner_user_id: userB,
+        items,
+        days: windowDays,
+        generated_at: now,
+      },
+      {
+        plan_id: planBId,
+        scope: "partner_combined",
+        partner_user_id: userA,
+        items,
+        days: windowDays,
+        generated_at: now,
+      },
     ],
     { onConflict: "plan_id,scope" },
   );
