@@ -20,6 +20,10 @@ import {
   MessageSquare,
   Check,
   Sparkles,
+  TrendingUp,
+  Ruler,
+  Camera,
+  ChevronRight,
 } from "lucide-react";
 import {
   createPackageRequest,
