@@ -72,6 +72,7 @@ import { Route as ApiPublicHooksTrialRemindersRouteImport } from './routes/api/p
 import { Route as ApiPublicHooksSendFeatureNewsRouteImport } from './routes/api/public/hooks/send-feature-news'
 import { Route as ApiPublicHooksRegenTrainingPlansRouteImport } from './routes/api/public/hooks/regen-training-plans'
 import { Route as ApiPublicHooksPlanRotationRouteImport } from './routes/api/public/hooks/plan-rotation'
+import { Route as ApiPublicHooksCoachDailySummaryRouteImport } from './routes/api/public/hooks/coach-daily-summary'
 
 const WelcomeRoute = WelcomeRouteImport.update({
   id: '/welcome',
@@ -397,6 +398,12 @@ const ApiPublicHooksPlanRotationRoute =
     path: '/api/public/hooks/plan-rotation',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksCoachDailySummaryRoute =
+  ApiPublicHooksCoachDailySummaryRouteImport.update({
+    id: '/api/public/hooks/coach-daily-summary',
+    path: '/api/public/hooks/coach-daily-summary',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -453,6 +460,7 @@ export interface FileRoutesByFullPath {
   '/tracker/app/weight': typeof TrackerAppWeightRoute
   '/coach/customers/': typeof CoachCustomersIndexRoute
   '/tracker/app/': typeof TrackerAppIndexRoute
+  '/api/public/hooks/coach-daily-summary': typeof ApiPublicHooksCoachDailySummaryRoute
   '/api/public/hooks/plan-rotation': typeof ApiPublicHooksPlanRotationRoute
   '/api/public/hooks/regen-training-plans': typeof ApiPublicHooksRegenTrainingPlansRoute
   '/api/public/hooks/send-feature-news': typeof ApiPublicHooksSendFeatureNewsRoute
@@ -514,6 +522,7 @@ export interface FileRoutesByTo {
   '/tracker/app/weight': typeof TrackerAppWeightRoute
   '/coach/customers': typeof CoachCustomersIndexRoute
   '/tracker/app': typeof TrackerAppIndexRoute
+  '/api/public/hooks/coach-daily-summary': typeof ApiPublicHooksCoachDailySummaryRoute
   '/api/public/hooks/plan-rotation': typeof ApiPublicHooksPlanRotationRoute
   '/api/public/hooks/regen-training-plans': typeof ApiPublicHooksRegenTrainingPlansRoute
   '/api/public/hooks/send-feature-news': typeof ApiPublicHooksSendFeatureNewsRoute
@@ -580,6 +589,7 @@ export interface FileRoutesById {
   '/tracker/app/weight': typeof TrackerAppWeightRoute
   '/coach/customers/': typeof CoachCustomersIndexRoute
   '/tracker/app/': typeof TrackerAppIndexRoute
+  '/api/public/hooks/coach-daily-summary': typeof ApiPublicHooksCoachDailySummaryRoute
   '/api/public/hooks/plan-rotation': typeof ApiPublicHooksPlanRotationRoute
   '/api/public/hooks/regen-training-plans': typeof ApiPublicHooksRegenTrainingPlansRoute
   '/api/public/hooks/send-feature-news': typeof ApiPublicHooksSendFeatureNewsRoute
@@ -647,6 +657,7 @@ export interface FileRouteTypes {
     | '/tracker/app/weight'
     | '/coach/customers/'
     | '/tracker/app/'
+    | '/api/public/hooks/coach-daily-summary'
     | '/api/public/hooks/plan-rotation'
     | '/api/public/hooks/regen-training-plans'
     | '/api/public/hooks/send-feature-news'
@@ -708,6 +719,7 @@ export interface FileRouteTypes {
     | '/tracker/app/weight'
     | '/coach/customers'
     | '/tracker/app'
+    | '/api/public/hooks/coach-daily-summary'
     | '/api/public/hooks/plan-rotation'
     | '/api/public/hooks/regen-training-plans'
     | '/api/public/hooks/send-feature-news'
@@ -773,6 +785,7 @@ export interface FileRouteTypes {
     | '/tracker/app/weight'
     | '/coach/customers/'
     | '/tracker/app/'
+    | '/api/public/hooks/coach-daily-summary'
     | '/api/public/hooks/plan-rotation'
     | '/api/public/hooks/regen-training-plans'
     | '/api/public/hooks/send-feature-news'
@@ -819,6 +832,7 @@ export interface RootRouteChildren {
   BullsIndexRoute: typeof BullsIndexRoute
   TrackerIndexRoute: typeof TrackerIndexRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
+  ApiPublicHooksCoachDailySummaryRoute: typeof ApiPublicHooksCoachDailySummaryRoute
   ApiPublicHooksPlanRotationRoute: typeof ApiPublicHooksPlanRotationRoute
   ApiPublicHooksRegenTrainingPlansRoute: typeof ApiPublicHooksRegenTrainingPlansRoute
   ApiPublicHooksSendFeatureNewsRoute: typeof ApiPublicHooksSendFeatureNewsRoute
@@ -1273,6 +1287,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksPlanRotationRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/coach-daily-summary': {
+      id: '/api/public/hooks/coach-daily-summary'
+      path: '/api/public/hooks/coach-daily-summary'
+      fullPath: '/api/public/hooks/coach-daily-summary'
+      preLoaderRoute: typeof ApiPublicHooksCoachDailySummaryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -1389,6 +1410,7 @@ const rootRouteChildren: RootRouteChildren = {
   BullsIndexRoute: BullsIndexRoute,
   TrackerIndexRoute: TrackerIndexRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
+  ApiPublicHooksCoachDailySummaryRoute: ApiPublicHooksCoachDailySummaryRoute,
   ApiPublicHooksPlanRotationRoute: ApiPublicHooksPlanRotationRoute,
   ApiPublicHooksRegenTrainingPlansRoute: ApiPublicHooksRegenTrainingPlansRoute,
   ApiPublicHooksSendFeatureNewsRoute: ApiPublicHooksSendFeatureNewsRoute,
