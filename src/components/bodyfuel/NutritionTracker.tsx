@@ -608,6 +608,48 @@ export function NutritionTracker() {
 
   return (
     <div className="space-y-6">
+      {/* Date picker */}
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border bg-card p-3">
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              const d = new Date(date + "T12:00:00");
+              d.setDate(d.getDate() - 1);
+              setDate(d.toISOString().slice(0, 10));
+            }}
+          >
+            ← Tag
+          </Button>
+          <Input
+            type="date"
+            className="h-8 w-[150px]"
+            value={date}
+            max={today()}
+            onChange={(e) => e.target.value && setDate(e.target.value)}
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={isToday}
+            onClick={() => {
+              const d = new Date(date + "T12:00:00");
+              d.setDate(d.getDate() + 1);
+              const next = d.toISOString().slice(0, 10);
+              if (next <= today()) setDate(next);
+            }}
+          >
+            Tag →
+          </Button>
+        </div>
+        {!isToday && (
+          <Button size="sm" variant="ghost" onClick={() => setDate(today())}>
+            Heute
+          </Button>
+        )}
+      </div>
+
       {/* Day-type badge */}
       <div
         className={`flex items-center justify-between gap-3 rounded-2xl border p-4 ${
