@@ -149,6 +149,59 @@ function CoachDashboard() {
     onError: (e: any) => toast.error(e?.message ?? "KI-Entwurf fehlgeschlagen"),
   });
 
+  const [bulkExtendProgress, setBulkExtendProgress] = useState<{ done: number; total: number } | null>(null);
+  const bulkExtendMut = useMutation({
+    mutationFn: async (items: Array<{ client_id: string; kind: "nutrition" | "training"; task_key: string }>) => {
+      setBulkExtendProgress({ done: 0, total: items.length });
+      let ok = 0;
+      const errors: string[] = [];
+      for (let i = 0; i < items.length; i++) {
+        try {
+          await extendPlanFn({ data: { client_id: items[i].client_id, kind: items[i].kind, weeks: 4 } });
+          await setStateFn({ data: { task_key: items[i].task_key, action: "complete" } });
+          ok++;
+        } catch (e: any) {
+          errors.push(e?.message ?? "Fehler");
+        }
+        setBulkExtendProgress({ done: i + 1, total: items.length });
+      }
+      return { ok, errors };
+    },
+    onSuccess: (res) => {
+      if (res.ok > 0) toast.success(`${res.ok} Pläne um 4 Wochen verlängert`);
+      if (res.errors.length > 0) toast.error(`${res.errors.length} fehlgeschlagen: ${res.errors[0]}`);
+      qc.invalidateQueries({ queryKey: ["coach-task-states"] });
+    },
+    onSettled: () => setTimeout(() => setBulkExtendProgress(null), 1500),
+  });
+
+  const [bulkDraftProgress, setBulkDraftProgress] = useState<{ done: number; total: number } | null>(null);
+  const bulkDraftMut = useMutation({
+    mutationFn: async (items: Array<{ client_id: string; task_key: string }>) => {
+      setBulkDraftProgress({ done: 0, total: items.length });
+      let ok = 0;
+      const errors: string[] = [];
+      for (let i = 0; i < items.length; i++) {
+        try {
+          await genDraftFn({ data: { user_id: items[i].client_id } });
+          await setStateFn({ data: { task_key: items[i].task_key, action: "complete" } });
+          ok++;
+        } catch (e: any) {
+          errors.push(e?.message ?? "Fehler");
+        }
+        setBulkDraftProgress({ done: i + 1, total: items.length });
+      }
+      return { ok, errors };
+    },
+    onSuccess: (res) => {
+      if (res.ok > 0) toast.success(`${res.ok} KI-Entwürfe erstellt`);
+      if (res.errors.length > 0) toast.error(`${res.errors.length} fehlgeschlagen: ${res.errors[0]}`);
+      qc.invalidateQueries({ queryKey: ["pending-checkin-drafts"] });
+      qc.invalidateQueries({ queryKey: ["coach-task-states"] });
+    },
+    onSettled: () => setTimeout(() => setBulkDraftProgress(null), 1500),
+  });
+
   const weekStart = mondayOf(new Date());
 
 
