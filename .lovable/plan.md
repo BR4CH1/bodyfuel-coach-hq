@@ -1,95 +1,73 @@
+## BODYFUEL OS – Navigation Rework
 
-## Ziel
-Eine kostenlose, eigenständig wirkende Tracker-App unter `/tracker` als Lead-Magnet. Free User leben in ihrem eigenen Bereich, sind im Coach-Dashboard sichtbar, und werden über Trigger-Banner zu Coaching-Kunden konvertiert.
+Ziel: Reorganisation der Navigation auf 5 klare Hauptbereiche, **ohne** bestehende Daten, Routen oder Funktionen zu entfernen. Alle alten URLs bleiben weiter erreichbar (Deep-Links, Coach-Links, E-Mails funktionieren weiter). Nur die Sidebar/Bottom-Nav und die Hub-Seiten ändern sich.
 
-## 1. Rollen & Datenmodell (Migration)
+### Neue Bottom-Nav (5 Einträge)
+1. **Dashboard** → `/dashboard`
+2. **Ernährung** → `/nutrition`
+3. **Training** → `/training`
+4. **Community** → `/community` *(neu)*
+5. **Profil** → `/profile`
 
-Neue Rolle in `app_role`-Enum: `'free'`. Bestehende Trennung:
-- `'coach'` → Coach
-- `'client'` → bezahlter Coaching-Kunde
-- `'free'` → kostenloser Tracker-User (NEU)
+Bulls-Hub bleibt als zusätzlicher Eintrag erhalten (für Bulls-Mitglieder), zieht aber visuell unter Community ein.
 
-Neue Tabellen (mit GRANTs + RLS scoped auf `auth.uid()`):
-- `water_logs` ist bereits vorhanden → wiederverwenden.
-- `activity_logs` (NEU): `user_id`, `date`, `steps`, `training_done bool`.
-- `free_user_events` (NEU): `user_id`, `event` (`'signup'`, `'first_track'`, `'upgrade_clicked'`, `'converted'`), `created_at` — fürs Conversion-Tracking.
+### Was wir ändern
 
-Helper:
-- Funktion `is_free_user(uid)` / nutze `has_role(uid,'free')`.
-- Trigger `handle_new_user` erweitern: wenn `raw_user_meta_data->>'tier' = 'free'`, dann Rolle `free` statt `client`.
+**`src/components/bodyfuel/AppLayout.tsx`**
+- `clientNav` reduzieren auf die 5 Punkte oben.
+- Bulls-Eintrag bleibt (Sidebar-Add-on), wird im Community-Hub zusätzlich verlinkt.
+- Achievements / Ranking / Measurements werden aus der Nav entfernt, bleiben aber als Routen verfügbar und werden in Community bzw. Profil verlinkt.
 
-Punkte: bestehendes `daily_checks` + `performance_points` + `recompute_user_points` System wiederverwenden. Free-User dürfen daily_checks schreiben (RLS prüfen — heute schon `user_id = auth.uid()`).
+**Neue Hub-Seiten (jede ist nur eine Übersicht mit Links auf bereits existierende Routen/Komponenten – keine Logik-Änderung):**
 
-## 2. Public Landingpage `/tracker`
+- `src/routes/community.tsx` *(neu)* – Sammelhub:
+  - Ranking-Card → `/ranking` (Tabs: Gesamt / Woche / Streak / Level existieren bereits)
+  - Bulls Hub → `/bulls` (nur sichtbar wenn `hasGroup("bulls")`)
+  - Challenges → Platzhalter-Card „Bald verfügbar" (Feature existiert noch nicht – nicht erfinden)
+  - Achievements → `/achievements`
+  - Community-Profil-Card (Nickname/Level/Punkte/Streak aus Session)
 
-Neue Route `src/routes/tracker.tsx` (öffentlich, SSR, eigene SEO-Metadaten, og:image).
-- Hero: „BODYFUEL TRACKER – KOSTENLOS" mit grün/schwarz/weiß BodyFuel-Design.
-- Feature-Grid: Kalorien, Protein, Carbs, Fat, Wasser, Gewicht, Punkte, Level.
-- Sekundärer CTA: „Du willst mehr? → Coaching anfragen".
-- Primärer CTA: „Kostenlos starten" → `/tracker/signup`.
+- `src/routes/nutrition.tsx` umbauen zum Ernährungs-Hub mit Sektionen:
+  - Tracking → `/nutrition/tracking`
+  - Plan (aktiv/kommend/Archiv) → `/nutrition` Inhalte (bestehende `PlansView`/`PlanContentView`)
+  - Einkaufsliste → `/nutrition/shopping`
+  - Meal Prep → zeigt die aus dem Profil hinterlegte Präferenz nur an (read-only aus bestehendem Feld)
+  - Favoriten → `/nutrition/favorites`
+  - Rezept aus Zutaten → `/nutrition/recipe-from-ingredients`
 
-## 3. Free-User Signup/Login
+- `src/routes/training.tsx` umbauen zum Trainings-Hub:
+  - Trainingsplan (aktiv/kommend/Archiv) – bestehende `TrainingPlanManagementCard`
+  - Freie Einheiten → bestehender `TrainingTracker` / `AddTrainingSessionDialog`
+  - Strength Check → `/strength-check`
+  - Trainingsanalyse → bestehende `TrainingTrends` / `ExerciseAnalytics`
+  - Insights → bestehende Insights-Komponenten
 
-- `src/routes/tracker.signup.tsx`: Form mit Vorname, Nachname, E-Mail, Passwort (Pflicht) + optional Gewicht, Größe, Geschlecht, Geburtsdatum (collapsible).
-- Validierung mit Zod.
-- `supabase.auth.signUp` mit `data: { display_name, first_name, last_name, tier: 'free', height_cm, gender, birthdate }`.
-- Trigger `handle_new_user` legt Profil + Rolle `free` an; optionale Body-Maße schreibt der Client nach Signup in `body_measurements` / `profiles`.
-- `src/routes/tracker.login.tsx`: schlankes Login (oder Wiederverwendung von `/auth` mit Redirect-Logik).
-- Nach Login: Free-User → `/tracker/app`, Coaching-User → `/dashboard`, Coach → `/coach`.
+- `src/routes/profile.tsx` erweitern zum Profil-Hub:
+  - Fortschritt → `/progress`
+  - Maße → `/measurements`
+  - Fortschrittsfotos → `ProgressPhotosCard`
+  - Check-ins → `/check-in`
+  - Bewertungen → `CustomerCheckinsCard` / Coach-Reviews-Anzeige
+  - Einstellungen (Account, Datenschutz, Nickname ändern, Profil bearbeiten)
 
-## 4. Free-User App-Bereich `/tracker/app/*`
+- `src/routes/dashboard.tsx`: nur Aufräumen/Priorisieren der Widget-Reihenfolge (Tagespunkte, Kalorien, Protein, Schritte, aktueller Plan, nächste Aufgaben, Gewicht, Streak, Quick Actions). Keine Logik anfassen.
 
-Neue pathless Layout-Route `src/routes/_free.tsx` (Gate: Rolle muss `free` sein, sonst Redirect zur passenden Welt). Routen:
-- `tracker.app.tsx` — Dashboard: Heute, Streak, Level/XP, Wasser, Kalorien-Donut.
-- `tracker.app.nutrition.tsx` — kompakter NutritionTracker (Wiederverwendung der bestehenden Komponente in „free mode": ohne Coaching-Plan, nur freies Tracking).
-- `tracker.app.weight.tsx` — Gewicht eintragen + Verlauf (WeightProgressChart wiederverwenden).
-- `tracker.app.water.tsx` — Wasserziel + Fortschritt.
-- `tracker.app.activity.tsx` — Schritte + Training-Toggle.
-- `tracker.app.achievements.tsx` — Level, XP, Streaks, Achievements.
-- `tracker.app.profile.tsx` — Stammdaten + Logout.
+### Was wir NICHT ändern
+- Keine DB-Migration. Keine Felder ändern.
+- Keine `*.functions.ts` / `*.server.ts` werden umgeschrieben.
+- Alle alten Routen (`/measurements`, `/ranking`, `/achievements`, `/progress`, `/check-in`, `/nutrition/*`, `/strength-check`, `/bulls*`, `/tracker/*`) bleiben 1:1 bestehen und funktionieren weiter.
+- Coach-Bereich (`/coach/*`) bleibt unverändert.
+- Free-Tracker-Layout (`FreeAppLayout`) bleibt unverändert.
+- Challenges werden nur als „Coming Soon"-Platzhalter angezeigt (kein neues Feature gebaut).
 
-Bottom-Tab-Nav (mobile-first) für die 5 Hauptbereiche. Eigene App-Shell `FreeAppLayout` (analog `AppLayout` aber stripped-down).
+### Technische Details
+- Neue Route: nur `src/routes/community.tsx` (TanStack file-route `/community`).
+- `routeTree.gen.ts` wird automatisch regeneriert.
+- Hub-Seiten verwenden ausschließlich bestehende Komponenten + `<Link>`.
+- Mobile Bottom-Nav: genau 5 Icons; Bulls erscheint nur in Desktop-Sidebar als Zusatz, in Mobile über den Community-Hub erreichbar.
 
-Gating der bestehenden Coaching-Routen: in `_authenticated/route.tsx` oder via per-Route `beforeLoad`: wenn Rolle `free` → Redirect auf `/tracker/app`. Coach-Routen bleiben für Coach-Rolle.
-
-## 5. Punkte / Level / Achievements
-
-Wiederverwendung des bestehenden Systems (`daily_checks`, `user_points`, `achievements`, `process_daily_check`).
-- Eigene schlanke `FreeDailyCheck`-Komponente, die Tasks setzt (Protein/Kalorien/Wasser/Gewicht/Training/Schritte) und in `daily_checks.tasks` schreibt.
-- Punkte/Level-Anzeige nutzt `user_points` (XP = total_points, Level = `1 + total_points/100`).
-- Achievements: bestehende Tabelle, plus Seed-Inserts für „100 L Wasser", „10 kg verloren" via Migration.
-
-## 6. Coach-Dashboard Integration
-
-Datei: `src/routes/coach.customers.index.tsx` erweitern.
-- Status-Badge: 🟢 Free / 🔥 Coaching anhand Rolle.
-- Filter-Tabs: Alle | Coaching | Free | Aktiv | Inaktiv (Inaktiv = kein `daily_checks` in 14 Tagen).
-- Spalten: Name, Email, Registriert, Aktuelles Gewicht, Level, Punkte, Streak, Letzter Login (aus `auth.users.last_sign_in_at` via server fn mit `supabaseAdmin`), Ø Nutzung (Checks/Woche).
-- Neue KPI-Karte oben: Free Users, Coaching Users, Conversion Rate (= coaching / (free+coaching)).
-- Neue Server-Funktion `getFreeUserStats` (`createServerFn` + `requireSupabaseAuth` + has_role(coach)-Check + supabaseAdmin im Handler).
-
-## 7. Conversion-Prompts
-
-Neue Komponente `FreeUpsellBanner` in FreeAppLayout. Trigger via Server-Funktion `getFreeUserUpsellState` (auth, RLS):
-- Tage seit Signup ≥ 7 → „7-Tage"-Banner.
-- Tage seit Signup ≥ 30 → „30-Tage"-Banner.
-- Anteil Tage in letzten 14 mit verfehltem Proteinziel ≥ 50 % → „Protein"-Banner.
-- Dismissible (gespeichert in `free_user_events` mit `event='banner_dismissed_X'`).
-- Klick auf CTA → `event='upgrade_clicked'` insert + Link auf Coaching-Anfrage (`/`).
-
-## 8. Design
-
-Bestehendes BodyFuel-Design (gold/schwarz für Coaching). Für Tracker zusätzliche Akzentfarbe „BodyFuel Grün" als CSS-Token `--tracker-green` in `src/styles.css` (semantic). Hochwertig: große Zahlen, klare Hierarchie, dunkle Cards, sanfte Gradients, gleiche Komponenten-Sprache wie Coaching-App. Mobile-first.
-
-## Technische Details
-
-- Migration: enum extend `app_role` add `'free'`; `handle_new_user` updaten; `activity_logs`, `free_user_events` Tabellen + GRANTs + RLS; Seed neue Achievements.
-- Alle DB-Reads in Free-Routen via authenticated `supabase` client (RLS schützt Daten).
-- Coach-Dashboard-Reads via `createServerFn` mit `requireSupabaseAuth` + `has_role(coach)`-Gate; `supabaseAdmin` nur für `auth.users.last_sign_in_at`.
-- Tracker-Routen sind public (Landing, Signup, Login). App-Bereich `tracker.app.*` liegt logisch unter einem Gate-Layout, das `has_role(user,'free')` erzwingt.
-- SEO: Landingpage hat eigenes head() mit Title, Description, OG-Tags + generiertem og:image.
-
-## Out of Scope (für diesen Durchgang)
-- Push-Notifications, E-Mail-Drip-Kampagnen für Free User.
-- Detaillierte CRM-Notizen/Tags pro Free User.
-- Stripe-Checkout fürs Coaching-Upgrade (CTA verweist auf bestehendes Anfrage-Formular).
+### Reihenfolge
+1. `AppLayout.tsx` Nav reduzieren, `community`-Eintrag aufnehmen.
+2. `community.tsx` anlegen.
+3. `nutrition.tsx`, `training.tsx`, `profile.tsx` zu Hubs erweitern (Inhalte hinzufügen, nichts entfernen).
+4. `dashboard.tsx` Widget-Reihenfolge sortieren.
