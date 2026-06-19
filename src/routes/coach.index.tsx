@@ -149,6 +149,59 @@ function CoachDashboard() {
     onError: (e: any) => toast.error(e?.message ?? "KI-Entwurf fehlgeschlagen"),
   });
 
+  const [bulkExtendProgress, setBulkExtendProgress] = useState<{ done: number; total: number } | null>(null);
+  const bulkExtendMut = useMutation({
+    mutationFn: async (items: Array<{ client_id: string; kind: "nutrition" | "training"; task_key: string }>) => {
+      setBulkExtendProgress({ done: 0, total: items.length });
+      let ok = 0;
+      const errors: string[] = [];
+      for (let i = 0; i < items.length; i++) {
+        try {
+          await extendPlanFn({ data: { client_id: items[i].client_id, kind: items[i].kind, weeks: 4 } });
+          await setStateFn({ data: { task_key: items[i].task_key, action: "complete" } });
+          ok++;
+        } catch (e: any) {
+          errors.push(e?.message ?? "Fehler");
+        }
+        setBulkExtendProgress({ done: i + 1, total: items.length });
+      }
+      return { ok, errors };
+    },
+    onSuccess: (res) => {
+      if (res.ok > 0) toast.success(`${res.ok} Pläne um 4 Wochen verlängert`);
+      if (res.errors.length > 0) toast.error(`${res.errors.length} fehlgeschlagen: ${res.errors[0]}`);
+      qc.invalidateQueries({ queryKey: ["coach-task-states"] });
+    },
+    onSettled: () => setTimeout(() => setBulkExtendProgress(null), 1500),
+  });
+
+  const [bulkDraftProgress, setBulkDraftProgress] = useState<{ done: number; total: number } | null>(null);
+  const bulkDraftMut = useMutation({
+    mutationFn: async (items: Array<{ client_id: string; task_key: string }>) => {
+      setBulkDraftProgress({ done: 0, total: items.length });
+      let ok = 0;
+      const errors: string[] = [];
+      for (let i = 0; i < items.length; i++) {
+        try {
+          await genDraftFn({ data: { user_id: items[i].client_id } });
+          await setStateFn({ data: { task_key: items[i].task_key, action: "complete" } });
+          ok++;
+        } catch (e: any) {
+          errors.push(e?.message ?? "Fehler");
+        }
+        setBulkDraftProgress({ done: i + 1, total: items.length });
+      }
+      return { ok, errors };
+    },
+    onSuccess: (res) => {
+      if (res.ok > 0) toast.success(`${res.ok} KI-Entwürfe erstellt`);
+      if (res.errors.length > 0) toast.error(`${res.errors.length} fehlgeschlagen: ${res.errors[0]}`);
+      qc.invalidateQueries({ queryKey: ["pending-checkin-drafts"] });
+      qc.invalidateQueries({ queryKey: ["coach-task-states"] });
+    },
+    onSettled: () => setTimeout(() => setBulkDraftProgress(null), 1500),
+  });
+
   const weekStart = mondayOf(new Date());
 
 
@@ -545,6 +598,12 @@ function CoachDashboard() {
               genDraftMut.mutate({ client_id, task_key })
             }
             generatingKey={genDraftMut.isPending ? genDraftMut.variables?.task_key : null}
+            onBulkExtend={(items) => bulkExtendMut.mutate(items)}
+            bulkExtendProgress={bulkExtendProgress}
+            bulkExtending={bulkExtendMut.isPending}
+            onBulkDraft={(items) => bulkDraftMut.mutate(items)}
+            bulkDraftProgress={bulkDraftProgress}
+            bulkDrafting={bulkDraftMut.isPending}
           />
 
 
@@ -819,6 +878,12 @@ function TaskInboxCard({
   extendingKey,
   onGenerateDraft,
   generatingKey,
+  onBulkExtend,
+  bulkExtendProgress,
+  bulkExtending,
+  onBulkDraft,
+  bulkDraftProgress,
+  bulkDrafting,
 }: {
   openCheckins: Client[];
   expiringPlans: ExpiringPlan[];
@@ -830,6 +895,12 @@ function TaskInboxCard({
   extendingKey: string | null | undefined;
   onGenerateDraft: (client_id: string, task_key: string) => void;
   generatingKey: string | null | undefined;
+  onBulkExtend: (items: Array<{ client_id: string; kind: "nutrition" | "training"; task_key: string }>) => void;
+  bulkExtendProgress: { done: number; total: number } | null;
+  bulkExtending: boolean;
+  onBulkDraft: (items: Array<{ client_id: string; task_key: string }>) => void;
+  bulkDraftProgress: { done: number; total: number } | null;
+  bulkDrafting: boolean;
 }) {
   type QuickAction = {
     label: string;
@@ -929,6 +1000,66 @@ function TaskInboxCard({
               {done.length > 0 ? ` · ${done.length} erledigt` : ""}
             </p>
           </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {(() => {
+            const openExtendItems = expiringPlans
+              .map((p) => ({ p, tk: `plan:${p.id}:${p.kind}:${p.end}` }))
+              .filter(({ tk }) => {
+                const s = states.get(tk);
+                if (!s) return true;
+                if (s.completed_at) return false;
+                if (s.snoozed_until && new Date(s.snoozed_until).getTime() > Date.now()) return false;
+                return true;
+              })
+              .map(({ p, tk }) => ({ client_id: p.id, kind: p.kind, task_key: tk }));
+            if (openExtendItems.length === 0) return null;
+            return (
+              <button
+                type="button"
+                onClick={() => onBulkExtend(openExtendItems)}
+                disabled={bulkExtending}
+                className="inline-flex items-center gap-1.5 rounded-md border border-gold/40 bg-gold/10 px-2.5 py-1.5 text-[11px] font-semibold text-gold transition hover:bg-gold/20 disabled:opacity-50"
+              >
+                <CalendarClock className="h-3.5 w-3.5" />
+                {bulkExtending && bulkExtendProgress
+                  ? `Verlängere ${bulkExtendProgress.done}/${bulkExtendProgress.total}…`
+                  : `Alle Pläne +4 Wo. (${openExtendItems.length})`}
+              </button>
+            );
+          })()}
+          {(() => {
+            const draftCandidates: Array<{ client_id: string; task_key: string }> = [];
+            openCheckins.slice(0, 20).forEach((c) => {
+              const tk = `checkin:${c.id}`;
+              const s = states.get(tk);
+              if (s?.completed_at) return;
+              if (s?.snoozed_until && new Date(s.snoozed_until).getTime() > Date.now()) return;
+              draftCandidates.push({ client_id: c.id, task_key: tk });
+            });
+            redClients.slice(0, 10).forEach((c) => {
+              const tk = `risk:${c.id}`;
+              if (draftCandidates.some((d) => d.client_id === c.id)) return;
+              const s = states.get(tk);
+              if (s?.completed_at) return;
+              if (s?.snoozed_until && new Date(s.snoozed_until).getTime() > Date.now()) return;
+              draftCandidates.push({ client_id: c.id, task_key: tk });
+            });
+            if (draftCandidates.length === 0) return null;
+            return (
+              <button
+                type="button"
+                onClick={() => onBulkDraft(draftCandidates)}
+                disabled={bulkDrafting}
+                className="inline-flex items-center gap-1.5 rounded-md border border-gold/40 bg-gold/10 px-2.5 py-1.5 text-[11px] font-semibold text-gold transition hover:bg-gold/20 disabled:opacity-50"
+              >
+                <Zap className="h-3.5 w-3.5" />
+                {bulkDrafting && bulkDraftProgress
+                  ? `KI ${bulkDraftProgress.done}/${bulkDraftProgress.total}…`
+                  : `KI-Entwürfe für alle (${draftCandidates.length})`}
+              </button>
+            );
+          })()}
         </div>
       </div>
 
