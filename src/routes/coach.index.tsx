@@ -598,6 +598,12 @@ function CoachDashboard() {
               genDraftMut.mutate({ client_id, task_key })
             }
             generatingKey={genDraftMut.isPending ? genDraftMut.variables?.task_key : null}
+            onBulkExtend={(items) => bulkExtendMut.mutate(items)}
+            bulkExtendProgress={bulkExtendProgress}
+            bulkExtending={bulkExtendMut.isPending}
+            onBulkDraft={(items) => bulkDraftMut.mutate(items)}
+            bulkDraftProgress={bulkDraftProgress}
+            bulkDrafting={bulkDraftMut.isPending}
           />
 
 
