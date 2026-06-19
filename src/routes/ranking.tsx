@@ -194,9 +194,6 @@ function RankingPage() {
             </div>
           )}
 
-          <div className="rounded-2xl border border-border bg-card/60 p-4 text-xs text-muted-foreground">
-            Möchtest du deinen Nickname ändern? Schreib dem Coach.
-          </div>
         </>
       )}
     </div>
