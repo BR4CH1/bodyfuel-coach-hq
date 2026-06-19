@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BarcodeScanner } from "./BarcodeScanner";
 import { MealBuilderDialog } from "./MealBuilderDialog";
-import { CustomMealsCard } from "./CustomMealsCard";
 import {
   searchFoods,
   lookupBarcode,
@@ -19,6 +18,7 @@ import {
   type FoodResult,
   type DayType,
 } from "@/lib/nutrition.functions";
+import { listCustomMeals, type CustomMeal } from "@/lib/custom-meals.functions";
 import { LOCAL_FOODS } from "@/lib/bodyfuel/localFoods";
 import {
   entryMatchesActiveDay,
