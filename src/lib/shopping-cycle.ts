@@ -11,27 +11,32 @@ const DAY_LABEL_DE: Record<string, string> = {
 };
 
 /**
- * Days the current plan window should cover, based on selected shopping days.
- * If no day matches, defaults to 7. Always at least 1.
+ * How many days the next plan/shopping window should cover.
+ *
+ * The shopping list is always for a FULL upcoming cycle (from the next
+ * shopping day until the one after), not just the few days until the
+ * next shopping day. With a single shopping day per week this returns 7;
+ * with multiple shopping days it returns the LONGEST gap between
+ * consecutive shopping days (i.e. the cycle the next shop must cover).
  */
 export function daysUntilNextShopping(
   shoppingDays: string[] | null | undefined,
-  from: Date = new Date(),
+  _from: Date = new Date(),
 ): number {
   if (!shoppingDays || shoppingDays.length === 0) return 7;
-  const today = from.getDay();
-  const targets = shoppingDays
-    .map((d) => DAY_INDEX[d])
-    .filter((n) => n !== undefined);
+  const targets = Array.from(
+    new Set(shoppingDays.map((d) => DAY_INDEX[d]).filter((n) => n !== undefined)),
+  ).sort((a, b) => a - b);
   if (!targets.length) return 7;
-
-  // Find smallest positive delta to a shopping day. If today is a shopping day,
-  // we still want the plan to cover until the NEXT shopping day.
-  const deltas = targets.map((t) => {
-    const d = (t - today + 7) % 7;
-    return d === 0 ? 7 : d;
-  });
-  return Math.max(1, Math.min(...deltas));
+  if (targets.length === 1) return 7;
+  let maxGap = 0;
+  for (let i = 0; i < targets.length; i++) {
+    const next = targets[(i + 1) % targets.length];
+    const cur = targets[i];
+    const gap = (next - cur + 7) % 7 || 7;
+    if (gap > maxGap) maxGap = gap;
+  }
+  return Math.max(1, maxGap);
 }
 
 export function formatShoppingDays(days: string[] | null | undefined): string {
