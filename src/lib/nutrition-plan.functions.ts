@@ -261,27 +261,13 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
     const partnerNameFromTitle = nameLooksShared?.[1]?.trim() || null;
     const isPartnerMeal = !!meal.partner_meal_id || !!partnerNameFromTitle;
 
-    // Cache hit — but if this is a partner meal and the cached recipe was made
-    // for one person only (no "für <name>"), fall through and regenerate.
-    const cached = Array.isArray(meal.recipe_ingredients) ? (meal.recipe_ingredients as string[]) : [];
-    const cachedLooksPartnerAware = cached.some((s) => /\bfür\s+\S/i.test(s));
-    const skipCache = isPartnerMeal && !cachedLooksPartnerAware;
-    if (!data.force && !skipCache && cached.length > 0) {
-      return {
-        ingredients: cached,
-        steps: (meal.recipe_steps as string[]) ?? [],
-        cached: true,
-      };
-    }
-
-    // Partner-meal lookup: if this meal is paired with a partner's meal, fetch
-    // the partner's macros + display name so the recipe can list per-person quantities.
+    // Partner-meal lookup: fetch the partner's macros + display name so the
+    // recipe can list per-person quantities. We do this BEFORE the cache check
+    // so cached recipes with stale "für Person" labels can be fixed on the fly.
     type Partner = { name: string; kcal: number | null; protein_g: number | null; carbs_g: number | null; fat_g: number | null; description?: string | null };
     let selfPartner: Partner | null = null;
     let otherPartner: Partner | null = null;
     if (meal.partner_meal_id) {
-      // Use admin client: RLS otherwise prevents the caller from reading the
-      // partner's plan/day/profile.
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const { data: pMeal } = await supabaseAdmin
         .from("nutrition_plan_meals")
@@ -298,11 +284,16 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
         if (clientId && otherClientId) {
           const { data: profs } = await supabaseAdmin
             .from("profiles")
-            .select("id, display_name, first_name")
+            .select("id, display_name, first_name, email")
             .in("id", [clientId, otherClientId]);
           const nameOf = (id: string) => {
             const p: any = (profs ?? []).find((x: any) => x.id === id);
-            return (p?.display_name?.trim() || p?.first_name?.trim() || "Person");
+            return (
+              p?.display_name?.trim() ||
+              p?.first_name?.trim() ||
+              (p?.email ? p.email.split("@")[0] : null) ||
+              "Du"
+            );
           };
           selfPartner = {
             name: nameOf(clientId),
@@ -319,6 +310,35 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
       }
     }
 
+    const fixLabels = (arr: string[]) => {
+      if (!selfPartner || !otherPartner) return arr;
+      const generic = /\bfür\s+Person\b/gi;
+      return arr.map((s) => {
+        if (!generic.test(s)) return s;
+        // Distinguish first vs second occurrence when both are "Person"
+        let first = true;
+        return s.replace(generic, () => {
+          const name = first ? selfPartner!.name : otherPartner!.name;
+          first = false;
+          return `für ${name}`;
+        });
+      });
+    };
+
+    // Cache hit — but if this is a partner meal and the cached recipe was made
+    // for one person only (no "für <name>"), fall through and regenerate.
+    const cached = Array.isArray(meal.recipe_ingredients) ? (meal.recipe_ingredients as string[]) : [];
+    const cachedLooksPartnerAware = cached.some((s) => /\bfür\s+\S/i.test(s));
+    const skipCache = isPartnerMeal && !cachedLooksPartnerAware;
+    if (!data.force && !skipCache && cached.length > 0) {
+      return {
+        ingredients: fixLabels(cached),
+        steps: (meal.recipe_steps as string[]) ?? [],
+        cached: true,
+      };
+    }
+
+
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY fehlt");
 
@@ -332,8 +352,8 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
     const partnerBlock = selfPartner && otherPartner
       ? `
 WICHTIG — Das ist eine PARTNER-MAHLZEIT, die zwei Personen GEMEINSAM kochen:
-- Person A: ${selfPartner.name} — Zielwerte: ${[selfPartner.kcal && `${selfPartner.kcal} kcal`, selfPartner.protein_g && `${selfPartner.protein_g}g Eiweiß`, selfPartner.carbs_g && `${selfPartner.carbs_g}g KH`, selfPartner.fat_g && `${selfPartner.fat_g}g Fett`].filter(Boolean).join(", ")}${selfPartner.description ? `\n  Portion laut Plan: ${selfPartner.description}` : ""}
-- Person B: ${otherPartner.name} — Zielwerte: ${[otherPartner.kcal && `${otherPartner.kcal} kcal`, otherPartner.protein_g && `${otherPartner.protein_g}g Eiweiß`, otherPartner.carbs_g && `${otherPartner.carbs_g}g KH`, otherPartner.fat_g && `${otherPartner.fat_g}g Fett`].filter(Boolean).join(", ")}${otherPartner.description ? `\n  Portion laut Plan: ${otherPartner.description}` : ""}
+- ${selfPartner.name}: Zielwerte: ${[selfPartner.kcal && `${selfPartner.kcal} kcal`, selfPartner.protein_g && `${selfPartner.protein_g}g Eiweiß`, selfPartner.carbs_g && `${selfPartner.carbs_g}g KH`, selfPartner.fat_g && `${selfPartner.fat_g}g Fett`].filter(Boolean).join(", ")}${selfPartner.description ? `\n  Portion laut Plan: ${selfPartner.description}` : ""}
+- ${otherPartner.name}: Zielwerte: ${[otherPartner.kcal && `${otherPartner.kcal} kcal`, otherPartner.protein_g && `${otherPartner.protein_g}g Eiweiß`, otherPartner.carbs_g && `${otherPartner.carbs_g}g KH`, otherPartner.fat_g && `${otherPartner.fat_g}g Fett`].filter(Boolean).join(", ")}${otherPartner.description ? `\n  Portion laut Plan: ${otherPartner.description}` : ""}
 
 PFLICHT-FORMAT für JEDE Zutat (genau so, ohne Ausnahme):
 "<Lebensmittel>: <Menge> für ${selfPartner.name}, <Menge> für ${otherPartner.name} — insgesamt <Summe>"
@@ -343,9 +363,9 @@ Beispiele:
 - "Reis (ungekocht): 150 g für ${selfPartner.name}, 80 g für ${otherPartner.name} — insgesamt 230 g"
 - Bei Gewürzen / Öl, das geteilt wird: "Rapsöl: 1 EL für ${selfPartner.name}, 0,5 EL für ${otherPartner.name} — insgesamt 1,5 EL"
 
-Skaliere die Mengen pro Person passend zu den jeweiligen Makro-Zielen (Person B hat oft weniger kcal, also kleinere Portionen). Wenn in den Portion-Angaben oben schon Mengen pro Person stehen, übernimm GENAU diese und addiere die Summe.
+Skaliere die Mengen pro Person passend zu den jeweiligen Makro-Zielen (${otherPartner.name} hat oft weniger kcal, also kleinere Portionen). Wenn in den Portion-Angaben oben schon Mengen pro Person stehen, übernimm GENAU diese und addiere die Summe.
 
-NIEMALS eine Zutat ohne "für ${selfPartner.name}" und "für ${otherPartner.name}" schreiben. NIEMALS nur die Gesamtmenge ohne Aufteilung schreiben.
+NIEMALS eine Zutat ohne "für ${selfPartner.name}" und "für ${otherPartner.name}" schreiben. NIEMALS nur die Gesamtmenge ohne Aufteilung schreiben. NIEMALS "für Person" oder generische Platzhalter statt der echten Namen verwenden.
 
 Zubereitungsschritte: gemeinsame Zubereitung in einem Topf/Pfanne, am Ende auf zwei Teller portionieren (in den passenden Mengen).`
       : "";
@@ -390,13 +410,15 @@ Antworte ausschließlich mit gültigem JSON in diesem Format:
     let parsed: { ingredients?: unknown; steps?: unknown } = {};
     try { parsed = typeof raw === "string" ? JSON.parse(raw) : raw; } catch { parsed = {}; }
 
-    const ingredients = Array.isArray(parsed.ingredients)
+    let ingredients = Array.isArray(parsed.ingredients)
       ? parsed.ingredients.map((s) => String(s).trim()).filter(Boolean).slice(0, 30)
       : [];
     const steps = Array.isArray(parsed.steps)
       ? parsed.steps.map((s) => String(s).trim()).filter(Boolean).slice(0, 20)
       : [];
     if (!ingredients.length) throw new Error("Rezept konnte nicht erstellt werden");
+
+    ingredients = fixLabels(ingredients);
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     await supabaseAdmin
