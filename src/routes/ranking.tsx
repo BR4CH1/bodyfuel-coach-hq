@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Trophy, Flame, TrendingUp, Star, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
+import { FreeAppLayout } from "@/components/bodyfuel/FreeAppLayout";
 import { useSession } from "@/lib/bodyfuel/session";
 import { getRanking, getMyNickname, setMyNickname, type RankingEntry } from "@/lib/ranking.functions";
 import { Button } from "@/components/ui/button";
@@ -14,12 +15,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 
 export const Route = createFileRoute("/ranking")({
   head: () => ({ meta: [{ title: "Ranking — BODYFUEL" }] }),
-  component: () => (
-    <AppLayout>
-      <RankingPage />
-    </AppLayout>
-  ),
+  component: RankingRoute,
 });
+
+function RankingRoute() {
+  const { isFreeUser } = useSession();
+  const Layout = isFreeUser ? FreeAppLayout : AppLayout;
+  return (
+    <Layout>
+      <RankingPage />
+    </Layout>
+  );
+}
 
 type SortKey = "total" | "weekly" | "streak" | "level";
 

@@ -1,6 +1,6 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
-import { LayoutDashboard, Apple, Scale, Trophy, LogOut, Sparkles, Dumbbell, Shield, Droplet, Footprints, User } from "lucide-react";
+import { LayoutDashboard, Apple, Scale, Trophy, LogOut, Sparkles, Dumbbell, Shield, Droplet, Footprints, User, Crown } from "lucide-react";
 import { useSession } from "@/lib/bodyfuel/session";
 import { Logo } from "./Logo";
 import { FreeUpsellBanner } from "./FreeUpsellBanner";
@@ -15,6 +15,7 @@ const baseNav: FreeNavItem[] = [
   { to: "/tracker/app/water", label: "Wasser", icon: Droplet, desktopOnly: true },
   { to: "/tracker/app/activity", label: "Aktivität", icon: Footprints, desktopOnly: true },
   { to: "/tracker/app/achievements", label: "Erfolge", icon: Trophy },
+  { to: "/ranking", label: "Ranking", icon: Crown },
   { to: "/tracker/app/profile", label: "Profil", icon: User, desktopOnly: true },
 ];
 
