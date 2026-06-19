@@ -186,6 +186,7 @@ export const listCustomers = createServerFn({ method: "GET" })
         ...p,
         email: emailMap.get(p.user_id) ?? null,
         display_name: profileMap.get(p.user_id)?.display_name ?? null,
+        nickname: (profileMap.get(p.user_id) as any)?.nickname ?? null,
         phone: profileMap.get(p.user_id)?.phone ?? null,
         groups: groupsByUser.get(p.user_id) ?? [],
         last_payment_date: confirmed[0]?.payment_date ?? null,
