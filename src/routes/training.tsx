@@ -68,6 +68,13 @@ function TrainingPage() {
 
   return (
     <div className="space-y-8">
+      {!isCoach && (
+        <section className="grid gap-3 sm:grid-cols-3">
+          <TrainingQuickLink to="/strength-check" icon={<Activity className="h-5 w-5" />} title="Strength Check" desc="Scores, Historie, Trends" />
+          <TrainingQuickLink to="/progress" icon={<BarChart3 className="h-5 w-5" />} title="Trainingsanalyse" desc="Verbesserungen & Rückgänge" />
+          <TrainingQuickLink to="/achievements" icon={<Sparkles className="h-5 w-5" />} title="Insights & Erfolge" desc="Adhärenz, Volumen, Belastung" />
+        </section>
+      )}
       {!isCoach && <StrengthCheckStatus variant="block" />}
       {!isCoach && supabaseUser && <AthleteProfileBanner />}
       {hasCompleted && (
