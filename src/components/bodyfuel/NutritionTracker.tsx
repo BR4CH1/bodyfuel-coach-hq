@@ -521,6 +521,47 @@ export function NutritionTracker() {
     return () => { cancelled = true; };
   }, [openMeal, picking, userId, allEntries.length]);
 
+  // Load custom meals when dialog opens
+  useEffect(() => {
+    if (!openMeal || picking || !userId) return;
+    let cancelled = false;
+    setLoadingMeals(true);
+    listCustomMealsFn({ data: {} })
+      .then((rows) => {
+        if (!cancelled) setCustomMeals(rows ?? []);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoadingMeals(false);
+      });
+    return () => { cancelled = true; };
+  }, [openMeal, picking, userId, listCustomMealsFn, builderOpen]);
+
+  const addCustomMeal = async (m: CustomMeal) => {
+    if (!openMeal || !userId) return;
+    const payload = {
+      user_id: userId,
+      entry_date: date,
+      meal: openMeal,
+      name: m.name,
+      serving_g: 100,
+      kcal: Math.round(m.kcal ?? 0),
+      protein_g: m.protein_g ? +Number(m.protein_g).toFixed(1) : 0,
+      carbs_g: m.carbs_g ? +Number(m.carbs_g).toFixed(1) : 0,
+      fat_g: m.fat_g ? +Number(m.fat_g).toFixed(1) : 0,
+      source: `custom:${m.id}`,
+    };
+    const { data: row, error } = await supabase
+      .from("food_entries")
+      .insert(payload)
+      .select("id, meal, name, brand, serving_g, kcal, protein_g, carbs_g, fat_g, source")
+      .single();
+    if (error) return toast.error(error.message);
+    setAllEntries((e) => [...e, row as FoodEntry]);
+    setOpenMeal(null);
+    toast.success("Mahlzeit hinzugefügt");
+  };
+
 
   const handleBarcode = async (code: string) => {
     setScannerOpen(false);
