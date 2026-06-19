@@ -1503,6 +1503,7 @@ export type Database = {
           mobility_focus: string | null
           mobility_frequency: string | null
           next_checkin_date: string | null
+          nickname: string | null
           notifications_enabled: boolean
           phone: string | null
           practice_days_per_week: number | null
@@ -1542,6 +1543,7 @@ export type Database = {
           mobility_focus?: string | null
           mobility_frequency?: string | null
           next_checkin_date?: string | null
+          nickname?: string | null
           notifications_enabled?: boolean
           phone?: string | null
           practice_days_per_week?: number | null
@@ -1581,6 +1583,7 @@ export type Database = {
           mobility_focus?: string | null
           mobility_frequency?: string | null
           next_checkin_date?: string | null
+          nickname?: string | null
           notifications_enabled?: boolean
           phone?: string | null
           practice_days_per_week?: number | null
@@ -2369,6 +2372,18 @@ export type Database = {
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
+      }
+      get_ranking: {
+        Args: never
+        Returns: {
+          current_streak: number
+          display_name: string
+          level: number
+          nickname: string
+          total_points: number
+          user_id: string
+          weekly_points: number
+        }[]
       }
       has_group: {
         Args: {
