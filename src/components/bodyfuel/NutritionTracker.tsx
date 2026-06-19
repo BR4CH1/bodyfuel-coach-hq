@@ -12,6 +12,7 @@ import { MealBuilderDialog } from "./MealBuilderDialog";
 import {
   searchFoods,
   lookupBarcode,
+  estimateFoodFromText,
   getNutritionTargets,
   getDayType,
   setDayType,
