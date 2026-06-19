@@ -51,8 +51,10 @@ function ShoppingListPage() {
   }, [periodScope, partnerMode, data]);
 
   // Load persisted checked state when scope/plan/partnerMode changes
+  const loadedKeyRef = useRef<string | null>(null);
   useEffect(() => {
     if (!checkedStorageKey) {
+      loadedKeyRef.current = null;
       setChecked({});
       return;
     }
@@ -62,11 +64,13 @@ function ShoppingListPage() {
     } catch {
       setChecked({});
     }
+    loadedKeyRef.current = checkedStorageKey;
   }, [checkedStorageKey]);
 
-  // Persist on change
+  // Persist on change (only after load for current key has run)
   useEffect(() => {
     if (!checkedStorageKey) return;
+    if (loadedKeyRef.current !== checkedStorageKey) return;
     try {
       localStorage.setItem(checkedStorageKey, JSON.stringify(checked));
     } catch {}
