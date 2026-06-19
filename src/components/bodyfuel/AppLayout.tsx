@@ -46,7 +46,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (loading) return;
     if (!user && !supabaseUser) navigate({ to: "/login" });
-    else if (isFreeUser && !pathname.startsWith("/tracker") && !(pathname.startsWith("/bulls") && hasGroup("bulls"))) {
+    else if (isFreeUser && !pathname.startsWith("/tracker") && !pathname.startsWith("/ranking") && !(pathname.startsWith("/bulls") && hasGroup("bulls"))) {
       navigate({ to: "/tracker/app" });
     }
   }, [user, supabaseUser, loading, navigate, isFreeUser, pathname, hasGroup]);
