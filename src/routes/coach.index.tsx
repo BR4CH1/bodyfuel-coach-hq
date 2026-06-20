@@ -585,10 +585,9 @@ function CoachDashboard() {
             newLeads={leads.length}
           />
 
-          <CoachActionAlertsCard
-            expiringPlansCount={expiringPlans.length}
-            openCheckinsCount={openWeek.length}
-          />
+          <CoachDashboardSummary data={radarQuery.data} />
+          <CoachRadarCard data={radarQuery.data} />
+          <CoachTaskInboxCard data={radarQuery.data} />
 
           <TaskInboxCard
             openCheckins={openWeek}
@@ -614,6 +613,7 @@ function CoachDashboard() {
             bulkDraftProgress={bulkDraftProgress}
             bulkDrafting={bulkDraftMut.isPending}
           />
+
 
 
 
