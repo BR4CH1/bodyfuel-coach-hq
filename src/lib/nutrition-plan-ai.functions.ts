@@ -322,10 +322,10 @@ export async function generateAiNutritionPlanCore(
       .map((s: any) => s.meal?.name)
       .filter(Boolean);
     // Top swapped (frequency)
-    const swapFreq = swappedNames.reduce<Record<string, number>>((acc, n) => {
-      acc[n] = (acc[n] ?? 0) + 1;
-      return acc;
-    }, {});
+    const swapFreq: Record<string, number> = {};
+    for (const n of swappedNames as string[]) {
+      swapFreq[n] = (swapFreq[n] ?? 0) + 1;
+    }
     const topSwapped = Object.entries(swapFreq)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 8)
