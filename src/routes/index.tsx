@@ -1083,12 +1083,12 @@ function Pricing() {
             Wähle dein <span className="text-gradient-gold">Level</span>
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
-            Drei Pakete, ein Ziel: dein bester Körper — mit System, klarer Struktur und
-            persönlicher Betreuung.
+            Zwei Pakete, ein Ziel: dein bester Körper — mit System, klarer Struktur und
+            (optional) persönlicher Betreuung.
           </p>
         </div>
 
-        <div className="mt-12 grid gap-6 md:grid-cols-3">
+        <div className="mt-12 grid gap-6 md:grid-cols-2 md:mx-auto md:max-w-4xl">
           {PACKAGES.map((p) => (
             <div
               key={p.name}
