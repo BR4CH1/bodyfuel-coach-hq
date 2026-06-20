@@ -31,6 +31,7 @@ function CustomersList() {
   const fn = useServerFn(listCustomers);
   const trialFn = useServerFn(listTrialUsers);
   const freeFn = useServerFn(listFreeUsers);
+  const radarFn = useServerFn(getCoachRadar);
   const { data, isLoading } = useQuery({
     queryKey: ["customers"],
     queryFn: () => fn(),
@@ -43,6 +44,16 @@ function CustomersList() {
     queryKey: ["free-users"],
     queryFn: () => freeFn(),
   });
+  const { data: radar } = useQuery({
+    queryKey: ["coach-radar"],
+    queryFn: () => radarFn(),
+    staleTime: 60_000,
+  });
+  const statusByUser = useMemo(() => {
+    const m = new Map<string, "red" | "orange" | "yellow" | "green">();
+    (radar?.clients ?? []).forEach((c) => m.set(c.user_id, c.level));
+    return m;
+  }, [radar]);
   const [filter, setFilter] = useState<Filter>("all");
   const [search, setSearch] = useState("");
 
