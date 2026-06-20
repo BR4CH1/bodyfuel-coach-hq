@@ -59,10 +59,13 @@ async function handleSubscriptionCreated(subscription: any, env: StripeEnv) {
         user_id: userId,
         package: "smart",
         status: "active",
+        price_eur: 14.99,
+        end_date: "2099-12-31",
+        is_active: true,
         started_at: new Date().toISOString(),
         source: "stripe",
       } as any,
-      { onConflict: "user_id" } as any,
+      { onConflict: "user_id,package" } as any,
     );
   }
 }
