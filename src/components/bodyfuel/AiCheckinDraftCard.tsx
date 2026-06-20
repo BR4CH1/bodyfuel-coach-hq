@@ -86,6 +86,19 @@ export function AiCheckinDraftCard({ userId }: { userId: string }) {
   };
   ensureMessage();
 
+  // Persist edited message across reloads/tab switches so coach doesn't lose typing.
+  const editorDraftKey = active ? `bf.coach.checkinDraft.${userId}.${active.id}.v1` : null;
+  useFormDraft(
+    editorDraftKey,
+    { messageDraft, editing },
+    (d) => {
+      if (typeof d.messageDraft === "string" && d.messageDraft.length > 0) {
+        setMessageDraft(d.messageDraft);
+      }
+      if (typeof d.editing === "boolean") setEditing(d.editing);
+    },
+  );
+
   const generateMutation = useMutation({
     mutationFn: () => genFn({ data: { user_id: userId } }),
     onSuccess: async (res) => {
