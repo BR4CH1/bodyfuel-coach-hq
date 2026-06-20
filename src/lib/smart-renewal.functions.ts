@@ -145,14 +145,15 @@ export const renewSmartNutritionPlan = createServerFn({ method: "POST" })
     const { generateAiNutritionPlanCore } = await import(
       "./nutrition-plan-ai.functions"
     );
-    await generateAiNutritionPlanCore(supabase, {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await generateAiNutritionPlanCore(supabaseAdmin as any, {
       target: userId,
       uploadedBy: userId,
       start_mode: "today",
       plan_days: 30,
       apiKey,
     });
-    await activateLatest(supabase, userId, "nutrition");
+    await activateLatest(supabaseAdmin as any, userId, "nutrition");
     return { ok: true };
   });
 
@@ -195,14 +196,15 @@ export const renewSmartTrainingPlan = createServerFn({ method: "POST" })
     const { generateTrainingPlanCore } = await import(
       "./training-plan-ai-core.server"
     );
-    await generateTrainingPlanCore(supabase, {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await generateTrainingPlanCore(supabaseAdmin as any, {
       target: userId,
       uploadedBy: userId,
       startMode: "today",
       apiKey,
       weeks: 4,
     });
-    await activateLatest(supabase, userId, "training");
+    await activateLatest(supabaseAdmin as any, userId, "training");
     return { ok: true };
   });
 
