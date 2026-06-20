@@ -121,13 +121,13 @@ export const Route = createFileRoute("/api/public/hooks/send-feature-news")({
 
         for (const r of recipients) {
           const normalized = r.email.toLowerCase();
-          const idempotencyKey = `${LABEL}:${dateTag}:${normalized}`;
+          const idempotencyKey = `${effectiveLabel}:${dateTag}:${normalized}`;
 
           // Duplikat-Schutz
           const { data: existing } = await supabase
             .from("email_send_log")
             .select("id")
-            .eq("template_name", TEMPLATE_NAME)
+            .eq("template_name", effectiveTemplate)
             .eq("recipient_email", normalized)
             .eq("message_id", idempotencyKey)
             .maybeSingle();
