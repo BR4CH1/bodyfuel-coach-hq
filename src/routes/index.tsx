@@ -6,6 +6,7 @@ import appDashboardAsset from "@/assets/app-dashboard.png.asset.json";
 import nutritionPlanAsset from "@/assets/nutrition-plan.jpeg.asset.json";
 import nutritionMacrosAsset from "@/assets/nutrition-macros.jpeg.asset.json";
 import nutritionTrackerAsset from "@/assets/nutrition-tracker.jpeg.asset.json";
+import manuCoachAsset from "@/assets/manu-coach.png.asset.json";
 import {
   ArrowRight,
   Activity,
@@ -84,6 +85,7 @@ function LandingPage() {
       <AppScreenshots />
       <SystemSteps />
       <Gamification />
+      <SmartAutopilot />
       <Results />
       <AboutCoach />
       <Pricing />
@@ -91,6 +93,61 @@ function LandingPage() {
       <ContactForm />
       <Footer />
     </div>
+  );
+}
+
+function SmartAutopilot() {
+  const features = [
+    { icon: Salad, title: "Automatischer Ernährungsplan", text: "Passend zu Ziel, Kalorien & Makros — mit Rezepten, die schmecken." },
+    { icon: Dumbbell, title: "Automatischer Trainingsplan", text: "Auf dein Equipment, deine Erfahrung und deine Tage zugeschnitten." },
+    { icon: ClipboardList, title: "Smarte Einkaufsliste", text: "Sortiert, auf deine Einkaufstage und dein Budget abgestimmt." },
+    { icon: LineChart, title: "Tracking & Prognose", text: "Sieh jeden Tag, wo du stehst und wann du dein Ziel erreichst." },
+    { icon: Zap, title: "Strength Check", text: "Miss deine Kraft regelmäßig und sieh echten Fortschritt." },
+    { icon: Trophy, title: "Ranking & Level", text: "Punkte, Streaks und Achievements halten dich am Ball." },
+  ];
+  return (
+    <section id="smart" className="relative border-y border-border/60 bg-card/30 py-20 sm:py-28">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <div className="flex flex-col items-start gap-3">
+          <span className="inline-flex items-center gap-2 rounded-full border border-gold/40 bg-gold/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-gold">
+            <Sparkles className="h-3 w-3" /> Neu · BodyFuel Smart
+          </span>
+          <h2 className="font-display text-3xl font-bold sm:text-4xl">
+            Dein persönlicher <span className="text-gradient-gold">Autopilot</span> — für nur 14,99 €/Monat.
+          </h2>
+          <p className="max-w-2xl text-muted-foreground">
+            BodyFuel Smart erstellt vollautomatisch deinen Ernährungs- und Trainingsplan,
+            packt deine Einkaufsliste und zeigt dir täglich, wie du näher an dein Ziel
+            kommst. Kein Coach nötig — alles läuft für dich. Du willst mehr Begleitung?
+            Wechsel jederzeit auf das volle <span className="font-semibold text-foreground">Coaching für 69 €</span>.
+          </p>
+        </div>
+
+        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {features.map((f) => (
+            <div key={f.title} className="rounded-2xl border border-border bg-background/60 p-5 transition hover:border-gold/40">
+              <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-gold text-primary-foreground">
+                <f.icon className="h-5 w-5" />
+              </div>
+              <h3 className="mt-3 font-display text-base font-bold">{f.title}</h3>
+              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{f.text}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-8 flex flex-wrap items-center gap-3">
+          <Link to="/smart/signup">
+            <Button className="bg-gradient-gold text-primary-foreground shadow-gold hover:opacity-90">
+              Smart für 14,99 € starten
+              <ArrowRight className="ml-1 h-4 w-4" />
+            </Button>
+          </Link>
+          <a href="#pakete" className="text-xs text-muted-foreground hover:text-foreground">
+            Smart vs. Coaching vergleichen →
+          </a>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -950,16 +1007,19 @@ function AboutCoach() {
     <section id="coach" className="relative border-y border-border/60 bg-card/30 py-20 sm:py-28">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="grid items-center gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
-          {/* Coach photo placeholder */}
+          {/* Coach photo */}
           <div className="relative mx-auto w-full max-w-sm">
             <div className="absolute -inset-4 rounded-3xl bg-gradient-gold opacity-20 blur-2xl" />
             <div className="relative aspect-[4/5] overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-secondary to-background">
-              <div className="absolute inset-0 grid place-items-center">
-                <UserIcon className="h-24 w-24 text-border" strokeWidth={1.2} />
-              </div>
+              <img
+                src={manuCoachAsset.url}
+                alt="Manu — Head Coach von BodyFuel Coaching"
+                className="absolute inset-0 h-full w-full object-cover"
+                loading="lazy"
+              />
               <div className="absolute bottom-4 left-4 right-4 rounded-xl border border-gold/30 bg-background/70 p-3 backdrop-blur">
                 <div className="font-display text-base font-bold">Manu</div>
-                <div className="text-[11px] uppercase tracking-wider text-gold">Head Coach</div>
+                <div className="text-[11px] uppercase tracking-wider text-gold">Head Coach · Essen</div>
               </div>
             </div>
           </div>
@@ -970,15 +1030,17 @@ function AboutCoach() {
               Dein Coach: <span className="text-gradient-gold">Manu</span>
             </h2>
             <p className="mt-4 text-muted-foreground leading-relaxed">
-              Ich begleite Menschen dabei, Ernährung, Training und Alltag endlich in den
-              Griff zu bekommen. Mein Ziel ist nicht, dir irgendeinen perfekten Plan
-              hinzulegen, sondern ein System zu bauen, das du wirklich umsetzen kannst.
+              Geboren am 27.09.1990 in Essen, seit über 15 Jahren in der Fitnessbranche
+              zuhause. Ich begleite Menschen dabei, Ernährung, Training und Alltag endlich
+              in den Griff zu bekommen. Mein Ziel ist nicht, dir irgendeinen perfekten
+              Plan hinzulegen, sondern ein System zu bauen, das du wirklich umsetzen
+              kannst.
             </p>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-3">
               {[
+                { v: "15+", l: "Jahre Erfahrung" },
                 { v: "100+", l: "Kunden" },
-                { v: "5★", l: "Bewertungen" },
                 { v: "1:1", l: "Betreuung" },
               ].map((s) => (
                 <div key={s.l} className="rounded-xl border border-border bg-background/60 px-4 py-3 text-center">
@@ -992,6 +1054,7 @@ function AboutCoach() {
 
             <ul className="mt-6 space-y-2 text-sm">
               {[
+                "Aus Essen — seit 15 Jahren in der Fitnessbranche",
                 "Persönliches Coaching — kein Bot, kein Standardplan",
                 "Fokus auf Nachhaltigkeit statt schnelle Crash-Ergebnisse",
                 "Ehrliches Feedback, klare Struktur, echte Begleitung",
