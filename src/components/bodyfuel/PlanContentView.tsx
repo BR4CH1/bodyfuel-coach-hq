@@ -62,6 +62,25 @@ const isRestDay = (name: string) => /rest|ruh|pause|off|frei/i.test(name);
 const pickRandom = <T,>(arr: T[]): T | null =>
   arr.length ? arr[Math.floor(Math.random() * arr.length)] : null;
 
+// Map a German weekday abbreviation at the start of a day name to JS getDay() (0=Sun..6=Sat).
+const WEEKDAY_MAP: Record<string, number> = {
+  so: 0, son: 0, sonntag: 0,
+  mo: 1, mon: 1, montag: 1,
+  di: 2, die: 2, dienstag: 2,
+  mi: 3, mit: 3, mittwoch: 3,
+  do: 4, don: 4, donnerstag: 4,
+  fr: 5, fre: 5, freitag: 5,
+  sa: 6, sam: 6, samstag: 6,
+};
+function weekdayFromName(name: string): number | null {
+  const m = name.trim().toLowerCase().match(/^([a-zäöü]+)/);
+  if (!m) return null;
+  const key = m[1];
+  if (key in WEEKDAY_MAP) return WEEKDAY_MAP[key];
+  // try first 2-3 chars
+  return WEEKDAY_MAP[key.slice(0, 2)] ?? WEEKDAY_MAP[key.slice(0, 3)] ?? null;
+}
+
 const INSTRUCTION_SIGNALS = [
   "Alles", "Zubereitung", "Zubereiten", "Anleitung", "Zusammen", "Mischen",
   "Kochen", "Backen", "Braten", "Garen", "Dünsten", "Dämpfen", "Grillen",
