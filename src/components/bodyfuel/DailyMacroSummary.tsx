@@ -56,26 +56,12 @@ export function DailyMacroSummary({ userId }: { userId: string }) {
           fat_g: useRest ? (t.fat_g_rest ?? t.fat_g) : t.fat_g,
         });
       }
-      const activeKind = d?.kind === "rest" ? "rest" : "training";
+      void activeKind; void planMealIdFromEntry; void getPlanMealDayKind; void entryMatchesActiveDay;
       const rows = (entries.data as Totals[]) ?? [];
-      const planMealIds = [
-        ...new Set(rows.map(planMealIdFromEntry).filter((id): id is string => !!id)),
-      ];
-      const planMealKinds: Record<string, "training" | "rest"> = {};
-      if (planMealIds.length) {
-        const { data: planMeals } = await supabase
-          .from("nutrition_plan_meals")
-          .select("id, name, nutrition_plan_days(name)")
-          .in("id", planMealIds);
-        ((planMeals as PlanMealDayRow[]) ?? []).forEach((meal) => {
-          const dayName = Array.isArray(meal.nutrition_plan_days)
-            ? meal.nutrition_plan_days[0]?.name
-            : meal.nutrition_plan_days?.name;
-          const kind = getPlanMealDayKind([meal.name, dayName]);
-          if (kind) planMealKinds[meal.id] = kind;
-        });
-      }
-      const list = rows.filter((entry) => entryMatchesActiveDay(entry, activeKind, planMealKinds));
+      // Alle heute getrackten Einträge zählen für den aktuell eingestellten Tag,
+      // unabhängig davon, aus welchem Plan-Tag (Training/Rest) die Mahlzeit stammt.
+      const list = rows;
+
       setTotals(
         list.reduce(
           (s, e) => ({
