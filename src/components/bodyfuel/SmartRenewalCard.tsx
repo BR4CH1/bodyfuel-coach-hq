@@ -77,7 +77,7 @@ export function SmartRenewalCard() {
         {showN && (
           <RenewRow
             icon={<Apple className="h-4 w-4" />}
-            title="Ernährungsplan (4 Wochen)"
+            title="Ernährungsplan (1 Monat)"
             sub={
               data.nutrition.days_until_end != null && data.nutrition.days_until_end >= 0
                 ? `Aktuell läuft noch ${data.nutrition.days_until_end} Tage`
