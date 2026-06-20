@@ -123,7 +123,8 @@ export const broadcastFromCoach = createServerFn({ method: "POST" })
     if (body.length > 4000) throw new Error("Nachricht zu lang");
 
     const audience = data.audience ?? "all";
-    const roles = audience === "all" ? ["client", "free"] : [audience];
+    const roles: ("client" | "free")[] =
+      audience === "all" ? ["client", "free"] : audience === "free" ? ["free"] : ["client"];
 
     const { data: rows, error: rolesErr } = await context.supabase
       .from("user_roles")
