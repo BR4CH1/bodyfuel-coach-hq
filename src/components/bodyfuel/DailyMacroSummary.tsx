@@ -4,11 +4,6 @@ import { ArrowRight } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { getNutritionTargets, getDayType } from "@/lib/nutrition.functions";
-import {
-  entryMatchesActiveDay,
-  getPlanMealDayKind,
-  planMealIdFromEntry,
-} from "@/lib/bodyfuel/trialTracking";
 
 type Totals = {
   kcal: number;
