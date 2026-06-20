@@ -467,9 +467,13 @@ function CustomerDetail() {
                       onChange={(e) => setPkgKey(e.target.value)}
                       className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                     >
-                      <option value="starter">Starter</option>
-                      <option value="coaching">Coaching</option>
-                      <option value="premium">Premium</option>
+                      <option value="smart">BodyFuel Smart</option>
+                      <option value="coaching">BodyFuel Coaching</option>
+                      {(pkgKey === "starter" || pkgKey === "premium") && (
+                        <option value={pkgKey}>
+                          {pkgKey === "starter" ? "Starter (Legacy)" : "Premium (Legacy)"}
+                        </option>
+                      )}
                     </select>
                   </div>
                   <div className="space-y-2">
@@ -506,7 +510,7 @@ function CustomerDetail() {
                     onClick={() =>
                       update.mutate({
                         package_id: activePkg.id,
-                        package: pkgKey as "starter" | "coaching" | "premium",
+                        package: pkgKey as "smart" | "coaching" | "starter" | "premium",
                         price_eur: price,
                         start_date: startDate || undefined,
                         end_date: endDate,

@@ -3,7 +3,8 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const PAYPAL_ME = "https://www.paypal.me/ManuSchrader";
 
-type PackageKey = "starter" | "coaching" | "premium";
+// Aktive Pakete: smart, coaching. starter/premium bleiben für Legacy-Datensätze.
+type PackageKey = "smart" | "coaching" | "starter" | "premium";
 
 async function assertCoach(supabase: any, userId: string) {
   const { data, error } = await supabase.rpc("has_role", {
@@ -24,7 +25,7 @@ export const submitLead = createServerFn({ method: "POST" })
       phone?: string;
       goal?: string;
       current_weight?: string;
-      desired_package?: "starter" | "coaching" | "premium" | "unsure";
+      desired_package?: PackageKey | "unsure";
       message?: string;
     }) => data,
   )
@@ -849,7 +850,7 @@ export const createPackageRequest = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
       request_type: "renewal" | "change" | "contact";
-      requested_package?: "starter" | "coaching" | "premium" | null;
+      requested_package?: PackageKey | null;
       note?: string;
     }) => data,
   )

@@ -1083,12 +1083,12 @@ function Pricing() {
             Wähle dein <span className="text-gradient-gold">Level</span>
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
-            Drei Pakete, ein Ziel: dein bester Körper — mit System, klarer Struktur und
-            persönlicher Betreuung.
+            Zwei Pakete, ein Ziel: dein bester Körper — mit System, klarer Struktur und
+            (optional) persönlicher Betreuung.
           </p>
         </div>
 
-        <div className="mt-12 grid gap-6 md:grid-cols-3">
+        <div className="mt-12 grid gap-6 md:grid-cols-2 md:mx-auto md:max-w-4xl">
           {PACKAGES.map((p) => (
             <div
               key={p.name}
@@ -1180,7 +1180,7 @@ function ContactForm() {
     phone: "",
     goal: "",
     current_weight: "",
-    desired_package: "" as "" | "starter" | "coaching" | "premium" | "unsure",
+    desired_package: "" as "" | "smart" | "coaching" | "unsure",
     message: "",
   });
 
@@ -1334,9 +1334,8 @@ function ContactForm() {
                     <SelectValue placeholder="Noch unsicher? Auch okay." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="starter">Starter (79 €)</SelectItem>
-                    <SelectItem value="coaching">Coaching (129 €)</SelectItem>
-                    <SelectItem value="premium">Premium (199 €)</SelectItem>
+                    <SelectItem value="smart">BodyFuel Smart (14,99 €)</SelectItem>
+                    <SelectItem value="coaching">BodyFuel Coaching (69 €)</SelectItem>
                     <SelectItem value="unsure">Noch unsicher</SelectItem>
                   </SelectContent>
                 </Select>

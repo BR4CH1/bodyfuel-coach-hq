@@ -26,9 +26,9 @@ export const Route = createFileRoute("/coach/customers/new")({
   ),
 });
 
-const DEFAULT_PRICE = { starter: 79, coaching: 129, premium: 199, trial: 0, free: 0 } as const;
+const DEFAULT_PRICE = { smart: 14.99, coaching: 69, starter: 79, premium: 199, trial: 0, free: 0 } as const;
 
-type PackageOption = "starter" | "coaching" | "premium" | "trial" | "free";
+type PackageOption = "smart" | "coaching" | "starter" | "premium" | "trial" | "free";
 
 function NewCustomerForm() {
   const fn = useServerFn(createCustomer);
@@ -40,7 +40,7 @@ function NewCustomerForm() {
     email: "",
     phone: "",
     package: "coaching" as PackageOption,
-    price_eur: 129,
+    price_eur: 69,
     start_date: new Date().toISOString().slice(0, 10),
     duration_days: 30,
     trial_days: 7,
@@ -142,9 +142,8 @@ function NewCustomerForm() {
               <SelectContent>
                 <SelectItem value="free">Free (Tracker)</SelectItem>
                 <SelectItem value="trial">Trial (7-Tage-Test)</SelectItem>
-                <SelectItem value="starter">Starter</SelectItem>
-                <SelectItem value="coaching">Coaching</SelectItem>
-                <SelectItem value="premium">Premium</SelectItem>
+                <SelectItem value="smart">BodyFuel Smart (14,99 €)</SelectItem>
+                <SelectItem value="coaching">BodyFuel Coaching (69 €)</SelectItem>
               </SelectContent>
             </Select>
           </div>

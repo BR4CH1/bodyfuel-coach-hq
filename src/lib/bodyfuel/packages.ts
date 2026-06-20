@@ -1,7 +1,14 @@
-export type PackageKey = "starter" | "coaching" | "premium";
+// BodyFuel Tarifsystem
+// Aktive Tarife: smart (14,99 €) und coaching (69 € Standardpreis).
+// starter / premium bleiben als Legacy-Keys vorhanden, damit bestehende
+// Datensätze sauber angezeigt werden können — werden aber in keiner neuen
+// Verkaufs-UI mehr angeboten.
+
+export type PackageKey = "smart" | "coaching" | "starter" | "premium";
+export type ActivePackageKey = "smart" | "coaching";
 
 export type PackageInfo = {
-  key: PackageKey;
+  key: ActivePackageKey;
   name: string;
   price: number;
   tagline: string;
@@ -11,55 +18,50 @@ export type PackageInfo = {
 
 export const PACKAGES: PackageInfo[] = [
   {
-    key: "starter",
-    name: "BODYFUEL STARTER",
-    price: 79,
-    tagline: "Dein Einstieg mit Plan & System",
+    key: "smart",
+    name: "BODYFUEL SMART",
+    price: 14.99,
+    tagline: "Dein persönlicher Autopilot für Ernährung, Training & Fortschritt",
     features: [
-      "Individueller Ernährungsplan",
-      "BodyFuel Dashboard Zugang",
-      "Punkte- & Level-System",
-      "1 Check-in pro Monat",
-      "Fortschrittstracking",
+      "Automatischer Ernährungsplan",
+      "Automatischer Trainingsplan",
+      "Smarte Einkaufsliste",
+      "Tracking, Fortschritt & Prognosen",
+      "Strength Check",
+      "Ranking, Challenges, Punkte & Levelsystem",
+      "BodyFuel Autopilot (vollautomatisch)",
     ],
   },
   {
     key: "coaching",
     name: "BODYFUEL COACHING",
-    price: 129,
-    tagline: "Die beliebteste Wahl für echte Ergebnisse",
+    price: 69,
+    tagline: "Persönliche 1:1-Betreuung mit Manu als Coach",
     popular: true,
     features: [
-      "Individueller Ernährungsplan",
+      "Alles aus BodyFuel Smart",
+      "Persönliche Betreuung durch Manu",
       "Wöchentliche Check-ins",
-      "Anpassungen bei Bedarf",
-      "BodyFuel Dashboard Zugang",
-      "Punkte- & Level-System",
-      "Fortschrittsfotos & Gewichtstracking",
+      "Individuelle Anpassungen",
+      "Plananpassungen jederzeit",
       "WhatsApp Support",
-    ],
-  },
-  {
-    key: "premium",
-    name: "BODYFUEL PREMIUM",
-    price: 199,
-    tagline: "Maximale Betreuung & persönliche Strategie",
-    features: [
-      "Alles aus Coaching",
-      "Engere Betreuung",
-      "Individuelle Trainingsplanung",
-      "Priorisierter Support",
-      "Regelmäßige Anpassungen",
-      "Persönliche Strategiegespräche",
     ],
   },
 ];
 
 export const PACKAGE_LABEL: Record<PackageKey, string> = {
-  starter: "BodyFuel Starter",
+  smart: "BodyFuel Smart",
   coaching: "BodyFuel Coaching",
-  premium: "BodyFuel Premium",
+  // Legacy — werden weiterhin sauber angezeigt, aber nicht mehr neu vergeben.
+  starter: "BodyFuel Coaching",
+  premium: "BodyFuel Coaching",
 };
+
+export const LEGACY_PACKAGE_KEYS: PackageKey[] = ["starter", "premium"];
+
+export function isLegacyPackage(key: string | null | undefined): boolean {
+  return key === "starter" || key === "premium";
+}
 
 export function getPackage(key: string | null | undefined): PackageInfo | undefined {
   return PACKAGES.find((p) => p.key === key);
