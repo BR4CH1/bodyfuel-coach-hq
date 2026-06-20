@@ -58,7 +58,7 @@ export const Route = createFileRoute("/api/public/hooks/regen-training-plans")({
             continue;
           }
 
-          // Strength-Check muss frisch sein (≤ 28 Tage) — sonst wartet das System
+          // Strength-Check muss frisch sein (≤ 30 Tage) — sonst wartet das System
           const { data: lastCheck } = await supabaseAdmin
             .from("strength_checks")
             .select("performed_at")
