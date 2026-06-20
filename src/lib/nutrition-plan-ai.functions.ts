@@ -51,6 +51,47 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY fehlt");
 
+    return await generateAiNutritionPlanCore(supabase, {
+      target,
+      uploadedBy: userId,
+      scheduled_start_date: data.scheduled_start_date ?? null,
+      title: data.title,
+      start_mode: data.start_mode,
+      plan_days: data.plan_days ?? null,
+      apiKey,
+    });
+  });
+
+export type GenerateNutritionPlanOpts = {
+  target: string;
+  uploadedBy?: string | null;
+  scheduled_start_date?: string | null;
+  title?: string;
+  start_mode?: "today" | "next_shopping";
+  plan_days?: number | null;
+  apiKey: string;
+};
+
+/**
+ * Kern-Generator für Smart-Ernährungspläne. Wird sowohl vom user-facing
+ * Server-FN als auch vom Onboarding-Autopilot und der Verlängerungs-Logik
+ * aufgerufen. Keine Authorisierung — Aufrufer ist verantwortlich.
+ */
+export async function generateAiNutritionPlanCore(
+  supabase: any,
+  opts: GenerateNutritionPlanOpts,
+) {
+  const { target, uploadedBy = null, apiKey } = opts;
+  const data = {
+    user_id: target,
+    scheduled_start_date: opts.scheduled_start_date ?? null,
+    title: opts.title,
+    start_mode: opts.start_mode,
+    plan_days: opts.plan_days ?? null,
+  };
+  const userId = uploadedBy ?? target;
+  {
+
     const [
       { data: profile },
       { data: clientProfile },
