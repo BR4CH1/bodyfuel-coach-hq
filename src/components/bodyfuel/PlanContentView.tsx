@@ -320,7 +320,7 @@ export function PlanContentView({ clientId, planType }: Props) {
     return () => { cancelled = true; };
   }, [clientId, planType, isSelf, getDayTypeFn]);
 
-  // Auto-pick a matching virtual day for today; respect saved manual pick.
+  // Auto-pick today's weekday (e.g. "Mo — Trainingstag") for today; respect saved manual pick.
   useEffect(() => {
     if (!virtualDays.length) return;
     let saved = "";
@@ -330,6 +330,9 @@ export function PlanContentView({ clientId, planType }: Props) {
       return;
     }
     if (activeDay && virtualDays.find((d) => d.id === activeDay)) return;
+    const todayWd = new Date().getDay();
+    const todayMatch = virtualDays.find((d) => weekdayFromName(d.name) === todayWd);
+    if (todayMatch) { setActiveDay(todayMatch.id); return; }
     const matches = dayKind
       ? virtualDays.filter((d) =>
           dayKind === "rest" ? isRestDay(d.name) : !isRestDay(d.name),
@@ -340,6 +343,7 @@ export function PlanContentView({ clientId, planType }: Props) {
     if (pick) setActiveDay(pick.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [virtualDays, dayKind]);
+
 
   // Notify the Training Tracker (separate component on the /training page) so
   // it auto-expands the matching day section when the user picks one above.
