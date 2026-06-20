@@ -8,8 +8,8 @@ import { verifyCronAuth } from "@/lib/cron-auth.server";
 const SITE_NAME = "BodyFuel";
 const SENDER_DOMAIN = "notify.bodyfuel-coaching.com";
 const FROM_DOMAIN = "bodyfuel-coaching.com";
-const TEMPLATE_NAME = "feature-news-june";
-const LABEL = "feature-news-june";
+const DEFAULT_TEMPLATE = "feature-news-june";
+const DEFAULT_LABEL = "feature-news-june";
 
 function generateToken(): string {
   const bytes = new Uint8Array(32);
@@ -44,7 +44,9 @@ export const Route = createFileRoute("/api/public/hooks/send-feature-news")({
         }
         const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-        const template = TEMPLATES[TEMPLATE_NAME];
+        const effectiveTemplate = body.template_name || DEFAULT_TEMPLATE;
+        const effectiveLabel = body.label || DEFAULT_LABEL;
+        const template = TEMPLATES[effectiveTemplate];
         if (!template) {
           return Response.json({ error: "Template missing" }, { status: 500 });
         }
@@ -119,13 +121,13 @@ export const Route = createFileRoute("/api/public/hooks/send-feature-news")({
 
         for (const r of recipients) {
           const normalized = r.email.toLowerCase();
-          const idempotencyKey = `${LABEL}:${dateTag}:${normalized}`;
+          const idempotencyKey = `${effectiveLabel}:${dateTag}:${normalized}`;
 
           // Duplikat-Schutz
           const { data: existing } = await supabase
             .from("email_send_log")
             .select("id")
-            .eq("template_name", TEMPLATE_NAME)
+            .eq("template_name", effectiveTemplate)
             .eq("recipient_email", normalized)
             .eq("message_id", idempotencyKey)
             .maybeSingle();
@@ -180,7 +182,7 @@ export const Route = createFileRoute("/api/public/hooks/send-feature-news")({
 
           await supabase.from("email_send_log").insert({
             message_id: idempotencyKey,
-            template_name: TEMPLATE_NAME,
+            template_name: effectiveTemplate,
             recipient_email: normalized,
             status: "pending",
           });
@@ -196,7 +198,7 @@ export const Route = createFileRoute("/api/public/hooks/send-feature-news")({
               html,
               text,
               purpose: "transactional",
-              label: LABEL,
+              label: effectiveLabel,
               idempotency_key: idempotencyKey,
               unsubscribe_token: unsubscribeToken,
               queued_at: new Date().toISOString(),
