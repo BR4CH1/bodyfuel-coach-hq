@@ -8,8 +8,8 @@ import { verifyCronAuth } from "@/lib/cron-auth.server";
 const SITE_NAME = "BodyFuel";
 const SENDER_DOMAIN = "notify.bodyfuel-coaching.com";
 const FROM_DOMAIN = "bodyfuel-coaching.com";
-const TEMPLATE_NAME = "feature-news-june";
-const LABEL = "feature-news-june";
+const DEFAULT_TEMPLATE = "feature-news-june";
+const DEFAULT_LABEL = "feature-news-june";
 
 function generateToken(): string {
   const bytes = new Uint8Array(32);
