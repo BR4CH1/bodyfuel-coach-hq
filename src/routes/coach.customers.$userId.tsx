@@ -63,6 +63,7 @@ import { CoachTrainingAlertsCard } from "@/components/bodyfuel/CoachTrainingAler
 import { WeightProgressChart } from "@/components/bodyfuel/WeightProgressChart";
 import { GoalProjectionCard } from "@/components/bodyfuel/GoalProjectionCard";
 import { CoachBaseDataEditor } from "@/components/bodyfuel/CoachBaseDataEditor";
+import { CoachMessageThread } from "@/components/bodyfuel/CoachMessageThread";
 import { labelForTrainingGoal } from "@/lib/training-goals";
 
 
