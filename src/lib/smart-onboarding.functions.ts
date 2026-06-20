@@ -107,7 +107,7 @@ export const completeSmartOnboarding = createServerFn({ method: "POST" })
       .upsert(snp as any, { onConflict: "user_id" });
     if (sErr) throw new Error(sErr.message);
 
-    // 4) Autopilot triggern — Training (6 Wochen) + Ernährung (28 Tage). Best effort.
+    // 4) Autopilot triggern — Training (1 Monat) + Ernährung (1 Monat / 30 Tage). Best effort.
     const apiKey = process.env.LOVABLE_API_KEY;
     const results = { nutrition: false, training: false, errors: [] as string[] };
     if (!apiKey) {
