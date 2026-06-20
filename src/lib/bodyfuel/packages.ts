@@ -11,6 +11,7 @@ export type PackageInfo = {
   key: ActivePackageKey;
   name: string;
   price: number;
+  priceId: string;
   tagline: string;
   features: string[];
   popular?: boolean;
