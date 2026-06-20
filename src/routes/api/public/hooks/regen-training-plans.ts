@@ -82,7 +82,7 @@ export const Route = createFileRoute("/api/public/hooks/regen-training-plans")({
               startMode: "today",
               apiKey,
               title: `Smart-Trainingsplan (Auto) — ${new Date().toLocaleDateString("de-DE")}`,
-              weeks: 6,
+              weeks: 4,
             });
             results.push({ user: row.client_id, ok: true, plan_id: r.plan_id });
           } catch (e) {
