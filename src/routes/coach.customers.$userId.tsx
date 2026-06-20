@@ -702,6 +702,18 @@ function CustomerDetail() {
         </AccordionItem>
 
         <AccordionItem
+          value="messages"
+          className="rounded-2xl border border-border bg-card px-4"
+        >
+          <AccordionTrigger id="messages" className="font-display text-base font-bold">
+            Nachrichten
+          </AccordionTrigger>
+          <AccordionContent className="space-y-6 pt-2">
+            <CoachMessageThread mode="coach" userId={userId} />
+          </AccordionContent>
+        </AccordionItem>
+
+        <AccordionItem
           value="partner"
           className="rounded-2xl border border-border bg-card px-4"
         >
