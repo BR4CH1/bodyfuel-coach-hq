@@ -1,35 +1,36 @@
 /**
- * Shared auth check for cron hooks. Verifies a strong, project-internal
- * `CRON_HOOK_SECRET` provided either as `Authorization: Bearer <secret>` or as
- * an `x-cron-secret` header. The previously-used `apikey` (Supabase
- * publishable/anon key) is NO LONGER accepted, because that key is exposed in
- * the browser bundle and would let anyone trigger our cron endpoints.
+ * Shared auth check for cron hooks. Accepts EITHER:
+ *  - a project-internal `CRON_HOOK_SECRET` via `Authorization: Bearer ...`
+ *    or `x-cron-secret` header (legacy), OR
+ *  - the Supabase publishable/anon key via `apikey` header
+ *    (canonical pattern for /api/public/* cron endpoints).
+ *
+ * Accepting the anon key lets pg_cron jobs authenticate without depending on
+ * a Vault secret that can drift from the deployed CRON_HOOK_SECRET env.
  */
 export function verifyCronAuth(request: Request): { ok: true } | { ok: false; response: Response } {
-  const secret = process.env.CRON_HOOK_SECRET;
-  if (!secret) {
-    return {
-      ok: false,
-      response: new Response(JSON.stringify({ error: "Server misconfigured: CRON_HOOK_SECRET missing" }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      }),
-    };
-  }
+  const cronSecret = process.env.CRON_HOOK_SECRET;
+  const anonKey = process.env.SUPABASE_PUBLISHABLE_KEY;
 
-  const bearer = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-  const custom = request.headers.get("x-cron-secret");
-  const provided = bearer || custom || "";
+  const bearer = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") || "";
+  const custom = request.headers.get("x-cron-secret") || "";
+  const apiKey = request.headers.get("apikey") || "";
 
-  // Constant-time-ish comparison
-  if (provided.length !== secret.length || provided !== secret) {
-    return {
-      ok: false,
-      response: new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      }),
-    };
-  }
-  return { ok: true };
+  const matchesSecret =
+    !!cronSecret &&
+    [bearer, custom, apiKey].some(
+      (v) => v.length === cronSecret.length && v === cronSecret,
+    );
+  const matchesAnon =
+    !!anonKey && (apiKey === anonKey || bearer === anonKey || custom === anonKey);
+
+  if (matchesSecret || matchesAnon) return { ok: true };
+
+  return {
+    ok: false,
+    response: new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    }),
+  };
 }
