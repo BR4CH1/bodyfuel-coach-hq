@@ -24,6 +24,7 @@ export function TrialNutritionPlan() {
   const getDayFn = useServerFn(getDayType);
   const ensureFn = useServerFn(ensureTrialTrainingPlan);
   const [dayId, setDayId] = useState<string>(TRIAL_NUTRITION[0].id);
+  const [activeDayId, setActiveDayId] = useState<string>(TRIAL_NUTRITION[0].id);
   const [autoNote, setAutoNote] = useState<string | null>(null);
   const day = TRIAL_NUTRITION.find((d) => d.id === dayId)!;
   const [variantId, setVariantId] = useState<string>(day.variants[0].id);
@@ -60,6 +61,7 @@ export function TrialNutritionPlan() {
         const targetId = res.kind === "training" ? "training" : "rest";
         const target = TRIAL_NUTRITION.find((d) => d.id === targetId);
         if (target) {
+          setActiveDayId(target.id);
           setDayId(target.id);
           setVariantId(target.variants[0].id);
           setAutoNote(
@@ -107,13 +109,15 @@ export function TrialNutritionPlan() {
       <div className="mt-4 space-y-3">
         {variant.meals.map((m, i) => {
           const key = trialMealEntrySource(dayId, variantId, i);
+          const insertKey = trialMealEntrySource(activeDayId, variantId, i);
           return (
             <TrialMealCard
               key={`${dayId}-${variantId}-${i}`}
               meal={m}
               entryKey={key}
-              initiallyTracked={trackedKeys.has(key)}
-              onTracked={() => setTrackedKeys((prev) => new Set(prev).add(key))}
+              insertKey={insertKey}
+              initiallyTracked={trackedKeys.has(key) || trackedKeys.has(insertKey)}
+              onTracked={() => setTrackedKeys((prev) => new Set(prev).add(insertKey))}
             />
           );
         })}
@@ -226,11 +230,13 @@ function UpgradeHint({ text }: { text: string }) {
 function TrialMealCard({
   meal,
   entryKey,
+  insertKey,
   initiallyTracked,
   onTracked,
 }: {
   meal: TrialMeal;
   entryKey: string;
+  insertKey?: string;
   initiallyTracked: boolean;
   onTracked: () => void;
 }) {
@@ -255,7 +261,7 @@ function TrialMealCard({
       protein_g: meal.protein_g,
       carbs_g: meal.carbs_g,
       fat_g: meal.fat_g,
-      source: entryKey,
+      source: insertKey ?? entryKey,
     });
     setBusy(false);
     if (error) {
