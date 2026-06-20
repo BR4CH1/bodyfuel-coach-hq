@@ -500,7 +500,7 @@ export type Database = {
       customer_packages: {
         Row: {
           created_at: string
-          end_date: string | null
+          end_date: string
           ended_at: string | null
           id: string
           is_active: boolean
@@ -516,7 +516,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          end_date?: string | null
+          end_date?: string
           ended_at?: string | null
           id?: string
           is_active?: boolean
@@ -532,7 +532,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          end_date?: string | null
+          end_date?: string
           ended_at?: string | null
           id?: string
           is_active?: boolean
