@@ -1,5 +1,7 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   LayoutDashboard,
@@ -12,7 +14,9 @@ import {
   UserCircle,
   Shield,
   MessageCircle,
+  Bell,
 } from "lucide-react";
+import { getMyUnreadCount, getCoachInbox } from "@/lib/coach-messages.functions";
 import { useSession } from "@/lib/bodyfuel/session";
 import { Logo } from "./Logo";
 import { getLevel } from "@/lib/bodyfuel/data";
@@ -87,11 +91,31 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   const baseNav = isCoach ? coachNav : clientNav;
   const nav = !isCoach && hasGroup("bulls") ? [...baseNav, bullsNavItem] : baseNav;
+  // Mobile bottom nav: Coach-Chat ist in die obere Leiste gewandert
+  const mobileNav = nav.filter((item) => item.to !== "/messages");
   const points = user ? totalPoints(user) : 0;
   const { level } = getLevel(points);
   const displayName = user?.name ?? profile?.display_name ?? supabaseUser?.email ?? "Coach";
   const avatar = user?.avatar ?? (displayName.slice(0, 2).toUpperCase());
   const roleLabel = user ? level.name : isCoach ? "Coach" : "Mitglied";
+
+  // Ungelesene Nachrichten für Glocke
+  const myUnreadFn = useServerFn(getMyUnreadCount);
+  const coachInboxFn = useServerFn(getCoachInbox);
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: ["chat-unread", isCoach, supabaseUser?.id],
+    enabled: !!supabaseUser && !isFreeUser,
+    refetchInterval: 30_000,
+    queryFn: async () => {
+      if (isCoach) {
+        const inbox = await coachInboxFn();
+        return (inbox ?? []).reduce((s, t: any) => s + (t.unread_count ?? 0), 0);
+      }
+      const r = await myUnreadFn();
+      return r?.count ?? 0;
+    },
+  });
+  const chatHref = isCoach ? "/coach" : "/messages";
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -150,16 +174,41 @@ export function AppLayout({ children }: { children: ReactNode }) {
         <Link to={isCoach ? "/coach" : "/dashboard"}>
           <Logo />
         </Link>
-        <button
-          onClick={() => {
-            logout();
-            navigate({ to: "/login" });
-          }}
-          className="rounded-md p-2 text-muted-foreground hover:text-foreground"
-          aria-label="Logout"
-        >
-          <LogOut className="h-4 w-4" />
-        </button>
+        <div className="flex items-center gap-1">
+          {!isFreeUser && (
+            <>
+              <Link
+                to={chatHref}
+                className="relative rounded-md p-2 text-muted-foreground hover:text-foreground"
+                aria-label="Coach-Chat"
+              >
+                <MessageCircle className="h-5 w-5" />
+              </Link>
+              <Link
+                to={chatHref}
+                className="relative rounded-md p-2 text-muted-foreground hover:text-foreground"
+                aria-label="Benachrichtigungen"
+              >
+                <Bell className="h-5 w-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 grid h-4 min-w-[16px] place-items-center rounded-full bg-red-600 px-1 text-[10px] font-bold leading-none text-white">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
+              </Link>
+            </>
+          )}
+          <button
+            onClick={() => {
+              logout();
+              navigate({ to: "/login" });
+            }}
+            className="rounded-md p-2 text-muted-foreground hover:text-foreground"
+            aria-label="Logout"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
+        </div>
       </header>
 
       {/* Main */}
@@ -169,8 +218,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
       {/* Mobile bottom nav */}
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 backdrop-blur lg:hidden">
-        <div className={`grid grid-cols-${Math.min(nav.length, 7)}`} style={{ gridTemplateColumns: `repeat(${Math.min(nav.length, 7)}, minmax(0, 1fr))` }}>
-          {nav.slice(0, 7).map((item) => {
+        <div className={`grid grid-cols-${Math.min(mobileNav.length, 7)}`} style={{ gridTemplateColumns: `repeat(${Math.min(mobileNav.length, 7)}, minmax(0, 1fr))` }}>
+          {mobileNav.slice(0, 7).map((item) => {
             const active = item.to === "/coach" ? pathname === "/coach" : pathname.startsWith(item.to);
             const Icon = item.icon;
             return (
