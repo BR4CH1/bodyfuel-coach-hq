@@ -54,13 +54,21 @@ async function handleSubscriptionCreated(subscription: any, env: StripeEnv) {
     subscription.status === "active" ||
     subscription.status === "trialing"
   ) {
+    // end_date spiegelt das aktuelle Stripe-Abrechnungs-Ende (≈ 1 Monat).
+    // Bei aktiver Subscription verlängert Stripe das automatisch und der
+    // Webhook aktualisiert es bei jeder Erneuerung über handleSubscriptionUpdated.
+    const endDateIso = periodEnd
+      ? new Date(periodEnd * 1000).toISOString().slice(0, 10)
+      : new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+
     await getSupabase().from("customer_packages").upsert(
       {
         user_id: userId,
         package: "smart",
         status: "active",
         price_eur: 14.99,
-        end_date: "2099-12-31",
+        start_date: new Date().toISOString().slice(0, 10),
+        end_date: endDateIso,
         is_active: true,
         started_at: new Date().toISOString(),
         source: "stripe",
