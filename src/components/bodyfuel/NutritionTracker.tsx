@@ -22,11 +22,7 @@ import {
 } from "@/lib/nutrition.functions";
 import { listCustomMeals, type CustomMeal } from "@/lib/custom-meals.functions";
 import { LOCAL_FOODS } from "@/lib/bodyfuel/localFoods";
-import {
-  entryMatchesActiveDay,
-  getPlanMealDayKind,
-  planMealIdFromEntry,
-} from "@/lib/bodyfuel/trialTracking";
+import { getPlanMealDayKind } from "@/lib/bodyfuel/trialTracking";
 import { Dumbbell, Moon } from "lucide-react";
 
 type Meal = "breakfast" | "lunch" | "dinner" | "snack";
