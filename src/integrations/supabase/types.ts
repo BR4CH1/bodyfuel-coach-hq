@@ -338,6 +338,51 @@ export type Database = {
         }
         Relationships: []
       }
+      coach_alert_resolutions: {
+        Row: {
+          action: string
+          alert_detail: string | null
+          alert_key: string
+          alert_kind: string
+          alert_range: string | null
+          alert_severity: string
+          alert_title: string
+          alert_user_id: string
+          client_name: string | null
+          coach_user_id: string
+          id: string
+          resolved_at: string
+        }
+        Insert: {
+          action: string
+          alert_detail?: string | null
+          alert_key: string
+          alert_kind: string
+          alert_range?: string | null
+          alert_severity: string
+          alert_title: string
+          alert_user_id: string
+          client_name?: string | null
+          coach_user_id: string
+          id?: string
+          resolved_at?: string
+        }
+        Update: {
+          action?: string
+          alert_detail?: string | null
+          alert_key?: string
+          alert_kind?: string
+          alert_range?: string | null
+          alert_severity?: string
+          alert_title?: string
+          alert_user_id?: string
+          client_name?: string | null
+          coach_user_id?: string
+          id?: string
+          resolved_at?: string
+        }
+        Relationships: []
+      }
       coach_task_state: {
         Row: {
           coach_id: string
