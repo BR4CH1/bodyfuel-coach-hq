@@ -1222,7 +1222,7 @@ function Pricing() {
                   "w-full " +
                   (p.popular
                     ? "bg-gradient-gold text-primary-foreground shadow-gold hover:opacity-90"
-                    : "bg-card border border-border hover:bg-primary/10 hover:border-primary/40 hover:text-foreground")
+                    : "bg-card text-foreground border border-border hover:bg-primary/10 hover:border-primary/40 hover:text-foreground")
                 }
               >
                 Jetzt kaufen
