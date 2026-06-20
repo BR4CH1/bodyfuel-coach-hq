@@ -8,6 +8,8 @@ import { listCustomers } from "@/lib/coaching.functions";
 import { listTrialUsers } from "@/lib/trial.functions";
 import { listFreeUsers } from "@/lib/free-users.functions";
 import { Button } from "@/components/ui/button";
+import { CustomerStatusBadge } from "@/components/bodyfuel/CustomerStatusBadge";
+import { getCoachRadar } from "@/lib/coach-radar.functions";
 
 export const Route = createFileRoute("/coach/customers/")({
   head: () => ({ meta: [{ title: "Kunden — BODYFUEL" }] }),
