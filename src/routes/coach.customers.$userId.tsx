@@ -92,7 +92,14 @@ function CustomerDetail() {
   const deleteFn = useServerFn(deleteCustomer);
   const coachingFn = useServerFn(updateCustomerCoachingInfo);
   const groupFn = useServerFn(setUserGroup);
+  const radarFn = useServerFn(getCoachRadar);
   const qc = useQueryClient();
+  const { data: radar } = useQuery({
+    queryKey: ["coach-radar"],
+    queryFn: () => radarFn(),
+    staleTime: 60_000,
+  });
+  const radarStatus = (radar?.clients ?? []).find((c) => c.user_id === userId) ?? null;
 
   const [newPw, setNewPw] = useState("");
   const [showPwForm, setShowPwForm] = useState(false);
