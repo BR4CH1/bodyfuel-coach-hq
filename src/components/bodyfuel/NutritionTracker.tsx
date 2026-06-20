@@ -22,11 +22,7 @@ import {
 } from "@/lib/nutrition.functions";
 import { listCustomMeals, type CustomMeal } from "@/lib/custom-meals.functions";
 import { LOCAL_FOODS } from "@/lib/bodyfuel/localFoods";
-import {
-  entryMatchesActiveDay,
-  getPlanMealDayKind,
-  planMealIdFromEntry,
-} from "@/lib/bodyfuel/trialTracking";
+
 import { Dumbbell, Moon } from "lucide-react";
 
 type Meal = "breakfast" | "lunch" | "dinner" | "snack";
@@ -145,10 +141,12 @@ export function NutritionTracker() {
 
   const [allEntries, setAllEntries] = useState<FoodEntry[]>([]);
   const [planMealKinds, setPlanMealKinds] = useState<Record<string, DayType>>({});
-  const entries = useMemo(
-    () => allEntries.filter((entry) => entryMatchesActiveDay(entry, dayType, planMealKinds)),
-    [allEntries, dayType, planMealKinds],
-  );
+  // Tracked entries always count for the currently selected day —
+  // no Filterung nach Plan-Tag-Kind (Training/Rest), damit eine
+  // bewusst gewählte Mahlzeit auch am eingestellten Tag erscheint.
+  const entries = allEntries;
+  void planMealKinds;
+
   const [waterGlasses, setWaterGlasses] = useState(0);
   const [loading, setLoading] = useState(true);
 
@@ -352,24 +350,7 @@ export function NutritionTracker() {
         }
       }
       const rows = ((e.data as FoodEntry[]) ?? []).map((r) => ({ ...r }));
-      const planMealIds = [
-        ...new Set(rows.map(planMealIdFromEntry).filter((id): id is string => !!id)),
-      ];
-      const nextPlanMealKinds: Record<string, DayType> = {};
-      if (planMealIds.length) {
-        const { data: planMeals } = await supabase
-          .from("nutrition_plan_meals")
-          .select("id, name, nutrition_plan_days(name)")
-          .in("id", planMealIds);
-        ((planMeals as PlanMealDayRow[]) ?? []).forEach((meal) => {
-          const dayName = Array.isArray(meal.nutrition_plan_days)
-            ? meal.nutrition_plan_days[0]?.name
-            : meal.nutrition_plan_days?.name;
-          const kind = getPlanMealDayKind([meal.name, dayName]);
-          if (kind) nextPlanMealKinds[meal.id] = kind;
-        });
-      }
-      setPlanMealKinds(nextPlanMealKinds);
+      setPlanMealKinds({});
       setAllEntries(rows);
       setWaterGlasses(w.data?.glasses ?? 0);
       setDayTypeState(d.kind);
