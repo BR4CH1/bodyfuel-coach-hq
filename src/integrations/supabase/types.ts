@@ -2220,6 +2220,36 @@ export type Database = {
           },
         ]
       }
+      upgrade_events: {
+        Row: {
+          created_at: string
+          event: string
+          from_tier: string | null
+          id: string
+          source: string | null
+          to_tier: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event: string
+          from_tier?: string | null
+          id?: string
+          source?: string | null
+          to_tier: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event?: string
+          from_tier?: string | null
+          id?: string
+          source?: string | null
+          to_tier?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_achievements: {
         Row: {
           achievement_id: string
