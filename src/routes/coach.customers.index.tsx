@@ -254,6 +254,7 @@ function CustomersList() {
                   <tr key={c.id} className="border-b border-border last:border-0 hover:bg-secondary/30">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
+                        <CustomerStatusBadge level={statusByUser.get(c.user_id) ?? null} size="xs" />
                         <span className="font-semibold">{c.display_name ?? "—"}</span>
                         {c.nickname && (
                           <span className="rounded bg-secondary px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">@{c.nickname}</span>
