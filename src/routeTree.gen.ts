@@ -83,6 +83,7 @@ import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/publi
 import { Route as ApiPublicHooksTrialRemindersRouteImport } from './routes/api/public/hooks/trial-reminders'
 import { Route as ApiPublicHooksSendFeatureNewsRouteImport } from './routes/api/public/hooks/send-feature-news'
 import { Route as ApiPublicHooksRegenTrainingPlansRouteImport } from './routes/api/public/hooks/regen-training-plans'
+import { Route as ApiPublicHooksRegenNutritionPlansRouteImport } from './routes/api/public/hooks/regen-nutrition-plans'
 import { Route as ApiPublicHooksPlanRotationRouteImport } from './routes/api/public/hooks/plan-rotation'
 import { Route as ApiPublicHooksCoachDailySummaryRouteImport } from './routes/api/public/hooks/coach-daily-summary'
 
@@ -465,6 +466,12 @@ const ApiPublicHooksRegenTrainingPlansRoute =
     path: '/api/public/hooks/regen-training-plans',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksRegenNutritionPlansRoute =
+  ApiPublicHooksRegenNutritionPlansRouteImport.update({
+    id: '/api/public/hooks/regen-nutrition-plans',
+    path: '/api/public/hooks/regen-nutrition-plans',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksPlanRotationRoute =
   ApiPublicHooksPlanRotationRouteImport.update({
     id: '/api/public/hooks/plan-rotation',
@@ -546,6 +553,7 @@ export interface FileRoutesByFullPath {
   '/tracker/app/': typeof TrackerAppIndexRoute
   '/api/public/hooks/coach-daily-summary': typeof ApiPublicHooksCoachDailySummaryRoute
   '/api/public/hooks/plan-rotation': typeof ApiPublicHooksPlanRotationRoute
+  '/api/public/hooks/regen-nutrition-plans': typeof ApiPublicHooksRegenNutritionPlansRoute
   '/api/public/hooks/regen-training-plans': typeof ApiPublicHooksRegenTrainingPlansRoute
   '/api/public/hooks/send-feature-news': typeof ApiPublicHooksSendFeatureNewsRoute
   '/api/public/hooks/trial-reminders': typeof ApiPublicHooksTrialRemindersRoute
@@ -619,6 +627,7 @@ export interface FileRoutesByTo {
   '/tracker/app': typeof TrackerAppIndexRoute
   '/api/public/hooks/coach-daily-summary': typeof ApiPublicHooksCoachDailySummaryRoute
   '/api/public/hooks/plan-rotation': typeof ApiPublicHooksPlanRotationRoute
+  '/api/public/hooks/regen-nutrition-plans': typeof ApiPublicHooksRegenNutritionPlansRoute
   '/api/public/hooks/regen-training-plans': typeof ApiPublicHooksRegenTrainingPlansRoute
   '/api/public/hooks/send-feature-news': typeof ApiPublicHooksSendFeatureNewsRoute
   '/api/public/hooks/trial-reminders': typeof ApiPublicHooksTrialRemindersRoute
@@ -698,6 +707,7 @@ export interface FileRoutesById {
   '/tracker/app/': typeof TrackerAppIndexRoute
   '/api/public/hooks/coach-daily-summary': typeof ApiPublicHooksCoachDailySummaryRoute
   '/api/public/hooks/plan-rotation': typeof ApiPublicHooksPlanRotationRoute
+  '/api/public/hooks/regen-nutrition-plans': typeof ApiPublicHooksRegenNutritionPlansRoute
   '/api/public/hooks/regen-training-plans': typeof ApiPublicHooksRegenTrainingPlansRoute
   '/api/public/hooks/send-feature-news': typeof ApiPublicHooksSendFeatureNewsRoute
   '/api/public/hooks/trial-reminders': typeof ApiPublicHooksTrialRemindersRoute
@@ -778,6 +788,7 @@ export interface FileRouteTypes {
     | '/tracker/app/'
     | '/api/public/hooks/coach-daily-summary'
     | '/api/public/hooks/plan-rotation'
+    | '/api/public/hooks/regen-nutrition-plans'
     | '/api/public/hooks/regen-training-plans'
     | '/api/public/hooks/send-feature-news'
     | '/api/public/hooks/trial-reminders'
@@ -851,6 +862,7 @@ export interface FileRouteTypes {
     | '/tracker/app'
     | '/api/public/hooks/coach-daily-summary'
     | '/api/public/hooks/plan-rotation'
+    | '/api/public/hooks/regen-nutrition-plans'
     | '/api/public/hooks/regen-training-plans'
     | '/api/public/hooks/send-feature-news'
     | '/api/public/hooks/trial-reminders'
@@ -929,6 +941,7 @@ export interface FileRouteTypes {
     | '/tracker/app/'
     | '/api/public/hooks/coach-daily-summary'
     | '/api/public/hooks/plan-rotation'
+    | '/api/public/hooks/regen-nutrition-plans'
     | '/api/public/hooks/regen-training-plans'
     | '/api/public/hooks/send-feature-news'
     | '/api/public/hooks/trial-reminders'
@@ -983,6 +996,7 @@ export interface RootRouteChildren {
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiPublicHooksCoachDailySummaryRoute: typeof ApiPublicHooksCoachDailySummaryRoute
   ApiPublicHooksPlanRotationRoute: typeof ApiPublicHooksPlanRotationRoute
+  ApiPublicHooksRegenNutritionPlansRoute: typeof ApiPublicHooksRegenNutritionPlansRoute
   ApiPublicHooksRegenTrainingPlansRoute: typeof ApiPublicHooksRegenTrainingPlansRoute
   ApiPublicHooksSendFeatureNewsRoute: typeof ApiPublicHooksSendFeatureNewsRoute
   ApiPublicHooksTrialRemindersRoute: typeof ApiPublicHooksTrialRemindersRoute
@@ -1514,6 +1528,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksRegenTrainingPlansRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/regen-nutrition-plans': {
+      id: '/api/public/hooks/regen-nutrition-plans'
+      path: '/api/public/hooks/regen-nutrition-plans'
+      fullPath: '/api/public/hooks/regen-nutrition-plans'
+      preLoaderRoute: typeof ApiPublicHooksRegenNutritionPlansRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/plan-rotation': {
       id: '/api/public/hooks/plan-rotation'
       path: '/api/public/hooks/plan-rotation'
@@ -1670,6 +1691,8 @@ const rootRouteChildren: RootRouteChildren = {
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ApiPublicHooksCoachDailySummaryRoute: ApiPublicHooksCoachDailySummaryRoute,
   ApiPublicHooksPlanRotationRoute: ApiPublicHooksPlanRotationRoute,
+  ApiPublicHooksRegenNutritionPlansRoute:
+    ApiPublicHooksRegenNutritionPlansRoute,
   ApiPublicHooksRegenTrainingPlansRoute: ApiPublicHooksRegenTrainingPlansRoute,
   ApiPublicHooksSendFeatureNewsRoute: ApiPublicHooksSendFeatureNewsRoute,
   ApiPublicHooksTrialRemindersRoute: ApiPublicHooksTrialRemindersRoute,

@@ -76,6 +76,9 @@ export const getSmartRenewalStatus = createServerFn({ method: "GET" })
       .maybeSingle();
     const isSmart = pkg?.package === "smart";
 
+    const { hasActiveSmartSubscription } = await import("./smart-subscription.server");
+    const sub = await hasActiveSmartSubscription(supabase, userId);
+
     const [nutrition, training, lastCheck] = await Promise.all([
       getActivePlan(supabase, userId, "nutrition"),
       getActivePlan(supabase, userId, "training"),
@@ -93,16 +96,23 @@ export const getSmartRenewalStatus = createServerFn({ method: "GET" })
 
     return {
       is_smart: isSmart,
+      subscription: {
+        active: sub.active,
+        status: sub.status,
+        period_end: sub.period_end,
+      },
       nutrition: {
         end_date: nutrition?.scheduled_end_date ?? null,
         days_until_end: nDays,
-        can_renew: nDays == null || nDays <= 7,
+        can_renew: sub.active && (nDays == null || nDays <= 7),
+        blocked_by_subscription: !sub.active,
       },
       training: {
         end_date: training?.scheduled_end_date ?? null,
         days_until_end: tDays,
-        can_renew: (tDays == null || tDays <= 7) && !strengthCheckStale,
+        can_renew: sub.active && (tDays == null || tDays <= 7) && !strengthCheckStale,
         blocked_by_strength_check: strengthCheckStale,
+        blocked_by_subscription: !sub.active,
         last_check_days_ago: checkAgeDays,
       },
     };
@@ -113,6 +123,13 @@ export const renewSmartNutritionPlan = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
     await assertSmart(supabase, userId);
+    const { hasActiveSmartSubscription } = await import("./smart-subscription.server");
+    const sub = await hasActiveSmartSubscription(supabase, userId);
+    if (!sub.active) {
+      throw new Error(
+        "Verlängerung nicht möglich — bitte zuerst Zahlung/Abo aktualisieren.",
+      );
+    }
 
     const current = await getActivePlan(supabase, userId, "nutrition");
     const days = daysUntil(current?.scheduled_end_date);
@@ -144,6 +161,13 @@ export const renewSmartTrainingPlan = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
     await assertSmart(supabase, userId);
+    const { hasActiveSmartSubscription } = await import("./smart-subscription.server");
+    const sub = await hasActiveSmartSubscription(supabase, userId);
+    if (!sub.active) {
+      throw new Error(
+        "Verlängerung nicht möglich — bitte zuerst Zahlung/Abo aktualisieren.",
+      );
+    }
 
     const lastCheck = await getLastStrengthCheck(supabase, userId);
     const checkAgeDays = lastCheck?.performed_at

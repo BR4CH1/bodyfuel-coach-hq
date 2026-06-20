@@ -2,14 +2,15 @@ import { createFileRoute } from "@tanstack/react-router";
 import { verifyCronAuth } from "@/lib/cron-auth.server";
 
 /**
- * Cron-Endpoint: Findet aktive Trainingspläne, deren Zeitraum (4 Wochen)
- * abgelaufen ist, und generiert für jeden Kunden automatisch einen neuen
- * Smart-Plan als Entwurf. Coach bekommt diesen über die normale
- * Plan-Vorschau zur Freigabe.
+ * Auto-Regen für Smart-Ernährungspläne:
+ * Findet aktive Smart-Nutrition-Pläne, deren scheduled_end_date erreicht ist,
+ * prüft auf aktives Abo und generiert automatisch einen frischen 4-Wochen-Plan.
+ *
+ * Plan-Rotation (separater Cron) aktiviert den neuen Plan dann am Startdatum.
  *
  * Aufruf per pg_cron mit `Authorization: Bearer <CRON_HOOK_SECRET>`.
  */
-export const Route = createFileRoute("/api/public/hooks/regen-training-plans")({
+export const Route = createFileRoute("/api/public/hooks/regen-nutrition-plans")({
   server: {
     handlers: {
       POST: async ({ request }) => {
@@ -22,14 +23,15 @@ export const Route = createFileRoute("/api/public/hooks/regen-training-plans")({
         }
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        const { generateTrainingPlanCore } = await import("@/lib/training-plan-ai-core.server");
+        const { generateAiNutritionPlanCore } = await import("@/lib/nutrition-plan-ai.functions");
+        const { hasActiveSmartSubscription } = await import("@/lib/smart-subscription.server");
 
         const today = new Date().toISOString().slice(0, 10);
 
         const { data: expired, error } = await supabaseAdmin
           .from("nutrition_plans")
           .select("id, client_id, scheduled_end_date")
-          .eq("plan_type", "training")
+          .eq("plan_type", "nutrition")
           .eq("is_active", true)
           .lt("scheduled_end_date", today);
 
@@ -37,11 +39,8 @@ export const Route = createFileRoute("/api/public/hooks/regen-training-plans")({
           return new Response(JSON.stringify({ error: error.message }), { status: 500 });
         }
 
-        const { hasActiveSmartSubscription } = await import("@/lib/smart-subscription.server");
-
-        const results: Array<{ user: string; ok: boolean; error?: string; plan_id?: string; skipped?: string }> = [];
+        const results: Array<{ user: string; ok: boolean; error?: string; skipped?: string }> = [];
         for (const row of expired ?? []) {
-          // Nur Smart-Kunden mit aktivem Abo bekommen automatisch einen neuen Plan
           const { data: pkg } = await supabaseAdmin
             .from("customer_packages")
             .select("package")
@@ -58,33 +57,15 @@ export const Route = createFileRoute("/api/public/hooks/regen-training-plans")({
             continue;
           }
 
-          // Strength-Check muss frisch sein (≤ 28 Tage) — sonst wartet das System
-          const { data: lastCheck } = await supabaseAdmin
-            .from("strength_checks")
-            .select("performed_at")
-            .eq("user_id", row.client_id)
-            .eq("status", "completed")
-            .order("performed_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-          const ageDays = lastCheck?.performed_at
-            ? Math.floor((Date.now() - new Date(lastCheck.performed_at).getTime()) / 86_400_000)
-            : null;
-          if (ageDays == null || ageDays > 28) {
-            results.push({ user: row.client_id, ok: false, skipped: "strength_check_stale" });
-            continue;
-          }
-
           try {
-            const r = await generateTrainingPlanCore(supabaseAdmin as any, {
+            await generateAiNutritionPlanCore(supabaseAdmin as any, {
               target: row.client_id,
               uploadedBy: null,
-              startMode: "today",
+              start_mode: "today",
+              plan_days: 28,
               apiKey,
-              title: `Smart-Trainingsplan (Auto) — ${new Date().toLocaleDateString("de-DE")}`,
-              weeks: 6,
             });
-            results.push({ user: row.client_id, ok: true, plan_id: r.plan_id });
+            results.push({ user: row.client_id, ok: true });
           } catch (e) {
             results.push({ user: row.client_id, ok: false, error: (e as Error).message });
           }
