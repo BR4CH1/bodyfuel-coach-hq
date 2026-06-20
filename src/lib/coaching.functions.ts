@@ -25,7 +25,7 @@ export const submitLead = createServerFn({ method: "POST" })
       phone?: string;
       goal?: string;
       current_weight?: string;
-      desired_package?: "starter" | "coaching" | "premium" | "unsure";
+      desired_package?: PackageKey | "unsure";
       message?: string;
     }) => data,
   )
