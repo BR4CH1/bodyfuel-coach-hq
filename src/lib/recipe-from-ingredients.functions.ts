@@ -44,9 +44,9 @@ ZUTATEN DES KUNDEN: ${data.ingredients}
 ${data.goal ? "ZIEL: " + data.goal : ""}
 ${targets ? `TAGES-ZIELE (Orientierung): ${targets.kcal} kcal · ${targets.protein_g}P/${targets.carbs_g}C/${targets.fat_g}F g` : ""}
 
-🚨 ABSOLUTE AUSSCHLÜSSE (höchste Priorität, NIEMALS verwenden!):
-${allergyList.length ? "ALLERGIEN/UNVERTRÄGLICHKEITEN: " + allergyList.join(", ") : "(keine)"}
-${nogoList.length ? "NO-GO LEBENSMITTEL: " + nogoList.join(", ") : "(keine)"}
+Berücksichtige wenn möglich:
+${allergyList.length ? "ALLERGIEN/UNVERTRÄGLICHKEITEN: " + allergyList.join(", ") : ""}
+${nogoList.length ? "NO-GO LEBENSMITTEL: " + nogoList.join(", ") : ""}
 ${prepHint}
 
 Antworte ausschließlich mit gültigem JSON in dieser Form:
