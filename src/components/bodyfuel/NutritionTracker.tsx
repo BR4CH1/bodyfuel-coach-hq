@@ -350,24 +350,7 @@ export function NutritionTracker() {
         }
       }
       const rows = ((e.data as FoodEntry[]) ?? []).map((r) => ({ ...r }));
-      const planMealIds = [
-        ...new Set(rows.map(planMealIdFromEntry).filter((id): id is string => !!id)),
-      ];
-      const nextPlanMealKinds: Record<string, DayType> = {};
-      if (planMealIds.length) {
-        const { data: planMeals } = await supabase
-          .from("nutrition_plan_meals")
-          .select("id, name, nutrition_plan_days(name)")
-          .in("id", planMealIds);
-        ((planMeals as PlanMealDayRow[]) ?? []).forEach((meal) => {
-          const dayName = Array.isArray(meal.nutrition_plan_days)
-            ? meal.nutrition_plan_days[0]?.name
-            : meal.nutrition_plan_days?.name;
-          const kind = getPlanMealDayKind([meal.name, dayName]);
-          if (kind) nextPlanMealKinds[meal.id] = kind;
-        });
-      }
-      setPlanMealKinds(nextPlanMealKinds);
+      setPlanMealKinds({});
       setAllEntries(rows);
       setWaterGlasses(w.data?.glasses ?? 0);
       setDayTypeState(d.kind);
