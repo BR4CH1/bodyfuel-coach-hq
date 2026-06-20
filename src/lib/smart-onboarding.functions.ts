@@ -119,6 +119,28 @@ export const completeSmartOnboarding = createServerFn({ method: "POST" })
           startMode: "today",
           apiKey,
         });
+        // Auto-Publish: jüngsten Trainings-Draft sofort aktivieren
+        const { data: draft } = await supabase
+          .from("nutrition_plans")
+          .select("id")
+          .eq("client_id", userId)
+          .eq("plan_type", "training")
+          .in("status", ["draft", "approved", "published"])
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (draft) {
+          await supabase
+            .from("nutrition_plans")
+            .update({ status: "archived" })
+            .eq("client_id", userId)
+            .eq("plan_type", "training")
+            .eq("status", "active");
+          await supabase
+            .from("nutrition_plans")
+            .update({ status: "active" })
+            .eq("id", draft.id);
+        }
         results.training = true;
       } catch (e) {
         results.errors.push("training: " + (e as Error).message);

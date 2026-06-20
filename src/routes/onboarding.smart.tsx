@@ -12,6 +12,8 @@ import {
   completeSmartOnboarding,
   getOnboardingStatus,
 } from "@/lib/smart-onboarding.functions";
+import { generateAiNutritionPlanDraft } from "@/lib/nutrition-plan-ai.functions";
+import { activateLatestSmartPlan } from "@/lib/smart-autopublish.functions";
 import { useSession } from "@/lib/bodyfuel/session";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/bodyfuel/Logo";
@@ -120,6 +122,8 @@ function SmartOnboardingPage() {
   const { supabaseUser, loading } = useSession();
   const statusFn = useServerFn(getOnboardingStatus);
   const completeFn = useServerFn(completeSmartOnboarding);
+  const genNutritionFn = useServerFn(generateAiNutritionPlanDraft);
+  const activateFn = useServerFn(activateLatestSmartPlan);
 
   useEffect(() => {
     if (!loading && !supabaseUser) navigate({ to: "/auth" });
