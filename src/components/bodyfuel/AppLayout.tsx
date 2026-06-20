@@ -91,11 +91,31 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   const baseNav = isCoach ? coachNav : clientNav;
   const nav = !isCoach && hasGroup("bulls") ? [...baseNav, bullsNavItem] : baseNav;
+  // Mobile bottom nav: Coach-Chat ist in die obere Leiste gewandert
+  const mobileNav = nav.filter((item) => item.to !== "/messages");
   const points = user ? totalPoints(user) : 0;
   const { level } = getLevel(points);
   const displayName = user?.name ?? profile?.display_name ?? supabaseUser?.email ?? "Coach";
   const avatar = user?.avatar ?? (displayName.slice(0, 2).toUpperCase());
   const roleLabel = user ? level.name : isCoach ? "Coach" : "Mitglied";
+
+  // Ungelesene Nachrichten für Glocke
+  const myUnreadFn = useServerFn(getMyUnreadCount);
+  const coachInboxFn = useServerFn(getCoachInbox);
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: ["chat-unread", isCoach, supabaseUser?.id],
+    enabled: !!supabaseUser && !isFreeUser,
+    refetchInterval: 30_000,
+    queryFn: async () => {
+      if (isCoach) {
+        const inbox = await coachInboxFn();
+        return (inbox ?? []).reduce((s, t: any) => s + (t.unread_count ?? 0), 0);
+      }
+      const r = await myUnreadFn();
+      return r?.count ?? 0;
+    },
+  });
+  const chatHref = isCoach ? "/coach" : "/messages";
 
   return (
     <div className="min-h-screen bg-background text-foreground">
