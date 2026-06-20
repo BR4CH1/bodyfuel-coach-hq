@@ -18,10 +18,12 @@ export function MyUpgradeCard({ source = "dashboard" }: { source?: string }) {
 
   if (isLoading) return null;
   const pkg = data?.active?.package as string | undefined;
+  const status = data?.active?.status as string | undefined;
 
-  let tier: UpgradeTier = "trial";
+  let tier: UpgradeTier = "free";
   if (pkg === "smart") tier = "smart";
   else if (pkg === "coaching" || pkg === "starter" || pkg === "premium") tier = "coaching";
+  else if (status === "trial" || pkg === "trial") tier = "trial";
 
   if (tier === "coaching") return null;
   return <UpgradeCard currentTier={tier} source={source} />;
