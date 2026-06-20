@@ -85,7 +85,6 @@ export const createSmartCheckoutSession = createServerFn({ method: "POST" })
           ...(isRecurring && {
             subscription_data: { metadata: { userId } },
           }),
-          managed_payments: { enabled: true },
         } as any);
 
         return { clientSecret: session.client_secret ?? "" };
