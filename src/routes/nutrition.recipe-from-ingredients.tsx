@@ -1,7 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+const DRAFT_KEY = "bf.recipeFromIngredients.draft.v1";
+type Draft = {
+  ingredients?: string;
+  goal?: string;
+  recipe?: Recipe | null;
+  slot?: Slot;
+  tracked?: boolean;
+};
 import { toast } from "sonner";
 import { ChevronLeft, Carrot, Loader2, Check } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
@@ -59,13 +68,33 @@ const todayKey = () => new Date().toISOString().slice(0, 10);
 function RecipePage() {
   const { supabaseUser } = useSession();
   const fn = useServerFn(generateRecipeFromIngredients);
-  const [ingredients, setIngredients] = useState("");
-  const [goal, setGoal] = useState("");
-  const [recipe, setRecipe] = useState<Recipe | null>(null);
-  const defaultSlot = useMemo<Slot>(() => slotFromHour(new Date().getHours()), [recipe]);
-  const [slot, setSlot] = useState<Slot>(defaultSlot);
+
+  const initial = useMemo<Draft>(() => {
+    if (typeof window === "undefined") return {};
+    try {
+      return JSON.parse(window.localStorage.getItem(DRAFT_KEY) || "{}") as Draft;
+    } catch {
+      return {};
+    }
+  }, []);
+
+  const [ingredients, setIngredients] = useState(initial.ingredients ?? "");
+  const [goal, setGoal] = useState(initial.goal ?? "");
+  const [recipe, setRecipe] = useState<Recipe | null>(initial.recipe ?? null);
+  const defaultSlot = useMemo<Slot>(() => slotFromHour(new Date().getHours()), []);
+  const [slot, setSlot] = useState<Slot>(initial.slot ?? defaultSlot);
   const [tracking, setTracking] = useState(false);
-  const [tracked, setTracked] = useState(false);
+  const [tracked, setTracked] = useState(initial.tracked ?? false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const payload: Draft = { ingredients, goal, recipe, slot, tracked };
+      window.localStorage.setItem(DRAFT_KEY, JSON.stringify(payload));
+    } catch {
+      /* ignore quota errors */
+    }
+  }, [ingredients, goal, recipe, slot, tracked]);
 
   const gen = useMutation({
     mutationFn: () => fn({ data: { ingredients, goal: goal || undefined } }),
