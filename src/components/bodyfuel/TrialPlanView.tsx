@@ -24,6 +24,7 @@ export function TrialNutritionPlan() {
   const getDayFn = useServerFn(getDayType);
   const ensureFn = useServerFn(ensureTrialTrainingPlan);
   const [dayId, setDayId] = useState<string>(TRIAL_NUTRITION[0].id);
+  const [activeDayId, setActiveDayId] = useState<string>(TRIAL_NUTRITION[0].id);
   const [autoNote, setAutoNote] = useState<string | null>(null);
   const day = TRIAL_NUTRITION.find((d) => d.id === dayId)!;
   const [variantId, setVariantId] = useState<string>(day.variants[0].id);
