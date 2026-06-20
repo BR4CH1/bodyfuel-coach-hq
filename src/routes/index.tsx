@@ -50,6 +50,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { useStripeCheckout } from "@/hooks/useStripeCheckout";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -1119,6 +1120,7 @@ import { PACKAGES as SHARED_PACKAGES } from "@/lib/bodyfuel/packages";
 const PACKAGES: Array<{
   name: string;
   price: number;
+  priceId: string;
   tagline: string;
   features: string[];
   cta: string;
@@ -1126,6 +1128,7 @@ const PACKAGES: Array<{
 }> = SHARED_PACKAGES.map((p) => ({
   name: p.name,
   price: p.price,
+  priceId: p.priceId,
   tagline: p.tagline,
   features: p.features,
   popular: p.popular,
@@ -1134,6 +1137,15 @@ const PACKAGES: Array<{
 
 
 function Pricing() {
+  const { openCheckout, checkoutElement } = useStripeCheckout();
+
+  const handleBuy = (priceId: string) => {
+    openCheckout({
+      priceId,
+      returnUrl: `${typeof window !== "undefined" ? window.location.origin : ""}/dashboard?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+    });
+  };
+
   return (
     <section
       id="pakete"
@@ -1203,30 +1215,29 @@ function Pricing() {
 
               <div className="mt-8 flex-1" />
 
-              <a href="#kontakt" className="block">
-                <Button
-                  size="lg"
-                  className={
-                    "w-full " +
-                    (p.popular
-                      ? "bg-gradient-gold text-primary-foreground shadow-gold hover:opacity-90"
-                      : "bg-card border border-border hover:bg-primary/10 hover:border-primary/40 hover:text-foreground")
-                  }
-                >
-                  Kostenloses Erstgespräch vereinbaren
-                  <ArrowRight className="ml-1 h-4 w-4" />
-                </Button>
-              </a>
+              <Button
+                size="lg"
+                onClick={() => handleBuy(p.priceId)}
+                className={
+                  "w-full " +
+                  (p.popular
+                    ? "bg-gradient-gold text-primary-foreground shadow-gold hover:opacity-90"
+                    : "bg-card border border-border hover:bg-primary/10 hover:border-primary/40 hover:text-foreground")
+                }
+              >
+                Jetzt kaufen
+                <ArrowRight className="ml-1 h-4 w-4" />
+              </Button>
             </div>
           ))}
         </div>
 
         <p className="mx-auto mt-10 max-w-2xl text-center text-xs text-muted-foreground">
           Alle Preise gemäß § 19 UStG (Kleinunternehmerregelung). Es wird keine
-          Umsatzsteuer ausgewiesen. Neue Kunden werden ausschließlich nach einem
-          persönlichen Erstgespräch vom Coach angelegt.
+          Umsatzsteuer ausgewiesen. Sofort nach Zahlung bekommst du Zugang — ohne Erstgespräch.
         </p>
       </div>
+      {checkoutElement}
     </section>
   );
 }
