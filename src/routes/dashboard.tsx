@@ -143,7 +143,6 @@ function DashboardContent() {
       {supabaseUser && <PendingPaymentBanner userId={supabaseUser.id} />}
       {supabaseUser && <MyPackagePanel />}
       {supabaseUser && <SmartRenewalCard />}
-      {supabaseUser && <MyUpgradeCard source="dashboard" />}
 
 
 
