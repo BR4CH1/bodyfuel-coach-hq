@@ -414,8 +414,26 @@ function ExerciseCard({
     return "";
   };
 
-  // Per-set editable values (user overrides). Empty string = use placeholder/default.
-  const [overrides, setOverrides] = useState<Record<number, { w: string; r: string }>>({});
+  // Per-set editable values (user overrides). Persisted locally so a phone-lock /
+  // PWA reload doesn't wipe values the user typed before tapping the check.
+  const overridesKey = `bf.tt.overrides.${clientId}.${ex.id}.${todayStr}`;
+  const [overrides, setOverrides] = useState<Record<number, { w: string; r: string }>>(() => {
+    if (typeof window === "undefined") return {};
+    try {
+      const raw = window.localStorage.getItem(overridesKey);
+      return raw ? (JSON.parse(raw) as Record<number, { w: string; r: string }>) : {};
+    } catch {
+      return {};
+    }
+  });
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(overridesKey, JSON.stringify(overrides));
+    } catch {
+      /* ignore */
+    }
+  }, [overrides, overridesKey]);
   const setOverride = (n: number, key: "w" | "r", val: string) =>
     setOverrides((cur) => ({ ...cur, [n]: { w: cur[n]?.w ?? "", r: cur[n]?.r ?? "", [key]: val } }));
 
