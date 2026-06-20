@@ -141,6 +141,9 @@ function DashboardContent() {
 
       {supabaseUser && <PendingPaymentBanner userId={supabaseUser.id} />}
       {supabaseUser && <MyPackagePanel />}
+      {supabaseUser && <MyUpgradeCard source="dashboard" />}
+
+
 
 
       {/* Level hero card */}
