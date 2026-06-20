@@ -40,6 +40,7 @@ import { Route as BullsIndexRouteImport } from './routes/bulls.index'
 import { Route as TrackerSignupRouteImport } from './routes/tracker.signup'
 import { Route as TrackerLoginRouteImport } from './routes/tracker.login'
 import { Route as TrackerAppRouteImport } from './routes/tracker.app'
+import { Route as SmartSignupRouteImport } from './routes/smart.signup'
 import { Route as OnboardingSmartNutritionRouteImport } from './routes/onboarding.smart-nutrition'
 import { Route as OnboardingSmartRouteImport } from './routes/onboarding.smart'
 import { Route as NutritionTrackingRouteImport } from './routes/nutrition.tracking'
@@ -238,6 +239,11 @@ const TrackerAppRoute = TrackerAppRouteImport.update({
   id: '/tracker/app',
   path: '/tracker/app',
   getParentRoute: () => rootRouteImport,
+} as any)
+const SmartSignupRoute = SmartSignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => SmartRoute,
 } as any)
 const OnboardingSmartNutritionRoute =
   OnboardingSmartNutritionRouteImport.update({
@@ -484,7 +490,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRoute
   '/progress': typeof ProgressRoute
   '/ranking': typeof RankingRoute
-  '/smart': typeof SmartRoute
+  '/smart': typeof SmartRouteWithChildren
   '/strength-check': typeof StrengthCheckRoute
   '/training': typeof TrainingRoute
   '/trial': typeof TrialRoute
@@ -510,6 +516,7 @@ export interface FileRoutesByFullPath {
   '/nutrition/tracking': typeof NutritionTrackingRoute
   '/onboarding/smart': typeof OnboardingSmartRoute
   '/onboarding/smart-nutrition': typeof OnboardingSmartNutritionRoute
+  '/smart/signup': typeof SmartSignupRoute
   '/tracker/app': typeof TrackerAppRouteWithChildren
   '/tracker/login': typeof TrackerLoginRoute
   '/tracker/signup': typeof TrackerSignupRoute
@@ -558,7 +565,7 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/progress': typeof ProgressRoute
   '/ranking': typeof RankingRoute
-  '/smart': typeof SmartRoute
+  '/smart': typeof SmartRouteWithChildren
   '/strength-check': typeof StrengthCheckRoute
   '/training': typeof TrainingRoute
   '/trial': typeof TrialRoute
@@ -583,6 +590,7 @@ export interface FileRoutesByTo {
   '/nutrition/tracking': typeof NutritionTrackingRoute
   '/onboarding/smart': typeof OnboardingSmartRoute
   '/onboarding/smart-nutrition': typeof OnboardingSmartNutritionRoute
+  '/smart/signup': typeof SmartSignupRoute
   '/tracker/login': typeof TrackerLoginRoute
   '/tracker/signup': typeof TrackerSignupRoute
   '/bulls': typeof BullsIndexRoute
@@ -633,7 +641,7 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRoute
   '/progress': typeof ProgressRoute
   '/ranking': typeof RankingRoute
-  '/smart': typeof SmartRoute
+  '/smart': typeof SmartRouteWithChildren
   '/strength-check': typeof StrengthCheckRoute
   '/training': typeof TrainingRoute
   '/trial': typeof TrialRoute
@@ -659,6 +667,7 @@ export interface FileRoutesById {
   '/nutrition/tracking': typeof NutritionTrackingRoute
   '/onboarding/smart': typeof OnboardingSmartRoute
   '/onboarding/smart-nutrition': typeof OnboardingSmartNutritionRoute
+  '/smart/signup': typeof SmartSignupRoute
   '/tracker/app': typeof TrackerAppRouteWithChildren
   '/tracker/login': typeof TrackerLoginRoute
   '/tracker/signup': typeof TrackerSignupRoute
@@ -737,6 +746,7 @@ export interface FileRouteTypes {
     | '/nutrition/tracking'
     | '/onboarding/smart'
     | '/onboarding/smart-nutrition'
+    | '/smart/signup'
     | '/tracker/app'
     | '/tracker/login'
     | '/tracker/signup'
@@ -810,6 +820,7 @@ export interface FileRouteTypes {
     | '/nutrition/tracking'
     | '/onboarding/smart'
     | '/onboarding/smart-nutrition'
+    | '/smart/signup'
     | '/tracker/login'
     | '/tracker/signup'
     | '/bulls'
@@ -885,6 +896,7 @@ export interface FileRouteTypes {
     | '/nutrition/tracking'
     | '/onboarding/smart'
     | '/onboarding/smart-nutrition'
+    | '/smart/signup'
     | '/tracker/app'
     | '/tracker/login'
     | '/tracker/signup'
@@ -936,7 +948,7 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRoute
   ProgressRoute: typeof ProgressRoute
   RankingRoute: typeof RankingRoute
-  SmartRoute: typeof SmartRoute
+  SmartRoute: typeof SmartRouteWithChildren
   StrengthCheckRoute: typeof StrengthCheckRoute
   TrainingRoute: typeof TrainingRoute
   TrialRoute: typeof TrialRoute
@@ -1190,6 +1202,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/tracker/app'
       preLoaderRoute: typeof TrackerAppRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/smart/signup': {
+      id: '/smart/signup'
+      path: '/signup'
+      fullPath: '/smart/signup'
+      preLoaderRoute: typeof SmartSignupRouteImport
+      parentRoute: typeof SmartRoute
     }
     '/onboarding/smart-nutrition': {
       id: '/onboarding/smart-nutrition'
@@ -1553,6 +1572,16 @@ const NutritionRouteWithChildren = NutritionRoute._addFileChildren(
   NutritionRouteChildren,
 )
 
+interface SmartRouteChildren {
+  SmartSignupRoute: typeof SmartSignupRoute
+}
+
+const SmartRouteChildren: SmartRouteChildren = {
+  SmartSignupRoute: SmartSignupRoute,
+}
+
+const SmartRouteWithChildren = SmartRoute._addFileChildren(SmartRouteChildren)
+
 interface TrackerAppRouteChildren {
   TrackerAppAchievementsRoute: typeof TrackerAppAchievementsRoute
   TrackerAppActivityRoute: typeof TrackerAppActivityRoute
@@ -1597,7 +1626,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   ProgressRoute: ProgressRoute,
   RankingRoute: RankingRoute,
-  SmartRoute: SmartRoute,
+  SmartRoute: SmartRouteWithChildren,
   StrengthCheckRoute: StrengthCheckRoute,
   TrainingRoute: TrainingRoute,
   TrialRoute: TrialRoute,
