@@ -510,7 +510,7 @@ function CustomerDetail() {
                     onClick={() =>
                       update.mutate({
                         package_id: activePkg.id,
-                        package: pkgKey as "starter" | "coaching" | "premium",
+                        package: pkgKey as "smart" | "coaching" | "starter" | "premium",
                         price_eur: price,
                         start_date: startDate || undefined,
                         end_date: endDate,
