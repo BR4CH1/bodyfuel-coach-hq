@@ -33,23 +33,27 @@ const BULK_GOALS = new Set(["lean_bulk", "muscle_gain", "bulk"]);
 
 export const getCoachActionAlerts = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<{ alerts: CoachActionAlert[] }> => {
-    const { supabase, userId } = context;
-    await assertCoach(supabase, userId);
+  .handler(
+    async ({
+      context,
+    }): Promise<{ alerts: CoachActionAlert[]; resolved: CoachResolvedAlert[] }> => {
+      const { supabase, userId } = context;
+      await assertCoach(supabase, userId);
 
-    const { data: roles } = await supabase
-      .from("user_roles")
-      .select("user_id")
-      .eq("role", "client");
-    const ids = (roles ?? []).map((r: any) => r.user_id);
-    if (!ids.length) return { alerts: [] };
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "client");
+      const ids = (roles ?? []).map((r: any) => r.user_id);
+      if (!ids.length) return { alerts: [], resolved: [] };
 
-    const today = Date.now();
-    const since30Date = new Date(today - 30 * 86400000).toISOString().slice(0, 10);
-    const since14Date = new Date(today - 14 * 86400000).toISOString().slice(0, 10);
-    const since30Iso = new Date(today - 30 * 86400000).toISOString();
+      const today = Date.now();
+      const since30Date = new Date(today - 30 * 86400000).toISOString().slice(0, 10);
+      const since14Date = new Date(today - 14 * 86400000).toISOString().slice(0, 10);
+      const since30Iso = new Date(today - 30 * 86400000).toISOString();
+      const since7dIso = new Date(today - 7 * 86400000).toISOString();
 
-    const [profiles, measurements, foods, targets, skips, swaps] = await Promise.all([
+      const [profiles, measurements, foods, targets, skips, swaps] = await Promise.all([
       supabase
         .from("profiles")
         .select("id, display_name, training_goal, goal_weight_kg, goal_target_date")
