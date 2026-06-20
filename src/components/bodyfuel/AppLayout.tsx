@@ -83,6 +83,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   if (loading) return null;
   if (!user && !supabaseUser) return null;
   if (isFreeUser && !freeBullsAccess && !freeRankingAccess) return null;
+  if (!smartGateChecked) return null;
 
   const baseNav = isCoach ? coachNav : clientNav;
   const nav = !isCoach && hasGroup("bulls") ? [...baseNav, bullsNavItem] : baseNav;
