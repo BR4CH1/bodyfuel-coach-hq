@@ -8,6 +8,7 @@ import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { FreeAppLayout } from "@/components/bodyfuel/FreeAppLayout";
 import { useSession } from "@/lib/bodyfuel/session";
 import { getRanking, getMyNickname, setMyNickname, type RankingEntry } from "@/lib/ranking.functions";
+import { getLevel } from "@/lib/bodyfuel/data";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -76,7 +77,7 @@ function RankingPage() {
       switch (sort) {
         case "weekly": return b.weekly_points - a.weekly_points;
         case "streak": return b.current_streak - a.current_streak;
-        case "level": return b.level - a.level;
+        case "level": return b.total_points - a.total_points;
         default: return b.total_points - a.total_points;
       }
     });
@@ -162,7 +163,7 @@ function RankingPage() {
                     <th className="px-3 py-2.5 text-right">Punkte</th>
                     <th className="px-3 py-2.5 text-right hidden sm:table-cell">Woche</th>
                     <th className="px-3 py-2.5 text-right hidden sm:table-cell">Streak</th>
-                    <th className="px-3 py-2.5 text-right">Lvl</th>
+                    <th className="px-3 py-2.5 text-right">Level</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -185,7 +186,7 @@ function RankingPage() {
                         <td className="px-3 py-2.5 text-right font-display">{e.total_points}</td>
                         <td className="px-3 py-2.5 text-right hidden sm:table-cell">{e.weekly_points}</td>
                         <td className="px-3 py-2.5 text-right hidden sm:table-cell">{e.current_streak}🔥</td>
-                        <td className="px-3 py-2.5 text-right">{e.level}</td>
+                        <td className="px-3 py-2.5 text-right font-semibold text-gold">{getLevel(e.total_points).level.name}</td>
                       </tr>
                     );
                   })}
