@@ -109,13 +109,15 @@ export function TrialNutritionPlan() {
       <div className="mt-4 space-y-3">
         {variant.meals.map((m, i) => {
           const key = trialMealEntrySource(dayId, variantId, i);
+          const insertKey = trialMealEntrySource(activeDayId, variantId, i);
           return (
             <TrialMealCard
               key={`${dayId}-${variantId}-${i}`}
               meal={m}
               entryKey={key}
-              initiallyTracked={trackedKeys.has(key)}
-              onTracked={() => setTrackedKeys((prev) => new Set(prev).add(key))}
+              insertKey={insertKey}
+              initiallyTracked={trackedKeys.has(key) || trackedKeys.has(insertKey)}
+              onTracked={() => setTrackedKeys((prev) => new Set(prev).add(insertKey))}
             />
           );
         })}
