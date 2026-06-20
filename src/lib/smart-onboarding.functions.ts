@@ -138,7 +138,7 @@ export const completeSmartOnboarding = createServerFn({ method: "POST" })
         target: userId,
         uploadedBy: userId,
         start_mode: "today",
-        plan_days: 21, // max erlaubt (Hard-Cap im Core); Renewal verlängert in 21-Tage-Schritten
+        plan_days: 28,
         apiKey,
       });
       await activateLatestPlan(supabase, userId, "nutrition");
