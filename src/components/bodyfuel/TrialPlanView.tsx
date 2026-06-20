@@ -61,6 +61,7 @@ export function TrialNutritionPlan() {
         const targetId = res.kind === "training" ? "training" : "rest";
         const target = TRIAL_NUTRITION.find((d) => d.id === targetId);
         if (target) {
+          setActiveDayId(target.id);
           setDayId(target.id);
           setVariantId(target.variants[0].id);
           setAutoNote(
