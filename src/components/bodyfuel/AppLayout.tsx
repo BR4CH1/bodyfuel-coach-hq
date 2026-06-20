@@ -55,6 +55,31 @@ export function AppLayout({ children }: { children: ReactNode }) {
     }
   }, [user, supabaseUser, loading, navigate, isFreeUser, pathname, hasGroup]);
 
+  // Hard-Gate: BodyFuel Smart Nutzer müssen Onboarding abschließen, bevor sie in die App kommen.
+  const [smartGateChecked, setSmartGateChecked] = useState(false);
+  useEffect(() => {
+    if (loading || !supabaseUser || isCoach || isFreeUser) { setSmartGateChecked(true); return; }
+    if (pathname.startsWith("/onboarding/smart") || pathname.startsWith("/auth") || pathname.startsWith("/profile")) {
+      setSmartGateChecked(true); return;
+    }
+    let cancelled = false;
+    (async () => {
+      const [{ data: prof }, { data: pkg }] = await Promise.all([
+        supabase.from("profiles").select("smart_onboarding_completed_at").eq("id", supabaseUser.id).maybeSingle(),
+        supabase.from("customer_packages").select("package").eq("user_id", supabaseUser.id).eq("is_active", true).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      ]);
+      if (cancelled) return;
+      const isSmart = (pkg?.package as string | undefined) === "smart";
+      const done = !!(prof as any)?.smart_onboarding_completed_at;
+      if (isSmart && !done) {
+        navigate({ to: "/onboarding/smart" });
+      } else {
+        setSmartGateChecked(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [loading, supabaseUser, isCoach, isFreeUser, pathname, navigate]);
+
   if (loading) return null;
   if (!user && !supabaseUser) return null;
   if (isFreeUser && !freeBullsAccess && !freeRankingAccess) return null;
