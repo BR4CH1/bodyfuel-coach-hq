@@ -174,16 +174,41 @@ export function AppLayout({ children }: { children: ReactNode }) {
         <Link to={isCoach ? "/coach" : "/dashboard"}>
           <Logo />
         </Link>
-        <button
-          onClick={() => {
-            logout();
-            navigate({ to: "/login" });
-          }}
-          className="rounded-md p-2 text-muted-foreground hover:text-foreground"
-          aria-label="Logout"
-        >
-          <LogOut className="h-4 w-4" />
-        </button>
+        <div className="flex items-center gap-1">
+          {!isFreeUser && (
+            <>
+              <Link
+                to={chatHref}
+                className="relative rounded-md p-2 text-muted-foreground hover:text-foreground"
+                aria-label="Coach-Chat"
+              >
+                <MessageCircle className="h-5 w-5" />
+              </Link>
+              <Link
+                to={chatHref}
+                className="relative rounded-md p-2 text-muted-foreground hover:text-foreground"
+                aria-label="Benachrichtigungen"
+              >
+                <Bell className="h-5 w-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 grid h-4 min-w-[16px] place-items-center rounded-full bg-red-600 px-1 text-[10px] font-bold leading-none text-white">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
+              </Link>
+            </>
+          )}
+          <button
+            onClick={() => {
+              logout();
+              navigate({ to: "/login" });
+            }}
+            className="rounded-md p-2 text-muted-foreground hover:text-foreground"
+            aria-label="Logout"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
+        </div>
       </header>
 
       {/* Main */}
@@ -193,8 +218,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
       {/* Mobile bottom nav */}
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 backdrop-blur lg:hidden">
-        <div className={`grid grid-cols-${Math.min(nav.length, 7)}`} style={{ gridTemplateColumns: `repeat(${Math.min(nav.length, 7)}, minmax(0, 1fr))` }}>
-          {nav.slice(0, 7).map((item) => {
+        <div className={`grid grid-cols-${Math.min(mobileNav.length, 7)}`} style={{ gridTemplateColumns: `repeat(${Math.min(mobileNav.length, 7)}, minmax(0, 1fr))` }}>
+          {mobileNav.slice(0, 7).map((item) => {
             const active = item.to === "/coach" ? pathname === "/coach" : pathname.startsWith(item.to);
             const Icon = item.icon;
             return (
