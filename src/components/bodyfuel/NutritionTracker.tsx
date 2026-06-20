@@ -145,10 +145,12 @@ export function NutritionTracker() {
 
   const [allEntries, setAllEntries] = useState<FoodEntry[]>([]);
   const [planMealKinds, setPlanMealKinds] = useState<Record<string, DayType>>({});
-  const entries = useMemo(
-    () => allEntries.filter((entry) => entryMatchesActiveDay(entry, dayType, planMealKinds)),
-    [allEntries, dayType, planMealKinds],
-  );
+  // Tracked entries always count for the currently selected day —
+  // no Filterung nach Plan-Tag-Kind (Training/Rest), damit eine
+  // bewusst gewählte Mahlzeit auch am eingestellten Tag erscheint.
+  const entries = allEntries;
+  void planMealKinds;
+
   const [waterGlasses, setWaterGlasses] = useState(0);
   const [loading, setLoading] = useState(true);
 
