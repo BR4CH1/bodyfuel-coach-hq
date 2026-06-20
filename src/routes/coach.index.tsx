@@ -104,6 +104,13 @@ function CoachDashboard() {
   const setStateFn = useServerFn(setCoachTaskState);
   const extendPlanFn = useServerFn(extendClientPlan);
   const genDraftFn = useServerFn(generateCheckinDraft);
+  const radarFn = useServerFn(getCoachRadar);
+
+  const radarQuery = useQuery({
+    queryKey: ["coach-radar"],
+    queryFn: () => radarFn(),
+    staleTime: 60_000,
+  });
 
   const taskStatesQuery = useQuery({
     queryKey: ["coach-task-states"],
