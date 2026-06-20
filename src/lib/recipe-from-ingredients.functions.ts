@@ -69,11 +69,5 @@ Antworte ausschließlich mit gültigem JSON in dieser Form:
     let parsed: any = {};
     try { parsed = typeof raw === "string" ? JSON.parse(raw) : raw; } catch { parsed = {}; }
 
-    // Post-filter forbidden
-    const forbidden = [...allergyList, ...nogoList].map((s) => s.toLowerCase().trim()).filter(Boolean);
-    const hay = `${parsed?.name ?? ""} ${parsed?.description ?? ""} ${(parsed?.ingredients ?? []).join(" ")}`.toLowerCase();
-    if (forbidden.some((f) => hay.includes(f))) {
-      throw new Error("Das vorgeschlagene Rezept enthält verbotene Zutaten — bitte erneut versuchen.");
-    }
     return parsed;
   });
