@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { useFormDraft, clearFormDraft } from "@/hooks/use-form-draft";
 import {
   generateCheckinDraft,
   listCheckinDrafts,
