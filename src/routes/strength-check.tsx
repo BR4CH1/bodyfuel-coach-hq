@@ -235,6 +235,11 @@ function StrengthCheckPage() {
     try {
       await saveStep(false);
       const finished = await completeFn({ data: { check_id: check.id } });
+      try {
+        window.localStorage.removeItem(DRAFT_KEY);
+      } catch {
+        /* ignore */
+      }
       setCompleted(finished);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Konnte nicht abschließen");
