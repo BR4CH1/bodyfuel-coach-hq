@@ -92,7 +92,7 @@ export const getSmartRenewalStatus = createServerFn({ method: "GET" })
           (Date.now() - new Date(lastCheck.performed_at).getTime()) / 86_400_000,
         )
       : null;
-    const strengthCheckStale = checkAgeDays == null ? true : checkAgeDays > 28;
+    const strengthCheckStale = checkAgeDays == null ? true : checkAgeDays > 30;
 
     return {
       is_smart: isSmart,
