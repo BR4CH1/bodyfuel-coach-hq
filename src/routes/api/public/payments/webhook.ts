@@ -105,6 +105,27 @@ async function handleSubscriptionUpdated(subscription: any, env: StripeEnv) {
     })
     .eq("stripe_subscription_id", subscription.id)
     .eq("environment", env);
+
+  // customer_packages.end_date an aktuelles Stripe-Periodenende anpassen
+  // (1 Monat bei aktivem Abo). So sieht der Kunde im Dashboard immer das
+  // korrekte „Ende"-Datum.
+  const userId = subscription.metadata?.userId;
+  if (
+    userId &&
+    (subscription.status === "active" || subscription.status === "trialing") &&
+    periodEnd
+  ) {
+    const endDateIso = new Date(periodEnd * 1000).toISOString().slice(0, 10);
+    await getSupabase()
+      .from("customer_packages")
+      .update({
+        status: "active",
+        is_active: true,
+        end_date: endDateIso,
+      } as any)
+      .eq("user_id", userId)
+      .eq("package", "smart");
+  }
 }
 
 async function handleSubscriptionDeleted(subscription: any, env: StripeEnv) {
