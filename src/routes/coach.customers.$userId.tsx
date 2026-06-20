@@ -38,6 +38,8 @@ import { CoachStrengthCheckCard } from "@/components/bodyfuel/CoachStrengthCheck
 import { NutritionTargetsEditor } from "@/components/bodyfuel/NutritionTargetsEditor";
 import { MacroTargetsCard } from "@/components/bodyfuel/MacroTargetsCard";
 import { TrainingBonusCard } from "@/components/bodyfuel/TrainingBonusCard";
+import { CustomerStatusBadge } from "@/components/bodyfuel/CustomerStatusBadge";
+import { getCoachRadar } from "@/lib/coach-radar.functions";
 import { CustomerRecentActivityCard } from "@/components/bodyfuel/CustomerRecentActivityCard";
 import { CoachTrialCard } from "@/components/bodyfuel/CoachTrialCard";
 import { RecipeInsightsCard } from "@/components/bodyfuel/RecipeInsightsCard";
