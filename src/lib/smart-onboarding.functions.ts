@@ -115,7 +115,7 @@ export const completeSmartOnboarding = createServerFn({ method: "POST" })
       return { ok: true, ...results };
     }
 
-    // Trainingsplan (6 Wochen) + sofort aktivieren
+    // Trainingsplan (1 Monat = 4 Wochen) + sofort aktivieren
     try {
       const { generateTrainingPlanCore } = await import("./training-plan-ai-core.server");
       await generateTrainingPlanCore(supabase, {
@@ -123,7 +123,7 @@ export const completeSmartOnboarding = createServerFn({ method: "POST" })
         uploadedBy: userId,
         startMode: "today",
         apiKey,
-        weeks: 6,
+        weeks: 4,
       });
       await activateLatestPlan(supabase, userId, "training");
       results.training = true;
@@ -131,14 +131,14 @@ export const completeSmartOnboarding = createServerFn({ method: "POST" })
       results.errors.push("training: " + (e as Error).message);
     }
 
-    // Ernährungsplan (28 Tage) + sofort aktivieren
+    // Ernährungsplan (1 Monat = 30 Tage) + sofort aktivieren
     try {
       const { generateAiNutritionPlanCore } = await import("./nutrition-plan-ai.functions");
       await generateAiNutritionPlanCore(supabase, {
         target: userId,
         uploadedBy: userId,
         start_mode: "today",
-        plan_days: 28,
+        plan_days: 30,
         apiKey,
       });
       await activateLatestPlan(supabase, userId, "nutrition");
