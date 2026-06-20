@@ -26,6 +26,7 @@ import { CoachDashboardSummary } from "@/components/bodyfuel/CoachDashboardSumma
 import { CoachRadarCard } from "@/components/bodyfuel/CoachRadarCard";
 import { CoachTaskInboxCard } from "@/components/bodyfuel/CoachTaskInboxCard";
 import { CoachMessagesCard } from "@/components/bodyfuel/CoachMessagesCard";
+import { TierMetricsCard } from "@/components/bodyfuel/TierMetricsCard";
 import { getCoachRadar } from "@/lib/coach-radar.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { getRanking, type RankingPeriod } from "@/lib/coaching.functions";
@@ -594,6 +595,7 @@ function CoachDashboard() {
           />
 
           <CoachDashboardSummary data={radarQuery.data} />
+          <TierMetricsCard />
           <CoachMessagesCard />
           <CoachRadarCard data={radarQuery.data} />
           <CoachTaskInboxCard data={radarQuery.data} />
