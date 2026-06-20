@@ -186,7 +186,7 @@ function RankingPage() {
                         <td className="px-3 py-2.5 text-right font-display">{e.total_points}</td>
                         <td className="px-3 py-2.5 text-right hidden sm:table-cell">{e.weekly_points}</td>
                         <td className="px-3 py-2.5 text-right hidden sm:table-cell">{e.current_streak}🔥</td>
-                        <td className="px-3 py-2.5 text-right">{e.level}</td>
+                        <td className="px-3 py-2.5 text-right font-semibold text-gold">{getLevel(e.total_points).level.name}</td>
                       </tr>
                     );
                   })}
