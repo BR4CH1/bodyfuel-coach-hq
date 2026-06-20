@@ -1,7 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+const DRAFT_KEY = "bf.recipeFromIngredients.draft.v1";
+type Draft = {
+  ingredients?: string;
+  goal?: string;
+  recipe?: Recipe | null;
+  slot?: Slot;
+  tracked?: boolean;
+};
 import { toast } from "sonner";
 import { ChevronLeft, Carrot, Loader2, Check } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
