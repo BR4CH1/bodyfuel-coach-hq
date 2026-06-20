@@ -38,6 +38,26 @@ type WizardResult = {
 
 const emptyResult = (): WizardResult => ({ weight: "", reps: "", duration: "", rpe: 7, pain: "" });
 
+const DRAFT_KEY = "bf.strengthCheck.draft.v1";
+
+type LocalDraft = {
+  bodyweight: string;
+  stepIdx: number;
+  values: Record<StrengthTestKey, WizardResult>;
+  intro: boolean;
+};
+
+function loadDraft(): LocalDraft | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as LocalDraft;
+  } catch {
+    return null;
+  }
+}
+
 function StrengthCheckPage() {
   const { supabaseUser } = useSession();
   const startFn = useServerFn(startStrengthCheck);
@@ -47,19 +67,37 @@ function StrengthCheckPage() {
   const statusFn = useServerFn(getMyStrengthStatus);
   const navigate = useNavigate();
 
-  const [intro, setIntro] = useState(true);
-  const [bodyweight, setBodyweight] = useState("");
+  const draft = useMemo(() => loadDraft(), []);
+
+  const [intro, setIntro] = useState(() => (draft ? draft.intro : true));
+  const [bodyweight, setBodyweight] = useState(() => draft?.bodyweight ?? "");
   const [check, setCheck] = useState<StrengthCheck | null>(null);
-  const [stepIdx, setStepIdx] = useState(0);
+  const [stepIdx, setStepIdx] = useState(() => draft?.stepIdx ?? 0);
   const [values, setValues] = useState<Record<StrengthTestKey, WizardResult>>(() => {
     const map = {} as Record<StrengthTestKey, WizardResult>;
     for (const t of STRENGTH_TESTS) map[t.key] = emptyResult();
+    if (draft?.values) {
+      for (const t of STRENGTH_TESTS) {
+        if (draft.values[t.key]) map[t.key] = { ...map[t.key], ...draft.values[t.key] };
+      }
+    }
     return map;
   });
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [completed, setCompleted] = useState<StrengthCheck | null>(null);
   const [lastSummary, setLastSummary] = useState<StrengthCheck | null>(null);
+
+  // Persist draft locally so phone-lock / PWA reload doesn't lose progress.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const payload: LocalDraft = { bodyweight, stepIdx, values, intro };
+      window.localStorage.setItem(DRAFT_KEY, JSON.stringify(payload));
+    } catch {
+      /* quota / private mode */
+    }
+  }, [bodyweight, stepIdx, values, intro]);
 
   // Preload last completed for delta comparison.
   useEffect(() => {
@@ -72,6 +110,27 @@ function StrengthCheckPage() {
       cancelled = true;
     };
   }, [supabaseUser, statusFn]);
+
+  // If we resumed past the intro from a local draft, re-attach to (or create) the server-side draft check.
+  useEffect(() => {
+    if (!supabaseUser || intro || check) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const bw = bodyweight.trim() === "" ? null : Number(bodyweight.replace(",", "."));
+        const row = await startFn({
+          data: { bodyweight_kg: bw !== null && Number.isFinite(bw) && bw > 0 ? bw : null },
+        });
+        if (!cancelled) setCheck(row);
+      } catch {
+        /* on failure, force back to intro so user can start clean */
+        if (!cancelled) setIntro(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [supabaseUser, intro, check, startFn, bodyweight]);
 
   if (!supabaseUser) return null;
 
@@ -176,6 +235,11 @@ function StrengthCheckPage() {
     try {
       await saveStep(false);
       const finished = await completeFn({ data: { check_id: check.id } });
+      try {
+        window.localStorage.removeItem(DRAFT_KEY);
+      } catch {
+        /* ignore */
+      }
       setCompleted(finished);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Konnte nicht abschließen");
