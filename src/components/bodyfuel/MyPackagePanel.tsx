@@ -1,9 +1,9 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { toast } from "sonner";
 import { Calendar, CreditCard, RefreshCcw } from "lucide-react";
-import { getMyPackage, requestRenewal } from "@/lib/coaching.functions";
+import { getMyPackage } from "@/lib/coaching.functions";
 import { Button } from "@/components/ui/button";
+import { useStripeCheckout } from "@/hooks/useStripeCheckout";
 
 const PKG_LABEL: Record<string, string> = {
   smart: "BodyFuel Smart",
@@ -13,25 +13,20 @@ const PKG_LABEL: Record<string, string> = {
   premium: "BodyFuel Coaching",
 };
 
+// Stripe-Preise pro Paket (1 Monat). Müssen mit den im Lovable
+// Payments-Setup angelegten lookup_keys übereinstimmen.
+const STRIPE_PRICE_BY_PKG: Record<string, string> = {
+  smart: "bodyfuel_smart_monthly",
+};
+
 export function MyPackagePanel() {
   const getFn = useServerFn(getMyPackage);
-  const renewFn = useServerFn(requestRenewal);
-  const qc = useQueryClient();
+  const { openCheckout, checkoutElement } = useStripeCheckout();
 
   const { data } = useQuery({
     queryKey: ["my-package"],
     queryFn: () => getFn(),
     retry: false,
-  });
-
-  const renew = useMutation({
-    mutationFn: () => renewFn(),
-    onSuccess: (res) => {
-      qc.invalidateQueries({ queryKey: ["my-package"] });
-      toast.success("Weiter zu PayPal …");
-      window.open(res.paypal_url, "_blank");
-    },
-    onError: (e: Error) => toast.error(e.message),
   });
 
   if (!data?.active) return null;
@@ -45,6 +40,15 @@ export function MyPackagePanel() {
   const lastPayment = data.payments[0];
   const hasCompletedPayment = data.payments.some((p) => p.status === "completed");
   const renewLabel = hasCompletedPayment ? "Coaching verlängern" : "Coaching starten";
+  const stripePriceId = STRIPE_PRICE_BY_PKG[pkg.package];
+
+  const handleRenew = () => {
+    if (!stripePriceId) return;
+    openCheckout({
+      priceId: stripePriceId,
+      returnUrl: `${window.location.origin}/dashboard?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+    });
+  };
 
   return (
     <div className="rounded-2xl border border-border bg-card p-6">
@@ -58,14 +62,15 @@ export function MyPackagePanel() {
             {Number(pkg.price_eur).toFixed(2)} € / Monat
           </div>
         </div>
-        <Button
-          onClick={() => renew.mutate()}
-          disabled={renew.isPending}
-          className="bg-gradient-gold text-primary-foreground"
-        >
-          <RefreshCcw className="mr-1 h-4 w-4" />
-          {renewLabel}
-        </Button>
+        {stripePriceId && (
+          <Button
+            onClick={handleRenew}
+            className="bg-gradient-gold text-primary-foreground"
+          >
+            <RefreshCcw className="mr-1 h-4 w-4" />
+            {renewLabel}
+          </Button>
+        )}
       </div>
 
       <div className="mt-5 grid gap-3 sm:grid-cols-3">
@@ -79,8 +84,8 @@ export function MyPackagePanel() {
       </div>
 
       <p className="mt-4 text-xs text-muted-foreground">
-        Restlaufzeit: {daysLeft} Tage. Zahlung per PayPal an ManuSchrader; nach
-        Bestätigung wird deine Laufzeit um 30 Tage verlängert.
+        Restlaufzeit: {daysLeft} Tage. Zahlung sicher per Kreditkarte/SEPA über
+        Stripe; nach Bestätigung wird deine Laufzeit um 1 Monat verlängert.
       </p>
 
       {data.payments.length > 0 && (
@@ -96,6 +101,8 @@ export function MyPackagePanel() {
           </ul>
         </details>
       )}
+
+      {checkoutElement}
     </div>
   );
 }
