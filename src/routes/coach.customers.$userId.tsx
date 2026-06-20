@@ -63,6 +63,7 @@ import { CoachTrainingAlertsCard } from "@/components/bodyfuel/CoachTrainingAler
 import { WeightProgressChart } from "@/components/bodyfuel/WeightProgressChart";
 import { GoalProjectionCard } from "@/components/bodyfuel/GoalProjectionCard";
 import { CoachBaseDataEditor } from "@/components/bodyfuel/CoachBaseDataEditor";
+import { CoachMessageThread } from "@/components/bodyfuel/CoachMessageThread";
 import { labelForTrainingGoal } from "@/lib/training-goals";
 
 
@@ -698,6 +699,18 @@ function CustomerDetail() {
             <PlanAdjustmentsCard userId={userId} />
             <CustomerCheckinsCard userId={userId} />
             <CustomerRecentActivityCard userId={userId} />
+          </AccordionContent>
+        </AccordionItem>
+
+        <AccordionItem
+          value="messages"
+          className="rounded-2xl border border-border bg-card px-4"
+        >
+          <AccordionTrigger id="messages" className="font-display text-base font-bold">
+            Nachrichten
+          </AccordionTrigger>
+          <AccordionContent className="space-y-6 pt-2">
+            <CoachMessageThread mode="coach" userId={userId} />
           </AccordionContent>
         </AccordionItem>
 

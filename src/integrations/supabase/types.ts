@@ -383,6 +383,42 @@ export type Database = {
         }
         Relationships: []
       }
+      coach_messages: {
+        Row: {
+          body: string
+          broadcast_id: string | null
+          created_at: string
+          from_coach: boolean
+          id: string
+          read_by_client_at: string | null
+          read_by_coach_at: string | null
+          sender_id: string
+          thread_user_id: string
+        }
+        Insert: {
+          body: string
+          broadcast_id?: string | null
+          created_at?: string
+          from_coach: boolean
+          id?: string
+          read_by_client_at?: string | null
+          read_by_coach_at?: string | null
+          sender_id: string
+          thread_user_id: string
+        }
+        Update: {
+          body?: string
+          broadcast_id?: string | null
+          created_at?: string
+          from_coach?: boolean
+          id?: string
+          read_by_client_at?: string | null
+          read_by_coach_at?: string | null
+          sender_id?: string
+          thread_user_id?: string
+        }
+        Relationships: []
+      }
       coach_task_state: {
         Row: {
           coach_id: string

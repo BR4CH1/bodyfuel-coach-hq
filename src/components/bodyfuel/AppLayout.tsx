@@ -10,6 +10,7 @@ import {
   Inbox,
   UserCircle,
   Shield,
+  MessageCircle,
 } from "lucide-react";
 import { useSession } from "@/lib/bodyfuel/session";
 import { Logo } from "./Logo";
@@ -21,6 +22,7 @@ const clientNav = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/nutrition", label: "Ernährung", icon: FileText },
   { to: "/training", label: "Training", icon: Dumbbell },
+  { to: "/messages", label: "Coach-Chat", icon: MessageCircle },
   { to: "/community", label: "Community", icon: Users },
   { to: "/profile", label: "Profil", icon: UserCircle },
 ];
