@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useFormDraft, clearFormDraft } from "@/hooks/use-form-draft";
 import { BarcodeScanner } from "./BarcodeScanner";
 import { MealBuilderDialog } from "./MealBuilderDialog";
 import {
