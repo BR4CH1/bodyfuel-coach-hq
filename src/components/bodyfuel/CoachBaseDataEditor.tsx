@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Save, IdCard } from "lucide-react";
 import { updateCustomerCoachingInfo, setCustomerWeight } from "@/lib/coaching.functions";
 import { TRAINING_GOAL_LABELS } from "@/lib/training-goals";
+import { useFormDraft, clearFormDraft } from "@/hooks/use-form-draft";
 
 type Gender = "male" | "female" | "other";
 type Activity = "sedentary" | "light" | "moderate" | "active" | "athlete";
