@@ -77,7 +77,7 @@ function RankingPage() {
       switch (sort) {
         case "weekly": return b.weekly_points - a.weekly_points;
         case "streak": return b.current_streak - a.current_streak;
-        case "level": return b.level - a.level;
+        case "level": return b.total_points - a.total_points;
         default: return b.total_points - a.total_points;
       }
     });
