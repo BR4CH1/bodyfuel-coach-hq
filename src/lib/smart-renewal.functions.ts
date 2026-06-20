@@ -123,6 +123,13 @@ export const renewSmartNutritionPlan = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
     await assertSmart(supabase, userId);
+    const { hasActiveSmartSubscription } = await import("./smart-subscription.server");
+    const sub = await hasActiveSmartSubscription(supabase, userId);
+    if (!sub.active) {
+      throw new Error(
+        "Verlängerung nicht möglich — bitte zuerst Zahlung/Abo aktualisieren.",
+      );
+    }
 
     const current = await getActivePlan(supabase, userId, "nutrition");
     const days = daysUntil(current?.scheduled_end_date);
