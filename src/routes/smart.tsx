@@ -150,7 +150,7 @@ function SmartLandingPage() {
                 "Strength Check",
                 "Ranking, Level & Achievements",
               ]}
-              cta={{ to: "/auth", label: "Smart starten" }}
+              cta={{ to: "/smart/signup", label: "Smart starten" }}
               highlight
             />
             <PlanCard
