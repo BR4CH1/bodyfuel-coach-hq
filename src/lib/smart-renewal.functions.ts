@@ -200,7 +200,7 @@ export const renewSmartTrainingPlan = createServerFn({ method: "POST" })
       uploadedBy: userId,
       startMode: "today",
       apiKey,
-      weeks: 6,
+      weeks: 4,
     });
     await activateLatest(supabase, userId, "training");
     return { ok: true };
