@@ -260,13 +260,6 @@ function TaskRow({
     <div className={`rounded-xl border p-3 ${meta.row}`}>
       <Link
         to="/coach/customers/$userId"
-        params={{ user_id: task.user_id } as any}
-        // Note: TanStack Router expects `userId` as the param name; pass via params explicitly.
-      >
-        {/* unreachable wrapper; replaced below */}
-      </Link>
-      <Link
-        to="/coach/customers/$userId"
         params={{ userId: task.user_id }}
         className="group flex items-start gap-3"
       >
