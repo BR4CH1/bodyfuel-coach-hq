@@ -62,6 +62,25 @@ const isRestDay = (name: string) => /rest|ruh|pause|off|frei/i.test(name);
 const pickRandom = <T,>(arr: T[]): T | null =>
   arr.length ? arr[Math.floor(Math.random() * arr.length)] : null;
 
+// Map a German weekday abbreviation at the start of a day name to JS getDay() (0=Sun..6=Sat).
+const WEEKDAY_MAP: Record<string, number> = {
+  so: 0, son: 0, sonntag: 0,
+  mo: 1, mon: 1, montag: 1,
+  di: 2, die: 2, dienstag: 2,
+  mi: 3, mit: 3, mittwoch: 3,
+  do: 4, don: 4, donnerstag: 4,
+  fr: 5, fre: 5, freitag: 5,
+  sa: 6, sam: 6, samstag: 6,
+};
+function weekdayFromName(name: string): number | null {
+  const m = name.trim().toLowerCase().match(/^([a-zäöü]+)/);
+  if (!m) return null;
+  const key = m[1];
+  if (key in WEEKDAY_MAP) return WEEKDAY_MAP[key];
+  // try first 2-3 chars
+  return WEEKDAY_MAP[key.slice(0, 2)] ?? WEEKDAY_MAP[key.slice(0, 3)] ?? null;
+}
+
 const INSTRUCTION_SIGNALS = [
   "Alles", "Zubereitung", "Zubereiten", "Anleitung", "Zusammen", "Mischen",
   "Kochen", "Backen", "Braten", "Garen", "Dünsten", "Dämpfen", "Grillen",
@@ -213,28 +232,35 @@ export function PlanContentView({ clientId, planType }: Props) {
       .eq("plan_id", planRow.id)
       .order("sort_order");
     let dayList = (dayRows as Day[]) ?? [];
-    // For multi-week training plans, only expose the current week's days in the dropdown.
-    if (planType === "training") {
+    // Multi-week plans: only expose the current week's days; auto-advance to next week after each week ends.
+    {
       const wc = (planRow as any).weeks_count ?? 1;
       const start = (planRow as any).scheduled_start_date
         ? new Date((planRow as any).scheduled_start_date)
         : null;
-      let activeWeek = 1;
-      if (start && wc > 1) {
-        const diffDays = Math.floor((Date.now() - start.getTime()) / 86400000);
-        activeWeek = Math.min(wc, Math.max(1, Math.floor(diffDays / 7) + 1));
-      }
-      // Derive week_number from sort_order when the column is missing so that
-      // plans created before the week_number field still split correctly.
+      // Derive week_number from sort_order when the column is missing so older plans split correctly.
       const withWeek = dayList.map((d) => ({
         ...d,
         week_number: d.week_number ?? Math.floor((d.sort_order - 1) / 7) + 1,
       }));
-      const filtered = withWeek.filter((d) => d.week_number === activeWeek);
-      // Always restrict to the current week (fallback to week 1 if nothing matches)
-      dayList = filtered.length ? filtered : withWeek.filter((d) => d.week_number === 1);
+      const maxWeek = withWeek.reduce((acc, d) => Math.max(acc, d.week_number ?? 1), 1);
+      const effectiveWc = Math.max(wc ?? 1, maxWeek);
+      let activeWeek = 1;
+      if (start && effectiveWc > 1) {
+        const diffDays = Math.floor((Date.now() - start.getTime()) / 86400000);
+        activeWeek = Math.min(effectiveWc, Math.max(1, Math.floor(diffDays / 7) + 1));
+      } else if (effectiveWc > 1) {
+        activeWeek = 1;
+      }
+      if (effectiveWc > 1) {
+        const filtered = withWeek.filter((d) => d.week_number === activeWeek);
+        dayList = filtered.length ? filtered : withWeek.filter((d) => d.week_number === 1);
+      } else {
+        dayList = withWeek;
+      }
     }
     setDays(dayList);
+
 
     if (dayList.length) {
       const { data: itemRows } = await supabase
@@ -294,7 +320,7 @@ export function PlanContentView({ clientId, planType }: Props) {
     return () => { cancelled = true; };
   }, [clientId, planType, isSelf, getDayTypeFn]);
 
-  // Auto-pick a matching virtual day for today; respect saved manual pick.
+  // Auto-pick today's weekday (e.g. "Mo — Trainingstag") for today; respect saved manual pick.
   useEffect(() => {
     if (!virtualDays.length) return;
     let saved = "";
@@ -304,6 +330,9 @@ export function PlanContentView({ clientId, planType }: Props) {
       return;
     }
     if (activeDay && virtualDays.find((d) => d.id === activeDay)) return;
+    const todayWd = new Date().getDay();
+    const todayMatch = virtualDays.find((d) => weekdayFromName(d.name) === todayWd);
+    if (todayMatch) { setActiveDay(todayMatch.id); return; }
     const matches = dayKind
       ? virtualDays.filter((d) =>
           dayKind === "rest" ? isRestDay(d.name) : !isRestDay(d.name),
@@ -314,6 +343,7 @@ export function PlanContentView({ clientId, planType }: Props) {
     if (pick) setActiveDay(pick.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [virtualDays, dayKind]);
+
 
   // Notify the Training Tracker (separate component on the /training page) so
   // it auto-expands the matching day section when the user picks one above.
