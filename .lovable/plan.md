@@ -1,73 +1,58 @@
-## BODYFUEL OS – Navigation Rework
+## Coaching Dashboard 2.0 – Aufgaben-Inbox, Coach Radar & Kundenstatus
 
-Ziel: Reorganisation der Navigation auf 5 klare Hauptbereiche, **ohne** bestehende Daten, Routen oder Funktionen zu entfernen. Alle alten URLs bleiben weiter erreichbar (Deep-Links, Coach-Links, E-Mails funktionieren weiter). Nur die Sidebar/Bottom-Nav und die Hub-Seiten ändern sich.
+Großes Feature mit mehreren neuen Bereichen. Ich baue es schrittweise auf bestehender Infrastruktur auf (`coach-alerts.functions.ts`, `coach-smart-insights.functions.ts`, `CoachActionAlertsCard.tsx`).
 
-### Neue Bottom-Nav (5 Einträge)
-1. **Dashboard** → `/dashboard`
-2. **Ernährung** → `/nutrition`
-3. **Training** → `/training`
-4. **Community** → `/community` *(neu)*
-5. **Profil** → `/profile`
+### 1. Backend – neue Server Functions (`src/lib/coach-radar.functions.ts`)
 
-Bulls-Hub bleibt als zusätzlicher Eintrag erhalten (für Bulls-Mitglieder), zieht aber visuell unter Community ein.
+- **`getCoachRadar`**: Berechnet pro Kunde einen Status (`green` / `yellow` / `orange` / `red`) basierend auf:
+  - Plan-Status (aktiv/abgelaufen/läuft bald aus)
+  - Gewichtstrend (>1,5 %/Woche Verlust, Stagnation 14d, Anstieg trotz Abnehmziel)
+  - Kalorien-Adhärenz (<80 % / >120 % an 3 von 7 Tagen)
+  - Protein-Adhärenz (<75 % an 3 von 7 Tagen)
+  - Wasser (<2 L an 4 Tagen)
+  - Training (7 Tage kein Training, Frequenz unter Vorgabe)
+  - Aktivität (Ø Schritte <5.000, 2-Wochen-Trend)
+  - Check-in-Verzug
+  - Liefert Kundenliste pro Bucket + aggregierte Counts.
 
-### Was wir ändern
+- **`getCoachTaskInbox`**: Vereinheitlicht offene Aufgaben aus mehreren Quellen zu einem Inbox-Feed mit Priorität (`critical` / `important` / `info`):
+  - Kritisch: kein aktiver Ernährungs-/Trainingsplan, Plan endet ≤3d, extreme Gewichtsänderung, manuelle Freigaben
+  - Wichtig: Plan endet ≤7d, Check-in überfällig (>7d), fehlende Fortschrittsfotos (>21d), Inaktivität (>10d ohne Daten)
+  - Info: Neuer Kunde (<7d), erstes Gewicht, neuer Check-in, abgeschlossene Challenge
+  - Nutzt vorhandene `coach_alert_resolutions` Tabelle für „erledigt/ignoriert".
 
-**`src/components/bodyfuel/AppLayout.tsx`**
-- `clientNav` reduzieren auf die 5 Punkte oben.
-- Bulls-Eintrag bleibt (Sidebar-Add-on), wird im Community-Hub zusätzlich verlinkt.
-- Achievements / Ranking / Measurements werden aus der Nav entfernt, bleiben aber als Routen verfügbar und werden in Community bzw. Profil verlinkt.
+### 2. UI-Komponenten
 
-**Neue Hub-Seiten (jede ist nur eine Übersicht mit Links auf bereits existierende Routen/Komponenten – keine Logik-Änderung):**
+- **`CoachRadarCard.tsx`** (neu): Drei klickbare Buckets (🔴 Sofort handeln / 🟠 Beobachten / 🟢 Auf Kurs) mit Counts. Klick öffnet ausklappbare Kundenliste mit Grund + Link zum Kundenprofil.
 
-- `src/routes/community.tsx` *(neu)* – Sammelhub:
-  - Ranking-Card → `/ranking` (Tabs: Gesamt / Woche / Streak / Level existieren bereits)
-  - Bulls Hub → `/bulls` (nur sichtbar wenn `hasGroup("bulls")`)
-  - Challenges → Platzhalter-Card „Bald verfügbar" (Feature existiert noch nicht – nicht erfinden)
-  - Achievements → `/achievements`
-  - Community-Profil-Card (Nickname/Level/Punkte/Streak aus Session)
+- **`CoachTaskInboxCard.tsx`** (neu, ersetzt Logik von `CoachActionAlertsCard`): 
+  - Filter-Pills (Alle / 🔴 / 🟠 / 🟢), Counts pro Kategorie
+  - Aufgaben mit Icon, Kundenname, Beschreibung, „Erledigt/Ignorieren"-Buttons
+  - Collapsible „Verlauf" für erledigte Aufgaben (7 Tage)
+  - Erledigte standardmäßig ausgeblendet
 
-- `src/routes/nutrition.tsx` umbauen zum Ernährungs-Hub mit Sektionen:
-  - Tracking → `/nutrition/tracking`
-  - Plan (aktiv/kommend/Archiv) → `/nutrition` Inhalte (bestehende `PlansView`/`PlanContentView`)
-  - Einkaufsliste → `/nutrition/shopping`
-  - Meal Prep → zeigt die aus dem Profil hinterlegte Präferenz nur an (read-only aus bestehendem Feld)
-  - Favoriten → `/nutrition/favorites`
-  - Rezept aus Zutaten → `/nutrition/recipe-from-ingredients`
+- **`CoachDashboardSummary.tsx`** (neu): Zusammenfassungs-Strip ganz oben mit 6 Kacheln:
+  🔴 Sofort handeln · 🟠 Beobachten · 🟢 Auf Kurs · 📋 Offene Aufgaben · 📅 Pläne laufen aus · ⚠️ Aktive Warnungen
 
-- `src/routes/training.tsx` umbauen zum Trainings-Hub:
-  - Trainingsplan (aktiv/kommend/Archiv) – bestehende `TrainingPlanManagementCard`
-  - Freie Einheiten → bestehender `TrainingTracker` / `AddTrainingSessionDialog`
-  - Strength Check → `/strength-check`
-  - Trainingsanalyse → bestehende `TrainingTrends` / `ExerciseAnalytics`
-  - Insights → bestehende Insights-Komponenten
+- **`CustomerStatusBadge.tsx`** (neu, wiederverwendbar): Zeigt Kundenstatus (🟢🟡🟠🔴) – wird in Dashboard, Kundenliste und Kundenprofil eingebunden.
 
-- `src/routes/profile.tsx` erweitern zum Profil-Hub:
-  - Fortschritt → `/progress`
-  - Maße → `/measurements`
-  - Fortschrittsfotos → `ProgressPhotosCard`
-  - Check-ins → `/check-in`
-  - Bewertungen → `CustomerCheckinsCard` / Coach-Reviews-Anzeige
-  - Einstellungen (Account, Datenschutz, Nickname ändern, Profil bearbeiten)
+### 3. Integration
 
-- `src/routes/dashboard.tsx`: nur Aufräumen/Priorisieren der Widget-Reihenfolge (Tagespunkte, Kalorien, Protein, Schritte, aktueller Plan, nächste Aufgaben, Gewicht, Streak, Quick Actions). Keine Logik anfassen.
+- **`src/routes/coach.index.tsx`**: Neue Reihenfolge oben → Summary, Radar, Task-Inbox. Bestehende Karten darunter behalten.
+- **`src/routes/coach.customers.index.tsx`**: `CustomerStatusBadge` neben jedem Kundennamen.
+- **`src/routes/coach.customers.$userId.tsx`**: `CustomerStatusBadge` im Header.
 
-### Was wir NICHT ändern
-- Keine DB-Migration. Keine Felder ändern.
-- Keine `*.functions.ts` / `*.server.ts` werden umgeschrieben.
-- Alle alten Routen (`/measurements`, `/ranking`, `/achievements`, `/progress`, `/check-in`, `/nutrition/*`, `/strength-check`, `/bulls*`, `/tracker/*`) bleiben 1:1 bestehen und funktionieren weiter.
-- Coach-Bereich (`/coach/*`) bleibt unverändert.
-- Free-Tracker-Layout (`FreeAppLayout`) bleibt unverändert.
-- Challenges werden nur als „Coming Soon"-Platzhalter angezeigt (kein neues Feature gebaut).
+### Technisch
 
-### Technische Details
-- Neue Route: nur `src/routes/community.tsx` (TanStack file-route `/community`).
-- `routeTree.gen.ts` wird automatisch regeneriert.
-- Hub-Seiten verwenden ausschließlich bestehende Komponenten + `<Link>`.
-- Mobile Bottom-Nav: genau 5 Icons; Bulls erscheint nur in Desktop-Sidebar als Zusatz, in Mobile über den Community-Hub erreichbar.
+- Keine DB-Migration nötig – alle Berechnungen on-the-fly aus existierenden Tabellen (`body_measurements`, `food_entries`, `water_logs`, `training_set_logs`, `weekly_checkins`, `nutrition_plans`, `coach_alert_resolutions`, `daily_checks`).
+- React Query mit `staleTime: 60s`; eine gemeinsame Query für Radar+Inbox+Summary, damit nur 1 Backend-Roundtrip.
+- Bestehende `resolveCoachAlert`/`unresolveCoachAlert` werden für die neue Inbox wiederverwendet (gleiche `coach_alert_resolutions` Tabelle).
+- `CoachActionAlertsCard.tsx` bleibt als Fallback erhalten, wird aber aus dem Dashboard entfernt.
 
 ### Reihenfolge
-1. `AppLayout.tsx` Nav reduzieren, `community`-Eintrag aufnehmen.
-2. `community.tsx` anlegen.
-3. `nutrition.tsx`, `training.tsx`, `profile.tsx` zu Hubs erweitern (Inhalte hinzufügen, nichts entfernen).
-4. `dashboard.tsx` Widget-Reihenfolge sortieren.
+
+1. `coach-radar.functions.ts` (Radar + Inbox + Summary in einer Datei)
+2. `CustomerStatusBadge.tsx`
+3. `CoachDashboardSummary.tsx`, `CoachRadarCard.tsx`, `CoachTaskInboxCard.tsx`
+4. `coach.index.tsx` umbauen
+5. Badge in Kundenliste + Kundenprofil einbinden
