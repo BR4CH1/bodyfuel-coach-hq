@@ -64,6 +64,22 @@ export function CoachBaseDataEditor({
     setTrainingGoal(initial.training_goal ?? "");
   }, [initial]);
 
+  const draftKey = `bf.coach.baseData.${userId}.v1`;
+  useFormDraft(
+    draftKey,
+    { height, birthdate, gender, goalWeight, goalDate, activity, trainingGoal, newWeight },
+    (d) => {
+      if (typeof d.height === "string") setHeight(d.height);
+      if (typeof d.birthdate === "string") setBirthdate(d.birthdate);
+      if (typeof d.gender === "string") setGender(d.gender as Gender | "");
+      if (typeof d.goalWeight === "string") setGoalWeight(d.goalWeight);
+      if (typeof d.goalDate === "string") setGoalDate(d.goalDate);
+      if (typeof d.activity === "string") setActivity(d.activity as Activity | "");
+      if (typeof d.trainingGoal === "string") setTrainingGoal(d.trainingGoal);
+      if (typeof d.newWeight === "string") setNewWeight(d.newWeight);
+    },
+  );
+
   const fn = useServerFn(updateCustomerCoachingInfo);
   const weightFn = useServerFn(setCustomerWeight);
   const qc = useQueryClient();
@@ -84,6 +100,7 @@ export function CoachBaseDataEditor({
       }),
     onSuccess: () => {
       toast.success("Stammdaten gespeichert");
+      clearFormDraft(draftKey);
       qc.invalidateQueries({ queryKey: ["customer", userId] });
       qc.invalidateQueries({ queryKey: ["customer-detail", userId] });
     },
