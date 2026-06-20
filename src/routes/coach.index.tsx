@@ -21,8 +21,11 @@ import {
 
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { CoachTrialOverview } from "@/components/bodyfuel/CoachTrialOverview";
-import { CoachActionAlertsCard } from "@/components/bodyfuel/CoachActionAlertsCard";
 import { PendingDraftsCard } from "@/components/bodyfuel/PendingDraftsCard";
+import { CoachDashboardSummary } from "@/components/bodyfuel/CoachDashboardSummary";
+import { CoachRadarCard } from "@/components/bodyfuel/CoachRadarCard";
+import { CoachTaskInboxCard } from "@/components/bodyfuel/CoachTaskInboxCard";
+import { getCoachRadar } from "@/lib/coach-radar.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { getRanking, type RankingPeriod } from "@/lib/coaching.functions";
 import {
@@ -101,6 +104,13 @@ function CoachDashboard() {
   const setStateFn = useServerFn(setCoachTaskState);
   const extendPlanFn = useServerFn(extendClientPlan);
   const genDraftFn = useServerFn(generateCheckinDraft);
+  const radarFn = useServerFn(getCoachRadar);
+
+  const radarQuery = useQuery({
+    queryKey: ["coach-radar"],
+    queryFn: () => radarFn(),
+    staleTime: 60_000,
+  });
 
   const taskStatesQuery = useQuery({
     queryKey: ["coach-task-states"],
@@ -582,10 +592,9 @@ function CoachDashboard() {
             newLeads={leads.length}
           />
 
-          <CoachActionAlertsCard
-            expiringPlansCount={expiringPlans.length}
-            openCheckinsCount={openWeek.length}
-          />
+          <CoachDashboardSummary data={radarQuery.data} />
+          <CoachRadarCard data={radarQuery.data} />
+          <CoachTaskInboxCard data={radarQuery.data} />
 
           <TaskInboxCard
             openCheckins={openWeek}
@@ -611,6 +620,7 @@ function CoachDashboard() {
             bulkDraftProgress={bulkDraftProgress}
             bulkDrafting={bulkDraftMut.isPending}
           />
+
 
 
 

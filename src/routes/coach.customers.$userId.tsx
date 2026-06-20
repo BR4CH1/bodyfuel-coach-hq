@@ -38,6 +38,8 @@ import { CoachStrengthCheckCard } from "@/components/bodyfuel/CoachStrengthCheck
 import { NutritionTargetsEditor } from "@/components/bodyfuel/NutritionTargetsEditor";
 import { MacroTargetsCard } from "@/components/bodyfuel/MacroTargetsCard";
 import { TrainingBonusCard } from "@/components/bodyfuel/TrainingBonusCard";
+import { CustomerStatusBadge } from "@/components/bodyfuel/CustomerStatusBadge";
+import { getCoachRadar } from "@/lib/coach-radar.functions";
 import { CustomerRecentActivityCard } from "@/components/bodyfuel/CustomerRecentActivityCard";
 import { CoachTrialCard } from "@/components/bodyfuel/CoachTrialCard";
 import { RecipeInsightsCard } from "@/components/bodyfuel/RecipeInsightsCard";
@@ -90,7 +92,14 @@ function CustomerDetail() {
   const deleteFn = useServerFn(deleteCustomer);
   const coachingFn = useServerFn(updateCustomerCoachingInfo);
   const groupFn = useServerFn(setUserGroup);
+  const radarFn = useServerFn(getCoachRadar);
   const qc = useQueryClient();
+  const { data: radar } = useQuery({
+    queryKey: ["coach-radar"],
+    queryFn: () => radarFn(),
+    staleTime: 60_000,
+  });
+  const radarStatus = (radar?.clients ?? []).find((c) => c.user_id === userId) ?? null;
 
   const [newPw, setNewPw] = useState("");
   const [showPwForm, setShowPwForm] = useState(false);
@@ -199,9 +208,17 @@ function CustomerDetail() {
     <div className="space-y-6">
       <div>
         <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Kunde</p>
-        <h1 className="font-display text-3xl font-bold">
-          {data.profile?.display_name ?? data.email}
-        </h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="font-display text-3xl font-bold">
+            {data.profile?.display_name ?? data.email}
+          </h1>
+          {radarStatus && (
+            <CustomerStatusBadge level={radarStatus.level} size="md" showLabel />
+          )}
+        </div>
+        {radarStatus && radarStatus.level !== "green" && (
+          <p className="mt-1 text-xs text-warning">{radarStatus.primary_reason}</p>
+        )}
         <p className="text-sm text-muted-foreground">{data.email}</p>
         {data.profile?.phone && (
           <p className="text-sm text-muted-foreground">{data.profile.phone}</p>

@@ -8,6 +8,8 @@ import { listCustomers } from "@/lib/coaching.functions";
 import { listTrialUsers } from "@/lib/trial.functions";
 import { listFreeUsers } from "@/lib/free-users.functions";
 import { Button } from "@/components/ui/button";
+import { CustomerStatusBadge } from "@/components/bodyfuel/CustomerStatusBadge";
+import { getCoachRadar } from "@/lib/coach-radar.functions";
 
 export const Route = createFileRoute("/coach/customers/")({
   head: () => ({ meta: [{ title: "Kunden — BODYFUEL" }] }),
@@ -29,6 +31,7 @@ function CustomersList() {
   const fn = useServerFn(listCustomers);
   const trialFn = useServerFn(listTrialUsers);
   const freeFn = useServerFn(listFreeUsers);
+  const radarFn = useServerFn(getCoachRadar);
   const { data, isLoading } = useQuery({
     queryKey: ["customers"],
     queryFn: () => fn(),
@@ -41,6 +44,16 @@ function CustomersList() {
     queryKey: ["free-users"],
     queryFn: () => freeFn(),
   });
+  const { data: radar } = useQuery({
+    queryKey: ["coach-radar"],
+    queryFn: () => radarFn(),
+    staleTime: 60_000,
+  });
+  const statusByUser = useMemo(() => {
+    const m = new Map<string, "red" | "orange" | "yellow" | "green">();
+    (radar?.clients ?? []).forEach((c) => m.set(c.user_id, c.level));
+    return m;
+  }, [radar]);
   const [filter, setFilter] = useState<Filter>("all");
   const [search, setSearch] = useState("");
 
@@ -241,6 +254,7 @@ function CustomersList() {
                   <tr key={c.id} className="border-b border-border last:border-0 hover:bg-secondary/30">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
+                        <CustomerStatusBadge level={statusByUser.get(c.user_id) ?? null} size="xs" />
                         <span className="font-semibold">{c.display_name ?? "—"}</span>
                         {c.nickname && (
                           <span className="rounded bg-secondary px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">@{c.nickname}</span>
@@ -292,6 +306,7 @@ function CustomersList() {
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
+                      <CustomerStatusBadge level={statusByUser.get(c.user_id) ?? null} size="xs" />
                       <p className="truncate font-semibold">
                         {c.display_name ?? "—"}
                         {c.nickname && <span className="ml-1.5 text-[10px] font-mono text-muted-foreground">@{c.nickname}</span>}
