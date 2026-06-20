@@ -6,9 +6,11 @@ import { getMyPackage, requestRenewal } from "@/lib/coaching.functions";
 import { Button } from "@/components/ui/button";
 
 const PKG_LABEL: Record<string, string> = {
-  starter: "BodyFuel Starter",
+  smart: "BodyFuel Smart",
   coaching: "BodyFuel Coaching",
-  premium: "BodyFuel Premium",
+  // Legacy
+  starter: "BodyFuel Coaching",
+  premium: "BodyFuel Coaching",
 };
 
 export function MyPackagePanel() {
