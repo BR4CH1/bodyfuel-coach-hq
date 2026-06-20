@@ -594,8 +594,10 @@ function CoachDashboard() {
           />
 
           <CoachDashboardSummary data={radarQuery.data} />
+          <CoachMessagesCard />
           <CoachRadarCard data={radarQuery.data} />
           <CoachTaskInboxCard data={radarQuery.data} />
+
 
 
 
