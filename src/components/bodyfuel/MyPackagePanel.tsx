@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Calendar, CreditCard, RefreshCcw } from "lucide-react";
+import { Calendar, CreditCard, Sparkles, Crown } from "lucide-react";
 import { getMyPackage } from "@/lib/coaching.functions";
 import { Button } from "@/components/ui/button";
 import { useStripeCheckout } from "@/hooks/useStripeCheckout";
@@ -13,11 +13,47 @@ const PKG_LABEL: Record<string, string> = {
   premium: "BodyFuel Coaching",
 };
 
-// Stripe-Preise pro Paket (1 Monat). Müssen mit den im Lovable
-// Payments-Setup angelegten lookup_keys übereinstimmen.
-const STRIPE_PRICE_BY_PKG: Record<string, string> = {
-  smart: "bodyfuel_smart_monthly",
+type PlanOption = {
+  key: "smart" | "coaching";
+  name: string;
+  short: string;
+  price: number;
+  priceId: string;
+  icon: React.ReactNode;
+  blurb: string;
+  bullets: string[];
 };
+
+const PLAN_OPTIONS: PlanOption[] = [
+  {
+    key: "smart",
+    name: "BodyFuel Smart",
+    short: "Smart",
+    price: 14.99,
+    priceId: "bodyfuel_smart_monthly",
+    icon: <Sparkles className="h-4 w-4" />,
+    blurb: "Komplett autonomes KI-System.",
+    bullets: [
+      "KI-Ernährungs- & Trainingsplan (1 Monat)",
+      "Automatische Verlängerung & Anpassung",
+      "Kein 1:1-Coach",
+    ],
+  },
+  {
+    key: "coaching",
+    name: "BodyFuel Coaching",
+    short: "Coaching",
+    price: 69,
+    priceId: "bodyfuel_coaching_monthly",
+    icon: <Crown className="h-4 w-4" />,
+    blurb: "1:1 Betreuung durch deinen Coach.",
+    bullets: [
+      "Persönliche Plan-Erstellung & Check",
+      "Anpassungen & Chat-Support",
+      "Wöchentlicher Check-In",
+    ],
+  },
+];
 
 export function MyPackagePanel() {
   const getFn = useServerFn(getMyPackage);
@@ -39,13 +75,11 @@ export function MyPackagePanel() {
   );
   const lastPayment = data.payments[0];
   const hasAnyPayment = data.payments.length > 0;
-  const renewLabel = hasAnyPayment ? "Coaching verlängern" : "Coaching starten";
-  const stripePriceId = STRIPE_PRICE_BY_PKG[pkg.package];
+  const ctaPrefix = hasAnyPayment ? "Verlängern mit" : "Starten mit";
 
-  const handleRenew = () => {
-    if (!stripePriceId) return;
+  const handleSelect = (priceId: string) => {
     openCheckout({
-      priceId: stripePriceId,
+      priceId,
       returnUrl: `${window.location.origin}/dashboard?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
     });
   };
@@ -62,15 +96,6 @@ export function MyPackagePanel() {
             {Number(pkg.price_eur).toFixed(2)} € / Monat
           </div>
         </div>
-        {stripePriceId && (
-          <Button
-            onClick={handleRenew}
-            className="bg-gradient-gold text-primary-foreground"
-          >
-            <RefreshCcw className="mr-1 h-4 w-4" />
-            {renewLabel}
-          </Button>
-        )}
       </div>
 
       <div className="mt-5 grid gap-3 sm:grid-cols-3">
@@ -87,6 +112,56 @@ export function MyPackagePanel() {
         Restlaufzeit: {daysLeft} Tage. Zahlung sicher per Kreditkarte/SEPA über
         Stripe; nach Bestätigung wird deine Laufzeit um 1 Monat verlängert.
       </p>
+
+      <div className="mt-5 border-t border-border pt-5">
+        <div className="mb-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+          {hasAnyPayment ? "Paket wählen & verlängern" : "Paket wählen & starten"}
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {PLAN_OPTIONS.map((opt) => {
+            const isCurrent = opt.key === pkg.package;
+            return (
+              <div
+                key={opt.key}
+                className={`flex flex-col rounded-xl border p-4 ${
+                  isCurrent ? "border-gold/60 bg-gold/5" : "border-border bg-background/40"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 font-display text-base font-bold">
+                    {opt.icon}
+                    {opt.name}
+                  </div>
+                  <div className="font-display text-lg text-gold">
+                    {opt.price.toFixed(2).replace(".", ",")} €
+                  </div>
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">{opt.blurb}</p>
+                <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+                  {opt.bullets.map((b) => (
+                    <li key={b}>• {b}</li>
+                  ))}
+                </ul>
+                <Button
+                  onClick={() => handleSelect(opt.priceId)}
+                  className="mt-4 bg-gradient-gold text-primary-foreground"
+                  size="sm"
+                >
+                  {ctaPrefix} {opt.short}
+                </Button>
+                {isCurrent && (
+                  <div className="mt-2 text-center text-[10px] uppercase tracking-wider text-gold">
+                    Dein aktuelles Paket
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <p className="mt-3 text-[11px] text-muted-foreground">
+          Wechsel jederzeit möglich — die Laufzeit beginnt nach Zahlung neu für 1 Monat.
+        </p>
+      </div>
 
       {data.payments.length > 0 && (
         <details className="mt-4">
