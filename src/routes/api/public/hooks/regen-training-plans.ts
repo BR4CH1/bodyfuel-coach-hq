@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { verifyCronAuth } from "@/lib/cron-auth.server";
 
 /**
- * Cron-Endpoint: Findet aktive Trainingspläne, deren Zeitraum (4 Wochen)
+ * Cron-Endpoint: Findet aktive Trainingspläne, deren Zeitraum (1 Monat)
  * abgelaufen ist, und generiert für jeden Kunden automatisch einen neuen
  * Smart-Plan als Entwurf. Coach bekommt diesen über die normale
  * Plan-Vorschau zur Freigabe.
