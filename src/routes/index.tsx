@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useConsent } from "@/lib/consent";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import appDashboardAsset from "@/assets/app-dashboard.png.asset.json";
 import nutritionPlanAsset from "@/assets/nutrition-plan.jpeg.asset.json";
@@ -1137,13 +1137,17 @@ const PACKAGES: Array<{
 
 
 function Pricing() {
-  const { openCheckout, checkoutElement } = useStripeCheckout();
+  const { openCheckout, checkoutElement, isOpen } = useStripeCheckout();
+  const checkoutRef = useRef<HTMLDivElement>(null);
 
   const handleBuy = (priceId: string) => {
     openCheckout({
       priceId,
       returnUrl: `${typeof window !== "undefined" ? window.location.origin : ""}/dashboard?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
     });
+    window.setTimeout(() => {
+      checkoutRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
   };
 
   return (
@@ -1232,12 +1236,18 @@ function Pricing() {
           ))}
         </div>
 
+        <div
+          ref={checkoutRef}
+          className={isOpen ? "mt-8 scroll-mt-24 overflow-hidden bg-background" : ""}
+        >
+          {checkoutElement}
+        </div>
+
         <p className="mx-auto mt-10 max-w-2xl text-center text-xs text-muted-foreground">
           Alle Preise gemäß § 19 UStG (Kleinunternehmerregelung). Es wird keine
           Umsatzsteuer ausgewiesen. Sofort nach Zahlung bekommst du Zugang — ohne Erstgespräch.
         </p>
       </div>
-      {checkoutElement}
     </section>
   );
 }
