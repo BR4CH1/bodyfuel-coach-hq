@@ -142,9 +142,8 @@ function NewCustomerForm() {
               <SelectContent>
                 <SelectItem value="free">Free (Tracker)</SelectItem>
                 <SelectItem value="trial">Trial (7-Tage-Test)</SelectItem>
-                <SelectItem value="starter">Starter</SelectItem>
-                <SelectItem value="coaching">Coaching</SelectItem>
-                <SelectItem value="premium">Premium</SelectItem>
+                <SelectItem value="smart">BodyFuel Smart (14,99 €)</SelectItem>
+                <SelectItem value="coaching">BodyFuel Coaching (69 €)</SelectItem>
               </SelectContent>
             </Select>
           </div>
