@@ -141,7 +141,7 @@ export const getCoachRadar = createServerFn({ method: "GET" })
         .from("nutrition_plans")
         .select("client_id, plan_type, status, scheduled_end_date")
         .in("client_id", ids)
-        .in("status", ["active", "approved"]),
+        .in("status", ["active", "approved", "draft"]),
       supabase
         .from("training_set_logs")
         .select("client_id, performed_at")
