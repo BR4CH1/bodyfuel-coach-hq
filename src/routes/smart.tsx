@@ -42,8 +42,7 @@ function SmartLandingPage() {
             <Logo />
           </Link>
           <Link
-            to="/auth"
-            search={{ intent: "smart-signup" } as any}
+            to="/smart/signup"
             className="rounded-lg bg-gradient-gold px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90"
           >
             Jetzt starten
@@ -68,8 +67,7 @@ function SmartLandingPage() {
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Link
-              to="/auth"
-              search={{ intent: "smart-signup" } as any}
+              to="/smart/signup"
               className="inline-flex items-center gap-2 rounded-xl bg-gradient-gold px-6 py-3 font-semibold text-primary-foreground hover:opacity-90"
             >
               Jetzt für 14,99 € starten
@@ -152,7 +150,7 @@ function SmartLandingPage() {
                 "Strength Check",
                 "Ranking, Level & Achievements",
               ]}
-              cta={{ to: "/auth", label: "Smart starten" }}
+              cta={{ to: "/smart/signup", label: "Smart starten" }}
               highlight
             />
             <PlanCard
@@ -203,8 +201,7 @@ function SmartLandingPage() {
             Registrieren. Onboarding. Plan steht. So einfach ist es.
           </p>
           <Link
-            to="/auth"
-            search={{ intent: "smart-signup" } as any}
+            to="/smart/signup"
             className="mt-6 inline-flex items-center gap-2 rounded-xl bg-gradient-gold px-6 py-3 font-semibold text-primary-foreground hover:opacity-90"
           >
             Jetzt für 14,99 € starten <ArrowRight className="h-4 w-4" />
