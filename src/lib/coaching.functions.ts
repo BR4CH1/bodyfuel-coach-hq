@@ -850,7 +850,7 @@ export const createPackageRequest = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
       request_type: "renewal" | "change" | "contact";
-      requested_package?: "starter" | "coaching" | "premium" | null;
+      requested_package?: PackageKey | null;
       note?: string;
     }) => data,
   )
