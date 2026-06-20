@@ -22,6 +22,7 @@ export const PACKAGES: PackageInfo[] = [
     key: "smart",
     name: "BODYFUEL SMART",
     price: 14.99,
+    priceId: "bodyfuel_smart_monthly",
     tagline: "Dein persönlicher Autopilot für Ernährung, Training & Fortschritt",
     features: [
       "Automatischer Ernährungsplan",
@@ -37,6 +38,7 @@ export const PACKAGES: PackageInfo[] = [
     key: "coaching",
     name: "BODYFUEL COACHING",
     price: 69,
+    priceId: "bodyfuel_coaching_monthly",
     tagline: "Persönliche 1:1-Betreuung mit Manu als Coach",
     popular: true,
     features: [
