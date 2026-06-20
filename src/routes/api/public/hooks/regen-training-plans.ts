@@ -70,7 +70,7 @@ export const Route = createFileRoute("/api/public/hooks/regen-training-plans")({
           const ageDays = lastCheck?.performed_at
             ? Math.floor((Date.now() - new Date(lastCheck.performed_at).getTime()) / 86_400_000)
             : null;
-          if (ageDays == null || ageDays > 28) {
+          if (ageDays == null || ageDays > 30) {
             results.push({ user: row.client_id, ok: false, skipped: "strength_check_stale" });
             continue;
           }
