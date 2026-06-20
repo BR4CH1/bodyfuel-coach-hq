@@ -500,37 +500,49 @@ export type Database = {
       customer_packages: {
         Row: {
           created_at: string
-          end_date: string
+          end_date: string | null
+          ended_at: string | null
           id: string
           is_active: boolean
           notes: string | null
           package: string
           price_eur: number
+          source: string
           start_date: string
+          started_at: string | null
+          status: string
           updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
-          end_date: string
+          end_date?: string | null
+          ended_at?: string | null
           id?: string
           is_active?: boolean
           notes?: string | null
           package: string
-          price_eur: number
+          price_eur?: number
+          source?: string
           start_date?: string
+          started_at?: string | null
+          status?: string
           updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
-          end_date?: string
+          end_date?: string | null
+          ended_at?: string | null
           id?: string
           is_active?: boolean
           notes?: string | null
           package?: string
           price_eur?: number
+          source?: string
           start_date?: string
+          started_at?: string | null
+          status?: string
           updated_at?: string
           user_id?: string
         }
