@@ -51,11 +51,11 @@ export function DailyMacroSummary({ userId }: { userId: string }) {
           fat_g: useRest ? (t.fat_g_rest ?? t.fat_g) : t.fat_g,
         });
       }
-      void activeKind; void planMealIdFromEntry; void getPlanMealDayKind; void entryMatchesActiveDay;
       const rows = (entries.data as Totals[]) ?? [];
       // Alle heute getrackten Einträge zählen für den aktuell eingestellten Tag,
       // unabhängig davon, aus welchem Plan-Tag (Training/Rest) die Mahlzeit stammt.
       const list = rows;
+
 
       setTotals(
         list.reduce(
