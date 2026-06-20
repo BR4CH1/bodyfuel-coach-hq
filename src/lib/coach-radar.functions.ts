@@ -68,9 +68,24 @@ export const getCoachRadar = createServerFn({ method: "GET" })
 
     const { data: roles } = await supabase
       .from("user_roles")
-      .select("user_id")
-      .eq("role", "client");
-    const ids: string[] = (roles ?? []).map((r: any) => r.user_id);
+      .select("user_id, role")
+      .in("role", ["client", "free"]);
+    const ids: string[] = Array.from(
+      new Set((roles ?? []).map((r: any) => r.user_id as string)),
+    );
+    const clientIdSet = new Set<string>(
+      (roles ?? []).filter((r: any) => r.role === "client").map((r: any) => r.user_id),
+    );
+
+    // Also include profiles currently in trial state
+    const { data: trialProfiles } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("trial_status", "trial");
+    (trialProfiles ?? []).forEach((p: any) => {
+      if (!ids.includes(p.id)) ids.push(p.id);
+    });
+
     if (!ids.length) {
       return {
         summary: { red: 0, yellow: 0, orange: 0, green: 0, open_tasks: 0, expiring_plans: 0, active_warnings: 0 },
