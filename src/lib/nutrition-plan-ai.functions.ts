@@ -673,7 +673,8 @@ WICHTIG zu name/description:
       scheduled_start_date: isoDate(start),
       scheduled_end_date: isoDate(end),
     };
-  });
+  }
+}
 
 
 function labelForSlot(slot: string): string {
