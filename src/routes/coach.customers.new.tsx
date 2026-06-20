@@ -50,6 +50,13 @@ function NewCustomerForm() {
   const isTrial = form.package === "trial";
   const isFree = form.package === "free";
 
+  const DRAFT_KEY = "bf.coach.newCustomer.v1";
+  useFormDraft(DRAFT_KEY, { form }, (d) => {
+    if (d.form && typeof d.form === "object") {
+      setForm((cur) => ({ ...cur, ...(d.form as typeof cur) }));
+    }
+  });
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.first_name || !form.last_name || !form.email) {
@@ -58,6 +65,7 @@ function NewCustomerForm() {
     setBusy(true);
     try {
       await fn({ data: { ...form, origin: window.location.origin } });
+      clearFormDraft(DRAFT_KEY);
       toast.success(isFree ? "Free-User angelegt — Einladung verschickt." : isTrial ? "Trial-Kunde angelegt — Einladung verschickt." : "Kunde angelegt — Einladung verschickt.");
       navigate({ to: "/coach/customers" });
     } catch (err) {
