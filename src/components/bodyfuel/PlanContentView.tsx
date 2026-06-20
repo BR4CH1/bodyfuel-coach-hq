@@ -232,28 +232,35 @@ export function PlanContentView({ clientId, planType }: Props) {
       .eq("plan_id", planRow.id)
       .order("sort_order");
     let dayList = (dayRows as Day[]) ?? [];
-    // For multi-week training plans, only expose the current week's days in the dropdown.
-    if (planType === "training") {
+    // Multi-week plans: only expose the current week's days; auto-advance to next week after each week ends.
+    {
       const wc = (planRow as any).weeks_count ?? 1;
       const start = (planRow as any).scheduled_start_date
         ? new Date((planRow as any).scheduled_start_date)
         : null;
-      let activeWeek = 1;
-      if (start && wc > 1) {
-        const diffDays = Math.floor((Date.now() - start.getTime()) / 86400000);
-        activeWeek = Math.min(wc, Math.max(1, Math.floor(diffDays / 7) + 1));
-      }
-      // Derive week_number from sort_order when the column is missing so that
-      // plans created before the week_number field still split correctly.
+      // Derive week_number from sort_order when the column is missing so older plans split correctly.
       const withWeek = dayList.map((d) => ({
         ...d,
         week_number: d.week_number ?? Math.floor((d.sort_order - 1) / 7) + 1,
       }));
-      const filtered = withWeek.filter((d) => d.week_number === activeWeek);
-      // Always restrict to the current week (fallback to week 1 if nothing matches)
-      dayList = filtered.length ? filtered : withWeek.filter((d) => d.week_number === 1);
+      const maxWeek = withWeek.reduce((acc, d) => Math.max(acc, d.week_number ?? 1), 1);
+      const effectiveWc = Math.max(wc ?? 1, maxWeek);
+      let activeWeek = 1;
+      if (start && effectiveWc > 1) {
+        const diffDays = Math.floor((Date.now() - start.getTime()) / 86400000);
+        activeWeek = Math.min(effectiveWc, Math.max(1, Math.floor(diffDays / 7) + 1));
+      } else if (effectiveWc > 1) {
+        activeWeek = 1;
+      }
+      if (effectiveWc > 1) {
+        const filtered = withWeek.filter((d) => d.week_number === activeWeek);
+        dayList = filtered.length ? filtered : withWeek.filter((d) => d.week_number === 1);
+      } else {
+        dayList = withWeek;
+      }
     }
     setDays(dayList);
+
 
     if (dayList.length) {
       const { data: itemRows } = await supabase
