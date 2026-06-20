@@ -145,7 +145,7 @@ export async function generateTrainingPlanCore(
     d.setHours(0, 0, 0, 0);
     return d;
   })();
-  const totalWeeks = 4;
+  const totalWeeks = requestedWeeks;
   const planSpan = totalWeeks * 7;
 
   const priorNames = new Set<string>();
