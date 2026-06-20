@@ -68,9 +68,24 @@ export const getCoachRadar = createServerFn({ method: "GET" })
 
     const { data: roles } = await supabase
       .from("user_roles")
-      .select("user_id")
-      .eq("role", "client");
-    const ids: string[] = (roles ?? []).map((r: any) => r.user_id);
+      .select("user_id, role")
+      .in("role", ["client", "free"]);
+    const ids: string[] = Array.from(
+      new Set((roles ?? []).map((r: any) => r.user_id as string)),
+    );
+    const clientIdSet = new Set<string>(
+      (roles ?? []).filter((r: any) => r.role === "client").map((r: any) => r.user_id),
+    );
+
+    // Also include profiles currently in trial state
+    const { data: trialProfiles } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("trial_status", "trial");
+    (trialProfiles ?? []).forEach((p: any) => {
+      if (!ids.includes(p.id)) ids.push(p.id);
+    });
+
     if (!ids.length) {
       return {
         summary: { red: 0, yellow: 0, orange: 0, green: 0, open_tasks: 0, expiring_plans: 0, active_warnings: 0 },
@@ -126,7 +141,7 @@ export const getCoachRadar = createServerFn({ method: "GET" })
         .from("nutrition_plans")
         .select("client_id, plan_type, status, scheduled_end_date")
         .in("client_id", ids)
-        .in("status", ["active", "approved"]),
+        .in("status", ["active", "approved", "draft"]),
       supabase
         .from("training_set_logs")
         .select("client_id, performed_at")
@@ -203,8 +218,15 @@ export const getCoachRadar = createServerFn({ method: "GET" })
     type PlanEnd = { end: string | null; status: string };
     const nutritionPlanByUser = new Map<string, PlanEnd>();
     const trainingPlanByUser = new Map<string, PlanEnd>();
+    const nutritionQueued = new Set<string>();
+    const trainingQueued = new Set<string>();
     ((plans as any).data ?? []).forEach((p: any) => {
-      const map = p.plan_type === "training" ? trainingPlanByUser : nutritionPlanByUser;
+      const isTraining = p.plan_type === "training";
+      const map = isTraining ? trainingPlanByUser : nutritionPlanByUser;
+      const queuedSet = isTraining ? trainingQueued : nutritionQueued;
+      if (p.status === "approved" || p.status === "draft") {
+        queuedSet.add(p.client_id);
+      }
       const existing = map.get(p.client_id);
       if (p.status === "active") {
         map.set(p.client_id, { end: p.scheduled_end_date ?? null, status: "active" });
@@ -292,8 +314,9 @@ export const getCoachRadar = createServerFn({ method: "GET" })
       const reasons: string[] = [];
       let critical = 0;
       let warn = 0;
+      const isClient = clientIdSet.has(p.id);
 
-      // ----- NEW CUSTOMER INFO TASK -----
+      // ----- NEW CUSTOMER INFO TASK (für alle Rollen: client, free, trial) -----
       if (p.created_at) {
         const ageDays = (now - new Date(p.created_at).getTime()) / 86400000;
         if (ageDays < 7) {
@@ -302,23 +325,27 @@ export const getCoachRadar = createServerFn({ method: "GET" })
             name,
             priority: "info",
             kind: "new_customer",
-            title: "Neuer Kunde registriert",
+            title: "Neue Anmeldung",
             detail: `Vor ${Math.max(0, Math.floor(ageDays))} Tagen beigetreten`,
             keySuffix: new Date(p.created_at).toISOString().slice(0, 10),
           });
         }
       }
 
+      // Alle weiteren Checks und Radar-Buckets nur für aktive Coaching-Kunden
+      if (!isClient) continue;
+
       // ----- PLAN STATUS -----
       const np = nutritionPlanByUser.get(p.id);
       const tp = trainingPlanByUser.get(p.id);
-      const planChecks: Array<["nutrition" | "training", PlanEnd | undefined]> = [
-        ["nutrition", np],
-        ["training", tp],
+      const planChecks: Array<["nutrition" | "training", PlanEnd | undefined, boolean]> = [
+        ["nutrition", np, nutritionQueued.has(p.id)],
+        ["training", tp, trainingQueued.has(p.id)],
       ];
-      for (const [kind, plan] of planChecks) {
+      for (const [kind, plan, queued] of planChecks) {
         const label = kind === "nutrition" ? "Ernährungsplan" : "Trainingsplan";
         if (!plan || plan.status !== "active") {
+          if (queued) continue; // neuer Plan liegt schon in der Warteschleife
           critical++;
           reasons.push(`Kein aktiver ${label}`);
           pushTask({
@@ -336,6 +363,10 @@ export const getCoachRadar = createServerFn({ method: "GET" })
           const days = Math.ceil(
             (new Date(plan.end).getTime() - new Date(today).getTime()) / 86400000,
           );
+          if (queued) {
+            // Nachfolgeplan wartet bereits → still
+            continue;
+          }
           if (days <= 3) {
             critical++;
             reasons.push(`${label} endet in ${days}T`);
@@ -605,6 +636,21 @@ export const getCoachRadar = createServerFn({ method: "GET" })
         }
       }
 
+      // ----- SILENT STAKEHOLDER: niemand der je etwas eingetragen hat -----
+      const hasAnySignal =
+        !!lc ||
+        !!latest ||
+        trackedDates.length > 0 ||
+        !!lt ||
+        !!waterByUser.get(p.id) ||
+        (stepsByUser.get(p.id)?.length ?? 0) > 0 ||
+        pendingDraftCount > 0 ||
+        !!lastPhotoByUser.get(p.id);
+      if (!hasAnySignal) continue;
+
+      // ----- RADAR DISMISS (Coach kann Eintrag abhaken) -----
+      if (resolvedSet.has(`${p.id}:radar:dismiss`)) continue;
+
       // ----- LEVEL -----
       let level: RadarLevel;
       if (critical >= 1) level = "red";
@@ -693,6 +739,32 @@ export const unresolveCoachInboxTask = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const dismissRadarClient = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { user_id: string; name: string; primary_reason: string }) => input)
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    await assertCoach(supabase, userId);
+    const key = `${data.user_id}:radar:dismiss`;
+    const { error } = await supabase.from("coach_alert_resolutions").upsert(
+      {
+        coach_user_id: userId,
+        alert_key: key,
+        alert_user_id: data.user_id,
+        alert_kind: "radar_dismiss",
+        alert_severity: "orange",
+        alert_title: "Radar abgehakt",
+        alert_detail: data.primary_reason,
+        alert_range: "",
+        client_name: data.name,
+        action: "done",
+        resolved_at: new Date().toISOString(),
+      },
+      { onConflict: "coach_user_id,alert_key" },
+    );
+    if (error) throw error;
+    return { ok: true };
+  });
 export const getCustomerRadarStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { user_id: string }) => d)
