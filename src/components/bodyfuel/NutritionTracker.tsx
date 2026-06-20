@@ -598,6 +598,7 @@ export function NutritionTracker() {
     if (error) return toast.error(error.message);
     setAllEntries((e) => [...e, row as FoodEntry]);
     setOpenMeal(null);
+    clearFormDraft(draftKey);
     toast.success("Mahlzeit hinzugefügt");
   };
 
