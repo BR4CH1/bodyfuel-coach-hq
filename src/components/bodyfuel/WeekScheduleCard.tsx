@@ -68,8 +68,12 @@ export function WeekScheduleCard({ userId }: { userId: string }) {
       <ul className="mt-4 space-y-1.5">
         {DISPLAY_ORDER.map((idx) => {
           const wkKey = KEYS[idx];
-          const isTraining = trainSet.has(wkKey);
           const isToday = idx === todayIdx;
+          // Heutiger Tag spiegelt manuelle/automatische Override-Auswahl wider,
+          // andere Tage zeigen weiterhin den Wochenplan.
+          const isTraining = isToday && today?.kind
+            ? today.kind === "training"
+            : trainSet.has(wkKey);
           return (
             <li
               key={wkKey}
