@@ -327,7 +327,7 @@ export async function generateAiNutritionPlanCore(
       swapFreq[n] = (swapFreq[n] ?? 0) + 1;
     }
     const topSwapped = Object.entries(swapFreq)
-      .sort((a, b) => b[1] - a[1])
+      .sort((a, b) => (b[1] as number) - (a[1] as number))
       .slice(0, 8)
       .map(([n, c]) => `${n} (${c}×)`);
 
