@@ -314,8 +314,9 @@ export const getCoachRadar = createServerFn({ method: "GET" })
       const reasons: string[] = [];
       let critical = 0;
       let warn = 0;
+      const isClient = clientIdSet.has(p.id);
 
-      // ----- NEW CUSTOMER INFO TASK -----
+      // ----- NEW CUSTOMER INFO TASK (für alle Rollen: client, free, trial) -----
       if (p.created_at) {
         const ageDays = (now - new Date(p.created_at).getTime()) / 86400000;
         if (ageDays < 7) {
@@ -324,23 +325,27 @@ export const getCoachRadar = createServerFn({ method: "GET" })
             name,
             priority: "info",
             kind: "new_customer",
-            title: "Neuer Kunde registriert",
+            title: "Neue Anmeldung",
             detail: `Vor ${Math.max(0, Math.floor(ageDays))} Tagen beigetreten`,
             keySuffix: new Date(p.created_at).toISOString().slice(0, 10),
           });
         }
       }
 
+      // Alle weiteren Checks und Radar-Buckets nur für aktive Coaching-Kunden
+      if (!isClient) continue;
+
       // ----- PLAN STATUS -----
       const np = nutritionPlanByUser.get(p.id);
       const tp = trainingPlanByUser.get(p.id);
-      const planChecks: Array<["nutrition" | "training", PlanEnd | undefined]> = [
-        ["nutrition", np],
-        ["training", tp],
+      const planChecks: Array<["nutrition" | "training", PlanEnd | undefined, boolean]> = [
+        ["nutrition", np, nutritionQueued.has(p.id)],
+        ["training", tp, trainingQueued.has(p.id)],
       ];
-      for (const [kind, plan] of planChecks) {
+      for (const [kind, plan, queued] of planChecks) {
         const label = kind === "nutrition" ? "Ernährungsplan" : "Trainingsplan";
         if (!plan || plan.status !== "active") {
+          if (queued) continue; // neuer Plan liegt schon in der Warteschleife
           critical++;
           reasons.push(`Kein aktiver ${label}`);
           pushTask({
@@ -358,6 +363,10 @@ export const getCoachRadar = createServerFn({ method: "GET" })
           const days = Math.ceil(
             (new Date(plan.end).getTime() - new Date(today).getTime()) / 86400000,
           );
+          if (queued) {
+            // Nachfolgeplan wartet bereits → still
+            continue;
+          }
           if (days <= 3) {
             critical++;
             reasons.push(`${label} endet in ${days}T`);
