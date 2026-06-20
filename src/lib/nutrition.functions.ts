@@ -487,13 +487,13 @@ Antworte ausschließlich mit gültigem JSON:
     });
     if (!aiRes.ok) {
       const txt = await aiRes.text();
-      throw new Error(`KI-Fehler [${aiRes.status}]: ${txt.slice(0, 300)}`);
+      throw new Error(`Fehler [${aiRes.status}]: ${txt.slice(0, 300)}`);
     }
     const aiJson = await aiRes.json();
     const raw = aiJson?.choices?.[0]?.message?.content ?? "";
     let parsed: any;
     try { parsed = typeof raw === "string" ? JSON.parse(raw) : raw; }
-    catch { throw new Error("KI-Antwort konnte nicht gelesen werden"); }
+    catch { throw new Error("Antwort konnte nicht gelesen werden"); }
 
     const nz = (v: any) => {
       const n = Number(v);
@@ -521,7 +521,7 @@ Antworte ausschließlich mit gültigem JSON:
     };
   });
 
-/* ----------- KI-Schätzung von Nährwerten ----------- */
+/* ----------- Schätzung von Nährwerten ----------- */
 
 /**
  * Schätzt Nährwerte (pro 100g) für ein Lebensmittel/Gericht per KI,
@@ -534,7 +534,7 @@ export const estimateFoodFromText = createServerFn({ method: "POST" })
     const q = data.query.trim();
     if (!q) throw new Error("Bitte gib ein Lebensmittel ein.");
     const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("KI-Schätzung nicht verfügbar (LOVABLE_API_KEY fehlt).");
+    if (!apiKey) throw new Error("Schätzung nicht verfügbar (LOVABLE_API_KEY fehlt).");
 
     const system = `Du bist Ernährungswissenschaftler. Schätze Nährwerte für ein vom Nutzer beschriebenes Lebensmittel oder Gericht (deutsche Esskultur, typische Zubereitung). Antworte ausschließlich mit JSON. Werte IMMER pro 100 g. Sei realistisch (z.B. Döner ~215 kcal/100g, Pizza Salami ~265 kcal/100g, Pommes ~290 kcal/100g). Wenn du dir gar nicht sicher bist, gib trotzdem die plausibelste Schätzung ab.
 
@@ -562,26 +562,26 @@ JSON-Schema:
       }),
     });
     if (aiRes.status === 429) throw new Error("Rate-Limit erreicht – kurz warten.");
-    if (aiRes.status === 402) throw new Error("KI-Guthaben aufgebraucht.");
+    if (aiRes.status === 402) throw new Error("Guthaben aufgebraucht.");
     if (!aiRes.ok) {
       const txt = await aiRes.text();
-      throw new Error(`KI-Fehler [${aiRes.status}]: ${txt.slice(0, 200)}`);
+      throw new Error(`Fehler [${aiRes.status}]: ${txt.slice(0, 200)}`);
     }
     const aiJson = await aiRes.json();
     const raw = aiJson?.choices?.[0]?.message?.content ?? "{}";
     let parsed: any;
     try { parsed = typeof raw === "string" ? JSON.parse(raw) : raw; }
-    catch { throw new Error("KI-Antwort konnte nicht gelesen werden."); }
+    catch { throw new Error("Antwort konnte nicht gelesen werden."); }
 
     const num = (v: any) => {
       const n = Number(v);
       return isFinite(n) && n >= 0 ? Math.round(n * 10) / 10 : 0;
     };
     const kcal = num(parsed.kcal_per_100g);
-    if (!kcal) throw new Error("KI konnte keine Schätzung erzeugen – bitte präziser beschreiben.");
+    if (!kcal) throw new Error("Schätzung nicht möglich – bitte präziser beschreiben.");
     const sg = Number(parsed.serving_g);
     return {
-      name: `${String(parsed.name || q)} (KI-Schätzung)`,
+      name: `${String(parsed.name || q)} (geschätzt)`,
       brand: null,
       barcode: null,
       kcal_per_100g: kcal,

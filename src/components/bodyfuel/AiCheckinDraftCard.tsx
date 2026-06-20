@@ -92,7 +92,7 @@ export function AiCheckinDraftCard({ userId }: { userId: string }) {
       setSelectedId(res.id);
       setMessageDraft(res.message_final);
       setEditing(false);
-      toast.success("KI-Entwurf erstellt");
+      toast.success("Entwurf erstellt");
     },
     onError: (err: Error) => toast.error(err.message || "Entwurf konnte nicht erstellt werden"),
   });
@@ -159,9 +159,9 @@ export function AiCheckinDraftCard({ userId }: { userId: string }) {
         <div className="flex items-center gap-2">
           <Sparkles className="h-5 w-5 text-gold" />
           <div>
-            <h2 className="font-display text-lg font-bold">KI Check-in-Entwurf</h2>
+            <h2 className="font-display text-lg font-bold">Check-in-Entwurf</h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              KI analysiert die letzten Wochen und schlägt einen Check-in-Entwurf vor. Du entscheidest.
+              BodyFuel analysiert die letzten Wochen und schlägt einen Check-in-Entwurf vor. Du entscheidest.
             </p>
           </div>
         </div>
@@ -236,7 +236,7 @@ export function AiCheckinDraftCard({ userId }: { userId: string }) {
 
       {!isLoading && !active && !generateMutation.isPending && (
         <p className="mt-6 text-sm text-muted-foreground">
-          Noch kein Entwurf. Klicke auf „Entwurf erstellen", um eine KI-Analyse zu starten.
+          Noch kein Entwurf. Klicke auf „Entwurf erstellen", um eine Analyse zu starten.
         </p>
       )}
 

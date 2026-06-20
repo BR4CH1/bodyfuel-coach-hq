@@ -174,10 +174,10 @@ Antworte AUSSCHLIESSLICH mit gültigem JSON in genau dieser Form:
     });
 
     if (aiRes.status === 429) throw new Error("Rate-Limit erreicht — bitte gleich nochmal versuchen.");
-    if (aiRes.status === 402) throw new Error("KI-Guthaben aufgebraucht — bitte aufladen.");
+    if (aiRes.status === 402) throw new Error("Guthaben aufgebraucht — bitte aufladen.");
     if (!aiRes.ok) {
       const txt = await aiRes.text();
-      throw new Error(`KI-Fehler [${aiRes.status}]: ${txt.slice(0, 200)}`);
+      throw new Error(`Fehler [${aiRes.status}]: ${txt.slice(0, 200)}`);
     }
     const aiJson = await aiRes.json();
     const raw = aiJson?.choices?.[0]?.message?.content ?? "{}";
@@ -185,7 +185,7 @@ Antworte AUSSCHLIESSLICH mit gültigem JSON in genau dieser Form:
     try {
       parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
     } catch {
-      throw new Error("KI-Antwort konnte nicht gelesen werden.");
+      throw new Error("Antwort konnte nicht gelesen werden.");
     }
 
     // Defensive defaults

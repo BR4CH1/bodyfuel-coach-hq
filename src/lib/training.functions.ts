@@ -87,7 +87,7 @@ Keine Erklärungen.`;
     });
     if (!aiRes.ok) {
       const txt = await aiRes.text();
-      throw new Error(`KI-Fehler [${aiRes.status}]: ${txt.slice(0, 300)}`);
+      throw new Error(`Fehler [${aiRes.status}]: ${txt.slice(0, 300)}`);
     }
     const aiJson = await aiRes.json();
     const raw = aiJson?.choices?.[0]?.message?.content ?? "";
@@ -95,7 +95,7 @@ Keine Erklärungen.`;
     try {
       parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
     } catch {
-      throw new Error("KI-Antwort konnte nicht gelesen werden");
+      throw new Error("Antwort konnte nicht gelesen werden");
     }
     const days = Array.isArray(parsed.days) ? parsed.days : [];
     if (!days.length) throw new Error("Keine Übungen erkannt");

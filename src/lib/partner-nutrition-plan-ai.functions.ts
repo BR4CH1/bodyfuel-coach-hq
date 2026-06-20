@@ -408,14 +408,14 @@ Genau ${planDays} Tage. Pro Person je 4 Slots (breakfast/lunch/dinner/snack). Be
       }),
     });
     if (aiRes.status === 429) throw new Error("Rate-Limit erreicht.");
-    if (aiRes.status === 402) throw new Error("KI-Guthaben aufgebraucht.");
-    if (!aiRes.ok) throw new Error(`KI-Fehler [${aiRes.status}]`);
+    if (aiRes.status === 402) throw new Error("Guthaben aufgebraucht.");
+    if (!aiRes.ok) throw new Error(`Fehler [${aiRes.status}]`);
     const raw = (await aiRes.json())?.choices?.[0]?.message?.content ?? "{}";
     let parsed: { days?: GeneratedDay[] } = {};
     try {
       parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
     } catch {
-      throw new Error("KI-Antwort konnte nicht gelesen werden.");
+      throw new Error("Antwort konnte nicht gelesen werden.");
     }
     const days = (parsed.days ?? []).slice(0, planDays);
     if (!days.length) {
@@ -428,7 +428,7 @@ Genau ${planDays} Tage. Pro Person je 4 Slots (breakfast/lunch/dinner/snack). Be
     const totalMealsReturned = days.reduce((s: number, g: any) => s + countMeals(g), 0);
     if (totalMealsReturned === 0) {
       console.error("[partner-plan] AI returned 0 meals across all days. raw=", raw);
-      throw new Error("KI hat keine Mahlzeiten geliefert. Bitte erneut versuchen.");
+      throw new Error("Keine Mahlzeiten geliefert. Bitte erneut versuchen.");
     }
 
     const forbidden = mergedAllergies; // never tolerate, for anybody

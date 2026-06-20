@@ -47,7 +47,7 @@ export function PendingDraftsCard({ redClients }: { redClients: RedClient[] }) {
         <div className="flex items-center gap-2">
           <Sparkles className="h-5 w-5 text-gold" />
           <div>
-            <h3 className="font-display text-lg font-bold">Wartende KI-Entwürfe</h3>
+            <h3 className="font-display text-lg font-bold">Wartende Entwürfe</h3>
             <p className="text-xs text-muted-foreground">
               {isLoading ? "Lade…" : `${items.length} offen`}
               {redClients.length > 0 && ` · ${redClients.length} 🔴-Kunden`}
@@ -83,7 +83,7 @@ export function PendingDraftsCard({ redClients }: { redClients: RedClient[] }) {
 
       {!isLoading && items.length === 0 && (
         <div className="rounded-xl border border-dashed border-border/60 p-4 text-sm text-muted-foreground">
-          Keine wartenden Entwürfe. Klicke oben, um KI-Analysen für deine 🔴-Kunden zu starten.
+          Keine wartenden Entwürfe. Klicke oben, um Analysen für deine 🔴-Kunden zu starten.
         </div>
       )}
 
@@ -108,7 +108,7 @@ export function PendingDraftsCard({ redClients }: { redClients: RedClient[] }) {
                     {it.client_name ?? "Ohne Namen"}
                   </p>
                   <p className="line-clamp-2 text-xs text-muted-foreground">
-                    {it.status_summary || "KI-Entwurf wartet auf Freigabe"}
+                    {it.status_summary || "Entwurf wartet auf Freigabe"}
                   </p>
                   <p className="mt-1 text-[10px] uppercase tracking-wider text-muted-foreground/70">
                     {new Date(it.generated_at).toLocaleString("de-DE")}
