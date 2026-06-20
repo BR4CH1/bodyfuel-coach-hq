@@ -107,50 +107,75 @@ export const completeSmartOnboarding = createServerFn({ method: "POST" })
       .upsert(snp as any, { onConflict: "user_id" });
     if (sErr) throw new Error(sErr.message);
 
-    // 4) Autopilot triggern — best effort, blockiert nicht
+    // 4) Autopilot triggern — Training (6 Wochen) + Ernährung (28 Tage). Best effort.
     const apiKey = process.env.LOVABLE_API_KEY;
     const results = { nutrition: false, training: false, errors: [] as string[] };
-    if (apiKey) {
-      try {
-        const { generateTrainingPlanCore } = await import("./training-plan-ai-core.server");
-        await generateTrainingPlanCore(supabase, {
-          target: userId,
-          uploadedBy: userId,
-          startMode: "today",
-          apiKey,
-        });
-        // Auto-Publish: jüngsten Trainings-Draft sofort aktivieren
-        const { data: draft } = await supabase
-          .from("nutrition_plans")
-          .select("id")
-          .eq("client_id", userId)
-          .eq("plan_type", "training")
-          .in("status", ["draft", "approved", "published"])
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        if (draft) {
-          await supabase
-            .from("nutrition_plans")
-            .update({ status: "archived" })
-            .eq("client_id", userId)
-            .eq("plan_type", "training")
-            .eq("status", "active");
-          await supabase
-            .from("nutrition_plans")
-            .update({ status: "active" })
-            .eq("id", draft.id);
-        }
-        results.training = true;
-      } catch (e) {
-        results.errors.push("training: " + (e as Error).message);
-      }
-    } else {
+    if (!apiKey) {
       results.errors.push("LOVABLE_API_KEY fehlt — Pläne werden später erstellt.");
+      return { ok: true, ...results };
+    }
+
+    // Trainingsplan (6 Wochen) + sofort aktivieren
+    try {
+      const { generateTrainingPlanCore } = await import("./training-plan-ai-core.server");
+      await generateTrainingPlanCore(supabase, {
+        target: userId,
+        uploadedBy: userId,
+        startMode: "today",
+        apiKey,
+        weeks: 6,
+      });
+      await activateLatestPlan(supabase, userId, "training");
+      results.training = true;
+    } catch (e) {
+      results.errors.push("training: " + (e as Error).message);
+    }
+
+    // Ernährungsplan (28 Tage) + sofort aktivieren
+    try {
+      const { generateAiNutritionPlanCore } = await import("./nutrition-plan-ai.functions");
+      await generateAiNutritionPlanCore(supabase, {
+        target: userId,
+        uploadedBy: userId,
+        start_mode: "today",
+        plan_days: 28,
+        apiKey,
+      });
+      await activateLatestPlan(supabase, userId, "nutrition");
+      results.nutrition = true;
+    } catch (e) {
+      results.errors.push("nutrition: " + (e as Error).message);
     }
 
     return { ok: true, ...results };
   });
+
+async function activateLatestPlan(
+  supabase: any,
+  userId: string,
+  planType: "nutrition" | "training",
+) {
+  const { data: draft } = await supabase
+    .from("nutrition_plans")
+    .select("id")
+    .eq("client_id", userId)
+    .eq("plan_type", planType)
+    .in("status", ["draft", "approved", "published"])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!draft) return;
+  await supabase
+    .from("nutrition_plans")
+    .update({ status: "archived" })
+    .eq("client_id", userId)
+    .eq("plan_type", planType)
+    .eq("status", "active");
+  await supabase
+    .from("nutrition_plans")
+    .update({ status: "active" })
+    .eq("id", draft.id);
+}
 
 export const getOnboardingStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])

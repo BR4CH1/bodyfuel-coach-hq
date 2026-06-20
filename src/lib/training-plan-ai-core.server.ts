@@ -29,6 +29,8 @@ export type GenerateOpts = {
   title?: string;
   startMode?: "today" | "next_week";
   apiKey: string;
+  /** Anzahl Wochen für den Plan. Default 4. Smart-Onboarding/Renewal nutzt 6. */
+  weeks?: number;
 };
 
 export async function generateTrainingPlanCore(
@@ -36,6 +38,7 @@ export async function generateTrainingPlanCore(
   opts: GenerateOpts,
 ) {
   const { target, uploadedBy = null, title, startMode = "today", apiKey } = opts;
+  const requestedWeeks = Math.max(1, Math.min(12, Math.round(opts.weeks ?? 4)));
 
   const since60 = new Date(Date.now() - 60 * 86400000).toISOString();
   const sinceDate60 = since60.slice(0, 10);
@@ -142,7 +145,7 @@ export async function generateTrainingPlanCore(
     d.setHours(0, 0, 0, 0);
     return d;
   })();
-  const totalWeeks = 4;
+  const totalWeeks = requestedWeeks;
   const planSpan = totalWeeks * 7;
 
   const priorNames = new Set<string>();

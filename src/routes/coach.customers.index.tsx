@@ -20,7 +20,7 @@ export const Route = createFileRoute("/coach/customers/")({
   ),
 });
 
-type Filter = "all" | "due" | "overdue" | "bulls" | "trial" | "trial_expired" | "free";
+type Filter = "all" | "due" | "overdue" | "bulls" | "smart" | "trial" | "trial_expired" | "free";
 
 function daysLeft(end: string | null): number | null {
   if (!end) return null;
@@ -67,7 +67,8 @@ function CustomersList() {
     const due = (data ?? []).filter((c: any) => c.payment_status === "due").length;
     const overdue = (data ?? []).filter((c: any) => c.payment_status === "overdue").length;
     const bulls = (data ?? []).filter((c: any) => (c.groups ?? []).includes("bulls")).length;
-    return { all: data?.length ?? 0, due, overdue, bulls, trial: trialCount, trial_expired: trialExpiredCount, free: freeCount };
+    const smart = (data ?? []).filter((c: any) => c.package === "smart").length;
+    return { all: data?.length ?? 0, due, overdue, bulls, smart, trial: trialCount, trial_expired: trialExpiredCount, free: freeCount };
   }, [data, trialCount, trialExpiredCount, freeCount]);
 
   const filtered = useMemo(() => {
@@ -75,6 +76,7 @@ function CustomersList() {
     let list = data as any[];
     if (filter !== "all") {
       if (filter === "bulls") list = list.filter((c) => (c.groups ?? []).includes("bulls"));
+      else if (filter === "smart") list = list.filter((c) => c.package === "smart");
       else list = list.filter((c) => c.payment_status === filter);
     }
     if (search.trim()) {
@@ -189,6 +191,7 @@ function CustomersList() {
           ["due", `Zahlung fällig (${counts.due})`],
           ["overdue", `Überfällig (${counts.overdue})`],
           ["bulls", `Bulls (${counts.bulls})`],
+          ["smart", `Smart (${counts.smart})`],
           ["trial", `Trial (${counts.trial})`],
           ["trial_expired", `Trial abgelaufen (${counts.trial_expired})`],
           ["free", `Free (${counts.free})`],

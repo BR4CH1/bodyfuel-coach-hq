@@ -51,6 +51,47 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY fehlt");
 
+    return await generateAiNutritionPlanCore(supabase, {
+      target,
+      uploadedBy: userId,
+      scheduled_start_date: data.scheduled_start_date ?? null,
+      title: data.title,
+      start_mode: data.start_mode,
+      plan_days: data.plan_days ?? null,
+      apiKey,
+    });
+  });
+
+export type GenerateNutritionPlanOpts = {
+  target: string;
+  uploadedBy?: string | null;
+  scheduled_start_date?: string | null;
+  title?: string;
+  start_mode?: "today" | "next_shopping";
+  plan_days?: number | null;
+  apiKey: string;
+};
+
+/**
+ * Kern-Generator für Smart-Ernährungspläne. Wird sowohl vom user-facing
+ * Server-FN als auch vom Onboarding-Autopilot und der Verlängerungs-Logik
+ * aufgerufen. Keine Authorisierung — Aufrufer ist verantwortlich.
+ */
+export async function generateAiNutritionPlanCore(
+  supabase: any,
+  opts: GenerateNutritionPlanOpts,
+) {
+  const { target, uploadedBy = null, apiKey } = opts;
+  const data = {
+    user_id: target,
+    scheduled_start_date: opts.scheduled_start_date ?? null,
+    title: opts.title,
+    start_mode: opts.start_mode,
+    plan_days: opts.plan_days ?? null,
+  };
+  const userId = uploadedBy ?? target;
+  {
+
     const [
       { data: profile },
       { data: clientProfile },
@@ -281,12 +322,12 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
       .map((s: any) => s.meal?.name)
       .filter(Boolean);
     // Top swapped (frequency)
-    const swapFreq = swappedNames.reduce<Record<string, number>>((acc, n) => {
-      acc[n] = (acc[n] ?? 0) + 1;
-      return acc;
-    }, {});
+    const swapFreq: Record<string, number> = {};
+    for (const n of swappedNames as string[]) {
+      swapFreq[n] = (swapFreq[n] ?? 0) + 1;
+    }
     const topSwapped = Object.entries(swapFreq)
-      .sort((a, b) => b[1] - a[1])
+      .sort((a, b) => (b[1] as number) - (a[1] as number))
       .slice(0, 8)
       .map(([n, c]) => `${n} (${c}×)`);
 
@@ -324,7 +365,7 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
       ? daysUntilNextShopping(p.shopping_days, start)
       : daysToNextShopping;
     const overrideDays = data.plan_days != null
-      ? Math.max(1, Math.min(21, Math.round(data.plan_days)))
+      ? Math.max(1, Math.min(28, Math.round(data.plan_days)))
       : null;
     const planDays = overrideDays ?? computedPlanDays;
 
@@ -632,7 +673,8 @@ WICHTIG zu name/description:
       scheduled_start_date: isoDate(start),
       scheduled_end_date: isoDate(end),
     };
-  });
+  }
+}
 
 
 function labelForSlot(slot: string): string {
