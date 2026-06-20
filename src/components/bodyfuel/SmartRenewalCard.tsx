@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 /**
  * Wird nur für Smart-Kunden angezeigt, deren Plan in <= 7 Tagen abläuft
  * (oder bereits abgelaufen ist). Trainingsplan-Verlängerung blockiert, wenn
- * letzter Strength-Check älter als 4 Wochen.
+ * letzter Strength-Check älter als 1 Monat.
  */
 export function SmartRenewalCard() {
   const fn = useServerFn(getSmartRenewalStatus);
