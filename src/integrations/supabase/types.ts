@@ -1589,6 +1589,7 @@ export type Database = {
           phone: string | null
           practice_days_per_week: number | null
           season_phase: string | null
+          smart_onboarding_completed_at: string | null
           sport: string | null
           sport_level: string | null
           sport_position: string | null
@@ -1629,6 +1630,7 @@ export type Database = {
           phone?: string | null
           practice_days_per_week?: number | null
           season_phase?: string | null
+          smart_onboarding_completed_at?: string | null
           sport?: string | null
           sport_level?: string | null
           sport_position?: string | null
@@ -1669,6 +1671,7 @@ export type Database = {
           phone?: string | null
           practice_days_per_week?: number | null
           season_phase?: string | null
+          smart_onboarding_completed_at?: string | null
           sport?: string | null
           sport_level?: string | null
           sport_position?: string | null
@@ -1759,21 +1762,29 @@ export type Database = {
           budget_band: string | null
           completed_at: string | null
           created_at: string
+          eating_style: string | null
           extra_allergies: string | null
           extra_favorites: string | null
           extra_nogos: string | null
           favorite_foods: string[]
+          intolerances: string[] | null
           kitchen_equipment: string[]
           kitchen_equipment_notes: string | null
+          meal_prep_days: number | null
           meal_prep_style: string | null
           nogo_foods: string[]
           shopping_day: string | null
           shopping_days: string[]
           shopping_lead_days: number
+          training_duration_min: number | null
+          training_equipment: string | null
+          training_experience: string | null
+          training_location: string | null
           training_session_minutes: number | null
           training_weekdays: string[]
           updated_at: string
           user_id: string
+          variety_level: string | null
           weekly_budget_eur: number | null
         }
         Insert: {
@@ -1783,21 +1794,29 @@ export type Database = {
           budget_band?: string | null
           completed_at?: string | null
           created_at?: string
+          eating_style?: string | null
           extra_allergies?: string | null
           extra_favorites?: string | null
           extra_nogos?: string | null
           favorite_foods?: string[]
+          intolerances?: string[] | null
           kitchen_equipment?: string[]
           kitchen_equipment_notes?: string | null
+          meal_prep_days?: number | null
           meal_prep_style?: string | null
           nogo_foods?: string[]
           shopping_day?: string | null
           shopping_days?: string[]
           shopping_lead_days?: number
+          training_duration_min?: number | null
+          training_equipment?: string | null
+          training_experience?: string | null
+          training_location?: string | null
           training_session_minutes?: number | null
           training_weekdays?: string[]
           updated_at?: string
           user_id: string
+          variety_level?: string | null
           weekly_budget_eur?: number | null
         }
         Update: {
@@ -1807,21 +1826,29 @@ export type Database = {
           budget_band?: string | null
           completed_at?: string | null
           created_at?: string
+          eating_style?: string | null
           extra_allergies?: string | null
           extra_favorites?: string | null
           extra_nogos?: string | null
           favorite_foods?: string[]
+          intolerances?: string[] | null
           kitchen_equipment?: string[]
           kitchen_equipment_notes?: string | null
+          meal_prep_days?: number | null
           meal_prep_style?: string | null
           nogo_foods?: string[]
           shopping_day?: string | null
           shopping_days?: string[]
           shopping_lead_days?: number
+          training_duration_min?: number | null
+          training_equipment?: string | null
+          training_experience?: string | null
+          training_location?: string | null
           training_session_minutes?: number | null
           training_weekdays?: string[]
           updated_at?: string
           user_id?: string
+          variety_level?: string | null
           weekly_budget_eur?: number | null
         }
         Relationships: []
