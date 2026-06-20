@@ -1334,9 +1334,8 @@ function ContactForm() {
                     <SelectValue placeholder="Noch unsicher? Auch okay." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="starter">Starter (79 €)</SelectItem>
-                    <SelectItem value="coaching">Coaching (129 €)</SelectItem>
-                    <SelectItem value="premium">Premium (199 €)</SelectItem>
+                    <SelectItem value="smart">BodyFuel Smart (14,99 €)</SelectItem>
+                    <SelectItem value="coaching">BodyFuel Coaching (69 €)</SelectItem>
                     <SelectItem value="unsure">Noch unsicher</SelectItem>
                   </SelectContent>
                 </Select>
