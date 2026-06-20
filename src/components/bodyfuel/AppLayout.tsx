@@ -84,6 +84,27 @@ export function AppLayout({ children }: { children: ReactNode }) {
     return () => { cancelled = true; };
   }, [loading, supabaseUser, isCoach, isFreeUser, pathname, navigate]);
 
+  // Ungelesene Nachrichten für Glocke — Hooks müssen VOR jedem early return aufgerufen werden
+  const myUnreadFn = useServerFn(getMyUnreadCount);
+  const coachInboxFn = useServerFn(getCoachInbox);
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: ["chat-unread", isCoach, supabaseUser?.id],
+    enabled: !!supabaseUser && !isFreeUser,
+    refetchInterval: 30_000,
+    queryFn: async () => {
+      try {
+        if (isCoach) {
+          const inbox = await coachInboxFn();
+          return (inbox ?? []).reduce((s: number, t: any) => s + (t.unread_count ?? 0), 0);
+        }
+        const r = await myUnreadFn();
+        return r?.count ?? 0;
+      } catch {
+        return 0;
+      }
+    },
+  });
+
   if (loading) return null;
   if (!user && !supabaseUser) return null;
   if (isFreeUser && !freeBullsAccess && !freeRankingAccess) return null;
@@ -98,23 +119,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const displayName = user?.name ?? profile?.display_name ?? supabaseUser?.email ?? "Coach";
   const avatar = user?.avatar ?? (displayName.slice(0, 2).toUpperCase());
   const roleLabel = user ? level.name : isCoach ? "Coach" : "Mitglied";
-
-  // Ungelesene Nachrichten für Glocke
-  const myUnreadFn = useServerFn(getMyUnreadCount);
-  const coachInboxFn = useServerFn(getCoachInbox);
-  const { data: unreadCount = 0 } = useQuery({
-    queryKey: ["chat-unread", isCoach, supabaseUser?.id],
-    enabled: !!supabaseUser && !isFreeUser,
-    refetchInterval: 30_000,
-    queryFn: async () => {
-      if (isCoach) {
-        const inbox = await coachInboxFn();
-        return (inbox ?? []).reduce((s, t: any) => s + (t.unread_count ?? 0), 0);
-      }
-      const r = await myUnreadFn();
-      return r?.count ?? 0;
-    },
-  });
   const chatHref = isCoach ? "/coach" : "/messages";
 
   return (
