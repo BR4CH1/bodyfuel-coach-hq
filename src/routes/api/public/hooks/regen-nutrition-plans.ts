@@ -62,7 +62,7 @@ export const Route = createFileRoute("/api/public/hooks/regen-nutrition-plans")(
               target: row.client_id,
               uploadedBy: null,
               start_mode: "today",
-              plan_days: 28,
+              plan_days: 30,
               apiKey,
             });
             results.push({ user: row.client_id, ok: true });
