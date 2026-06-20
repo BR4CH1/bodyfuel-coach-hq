@@ -38,8 +38,8 @@ export function MyPackagePanel() {
     ),
   );
   const lastPayment = data.payments[0];
-  const hasCompletedPayment = data.payments.some((p) => p.status === "completed");
-  const renewLabel = hasCompletedPayment ? "Coaching verlängern" : "Coaching starten";
+  const hasAnyPayment = data.payments.length > 0;
+  const renewLabel = hasAnyPayment ? "Coaching verlängern" : "Coaching starten";
   const stripePriceId = STRIPE_PRICE_BY_PKG[pkg.package];
 
   const handleRenew = () => {
