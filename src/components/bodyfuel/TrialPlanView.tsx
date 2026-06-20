@@ -261,7 +261,7 @@ function TrialMealCard({
       protein_g: meal.protein_g,
       carbs_g: meal.carbs_g,
       fat_g: meal.fat_g,
-      source: entryKey,
+      source: insertKey ?? entryKey,
     });
     setBusy(false);
     if (error) {
