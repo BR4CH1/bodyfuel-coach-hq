@@ -182,7 +182,7 @@ export const Route = createFileRoute("/api/public/hooks/send-feature-news")({
 
           await supabase.from("email_send_log").insert({
             message_id: idempotencyKey,
-            template_name: TEMPLATE_NAME,
+            template_name: effectiveTemplate,
             recipient_email: normalized,
             status: "pending",
           });
@@ -198,7 +198,7 @@ export const Route = createFileRoute("/api/public/hooks/send-feature-news")({
               html,
               text,
               purpose: "transactional",
-              label: LABEL,
+              label: effectiveLabel,
               idempotency_key: idempotencyKey,
               unsubscribe_token: unsubscribeToken,
               queued_at: new Date().toISOString(),
