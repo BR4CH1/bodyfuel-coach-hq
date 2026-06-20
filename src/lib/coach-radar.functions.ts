@@ -218,8 +218,15 @@ export const getCoachRadar = createServerFn({ method: "GET" })
     type PlanEnd = { end: string | null; status: string };
     const nutritionPlanByUser = new Map<string, PlanEnd>();
     const trainingPlanByUser = new Map<string, PlanEnd>();
+    const nutritionQueued = new Set<string>();
+    const trainingQueued = new Set<string>();
     ((plans as any).data ?? []).forEach((p: any) => {
-      const map = p.plan_type === "training" ? trainingPlanByUser : nutritionPlanByUser;
+      const isTraining = p.plan_type === "training";
+      const map = isTraining ? trainingPlanByUser : nutritionPlanByUser;
+      const queuedSet = isTraining ? trainingQueued : nutritionQueued;
+      if (p.status === "approved" || p.status === "draft") {
+        queuedSet.add(p.client_id);
+      }
       const existing = map.get(p.client_id);
       if (p.status === "active") {
         map.set(p.client_id, { end: p.scheduled_end_date ?? null, status: "active" });
