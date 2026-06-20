@@ -34,6 +34,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AchievementsRouteImport } from './routes/achievements'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TrackerIndexRouteImport } from './routes/tracker.index'
+import { Route as SmartIndexRouteImport } from './routes/smart.index'
 import { Route as NutritionIndexRouteImport } from './routes/nutrition.index'
 import { Route as CoachIndexRouteImport } from './routes/coach.index'
 import { Route as BullsIndexRouteImport } from './routes/bulls.index'
@@ -209,6 +210,11 @@ const TrackerIndexRoute = TrackerIndexRouteImport.update({
   id: '/tracker/',
   path: '/tracker/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const SmartIndexRoute = SmartIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => SmartRoute,
 } as any)
 const NutritionIndexRoute = NutritionIndexRouteImport.update({
   id: '/',
@@ -523,6 +529,7 @@ export interface FileRoutesByFullPath {
   '/bulls/': typeof BullsIndexRoute
   '/coach/': typeof CoachIndexRoute
   '/nutrition/': typeof NutritionIndexRoute
+  '/smart/': typeof SmartIndexRoute
   '/tracker/': typeof TrackerIndexRoute
   '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
   '/coach/customers/new': typeof CoachCustomersNewRoute
@@ -565,7 +572,6 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/progress': typeof ProgressRoute
   '/ranking': typeof RankingRoute
-  '/smart': typeof SmartRouteWithChildren
   '/strength-check': typeof StrengthCheckRoute
   '/training': typeof TrainingRoute
   '/trial': typeof TrialRoute
@@ -596,6 +602,7 @@ export interface FileRoutesByTo {
   '/bulls': typeof BullsIndexRoute
   '/coach': typeof CoachIndexRoute
   '/nutrition': typeof NutritionIndexRoute
+  '/smart': typeof SmartIndexRoute
   '/tracker': typeof TrackerIndexRoute
   '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
   '/coach/customers/new': typeof CoachCustomersNewRoute
@@ -674,6 +681,7 @@ export interface FileRoutesById {
   '/bulls/': typeof BullsIndexRoute
   '/coach/': typeof CoachIndexRoute
   '/nutrition/': typeof NutritionIndexRoute
+  '/smart/': typeof SmartIndexRoute
   '/tracker/': typeof TrackerIndexRoute
   '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
   '/coach/customers/new': typeof CoachCustomersNewRoute
@@ -753,6 +761,7 @@ export interface FileRouteTypes {
     | '/bulls/'
     | '/coach/'
     | '/nutrition/'
+    | '/smart/'
     | '/tracker/'
     | '/coach/customers/$userId'
     | '/coach/customers/new'
@@ -795,7 +804,6 @@ export interface FileRouteTypes {
     | '/profile'
     | '/progress'
     | '/ranking'
-    | '/smart'
     | '/strength-check'
     | '/training'
     | '/trial'
@@ -826,6 +834,7 @@ export interface FileRouteTypes {
     | '/bulls'
     | '/coach'
     | '/nutrition'
+    | '/smart'
     | '/tracker'
     | '/coach/customers/$userId'
     | '/coach/customers/new'
@@ -903,6 +912,7 @@ export interface FileRouteTypes {
     | '/bulls/'
     | '/coach/'
     | '/nutrition/'
+    | '/smart/'
     | '/tracker/'
     | '/coach/customers/$userId'
     | '/coach/customers/new'
@@ -1160,6 +1170,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/tracker/'
       preLoaderRoute: typeof TrackerIndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/smart/': {
+      id: '/smart/'
+      path: '/'
+      fullPath: '/smart/'
+      preLoaderRoute: typeof SmartIndexRouteImport
+      parentRoute: typeof SmartRoute
     }
     '/nutrition/': {
       id: '/nutrition/'
@@ -1574,10 +1591,12 @@ const NutritionRouteWithChildren = NutritionRoute._addFileChildren(
 
 interface SmartRouteChildren {
   SmartSignupRoute: typeof SmartSignupRoute
+  SmartIndexRoute: typeof SmartIndexRoute
 }
 
 const SmartRouteChildren: SmartRouteChildren = {
   SmartSignupRoute: SmartSignupRoute,
+  SmartIndexRoute: SmartIndexRoute,
 }
 
 const SmartRouteWithChildren = SmartRoute._addFileChildren(SmartRouteChildren)
