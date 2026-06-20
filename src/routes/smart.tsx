@@ -42,8 +42,7 @@ function SmartLandingPage() {
             <Logo />
           </Link>
           <Link
-            to="/auth"
-            search={{ intent: "smart-signup" } as any}
+            to="/smart/signup"
             className="rounded-lg bg-gradient-gold px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90"
           >
             Jetzt starten
