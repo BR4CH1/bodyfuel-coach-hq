@@ -109,7 +109,7 @@ export function SmartRenewalCard() {
                     ? `Aktuell läuft noch ${data.training.days_until_end} Tage`
                     : "Bereits abgelaufen"
                 }
-                disabled={trainingMut.isPending}
+                disabled={trainingMut.isPending || subBlocked}
                 onClick={() => trainingMut.mutate()}
                 label={trainingMut.isPending ? "Wird erstellt…" : "Verlängern"}
               />
