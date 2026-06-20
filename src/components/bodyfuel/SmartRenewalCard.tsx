@@ -83,10 +83,11 @@ export function SmartRenewalCard() {
                 ? `Aktuell läuft noch ${data.nutrition.days_until_end} Tage`
                 : "Bereits abgelaufen"
             }
-            disabled={nutritionMut.isPending}
+            disabled={nutritionMut.isPending || subBlocked}
             onClick={() => nutritionMut.mutate()}
             label={nutritionMut.isPending ? "Wird erstellt…" : "Verlängern"}
           />
+
         )}
         {showT && (
           <>
