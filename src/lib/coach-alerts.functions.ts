@@ -406,5 +406,79 @@ export const getCoachActionAlerts = createServerFn({ method: "GET" })
       (a, b) =>
         order[a.severity] - order[b.severity] || a.name.localeCompare(b.name),
     );
-    return { alerts };
+
+    const { data: resolvedRows } = await supabase
+      .from("coach_alert_resolutions")
+      .select("*")
+      .eq("coach_user_id", userId)
+      .gte("resolved_at", since7dIso)
+      .order("resolved_at", { ascending: false });
+
+    const resolvedKeys = new Set((resolvedRows ?? []).map((r: any) => r.alert_key));
+    const filtered = alerts.filter((a) => !resolvedKeys.has(a.key));
+
+    const resolved: CoachResolvedAlert[] = (resolvedRows ?? []).map((r: any) => ({
+      user_id: r.alert_user_id,
+      name: r.client_name ?? "Ohne Namen",
+      severity: r.alert_severity as CoachAlertSeverity,
+      kind: r.alert_kind as CoachAlertKind,
+      key: r.alert_key,
+      title: r.alert_title,
+      detail: r.alert_detail ?? "",
+      range: r.alert_range ?? "",
+      action: r.action,
+      resolved_at: r.resolved_at,
+    }));
+
+    return { alerts: filtered, resolved };
   });
+
+export const resolveCoachAlert = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (input: {
+      alert: CoachActionAlert;
+      action: "done" | "ignored";
+    }) => input,
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    await assertCoach(supabase, userId);
+    const a = data.alert;
+    const { error } = await supabase
+      .from("coach_alert_resolutions")
+      .upsert(
+        {
+          coach_user_id: userId,
+          alert_key: a.key,
+          alert_user_id: a.user_id,
+          alert_kind: a.kind,
+          alert_severity: a.severity,
+          alert_title: a.title,
+          alert_detail: a.detail,
+          alert_range: a.range,
+          client_name: a.name,
+          action: data.action,
+          resolved_at: new Date().toISOString(),
+        },
+        { onConflict: "coach_user_id,alert_key" },
+      );
+    if (error) throw error;
+    return { ok: true };
+  });
+
+export const unresolveCoachAlert = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { alert_key: string }) => input)
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    await assertCoach(supabase, userId);
+    const { error } = await supabase
+      .from("coach_alert_resolutions")
+      .delete()
+      .eq("coach_user_id", userId)
+      .eq("alert_key", data.alert_key);
+    if (error) throw error;
+    return { ok: true };
+  });
+
