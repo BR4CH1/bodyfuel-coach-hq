@@ -8,6 +8,7 @@ import {
   updateCustomerAthleteProfile,
   type AthleteProfileInput,
 } from "@/lib/athlete-profile.functions";
+import { useFormDraft, clearFormDraft } from "@/hooks/use-form-draft";
 
 type Experience = "beginner" | "intermediate" | "advanced";
 type SportLevel = "recreational" | "amateur" | "semi_pro" | "pro" | "coach";
@@ -107,6 +108,33 @@ export function AthleteProfileEditor({
     setExperience(initial.training_experience ?? "");
   }, [initial]);
 
+  const draftKey = `bf.athleteProfile.${mode}.${userId ?? "self"}.v1`;
+  useFormDraft(
+    draftKey,
+    {
+      sport, sportPosition, sportLevel, teamSport, matchDays, practiceDays,
+      seasonPhase, classTypes, classDays, mobilityFreq, sportWeekdays,
+      mobilityFocus, cardioOutside, injuries, experience,
+    },
+    (d) => {
+      if (typeof d.sport === "string") setSport(d.sport);
+      if (typeof d.sportPosition === "string") setSportPosition(d.sportPosition);
+      if (typeof d.sportLevel === "string") setSportLevel(d.sportLevel as SportLevel | "");
+      if (typeof d.teamSport === "boolean") setTeamSport(d.teamSport);
+      if (typeof d.matchDays === "string") setMatchDays(d.matchDays);
+      if (typeof d.practiceDays === "string") setPracticeDays(d.practiceDays);
+      if (typeof d.seasonPhase === "string") setSeasonPhase(d.seasonPhase as SeasonPhase | "");
+      if (Array.isArray(d.classTypes)) setClassTypes(d.classTypes as string[]);
+      if (typeof d.classDays === "string") setClassDays(d.classDays);
+      if (typeof d.mobilityFreq === "string") setMobilityFreq(d.mobilityFreq as MobilityFreq | "");
+      if (Array.isArray(d.sportWeekdays)) setSportWeekdays(d.sportWeekdays as string[]);
+      if (typeof d.mobilityFocus === "string") setMobilityFocus(d.mobilityFocus);
+      if (typeof d.cardioOutside === "string") setCardioOutside(d.cardioOutside);
+      if (typeof d.injuries === "string") setInjuries(d.injuries);
+      if (typeof d.experience === "string") setExperience(d.experience as Experience | "");
+    },
+  );
+
   const selfFn = useServerFn(updateMyAthleteProfile);
   const coachFn = useServerFn(updateCustomerAthleteProfile);
   const qc = useQueryClient();
@@ -136,6 +164,7 @@ export function AthleteProfileEditor({
     },
     onSuccess: () => {
       toast.success("Trainings-Profil gespeichert");
+      clearFormDraft(draftKey);
       qc.invalidateQueries({ queryKey: ["customer-detail", userId] });
       qc.invalidateQueries({ queryKey: ["my-athlete-profile"] });
       onSaved?.();

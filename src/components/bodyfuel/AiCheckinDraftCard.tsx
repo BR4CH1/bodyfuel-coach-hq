@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { useFormDraft, clearFormDraft } from "@/hooks/use-form-draft";
 import {
   generateCheckinDraft,
   listCheckinDrafts,
@@ -85,6 +86,19 @@ export function AiCheckinDraftCard({ userId }: { userId: string }) {
   };
   ensureMessage();
 
+  // Persist edited message across reloads/tab switches so coach doesn't lose typing.
+  const editorDraftKey = active ? `bf.coach.checkinDraft.${userId}.${active.id}.v1` : null;
+  useFormDraft(
+    editorDraftKey,
+    { messageDraft, editing },
+    (d) => {
+      if (typeof d.messageDraft === "string" && d.messageDraft.length > 0) {
+        setMessageDraft(d.messageDraft);
+      }
+      if (typeof d.editing === "boolean") setEditing(d.editing);
+    },
+  );
+
   const generateMutation = useMutation({
     mutationFn: () => genFn({ data: { user_id: userId } }),
     onSuccess: async (res) => {
@@ -112,6 +126,7 @@ export function AiCheckinDraftCard({ userId }: { userId: string }) {
     onSuccess: async (_r, vars) => {
       await qc.invalidateQueries({ queryKey });
       setEditing(false);
+      clearFormDraft(editorDraftKey);
       toast.success(
         vars.decision === "approved"
           ? "Entwurf freigegeben"
