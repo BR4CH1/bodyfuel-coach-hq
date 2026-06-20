@@ -1120,6 +1120,7 @@ import { PACKAGES as SHARED_PACKAGES } from "@/lib/bodyfuel/packages";
 const PACKAGES: Array<{
   name: string;
   price: number;
+  priceId: string;
   tagline: string;
   features: string[];
   cta: string;
@@ -1127,6 +1128,7 @@ const PACKAGES: Array<{
 }> = SHARED_PACKAGES.map((p) => ({
   name: p.name,
   price: p.price,
+  priceId: p.priceId,
   tagline: p.tagline,
   features: p.features,
   popular: p.popular,
