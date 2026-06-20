@@ -739,6 +739,32 @@ export const unresolveCoachInboxTask = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const dismissRadarClient = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { user_id: string; name: string; primary_reason: string }) => input)
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    await assertCoach(supabase, userId);
+    const key = `${data.user_id}:radar:dismiss`;
+    const { error } = await supabase.from("coach_alert_resolutions").upsert(
+      {
+        coach_user_id: userId,
+        alert_key: key,
+        alert_user_id: data.user_id,
+        alert_kind: "radar_dismiss",
+        alert_severity: "orange",
+        alert_title: "Radar abgehakt",
+        alert_detail: data.primary_reason,
+        alert_range: "",
+        client_name: data.name,
+        action: "done",
+        resolved_at: new Date().toISOString(),
+      },
+      { onConflict: "coach_user_id,alert_key" },
+    );
+    if (error) throw error;
+    return { ok: true };
+  });
 export const getCustomerRadarStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { user_id: string }) => d)
