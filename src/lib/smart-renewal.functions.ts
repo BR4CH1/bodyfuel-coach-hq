@@ -196,14 +196,15 @@ export const renewSmartTrainingPlan = createServerFn({ method: "POST" })
     const { generateTrainingPlanCore } = await import(
       "./training-plan-ai-core.server"
     );
-    await generateTrainingPlanCore(supabase, {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await generateTrainingPlanCore(supabaseAdmin as any, {
       target: userId,
       uploadedBy: userId,
       startMode: "today",
       apiKey,
       weeks: 4,
     });
-    await activateLatest(supabase, userId, "training");
+    await activateLatest(supabaseAdmin as any, userId, "training");
     return { ok: true };
   });
 
