@@ -175,9 +175,9 @@ export const renewSmartTrainingPlan = createServerFn({ method: "POST" })
           (Date.now() - new Date(lastCheck.performed_at).getTime()) / 86_400_000,
         )
       : null;
-    if (checkAgeDays == null || checkAgeDays > 28) {
+    if (checkAgeDays == null || checkAgeDays > 30) {
       throw new Error(
-        "Bitte zuerst einen neuen Strength-Check durchführen — der letzte ist älter als 4 Wochen.",
+        "Bitte zuerst einen neuen Strength-Check durchführen — der letzte ist älter als 1 Monat.",
       );
     }
 
