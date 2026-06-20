@@ -1180,7 +1180,7 @@ function ContactForm() {
     phone: "",
     goal: "",
     current_weight: "",
-    desired_package: "" as "" | "starter" | "coaching" | "premium" | "unsure",
+    desired_package: "" as "" | "smart" | "coaching" | "unsure",
     message: "",
   });
 
