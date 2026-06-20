@@ -1,5 +1,7 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   LayoutDashboard,
@@ -12,7 +14,9 @@ import {
   UserCircle,
   Shield,
   MessageCircle,
+  Bell,
 } from "lucide-react";
+import { getMyUnreadCount, getCoachInbox } from "@/lib/coach-messages.functions";
 import { useSession } from "@/lib/bodyfuel/session";
 import { Logo } from "./Logo";
 import { getLevel } from "@/lib/bodyfuel/data";
