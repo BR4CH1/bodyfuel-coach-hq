@@ -36,6 +36,8 @@ function TrackerHome() {
 
       <DailyChecklist userId={supabaseUser.id} hideCheckin />
 
+      <MyPackagePanel />
+
       <div className="grid gap-3 sm:grid-cols-2">
         {tiles.map((t) => {
           const Icon = t.icon;
