@@ -44,7 +44,9 @@ export const Route = createFileRoute("/api/public/hooks/send-feature-news")({
         }
         const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-        const template = TEMPLATES[TEMPLATE_NAME];
+        const effectiveTemplate = body.template_name || DEFAULT_TEMPLATE;
+        const effectiveLabel = body.label || DEFAULT_LABEL;
+        const template = TEMPLATES[effectiveTemplate];
         if (!template) {
           return Response.json({ error: "Template missing" }, { status: 500 });
         }
