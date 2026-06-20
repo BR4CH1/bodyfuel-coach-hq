@@ -8,6 +8,7 @@ import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { FreeAppLayout } from "@/components/bodyfuel/FreeAppLayout";
 import { useSession } from "@/lib/bodyfuel/session";
 import { getRanking, getMyNickname, setMyNickname, type RankingEntry } from "@/lib/ranking.functions";
+import { getLevel } from "@/lib/bodyfuel/data";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
