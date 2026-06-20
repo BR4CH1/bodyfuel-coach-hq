@@ -8,6 +8,7 @@ import {
   updateCustomerAthleteProfile,
   type AthleteProfileInput,
 } from "@/lib/athlete-profile.functions";
+import { useFormDraft, clearFormDraft } from "@/hooks/use-form-draft";
 
 type Experience = "beginner" | "intermediate" | "advanced";
 type SportLevel = "recreational" | "amateur" | "semi_pro" | "pro" | "coach";
