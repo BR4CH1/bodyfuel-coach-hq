@@ -546,6 +546,7 @@ function RealUserDashboard() {
       )}
 
       <MyPackagePanel />
+      <SmartRenewalCard />
 
       {/* Level hero card */}
       {(() => {
