@@ -149,7 +149,7 @@ export const renewSmartNutritionPlan = createServerFn({ method: "POST" })
       target: userId,
       uploadedBy: userId,
       start_mode: "today",
-      plan_days: 28,
+      plan_days: 30,
       apiKey,
     });
     await activateLatest(supabase, userId, "nutrition");
