@@ -714,7 +714,6 @@ function PendingPaymentBanner({ userId }: { userId: string }) {
 
   if (pending.length === 0) return null;
   const total = pending.reduce((s, p) => s + Number(p.amount_eur), 0);
-  const paypalUrl = `https://www.paypal.me/ManuSchrader/${total}EUR`;
 
   // Frühestes pending bestimmt die Frist (3 Tage ab Anlage)
   const earliest = pending.reduce((a, b) =>
@@ -769,16 +768,13 @@ function PendingPaymentBanner({ userId }: { userId: string }) {
             </div>
           </div>
         </div>
-        <a
-          href={paypalUrl}
-          target="_blank"
-          rel="noreferrer"
+        <Link
+          to="/dashboard"
           className="inline-flex items-center gap-1 rounded-xl bg-gradient-gold px-4 py-2 text-sm font-semibold text-primary-foreground shadow-gold hover:opacity-90"
         >
-          Jetzt mit PayPal zahlen
+          Jetzt sicher bezahlen
           <ArrowRight className="h-4 w-4" />
-
-        </a>
+        </Link>
       </div>
     </div>
   );
