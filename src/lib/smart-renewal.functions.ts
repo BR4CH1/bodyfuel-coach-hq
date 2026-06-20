@@ -3,9 +3,9 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 /**
  * Smart-Paket Verlängerung:
- * - Ernährungsplan: 4 Wochen (28 Tage)
- * - Trainingsplan: 6 Wochen (42 Tage), aber nur freigegeben wenn letzter
- *   Strength-Check < 28 Tage alt ist. Sonst muss vorher ein neuer Check her.
+ * - Ernährungsplan: 1 Monat (30 Tage)
+ * - Trainingsplan: 1 Monat (4 Wochen), aber nur freigegeben wenn letzter
+ *   Strength-Check < 30 Tage alt ist. Sonst muss vorher ein neuer Check her.
  *
  * Verlängerung ist nur erlaubt, wenn der aktuelle Plan in den nächsten 7 Tagen
  * abläuft ODER bereits abgelaufen ist — kein vorzeitiges Spammen.
