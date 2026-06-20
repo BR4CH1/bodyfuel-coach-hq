@@ -65,14 +65,10 @@ export function MyPackagePanel() {
     retry: false,
   });
 
-  if (!data?.active) return null;
-  const pkg = data.active;
-  const daysLeft = Math.max(
-    0,
-    Math.ceil(
-      (new Date(pkg.end_date).getTime() - Date.now()) / 86400000,
-    ),
-  );
+  const pkg = data?.active ?? null;
+  const daysLeft = pkg
+    ? Math.max(0, Math.ceil((new Date(pkg.end_date).getTime() - Date.now()) / 86400000))
+    : 0;
   const lastPayment = data.payments[0];
   const hasAnyPayment = data.payments.length > 0;
   const ctaPrefix = hasAnyPayment ? "Verlängern mit" : "Starten mit";
@@ -86,34 +82,38 @@ export function MyPackagePanel() {
 
   return (
     <div className="rounded-2xl border border-border bg-card p-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="text-xs uppercase tracking-[0.2em] text-gold">Dein Paket</div>
-          <div className="mt-1 font-display text-2xl font-bold">
-            {PKG_LABEL[pkg.package] ?? pkg.package}
+      {pkg && (
+        <>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <div className="text-xs uppercase tracking-[0.2em] text-gold">Dein Paket</div>
+              <div className="mt-1 font-display text-2xl font-bold">
+                {PKG_LABEL[pkg.package] ?? pkg.package}
+              </div>
+              <div className="mt-1 font-display text-xl text-gold">
+                {Number(pkg.price_eur).toFixed(2)} € / Monat
+              </div>
+            </div>
           </div>
-          <div className="mt-1 font-display text-xl text-gold">
-            {Number(pkg.price_eur).toFixed(2)} € / Monat
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            <Stat icon={<Calendar className="h-4 w-4" />} label="Start" value={pkg.start_date} />
+            <Stat icon={<Calendar className="h-4 w-4" />} label="Ende" value={pkg.end_date} />
+            <Stat
+              icon={<CreditCard className="h-4 w-4" />}
+              label="Status"
+              value={lastPayment ? `${lastPayment.status}` : pkg.is_active ? "aktiv" : "inaktiv"}
+            />
           </div>
-        </div>
-      </div>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-3">
-        <Stat icon={<Calendar className="h-4 w-4" />} label="Start" value={pkg.start_date} />
-        <Stat icon={<Calendar className="h-4 w-4" />} label="Ende" value={pkg.end_date} />
-        <Stat
-          icon={<CreditCard className="h-4 w-4" />}
-          label="Status"
-          value={lastPayment ? `${lastPayment.status}` : pkg.is_active ? "aktiv" : "inaktiv"}
-        />
-      </div>
+          <p className="mt-4 text-xs text-muted-foreground">
+            Restlaufzeit: {daysLeft} Tage. Zahlung sicher per Kreditkarte/SEPA über
+            Stripe; nach Bestätigung wird deine Laufzeit um 1 Monat verlängert.
+          </p>
 
-      <p className="mt-4 text-xs text-muted-foreground">
-        Restlaufzeit: {daysLeft} Tage. Zahlung sicher per Kreditkarte/SEPA über
-        Stripe; nach Bestätigung wird deine Laufzeit um 1 Monat verlängert.
-      </p>
-
-      <div className="mt-5 border-t border-border pt-5">
+          <div className="mt-5 border-t border-border pt-5">
+        </>
+      )}
         <div className="mb-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">
           {hasAnyPayment ? "Paket wählen & verlängern" : "Paket wählen & starten"}
         </div>
