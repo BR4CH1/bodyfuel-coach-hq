@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { type StripeEnv, verifyWebhook } from "@/lib/stripe.server";
 
 let _supabase: ReturnType<typeof createClient> | null = null;
-function getSupabase() {
+function getSupabase(): any {
   if (!_supabase) {
     _supabase = createClient(
       process.env.SUPABASE_URL!,
@@ -28,7 +28,7 @@ async function handleSubscriptionCreated(subscription: any, env: StripeEnv) {
   const periodStart = item?.current_period_start ?? subscription.current_period_start;
   const periodEnd = item?.current_period_end ?? subscription.current_period_end;
 
-  await (getSupabase() as any).from("subscriptions").upsert(
+  await getSupabase().from("subscriptions").upsert(
     {
       user_id: userId,
       stripe_subscription_id: subscription.id,
@@ -54,7 +54,7 @@ async function handleSubscriptionCreated(subscription: any, env: StripeEnv) {
     subscription.status === "active" ||
     subscription.status === "trialing"
   ) {
-    await (getSupabase() as any).from("customer_packages").upsert(
+    await getSupabase().from("customer_packages").upsert(
       {
         user_id: userId,
         package: "smart",
