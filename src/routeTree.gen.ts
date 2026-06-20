@@ -40,6 +40,7 @@ import { Route as TrackerSignupRouteImport } from './routes/tracker.signup'
 import { Route as TrackerLoginRouteImport } from './routes/tracker.login'
 import { Route as TrackerAppRouteImport } from './routes/tracker.app'
 import { Route as OnboardingSmartNutritionRouteImport } from './routes/onboarding.smart-nutrition'
+import { Route as OnboardingSmartRouteImport } from './routes/onboarding.smart'
 import { Route as NutritionTrackingRouteImport } from './routes/nutrition.tracking'
 import { Route as NutritionShoppingRouteImport } from './routes/nutrition.shopping'
 import { Route as NutritionRecipeFromIngredientsRouteImport } from './routes/nutrition.recipe-from-ingredients'
@@ -236,6 +237,11 @@ const OnboardingSmartNutritionRoute =
     path: '/onboarding/smart-nutrition',
     getParentRoute: () => rootRouteImport,
   } as any)
+const OnboardingSmartRoute = OnboardingSmartRouteImport.update({
+  id: '/onboarding/smart',
+  path: '/onboarding/smart',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const NutritionTrackingRoute = NutritionTrackingRouteImport.update({
   id: '/tracking',
   path: '/tracking',
@@ -481,6 +487,7 @@ export interface FileRoutesByFullPath {
   '/nutrition/recipe-from-ingredients': typeof NutritionRecipeFromIngredientsRoute
   '/nutrition/shopping': typeof NutritionShoppingRoute
   '/nutrition/tracking': typeof NutritionTrackingRoute
+  '/onboarding/smart': typeof OnboardingSmartRoute
   '/onboarding/smart-nutrition': typeof OnboardingSmartNutritionRoute
   '/tracker/app': typeof TrackerAppRouteWithChildren
   '/tracker/login': typeof TrackerLoginRoute
@@ -550,6 +557,7 @@ export interface FileRoutesByTo {
   '/nutrition/recipe-from-ingredients': typeof NutritionRecipeFromIngredientsRoute
   '/nutrition/shopping': typeof NutritionShoppingRoute
   '/nutrition/tracking': typeof NutritionTrackingRoute
+  '/onboarding/smart': typeof OnboardingSmartRoute
   '/onboarding/smart-nutrition': typeof OnboardingSmartNutritionRoute
   '/tracker/login': typeof TrackerLoginRoute
   '/tracker/signup': typeof TrackerSignupRoute
@@ -622,6 +630,7 @@ export interface FileRoutesById {
   '/nutrition/recipe-from-ingredients': typeof NutritionRecipeFromIngredientsRoute
   '/nutrition/shopping': typeof NutritionShoppingRoute
   '/nutrition/tracking': typeof NutritionTrackingRoute
+  '/onboarding/smart': typeof OnboardingSmartRoute
   '/onboarding/smart-nutrition': typeof OnboardingSmartNutritionRoute
   '/tracker/app': typeof TrackerAppRouteWithChildren
   '/tracker/login': typeof TrackerLoginRoute
@@ -696,6 +705,7 @@ export interface FileRouteTypes {
     | '/nutrition/recipe-from-ingredients'
     | '/nutrition/shopping'
     | '/nutrition/tracking'
+    | '/onboarding/smart'
     | '/onboarding/smart-nutrition'
     | '/tracker/app'
     | '/tracker/login'
@@ -765,6 +775,7 @@ export interface FileRouteTypes {
     | '/nutrition/recipe-from-ingredients'
     | '/nutrition/shopping'
     | '/nutrition/tracking'
+    | '/onboarding/smart'
     | '/onboarding/smart-nutrition'
     | '/tracker/login'
     | '/tracker/signup'
@@ -836,6 +847,7 @@ export interface FileRouteTypes {
     | '/nutrition/recipe-from-ingredients'
     | '/nutrition/shopping'
     | '/nutrition/tracking'
+    | '/onboarding/smart'
     | '/onboarding/smart-nutrition'
     | '/tracker/app'
     | '/tracker/login'
@@ -900,6 +912,7 @@ export interface RootRouteChildren {
   BullsTrainingRoute: typeof BullsTrainingRoute
   BullsWeightRoute: typeof BullsWeightRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
+  OnboardingSmartRoute: typeof OnboardingSmartRoute
   OnboardingSmartNutritionRoute: typeof OnboardingSmartNutritionRoute
   TrackerAppRoute: typeof TrackerAppRouteWithChildren
   TrackerLoginRoute: typeof TrackerLoginRoute
@@ -1136,6 +1149,13 @@ declare module '@tanstack/react-router' {
       path: '/onboarding/smart-nutrition'
       fullPath: '/onboarding/smart-nutrition'
       preLoaderRoute: typeof OnboardingSmartNutritionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding/smart': {
+      id: '/onboarding/smart'
+      path: '/onboarding/smart'
+      fullPath: '/onboarding/smart'
+      preLoaderRoute: typeof OnboardingSmartRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/nutrition/tracking': {
@@ -1529,6 +1549,7 @@ const rootRouteChildren: RootRouteChildren = {
   BullsTrainingRoute: BullsTrainingRoute,
   BullsWeightRoute: BullsWeightRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
+  OnboardingSmartRoute: OnboardingSmartRoute,
   OnboardingSmartNutritionRoute: OnboardingSmartNutritionRoute,
   TrackerAppRoute: TrackerAppRouteWithChildren,
   TrackerLoginRoute: TrackerLoginRoute,
