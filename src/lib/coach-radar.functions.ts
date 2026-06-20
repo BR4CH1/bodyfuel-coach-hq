@@ -636,6 +636,21 @@ export const getCoachRadar = createServerFn({ method: "GET" })
         }
       }
 
+      // ----- SILENT STAKEHOLDER: niemand der je etwas eingetragen hat -----
+      const hasAnySignal =
+        !!lc ||
+        !!latest ||
+        trackedDates.length > 0 ||
+        !!lt ||
+        !!waterByUser.get(p.id) ||
+        (stepsByUser.get(p.id)?.length ?? 0) > 0 ||
+        pendingDraftCount > 0 ||
+        !!lastPhotoByUser.get(p.id);
+      if (!hasAnySignal) continue;
+
+      // ----- RADAR DISMISS (Coach kann Eintrag abhaken) -----
+      if (resolvedSet.has(`${p.id}:radar:dismiss`)) continue;
+
       // ----- LEVEL -----
       let level: RadarLevel;
       if (critical >= 1) level = "red";
