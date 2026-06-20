@@ -191,6 +191,7 @@ function CustomersList() {
           ["due", `Zahlung fällig (${counts.due})`],
           ["overdue", `Überfällig (${counts.overdue})`],
           ["bulls", `Bulls (${counts.bulls})`],
+          ["smart", `Smart (${counts.smart})`],
           ["trial", `Trial (${counts.trial})`],
           ["trial_expired", `Trial abgelaufen (${counts.trial_expired})`],
           ["free", `Free (${counts.free})`],
