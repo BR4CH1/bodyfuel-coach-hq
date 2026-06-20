@@ -170,6 +170,23 @@ export function NutritionTracker() {
   const [loadingMeals, setLoadingMeals] = useState(false);
   const listCustomMealsFn = useServerFn(listCustomMeals);
 
+  // Persist in-progress add-meal dialog so phone-lock / tab switch doesn't wipe it.
+  const draftKey = userId ? `bf.nutritionTracker.add.${userId}.${date}.v1` : null;
+  useFormDraft(
+    draftKey,
+    { openMeal, query, picking, unit, amountStr, source },
+    (d) => {
+      if (d.openMeal === null || typeof d.openMeal === "string") {
+        setOpenMeal(d.openMeal as Meal | null);
+      }
+      if (typeof d.query === "string") setQuery(d.query);
+      if (d.picking && typeof d.picking === "object") setPicking(d.picking as FoodResult);
+      if (d.unit === "g" || d.unit === "piece") setUnit(d.unit);
+      if (typeof d.amountStr === "string") setAmountStr(d.amountStr);
+      if (d.source === "food" || d.source === "meal") setSource(d.source);
+    },
+  );
+
   const favKey = (f: { barcode?: string | null; name: string; brand?: string | null }) =>
     `${f.barcode ?? f.name}|${f.brand ?? ""}`;
   const favIndex = useMemo(() => {
