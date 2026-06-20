@@ -649,6 +649,7 @@ export function NutritionTracker() {
     setQuery("");
     setResults([]);
     setOpenMeal(null);
+    clearFormDraft(draftKey);
     toast.success("Eintrag hinzugefügt");
   };
 
