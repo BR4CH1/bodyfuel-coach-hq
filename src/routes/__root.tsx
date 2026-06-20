@@ -14,6 +14,7 @@ import { SessionProvider } from "../lib/bodyfuel/session";
 import { Toaster } from "../components/ui/sonner";
 import { ConsentProvider } from "../lib/consent";
 import { CookieConsent } from "../components/bodyfuel/CookieConsent";
+import { PaymentTestModeBanner } from "../components/PaymentTestModeBanner";
 
 function NotFoundComponent() {
   return (
@@ -116,6 +117,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <ConsentProvider>
         <SessionProvider>
+          <PaymentTestModeBanner />
           <Outlet />
           <CookieConsent />
           <Toaster theme="dark" />

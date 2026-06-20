@@ -12,6 +12,8 @@ import {
   completeSmartOnboarding,
   getOnboardingStatus,
 } from "@/lib/smart-onboarding.functions";
+import { generateAiNutritionPlanDraft } from "@/lib/nutrition-plan-ai.functions";
+import { activateLatestSmartPlan } from "@/lib/smart-autopublish.functions";
 import { useSession } from "@/lib/bodyfuel/session";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/bodyfuel/Logo";
@@ -120,6 +122,8 @@ function SmartOnboardingPage() {
   const { supabaseUser, loading } = useSession();
   const statusFn = useServerFn(getOnboardingStatus);
   const completeFn = useServerFn(completeSmartOnboarding);
+  const genNutritionFn = useServerFn(generateAiNutritionPlanDraft);
+  const activateFn = useServerFn(activateLatestSmartPlan);
 
   useEffect(() => {
     if (!loading && !supabaseUser) navigate({ to: "/auth" });
@@ -158,35 +162,51 @@ function SmartOnboardingPage() {
   }, [supabaseUser]);
 
   const mut = useMutation({
-    mutationFn: () => completeFn({
-      data: {
-        height_cm: form.height_cm ? Number(form.height_cm) : null,
-        gender: form.gender || null,
-        birthdate: form.birthdate || null,
-        weight_kg: form.weight_kg ? Number(form.weight_kg) : null,
-        goal_weight_kg: form.goal_weight_kg ? Number(form.goal_weight_kg) : null,
-        training_goal: form.training_goal || null,
-        training_experience: form.training_experience || null,
-        training_location: form.training_location || null,
-        training_equipment: form.training_equipment || null,
-        training_weekdays: form.training_weekdays,
-        training_duration_min: form.training_duration_min,
-        eating_style: form.eating_style || null,
-        meal_prep_days: form.eating_style === "meal_prep" ? form.meal_prep_days : null,
-        shopping_days: form.shopping_days,
-        shopping_lead_days: form.shopping_lead_days,
-        budget_band: form.budget_band || null,
-        weekly_budget_eur: form.weekly_budget_eur ? Number(form.weekly_budget_eur) : null,
-        variety_level: form.variety_level || null,
-        favorite_foods: form.favorite_foods,
-        nogo_foods: form.nogo_foods,
-        allergies: form.allergies,
-        intolerances: form.intolerances,
-        extra_favorites: form.extra_favorites || null,
-        extra_nogos: form.extra_nogos || null,
-        extra_allergies: form.extra_allergies || null,
-      },
-    }),
+    mutationFn: async () => {
+      // 1) Pflichtdaten speichern + Training-Plan automatisch erstellen & aktivieren
+      await completeFn({
+        data: {
+          height_cm: form.height_cm ? Number(form.height_cm) : null,
+          gender: form.gender || null,
+          birthdate: form.birthdate || null,
+          weight_kg: form.weight_kg ? Number(form.weight_kg) : null,
+          goal_weight_kg: form.goal_weight_kg ? Number(form.goal_weight_kg) : null,
+          training_goal: form.training_goal || null,
+          training_experience: form.training_experience || null,
+          training_location: form.training_location || null,
+          training_equipment: form.training_equipment || null,
+          training_weekdays: form.training_weekdays,
+          training_duration_min: form.training_duration_min,
+          eating_style: form.eating_style || null,
+          meal_prep_days: form.eating_style === "meal_prep" ? form.meal_prep_days : null,
+          shopping_days: form.shopping_days,
+          shopping_lead_days: form.shopping_lead_days,
+          budget_band: form.budget_band || null,
+          weekly_budget_eur: form.weekly_budget_eur ? Number(form.weekly_budget_eur) : null,
+          variety_level: form.variety_level || null,
+          favorite_foods: form.favorite_foods,
+          nogo_foods: form.nogo_foods,
+          allergies: form.allergies,
+          intolerances: form.intolerances,
+          extra_favorites: form.extra_favorites || null,
+          extra_nogos: form.extra_nogos || null,
+          extra_allergies: form.extra_allergies || null,
+        },
+      });
+      // 2) Ernährungsplan generieren + aktivieren (best effort)
+      if (supabaseUser) {
+        try {
+          await genNutritionFn({
+            data: { user_id: supabaseUser.id, start_mode: "today" },
+          });
+          await activateFn({
+            data: { user_id: supabaseUser.id, plan_type: "nutrition" },
+          });
+        } catch (e) {
+          console.warn("Auto-Publish Ernährung fehlgeschlagen:", e);
+        }
+      }
+    },
     onSuccess: () => {
       toast.success("Dein BodyFuel Autopilot ist startbereit!");
       navigate({ to: "/dashboard" });

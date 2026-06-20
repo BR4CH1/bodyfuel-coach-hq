@@ -52,6 +52,7 @@ import { Route as CoachPackageRequestsRouteImport } from './routes/coach.package
 import { Route as CoachLeadsRouteImport } from './routes/coach.leads'
 import { Route as CoachCustomersRouteImport } from './routes/coach.customers'
 import { Route as CoachClientIdRouteImport } from './routes/coach.$clientId'
+import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
 import { Route as BullsWeightRouteImport } from './routes/bulls.weight'
 import { Route as BullsTrainingRouteImport } from './routes/bulls.training'
 import { Route as BullsRecoveryRouteImport } from './routes/bulls.recovery'
@@ -76,6 +77,7 @@ import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/l
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
+import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicHooksTrialRemindersRouteImport } from './routes/api/public/hooks/trial-reminders'
 import { Route as ApiPublicHooksSendFeatureNewsRouteImport } from './routes/api/public/hooks/send-feature-news'
 import { Route as ApiPublicHooksRegenTrainingPlansRouteImport } from './routes/api/public/hooks/regen-training-plans'
@@ -299,6 +301,11 @@ const CoachClientIdRoute = CoachClientIdRouteImport.update({
   path: '/$clientId',
   getParentRoute: () => CoachRoute,
 } as any)
+const CheckoutReturnRoute = CheckoutReturnRouteImport.update({
+  id: '/checkout/return',
+  path: '/checkout/return',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BullsWeightRoute = BullsWeightRouteImport.update({
   id: '/bulls/weight',
   path: '/bulls/weight',
@@ -422,6 +429,12 @@ const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
   path: '/lovable/email/auth/preview',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicPaymentsWebhookRoute =
+  ApiPublicPaymentsWebhookRouteImport.update({
+    id: '/api/public/payments/webhook',
+    path: '/api/public/payments/webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksTrialRemindersRoute =
   ApiPublicHooksTrialRemindersRouteImport.update({
     id: '/api/public/hooks/trial-reminders',
@@ -484,6 +497,7 @@ export interface FileRoutesByFullPath {
   '/bulls/recovery': typeof BullsRecoveryRoute
   '/bulls/training': typeof BullsTrainingRoute
   '/bulls/weight': typeof BullsWeightRoute
+  '/checkout/return': typeof CheckoutReturnRoute
   '/coach/$clientId': typeof CoachClientIdRoute
   '/coach/customers': typeof CoachCustomersRouteWithChildren
   '/coach/leads': typeof CoachLeadsRoute
@@ -521,6 +535,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/regen-training-plans': typeof ApiPublicHooksRegenTrainingPlansRoute
   '/api/public/hooks/send-feature-news': typeof ApiPublicHooksSendFeatureNewsRoute
   '/api/public/hooks/trial-reminders': typeof ApiPublicHooksTrialRemindersRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -556,6 +571,7 @@ export interface FileRoutesByTo {
   '/bulls/recovery': typeof BullsRecoveryRoute
   '/bulls/training': typeof BullsTrainingRoute
   '/bulls/weight': typeof BullsWeightRoute
+  '/checkout/return': typeof CheckoutReturnRoute
   '/coach/$clientId': typeof CoachClientIdRoute
   '/coach/leads': typeof CoachLeadsRoute
   '/coach/package-requests': typeof CoachPackageRequestsRoute
@@ -591,6 +607,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/regen-training-plans': typeof ApiPublicHooksRegenTrainingPlansRoute
   '/api/public/hooks/send-feature-news': typeof ApiPublicHooksSendFeatureNewsRoute
   '/api/public/hooks/trial-reminders': typeof ApiPublicHooksTrialRemindersRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -629,6 +646,7 @@ export interface FileRoutesById {
   '/bulls/recovery': typeof BullsRecoveryRoute
   '/bulls/training': typeof BullsTrainingRoute
   '/bulls/weight': typeof BullsWeightRoute
+  '/checkout/return': typeof CheckoutReturnRoute
   '/coach/$clientId': typeof CoachClientIdRoute
   '/coach/customers': typeof CoachCustomersRouteWithChildren
   '/coach/leads': typeof CoachLeadsRoute
@@ -666,6 +684,7 @@ export interface FileRoutesById {
   '/api/public/hooks/regen-training-plans': typeof ApiPublicHooksRegenTrainingPlansRoute
   '/api/public/hooks/send-feature-news': typeof ApiPublicHooksSendFeatureNewsRoute
   '/api/public/hooks/trial-reminders': typeof ApiPublicHooksTrialRemindersRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -705,6 +724,7 @@ export interface FileRouteTypes {
     | '/bulls/recovery'
     | '/bulls/training'
     | '/bulls/weight'
+    | '/checkout/return'
     | '/coach/$clientId'
     | '/coach/customers'
     | '/coach/leads'
@@ -742,6 +762,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/regen-training-plans'
     | '/api/public/hooks/send-feature-news'
     | '/api/public/hooks/trial-reminders'
+    | '/api/public/payments/webhook'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -777,6 +798,7 @@ export interface FileRouteTypes {
     | '/bulls/recovery'
     | '/bulls/training'
     | '/bulls/weight'
+    | '/checkout/return'
     | '/coach/$clientId'
     | '/coach/leads'
     | '/coach/package-requests'
@@ -812,6 +834,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/regen-training-plans'
     | '/api/public/hooks/send-feature-news'
     | '/api/public/hooks/trial-reminders'
+    | '/api/public/payments/webhook'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -849,6 +872,7 @@ export interface FileRouteTypes {
     | '/bulls/recovery'
     | '/bulls/training'
     | '/bulls/weight'
+    | '/checkout/return'
     | '/coach/$clientId'
     | '/coach/customers'
     | '/coach/leads'
@@ -886,6 +910,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/regen-training-plans'
     | '/api/public/hooks/send-feature-news'
     | '/api/public/hooks/trial-reminders'
+    | '/api/public/payments/webhook'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -924,6 +949,7 @@ export interface RootRouteChildren {
   BullsRecoveryRoute: typeof BullsRecoveryRoute
   BullsTrainingRoute: typeof BullsTrainingRoute
   BullsWeightRoute: typeof BullsWeightRoute
+  CheckoutReturnRoute: typeof CheckoutReturnRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   OnboardingSmartRoute: typeof OnboardingSmartRoute
   OnboardingSmartNutritionRoute: typeof OnboardingSmartNutritionRoute
@@ -938,6 +964,7 @@ export interface RootRouteChildren {
   ApiPublicHooksRegenTrainingPlansRoute: typeof ApiPublicHooksRegenTrainingPlansRoute
   ApiPublicHooksSendFeatureNewsRoute: typeof ApiPublicHooksSendFeatureNewsRoute
   ApiPublicHooksTrialRemindersRoute: typeof ApiPublicHooksTrialRemindersRoute
+  ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
@@ -1248,6 +1275,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CoachClientIdRouteImport
       parentRoute: typeof CoachRoute
     }
+    '/checkout/return': {
+      id: '/checkout/return'
+      path: '/checkout/return'
+      fullPath: '/checkout/return'
+      preLoaderRoute: typeof CheckoutReturnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/bulls/weight': {
       id: '/bulls/weight'
       path: '/bulls/weight'
@@ -1416,6 +1450,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailAuthPreviewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/payments/webhook': {
+      id: '/api/public/payments/webhook'
+      path: '/api/public/payments/webhook'
+      fullPath: '/api/public/payments/webhook'
+      preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/trial-reminders': {
       id: '/api/public/hooks/trial-reminders'
       path: '/api/public/hooks/trial-reminders'
@@ -1569,6 +1610,7 @@ const rootRouteChildren: RootRouteChildren = {
   BullsRecoveryRoute: BullsRecoveryRoute,
   BullsTrainingRoute: BullsTrainingRoute,
   BullsWeightRoute: BullsWeightRoute,
+  CheckoutReturnRoute: CheckoutReturnRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   OnboardingSmartRoute: OnboardingSmartRoute,
   OnboardingSmartNutritionRoute: OnboardingSmartNutritionRoute,
@@ -1583,6 +1625,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksRegenTrainingPlansRoute: ApiPublicHooksRegenTrainingPlansRoute,
   ApiPublicHooksSendFeatureNewsRoute: ApiPublicHooksSendFeatureNewsRoute,
   ApiPublicHooksTrialRemindersRoute: ApiPublicHooksTrialRemindersRoute,
+  ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
