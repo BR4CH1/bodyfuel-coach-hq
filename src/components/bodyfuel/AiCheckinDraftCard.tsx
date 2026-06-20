@@ -126,6 +126,7 @@ export function AiCheckinDraftCard({ userId }: { userId: string }) {
     onSuccess: async (_r, vars) => {
       await qc.invalidateQueries({ queryKey });
       setEditing(false);
+      clearFormDraft(editorDraftKey);
       toast.success(
         vars.decision === "approved"
           ? "Entwurf freigegeben"
