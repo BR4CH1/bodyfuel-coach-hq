@@ -23,59 +23,67 @@ export const Route = createFileRoute("/api/public/hooks/plan-rotation")({
         const today = new Date().toISOString().slice(0, 10);
         const log: any[] = [];
 
-        // 1. Auto-archive: active plans past scheduled_end_date
+        // 1. Auto-archive: active plans past scheduled_end_date (bulk update)
         const { data: expired } = await admin
           .from("nutrition_plans")
-          .select("id, client_id, title")
+          .select("id, client_id")
           .eq("status", "active")
           .not("scheduled_end_date", "is", null)
           .lt("scheduled_end_date", today);
-
-        for (const p of (expired ?? []) as any[]) {
+        const expiredIds = (expired ?? []).map((p: any) => p.id);
+        if (expiredIds.length) {
           await admin
             .from("nutrition_plans")
             .update({ status: "archived" })
-            .eq("id", p.id);
-          log.push({ action: "archived_expired", plan: p.id, client: p.client_id });
+            .in("id", expiredIds);
+          for (const p of expired ?? [])
+            log.push({ action: "archived_expired", plan: (p as any).id, client: (p as any).client_id });
         }
 
         // 2. Auto-activate: clients with auto_publish=true whose published/approved
-        //    plan should start today (scheduled_start_date <= today or null).
+        //    plan should start today. Process clients in parallel chunks to stay
+        //    inside Worker CPU limits.
         const { data: profiles } = await admin
           .from("smart_nutrition_profile")
           .select("user_id")
           .eq("auto_publish", true);
 
-        for (const prof of (profiles ?? []) as any[]) {
-          const clientId = prof.user_id;
-          const { data: candidates } = await admin
-            .from("nutrition_plans")
-            .select("id, status, scheduled_start_date, created_at")
-            .eq("client_id", clientId)
-            .eq("plan_type", "nutrition")
-            .in("status", ["approved", "published"])
-            .order("created_at", { ascending: false });
+        const profList = (profiles ?? []) as any[];
+        const CHUNK = 5;
+        for (let i = 0; i < profList.length; i += CHUNK) {
+          const slice = profList.slice(i, i + CHUNK);
+          await Promise.all(
+            slice.map(async (prof) => {
+              const clientId = prof.user_id;
+              const { data: candidates } = await admin
+                .from("nutrition_plans")
+                .select("id, status, scheduled_start_date, created_at")
+                .eq("client_id", clientId)
+                .eq("plan_type", "nutrition")
+                .in("status", ["approved", "published"])
+                .order("created_at", { ascending: false });
 
-          const cand = (candidates ?? []).find(
-            (c: any) =>
-              !c.scheduled_start_date || c.scheduled_start_date <= today,
-          ) as any;
-          if (!cand) continue;
+              const cand = (candidates ?? []).find(
+                (c: any) =>
+                  !c.scheduled_start_date || c.scheduled_start_date <= today,
+              ) as any;
+              if (!cand) return;
 
-          // Archive currently active for this client
-          await admin
-            .from("nutrition_plans")
-            .update({ status: "archived" })
-            .eq("client_id", clientId)
-            .eq("plan_type", "nutrition")
-            .eq("status", "active");
+              await admin
+                .from("nutrition_plans")
+                .update({ status: "archived" })
+                .eq("client_id", clientId)
+                .eq("plan_type", "nutrition")
+                .eq("status", "active");
 
-          await admin
-            .from("nutrition_plans")
-            .update({ status: "active" })
-            .eq("id", cand.id);
+              await admin
+                .from("nutrition_plans")
+                .update({ status: "active" })
+                .eq("id", cand.id);
 
-          log.push({ action: "activated", plan: cand.id, client: clientId });
+              log.push({ action: "activated", plan: cand.id, client: clientId });
+            }),
+          );
         }
 
         return new Response(
