@@ -23,6 +23,11 @@ export type CoachActionAlert = {
   range: string;
 };
 
+export type CoachResolvedAlert = CoachActionAlert & {
+  action: "done" | "ignored";
+  resolved_at: string;
+};
+
 const CUT_GOALS = new Set(["fat_loss", "weight_loss", "aggressive_cut", "cut"]);
 const BULK_GOALS = new Set(["lean_bulk", "muscle_gain", "bulk"]);
 
