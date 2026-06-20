@@ -208,9 +208,17 @@ function CustomerDetail() {
     <div className="space-y-6">
       <div>
         <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Kunde</p>
-        <h1 className="font-display text-3xl font-bold">
-          {data.profile?.display_name ?? data.email}
-        </h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="font-display text-3xl font-bold">
+            {data.profile?.display_name ?? data.email}
+          </h1>
+          {radarStatus && (
+            <CustomerStatusBadge level={radarStatus.level} size="md" showLabel />
+          )}
+        </div>
+        {radarStatus && radarStatus.level !== "green" && (
+          <p className="mt-1 text-xs text-warning">{radarStatus.primary_reason}</p>
+        )}
         <p className="text-sm text-muted-foreground">{data.email}</p>
         {data.profile?.phone && (
           <p className="text-sm text-muted-foreground">{data.profile.phone}</p>
