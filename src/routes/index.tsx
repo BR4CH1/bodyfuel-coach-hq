@@ -6,6 +6,7 @@ import appDashboardAsset from "@/assets/app-dashboard.png.asset.json";
 import nutritionPlanAsset from "@/assets/nutrition-plan.jpeg.asset.json";
 import nutritionMacrosAsset from "@/assets/nutrition-macros.jpeg.asset.json";
 import nutritionTrackerAsset from "@/assets/nutrition-tracker.jpeg.asset.json";
+import manuCoachAsset from "@/assets/manu-coach.png.asset.json";
 import {
   ArrowRight,
   Activity,
