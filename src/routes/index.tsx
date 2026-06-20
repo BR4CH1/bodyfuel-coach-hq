@@ -951,16 +951,19 @@ function AboutCoach() {
     <section id="coach" className="relative border-y border-border/60 bg-card/30 py-20 sm:py-28">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="grid items-center gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
-          {/* Coach photo placeholder */}
+          {/* Coach photo */}
           <div className="relative mx-auto w-full max-w-sm">
             <div className="absolute -inset-4 rounded-3xl bg-gradient-gold opacity-20 blur-2xl" />
             <div className="relative aspect-[4/5] overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-secondary to-background">
-              <div className="absolute inset-0 grid place-items-center">
-                <UserIcon className="h-24 w-24 text-border" strokeWidth={1.2} />
-              </div>
+              <img
+                src={manuCoachAsset.url}
+                alt="Manu — Head Coach von BodyFuel Coaching"
+                className="absolute inset-0 h-full w-full object-cover"
+                loading="lazy"
+              />
               <div className="absolute bottom-4 left-4 right-4 rounded-xl border border-gold/30 bg-background/70 p-3 backdrop-blur">
                 <div className="font-display text-base font-bold">Manu</div>
-                <div className="text-[11px] uppercase tracking-wider text-gold">Head Coach</div>
+                <div className="text-[11px] uppercase tracking-wider text-gold">Head Coach · Essen</div>
               </div>
             </div>
           </div>
@@ -971,15 +974,17 @@ function AboutCoach() {
               Dein Coach: <span className="text-gradient-gold">Manu</span>
             </h2>
             <p className="mt-4 text-muted-foreground leading-relaxed">
-              Ich begleite Menschen dabei, Ernährung, Training und Alltag endlich in den
-              Griff zu bekommen. Mein Ziel ist nicht, dir irgendeinen perfekten Plan
-              hinzulegen, sondern ein System zu bauen, das du wirklich umsetzen kannst.
+              Geboren am 27.09.1990 in Essen, seit über 15 Jahren in der Fitnessbranche
+              zuhause. Ich begleite Menschen dabei, Ernährung, Training und Alltag endlich
+              in den Griff zu bekommen. Mein Ziel ist nicht, dir irgendeinen perfekten
+              Plan hinzulegen, sondern ein System zu bauen, das du wirklich umsetzen
+              kannst.
             </p>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-3">
               {[
+                { v: "15+", l: "Jahre Erfahrung" },
                 { v: "100+", l: "Kunden" },
-                { v: "5★", l: "Bewertungen" },
                 { v: "1:1", l: "Betreuung" },
               ].map((s) => (
                 <div key={s.l} className="rounded-xl border border-border bg-background/60 px-4 py-3 text-center">
@@ -993,6 +998,7 @@ function AboutCoach() {
 
             <ul className="mt-6 space-y-2 text-sm">
               {[
+                "Aus Essen — seit 15 Jahren in der Fitnessbranche",
                 "Persönliches Coaching — kein Bot, kein Standardplan",
                 "Fokus auf Nachhaltigkeit statt schnelle Crash-Ergebnisse",
                 "Ehrliches Feedback, klare Struktur, echte Begleitung",
