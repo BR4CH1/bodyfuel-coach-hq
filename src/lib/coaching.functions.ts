@@ -3,7 +3,8 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const PAYPAL_ME = "https://www.paypal.me/ManuSchrader";
 
-type PackageKey = "starter" | "coaching" | "premium";
+// Aktive Pakete: smart, coaching. starter/premium bleiben für Legacy-Datensätze.
+type PackageKey = "smart" | "coaching" | "starter" | "premium";
 
 async function assertCoach(supabase: any, userId: string) {
   const { data, error } = await supabase.rpc("has_role", {
