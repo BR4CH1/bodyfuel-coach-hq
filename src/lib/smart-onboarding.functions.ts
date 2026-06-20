@@ -48,7 +48,7 @@ export const completeSmartOnboarding = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
 
     // 1) Profil-Stammdaten upserten
-    const profilePatch: Record<string, unknown> = {};
+    const profilePatch: Record<string, any> = {};
     if (data.height_cm != null) profilePatch.height_cm = data.height_cm;
     if (data.gender) profilePatch.gender = data.gender;
     if (data.birthdate) profilePatch.birthdate = data.birthdate;
@@ -58,7 +58,7 @@ export const completeSmartOnboarding = createServerFn({ method: "POST" })
 
     const { error: pErr } = await supabase
       .from("profiles")
-      .update(profilePatch)
+      .update(profilePatch as any)
       .eq("id", userId);
     if (pErr) throw new Error(pErr.message);
 
@@ -73,7 +73,7 @@ export const completeSmartOnboarding = createServerFn({ method: "POST" })
     }
 
     // 3) smart_nutrition_profile upserten
-    const snp: Record<string, unknown> = { user_id: userId };
+    const snp: Record<string, any> = { user_id: userId };
     const map: Array<keyof SmartOnboardingInput> = [
       "eating_style",
       "meal_prep_days",
@@ -104,7 +104,7 @@ export const completeSmartOnboarding = createServerFn({ method: "POST" })
 
     const { error: sErr } = await supabase
       .from("smart_nutrition_profile")
-      .upsert(snp, { onConflict: "user_id" });
+      .upsert(snp as any, { onConflict: "user_id" });
     if (sErr) throw new Error(sErr.message);
 
     // 4) Autopilot triggern — best effort, blockiert nicht
