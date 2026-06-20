@@ -21,6 +21,7 @@ import {
 
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { CoachTrialOverview } from "@/components/bodyfuel/CoachTrialOverview";
+import { CoachActionAlertsCard } from "@/components/bodyfuel/CoachActionAlertsCard";
 import { PendingDraftsCard } from "@/components/bodyfuel/PendingDraftsCard";
 import { supabase } from "@/integrations/supabase/client";
 import { getRanking, type RankingPeriod } from "@/lib/coaching.functions";
@@ -579,6 +580,11 @@ function CoachDashboard() {
             expiringPlans={expiringPlans.length}
             inactive={inactive.length}
             newLeads={leads.length}
+          />
+
+          <CoachActionAlertsCard
+            expiringPlansCount={expiringPlans.length}
+            openCheckinsCount={openWeek.length}
           />
 
           <TaskInboxCard
