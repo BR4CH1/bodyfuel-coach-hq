@@ -163,7 +163,7 @@ function RankingPage() {
                     <th className="px-3 py-2.5 text-right">Punkte</th>
                     <th className="px-3 py-2.5 text-right hidden sm:table-cell">Woche</th>
                     <th className="px-3 py-2.5 text-right hidden sm:table-cell">Streak</th>
-                    <th className="px-3 py-2.5 text-right">Lvl</th>
+                    <th className="px-3 py-2.5 text-right">Level</th>
                   </tr>
                 </thead>
                 <tbody>
