@@ -230,11 +230,13 @@ function UpgradeHint({ text }: { text: string }) {
 function TrialMealCard({
   meal,
   entryKey,
+  insertKey,
   initiallyTracked,
   onTracked,
 }: {
   meal: TrialMeal;
   entryKey: string;
+  insertKey?: string;
   initiallyTracked: boolean;
   onTracked: () => void;
 }) {
