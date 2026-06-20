@@ -365,7 +365,7 @@ export async function generateAiNutritionPlanCore(
       ? daysUntilNextShopping(p.shopping_days, start)
       : daysToNextShopping;
     const overrideDays = data.plan_days != null
-      ? Math.max(1, Math.min(28, Math.round(data.plan_days)))
+      ? Math.max(1, Math.min(30, Math.round(data.plan_days)))
       : null;
     const planDays = overrideDays ?? computedPlanDays;
 

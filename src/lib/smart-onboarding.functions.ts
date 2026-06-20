@@ -107,7 +107,7 @@ export const completeSmartOnboarding = createServerFn({ method: "POST" })
       .upsert(snp as any, { onConflict: "user_id" });
     if (sErr) throw new Error(sErr.message);
 
-    // 4) Autopilot triggern — Training (6 Wochen) + Ernährung (28 Tage). Best effort.
+    // 4) Autopilot triggern — Training (1 Monat) + Ernährung (1 Monat / 30 Tage). Best effort.
     const apiKey = process.env.LOVABLE_API_KEY;
     const results = { nutrition: false, training: false, errors: [] as string[] };
     if (!apiKey) {
@@ -115,7 +115,7 @@ export const completeSmartOnboarding = createServerFn({ method: "POST" })
       return { ok: true, ...results };
     }
 
-    // Trainingsplan (6 Wochen) + sofort aktivieren
+    // Trainingsplan (1 Monat = 4 Wochen) + sofort aktivieren
     try {
       const { generateTrainingPlanCore } = await import("./training-plan-ai-core.server");
       await generateTrainingPlanCore(supabase, {
@@ -123,7 +123,7 @@ export const completeSmartOnboarding = createServerFn({ method: "POST" })
         uploadedBy: userId,
         startMode: "today",
         apiKey,
-        weeks: 6,
+        weeks: 4,
       });
       await activateLatestPlan(supabase, userId, "training");
       results.training = true;
@@ -131,14 +131,14 @@ export const completeSmartOnboarding = createServerFn({ method: "POST" })
       results.errors.push("training: " + (e as Error).message);
     }
 
-    // Ernährungsplan (28 Tage) + sofort aktivieren
+    // Ernährungsplan (1 Monat = 30 Tage) + sofort aktivieren
     try {
       const { generateAiNutritionPlanCore } = await import("./nutrition-plan-ai.functions");
       await generateAiNutritionPlanCore(supabase, {
         target: userId,
         uploadedBy: userId,
         start_mode: "today",
-        plan_days: 28,
+        plan_days: 30,
         apiKey,
       });
       await activateLatestPlan(supabase, userId, "nutrition");

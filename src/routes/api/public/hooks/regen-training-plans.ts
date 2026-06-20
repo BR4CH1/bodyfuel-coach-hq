@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { verifyCronAuth } from "@/lib/cron-auth.server";
 
 /**
- * Cron-Endpoint: Findet aktive Trainingspläne, deren Zeitraum (4 Wochen)
+ * Cron-Endpoint: Findet aktive Trainingspläne, deren Zeitraum (1 Monat)
  * abgelaufen ist, und generiert für jeden Kunden automatisch einen neuen
  * Smart-Plan als Entwurf. Coach bekommt diesen über die normale
  * Plan-Vorschau zur Freigabe.
@@ -58,7 +58,7 @@ export const Route = createFileRoute("/api/public/hooks/regen-training-plans")({
             continue;
           }
 
-          // Strength-Check muss frisch sein (≤ 28 Tage) — sonst wartet das System
+          // Strength-Check muss frisch sein (≤ 30 Tage) — sonst wartet das System
           const { data: lastCheck } = await supabaseAdmin
             .from("strength_checks")
             .select("performed_at")
@@ -70,7 +70,7 @@ export const Route = createFileRoute("/api/public/hooks/regen-training-plans")({
           const ageDays = lastCheck?.performed_at
             ? Math.floor((Date.now() - new Date(lastCheck.performed_at).getTime()) / 86_400_000)
             : null;
-          if (ageDays == null || ageDays > 28) {
+          if (ageDays == null || ageDays > 30) {
             results.push({ user: row.client_id, ok: false, skipped: "strength_check_stale" });
             continue;
           }
@@ -82,7 +82,7 @@ export const Route = createFileRoute("/api/public/hooks/regen-training-plans")({
               startMode: "today",
               apiKey,
               title: `Smart-Trainingsplan (Auto) — ${new Date().toLocaleDateString("de-DE")}`,
-              weeks: 6,
+              weeks: 4,
             });
             results.push({ user: row.client_id, ok: true, plan_id: r.plan_id });
           } catch (e) {

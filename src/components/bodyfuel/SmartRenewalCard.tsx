@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 /**
  * Wird nur für Smart-Kunden angezeigt, deren Plan in <= 7 Tagen abläuft
  * (oder bereits abgelaufen ist). Trainingsplan-Verlängerung blockiert, wenn
- * letzter Strength-Check älter als 4 Wochen.
+ * letzter Strength-Check älter als 1 Monat.
  */
 export function SmartRenewalCard() {
   const fn = useServerFn(getSmartRenewalStatus);
@@ -77,7 +77,7 @@ export function SmartRenewalCard() {
         {showN && (
           <RenewRow
             icon={<Apple className="h-4 w-4" />}
-            title="Ernährungsplan (4 Wochen)"
+            title="Ernährungsplan (1 Monat)"
             sub={
               data.nutrition.days_until_end != null && data.nutrition.days_until_end >= 0
                 ? `Aktuell läuft noch ${data.nutrition.days_until_end} Tage`
@@ -93,7 +93,7 @@ export function SmartRenewalCard() {
           <>
             {data.training.blocked_by_strength_check ? (
               <BlockedRow
-                title="Trainingsplan (6 Wochen)"
+                title="Trainingsplan (1 Monat)"
                 sub={
                   data.training.last_check_days_ago == null
                     ? "Noch kein Strength-Check abgeschlossen"
@@ -103,7 +103,7 @@ export function SmartRenewalCard() {
             ) : (
               <RenewRow
                 icon={<Dumbbell className="h-4 w-4" />}
-                title="Trainingsplan (6 Wochen)"
+                title="Trainingsplan (1 Monat)"
                 sub={
                   data.training.days_until_end != null && data.training.days_until_end >= 0
                     ? `Aktuell läuft noch ${data.training.days_until_end} Tage`

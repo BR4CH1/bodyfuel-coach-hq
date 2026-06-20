@@ -3,9 +3,9 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 /**
  * Smart-Paket Verlängerung:
- * - Ernährungsplan: 4 Wochen (28 Tage)
- * - Trainingsplan: 6 Wochen (42 Tage), aber nur freigegeben wenn letzter
- *   Strength-Check < 28 Tage alt ist. Sonst muss vorher ein neuer Check her.
+ * - Ernährungsplan: 1 Monat (30 Tage)
+ * - Trainingsplan: 1 Monat (4 Wochen), aber nur freigegeben wenn letzter
+ *   Strength-Check < 30 Tage alt ist. Sonst muss vorher ein neuer Check her.
  *
  * Verlängerung ist nur erlaubt, wenn der aktuelle Plan in den nächsten 7 Tagen
  * abläuft ODER bereits abgelaufen ist — kein vorzeitiges Spammen.
@@ -92,7 +92,7 @@ export const getSmartRenewalStatus = createServerFn({ method: "GET" })
           (Date.now() - new Date(lastCheck.performed_at).getTime()) / 86_400_000,
         )
       : null;
-    const strengthCheckStale = checkAgeDays == null ? true : checkAgeDays > 28;
+    const strengthCheckStale = checkAgeDays == null ? true : checkAgeDays > 30;
 
     return {
       is_smart: isSmart,
@@ -149,7 +149,7 @@ export const renewSmartNutritionPlan = createServerFn({ method: "POST" })
       target: userId,
       uploadedBy: userId,
       start_mode: "today",
-      plan_days: 28,
+      plan_days: 30,
       apiKey,
     });
     await activateLatest(supabase, userId, "nutrition");
@@ -175,9 +175,9 @@ export const renewSmartTrainingPlan = createServerFn({ method: "POST" })
           (Date.now() - new Date(lastCheck.performed_at).getTime()) / 86_400_000,
         )
       : null;
-    if (checkAgeDays == null || checkAgeDays > 28) {
+    if (checkAgeDays == null || checkAgeDays > 30) {
       throw new Error(
-        "Bitte zuerst einen neuen Strength-Check durchführen — der letzte ist älter als 4 Wochen.",
+        "Bitte zuerst einen neuen Strength-Check durchführen — der letzte ist älter als 1 Monat.",
       );
     }
 
@@ -200,7 +200,7 @@ export const renewSmartTrainingPlan = createServerFn({ method: "POST" })
       uploadedBy: userId,
       startMode: "today",
       apiKey,
-      weeks: 6,
+      weeks: 4,
     });
     await activateLatest(supabase, userId, "training");
     return { ok: true };
