@@ -141,13 +141,13 @@ function CoachDashboard() {
     mutationFn: (input: { client_id: string; task_key: string }) =>
       genDraftFn({ data: { user_id: input.client_id } }).then((res) => ({ ...res, task_key: input.task_key })),
     onSuccess: (res) => {
-      toast.success("KI-Entwurf erstellt — im Kundenprofil prüfen");
+      toast.success("Entwurf erstellt — im Kundenprofil prüfen");
       qc.invalidateQueries({ queryKey: ["pending-checkin-drafts"] });
       setStateFn({ data: { task_key: res.task_key, action: "complete" } }).then(() =>
         qc.invalidateQueries({ queryKey: ["coach-task-states"] }),
       );
     },
-    onError: (e: any) => toast.error(e?.message ?? "KI-Entwurf fehlgeschlagen"),
+    onError: (e: any) => toast.error(e?.message ?? "Entwurf fehlgeschlagen"),
   });
 
   const [bulkExtendProgress, setBulkExtendProgress] = useState<{ done: number; total: number } | null>(null);
@@ -195,7 +195,7 @@ function CoachDashboard() {
       return { ok, errors };
     },
     onSuccess: (res) => {
-      if (res.ok > 0) toast.success(`${res.ok} KI-Entwürfe erstellt`);
+      if (res.ok > 0) toast.success(`${res.ok} Entwürfe erstellt`);
       if (res.errors.length > 0) toast.error(`${res.errors.length} fehlgeschlagen: ${res.errors[0]}`);
       qc.invalidateQueries({ queryKey: ["pending-checkin-drafts"] });
       qc.invalidateQueries({ queryKey: ["coach-task-states"] });
@@ -938,7 +938,7 @@ function TaskInboxCard({
       to: "/coach/customers/$userId",
       params: { userId: c.id },
       quickAction: {
-        label: "✨ KI-Entwurf",
+        label: "✨ Entwurf",
         onClick: () => onGenerateDraft(c.id, `checkin:${c.id}`),
         loading: generatingKey === `checkin:${c.id}`,
       },
@@ -973,7 +973,7 @@ function TaskInboxCard({
       to: "/coach/customers/$userId",
       params: { userId: c.id },
       quickAction: {
-        label: "✨ KI-Entwurf",
+        label: "✨ Entwurf",
         onClick: () => onGenerateDraft(c.id, `risk:${c.id}`),
         loading: generatingKey === `risk:${c.id}`,
       },
@@ -1061,8 +1061,8 @@ function TaskInboxCard({
               >
                 <Zap className="h-3.5 w-3.5" />
                 {bulkDrafting && bulkDraftProgress
-                  ? `KI ${bulkDraftProgress.done}/${bulkDraftProgress.total}…`
-                  : `KI-Entwürfe für alle (${draftCandidates.length})`}
+                  ? `Erstelle ${bulkDraftProgress.done}/${bulkDraftProgress.total}…`
+                  : `Entwürfe für alle (${draftCandidates.length})`}
               </button>
             );
           })()}

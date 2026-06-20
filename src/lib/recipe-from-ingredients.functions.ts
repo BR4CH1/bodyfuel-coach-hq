@@ -62,8 +62,8 @@ Antworte ausschließlich mit gültigem JSON in dieser Form:
       }),
     });
     if (res.status === 429) throw new Error("Rate-Limit erreicht — bitte gleich nochmal versuchen.");
-    if (res.status === 402) throw new Error("KI-Guthaben aufgebraucht — bitte aufladen.");
-    if (!res.ok) throw new Error(`KI-Fehler [${res.status}]`);
+    if (res.status === 402) throw new Error("Guthaben aufgebraucht — bitte aufladen.");
+    if (!res.ok) throw new Error(`Fehler [${res.status}]`);
     const json = await res.json();
     const raw = json?.choices?.[0]?.message?.content ?? "{}";
     let parsed: any = {};

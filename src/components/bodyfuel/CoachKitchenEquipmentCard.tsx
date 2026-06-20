@@ -78,7 +78,7 @@ export function CoachKitchenEquipmentCard({ userId }: { userId: string }) {
         <h2 className="font-display text-lg font-bold">Küchenausstattung</h2>
       </div>
       <p className="mb-4 text-xs text-muted-foreground">
-        Welche Geräte hat der Kunde verfügbar? Die KI wird Rezepte so wählen, dass sie damit
+        Welche Geräte hat der Kunde verfügbar? BodyFuel wählt Rezepte so, dass sie damit
         zubereitbar sind (z. B. „nur Airfryer, kein Herd“).
       </p>
 

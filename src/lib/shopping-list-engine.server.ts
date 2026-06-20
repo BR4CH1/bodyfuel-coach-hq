@@ -391,8 +391,8 @@ async function callAi(prompt: string, apiKey: string): Promise<ShoppingItem[]> {
     }),
   });
   if (res.status === 429) throw new Error("Rate-Limit erreicht");
-  if (res.status === 402) throw new Error("KI-Guthaben aufgebraucht");
-  if (!res.ok) throw new Error(`KI-Fehler [${res.status}]`);
+  if (res.status === 402) throw new Error("Guthaben aufgebraucht");
+  if (!res.ok) throw new Error(`Fehler [${res.status}]`);
   const raw = (await res.json())?.choices?.[0]?.message?.content ?? "{}";
   try {
     const clean =

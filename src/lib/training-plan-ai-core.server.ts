@@ -440,16 +440,16 @@ GENAU 4 Wochen. Jede Woche GENAU 7 Tage (Mo, Di, Mi, Do, Fr, Sa, So in dieser Re
     }),
   });
   if (aiRes.status === 429) throw new Error("Rate-Limit erreicht — gleich nochmal versuchen.");
-  if (aiRes.status === 402) throw new Error("KI-Guthaben aufgebraucht — bitte aufladen.");
+  if (aiRes.status === 402) throw new Error("Guthaben aufgebraucht — bitte aufladen.");
   if (!aiRes.ok) {
     const txt = await aiRes.text();
-    throw new Error(`KI-Fehler [${aiRes.status}]: ${txt.slice(0, 200)}`);
+    throw new Error(`Fehler [${aiRes.status}]: ${txt.slice(0, 200)}`);
   }
   const aiJson = await aiRes.json();
   const raw = aiJson?.choices?.[0]?.message?.content ?? "{}";
   let parsed: { weeks?: GenWeek[]; days?: GenDay[] } = {};
   try { parsed = typeof raw === "string" ? JSON.parse(raw) : raw; }
-  catch { throw new Error("KI-Antwort konnte nicht gelesen werden."); }
+  catch { throw new Error("Antwort konnte nicht gelesen werden."); }
 
   let weeks: GenWeek[] = parsed.weeks ?? [];
   if (!weeks.length && parsed.days?.length) {
@@ -562,7 +562,7 @@ GENAU 4 Wochen. Jede Woche GENAU 7 Tage (Mo, Di, Mi, Do, Fr, Sa, So in dieser Re
 
   if (totalEx === 0) {
     await supabase.from("nutrition_plans").delete().eq("id", planRow.id);
-    throw new Error("KI hat keine Übungen geliefert (Antwort vermutlich abgeschnitten). Bitte erneut versuchen.");
+    throw new Error("Keine Übungen geliefert (Antwort vermutlich abgeschnitten). Bitte erneut versuchen.");
   }
 
   return {

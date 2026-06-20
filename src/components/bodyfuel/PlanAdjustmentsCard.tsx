@@ -38,7 +38,7 @@ export function PlanAdjustmentsCard({ userId }: { userId: string }) {
       setActiveIdx(0);
       setAppliedNutritionFor(null);
     },
-    onError: (e: any) => toast.error(e?.message ?? "KI-Vorschlag fehlgeschlagen"),
+    onError: (e: any) => toast.error(e?.message ?? "Vorschlag fehlgeschlagen"),
   });
 
   const applyMut = useMutation({
@@ -80,7 +80,7 @@ export function PlanAdjustmentsCard({ userId }: { userId: string }) {
         <div className="flex items-center gap-2">
           <Sparkles className="h-5 w-5 text-gold" />
           <div>
-            <h3 className="font-display text-lg font-bold">KI Plan-Anpassungen</h3>
+            <h3 className="font-display text-lg font-bold">Plan-Anpassungen</h3>
             <p className="text-xs text-muted-foreground">
               A/B-Vergleich: Konservativ vs. Aggressiv
             </p>
@@ -108,7 +108,7 @@ export function PlanAdjustmentsCard({ userId }: { userId: string }) {
 
       {!data && !genMut.isPending && (
         <div className="rounded-xl border border-dashed border-border/60 p-4 text-sm text-muted-foreground">
-          Klicke „Varianten generieren", um zwei KI-Vorschläge (vorsichtig &amp; aggressiv) zum Vergleich zu erhalten.
+          Klicke „Varianten generieren", um zwei Vorschläge (vorsichtig &amp; aggressiv) zum Vergleich zu erhalten.
         </div>
       )}
 

@@ -103,7 +103,7 @@ export function PartnerLinkCard({ userId }: { userId: string }) {
         <h2 className="font-display text-lg font-bold">Partner-Modus</h2>
       </div>
       <p className="mt-1 text-xs text-muted-foreground">
-        Koppele zwei Kunden, wenn sie häufig zusammen essen. Die KI plant
+        Koppele zwei Kunden, wenn sie häufig zusammen essen. BodyFuel plant
         gleiche Gerichte mit individuellen Mengen und Makros.
       </p>
 

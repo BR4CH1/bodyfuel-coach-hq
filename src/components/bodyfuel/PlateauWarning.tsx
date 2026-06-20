@@ -62,7 +62,7 @@ export function PlateauWarning({
           <p className="font-display text-sm font-bold text-amber-200">Gewichtsplateau</p>
           <p className="mt-1 text-sm text-amber-100/90">
             Gewicht stagniert seit ~{state.days} Tagen. Empfehlung: Kalorien um {adjustment} anpassen.
-            Der nächste KI-Ernährungsplan berücksichtigt das automatisch.
+            Der nächste Ernährungsplan berücksichtigt das automatisch.
           </p>
         </div>
       </div>

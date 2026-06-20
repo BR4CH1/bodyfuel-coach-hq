@@ -282,7 +282,7 @@ export function NutritionTracker() {
       setPicking(r);
       setUnit(r.serving_g ? "piece" : "g");
       setAmountStr(r.serving_g ? "1" : "100");
-      toast.success("KI-Schätzung erstellt – Werte prüfen & speichern.");
+      toast.success("Schätzung erstellt – Werte prüfen & speichern.");
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -1055,9 +1055,9 @@ export function NutritionTracker() {
                           className="gap-2 border-gold/40 text-gold hover:bg-gold/10"
                         >
                           {aiEstimating ? (
-                            <><Loader2 className="h-3.5 w-3.5 animate-spin" /> KI schätzt…</>
+                            <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Schätzt…</>
                           ) : (
-                            <><Sparkles className="h-3.5 w-3.5" /> Nährwerte per KI schätzen</>
+                            <><Sparkles className="h-3.5 w-3.5" /> Nährwerte schätzen</>
                           )}
                         </Button>
                       )}
@@ -1072,9 +1072,9 @@ export function NutritionTracker() {
                         className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-gold disabled:opacity-50"
                       >
                         {aiEstimating ? (
-                          <><Loader2 className="h-3 w-3 animate-spin" /> KI schätzt…</>
+                          <><Loader2 className="h-3 w-3 animate-spin" /> Schätzt…</>
                         ) : (
-                          <><Sparkles className="h-3 w-3" /> Nichts passt? KI-Schätzung</>
+                          <><Sparkles className="h-3 w-3" /> Nichts passt? Schätzung</>
                         )}
                       </button>
                     </div>

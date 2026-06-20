@@ -107,7 +107,7 @@ export function CoachBaseDataEditor({
         <h3 className="font-display text-base font-bold">Stammdaten bearbeiten</h3>
       </div>
       <p className="text-xs text-muted-foreground mb-4">
-        Diese Werte fließen in Zielprognose, Kalorienpfad und KI-Pläne ein. Bitte für jeden neuen
+        Diese Werte fließen in Zielprognose, Kalorienpfad und Pläne ein. Bitte für jeden neuen
         Kunden direkt vollständig hinterlegen.
       </p>
 
@@ -173,7 +173,7 @@ export function CoachBaseDataEditor({
             </button>
           </div>
           <p className="mt-1 text-[11px] text-muted-foreground">
-            Falls der Kunde sein Gewicht nicht selbst gepflegt hat — wird sofort für Zielprognose und KI-Pläne verwendet.
+            Falls der Kunde sein Gewicht nicht selbst gepflegt hat — wird sofort für Zielprognose und Pläne verwendet.
           </p>
         </div>
 

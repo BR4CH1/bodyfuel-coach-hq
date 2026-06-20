@@ -123,9 +123,9 @@ export function PhotoAssessmentCard({
         after_date: dates[0],
         released_to_client: false,
       });
-      toast.success("KI-Vorschlag erstellt — bitte prüfen und speichern");
+      toast.success("Vorschlag erstellt — bitte prüfen und speichern");
     } catch (e: any) {
-      toast.error(e?.message ?? "KI Fehler");
+      toast.error(e?.message ?? "Fehler");
     } finally {
       setRunning(false);
     }
@@ -142,7 +142,7 @@ export function PhotoAssessmentCard({
             className="inline-flex items-center gap-1 rounded-md border border-gold/40 bg-accent/30 px-3 py-1.5 text-xs font-semibold text-gold hover:bg-accent/50 disabled:opacity-60"
           >
             {running ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-            KI-Vorschlag
+            Smart-Vorschlag
           </button>
           {!draft && (
             <button
@@ -214,7 +214,7 @@ export function PhotoAssessmentCard({
           <textarea
             value={draft.ai_summary ?? ""}
             onChange={(e) => setDraft({ ...draft, ai_summary: e.target.value })}
-            placeholder="KI-Zusammenfassung / Notiz"
+            placeholder="Zusammenfassung / Notiz"
             rows={3}
             className="w-full rounded-md border border-border bg-background px-2 py-1 text-xs"
           />

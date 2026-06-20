@@ -155,7 +155,7 @@ export function AthleteProfileEditor({
         <h3 className="font-display text-base font-bold">Trainings- & Sport-Profil</h3>
       </div>
       <p className="text-xs text-muted-foreground mb-4">
-        Diese Angaben fließen direkt in die Smart-Trainingsplan-Erstellung der KI ein.
+        Diese Angaben fließen direkt in die Smart-Trainingsplan-Erstellung ein.
         Je vollständiger, desto besser passt der Plan zu dir.
       </p>
 
@@ -248,7 +248,7 @@ export function AthleteProfileEditor({
               ))}
             </div>
             <p className="mt-1 text-[11px] text-muted-foreground">
-              Die KI plant an diesen Tagen leichteres oder kein Beintraining ein, um Übertraining zu vermeiden.
+              BodyFuel plant an diesen Tagen leichteres oder kein Beintraining ein, um Übertraining zu vermeiden.
             </p>
           </Field>
         )}
