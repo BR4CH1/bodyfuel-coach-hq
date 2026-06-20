@@ -164,6 +164,7 @@ export function AthleteProfileEditor({
     },
     onSuccess: () => {
       toast.success("Trainings-Profil gespeichert");
+      clearFormDraft(draftKey);
       qc.invalidateQueries({ queryKey: ["customer-detail", userId] });
       qc.invalidateQueries({ queryKey: ["my-athlete-profile"] });
       onSaved?.();
