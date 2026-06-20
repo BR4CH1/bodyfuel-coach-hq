@@ -55,12 +55,24 @@ export function SmartRenewalCard() {
     data.training.days_until_end == null || data.training.days_until_end <= 7;
   if (!showN && !showT) return null;
 
+  const subBlocked = data.subscription && !data.subscription.active;
+
   return (
     <div className="rounded-2xl border border-gold/40 bg-gradient-to-br from-gold/10 to-transparent p-4">
       <div className="mb-3 flex items-center gap-2">
         <RefreshCw className="h-4 w-4 text-gold" />
         <h3 className="font-display text-base font-bold">Plan verlängern</h3>
       </div>
+      {subBlocked && (
+        <div className="mb-3 rounded-xl border border-destructive/40 bg-destructive/5 p-3 text-xs text-muted-foreground">
+          <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-destructive">
+            <AlertTriangle className="h-4 w-4" />
+            Abo nicht aktiv
+          </div>
+          Verlängerung erst möglich, wenn die nächste Zahlung durch ist
+          {data.subscription?.status ? ` (Status: ${data.subscription.status})` : ""}.
+        </div>
+      )}
       <div className="space-y-3">
         {showN && (
           <RenewRow
