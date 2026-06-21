@@ -142,7 +142,7 @@ export const Route = createFileRoute("/api/public/hooks/send-feature-news")({
           }, { status: 400 });
         }
 
-        const results: Array<{ email: string; status: string; reason?: string }> = [];
+        const counts = { queued: 0, duplicate: 0, suppressed: 0, error: 0 };
         const dateTag = new Date().toISOString().slice(0, 10);
 
         for (const r of recipients) {
@@ -158,7 +158,7 @@ export const Route = createFileRoute("/api/public/hooks/send-feature-news")({
             .eq("message_id", idempotencyKey)
             .maybeSingle();
           if (existing) {
-            results.push({ email: normalized, status: "duplicate" });
+            counts.duplicate++;
             continue;
           }
 
@@ -169,7 +169,7 @@ export const Route = createFileRoute("/api/public/hooks/send-feature-news")({
             .eq("email", normalized)
             .maybeSingle();
           if (supp) {
-            results.push({ email: normalized, status: "suppressed" });
+            counts.suppressed++;
             continue;
           }
 
@@ -232,17 +232,14 @@ export const Route = createFileRoute("/api/public/hooks/send-feature-news")({
           });
 
           if (enqErr) {
-            results.push({ email: normalized, status: "error", reason: enqErr.message });
+            counts.error++;
           } else {
-            results.push({ email: normalized, status: "queued" });
+            counts.queued++;
           }
         }
 
-        return Response.json({
-          ok: true,
-          processed: results.length,
-          results,
-        });
+        const processed = counts.queued + counts.duplicate + counts.suppressed + counts.error;
+        return Response.json({ ok: true, processed, counts });
       },
     },
   },
