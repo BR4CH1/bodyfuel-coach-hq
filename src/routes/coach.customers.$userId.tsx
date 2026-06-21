@@ -53,6 +53,7 @@ import { MealWishesCard } from "@/components/bodyfuel/MealWishesCard";
 import { CoachKitchenEquipmentCard } from "@/components/bodyfuel/CoachKitchenEquipmentCard";
 import { ProgressPhotosCard } from "@/components/bodyfuel/ProgressPhotosCard";
 import { PhotoAssessmentCard } from "@/components/bodyfuel/PhotoAssessmentCard";
+import { SectionErrorBoundary } from "@/components/bodyfuel/SectionErrorBoundary";
 
 import { PartnerLinkCard } from "@/components/bodyfuel/PartnerLinkCard";
 import { CoachTrainingGoalCard } from "@/components/bodyfuel/CoachTrainingGoalCard";
