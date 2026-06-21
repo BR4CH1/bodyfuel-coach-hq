@@ -351,6 +351,20 @@ function CustomersList() {
           </div>
         </>
       )}
+
+      {filter === "all" && (trials ?? []).some((t: any) => t.trial_status === "trial") && (
+        <div className="space-y-2">
+          <h2 className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Trial</h2>
+          <TrialList users={(trials ?? []).filter((t: any) => t.trial_status === "trial")} />
+        </div>
+      )}
+
+      {filter === "all" && (freeUsers ?? []).length > 0 && (
+        <div className="space-y-2">
+          <h2 className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Free Tracker</h2>
+          <FreeList users={freeUsers ?? []} />
+        </div>
+      )}
     </div>
   );
 }
