@@ -109,10 +109,36 @@ export const Route = createFileRoute("/api/public/hooks/send-feature-news")({
           }
         }
 
+        // Mode 3: all registered users (any profile with an auth email)
+        if (body.send_to_all_registered === true) {
+          const { data: profs } = await supabase
+            .from("profiles")
+            .select("id, display_name")
+            .order("id");
+
+          if (profs && profs.length > 0) {
+            const nameById = new Map<string, string>();
+            profs.forEach((p: any) =>
+              nameById.set(p.id, (p.display_name ?? "").split(" ")[0] ?? "")
+            );
+
+            for (const p of profs) {
+              const { data: u } = await supabase.auth.admin.getUserById(p.id);
+              const email = u?.user?.email;
+              if (!email) continue;
+              recipients.push({
+                user_id: p.id,
+                email,
+                first_name: nameById.get(p.id) ?? "",
+              });
+            }
+          }
+        }
+
         if (recipients.length === 0) {
           return Response.json({
             error:
-              "No recipients. Provide { test_emails: [...] } or { send_to_all_active: true }",
+              "No recipients. Provide { test_emails: [...] } or { send_to_all_active: true } or { send_to_all_registered: true }",
           }, { status: 400 });
         }
 
