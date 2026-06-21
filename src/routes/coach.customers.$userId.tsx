@@ -270,7 +270,7 @@ function CustomerDetail() {
                 >
                   Passwort zurücksetzen
                 </Button>
-                {status === "deactivated" ? (
+                {status === "deactivated" && (
                   <Button
                     size="sm"
                     variant="outline"
@@ -279,47 +279,72 @@ function CustomerDetail() {
                   >
                     Zugang aktivieren
                   </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      if (window.confirm("Zugang wirklich deaktivieren? Der Kunde kann sich nicht mehr einloggen.")) {
-                        accessAction.mutate("deactivate");
-                      }
-                    }}
-                    disabled={accessAction.isPending}
-                    className="text-destructive hover:text-destructive"
-                  >
-                    Zugang deaktivieren
-                  </Button>
                 )}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setShowPwForm((v) => !v)}
-                >
-                  Passwort selbst setzen
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={async () => {
-                    const name = data.profile?.display_name ?? data.email ?? "diesen Kunden";
-                    if (!window.confirm(`Konto von ${name} unwiderruflich löschen? Alle Pakete und Zahlungen werden ebenfalls entfernt.`)) return;
-                    try {
-                      await deleteFn({ data: { user_id: userId } });
-                      toast.success("Kunde gelöscht.");
-                      navigate({ to: "/coach/customers" });
-                    } catch (e) {
-                      toast.error((e as Error).message);
-                    }
-                  }}
-                  className="text-destructive hover:text-destructive"
-                >
-                  Konto löschen
-                </Button>
               </div>
+
+              {/* Danger zone — versteckt, damit nichts versehentlich passiert */}
+              <div className="mt-4 border-t border-border pt-3">
+                <button
+                  type="button"
+                  onClick={() => setShowDangerZone((v) => !v)}
+                  className="text-[11px] uppercase tracking-wider text-muted-foreground hover:text-destructive"
+                >
+                  {showDangerZone ? "▾ Erweiterte Aktionen ausblenden" : "▸ Erweiterte Aktionen anzeigen"}
+                </button>
+                {showDangerZone && (
+                  <div className="mt-3 rounded-xl border border-destructive/30 bg-destructive/5 p-3">
+                    <p className="mb-3 text-[11px] text-muted-foreground">
+                      Diese Aktionen sind kritisch. Bitte vorsichtig nutzen.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setShowPwForm((v) => !v)}
+                      >
+                        Passwort selbst setzen
+                      </Button>
+                      {status !== "deactivated" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            if (window.confirm("Zugang wirklich deaktivieren? Der Kunde kann sich nicht mehr einloggen.")) {
+                              accessAction.mutate("deactivate");
+                            }
+                          }}
+                          disabled={accessAction.isPending}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          Zugang deaktivieren
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={async () => {
+                          const name = data.profile?.display_name ?? data.email ?? "diesen Kunden";
+                          const confirm1 = window.prompt(
+                            `Konto von ${name} unwiderruflich löschen?\n\nAlle Pakete und Zahlungen werden ebenfalls entfernt.\n\nZum Bestätigen tippe LÖSCHEN ein:`,
+                          );
+                          if (confirm1 !== "LÖSCHEN") return;
+                          try {
+                            await deleteFn({ data: { user_id: userId } });
+                            toast.success("Kunde gelöscht.");
+                            navigate({ to: "/coach/customers" });
+                          } catch (e) {
+                            toast.error((e as Error).message);
+                          }
+                        }}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        Konto löschen
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
 
               {showPwForm && (
                 <form
