@@ -253,9 +253,41 @@ export const listTrialUsers = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data, error } = await supabaseAdmin
       .from("profiles")
-      .select("id, display_name, trial_status, trial_start, trial_end, created_at")
+      .select("id, display_name, nickname, trial_status, trial_start, trial_end, created_at")
       .in("trial_status", ["trial", "trial_expired"])
       .order("trial_end", { ascending: true });
     if (error) throw new Error(error.message);
-    return data ?? [];
+    const rows = data ?? [];
+    const ids = rows.map((r: any) => r.id);
+    if (ids.length === 0) return rows;
+
+    const [usersRes, groupsRes] = await Promise.all([
+      supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 }),
+      supabaseAdmin.from("user_groups").select("user_id, group_name").in("user_id", ids),
+    ]);
+    const emailMap = new Map(usersRes.data.users.map((u: any) => [u.id, u.email]));
+    const groupsByUser = new Map<string, string[]>();
+    for (const g of groupsRes.data ?? []) {
+      const a = groupsByUser.get(g.user_id) ?? [];
+      a.push(g.group_name);
+      groupsByUser.set(g.user_id, a);
+    }
+    const emailList = [...emailMap.values()].filter(Boolean) as string[];
+    const { data: suppressed } = emailList.length
+      ? await supabaseAdmin
+          .from("suppressed_emails")
+          .select("email")
+          .in("email", emailList.map((e) => e.toLowerCase()))
+      : { data: [] as { email: string }[] };
+    const suppressedSet = new Set((suppressed ?? []).map((s: any) => s.email.toLowerCase()));
+
+    return rows.map((r: any) => {
+      const email = emailMap.get(r.id) ?? null;
+      return {
+        ...r,
+        email,
+        email_subscribed: email ? !suppressedSet.has(email.toLowerCase()) : true,
+        groups: groupsByUser.get(r.id) ?? [],
+      };
+    });
   });
