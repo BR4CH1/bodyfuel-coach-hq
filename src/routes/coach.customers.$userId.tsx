@@ -104,6 +104,7 @@ function CustomerDetail() {
 
   const [newPw, setNewPw] = useState("");
   const [showPwForm, setShowPwForm] = useState(false);
+  const [showDangerZone, setShowDangerZone] = useState(false);
 
 
   const { data, isLoading } = useQuery({
