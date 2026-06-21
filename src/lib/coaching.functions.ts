@@ -262,7 +262,7 @@ export const createCustomer = createServerFn({ method: "POST" })
       name: displayName,
       email,
       phone: data.phone || null,
-      desired_package: isTrial || isFree ? null : data.package,
+      desired_package: ["starter", "coaching", "premium"].includes(data.package as string) ? data.package : null,
       status: "converted",
       message: data.notes || null,
     });
