@@ -418,7 +418,7 @@ function TrialList({ users }: { users: any[] }) {
     );
   }
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {users.map((u) => {
         const dl = u.trial_end
           ? Math.ceil(
@@ -431,21 +431,28 @@ function TrialList({ users }: { users: any[] }) {
             key={u.id}
             to="/coach/customers/$userId"
             params={{ userId: u.id }}
-            className="flex items-center justify-between rounded-2xl border border-border bg-card p-4 transition hover:border-gold/40"
+            className="block rounded-2xl border border-border bg-card p-4 transition hover:border-gold/40 active:bg-secondary/30"
           >
-            <div>
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-gold" />
-                <span className="font-semibold">{u.display_name ?? "—"}</span>
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Sparkles className="h-4 w-4 shrink-0 text-gold" />
+                  <p className="truncate font-semibold">
+                    {u.display_name ?? "—"}
+                    {u.nickname && (
+                      <span className="ml-1.5 text-[10px] font-mono text-muted-foreground">@{u.nickname}</span>
+                    )}
+                  </p>
+                  {(u.groups ?? []).includes("bulls") && <BullsBadge />}
+                </div>
+                <p className="truncate text-xs text-muted-foreground">
+                  {u.email ?? "—"}
+                  <span className="ml-1.5">{u.email_subscribed === false ? "Mail ❌" : "Mail ✅"}</span>
+                </p>
               </div>
-              <div className="text-xs text-muted-foreground">
-                Trial-Ende: {u.trial_end ? new Date(u.trial_end).toLocaleDateString("de-DE") : "—"}
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
               <span
                 className={
-                  "rounded-full px-2 py-1 text-[10px] font-bold uppercase " +
+                  "shrink-0 rounded-full px-2 py-1 text-[10px] font-bold uppercase " +
                   (expired
                     ? "bg-destructive/15 text-destructive"
                     : "bg-gold/15 text-gold")
@@ -455,7 +462,12 @@ function TrialList({ users }: { users: any[] }) {
                   ? "Abgelaufen"
                   : `${Math.max(0, dl ?? 0)} ${dl === 1 ? "Tag" : "Tage"} verbleibend`}
               </span>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <div className="mt-3 text-xs text-muted-foreground">
+              Trial-Ende: {u.trial_end ? new Date(u.trial_end).toLocaleDateString("de-DE") : "—"}
+            </div>
+            <div className="mt-2 flex items-center gap-1 text-xs font-semibold text-gold">
+              Detail <ChevronRight className="h-3 w-3" />
             </div>
           </Link>
         );
@@ -473,7 +485,7 @@ function FreeList({ users }: { users: any[] }) {
     );
   }
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {users.map((u) => {
         const lastActive = u.last_check_date ?? u.last_event_at ?? u.signup_at;
         const lastActiveLabel = lastActive ? new Date(lastActive).toLocaleDateString("de-DE") : "—";
@@ -482,23 +494,48 @@ function FreeList({ users }: { users: any[] }) {
             key={u.user_id}
             to="/coach/customers/$userId"
             params={{ userId: u.user_id }}
-            className="flex items-center justify-between rounded-2xl border border-border bg-card p-4 transition hover:border-emerald-500/40"
+            className="block rounded-2xl border border-border bg-card p-4 transition hover:border-emerald-500/40 active:bg-secondary/30"
           >
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <Flame className="h-4 w-4 text-emerald-500" />
-                <span className="truncate font-semibold">{u.display_name ?? "—"}</span>
-                {u.upgrade_clicked && (
-                  <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-bold uppercase text-gold">
-                    Upgrade-Interesse
-                  </span>
-                )}
-              </div>
-              <div className="text-xs text-muted-foreground">
-                Level {u.level} · {u.total_points} Pkt · Streak {u.streak} · zuletzt {lastActiveLabel}
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Flame className="h-4 w-4 shrink-0 text-emerald-500" />
+                  <p className="truncate font-semibold">
+                    {u.display_name ?? "—"}
+                    {u.nickname && (
+                      <span className="ml-1.5 text-[10px] font-mono text-muted-foreground">@{u.nickname}</span>
+                    )}
+                  </p>
+                  {(u.groups ?? []).includes("bulls") && <BullsBadge />}
+                  {u.upgrade_clicked && (
+                    <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-bold uppercase text-gold">
+                      Upgrade-Interesse
+                    </span>
+                  )}
+                </div>
+                <p className="truncate text-xs text-muted-foreground">
+                  {u.email ?? "—"}
+                  <span className="ml-1.5">{u.email_subscribed === false ? "Mail ❌" : "Mail ✅"}</span>
+                </p>
               </div>
             </div>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            <div className="mt-3 grid grid-cols-2 gap-y-2 text-xs">
+              <div>
+                <p className="text-muted-foreground">Level</p>
+                <p className="font-display">{u.level} · {u.total_points} Pkt</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Streak</p>
+                <p>{u.streak}</p>
+              </div>
+              <div className="col-span-2">
+                <p className="text-muted-foreground">Zuletzt aktiv</p>
+                <p>{lastActiveLabel}</p>
+              </div>
+            </div>
+            <div className="mt-2 flex items-center gap-1 text-xs font-semibold text-emerald-500">
+              Detail <ChevronRight className="h-3 w-3" />
+            </div>
           </Link>
         );
       })}
