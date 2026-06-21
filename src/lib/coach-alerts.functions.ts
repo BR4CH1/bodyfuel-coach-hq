@@ -53,7 +53,7 @@ export const getCoachActionAlerts = createServerFn({ method: "GET" })
       const since30Iso = new Date(today - 30 * 86400000).toISOString();
       const since7dIso = new Date(today - 7 * 86400000).toISOString();
 
-      const [profiles, measurements, foods, targets, skips, swaps] = await Promise.all([
+      const [profiles, measurements, foods, targets, skips, swaps, activePlans] = await Promise.all([
       supabase
         .from("profiles")
         .select("id, display_name, training_goal, goal_weight_kg, goal_target_date")
@@ -84,6 +84,11 @@ export const getCoachActionAlerts = createServerFn({ method: "GET" })
         .in("user_id", ids)
         .eq("kind", "swapped")
         .gte("created_at", since30Iso),
+      supabase
+        .from("nutrition_plans")
+        .select("client_id, plan_type, status, scheduled_end_date")
+        .in("client_id", ids)
+        .in("status", ["active", "draft", "approved", "published"]),
     ]);
 
     const weightsByUser = new Map<string, Array<{ w: number; at: string }>>();
