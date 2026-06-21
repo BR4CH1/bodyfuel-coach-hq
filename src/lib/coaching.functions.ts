@@ -198,6 +198,10 @@ export const listCustomers = createServerFn({ method: "GET" })
       return {
         ...p,
         email: emailMap.get(p.user_id) ?? null,
+        email_subscribed: (() => {
+          const e = emailMap.get(p.user_id);
+          return e ? !suppressedSet.has(e.toLowerCase()) : true;
+        })(),
         display_name: profileMap.get(p.user_id)?.display_name ?? null,
         nickname: (profileMap.get(p.user_id) as any)?.nickname ?? null,
         phone: profileMap.get(p.user_id)?.phone ?? null,
