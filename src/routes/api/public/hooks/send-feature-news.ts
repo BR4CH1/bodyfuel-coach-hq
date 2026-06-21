@@ -138,7 +138,7 @@ export const Route = createFileRoute("/api/public/hooks/send-feature-news")({
         if (recipients.length === 0) {
           return Response.json({
             error:
-              "No recipients. Provide { test_emails: [...] } or { send_to_all_active: true }",
+              "No recipients. Provide { test_emails: [...] } or { send_to_all_active: true } or { send_to_all_registered: true }",
           }, { status: 400 });
         }
 
