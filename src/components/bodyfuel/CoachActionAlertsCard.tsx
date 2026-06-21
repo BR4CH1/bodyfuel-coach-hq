@@ -12,6 +12,7 @@ import {
   X,
   ChevronDown,
   Undo2,
+  ClipboardList,
 } from "lucide-react";
 import {
   getCoachActionAlerts,
@@ -26,12 +27,14 @@ const KIND_ICON = {
   weight: Scale,
   nutrition: Utensils,
   tracking: Activity,
+  plan: ClipboardList,
 } as const;
 
 const KIND_LABEL = {
   weight: "Gewicht",
   nutrition: "Ernährung",
   tracking: "Tracking",
+  plan: "Plan",
 } as const;
 
 export function CoachActionAlertsCard({
