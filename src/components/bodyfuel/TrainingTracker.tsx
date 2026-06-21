@@ -43,7 +43,23 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
   const [days, setDays] = useState<Day[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [logs, setLogs] = useState<SetLog[]>([]);
-  const [openDay, setOpenDay] = useState<string | null>(null);
+  const openDayKey = `bf.tt.openDay.${clientId}`;
+  const [openDay, setOpenDayState] = useState<string | null>(() => {
+    if (typeof window === "undefined" || !clientId) return null;
+    try { return window.localStorage.getItem(openDayKey); } catch { return null; }
+  });
+  const setOpenDay = (v: string | null | ((p: string | null) => string | null)) => {
+    setOpenDayState((cur) => {
+      const next = typeof v === "function" ? (v as (p: string | null) => string | null)(cur) : v;
+      try {
+        if (typeof window !== "undefined" && clientId) {
+          if (next) window.localStorage.setItem(openDayKey, next);
+          else window.localStorage.removeItem(openDayKey);
+        }
+      } catch { /* ignore */ }
+      return next;
+    });
+  };
   const [parsing, setParsing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [activeWeek, setActiveWeek] = useState(1);
