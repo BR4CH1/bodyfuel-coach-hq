@@ -32,11 +32,12 @@ const PLAN_OPTIONS: PlanOption[] = [
     price: 14.99,
     priceId: "bodyfuel_smart_monthly",
     icon: <Sparkles className="h-4 w-4" />,
-    blurb: "Komplett autonomes KI-System.",
+    blurb: "Dein persönlicher Fitness-Autopilot.",
     bullets: [
-      "KI-Ernährungs- & Trainingsplan (1 Monat)",
-      "Automatische Verlängerung & Anpassung",
-      "Kein 1:1-Coach",
+      "Individueller Ernährungs- & Trainingsplan",
+      "Automatische Anpassungen & Verlängerung",
+      "Tracker, Tagespunkte & Community inklusive",
+      "Selbstständig mit intelligenter Unterstützung",
     ],
   },
   {
@@ -46,11 +47,12 @@ const PLAN_OPTIONS: PlanOption[] = [
     price: 69,
     priceId: "bodyfuel_coaching_monthly",
     icon: <Crown className="h-4 w-4" />,
-    blurb: "1:1 Betreuung durch deinen Coach.",
+    blurb: "Persönliche 1:1 Betreuung durch deinen Coach.",
     bullets: [
-      "Persönliche Plan-Erstellung & Check",
-      "Anpassungen & Chat-Support",
-      "Wöchentlicher Check-In",
+      "Individueller Ernährungs- & Trainingsplan",
+      "Persönliche Anpassungen statt Automatiken",
+      "Direkter Chat-Support bei Fragen",
+      "Wöchentliche Check-Ins & Feedback",
     ],
   },
 ];
