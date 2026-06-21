@@ -248,8 +248,14 @@ export const getCoachRadar = createServerFn({ method: "GET" })
     });
 
     const lastCheckin = new Map<string, string>();
+    const lastCheckinSubmitted = new Map<string, string>();
     ((checkins as any).data ?? []).forEach((c: any) => {
       if (!lastCheckin.has(c.user_id)) lastCheckin.set(c.user_id, c.week_start);
+      const sub = c.submitted_at ?? c.week_start;
+      const cur = lastCheckinSubmitted.get(c.user_id);
+      if (!cur || new Date(sub).getTime() > new Date(cur).getTime()) {
+        lastCheckinSubmitted.set(c.user_id, sub);
+      }
     });
 
     const waterByUser = new Map<string, Map<string, number>>();
