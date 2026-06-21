@@ -264,7 +264,10 @@ function CustomersList() {
                         )}
                         {(c.groups ?? []).includes("bulls") && <BullsBadge />}
                       </div>
-                      <div className="text-xs text-muted-foreground">{c.email ?? "—"}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {c.email ?? "—"}
+                        <span className="ml-1.5">{c.email_subscribed === false ? "Mail ❌" : "Mail ✅"}</span>
+                      </div>
                     </td>
                     <td className="px-4 py-3 uppercase tracking-wider text-gold">{c.package}</td>
                     <td className="px-4 py-3 font-display">{Number(c.price_eur).toFixed(2)} €</td>
