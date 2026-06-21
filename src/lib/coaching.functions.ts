@@ -233,6 +233,7 @@ export const createCustomer = createServerFn({ method: "POST" })
       origin?: string;
       bulls?: boolean;
       trial_days?: number;
+      skip_invite?: boolean;
     }) => data,
   )
   .handler(async ({ data, context }) => {
@@ -267,21 +268,44 @@ export const createCustomer = createServerFn({ method: "POST" })
     });
     if (leadErr) throw new Error(leadErr.message);
 
-    const { data: invited, error: invErr } =
-      await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-        data: {
-          display_name: displayName,
-          first_name: firstName,
-          last_name: lastName,
-          full_name: displayName,
-          name: displayName,
-          ...(isFree ? { tier: "free" } : { role: "client" }),
-        },
-        redirectTo: isFree ? `${origin}/tracker/app` : `${origin}/welcome`,
-      });
-
-    if (invErr) throw new Error(invErr.message);
-    const newUserId = invited.user.id;
+    let newUserId: string;
+    if (data.skip_invite) {
+      // Silent anlegen (z.B. Influencer) – kein Invite-Mail.
+      // Zufallspasswort; Coach kann später Reset-Link teilen.
+      const randomPassword =
+        crypto.randomUUID().replace(/-/g, "") + "Aa1!";
+      const { data: created, error: createErr } =
+        await supabaseAdmin.auth.admin.createUser({
+          email,
+          password: randomPassword,
+          email_confirm: true,
+          user_metadata: {
+            display_name: displayName,
+            first_name: firstName,
+            last_name: lastName,
+            full_name: displayName,
+            name: displayName,
+            ...(isFree ? { tier: "free" } : { role: "client" }),
+          },
+        });
+      if (createErr) throw new Error(createErr.message);
+      newUserId = created.user!.id;
+    } else {
+      const { data: invited, error: invErr } =
+        await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+          data: {
+            display_name: displayName,
+            first_name: firstName,
+            last_name: lastName,
+            full_name: displayName,
+            name: displayName,
+            ...(isFree ? { tier: "free" } : { role: "client" }),
+          },
+          redirectTo: isFree ? `${origin}/tracker/app` : `${origin}/welcome`,
+        });
+      if (invErr) throw new Error(invErr.message);
+      newUserId = invited.user.id;
+    }
 
     if (isFree) {
       await supabaseAdmin

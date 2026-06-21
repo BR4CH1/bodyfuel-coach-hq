@@ -46,6 +46,7 @@ function NewCustomerForm() {
     trial_days: 7,
     notes: "",
     bulls: false,
+    skip_invite: false,
   });
   const isTrial = form.package === "trial";
   const isFree = form.package === "free";
@@ -66,7 +67,15 @@ function NewCustomerForm() {
     try {
       await fn({ data: { ...form, origin: window.location.origin } });
       clearFormDraft(DRAFT_KEY);
-      toast.success(isFree ? "Free-User angelegt — Einladung verschickt." : isTrial ? "Trial-Kunde angelegt — Einladung verschickt." : "Kunde angelegt — Einladung verschickt.");
+      toast.success(
+        form.skip_invite
+          ? "Account angelegt — keine Einladung verschickt."
+          : isFree
+            ? "Free-User angelegt — Einladung verschickt."
+            : isTrial
+              ? "Trial-Kunde angelegt — Einladung verschickt."
+              : "Kunde angelegt — Einladung verschickt.",
+      );
       navigate({ to: "/coach/customers" });
     } catch (err) {
       toast.error((err as Error).message);
@@ -233,12 +242,27 @@ function NewCustomerForm() {
           </div>
         </label>
 
+        <label className="flex items-start gap-3 rounded-xl border border-border bg-secondary/30 p-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={form.skip_invite}
+            onChange={(e) => setForm({ ...form, skip_invite: e.target.checked })}
+            className="mt-0.5 h-4 w-4"
+          />
+          <div>
+            <div className="text-sm font-semibold">Ohne Einladung anlegen (still)</div>
+            <div className="text-xs text-muted-foreground">
+              Für Influencer / Test-Accounts: Account wird angelegt, aber es wird keine E-Mail verschickt. Passwort kannst du später per Reset-Link teilen.
+            </div>
+          </div>
+        </label>
+
         <Button
           type="submit"
           disabled={busy}
           className="w-full bg-gradient-gold text-primary-foreground"
         >
-          {busy ? "Lege an …" : "Kunde anlegen & Einladung senden"}
+          {busy ? "Lege an …" : form.skip_invite ? "Account still anlegen" : "Kunde anlegen & Einladung senden"}
         </Button>
       </form>
     </div>
