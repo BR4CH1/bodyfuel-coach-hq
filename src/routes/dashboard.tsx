@@ -522,6 +522,7 @@ function RealUserDashboard() {
       {supabaseUser && <SmartAnalysisCTA />}
       {supabaseUser && <StrengthCheckStatus variant="card" />}
       {supabaseUser && <DailyMacroSummary userId={supabaseUser.id} />}
+      {supabaseUser && <CheckinComparisonCard userId={supabaseUser.id} />}
 
 
       {todayDbPoints < MAX_DAILY_POINTS && (
