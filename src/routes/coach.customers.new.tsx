@@ -67,7 +67,15 @@ function NewCustomerForm() {
     try {
       await fn({ data: { ...form, origin: window.location.origin } });
       clearFormDraft(DRAFT_KEY);
-      toast.success(isFree ? "Free-User angelegt — Einladung verschickt." : isTrial ? "Trial-Kunde angelegt — Einladung verschickt." : "Kunde angelegt — Einladung verschickt.");
+      toast.success(
+        form.skip_invite
+          ? "Account angelegt — keine Einladung verschickt."
+          : isFree
+            ? "Free-User angelegt — Einladung verschickt."
+            : isTrial
+              ? "Trial-Kunde angelegt — Einladung verschickt."
+              : "Kunde angelegt — Einladung verschickt.",
+      );
       navigate({ to: "/coach/customers" });
     } catch (err) {
       toast.error((err as Error).message);
