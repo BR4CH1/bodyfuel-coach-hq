@@ -316,7 +316,10 @@ function CustomersList() {
                       </p>
                       {(c.groups ?? []).includes("bulls") && <BullsBadge />}
                     </div>
-                    <p className="truncate text-xs text-muted-foreground">{c.email ?? "—"}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {c.email ?? "—"}
+                      <span className="ml-1.5">{c.email_subscribed === false ? "Mail ❌" : "Mail ✅"}</span>
+                    </p>
                   </div>
                   <PaymentBadge c={c} />
                 </div>
