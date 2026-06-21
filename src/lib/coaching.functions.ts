@@ -335,8 +335,8 @@ export const createCustomer = createServerFn({ method: "POST" })
       const start = new Date(data.start_date);
       const end = new Date(start);
       if (data.skip_invite) {
-        // Influencer / Komplimentär-Account: 10 Jahre Laufzeit, 0 €.
-        end.setUTCFullYear(end.getUTCFullYear() + 10);
+        // Influencer / Komplimentär-Account: 30 Tage Laufzeit, 0 €.
+        end.setUTCDate(end.getUTCDate() + 30);
       } else {
         end.setDate(end.getDate() + Number(data.duration_days || 30));
       }
