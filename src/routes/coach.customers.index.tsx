@@ -68,7 +68,8 @@ function CustomersList() {
     const overdue = (data ?? []).filter((c: any) => c.payment_status === "overdue").length;
     const bulls = (data ?? []).filter((c: any) => (c.groups ?? []).includes("bulls")).length;
     const smart = (data ?? []).filter((c: any) => c.package === "smart").length;
-    return { all: data?.length ?? 0, due, overdue, bulls, smart, trial: trialCount, trial_expired: trialExpiredCount, free: freeCount };
+    const customers = data?.length ?? 0;
+    return { all: customers + trialCount + freeCount, due, overdue, bulls, smart, trial: trialCount, trial_expired: trialExpiredCount, free: freeCount };
   }, [data, trialCount, trialExpiredCount, freeCount]);
 
   const filtered = useMemo(() => {
@@ -226,17 +227,15 @@ function CustomersList() {
       {filter !== "trial" && filter !== "trial_expired" && filter !== "free" && isLoading && (
         <p className="text-sm text-muted-foreground">Lade…</p>
       )}
-      {filter !== "trial" && filter !== "trial_expired" && filter !== "free" && data && filtered.length === 0 && (
+      {filter !== "trial" && filter !== "trial_expired" && filter !== "free" && data && filtered.length === 0 && filter !== "all" && (
         <p className="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground">
-          {filter === "all"
-            ? "Noch keine Kunden angelegt."
-            : "Keine Kunden in dieser Ansicht."}
+          Keine Kunden in dieser Ansicht.
         </p>
       )}
 
 
 
-      {filter !== "trial" && filter !== "trial_expired" && filtered.length > 0 && (
+      {filter !== "trial" && filter !== "trial_expired" && filter !== "free" && filtered.length > 0 && (
         <>
           {/* Desktop table */}
           <div className="hidden overflow-x-auto rounded-2xl border border-border bg-card sm:block">
@@ -351,6 +350,20 @@ function CustomersList() {
             ))}
           </div>
         </>
+      )}
+
+      {filter === "all" && (trials ?? []).some((t: any) => t.trial_status === "trial") && (
+        <div className="space-y-2">
+          <h2 className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Trial</h2>
+          <TrialList users={(trials ?? []).filter((t: any) => t.trial_status === "trial")} />
+        </div>
+      )}
+
+      {filter === "all" && (freeUsers ?? []).length > 0 && (
+        <div className="space-y-2">
+          <h2 className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Free Tracker</h2>
+          <FreeList users={freeUsers ?? []} />
+        </div>
       )}
     </div>
   );

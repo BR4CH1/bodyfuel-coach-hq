@@ -63,21 +63,19 @@ export const getTierMetrics = createServerFn({ method: "GET" })
       else coachingUsers.add(p.user_id); // coaching/starter/premium
     }
 
-    // Roles: free / client
-    const { data: roles } = await context.supabase
+    // Free-Rolle
+    const { count: freeCount } = await context.supabase
       .from("user_roles")
-      .select("user_id, role")
-      .in("role", ["free", "client"]);
+      .select("user_id", { count: "exact", head: true })
+      .eq("role", "free");
+    const free = freeCount ?? 0;
 
-    let free = 0;
-    let trial = 0;
-    for (const r of (roles ?? []) as any[]) {
-      if (r.role === "free") free++;
-      else if (r.role === "client") {
-        // Client ohne aktives Paket = Trial
-        if (!smartUsers.has(r.user_id) && !coachingUsers.has(r.user_id)) trial++;
-      }
-    }
+    // Trial: profiles.trial_status === 'trial' (deckungsgleich mit listTrialUsers)
+    const { count: trialCount } = await context.supabase
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("trial_status", "trial");
+    const trial = trialCount ?? 0;
 
     // Upgrade-Events
     const now = Date.now();
