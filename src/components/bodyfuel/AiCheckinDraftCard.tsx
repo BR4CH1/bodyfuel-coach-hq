@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Sparkles, Loader2, CheckCircle2, XCircle, Pencil, Copy, History, Trash2 } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -73,18 +73,14 @@ export function AiCheckinDraftCard({ userId }: { userId: string }) {
     items[0] ??
     null;
 
-  // sync editor with active draft
+  // sync editor with active draft once it loads (no setState during render!)
   const activeMessage = active?.message_final ?? active?.draft.coach_message ?? "";
-  if (active && !editing && messageDraft !== activeMessage && selectedId !== active.id) {
-    // initial selection load — keep last edit when same draft
-  }
-
-  const ensureMessage = () => {
-    if (active && messageDraft === "" && !editing) {
+  useEffect(() => {
+    if (active && !editing && messageDraft === "") {
       setMessageDraft(activeMessage);
     }
-  };
-  ensureMessage();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active?.id]);
 
   // Persist edited message across reloads/tab switches so coach doesn't lose typing.
   const editorDraftKey = active ? `bf.coach.checkinDraft.${userId}.${active.id}.v1` : null;
