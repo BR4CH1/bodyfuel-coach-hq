@@ -716,20 +716,37 @@ function CustomerDetail() {
             Fortschritt & Check-ins
           </AccordionTrigger>
           <AccordionContent className="space-y-6 pt-2">
-            <WeightProgressChart
-              measurements={(data.measurements ?? []) as any}
-              goalWeight={(data.profile as any)?.goal_weight_kg ?? null}
-              title="Gewichtsentwicklung"
-              emptyHint="Sobald der Kunde sein erstes Gewicht einträgt, erscheint hier sein Verlauf."
-            />
-            <MeasurementsCard measurements={data.measurements ?? []} />
-            <ProgressPhotosCard userId={userId} readOnly />
-            <PhotoAssessmentCard userId={userId} isCoach />
-            <AiCheckinDraftCard userId={userId} />
-            <PlanAdjustmentsCard userId={userId} />
-            <CustomerCheckinsCard userId={userId} />
-            <CustomerRecentActivityCard userId={userId} />
+            <SectionErrorBoundary label="Gewichtsentwicklung">
+              <WeightProgressChart
+                measurements={(data.measurements ?? []) as any}
+                goalWeight={(data.profile as any)?.goal_weight_kg ?? null}
+                title="Gewichtsentwicklung"
+                emptyHint="Sobald der Kunde sein erstes Gewicht einträgt, erscheint hier sein Verlauf."
+              />
+            </SectionErrorBoundary>
+            <SectionErrorBoundary label="Maße & Gewicht">
+              <MeasurementsCard measurements={data.measurements ?? []} />
+            </SectionErrorBoundary>
+            <SectionErrorBoundary label="Fortschrittsfotos">
+              <ProgressPhotosCard userId={userId} readOnly />
+            </SectionErrorBoundary>
+            <SectionErrorBoundary label="Foto-Auswertung">
+              <PhotoAssessmentCard userId={userId} isCoach />
+            </SectionErrorBoundary>
+            <SectionErrorBoundary label="AI Check-in Entwurf">
+              <AiCheckinDraftCard userId={userId} />
+            </SectionErrorBoundary>
+            <SectionErrorBoundary label="Plan-Anpassungen">
+              <PlanAdjustmentsCard userId={userId} />
+            </SectionErrorBoundary>
+            <SectionErrorBoundary label="Check-ins">
+              <CustomerCheckinsCard userId={userId} />
+            </SectionErrorBoundary>
+            <SectionErrorBoundary label="Letzte Aktivität">
+              <CustomerRecentActivityCard userId={userId} />
+            </SectionErrorBoundary>
           </AccordionContent>
+
         </AccordionItem>
 
         <AccordionItem
