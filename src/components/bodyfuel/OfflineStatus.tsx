@@ -1,22 +1,52 @@
 import { useEffect, useState } from "react";
 import { CloudOff, RefreshCw } from "lucide-react";
-import { onQueueChange } from "@/lib/offline/queue";
+import { onQueueChange, flushQueue } from "@/lib/offline/queue";
+
+// Verify real connectivity (navigator.onLine lies on iOS/Safari/PWA).
+async function ping(): Promise<boolean> {
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 3500);
+    const res = await fetch("/favicon.ico?_=" + Date.now(), {
+      method: "HEAD",
+      cache: "no-store",
+      signal: ctrl.signal,
+    });
+    clearTimeout(t);
+    return res.ok || res.status === 0 || res.type === "opaque";
+  } catch {
+    return false;
+  }
+}
 
 export function OfflineStatus() {
-  const [online, setOnline] = useState(
-    typeof navigator === "undefined" ? true : navigator.onLine,
-  );
+  const [online, setOnline] = useState(true);
   const [pending, setPending] = useState(0);
 
   useEffect(() => {
-    const upOn = () => setOnline(true);
-    const upOff = () => setOnline(false);
-    window.addEventListener("online", upOn);
-    window.addEventListener("offline", upOff);
+    let cancelled = false;
+
+    const recheck = async () => {
+      const ok = await ping();
+      if (cancelled) return;
+      setOnline(ok);
+      if (ok) void flushQueue();
+    };
+
+    void recheck();
+    const iv = setInterval(recheck, 15000);
+    const onChange = () => void recheck();
+    window.addEventListener("online", onChange);
+    window.addEventListener("offline", onChange);
+    document.addEventListener("visibilitychange", onChange);
+
     const off = onQueueChange(setPending);
     return () => {
-      window.removeEventListener("online", upOn);
-      window.removeEventListener("offline", upOff);
+      cancelled = true;
+      clearInterval(iv);
+      window.removeEventListener("online", onChange);
+      window.removeEventListener("offline", onChange);
+      document.removeEventListener("visibilitychange", onChange);
       off();
     };
   }, []);
