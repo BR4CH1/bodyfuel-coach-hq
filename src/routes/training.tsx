@@ -12,6 +12,7 @@ import { StrengthCheckStatus } from "@/components/bodyfuel/StrengthCheckStatus";
 import { StrengthSummaryCard } from "@/components/bodyfuel/StrengthSummaryCard";
 import { getMyStrengthStatus } from "@/lib/strength-check.functions";
 import { AthleteProfileBanner } from "@/components/bodyfuel/AthleteProfileBanner";
+import { useScrollRestore } from "@/hooks/use-scroll-restore";
 
 import { useTrial } from "@/hooks/use-trial";
 import { TrialTrainingPlan } from "@/components/bodyfuel/TrialPlanView";
@@ -34,6 +35,12 @@ function TrainingPage() {
   const [clientId, setClientId] = useState<string>("");
   const [trackerKey, setTrackerKey] = useState(0);
   const seededRef = useRef(false);
+
+  // Scroll-Position über Tab-/Routenwechsel hinweg merken.
+  useScrollRestore(
+    `training:${supabaseUser?.id ?? "anon"}`,
+    !!supabaseUser,
+  );
 
   const { data: strengthStatus } = useQuery({
     queryKey: ["my-strength-status"],
