@@ -133,6 +133,18 @@ export const listCustomers = createServerFn({ method: "GET" })
       groupsByUser.set(g.user_id, a);
     }
 
+    // Email-Abmeldungen laden
+    const emailList = [...emailMap.values()].filter(Boolean) as string[];
+    const { data: suppressed } = emailList.length
+      ? await supabaseAdmin
+          .from("suppressed_emails")
+          .select("email")
+          .in("email", emailList.map((e) => e.toLowerCase()))
+      : { data: [] as { email: string }[] };
+    const suppressedSet = new Set(
+      (suppressed ?? []).map((s) => s.email.toLowerCase()),
+    );
+
     const paymentsByUser = new Map<string, typeof payments>();
     for (const p of payments ?? []) {
       const arr = paymentsByUser.get(p.user_id) ?? [];
@@ -186,6 +198,10 @@ export const listCustomers = createServerFn({ method: "GET" })
       return {
         ...p,
         email: emailMap.get(p.user_id) ?? null,
+        email_subscribed: (() => {
+          const e = emailMap.get(p.user_id);
+          return e ? !suppressedSet.has(e.toLowerCase()) : true;
+        })(),
         display_name: profileMap.get(p.user_id)?.display_name ?? null,
         nickname: (profileMap.get(p.user_id) as any)?.nickname ?? null,
         phone: profileMap.get(p.user_id)?.phone ?? null,
