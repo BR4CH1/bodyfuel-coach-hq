@@ -36,6 +36,12 @@ function TrainingPage() {
   const [trackerKey, setTrackerKey] = useState(0);
   const seededRef = useRef(false);
 
+  // Scroll-Position über Tab-/Routenwechsel hinweg merken.
+  useScrollRestore(
+    `training:${supabaseUser?.id ?? "anon"}`,
+    !!supabaseUser,
+  );
+
   const { data: strengthStatus } = useQuery({
     queryKey: ["my-strength-status"],
     queryFn: () => statusFn(),
