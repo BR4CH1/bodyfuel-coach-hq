@@ -248,8 +248,14 @@ export const getCoachRadar = createServerFn({ method: "GET" })
     });
 
     const lastCheckin = new Map<string, string>();
+    const lastCheckinSubmitted = new Map<string, string>();
     ((checkins as any).data ?? []).forEach((c: any) => {
       if (!lastCheckin.has(c.user_id)) lastCheckin.set(c.user_id, c.week_start);
+      const sub = c.submitted_at ?? c.week_start;
+      const cur = lastCheckinSubmitted.get(c.user_id);
+      if (!cur || new Date(sub).getTime() > new Date(cur).getTime()) {
+        lastCheckinSubmitted.set(c.user_id, sub);
+      }
     });
 
     const waterByUser = new Map<string, Map<string, number>>();
@@ -621,17 +627,18 @@ export const getCoachRadar = createServerFn({ method: "GET" })
       }
 
       // ----- INFO TASKS -----
-      if (lc) {
-        const lcAge = (now - new Date(lc).getTime()) / 86400000;
-        if (lcAge < 3) {
+      const lcSub = lastCheckinSubmitted.get(p.id);
+      if (lcSub) {
+        const lcAgeDays = (now - new Date(lcSub).getTime()) / 86400000;
+        if (lcAgeDays < 7) {
           pushTask({
             user_id: p.id,
             name,
             priority: "info",
             kind: "new_checkin",
             title: "Neuer Check-in eingegangen",
-            detail: `Vom ${new Date(lc).toLocaleDateString("de-DE")}`,
-            keySuffix: lc,
+            detail: `Eingereicht am ${new Date(lcSub).toLocaleDateString("de-DE")}`,
+            keySuffix: new Date(lcSub).toISOString().slice(0, 10),
           });
         }
       }
