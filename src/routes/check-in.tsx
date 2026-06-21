@@ -161,7 +161,7 @@ function WeeklyCheckIn() {
         .from("body_measurements")
         .delete()
         .eq("user_id", uid)
-        .eq("source", "weekly_checkin")
+        .eq("notes", "weekly_checkin")
         .gte("measured_at", week)
         .lt("measured_at", weekEnd.toISOString().slice(0, 10));
       await supabase.from("body_measurements").insert({
@@ -175,7 +175,7 @@ function WeeklyCheckIn() {
         thigh_right_cm: payload.thigh_right_cm,
         biceps_left_cm: payload.biceps_left_cm,
         biceps_right_cm: payload.biceps_right_cm,
-        source: "weekly_checkin",
+        notes: "weekly_checkin",
       });
     }
 
