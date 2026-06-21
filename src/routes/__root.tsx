@@ -15,6 +15,7 @@ import { Toaster } from "../components/ui/sonner";
 import { ConsentProvider } from "../lib/consent";
 import { CookieConsent } from "../components/bodyfuel/CookieConsent";
 import { PaymentTestModeBanner } from "../components/PaymentTestModeBanner";
+import { OfflineStatus } from "../components/bodyfuel/OfflineStatus";
 
 function NotFoundComponent() {
   return (
@@ -113,6 +114,20 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  useEffect(() => {
+    void (async () => {
+      try {
+        const [{ registerOfflineSW }, { attachOfflineSync }] = await Promise.all([
+          import("../lib/pwa/register"),
+          import("../lib/offline/queue"),
+        ]);
+        registerOfflineSW();
+        attachOfflineSync();
+      } catch {
+        /* ignore */
+      }
+    })();
+  }, []);
   return (
     <QueryClientProvider client={queryClient}>
       <ConsentProvider>
@@ -120,6 +135,7 @@ function RootComponent() {
           <PaymentTestModeBanner />
           <Outlet />
           <CookieConsent />
+          <OfflineStatus />
           <Toaster theme="dark" />
         </SessionProvider>
       </ConsentProvider>
