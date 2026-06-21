@@ -227,17 +227,15 @@ function CustomersList() {
       {filter !== "trial" && filter !== "trial_expired" && filter !== "free" && isLoading && (
         <p className="text-sm text-muted-foreground">Lade…</p>
       )}
-      {filter !== "trial" && filter !== "trial_expired" && filter !== "free" && data && filtered.length === 0 && (
+      {filter !== "trial" && filter !== "trial_expired" && filter !== "free" && data && filtered.length === 0 && filter !== "all" && (
         <p className="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground">
-          {filter === "all"
-            ? "Noch keine Kunden angelegt."
-            : "Keine Kunden in dieser Ansicht."}
+          Keine Kunden in dieser Ansicht.
         </p>
       )}
 
 
 
-      {filter !== "trial" && filter !== "trial_expired" && filtered.length > 0 && (
+      {filter !== "trial" && filter !== "trial_expired" && filter !== "free" && filtered.length > 0 && (
         <>
           {/* Desktop table */}
           <div className="hidden overflow-x-auto rounded-2xl border border-border bg-card sm:block">
