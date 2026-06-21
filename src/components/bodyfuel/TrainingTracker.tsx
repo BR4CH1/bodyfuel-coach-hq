@@ -105,7 +105,7 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
     setWeeksCount(wc);
     const dayList = allDays.filter((d) => (d.week_number ?? 1) === aw);
     setDays(dayList);
-    setOpenDay((cur) => cur ?? dayList[0]?.id ?? null);
+    setOpenDay((cur) => (cur && dayList.some((d) => d.id === cur) ? cur : dayList[0]?.id ?? null));
 
     if (dayList.length) {
       const { data: exRows } = await supabase
