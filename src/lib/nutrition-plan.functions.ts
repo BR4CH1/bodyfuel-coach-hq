@@ -388,16 +388,22 @@ Zubereitungsschritte: gemeinsame Zubereitung in einem Topf/Pfanne, am Ende auf z
 
     const onePersonBlock = !partnerBlock
       ? `Erstelle das Rezept für genau EINE Person.
-- Zutaten mit konkreten Mengen in Gramm/ml/Stück, so dass die Zielwerte ungefähr passen.
-- Wenn in der Beschreibung schon Lebensmittel + Mengen stehen, nutze GENAU diese.`
+- Zutaten mit konkreten Mengen in Gramm/ml/Stück.
+- Wenn die Beschreibung bereits Lebensmittel + Mengen nennt, nutze sie NUR wenn sie zu den Zielwerten passen. Sonst skaliere die Mengen so, dass die Zielwerte stimmen.`
       : "";
 
     const prompt = `Du bist Ernährungsberater. Erstelle ein einfaches, alltagstaugliches Rezept für die folgende Mahlzeit.
 
 Mahlzeit: ${meal.name}${meal.description ? ` — ${meal.description}` : ""}
-${!partnerBlock && macros ? `Zielwerte: ${macros}` : ""}
+${!partnerBlock && macros ? `Zielwerte (Pflicht, ±10 %): ${macros}` : ""}
 ${partnerBlock}
 ${onePersonBlock}
+
+KRITISCH — die Mengen MÜSSEN zu den Zielwerten passen:
+- Rechne intern jede Zutat mit USDA/DGE-Werten zusammen und prüfe, dass die Summe ≈ Zielwerte ergibt, BEVOR du antwortest. Wenn nicht: Mengen anpassen.
+- Referenzwerte pro 100 g (roh/ungekocht): Reis ungekocht ~360 kcal / 78 g KH / 7 g P · Nudeln trocken ~360 kcal / 72 g KH / 12 g P · Kartoffeln roh ~70 kcal / 16 g KH · Haferflocken ~370 kcal / 60 g KH / 13 g P · Hähnchenbrust roh ~110 kcal / 23 g P · Pute ~110 kcal / 24 g P · Rinderhack 5 % ~140 kcal / 21 g P / 5 g F · Lachs ~200 kcal / 20 g P / 13 g F · Thunfisch im Saft abgetropft ~110 kcal / 25 g P · Skyr ~60 kcal / 11 g P · Magerquark ~70 kcal / 12 g P · Ei M (60 g) ~85 kcal / 7 g P / 6 g F · Olivenöl 1 EL (10 g) ~90 kcal / 10 g F · Avocado ~160 kcal / 15 g F · Gemüse ~25 kcal / 100 g.
+- Beispiel: 200 g Reis ungekocht sind bereits ~720 kcal und ~155 g KH — passe das mit den anderen Zutaten zur Zielwerte-Summe oder reduziere die Menge.
+- Lieber realistische, kleinere Mengen als überdimensionierte Portionen.
 
 Anforderungen:
 - 3 bis 6 kurze Zubereitungsschritte, jeder Schritt 1 Satz.
