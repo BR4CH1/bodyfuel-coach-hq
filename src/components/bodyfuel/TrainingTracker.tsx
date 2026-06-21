@@ -513,6 +513,21 @@ function ExerciseCard({
     setNote(val);
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
+      const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+      if (isOffline) {
+        try {
+          await enqueue({
+            kind: "exercise_note",
+            exercise_id: ex.id,
+            client_id: clientId,
+            note_date: todayStr,
+            note: val,
+          });
+        } catch {
+          /* silent */
+        }
+        return;
+      }
       try {
         await supabase
           .from("training_exercise_notes")
