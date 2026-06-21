@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useFormDraft, clearFormDraft } from "@/hooks/use-form-draft";
 
 export const Route = createFileRoute("/check-in")({
   head: () => ({ meta: [{ title: "Wochen-Check-in — BODYFUEL" }] }),
@@ -74,6 +75,8 @@ function WeeklyCheckIn() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
 
+  const draftKey = uid ? `bf.checkin.${uid}.${week}.v1` : null;
+
   useEffect(() => {
     if (!uid) return;
     (async () => {
@@ -107,6 +110,16 @@ function WeeklyCheckIn() {
     })();
   }, [uid, week]);
 
+  // Zwischenspeicher: lokaler Draft, damit Eingaben einen Reload/Sperre überleben.
+  useFormDraft<Form>(
+    draftKey,
+    form,
+    (draft) => {
+      setForm((prev) => ({ ...prev, ...draft }));
+    },
+    { enabled: !loading },
+  );
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!uid) return;
@@ -135,11 +148,25 @@ function WeeklyCheckIn() {
       .from("weekly_checkins")
       .upsert(payload, { onConflict: "user_id,week_start" });
 
-    // Also write a body measurement if values are given
+    // Werte zusätzlich als Körpermessung speichern, damit sie als
+    // "aktuelles Gewicht" gelten. measured_at = HEUTE (Zeitstempel jetzt),
+    // damit die letzte Messung wirklich neuer ist als alle früheren Einträge.
+    // Vorherige check-in-Messung dieser Woche wird vorab entfernt, damit
+    // beim Aktualisieren keine Duplikate entstehen.
     if (!error && (payload.weight_kg || payload.body_fat_pct || payload.waist_cm)) {
+      const todayIso = new Date().toISOString();
+      const weekEnd = new Date(week);
+      weekEnd.setDate(weekEnd.getDate() + 7);
+      await supabase
+        .from("body_measurements")
+        .delete()
+        .eq("user_id", uid)
+        .eq("notes", "weekly_checkin")
+        .gte("measured_at", week)
+        .lt("measured_at", weekEnd.toISOString().slice(0, 10));
       await supabase.from("body_measurements").insert({
         user_id: uid,
-        measured_at: week,
+        measured_at: todayIso,
         weight_kg: payload.weight_kg,
         body_fat_pct: payload.body_fat_pct,
         waist_cm: payload.waist_cm,
@@ -148,12 +175,16 @@ function WeeklyCheckIn() {
         thigh_right_cm: payload.thigh_right_cm,
         biceps_left_cm: payload.biceps_left_cm,
         biceps_right_cm: payload.biceps_right_cm,
+        notes: "weekly_checkin",
       });
     }
 
     setBusy(false);
     if (error) toast.error(error.message);
-    else toast.success(existingId ? "Check-in aktualisiert" : "Check-in gespeichert");
+    else {
+      clearFormDraft(draftKey);
+      toast.success(existingId ? "Check-in aktualisiert" : "Check-in gespeichert");
+    }
   };
 
   if (!uid) return null;
