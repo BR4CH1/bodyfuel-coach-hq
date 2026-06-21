@@ -67,10 +67,14 @@ export async function pendingCount(): Promise<number> {
   return db.count(STORE);
 }
 
-export async function enqueue(item: Omit<PendingItem, "id" | "created_at" | "attempts">) {
+export type EnqueueInput =
+  | Omit<PendingSetLog, never>
+  | Omit<PendingNote, never>;
+
+export async function enqueue(item: EnqueueInput) {
   const db = await getDB();
   if (!db) throw new Error("IndexedDB nicht verfügbar");
-  const payload: PendingItem = {
+  const payload = {
     ...item,
     created_at: new Date().toISOString(),
     attempts: 0,
