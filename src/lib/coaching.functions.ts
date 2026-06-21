@@ -233,6 +233,7 @@ export const createCustomer = createServerFn({ method: "POST" })
       origin?: string;
       bulls?: boolean;
       trial_days?: number;
+      skip_invite?: boolean;
     }) => data,
   )
   .handler(async ({ data, context }) => {
