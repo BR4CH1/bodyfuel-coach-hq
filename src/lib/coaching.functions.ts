@@ -334,16 +334,23 @@ export const createCustomer = createServerFn({ method: "POST" })
 
       const start = new Date(data.start_date);
       const end = new Date(start);
-      end.setDate(end.getDate() + Number(data.duration_days || 30));
+      if (data.skip_invite) {
+        // Influencer / Komplimentär-Account: 10 Jahre Laufzeit, 0 €.
+        end.setUTCFullYear(end.getUTCFullYear() + 10);
+      } else {
+        end.setDate(end.getDate() + Number(data.duration_days || 30));
+      }
 
       const { error: pkgErr } = await supabaseAdmin.from("customer_packages").insert({
         user_id: newUserId,
         package: data.package as PackageKey,
-        price_eur: data.price_eur,
+        price_eur: data.skip_invite ? 0 : data.price_eur,
         start_date: data.start_date,
         end_date: end.toISOString().slice(0, 10),
         is_active: true,
-        notes: data.notes ?? null,
+        notes: data.skip_invite
+          ? `[Influencer / kostenlos freigeschaltet] ${data.notes ?? ""}`.trim()
+          : (data.notes ?? null),
       });
       if (pkgErr) throw new Error(pkgErr.message);
     }
