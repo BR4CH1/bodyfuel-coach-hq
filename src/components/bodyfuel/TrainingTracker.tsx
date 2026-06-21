@@ -9,6 +9,7 @@ import { ExerciseAnalytics } from "./ExerciseAnalytics";
 import { normalizeExerciseName } from "@/lib/exercise-name-match";
 import { AddTrainingSessionButton } from "./AddTrainingSessionDialog";
 import { TrainingSessionsList } from "./TrainingSessionsList";
+import { enqueue, flushQueue } from "@/lib/offline/queue";
 
 
 type Plan = { id: string; client_id: string; title: string; weeks_count?: number | null; scheduled_start_date?: string | null };
@@ -307,6 +308,34 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
                     clientId={clientId}
                     logs={logs.filter((l) => l.exercise_id === ex.id)}
                     onLog={async (set_number, weight_kg, reps) => {
+                      const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+                      if (isOffline) {
+                        try {
+                          await enqueue({
+                            kind: "set_log",
+                            client_id: clientId,
+                            exercise_id: ex.id,
+                            set_number,
+                            weight_kg,
+                            reps,
+                            logged_at: new Date().toISOString(),
+                          });
+                          const optimistic: SetLog = {
+                            id: `offline-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                            exercise_id: ex.id,
+                            client_id: clientId,
+                            set_number,
+                            weight_kg,
+                            reps,
+                            performed_at: new Date().toISOString(),
+                          };
+                          setLogs((cur) => [optimistic, ...cur]);
+                          toast.success("Offline gespeichert · synct beim Wieder-Online");
+                        } catch (e: unknown) {
+                          toast.error(e instanceof Error ? e.message : "Fehler");
+                        }
+                        return;
+                      }
                       try {
                         const row = await logFn({
                           data: { exercise_id: ex.id, set_number, weight_kg, reps },
@@ -329,6 +358,8 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
                             { onConflict: "user_id,check_date" },
                           );
                         } catch {}
+                        // opportunistic flush of any prior offline writes
+                        void flushQueue();
                       } catch (e: unknown) {
                         toast.error(e instanceof Error ? e.message : "Fehler");
                       }
@@ -482,6 +513,21 @@ function ExerciseCard({
     setNote(val);
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
+      const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+      if (isOffline) {
+        try {
+          await enqueue({
+            kind: "exercise_note",
+            exercise_id: ex.id,
+            client_id: clientId,
+            note_date: todayStr,
+            note: val,
+          });
+        } catch {
+          /* silent */
+        }
+        return;
+      }
       try {
         await supabase
           .from("training_exercise_notes")
