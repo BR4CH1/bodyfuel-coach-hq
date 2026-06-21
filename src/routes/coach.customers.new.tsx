@@ -46,6 +46,7 @@ function NewCustomerForm() {
     trial_days: 7,
     notes: "",
     bulls: false,
+    skip_invite: false,
   });
   const isTrial = form.package === "trial";
   const isFree = form.package === "free";
