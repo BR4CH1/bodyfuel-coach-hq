@@ -139,17 +139,15 @@ function SmartLandingPage() {
           </p>
 
           <div className="mt-10 grid gap-5 lg:grid-cols-2">
-            <PlanCard
+          <PlanCard
               name="BodyFuel Smart"
               price="14,99 €"
-              tagline="Voll automatisiert. Du startest sofort."
+              tagline="Dein persönlicher Fitness-Autopilot."
               items={[
-                "Automatischer Ernährungsplan",
-                "Automatischer Trainingsplan",
-                "Smarte Einkaufsliste",
-                "Tracking, Fortschritt & Prognose",
-                "Strength Check",
-                "Ranking, Level & Achievements",
+                "Individueller Ernährungs- & Trainingsplan",
+                "Automatische Anpassungen & Verlängerung",
+                "Tracker, Tagespunkte & Community inklusive",
+                "Selbstständig mit intelligenter Unterstützung",
               ]}
               cta={{ to: "/smart/signup", label: "Smart starten" }}
               highlight
@@ -157,14 +155,12 @@ function SmartLandingPage() {
             <PlanCard
               name="BodyFuel Coaching"
               price="69 €"
-              tagline="1:1-Betreuung mit Manu als Coach."
+              tagline="Persönliche 1:1 Betreuung durch deinen Coach."
               items={[
-                "Alles aus BodyFuel Smart",
-                "Persönliche Betreuung durch Manu",
-                "Wöchentliche Check-ins",
-                "Individuelle Anpassungen",
-                "Plananpassungen jederzeit",
-                "WhatsApp Support",
+                "Individueller Ernährungs- & Trainingsplan",
+                "Persönliche Anpassungen statt Automatiken",
+                "Direkter Chat-Support bei Fragen",
+                "Wöchentliche Check-Ins & Feedback",
               ]}
               cta={{ to: "/", hash: "pakete", label: "Coaching ansehen" }}
             />
