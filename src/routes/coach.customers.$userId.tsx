@@ -53,6 +53,7 @@ import { MealWishesCard } from "@/components/bodyfuel/MealWishesCard";
 import { CoachKitchenEquipmentCard } from "@/components/bodyfuel/CoachKitchenEquipmentCard";
 import { ProgressPhotosCard } from "@/components/bodyfuel/ProgressPhotosCard";
 import { PhotoAssessmentCard } from "@/components/bodyfuel/PhotoAssessmentCard";
+import { SectionErrorBoundary } from "@/components/bodyfuel/SectionErrorBoundary";
 
 import { PartnerLinkCard } from "@/components/bodyfuel/PartnerLinkCard";
 import { CoachTrainingGoalCard } from "@/components/bodyfuel/CoachTrainingGoalCard";
@@ -104,6 +105,7 @@ function CustomerDetail() {
 
   const [newPw, setNewPw] = useState("");
   const [showPwForm, setShowPwForm] = useState(false);
+  const [showDangerZone, setShowDangerZone] = useState(false);
 
 
   const { data, isLoading } = useQuery({
@@ -269,7 +271,7 @@ function CustomerDetail() {
                 >
                   Passwort zurücksetzen
                 </Button>
-                {status === "deactivated" ? (
+                {status === "deactivated" && (
                   <Button
                     size="sm"
                     variant="outline"
@@ -278,47 +280,72 @@ function CustomerDetail() {
                   >
                     Zugang aktivieren
                   </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      if (window.confirm("Zugang wirklich deaktivieren? Der Kunde kann sich nicht mehr einloggen.")) {
-                        accessAction.mutate("deactivate");
-                      }
-                    }}
-                    disabled={accessAction.isPending}
-                    className="text-destructive hover:text-destructive"
-                  >
-                    Zugang deaktivieren
-                  </Button>
                 )}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setShowPwForm((v) => !v)}
-                >
-                  Passwort selbst setzen
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={async () => {
-                    const name = data.profile?.display_name ?? data.email ?? "diesen Kunden";
-                    if (!window.confirm(`Konto von ${name} unwiderruflich löschen? Alle Pakete und Zahlungen werden ebenfalls entfernt.`)) return;
-                    try {
-                      await deleteFn({ data: { user_id: userId } });
-                      toast.success("Kunde gelöscht.");
-                      navigate({ to: "/coach/customers" });
-                    } catch (e) {
-                      toast.error((e as Error).message);
-                    }
-                  }}
-                  className="text-destructive hover:text-destructive"
-                >
-                  Konto löschen
-                </Button>
               </div>
+
+              {/* Danger zone — versteckt, damit nichts versehentlich passiert */}
+              <div className="mt-4 border-t border-border pt-3">
+                <button
+                  type="button"
+                  onClick={() => setShowDangerZone((v) => !v)}
+                  className="text-[11px] uppercase tracking-wider text-muted-foreground hover:text-destructive"
+                >
+                  {showDangerZone ? "▾ Erweiterte Aktionen ausblenden" : "▸ Erweiterte Aktionen anzeigen"}
+                </button>
+                {showDangerZone && (
+                  <div className="mt-3 rounded-xl border border-destructive/30 bg-destructive/5 p-3">
+                    <p className="mb-3 text-[11px] text-muted-foreground">
+                      Diese Aktionen sind kritisch. Bitte vorsichtig nutzen.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setShowPwForm((v) => !v)}
+                      >
+                        Passwort selbst setzen
+                      </Button>
+                      {status !== "deactivated" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            if (window.confirm("Zugang wirklich deaktivieren? Der Kunde kann sich nicht mehr einloggen.")) {
+                              accessAction.mutate("deactivate");
+                            }
+                          }}
+                          disabled={accessAction.isPending}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          Zugang deaktivieren
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={async () => {
+                          const name = data.profile?.display_name ?? data.email ?? "diesen Kunden";
+                          const confirm1 = window.prompt(
+                            `Konto von ${name} unwiderruflich löschen?\n\nAlle Pakete und Zahlungen werden ebenfalls entfernt.\n\nZum Bestätigen tippe LÖSCHEN ein:`,
+                          );
+                          if (confirm1 !== "LÖSCHEN") return;
+                          try {
+                            await deleteFn({ data: { user_id: userId } });
+                            toast.success("Kunde gelöscht.");
+                            navigate({ to: "/coach/customers" });
+                          } catch (e) {
+                            toast.error((e as Error).message);
+                          }
+                        }}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        Konto löschen
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
 
               {showPwForm && (
                 <form
@@ -690,20 +717,37 @@ function CustomerDetail() {
             Fortschritt & Check-ins
           </AccordionTrigger>
           <AccordionContent className="space-y-6 pt-2">
-            <WeightProgressChart
-              measurements={(data.measurements ?? []) as any}
-              goalWeight={(data.profile as any)?.goal_weight_kg ?? null}
-              title="Gewichtsentwicklung"
-              emptyHint="Sobald der Kunde sein erstes Gewicht einträgt, erscheint hier sein Verlauf."
-            />
-            <MeasurementsCard measurements={data.measurements ?? []} />
-            <ProgressPhotosCard userId={userId} readOnly />
-            <PhotoAssessmentCard userId={userId} isCoach />
-            <AiCheckinDraftCard userId={userId} />
-            <PlanAdjustmentsCard userId={userId} />
-            <CustomerCheckinsCard userId={userId} />
-            <CustomerRecentActivityCard userId={userId} />
+            <SectionErrorBoundary label="Gewichtsentwicklung">
+              <WeightProgressChart
+                measurements={(data.measurements ?? []) as any}
+                goalWeight={(data.profile as any)?.goal_weight_kg ?? null}
+                title="Gewichtsentwicklung"
+                emptyHint="Sobald der Kunde sein erstes Gewicht einträgt, erscheint hier sein Verlauf."
+              />
+            </SectionErrorBoundary>
+            <SectionErrorBoundary label="Maße & Gewicht">
+              <MeasurementsCard measurements={data.measurements ?? []} />
+            </SectionErrorBoundary>
+            <SectionErrorBoundary label="Fortschrittsfotos">
+              <ProgressPhotosCard userId={userId} readOnly />
+            </SectionErrorBoundary>
+            <SectionErrorBoundary label="Foto-Auswertung">
+              <PhotoAssessmentCard userId={userId} isCoach />
+            </SectionErrorBoundary>
+            <SectionErrorBoundary label="AI Check-in Entwurf">
+              <AiCheckinDraftCard userId={userId} />
+            </SectionErrorBoundary>
+            <SectionErrorBoundary label="Plan-Anpassungen">
+              <PlanAdjustmentsCard userId={userId} />
+            </SectionErrorBoundary>
+            <SectionErrorBoundary label="Check-ins">
+              <CustomerCheckinsCard userId={userId} />
+            </SectionErrorBoundary>
+            <SectionErrorBoundary label="Letzte Aktivität">
+              <CustomerRecentActivityCard userId={userId} />
+            </SectionErrorBoundary>
           </AccordionContent>
+
         </AccordionItem>
 
         <AccordionItem
