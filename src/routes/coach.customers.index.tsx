@@ -68,7 +68,8 @@ function CustomersList() {
     const overdue = (data ?? []).filter((c: any) => c.payment_status === "overdue").length;
     const bulls = (data ?? []).filter((c: any) => (c.groups ?? []).includes("bulls")).length;
     const smart = (data ?? []).filter((c: any) => c.package === "smart").length;
-    return { all: data?.length ?? 0, due, overdue, bulls, smart, trial: trialCount, trial_expired: trialExpiredCount, free: freeCount };
+    const customers = data?.length ?? 0;
+    return { all: customers + trialCount + freeCount, due, overdue, bulls, smart, trial: trialCount, trial_expired: trialExpiredCount, free: freeCount };
   }, [data, trialCount, trialExpiredCount, freeCount]);
 
   const filtered = useMemo(() => {
