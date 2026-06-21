@@ -10,7 +10,7 @@ async function assertCoach(supabase: any, userId: string) {
 }
 
 export type CoachAlertSeverity = "red" | "orange";
-export type CoachAlertKind = "weight" | "nutrition" | "tracking";
+export type CoachAlertKind = "weight" | "nutrition" | "tracking" | "plan";
 
 export type CoachActionAlert = {
   user_id: string;
@@ -53,7 +53,7 @@ export const getCoachActionAlerts = createServerFn({ method: "GET" })
       const since30Iso = new Date(today - 30 * 86400000).toISOString();
       const since7dIso = new Date(today - 7 * 86400000).toISOString();
 
-      const [profiles, measurements, foods, targets, skips, swaps] = await Promise.all([
+      const [profiles, measurements, foods, targets, skips, swaps, activePlans] = await Promise.all([
       supabase
         .from("profiles")
         .select("id, display_name, training_goal, goal_weight_kg, goal_target_date")
@@ -84,6 +84,11 @@ export const getCoachActionAlerts = createServerFn({ method: "GET" })
         .in("user_id", ids)
         .eq("kind", "swapped")
         .gte("created_at", since30Iso),
+      supabase
+        .from("nutrition_plans")
+        .select("client_id, plan_type, status, scheduled_end_date")
+        .in("client_id", ids)
+        .in("status", ["active", "draft", "approved", "published"]),
     ]);
 
     const weightsByUser = new Map<string, Array<{ w: number; at: string }>>();
@@ -121,6 +126,31 @@ export const getCoachActionAlerts = createServerFn({ method: "GET" })
       swapCountByUser.set(s.user_id, (swapCountByUser.get(s.user_id) ?? 0) + 1),
     );
 
+    type PlanState = {
+      activeNutrition: boolean;
+      activeTraining: boolean;
+      pendingNutrition: boolean;
+      pendingTraining: boolean;
+    };
+    const planByUser = new Map<string, PlanState>();
+    ((activePlans as any).data ?? []).forEach((p: any) => {
+      const s = planByUser.get(p.client_id) ?? {
+        activeNutrition: false,
+        activeTraining: false,
+        pendingNutrition: false,
+        pendingTraining: false,
+      };
+      const isActive = p.status === "active";
+      if (p.plan_type === "nutrition") {
+        if (isActive) s.activeNutrition = true;
+        else s.pendingNutrition = true;
+      } else if (p.plan_type === "training") {
+        if (isActive) s.activeTraining = true;
+        else s.pendingTraining = true;
+      }
+      planByUser.set(p.client_id, s);
+    });
+
     const alerts: CoachActionAlert[] = [];
     const push = (a: Omit<CoachActionAlert, "key">) =>
       alerts.push({ ...a, key: `${a.user_id}:${a.kind}:${a.title}` });
@@ -130,6 +160,41 @@ export const getCoachActionAlerts = createServerFn({ method: "GET" })
       const goal = String(p.training_goal ?? "").toLowerCase();
       const isCut = CUT_GOALS.has(goal);
       const isBulk = BULK_GOALS.has(goal);
+
+      // ----- PLAN -----
+      const plan = planByUser.get(p.id) ?? {
+        activeNutrition: false,
+        activeTraining: false,
+        pendingNutrition: false,
+        pendingTraining: false,
+      };
+      if (!plan.activeNutrition) {
+        push({
+          user_id: p.id,
+          name,
+          severity: "red",
+          kind: "plan",
+          title: "Kein aktiver Ernährungsplan",
+          detail: plan.pendingNutrition
+            ? "Draft/Published vorhanden — Auto-Aktivierung hat nicht gegriffen."
+            : "Kein Ernährungsplan vorhanden — Plan erstellen.",
+          range: "akt.",
+        });
+      }
+      if (!plan.activeTraining) {
+        push({
+          user_id: p.id,
+          name,
+          severity: "red",
+          kind: "plan",
+          title: "Kein aktiver Trainingsplan",
+          detail: plan.pendingTraining
+            ? "Draft/Published vorhanden — Auto-Aktivierung hat nicht gegriffen."
+            : "Kein Trainingsplan vorhanden — Plan erstellen.",
+          range: "akt.",
+        });
+      }
+
 
       // ----- WEIGHT -----
       const series = (weightsByUser.get(p.id) ?? [])
