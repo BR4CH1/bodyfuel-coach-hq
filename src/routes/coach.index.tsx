@@ -586,19 +586,15 @@ function CoachDashboard() {
 
       {!loading && (
         <div className="space-y-8">
-          {/* ===== 1. HANDLUNGSBEDARF ===== */}
-          <ActionNeededHero
-            openCheckins={openWeek.length}
-            expiringPlans={expiringPlans.length}
-            inactive={inactive.length}
-            newLeads={leads.length}
-          />
-
+          {/* ===== Übersicht ===== */}
           <CoachDashboardSummary data={radarQuery.data} />
-          <TierMetricsCard />
-          <CoachMessagesCard />
+
+          {/* Direkt unter der Übersicht: Radar + Aufgaben-Inbox */}
           <CoachRadarCard data={radarQuery.data} />
           <CoachTaskInboxCard data={radarQuery.data} />
+
+          <TierMetricsCard />
+          <CoachMessagesCard />
 
 
 
