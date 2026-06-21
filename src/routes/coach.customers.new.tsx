@@ -252,7 +252,7 @@ function NewCustomerForm() {
           <div>
             <div className="text-sm font-semibold">Ohne Einladung anlegen (still)</div>
             <div className="text-xs text-muted-foreground">
-              Für Influencer / Test-Accounts: Account wird angelegt, aber es wird keine E-Mail verschickt. Passwort kannst du später per Reset-Link teilen.
+              Für Influencer / Test-Accounts: Account wird angelegt, keine E-Mail verschickt. Das gewählte Paket wird automatisch <strong>kostenlos für 10 Jahre</strong> freigeschaltet — keine Zahlung nötig. Passwort kannst du später per Reset-Link teilen.
             </div>
           </div>
         </label>
