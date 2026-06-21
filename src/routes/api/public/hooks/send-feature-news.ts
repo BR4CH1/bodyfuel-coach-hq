@@ -244,7 +244,3 @@ export const Route = createFileRoute("/api/public/hooks/send-feature-news")({
     },
   },
 });
-      },
-    },
-  },
-});
