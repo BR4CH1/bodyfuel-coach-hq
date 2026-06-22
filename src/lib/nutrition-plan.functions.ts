@@ -448,9 +448,17 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
     const hasPlaceholder = /\bfür\s+(Person|Person\s+[AB]|Du|Ich)\b/i.test(joined);
     const otherInText = otherPartner?.name && joined.toLowerCase().includes(otherPartner.name.toLowerCase());
     const skipCache = isPartnerMeal && (!hasPerPerson || hasPlaceholder || !otherInText);
+    const partnerIngredientSplit = buildPartnerIngredientSplit();
+    if (!data.force && partnerIngredientSplit && cached.length > 0) {
+      return {
+        ingredients: partnerIngredientSplit,
+        steps: (meal.recipe_steps as string[]) ?? [],
+        cached: true,
+      };
+    }
     if (!data.force && !skipCache && cached.length > 0) {
       return {
-        ingredients: buildPartnerIngredientSplit() ?? fixLabels(cached),
+        ingredients: partnerIngredientSplit ?? fixLabels(cached),
         steps: (meal.recipe_steps as string[]) ?? [],
         cached: true,
       };
@@ -540,7 +548,7 @@ Antworte ausschließlich mit gültigem JSON in diesem Format:
       : [];
     if (!ingredients.length) throw new Error("Rezept konnte nicht erstellt werden");
 
-    ingredients = buildPartnerIngredientSplit() ?? fixLabels(ingredients);
+    ingredients = partnerIngredientSplit ?? fixLabels(ingredients);
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     await supabaseAdmin
