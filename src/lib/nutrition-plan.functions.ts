@@ -318,8 +318,14 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
             if (pMeal) {
               partnerMealId = pMeal.id;
               // Back-fill the link on both sides for future calls.
-              await supabaseAdmin.from("nutrition_plan_meals").update({ partner_meal_id: pMeal.id }).eq("id", meal.id);
-              await supabaseAdmin.from("nutrition_plan_meals").update({ partner_meal_id: meal.id }).eq("id", pMeal.id);
+              await supabaseAdmin
+                .from("nutrition_plan_meals")
+                .update({ partner_meal_id: pMeal.id })
+                .eq("id", meal.id);
+              await supabaseAdmin
+                .from("nutrition_plan_meals")
+                .update({ partner_meal_id: meal.id })
+                .eq("id", pMeal.id);
             }
           }
         }
@@ -345,13 +351,18 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
           const selfName = nameOf(clientId, "Ich");
           selfPartner = {
             name: selfName,
-            kcal: meal.kcal, protein_g: meal.protein_g, carbs_g: meal.carbs_g, fat_g: meal.fat_g,
+            kcal: meal.kcal,
+            protein_g: meal.protein_g,
+            carbs_g: meal.carbs_g,
+            fat_g: meal.fat_g,
             description: meal.description,
           };
           otherPartner = {
             name: otherName,
-            kcal: pMeal.kcal, protein_g: pMeal.protein_g,
-            carbs_g: pMeal.carbs_g, fat_g: pMeal.fat_g,
+            kcal: pMeal.kcal,
+            protein_g: pMeal.protein_g,
+            carbs_g: pMeal.carbs_g,
+            fat_g: pMeal.fat_g,
             description: pMeal.description ?? null,
           };
         }
@@ -369,7 +380,8 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
             .from("nutrition_targets")
             .select("user_id, kcal, protein_g, carbs_g, fat_g")
             .in("user_id", [clientId, partnerId]);
-          const targetOf = (id: string) => (targetRows ?? []).find((x: any) => x.user_id === id) as any;
+          const targetOf = (id: string) =>
+            (targetRows ?? []).find((x: any) => x.user_id === id) as any;
           const selfTarget = targetOf(clientId);
           const otherTarget = targetOf(partnerId);
           const { data: selfProfile } = await supabaseAdmin
