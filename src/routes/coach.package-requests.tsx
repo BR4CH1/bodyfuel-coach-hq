@@ -6,6 +6,7 @@ import { ArrowLeft, Check, X, Mail } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { useFormDraft, clearFormDraft } from "@/hooks/use-form-draft";
 import {
   listPackageRequests,
   updatePackageRequest,
@@ -49,6 +50,14 @@ function PackageRequestsAdmin() {
   const [filter, setFilter] = useState<"pending" | "all">("pending");
   const [notes, setNotes] = useState<Record<string, string>>({});
 
+  useFormDraft(
+    "bf.coach.packageRequests.notes.v1",
+    { notes },
+    (d) => {
+      if (d.notes && typeof d.notes === "object") setNotes(d.notes as Record<string, string>);
+    },
+  );
+
   const load = async () => {
     setLoading(true);
     try {
@@ -73,6 +82,12 @@ function PackageRequestsAdmin() {
         data: { id, status, coach_note: notes[id] || undefined },
       });
       toast.success(status === "approved" ? "Genehmigt" : "Abgelehnt");
+      setNotes((n) => {
+        const next = { ...n };
+        delete next[id];
+        if (Object.keys(next).length === 0) clearFormDraft("bf.coach.packageRequests.notes.v1");
+        return next;
+      });
       load();
     } catch (e: any) {
       toast.error(e.message);

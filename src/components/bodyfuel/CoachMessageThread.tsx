@@ -5,6 +5,7 @@ import { Send, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { useFormDraft, clearFormDraft } from "@/hooks/use-form-draft";
 import { supabase } from "@/integrations/supabase/client";
 import {
   getThreadForClient,
@@ -53,6 +54,16 @@ export function CoachMessageThread({ mode, userId }: Props) {
 
   const [text, setText] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const draftKey =
+    mode === "coach" && userId
+      ? `bf.coach.thread.reply.v1.${userId}`
+      : mode === "client"
+        ? "bf.client.thread.reply.v1"
+        : null;
+  useFormDraft(draftKey, { text }, (d) => {
+    if (typeof d.text === "string") setText(d.text);
+  });
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -109,6 +120,7 @@ export function CoachMessageThread({ mode, userId }: Props) {
     },
     onSuccess: () => {
       setText("");
+      clearFormDraft(draftKey);
       qc.invalidateQueries({ queryKey: threadKey });
       qc.invalidateQueries({ queryKey: ["coach-inbox"] });
       qc.invalidateQueries({ queryKey: ["my-unread"] });

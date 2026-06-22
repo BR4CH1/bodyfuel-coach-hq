@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import { useFormDraft, clearFormDraft } from "@/hooks/use-form-draft";
 import {
   getCoachInbox,
   broadcastFromCoach,
@@ -64,11 +65,22 @@ export function CoachMessagesCard() {
   const [audience, setAudience] = useState<"all" | "client" | "free">("all");
   const [showBroadcast, setShowBroadcast] = useState(false);
 
+  useFormDraft(
+    "bf.coach.broadcast.v1",
+    { broadcastBody, audience },
+    (d) => {
+      if (typeof d.broadcastBody === "string") setBroadcastBody(d.broadcastBody);
+      if (d.audience === "all" || d.audience === "client" || d.audience === "free") setAudience(d.audience);
+      if (typeof d.broadcastBody === "string" && d.broadcastBody.length > 0) setShowBroadcast(true);
+    },
+  );
+
   const broadcastMut = useMutation({
     mutationFn: () => broadcastFn({ data: { body: broadcastBody.trim(), audience } }),
     onSuccess: (res: any) => {
       toast.success(`Broadcast gesendet an ${res?.sent ?? 0} Kunden`);
       setBroadcastBody("");
+      clearFormDraft("bf.coach.broadcast.v1");
       setShowBroadcast(false);
       qc.invalidateQueries({ queryKey: ["coach-inbox"] });
     },
