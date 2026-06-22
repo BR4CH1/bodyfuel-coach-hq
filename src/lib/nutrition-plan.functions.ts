@@ -523,7 +523,7 @@ Antworte ausschließlich mit gültigem JSON in diesem Format:
       : [];
     if (!ingredients.length) throw new Error("Rezept konnte nicht erstellt werden");
 
-    ingredients = fixLabels(ingredients);
+    ingredients = buildPartnerIngredientSplit() ?? fixLabels(ingredients);
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     await supabaseAdmin
