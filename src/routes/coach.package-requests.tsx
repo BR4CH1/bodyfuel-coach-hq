@@ -50,6 +50,14 @@ function PackageRequestsAdmin() {
   const [filter, setFilter] = useState<"pending" | "all">("pending");
   const [notes, setNotes] = useState<Record<string, string>>({});
 
+  useFormDraft(
+    "bf.coach.packageRequests.notes.v1",
+    { notes },
+    (d) => {
+      if (d.notes && typeof d.notes === "object") setNotes(d.notes as Record<string, string>);
+    },
+  );
+
   const load = async () => {
     setLoading(true);
     try {
