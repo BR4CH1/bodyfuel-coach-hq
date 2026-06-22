@@ -14,13 +14,12 @@ import { captureReferralFromUrl, clearStoredReferral, getStoredReferral } from "
 export function ReferralAttacher() {
   const { supabaseUser, loading } = useSession();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const search = useRouterState({ select: (s) => s.location.searchStr });
   const attach = useServerFn(attachReferralForSelf);
 
   // Capture ?ref=… on every navigation
   useEffect(() => {
-    captureReferralFromUrl(search);
-  }, [pathname, search]);
+    captureReferralFromUrl();
+  }, [pathname]);
 
   // After sign-in, attach the stored slug to this user (once)
   useEffect(() => {
