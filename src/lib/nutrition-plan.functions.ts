@@ -541,7 +541,7 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
           `${selfItem.name}: ${formatAmount(selfItem.amount)} ${selfItem.unit} für ${self.name}, ${formatAmount(otherItem.amount)} ${otherItem.unit} für ${other.name} — insgesamt ${formatAmount(selfItem.amount + otherItem.amount)} ${selfItem.unit}`,
         );
       }
-      return rows.length >= 2 ? rows : null;
+      return rows.length >= 2 ? rows : buildScaledPartnerIngredientSplit();
     };
 
     const buildScaledPartnerIngredientSplit = () => {
