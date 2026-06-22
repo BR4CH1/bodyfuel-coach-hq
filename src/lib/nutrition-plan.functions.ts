@@ -335,16 +335,11 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
         if (clientId && otherClientId) {
           const { data: profs } = await supabaseAdmin
             .from("profiles")
-            .select("id, display_name, first_name, email")
+            .select("id, display_name")
             .in("id", [clientId, otherClientId]);
           const nameOf = (id: string, fallback: string) => {
             const p: any = (profs ?? []).find((x: any) => x.id === id);
-            return (
-              p?.display_name?.trim() ||
-              p?.first_name?.trim() ||
-              (p?.email ? p.email.split("@")[0] : null) ||
-              fallback
-            );
+            return p?.display_name?.trim() || fallback;
           };
           const otherName = partnerNameFromTitle || nameOf(otherClientId, "Partner");
           const selfName = nameOf(clientId, "Ich");
@@ -358,6 +353,45 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
             kcal: pMeal.kcal, protein_g: pMeal.protein_g,
             carbs_g: pMeal.carbs_g, fat_g: pMeal.fat_g,
             description: pMeal.description ?? null,
+          };
+        }
+      }
+
+      if (!pMeal && clientId && partnerNameFromTitle) {
+        const { data: partnerProfile } = await supabaseAdmin
+          .from("profiles")
+          .select("id, display_name")
+          .eq("display_name", partnerNameFromTitle)
+          .maybeSingle();
+        const partnerId = (partnerProfile as any)?.id;
+        if (partnerId) {
+          const { data: targetRows } = await supabaseAdmin
+            .from("nutrition_targets")
+            .select("user_id, kcal, protein_g, carbs_g, fat_g")
+            .in("user_id", [clientId, partnerId]);
+          const targetOf = (id: string) => (targetRows ?? []).find((x: any) => x.user_id === id) as any;
+          const selfTarget = targetOf(clientId);
+          const otherTarget = targetOf(partnerId);
+          const { data: selfProfile } = await supabaseAdmin
+            .from("profiles")
+            .select("display_name")
+            .eq("id", clientId)
+            .maybeSingle();
+          selfPartner = {
+            name: (selfProfile as any)?.display_name?.trim() || "Ich",
+            kcal: meal.kcal ?? selfTarget?.kcal ?? null,
+            protein_g: meal.protein_g ?? selfTarget?.protein_g ?? null,
+            carbs_g: meal.carbs_g ?? selfTarget?.carbs_g ?? null,
+            fat_g: meal.fat_g ?? selfTarget?.fat_g ?? null,
+            description: meal.description,
+          };
+          otherPartner = {
+            name: partnerNameFromTitle,
+            kcal: otherTarget?.kcal ?? null,
+            protein_g: otherTarget?.protein_g ?? null,
+            carbs_g: otherTarget?.carbs_g ?? null,
+            fat_g: otherTarget?.fat_g ?? null,
+            description: null,
           };
         }
       }
