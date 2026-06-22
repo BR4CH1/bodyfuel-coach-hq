@@ -302,7 +302,9 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
         // day (by sort_order) and the meal with the same name + sort_order.
         const { data: selfDay } = await supabaseAdmin
           .from("nutrition_plan_days")
-          .select("plan_id, sort_order, nutrition_plans!inner(partner_plan_id)")
+          .select(
+            "plan_id, sort_order, nutrition_plans!inner(partner_plan_id, scheduled_start_date, scheduled_end_date, created_at)",
+          )
           .eq("id", meal.day_id)
           .maybeSingle();
         const partnerPlanId = (selfDay as any)?.nutrition_plans?.partner_plan_id;
@@ -338,6 +340,51 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
                 .from("nutrition_plan_meals")
                 .update({ partner_meal_id: meal.id })
                 .eq("id", pMeal.id);
+            }
+          }
+        }
+        if (!pMeal && partnerNameFromTitle && daySort != null) {
+          const selfPlan = (selfDay as any)?.nutrition_plans;
+          const { data: partnerProfile } = await supabaseAdmin
+            .from("profiles")
+            .select("id")
+            .eq("display_name", partnerNameFromTitle)
+            .maybeSingle();
+          const partnerClientId = (partnerProfile as any)?.id;
+          if (partnerClientId && selfPlan?.scheduled_start_date && selfPlan?.scheduled_end_date) {
+            const { data: candidatePlans } = await supabaseAdmin
+              .from("nutrition_plans")
+              .select("id, status, partner_plan_id, created_at")
+              .eq("client_id", partnerClientId)
+              .eq("plan_type", "nutrition")
+              .eq("is_partner_plan", true)
+              .lte("scheduled_start_date", selfPlan.scheduled_end_date)
+              .gte("scheduled_end_date", selfPlan.scheduled_start_date)
+              .order("created_at", { ascending: false })
+              .limit(10);
+            const partnerPlan =
+              (candidatePlans ?? []).find((x: any) => x.partner_plan_id === (selfDay as any)?.plan_id) ||
+              (candidatePlans ?? []).find((x: any) => x.status === "active") ||
+              (candidatePlans ?? [])[0];
+            if (partnerPlan?.id) {
+              const { data: pDayRow } = await supabaseAdmin
+                .from("nutrition_plan_days")
+                .select("id")
+                .eq("plan_id", partnerPlan.id)
+                .eq("sort_order", daySort)
+                .maybeSingle();
+              const pDayId = (pDayRow as any)?.id;
+              if (pDayId) {
+                const { data: candidates } = await supabaseAdmin
+                  .from("nutrition_plan_meals")
+                  .select("id, kcal, protein_g, carbs_g, fat_g, day_id, description, name, sort_order")
+                  .eq("day_id", pDayId);
+                const list = (candidates ?? []) as any[];
+                pMeal =
+                  list.find((x) => x.name === meal.name) ||
+                  list.find((x) => x.sort_order === (meal as any).sort_order) ||
+                  null;
+              }
             }
           }
         }
