@@ -52,7 +52,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   // hydrate supabase
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      // Silent events that should never cause a UI flicker or profile reload
+      // (Supabase fires TOKEN_REFRESHED ~hourly + on tab focus; INITIAL_SESSION
+      // every mount). Re-loading profile here used to unmount mid-form state
+      // — e.g. losing a half-entered training set right before saving.
+      if (event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION" || event === "USER_UPDATED") {
+        setSupabaseUser(session?.user ?? null);
+        return;
+      }
       setLoading(true);
       setSupabaseUser(session?.user ?? null);
       if (!session?.user) {
