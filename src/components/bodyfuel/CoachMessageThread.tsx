@@ -120,6 +120,7 @@ export function CoachMessageThread({ mode, userId }: Props) {
     },
     onSuccess: () => {
       setText("");
+      clearFormDraft(draftKey);
       qc.invalidateQueries({ queryKey: threadKey });
       qc.invalidateQueries({ queryKey: ["coach-inbox"] });
       qc.invalidateQueries({ queryKey: ["my-unread"] });
