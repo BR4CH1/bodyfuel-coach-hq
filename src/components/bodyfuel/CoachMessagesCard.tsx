@@ -80,6 +80,7 @@ export function CoachMessagesCard() {
     onSuccess: (res: any) => {
       toast.success(`Broadcast gesendet an ${res?.sent ?? 0} Kunden`);
       setBroadcastBody("");
+      clearFormDraft("bf.coach.broadcast.v1");
       setShowBroadcast(false);
       qc.invalidateQueries({ queryKey: ["coach-inbox"] });
     },
