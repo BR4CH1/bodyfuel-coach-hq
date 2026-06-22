@@ -435,6 +435,45 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
           };
         }
       }
+
+      if (!otherPartner && clientId && partnerNameFromTitle) {
+        const { data: partnerProfile } = await supabaseAdmin
+          .from("profiles")
+          .select("id, display_name")
+          .eq("display_name", partnerNameFromTitle)
+          .maybeSingle();
+        const partnerClientId = (partnerProfile as any)?.id;
+        if (partnerClientId) {
+          const { data: targets } = await supabaseAdmin
+            .from("nutrition_targets")
+            .select("user_id, kcal, protein_g, carbs_g, fat_g")
+            .in("user_id", [clientId, partnerClientId]);
+          const targetOf = (id: string) => (targets ?? []).find((x: any) => x.user_id === id) as any;
+          const selfTarget = targetOf(clientId);
+          const otherTarget = targetOf(partnerClientId);
+          const { data: selfProfile } = await supabaseAdmin
+            .from("profiles")
+            .select("display_name")
+            .eq("id", clientId)
+            .maybeSingle();
+          selfPartner = {
+            name: (selfProfile as any)?.display_name?.trim() || "Ich",
+            kcal: meal.kcal ?? selfTarget?.kcal ?? null,
+            protein_g: meal.protein_g ?? selfTarget?.protein_g ?? null,
+            carbs_g: meal.carbs_g ?? selfTarget?.carbs_g ?? null,
+            fat_g: meal.fat_g ?? selfTarget?.fat_g ?? null,
+            description: meal.description,
+          };
+          otherPartner = {
+            name: (partnerProfile as any)?.display_name?.trim() || partnerNameFromTitle,
+            kcal: otherTarget?.kcal ?? null,
+            protein_g: otherTarget?.protein_g ?? null,
+            carbs_g: otherTarget?.carbs_g ?? null,
+            fat_g: otherTarget?.fat_g ?? null,
+            description: null,
+          };
+        }
+      }
     }
 
     type IngredientPart = { amount: number; unit: string; name: string; key: string };
@@ -481,7 +520,7 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
 
     const buildPartnerIngredientSplit = () => {
       if (!selfPartner?.description || !otherPartner?.description || !otherPartner.name)
-        return null;
+        return buildScaledPartnerIngredientSplit();
       const selfItems = selfPartner.description
         .split(",")
         .map(parseIngredientPart)
@@ -500,6 +539,27 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
         );
       }
       return rows.length >= 2 ? rows : null;
+    };
+
+    const buildScaledPartnerIngredientSplit = () => {
+      if (!selfPartner?.description || !otherPartner?.name) return null;
+      const selfItems = selfPartner.description
+        .split(",")
+        .map(parseIngredientPart)
+        .filter((it): it is IngredientPart => Boolean(it));
+      if (selfItems.length < 2) return null;
+      const rawRatio = otherPartner.kcal && selfPartner.kcal ? otherPartner.kcal / selfPartner.kcal : 0.5;
+      const ratio = Math.min(0.85, Math.max(0.35, rawRatio));
+      const roundPartnerAmount = (amount: number, unit: string) => {
+        const value = amount * ratio;
+        return ["g", "ml"].includes(unit)
+          ? Math.max(5, Math.round(value / 5) * 5)
+          : Math.round(value * 2) / 2;
+      };
+      return selfItems.map((item) => {
+        const otherAmount = roundPartnerAmount(item.amount, item.unit);
+        return `${item.name}: ${formatAmount(item.amount)} ${item.unit} für ${selfPartner.name}, ${formatAmount(otherAmount)} ${item.unit} für ${otherPartner.name} — insgesamt ${formatAmount(item.amount + otherAmount)} ${item.unit}`;
+      });
     };
 
     const fixLabels = (arr: string[]) => {
