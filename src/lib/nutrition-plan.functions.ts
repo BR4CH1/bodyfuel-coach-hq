@@ -212,7 +212,11 @@ Antworte ausschließlich mit gültigem JSON in dieser Form (ganzzahlige Werte, k
     const aiJson = await aiRes.json();
     const raw = aiJson?.choices?.[0]?.message?.content ?? "{}";
     let est: any = {};
-    try { est = typeof raw === "string" ? JSON.parse(raw) : raw; } catch { est = {}; }
+    try {
+      est = typeof raw === "string" ? JSON.parse(raw) : raw;
+    } catch {
+      est = {};
+    }
     const nz = (v: any) => {
       const n = Number(v);
       return Number.isFinite(n) && n >= 0 ? Math.round(n) : 0;
@@ -239,7 +243,7 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
     const { data: meal, error: mErr } = await supabase
       .from("nutrition_plan_meals")
       .select(
-        "id, name, description, kcal, protein_g, carbs_g, fat_g, day_id, partner_meal_id, sort_order, recipe_ingredients, recipe_steps, recipe_generated_at",
+        "id, name, description, kcal, protein_g, carbs_g, fat_g, day_id, partner_meal_id, is_shared, sort_order, recipe_ingredients, recipe_steps, recipe_generated_at",
       )
       .eq("id", data.meal_id)
       .maybeSingle();
@@ -259,12 +263,20 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
     // shared-meal prefix we set in partner-nutrition-plan-ai.functions.ts.
     const nameLooksShared = /Gemeinsam mit\s+(.+?)\s+—/i.exec(meal.name || "");
     const partnerNameFromTitle = nameLooksShared?.[1]?.trim() || null;
-    const isPartnerMeal = !!meal.partner_meal_id || !!partnerNameFromTitle;
+    const isPartnerMeal =
+      !!meal.partner_meal_id || !!partnerNameFromTitle || meal.is_shared === true;
 
     // Partner-meal lookup: fetch the partner's macros + display name so the
     // recipe can list per-person quantities. We do this BEFORE the cache check
     // so cached recipes with stale "für Person" labels can be fixed on the fly.
-    type Partner = { name: string; kcal: number | null; protein_g: number | null; carbs_g: number | null; fat_g: number | null; description?: string | null };
+    type Partner = {
+      name: string;
+      kcal: number | null;
+      protein_g: number | null;
+      carbs_g: number | null;
+      fat_g: number | null;
+      description?: string | null;
+    };
     let selfPartner: Partner | null = null;
     let otherPartner: Partner | null = null;
     if (isPartnerMeal) {
@@ -290,7 +302,9 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
         // day (by sort_order) and the meal with the same name + sort_order.
         const { data: selfDay } = await supabaseAdmin
           .from("nutrition_plan_days")
-          .select("plan_id, sort_order, nutrition_plans!inner(partner_plan_id)")
+          .select(
+            "plan_id, sort_order, nutrition_plans!inner(partner_plan_id, scheduled_start_date, scheduled_end_date, created_at)",
+          )
           .eq("id", meal.day_id)
           .maybeSingle();
         const partnerPlanId = (selfDay as any)?.nutrition_plans?.partner_plan_id;
@@ -318,8 +332,63 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
             if (pMeal) {
               partnerMealId = pMeal.id;
               // Back-fill the link on both sides for future calls.
-              await supabaseAdmin.from("nutrition_plan_meals").update({ partner_meal_id: pMeal.id }).eq("id", meal.id);
-              await supabaseAdmin.from("nutrition_plan_meals").update({ partner_meal_id: meal.id }).eq("id", pMeal.id);
+              await supabaseAdmin
+                .from("nutrition_plan_meals")
+                .update({ partner_meal_id: pMeal.id })
+                .eq("id", meal.id);
+              await supabaseAdmin
+                .from("nutrition_plan_meals")
+                .update({ partner_meal_id: meal.id })
+                .eq("id", pMeal.id);
+            }
+          }
+        }
+        if (!pMeal && partnerNameFromTitle && daySort != null) {
+          const selfPlan = (selfDay as any)?.nutrition_plans;
+          const { data: partnerProfile } = await supabaseAdmin
+            .from("profiles")
+            .select("id")
+            .eq("display_name", partnerNameFromTitle)
+            .maybeSingle();
+          const partnerClientId = (partnerProfile as any)?.id;
+          if (partnerClientId && selfPlan?.scheduled_start_date && selfPlan?.scheduled_end_date) {
+            const { data: candidatePlans } = await supabaseAdmin
+              .from("nutrition_plans")
+              .select("id, status, partner_plan_id, created_at")
+              .eq("client_id", partnerClientId)
+              .eq("plan_type", "nutrition")
+              .eq("is_partner_plan", true)
+              .lte("scheduled_start_date", selfPlan.scheduled_end_date)
+              .gte("scheduled_end_date", selfPlan.scheduled_start_date)
+              .order("created_at", { ascending: false })
+              .limit(10);
+            const partnerPlan =
+              (candidatePlans ?? []).find(
+                (x: any) => x.partner_plan_id === (selfDay as any)?.plan_id,
+              ) ||
+              (candidatePlans ?? []).find((x: any) => x.status === "active") ||
+              (candidatePlans ?? [])[0];
+            if (partnerPlan?.id) {
+              const { data: pDayRow } = await supabaseAdmin
+                .from("nutrition_plan_days")
+                .select("id")
+                .eq("plan_id", partnerPlan.id)
+                .eq("sort_order", daySort)
+                .maybeSingle();
+              const pDayId = (pDayRow as any)?.id;
+              if (pDayId) {
+                const { data: candidates } = await supabaseAdmin
+                  .from("nutrition_plan_meals")
+                  .select(
+                    "id, kcal, protein_g, carbs_g, fat_g, day_id, description, name, sort_order",
+                  )
+                  .eq("day_id", pDayId);
+                const list = (candidates ?? []) as any[];
+                pMeal =
+                  list.find((x) => x.name === meal.name) ||
+                  list.find((x) => x.sort_order === (meal as any).sort_order) ||
+                  null;
+              }
             }
           }
         }
@@ -350,24 +419,159 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
           const selfName = nameOf(clientId, "Ich");
           selfPartner = {
             name: selfName,
-            kcal: meal.kcal, protein_g: meal.protein_g, carbs_g: meal.carbs_g, fat_g: meal.fat_g,
+            kcal: meal.kcal,
+            protein_g: meal.protein_g,
+            carbs_g: meal.carbs_g,
+            fat_g: meal.fat_g,
             description: meal.description,
           };
           otherPartner = {
             name: otherName,
-            kcal: pMeal.kcal, protein_g: pMeal.protein_g,
-            carbs_g: pMeal.carbs_g, fat_g: pMeal.fat_g,
+            kcal: pMeal.kcal,
+            protein_g: pMeal.protein_g,
+            carbs_g: pMeal.carbs_g,
+            fat_g: pMeal.fat_g,
             description: pMeal.description ?? null,
+          };
+        }
+      }
+
+      if (!otherPartner && clientId && partnerNameFromTitle) {
+        const { data: partnerProfile } = await supabaseAdmin
+          .from("profiles")
+          .select("id, display_name")
+          .eq("display_name", partnerNameFromTitle)
+          .maybeSingle();
+        const partnerClientId = (partnerProfile as any)?.id;
+        if (partnerClientId) {
+          const { data: targets } = await supabaseAdmin
+            .from("nutrition_targets")
+            .select("user_id, kcal, protein_g, carbs_g, fat_g")
+            .in("user_id", [clientId, partnerClientId]);
+          const targetOf = (id: string) =>
+            (targets ?? []).find((x: any) => x.user_id === id) as any;
+          const selfTarget = targetOf(clientId);
+          const otherTarget = targetOf(partnerClientId);
+          const { data: selfProfile } = await supabaseAdmin
+            .from("profiles")
+            .select("display_name")
+            .eq("id", clientId)
+            .maybeSingle();
+          selfPartner = {
+            name: (selfProfile as any)?.display_name?.trim() || "Ich",
+            kcal: meal.kcal ?? selfTarget?.kcal ?? null,
+            protein_g: meal.protein_g ?? selfTarget?.protein_g ?? null,
+            carbs_g: meal.carbs_g ?? selfTarget?.carbs_g ?? null,
+            fat_g: meal.fat_g ?? selfTarget?.fat_g ?? null,
+            description: meal.description,
+          };
+          otherPartner = {
+            name: (partnerProfile as any)?.display_name?.trim() || partnerNameFromTitle,
+            kcal: otherTarget?.kcal ?? null,
+            protein_g: otherTarget?.protein_g ?? null,
+            carbs_g: otherTarget?.carbs_g ?? null,
+            fat_g: otherTarget?.fat_g ?? null,
+            description: null,
           };
         }
       }
     }
 
+    type IngredientPart = { amount: number; unit: string; name: string; key: string };
+    const unitsPattern = "g|kg|ml|l|el|tl|stück|stk\\.?|dose|dosen|scheibe|scheiben|zehe|zehen";
+
+    const normalizeIngredientName = (raw: string) =>
+      raw
+        .replace(
+          new RegExp(
+            `^\\s*(?:ca\\.?\\s*)?(?:\\d+(?:[.,]\\d+)?|\\d+\\/\\d+)\\s*(?:${unitsPattern})\\s+`,
+            "i",
+          ),
+          "",
+        )
+        .replace(/\s+/g, " ")
+        .trim();
+
+    const parseIngredientPart = (part: string): IngredientPart | null => {
+      const text = part.trim();
+      const match = new RegExp(
+        `^(?:ca\\.?\\s*)?(\\d+(?:[.,]\\d+)?|\\d+\\/\\d+)\\s*(${unitsPattern})\\s+(.+)$`,
+        "i",
+      ).exec(text);
+      if (!match) return null;
+      const [, amountRaw, unitRaw, nameRaw] = match;
+      const amount = amountRaw.includes("/")
+        ? amountRaw
+            .split("/")
+            .map(Number)
+            .reduce((a, b) => (b ? a / b : a))
+        : Number(amountRaw.replace(",", "."));
+      if (!Number.isFinite(amount) || amount <= 0) return null;
+      const unit = unitRaw.toLowerCase().replace("stk.", "Stück");
+      return {
+        amount,
+        unit,
+        name: nameRaw.trim(),
+        key: normalizeIngredientName(text).toLowerCase(),
+      };
+    };
+
+    const formatAmount = (n: number) =>
+      Number.isInteger(n) ? String(n) : String(Math.round(n * 10) / 10).replace(".", ",");
+
+    const buildPartnerIngredientSplit = () => {
+      const self = selfPartner;
+      const other = otherPartner;
+      if (!self?.description || !other?.description || !other.name)
+        return buildScaledPartnerIngredientSplit();
+      const selfItems = self.description
+        .split(",")
+        .map(parseIngredientPart)
+        .filter((it): it is IngredientPart => Boolean(it));
+      const otherItems = other.description
+        .split(",")
+        .map(parseIngredientPart)
+        .filter((it): it is IngredientPart => Boolean(it));
+      const otherByKey = new Map(otherItems.map((it) => [it.key, it]));
+      const rows: string[] = [];
+      for (const selfItem of selfItems) {
+        const otherItem = otherByKey.get(selfItem.key);
+        if (!otherItem || otherItem.unit !== selfItem.unit) continue;
+        rows.push(
+          `${selfItem.name}: ${formatAmount(selfItem.amount)} ${selfItem.unit} für ${self.name}, ${formatAmount(otherItem.amount)} ${otherItem.unit} für ${other.name} — insgesamt ${formatAmount(selfItem.amount + otherItem.amount)} ${selfItem.unit}`,
+        );
+      }
+      return rows.length >= 2 ? rows : buildScaledPartnerIngredientSplit();
+    };
+
+    const buildScaledPartnerIngredientSplit = () => {
+      const self = selfPartner;
+      const other = otherPartner;
+      if (!self?.description || !other?.name) return null;
+      const selfItems = self.description
+        .split(",")
+        .map(parseIngredientPart)
+        .filter((it): it is IngredientPart => Boolean(it));
+      if (selfItems.length < 2) return null;
+      const rawRatio = other.kcal && self.kcal ? other.kcal / self.kcal : 0.5;
+      const ratio = Math.min(0.85, Math.max(0.35, rawRatio));
+      const roundPartnerAmount = (amount: number, unit: string) => {
+        const value = amount * ratio;
+        return ["g", "ml"].includes(unit)
+          ? Math.max(5, Math.round(value / 5) * 5)
+          : Math.round(value * 2) / 2;
+      };
+      return selfItems.map((item) => {
+        const otherAmount = roundPartnerAmount(item.amount, item.unit);
+        return `${item.name}: ${formatAmount(item.amount)} ${item.unit} für ${self.name}, ${formatAmount(otherAmount)} ${item.unit} für ${other.name} — insgesamt ${formatAmount(item.amount + otherAmount)} ${item.unit}`;
+      });
+    };
+
     const fixLabels = (arr: string[]) => {
       if (!selfPartner || !otherPartner) return arr;
       // Replace generic "für Person" AND duplicate "für Du, für Du" patterns
       // that older cached recipes contain when both profiles had no name.
-      const patterns = [/\bfür\s+Person\b/gi, /\bfür\s+Du\b/g];
+      const patterns = [/\bfür\s+Person(?:\s+[AB])?\b/gi, /\bfür\s+Du\b/g, /\bfür\s+Ich\b/g];
       return arr.map((s) => {
         let out = s;
         for (const re of patterns) {
@@ -386,23 +590,30 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
     // Cache hit — regenerate when the cached recipe is missing partner names,
     // still uses generic "Person"/"Du" placeholders, or doesn't mention the
     // current partner's actual name.
-    const cached = Array.isArray(meal.recipe_ingredients) ? (meal.recipe_ingredients as string[]) : [];
+    const cached = Array.isArray(meal.recipe_ingredients)
+      ? (meal.recipe_ingredients as string[])
+      : [];
     const joined = cached.join("\n");
     const hasPerPerson = /\bfür\s+\S/i.test(joined);
-    const hasPlaceholder = /\bfür\s+(Person|Du)\b/i.test(joined);
-    const otherInText = otherPartner?.name && joined.toLowerCase().includes(otherPartner.name.toLowerCase());
+    const hasPlaceholder = /\bfür\s+(Person|Person\s+[AB]|Du|Ich)\b/i.test(joined);
+    const otherInText =
+      otherPartner?.name && joined.toLowerCase().includes(otherPartner.name.toLowerCase());
     const skipCache = isPartnerMeal && (!hasPerPerson || hasPlaceholder || !otherInText);
-    if (!data.force && !skipCache && cached.length > 0) {
+    const partnerIngredientSplit = buildPartnerIngredientSplit();
+    if (!data.force && partnerIngredientSplit && cached.length > 0) {
       return {
-        ingredients: fixLabels(cached),
+        ingredients: partnerIngredientSplit,
         steps: (meal.recipe_steps as string[]) ?? [],
         cached: true,
       };
     }
-
-
-
-
+    if (!data.force && !skipCache && cached.length > 0) {
+      return {
+        ingredients: partnerIngredientSplit ?? fixLabels(cached),
+        steps: (meal.recipe_steps as string[]) ?? [],
+        cached: true,
+      };
+    }
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY fehlt");
 
@@ -411,10 +622,13 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
       meal.protein_g != null ? `${meal.protein_g}g Eiweiß` : null,
       meal.carbs_g != null ? `${meal.carbs_g}g Kohlenhydrate` : null,
       meal.fat_g != null ? `${meal.fat_g}g Fett` : null,
-    ].filter(Boolean).join(", ");
+    ]
+      .filter(Boolean)
+      .join(", ");
 
-    const partnerBlock = selfPartner && otherPartner
-      ? `
+    const partnerBlock =
+      selfPartner && otherPartner
+        ? `
 WICHTIG — Das ist eine PARTNER-MAHLZEIT, die zwei Personen GEMEINSAM kochen:
 - ${selfPartner.name}: Zielwerte: ${[selfPartner.kcal && `${selfPartner.kcal} kcal`, selfPartner.protein_g && `${selfPartner.protein_g}g Eiweiß`, selfPartner.carbs_g && `${selfPartner.carbs_g}g KH`, selfPartner.fat_g && `${selfPartner.fat_g}g Fett`].filter(Boolean).join(", ")}${selfPartner.description ? `\n  Portion laut Plan: ${selfPartner.description}` : ""}
 - ${otherPartner.name}: Zielwerte: ${[otherPartner.kcal && `${otherPartner.kcal} kcal`, otherPartner.protein_g && `${otherPartner.protein_g}g Eiweiß`, otherPartner.carbs_g && `${otherPartner.carbs_g}g KH`, otherPartner.fat_g && `${otherPartner.fat_g}g Fett`].filter(Boolean).join(", ")}${otherPartner.description ? `\n  Portion laut Plan: ${otherPartner.description}` : ""}
@@ -432,7 +646,7 @@ Skaliere die Mengen pro Person passend zu den jeweiligen Makro-Zielen (${otherPa
 NIEMALS eine Zutat ohne "für ${selfPartner.name}" und "für ${otherPartner.name}" schreiben. NIEMALS nur die Gesamtmenge ohne Aufteilung schreiben. NIEMALS "für Person" oder generische Platzhalter statt der echten Namen verwenden.
 
 Zubereitungsschritte: gemeinsame Zubereitung in einem Topf/Pfanne, am Ende auf zwei Teller portionieren (in den passenden Mengen).`
-      : "";
+        : "";
 
     const onePersonBlock = !partnerBlock
       ? `Erstelle das Rezept für genau EINE Person.
@@ -469,8 +683,10 @@ Antworte ausschließlich mit gültigem JSON in diesem Format:
         messages: [{ role: "user", content: prompt }],
       }),
     });
-    if (aiRes.status === 429) throw new Error("Rate-Limit erreicht — bitte gleich nochmal versuchen.");
-    if (aiRes.status === 402) throw new Error("Guthaben aufgebraucht — bitte im Workspace aufladen.");
+    if (aiRes.status === 429)
+      throw new Error("Rate-Limit erreicht — bitte gleich nochmal versuchen.");
+    if (aiRes.status === 402)
+      throw new Error("Guthaben aufgebraucht — bitte im Workspace aufladen.");
     if (!aiRes.ok) {
       const txt = await aiRes.text();
       throw new Error(`Fehler [${aiRes.status}]: ${txt.slice(0, 200)}`);
@@ -478,17 +694,27 @@ Antworte ausschließlich mit gültigem JSON in diesem Format:
     const aiJson = await aiRes.json();
     const raw = aiJson?.choices?.[0]?.message?.content ?? "{}";
     let parsed: { ingredients?: unknown; steps?: unknown } = {};
-    try { parsed = typeof raw === "string" ? JSON.parse(raw) : raw; } catch { parsed = {}; }
+    try {
+      parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+    } catch {
+      parsed = {};
+    }
 
     let ingredients = Array.isArray(parsed.ingredients)
-      ? parsed.ingredients.map((s) => String(s).trim()).filter(Boolean).slice(0, 30)
+      ? parsed.ingredients
+          .map((s) => String(s).trim())
+          .filter(Boolean)
+          .slice(0, 30)
       : [];
     const steps = Array.isArray(parsed.steps)
-      ? parsed.steps.map((s) => String(s).trim()).filter(Boolean).slice(0, 20)
+      ? parsed.steps
+          .map((s) => String(s).trim())
+          .filter(Boolean)
+          .slice(0, 20)
       : [];
     if (!ingredients.length) throw new Error("Rezept konnte nicht erstellt werden");
 
-    ingredients = fixLabels(ingredients);
+    ingredients = partnerIngredientSplit ?? fixLabels(ingredients);
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     await supabaseAdmin
