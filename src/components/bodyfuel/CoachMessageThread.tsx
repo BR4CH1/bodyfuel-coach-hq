@@ -55,6 +55,16 @@ export function CoachMessageThread({ mode, userId }: Props) {
   const [text, setText] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  const draftKey =
+    mode === "coach" && userId
+      ? `bf.coach.thread.reply.v1.${userId}`
+      : mode === "client"
+        ? "bf.client.thread.reply.v1"
+        : null;
+  useFormDraft(draftKey, { text }, (d) => {
+    if (typeof d.text === "string") setText(d.text);
+  });
+
   // Auto-scroll on new messages
   useEffect(() => {
     if (scrollRef.current) {
