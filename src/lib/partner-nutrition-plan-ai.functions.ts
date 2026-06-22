@@ -408,6 +408,7 @@ Jede Mahlzeit MUSS aus dieser Erlaubt-Liste komponiert sein. Worte wie "gekocht/
         : "";
 
     const prompt = `Erstelle einen ${planDays}-Tage-Partner-Ernährungsplan für ZWEI Personen, die zusammen essen.
+${noCookBlock}
 
 🎯 INDIVIDUELLE ZIELE (NIE angleichen):
 ${targetBlockFor(a.name, a.targets)}
