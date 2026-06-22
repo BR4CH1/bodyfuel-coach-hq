@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { Activity, BarChart3, ChevronRight, Sparkles } from "lucide-react";
+import { Activity, BarChart3, ChevronRight, Sparkles, Upload } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { PlansView } from "@/components/bodyfuel/PlansView";
 import { TrainingTracker } from "@/components/bodyfuel/TrainingTracker";
@@ -81,6 +81,14 @@ function TrainingPage() {
           <TrainingQuickLink to="/progress" icon={<BarChart3 className="h-5 w-5" />} title="Trainingsanalyse" desc="Verbesserungen & Rückgänge" />
           <TrainingQuickLink to="/achievements" icon={<Sparkles className="h-5 w-5" />} title="Insights & Erfolge" desc="Adhärenz, Volumen, Belastung" />
         </section>
+      )}
+      {!isCoach && supabaseUser && (
+        <TrainingQuickLink
+          to="/training-import"
+          icon={<Upload className="h-5 w-5" />}
+          title="Eigenen Trainingsplan importieren"
+          desc="PDF/Bild, Text oder manuell — Coach-Plan ist optional"
+        />
       )}
       {!isCoach && <StrengthCheckStatus variant="block" />}
       {!isCoach && supabaseUser && <AthleteProfileBanner />}
