@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { Activity, BarChart3, ChevronRight, Sparkles } from "lucide-react";
+import { Activity, BarChart3, ChevronRight, Sparkles, Upload } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { PlansView } from "@/components/bodyfuel/PlansView";
 import { TrainingTracker } from "@/components/bodyfuel/TrainingTracker";
