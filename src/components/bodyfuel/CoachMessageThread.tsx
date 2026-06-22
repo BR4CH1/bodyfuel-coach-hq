@@ -5,6 +5,7 @@ import { Send, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { useFormDraft, clearFormDraft } from "@/hooks/use-form-draft";
 import { supabase } from "@/integrations/supabase/client";
 import {
   getThreadForClient,
