@@ -16,6 +16,7 @@ import { ConsentProvider } from "../lib/consent";
 import { CookieConsent } from "../components/bodyfuel/CookieConsent";
 import { PaymentTestModeBanner } from "../components/PaymentTestModeBanner";
 import { OfflineStatus } from "../components/bodyfuel/OfflineStatus";
+import { ReferralAttacher } from "../components/bodyfuel/ReferralAttacher";
 
 function NotFoundComponent() {
   return (
