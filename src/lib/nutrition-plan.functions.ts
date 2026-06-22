@@ -267,18 +267,69 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
     type Partner = { name: string; kcal: number | null; protein_g: number | null; carbs_g: number | null; fat_g: number | null; description?: string | null };
     let selfPartner: Partner | null = null;
     let otherPartner: Partner | null = null;
-    if (meal.partner_meal_id) {
+    if (isPartnerMeal) {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      const { data: pMeal } = await supabaseAdmin
-        .from("nutrition_plan_meals")
-        .select("kcal, protein_g, carbs_g, fat_g, day_id, description")
-        .eq("id", meal.partner_meal_id)
-        .maybeSingle();
+
+      // Resolve the partner meal — either via the stored link, or by a fallback
+      // lookup through the partner plan (older shared meals were created
+      // without the cross-link, leaving partner_meal_id null).
+      let partnerMealId: string | null = meal.partner_meal_id ?? null;
+      let pMeal: any = null;
+
+      if (partnerMealId) {
+        const { data } = await supabaseAdmin
+          .from("nutrition_plan_meals")
+          .select("id, kcal, protein_g, carbs_g, fat_g, day_id, description, name, sort_order")
+          .eq("id", partnerMealId)
+          .maybeSingle();
+        pMeal = data;
+      }
+
+      if (!pMeal) {
+        // Fallback: locate own plan, follow partner_plan_id, find the matching
+        // day (by day_index) and the meal with the same name + sort_order.
+        const { data: selfDay } = await supabaseAdmin
+          .from("nutrition_plan_days")
+          .select("plan_id, day_index, nutrition_plans!inner(partner_plan_id)")
+          .eq("id", meal.day_id)
+          .maybeSingle();
+        const partnerPlanId = (selfDay as any)?.nutrition_plans?.partner_plan_id;
+        const dayIndex = (selfDay as any)?.day_index;
+        if (partnerPlanId && dayIndex != null) {
+          const { data: pDayRow } = await supabaseAdmin
+            .from("nutrition_plan_days")
+            .select("id")
+            .eq("plan_id", partnerPlanId)
+            .eq("day_index", dayIndex)
+            .maybeSingle();
+          const pDayId = (pDayRow as any)?.id;
+          if (pDayId) {
+            // Match the same slot+name (the AI generates identical titles for
+            // shared meals on both sides). Fall back to same sort_order.
+            const { data: candidates } = await supabaseAdmin
+              .from("nutrition_plan_meals")
+              .select("id, kcal, protein_g, carbs_g, fat_g, day_id, description, name, sort_order")
+              .eq("day_id", pDayId);
+            const list = (candidates ?? []) as any[];
+            pMeal =
+              list.find((x) => x.name === meal.name) ||
+              list.find((x) => x.sort_order === (meal as any).sort_order) ||
+              null;
+            if (pMeal) {
+              partnerMealId = pMeal.id;
+              // Back-fill the link on both sides for future calls.
+              await supabaseAdmin.from("nutrition_plan_meals").update({ partner_meal_id: pMeal.id }).eq("id", meal.id);
+              await supabaseAdmin.from("nutrition_plan_meals").update({ partner_meal_id: meal.id }).eq("id", pMeal.id);
+            }
+          }
+        }
+      }
+
       if (pMeal) {
         const { data: pDay } = await supabaseAdmin
           .from("nutrition_plan_days")
           .select("nutrition_plans!inner(client_id)")
-          .eq("id", (pMeal as any).day_id)
+          .eq("id", pMeal.day_id)
           .maybeSingle();
         const otherClientId = (pDay as any)?.nutrition_plans?.client_id;
         if (clientId && otherClientId) {
@@ -295,9 +346,6 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
               fallback
             );
           };
-          // Prefer the name embedded in the meal title (set by the partner-plan
-          // generator from the partner's display_name) over a profile lookup
-          // that may return a stale/empty value for one side.
           const otherName = partnerNameFromTitle || nameOf(otherClientId, "Partner");
           const selfName = nameOf(clientId, "Ich");
           selfPartner = {
@@ -307,9 +355,9 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
           };
           otherPartner = {
             name: otherName,
-            kcal: (pMeal as any).kcal, protein_g: (pMeal as any).protein_g,
-            carbs_g: (pMeal as any).carbs_g, fat_g: (pMeal as any).fat_g,
-            description: (pMeal as any).description ?? null,
+            kcal: pMeal.kcal, protein_g: pMeal.protein_g,
+            carbs_g: pMeal.carbs_g, fat_g: pMeal.fat_g,
+            description: pMeal.description ?? null,
           };
         }
       }
