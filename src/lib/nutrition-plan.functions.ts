@@ -363,37 +363,58 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
       }
     }
 
-    const normalizeIngredientName = (raw: string) => raw
-      .replace(/^\s*(?:ca\.?\s*)?(?:\d+(?:[.,]\d+)?|\d+\/\d+)\s*(?:g|kg|ml|l|el|tl|stück|stk\.?|dose|dosen|scheibe|scheiben|zehe|zehen)\s+/i, "")
-      .replace(/\s+/g, " ")
-      .trim();
+    type IngredientPart = { amount: number; unit: string; name: string; key: string };
+    const unitsPattern = "g|kg|ml|l|el|tl|stück|stk\\.?|dose|dosen|scheibe|scheiben|zehe|zehen";
 
-    const parseIngredientPart = (part: string) => {
+    const normalizeIngredientName = (raw: string) =>
+      raw
+        .replace(
+          new RegExp(`^\\s*(?:ca\\.?\\s*)?(?:\\d+(?:[.,]\\d+)?|\\d+\\/\\d+)\\s*(?:${unitsPattern})\\s+`, "i"),
+          "",
+        )
+        .replace(/\s+/g, " ")
+        .trim();
+
+    const parseIngredientPart = (part: string): IngredientPart | null => {
       const text = part.trim();
-      const match = /^(?:ca\.?\s*)?(\d+(?:[.,]\d+)?|\d+\/\d+)\s*(g|kg|ml|l|el|tl|stück|stk\.?|dose|dosen|scheibe|scheiben|zehe|zehen)\s+(.+)$/i.exec(text);
+      const match = new RegExp(
+        `^(?:ca\\.?\\s*)?(\\d+(?:[.,]\\d+)?|\\d+\\/\\d+)\\s*(${unitsPattern})\\s+(.+)$`,
+        "i",
+      ).exec(text);
       if (!match) return null;
       const [, amountRaw, unitRaw, nameRaw] = match;
       const amount = amountRaw.includes("/")
-        ? amountRaw.split("/").map(Number).reduce((a, b) => (b ? a / b : a))
+        ? amountRaw
+            .split("/")
+            .map(Number)
+            .reduce((a, b) => (b ? a / b : a))
         : Number(amountRaw.replace(",", "."));
       if (!Number.isFinite(amount) || amount <= 0) return null;
       const unit = unitRaw.toLowerCase().replace("stk.", "Stück");
       return { amount, unit, name: nameRaw.trim(), key: normalizeIngredientName(text).toLowerCase() };
     };
 
-    const formatAmount = (n: number) => Number.isInteger(n) ? String(n) : String(Math.round(n * 10) / 10).replace(".", ",");
+    const formatAmount = (n: number) =>
+      Number.isInteger(n) ? String(n) : String(Math.round(n * 10) / 10).replace(".", ",");
 
     const buildPartnerIngredientSplit = () => {
       if (!selfPartner?.description || !otherPartner?.description || !otherPartner.name) return null;
-      const selfItems = selfPartner.description.split(",").map(parseIngredientPart).filter(Boolean) as ReturnType<typeof parseIngredientPart>[];
-      const otherItems = otherPartner.description.split(",").map(parseIngredientPart).filter(Boolean) as ReturnType<typeof parseIngredientPart>[];
-      const otherByKey = new Map(otherItems.map((it) => [it!.key, it!]));
+      const selfItems = selfPartner.description
+        .split(",")
+        .map(parseIngredientPart)
+        .filter((it): it is IngredientPart => Boolean(it));
+      const otherItems = otherPartner.description
+        .split(",")
+        .map(parseIngredientPart)
+        .filter((it): it is IngredientPart => Boolean(it));
+      const otherByKey = new Map(otherItems.map((it) => [it.key, it]));
       const rows: string[] = [];
       for (const selfItem of selfItems) {
-        if (!selfItem) continue;
         const otherItem = otherByKey.get(selfItem.key);
         if (!otherItem || otherItem.unit !== selfItem.unit) continue;
-        rows.push(`${selfItem.name}: ${formatAmount(selfItem.amount)} ${selfItem.unit} für ${selfPartner.name}, ${formatAmount(otherItem.amount)} ${otherItem.unit} für ${otherPartner.name} — insgesamt ${formatAmount(selfItem.amount + otherItem.amount)} ${selfItem.unit}`);
+        rows.push(
+          `${selfItem.name}: ${formatAmount(selfItem.amount)} ${selfItem.unit} für ${selfPartner.name}, ${formatAmount(otherItem.amount)} ${otherItem.unit} für ${otherPartner.name} — insgesamt ${formatAmount(selfItem.amount + otherItem.amount)} ${selfItem.unit}`,
+        );
       }
       return rows.length >= 2 ? rows : null;
     };
