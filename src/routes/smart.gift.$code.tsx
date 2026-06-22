@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
@@ -44,7 +44,35 @@ function GiftRedeemPage() {
     queryFn: () => validate({ data: { code } }),
   });
 
-  // Einlösung erfolgt erst nach expliziter Bestätigung (Formular abschicken bzw. Button klicken).
+  // Auto-redeem nach E-Mail-Bestätigung: Sobald der User eingeloggt ist und der Code gültig ist,
+  // lösen wir automatisch ein (z.B. wenn Telly nach Verifizierung den Link erneut öffnet).
+  const autoRedeemTried = useRef(false);
+  useEffect(() => {
+    if (loading) return;
+    if (!supabaseUser) return;
+    if (!info?.valid) return;
+    if (autoRedeemTried.current || redeemed || busy) return;
+    autoRedeemTried.current = true;
+    (async () => {
+      setBusy(true);
+      try {
+        await redeem({ data: { code } });
+        setRedeemed(true);
+        toast.success("Smart freigeschaltet — willkommen!");
+        navigate({ to: "/onboarding/smart" });
+      } catch (e: any) {
+        const msg = e?.message ?? "";
+        // Bereits eingelöst / Code verbraucht → still ignorieren und zum Onboarding leiten
+        if (/bereits eingelöst|bereits ein/i.test(msg)) {
+          navigate({ to: "/onboarding/smart" });
+          return;
+        }
+        toast.error(msg || "Einlösen fehlgeschlagen");
+      } finally {
+        setBusy(false);
+      }
+    })();
+  }, [loading, supabaseUser, info, code, redeem, navigate, redeemed, busy]);
 
   const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
