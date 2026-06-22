@@ -435,10 +435,12 @@ function ExerciseCard({
   const previousLogs = logs.filter((l) => l.performed_at.slice(0, 10) !== todayStr);
 
   const isPerSide = /kurzhantel|dumbbell|\bkh\b|\bdb\b|einarmig|one[- ]?arm|single[- ]?arm/i.test(
-    `${ex.name} ${ex.notes ?? ""}`,
+    ex.name,
   );
-  const isTimeBased = /plank|unterarmst(ü|ue)tz|halten|hold|isometr|wandsitz|wall[- ]?sit|hollow|dead[- ]?hang|h(ä|ae)ngen|l[- ]?sit|side ?bridge|seitst(ü|ue)tz|bridge halten/i.test(
-    `${ex.name} ${ex.notes ?? ""}`,
+  // Nur am Übungsnamen erkennen — Notizen können Worte wie "halten" enthalten
+  // (z.B. "Handgelenke stabil halten"), ohne dass die Übung zeitbasiert ist.
+  const isTimeBased = /\bplank\b|unterarmst(ü|ue)tz|isometr|wandsitz|wall[- ]?sit|hollow|dead[- ]?hang|h(ä|ae)ngen|l[- ]?sit|side ?bridge|seitst(ü|ue)tz|bridge halten|stat(ic|isch)|halten\b/i.test(
+    ex.name,
   );
   const weightHint = isPerSide ? "pro Seite" : "Gesamtgewicht";
 
