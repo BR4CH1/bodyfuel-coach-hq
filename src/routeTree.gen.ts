@@ -55,6 +55,7 @@ import { Route as CoachPackageRequestsRouteImport } from './routes/coach.package
 import { Route as CoachLeadsRouteImport } from './routes/coach.leads'
 import { Route as CoachGiftsRouteImport } from './routes/coach.gifts'
 import { Route as CoachCustomersRouteImport } from './routes/coach.customers'
+import { Route as CoachAffiliatesRouteImport } from './routes/coach.affiliates'
 import { Route as CoachClientIdRouteImport } from './routes/coach.$clientId'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
 import { Route as BullsWeightRouteImport } from './routes/bulls.weight'
@@ -322,6 +323,11 @@ const CoachCustomersRoute = CoachCustomersRouteImport.update({
   path: '/customers',
   getParentRoute: () => CoachRoute,
 } as any)
+const CoachAffiliatesRoute = CoachAffiliatesRouteImport.update({
+  id: '/affiliates',
+  path: '/affiliates',
+  getParentRoute: () => CoachRoute,
+} as any)
 const CoachClientIdRoute = CoachClientIdRouteImport.update({
   id: '/$clientId',
   path: '/$clientId',
@@ -537,6 +543,7 @@ export interface FileRoutesByFullPath {
   '/bulls/weight': typeof BullsWeightRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/coach/$clientId': typeof CoachClientIdRoute
+  '/coach/affiliates': typeof CoachAffiliatesRoute
   '/coach/customers': typeof CoachCustomersRouteWithChildren
   '/coach/gifts': typeof CoachGiftsRoute
   '/coach/leads': typeof CoachLeadsRoute
@@ -616,6 +623,7 @@ export interface FileRoutesByTo {
   '/bulls/weight': typeof BullsWeightRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/coach/$clientId': typeof CoachClientIdRoute
+  '/coach/affiliates': typeof CoachAffiliatesRoute
   '/coach/gifts': typeof CoachGiftsRoute
   '/coach/leads': typeof CoachLeadsRoute
   '/coach/package-requests': typeof CoachPackageRequestsRoute
@@ -697,6 +705,7 @@ export interface FileRoutesById {
   '/bulls/weight': typeof BullsWeightRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/coach/$clientId': typeof CoachClientIdRoute
+  '/coach/affiliates': typeof CoachAffiliatesRoute
   '/coach/customers': typeof CoachCustomersRouteWithChildren
   '/coach/gifts': typeof CoachGiftsRoute
   '/coach/leads': typeof CoachLeadsRoute
@@ -781,6 +790,7 @@ export interface FileRouteTypes {
     | '/bulls/weight'
     | '/checkout/return'
     | '/coach/$clientId'
+    | '/coach/affiliates'
     | '/coach/customers'
     | '/coach/gifts'
     | '/coach/leads'
@@ -860,6 +870,7 @@ export interface FileRouteTypes {
     | '/bulls/weight'
     | '/checkout/return'
     | '/coach/$clientId'
+    | '/coach/affiliates'
     | '/coach/gifts'
     | '/coach/leads'
     | '/coach/package-requests'
@@ -940,6 +951,7 @@ export interface FileRouteTypes {
     | '/bulls/weight'
     | '/checkout/return'
     | '/coach/$clientId'
+    | '/coach/affiliates'
     | '/coach/customers'
     | '/coach/gifts'
     | '/coach/leads'
@@ -1369,6 +1381,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CoachCustomersRouteImport
       parentRoute: typeof CoachRoute
     }
+    '/coach/affiliates': {
+      id: '/coach/affiliates'
+      path: '/affiliates'
+      fullPath: '/coach/affiliates'
+      preLoaderRoute: typeof CoachAffiliatesRouteImport
+      parentRoute: typeof CoachRoute
+    }
     '/coach/$clientId': {
       id: '/coach/$clientId'
       path: '/$clientId'
@@ -1628,6 +1647,7 @@ const CoachCustomersRouteWithChildren = CoachCustomersRoute._addFileChildren(
 
 interface CoachRouteChildren {
   CoachClientIdRoute: typeof CoachClientIdRoute
+  CoachAffiliatesRoute: typeof CoachAffiliatesRoute
   CoachCustomersRoute: typeof CoachCustomersRouteWithChildren
   CoachGiftsRoute: typeof CoachGiftsRoute
   CoachLeadsRoute: typeof CoachLeadsRoute
@@ -1639,6 +1659,7 @@ interface CoachRouteChildren {
 
 const CoachRouteChildren: CoachRouteChildren = {
   CoachClientIdRoute: CoachClientIdRoute,
+  CoachAffiliatesRoute: CoachAffiliatesRoute,
   CoachCustomersRoute: CoachCustomersRouteWithChildren,
   CoachGiftsRoute: CoachGiftsRoute,
   CoachLeadsRoute: CoachLeadsRoute,

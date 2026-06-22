@@ -16,6 +16,7 @@ import { ConsentProvider } from "../lib/consent";
 import { CookieConsent } from "../components/bodyfuel/CookieConsent";
 import { PaymentTestModeBanner } from "../components/PaymentTestModeBanner";
 import { OfflineStatus } from "../components/bodyfuel/OfflineStatus";
+import { ReferralAttacher } from "../components/bodyfuel/ReferralAttacher";
 
 function NotFoundComponent() {
   return (
@@ -132,11 +133,12 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <ConsentProvider>
         <SessionProvider>
-          <PaymentTestModeBanner />
-          <Outlet />
-          <CookieConsent />
-          <OfflineStatus />
-          <Toaster theme="dark" />
+            <PaymentTestModeBanner />
+            <ReferralAttacher />
+            <Outlet />
+            <CookieConsent />
+            <OfflineStatus />
+            <Toaster theme="dark" />
         </SessionProvider>
       </ConsentProvider>
     </QueryClientProvider>

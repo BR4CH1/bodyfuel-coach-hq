@@ -1,48 +1,64 @@
 
-## Was ich baue
+# Affiliate-Programm für Partner
 
-### 1. Smart-Filter in Kundenliste (`src/routes/coach.customers.index.tsx`)
-- Neuer Filter-Chip **`SMART (n)`** zwischen `BULLS` und `TRIAL`
-- Zählt alle aktiven Kunden mit `package = 'smart'`
-- Klick filtert die Liste auf Smart-Kunden
+Partner bekommen einen persönlichen Link, du siehst wer wen geworben hat und 10% der Erstzahlung des Geworbenen geht automatisch an den Partner — bei allen bezahlten Paketen außer Smart-Gift (0 €).
 
-### 2. Autopilot-Fix für Smart Onboarding
-**Bug:** `completeSmartOnboarding` triggert nur den **Trainings**-Plan. Der Ernährungsplan wird nie automatisch generiert — deswegen ist bei Manuel nichts da.
+## Phase 1 — Tracking & Provisions-Übersicht (sofort)
 
-**Fix in `src/lib/smart-onboarding.functions.ts`:**
-- Nach dem Training-Generator zusätzlich den Nutrition-Generator (`generateAiNutritionPlanDraft`-Kernlogik) aufrufen
-- Beide Drafts automatisch auf `status='active'` setzen mit korrektem `scheduled_start_date` (heute) und `scheduled_end_date` (heute + 28 Tage Nutrition / heute + 42 Tage Training)
-- Wenn einer der beiden Generatoren fehlschlägt, wird der andere trotzdem aktiviert (best effort, kein Block)
+### 1. Datenmodell
+- **`affiliate_partners`**: name, email, slug (z.B. `manu-2026`), commission_pct (default 10), is_active, stripe_connect_account_id (für Phase 2), created_by (Coach), notes
+- **`affiliate_referrals`**: partner_id, referred_user_id, signup_at, source_slug, first_payment_id, commission_amount_eur, commission_status (`pending` / `payable` / `paid` / `void`)
+- **`profiles.referred_by_partner_id`**: neue Spalte zur dauerhaften Zuordnung
+- RLS: nur Coaches lesen/schreiben Partner & Referrals; Partner sehen ihren eigenen Slug & Stats nur über öffentliche Tracking-Seite (kein Login nötig in Phase 1)
 
-### 3. Manuelle Verlängerung (Smart-Kunde)
-**Server-Funktionen** (`src/lib/smart-renewal.functions.ts` neu):
-- `renewSmartNutritionPlan` — nur erlaubt wenn aktueller Plan in den letzten 7 Tagen abläuft ODER bereits abgelaufen. Generiert neuen 4-Wochen-Plan, archiviert alten, setzt neuen auf `active`.
-- `renewSmartTrainingPlan` — analog für 6 Wochen. **Sonderfall:** wenn letzter `strength_checks` Eintrag > 28 Tage alt ist → blockiert, zwingt Strength-Check zuerst.
-- `canRenewSmart` (GET) — liefert für Nutrition & Training: `{ can_renew, blocked_by_strength_check, days_until_end, current_end_date }`
+### 2. Referral-Tracking
+- Öffentliche Landingpages (`/`, `/smart`, `/bulls`, `/coaching`, `/smart/gift/:code` …) lesen `?ref=slug` und legen ihn in `localStorage` ab (30 Tage TTL)
+- Bei Signup (sowohl regulärer als auch Gift-Code-Flow) wird der Slug serverseitig in `profiles.referred_by_partner_id` gespeichert
+- Gift-Redemption (0 €) erzeugt **kein** Commission-Event (deine Vorgabe „außer Smart-Gift")
 
-**Frontend** in `src/routes/tracker.app.tsx` (oder dort wo Smart-Nutzer landen):
-- Neue Komponente `SmartRenewalCard` — nur sichtbar wenn `package='smart'` UND mindestens ein Plan läuft in ≤7 Tagen aus
-- Zwei Buttons: „Ernährungsplan verlängern (4 Wochen)" / „Trainingsplan verlängern (6 Wochen)"
-- Bei Training-Block: Button-Label „Erst Strength-Check durchführen" → Link zu `/strength-check`
+### 3. Provisions-Erfassung
+- Nach erfolgreichem `payment_history`-Eintrag (status=`confirmed`) prüft ein DB-Trigger: 
+  - Hat der User `referred_by_partner_id`? 
+  - Gibt es noch keine Provision für diesen User? (Erstzahlung) 
+  - Paket ≠ Smart-Gift?
+- Wenn ja → Insert in `affiliate_referrals` mit 10% des Zahlungsbetrags und `commission_status='payable'`
 
-### 4. Brachi-Gate Update
-Da Smart-Autopilot jetzt korrekt läuft, bleibt die Brachi-Test-Sperre für das **Upgrade-Popup** (Free → Smart) wie sie ist — die wurde im vorigen Schritt bereits so gebaut. Die neue Verlängerungs-Funktion ist für **alle Smart-Kunden** freigeschaltet (kein Test-Gate).
+### 4. Coach-UI
+- Neue Route `/coach/affiliates`:
+  - Liste der Partner (anlegen/bearbeiten/deaktivieren, Slug-Generator, individuellen %-Satz überschreiben)
+  - Pro Partner: geworbene Kunden, offene/ausgezahlte Provisionen, Link zum Kopieren (`bodyfuel-coaching.com/?ref=slug`)
+  - Globale Tabelle aller fälligen Provisionen mit Filter (offen / ausgezahlt)
+  - Manuell "Als ausgezahlt markieren" als Übergang bis Phase 2 live ist
 
-## Technische Details
+## Phase 2 — Stripe Connect Auto-Payout
 
-**Tabellen genutzt:** `nutrition_plans` (`scheduled_end_date`, `status`, `plan_type`), `customer_packages` (Filter), `strength_checks` (Block-Check), `smart_nutrition_profile`.
+Stripe Connect ist eigenständig und braucht ein paar Voraussetzungen, deshalb getrennt:
 
-**Neue Migration:** keine. `scheduled_end_date` existiert bereits.
+### 1. Voraussetzungen
+- Stripe Connect (Express-Accounts) muss in deinem Stripe-Dashboard aktiviert sein (du gehst einmal in dein Stripe → Connect → Get Started, Plattform-Profil ausfüllen). Ich kann das nicht für dich tun.
+- Partner brauchen ein Onboarding (Stripe sammelt Steuer-/Bankdaten direkt von ihnen)
 
-**Bestehende Manuel-Daten:** Nach Plan-Akzeptanz triggere ich für Manuel manuell die neue Autopilot-Logik einmal, damit er sofort einen Plan hat (sobald er das Onboarding abschließt — ohne Onboarding-Daten kein Plan möglich).
+### 2. Flow
+- Im Coach-UI: Button „Stripe-Onboarding-Link für Partner generieren" → erzeugt `AccountLink` über Gateway → URL geht per Mail an den Partner
+- Partner verifiziert sich bei Stripe → wir speichern `stripe_connect_account_id` und `payouts_enabled`
+- Bei jeder fälligen Provision (commission_status=`payable` und Partner hat verifizierten Connect-Account): automatischer `Transfer` an Connect-Account → `commission_status='paid'`, `paid_at`, `stripe_transfer_id` gespeichert
+- Cron-Route `/api/public/hooks/payout-affiliates` (täglich) cleared den Backlog
 
-**Smart-Filter-Zählung:** ich nutze den vorhandenen `listCustomers` Datafetch — kein neuer Server-Call.
+### 3. Compliance
+- Provisionen werden aus deinem Stripe-Balance an die Partner-Connect-Accounts transferiert. Stripe schickt den Partnern automatisch ihre Auszahlung auf ihr Bankkonto.
+- Die Partner sind selbst für ihre Steuer verantwortlich; Stripe stellt ihnen die Belege.
 
-## Was ich NICHT anfasse
+---
 
-- Stripe-Live-Webhook-Problem (separates Thema)
-- Bestehendes Smart-Onboarding-UI
-- Coach-Detailseite eines Kunden
+## Was ich jetzt baue (Phase 1)
+1. Migration: Tabellen + RLS + Trigger
+2. Server-Functions: Partner CRUD, Referral-Stats, Slug-Validierung, Commission-Generation-Trigger
+3. Coach-UI: `/coach/affiliates` mit Liste, Detail, Provisions-Tabelle
+4. Referral-Tracking: localStorage-Hook + Speichern bei Signup (Smart-Gift- und Standard-Flow)
+5. Link in Coach-Navigation
 
-## Geschätzter Aufwand
-~6 Dateien, 1 neue Datei, kein Schema-Change.
+## Phase 2 starte ich erst auf dein "Ja"
+- Erfordert manuellen Schritt von dir: Stripe Connect im Stripe-Dashboard aktivieren
+- Ohne Connect bleibst du in „manuell auszahlen + abhaken"-Modus (Phase 1 funktioniert komplett ohne Connect)
+
+**Soll ich mit Phase 1 starten?**
