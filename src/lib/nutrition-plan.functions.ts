@@ -363,11 +363,46 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
       }
     }
 
+    const normalizeIngredientName = (raw: string) => raw
+      .replace(/^\s*(?:ca\.?\s*)?(?:\d+(?:[.,]\d+)?|\d+\/\d+)\s*(?:g|kg|ml|l|el|tl|stück|stk\.?|dose|dosen|scheibe|scheiben|zehe|zehen)\s+/i, "")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    const parseIngredientPart = (part: string) => {
+      const text = part.trim();
+      const match = /^(?:ca\.?\s*)?(\d+(?:[.,]\d+)?|\d+\/\d+)\s*(g|kg|ml|l|el|tl|stück|stk\.?|dose|dosen|scheibe|scheiben|zehe|zehen)\s+(.+)$/i.exec(text);
+      if (!match) return null;
+      const [, amountRaw, unitRaw, nameRaw] = match;
+      const amount = amountRaw.includes("/")
+        ? amountRaw.split("/").map(Number).reduce((a, b) => (b ? a / b : a))
+        : Number(amountRaw.replace(",", "."));
+      if (!Number.isFinite(amount) || amount <= 0) return null;
+      const unit = unitRaw.toLowerCase().replace("stk.", "Stück");
+      return { amount, unit, name: nameRaw.trim(), key: normalizeIngredientName(text).toLowerCase() };
+    };
+
+    const formatAmount = (n: number) => Number.isInteger(n) ? String(n) : String(Math.round(n * 10) / 10).replace(".", ",");
+
+    const buildPartnerIngredientSplit = () => {
+      if (!selfPartner?.description || !otherPartner?.description || !otherPartner.name) return null;
+      const selfItems = selfPartner.description.split(",").map(parseIngredientPart).filter(Boolean) as ReturnType<typeof parseIngredientPart>[];
+      const otherItems = otherPartner.description.split(",").map(parseIngredientPart).filter(Boolean) as ReturnType<typeof parseIngredientPart>[];
+      const otherByKey = new Map(otherItems.map((it) => [it!.key, it!]));
+      const rows: string[] = [];
+      for (const selfItem of selfItems) {
+        if (!selfItem) continue;
+        const otherItem = otherByKey.get(selfItem.key);
+        if (!otherItem || otherItem.unit !== selfItem.unit) continue;
+        rows.push(`${selfItem.name}: ${formatAmount(selfItem.amount)} ${selfItem.unit} für ${selfPartner.name}, ${formatAmount(otherItem.amount)} ${otherItem.unit} für ${otherPartner.name} — insgesamt ${formatAmount(selfItem.amount + otherItem.amount)} ${selfItem.unit}`);
+      }
+      return rows.length >= 2 ? rows : null;
+    };
+
     const fixLabels = (arr: string[]) => {
       if (!selfPartner || !otherPartner) return arr;
       // Replace generic "für Person" AND duplicate "für Du, für Du" patterns
       // that older cached recipes contain when both profiles had no name.
-      const patterns = [/\bfür\s+Person\b/gi, /\bfür\s+Du\b/g];
+      const patterns = [/\bfür\s+Person(?:\s+[AB])?\b/gi, /\bfür\s+Du\b/g, /\bfür\s+Ich\b/g];
       return arr.map((s) => {
         let out = s;
         for (const re of patterns) {
@@ -389,7 +424,7 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
     const cached = Array.isArray(meal.recipe_ingredients) ? (meal.recipe_ingredients as string[]) : [];
     const joined = cached.join("\n");
     const hasPerPerson = /\bfür\s+\S/i.test(joined);
-    const hasPlaceholder = /\bfür\s+(Person|Du)\b/i.test(joined);
+    const hasPlaceholder = /\bfür\s+(Person|Person\s+[AB]|Du|Ich)\b/i.test(joined);
     const otherInText = otherPartner?.name && joined.toLowerCase().includes(otherPartner.name.toLowerCase());
     const skipCache = isPartnerMeal && (!hasPerPerson || hasPlaceholder || !otherInText);
     if (!data.force && !skipCache && cached.length > 0) {
