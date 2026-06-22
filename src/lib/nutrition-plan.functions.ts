@@ -448,7 +448,8 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
             .from("nutrition_targets")
             .select("user_id, kcal, protein_g, carbs_g, fat_g")
             .in("user_id", [clientId, partnerClientId]);
-          const targetOf = (id: string) => (targets ?? []).find((x: any) => x.user_id === id) as any;
+          const targetOf = (id: string) =>
+            (targets ?? []).find((x: any) => x.user_id === id) as any;
           const selfTarget = targetOf(clientId);
           const otherTarget = targetOf(partnerClientId);
           const { data: selfProfile } = await supabaseAdmin
@@ -548,7 +549,8 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
         .map(parseIngredientPart)
         .filter((it): it is IngredientPart => Boolean(it));
       if (selfItems.length < 2) return null;
-      const rawRatio = otherPartner.kcal && selfPartner.kcal ? otherPartner.kcal / selfPartner.kcal : 0.5;
+      const rawRatio =
+        otherPartner.kcal && selfPartner.kcal ? otherPartner.kcal / selfPartner.kcal : 0.5;
       const ratio = Math.min(0.85, Math.max(0.35, rawRatio));
       const roundPartnerAmount = (amount: number, unit: string) => {
         const value = amount * ratio;
