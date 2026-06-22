@@ -355,11 +355,46 @@ ${wishesB.length ? `${b.name}: ${wishesB.map((w, i) => `${i + 1}. ${w}`).join(";
     const equipmentNotesCombined = [a.kitchenEquipmentNotes, b.kitchenEquipmentNotes]
       .filter((s) => s && s.length > 0)
       .join(" | ");
+    const equipmentLowerP = equipmentUnion.map((e) => e.toLowerCase());
+    const notesLowerP = (equipmentNotesCombined || "").toLowerCase();
+    const cookingDevicesP = ["herd", "stove", "ofen", "backofen", "oven", "airfryer", "air fryer", "heißluft", "mikrowelle", "microwave", "kochplatte", "induktion", "gas", "grill", "thermomix", "reiskocher", "wasserkocher", "kettle", "dampfgarer", "slow cooker", "instant pot", "multikocher", "pfanne", "topf"];
+    const hasCookingDeviceP = equipmentLowerP.some((e) => cookingDevicesP.some((d) => e.includes(d)));
+    const notesIndicatesNoCookP = /\b(keine k(ü|ue)che|nur k(ü|ue)hlschrank|alles\s+(muss\s+)?kalt|no[- ]?cook|kein herd|kein ofen|nichts kochen|nicht kochen)\b/.test(notesLowerP);
+    const isNoCookP = (equipmentUnion.length > 0 || (equipmentNotesCombined && equipmentNotesCombined.length > 0)) && (!hasCookingDeviceP || notesIndicatesNoCookP);
+
     const equipmentBlock = equipmentUnion.length || equipmentNotesCombined
       ? `\n🍳 KÜCHENAUSSTATTUNG (HARTE EINSCHRÄNKUNG — beide kochen gemeinsam; nur Rezepte vorschlagen, die mit DIESEN Geräten zubereitbar sind):\n${
           equipmentUnion.length ? "Verfügbare Geräte: " + equipmentUnion.join(", ") : "(keine Liste vom Coach)"
-        }${equipmentNotesCombined ? "\nCoach-Notiz: " + equipmentNotesCombined : ""}\nWenn z. B. KEIN HERD verfügbar ist, dürfen Rezepte nicht „in der Pfanne anbraten" verlangen — Garmethode an Airfryer/Backofen/Mikrowelle anpassen.\nWICHTIG „NO-COOK"-FALL: Wenn KEINE Garmethode verfügbar ist (z. B. nur Kühlschrank, alles muss kalt) — schlage AUSSCHLIESSLICH Zutaten vor, die roh / fertig / kalt aus dem Supermarkt verzehrt werden können. Verboten sind dann insbesondere: „gekochte Nudeln/Reis/Kartoffeln", roher Fisch/rohes Fleisch, Eier (müssen gekocht werden), Tiefkühlware, die aufgetaut/gegart werden muss. Erlaubt sind z. B.: Aufschnitt aus der Wurst-/Kühltheke (gekochter Schinken, Putenbrust, Bresaola), geräucherter Lachs, Skyr/Quark/Joghurt, Käse, Hüttenkäse, Wraps/Brot/Brötchen/Knäckebrot, fertig gekochte Linsen/Kichererbsen aus der Dose, Mais/Bohnen aus der Dose, frisches Obst & Gemüse zum Rohverzehr, Salat-Fertigmischungen, Beef Jerky, Thunfisch aus der Dose, Hummus, Nüsse, Müsli/Haferflocken zum Einweichen (Overnight Oats), Proteinpulver, Proteinriegel/-shakes, Milch/Pflanzendrinks. Garhinweise wie „gekocht", „angebraten", „gebacken" sind in diesem Fall STRIKT verboten.\n`
+        }${equipmentNotesCombined ? "\nCoach-Notiz: " + equipmentNotesCombined : ""}\nWenn z. B. KEIN HERD verfügbar ist, dürfen Rezepte nicht „in der Pfanne anbraten" verlangen — Garmethode an Airfryer/Backofen/Mikrowelle anpassen.\n`
       : "";
+
+    const noCookBlock = isNoCookP
+      ? `\n\n🧊🧊🧊 ABSOLUTE NO-COOK-REGEL (HÖCHSTE PRIORITÄT — überschreibt alle anderen Vorschläge):
+Beide Partner haben KEINE Garmethode verfügbar (nur Kühlschrank / alles muss kalt aus dem Supermarkt verzehrbar sein).
+
+❌ STRIKT VERBOTEN — auch nicht mit dem Zusatz "(kalt)" oder "vorgekocht":
+- Nudeln, Reis, Kartoffeln, Quinoa, Bulgur, Couscous, Linsen-Trockenware (egal ob "gekocht, kalt" deklariert)
+- Rohes Fleisch, rohes Hackfleisch, Hähnchenbrust roh, Fisch roh
+- Eier (jeder Art)
+- Tiefkühlware, die aufgetaut/gegart werden muss
+- Alles, was die Worte „gekocht", „angebraten", „gebacken", „gegrillt", „erhitzt", „aufgewärmt" enthält
+
+✅ NUR ERLAUBT (fertig vom Supermarktregal / aus der Kühltheke):
+- Aufschnitt aus der Wurst-/Kühltheke (Schinken, Putenbrust, Bresaola, Salami, Roastbeef-Aufschnitt)
+- Räucherlachs, Räucherforelle, Räuchermakrele
+- Thunfisch / Sardinen / Makrele aus der Dose
+- Skyr, Quark, Naturjoghurt, Hüttenkäse, Frischkäse, Käse-Scheiben
+- Fertig gekochte Linsen/Kichererbsen/Bohnen/Mais aus Dose
+- Hummus, Tzatziki
+- Brot, Wraps, Tortillas, Knäckebrot, Reiswaffeln
+- Rohes Obst & Gemüse, Salat-Fertigmischungen
+- Overnight Oats (Haferflocken in Milch/Joghurt eingeweicht — NICHT gekocht)
+- Proteinpulver, Riegel, Shakes, Beef Jerky, Nüsse
+
+Jede Mahlzeit MUSS aus dieser Erlaubt-Liste komponiert sein. Worte wie "gekocht/gebacken/angebraten" in description sind FALSCH.\n`
+      : "";
+
+
 
     const combinedBudget =
       (a.weeklyBudget ?? 0) + (b.weeklyBudget ?? 0) > 0
