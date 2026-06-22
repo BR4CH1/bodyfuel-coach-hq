@@ -520,13 +520,15 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
       Number.isInteger(n) ? String(n) : String(Math.round(n * 10) / 10).replace(".", ",");
 
     const buildPartnerIngredientSplit = () => {
-      if (!selfPartner?.description || !otherPartner?.description || !otherPartner.name)
+      const self = selfPartner;
+      const other = otherPartner;
+      if (!self?.description || !other?.description || !other.name)
         return buildScaledPartnerIngredientSplit();
-      const selfItems = selfPartner.description
+      const selfItems = self.description
         .split(",")
         .map(parseIngredientPart)
         .filter((it): it is IngredientPart => Boolean(it));
-      const otherItems = otherPartner.description
+      const otherItems = other.description
         .split(",")
         .map(parseIngredientPart)
         .filter((it): it is IngredientPart => Boolean(it));
@@ -536,21 +538,22 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
         const otherItem = otherByKey.get(selfItem.key);
         if (!otherItem || otherItem.unit !== selfItem.unit) continue;
         rows.push(
-          `${selfItem.name}: ${formatAmount(selfItem.amount)} ${selfItem.unit} für ${selfPartner.name}, ${formatAmount(otherItem.amount)} ${otherItem.unit} für ${otherPartner.name} — insgesamt ${formatAmount(selfItem.amount + otherItem.amount)} ${selfItem.unit}`,
+          `${selfItem.name}: ${formatAmount(selfItem.amount)} ${selfItem.unit} für ${self.name}, ${formatAmount(otherItem.amount)} ${otherItem.unit} für ${other.name} — insgesamt ${formatAmount(selfItem.amount + otherItem.amount)} ${selfItem.unit}`,
         );
       }
       return rows.length >= 2 ? rows : null;
     };
 
     const buildScaledPartnerIngredientSplit = () => {
-      if (!selfPartner?.description || !otherPartner?.name) return null;
-      const selfItems = selfPartner.description
+      const self = selfPartner;
+      const other = otherPartner;
+      if (!self?.description || !other?.name) return null;
+      const selfItems = self.description
         .split(",")
         .map(parseIngredientPart)
         .filter((it): it is IngredientPart => Boolean(it));
       if (selfItems.length < 2) return null;
-      const rawRatio =
-        otherPartner.kcal && selfPartner.kcal ? otherPartner.kcal / selfPartner.kcal : 0.5;
+      const rawRatio = other.kcal && self.kcal ? other.kcal / self.kcal : 0.5;
       const ratio = Math.min(0.85, Math.max(0.35, rawRatio));
       const roundPartnerAmount = (amount: number, unit: string) => {
         const value = amount * ratio;
@@ -560,7 +563,7 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
       };
       return selfItems.map((item) => {
         const otherAmount = roundPartnerAmount(item.amount, item.unit);
-        return `${item.name}: ${formatAmount(item.amount)} ${item.unit} für ${selfPartner.name}, ${formatAmount(otherAmount)} ${item.unit} für ${otherPartner.name} — insgesamt ${formatAmount(item.amount + otherAmount)} ${item.unit}`;
+        return `${item.name}: ${formatAmount(item.amount)} ${item.unit} für ${self.name}, ${formatAmount(otherAmount)} ${item.unit} für ${other.name} — insgesamt ${formatAmount(item.amount + otherAmount)} ${item.unit}`;
       });
     };
 
