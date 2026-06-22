@@ -44,23 +44,7 @@ function GiftRedeemPage() {
     queryFn: () => validate({ data: { code } }),
   });
 
-  // Auto-redeem if already logged in and code valid
-  useEffect(() => {
-    if (loading || !supabaseUser || !info?.valid || redeemed || busy) return;
-    (async () => {
-      setBusy(true);
-      try {
-        await redeem({ data: { code } });
-        setRedeemed(true);
-        toast.success("Smart freigeschaltet — willkommen!");
-        navigate({ to: "/onboarding/smart" });
-      } catch (e: any) {
-        toast.error(e?.message ?? "Einlösung fehlgeschlagen");
-      } finally {
-        setBusy(false);
-      }
-    })();
-  }, [loading, supabaseUser, info, redeemed, busy, code, redeem, navigate]);
+  // Einlösung erfolgt erst nach expliziter Bestätigung (Formular abschicken bzw. Button klicken).
 
   const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
