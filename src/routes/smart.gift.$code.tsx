@@ -125,7 +125,7 @@ function GiftRedeemPage() {
 
             {supabaseUser ? (
               <div className="mt-6 space-y-3">
-                <p className="text-sm">Eingeloggt als <span className="font-semibold">{supabaseUser.email}</span>. Code wird automatisch eingelöst…</p>
+                <p className="text-sm">Eingeloggt als <span className="font-semibold">{supabaseUser.email}</span>. Klicke auf „Jetzt freischalten", um deinen Code einzulösen.</p>
                 <Button
                   onClick={async () => {
                     setBusy(true);
