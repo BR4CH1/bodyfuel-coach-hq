@@ -1766,6 +1766,68 @@ export type Database = {
           },
         ]
       }
+      smart_gift_codes: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          days: number
+          expires_at: string | null
+          label: string | null
+          max_uses: number
+          uses: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          days?: number
+          expires_at?: string | null
+          label?: string | null
+          max_uses?: number
+          uses?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          days?: number
+          expires_at?: string | null
+          label?: string | null
+          max_uses?: number
+          uses?: number
+        }
+        Relationships: []
+      }
+      smart_gift_redemptions: {
+        Row: {
+          code: string
+          id: string
+          redeemed_at: string
+          user_id: string
+        }
+        Insert: {
+          code: string
+          id?: string
+          redeemed_at?: string
+          user_id: string
+        }
+        Update: {
+          code?: string
+          id?: string
+          redeemed_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "smart_gift_redemptions_code_fkey"
+            columns: ["code"]
+            isOneToOne: false
+            referencedRelation: "smart_gift_codes"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
       smart_nutrition_profile: {
         Row: {
           allergies: string[]
