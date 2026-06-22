@@ -52,6 +52,7 @@ import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe
 import { Route as CoachReviewsRouteImport } from './routes/coach.reviews'
 import { Route as CoachPackageRequestsRouteImport } from './routes/coach.package-requests'
 import { Route as CoachLeadsRouteImport } from './routes/coach.leads'
+import { Route as CoachGiftsRouteImport } from './routes/coach.gifts'
 import { Route as CoachCustomersRouteImport } from './routes/coach.customers'
 import { Route as CoachClientIdRouteImport } from './routes/coach.$clientId'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
@@ -70,6 +71,7 @@ import { Route as TrackerAppProfileRouteImport } from './routes/tracker.app.prof
 import { Route as TrackerAppNutritionRouteImport } from './routes/tracker.app.nutrition'
 import { Route as TrackerAppActivityRouteImport } from './routes/tracker.app.activity'
 import { Route as TrackerAppAchievementsRouteImport } from './routes/tracker.app.achievements'
+import { Route as SmartGiftCodeRouteImport } from './routes/smart.gift.$code'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as CoachPlanPreviewPlanIdRouteImport } from './routes/coach.plan-preview.$planId'
 import { Route as CoachCustomersNewRouteImport } from './routes/coach.customers.new'
@@ -304,6 +306,11 @@ const CoachLeadsRoute = CoachLeadsRouteImport.update({
   path: '/leads',
   getParentRoute: () => CoachRoute,
 } as any)
+const CoachGiftsRoute = CoachGiftsRouteImport.update({
+  id: '/gifts',
+  path: '/gifts',
+  getParentRoute: () => CoachRoute,
+} as any)
 const CoachCustomersRoute = CoachCustomersRouteImport.update({
   id: '/customers',
   path: '/customers',
@@ -393,6 +400,11 @@ const TrackerAppAchievementsRoute = TrackerAppAchievementsRouteImport.update({
   id: '/achievements',
   path: '/achievements',
   getParentRoute: () => TrackerAppRoute,
+} as any)
+const SmartGiftCodeRoute = SmartGiftCodeRouteImport.update({
+  id: '/gift/$code',
+  path: '/gift/$code',
+  getParentRoute: () => SmartRoute,
 } as any)
 const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
   id: '/lovable/email/suppression',
@@ -519,6 +531,7 @@ export interface FileRoutesByFullPath {
   '/checkout/return': typeof CheckoutReturnRoute
   '/coach/$clientId': typeof CoachClientIdRoute
   '/coach/customers': typeof CoachCustomersRouteWithChildren
+  '/coach/gifts': typeof CoachGiftsRoute
   '/coach/leads': typeof CoachLeadsRoute
   '/coach/package-requests': typeof CoachPackageRequestsRoute
   '/coach/reviews': typeof CoachReviewsRoute
@@ -542,6 +555,7 @@ export interface FileRoutesByFullPath {
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/coach/plan-preview/$planId': typeof CoachPlanPreviewPlanIdRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/smart/gift/$code': typeof SmartGiftCodeRoute
   '/tracker/app/achievements': typeof TrackerAppAchievementsRoute
   '/tracker/app/activity': typeof TrackerAppActivityRoute
   '/tracker/app/nutrition': typeof TrackerAppNutritionRoute
@@ -594,6 +608,7 @@ export interface FileRoutesByTo {
   '/bulls/weight': typeof BullsWeightRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/coach/$clientId': typeof CoachClientIdRoute
+  '/coach/gifts': typeof CoachGiftsRoute
   '/coach/leads': typeof CoachLeadsRoute
   '/coach/package-requests': typeof CoachPackageRequestsRoute
   '/coach/reviews': typeof CoachReviewsRoute
@@ -616,6 +631,7 @@ export interface FileRoutesByTo {
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/coach/plan-preview/$planId': typeof CoachPlanPreviewPlanIdRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/smart/gift/$code': typeof SmartGiftCodeRoute
   '/tracker/app/achievements': typeof TrackerAppAchievementsRoute
   '/tracker/app/activity': typeof TrackerAppActivityRoute
   '/tracker/app/nutrition': typeof TrackerAppNutritionRoute
@@ -673,6 +689,7 @@ export interface FileRoutesById {
   '/checkout/return': typeof CheckoutReturnRoute
   '/coach/$clientId': typeof CoachClientIdRoute
   '/coach/customers': typeof CoachCustomersRouteWithChildren
+  '/coach/gifts': typeof CoachGiftsRoute
   '/coach/leads': typeof CoachLeadsRoute
   '/coach/package-requests': typeof CoachPackageRequestsRoute
   '/coach/reviews': typeof CoachReviewsRoute
@@ -696,6 +713,7 @@ export interface FileRoutesById {
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/coach/plan-preview/$planId': typeof CoachPlanPreviewPlanIdRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/smart/gift/$code': typeof SmartGiftCodeRoute
   '/tracker/app/achievements': typeof TrackerAppAchievementsRoute
   '/tracker/app/activity': typeof TrackerAppActivityRoute
   '/tracker/app/nutrition': typeof TrackerAppNutritionRoute
@@ -754,6 +772,7 @@ export interface FileRouteTypes {
     | '/checkout/return'
     | '/coach/$clientId'
     | '/coach/customers'
+    | '/coach/gifts'
     | '/coach/leads'
     | '/coach/package-requests'
     | '/coach/reviews'
@@ -777,6 +796,7 @@ export interface FileRouteTypes {
     | '/coach/customers/new'
     | '/coach/plan-preview/$planId'
     | '/lovable/email/suppression'
+    | '/smart/gift/$code'
     | '/tracker/app/achievements'
     | '/tracker/app/activity'
     | '/tracker/app/nutrition'
@@ -829,6 +849,7 @@ export interface FileRouteTypes {
     | '/bulls/weight'
     | '/checkout/return'
     | '/coach/$clientId'
+    | '/coach/gifts'
     | '/coach/leads'
     | '/coach/package-requests'
     | '/coach/reviews'
@@ -851,6 +872,7 @@ export interface FileRouteTypes {
     | '/coach/customers/new'
     | '/coach/plan-preview/$planId'
     | '/lovable/email/suppression'
+    | '/smart/gift/$code'
     | '/tracker/app/achievements'
     | '/tracker/app/activity'
     | '/tracker/app/nutrition'
@@ -907,6 +929,7 @@ export interface FileRouteTypes {
     | '/checkout/return'
     | '/coach/$clientId'
     | '/coach/customers'
+    | '/coach/gifts'
     | '/coach/leads'
     | '/coach/package-requests'
     | '/coach/reviews'
@@ -930,6 +953,7 @@ export interface FileRouteTypes {
     | '/coach/customers/new'
     | '/coach/plan-preview/$planId'
     | '/lovable/email/suppression'
+    | '/smart/gift/$code'
     | '/tracker/app/achievements'
     | '/tracker/app/activity'
     | '/tracker/app/nutrition'
@@ -1311,6 +1335,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CoachLeadsRouteImport
       parentRoute: typeof CoachRoute
     }
+    '/coach/gifts': {
+      id: '/coach/gifts'
+      path: '/gifts'
+      fullPath: '/coach/gifts'
+      preLoaderRoute: typeof CoachGiftsRouteImport
+      parentRoute: typeof CoachRoute
+    }
     '/coach/customers': {
       id: '/coach/customers'
       path: '/customers'
@@ -1436,6 +1467,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/tracker/app/achievements'
       preLoaderRoute: typeof TrackerAppAchievementsRouteImport
       parentRoute: typeof TrackerAppRoute
+    }
+    '/smart/gift/$code': {
+      id: '/smart/gift/$code'
+      path: '/gift/$code'
+      fullPath: '/smart/gift/$code'
+      preLoaderRoute: typeof SmartGiftCodeRouteImport
+      parentRoute: typeof SmartRoute
     }
     '/lovable/email/suppression': {
       id: '/lovable/email/suppression'
@@ -1571,6 +1609,7 @@ const CoachCustomersRouteWithChildren = CoachCustomersRoute._addFileChildren(
 interface CoachRouteChildren {
   CoachClientIdRoute: typeof CoachClientIdRoute
   CoachCustomersRoute: typeof CoachCustomersRouteWithChildren
+  CoachGiftsRoute: typeof CoachGiftsRoute
   CoachLeadsRoute: typeof CoachLeadsRoute
   CoachPackageRequestsRoute: typeof CoachPackageRequestsRoute
   CoachReviewsRoute: typeof CoachReviewsRoute
@@ -1581,6 +1620,7 @@ interface CoachRouteChildren {
 const CoachRouteChildren: CoachRouteChildren = {
   CoachClientIdRoute: CoachClientIdRoute,
   CoachCustomersRoute: CoachCustomersRouteWithChildren,
+  CoachGiftsRoute: CoachGiftsRoute,
   CoachLeadsRoute: CoachLeadsRoute,
   CoachPackageRequestsRoute: CoachPackageRequestsRoute,
   CoachReviewsRoute: CoachReviewsRoute,
@@ -1613,11 +1653,13 @@ const NutritionRouteWithChildren = NutritionRoute._addFileChildren(
 interface SmartRouteChildren {
   SmartSignupRoute: typeof SmartSignupRoute
   SmartIndexRoute: typeof SmartIndexRoute
+  SmartGiftCodeRoute: typeof SmartGiftCodeRoute
 }
 
 const SmartRouteChildren: SmartRouteChildren = {
   SmartSignupRoute: SmartSignupRoute,
   SmartIndexRoute: SmartIndexRoute,
+  SmartGiftCodeRoute: SmartGiftCodeRoute,
 }
 
 const SmartRouteWithChildren = SmartRoute._addFileChildren(SmartRouteChildren)

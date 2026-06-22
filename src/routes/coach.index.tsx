@@ -574,6 +574,13 @@ function CoachDashboard() {
             <span className="text-gold">📦</span>
             <span className="font-display text-sm font-bold">Paketanfragen</span>
           </Link>
+          <Link
+            to="/coach/gifts"
+            className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm hover:border-gold/40"
+          >
+            <span className="text-gold">🎁</span>
+            <span className="font-display text-sm font-bold">Geschenklinks</span>
+          </Link>
         </div>
 
       </div>
