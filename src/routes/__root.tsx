@@ -133,11 +133,12 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <ConsentProvider>
         <SessionProvider>
-          <PaymentTestModeBanner />
-          <Outlet />
-          <CookieConsent />
-          <OfflineStatus />
-          <Toaster theme="dark" />
+            <PaymentTestModeBanner />
+            <ReferralAttacher />
+            <Outlet />
+            <CookieConsent />
+            <OfflineStatus />
+            <Toaster theme="dark" />
         </SessionProvider>
       </ConsentProvider>
     </QueryClientProvider>
