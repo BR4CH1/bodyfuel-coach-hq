@@ -363,7 +363,9 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
               .order("created_at", { ascending: false })
               .limit(10);
             const partnerPlan =
-              (candidatePlans ?? []).find((x: any) => x.partner_plan_id === (selfDay as any)?.plan_id) ||
+              (candidatePlans ?? []).find(
+                (x: any) => x.partner_plan_id === (selfDay as any)?.plan_id,
+              ) ||
               (candidatePlans ?? []).find((x: any) => x.status === "active") ||
               (candidatePlans ?? [])[0];
             if (partnerPlan?.id) {
@@ -377,7 +379,9 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
               if (pDayId) {
                 const { data: candidates } = await supabaseAdmin
                   .from("nutrition_plan_meals")
-                  .select("id, kcal, protein_g, carbs_g, fat_g, day_id, description, name, sort_order")
+                  .select(
+                    "id, kcal, protein_g, carbs_g, fat_g, day_id, description, name, sort_order",
+                  )
                   .eq("day_id", pDayId);
                 const list = (candidates ?? []) as any[];
                 pMeal =
