@@ -343,11 +343,49 @@ export async function generateAiNutritionPlanCore(
 
     const equipmentList: string[] = Array.isArray(p.kitchen_equipment) ? p.kitchen_equipment : [];
     const equipmentNotes: string = (p.kitchen_equipment_notes ?? "").toString().trim();
+    const equipmentLower = equipmentList.map((e) => e.toLowerCase());
+    const notesLower = equipmentNotes.toLowerCase();
+    const cookingDevices = ["herd", "stove", "ofen", "backofen", "oven", "airfryer", "air fryer", "heißluft", "mikrowelle", "microwave", "kochplatte", "induktion", "gas", "grill", "thermomix", "reiskocher", "wasserkocher", "kettle", "dampfgarer", "slow cooker", "instant pot", "multikocher", "pfanne", "topf"];
+    const hasCookingDevice = equipmentLower.some((e) => cookingDevices.some((d) => e.includes(d)));
+    const notesIndicatesNoCook = /\b(keine k(ü|ue)che|nur k(ü|ue)hlschrank|alles\s+(muss\s+)?kalt|no[- ]?cook|kein herd|kein ofen|nichts kochen|nicht kochen)\b/.test(notesLower);
+    const isNoCook = (equipmentList.length > 0 || equipmentNotes.length > 0) && (!hasCookingDevice || notesIndicatesNoCook);
+
     const equipmentBlock = equipmentList.length || equipmentNotes
       ? `\n🍳 KÜCHENAUSSTATTUNG (HARTE EINSCHRÄNKUNG — nur Rezepte vorschlagen, die mit diesen Geräten zubereitbar sind):\n${
           equipmentList.length ? "Verfügbare Geräte: " + equipmentList.join(", ") : "(keine Liste vom Coach)"
-        }${equipmentNotes ? "\nCoach-Notiz: " + equipmentNotes : ""}\nWenn z. B. KEIN HERD verfügbar ist, dürfen Rezepte nicht „in der Pfanne anbraten" o. ä. verlangen — Garmethode an Airfryer/Backofen/Mikrowelle anpassen.\nWICHTIG „NO-COOK"-FALL: Wenn KEINE Garmethode verfügbar ist (z. B. nur Kühlschrank, alles muss kalt) — schlage AUSSCHLIESSLICH Zutaten vor, die roh / fertig / kalt aus dem Supermarkt verzehrt werden können. Verboten sind dann insbesondere: „gekochte Nudeln/Reis/Kartoffeln", roher Fisch/rohes Fleisch, Eier (müssen gekocht werden), Tiefkühlware, die aufgetaut/gegart werden muss. Erlaubt sind z. B.: Aufschnitt aus der Wurst-/Kühltheke (gekochter Schinken, Putenbrust, Bresaola), geräucherter Lachs, Skyr/Quark/Joghurt, Käse, Hüttenkäse, Wraps/Brot/Brötchen/Knäckebrot, fertig gekochte Linsen/Kichererbsen aus der Dose, Mais/Bohnen aus der Dose, frisches Obst & Gemüse zum Rohverzehr, Salat-Fertigmischungen, Beef Jerky, Thunfisch aus der Dose, Hummus, Nüsse, Müsli/Haferflocken zum Einweichen (Overnight Oats), Proteinpulver, Proteinriegel/-shakes, Milch/Pflanzendrinks. Garhinweise wie „gekocht", „angebraten", „gebacken" sind in diesem Fall STRIKT verboten.\n`
+        }${equipmentNotes ? "\nCoach-Notiz: " + equipmentNotes : ""}\nWenn z. B. KEIN HERD verfügbar ist, dürfen Rezepte nicht „in der Pfanne anbraten" o. ä. verlangen — Garmethode an Airfryer/Backofen/Mikrowelle anpassen.\n`
       : "";
+
+    const noCookBlock = isNoCook
+      ? `\n\n🧊🧊🧊 ABSOLUTE NO-COOK-REGEL (HÖCHSTE PRIORITÄT — überschreibt alle anderen Vorschläge):
+Der Kunde hat KEINE Garmethode verfügbar (nur Kühlschrank / alles muss kalt aus dem Supermarkt verzehrbar sein).
+
+❌ STRIKT VERBOTEN — auch nicht mit dem Zusatz "(kalt)" oder "vorgekocht":
+- Nudeln, Reis, Kartoffeln, Quinoa, Bulgur, Couscous, Linsen-Trockenware (egal ob "gekocht, kalt" deklariert)
+- Rohes Fleisch, rohes Hackfleisch, Hähnchenbrust roh, Fisch roh
+- Eier (jeder Art — auch hartgekocht zählt NICHT als no-cook)
+- Tiefkühlware, die aufgetaut oder gegart werden muss (TK-Gemüse, TK-Fisch, TK-Hähnchen, TK-Beeren NUR ok wenn als gefroren in Skyr/Joghurt eingerührt)
+- Alles, was die Worte „gekocht", „angebraten", „gebacken", „gegrillt", „erhitzt", „aufgewärmt" enthält
+
+✅ NUR ERLAUBT (fertig vom Supermarktregal / aus der Kühltheke):
+- Aufschnitt aus der Wurst-/Kühltheke: gekochter Schinken, Putenbrust-Aufschnitt, Bresaola, Salami, Mortadella, Roastbeef-Aufschnitt
+- Räucherlachs, Räucherforelle, geräucherte Makrele
+- Thunfisch / Sardinen / Makrele aus der Dose
+- Skyr, Quark, Naturjoghurt, griechischer Joghurt, Hüttenkäse, Frischkäse, Käse (Scheiben, Gouda, Mozzarella, Feta)
+- Fertig gekochte Linsen/Kichererbsen/Bohnen/Mais aus Dose oder Beutel
+- Hummus, Guacamole-Fertig, Tzatziki
+- Brot, Brötchen, Wraps, Tortillas, Knäckebrot, Reiswaffeln
+- Frisches Obst & Gemüse zum Rohverzehr (Salat, Gurke, Tomate, Paprika, Möhre, Apfel, Banane, Beeren)
+- Salat-Fertigmischungen
+- Haferflocken / Müsli als Overnight Oats (in Milch/Joghurt einweichen, NICHT kochen)
+- Proteinpulver, Proteinriegel, Proteinshakes, Proteinpudding
+- Beef Jerky, Nüsse, Nussmus, Trockenfrüchte
+- Milch, Pflanzendrinks, Skyr-Drinks
+
+Jede Mahlzeit MUSS aus dieser Erlaubt-Liste komponiert sein. Wenn du im Description-Feld auch nur EIN Wort wie "gekocht", "gebacken", "angebraten", "gegart" verwendest, ist der Plan FALSCH. Beispiele für gültige No-Cook-Mittagessen: „150g Putenbrust-Aufschnitt, 60g Vollkornbrot, 30g Hüttenkäse, 100g Tomate, 50g Gurke" oder „200g Thunfisch (Dose, abgetropft), 150g Kichererbsen (Dose), 100g Paprika, 50g Mais, 1 EL Olivenöl".\n`
+      : "";
+
+
 
     // Plan length & start date abhängig vom Modus.
     // - "today" (Default): Plan ab HEUTE bis zum nächsten Einkaufstag (Lücken-Plan).
