@@ -287,20 +287,20 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
 
       if (!pMeal) {
         // Fallback: locate own plan, follow partner_plan_id, find the matching
-        // day (by day_index) and the meal with the same name + sort_order.
+        // day (by sort_order) and the meal with the same name + sort_order.
         const { data: selfDay } = await supabaseAdmin
           .from("nutrition_plan_days")
-          .select("plan_id, day_index, nutrition_plans!inner(partner_plan_id)")
+          .select("plan_id, sort_order, nutrition_plans!inner(partner_plan_id)")
           .eq("id", meal.day_id)
           .maybeSingle();
         const partnerPlanId = (selfDay as any)?.nutrition_plans?.partner_plan_id;
-        const dayIndex = (selfDay as any)?.day_index;
-        if (partnerPlanId && dayIndex != null) {
+        const daySort = (selfDay as any)?.sort_order;
+        if (partnerPlanId && daySort != null) {
           const { data: pDayRow } = await supabaseAdmin
             .from("nutrition_plan_days")
             .select("id")
             .eq("plan_id", partnerPlanId)
-            .eq("day_index", dayIndex)
+            .eq("sort_order", daySort)
             .maybeSingle();
           const pDayId = (pDayRow as any)?.id;
           if (pDayId) {
