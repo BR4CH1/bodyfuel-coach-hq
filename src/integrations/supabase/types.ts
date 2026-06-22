@@ -89,6 +89,113 @@ export type Database = {
         }
         Relationships: []
       }
+      affiliate_partners: {
+        Row: {
+          commission_pct: number
+          created_at: string
+          created_by: string
+          email: string | null
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          payouts_enabled: boolean
+          slug: string
+          stripe_connect_account_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          commission_pct?: number
+          created_at?: string
+          created_by: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          payouts_enabled?: boolean
+          slug: string
+          stripe_connect_account_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          commission_pct?: number
+          created_at?: string
+          created_by?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          payouts_enabled?: boolean
+          slug?: string
+          stripe_connect_account_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      affiliate_referrals: {
+        Row: {
+          commission_amount_eur: number | null
+          commission_pct: number | null
+          commission_status: string
+          created_at: string
+          first_payment_id: string | null
+          id: string
+          paid_at: string | null
+          partner_id: string
+          payment_amount_eur: number | null
+          payout_note: string | null
+          referred_user_id: string
+          signup_at: string
+          source_slug: string | null
+          stripe_transfer_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          commission_amount_eur?: number | null
+          commission_pct?: number | null
+          commission_status?: string
+          created_at?: string
+          first_payment_id?: string | null
+          id?: string
+          paid_at?: string | null
+          partner_id: string
+          payment_amount_eur?: number | null
+          payout_note?: string | null
+          referred_user_id: string
+          signup_at?: string
+          source_slug?: string | null
+          stripe_transfer_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          commission_amount_eur?: number | null
+          commission_pct?: number | null
+          commission_status?: string
+          created_at?: string
+          first_payment_id?: string | null
+          id?: string
+          paid_at?: string | null
+          partner_id?: string
+          payment_amount_eur?: number | null
+          payout_note?: string | null
+          referred_user_id?: string
+          signup_at?: string
+          source_slug?: string | null
+          stripe_transfer_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_referrals_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_checkin_drafts: {
         Row: {
           client_id: string
@@ -1600,6 +1707,7 @@ export type Database = {
           notifications_enabled: boolean
           phone: string | null
           practice_days_per_week: number | null
+          referred_by_partner_id: string | null
           season_phase: string | null
           smart_onboarding_completed_at: string | null
           sport: string | null
@@ -1641,6 +1749,7 @@ export type Database = {
           notifications_enabled?: boolean
           phone?: string | null
           practice_days_per_week?: number | null
+          referred_by_partner_id?: string | null
           season_phase?: string | null
           smart_onboarding_completed_at?: string | null
           sport?: string | null
@@ -1682,6 +1791,7 @@ export type Database = {
           notifications_enabled?: boolean
           phone?: string | null
           practice_days_per_week?: number | null
+          referred_by_partner_id?: string | null
           season_phase?: string | null
           smart_onboarding_completed_at?: string | null
           sport?: string | null
@@ -1696,7 +1806,15 @@ export type Database = {
           trial_status?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_referred_by_partner_id_fkey"
+            columns: ["referred_by_partner_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_partners"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       progress_photos: {
         Row: {
@@ -2615,6 +2733,10 @@ export type Database = {
       are_nutrition_partners: {
         Args: { _a: string; _b: string }
         Returns: boolean
+      }
+      attach_referral: {
+        Args: { _slug: string; _user_id: string }
+        Returns: undefined
       }
       auto_activate_due_plans: {
         Args: never
