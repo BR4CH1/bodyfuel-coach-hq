@@ -450,15 +450,11 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
     const skipCache = isPartnerMeal && (!hasPerPerson || hasPlaceholder || !otherInText);
     if (!data.force && !skipCache && cached.length > 0) {
       return {
-        ingredients: fixLabels(cached),
+        ingredients: buildPartnerIngredientSplit() ?? fixLabels(cached),
         steps: (meal.recipe_steps as string[]) ?? [],
         cached: true,
       };
     }
-
-
-
-
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY fehlt");
 
