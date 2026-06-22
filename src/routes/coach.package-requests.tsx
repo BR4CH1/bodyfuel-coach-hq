@@ -82,6 +82,12 @@ function PackageRequestsAdmin() {
         data: { id, status, coach_note: notes[id] || undefined },
       });
       toast.success(status === "approved" ? "Genehmigt" : "Abgelehnt");
+      setNotes((n) => {
+        const next = { ...n };
+        delete next[id];
+        if (Object.keys(next).length === 0) clearFormDraft("bf.coach.packageRequests.notes.v1");
+        return next;
+      });
       load();
     } catch (e: any) {
       toast.error(e.message);
