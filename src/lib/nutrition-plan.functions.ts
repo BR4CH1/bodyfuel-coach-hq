@@ -239,7 +239,7 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
     const { data: meal, error: mErr } = await supabase
       .from("nutrition_plan_meals")
       .select(
-        "id, name, description, kcal, protein_g, carbs_g, fat_g, day_id, partner_meal_id, sort_order, recipe_ingredients, recipe_steps, recipe_generated_at",
+        "id, name, description, kcal, protein_g, carbs_g, fat_g, day_id, partner_meal_id, is_shared, sort_order, recipe_ingredients, recipe_steps, recipe_generated_at",
       )
       .eq("id", data.meal_id)
       .maybeSingle();
@@ -259,7 +259,7 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
     // shared-meal prefix we set in partner-nutrition-plan-ai.functions.ts.
     const nameLooksShared = /Gemeinsam mit\s+(.+?)\s+—/i.exec(meal.name || "");
     const partnerNameFromTitle = nameLooksShared?.[1]?.trim() || null;
-    const isPartnerMeal = !!meal.partner_meal_id || !!partnerNameFromTitle;
+    const isPartnerMeal = !!meal.partner_meal_id || !!partnerNameFromTitle || meal.is_shared === true;
 
     // Partner-meal lookup: fetch the partner's macros + display name so the
     // recipe can list per-person quantities. We do this BEFORE the cache check
