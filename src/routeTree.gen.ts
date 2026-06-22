@@ -13,6 +13,7 @@ import { Route as WelcomeRouteImport } from './routes/welcome'
 import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
 import { Route as TrustRouteImport } from './routes/trust'
 import { Route as TrialRouteImport } from './routes/trial'
+import { Route as TrainingImportRouteImport } from './routes/training-import'
 import { Route as TrainingRouteImport } from './routes/training'
 import { Route as StrengthCheckRouteImport } from './routes/strength-check'
 import { Route as SmartRouteImport } from './routes/smart'
@@ -107,6 +108,11 @@ const TrustRoute = TrustRouteImport.update({
 const TrialRoute = TrialRouteImport.update({
   id: '/trial',
   path: '/trial',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TrainingImportRoute = TrainingImportRouteImport.update({
+  id: '/training-import',
+  path: '/training-import',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TrainingRoute = TrainingRouteImport.update({
@@ -518,6 +524,7 @@ export interface FileRoutesByFullPath {
   '/smart': typeof SmartRouteWithChildren
   '/strength-check': typeof StrengthCheckRoute
   '/training': typeof TrainingRoute
+  '/training-import': typeof TrainingImportRoute
   '/trial': typeof TrialRoute
   '/trust': typeof TrustRoute
   '/unsubscribe': typeof UnsubscribeRoute
@@ -596,6 +603,7 @@ export interface FileRoutesByTo {
   '/ranking': typeof RankingRoute
   '/strength-check': typeof StrengthCheckRoute
   '/training': typeof TrainingRoute
+  '/training-import': typeof TrainingImportRoute
   '/trial': typeof TrialRoute
   '/trust': typeof TrustRoute
   '/unsubscribe': typeof UnsubscribeRoute
@@ -676,6 +684,7 @@ export interface FileRoutesById {
   '/smart': typeof SmartRouteWithChildren
   '/strength-check': typeof StrengthCheckRoute
   '/training': typeof TrainingRoute
+  '/training-import': typeof TrainingImportRoute
   '/trial': typeof TrialRoute
   '/trust': typeof TrustRoute
   '/unsubscribe': typeof UnsubscribeRoute
@@ -759,6 +768,7 @@ export interface FileRouteTypes {
     | '/smart'
     | '/strength-check'
     | '/training'
+    | '/training-import'
     | '/trial'
     | '/trust'
     | '/unsubscribe'
@@ -837,6 +847,7 @@ export interface FileRouteTypes {
     | '/ranking'
     | '/strength-check'
     | '/training'
+    | '/training-import'
     | '/trial'
     | '/trust'
     | '/unsubscribe'
@@ -916,6 +927,7 @@ export interface FileRouteTypes {
     | '/smart'
     | '/strength-check'
     | '/training'
+    | '/training-import'
     | '/trial'
     | '/trust'
     | '/unsubscribe'
@@ -998,6 +1010,7 @@ export interface RootRouteChildren {
   SmartRoute: typeof SmartRouteWithChildren
   StrengthCheckRoute: typeof StrengthCheckRoute
   TrainingRoute: typeof TrainingRoute
+  TrainingImportRoute: typeof TrainingImportRoute
   TrialRoute: typeof TrialRoute
   TrustRoute: typeof TrustRoute
   UnsubscribeRoute: typeof UnsubscribeRoute
@@ -1060,6 +1073,13 @@ declare module '@tanstack/react-router' {
       path: '/trial'
       fullPath: '/trial'
       preLoaderRoute: typeof TrialRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/training-import': {
+      id: '/training-import'
+      path: '/training-import'
+      fullPath: '/training-import'
+      preLoaderRoute: typeof TrainingImportRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/training': {
@@ -1711,6 +1731,7 @@ const rootRouteChildren: RootRouteChildren = {
   SmartRoute: SmartRouteWithChildren,
   StrengthCheckRoute: StrengthCheckRoute,
   TrainingRoute: TrainingRoute,
+  TrainingImportRoute: TrainingImportRoute,
   TrialRoute: TrialRoute,
   TrustRoute: TrustRoute,
   UnsubscribeRoute: UnsubscribeRoute,

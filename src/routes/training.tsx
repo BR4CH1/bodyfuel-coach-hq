@@ -82,6 +82,14 @@ function TrainingPage() {
           <TrainingQuickLink to="/achievements" icon={<Sparkles className="h-5 w-5" />} title="Insights & Erfolge" desc="Adhärenz, Volumen, Belastung" />
         </section>
       )}
+      {!isCoach && supabaseUser && (
+        <TrainingQuickLink
+          to="/training-import"
+          icon={<Upload className="h-5 w-5" />}
+          title="Eigenen Trainingsplan importieren"
+          desc="PDF/Bild, Text oder manuell — Coach-Plan ist optional"
+        />
+      )}
       {!isCoach && <StrengthCheckStatus variant="block" />}
       {!isCoach && supabaseUser && <AthleteProfileBanner />}
       {hasCompleted && (
