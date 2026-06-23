@@ -12,6 +12,7 @@ import { BarcodeScanner } from "./BarcodeScanner";
 import { MealBuilderDialog } from "./MealBuilderDialog";
 import {
   searchFoods,
+  searchFoodsDb,
   lookupBarcode,
   estimateFoodFromText,
   getNutritionTargets,
