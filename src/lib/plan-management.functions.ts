@@ -157,7 +157,6 @@ export const transitionPlanStatus = createServerFn({ method: "POST" })
   .inputValidator((d: { plan_id: string; to: PlanStatus }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    await requireCoach(supabase, userId);
 
     const { data: plan } = await supabase
       .from("nutrition_plans")
@@ -165,6 +164,12 @@ export const transitionPlanStatus = createServerFn({ method: "POST" })
       .eq("id", data.plan_id)
       .maybeSingle();
     if (!plan) throw new Error("Plan nicht gefunden");
+
+    // Self-Service erlaubt: Kunden dürfen ihren eigenen Plan in jeden Status
+    // überführen (insb. Smart-Kunden, die ihren Entwurf selbst aktivieren).
+    if ((plan as any).client_id !== userId) {
+      await requireCoach(supabase, userId);
+    }
 
     // If transitioning to active, archive the currently active plan first
     if (data.to === "active") {
