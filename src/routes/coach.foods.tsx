@@ -333,10 +333,10 @@ function CoachFoodsPage() {
               </div>
 
               <div className="grid grid-cols-4 gap-2">
-                <NumField label="kcal/100g" value={editing.kcal_per_100g} onChange={(v) => setEditing({ ...editing, kcal_per_100g: v })} />
-                <NumField label="Protein g" value={editing.protein_per_100g} onChange={(v) => setEditing({ ...editing, protein_per_100g: v })} />
-                <NumField label="KH g" value={editing.carbs_per_100g} onChange={(v) => setEditing({ ...editing, carbs_per_100g: v })} />
-                <NumField label="Fett g" value={editing.fat_per_100g} onChange={(v) => setEditing({ ...editing, fat_per_100g: v })} />
+                <NumField label="kcal/100g" value={editing.kcal_per_100g} onChange={(v) => setEditing({ ...editing, kcal_per_100g: v ?? 0 })} />
+                <NumField label="Protein g" value={editing.protein_per_100g} onChange={(v) => setEditing({ ...editing, protein_per_100g: v ?? 0 })} />
+                <NumField label="KH g" value={editing.carbs_per_100g} onChange={(v) => setEditing({ ...editing, carbs_per_100g: v ?? 0 })} />
+                <NumField label="Fett g" value={editing.fat_per_100g} onChange={(v) => setEditing({ ...editing, fat_per_100g: v ?? 0 })} />
                 <NumField label="Ballast." value={editing.fiber_per_100g ?? undefined} onChange={(v) => setEditing({ ...editing, fiber_per_100g: v })} />
                 <NumField label="Zucker" value={editing.sugar_per_100g ?? undefined} onChange={(v) => setEditing({ ...editing, sugar_per_100g: v })} />
                 <NumField label="Salz" value={editing.salt_per_100g ?? undefined} onChange={(v) => setEditing({ ...editing, salt_per_100g: v })} />
