@@ -415,6 +415,16 @@ function RealUserDashboard() {
         .lte("performed_at", `${todayStr}T23:59:59.999`);
       setTrainedToday((tCount ?? 0) > 0);
 
+      // Prüfe ob aktiver Plan existiert (Ernährung oder Training)
+      const { data: activePlan } = await supabase
+        .from("nutrition_plans")
+        .select("id")
+        .eq("client_id", supabaseUser.id)
+        .eq("status", "active")
+        .limit(1)
+        .maybeSingle();
+      setHasActivePlan(!!activePlan);
+
       setLoading(false);
     })();
   }, [supabaseUser, todayStr]);
