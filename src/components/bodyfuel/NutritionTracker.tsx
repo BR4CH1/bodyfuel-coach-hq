@@ -1228,13 +1228,13 @@ export function NutritionTracker() {
                   <div className="min-w-0">
                     <div className="flex items-center gap-1">
                       <div className="text-sm font-semibold">{picking.name}</div>
-                      <SourceBadge source={picking.source} verified={picking.verified_by_coach} />
+                      {isCoach && <SourceBadge source={picking.source} verified={picking.verified_by_coach} />}
                     </div>
                     <div className="text-xs text-muted-foreground">
                       {picking.brand ?? "—"}
                       {picking.serving_g ? ` · 1 Stück ≈ ${picking.serving_g} g` : ""}
                     </div>
-                    {picking.source === "ai_estimate" && (
+                    {isCoach && picking.source === "ai_estimate" && (
                       <div className="mt-1 rounded-md border border-amber-500/30 bg-amber-500/5 px-2 py-1 text-[11px] text-amber-300">
                         ⚠ KI-Schätzung – Werte vor dem Speichern prüfen. Nicht aus geprüfter Datenbank.
                       </div>
