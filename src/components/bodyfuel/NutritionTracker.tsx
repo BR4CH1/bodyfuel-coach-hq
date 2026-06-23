@@ -12,6 +12,7 @@ import { BarcodeScanner } from "./BarcodeScanner";
 import { MealBuilderDialog } from "./MealBuilderDialog";
 import {
   searchFoods,
+  searchFoodsDb,
   lookupBarcode,
   estimateFoodFromText,
   getNutritionTargets,
@@ -73,6 +74,56 @@ const DEFAULT_TARGETS: Targets = {
 
 function today() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function SourceBadge({
+  source,
+  verified,
+}: {
+  source?: FoodResult["source"];
+  verified?: boolean;
+}) {
+  if (verified) {
+    return (
+      <span className="ml-1 inline-flex items-center rounded-sm bg-emerald-500/15 px-1 py-px text-[9px] font-semibold uppercase tracking-wide text-emerald-400">
+        BodyFuel ✓
+      </span>
+    );
+  }
+  switch (source) {
+    case "bls_4_0":
+      return (
+        <span className="ml-1 inline-flex items-center rounded-sm bg-emerald-500/10 px-1 py-px text-[9px] font-semibold uppercase tracking-wide text-emerald-400">
+          BLS 4.0
+        </span>
+      );
+    case "bodyfuel_verified":
+      return (
+        <span className="ml-1 inline-flex items-center rounded-sm bg-emerald-500/15 px-1 py-px text-[9px] font-semibold uppercase tracking-wide text-emerald-400">
+          BodyFuel ✓
+        </span>
+      );
+    case "open_food_facts":
+      return (
+        <span className="ml-1 inline-flex items-center rounded-sm bg-sky-500/10 px-1 py-px text-[9px] font-semibold uppercase tracking-wide text-sky-400">
+          OFF
+        </span>
+      );
+    case "usda":
+      return (
+        <span className="ml-1 inline-flex items-center rounded-sm bg-sky-500/10 px-1 py-px text-[9px] font-semibold uppercase tracking-wide text-sky-400">
+          USDA
+        </span>
+      );
+    case "ai_estimate":
+      return (
+        <span className="ml-1 inline-flex items-center rounded-sm bg-amber-500/15 px-1 py-px text-[9px] font-semibold uppercase tracking-wide text-amber-400">
+          ⚠ geschätzt
+        </span>
+      );
+    default:
+      return null;
+  }
 }
 
 function Ring({
@@ -284,6 +335,7 @@ export function NutritionTracker() {
   const getDayTypeFn = useServerFn(getDayType);
   const setDayTypeFn = useServerFn(setDayType);
   const searchFn = useServerFn(searchFoods);
+  const searchDbFn = useServerFn(searchFoodsDb);
   const lookupFn = useServerFn(lookupBarcode);
   const estimateFn = useServerFn(estimateFoodFromText);
   const [aiEstimating, setAiEstimating] = useState(false);
@@ -452,6 +504,9 @@ export function NutritionTracker() {
     }
     setSearching(true);
     try {
+      // 1) Geprüfte BodyFuel/BLS-DB ZUERST
+      const dbResults = await searchDbFn({ data: { query: term, limit: 15 } }).catch(() => [] as FoodResult[]);
+      // 2) Externe Quellen (Open Food Facts) für Marken/Verpacktes
       const remote = await searchFn({ data: { query: term } });
       const t = term.toLowerCase();
       const local = LOCAL_FOODS.filter(
@@ -459,10 +514,10 @@ export function NutritionTracker() {
           f.name.toLowerCase().includes(t) ||
           (f.aliases ?? []).some((a) => a.toLowerCase().includes(t)),
       ).map(({ aliases: _a, ...r }) => r);
-      // Local first so basics ("Ei", "Apfel", "Banane"…) are always findable
+      // Reihenfolge: BodyFuel-DB → lokal → OFF
       const seen = new Set<string>();
       const merged: FoodResult[] = [];
-      for (const r of [...local, ...remote]) {
+      for (const r of [...dbResults, ...local, ...remote]) {
         const key = (r.barcode || r.name) + "|" + (r.brand ?? "");
         if (seen.has(key)) continue;
         seen.add(key);
@@ -617,7 +672,7 @@ export function NutritionTracker() {
       protein_g: +(picking.protein_per_100g * factor).toFixed(1),
       carbs_g: +(picking.carbs_per_100g * factor).toFixed(1),
       fat_g: +(picking.fat_per_100g * factor).toFixed(1),
-      source: picking.barcode ? "barcode" : "manual",
+      source: picking.source ?? (picking.barcode ? "barcode" : "manual"),
     };
     const { data, error } = await supabase
       .from("food_entries")
@@ -1094,7 +1149,10 @@ export function NutritionTracker() {
                           }}
                           className="min-w-0 flex-1 px-2 py-3 text-left hover:bg-secondary"
                         >
-                          <div className="truncate text-sm font-medium">{r.name}</div>
+                          <div className="flex items-center gap-1">
+                            <div className="truncate text-sm font-medium">{r.name}</div>
+                            <SourceBadge source={r.source} verified={r.verified_by_coach} />
+                          </div>
                           <div className="text-[11px] text-muted-foreground">
                             {r.brand ? `${r.brand} · ` : ""}
                             {Math.round(r.kcal_per_100g)} kcal · P {r.protein_per_100g.toFixed(1)} · K {r.carbs_per_100g.toFixed(1)} · F {r.fat_per_100g.toFixed(1)} (/100g)
@@ -1168,11 +1226,19 @@ export function NutritionTracker() {
               <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <div className="text-sm font-semibold">{picking.name}</div>
+                    <div className="flex items-center gap-1">
+                      <div className="text-sm font-semibold">{picking.name}</div>
+                      <SourceBadge source={picking.source} verified={picking.verified_by_coach} />
+                    </div>
                     <div className="text-xs text-muted-foreground">
                       {picking.brand ?? "—"}
                       {picking.serving_g ? ` · 1 Stück ≈ ${picking.serving_g} g` : ""}
                     </div>
+                    {picking.source === "ai_estimate" && (
+                      <div className="mt-1 rounded-md border border-amber-500/30 bg-amber-500/5 px-2 py-1 text-[11px] text-amber-300">
+                        ⚠ KI-Schätzung – Werte vor dem Speichern prüfen. Nicht aus geprüfter Datenbank.
+                      </div>
+                    )}
                   </div>
                   <button
                     type="button"

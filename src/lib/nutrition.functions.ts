@@ -1,6 +1,16 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+export type FoodSource =
+  | "bls_4_0"
+  | "bodyfuel_verified"
+  | "open_food_facts"
+  | "usda"
+  | "ai_estimate"
+  | "barcode"
+  | "manual"
+  | null;
+
 export type FoodResult = {
   name: string;
   brand: string | null;
@@ -13,6 +23,10 @@ export type FoodResult = {
   serving_g: number | null;
   /** Roh-Label von OFF, z.B. "1 slice (25g)" oder "30 g" */
   serving_label: string | null;
+  /** Datenquelle (bls_4_0, bodyfuel_verified, open_food_facts, usda, ai_estimate, …) */
+  source?: FoodSource;
+  /** True wenn Coach geprüft */
+  verified_by_coach?: boolean;
 };
 
 function mapOff(p: any): FoodResult | null {
@@ -41,6 +55,8 @@ function mapOff(p: any): FoodResult | null {
     fat_per_100g: Number(n["fat_100g"] ?? 0),
     serving_g,
     serving_label: (p.serving_size as string) || null,
+    source: "open_food_facts",
+    verified_by_coach: false,
   };
 }
 
@@ -590,7 +606,68 @@ JSON-Schema:
       fat_per_100g: num(parsed.fat_per_100g),
       serving_g: isFinite(sg) && sg > 0 ? Math.round(sg) : null,
       serving_label: parsed.serving_label || null,
+      source: "ai_estimate",
+      verified_by_coach: false,
     };
+  });
+
+/* ----------- BodyFuel Lebensmittel-DB (BLS 4.0 + verified) ----------- */
+
+/**
+ * Sucht in unserer geprüften Nährwert-DB (BLS 4.0 + Coach-verified).
+ * Wird VOR OpenFoodFacts angefragt, damit Grundnahrungsmittel immer
+ * geprüfte Werte liefern.
+ */
+export const searchFoodsDb = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { query: string; limit?: number }) => d)
+  .handler(async ({ data, context }): Promise<FoodResult[]> => {
+    const q = data.query.trim();
+    if (!q) return [];
+    const limit = Math.min(25, Math.max(1, data.limit ?? 15));
+    // ILIKE on name + aliases (text[] -> use array_to_string for cheap fuzzy)
+    const { data: rows, error } = await context.supabase
+      .from("nutrition_foods")
+      .select(
+        "name, source, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, verified_by_coach, unit_type, default_state, aliases",
+      )
+      .or(`name.ilike.%${q}%,aliases.cs.{${q.toLowerCase()}}`)
+      .eq("needs_review", false)
+      .limit(limit);
+    if (error) return [];
+    const term = q.toLowerCase();
+    const mapped: FoodResult[] = (rows ?? []).map((r: any) => ({
+      name: r.name,
+      brand: null,
+      barcode: null,
+      kcal_per_100g: Number(r.kcal_per_100g) || 0,
+      protein_per_100g: Number(r.protein_per_100g) || 0,
+      carbs_per_100g: Number(r.carbs_per_100g) || 0,
+      fat_per_100g: Number(r.fat_per_100g) || 0,
+      serving_g: null,
+      serving_label: r.default_state ? `pro 100 g (${r.default_state})` : null,
+      source: r.source,
+      verified_by_coach: !!r.verified_by_coach,
+    }));
+    // Source-Priorität: bodyfuel_verified > bls_4_0 > rest
+    const prio: Record<string, number> = {
+      bodyfuel_verified: 0,
+      bls_4_0: 1,
+      open_food_facts: 2,
+      usda: 3,
+      ai_estimate: 9,
+    };
+    mapped.sort((a, b) => {
+      const pa = prio[a.source ?? ""] ?? 5;
+      const pb = prio[b.source ?? ""] ?? 5;
+      if (pa !== pb) return pa - pb;
+      const an = a.name.toLowerCase();
+      const bn = b.name.toLowerCase();
+      const ax = an === term ? 0 : an.startsWith(term) ? 1 : 2;
+      const bx = bn === term ? 0 : bn.startsWith(term) ? 1 : 2;
+      return ax - bx;
+    });
+    return mapped;
   });
 
 
