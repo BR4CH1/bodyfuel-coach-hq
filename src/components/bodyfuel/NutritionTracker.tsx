@@ -1149,7 +1149,10 @@ export function NutritionTracker() {
                           }}
                           className="min-w-0 flex-1 px-2 py-3 text-left hover:bg-secondary"
                         >
-                          <div className="truncate text-sm font-medium">{r.name}</div>
+                          <div className="flex items-center gap-1">
+                            <div className="truncate text-sm font-medium">{r.name}</div>
+                            <SourceBadge source={r.source} verified={r.verified_by_coach} />
+                          </div>
                           <div className="text-[11px] text-muted-foreground">
                             {r.brand ? `${r.brand} · ` : ""}
                             {Math.round(r.kcal_per_100g)} kcal · P {r.protein_per_100g.toFixed(1)} · K {r.carbs_per_100g.toFixed(1)} · F {r.fat_per_100g.toFixed(1)} (/100g)
