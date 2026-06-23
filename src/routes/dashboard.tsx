@@ -527,6 +527,7 @@ function RealUserDashboard() {
       </div>
 
       {supabaseUser && <SmartAnalysisCTA />}
+      {supabaseUser && !hasActivePlan && <SmartRenewalCard />}
       {supabaseUser && <StrengthCheckStatus variant="block" />}
       {supabaseUser && <PackageExpiryBanner userId={supabaseUser.id} />}
       {supabaseUser && <DailyMacroSummary userId={supabaseUser.id} />}
