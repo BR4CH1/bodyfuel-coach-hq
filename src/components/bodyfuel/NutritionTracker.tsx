@@ -622,7 +622,7 @@ export function NutritionTracker() {
       protein_g: +(picking.protein_per_100g * factor).toFixed(1),
       carbs_g: +(picking.carbs_per_100g * factor).toFixed(1),
       fat_g: +(picking.fat_per_100g * factor).toFixed(1),
-      source: picking.barcode ? "barcode" : "manual",
+      source: picking.source ?? (picking.barcode ? "barcode" : "manual"),
     };
     const { data, error } = await supabase
       .from("food_entries")
