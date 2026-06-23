@@ -674,7 +674,71 @@ function RealUserDashboard() {
           Zu meinen Körpermaßen <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
+
+      {/* Paket & Verlängerung — ans Ende */}
+      <div id="my-package" className="scroll-mt-24 space-y-4">
+        <MyPackagePanel />
+        <SmartRenewalCard />
+      </div>
     </div>
+  );
+}
+
+function PackageExpiryBanner({ userId }: { userId: string }) {
+  const [info, setInfo] = useState<{ end_date: string; daysLeft: number } | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("customer_packages")
+        .select("end_date")
+        .eq("user_id", userId)
+        .eq("is_active", true)
+        .order("end_date", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!data?.end_date) return;
+      const end = new Date(data.end_date).getTime();
+      const daysLeft = Math.ceil((end - Date.now()) / 86400000);
+      if (daysLeft <= 3) {
+        setInfo({ end_date: data.end_date, daysLeft });
+      }
+    })();
+  }, [userId]);
+
+  if (!info) return null;
+  const label =
+    info.daysLeft < 0
+      ? `Mitgliedschaft seit ${Math.abs(info.daysLeft)} Tag${Math.abs(info.daysLeft) === 1 ? "" : "en"} abgelaufen`
+      : info.daysLeft === 0
+        ? "Mitgliedschaft läuft heute aus"
+        : `Mitgliedschaft läuft aus in ${info.daysLeft} Tag${info.daysLeft === 1 ? "" : "en"}`;
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    document.getElementById("my-package")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  return (
+    <a
+      href="#my-package"
+      onClick={handleClick}
+      className="group flex items-center justify-between gap-3 rounded-2xl border border-red-500/60 bg-red-500/10 p-5 transition hover:border-red-500"
+    >
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-red-500/20 text-red-300">
+          ⚠️
+        </div>
+        <div className="min-w-0">
+          <div className="text-xs uppercase tracking-wider text-red-300">Achtung</div>
+          <div className="font-display text-base font-bold text-red-100">{label}</div>
+          <div className="truncate text-xs text-muted-foreground">
+            Jetzt verlängern, um nichts zu verpassen — tippe für Paket-Auswahl.
+          </div>
+        </div>
+      </div>
+      <ArrowRight className="h-5 w-5 text-red-300 transition group-hover:translate-x-1" />
+    </a>
   );
 }
 
