@@ -1315,6 +1315,7 @@ export type Database = {
           assigned_to: string | null
           carbs_g: number | null
           created_at: string
+          data_source: string
           day_id: string
           description: string | null
           fat_g: number | null
@@ -1328,11 +1329,13 @@ export type Database = {
           recipe_ingredients: string[] | null
           recipe_steps: string[] | null
           sort_order: number
+          verified_ratio: number | null
         }
         Insert: {
           assigned_to?: string | null
           carbs_g?: number | null
           created_at?: string
+          data_source?: string
           day_id: string
           description?: string | null
           fat_g?: number | null
@@ -1346,11 +1349,13 @@ export type Database = {
           recipe_ingredients?: string[] | null
           recipe_steps?: string[] | null
           sort_order?: number
+          verified_ratio?: number | null
         }
         Update: {
           assigned_to?: string | null
           carbs_g?: number | null
           created_at?: string
+          data_source?: string
           day_id?: string
           description?: string | null
           fat_g?: number | null
@@ -1364,6 +1369,7 @@ export type Database = {
           recipe_ingredients?: string[] | null
           recipe_steps?: string[] | null
           sort_order?: number
+          verified_ratio?: number | null
         }
         Relationships: [
           {
