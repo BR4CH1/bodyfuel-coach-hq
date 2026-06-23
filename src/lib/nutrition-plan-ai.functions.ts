@@ -51,7 +51,12 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY fehlt");
 
-    return await generateAiNutritionPlanCore(supabase, {
+    // Smart-Kunden dürfen sich selbst einen Plan generieren. Insert/Update auf
+    // nutrition_plans ist per RLS nur Coaches erlaubt — daher hier mit
+    // Admin-Client schreiben, nachdem die Autorisierung oben geprüft wurde.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    return await generateAiNutritionPlanCore(supabaseAdmin, {
       target,
       uploadedBy: userId,
       scheduled_start_date: data.scheduled_start_date ?? null,
