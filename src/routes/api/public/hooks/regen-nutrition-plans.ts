@@ -39,61 +39,35 @@ export const Route = createFileRoute("/api/public/hooks/regen-nutrition-plans")(
           return new Response(JSON.stringify({ error: error.message }), { status: 500 });
         }
 
-        const results: Array<{ user: string; ok: boolean; error?: string; skipped?: string; kind?: "regen" | "initial" }> = [];
-
-        const tryGenerate = async (clientId: string, kind: "regen" | "initial") => {
+        const results: Array<{ user: string; ok: boolean; error?: string; skipped?: string }> = [];
+        for (const row of expired ?? []) {
           const { data: pkg } = await supabaseAdmin
             .from("customer_packages")
             .select("package")
-            .eq("user_id", clientId)
+            .eq("user_id", row.client_id)
             .eq("is_active", true)
             .maybeSingle();
           if (pkg?.package !== "smart") {
-            results.push({ user: clientId, ok: false, skipped: "not_smart", kind });
-            return;
+            results.push({ user: row.client_id, ok: false, skipped: "not_smart" });
+            continue;
           }
-          const sub = await hasActiveSmartSubscription(supabaseAdmin as any, clientId);
+          const sub = await hasActiveSmartSubscription(supabaseAdmin as any, row.client_id);
           if (!sub.active) {
-            results.push({ user: clientId, ok: false, skipped: `no_active_sub(${sub.status ?? "none"})`, kind });
-            return;
+            results.push({ user: row.client_id, ok: false, skipped: `no_active_sub(${sub.status ?? "none"})` });
+            continue;
           }
+
           try {
             await generateAiNutritionPlanCore(supabaseAdmin as any, {
-              target: clientId,
+              target: row.client_id,
               uploadedBy: null,
               start_mode: "today",
               plan_days: 30,
               apiKey,
             });
-            results.push({ user: clientId, ok: true, kind });
+            results.push({ user: row.client_id, ok: true });
           } catch (e) {
-            results.push({ user: clientId, ok: false, error: (e as Error).message, kind });
-          }
-        };
-
-        // Pass 1: Renewals — active Smart plan with expired scheduled_end_date
-        for (const row of expired ?? []) {
-          await tryGenerate(row.client_id, "regen");
-        }
-
-        // Pass 2: Initial creation — Smart users with a smart_nutrition_profile
-        // but no nutrition plan yet (covers manually freigeschaltete 0€-Kunden,
-        // bei denen kein Self-Service-Trigger lief).
-        const { data: smartProfiles } = await supabaseAdmin
-          .from("smart_nutrition_profile")
-          .select("user_id");
-        const candidateIds = (smartProfiles ?? []).map((r: { user_id: string }) => r.user_id);
-        if (candidateIds.length > 0) {
-          const { data: existingPlans } = await supabaseAdmin
-            .from("nutrition_plans")
-            .select("client_id")
-            .eq("plan_type", "nutrition")
-            .in("client_id", candidateIds)
-            .in("status", ["active", "approved", "draft"]);
-          const haveAny = new Set((existingPlans ?? []).map((r: { client_id: string }) => r.client_id));
-          for (const id of candidateIds) {
-            if (haveAny.has(id)) continue;
-            await tryGenerate(id, "initial");
+            results.push({ user: row.client_id, ok: false, error: (e as Error).message });
           }
         }
 
