@@ -800,6 +800,8 @@ function buildIssnCarbCyclingTargets(trainingInput: MacroTarget): { training: Ma
 }
 
 
+const MAX_KCAL_PER_MEAL = 850;
+
 function normalizeMealsToTargets(meals: GeneratedMeal[], target: MacroTarget): GeneratedMeal[] {
   if (!meals.length) return meals;
   const sums = meals.reduce(
@@ -813,7 +815,7 @@ function normalizeMealsToTargets(meals: GeneratedMeal[], target: MacroTarget): G
   );
   const scale = (value: number, from: number, to: number) =>
     Math.max(0, Math.round(value * (to / Math.max(1, from))));
-  const adjusted = meals.map((meal) => ({
+  const adjusted: GeneratedMeal[] = meals.map((meal) => ({
     ...meal,
     kcal: scale(Number(meal.kcal) || 0, sums.kcal, target.kcal),
     protein_g: scale(Number(meal.protein_g) || 0, sums.protein_g, target.protein_g),
@@ -827,5 +829,29 @@ function normalizeMealsToTargets(meals: GeneratedMeal[], target: MacroTarget): G
   last.carbs_g += target.carbs_g - adjusted.reduce((sum, meal) => sum + meal.carbs_g, 0);
   last.fat_g += target.fat_g - adjusted.reduce((sum, meal) => sum + meal.fat_g, 0);
 
-  return adjusted;
+  // Enforce 850-kcal cap per meal: split oversized meals into N portions as extra snacks.
+  const capped: GeneratedMeal[] = [];
+  for (const m of adjusted) {
+    const k = Number(m.kcal) || 0;
+    if (k <= MAX_KCAL_PER_MEAL) {
+      capped.push(m);
+      continue;
+    }
+    const parts = Math.ceil(k / MAX_KCAL_PER_MEAL);
+    for (let i = 0; i < parts; i++) {
+      capped.push({
+        ...m,
+        slot: i === 0 ? m.slot : "snack",
+        name: parts > 1 ? `${m.name} (Portion ${i + 1}/${parts})` : m.name,
+        description: m.description,
+        kcal: Math.round(k / parts),
+        protein_g: Math.round((Number(m.protein_g) || 0) / parts),
+        carbs_g: Math.round((Number(m.carbs_g) || 0) / parts),
+        fat_g: Math.round((Number(m.fat_g) || 0) / parts),
+      });
+    }
+  }
+
+  return capped;
 }
+
