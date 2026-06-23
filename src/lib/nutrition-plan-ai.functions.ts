@@ -300,6 +300,33 @@ export async function generateAiNutritionPlanCore(
       ...(p.nogo_foods ?? []),
       ...((p.extra_nogos ?? "").split(",").map((s: string) => s.trim()).filter(Boolean)),
     ];
+    // Expand category words (Fisch → Lachs, Thunfisch, …) so substring filter & prompt catch all variants.
+    const CATEGORY_SYNONYMS: Record<string, string[]> = {
+      fisch: ["fisch", "lachs", "räucherlachs", "raeucherlachs", "thunfisch", "forelle", "kabeljau", "seelachs", "dorsch", "heilbutt", "hering", "makrele", "sardine", "sardelle", "anchovis", "wels", "zander", "barsch", "scholle", "rotbarsch", "pangasius", "tilapia"],
+      meeresfrüchte: ["meeresfrüchte", "meeresfruechte", "garnele", "garnelen", "shrimp", "scampi", "krabbe", "krabben", "hummer", "muschel", "muscheln", "tintenfisch", "calamari", "oktopus"],
+      schweinefleisch: ["schwein", "schweinefleisch", "schinken", "speck", "bacon", "kassler", "salami", "mortadella", "schweinefilet", "schweinebraten", "kotelett"],
+      rindfleisch: ["rind", "rindfleisch", "steak", "rinderhack", "rinderfilet", "tafelspitz", "roastbeef"],
+      geflügel: ["geflügel", "gefluegel", "hähnchen", "haehnchen", "huhn", "pute", "truthahn", "ente", "wachtel"],
+      fleisch: ["fleisch", "hähnchen", "haehnchen", "pute", "rind", "schwein", "lamm", "wurst", "salami", "schinken", "speck", "hack", "steak", "filet"],
+      milchprodukte: ["milch", "joghurt", "quark", "skyr", "käse", "kaese", "feta", "mozzarella", "parmesan", "frischkäse", "frischkaese", "hüttenkäse", "huettenkaese", "sahne", "butter"],
+      nüsse: ["nuss", "nüsse", "nuesse", "mandel", "mandeln", "walnuss", "walnüsse", "haselnuss", "cashew", "pistazie", "pekan", "macadamia", "erdnuss", "erdnüsse"],
+      gluten: ["weizen", "dinkel", "roggen", "gerste", "brot", "nudeln", "pasta", "couscous", "bulgur", "seitan"],
+      laktose: ["milch", "joghurt", "quark", "skyr", "käse", "kaese", "sahne", "butter", "frischkäse"],
+      ei: ["ei", "eier", "eiweiß", "eigelb", "omelett", "rührei", "ruehrei", "spiegelei"],
+      soja: ["soja", "tofu", "tempeh", "edamame", "sojasauce", "sojamilch"],
+    };
+    const expandTerm = (term: string): string[] => {
+      const key = term.toLowerCase().trim();
+      const out = new Set<string>([key]);
+      for (const [cat, syns] of Object.entries(CATEGORY_SYNONYMS)) {
+        if (key === cat || key.startsWith(cat) || cat.startsWith(key)) {
+          syns.forEach((s) => out.add(s));
+        }
+      }
+      return [...out];
+    };
+    const expandedNogo = Array.from(new Set(nogoList.flatMap(expandTerm)));
+    const expandedAllergies = Array.from(new Set(allergyList.flatMap(expandTerm)));
     const favFoods = [
       ...(p.favorite_foods ?? []),
       ...((p.extra_favorites ?? "").split(",").map((s: string) => s.trim()).filter(Boolean)),
