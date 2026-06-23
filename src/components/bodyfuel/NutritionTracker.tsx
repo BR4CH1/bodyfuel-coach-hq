@@ -1151,7 +1151,7 @@ export function NutritionTracker() {
                         >
                           <div className="flex items-center gap-1">
                             <div className="truncate text-sm font-medium">{r.name}</div>
-                            <SourceBadge source={r.source} verified={r.verified_by_coach} />
+                            {isCoach && <SourceBadge source={r.source} verified={r.verified_by_coach} />}
                           </div>
                           <div className="text-[11px] text-muted-foreground">
                             {r.brand ? `${r.brand} · ` : ""}
