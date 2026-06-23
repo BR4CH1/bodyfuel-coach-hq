@@ -454,6 +454,9 @@ export function NutritionTracker() {
     }
     setSearching(true);
     try {
+      // 1) Geprüfte BodyFuel/BLS-DB ZUERST
+      const dbResults = await searchDbFn({ data: { query: term, limit: 15 } }).catch(() => [] as FoodResult[]);
+      // 2) Externe Quellen (Open Food Facts) für Marken/Verpacktes
       const remote = await searchFn({ data: { query: term } });
       const t = term.toLowerCase();
       const local = LOCAL_FOODS.filter(
@@ -461,10 +464,10 @@ export function NutritionTracker() {
           f.name.toLowerCase().includes(t) ||
           (f.aliases ?? []).some((a) => a.toLowerCase().includes(t)),
       ).map(({ aliases: _a, ...r }) => r);
-      // Local first so basics ("Ei", "Apfel", "Banane"…) are always findable
+      // Reihenfolge: BodyFuel-DB → lokal → OFF
       const seen = new Set<string>();
       const merged: FoodResult[] = [];
-      for (const r of [...local, ...remote]) {
+      for (const r of [...dbResults, ...local, ...remote]) {
         const key = (r.barcode || r.name) + "|" + (r.brand ?? "");
         if (seen.has(key)) continue;
         seen.add(key);
