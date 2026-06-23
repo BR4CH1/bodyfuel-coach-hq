@@ -176,7 +176,7 @@ function Ring({
 }
 
 export function NutritionTracker() {
-  const { supabaseUser } = useSession();
+  const { supabaseUser, isCoach } = useSession();
   const userId = supabaseUser?.id;
   const [date, setDate] = useState<string>(() => today());
   const isToday = date === today();
