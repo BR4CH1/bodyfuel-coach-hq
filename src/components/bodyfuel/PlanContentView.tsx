@@ -26,6 +26,8 @@ type Meal = {
   carbs_g: number | null;
   fat_g: number | null;
   sort_order: number;
+  data_source?: "db_verified" | "db_mixed" | "ai_estimate" | "coach_verified" | null;
+  verified_ratio?: number | null;
 };
 type Exercise = {
   id: string;
