@@ -676,6 +676,7 @@ WICHTIG zu name/description:
     if (planErr || !planRow) throw new Error(planErr?.message ?? "Plan konnte nicht angelegt werden");
 
     // Insert days & meals
+    const { verifyMealAgainstDb } = await import("./nutrition-verify.server");
     for (let i = 0; i < cleaned.length; i++) {
       const d = cleaned[i];
       const { data: dayRow, error: dErr } = await supabase
@@ -685,6 +686,10 @@ WICHTIG zu name/description:
         .single();
       if (dErr || !dayRow) continue;
       let snackCounter = 0;
+      // Verifizierung gegen BodyFuel-DB (BLS 4.0 + Coach-verified) — parallel
+      const verifications = await Promise.all(
+        d.meals.map((m) => verifyMealAgainstDb(supabase, m.description ?? null)),
+      );
       const mealRows = d.meals.map((m, idx) => {
         let slotLabel: string;
         if (m.slot === "breakfast") slotLabel = "Frühstück";
@@ -694,6 +699,7 @@ WICHTIG zu name/description:
           snackCounter += 1;
           slotLabel = `Snack ${snackCounter}`;
         }
+        const v = verifications[idx];
         return {
           day_id: dayRow.id,
           name: `${d.name} — ${slotLabel}`,
@@ -703,6 +709,8 @@ WICHTIG zu name/description:
           carbs_g: m.carbs_g ?? null,
           fat_g: m.fat_g ?? null,
           sort_order: idx,
+          data_source: v.data_source,
+          verified_ratio: v.verified_ratio,
         };
       });
       if (mealRows.length) {
