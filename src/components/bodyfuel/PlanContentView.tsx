@@ -582,22 +582,22 @@ export function PlanContentView({ clientId, planType }: Props) {
                             <Check className="h-3 w-3" /> getrackt
                           </span>
                         )}
-                        {m.data_source === "db_verified" && (
+                        {isCoach && m.data_source === "db_verified" && (
                           <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400" title="Alle Zutaten aus geprüfter BodyFuel-Datenbank (BLS 4.0).">
                             BLS-geprüft
                           </span>
                         )}
-                        {m.data_source === "coach_verified" && (
+                        {isCoach && m.data_source === "coach_verified" && (
                           <span className="inline-flex items-center rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-400" title="Vom Coach manuell freigegeben.">
                             Coach ✓
                           </span>
                         )}
-                        {m.data_source === "db_mixed" && (
+                        {isCoach && m.data_source === "db_mixed" && (
                           <span className="inline-flex items-center rounded-full bg-sky-500/10 px-2 py-0.5 text-[10px] font-semibold text-sky-400" title={`Teilweise aus BodyFuel-DB (${Math.round((m.verified_ratio ?? 0) * 100)}% der Zutaten).`}>
                             teils geprüft
                           </span>
                         )}
-                        {m.data_source === "ai_estimate" && (
+                        {isCoach && m.data_source === "ai_estimate" && (
                           <span className="inline-flex items-center rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold text-amber-400" title="Werte von der KI geschätzt — vor dem Verlassen prüfen.">
                             ⚠ KI-Schätzung
                           </span>
