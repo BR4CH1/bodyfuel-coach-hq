@@ -22,6 +22,7 @@ import { Logo } from "./Logo";
 import { getLevel } from "@/lib/bodyfuel/data";
 import { totalPoints } from "@/lib/bodyfuel/data";
 import { ReviewPrompt } from "./ReviewPrompt";
+import { SmartPlanReadyPopup } from "./SmartPlanReadyPopup";
 
 const clientNav = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
