@@ -587,41 +587,20 @@ function RealUserDashboard() {
         </details>
       )}
 
-      {supabaseUser && <TrainingBonusCard userId={supabaseUser.id} />}
-
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card
-          icon={<Scale className="h-5 w-5" />}
-          label="Aktuelles Gewicht"
-          value={latest?.weight_kg ? `${latest.weight_kg} kg` : "—"}
-          hint={
-            latest
-              ? `Stand ${new Date(latest.measured_at).toLocaleDateString("de-DE")}`
-              : "Noch keine Messung"
-          }
-        />
-        <Card
-          icon={<TrendingUp className="h-5 w-5" />}
-          label="Körperfett"
-          value={latest?.body_fat_pct ? `${latest.body_fat_pct} %` : "—"}
-          hint={latest ? "Letzte Messung" : "Noch keine Messung"}
-        />
-        <Card
-          icon={<Calendar className="h-5 w-5" />}
-          label="Einträge gesamt"
-          value={`${count}`}
-          hint="Verlauf"
-        />
-        <Link to="/daily-checklist" className="contents">
-          <Card
-            icon={<Target className="h-5 w-5" />}
-            label="Heute"
-            value={`${todayDbPoints} / ${MAX_DAILY_POINTS}`}
-            hint="Tagespunkte"
-          />
-        </Link>
-      </div>
+      {supabaseUser && (
+        <details className="group rounded-2xl border border-border bg-card">
+          <summary className="flex cursor-pointer items-center justify-between gap-3 p-5 text-sm font-semibold">
+            <span className="flex items-center gap-2 text-gold">
+              <Dumbbell className="h-4 w-4" />
+              <span className="uppercase tracking-wider">Trainingsbonus diese Woche</span>
+            </span>
+            <ArrowRight className="h-4 w-4 text-muted-foreground transition group-open:rotate-90" />
+          </summary>
+          <div className="border-t border-border p-2 sm:p-3">
+            <TrainingBonusCard userId={supabaseUser.id} />
+          </div>
+        </details>
+      )}
 
       <Link
         to="/check-in"
@@ -642,38 +621,11 @@ function RealUserDashboard() {
 
       {supabaseUser && <DailyChecklist userId={supabaseUser.id} />}
 
-      {supabaseUser && <MacroTargetsCard userId={supabaseUser.id} />}
-
       {supabaseUser && <AchievementsCard userId={supabaseUser.id} />}
 
       {supabaseUser && <TrainingDevelopmentCard clientId={supabaseUser.id} />}
 
 
-
-      <div className="rounded-2xl border border-border bg-card p-6">
-        <div className="flex items-center gap-2 text-gold">
-          <Target className="h-5 w-5" />
-          <span className="text-xs uppercase tracking-wider">Nächster Schritt</span>
-        </div>
-        <h2 className="mt-2 font-display text-xl font-bold">
-          {loading
-            ? "…"
-            : count === 0
-            ? "Lege deine Startwerte an"
-            : "Halte deine Maße aktuell"}
-        </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {count === 0
-            ? "Trage Größe, Geburtsdatum und deine erste Messung ein."
-            : "Trage einmal pro Woche neue Werte ein, um deinen Fortschritt zu sehen."}
-        </p>
-        <Link
-          to="/measurements"
-          className="mt-4 inline-flex items-center gap-2 rounded-lg border border-gold/40 px-4 py-2 text-sm font-semibold text-gold hover:bg-gold/10"
-        >
-          Zu meinen Körpermaßen <ArrowRight className="h-4 w-4" />
-        </Link>
-      </div>
 
       {/* Paket & Verlängerung — ans Ende */}
       <div id="my-package" className="scroll-mt-24 space-y-4">
