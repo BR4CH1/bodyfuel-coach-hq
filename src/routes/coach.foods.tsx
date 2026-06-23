@@ -387,7 +387,7 @@ function CoachFoodsPage() {
 function NumField({
   label, value, onChange, step,
 }: {
-  label: string; value: number | undefined; onChange: (v: number | null) => void; step?: string;
+  label: string; value: number | null | undefined; onChange: (v: number | null) => void; step?: string;
 }) {
   return (
     <div>
