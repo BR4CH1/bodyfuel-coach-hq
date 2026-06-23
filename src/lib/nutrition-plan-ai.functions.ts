@@ -527,9 +527,11 @@ Die Kalorien-/Makro-Ziele sind auf aktuelles Gewicht, Wunschgewicht und Training
       ? `\n💶 WOCHEN-BUDGET vom Coach: ${weeklyBudget} € / Woche → für diesen ${planDays}-Tage-Plan max. ~${budgetPerPeriod} € an Lebensmittelkosten (Discounter-Preise DE). Wähle Zutaten & Mengen so, dass die Gesamteinkaufskosten dieses Budget NICHT überschreiten. Bevorzuge saisonale/günstige Proteinquellen (Hähnchenbrust, Quark, Eier, Hülsenfrüchte, Thunfisch i. W., Hackfleisch), Grundbeilagen (Reis, Haferflocken, Kartoffeln, Nudeln) und tiefgekühltes Gemüse. Premium-Zutaten (Lachs, Rindersteak, Avocado, Nüsse) sparsam einsetzen.`
       : "";
 
-    const prompt = `Erstelle einen ${planDays}-Tage-Ernährungsplan. Pflicht-Mahlzeiten pro Tag: Frühstück, Mittagessen, Abendessen + mindestens 1 Snack. Der Plan soll genau bis zum nächsten Einkaufstag reichen.
+    const prompt = `Erstelle einen ${planDays}-Tage-Ernährungsplan. PFLICHT pro Tag: genau 1 Frühstück (slot:"breakfast"), 1 Mittagessen (slot:"lunch"), 1 Abendessen (slot:"dinner") + mindestens 1 Snack (slot:"snack"). Diese 3 Hauptmahlzeiten sind NICHT optional — fehlt eine, ist der Plan ungültig. Der Plan soll genau bis zum nächsten Einkaufstag reichen.
 
 🚨 KALORIEN-OBERGRENZE PRO MAHLZEIT: 850 kcal (HART). Keine einzelne Mahlzeit darf 850 kcal überschreiten — auch nicht Frühstück, Mittag oder Abend. Wenn das Tages-kcal-Ziel mit 4 Mahlzeiten nicht erreicht wird, FÜGE WEITERE SNACKS HINZU (Snack 2, Snack 3, …), bis das Tagesziel erreicht ist. Lieber 5–7 kleinere Mahlzeiten als 3–4 zu große. Verteile Kalorien gleichmäßig: typisch Hauptmahlzeiten 500–800 kcal, Snacks 150–400 kcal.
+
+🎯 ZIELWERTE EXAKT TREFFEN: Tages-kcal innerhalb ±3 %, Protein/Kohlenhydrate/Fett jeweils innerhalb ±5 g der Vorgaben. Plane Portionsgrößen mathematisch so, dass die Summe der Mahlzeiten möglichst genau den Tageszielen entspricht — nicht überschreiten, nicht unterschreiten.
 ${noCookBlock}
 
 ${plateauNote ? "\n" + plateauNote + "\n" : ""}
