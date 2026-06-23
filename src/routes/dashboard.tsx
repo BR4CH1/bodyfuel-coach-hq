@@ -9,7 +9,7 @@ import { TrainingDevelopmentCard } from "@/components/bodyfuel/TrainingTrends";
 import { DailyChecklist } from "@/components/bodyfuel/DailyChecklist";
 import { AchievementsCard } from "@/components/bodyfuel/AchievementsCard";
 import { TrainingBonusCard } from "@/components/bodyfuel/TrainingBonusCard";
-import { MacroTargetsCard } from "@/components/bodyfuel/MacroTargetsCard";
+
 import { SmartAnalysisCTA } from "@/components/bodyfuel/SmartAnalysisCTA";
 import { StrengthCheckStatus } from "@/components/bodyfuel/StrengthCheckStatus";
 import { DailyMacroSummary } from "@/components/bodyfuel/DailyMacroSummary";
