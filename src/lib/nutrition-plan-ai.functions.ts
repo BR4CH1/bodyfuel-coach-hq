@@ -527,7 +527,9 @@ Die Kalorien-/Makro-Ziele sind auf aktuelles Gewicht, Wunschgewicht und Training
       ? `\n💶 WOCHEN-BUDGET vom Coach: ${weeklyBudget} € / Woche → für diesen ${planDays}-Tage-Plan max. ~${budgetPerPeriod} € an Lebensmittelkosten (Discounter-Preise DE). Wähle Zutaten & Mengen so, dass die Gesamteinkaufskosten dieses Budget NICHT überschreiten. Bevorzuge saisonale/günstige Proteinquellen (Hähnchenbrust, Quark, Eier, Hülsenfrüchte, Thunfisch i. W., Hackfleisch), Grundbeilagen (Reis, Haferflocken, Kartoffeln, Nudeln) und tiefgekühltes Gemüse. Premium-Zutaten (Lachs, Rindersteak, Avocado, Nüsse) sparsam einsetzen.`
       : "";
 
-    const prompt = `Erstelle einen ${planDays}-Tage-Ernährungsplan mit 4 Mahlzeiten pro Tag (Frühstück, Mittag, Abend, Snack). Der Plan soll genau bis zum nächsten Einkaufstag reichen.
+    const prompt = `Erstelle einen ${planDays}-Tage-Ernährungsplan. Pflicht-Mahlzeiten pro Tag: Frühstück, Mittagessen, Abendessen + mindestens 1 Snack. Der Plan soll genau bis zum nächsten Einkaufstag reichen.
+
+🚨 KALORIEN-OBERGRENZE PRO MAHLZEIT: 850 kcal (HART). Keine einzelne Mahlzeit darf 850 kcal überschreiten — auch nicht Frühstück, Mittag oder Abend. Wenn das Tages-kcal-Ziel mit 4 Mahlzeiten nicht erreicht wird, FÜGE WEITERE SNACKS HINZU (Snack 2, Snack 3, …), bis das Tagesziel erreicht ist. Lieber 5–7 kleinere Mahlzeiten als 3–4 zu große. Verteile Kalorien gleichmäßig: typisch Hauptmahlzeiten 500–800 kcal, Snacks 150–400 kcal.
 ${noCookBlock}
 
 ${plateauNote ? "\n" + plateauNote + "\n" : ""}
@@ -554,7 +556,7 @@ ${prepHint} ${budgetHint}
 
 Antworte AUSSCHLIESSLICH mit gültigem JSON:
 {"days":[{"name":"Tag 1","type":"training","meals":[{"slot":"breakfast","name":"Overnight Oats","description":"80g Haferflocken, 250ml fettarme Milch, 150g Skyr, 100g Beeren, 1 EL Chiasamen, 1 EL Mandelsplitter","kcal":500,"protein_g":35,"carbs_g":55,"fat_g":15}]}]}
-Genau ${planDays} Tage in der vorgegebenen Reihenfolge, je 4 Mahlzeiten. Jeder Tag MUSS ein Feld "type" mit "training" ODER "rest" enthalten (passend zum Tagesplan oben). Tagessummen müssen die jeweiligen Ziele treffen.
+Genau ${planDays} Tage in der vorgegebenen Reihenfolge, mindestens 4 Mahlzeiten pro Tag (Frühstück, Mittag, Abend, Snack), bei Bedarf zusätzliche Snacks ergänzen. KEINE Mahlzeit über 850 kcal. Jeder Tag MUSS ein Feld "type" mit "training" ODER "rest" enthalten (passend zum Tagesplan oben). Tagessummen müssen die jeweiligen Ziele treffen.
 
 WICHTIG zu name/description:
 - "name" = konkreter Gerichtsname (z. B. Overnight Oats, Hähnchen-Reis-Bowl).
@@ -798,6 +800,8 @@ function buildIssnCarbCyclingTargets(trainingInput: MacroTarget): { training: Ma
 }
 
 
+const MAX_KCAL_PER_MEAL = 850;
+
 function normalizeMealsToTargets(meals: GeneratedMeal[], target: MacroTarget): GeneratedMeal[] {
   if (!meals.length) return meals;
   const sums = meals.reduce(
@@ -811,7 +815,7 @@ function normalizeMealsToTargets(meals: GeneratedMeal[], target: MacroTarget): G
   );
   const scale = (value: number, from: number, to: number) =>
     Math.max(0, Math.round(value * (to / Math.max(1, from))));
-  const adjusted = meals.map((meal) => ({
+  const adjusted: GeneratedMeal[] = meals.map((meal) => ({
     ...meal,
     kcal: scale(Number(meal.kcal) || 0, sums.kcal, target.kcal),
     protein_g: scale(Number(meal.protein_g) || 0, sums.protein_g, target.protein_g),
@@ -825,5 +829,29 @@ function normalizeMealsToTargets(meals: GeneratedMeal[], target: MacroTarget): G
   last.carbs_g += target.carbs_g - adjusted.reduce((sum, meal) => sum + meal.carbs_g, 0);
   last.fat_g += target.fat_g - adjusted.reduce((sum, meal) => sum + meal.fat_g, 0);
 
-  return adjusted;
+  // Enforce 850-kcal cap per meal: split oversized meals into N portions as extra snacks.
+  const capped: GeneratedMeal[] = [];
+  for (const m of adjusted) {
+    const k = Number(m.kcal) || 0;
+    if (k <= MAX_KCAL_PER_MEAL) {
+      capped.push(m);
+      continue;
+    }
+    const parts = Math.ceil(k / MAX_KCAL_PER_MEAL);
+    for (let i = 0; i < parts; i++) {
+      capped.push({
+        ...m,
+        slot: i === 0 ? m.slot : "snack",
+        name: parts > 1 ? `${m.name} (Portion ${i + 1}/${parts})` : m.name,
+        description: m.description,
+        kcal: Math.round(k / parts),
+        protein_g: Math.round((Number(m.protein_g) || 0) / parts),
+        carbs_g: Math.round((Number(m.carbs_g) || 0) / parts),
+        fat_g: Math.round((Number(m.fat_g) || 0) / parts),
+      });
+    }
+  }
+
+  return capped;
 }
+
