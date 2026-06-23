@@ -536,9 +536,9 @@ ${goalBlock}
 ${targetsBlock}
 
 
-🚨 ABSOLUTE AUSSCHLÜSSE — niemals verwenden:
-${allergyList.length ? "ALLERGIEN: " + allergyList.join(", ") : "(keine)"}
-${nogoList.length ? "NO-GO: " + nogoList.join(", ") : "(keine)"}
+🚨 ABSOLUTE AUSSCHLÜSSE — niemals verwenden (Kategorien gelten für ALLE Varianten, inkl. geräuchert/getrocknet/eingelegt/pulver/-mehl/-milch):
+${allergyList.length ? "ALLERGIEN: " + allergyList.join(", ") + (expandedAllergies.length > allergyList.length ? " — gilt auch für: " + expandedAllergies.filter(t => !allergyList.map(a=>a.toLowerCase()).includes(t)).join(", ") : "") : "(keine)"}
+${nogoList.length ? "NO-GO: " + nogoList.join(", ") + (expandedNogo.length > nogoList.length ? " — gilt auch für: " + expandedNogo.filter(t => !nogoList.map(a=>a.toLowerCase()).includes(t)).join(", ") : "") : "(keine)"}
 
 KUNDEN-VORLIEBEN (priorisieren):
 ${favFoods.length ? "Lieblings-Foods: " + favFoods.join(", ") : ""}
