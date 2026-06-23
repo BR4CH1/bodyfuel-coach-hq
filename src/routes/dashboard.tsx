@@ -13,7 +13,6 @@ import { MacroTargetsCard } from "@/components/bodyfuel/MacroTargetsCard";
 import { SmartAnalysisCTA } from "@/components/bodyfuel/SmartAnalysisCTA";
 import { StrengthCheckStatus } from "@/components/bodyfuel/StrengthCheckStatus";
 import { DailyMacroSummary } from "@/components/bodyfuel/DailyMacroSummary";
-import { CheckinComparisonCard } from "@/components/bodyfuel/CheckinComparisonCard";
 import { PointsBreakdownCard } from "@/components/bodyfuel/PointsBreakdownCard";
 import { TrialStatusBanner, TrialWelcomeDialog } from "@/components/bodyfuel/Trial";
 import { TrialChecklist } from "@/components/bodyfuel/TrialChecklist";
@@ -520,34 +519,9 @@ function RealUserDashboard() {
       </div>
 
       {supabaseUser && <SmartAnalysisCTA />}
-      {supabaseUser && <StrengthCheckStatus variant="card" />}
+      {supabaseUser && <StrengthCheckStatus variant="block" />}
+      {supabaseUser && <PackageExpiryBanner userId={supabaseUser.id} />}
       {supabaseUser && <DailyMacroSummary userId={supabaseUser.id} />}
-      {supabaseUser && <CheckinComparisonCard userId={supabaseUser.id} />}
-
-
-      {todayDbPoints < MAX_DAILY_POINTS && (
-        <Link
-          to="/daily-checklist"
-          className="group flex items-center justify-between rounded-2xl border border-gold/40 bg-gradient-to-br from-gold/15 to-transparent p-5 transition hover:border-gold/70"
-        >
-          <div className="flex items-center gap-3">
-            <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-gold text-primary-foreground shadow-gold">
-              <ListChecks className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="text-xs uppercase tracking-wider text-gold">Tagescheck offen</div>
-              <div className="font-display text-base font-bold">
-                Noch {MAX_DAILY_POINTS - todayDbPoints} von {MAX_DAILY_POINTS} Punkten heute
-              </div>
-              <div className="text-xs text-muted-foreground">Hak deine Tagesziele ab — Streak nicht reißen lassen!</div>
-            </div>
-          </div>
-          <ArrowRight className="h-5 w-5 text-gold transition group-hover:translate-x-1" />
-        </Link>
-      )}
-
-      <MyPackagePanel />
-      <SmartRenewalCard />
 
       {/* Level hero card */}
       {(() => {
@@ -598,7 +572,20 @@ function RealUserDashboard() {
         );
       })()}
 
-      {supabaseUser && <PointsBreakdownCard userId={supabaseUser.id} />}
+      {supabaseUser && (
+        <details className="group rounded-2xl border border-border bg-card">
+          <summary className="flex cursor-pointer items-center justify-between gap-3 p-5 text-sm font-semibold">
+            <span className="flex items-center gap-2 text-gold">
+              <Target className="h-4 w-4" />
+              <span className="uppercase tracking-wider">Punkte-Aufschlüsselung</span>
+            </span>
+            <ArrowRight className="h-4 w-4 text-muted-foreground transition group-open:rotate-90" />
+          </summary>
+          <div className="border-t border-border p-2 sm:p-3">
+            <PointsBreakdownCard userId={supabaseUser.id} />
+          </div>
+        </details>
+      )}
 
       {supabaseUser && <TrainingBonusCard userId={supabaseUser.id} />}
 
@@ -687,7 +674,71 @@ function RealUserDashboard() {
           Zu meinen Körpermaßen <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
+
+      {/* Paket & Verlängerung — ans Ende */}
+      <div id="my-package" className="scroll-mt-24 space-y-4">
+        <MyPackagePanel />
+        <SmartRenewalCard />
+      </div>
     </div>
+  );
+}
+
+function PackageExpiryBanner({ userId }: { userId: string }) {
+  const [info, setInfo] = useState<{ end_date: string; daysLeft: number } | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("customer_packages")
+        .select("end_date")
+        .eq("user_id", userId)
+        .eq("is_active", true)
+        .order("end_date", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!data?.end_date) return;
+      const end = new Date(data.end_date).getTime();
+      const daysLeft = Math.ceil((end - Date.now()) / 86400000);
+      if (daysLeft <= 3) {
+        setInfo({ end_date: data.end_date, daysLeft });
+      }
+    })();
+  }, [userId]);
+
+  if (!info) return null;
+  const label =
+    info.daysLeft < 0
+      ? `Mitgliedschaft seit ${Math.abs(info.daysLeft)} Tag${Math.abs(info.daysLeft) === 1 ? "" : "en"} abgelaufen`
+      : info.daysLeft === 0
+        ? "Mitgliedschaft läuft heute aus"
+        : `Mitgliedschaft läuft aus in ${info.daysLeft} Tag${info.daysLeft === 1 ? "" : "en"}`;
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    document.getElementById("my-package")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  return (
+    <a
+      href="#my-package"
+      onClick={handleClick}
+      className="group flex items-center justify-between gap-3 rounded-2xl border border-red-500/60 bg-red-500/10 p-5 transition hover:border-red-500"
+    >
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-red-500/20 text-red-300">
+          ⚠️
+        </div>
+        <div className="min-w-0">
+          <div className="text-xs uppercase tracking-wider text-red-300">Achtung</div>
+          <div className="font-display text-base font-bold text-red-100">{label}</div>
+          <div className="truncate text-xs text-muted-foreground">
+            Jetzt verlängern, um nichts zu verpassen — tippe für Paket-Auswahl.
+          </div>
+        </div>
+      </div>
+      <ArrowRight className="h-5 w-5 text-red-300 transition group-hover:translate-x-1" />
+    </a>
   );
 }
 
