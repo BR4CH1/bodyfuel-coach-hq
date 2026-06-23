@@ -13,7 +13,6 @@ import { MacroTargetsCard } from "@/components/bodyfuel/MacroTargetsCard";
 import { SmartAnalysisCTA } from "@/components/bodyfuel/SmartAnalysisCTA";
 import { StrengthCheckStatus } from "@/components/bodyfuel/StrengthCheckStatus";
 import { DailyMacroSummary } from "@/components/bodyfuel/DailyMacroSummary";
-import { CheckinComparisonCard } from "@/components/bodyfuel/CheckinComparisonCard";
 import { PointsBreakdownCard } from "@/components/bodyfuel/PointsBreakdownCard";
 import { TrialStatusBanner, TrialWelcomeDialog } from "@/components/bodyfuel/Trial";
 import { TrialChecklist } from "@/components/bodyfuel/TrialChecklist";
