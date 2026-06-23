@@ -1155,6 +1155,99 @@ export type Database = {
         }
         Relationships: []
       }
+      nutrition_foods: {
+        Row: {
+          aliases: string[]
+          carbs_per_100g: number
+          category: string | null
+          citation: string | null
+          created_at: string
+          created_by: string | null
+          default_state: Database["public"]["Enums"]["nutrition_food_state"]
+          density_g_per_ml: number | null
+          fat_per_100g: number
+          fiber_per_100g: number | null
+          id: string
+          kcal_per_100g: number
+          license: string | null
+          name: string
+          needs_review: boolean
+          notes: string | null
+          protein_per_100g: number
+          review_reason: string | null
+          salt_per_100g: number | null
+          source: Database["public"]["Enums"]["nutrition_food_source"]
+          source_id: string | null
+          source_name: string | null
+          sugar_per_100g: number | null
+          unit_type: Database["public"]["Enums"]["nutrition_food_unit"]
+          updated_at: string
+          verified_at: string | null
+          verified_by: string | null
+          verified_by_coach: boolean
+        }
+        Insert: {
+          aliases?: string[]
+          carbs_per_100g?: number
+          category?: string | null
+          citation?: string | null
+          created_at?: string
+          created_by?: string | null
+          default_state?: Database["public"]["Enums"]["nutrition_food_state"]
+          density_g_per_ml?: number | null
+          fat_per_100g?: number
+          fiber_per_100g?: number | null
+          id?: string
+          kcal_per_100g: number
+          license?: string | null
+          name: string
+          needs_review?: boolean
+          notes?: string | null
+          protein_per_100g?: number
+          review_reason?: string | null
+          salt_per_100g?: number | null
+          source?: Database["public"]["Enums"]["nutrition_food_source"]
+          source_id?: string | null
+          source_name?: string | null
+          sugar_per_100g?: number | null
+          unit_type?: Database["public"]["Enums"]["nutrition_food_unit"]
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+          verified_by_coach?: boolean
+        }
+        Update: {
+          aliases?: string[]
+          carbs_per_100g?: number
+          category?: string | null
+          citation?: string | null
+          created_at?: string
+          created_by?: string | null
+          default_state?: Database["public"]["Enums"]["nutrition_food_state"]
+          density_g_per_ml?: number | null
+          fat_per_100g?: number
+          fiber_per_100g?: number | null
+          id?: string
+          kcal_per_100g?: number
+          license?: string | null
+          name?: string
+          needs_review?: boolean
+          notes?: string | null
+          protein_per_100g?: number
+          review_reason?: string | null
+          salt_per_100g?: number | null
+          source?: Database["public"]["Enums"]["nutrition_food_source"]
+          source_id?: string | null
+          source_name?: string | null
+          sugar_per_100g?: number | null
+          unit_type?: Database["public"]["Enums"]["nutrition_food_unit"]
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+          verified_by_coach?: boolean
+        }
+        Relationships: []
+      }
       nutrition_partners: {
         Row: {
           created_at: string
@@ -2817,6 +2910,8 @@ export type Database = {
         }
         Returns: number
       }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
     }
     Enums: {
       app_group: "bulls" | "running_team" | "sgz" | "premium"
@@ -2833,6 +2928,15 @@ export type Database = {
         | "DB"
         | "KP"
         | "COACH"
+      nutrition_food_source:
+        | "bls_4_0"
+        | "open_food_facts"
+        | "usda"
+        | "bodyfuel_verified"
+        | "ai_estimate"
+        | "manual"
+      nutrition_food_state: "raw" | "cooked" | "n_a"
+      nutrition_food_unit: "raw" | "cooked" | "ml" | "piece"
       strength_check_status: "draft" | "completed"
       strength_reminder_kind: "upcoming" | "due"
       strength_test_key:
@@ -2985,6 +3089,16 @@ export const Constants = {
         "KP",
         "COACH",
       ],
+      nutrition_food_source: [
+        "bls_4_0",
+        "open_food_facts",
+        "usda",
+        "bodyfuel_verified",
+        "ai_estimate",
+        "manual",
+      ],
+      nutrition_food_state: ["raw", "cooked", "n_a"],
+      nutrition_food_unit: ["raw", "cooked", "ml", "piece"],
       strength_check_status: ["draft", "completed"],
       strength_reminder_kind: ["upcoming", "due"],
       strength_test_key: [
