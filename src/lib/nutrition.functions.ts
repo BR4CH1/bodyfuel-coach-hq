@@ -55,6 +55,8 @@ function mapOff(p: any): FoodResult | null {
     fat_per_100g: Number(n["fat_100g"] ?? 0),
     serving_g,
     serving_label: (p.serving_size as string) || null,
+    source: "open_food_facts",
+    verified_by_coach: false,
   };
 }
 
