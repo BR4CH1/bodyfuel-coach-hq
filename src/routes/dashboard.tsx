@@ -607,7 +607,7 @@ function RealUserDashboard() {
       {/* Paket & Verlängerung — ans Ende */}
       <div id="my-package" className="scroll-mt-24 space-y-4">
         <MyPackagePanel />
-        <SmartRenewalCard />
+        {hasActivePlan && <SmartRenewalCard />}
       </div>
     </div>
   );
