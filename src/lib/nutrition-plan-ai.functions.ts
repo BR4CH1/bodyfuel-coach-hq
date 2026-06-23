@@ -590,7 +590,7 @@ WICHTIG zu name/description:
     if (!days.length) throw new Error("Keine Tage generiert.");
 
     // Hard filter + authoritative day type from `schedule`.
-    const forbidden = [...allergyList, ...nogoList]
+    const forbidden = [...expandedAllergies, ...expandedNogo]
       .map((s) => s.toLowerCase().trim())
       .filter(Boolean);
     const cleaned = days.map((d, i) => {
