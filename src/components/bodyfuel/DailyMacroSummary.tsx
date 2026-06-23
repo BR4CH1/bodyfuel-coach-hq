@@ -13,11 +13,6 @@ type Totals = {
   source?: string | null;
 };
 type Targets = { kcal: number; protein_g: number; carbs_g: number; fat_g: number };
-type PlanMealDayRow = {
-  id: string;
-  name: string;
-  nutrition_plan_days?: { name: string } | { name: string }[] | null;
-};
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -52,13 +47,8 @@ export function DailyMacroSummary({ userId }: { userId: string }) {
         });
       }
       const rows = (entries.data as Totals[]) ?? [];
-      // Alle heute getrackten Einträge zählen für den aktuell eingestellten Tag,
-      // unabhängig davon, aus welchem Plan-Tag (Training/Rest) die Mahlzeit stammt.
-      const list = rows;
-
-
       setTotals(
-        list.reduce(
+        rows.reduce(
           (s, e) => ({
             kcal: s.kcal + Number(e.kcal),
             protein_g: s.protein_g + Number(e.protein_g),
@@ -94,16 +84,16 @@ export function DailyMacroSummary({ userId }: { userId: string }) {
         </div>
       </div>
       <div className="mt-5 grid grid-cols-4 gap-3 text-center">
-        <MacroCell color="var(--gold)" label="kcal" value={totals.kcal} target={targets.kcal} />
-        <MacroCell color="#ef4444" label="Protein" value={totals.protein_g} target={targets.protein_g} unit="g" />
-        <MacroCell color="#3b82f6" label="Carbs" value={totals.carbs_g} target={targets.carbs_g} unit="g" />
-        <MacroCell color="#f59e0b" label="Fett" value={totals.fat_g} target={targets.fat_g} unit="g" />
+        <MacroRing color="hsl(142 70% 45%)" label="kcal" value={totals.kcal} target={targets.kcal} />
+        <MacroRing color="#ef4444" label="Protein" value={totals.protein_g} target={targets.protein_g} unit="g" />
+        <MacroRing color="#3b82f6" label="Carbs" value={totals.carbs_g} target={targets.carbs_g} unit="g" />
+        <MacroRing color="#f59e0b" label="Fett" value={totals.fat_g} target={targets.fat_g} unit="g" />
       </div>
     </Link>
   );
 }
 
-function MacroCell({
+function MacroRing({
   color,
   label,
   value,
@@ -116,15 +106,43 @@ function MacroCell({
   target: number;
   unit?: string;
 }) {
+  const size = 76;
+  const stroke = 7;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const pct = target > 0 ? Math.min(1, value / target) : 0;
+  const dash = c * pct;
+
   return (
     <div className="flex flex-col items-center">
-      <span
-        className="mb-2 h-2 w-2 rounded-full"
-        style={{ background: color }}
-        aria-hidden
-      />
-      <div className="font-display text-2xl font-bold">{Math.round(value)}</div>
-      <div className="text-[11px] text-muted-foreground">/ {target}{unit}</div>
+      <div className="relative" style={{ width: size, height: size }}>
+        <svg width={size} height={size} className="-rotate-90">
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={r}
+            stroke="hsl(var(--secondary))"
+            strokeWidth={stroke}
+            fill="none"
+            opacity={0.5}
+          />
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={r}
+            stroke={color}
+            strokeWidth={stroke}
+            fill="none"
+            strokeLinecap="round"
+            strokeDasharray={`${dash} ${c}`}
+            style={{ transition: "stroke-dasharray 400ms ease" }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <div className="font-display text-base font-bold leading-none">{Math.round(value)}</div>
+          <div className="mt-0.5 text-[9px] text-muted-foreground">/ {target}{unit}</div>
+        </div>
+      </div>
       <div className="mt-2 text-[10px] uppercase tracking-wider text-muted-foreground">
         {label}
       </div>
