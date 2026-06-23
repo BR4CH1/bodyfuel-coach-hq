@@ -285,6 +285,7 @@ export function NutritionTracker() {
   const getDayTypeFn = useServerFn(getDayType);
   const setDayTypeFn = useServerFn(setDayType);
   const searchFn = useServerFn(searchFoods);
+  const searchDbFn = useServerFn(searchFoodsDb);
   const lookupFn = useServerFn(lookupBarcode);
   const estimateFn = useServerFn(estimateFoodFromText);
   const [aiEstimating, setAiEstimating] = useState(false);
