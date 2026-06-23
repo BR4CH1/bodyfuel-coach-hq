@@ -331,6 +331,7 @@ function RealUserDashboard() {
     level: number;
   }>({ total: 0, daily: 0, perf: 0, streak: 0, longest: 0, level: 1 });
   const [loading, setLoading] = useState(true);
+  const [hasActivePlan, setHasActivePlan] = useState(false);
 
   const todayStr = new Date().toISOString().slice(0, 10);
 
@@ -413,6 +414,16 @@ function RealUserDashboard() {
         .gte("performed_at", `${todayStr}T00:00:00`)
         .lte("performed_at", `${todayStr}T23:59:59.999`);
       setTrainedToday((tCount ?? 0) > 0);
+
+      // Prüfe ob aktiver Plan existiert (Ernährung oder Training)
+      const { data: activePlan } = await supabase
+        .from("nutrition_plans")
+        .select("id")
+        .eq("client_id", supabaseUser.id)
+        .eq("status", "active")
+        .limit(1)
+        .maybeSingle();
+      setHasActivePlan(!!activePlan);
 
       setLoading(false);
     })();
@@ -516,6 +527,7 @@ function RealUserDashboard() {
       </div>
 
       {supabaseUser && <SmartAnalysisCTA />}
+      {supabaseUser && !hasActivePlan && <SmartRenewalCard />}
       {supabaseUser && <StrengthCheckStatus variant="block" />}
       {supabaseUser && <PackageExpiryBanner userId={supabaseUser.id} />}
       {supabaseUser && <DailyMacroSummary userId={supabaseUser.id} />}
@@ -595,7 +607,7 @@ function RealUserDashboard() {
       {/* Paket & Verlängerung — ans Ende */}
       <div id="my-package" className="scroll-mt-24 space-y-4">
         <MyPackagePanel />
-        <SmartRenewalCard />
+        {hasActivePlan && <SmartRenewalCard />}
       </div>
     </div>
   );

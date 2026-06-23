@@ -61,7 +61,7 @@ export function SmartRenewalCard() {
     <div className="rounded-2xl border border-gold/40 bg-gradient-to-br from-gold/10 to-transparent p-4">
       <div className="mb-3 flex items-center gap-2">
         <RefreshCw className="h-4 w-4 text-gold" />
-        <h3 className="font-display text-base font-bold">Plan verlängern</h3>
+        <h3 className="font-display text-base font-bold">Plan erstellen</h3>
       </div>
       {subBlocked && (
         <div className="mb-3 rounded-xl border border-destructive/40 bg-destructive/5 p-3 text-xs text-muted-foreground">
