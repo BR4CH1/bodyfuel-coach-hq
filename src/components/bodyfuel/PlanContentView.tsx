@@ -575,11 +575,31 @@ export function PlanContentView({ clientId, planType }: Props) {
                           {slotLabel}
                         </div>
                       )}
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <div className="text-sm font-bold text-gold">{titleText}</div>
                         {canTrack && isTracked && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
                             <Check className="h-3 w-3" /> getrackt
+                          </span>
+                        )}
+                        {m.data_source === "db_verified" && (
+                          <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400" title="Alle Zutaten aus geprüfter BodyFuel-Datenbank (BLS 4.0).">
+                            BLS-geprüft
+                          </span>
+                        )}
+                        {m.data_source === "coach_verified" && (
+                          <span className="inline-flex items-center rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-400" title="Vom Coach manuell freigegeben.">
+                            Coach ✓
+                          </span>
+                        )}
+                        {m.data_source === "db_mixed" && (
+                          <span className="inline-flex items-center rounded-full bg-sky-500/10 px-2 py-0.5 text-[10px] font-semibold text-sky-400" title={`Teilweise aus BodyFuel-DB (${Math.round((m.verified_ratio ?? 0) * 100)}% der Zutaten).`}>
+                            teils geprüft
+                          </span>
+                        )}
+                        {m.data_source === "ai_estimate" && (
+                          <span className="inline-flex items-center rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold text-amber-400" title="Werte von der KI geschätzt — vor dem Verlassen prüfen.">
+                            ⚠ KI-Schätzung
                           </span>
                         )}
                       </div>
