@@ -1,6 +1,16 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+export type FoodSource =
+  | "bls_4_0"
+  | "bodyfuel_verified"
+  | "open_food_facts"
+  | "usda"
+  | "ai_estimate"
+  | "barcode"
+  | "manual"
+  | null;
+
 export type FoodResult = {
   name: string;
   brand: string | null;
@@ -13,6 +23,10 @@ export type FoodResult = {
   serving_g: number | null;
   /** Roh-Label von OFF, z.B. "1 slice (25g)" oder "30 g" */
   serving_label: string | null;
+  /** Datenquelle (bls_4_0, bodyfuel_verified, open_food_facts, usda, ai_estimate, …) */
+  source?: FoodSource;
+  /** True wenn Coach geprüft */
+  verified_by_coach?: boolean;
 };
 
 function mapOff(p: any): FoodResult | null {
