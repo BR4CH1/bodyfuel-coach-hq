@@ -519,34 +519,9 @@ function RealUserDashboard() {
       </div>
 
       {supabaseUser && <SmartAnalysisCTA />}
-      {supabaseUser && <StrengthCheckStatus variant="card" />}
+      {supabaseUser && <StrengthCheckStatus variant="block" />}
+      {supabaseUser && <PackageExpiryBanner userId={supabaseUser.id} />}
       {supabaseUser && <DailyMacroSummary userId={supabaseUser.id} />}
-      {supabaseUser && <CheckinComparisonCard userId={supabaseUser.id} />}
-
-
-      {todayDbPoints < MAX_DAILY_POINTS && (
-        <Link
-          to="/daily-checklist"
-          className="group flex items-center justify-between rounded-2xl border border-gold/40 bg-gradient-to-br from-gold/15 to-transparent p-5 transition hover:border-gold/70"
-        >
-          <div className="flex items-center gap-3">
-            <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-gold text-primary-foreground shadow-gold">
-              <ListChecks className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="text-xs uppercase tracking-wider text-gold">Tagescheck offen</div>
-              <div className="font-display text-base font-bold">
-                Noch {MAX_DAILY_POINTS - todayDbPoints} von {MAX_DAILY_POINTS} Punkten heute
-              </div>
-              <div className="text-xs text-muted-foreground">Hak deine Tagesziele ab — Streak nicht reißen lassen!</div>
-            </div>
-          </div>
-          <ArrowRight className="h-5 w-5 text-gold transition group-hover:translate-x-1" />
-        </Link>
-      )}
-
-      <MyPackagePanel />
-      <SmartRenewalCard />
 
       {/* Level hero card */}
       {(() => {
@@ -597,7 +572,20 @@ function RealUserDashboard() {
         );
       })()}
 
-      {supabaseUser && <PointsBreakdownCard userId={supabaseUser.id} />}
+      {supabaseUser && (
+        <details className="group rounded-2xl border border-border bg-card">
+          <summary className="flex cursor-pointer items-center justify-between gap-3 p-5 text-sm font-semibold">
+            <span className="flex items-center gap-2 text-gold">
+              <Target className="h-4 w-4" />
+              <span className="uppercase tracking-wider">Punkte-Aufschlüsselung</span>
+            </span>
+            <ArrowRight className="h-4 w-4 text-muted-foreground transition group-open:rotate-90" />
+          </summary>
+          <div className="border-t border-border p-2 sm:p-3">
+            <PointsBreakdownCard userId={supabaseUser.id} />
+          </div>
+        </details>
+      )}
 
       {supabaseUser && <TrainingBonusCard userId={supabaseUser.id} />}
 
