@@ -55,6 +55,7 @@ import { Switch } from "@/components/ui/switch";
 import { useQuery } from "@tanstack/react-query";
 import { getMyAthleteProfile } from "@/lib/athlete-profile.functions";
 import { AthleteProfileEditor } from "@/components/bodyfuel/AthleteProfileEditor";
+import { MyCheckinsHistorySection } from "@/components/bodyfuel/MyCheckinsHistorySection";
 import {
   Select,
   SelectContent,
@@ -247,6 +248,9 @@ function ProfileContent() {
 
       {/* Mein Paket */}
       <MyPackageSection pkg={pkg} />
+
+      {/* Check-ins (mit Coach-Antwort & Archiv) */}
+      {uid && <MyCheckinsHistorySection userId={uid} />}
 
       {/* Coaching-Infos */}
 
