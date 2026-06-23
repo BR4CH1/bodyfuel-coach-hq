@@ -684,16 +684,27 @@ WICHTIG zu name/description:
         .select("id")
         .single();
       if (dErr || !dayRow) continue;
-      const mealRows = d.meals.map((m, idx) => ({
-        day_id: dayRow.id,
-        name: `${d.name} — ${labelForSlot(m.slot)}`,
-        description: m.description ?? null,
-        kcal: m.kcal ?? null,
-        protein_g: m.protein_g ?? null,
-        carbs_g: m.carbs_g ?? null,
-        fat_g: m.fat_g ?? null,
-        sort_order: idx,
-      }));
+      let snackCounter = 0;
+      const mealRows = d.meals.map((m, idx) => {
+        let slotLabel: string;
+        if (m.slot === "breakfast") slotLabel = "Frühstück";
+        else if (m.slot === "lunch") slotLabel = "Mittagessen";
+        else if (m.slot === "dinner") slotLabel = "Abendessen";
+        else {
+          snackCounter += 1;
+          slotLabel = `Snack ${snackCounter}`;
+        }
+        return {
+          day_id: dayRow.id,
+          name: `${d.name} — ${slotLabel}`,
+          description: m.description ?? null,
+          kcal: m.kcal ?? null,
+          protein_g: m.protein_g ?? null,
+          carbs_g: m.carbs_g ?? null,
+          fat_g: m.fat_g ?? null,
+          sort_order: idx,
+        };
+      });
       if (mealRows.length) {
         await supabase.from("nutrition_plan_meals").insert(mealRows);
       }
