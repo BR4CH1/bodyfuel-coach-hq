@@ -8,7 +8,7 @@ import { SmartRenewalCard } from "@/components/bodyfuel/SmartRenewalCard";
 import { TrainingDevelopmentCard } from "@/components/bodyfuel/TrainingTrends";
 import { DailyChecklist } from "@/components/bodyfuel/DailyChecklist";
 import { AchievementsCard } from "@/components/bodyfuel/AchievementsCard";
-import { TrainingBonusCard } from "@/components/bodyfuel/TrainingBonusCard";
+
 
 import { SmartAnalysisCTA } from "@/components/bodyfuel/SmartAnalysisCTA";
 import { StrengthCheckStatus } from "@/components/bodyfuel/StrengthCheckStatus";
@@ -200,9 +200,6 @@ function DashboardContent() {
       </div>
 
       {supabaseUser && <PointsBreakdownCard userId={supabaseUser.id} />}
-
-      {supabaseUser && <TrainingBonusCard userId={supabaseUser.id} />}
-
 
       {/* Stat grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -586,38 +583,6 @@ function RealUserDashboard() {
           </div>
         </details>
       )}
-
-      {supabaseUser && (
-        <details className="group rounded-2xl border border-border bg-card">
-          <summary className="flex cursor-pointer items-center justify-between gap-3 p-5 text-sm font-semibold">
-            <span className="flex items-center gap-2 text-gold">
-              <Dumbbell className="h-4 w-4" />
-              <span className="uppercase tracking-wider">Trainingsbonus diese Woche</span>
-            </span>
-            <ArrowRight className="h-4 w-4 text-muted-foreground transition group-open:rotate-90" />
-          </summary>
-          <div className="border-t border-border p-2 sm:p-3">
-            <TrainingBonusCard userId={supabaseUser.id} />
-          </div>
-        </details>
-      )}
-
-      <Link
-        to="/check-in"
-        className="group flex items-center justify-between rounded-2xl border border-gold/30 bg-gradient-to-br from-gold/10 to-transparent p-5 transition hover:border-gold/60"
-      >
-        <div className="flex items-center gap-3">
-          <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-gold text-primary-foreground shadow-gold">
-            <CalendarCheck className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="text-xs uppercase tracking-wider text-gold">Wochen-Check-in</div>
-            <div className="font-display text-base font-bold">Diese Woche eintragen</div>
-            <div className="text-xs text-muted-foreground">Maße, Stimmung, Erfolge & Hürden</div>
-          </div>
-        </div>
-        <ArrowRight className="h-5 w-5 text-gold transition group-hover:translate-x-1" />
-      </Link>
 
       {supabaseUser && <DailyChecklist userId={supabaseUser.id} />}
 
