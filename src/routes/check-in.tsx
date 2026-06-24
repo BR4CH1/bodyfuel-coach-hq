@@ -93,6 +93,7 @@ function WeeklyCheckIn() {
         setForm({
           weight_kg: data.weight_kg?.toString() ?? "",
           body_fat_pct: data.body_fat_pct?.toString() ?? "",
+          muscle_mass_kg: (data as { muscle_mass_kg?: number | null }).muscle_mass_kg?.toString() ?? "",
           waist_cm: data.waist_cm?.toString() ?? "",
           chest_cm: data.chest_cm?.toString() ?? "",
           thigh_left_cm: data.thigh_left_cm?.toString() ?? "",
