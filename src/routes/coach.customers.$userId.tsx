@@ -822,7 +822,7 @@ function MeasurementsCard({ measurements }: { measurements: any[] }) {
               <th>Gewicht</th>
               <th>KFA</th>
               <th>Muskel</th>
-              <th>Taille</th>
+              <th>Bauchumfang</th>
               <th>Brust</th>
               <th>OS L</th>
               <th>OS R</th>
