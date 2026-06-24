@@ -607,13 +607,20 @@ export function PlanContentView({ clientId, planType }: Props) {
           <div className="mt-3 space-y-3">
             {planType === "nutrition"
               ? meals.filter((m) => itemToVirtual[m.id] === activeDay).map((m) => {
+                  const override = overrides[m.id];
+                  const effName = override?.name ?? (itemDisplayName[m.id] ?? m.name);
+                  const effDescription = override ? override.description : m.description;
+                  const effKcal = override ? override.kcal : m.kcal;
+                  const effProtein = override ? override.protein_g : m.protein_g;
+                  const effCarbs = override ? override.carbs_g : m.carbs_g;
+                  const effFat = override ? override.fat_g : m.fat_g;
                   const isTracked = !!tracked[m.id];
                   const busy = togglingId === m.id;
-                  const rawDisplayName = itemDisplayName[m.id] ?? m.name;
                   // Wenn der Name "Frühstück: …" enthält → Slot als Eyebrow, Rest als Titel
-                  const colonIdx = rawDisplayName.indexOf(":");
-                  const slotLabel = colonIdx > 0 ? rawDisplayName.slice(0, colonIdx).trim() : null;
-                  const titleText = colonIdx > 0 ? rawDisplayName.slice(colonIdx + 1).trim() : rawDisplayName;
+                  const colonIdx = effName.indexOf(":");
+                  const slotLabel = colonIdx > 0 ? effName.slice(0, colonIdx).trim() : null;
+                  const titleText = colonIdx > 0 ? effName.slice(colonIdx + 1).trim() : effName;
+                  const originalTitle = itemDisplayName[m.id] ?? m.name;
                   const inner = (
                     <>
                       {slotLabel && (
@@ -623,27 +630,32 @@ export function PlanContentView({ clientId, planType }: Props) {
                       )}
                       <div className="flex flex-wrap items-center gap-2">
                         <div className="text-sm font-bold text-gold">{titleText}</div>
+                        {override && (
+                          <span className="inline-flex items-center rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-semibold text-gold" title="Du hast diese Mahlzeit heute durch ein eigenes Rezept ersetzt.">
+                            Eigenes Rezept
+                          </span>
+                        )}
                         {canTrack && isTracked && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
                             <Check className="h-3 w-3" /> getrackt
                           </span>
                         )}
-                        {isCoach && m.data_source === "db_verified" && (
+                        {!override && isCoach && m.data_source === "db_verified" && (
                           <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400" title="Alle Zutaten aus geprüfter BodyFuel-Datenbank (BLS 4.0).">
                             BLS-geprüft
                           </span>
                         )}
-                        {isCoach && m.data_source === "coach_verified" && (
+                        {!override && isCoach && m.data_source === "coach_verified" && (
                           <span className="inline-flex items-center rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-400" title="Vom Coach manuell freigegeben.">
                             Coach ✓
                           </span>
                         )}
-                        {isCoach && m.data_source === "db_mixed" && (
+                        {!override && isCoach && m.data_source === "db_mixed" && (
                           <span className="inline-flex items-center rounded-full bg-sky-500/10 px-2 py-0.5 text-[10px] font-semibold text-sky-400" title={`Teilweise aus BodyFuel-DB (${Math.round((m.verified_ratio ?? 0) * 100)}% der Zutaten).`}>
                             teils geprüft
                           </span>
                         )}
-                        {isCoach && m.data_source === "ai_estimate" && (
+                        {!override && isCoach && m.data_source === "ai_estimate" && (
                           <span className="inline-flex items-center rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold text-amber-400" title="Werte von der KI geschätzt — vor dem Verlassen prüfen.">
                             ⚠ KI-Schätzung
                           </span>
@@ -651,16 +663,33 @@ export function PlanContentView({ clientId, planType }: Props) {
                       </div>
 
                       {(() => {
-                        const text = cleanDescription(m.description);
+                        const text = cleanDescription(effDescription);
                         if (!text) return null;
                         return <p className="mt-1 text-sm text-foreground/90">{text}</p>;
                       })()}
-                      {(m.protein_g != null || m.carbs_g != null || m.fat_g != null || m.kcal != null) && (
+                      {(effProtein != null || effCarbs != null || effFat != null || effKcal != null) && (
                         <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-                          {m.kcal != null && <span>{m.kcal} kcal</span>}
-                          {m.protein_g != null && <span>P {m.protein_g}g</span>}
-                          {m.carbs_g != null && <span>· KH {m.carbs_g}g</span>}
-                          {m.fat_g != null && <span>· F {m.fat_g}g</span>}
+                          {effKcal != null && <span>{effKcal} kcal</span>}
+                          {effProtein != null && <span>P {effProtein}g</span>}
+                          {effCarbs != null && <span>· KH {effCarbs}g</span>}
+                          {effFat != null && <span>· F {effFat}g</span>}
+                        </div>
+                      )}
+                      {override && (
+                        <div className="mt-2 rounded-md border border-border/60 bg-background/40 px-2 py-1.5 text-[11px] text-muted-foreground">
+                          <span className="opacity-70">Ursprünglich geplant:</span>{" "}
+                          <span className="text-foreground/80">{originalTitle}</span>
+                          {canTrack && (
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); revertOverride(m); }}
+                              disabled={revertingId === m.id}
+                              className="ml-2 inline-flex items-center gap-1 rounded border border-border bg-background/60 px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground hover:border-gold/50 hover:text-gold disabled:opacity-60"
+                            >
+                              {revertingId === m.id ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                              Original wiederherstellen
+                            </button>
+                          )}
                         </div>
                       )}
                     </>
@@ -671,11 +700,13 @@ export function PlanContentView({ clientId, planType }: Props) {
                     ? "border-emerald-500/40 bg-emerald-500/5"
                     : isSkipped
                       ? "border-amber-500/40 bg-amber-500/5 opacity-80"
-                      : "border-border bg-background/40";
+                      : override
+                        ? "border-gold/30 bg-gold/5"
+                        : "border-border bg-background/40";
                   return (
                     <div key={m.id} className={`${base} ${style} relative`}>
                       <div className="absolute right-2 top-2 flex items-center gap-1">
-                        {canTrack && m.kcal && m.protein_g && m.carbs_g && m.fat_g && (
+                        {canTrack && !override && m.kcal && m.protein_g && m.carbs_g && m.fat_g && (
                           <button
                             type="button"
                             onClick={() => setSwapMeal(m)}
