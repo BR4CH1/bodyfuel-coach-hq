@@ -146,19 +146,46 @@ function RecipePage() {
       }
 
       const sourceTag = replacedPlanMealId ? `custom:${replacedPlanMealId}` : "custom:freeform";
+      const mealName = `${recipe.name ?? "Eigenes Rezept"}${recipe.description ? " — " + recipe.description : ""}`;
+      const kcalVal = Math.round(recipe.kcal ?? 0);
+      const pVal = Math.round(recipe.protein_g ?? 0);
+      const cVal = Math.round(recipe.carbs_g ?? 0);
+      const fVal = Math.round(recipe.fat_g ?? 0);
       const { error } = await supabase.from("food_entries").insert({
         user_id: supabaseUser.id,
         entry_date: todayKey(),
         meal: slot,
-        name: `${recipe.name ?? "Eigenes Rezept"}${recipe.description ? " — " + recipe.description : ""}`,
+        name: mealName,
         serving_g: 100,
-        kcal: Math.round(recipe.kcal ?? 0),
-        protein_g: Math.round(recipe.protein_g ?? 0),
-        carbs_g: Math.round(recipe.carbs_g ?? 0),
-        fat_g: Math.round(recipe.fat_g ?? 0),
+        kcal: kcalVal,
+        protein_g: pVal,
+        carbs_g: cVal,
+        fat_g: fVal,
         source: sourceTag,
       });
       if (error) throw error;
+
+      // Override the planned meal for today so the plan view reflects the new choice
+      if (replacedPlanMealId) {
+        await supabase
+          .from("nutrition_plan_meal_overrides")
+          .upsert(
+            {
+              user_id: supabaseUser.id,
+              plan_meal_id: replacedPlanMealId,
+              override_date: todayKey(),
+              name: recipe.name ?? "Eigenes Rezept",
+              description: recipe.description ?? null,
+              kcal: kcalVal || null,
+              protein_g: pVal || null,
+              carbs_g: cVal || null,
+              fat_g: fVal || null,
+              source: "recipe_from_ingredients",
+            },
+            { onConflict: "user_id,plan_meal_id,override_date" },
+          );
+      }
+
       setTracked(true);
       toast.success(
         replacedPlanMealId

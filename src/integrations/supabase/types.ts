@@ -1310,6 +1310,59 @@ export type Database = {
           },
         ]
       }
+      nutrition_plan_meal_overrides: {
+        Row: {
+          carbs_g: number | null
+          created_at: string
+          description: string | null
+          fat_g: number | null
+          id: string
+          kcal: number | null
+          name: string
+          override_date: string
+          plan_meal_id: string
+          protein_g: number | null
+          source: string | null
+          user_id: string
+        }
+        Insert: {
+          carbs_g?: number | null
+          created_at?: string
+          description?: string | null
+          fat_g?: number | null
+          id?: string
+          kcal?: number | null
+          name: string
+          override_date: string
+          plan_meal_id: string
+          protein_g?: number | null
+          source?: string | null
+          user_id: string
+        }
+        Update: {
+          carbs_g?: number | null
+          created_at?: string
+          description?: string | null
+          fat_g?: number | null
+          id?: string
+          kcal?: number | null
+          name?: string
+          override_date?: string
+          plan_meal_id?: string
+          protein_g?: number | null
+          source?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nutrition_plan_meal_overrides_plan_meal_id_fkey"
+            columns: ["plan_meal_id"]
+            isOneToOne: false
+            referencedRelation: "nutrition_plan_meals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       nutrition_plan_meals: {
         Row: {
           assigned_to: string | null
