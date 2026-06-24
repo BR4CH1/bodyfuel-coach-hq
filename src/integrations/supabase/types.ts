@@ -2785,6 +2785,7 @@ export type Database = {
           hip_cm: number | null
           id: string
           mood: number | null
+          muscle_mass_kg: number | null
           nutrition_adherence: number | null
           photo_urls: string[]
           sleep_quality: number | null
@@ -2811,6 +2812,7 @@ export type Database = {
           hip_cm?: number | null
           id?: string
           mood?: number | null
+          muscle_mass_kg?: number | null
           nutrition_adherence?: number | null
           photo_urls?: string[]
           sleep_quality?: number | null
@@ -2837,6 +2839,7 @@ export type Database = {
           hip_cm?: number | null
           id?: string
           mood?: number | null
+          muscle_mass_kg?: number | null
           nutrition_adherence?: number | null
           photo_urls?: string[]
           sleep_quality?: number | null

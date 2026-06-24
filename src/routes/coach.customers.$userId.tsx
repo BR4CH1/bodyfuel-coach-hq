@@ -806,7 +806,7 @@ function MeasurementsCard({ measurements }: { measurements: any[] }) {
         <Stat label="Gewicht" value={fmt(latest.weight_kg, "kg")} />
         <Stat label="Körperfett" value={fmt(latest.body_fat_pct, "%")} />
         <Stat label="Muskelmasse" value={fmt(latest.muscle_mass_kg, "kg")} />
-        <Stat label="Taille" value={fmt(latest.waist_cm, "cm")} />
+        <Stat label="Bauchumfang" value={fmt(latest.waist_cm, "cm")} />
         <Stat label="Brust" value={fmt(latest.chest_cm, "cm")} />
         <Stat label="Oberschenkel L" value={fmt(latest.thigh_left_cm, "cm")} />
         <Stat label="Oberschenkel R" value={fmt(latest.thigh_right_cm, "cm")} />
@@ -822,7 +822,7 @@ function MeasurementsCard({ measurements }: { measurements: any[] }) {
               <th>Gewicht</th>
               <th>KFA</th>
               <th>Muskel</th>
-              <th>Taille</th>
+              <th>Bauchumfang</th>
               <th>Brust</th>
               <th>OS L</th>
               <th>OS R</th>

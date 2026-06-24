@@ -59,7 +59,7 @@ export function CheckinComparisonCard({ userId }: { userId: string }) {
   const metrics: Array<{ label: string; unit: string; key: keyof Row }> = [
     { label: "Gewicht", unit: "kg", key: "weight_kg" },
     { label: "KFA", unit: "%", key: "body_fat_pct" },
-    { label: "Taille", unit: "cm", key: "waist_cm" },
+    { label: "Bauchumfang", unit: "cm", key: "waist_cm" },
     { label: "Brust", unit: "cm", key: "chest_cm" },
     { label: "Oberschenkel L", unit: "cm", key: "thigh_left_cm" },
     { label: "Oberschenkel R", unit: "cm", key: "thigh_right_cm" },

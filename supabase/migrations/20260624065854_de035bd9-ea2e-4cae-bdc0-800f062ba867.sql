@@ -1,0 +1,1 @@
+ALTER TABLE public.weekly_checkins ADD COLUMN IF NOT EXISTS muscle_mass_kg numeric;

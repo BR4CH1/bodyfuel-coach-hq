@@ -470,7 +470,7 @@ function MeasurementsContent() {
               onChange={(e) => setM({ ...m, muscle_mass_kg: e.target.value })}
             />
           </Field>
-          <Field label="Taille (cm)">
+          <Field label="Bauchumfang (cm)">
             <Input
               type="number"
               step="0.1"
@@ -567,7 +567,7 @@ function MeasurementsContent() {
                   <th className="py-2 pr-3">Gewicht</th>
                   <th className="py-2 pr-3">KF %</th>
                   <th className="py-2 pr-3">Muskel</th>
-                  <th className="py-2 pr-3">Taille</th>
+                  <th className="py-2 pr-3">Bauchumfang</th>
                   <th className="py-2 pr-3">Brust</th>
                   <th className="py-2 pr-3">OS L</th>
                   <th className="py-2 pr-3">OS R</th>

@@ -33,6 +33,7 @@ const num = (v: string) => (v.trim() === "" ? null : Number(v.replace(",", "."))
 type Form = {
   weight_kg: string;
   body_fat_pct: string;
+  muscle_mass_kg: string;
   waist_cm: string;
   chest_cm: string;
   thigh_left_cm: string;
@@ -51,6 +52,7 @@ type Form = {
 const empty: Form = {
   weight_kg: "",
   body_fat_pct: "",
+  muscle_mass_kg: "",
   waist_cm: "",
   chest_cm: "",
   thigh_left_cm: "",
@@ -91,6 +93,7 @@ function WeeklyCheckIn() {
         setForm({
           weight_kg: data.weight_kg?.toString() ?? "",
           body_fat_pct: data.body_fat_pct?.toString() ?? "",
+          muscle_mass_kg: (data as { muscle_mass_kg?: number | null }).muscle_mass_kg?.toString() ?? "",
           waist_cm: data.waist_cm?.toString() ?? "",
           chest_cm: data.chest_cm?.toString() ?? "",
           thigh_left_cm: data.thigh_left_cm?.toString() ?? "",
@@ -129,6 +132,7 @@ function WeeklyCheckIn() {
       week_start: week,
       weight_kg: num(form.weight_kg),
       body_fat_pct: num(form.body_fat_pct),
+      muscle_mass_kg: num(form.muscle_mass_kg),
       waist_cm: num(form.waist_cm),
       chest_cm: num(form.chest_cm),
       thigh_left_cm: num(form.thigh_left_cm),
@@ -169,6 +173,7 @@ function WeeklyCheckIn() {
         measured_at: todayIso,
         weight_kg: payload.weight_kg,
         body_fat_pct: payload.body_fat_pct,
+        muscle_mass_kg: payload.muscle_mass_kg,
         waist_cm: payload.waist_cm,
         chest_cm: payload.chest_cm,
         thigh_left_cm: payload.thigh_left_cm,
@@ -228,7 +233,15 @@ function WeeklyCheckIn() {
                   onChange={(e) => setForm({ ...form, body_fat_pct: e.target.value })}
                 />
               </Field>
-              <Field label="Taille (cm)">
+              <Field label="Muskelmasse (kg)">
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={form.muscle_mass_kg}
+                  onChange={(e) => setForm({ ...form, muscle_mass_kg: e.target.value })}
+                />
+              </Field>
+              <Field label="Bauchumfang (cm)">
                 <Input
                   type="number"
                   step="0.1"
