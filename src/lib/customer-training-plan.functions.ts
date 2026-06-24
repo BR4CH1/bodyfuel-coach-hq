@@ -204,7 +204,7 @@ export const saveCustomerTrainingPlan = createServerFn({ method: "POST" })
         plan_type: "training",
         is_active: true,
         status: "active",
-        source: "customer_import",
+        source: "manual",
         generated_by: "customer",
         uploaded_by: userId,
         file_path: `ai-generated/${userId}/customer-training-${Date.now()}.json`,
