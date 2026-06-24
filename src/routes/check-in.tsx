@@ -132,6 +132,7 @@ function WeeklyCheckIn() {
       week_start: week,
       weight_kg: num(form.weight_kg),
       body_fat_pct: num(form.body_fat_pct),
+      muscle_mass_kg: num(form.muscle_mass_kg),
       waist_cm: num(form.waist_cm),
       chest_cm: num(form.chest_cm),
       thigh_left_cm: num(form.thigh_left_cm),
