@@ -33,6 +33,7 @@ const num = (v: string) => (v.trim() === "" ? null : Number(v.replace(",", "."))
 type Form = {
   weight_kg: string;
   body_fat_pct: string;
+  muscle_mass_kg: string;
   waist_cm: string;
   chest_cm: string;
   thigh_left_cm: string;
@@ -51,6 +52,7 @@ type Form = {
 const empty: Form = {
   weight_kg: "",
   body_fat_pct: "",
+  muscle_mass_kg: "",
   waist_cm: "",
   chest_cm: "",
   thigh_left_cm: "",
