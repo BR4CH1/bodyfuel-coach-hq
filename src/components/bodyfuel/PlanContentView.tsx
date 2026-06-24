@@ -495,6 +495,28 @@ export function PlanContentView({ clientId, planType }: Props) {
     }
   };
 
+  const revertOverride = async (m: Meal) => {
+    const ov = overrides[m.id];
+    if (!ov) return;
+    setRevertingId(m.id);
+    try {
+      await supabase.from("nutrition_plan_meal_overrides").delete().eq("id", ov.id);
+      await supabase
+        .from("food_entries")
+        .delete()
+        .eq("user_id", clientId)
+        .eq("entry_date", todayKey())
+        .eq("source", `custom:${m.id}`);
+      setOverrides((o) => { const n = { ...o }; delete n[m.id]; return n; });
+      setTracked((t) => { const n = { ...t }; delete n[m.id]; return n; });
+      toast.success("Originalmahlzeit wiederhergestellt");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Wiederherstellen fehlgeschlagen");
+    } finally {
+      setRevertingId("");
+    }
+  };
+
   if (!plan) return null;
   if (loading) return <div className="text-sm text-muted-foreground">Lade Inhalte…</div>;
 
