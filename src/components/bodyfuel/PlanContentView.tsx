@@ -194,6 +194,18 @@ export function PlanContentView({ clientId, planType }: Props) {
   const [swapMeal, setSwapMeal] = useState<Meal | null>(null);
   const [skipMeal, setSkipMeal] = useState<Meal | null>(null);
   const [skipped, setSkipped] = useState<Record<string, string>>({}); // meal_id -> reason
+  type Override = {
+    id: string;
+    plan_meal_id: string;
+    name: string;
+    description: string | null;
+    kcal: number | null;
+    protein_g: number | null;
+    carbs_g: number | null;
+    fat_g: number | null;
+  };
+  const [overrides, setOverrides] = useState<Record<string, Override>>({}); // meal_id -> override
+  const [revertingId, setRevertingId] = useState<string>("");
   const logFn = useServerFn(logInteraction);
   const getSkipsFn = useServerFn(getMySkipsForDate);
   const removeSkipFn = useServerFn(removeMealSkip);
