@@ -189,20 +189,13 @@ export const saveCustomerTrainingPlan = createServerFn({ method: "POST" })
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // Vorherige Trainingspläne dieses Kunden archivieren
-    await supabaseAdmin
-      .from("nutrition_plans")
-      .update({ is_active: false, status: "archived", archived_at: new Date().toISOString() } as any)
-      .eq("client_id", userId)
-      .eq("plan_type", "training")
-      .eq("is_active", true);
-
     const weeks = plan.weeks_count ?? 1;
     const today = new Date();
     const start = today.toISOString().slice(0, 10);
     const endDate = new Date(today);
     endDate.setDate(endDate.getDate() + weeks * 7 - 1);
 
+    // 1) Neuen Plan zuerst anlegen — wenn das fehlschlägt, bleibt der alte aktiv.
     const { data: planRow, error: planErr } = await supabaseAdmin
       .from("nutrition_plans")
       .insert({
@@ -214,7 +207,7 @@ export const saveCustomerTrainingPlan = createServerFn({ method: "POST" })
         source: "customer_import",
         generated_by: "customer",
         uploaded_by: userId,
-        file_path: `customer-import/${userId}/training-${Date.now()}.json`,
+        file_path: `ai-generated/${userId}/customer-training-${Date.now()}.json`,
         file_name: "customer-training.json",
         scheduled_start_date: start,
         scheduled_end_date: endDate.toISOString().slice(0, 10),
@@ -224,6 +217,15 @@ export const saveCustomerTrainingPlan = createServerFn({ method: "POST" })
       .select("id")
       .single();
     if (planErr || !planRow) throw new Error(planErr?.message ?? "Plan konnte nicht angelegt werden");
+
+    // 2) Jetzt alle anderen aktiven Trainingspläne archivieren.
+    await supabaseAdmin
+      .from("nutrition_plans")
+      .update({ is_active: false, status: "archived", archived_at: new Date().toISOString() } as any)
+      .eq("client_id", userId)
+      .eq("plan_type", "training")
+      .eq("is_active", true)
+      .neq("id", planRow.id);
 
     let totalEx = 0;
     let dayIdx = 0;
