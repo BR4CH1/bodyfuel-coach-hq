@@ -214,7 +214,7 @@ export const saveCustomerTrainingPlan = createServerFn({ method: "POST" })
         source: "customer_import",
         generated_by: "customer",
         uploaded_by: userId,
-        file_path: `customer-import/${userId}/training-${Date.now()}.json`,
+        file_path: `ai-generated/${userId}/customer-training-${Date.now()}.json`,
         file_name: "customer-training.json",
         scheduled_start_date: start,
         scheduled_end_date: endDate.toISOString().slice(0, 10),
