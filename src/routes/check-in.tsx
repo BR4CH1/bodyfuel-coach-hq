@@ -173,6 +173,7 @@ function WeeklyCheckIn() {
         measured_at: todayIso,
         weight_kg: payload.weight_kg,
         body_fat_pct: payload.body_fat_pct,
+        muscle_mass_kg: payload.muscle_mass_kg,
         waist_cm: payload.waist_cm,
         chest_cm: payload.chest_cm,
         thigh_left_cm: payload.thigh_left_cm,
