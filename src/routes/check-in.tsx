@@ -233,7 +233,15 @@ function WeeklyCheckIn() {
                   onChange={(e) => setForm({ ...form, body_fat_pct: e.target.value })}
                 />
               </Field>
-              <Field label="Taille (cm)">
+              <Field label="Muskelmasse (kg)">
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={form.muscle_mass_kg}
+                  onChange={(e) => setForm({ ...form, muscle_mass_kg: e.target.value })}
+                />
+              </Field>
+              <Field label="Bauchumfang (cm)">
                 <Input
                   type="number"
                   step="0.1"
