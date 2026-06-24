@@ -316,8 +316,20 @@ export function PlanContentView({ clientId, planType }: Props) {
     } catch {}
   };
 
+  const reloadOverrides = async () => {
+    if (!isSelf || planType !== "nutrition") { setOverrides({}); return; }
+    const { data } = await supabase
+      .from("nutrition_plan_meal_overrides")
+      .select("id, plan_meal_id, name, description, kcal, protein_g, carbs_g, fat_g")
+      .eq("user_id", clientId)
+      .eq("override_date", todayKey());
+    const map: Record<string, Override> = {};
+    ((data as Override[]) ?? []).forEach((o) => { map[o.plan_meal_id] = o; });
+    setOverrides(map);
+  };
+
   useEffect(() => { reload(); /* eslint-disable-next-line */ }, [clientId, planType]);
-  useEffect(() => { reloadTracked(); reloadSkips(); /* eslint-disable-next-line */ }, [clientId, planType, supabaseUser?.id]);
+  useEffect(() => { reloadTracked(); reloadSkips(); reloadOverrides(); /* eslint-disable-next-line */ }, [clientId, planType, supabaseUser?.id]);
 
   // Fetch today's day type (only for self / nutrition); used to auto-pick a matching day.
   useEffect(() => {
