@@ -125,7 +125,7 @@ export function CustomerCheckinsCard({ userId }: { userId: string }) {
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                       <Metric label="Gewicht" value={c.weight_kg} unit="kg" />
                       <Metric label="KFA" value={c.body_fat_pct} unit="%" />
-                      <Metric label="Taille" value={c.waist_cm} unit="cm" />
+                      <Metric label="Bauchumfang" value={c.waist_cm} unit="cm" />
                       <Metric label="Brust" value={c.chest_cm} unit="cm" />
                       <Metric label="Oberschenkel L" value={c.thigh_left_cm} unit="cm" />
                       <Metric label="Oberschenkel R" value={c.thigh_right_cm} unit="cm" />
