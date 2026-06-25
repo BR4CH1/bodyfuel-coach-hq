@@ -40,11 +40,17 @@ function shoppingItemKey(name: string) {
     .replace(/:\s*\d+(?:[,.]\d+)?\s*(kg|g|ml|l|stk\.?|stück)?\s*$/i, "")
     .replace(/:\s*$/g, "")
     .replace(
-      /\b(ca\.|ungekocht|gekocht|gegart|gebraten|gedünstet|roh|trocken|frisch|tiefgekühlt|tk|light|fettarm|zuckerarm|magere?r?|natur|pur|optional)\b/gi,
+      /\b(ca\.|ungekocht|gekocht|gekochte|gekochter|gekochtes|gegart|gebraten|gedünstet|roh|trocken|frisch|tiefgekühlt|tk|light|fettarm|zuckerarm|magere?r?|natur|pur|optional)\b/gi,
       "",
     )
+    .replace(/^ekochtes\s+ei\b/i, "eier")
     .replace(/^[-•·]\s*/, "")
     .replace(/^(eine?|ein|der|die|das|etwas|frische?r?|frisches?)\s+/i, "")
+    .replace(/^(salat)?gurken?\b/, "gurke")
+    .replace(/^vollkorn-?tortillas?\b/, "vollkorn-tortillas")
+    .replace(/^scheiben?\s+vollkornbrot\b/, "vollkornbrot")
+    .replace(/^(ei|eier|eiweiß)\b/, "eier")
+    .replace(/^(rinder|puten|hähnchen)?hack(fleisch)?\b/, "putenhack")
     .replace(/\s+/g, " ")
     .trim()
     .toLowerCase();
@@ -208,7 +214,7 @@ function ShoppingListPage() {
   const catOrder = [
     "Obst & Gemüse",
     "Fleisch & Fisch",
-    "Milchprodukte",
+    "Eier & Milchprodukte",
     "Getreide & Beilagen",
     "Vorrat & Gewürze",
     "Sonstiges",
@@ -447,24 +453,26 @@ function ShoppingListPage() {
       {groupedEntries.map(([cat, list]) => (
         <div key={cat} className="rounded-2xl border border-border bg-card p-5">
           <h2 className="mb-3 font-display text-base font-bold">{cat}</h2>
-          <ul className="space-y-2">
+          <ul className="divide-y divide-border/60">
             {list.map((it, i) => {
               const itemKey = shoppingItemKey(it.name);
               const k = `${periodScope}-${partnerMode}-${cat}-${i}-${itemKey}`;
               return (
-                <li key={k} className="flex items-center gap-3">
+                <li key={k} className="grid grid-cols-[auto,minmax(0,1fr),max-content] items-center gap-3 py-3 first:pt-0 last:pb-0">
                   <input
                     type="checkbox"
                     checked={!!it.checked}
                     onChange={(e) => setItemChecked.mutate({ itemKey, checked: e.target.checked })}
-                    className="h-4 w-4"
+                    className="h-4 w-4 shrink-0"
                   />
                   <span
-                    className={`flex-1 text-sm ${it.checked ? "line-through text-muted-foreground" : ""}`}
+                    className={`line-clamp-2 min-w-0 break-words text-sm leading-snug ${it.checked ? "line-through text-muted-foreground" : ""}`}
                   >
                     {it.name}
                   </span>
-                  <span className="text-xs text-muted-foreground">{it.quantity}</span>
+                  <span className="max-w-[8.5rem] shrink-0 text-right text-xs font-semibold leading-snug text-muted-foreground sm:max-w-[12rem]">
+                    {it.quantity}
+                  </span>
                 </li>
               );
             })}
