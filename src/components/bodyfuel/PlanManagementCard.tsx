@@ -95,7 +95,7 @@ export function PlanManagementCard({ userId }: { userId: string }) {
     const e = new Date(endDate);
     if (isNaN(s.getTime()) || isNaN(e.getTime())) return 7;
     const diff = Math.round((e.getTime() - s.getTime()) / 86400000) + 1;
-    return Math.max(1, Math.min(21, diff));
+    return Math.max(1, Math.min(31, diff));
   };
 
   const smartProfile = useQuery({
@@ -257,7 +257,7 @@ export function PlanManagementCard({ userId }: { userId: string }) {
           />
         </label>
         <span className="text-muted-foreground">
-          ({computePlanDays()} Tag{computePlanDays() === 1 ? "" : "e"}, max. 21)
+          ({computePlanDays()} Tag{computePlanDays() === 1 ? "" : "e"}, max. 31)
         </span>
       </div>
 
