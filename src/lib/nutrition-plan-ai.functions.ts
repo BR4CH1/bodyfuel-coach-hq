@@ -420,8 +420,8 @@ Jede Mahlzeit MUSS aus dieser Erlaubt-Liste komponiert sein. Wenn du im Descript
 
 
     // Plan length & start date.
-    // Smart-Selfservice (kein plan_days übergeben): IMMER 28 Tage ab heute (1 Monat ab Kauf).
-    // Coach-Generierung übergibt plan_days explizit (max 30) und überschreibt diese Regel.
+    // Smart-Selfservice (kein plan_days übergeben): IMMER 31 Tage ab heute (1 Monat ab Kauf).
+    // Coach-Generierung übergibt plan_days explizit (max 31) und überschreibt diese Regel.
     const startMode: "today" | "next_shopping" = data.start_mode ?? "today";
     const daysToNextShopping = daysUntilNextShopping(p.shopping_days);
     const start = data.scheduled_start_date
@@ -432,10 +432,10 @@ Jede Mahlzeit MUSS aus dieser Erlaubt-Liste komponiert sein. Wenn du im Descript
           return d;
         })();
     const overrideDays = data.plan_days != null
-      ? Math.max(1, Math.min(30, Math.round(data.plan_days)))
+      ? Math.max(1, Math.min(31, Math.round(data.plan_days)))
       : null;
-    // Default für Smart: 28 Tage (4 Wochen, 1 Monat ab Kaufdatum / heute).
-    const planDays = overrideDays ?? 28;
+    // Default für Smart: 31 Tage (ca. 1 Monat ab Kaufdatum / heute).
+    const planDays = overrideDays ?? 31;
 
 
 
