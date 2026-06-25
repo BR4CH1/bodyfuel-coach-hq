@@ -15,11 +15,17 @@ function normalizeShoppingItemKey(name: string) {
     .replace(/:\s*\d+(?:[,.]\d+)?\s*(kg|g|ml|l|stk\.?|stück)?\s*$/i, "")
     .replace(/:\s*$/g, "")
     .replace(
-      /\b(ca\.|ungekocht|gekocht|gegart|gebraten|gedünstet|roh|trocken|frisch|tiefgekühlt|tk|light|fettarm|zuckerarm|magere?r?|natur|pur|optional)\b/gi,
+      /\b(ca\.|ungekocht|gekocht|gekochte|gekochter|gekochtes|gegart|gebraten|gedünstet|roh|trocken|frisch|tiefgekühlt|tk|light|fettarm|zuckerarm|magere?r?|natur|pur|optional)\b/gi,
       "",
     )
+    .replace(/^ekochtes\s+ei\b/i, "eier")
     .replace(/^[-•·]\s*/, "")
     .replace(/^(eine?|ein|der|die|das|etwas|frische?r?|frisches?)\s+/i, "")
+    .replace(/^(salat)?gurken?\b/i, "gurke")
+    .replace(/^vollkorn[-\s]?tortillas?\b/i, "vollkorn-tortillas")
+    .replace(/^scheiben?\s+vollkornbrot\b/i, "vollkornbrot")
+    .replace(/^(ei|eier|eiweiß)\b/i, "eier")
+    .replace(/^(rinder|puten|hähnchen|haehnchen)?hack(fleisch)?\b/i, "putenhack")
     .replace(/\s+/g, " ")
     .trim()
     .toLowerCase();
@@ -116,8 +122,14 @@ export const generateShoppingList = createServerFn({ method: "POST" })
         (cached as any).days === windowDays
       ) {
         const { cleanShoppingItems } = await import("./shopping-list-engine.server");
+        const cleanedItems = cleanShoppingItems((cached as any).items as ShoppingItem[]);
+        await supabaseAdmin
+          .from("shopping_lists")
+          .update({ items: cleanedItems })
+          .eq("plan_id", planId)
+          .eq("scope", data.scope === "combined" ? "partner_combined" : "individual");
         return {
-          items: cleanShoppingItems((cached as any).items as ShoppingItem[]),
+          items: cleanedItems,
           days: (cached as any).days as number,
           cached: true,
         };
@@ -234,6 +246,7 @@ export const setShoppingItemChecked = createServerFn({ method: "POST" })
     }
 
     const itemKey = normalizeShoppingItemKey(data.item_key);
+    const { cleanShoppingItems } = await import("./shopping-list-engine.server");
     const { data: rows } = await supabaseAdmin
       .from("shopping_lists")
       .select("plan_id, scope, items")
@@ -245,7 +258,11 @@ export const setShoppingItemChecked = createServerFn({ method: "POST" })
         supabaseAdmin
           .from("shopping_lists")
           .update({
-            items: applyCheckedToItems((row.items ?? []) as ShoppingItem[], itemKey, data.checked),
+            items: applyCheckedToItems(
+              cleanShoppingItems((row.items ?? []) as ShoppingItem[]),
+              itemKey,
+              data.checked,
+            ),
           })
           .eq("plan_id", row.plan_id)
           .eq("scope", row.scope),
