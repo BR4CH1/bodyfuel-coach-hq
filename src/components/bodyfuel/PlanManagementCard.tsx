@@ -172,25 +172,22 @@ export function PlanManagementCard({ userId }: { userId: string }) {
   });
 
   const partnerGen = useMutation({
-    mutationFn: (start_mode: "today" | "next_shopping") => {
-      const planDays =
-        durationMode === "fixed"
-          ? Math.max(1, Math.min(21, parseInt(fixedDays, 10) || 7))
-          : null;
+    mutationFn: () => {
+      const planDays = computePlanDays();
       return partnerGenFn({
         data: {
           user_a: userId,
           user_b: partnerLink.data!.partner_id,
-          start_mode,
+          start_mode: "today",
+          scheduled_start_date: startDate,
           plan_days: planDays,
         },
       });
     },
-    onSuccess: (_d, mode) => {
+    onSuccess: () => {
+      const days = computePlanDays();
       toast.success(
-        mode === "today"
-          ? "Gemeinsamer Plan ab heute erstellt (für beide Personen)."
-          : "Gemeinsamer Plan ab nächstem Einkauf erstellt (für beide Personen).",
+        `Gemeinsamer Plan erstellt (${startDate} → ${endDate}, ${days} Tag${days === 1 ? "" : "e"}).`,
       );
       invalidate();
     },
