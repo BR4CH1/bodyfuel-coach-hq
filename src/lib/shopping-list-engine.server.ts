@@ -322,7 +322,7 @@ function normalizeQuantity(quantity: Quantity | null, rule: IngredientRule, opts
     return { amount: Math.max(0.5, q.amount / rule.pieceGram), unit: "Stück", estimated: true };
   }
   if (rule.preferredUnit === "Stück" && q.unit !== "Stück" && !["g", "ml"].includes(q.unit)) {
-    return { amount: q.amount, unit: "Stück", estimated: q.unit !== "Stück" };
+    return { amount: q.amount, unit: "Stück", estimated: true };
   }
   return q;
 }
@@ -626,7 +626,7 @@ Antworte ausschließlich mit gültigem JSON:
 {"items":[{"name":"Hähnchenbrust","quantity":"1.4 kg","category":"Fleisch & Fisch"}]}`;
 
   const parsedItems = fallbackItemsFromLines(lines);
-  const items = mergeItems(parsedItems.length ? parsedItems : await callAi(prompt, apiKey));
+  const items = normalizeShoppingListItems(parsedItems.length ? parsedItems : await callAi(prompt, apiKey));
 
   await supabaseAdmin.from("shopping_lists").upsert(
     {
@@ -685,7 +685,7 @@ Antworte ausschließlich mit gültigem JSON:
 {"items":[{"name":"Hähnchenbrust","quantity":"1.4 kg","category":"Fleisch & Fisch"}]}`;
 
   const parsedItems = fallbackItemsFromLines([...linesA, ...linesB]);
-  const items = mergeItems(parsedItems.length ? parsedItems : await callAi(prompt, apiKey));
+  const items = normalizeShoppingListItems(parsedItems.length ? parsedItems : await callAi(prompt, apiKey));
 
   const now = new Date().toISOString();
   await supabaseAdmin.from("shopping_lists").upsert(
