@@ -15,11 +15,17 @@ function normalizeShoppingItemKey(name: string) {
     .replace(/:\s*\d+(?:[,.]\d+)?\s*(kg|g|ml|l|stk\.?|stück)?\s*$/i, "")
     .replace(/:\s*$/g, "")
     .replace(
-      /\b(ca\.|ungekocht|gekocht|gegart|gebraten|gedünstet|roh|trocken|frisch|tiefgekühlt|tk|light|fettarm|zuckerarm|magere?r?|natur|pur|optional)\b/gi,
+      /\b(ca\.|ungekocht|gekocht|gekochte|gekochter|gekochtes|gegart|gebraten|gedünstet|roh|trocken|frisch|tiefgekühlt|tk|light|fettarm|zuckerarm|magere?r?|natur|pur|optional)\b/gi,
       "",
     )
+    .replace(/^ekochtes\s+ei\b/i, "eier")
     .replace(/^[-•·]\s*/, "")
     .replace(/^(eine?|ein|der|die|das|etwas|frische?r?|frisches?)\s+/i, "")
+    .replace(/^(salat)?gurken?\b/i, "gurke")
+    .replace(/^vollkorn[-\s]?tortillas?\b/i, "vollkorn-tortillas")
+    .replace(/^scheiben?\s+vollkornbrot\b/i, "vollkornbrot")
+    .replace(/^(ei|eier|eiweiß)\b/i, "eier")
+    .replace(/^(rinder|puten|hähnchen|haehnchen)?hack(fleisch)?\b/i, "putenhack")
     .replace(/\s+/g, " ")
     .trim()
     .toLowerCase();
