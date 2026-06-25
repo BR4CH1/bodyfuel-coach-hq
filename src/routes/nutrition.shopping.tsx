@@ -217,6 +217,7 @@ function ShoppingListPage() {
     "Eier & Milchprodukte",
     "Getreide & Beilagen",
     "Vorrat & Gewürze",
+    "Getränke",
     "Sonstiges",
   ];
   const groupedEntries = Object.entries(grouped)
