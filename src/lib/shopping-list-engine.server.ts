@@ -161,6 +161,7 @@ function isNonIngredientText(text: string) {
   const t = compactText(text).toLowerCase();
   if (!t || !/[a-zäöüß]/i.test(t)) return true;
   if (/^für\s+.+\s+—\s+insgesamt\b/i.test(text)) return true;
+  if (/^für\s+(?!dressing|sauce|soße|sosse|marinade|topping|füllung|fuellung)\b/i.test(text)) return true;
   if (/^für\s+[a-zäöüß]+\s+[a-zäöüß]+\b.*\binsgesamt\b/i.test(text)) return true;
   if (/\binsgesamt\s+\d+(?:[,.]\d+)?\s*(g|kg|ml|l)\b/i.test(text) && /^für\b/i.test(text)) return true;
   if (/^(portion(en)?|person(en)?|ergibt|rezept|hinweis|notiz|zubereitung|gesamt|summe)\b/i.test(text)) return true;
@@ -276,7 +277,7 @@ function normalizeIngredientName(name: string) {
 function canonicalize(rawName: string): IngredientRule | null {
   let n = normalizeIngredientName(rawName);
   if (!n || isNonIngredientText(n)) return null;
-  if (/^wasser$/i.test(n)) return null;
+  if (/^(wasser|leitungswasser|stilles\s+wasser|sprudelwasser)\b/i.test(n)) return null;
   if (/^(gehackt|gekocht|gegart|gebraten|gedünstet|geduenstet|gewürfelt|gewuerfelt|geschnitten|frisch|optional)$/i.test(n)) return null;
   n = n.replace(/\s*-\s*/g, "-").trim();
   const lower = n.toLowerCase();

@@ -240,6 +240,7 @@ export const setShoppingItemChecked = createServerFn({ method: "POST" })
     }
 
     const itemKey = normalizeShoppingItemKey(data.item_key);
+    const { cleanShoppingItems } = await import("./shopping-list-engine.server");
     const { data: rows } = await supabaseAdmin
       .from("shopping_lists")
       .select("plan_id, scope, items")
@@ -251,7 +252,11 @@ export const setShoppingItemChecked = createServerFn({ method: "POST" })
         supabaseAdmin
           .from("shopping_lists")
           .update({
-            items: applyCheckedToItems((row.items ?? []) as ShoppingItem[], itemKey, data.checked),
+            items: applyCheckedToItems(
+              cleanShoppingItems((row.items ?? []) as ShoppingItem[]),
+              itemKey,
+              data.checked,
+            ),
           })
           .eq("plan_id", row.plan_id)
           .eq("scope", row.scope),
