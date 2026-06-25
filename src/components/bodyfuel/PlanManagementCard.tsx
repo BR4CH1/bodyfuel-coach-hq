@@ -81,8 +81,22 @@ export function PlanManagementCard({ userId }: { userId: string }) {
     qc.invalidateQueries({ queryKey: ["nutrition-targets", userId] });
   };
 
-  const [durationMode, setDurationMode] = useState<"shopping" | "fixed">("shopping");
-  const [fixedDays, setFixedDays] = useState<string>("7");
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const defaultEndISO = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 6);
+    return d.toISOString().slice(0, 10);
+  })();
+  const [startDate, setStartDate] = useState<string>(todayISO);
+  const [endDate, setEndDate] = useState<string>(defaultEndISO);
+
+  const computePlanDays = (): number => {
+    const s = new Date(startDate);
+    const e = new Date(endDate);
+    if (isNaN(s.getTime()) || isNaN(e.getTime())) return 7;
+    const diff = Math.round((e.getTime() - s.getTime()) / 86400000) + 1;
+    return Math.max(1, Math.min(21, diff));
+  };
 
   const smartProfile = useQuery({
     queryKey: ["smart-profile", userId],
