@@ -104,6 +104,25 @@ function ShoppingListPage() {
     ? (((selected as any)?.combined?.items ?? []) as Item[])
     : (((selected as any)?.list?.items as Item[]) ?? []);
 
+  // "Einkaufen bis"-Datum (optional override für das Einkaufsfenster)
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const planStartISO = (selected as any)?.scheduled_start_date as string | undefined;
+  const planEndISO = (selected as any)?.scheduled_end_date as string | undefined;
+  const referenceStartISO = planStartISO && planStartISO > todayISO ? planStartISO : todayISO;
+  const [untilDate, setUntilDate] = useState<string>("");
+  useEffect(() => {
+    setUntilDate("");
+  }, [periodScope, partnerMode]);
+
+  const customDays = useMemo(() => {
+    if (!untilDate) return null;
+    const start = new Date(referenceStartISO);
+    const end = new Date(untilDate);
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return null;
+    const diff = Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
+    return Math.max(1, Math.min(31, diff));
+  }, [untilDate, referenceStartISO]);
+
   // Plan content fetch
   const planIdForView = (selected as any)?.id ?? null;
   const { data: planContent, isFetching: planLoading } = useQuery({
@@ -120,6 +139,7 @@ function ShoppingListPage() {
           plan_id: (selected as any)?.id,
           force: true,
           scope: useCombined ? "combined" : "individual",
+          ...(customDays ? { days: customDays } : {}),
         },
       }),
     onSuccess: () => {
@@ -128,6 +148,7 @@ function ShoppingListPage() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   const setItemChecked = useMutation({
     mutationFn: (payload: { itemKey: string; checked: boolean }) =>
