@@ -377,16 +377,7 @@ function AppScreenshots() {
 /* ------------------------------------------------------------------ */
 
 function Header() {
-  const { supabaseUser, isCoach, isFreeUser, loading } = useSession();
-  const appTarget = loading
-    ? "/auth"
-    : supabaseUser
-    ? isCoach
-      ? "/coach"
-      : isFreeUser
-      ? "/tracker/app"
-      : "/dashboard"
-    : "/auth";
+  const { supabaseUser } = useSession();
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur-md">
@@ -409,7 +400,7 @@ function Header() {
         </nav>
         <div className="relative z-50 flex shrink-0 items-center gap-2">
           <Link
-            to={appTarget}
+            to="/app"
             className="relative z-50 inline-flex h-8 shrink-0 touch-manipulation select-none items-center justify-center rounded-md border border-gold/40 bg-background px-3 text-xs font-medium text-foreground shadow-sm transition hover:bg-gold/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           >
             {supabaseUser ? "App" : "Login"}
@@ -1471,16 +1462,7 @@ function ContactForm() {
 /* ------------------------------------------------------------------ */
 
 function Footer() {
-  const { supabaseUser, isCoach, isFreeUser, loading } = useSession();
-  const appTarget = loading
-    ? "/auth"
-    : supabaseUser
-    ? isCoach
-      ? "/coach"
-      : isFreeUser
-      ? "/tracker/app"
-      : "/dashboard"
-    : "/auth";
+  const { supabaseUser } = useSession();
 
   return (
     <footer className="border-t border-border bg-background py-12">
@@ -1517,7 +1499,7 @@ function Footer() {
         </div>
         <div className="mt-10 flex flex-col items-start justify-between gap-3 border-t border-border pt-6 text-xs text-muted-foreground sm:flex-row sm:items-center">
           <div>© {new Date().getFullYear()} BODYFUEL Nutrition Coaching. Alle Rechte vorbehalten.</div>
-          <Link to={appTarget} className="hover:text-foreground">
+          <Link to="/app" className="hover:text-foreground">
             {supabaseUser ? "Zur App →" : "Kunden-Login →"}
           </Link>
         </div>
