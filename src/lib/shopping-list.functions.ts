@@ -122,8 +122,14 @@ export const generateShoppingList = createServerFn({ method: "POST" })
         (cached as any).days === windowDays
       ) {
         const { cleanShoppingItems } = await import("./shopping-list-engine.server");
+        const cleanedItems = cleanShoppingItems((cached as any).items as ShoppingItem[]);
+        await supabaseAdmin
+          .from("shopping_lists")
+          .update({ items: cleanedItems })
+          .eq("plan_id", planId)
+          .eq("scope", data.scope === "combined" ? "partner_combined" : "individual");
         return {
-          items: cleanShoppingItems((cached as any).items as ShoppingItem[]),
+          items: cleanedItems,
           days: (cached as any).days as number,
           cached: true,
         };
