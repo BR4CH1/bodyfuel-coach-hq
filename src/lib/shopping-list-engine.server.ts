@@ -34,6 +34,7 @@ const CATEGORY_ORDER = [
   "Eier & Milchprodukte",
   "Getreide & Beilagen",
   "Vorrat & Gewürze",
+  "Getränke",
   "Sonstiges",
 ];
 
@@ -70,7 +71,7 @@ const INGREDIENT_RULES: Array<[RegExp, IngredientRule]> = [
   [/^(süßkartoffeln?|suesskartoffeln?)\b.*/, { key: "süßkartoffeln", display: "Süßkartoffeln", category: "Obst & Gemüse" }],
   [/^haferflocken\b.*/, { key: "haferflocken", display: "Haferflocken", category: "Getreide & Beilagen" }],
   [/^(müsli|muesli)\b.*/, { key: "müsli", display: "Müsli", category: "Getreide & Beilagen" }],
-  [/^(vollkorn\s*)?tortillas?\b.*/, { key: "vollkorn-tortillas", display: "Vollkorn-Tortillas", category: "Getreide & Beilagen", preferredUnit: "Stück", pieceGram: 60 }],
+  [/^(vollkorn[-\s]*)?tortillas?\b.*/, { key: "vollkorn-tortillas", display: "Vollkorn-Tortillas", category: "Getreide & Beilagen", preferredUnit: "Stück", pieceGram: 60 }],
   [/^wraps?\b.*/, { key: "wraps", display: "Wraps", category: "Getreide & Beilagen", preferredUnit: "Stück", pieceGram: 60 }],
   [/^vollkornbrot\b.*/, { key: "vollkornbrot", display: "Vollkornbrot", category: "Getreide & Beilagen", preferredUnit: "Scheiben", sliceGram: 45 }],
   [/^(eiweiß|protein)brot\b.*/, { key: "eiweißbrot", display: "Eiweißbrot", category: "Getreide & Beilagen", preferredUnit: "Scheiben", sliceGram: 45 }],
@@ -209,6 +210,13 @@ function parseQuantityText(text: string): Quantity | null {
   return { amount: normalizedAmount, unit: normalizedUnit };
 }
 
+function parseQuantityList(text: string): Quantity[] {
+  return compactText(text)
+    .split(/\s*\+\s*|\s*;\s*/)
+    .map((part) => parseQuantityText(part))
+    .filter((q): q is Quantity => !!q);
+}
+
 function takeQuantityFromText(text: string): { name: string; quantity: Quantity | null; cooked: boolean; rawHadSlice: boolean; rawHadPinch: boolean } {
   let t = stripNonIngredientNotes(text).replace(/^ekochtes\s+ei\b/i, "Gekochtes Ei");
   const cooked = /\b(gekocht|gekochte|gekochter|gekochtes|gegart|gegarte|gegarter|gegartes)\b/i.test(t);
@@ -327,19 +335,22 @@ function normalizeQuantity(quantity: Quantity | null, rule: IngredientRule, opts
   return q;
 }
 
-function parseShoppingItem(source: ShoppingItem): { rule: IngredientRule; quantity: Quantity; checked: boolean } | null {
+function parseShoppingItem(source: ShoppingItem): { rule: IngredientRule; quantities: Quantity[]; checked: boolean } | null {
   const rawName = compactText(source.name);
   if (!rawName || isNonIngredientText(rawName)) return null;
   const inline = takeQuantityFromText(rawName);
-  const quantityFromField = source.quantity ? parseQuantityText(source.quantity) : null;
+  const quantitiesFromField = source.quantity ? parseQuantityList(source.quantity) : [];
   const rule = canonicalize(inline.name || rawName);
   if (!rule) return null;
-  const quantity = normalizeQuantity(quantityFromField ?? inline.quantity, rule, {
-    cooked: inline.cooked,
-    rawHadSlice: inline.rawHadSlice,
-    rawHadPinch: inline.rawHadPinch,
-  });
-  return { rule, quantity, checked: !!source.checked };
+  const rawQuantities = quantitiesFromField.length ? quantitiesFromField : [inline.quantity];
+  const quantities = rawQuantities.map((quantity) =>
+    normalizeQuantity(quantity, rule, {
+      cooked: inline.cooked,
+      rawHadSlice: inline.rawHadSlice,
+      rawHadPinch: inline.rawHadPinch,
+    }),
+  );
+  return { rule, quantities, checked: !!source.checked };
 }
 
 function addQuantity(map: Map<Unit, { amount: number; estimated: boolean }>, q: Quantity) {
@@ -446,7 +457,7 @@ export function normalizeShoppingListItems(items: ShoppingItem[]): ShoppingItem[
       units: new Map<Unit, { amount: number; estimated: boolean }>(),
       checked: false,
     };
-    addQuantity(group.units, parsed.quantity);
+    for (const quantity of parsed.quantities) addQuantity(group.units, quantity);
     group.checked = group.checked || parsed.checked;
     groups.set(parsed.rule.key, group);
   }
@@ -617,7 +628,7 @@ export async function generateShoppingListForPlan(opts: {
 WICHTIG — Mengen sauber zusammenfassen:
 - Identische Zutaten in EINER Zeile mit summierter Menge (nie 3× "250 g Hähnchen", sondern "750 g Hähnchen").
 - Einheiten vereinheitlichen (g, kg, ml, l, Stück).
-- Kategorien: Obst & Gemüse, Fleisch & Fisch, Milchprodukte, Getreide & Beilagen, Vorrat & Gewürze, Sonstiges.
+- Kategorien: Obst & Gemüse, Fleisch & Fisch, Eier & Milchprodukte, Getreide & Beilagen, Vorrat & Gewürze, Getränke, Sonstiges.
 
 MAHLZEITEN:
 ${lines.join("\n")}
@@ -676,7 +687,7 @@ WICHTIG:
 - Identische/ähnliche Zutaten beider Personen IN EINER Zeile zusammenfassen und Mengen ADDIEREN (z. B. 500 g + 900 g Hähnchen = 1.4 kg Hähnchenbrust).
 - Gemeinsame Mahlzeiten (z. B. Abendessen) sind im Plan oft mit "Gemeinsam mit ..." markiert — Mengen so kalkulieren, dass beide Personen davon essen können (also für 2 Portionen, nicht doppelt).
 - Einheiten vereinheitlichen (g, kg, ml, l, Stück).
-- Kategorien: Obst & Gemüse, Fleisch & Fisch, Milchprodukte, Getreide & Beilagen, Vorrat & Gewürze, Sonstiges.
+- Kategorien: Obst & Gemüse, Fleisch & Fisch, Eier & Milchprodukte, Getreide & Beilagen, Vorrat & Gewürze, Getränke, Sonstiges.
 
 MAHLZEITEN BEIDER PERSONEN:
 ${mealsText}
