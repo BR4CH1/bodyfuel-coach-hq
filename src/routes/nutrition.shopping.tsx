@@ -330,6 +330,42 @@ function ShoppingListPage() {
             </div>
           )}
 
+          {/* Einkaufen bis (optionales Datum) */}
+          {!isArchive && selected && (
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Einkaufen bis (optional)
+              </label>
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  type="date"
+                  value={untilDate}
+                  min={referenceStartISO}
+                  max={planEndISO || undefined}
+                  onChange={(e) => setUntilDate(e.target.value)}
+                  className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+                />
+                {untilDate && (
+                  <button
+                    type="button"
+                    onClick={() => setUntilDate("")}
+                    className="text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                  >
+                    Zurücksetzen
+                  </button>
+                )}
+                {customDays && (
+                  <span className="text-xs text-muted-foreground">
+                    {customDays} Tag{customDays === 1 ? "" : "e"} ab {new Date(referenceStartISO).toLocaleDateString("de-DE")}
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Standardmäßig bis zum nächsten Einkaufstag. Wähle ein Datum, um nur bis dahin einzukaufen.
+              </p>
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex flex-wrap items-center gap-3">
             {!isArchive && (
@@ -360,6 +396,7 @@ function ShoppingListPage() {
               </Button>
             )}
           </div>
+
 
           {selected && (
             <div className="flex flex-wrap items-center gap-2 rounded-lg bg-secondary/40 px-3 py-2 text-xs">
