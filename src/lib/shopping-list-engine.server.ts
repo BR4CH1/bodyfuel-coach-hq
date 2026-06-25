@@ -197,7 +197,7 @@ function normalizeUnit(unit: string | undefined): Unit | null {
 }
 
 function parseQuantityText(text: string): Quantity | null {
-  const q = compactText(text);
+  const q = compactText(text).replace(/^(ca\.|circa)\s+/i, "");
   const m = q.match(/^(\d+\s*\/\s*\d+|\d+(?:[,.]\d+)?|ein(?:e|en|em|er)?|halb(?:e|er|es)?)\s*(kg|kilogramm|g|gramm|ml|milliliter|l|liter|el|esslöffel|essloeffel|tl|teelöffel|teeloeffel|prisen?|scheiben?|stück|stueck|stk\.?|bund|eier?|ei)?\b/i);
   if (!m) return null;
   const amount = parseNumberToken(m[1]);
