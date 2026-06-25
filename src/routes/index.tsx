@@ -403,7 +403,7 @@ function Header() {
             to="/app"
             className="relative z-50 inline-flex h-8 shrink-0 touch-manipulation select-none items-center justify-center rounded-md border border-gold/40 bg-background px-3 text-xs font-medium text-foreground shadow-sm transition hover:bg-gold/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           >
-            {supabaseUser ? "App" : "Login"}
+            Login
           </Link>
           <a href="#kontakt">
             <Button size="sm" className="bg-gradient-gold text-primary-foreground hover:opacity-90">
@@ -1500,7 +1500,7 @@ function Footer() {
         <div className="mt-10 flex flex-col items-start justify-between gap-3 border-t border-border pt-6 text-xs text-muted-foreground sm:flex-row sm:items-center">
           <div>© {new Date().getFullYear()} BODYFUEL Nutrition Coaching. Alle Rechte vorbehalten.</div>
           <Link to="/app" className="hover:text-foreground">
-            {supabaseUser ? "Zur App →" : "Kunden-Login →"}
+            Kunden-Login →
           </Link>
         </div>
       </div>
