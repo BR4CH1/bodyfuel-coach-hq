@@ -120,29 +120,21 @@ export function PlanManagementCard({ userId }: { userId: string }) {
   });
 
   const gen = useMutation({
-    mutationFn: (start_mode: "today" | "next_shopping") => {
-      const planDays =
-        durationMode === "fixed"
-          ? Math.max(1, Math.min(21, parseInt(fixedDays, 10) || 7))
-          : null;
+    mutationFn: () => {
+      const planDays = computePlanDays();
       return genFn({
         data: {
           user_id: userId,
-          start_mode,
+          start_mode: "today",
+          scheduled_start_date: startDate,
           plan_days: planDays,
         },
       });
     },
-    onSuccess: (_d, mode) => {
-      const daysNum = Math.max(1, Math.min(21, parseInt(fixedDays, 10) || 7));
-      const dauerHint =
-        durationMode === "fixed"
-          ? ` für ${daysNum} Tag${daysNum === 1 ? "" : "e"}`
-          : "";
+    onSuccess: () => {
+      const days = computePlanDays();
       toast.success(
-        mode === "today"
-          ? `Plan-Entwurf ab heute${dauerHint} erstellt.`
-          : `Plan-Entwurf ab nächstem Einkauf${dauerHint} erstellt.`,
+        `Plan-Entwurf erstellt (${startDate} → ${endDate}, ${days} Tag${days === 1 ? "" : "e"}).`,
       );
       invalidate();
     },
