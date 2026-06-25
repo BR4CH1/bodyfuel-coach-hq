@@ -32,6 +32,7 @@ import { Route as CommunityRouteImport } from './routes/community'
 import { Route as CoachRouteImport } from './routes/coach'
 import { Route as CheckInRouteImport } from './routes/check-in'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AppRouteImport } from './routes/app'
 import { Route as AchievementsRouteImport } from './routes/achievements'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TrackerIndexRouteImport } from './routes/tracker.index'
@@ -205,6 +206,11 @@ const CheckInRoute = CheckInRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppRoute = AppRouteImport.update({
+  id: '/app',
+  path: '/app',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AchievementsRoute = AchievementsRouteImport.update({
@@ -518,6 +524,7 @@ const ApiPublicHooksCoachDailySummaryRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/achievements': typeof AchievementsRoute
+  '/app': typeof AppRoute
   '/auth': typeof AuthRoute
   '/check-in': typeof CheckInRoute
   '/coach': typeof CoachRouteWithChildren
@@ -602,6 +609,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/achievements': typeof AchievementsRoute
+  '/app': typeof AppRoute
   '/auth': typeof AuthRoute
   '/check-in': typeof CheckInRoute
   '/community': typeof CommunityRoute
@@ -682,6 +690,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/achievements': typeof AchievementsRoute
+  '/app': typeof AppRoute
   '/auth': typeof AuthRoute
   '/check-in': typeof CheckInRoute
   '/coach': typeof CoachRouteWithChildren
@@ -768,6 +777,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/achievements'
+    | '/app'
     | '/auth'
     | '/check-in'
     | '/coach'
@@ -852,6 +862,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/achievements'
+    | '/app'
     | '/auth'
     | '/check-in'
     | '/community'
@@ -931,6 +942,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/achievements'
+    | '/app'
     | '/auth'
     | '/check-in'
     | '/coach'
@@ -1016,6 +1028,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AchievementsRoute: typeof AchievementsRoute
+  AppRoute: typeof AppRoute
   AuthRoute: typeof AuthRoute
   CheckInRoute: typeof CheckInRoute
   CoachRoute: typeof CoachRouteWithChildren
@@ -1230,6 +1243,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/app': {
+      id: '/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/achievements': {
@@ -1755,6 +1775,7 @@ const TrackerAppRouteWithChildren = TrackerAppRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AchievementsRoute: AchievementsRoute,
+  AppRoute: AppRoute,
   AuthRoute: AuthRoute,
   CheckInRoute: CheckInRoute,
   CoachRoute: CoachRouteWithChildren,

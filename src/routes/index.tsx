@@ -36,6 +36,7 @@ import {
   Zap,
 } from "lucide-react";
 import { Logo } from "@/components/bodyfuel/Logo";
+import { useSession } from "@/lib/bodyfuel/session";
 import { useServerFn } from "@tanstack/react-start";
 import { submitLead } from "@/lib/coaching.functions";
 import { Button } from "@/components/ui/button";
@@ -376,6 +377,8 @@ function AppScreenshots() {
 /* ------------------------------------------------------------------ */
 
 function Header() {
+  const { supabaseUser } = useSession();
+
   return (
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
@@ -396,12 +399,12 @@ function Header() {
           <a href="#kontakt" className="transition hover:text-foreground">Kontakt</a>
         </nav>
         <div className="relative z-50 flex shrink-0 items-center gap-2">
-          <a
-            href="/auth"
+          <Link
+            to="/app"
             className="relative z-50 inline-flex h-8 shrink-0 touch-manipulation select-none items-center justify-center rounded-md border border-gold/40 bg-background px-3 text-xs font-medium text-foreground shadow-sm transition hover:bg-gold/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           >
-            Login
-          </a>
+            {supabaseUser ? "App" : "Login"}
+          </Link>
           <a href="#kontakt">
             <Button size="sm" className="bg-gradient-gold text-primary-foreground hover:opacity-90">
               Erstgespräch
@@ -1459,6 +1462,8 @@ function ContactForm() {
 /* ------------------------------------------------------------------ */
 
 function Footer() {
+  const { supabaseUser } = useSession();
+
   return (
     <footer className="border-t border-border bg-background py-12">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
@@ -1494,7 +1499,9 @@ function Footer() {
         </div>
         <div className="mt-10 flex flex-col items-start justify-between gap-3 border-t border-border pt-6 text-xs text-muted-foreground sm:flex-row sm:items-center">
           <div>© {new Date().getFullYear()} BODYFUEL Nutrition Coaching. Alle Rechte vorbehalten.</div>
-          <Link to="/auth" className="hover:text-foreground">Kunden-Login →</Link>
+          <Link to="/app" className="hover:text-foreground">
+            {supabaseUser ? "Zur App →" : "Kunden-Login →"}
+          </Link>
         </div>
       </div>
     </footer>
