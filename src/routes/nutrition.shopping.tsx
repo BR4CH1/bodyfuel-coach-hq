@@ -104,6 +104,25 @@ function ShoppingListPage() {
     ? (((selected as any)?.combined?.items ?? []) as Item[])
     : (((selected as any)?.list?.items as Item[]) ?? []);
 
+  // "Einkaufen bis"-Datum (optional override für das Einkaufsfenster)
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const planStartISO = (selected as any)?.scheduled_start_date as string | undefined;
+  const planEndISO = (selected as any)?.scheduled_end_date as string | undefined;
+  const referenceStartISO = planStartISO && planStartISO > todayISO ? planStartISO : todayISO;
+  const [untilDate, setUntilDate] = useState<string>("");
+  useEffect(() => {
+    setUntilDate("");
+  }, [periodScope, partnerMode]);
+
+  const customDays = useMemo(() => {
+    if (!untilDate) return null;
+    const start = new Date(referenceStartISO);
+    const end = new Date(untilDate);
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return null;
+    const diff = Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
+    return Math.max(1, Math.min(31, diff));
+  }, [untilDate, referenceStartISO]);
+
   // Plan content fetch
   const planIdForView = (selected as any)?.id ?? null;
   const { data: planContent, isFetching: planLoading } = useQuery({
@@ -120,6 +139,7 @@ function ShoppingListPage() {
           plan_id: (selected as any)?.id,
           force: true,
           scope: useCombined ? "combined" : "individual",
+          ...(customDays ? { days: customDays } : {}),
         },
       }),
     onSuccess: () => {
@@ -128,6 +148,7 @@ function ShoppingListPage() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   const setItemChecked = useMutation({
     mutationFn: (payload: { itemKey: string; checked: boolean }) =>
@@ -309,6 +330,42 @@ function ShoppingListPage() {
             </div>
           )}
 
+          {/* Einkaufen bis (optionales Datum) */}
+          {!isArchive && selected && (
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Einkaufen bis (optional)
+              </label>
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  type="date"
+                  value={untilDate}
+                  min={referenceStartISO}
+                  max={planEndISO || undefined}
+                  onChange={(e) => setUntilDate(e.target.value)}
+                  className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+                />
+                {untilDate && (
+                  <button
+                    type="button"
+                    onClick={() => setUntilDate("")}
+                    className="text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                  >
+                    Zurücksetzen
+                  </button>
+                )}
+                {customDays && (
+                  <span className="text-xs text-muted-foreground">
+                    {customDays} Tag{customDays === 1 ? "" : "e"} ab {new Date(referenceStartISO).toLocaleDateString("de-DE")}
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Standardmäßig bis zum nächsten Einkaufstag. Wähle ein Datum, um nur bis dahin einzukaufen.
+              </p>
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex flex-wrap items-center gap-3">
             {!isArchive && (
@@ -339,6 +396,7 @@ function ShoppingListPage() {
               </Button>
             )}
           </div>
+
 
           {selected && (
             <div className="flex flex-wrap items-center gap-2 rounded-lg bg-secondary/40 px-3 py-2 text-xs">
