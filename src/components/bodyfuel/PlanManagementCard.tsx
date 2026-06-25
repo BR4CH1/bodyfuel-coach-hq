@@ -81,8 +81,22 @@ export function PlanManagementCard({ userId }: { userId: string }) {
     qc.invalidateQueries({ queryKey: ["nutrition-targets", userId] });
   };
 
-  const [durationMode, setDurationMode] = useState<"shopping" | "fixed">("shopping");
-  const [fixedDays, setFixedDays] = useState<string>("7");
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const defaultEndISO = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 6);
+    return d.toISOString().slice(0, 10);
+  })();
+  const [startDate, setStartDate] = useState<string>(todayISO);
+  const [endDate, setEndDate] = useState<string>(defaultEndISO);
+
+  const computePlanDays = (): number => {
+    const s = new Date(startDate);
+    const e = new Date(endDate);
+    if (isNaN(s.getTime()) || isNaN(e.getTime())) return 7;
+    const diff = Math.round((e.getTime() - s.getTime()) / 86400000) + 1;
+    return Math.max(1, Math.min(21, diff));
+  };
 
   const smartProfile = useQuery({
     queryKey: ["smart-profile", userId],
@@ -106,29 +120,21 @@ export function PlanManagementCard({ userId }: { userId: string }) {
   });
 
   const gen = useMutation({
-    mutationFn: (start_mode: "today" | "next_shopping") => {
-      const planDays =
-        durationMode === "fixed"
-          ? Math.max(1, Math.min(21, parseInt(fixedDays, 10) || 7))
-          : null;
+    mutationFn: () => {
+      const planDays = computePlanDays();
       return genFn({
         data: {
           user_id: userId,
-          start_mode,
+          start_mode: "today",
+          scheduled_start_date: startDate,
           plan_days: planDays,
         },
       });
     },
-    onSuccess: (_d, mode) => {
-      const daysNum = Math.max(1, Math.min(21, parseInt(fixedDays, 10) || 7));
-      const dauerHint =
-        durationMode === "fixed"
-          ? ` für ${daysNum} Tag${daysNum === 1 ? "" : "e"}`
-          : "";
+    onSuccess: () => {
+      const days = computePlanDays();
       toast.success(
-        mode === "today"
-          ? `Plan-Entwurf ab heute${dauerHint} erstellt.`
-          : `Plan-Entwurf ab nächstem Einkauf${dauerHint} erstellt.`,
+        `Plan-Entwurf erstellt (${startDate} → ${endDate}, ${days} Tag${days === 1 ? "" : "e"}).`,
       );
       invalidate();
     },
@@ -166,25 +172,22 @@ export function PlanManagementCard({ userId }: { userId: string }) {
   });
 
   const partnerGen = useMutation({
-    mutationFn: (start_mode: "today" | "next_shopping") => {
-      const planDays =
-        durationMode === "fixed"
-          ? Math.max(1, Math.min(21, parseInt(fixedDays, 10) || 7))
-          : null;
+    mutationFn: () => {
+      const planDays = computePlanDays();
       return partnerGenFn({
         data: {
           user_a: userId,
           user_b: partnerLink.data!.partner_id,
-          start_mode,
+          start_mode: "today",
+          scheduled_start_date: startDate,
           plan_days: planDays,
         },
       });
     },
-    onSuccess: (_d, mode) => {
+    onSuccess: () => {
+      const days = computePlanDays();
       toast.success(
-        mode === "today"
-          ? "Gemeinsamer Plan ab heute erstellt (für beide Personen)."
-          : "Gemeinsamer Plan ab nächstem Einkauf erstellt (für beide Personen).",
+        `Gemeinsamer Plan erstellt (${startDate} → ${endDate}, ${days} Tag${days === 1 ? "" : "e"}).`,
       );
       invalidate();
     },
@@ -202,95 +205,62 @@ export function PlanManagementCard({ userId }: { userId: string }) {
         </div>
         <div className="flex flex-wrap gap-2">
           <button
-            onClick={() => gen.mutate("today")}
+            onClick={() => gen.mutate()}
             disabled={gen.isPending}
             className="inline-flex items-center gap-2 rounded-lg bg-gradient-gold px-3 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-60"
           >
             <Sparkles className="h-4 w-4" />
-            {gen.isPending ? "Erstelle…" : "Plan ab heute"}
-          </button>
-          <button
-            onClick={() => gen.mutate("next_shopping")}
-            disabled={gen.isPending}
-            className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm font-semibold hover:bg-accent disabled:opacity-60"
-          >
-            <Sparkles className="h-4 w-4" />
-            {gen.isPending ? "Erstelle…" : "Plan ab nächstem Einkauf"}
+            {gen.isPending ? "Erstelle…" : "Plan solo"}
           </button>
           {partnerLink.data && (
-            <>
-              <button
-                onClick={() => partnerGen.mutate("today")}
-                disabled={partnerGen.isPending}
-                className="inline-flex items-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-600 hover:bg-emerald-500/20 disabled:opacity-60"
-                title={`Gemeinsam mit ${partnerLink.data.partner_name}`}
-              >
-                <Users className="h-4 w-4" />
-                {partnerGen.isPending ? "Erstelle…" : "Gemeinsamen Plan (ab heute)"}
-              </button>
-              <button
-                onClick={() => partnerGen.mutate("next_shopping")}
-                disabled={partnerGen.isPending}
-                className="inline-flex items-center gap-2 rounded-lg border border-emerald-500/40 bg-background px-3 py-2 text-sm font-semibold text-emerald-600 hover:bg-emerald-500/10 disabled:opacity-60"
-                title={`Gemeinsam mit ${partnerLink.data.partner_name}`}
-              >
-                <Users className="h-4 w-4" />
-                {partnerGen.isPending ? "Erstelle…" : "Gemeinsam ab Einkauf"}
-              </button>
-            </>
+            <button
+              onClick={() => partnerGen.mutate()}
+              disabled={partnerGen.isPending}
+              className="inline-flex items-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-600 hover:bg-emerald-500/20 disabled:opacity-60"
+              title={`Gemeinsam mit ${partnerLink.data.partner_name}`}
+            >
+              <Users className="h-4 w-4" />
+              {partnerGen.isPending ? "Erstelle…" : "Plan gemeinsam"}
+            </button>
           )}
         </div>
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-dashed border-border bg-background/40 px-4 py-3 text-xs">
         <span className="font-semibold uppercase tracking-wider text-muted-foreground">
-          Dauer
+          Zeitraum
         </span>
-        <label className="inline-flex items-center gap-1.5 cursor-pointer">
+        <label className="inline-flex items-center gap-1.5">
+          <span>Von</span>
           <input
-            type="radio"
-            name="plan-duration"
-            className="h-3.5 w-3.5 accent-current"
-            checked={durationMode === "shopping"}
-            onChange={() => setDurationMode("shopping")}
-          />
-          <span>Bis nächster Einkaufstag</span>
-          {data && (
-            <span className="text-muted-foreground">
-              (~{data.days_until_next_shopping} Tag{data.days_until_next_shopping === 1 ? "" : "e"})
-            </span>
-          )}
-        </label>
-        <label className="inline-flex items-center gap-1.5 cursor-pointer">
-          <input
-            type="radio"
-            name="plan-duration"
-            className="h-3.5 w-3.5 accent-current"
-            checked={durationMode === "fixed"}
-            onChange={() => setDurationMode("fixed")}
-          />
-          <span>Feste Dauer:</span>
-          <input
-            type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            min={1}
-            max={21}
-            value={fixedDays}
-            onFocus={() => setDurationMode("fixed")}
+            type="date"
+            value={startDate}
+            min={todayISO}
             onChange={(e) => {
-              const raw = e.target.value.replace(/[^0-9]/g, "").slice(0, 2);
-              setFixedDays(raw);
+              const v = e.target.value;
+              setStartDate(v);
+              if (v && endDate && new Date(v) > new Date(endDate)) {
+                setEndDate(v);
+              }
             }}
-            onBlur={() => {
-              const num = Math.max(1, Math.min(21, parseInt(fixedDays, 10) || 7));
-              setFixedDays(String(num));
-            }}
-            className="w-14 rounded-md border border-input bg-background px-2 py-1 text-xs"
+            className="rounded-md border border-input bg-background px-2 py-1 text-xs"
           />
-          <span>Tage</span>
         </label>
+        <label className="inline-flex items-center gap-1.5">
+          <span>Bis</span>
+          <input
+            type="date"
+            value={endDate}
+            min={startDate || todayISO}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="rounded-md border border-input bg-background px-2 py-1 text-xs"
+          />
+        </label>
+        <span className="text-muted-foreground">
+          ({computePlanDays()} Tag{computePlanDays() === 1 ? "" : "e"}, max. 21)
+        </span>
       </div>
+
 
       <div className="mt-2 flex flex-wrap items-center gap-3 rounded-xl border border-dashed border-border bg-background/40 px-4 py-3 text-xs">
         <span className="font-semibold uppercase tracking-wider text-muted-foreground">

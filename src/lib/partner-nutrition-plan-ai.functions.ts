@@ -258,6 +258,8 @@ export const generatePartnerNutritionPlanDraft = createServerFn({ method: "POST"
       shared_slots?: { breakfast?: boolean; lunch?: boolean; dinner?: boolean; snack?: boolean };
       /** Optional fixed plan length (1–21). Overrides the shopping-cycle logic. */
       plan_days?: number | null;
+      /** Optional explicit start date (YYYY-MM-DD). Overrides start_mode. */
+      scheduled_start_date?: string | null;
     }) => d,
   )
   .handler(async ({ data, context }) => {
@@ -280,8 +282,10 @@ export const generatePartnerNutritionPlanDraft = createServerFn({ method: "POST"
     // Use the EARLIER next-shopping day across both users.
     const daysA = daysUntilNextShopping(a.shoppingDays);
     const daysB = daysUntilNextShopping(b.shoppingDays);
-    const start = new Date();
-    if (startMode === "next_shopping") start.setDate(start.getDate() + Math.min(daysA, daysB));
+    const start = data.scheduled_start_date ? new Date(data.scheduled_start_date) : new Date();
+    if (!data.scheduled_start_date && startMode === "next_shopping") {
+      start.setDate(start.getDate() + Math.min(daysA, daysB));
+    }
     const fixedDays =
       data.plan_days != null ? Math.max(1, Math.min(21, Math.round(data.plan_days))) : null;
     const planDays =
