@@ -510,8 +510,11 @@ export const saveCoachNutritionPlanDraft = createServerFn({ method: "POST" })
 
     // Optional: shopping list für draft
     try {
-      const { generateShoppingListForPlan } = await import("./shopping-list-engine.server");
-      await generateShoppingListForPlan(supabaseAdmin, planRow.id);
+      const apiKey = process.env.LOVABLE_API_KEY;
+      if (apiKey) {
+        const { generateShoppingListForPlan } = await import("./shopping-list-engine.server");
+        await generateShoppingListForPlan({ apiKey, planId: planRow.id, windowDays: Math.min(7, computedDays.length) });
+      }
     } catch {
       // non-fatal
     }
