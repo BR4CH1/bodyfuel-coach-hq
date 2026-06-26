@@ -577,7 +577,7 @@ ${prepHint} ${budgetHint}
 
 
 Antworte AUSSCHLIESSLICH mit gültigem JSON in folgender Form:
-{"days":[{"name":"Tag 1","type":"training","meals":[{"slot":"breakfast","name":"Overnight Oats","description":"80g Haferflocken, 250ml fettarme Milch, 150g Skyr, 100g Beeren, 1 EL Chiasamen, 1 EL Mandelsplitter","ingredients":[{"name":"Haferflocken","amount":80,"unit":"g"},{"name":"fettarme Milch 1,5%","amount":250,"unit":"ml"},{"name":"Skyr","amount":150,"unit":"g"},{"name":"Beeren","amount":100,"unit":"g"},{"name":"Chiasamen","amount":15,"unit":"g"},{"name":"Mandelsplitter","amount":15,"unit":"g"}],"kcal":0,"protein_g":0,"carbs_g":0,"fat_g":0}]}]}
+{"days":[{"name":"Tag 1","type":"training","meals":[{"slot":"breakfast","name":"Overnight Oats","description":"80g Haferflocken, 250ml Milch 1,5%, 150g Skyr natur, 100g Beeren gemischt, 15g Chia-Samen, 15g Mandeln","ingredients":[{"name":"Haferflocken","amount":80,"unit":"g"},{"name":"Milch 1,5%","amount":250,"unit":"ml","grams":250},{"name":"Skyr natur","amount":150,"unit":"g"},{"name":"Beeren gemischt","amount":100,"unit":"g"},{"name":"Chia-Samen","amount":15,"unit":"g"},{"name":"Mandeln","amount":15,"unit":"g"}],"kcal":0,"protein_g":0,"carbs_g":0,"fat_g":0}]}]}
 
 🧮 STRUKTURIERTE ZUTATEN SIND PFLICHT — die Berechnung läuft NICHT über den Description-Text:
 - Jede Mahlzeit MUSS ein "ingredients"-Array enthalten, mit JEDER einzelnen Zutat aus der Description.
