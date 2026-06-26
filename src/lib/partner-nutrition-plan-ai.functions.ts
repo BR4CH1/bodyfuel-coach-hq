@@ -20,6 +20,7 @@ type ComputedPersonMeal = PersonMeal & {
   _data_source?: string;
   _verified_ratio?: number;
 };
+type CleanedPartnerDay = { name: string; meals: ComputedPersonMeal[]; type: "training" | "rest" };
 type GeneratedDay = {
   type_a?: "training" | "rest";
   type_b?: "training" | "rest";
@@ -33,6 +34,16 @@ function clonePersonMeal(meal: PersonMeal): PersonMeal {
     ingredients: Array.isArray(meal.ingredients)
       ? meal.ingredients.map((ing) => ({ ...ing }))
       : undefined,
+  };
+}
+
+function cloneComputedPersonMeal(meal: ComputedPersonMeal): ComputedPersonMeal {
+  return {
+    ...meal,
+    ingredients: Array.isArray(meal.ingredients)
+      ? meal.ingredients.map((ing) => ({ ...ing }))
+      : undefined,
+    _compute_warnings: Array.isArray(meal._compute_warnings) ? [...meal._compute_warnings] : undefined,
   };
 }
 
