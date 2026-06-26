@@ -361,7 +361,7 @@ function cleanIngredientName(raw: string): string {
   return raw
     .replace(/\((?:je\s*)?\d+(?:[.,]\d+)?\s*(?:g|gramm|ml|l|kg)\)/gi, " ")
     .replace(/[()]/g, " ")
-    .replace(/^\s*\d+(?:[.,]\d+)?\s*(scheiben?|stück|stueck|stk\.?|paprikaschoten?|wraps?|tortillas?|brötchen|broetchen|semmeln?|riegel)?\s+/i, " ")
+    .replace(/^\s*\d+(?:[.,]\d+)?\s*(scheiben?|stück|stueck|stk\.?|wraps?|tortillas?|brötchen|broetchen|semmeln?|riegel)\s+/i, " ")
     .replace(/\bje\s*\d+(?:[.,]\d+)?\s*(?:g|gramm|ml|l|kg)\b/gi, " ")
     .replace(PARSER_STOP_WORDS, " ")
     .replace(/[,;:]/g, " ")
