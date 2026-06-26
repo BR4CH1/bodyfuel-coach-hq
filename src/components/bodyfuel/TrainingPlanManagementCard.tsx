@@ -139,6 +139,13 @@ export function TrainingPlanManagementCard({ userId }: { userId: string }) {
             <Sparkles className="h-4 w-4" />
             {gen.isPending ? "Erstelle…" : "Plan ab nächster Woche"}
           </button>
+          <a
+            href={`/coach/import-plan?type=training&client=${userId}`}
+            className="inline-flex items-center gap-2 rounded-lg border border-gold/40 bg-background px-3 py-2 text-sm font-semibold hover:bg-accent"
+          >
+            <Pencil className="h-4 w-4" />
+            Eigenen Plan importieren
+          </a>
         </div>
       </div>
 
