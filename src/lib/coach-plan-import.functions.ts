@@ -402,7 +402,7 @@ export const saveCoachNutritionPlanDraft = createServerFn({ method: "POST" })
           carbs_g: Math.round(result.carbs_g),
           fat_g: Math.round(result.fat_g),
           data_source: result.data_source ?? "db_verified",
-          verified_ratio: result.verified_ratio ?? 1,
+          verified_ratio: result.coverage ?? 1,
           warnings: result.warnings ?? [],
         });
         daySum.kcal += result.kcal;
