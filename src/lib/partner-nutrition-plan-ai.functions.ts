@@ -450,7 +450,7 @@ Jede Mahlzeit MUSS aus dieser Erlaubt-Liste komponiert sein. Worte wie "gekocht/
         ? `\n💶 GEMEINSAMES WOCHEN-BUDGET vom Coach: ${combinedBudget} € / Woche (= ~${budgetForPeriod} € für diesen ${planDays}-Tage-Plan, Discounter-Preise DE). Plane Zutaten & Mengen für BEIDE Personen zusammen so, dass die gesamten Lebensmittelkosten dieses Budget NICHT überschreiten. Bevorzuge günstige Proteinquellen und Grundbeilagen; Premium-Zutaten sparsam.\n`
         : "";
 
-    const prompt = `Erstelle einen ${planDays}-Tage-Partner-Ernährungsplan für ZWEI Personen, die zusammen essen.
+    const prompt = `Erstelle eine ${aiPlanDays}-Tage-Basiswoche für einen ${planDays}-Tage-Partner-Ernährungsplan für ZWEI Personen, die zusammen essen. Der Server wiederholt diese Basiswoche anschließend bis Tag ${planDays}; antworte deshalb NICHT mit ${planDays} Tagen, sondern exakt mit ${aiPlanDays} Basistagen.
 ${noCookBlock}
 
 🎯 INDIVIDUELLE ZIELE (NIE angleichen):
@@ -470,12 +470,12 @@ NO-GOS für gemeinsame Gerichte vermeiden: ${mergedNogos.join(", ") || "(keine)"
 VORLIEBEN ${a.name}: Lieblings ${[...a.favFoods, ...a.favoriteNames].slice(0, 8).join(", ") || "—"}; mag ${a.liked.slice(0, 6).join(", ") || "—"}; meiden ${[...a.disliked, ...a.skipNames].slice(0, 6).join(", ") || "—"}
 VORLIEBEN ${b.name}: Lieblings ${[...b.favFoods, ...b.favoriteNames].slice(0, 8).join(", ") || "—"}; mag ${b.liked.slice(0, 6).join(", ") || "—"}; meiden ${[...b.disliked, ...b.skipNames].slice(0, 6).join(", ") || "—"}
 ${wishesBlock}${budgetBlock}${equipmentBlock}
-${a.plateauNote ? a.plateauNote + "\n" : ""}${b.plateauNote ? b.plateauNote + "\n" : ""}TAGESPLAN:
+${a.plateauNote ? a.plateauNote + "\n" : ""}${b.plateauNote ? b.plateauNote + "\n" : ""}BASIS-TAGESPLAN:
 ${scheduleLines}
 
 Antworte AUSSCHLIESSLICH mit gültigem JSON:
 {"days":[{"type_a":"training","type_b":"rest","person_a":[{"slot":"breakfast","name":"...","description":"80g X, 200ml Y","ingredients":[{"name":"X","amount":80,"unit":"g"},{"name":"Y","amount":200,"unit":"ml"}],"kcal":0,"protein_g":0,"carbs_g":0,"fat_g":0}], "person_b":[...]}]}
-Genau ${planDays} Tage. Pro Person je 4 Slots (breakfast/lunch/dinner/snack). Bei shared-Slots MUSS "name" zwischen person_a und person_b für denselben Slot am selben Tag identisch sein. "description" = NUR kommagetrennte Zutaten mit konkreten Mengen (g, ml, Stück, EL/TL). Niemals "Portion" oder "nach Geschmack".
+Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/snack). Bei shared-Slots MUSS "name" zwischen person_a und person_b für denselben Slot am selben Tag identisch sein. "description" = NUR kommagetrennte Zutaten mit konkreten Mengen (g, ml, Stück, EL/TL). Niemals "Portion" oder "nach Geschmack".
 🧮 STRUKTURIERTE ZUTATEN SIND PFLICHT: Jede Mahlzeit braucht ein ingredients-Array mit allen Zutaten. Nährwerte dürfen 0 sein — der Server berechnet sie aus der Lebensmittel-DB, KI-Schätzungen werden ignoriert.`;
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
