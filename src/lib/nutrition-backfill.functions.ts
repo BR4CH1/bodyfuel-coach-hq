@@ -21,7 +21,7 @@ export const recomputeAllPlanMacros = createServerFn({ method: "POST" })
     });
     if (!isCoach) throw new Error("Nur für Coaches");
 
-    const [{ computeMealFromIngredients, coerceIngredients }, { recomputeMealFromDb, enforceKcalConsistency }, { supabaseAdmin }] =
+    const [{ computeMealFromIngredients, computeMealFromDescription, coerceIngredients, isUsableEngineResult }, { enforceKcalConsistency }, { supabaseAdmin }] =
       await Promise.all([
         import("./nutrition-engine.server"),
         import("./nutrition-verify.server"),
@@ -53,7 +53,7 @@ export const recomputeAllPlanMacros = createServerFn({ method: "POST" })
       const structured = coerceIngredients((m as any).ingredients_json ?? null);
       if (structured.length) {
         const r = await computeMealFromIngredients(supabaseAdmin, structured);
-        if (r.coverage >= 0.7) {
+        if (isUsableEngineResult(r)) {
           kcal = r.kcal; p = r.protein_g; c = r.carbs_g; f = r.fat_g;
           data_source = r.data_source;
           verified_ratio = r.coverage;
@@ -61,11 +61,12 @@ export const recomputeAllPlanMacros = createServerFn({ method: "POST" })
           viaEngine += 1;
         }
       } else {
-        const rc = await recomputeMealFromDb(supabaseAdmin, m.description);
-        if (rc && rc.coverage >= 0.7) {
+        const rc = await computeMealFromDescription(supabaseAdmin, m.description);
+        if (isUsableEngineResult(rc)) {
           kcal = rc.kcal; p = rc.protein_g; c = rc.carbs_g; f = rc.fat_g;
-          data_source = "db_verified";
+          data_source = rc.data_source;
           verified_ratio = rc.coverage;
+          warnings = rc.warnings;
           viaParser += 1;
         } else {
           const fixed = enforceKcalConsistency({ kcal, protein_g: p, carbs_g: c, fat_g: f });

@@ -14,6 +14,11 @@ type GeneratedMeal = {
   /** Structured ingredient list — REQUIRED for engine compute. */
   ingredients?: AiIngredient[];
 };
+type ComputedGeneratedMeal = GeneratedMeal & {
+  _compute_warnings?: string[];
+  _data_source?: string;
+  _verified_ratio?: number;
+};
 type GeneratedDay = { name: string; type?: "training" | "rest"; meals: GeneratedMeal[] };
 type MacroTarget = { kcal: number; protein_g: number; carbs_g: number; fat_g: number };
 
@@ -604,23 +609,110 @@ WICHTIG zu name/description:
     if (!days.length) throw new Error("Keine Tage generiert.");
 
     // Hard filter + authoritative day type from `schedule`.
+    // Wichtig: Makros werden ab hier ausschließlich aus Zutaten + Food-DB
+    // berechnet. KI-Werte werden nicht mehr skaliert oder übernommen.
     const forbidden = [...expandedAllergies, ...expandedNogo]
       .map((s) => s.toLowerCase().trim())
       .filter(Boolean);
-    const cleaned = days.map((d, i) => {
+    const rawDays = days.map((d, i) => {
       const s = schedule[i] ?? schedule[schedule.length - 1];
       const typeLabel = s.type === "rest" ? "Restday" : "Trainingstag";
       const name = `${s.wkLabel} — ${typeLabel}`;
-      const targetForDay = s.type === "rest" ? restTargets : trainingTargets;
       const allowedMeals = (d.meals ?? []).filter((m) => {
-        const hay = `${m.name} ${m.description ?? ""}`.toLowerCase();
+        const hay = `${m.name} ${m.description ?? ""} ${JSON.stringify((m as any).ingredients ?? [])}`.toLowerCase();
         return !forbidden.some((f) => hay.includes(f));
       });
       return {
         name,
-        meals: normalizeMealsToTargets(allowedMeals, targetForDay),
+        target: s.type === "rest" ? restTargets : trainingTargets,
+        meals: allowedMeals,
       };
     });
+
+    const missingRequired = rawDays.flatMap((d, idx) => {
+      const slots = new Set(d.meals.map((m) => m.slot));
+      return (["breakfast", "lunch", "dinner"] as const)
+        .filter((slot) => !slots.has(slot))
+        .map((slot) => `Tag ${idx + 1}: ${labelForSlot(slot)} fehlt`);
+    });
+    if (missingRequired.length) {
+      throw new Error(`Plan unvollständig: ${missingRequired.slice(0, 6).join("; ")}. Bitte erneut generieren.`);
+    }
+
+    const {
+      computeMealFromIngredients,
+      computeMealFromDescription,
+      coerceIngredients,
+      isUsableEngineResult,
+      parseDescriptionToEngineIngredients,
+    } = await import("./nutrition-engine.server");
+
+    const cleaned = await Promise.all(rawDays.map(async (d, dayIdx) => {
+      const computed = await Promise.all(d.meals.map(async (m, mealIdx) => {
+        const structured = coerceIngredients((m as any).ingredients ?? null);
+        const ingredientsForMath = structured.length
+          ? structured
+          : parseDescriptionToEngineIngredients(m.description ?? null);
+        const result = structured.length
+          ? await computeMealFromIngredients(supabase, structured)
+          : await computeMealFromDescription(supabase, m.description ?? null);
+
+        if (!isUsableEngineResult(result)) {
+          const resultAny: any = result;
+          const warningList: string[] = Array.isArray(resultAny?.warnings) ? resultAny.warnings : [];
+          const warnings = warningList.length ? ` Hinweise: ${warningList.join(" | ")}` : "";
+          throw new Error(
+            `Nährwerte nicht zuverlässig berechenbar (${d.name}, Mahlzeit ${mealIdx + 1}: ${m.name}).${warnings} Bitte Lebensmittel-DB ergänzen oder Plan erneut generieren.`,
+          );
+        }
+
+        return {
+          ...m,
+          ingredients: ingredientsForMath,
+          kcal: result.kcal,
+          protein_g: result.protein_g,
+          carbs_g: result.carbs_g,
+          fat_g: result.fat_g,
+          _compute_warnings: result.warnings,
+          _data_source: result.data_source,
+          _verified_ratio: result.coverage,
+        } as ComputedGeneratedMeal;
+      }));
+
+      let capped = splitOversizedMeals(computed);
+      const daySums = capped.reduce(
+        (acc: MacroTarget, meal: ComputedGeneratedMeal) => ({
+          kcal: acc.kcal + (Number(meal.kcal) || 0),
+          protein_g: acc.protein_g + (Number(meal.protein_g) || 0),
+          carbs_g: acc.carbs_g + (Number(meal.carbs_g) || 0),
+          fat_g: acc.fat_g + (Number(meal.fat_g) || 0),
+        }),
+        { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0 },
+      );
+      capped = await addDeterministicCorrectionSnacks(capped, d.target, daySums, supabase, computeMealFromIngredients, isUsableEngineResult);
+      const finalSums = capped.reduce(
+        (acc: MacroTarget, meal: ComputedGeneratedMeal) => ({
+          kcal: acc.kcal + (Number(meal.kcal) || 0),
+          protein_g: acc.protein_g + (Number(meal.protein_g) || 0),
+          carbs_g: acc.carbs_g + (Number(meal.carbs_g) || 0),
+          fat_g: acc.fat_g + (Number(meal.fat_g) || 0),
+        }),
+        { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0 },
+      );
+      const kcalDiff = Math.abs(finalSums.kcal - d.target.kcal) / Math.max(1, d.target.kcal);
+      const macroOff =
+        Math.abs(finalSums.protein_g - d.target.protein_g) > 20 ||
+        Math.abs(finalSums.carbs_g - d.target.carbs_g) > 30 ||
+        Math.abs(finalSums.fat_g - d.target.fat_g) > 20;
+      if (kcalDiff > 0.15 || macroOff) {
+        console.warn("Nutrition plan target deviation", {
+          day: dayIdx + 1,
+          target: d.target,
+          actual: finalSums,
+        });
+      }
+      return { name: d.name, meals: capped };
+    }));
 
 
 
@@ -685,8 +777,7 @@ WICHTIG zu name/description:
       .single();
     if (planErr || !planRow) throw new Error(planErr?.message ?? "Plan konnte nicht angelegt werden");
 
-    // Insert days & meals
-    // (Verify + Recompute werden pro Tag innerhalb der Schleife geladen.)
+    // Insert days & meals — Werte sind bereits vorab von der Engine berechnet.
     for (let i = 0; i < cleaned.length; i++) {
       const d = cleaned[i];
       const { data: dayRow, error: dErr } = await supabase
@@ -696,27 +787,8 @@ WICHTIG zu name/description:
         .single();
       if (dErr || !dayRow) continue;
       let snackCounter = 0;
-      const [{ verifyMealAgainstDb: _v, recomputeMealFromDb, enforceKcalConsistency }, { computeMealFromIngredients, coerceIngredients }] = await Promise.all([
-        import("./nutrition-verify.server"),
-        import("./nutrition-engine.server"),
-      ]);
 
-      // Engine (strukturierte Zutaten) priorisiert — sonst Parser-Fallback.
-      const engineRuns = await Promise.all(
-        d.meals.map(async (m) => {
-          const ing = coerceIngredients((m as any).ingredients ?? null);
-          if (!ing.length) return null;
-          return await computeMealFromIngredients(supabase, ing);
-        }),
-      );
-      const recomputes = await Promise.all(
-        d.meals.map((m, i) => (engineRuns[i] ? Promise.resolve(null) : recomputeMealFromDb(supabase, m.description ?? null))),
-      );
-      const verifications = await Promise.all(
-        d.meals.map((m) => _v(supabase, m.description ?? null)),
-      );
-
-      const mealRows = d.meals.map((m, idx) => {
+      const mealRows = d.meals.map((m: ComputedGeneratedMeal, idx: number) => {
         let slotLabel: string;
         if (m.slot === "breakfast") slotLabel = "Frühstück";
         else if (m.slot === "lunch") slotLabel = "Mittagessen";
@@ -725,32 +797,14 @@ WICHTIG zu name/description:
           snackCounter += 1;
           slotLabel = `Snack ${snackCounter}`;
         }
-        const v = verifications[idx];
-        const eng = engineRuns[idx];
-        const rc = recomputes[idx];
-
-        let kcal: number | null = m.kcal ?? null;
-        let protein_g: number | null = m.protein_g ?? null;
-        let carbs_g: number | null = m.carbs_g ?? null;
-        let fat_g: number | null = m.fat_g ?? null;
-        let data_source = v.data_source;
-        let verified_ratio: number = v.verified_ratio;
-        let warnings: string[] = [];
+        const kcal: number | null = m.kcal ?? null;
+        const protein_g: number | null = m.protein_g ?? null;
+        const carbs_g: number | null = m.carbs_g ?? null;
+        const fat_g: number | null = m.fat_g ?? null;
+        const data_source = (m as any)._data_source ?? "db_verified";
+        const verified_ratio: number = (m as any)._verified_ratio ?? 1;
+        const warnings: string[] = (m as any)._compute_warnings ?? [];
         const structuredIngredients = coerceIngredients((m as any).ingredients ?? null);
-
-        if (eng && eng.coverage >= 0.7) {
-          kcal = eng.kcal; protein_g = eng.protein_g; carbs_g = eng.carbs_g; fat_g = eng.fat_g;
-          data_source = eng.data_source;
-          verified_ratio = eng.coverage;
-          warnings = eng.warnings;
-        } else if (rc && rc.coverage >= 0.7) {
-          kcal = rc.kcal; protein_g = rc.protein_g; carbs_g = rc.carbs_g; fat_g = rc.fat_g;
-          data_source = "db_verified";
-          verified_ratio = rc.coverage;
-        } else {
-          const fixed = enforceKcalConsistency({ kcal, protein_g, carbs_g, fat_g });
-          kcal = fixed.kcal; protein_g = fixed.protein_g; carbs_g = fixed.carbs_g; fat_g = fixed.fat_g;
-        }
 
         return {
           day_id: dayRow.id,
@@ -790,7 +844,7 @@ WICHTIG zu name/description:
     // unused wishes stay pending so they roll into the next plan.
     if (approvedWishIds.length) {
       const haystack = cleaned
-        .flatMap((d) => d.meals.map((m) => `${m.name} ${m.description ?? ""}`))
+        .flatMap((d) => d.meals.map((m: ComputedGeneratedMeal) => `${m.name} ${m.description ?? ""}`))
         .join(" | ")
         .toLowerCase();
       const norm = (s: string) =>
@@ -876,6 +930,113 @@ function buildIssnCarbCyclingTargets(trainingInput: MacroTarget): { training: Ma
 
 
 const MAX_KCAL_PER_MEAL = 850;
+
+function splitOversizedMeals(meals: ComputedGeneratedMeal[]): ComputedGeneratedMeal[] {
+  const capped: ComputedGeneratedMeal[] = [];
+  for (const m of meals) {
+    const k = Number(m.kcal) || 0;
+    if (k <= MAX_KCAL_PER_MEAL) {
+      capped.push(m);
+      continue;
+    }
+    const parts = Math.ceil(k / MAX_KCAL_PER_MEAL);
+    const sourceIngredients = Array.isArray(m.ingredients) ? (m.ingredients as any[]) : [];
+    for (let i = 0; i < parts; i++) {
+      const ingredients = sourceIngredients.map((ing) => {
+        const grams = Number(ing.grams ?? ing.amount_g ?? ing.amount) || 0;
+        const splitGrams = Math.max(0, Math.round((grams / parts) * 10) / 10);
+        return { name: ing.name, amount: splitGrams, unit: "g", grams: splitGrams };
+      });
+      capped.push({
+        ...m,
+        slot: i === 0 ? m.slot : "snack",
+        name: parts > 1 ? `${m.name} (Portion ${i + 1}/${parts})` : m.name,
+        description: ingredients.length ? describeIngredients(ingredients) : m.description,
+        ingredients,
+        kcal: Math.round(k / parts),
+        protein_g: Math.round((Number(m.protein_g) || 0) / parts),
+        carbs_g: Math.round((Number(m.carbs_g) || 0) / parts),
+        fat_g: Math.round((Number(m.fat_g) || 0) / parts),
+      });
+    }
+  }
+  return capped;
+}
+
+async function addDeterministicCorrectionSnacks(
+  meals: ComputedGeneratedMeal[],
+  target: MacroTarget,
+  current: MacroTarget,
+  supabase: any,
+  computeMealFromIngredients: (supabase: any, ingredients: any[]) => Promise<any>,
+  isUsableEngineResult: (result: any) => boolean,
+): Promise<ComputedGeneratedMeal[]> {
+  const result = [...meals];
+  const addSnack = async (label: string, ingredients: AiIngredient[]) => {
+    const computed = await computeMealFromIngredients(supabase, ingredients);
+    if (!isUsableEngineResult(computed) || computed.kcal < 50 || computed.kcal > MAX_KCAL_PER_MEAL) return;
+    result.push({
+      slot: "snack",
+      name: label,
+      description: describeIngredients(ingredients as any),
+      ingredients,
+      kcal: computed.kcal,
+      protein_g: computed.protein_g,
+      carbs_g: computed.carbs_g,
+      fat_g: computed.fat_g,
+      _data_source: computed.data_source,
+      _verified_ratio: computed.coverage,
+      _compute_warnings: ["Automatisch ergänzt, damit Tagesziel näher getroffen wird.", ...(computed.warnings ?? [])],
+    });
+    current.kcal += computed.kcal;
+    current.protein_g += computed.protein_g;
+    current.carbs_g += computed.carbs_g;
+    current.fat_g += computed.fat_g;
+  };
+
+  const kcalGap = target.kcal - current.kcal;
+  const proteinGap = target.protein_g - current.protein_g;
+  if (proteinGap > 12 && kcalGap > 80) {
+    const grams = Math.min(300, Math.max(100, Math.round((proteinGap / 11) * 100)));
+    await addSnack(
+      "Skyr-Protein-Snack",
+      [{ name: "Skyr", amount: grams, unit: "g", grams }],
+    );
+  }
+
+  const remainingKcal = target.kcal - current.kcal;
+  const carbGap = target.carbs_g - current.carbs_g;
+  if ((carbGap > 18 || remainingKcal > 180) && remainingKcal > 90) {
+    const grams = Math.min(120, Math.max(30, Math.round((Math.min(carbGap, remainingKcal / 4) / 58.7) * 100)));
+    await addSnack(
+      "Haferflocken-Snack",
+      [{ name: "Haferflocken", amount: grams, unit: "g", grams }],
+    );
+  }
+
+  const finalGap = target.kcal - current.kcal;
+  const fatGap = target.fat_g - current.fat_g;
+  if (fatGap > 8 && finalGap > 90) {
+    const grams = Math.min(30, Math.max(10, Math.round(fatGap / 0.5)));
+    await addSnack(
+      "Mandel-Snack",
+      [{ name: "Mandeln", amount: grams, unit: "g", grams }],
+    );
+  }
+
+  return result;
+}
+
+function describeIngredients(ingredients: Array<{ name?: string; grams?: number }>): string {
+  return ingredients
+    .filter((ing) => ing.name && Number(ing.grams) > 0)
+    .map((ing) => `${formatAmount(Number(ing.grams))}g ${ing.name}`)
+    .join(", ");
+}
+
+function formatAmount(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1).replace(".", ",");
+}
 
 function normalizeMealsToTargets(meals: GeneratedMeal[], target: MacroTarget): GeneratedMeal[] {
   if (!meals.length) return meals;
