@@ -120,8 +120,6 @@ function SmartOnboardingPage() {
   const { supabaseUser, loading } = useSession();
   const statusFn = useServerFn(getOnboardingStatus);
   const completeFn = useServerFn(completeSmartOnboarding);
-  const genNutritionFn = useServerFn(generateAiNutritionPlanDraft);
-  const activateFn = useServerFn(activateLatestSmartPlan);
 
   useEffect(() => {
     if (!loading && !supabaseUser) navigate({ to: "/auth" });
