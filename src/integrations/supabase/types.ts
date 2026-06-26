@@ -2042,6 +2042,51 @@ export type Database = {
           },
         ]
       }
+      smart_autopilot_jobs: {
+        Row: {
+          attempts: number
+          created_at: string
+          error: string | null
+          finished_at: string | null
+          id: string
+          nutrition_plan_id: string | null
+          started_at: string | null
+          status: string
+          step: string
+          training_plan_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          nutrition_plan_id?: string | null
+          started_at?: string | null
+          status?: string
+          step?: string
+          training_plan_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          nutrition_plan_id?: string | null
+          started_at?: string | null
+          status?: string
+          step?: string
+          training_plan_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       smart_gift_codes: {
         Row: {
           code: string
