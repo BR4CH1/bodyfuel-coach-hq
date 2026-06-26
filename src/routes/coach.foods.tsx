@@ -76,6 +76,24 @@ function CoachFoodsPage() {
   const [filter, setFilter] = useState<"all" | "review" | "verified" | "unverified">("all");
   const [editing, setEditing] = useState<Partial<Food> | null>(null);
   const [saving, setSaving] = useState(false);
+  const [recomputing, setRecomputing] = useState(false);
+
+  async function recomputeAll() {
+    if (recomputing) return;
+    if (!confirm("Alle aktiven & Draft-Pläne anhand der Lebensmittel-DB nachrechnen?")) return;
+    setRecomputing(true);
+    try {
+      const { recomputeAllPlanMacros } = await import("@/lib/nutrition-backfill.functions");
+      const res = await recomputeAllPlanMacros();
+      toast.success(
+        `Fertig: ${res.updated}/${res.scanned} Mahlzeiten korrigiert (${res.db_recomputed} aus DB neu, ${res.kcal_fixed} kcal-konsistent).`,
+      );
+    } catch (e: any) {
+      toast.error(e?.message ?? "Fehler beim Nachrechnen");
+    } finally {
+      setRecomputing(false);
+    }
+  }
 
   async function load() {
     setLoading(true);
