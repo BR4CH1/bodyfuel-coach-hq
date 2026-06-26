@@ -711,9 +711,10 @@ export async function generateCombinedShoppingList(opts: {
   const { apiKey, planAId, planBId, userA, userB, windowDays } = opts;
 
   const [linesA, linesB] = await Promise.all([
-    fetchMealLines(planAId, windowDays),
-    fetchMealLines(planBId, windowDays),
+    fetchMealLines(planAId, windowDays, "combined"),
+    fetchMealLines(planBId, windowDays, "combined"),
   ]);
+
   if (!linesA.length && !linesB.length) throw new Error("Keine Mahlzeiten für die Partnerpläne.");
 
   const mealsText = [
