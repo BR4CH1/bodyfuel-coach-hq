@@ -167,9 +167,14 @@ function CoachFoodsPage() {
         <Link to="/coach" className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" /> Coach-Dashboard
         </Link>
-        <Button onClick={() => setEditing(emptyFood())}>
-          <Plus className="mr-1 h-4 w-4" /> Neues Lebensmittel
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={recomputeAll} disabled={recomputing}>
+            {recomputing ? "Rechne neu…" : "Pläne nachrechnen"}
+          </Button>
+          <Button onClick={() => setEditing(emptyFood())}>
+            <Plus className="mr-1 h-4 w-4" /> Neues Lebensmittel
+          </Button>
+        </div>
       </div>
 
       <div>
