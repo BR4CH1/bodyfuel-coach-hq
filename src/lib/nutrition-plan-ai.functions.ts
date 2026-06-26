@@ -675,7 +675,7 @@ WICHTIG zu name/description:
     if (planErr || !planRow) throw new Error(planErr?.message ?? "Plan konnte nicht angelegt werden");
 
     // Insert days & meals
-    const { verifyMealAgainstDb } = await import("./nutrition-verify.server");
+    // (Verify + Recompute werden pro Tag innerhalb der Schleife geladen.)
     for (let i = 0; i < cleaned.length; i++) {
       const d = cleaned[i];
       const { data: dayRow, error: dErr } = await supabase
