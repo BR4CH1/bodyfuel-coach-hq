@@ -558,13 +558,21 @@ ${prepHint} ${budgetHint}
 
 
 
-Antworte AUSSCHLIESSLICH mit gültigem JSON:
-{"days":[{"name":"Tag 1","type":"training","meals":[{"slot":"breakfast","name":"Overnight Oats","description":"80g Haferflocken, 250ml fettarme Milch, 150g Skyr, 100g Beeren, 1 EL Chiasamen, 1 EL Mandelsplitter","kcal":500,"protein_g":35,"carbs_g":55,"fat_g":15}]}]}
+Antworte AUSSCHLIESSLICH mit gültigem JSON in folgender Form:
+{"days":[{"name":"Tag 1","type":"training","meals":[{"slot":"breakfast","name":"Overnight Oats","description":"80g Haferflocken, 250ml fettarme Milch, 150g Skyr, 100g Beeren, 1 EL Chiasamen, 1 EL Mandelsplitter","ingredients":[{"name":"Haferflocken","amount":80,"unit":"g"},{"name":"fettarme Milch 1,5%","amount":250,"unit":"ml"},{"name":"Skyr","amount":150,"unit":"g"},{"name":"Beeren","amount":100,"unit":"g"},{"name":"Chiasamen","amount":15,"unit":"g"},{"name":"Mandelsplitter","amount":15,"unit":"g"}],"kcal":0,"protein_g":0,"carbs_g":0,"fat_g":0}]}]}
+
+🧮 STRUKTURIERTE ZUTATEN SIND PFLICHT — die Berechnung läuft NICHT über den Description-Text:
+- Jede Mahlzeit MUSS ein "ingredients"-Array enthalten, mit JEDER einzelnen Zutat aus der Description.
+- Jede Zutat braucht "name" + numerisches "amount" + "unit" (g, ml, EL, TL, Stück). Bei Stück/Scheibe/EL/TL MUSS zusätzlich das Gewicht in Gramm angegeben werden, z. B. {"name":"Vollkornbrot","amount":100,"unit":"g","grams":100}.
+- "amount" + "unit" müssen genau zur Mengenangabe im Description-Text passen. Beispiel: Description „3 Scheiben Vollkornbrot (100g)" → ingredient {"name":"Vollkornbrot","amount":100,"unit":"g"}.
+- Nährwerte ("kcal","protein_g","carbs_g","fat_g") darfst du auf 0 setzen — sie werden vom Server aus den Zutaten neu berechnet. Schätze NIEMALS selbst.
+- Wasser, Gewürze, Salz, Pfeffer, Zimt: in "ingredients" mit amount:0 oder unit:"prise" angeben (zählen nicht in die Makros).
+
 Genau ${planDays} Tage in der vorgegebenen Reihenfolge, mindestens 4 Mahlzeiten pro Tag (Frühstück, Mittag, Abend, Snack), bei Bedarf zusätzliche Snacks ergänzen. KEINE Mahlzeit über 850 kcal. Jeder Tag MUSS ein Feld "type" mit "training" ODER "rest" enthalten (passend zum Tagesplan oben). Tagessummen müssen die jeweiligen Ziele treffen.
 
 WICHTIG zu name/description:
 - "name" = konkreter Gerichtsname (z. B. Overnight Oats, Hähnchen-Reis-Bowl).
-- "description" = NUR kommagetrennte Zutaten mit Mengen (z. B. 80g Haferflocken, 250ml Milch). NIEMALS Zubereitungsanweisungen.
+- "description" = NUR kommagetrennte Zutaten mit Mengen für die Anzeige (z. B. 80g Haferflocken, 250ml Milch). NIEMALS Zubereitungsanweisungen.
 - JEDE Zutat MUSS eine konkrete Menge in g, ml, Stück oder EL/TL haben — NIEMALS "Portion", "etwas", "nach Geschmack" o. ä. Auch Salat, Gemüse, Beilagen und Toppings IMMER in Gramm angeben (z. B. "150g Blattsalat", "200g Brokkoli", "30g Feldsalat").`;
 
 
