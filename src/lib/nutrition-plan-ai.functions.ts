@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { daysUntilNextShopping } from "./shopping-cycle";
 
+type AiIngredient = { name: string; amount?: number; unit?: string; grams?: number };
 type GeneratedMeal = {
   slot: "breakfast" | "lunch" | "dinner" | "snack";
   name: string;
@@ -10,6 +11,8 @@ type GeneratedMeal = {
   protein_g: number;
   carbs_g: number;
   fat_g: number;
+  /** Structured ingredient list — REQUIRED for engine compute. */
+  ingredients?: AiIngredient[];
 };
 type GeneratedDay = { name: string; type?: "training" | "rest"; meals: GeneratedMeal[] };
 type MacroTarget = { kcal: number; protein_g: number; carbs_g: number; fat_g: number };
