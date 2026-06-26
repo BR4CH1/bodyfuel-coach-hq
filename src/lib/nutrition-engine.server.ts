@@ -380,6 +380,7 @@ const PIECE_GRAMS: Array<[RegExp, number]> = [
   [/\bzitrone\b/i, 80], [/\bei\b|\beier\b/i, 60], [/\bscheibe\b|\bscheiben\b/i, 45],
   [/\bkartoffel\b/i, 120], [/\btomate\b/i, 90], [/\bgurke\b/i, 300], [/\bpaprika\b/i, 150],
   [/\bzwiebel\b/i, 80], [/\bknoblauch(?:zehe)?\b/i, 5], [/\bavocado\b/i, 170],
+  [/\b(proteinriegel|eiweißriegel|eiweissriegel)\b/i, 55],
 ];
 
 function defaultPieceGrams(name: string): number | null {
