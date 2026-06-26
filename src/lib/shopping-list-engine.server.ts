@@ -590,6 +590,7 @@ async function fetchMealLines(
   planId: string,
   windowDays: number,
   scope: "self" | "combined" = "self",
+  opts: { skipShared?: boolean } = {},
 ): Promise<string[]> {
   const { data: days } = await supabaseAdmin
     .from("nutrition_plan_days")
@@ -600,11 +601,12 @@ async function fetchMealLines(
   if (!dayIds.length) return [];
   const { data: meals } = await supabaseAdmin
     .from("nutrition_plan_meals")
-    .select("day_id, name, description, recipe_ingredients, sort_order")
+    .select("day_id, name, description, recipe_ingredients, sort_order, is_shared")
     .in("day_id", dayIds)
     .order("sort_order");
   const dayOrder = new Map(dayIds.map((id, index) => [id, index]));
   return (meals ?? [])
+    .filter((m: any) => !(opts.skipShared && m.is_shared))
     .sort(
       (a: any, b: any) =>
         (dayOrder.get(a.day_id) ?? 0) - (dayOrder.get(b.day_id) ?? 0) ||
@@ -612,8 +614,11 @@ async function fetchMealLines(
     )
     .map((m: any) => {
       const rawIngs = Array.isArray(m.recipe_ingredients) ? (m.recipe_ingredients as string[]) : [];
+      // In combined mode we want the "insgesamt" portion for shared meals,
+      // but for non-shared meals each partner only contributes their own amount.
+      const lineScope: "self" | "combined" = m.is_shared ? scope : "self";
       const cleaned = rawIngs
-        .map((i) => rewriteIngredientLine(i, scope))
+        .map((i) => rewriteIngredientLine(i, lineScope))
         .filter((i): i is string => !!i);
       const ing = cleaned.join(", ");
       // Strip emoji + "Gemeinsam mit …" prefix from displayed meal name so it never reaches the parser.
@@ -623,6 +628,7 @@ async function fetchMealLines(
       return `- ${cleanName}${ing ? " | Zutaten: " + ing : m.description ? " | " + m.description : ""}`;
     });
 }
+
 
 async function callAi(prompt: string, apiKey: string): Promise<ShoppingItem[]> {
   const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
