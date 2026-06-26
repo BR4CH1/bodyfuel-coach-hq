@@ -259,14 +259,18 @@ export async function recomputeMealFromDb(
 
   for (const ing of ingredients) {
     const grams = ing.grams ?? 0;
-    totalGrams += grams || 50; // Zutat ohne Menge zählt mit 50 g Gewicht (für Coverage)
+    // Zutat ohne erkannte Menge (z. B. "Zimt", "Pfeffer", "Salz, Pfeffer")
+    // wird komplett ignoriert — sie verfälscht weder Makros noch Coverage.
+    if (!grams) continue;
     const food = await lookupFood(supabase, ing.name);
-    if (!food || !grams) {
+    if (!food) {
+      totalGrams += grams;
       unmatched.push(ing.raw);
       continue;
     }
-    matched.push(ing.raw);
+    totalGrams += grams;
     matchedGrams += grams;
+    matched.push(ing.raw);
     const factor = grams / 100;
     kcal += (food.kcal_per_100g ?? 0) * factor;
     p += (food.protein_per_100g ?? 0) * factor;
