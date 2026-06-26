@@ -58,7 +58,7 @@ export const Route = createFileRoute("/api/public/hooks/process-autopilot-jobs")
                 target: job.user_id,
                 uploadedBy: job.user_id,
                 start_mode: "today",
-                plan_days: 30,
+                plan_days: 31,
                 apiKey,
               });
               const planId = (res as any)?.plan_id ?? (res as any)?.id ?? null;
