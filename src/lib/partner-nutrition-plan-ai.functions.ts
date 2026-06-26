@@ -508,7 +508,13 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
     } catch {
       throw new Error("Antwort konnte nicht gelesen werden.");
     }
-    const generatedDays = (parsed.days ?? []).slice(0, aiPlanDays);
+    const generatedDays = (parsed.days ?? [])
+      .slice(0, aiPlanDays)
+      .map((d: GeneratedDay, i: number): GeneratedDay => ({
+        ...d,
+        type_a: aiSchedule[i]?.type_a ?? d.type_a,
+        type_b: aiSchedule[i]?.type_b ?? d.type_b,
+      }));
     if (!generatedDays.length) {
       console.error("[partner-plan] AI returned no days. raw=", raw);
       throw new Error("Keine Tage generiert.");
