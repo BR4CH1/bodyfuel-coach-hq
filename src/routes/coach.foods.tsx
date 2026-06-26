@@ -76,6 +76,24 @@ function CoachFoodsPage() {
   const [filter, setFilter] = useState<"all" | "review" | "verified" | "unverified">("all");
   const [editing, setEditing] = useState<Partial<Food> | null>(null);
   const [saving, setSaving] = useState(false);
+  const [recomputing, setRecomputing] = useState(false);
+
+  async function recomputeAll() {
+    if (recomputing) return;
+    if (!confirm("Alle aktiven & Draft-Pläne anhand der Lebensmittel-DB nachrechnen?")) return;
+    setRecomputing(true);
+    try {
+      const { recomputeAllPlanMacros } = await import("@/lib/nutrition-backfill.functions");
+      const res = await recomputeAllPlanMacros();
+      toast.success(
+        `Fertig: ${res.updated}/${res.scanned} Mahlzeiten korrigiert (${res.db_recomputed} aus DB neu, ${res.kcal_fixed} kcal-konsistent).`,
+      );
+    } catch (e: any) {
+      toast.error(e?.message ?? "Fehler beim Nachrechnen");
+    } finally {
+      setRecomputing(false);
+    }
+  }
 
   async function load() {
     setLoading(true);
@@ -167,9 +185,14 @@ function CoachFoodsPage() {
         <Link to="/coach" className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" /> Coach-Dashboard
         </Link>
-        <Button onClick={() => setEditing(emptyFood())}>
-          <Plus className="mr-1 h-4 w-4" /> Neues Lebensmittel
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={recomputeAll} disabled={recomputing}>
+            {recomputing ? "Rechne neu…" : "Pläne nachrechnen"}
+          </Button>
+          <Button onClick={() => setEditing(emptyFood())}>
+            <Plus className="mr-1 h-4 w-4" /> Neues Lebensmittel
+          </Button>
+        </div>
       </div>
 
       <div>

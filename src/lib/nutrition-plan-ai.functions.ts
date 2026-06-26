@@ -675,7 +675,7 @@ WICHTIG zu name/description:
     if (planErr || !planRow) throw new Error(planErr?.message ?? "Plan konnte nicht angelegt werden");
 
     // Insert days & meals
-    const { verifyMealAgainstDb } = await import("./nutrition-verify.server");
+    // (Verify + Recompute werden pro Tag innerhalb der Schleife geladen.)
     for (let i = 0; i < cleaned.length; i++) {
       const d = cleaned[i];
       const { data: dayRow, error: dErr } = await supabase
@@ -685,10 +685,13 @@ WICHTIG zu name/description:
         .single();
       if (dErr || !dayRow) continue;
       let snackCounter = 0;
-      // Verifizierung gegen BodyFuel-DB (BLS 4.0 + Coach-verified) — parallel
-      const verifications = await Promise.all(
-        d.meals.map((m) => verifyMealAgainstDb(supabase, m.description ?? null)),
-      );
+      const { verifyMealAgainstDb: _v, recomputeMealFromDb, enforceKcalConsistency } =
+        await import("./nutrition-verify.server");
+      // Verifizierung + DB-Recompute parallel
+      const [verifications, recomputes] = await Promise.all([
+        Promise.all(d.meals.map((m) => _v(supabase, m.description ?? null))),
+        Promise.all(d.meals.map((m) => recomputeMealFromDb(supabase, m.description ?? null))),
+      ]);
       const mealRows = d.meals.map((m, idx) => {
         let slotLabel: string;
         if (m.slot === "breakfast") slotLabel = "Frühstück";
@@ -699,17 +702,42 @@ WICHTIG zu name/description:
           slotLabel = `Snack ${snackCounter}`;
         }
         const v = verifications[idx];
+        const rc = recomputes[idx];
+
+        // Wenn DB ≥ 70 % der Zutaten abdeckt: KI-Makros durch saubere
+        // gramm/100g-Rechnung ersetzen. Sonst KI-Werte behalten, aber
+        // immer kcal = round(P*4 + C*4 + F*9) erzwingen.
+        let kcal = m.kcal ?? null;
+        let protein_g = m.protein_g ?? null;
+        let carbs_g = m.carbs_g ?? null;
+        let fat_g = m.fat_g ?? null;
+        let data_source = v.data_source;
+
+        if (rc && rc.coverage >= 0.7) {
+          kcal = rc.kcal;
+          protein_g = rc.protein_g;
+          carbs_g = rc.carbs_g;
+          fat_g = rc.fat_g;
+          data_source = "db_verified";
+        } else {
+          const fixed = enforceKcalConsistency({ kcal, protein_g, carbs_g, fat_g });
+          kcal = fixed.kcal;
+          protein_g = fixed.protein_g;
+          carbs_g = fixed.carbs_g;
+          fat_g = fixed.fat_g;
+        }
+
         return {
           day_id: dayRow.id,
           name: `${d.name} — ${slotLabel}`,
           description: m.description ?? null,
-          kcal: m.kcal ?? null,
-          protein_g: m.protein_g ?? null,
-          carbs_g: m.carbs_g ?? null,
-          fat_g: m.fat_g ?? null,
+          kcal,
+          protein_g,
+          carbs_g,
+          fat_g,
           sort_order: idx,
-          data_source: v.data_source,
-          verified_ratio: v.verified_ratio,
+          data_source,
+          verified_ratio: rc && rc.coverage >= 0.7 ? rc.coverage : v.verified_ratio,
         };
       });
       if (mealRows.length) {
