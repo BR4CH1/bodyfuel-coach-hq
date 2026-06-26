@@ -935,6 +935,16 @@ function cloneMealForExpandedDay(meal: GeneratedMeal): GeneratedMeal {
   };
 }
 
+function cloneComputedMealForExpandedDay(meal: ComputedGeneratedMeal): ComputedGeneratedMeal {
+  return {
+    ...meal,
+    ingredients: Array.isArray(meal.ingredients)
+      ? meal.ingredients.map((ing) => ({ ...ing }))
+      : undefined,
+    _compute_warnings: Array.isArray(meal._compute_warnings) ? [...meal._compute_warnings] : undefined,
+  };
+}
+
 function expandGeneratedDays(
   baseDays: GeneratedDay[],
   schedule: PlanScheduleDay[],
