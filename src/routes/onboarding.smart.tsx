@@ -12,8 +12,6 @@ import {
   completeSmartOnboarding,
   getOnboardingStatus,
 } from "@/lib/smart-onboarding.functions";
-import { generateAiNutritionPlanDraft } from "@/lib/nutrition-plan-ai.functions";
-import { activateLatestSmartPlan } from "@/lib/smart-autopublish.functions";
 import { useSession } from "@/lib/bodyfuel/session";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/bodyfuel/Logo";
@@ -122,8 +120,6 @@ function SmartOnboardingPage() {
   const { supabaseUser, loading } = useSession();
   const statusFn = useServerFn(getOnboardingStatus);
   const completeFn = useServerFn(completeSmartOnboarding);
-  const genNutritionFn = useServerFn(generateAiNutritionPlanDraft);
-  const activateFn = useServerFn(activateLatestSmartPlan);
 
   useEffect(() => {
     if (!loading && !supabaseUser) navigate({ to: "/auth" });
@@ -193,22 +189,11 @@ function SmartOnboardingPage() {
           extra_allergies: form.extra_allergies || null,
         },
       });
-      // 2) Ernährungsplan generieren + aktivieren (best effort)
-      if (supabaseUser) {
-        try {
-          await genNutritionFn({
-            data: { user_id: supabaseUser.id, start_mode: "today" },
-          });
-          await activateFn({
-            data: { user_id: supabaseUser.id, plan_type: "nutrition" },
-          });
-        } catch (e) {
-          console.warn("Auto-Publish Ernährung fehlgeschlagen:", e);
-        }
-      }
+      // Pläne werden im Hintergrund (Queue + Cron) generiert, damit das
+      // Onboarding sofort fertig ist statt 2-4 Minuten zu blocken.
     },
     onSuccess: () => {
-      toast.success("Dein BodyFuel Autopilot ist startbereit!");
+      toast.success("Autopilot gestartet! Deine Pläne entstehen im Hintergrund.");
       navigate({ to: "/dashboard" });
     },
     onError: (e: any) => toast.error(e.message),

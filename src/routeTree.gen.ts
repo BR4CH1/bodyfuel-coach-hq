@@ -90,6 +90,7 @@ import { Route as ApiPublicHooksTrialRemindersRouteImport } from './routes/api/p
 import { Route as ApiPublicHooksSendFeatureNewsRouteImport } from './routes/api/public/hooks/send-feature-news'
 import { Route as ApiPublicHooksRegenTrainingPlansRouteImport } from './routes/api/public/hooks/regen-training-plans'
 import { Route as ApiPublicHooksRegenNutritionPlansRouteImport } from './routes/api/public/hooks/regen-nutrition-plans'
+import { Route as ApiPublicHooksProcessAutopilotJobsRouteImport } from './routes/api/public/hooks/process-autopilot-jobs'
 import { Route as ApiPublicHooksPlanRotationRouteImport } from './routes/api/public/hooks/plan-rotation'
 import { Route as ApiPublicHooksCoachDailySummaryRouteImport } from './routes/api/public/hooks/coach-daily-summary'
 
@@ -508,6 +509,12 @@ const ApiPublicHooksRegenNutritionPlansRoute =
     path: '/api/public/hooks/regen-nutrition-plans',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksProcessAutopilotJobsRoute =
+  ApiPublicHooksProcessAutopilotJobsRouteImport.update({
+    id: '/api/public/hooks/process-autopilot-jobs',
+    path: '/api/public/hooks/process-autopilot-jobs',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksPlanRotationRoute =
   ApiPublicHooksPlanRotationRouteImport.update({
     id: '/api/public/hooks/plan-rotation',
@@ -595,6 +602,7 @@ export interface FileRoutesByFullPath {
   '/tracker/app/': typeof TrackerAppIndexRoute
   '/api/public/hooks/coach-daily-summary': typeof ApiPublicHooksCoachDailySummaryRoute
   '/api/public/hooks/plan-rotation': typeof ApiPublicHooksPlanRotationRoute
+  '/api/public/hooks/process-autopilot-jobs': typeof ApiPublicHooksProcessAutopilotJobsRoute
   '/api/public/hooks/regen-nutrition-plans': typeof ApiPublicHooksRegenNutritionPlansRoute
   '/api/public/hooks/regen-training-plans': typeof ApiPublicHooksRegenTrainingPlansRoute
   '/api/public/hooks/send-feature-news': typeof ApiPublicHooksSendFeatureNewsRoute
@@ -675,6 +683,7 @@ export interface FileRoutesByTo {
   '/tracker/app': typeof TrackerAppIndexRoute
   '/api/public/hooks/coach-daily-summary': typeof ApiPublicHooksCoachDailySummaryRoute
   '/api/public/hooks/plan-rotation': typeof ApiPublicHooksPlanRotationRoute
+  '/api/public/hooks/process-autopilot-jobs': typeof ApiPublicHooksProcessAutopilotJobsRoute
   '/api/public/hooks/regen-nutrition-plans': typeof ApiPublicHooksRegenNutritionPlansRoute
   '/api/public/hooks/regen-training-plans': typeof ApiPublicHooksRegenTrainingPlansRoute
   '/api/public/hooks/send-feature-news': typeof ApiPublicHooksSendFeatureNewsRoute
@@ -761,6 +770,7 @@ export interface FileRoutesById {
   '/tracker/app/': typeof TrackerAppIndexRoute
   '/api/public/hooks/coach-daily-summary': typeof ApiPublicHooksCoachDailySummaryRoute
   '/api/public/hooks/plan-rotation': typeof ApiPublicHooksPlanRotationRoute
+  '/api/public/hooks/process-autopilot-jobs': typeof ApiPublicHooksProcessAutopilotJobsRoute
   '/api/public/hooks/regen-nutrition-plans': typeof ApiPublicHooksRegenNutritionPlansRoute
   '/api/public/hooks/regen-training-plans': typeof ApiPublicHooksRegenTrainingPlansRoute
   '/api/public/hooks/send-feature-news': typeof ApiPublicHooksSendFeatureNewsRoute
@@ -848,6 +858,7 @@ export interface FileRouteTypes {
     | '/tracker/app/'
     | '/api/public/hooks/coach-daily-summary'
     | '/api/public/hooks/plan-rotation'
+    | '/api/public/hooks/process-autopilot-jobs'
     | '/api/public/hooks/regen-nutrition-plans'
     | '/api/public/hooks/regen-training-plans'
     | '/api/public/hooks/send-feature-news'
@@ -928,6 +939,7 @@ export interface FileRouteTypes {
     | '/tracker/app'
     | '/api/public/hooks/coach-daily-summary'
     | '/api/public/hooks/plan-rotation'
+    | '/api/public/hooks/process-autopilot-jobs'
     | '/api/public/hooks/regen-nutrition-plans'
     | '/api/public/hooks/regen-training-plans'
     | '/api/public/hooks/send-feature-news'
@@ -1013,6 +1025,7 @@ export interface FileRouteTypes {
     | '/tracker/app/'
     | '/api/public/hooks/coach-daily-summary'
     | '/api/public/hooks/plan-rotation'
+    | '/api/public/hooks/process-autopilot-jobs'
     | '/api/public/hooks/regen-nutrition-plans'
     | '/api/public/hooks/regen-training-plans'
     | '/api/public/hooks/send-feature-news'
@@ -1070,6 +1083,7 @@ export interface RootRouteChildren {
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiPublicHooksCoachDailySummaryRoute: typeof ApiPublicHooksCoachDailySummaryRoute
   ApiPublicHooksPlanRotationRoute: typeof ApiPublicHooksPlanRotationRoute
+  ApiPublicHooksProcessAutopilotJobsRoute: typeof ApiPublicHooksProcessAutopilotJobsRoute
   ApiPublicHooksRegenNutritionPlansRoute: typeof ApiPublicHooksRegenNutritionPlansRoute
   ApiPublicHooksRegenTrainingPlansRoute: typeof ApiPublicHooksRegenTrainingPlansRoute
   ApiPublicHooksSendFeatureNewsRoute: typeof ApiPublicHooksSendFeatureNewsRoute
@@ -1651,6 +1665,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksRegenNutritionPlansRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/process-autopilot-jobs': {
+      id: '/api/public/hooks/process-autopilot-jobs'
+      path: '/api/public/hooks/process-autopilot-jobs'
+      fullPath: '/api/public/hooks/process-autopilot-jobs'
+      preLoaderRoute: typeof ApiPublicHooksProcessAutopilotJobsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/plan-rotation': {
       id: '/api/public/hooks/plan-rotation'
       path: '/api/public/hooks/plan-rotation'
@@ -1817,6 +1838,8 @@ const rootRouteChildren: RootRouteChildren = {
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ApiPublicHooksCoachDailySummaryRoute: ApiPublicHooksCoachDailySummaryRoute,
   ApiPublicHooksPlanRotationRoute: ApiPublicHooksPlanRotationRoute,
+  ApiPublicHooksProcessAutopilotJobsRoute:
+    ApiPublicHooksProcessAutopilotJobsRoute,
   ApiPublicHooksRegenNutritionPlansRoute:
     ApiPublicHooksRegenNutritionPlansRoute,
   ApiPublicHooksRegenTrainingPlansRoute: ApiPublicHooksRegenTrainingPlansRoute,

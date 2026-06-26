@@ -5,6 +5,7 @@ import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { MyPackagePanel } from "@/components/bodyfuel/MyPackagePanel";
 
 import { SmartRenewalCard } from "@/components/bodyfuel/SmartRenewalCard";
+import { AutopilotStatusCard } from "@/components/bodyfuel/AutopilotStatusCard";
 import { TrainingDevelopmentCard } from "@/components/bodyfuel/TrainingTrends";
 import { DailyChecklist } from "@/components/bodyfuel/DailyChecklist";
 import { AchievementsCard } from "@/components/bodyfuel/AchievementsCard";
@@ -526,6 +527,7 @@ function RealUserDashboard() {
         />
       </div>
 
+      {supabaseUser && <AutopilotStatusCard userId={supabaseUser.id} />}
       {supabaseUser && <SmartAnalysisCTA />}
       {supabaseUser && !hasActivePlan && <SmartRenewalCard />}
       {supabaseUser && <StrengthCheckStatus variant="block" />}
