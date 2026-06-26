@@ -136,7 +136,7 @@ export function SmartPlanReadyPopup({ userId }: { userId: string }) {
             className="w-full bg-gradient-gold text-primary-foreground"
           >
             <Sparkles className="mr-2 h-4 w-4" />
-            {generate.isPending ? "Erstelle Plan…" : "Plan jetzt erstellen"}
+            {generate.isPending ? "Starte Plan…" : "Plan jetzt starten"}
           </Button>
           <Button
             variant="ghost"
