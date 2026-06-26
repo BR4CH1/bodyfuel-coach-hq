@@ -21,6 +21,9 @@ type ComputedGeneratedMeal = GeneratedMeal & {
 };
 type GeneratedDay = { name: string; type?: "training" | "rest"; meals: GeneratedMeal[] };
 type MacroTarget = { kcal: number; protein_g: number; carbs_g: number; fat_g: number };
+type PlanScheduleDay = { wkKey?: string; wkLabel: string; type: "training" | "rest" };
+type RawPlanDay = { name: string; type: "training" | "rest"; target: MacroTarget; meals: GeneratedMeal[] };
+type CleanedPlanDay = { name: string; type: "training" | "rest"; meals: ComputedGeneratedMeal[] };
 
 
 /**
@@ -41,7 +44,7 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
       title?: string;
       /** "today" = ab heute bis nächster Einkauf, "next_shopping" = ab nächstem Einkauf für einen vollen Zyklus. */
       start_mode?: "today" | "next_shopping";
-      /** Optional override: feste Plan-Länge in Tagen (1–21). Überschreibt die Einkaufstag-Logik. */
+      /** Optional override: feste Plan-Länge in Tagen (1–31). Überschreibt die Einkaufstag-Logik. */
       plan_days?: number | null;
     }) => d,
   )
@@ -468,10 +471,17 @@ Jede Mahlzeit MUSS aus dieser Erlaubt-Liste komponiert sein. Wenn du im Descript
       return { wkKey, wkLabel, type };
     });
 
+    // Lange Pläne dürfen nicht als ein riesiger KI-Request laufen — das führt
+    // zuverlässig zu 524-Timeouts. Die KI erstellt max. 7 hochwertige Basistage,
+    // der Server rollt diese anschließend deterministisch auf bis zu 31 Tage aus.
+    const aiPlanDays = Math.min(planDays, 7);
+    const aiSchedule = schedule.slice(0, aiPlanDays);
     const trainingCount = schedule.filter((s) => s.type === "training").length;
     const restCount = schedule.length - trainingCount;
+    const aiTrainingCount = aiSchedule.filter((s) => s.type === "training").length;
+    const aiRestCount = aiSchedule.length - aiTrainingCount;
 
-    const scheduleLines = schedule
+    const scheduleLines = aiSchedule
       .map((s, i) => `Tag ${i + 1} (${s.wkLabel}): ${s.type === "training" ? "TRAININGSTAG" : "RESTDAY"}`)
       .join("\n");
 
@@ -493,7 +503,7 @@ RESTDAY-Ziel (für "type":"rest", ±5 % treffen):
 - Kohlenhydrate: ${carbsR} g
 - Fett: ${fatR} g
 
-VORGEGEBENER TAGESPLAN (Reihenfolge ist verbindlich, ${trainingCount}× Training / ${restCount}× Rest):
+VORGEGEBENER BASIS-TAGESPLAN (wird vom Server auf ${planDays} Tage ausgerollt; Gesamtplan: ${trainingCount}× Training / ${restCount}× Rest, Basis: ${aiTrainingCount}× Training / ${aiRestCount}× Rest):
 ${scheduleLines}`;
 
     const goalLabel = goalDirection === "cut" ? "FETTABBAU (moderates Kaloriendefizit, hohes Protein)" :
@@ -547,7 +557,7 @@ Die Kalorien-/Makro-Ziele sind auf aktuelles Gewicht, Wunschgewicht und Training
       ? `\n✅ ZUTATEN-WHITELIST FÜR SICHERE BERECHNUNG (HART): Verwende in ingredients.name AUSSCHLIESSLICH diese Lebensmittel-Namen. Wenn ein Wunsch-Lebensmittel nicht exakt in der Liste steht, wähle die nächstpassende Alternative aus dieser Liste. Keine neuen Fantasie-Zutaten erzeugen.\n${foodWhitelist}\n`
       : "";
 
-    const prompt = `Erstelle einen ${planDays}-Tage-Ernährungsplan. PFLICHT pro Tag: genau 1 Frühstück (slot:"breakfast"), 1 Mittagessen (slot:"lunch"), 1 Abendessen (slot:"dinner") + mindestens 1 Snack (slot:"snack"). Diese 3 Hauptmahlzeiten sind NICHT optional — fehlt eine, ist der Plan ungültig. Der Plan soll genau bis zum nächsten Einkaufstag reichen.
+    const prompt = `Erstelle eine ${aiPlanDays}-Tage-Basiswoche für einen ${planDays}-Tage-Ernährungsplan. PFLICHT pro Tag: genau 1 Frühstück (slot:"breakfast"), 1 Mittagessen (slot:"lunch"), 1 Abendessen (slot:"dinner") + mindestens 1 Snack (slot:"snack"). Diese 3 Hauptmahlzeiten sind NICHT optional — fehlt eine, ist der Plan ungültig. Der Server wiederholt passende Training-/Restday-Basistage anschließend bis Tag ${planDays}; antworte deshalb NICHT mit ${planDays} Tagen, sondern exakt mit ${aiPlanDays} Basistagen.
 
 🚨 KALORIEN-OBERGRENZE PRO MAHLZEIT: 850 kcal (HART). Keine einzelne Mahlzeit darf 850 kcal überschreiten — auch nicht Frühstück, Mittag oder Abend. Wenn das Tages-kcal-Ziel mit 4 Mahlzeiten nicht erreicht wird, FÜGE WEITERE SNACKS HINZU (Snack 2, Snack 3, …), bis das Tagesziel erreicht ist. Lieber 5–7 kleinere Mahlzeiten als 3–4 zu große. Verteile Kalorien gleichmäßig: typisch Hauptmahlzeiten 500–800 kcal, Snacks 150–400 kcal.
 
@@ -587,7 +597,7 @@ Antworte AUSSCHLIESSLICH mit gültigem JSON in folgender Form:
 - Nährwerte ("kcal","protein_g","carbs_g","fat_g") darfst du auf 0 setzen — sie werden vom Server aus den Zutaten neu berechnet. Schätze NIEMALS selbst.
 - Wasser, Gewürze, Salz, Pfeffer, Zimt: in "ingredients" mit amount:0 oder unit:"prise" angeben (zählen nicht in die Makros).
 
-Genau ${planDays} Tage in der vorgegebenen Reihenfolge, mindestens 4 Mahlzeiten pro Tag (Frühstück, Mittag, Abend, Snack), bei Bedarf zusätzliche Snacks ergänzen. KEINE Mahlzeit über 850 kcal. Jeder Tag MUSS ein Feld "type" mit "training" ODER "rest" enthalten (passend zum Tagesplan oben). Tagessummen müssen die jeweiligen Ziele treffen.
+Genau ${aiPlanDays} Basistage in der vorgegebenen Reihenfolge, mindestens 4 Mahlzeiten pro Tag (Frühstück, Mittag, Abend, Snack), bei Bedarf zusätzliche Snacks ergänzen. KEINE Mahlzeit über 850 kcal. Jeder Tag MUSS ein Feld "type" mit "training" ODER "rest" enthalten (passend zum Basis-Tagesplan oben). Tagessummen müssen die jeweiligen Ziele treffen.
 
 WICHTIG zu name/description:
 - "name" = konkreter Gerichtsname (z. B. Overnight Oats, Hähnchen-Reis-Bowl).
@@ -619,8 +629,11 @@ WICHTIG zu name/description:
     } catch {
       throw new Error("Antwort konnte nicht gelesen werden.");
     }
-    const days = (parsed.days ?? []).slice(0, planDays);
-    if (!days.length) throw new Error("Keine Tage generiert.");
+    const generatedDays = (parsed.days ?? [])
+      .slice(0, aiPlanDays)
+      .map((d: GeneratedDay, i: number): GeneratedDay => ({ ...d, type: aiSchedule[i]?.type ?? d.type }));
+    if (!generatedDays.length) throw new Error("Keine Tage generiert.");
+    const days: GeneratedDay[] = expandGeneratedDays(generatedDays, schedule, planDays);
 
     // Hard filter + authoritative day type from `schedule`.
     // Wichtig: Makros werden ab hier ausschließlich aus Zutaten + Food-DB
@@ -628,23 +641,24 @@ WICHTIG zu name/description:
     const forbidden = [...expandedAllergies, ...expandedNogo]
       .map((s) => s.toLowerCase().trim())
       .filter(Boolean);
-    const rawDays = days.map((d, i) => {
+    const rawDays: RawPlanDay[] = days.map((d: GeneratedDay, i: number): RawPlanDay => {
       const s = schedule[i] ?? schedule[schedule.length - 1];
       const typeLabel = s.type === "rest" ? "Restday" : "Trainingstag";
       const name = `${s.wkLabel} — ${typeLabel}`;
-      const allowedMeals = (d.meals ?? []).filter((m) => {
+      const allowedMeals = (d.meals ?? []).filter((m: GeneratedMeal) => {
         const hay = `${m.name} ${m.description ?? ""} ${JSON.stringify((m as any).ingredients ?? [])}`.toLowerCase();
         return !forbidden.some((f) => hay.includes(f));
       });
       return {
         name,
+        type: s.type,
         target: s.type === "rest" ? restTargets : trainingTargets,
         meals: allowedMeals,
       };
     });
 
-    const missingRequired = rawDays.flatMap((d, idx) => {
-      const slots = new Set(d.meals.map((m) => m.slot));
+    const missingRequired = rawDays.flatMap((d: RawPlanDay, idx: number) => {
+      const slots = new Set(d.meals.map((m: GeneratedMeal) => m.slot));
       return (["breakfast", "lunch", "dinner"] as const)
         .filter((slot) => !slots.has(slot))
         .map((slot) => `Tag ${idx + 1}: ${labelForSlot(slot)} fehlt`);
@@ -661,8 +675,9 @@ WICHTIG zu name/description:
       parseDescriptionToEngineIngredients,
     } = await import("./nutrition-engine.server");
 
-    const cleaned = await Promise.all(rawDays.map(async (d, dayIdx) => {
-      const computed = await Promise.all(d.meals.map(async (m, mealIdx) => {
+    const baseCache = new Map<string, Promise<ComputedGeneratedMeal[]>>();
+    const computeDayMeals = async (d: RawPlanDay, dayIdx: number): Promise<ComputedGeneratedMeal[]> => {
+      const computed = await Promise.all(d.meals.map(async (m: GeneratedMeal, mealIdx: number) => {
         const structured = coerceIngredients((m as any).ingredients ?? null);
         const ingredientsForMath = structured.length
           ? structured
@@ -725,7 +740,17 @@ WICHTIG zu name/description:
           actual: finalSums,
         });
       }
-      return { name: d.name, meals: capped };
+      return capped;
+    };
+    const cleaned: CleanedPlanDay[] = await Promise.all(rawDays.map(async (d: RawPlanDay, dayIdx: number): Promise<CleanedPlanDay> => {
+      const cacheKey = `${d.type}:${JSON.stringify(d.meals)}`;
+      let cached = baseCache.get(cacheKey);
+      if (!cached) {
+        cached = computeDayMeals(d, dayIdx);
+        baseCache.set(cacheKey, cached);
+      }
+      const meals = (await cached).map(cloneComputedMealForExpandedDay);
+      return { name: d.name, type: d.type, meals };
     }));
 
 
@@ -901,6 +926,50 @@ function labelForSlot(slot: string): string {
     case "snack": return "Snack";
     default: return "Mahlzeit";
   }
+}
+
+function cloneMealForExpandedDay(meal: GeneratedMeal): GeneratedMeal {
+  return {
+    ...meal,
+    ingredients: Array.isArray(meal.ingredients)
+      ? meal.ingredients.map((ing) => ({ ...ing }))
+      : undefined,
+  };
+}
+
+function cloneComputedMealForExpandedDay(meal: ComputedGeneratedMeal): ComputedGeneratedMeal {
+  return {
+    ...meal,
+    ingredients: Array.isArray(meal.ingredients)
+      ? meal.ingredients.map((ing) => ({ ...ing }))
+      : undefined,
+    _compute_warnings: Array.isArray(meal._compute_warnings) ? [...meal._compute_warnings] : undefined,
+  };
+}
+
+function expandGeneratedDays(
+  baseDays: GeneratedDay[],
+  schedule: PlanScheduleDay[],
+  planDays: number,
+): GeneratedDay[] {
+  const fallbackDays = baseDays.length ? baseDays : [{ name: "Tag 1", type: "training" as const, meals: [] }];
+  const pools: Record<"training" | "rest", GeneratedDay[]> = {
+    training: fallbackDays.filter((d) => d.type === "training"),
+    rest: fallbackDays.filter((d) => d.type === "rest"),
+  };
+  const counters: Record<"training" | "rest", number> = { training: 0, rest: 0 };
+
+  return Array.from({ length: planDays }, (_, i): GeneratedDay => {
+    const type = schedule[i]?.type ?? fallbackDays[i % fallbackDays.length]?.type ?? "training";
+    const pool = pools[type].length ? pools[type] : fallbackDays;
+    const template = pool[counters[type] % pool.length] ?? fallbackDays[i % fallbackDays.length];
+    counters[type] += 1;
+    return {
+      name: `Tag ${i + 1}`,
+      type,
+      meals: (template.meals ?? []).map(cloneMealForExpandedDay),
+    };
+  });
 }
 
 /** Auf 50-kcal-Schritte runden (z. B. 2237 → 2250). */

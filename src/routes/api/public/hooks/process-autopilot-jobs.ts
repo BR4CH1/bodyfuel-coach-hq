@@ -25,14 +25,16 @@ export const Route = createFileRoute("/api/public/hooks/process-autopilot-jobs")
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-        // Bis zu 3 offene Jobs pro Aufruf — jeder macht genau einen Schritt.
+        // Genau 1 offener Job-Schritt pro Aufruf: 31-Tage-Pläne sind bewusst
+        // gekürzt/chunked, aber mehrere LLM-/Engine-Schritte in einem Request
+        // können trotzdem Cloudflare-524 auslösen.
         const { data: jobs, error } = await supabaseAdmin
           .from("smart_autopilot_jobs")
           .select("*")
           .in("status", ["pending", "running"])
           .neq("step", "done")
           .order("created_at", { ascending: true })
-          .limit(3);
+          .limit(1);
 
         if (error) {
           return new Response(JSON.stringify({ error: error.message }), { status: 500 });
@@ -58,7 +60,7 @@ export const Route = createFileRoute("/api/public/hooks/process-autopilot-jobs")
                 target: job.user_id,
                 uploadedBy: job.user_id,
                 start_mode: "today",
-                plan_days: 30,
+                plan_days: 31,
                 apiKey,
               });
               const planId = (res as any)?.plan_id ?? (res as any)?.id ?? null;
