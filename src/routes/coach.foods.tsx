@@ -86,12 +86,33 @@ function CoachFoodsPage() {
       const { recomputeAllPlanMacros } = await import("@/lib/nutrition-backfill.functions");
       const res = await recomputeAllPlanMacros();
       toast.success(
-        `Fertig: ${res.updated}/${res.scanned} Mahlzeiten korrigiert (${res.db_recomputed} aus DB neu, ${res.kcal_fixed} kcal-konsistent).`,
+        `Fertig: ${res.updated}/${res.scanned} korrigiert (${res.via_engine} via Engine, ${res.via_parser} via Parser, ${res.kcal_fixed} kcal-konsistent).`,
       );
     } catch (e: any) {
       toast.error(e?.message ?? "Fehler beim Nachrechnen");
     } finally {
       setRecomputing(false);
+    }
+  }
+
+  const [testing, setTesting] = useState(false);
+  async function runEngineTests() {
+    if (testing) return;
+    setTesting(true);
+    try {
+      const { runNutritionEngineTests } = await import("@/lib/nutrition-backfill.functions");
+      const res = await runNutritionEngineTests();
+      const lines = res.runs.map((r) =>
+        `${r.passed ? "✅" : "❌"} ${r.name}: ${r.result.kcal} kcal · ${r.result.protein_g}P/${r.result.carbs_g}C/${r.result.fat_g}F${r.reasons.length ? " — " + r.reasons.join(", ") : ""}`,
+      );
+      const msg = `Engine-Tests: ${res.passed}/${res.passed + res.failed} bestanden\n\n${lines.join("\n")}`;
+      if (res.failed === 0) toast.success(msg, { duration: 12000 });
+      else toast.error(msg, { duration: 20000 });
+      console.log("Engine self-test", res);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Test fehlgeschlagen");
+    } finally {
+      setTesting(false);
     }
   }
 
@@ -186,6 +207,9 @@ function CoachFoodsPage() {
           <ArrowLeft className="h-4 w-4" /> Coach-Dashboard
         </Link>
         <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={runEngineTests} disabled={testing}>
+            {testing ? "Teste…" : "Engine-Tests"}
+          </Button>
           <Button variant="outline" onClick={recomputeAll} disabled={recomputing}>
             {recomputing ? "Rechne neu…" : "Pläne nachrechnen"}
           </Button>
