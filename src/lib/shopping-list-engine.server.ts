@@ -718,8 +718,9 @@ export async function generateCombinedShoppingList(opts: {
 
   const [linesA, linesB] = await Promise.all([
     fetchMealLines(planAId, windowDays, "combined"),
-    fetchMealLines(planBId, windowDays, "combined"),
+    fetchMealLines(planBId, windowDays, "combined", { skipShared: true }),
   ]);
+
 
   if (!linesA.length && !linesB.length) throw new Error("Keine Mahlzeiten für die Partnerpläne.");
 
