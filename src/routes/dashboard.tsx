@@ -527,6 +527,7 @@ function RealUserDashboard() {
         />
       </div>
 
+      {supabaseUser && <AutopilotStatusCard userId={supabaseUser.id} />}
       {supabaseUser && <SmartAnalysisCTA />}
       {supabaseUser && !hasActivePlan && <SmartRenewalCard />}
       {supabaseUser && <StrengthCheckStatus variant="block" />}
