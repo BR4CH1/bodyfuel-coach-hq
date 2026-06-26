@@ -1367,12 +1367,14 @@ export type Database = {
         Row: {
           assigned_to: string | null
           carbs_g: number | null
+          compute_warnings: string[] | null
           created_at: string
           data_source: string
           day_id: string
           description: string | null
           fat_g: number | null
           id: string
+          ingredients_json: Json | null
           is_shared: boolean
           kcal: number | null
           name: string
@@ -1387,12 +1389,14 @@ export type Database = {
         Insert: {
           assigned_to?: string | null
           carbs_g?: number | null
+          compute_warnings?: string[] | null
           created_at?: string
           data_source?: string
           day_id: string
           description?: string | null
           fat_g?: number | null
           id?: string
+          ingredients_json?: Json | null
           is_shared?: boolean
           kcal?: number | null
           name: string
@@ -1407,12 +1411,14 @@ export type Database = {
         Update: {
           assigned_to?: string | null
           carbs_g?: number | null
+          compute_warnings?: string[] | null
           created_at?: string
           data_source?: string
           day_id?: string
           description?: string | null
           fat_g?: number | null
           id?: string
+          ingredients_json?: Json | null
           is_shared?: boolean
           kcal?: number | null
           name?: string
