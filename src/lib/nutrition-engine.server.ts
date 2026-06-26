@@ -71,7 +71,7 @@ const STOPWORDS = new Set([
   "fett", "prozent",
   "light", "zuckerarm", "ungesüßt", "ungesalzen", "gewürfelt",
   "geschnitten", "gerieben", "gehackt", "fein", "grob", "kalt", "warm",
-  "scheibe", "scheiben", "stück", "stueck", "stk", "el", "tl",
+  "scheibe", "scheiben", "stück", "stueck", "stk", "je", "el", "tl",
   "esslöffel", "teelöffel", "prise", "prisen", "bund", "g", "gramm",
   "ml", "milliliter", "l", "liter", "kg",
 ]);
@@ -340,7 +340,9 @@ const PARSER_STOP_WORDS =
 
 function cleanIngredientName(raw: string): string {
   return raw
+    .replace(/\((?:je\s*)?\d+(?:[.,]\d+)?\s*(?:g|gramm|ml|l|kg)\)/gi, " ")
     .replace(/[()]/g, " ")
+    .replace(/\bje\s*\d+(?:[.,]\d+)?\s*(?:g|gramm|ml|l|kg)\b/gi, " ")
     .replace(PARSER_STOP_WORDS, " ")
     .replace(/[,;:]/g, " ")
     .replace(/\s+/g, " ")
@@ -379,6 +381,9 @@ function parseFraction(token: string): number | null {
 const PIECE_GRAMS: Array<[RegExp, number]> = [
   [/\bapfel\b/i, 150], [/\bbirne\b/i, 150], [/\bbanane\b/i, 120], [/\borange\b/i, 180],
   [/\bzitrone\b/i, 80], [/\bei\b|\beier\b/i, 60], [/\bscheibe\b|\bscheiben\b/i, 45],
+  [/\b(wrap|wraps|tortilla|tortillas)\b/i, 60],
+  [/\b(brötchen|broetchen|semmel|semmeln)\b/i, 70],
+  [/\b(reiswaffel|reiswaffeln)\b/i, 8],
   [/\bkartoffel\b/i, 120], [/\btomate\b/i, 90], [/\bgurke\b/i, 300], [/\bpaprika\b/i, 150],
   [/\bzwiebel\b/i, 80], [/\bknoblauch(?:zehe)?\b/i, 5], [/\bavocado\b/i, 170],
   [/\b(proteinriegel|eiweißriegel|eiweissriegel)\b/i, 55],
@@ -392,12 +397,25 @@ function defaultPieceGrams(name: string): number | null {
 function parseIngredientLine(raw: string): ParsedIngredient | null {
   const original = raw.trim();
   if (!original) return null;
-  const tail = original.match(/\((\d+(?:[.,]\d+)?)\s*(g|gramm|ml|l|kg)\)/i);
+  const tail = original.match(/\((je\s*)?(\d+(?:[.,]\d+)?)\s*(g|gramm|ml|l|kg)\)/i);
   if (tail) {
-    let amount = parseFloat(tail[1].replace(",", "."));
-    const unit = tail[2].toLowerCase();
+    let amount = parseFloat(tail[2].replace(",", "."));
+    const unit = tail[3].toLowerCase();
     if (unit === "kg" || unit === "l") amount *= 1000;
-    const name = cleanIngredientName(original.replace(tail[0], ""));
+    const beforeTail = original.replace(tail[0], "");
+    const lead = beforeTail.match(
+      /^\s*(\d+(?:[.,]\d+)?|ein(?:e|en|em|er)?)\s*(scheiben?|stück|stueck|stk\.?|wraps?|tortillas?|brötchen|broetchen|semmeln?|riegel)?\s*(.*)$/i,
+    );
+    if (lead) {
+      const countToken = lead[1].toLowerCase();
+      const count = /^ein/.test(countToken) ? 1 : parseFloat(countToken.replace(",", "."));
+      const unitToken = (lead[2] ?? "").toLowerCase();
+      const restName = cleanIngredientName(lead[3] ?? beforeTail);
+      if (Number.isFinite(count) && restName.length >= 3 && (tail[1] || unitToken)) {
+        return { raw: original, name: restName, grams: amount * count };
+      }
+    }
+    const name = cleanIngredientName(beforeTail);
     if (name.length >= 3) return { raw: original, name, grams: amount };
   }
   const m = original.match(
