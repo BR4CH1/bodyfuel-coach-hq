@@ -22,6 +22,8 @@ type ComputedGeneratedMeal = GeneratedMeal & {
 type GeneratedDay = { name: string; type?: "training" | "rest"; meals: GeneratedMeal[] };
 type MacroTarget = { kcal: number; protein_g: number; carbs_g: number; fat_g: number };
 type PlanScheduleDay = { wkKey?: string; wkLabel: string; type: "training" | "rest" };
+type RawPlanDay = { name: string; type: "training" | "rest"; target: MacroTarget; meals: GeneratedMeal[] };
+type CleanedPlanDay = { name: string; type: "training" | "rest"; meals: ComputedGeneratedMeal[] };
 
 
 /**
