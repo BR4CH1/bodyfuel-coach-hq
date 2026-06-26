@@ -74,6 +74,8 @@ const STOPWORDS = new Set([
   "fett", "prozent", "extra", "groß", "große", "gross", "grosse",
   "light", "zuckerarm", "ungesüßt", "ungesalzen", "gewürfelt",
   "geschnitten", "gerieben", "gehackt", "fein", "grob", "kalt", "warm",
+  "gefroren", "aufgetaut", "abgetropft", "fertig", "magerstufe",
+  "vanille", "schokolade", "streifen", "sticks", "ohne", "zuckerzusatz",
   "scheibe", "scheiben", "stück", "stueck", "stk", "je", "el", "tl",
   "esslöffel", "teelöffel", "prise", "prisen", "bund", "g", "gramm",
   "ml", "milliliter", "l", "liter", "kg",
@@ -105,6 +107,8 @@ const PROBE_REWRITES: Array<[RegExp, string]> = [
   [/\bputenbrustfilet\b/g, "putenbrust"],
   [/\bpute\s+filet\b/g, "putenbrust"],
   [/\bvollkorn[-\s]?wraps?\b/g, "weizenwrap"],
+  [/\bweizentortillas?\b/g, "tortilla"],
+  [/\bvollkorntortillas?\b/g, "tortilla"],
   [/\bwraps?\b/g, "weizenwrap"],
   [/\btortillas?\b/g, "tortilla"],
   [/\bvollkornnudeln\b/g, "vollkornnudeln"],
@@ -114,8 +118,10 @@ const PROBE_REWRITES: Array<[RegExp, string]> = [
   [/\bgemischtes\s+gemüse\b/g, "gemischtes gemüse"],
   [/\bgemischtes\s+gemuese\b/g, "gemischtes gemüse"],
   [/\bkarotten(?:stifte|scheiben)?\b/g, "karotte"],
+  [/\bkarottensticks\b/g, "karotte"],
   [/\bmöhren(?:stifte|scheiben)?\b/g, "karotte"],
   [/\bmoehren(?:stifte|scheiben)?\b/g, "karotte"],
+  [/\bpaprikastreifen\b/g, "paprika"],
   [/\bgurken(?:scheiben|stifte)?\b/g, "gurke"],
   [/\bsalatblätter\b/g, "kopfsalat"],
   [/\bsalatblaetter\b/g, "kopfsalat"],
@@ -130,11 +136,24 @@ const PROBE_REWRITES: Array<[RegExp, string]> = [
   [/\bharzer\s+käse\b/g, "harzer käse"],
   // Joghurt-Dressing → Joghurt
   [/\bjoghurt[-\s]?dressing\b/g, "joghurt natur"],
+  [/\bbalsamicoessig\b/g, "essig"],
+  [/\bchiasamen\b/g, "chia-samen"],
+  [/\bchia\s+samen\b/g, "chia-samen"],
+  [/\bputenbrustaufschnitt\b/g, "putenbrust aufschnitt"],
+  [/\bhähnchenbrustaufschnitt\b/g, "hähnchenbrust aufschnitt"],
+  [/\bhaehnchenbrustaufschnitt\b/g, "hähnchenbrust aufschnitt"],
+  [/\bgemischte\s+beeren\b/g, "beeren gemischt"],
+  [/\bbeerenmix\b/g, "beeren gemischt"],
+  [/\bwaldbeeren\b/g, "beeren gemischt"],
   // Coconut milk
   [/\bkokosmilch\s+light\b/g, "kokosmilch light"],
   [/\bkokosmilch\b/g, "kokosmilch"],
   // Curry paste – low impact, but provide mapping
   [/\bcurrypaste\b/g, "currypaste"],
+  // Fruit purées / common snack variants must resolve to the verified base row
+  // instead of failing plan generation on wording like "Apfelmus (ungesüßt)".
+  [/\bapfelmus\b/g, "apfelmus"],
+  [/\bapfelmark\b/g, "apfelmus"],
 ];
 
 function normalize(s: string): string {
@@ -257,7 +276,7 @@ const CARB_STAPLES: Array<{ re: RegExp; minCarbsPer100g: number; label: string }
 ];
 
 const HIGH_IMPACT_INGREDIENT = /\b(hähnchen|haehnchen|huhn|pute|truthahn|rind|hack|steak|schinken|aufschnitt|lachs|fisch|thunfisch|ei|eier|tofu|tempeh|skyr|quark|joghurt|hüttenkäse|huettenkaese|käse|kaese|mozzarella|feta|gouda|emmentaler|frischkäse|frischkaese|protein|riegel|reis|nudel|pasta|spaghetti|kartoffel|brot|brötchen|broetchen|wrap|tortilla|hafer|müsli|muesli|quinoa|bulgur|couscous|linsen|kichererbsen|bohnen|öl|oel|olivenöl|olivenoel|butter|kokosmilch|nuss|nüsse|nuesse|mandel|avocado)\b/i;
-const LOW_IMPACT_INGREDIENT = /\b(wasser|salz|pfeffer|gewürz|gewuerz|zimt|kräuter|kraeuter|essig|zitrone|limette|salat|gurke|tomate|zucchini|paprika|brokkoli|blumenkohl|spinat|spargel|champignon|pilz|zwiebel|knoblauch)\b/i;
+const LOW_IMPACT_INGREDIENT = /\b(wasser|salz|pfeffer|gewürz|gewuerz|zimt|kräuter|kraeuter|essig|zitrone|limette|salat|gurke|tomate|zucchini|paprika|brokkoli|blumenkohl|spinat|spargel|champignon|pilz|zwiebel|knoblauch|obst|apfel|äpfel|aepfel|apfelmus|apfelmark|banane|beere|beeren|erdbeere|erdbeeren|himbeere|himbeeren|heidelbeere|heidelbeeren|blaubeere|blaubeeren|orange|kiwi|birne|trauben|mango|ananas|mandarine)\b/i;
 
 function isBlockingMissingIngredient(ing: EngineIngredient): boolean {
   const grams = Number(ing.grams) || 0;

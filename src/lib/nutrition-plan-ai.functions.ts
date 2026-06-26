@@ -534,6 +534,19 @@ Die Kalorien-/Makro-Ziele sind auf aktuelles Gewicht, Wunschgewicht und Training
       ? `\n💶 WOCHEN-BUDGET vom Coach: ${weeklyBudget} € / Woche → für diesen ${planDays}-Tage-Plan max. ~${budgetPerPeriod} € an Lebensmittelkosten (Discounter-Preise DE). Wähle Zutaten & Mengen so, dass die Gesamteinkaufskosten dieses Budget NICHT überschreiten. Bevorzuge saisonale/günstige Proteinquellen (Hähnchenbrust, Quark, Eier, Hülsenfrüchte, Thunfisch i. W., Hackfleisch), Grundbeilagen (Reis, Haferflocken, Kartoffeln, Nudeln) und tiefgekühltes Gemüse. Premium-Zutaten (Lachs, Rindersteak, Avocado, Nüsse) sparsam einsetzen.`
       : "";
 
+    const { data: foodRows } = await supabase
+      .from("nutrition_foods")
+      .select("name")
+      .eq("needs_review", false)
+      .order("name", { ascending: true })
+      .limit(350);
+    const foodWhitelist = Array.from(
+      new Set(((foodRows as any[]) ?? []).map((f) => String(f.name ?? "").trim()).filter(Boolean)),
+    ).join(", ");
+    const foodWhitelistBlock = foodWhitelist
+      ? `\n✅ ZUTATEN-WHITELIST FÜR SICHERE BERECHNUNG (HART): Verwende in ingredients.name AUSSCHLIESSLICH diese Lebensmittel-Namen. Wenn ein Wunsch-Lebensmittel nicht exakt in der Liste steht, wähle die nächstpassende Alternative aus dieser Liste. Keine neuen Fantasie-Zutaten erzeugen.\n${foodWhitelist}\n`
+      : "";
+
     const prompt = `Erstelle einen ${planDays}-Tage-Ernährungsplan. PFLICHT pro Tag: genau 1 Frühstück (slot:"breakfast"), 1 Mittagessen (slot:"lunch"), 1 Abendessen (slot:"dinner") + mindestens 1 Snack (slot:"snack"). Diese 3 Hauptmahlzeiten sind NICHT optional — fehlt eine, ist der Plan ungültig. Der Plan soll genau bis zum nächsten Einkaufstag reichen.
 
 🚨 KALORIEN-OBERGRENZE PRO MAHLZEIT: 850 kcal (HART). Keine einzelne Mahlzeit darf 850 kcal überschreiten — auch nicht Frühstück, Mittag oder Abend. Wenn das Tages-kcal-Ziel mit 4 Mahlzeiten nicht erreicht wird, FÜGE WEITERE SNACKS HINZU (Snack 2, Snack 3, …), bis das Tagesziel erreicht ist. Lieber 5–7 kleinere Mahlzeiten als 3–4 zu große. Verteile Kalorien gleichmäßig: typisch Hauptmahlzeiten 500–800 kcal, Snacks 150–400 kcal.
@@ -558,16 +571,17 @@ ${liked.length ? "Mag (4-5★): " + liked.slice(0, 10).join(", ") : ""}
 ${disliked.length ? "Mag NICHT — vermeiden: " + disliked.slice(0, 10).join(", ") : ""}
 ${topSwapped.length ? "Häufig getauscht (lieber meiden): " + topSwapped.join(", ") : ""}
 ${skipReasons.length ? "Häufig übersprungen: " + skipReasons.slice(0, 8).join("; ") : ""}
-${wishesBlock}${budgetBlock}${equipmentBlock}
+${wishesBlock}${budgetBlock}${equipmentBlock}${foodWhitelistBlock}
 ${prepHint} ${budgetHint}
 
 
 
 Antworte AUSSCHLIESSLICH mit gültigem JSON in folgender Form:
-{"days":[{"name":"Tag 1","type":"training","meals":[{"slot":"breakfast","name":"Overnight Oats","description":"80g Haferflocken, 250ml fettarme Milch, 150g Skyr, 100g Beeren, 1 EL Chiasamen, 1 EL Mandelsplitter","ingredients":[{"name":"Haferflocken","amount":80,"unit":"g"},{"name":"fettarme Milch 1,5%","amount":250,"unit":"ml"},{"name":"Skyr","amount":150,"unit":"g"},{"name":"Beeren","amount":100,"unit":"g"},{"name":"Chiasamen","amount":15,"unit":"g"},{"name":"Mandelsplitter","amount":15,"unit":"g"}],"kcal":0,"protein_g":0,"carbs_g":0,"fat_g":0}]}]}
+{"days":[{"name":"Tag 1","type":"training","meals":[{"slot":"breakfast","name":"Overnight Oats","description":"80g Haferflocken, 250ml Milch 1,5%, 150g Skyr natur, 100g Beeren gemischt, 15g Chia-Samen, 15g Mandeln","ingredients":[{"name":"Haferflocken","amount":80,"unit":"g"},{"name":"Milch 1,5%","amount":250,"unit":"ml","grams":250},{"name":"Skyr natur","amount":150,"unit":"g"},{"name":"Beeren gemischt","amount":100,"unit":"g"},{"name":"Chia-Samen","amount":15,"unit":"g"},{"name":"Mandeln","amount":15,"unit":"g"}],"kcal":0,"protein_g":0,"carbs_g":0,"fat_g":0}]}]}
 
 🧮 STRUKTURIERTE ZUTATEN SIND PFLICHT — die Berechnung läuft NICHT über den Description-Text:
 - Jede Mahlzeit MUSS ein "ingredients"-Array enthalten, mit JEDER einzelnen Zutat aus der Description.
+- Für "ingredients[].name" NUR Namen aus der Zutaten-Whitelist verwenden — exakt so geschrieben wie in der Liste.
 - Jede Zutat braucht "name" + numerisches "amount" + "unit" (g, ml, EL, TL, Stück). Bei Stück/Scheibe/EL/TL MUSS zusätzlich das Gewicht in Gramm angegeben werden, z. B. {"name":"Vollkornbrot","amount":100,"unit":"g","grams":100}.
 - "amount" + "unit" müssen genau zur Mengenangabe im Description-Text passen. Beispiel: Description „3 Scheiben Vollkornbrot (100g)" → ingredient {"name":"Vollkornbrot","amount":100,"unit":"g"}.
 - Nährwerte ("kcal","protein_g","carbs_g","fat_g") darfst du auf 0 setzen — sie werden vom Server aus den Zutaten neu berechnet. Schätze NIEMALS selbst.
