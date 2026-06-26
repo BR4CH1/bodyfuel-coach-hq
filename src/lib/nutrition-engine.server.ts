@@ -138,12 +138,12 @@ function rewrittenProbes(norm: string): string[] {
 function stateScore(rawName: string, row: FoodRow): number {
   const hay = `${row.name} ${(row.aliases ?? []).join(" ")}`.toLowerCase();
   if (STATE_HINTS.raw.test(rawName)) {
-    if (/\b(roh|trocken|ungekocht|raw)\b/.test(hay)) return -30;
-    if (/\b(gekocht|gegart|gebraten|aufschnitt|geräuchert|geraeuchert)\b/.test(hay)) return 30;
+    if (/\b(roh|trocken|ungekocht|raw)\b/.test(hay)) return -40;
+    if (/\b(gekocht|gegart|gebraten|aufschnitt|geräuchert|geraeuchert)\b/.test(hay)) return 40;
   }
   if (STATE_HINTS.cooked.test(rawName)) {
-    if (/\b(gekocht|gegart|gebraten|gegrillt|cooked)\b/.test(hay)) return -30;
-    if (/\b(roh|trocken|ungekocht|raw)\b/.test(hay)) return 30;
+    if (/\b(gekocht|gegart|gebraten|gegrillt|cooked)\b/.test(hay)) return -40;
+    if (/\b(roh|trocken|ungekocht|raw)\b/.test(hay)) return 40;
   }
   if (STATE_HINTS.deli.test(rawName)) {
     if (/\b(aufschnitt|geräuchert|geraeuchert|dose|konserve)\b/.test(hay)) return -30;
