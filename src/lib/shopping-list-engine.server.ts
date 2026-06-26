@@ -557,7 +557,41 @@ function extractItems(parsed: any): ShoppingItem[] {
     .filter((item) => item.name);
 }
 
-async function fetchMealLines(planId: string, windowDays: number): Promise<string[]> {
+// Strict pre-cleaner for raw ingredient strings BEFORE they enter the parser.
+// Two responsibilities:
+//   1. Rewrite shared/partner-portion lines ("Name: A g für Ich, B g für X — insgesamt C g")
+//      into a clean "<amount> <unit> <name>" string for the requested scope.
+//   2. Strip meta-only strings (pure "für ... insgesamt ...", "Gemeinsam mit …", etc.).
+function rewriteIngredientLine(rawLine: string, scope: "self" | "combined"): string | null {
+  const line = String(rawLine ?? "").trim();
+  if (!line) return null;
+
+  // Shared per-portion pattern
+  const shared = line.match(
+    /^(.+?):\s*([\d.,]+)\s*(kg|g|ml|l|stück|stk\.?|scheiben?|el|tl)?\s*für\s+(?:ich|mich)\s*,\s*([\d.,]+)\s*(kg|g|ml|l|stück|stk\.?|scheiben?|el|tl)?\s*für\s+[^—–-]+\s*[—–-]\s*insgesamt\s*([\d.,]+)\s*(kg|g|ml|l|stück|stk\.?|scheiben?|el|tl)?/i,
+  );
+  if (shared) {
+    const name = shared[1].trim();
+    if (scope === "combined") {
+      return `${shared[6]} ${shared[7] ?? "g"} ${name}`;
+    }
+    return `${shared[2]} ${shared[3] ?? "g"} ${name}`;
+  }
+
+  // Reject pure meta lines that survived
+  if (/^für\s+.+\binsgesamt\b/i.test(line)) return null;
+  if (/^gemeinsam\s+mit\b/i.test(line)) return null;
+  if (/^(frühstück|mittagessen|abendessen|snack|zwischenmahlzeit)\s*:/i.test(line)) return null;
+
+  return line;
+}
+
+async function fetchMealLines(
+  planId: string,
+  windowDays: number,
+  scope: "self" | "combined" = "self",
+  opts: { skipShared?: boolean } = {},
+): Promise<string[]> {
   const { data: days } = await supabaseAdmin
     .from("nutrition_plan_days")
     .select("id, sort_order")
@@ -567,21 +601,34 @@ async function fetchMealLines(planId: string, windowDays: number): Promise<strin
   if (!dayIds.length) return [];
   const { data: meals } = await supabaseAdmin
     .from("nutrition_plan_meals")
-    .select("day_id, name, description, recipe_ingredients, sort_order")
+    .select("day_id, name, description, recipe_ingredients, sort_order, is_shared")
     .in("day_id", dayIds)
     .order("sort_order");
   const dayOrder = new Map(dayIds.map((id, index) => [id, index]));
   return (meals ?? [])
+    .filter((m: any) => !(opts.skipShared && m.is_shared))
     .sort(
       (a: any, b: any) =>
         (dayOrder.get(a.day_id) ?? 0) - (dayOrder.get(b.day_id) ?? 0) ||
         (a.sort_order ?? 0) - (b.sort_order ?? 0),
     )
     .map((m: any) => {
-      const ing = (m.recipe_ingredients ?? []).join(", ");
-      return `- ${m.name}${ing ? " | Zutaten: " + ing : m.description ? " | " + m.description : ""}`;
+      const rawIngs = Array.isArray(m.recipe_ingredients) ? (m.recipe_ingredients as string[]) : [];
+      // In combined mode we want the "insgesamt" portion for shared meals,
+      // but for non-shared meals each partner only contributes their own amount.
+      const lineScope: "self" | "combined" = m.is_shared ? scope : "self";
+      const cleaned = rawIngs
+        .map((i) => rewriteIngredientLine(i, lineScope))
+        .filter((i): i is string => !!i);
+      const ing = cleaned.join(", ");
+      // Strip emoji + "Gemeinsam mit …" prefix from displayed meal name so it never reaches the parser.
+      const cleanName = String(m.name ?? "")
+        .replace(/^🍽️\s*/u, "")
+        .replace(/^gemeinsam\s+mit\s+[^—–-]+\s*[—–-]\s*/i, "");
+      return `- ${cleanName}${ing ? " | Zutaten: " + ing : m.description ? " | " + m.description : ""}`;
     });
 }
+
 
 async function callAi(prompt: string, apiKey: string): Promise<ShoppingItem[]> {
   const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -621,8 +668,9 @@ export async function generateShoppingListForPlan(opts: {
 }): Promise<{ items: ShoppingItem[]; days: number }> {
   const { apiKey, planId, windowDays } = opts;
 
-  const lines = await fetchMealLines(planId, windowDays);
+  const lines = await fetchMealLines(planId, windowDays, "self");
   if (!lines.length) throw new Error("Plan enthält keine Mahlzeiten.");
+
 
   const prompt = `Du bist Ernährungsassistent. Erstelle aus den folgenden Mahlzeiten EINE konsolidierte Einkaufsliste für ${windowDays} Tage.
 
@@ -669,9 +717,11 @@ export async function generateCombinedShoppingList(opts: {
   const { apiKey, planAId, planBId, userA, userB, windowDays } = opts;
 
   const [linesA, linesB] = await Promise.all([
-    fetchMealLines(planAId, windowDays),
-    fetchMealLines(planBId, windowDays),
+    fetchMealLines(planAId, windowDays, "combined"),
+    fetchMealLines(planBId, windowDays, "combined", { skipShared: true }),
   ]);
+
+
   if (!linesA.length && !linesB.length) throw new Error("Keine Mahlzeiten für die Partnerpläne.");
 
   const mealsText = [
