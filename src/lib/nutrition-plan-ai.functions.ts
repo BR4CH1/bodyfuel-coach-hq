@@ -631,7 +631,7 @@ WICHTIG zu name/description:
     }
     const generatedDays = (parsed.days ?? []).slice(0, aiPlanDays);
     if (!generatedDays.length) throw new Error("Keine Tage generiert.");
-    const days = expandGeneratedDays(generatedDays, schedule, planDays);
+    const days: GeneratedDay[] = expandGeneratedDays(generatedDays, schedule, planDays);
 
     // Hard filter + authoritative day type from `schedule`.
     // Wichtig: Makros werden ab hier ausschließlich aus Zutaten + Food-DB
@@ -639,23 +639,24 @@ WICHTIG zu name/description:
     const forbidden = [...expandedAllergies, ...expandedNogo]
       .map((s) => s.toLowerCase().trim())
       .filter(Boolean);
-    const rawDays = days.map((d, i) => {
+    const rawDays: RawPlanDay[] = days.map((d: GeneratedDay, i: number): RawPlanDay => {
       const s = schedule[i] ?? schedule[schedule.length - 1];
       const typeLabel = s.type === "rest" ? "Restday" : "Trainingstag";
       const name = `${s.wkLabel} — ${typeLabel}`;
-      const allowedMeals = (d.meals ?? []).filter((m) => {
+      const allowedMeals = (d.meals ?? []).filter((m: GeneratedMeal) => {
         const hay = `${m.name} ${m.description ?? ""} ${JSON.stringify((m as any).ingredients ?? [])}`.toLowerCase();
         return !forbidden.some((f) => hay.includes(f));
       });
       return {
         name,
+        type: s.type,
         target: s.type === "rest" ? restTargets : trainingTargets,
         meals: allowedMeals,
       };
     });
 
-    const missingRequired = rawDays.flatMap((d, idx) => {
-      const slots = new Set(d.meals.map((m) => m.slot));
+    const missingRequired = rawDays.flatMap((d: RawPlanDay, idx: number) => {
+      const slots = new Set(d.meals.map((m: GeneratedMeal) => m.slot));
       return (["breakfast", "lunch", "dinner"] as const)
         .filter((slot) => !slots.has(slot))
         .map((slot) => `Tag ${idx + 1}: ${labelForSlot(slot)} fehlt`);
@@ -672,8 +673,9 @@ WICHTIG zu name/description:
       parseDescriptionToEngineIngredients,
     } = await import("./nutrition-engine.server");
 
-    const cleaned = await Promise.all(rawDays.map(async (d, dayIdx) => {
-      const computed = await Promise.all(d.meals.map(async (m, mealIdx) => {
+    const baseCache = new Map<string, Promise<ComputedGeneratedMeal[]>>();
+    const computeDayMeals = async (d: RawPlanDay, dayIdx: number): Promise<ComputedGeneratedMeal[]> => {
+      const computed = await Promise.all(d.meals.map(async (m: GeneratedMeal, mealIdx: number) => {
         const structured = coerceIngredients((m as any).ingredients ?? null);
         const ingredientsForMath = structured.length
           ? structured
@@ -736,7 +738,17 @@ WICHTIG zu name/description:
           actual: finalSums,
         });
       }
-      return { name: d.name, meals: capped };
+      return capped;
+    };
+    const cleaned: CleanedPlanDay[] = await Promise.all(rawDays.map(async (d: RawPlanDay, dayIdx: number): Promise<CleanedPlanDay> => {
+      const cacheKey = `${d.type}:${JSON.stringify(d.meals)}`;
+      let cached = baseCache.get(cacheKey);
+      if (!cached) {
+        cached = computeDayMeals(d, dayIdx);
+        baseCache.set(cacheKey, cached);
+      }
+      const meals = (await cached).map(cloneComputedMealForExpandedDay);
+      return { name: d.name, type: d.type, meals };
     }));
 
 
