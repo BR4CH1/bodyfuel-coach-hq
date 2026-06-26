@@ -207,6 +207,9 @@ function CoachFoodsPage() {
           <ArrowLeft className="h-4 w-4" /> Coach-Dashboard
         </Link>
         <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={runEngineTests} disabled={testing}>
+            {testing ? "Teste…" : "Engine-Tests"}
+          </Button>
           <Button variant="outline" onClick={recomputeAll} disabled={recomputing}>
             {recomputing ? "Rechne neu…" : "Pläne nachrechnen"}
           </Button>
