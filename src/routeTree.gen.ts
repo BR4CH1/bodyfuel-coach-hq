@@ -54,6 +54,7 @@ import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe
 import { Route as CoachReviewsRouteImport } from './routes/coach.reviews'
 import { Route as CoachPackageRequestsRouteImport } from './routes/coach.package-requests'
 import { Route as CoachLeadsRouteImport } from './routes/coach.leads'
+import { Route as CoachImportPlanRouteImport } from './routes/coach.import-plan'
 import { Route as CoachGiftsRouteImport } from './routes/coach.gifts'
 import { Route as CoachFoodsRouteImport } from './routes/coach.foods'
 import { Route as CoachCustomersRouteImport } from './routes/coach.customers'
@@ -321,6 +322,11 @@ const CoachLeadsRoute = CoachLeadsRouteImport.update({
   path: '/leads',
   getParentRoute: () => CoachRoute,
 } as any)
+const CoachImportPlanRoute = CoachImportPlanRouteImport.update({
+  id: '/import-plan',
+  path: '/import-plan',
+  getParentRoute: () => CoachRoute,
+} as any)
 const CoachGiftsRoute = CoachGiftsRouteImport.update({
   id: '/gifts',
   path: '/gifts',
@@ -567,6 +573,7 @@ export interface FileRoutesByFullPath {
   '/coach/customers': typeof CoachCustomersRouteWithChildren
   '/coach/foods': typeof CoachFoodsRoute
   '/coach/gifts': typeof CoachGiftsRoute
+  '/coach/import-plan': typeof CoachImportPlanRoute
   '/coach/leads': typeof CoachLeadsRoute
   '/coach/package-requests': typeof CoachPackageRequestsRoute
   '/coach/reviews': typeof CoachReviewsRoute
@@ -649,6 +656,7 @@ export interface FileRoutesByTo {
   '/coach/affiliates': typeof CoachAffiliatesRoute
   '/coach/foods': typeof CoachFoodsRoute
   '/coach/gifts': typeof CoachGiftsRoute
+  '/coach/import-plan': typeof CoachImportPlanRoute
   '/coach/leads': typeof CoachLeadsRoute
   '/coach/package-requests': typeof CoachPackageRequestsRoute
   '/coach/reviews': typeof CoachReviewsRoute
@@ -735,6 +743,7 @@ export interface FileRoutesById {
   '/coach/customers': typeof CoachCustomersRouteWithChildren
   '/coach/foods': typeof CoachFoodsRoute
   '/coach/gifts': typeof CoachGiftsRoute
+  '/coach/import-plan': typeof CoachImportPlanRoute
   '/coach/leads': typeof CoachLeadsRoute
   '/coach/package-requests': typeof CoachPackageRequestsRoute
   '/coach/reviews': typeof CoachReviewsRoute
@@ -823,6 +832,7 @@ export interface FileRouteTypes {
     | '/coach/customers'
     | '/coach/foods'
     | '/coach/gifts'
+    | '/coach/import-plan'
     | '/coach/leads'
     | '/coach/package-requests'
     | '/coach/reviews'
@@ -905,6 +915,7 @@ export interface FileRouteTypes {
     | '/coach/affiliates'
     | '/coach/foods'
     | '/coach/gifts'
+    | '/coach/import-plan'
     | '/coach/leads'
     | '/coach/package-requests'
     | '/coach/reviews'
@@ -990,6 +1001,7 @@ export interface FileRouteTypes {
     | '/coach/customers'
     | '/coach/foods'
     | '/coach/gifts'
+    | '/coach/import-plan'
     | '/coach/leads'
     | '/coach/package-requests'
     | '/coach/reviews'
@@ -1413,6 +1425,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CoachLeadsRouteImport
       parentRoute: typeof CoachRoute
     }
+    '/coach/import-plan': {
+      id: '/coach/import-plan'
+      path: '/import-plan'
+      fullPath: '/coach/import-plan'
+      preLoaderRoute: typeof CoachImportPlanRouteImport
+      parentRoute: typeof CoachRoute
+    }
     '/coach/gifts': {
       id: '/coach/gifts'
       path: '/gifts'
@@ -1711,6 +1730,7 @@ interface CoachRouteChildren {
   CoachCustomersRoute: typeof CoachCustomersRouteWithChildren
   CoachFoodsRoute: typeof CoachFoodsRoute
   CoachGiftsRoute: typeof CoachGiftsRoute
+  CoachImportPlanRoute: typeof CoachImportPlanRoute
   CoachLeadsRoute: typeof CoachLeadsRoute
   CoachPackageRequestsRoute: typeof CoachPackageRequestsRoute
   CoachReviewsRoute: typeof CoachReviewsRoute
@@ -1724,6 +1744,7 @@ const CoachRouteChildren: CoachRouteChildren = {
   CoachCustomersRoute: CoachCustomersRouteWithChildren,
   CoachFoodsRoute: CoachFoodsRoute,
   CoachGiftsRoute: CoachGiftsRoute,
+  CoachImportPlanRoute: CoachImportPlanRoute,
   CoachLeadsRoute: CoachLeadsRoute,
   CoachPackageRequestsRoute: CoachPackageRequestsRoute,
   CoachReviewsRoute: CoachReviewsRoute,
@@ -1855,13 +1876,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

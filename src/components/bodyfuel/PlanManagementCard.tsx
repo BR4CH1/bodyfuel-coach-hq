@@ -223,6 +223,13 @@ export function PlanManagementCard({ userId }: { userId: string }) {
               {partnerGen.isPending ? "Erstelle…" : "Plan gemeinsam"}
             </button>
           )}
+          <a
+            href={`/coach/import-plan?type=nutrition&client=${userId}`}
+            className="inline-flex items-center gap-2 rounded-lg border border-gold/40 bg-background px-3 py-2 text-sm font-semibold hover:bg-accent"
+          >
+            <Sparkles className="h-4 w-4" />
+            Eigenen Plan importieren
+          </a>
         </div>
       </div>
 
