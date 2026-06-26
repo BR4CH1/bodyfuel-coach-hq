@@ -119,6 +119,22 @@ const PROBE_REWRITES: Array<[RegExp, string]> = [
   [/\bgurken(?:scheiben|stifte)?\b/g, "gurke"],
   [/\bsalatblätter\b/g, "kopfsalat"],
   [/\bsalatblaetter\b/g, "kopfsalat"],
+  // Eggs: bare "Eier" / "Ei" / "3 Eier" must always resolve to Hühnerei
+  [/\beier\b/g, "hühnerei"],
+  [/\bei\b/g, "hühnerei"],
+  [/\bvollei\b/g, "hühnerei"],
+  // Generic light cheese variants (Light-Käse, Käse light, Magerkäse)
+  [/\blight\s+käse\b/g, "gouda light"],
+  [/\bkäse\s+light\b/g, "gouda light"],
+  [/\bmager(?:käse|kaese)\b/g, "gouda light"],
+  [/\bharzer\s+käse\b/g, "harzer käse"],
+  // Joghurt-Dressing → Joghurt
+  [/\bjoghurt[-\s]?dressing\b/g, "joghurt natur"],
+  // Coconut milk
+  [/\bkokosmilch\s+light\b/g, "kokosmilch light"],
+  [/\bkokosmilch\b/g, "kokosmilch"],
+  // Curry paste – low impact, but provide mapping
+  [/\bcurrypaste\b/g, "currypaste"],
 ];
 
 function normalize(s: string): string {
@@ -126,7 +142,9 @@ function normalize(s: string): string {
     .toLowerCase()
     .replace(/\(.*?\)/g, " ")
     .replace(/[0-9.,]+/g, " ")
-    .replace(/[%(),;:/]/g, " ")
+    // Treat hyphens, slashes and other separators as spaces so compounds like
+    // "Light-Käse", "Joghurt-Dressing", "BBQ/Honig" tokenize correctly.
+    .replace(/[%(),;:/\-_]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
