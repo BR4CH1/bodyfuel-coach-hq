@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, Sparkles, Utensils, Dumbbell, Check, Shuffle, BookOpen, Repeat, PlayCircle, CalendarRange } from "lucide-react";
+import { Loader2, Sparkles, Utensils, Dumbbell, Check, Shuffle, BookOpen, Repeat, PlayCircle, CalendarRange, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
 import { parseNutritionPlan, estimateMealMacros, getMealMacroDebug } from "@/lib/nutrition-plan.functions";
