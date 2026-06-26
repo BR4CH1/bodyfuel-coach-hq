@@ -4,6 +4,7 @@ import { daysUntilNextShopping } from "./shopping-cycle";
 
 type MacroTarget = { kcal: number; protein_g: number; carbs_g: number; fat_g: number };
 type Slot = "breakfast" | "lunch" | "dinner" | "snack";
+type AiIngredient = { name: string; amount?: number; unit?: string; grams?: number };
 type PersonMeal = {
   slot: Slot;
   name: string;
@@ -12,6 +13,12 @@ type PersonMeal = {
   protein_g: number;
   carbs_g: number;
   fat_g: number;
+  ingredients?: AiIngredient[];
+};
+type ComputedPersonMeal = PersonMeal & {
+  _compute_warnings?: string[];
+  _data_source?: string;
+  _verified_ratio?: number;
 };
 type GeneratedDay = {
   type_a?: "training" | "rest";
@@ -435,8 +442,9 @@ ${a.plateauNote ? a.plateauNote + "\n" : ""}${b.plateauNote ? b.plateauNote + "\
 ${scheduleLines}
 
 Antworte AUSSCHLIESSLICH mit gültigem JSON:
-{"days":[{"type_a":"training","type_b":"rest","person_a":[{"slot":"breakfast","name":"...","description":"80g X, 200ml Y","kcal":500,"protein_g":35,"carbs_g":55,"fat_g":15}], "person_b":[...]}]}
-Genau ${planDays} Tage. Pro Person je 4 Slots (breakfast/lunch/dinner/snack). Bei shared-Slots MUSS "name" zwischen person_a und person_b für denselben Slot am selben Tag identisch sein. "description" = NUR kommagetrennte Zutaten mit konkreten Mengen (g, ml, Stück, EL/TL). Niemals "Portion" oder "nach Geschmack".`;
+{"days":[{"type_a":"training","type_b":"rest","person_a":[{"slot":"breakfast","name":"...","description":"80g X, 200ml Y","ingredients":[{"name":"X","amount":80,"unit":"g"},{"name":"Y","amount":200,"unit":"ml"}],"kcal":0,"protein_g":0,"carbs_g":0,"fat_g":0}], "person_b":[...]}]}
+Genau ${planDays} Tage. Pro Person je 4 Slots (breakfast/lunch/dinner/snack). Bei shared-Slots MUSS "name" zwischen person_a und person_b für denselben Slot am selben Tag identisch sein. "description" = NUR kommagetrennte Zutaten mit konkreten Mengen (g, ml, Stück, EL/TL). Niemals "Portion" oder "nach Geschmack".
+🧮 STRUKTURIERTE ZUTATEN SIND PFLICHT: Jede Mahlzeit braucht ein ingredients-Array mit allen Zutaten. Nährwerte dürfen 0 sein — der Server berechnet sie aus der Lebensmittel-DB, KI-Schätzungen werden ignoriert.`;
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -490,18 +498,57 @@ Genau ${planDays} Tage. Pro Person je 4 Slots (breakfast/lunch/dinner/snack). Be
     const end = new Date(start);
     end.setDate(end.getDate() + planDays - 1);
 
+    const {
+      computeMealFromIngredients,
+      computeMealFromDescription,
+      coerceIngredients,
+      isUsableEngineResult,
+      parseDescriptionToEngineIngredients,
+    } = await import("./nutrition-engine.server");
+
     async function insertPlanFor(
       who: typeof a,
       clientId: string,
       pickType: (i: number) => "training" | "rest",
       pickMeals: (g: GeneratedDay) => PersonMeal[],
-    ): Promise<{ planId: string; dayIds: string[]; mealsByDay: PersonMeal[][] }> {
-      const cleanedDays: { name: string; meals: PersonMeal[]; type: "training" | "rest" }[] = [];
+    ): Promise<{ planId: string; dayIds: string[]; mealsByDay: ComputedPersonMeal[][] }> {
+      const cleanedDays: { name: string; meals: ComputedPersonMeal[]; type: "training" | "rest" }[] = [];
       for (let i = 0; i < days.length; i++) {
         const g = days[i];
         const type = pickType(i);
-        const tg = type === "rest" ? who.targets.rest : who.targets.training;
-        const ms = normalizeMealsToTargets(filterMeals(pickMeals(g)), tg);
+        const rawMeals = filterMeals(pickMeals(g));
+        const slots = new Set(rawMeals.map((m) => m.slot));
+        for (const required of ["breakfast", "lunch", "dinner"] as const) {
+          if (!slots.has(required)) {
+            throw new Error(`Partner-Plan unvollständig: ${who.name}, Tag ${i + 1}: ${slotLabel(required)} fehlt.`);
+          }
+        }
+        const ms = await Promise.all(rawMeals.map(async (m, mealIdx) => {
+          const structured = coerceIngredients((m as any).ingredients ?? null);
+          const ingredientsForMath = structured.length
+            ? structured
+            : parseDescriptionToEngineIngredients(m.description ?? null);
+          const computed = structured.length
+            ? await computeMealFromIngredients(supabase, structured)
+            : await computeMealFromDescription(supabase, m.description ?? null);
+          if (!isUsableEngineResult(computed)) {
+            const warnings = Array.isArray((computed as any)?.warnings) ? (computed as any).warnings.join(" | ") : "";
+            throw new Error(
+              `Nährwerte im Partner-Plan nicht zuverlässig berechenbar (${who.name}, Tag ${i + 1}, Mahlzeit ${mealIdx + 1}: ${m.name}). ${warnings}`,
+            );
+          }
+          return {
+            ...m,
+            ingredients: ingredientsForMath,
+            kcal: computed.kcal,
+            protein_g: computed.protein_g,
+            carbs_g: computed.carbs_g,
+            fat_g: computed.fat_g,
+            _compute_warnings: computed.warnings,
+            _data_source: computed.data_source,
+            _verified_ratio: computed.coverage,
+          } as ComputedPersonMeal;
+        }));
         cleanedDays.push({
           name: `${schedule[i].label} — ${type === "rest" ? "Restday" : "Trainingstag"}`,
           meals: ms,
@@ -547,7 +594,7 @@ Genau ${planDays} Tage. Pro Person je 4 Slots (breakfast/lunch/dinner/snack). Be
       if (error || !planRow) throw new Error(error?.message ?? "Plan-Insert fehlgeschlagen");
 
       const dayIds: string[] = [];
-      const mealsByDay: PersonMeal[][] = [];
+      const mealsByDay: ComputedPersonMeal[][] = [];
       for (let i = 0; i < cleanedDays.length; i++) {
         const d = cleanedDays[i];
         const { data: dayRow } = await supabase
@@ -591,12 +638,16 @@ Genau ${planDays} Tage. Pro Person je 4 Slots (breakfast/lunch/dinner/snack). Be
               day_id: dayId,
               name: `${prefix}: ${m.name}`,
               description: m.description ?? null,
+              ingredients_json: coerceIngredients((m as any).ingredients ?? null).length ? coerceIngredients((m as any).ingredients ?? null) : null,
+              compute_warnings: (m as any)._compute_warnings ?? [],
               kcal: m.kcal,
               protein_g: m.protein_g,
               carbs_g: m.carbs_g,
               fat_g: m.fat_g,
               sort_order: idx,
               is_shared: isShared,
+              data_source: (m as any)._data_source ?? "db_verified",
+              verified_ratio: (m as any)._verified_ratio ?? 1,
             })
             .select("id")
             .single();
