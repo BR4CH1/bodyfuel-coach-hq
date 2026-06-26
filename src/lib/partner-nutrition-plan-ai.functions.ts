@@ -27,6 +27,33 @@ type GeneratedDay = {
   person_b: PersonMeal[];
 };
 
+function clonePersonMeal(meal: PersonMeal): PersonMeal {
+  return {
+    ...meal,
+    ingredients: Array.isArray(meal.ingredients)
+      ? meal.ingredients.map((ing) => ({ ...ing }))
+      : undefined,
+  };
+}
+
+function expandPartnerGeneratedDays(
+  baseDays: GeneratedDay[],
+  schedule: Array<{ type_a: "training" | "rest"; type_b: "training" | "rest" }>,
+  planDays: number,
+): GeneratedDay[] {
+  if (!baseDays.length) return [];
+  return Array.from({ length: planDays }, (_, i): GeneratedDay => {
+    const template = baseDays[i % baseDays.length] ?? baseDays[0];
+    const s = schedule[i] ?? schedule[schedule.length - 1];
+    return {
+      type_a: s?.type_a ?? template.type_a ?? "training",
+      type_b: s?.type_b ?? template.type_b ?? "training",
+      person_a: (template.person_a ?? []).map(clonePersonMeal),
+      person_b: (template.person_b ?? []).map(clonePersonMeal),
+    };
+  });
+}
+
 function roundKcal50(v: number): number {
   return Math.max(0, Math.round(v / 50) * 50);
 }
@@ -263,7 +290,7 @@ export const generatePartnerNutritionPlanDraft = createServerFn({ method: "POST"
       user_b: string;
       start_mode?: "today" | "next_shopping";
       shared_slots?: { breakfast?: boolean; lunch?: boolean; dinner?: boolean; snack?: boolean };
-      /** Optional fixed plan length (1–21). Overrides the shopping-cycle logic. */
+      /** Optional fixed plan length (1–31). Overrides the shopping-cycle logic. */
       plan_days?: number | null;
       /** Optional explicit start date (YYYY-MM-DD). Overrides start_mode. */
       scheduled_start_date?: string | null;
@@ -294,7 +321,7 @@ export const generatePartnerNutritionPlanDraft = createServerFn({ method: "POST"
       start.setDate(start.getDate() + Math.min(daysA, daysB));
     }
     const fixedDays =
-      data.plan_days != null ? Math.max(1, Math.min(21, Math.round(data.plan_days))) : null;
+      data.plan_days != null ? Math.max(1, Math.min(31, Math.round(data.plan_days))) : null;
     const planDays =
       fixedDays ??
       (startMode === "next_shopping"
@@ -329,7 +356,12 @@ export const generatePartnerNutritionPlanDraft = createServerFn({ method: "POST"
       .map(slotLabel)
       .join(", ");
 
-    const scheduleLines = schedule
+    // Lange Partnerpläne werden nicht als ein riesiger KI-Request erzeugt.
+    // Die KI liefert max. 7 Basistage, der Server rollt sie auf bis zu 31 Tage aus.
+    const aiPlanDays = Math.min(planDays, 7);
+    const aiSchedule = schedule.slice(0, aiPlanDays);
+
+    const scheduleLines = aiSchedule
       .map(
         (s, i) =>
           `Tag ${i + 1} (${s.label}): ${a.name}=${s.type_a === "training" ? "TRAINING" : "REST"}, ${b.name}=${s.type_b === "training" ? "TRAINING" : "REST"}`,
