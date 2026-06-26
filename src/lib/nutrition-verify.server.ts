@@ -190,25 +190,45 @@ async function lookupFood(
   const tokens = name.toLowerCase().split(/\s+/).filter((t) => t.length >= 3);
   if (!tokens.length) return null;
 
-  // Mehrere Lookup-Strategien: ganzer Name, letztes Wort, erstes "wichtiges" Wort.
+  // Mehrere Lookup-Strategien: ganzer Name, letzte 2 Worte, letztes Wort,
+  // erstes Wort. Sucht in name UND aliases.
   const probes = Array.from(
-    new Set([name.toLowerCase(), tokens.slice(-2).join(" "), tokens[tokens.length - 1], tokens[0]]),
+    new Set([
+      name.toLowerCase(),
+      tokens.slice(-2).join(" "),
+      tokens[tokens.length - 1],
+      tokens[0],
+    ]),
   ).filter((p) => p && p.length >= 3);
 
   for (const probe of probes) {
-    const safe = probe.replace(/[,()%]/g, "").slice(0, 60);
+    const safe = probe.replace(/[,()%{}]/g, "").slice(0, 60);
     if (!safe) continue;
+    // Suche in Name (ilike) ODER in aliases (case-insensitive Array-Match).
     const { data, error } = await supabase
       .from("nutrition_foods")
       .select(
-        "id,name,kcal_per_100g,protein_per_100g,carbs_per_100g,fat_per_100g,verified_by_coach,source",
+        "id,name,kcal_per_100g,protein_per_100g,carbs_per_100g,fat_per_100g,verified_by_coach,source,aliases",
       )
-      .ilike("name", `%${safe}%`)
-      .limit(5);
+      .or(`name.ilike.%${safe}%,aliases.cs.{${safe}}`)
+      .limit(10);
     if (error) continue;
-    const rows = (data ?? []) as FoodRow[];
+    let rows = (data ?? []) as (FoodRow & { aliases?: string[] | null })[];
+    if (!rows.length) continue;
+    // Aliases sind case-sensitive im Array — also nochmal manuell prüfen
+    // und exakte Treffer bevorzugen.
+    rows = rows.filter((r) => {
+      const n = (r.name ?? "").toLowerCase();
+      if (n.includes(safe)) return true;
+      const al = (r.aliases ?? []).map((a) => (a ?? "").toLowerCase());
+      return al.some((a) => a === safe || a.includes(safe));
+    });
     if (!rows.length) continue;
     rows.sort((a, b) => {
+      // exakter Name-Match zuerst
+      const aExact = (a.name ?? "").toLowerCase() === safe ? 0 : 1;
+      const bExact = (b.name ?? "").toLowerCase() === safe ? 0 : 1;
+      if (aExact !== bExact) return aExact - bExact;
       if (a.verified_by_coach !== b.verified_by_coach) return a.verified_by_coach ? -1 : 1;
       return (SOURCE_PRIORITY[a.source] ?? 9) - (SOURCE_PRIORITY[b.source] ?? 9);
     });
@@ -239,14 +259,18 @@ export async function recomputeMealFromDb(
 
   for (const ing of ingredients) {
     const grams = ing.grams ?? 0;
-    totalGrams += grams || 50; // Zutat ohne Menge zählt mit 50 g Gewicht (für Coverage)
+    // Zutat ohne erkannte Menge (z. B. "Zimt", "Pfeffer", "Salz, Pfeffer")
+    // wird komplett ignoriert — sie verfälscht weder Makros noch Coverage.
+    if (!grams) continue;
     const food = await lookupFood(supabase, ing.name);
-    if (!food || !grams) {
+    if (!food) {
+      totalGrams += grams;
       unmatched.push(ing.raw);
       continue;
     }
-    matched.push(ing.raw);
+    totalGrams += grams;
     matchedGrams += grams;
+    matched.push(ing.raw);
     const factor = grams / 100;
     kcal += (food.kcal_per_100g ?? 0) * factor;
     p += (food.protein_per_100g ?? 0) * factor;
