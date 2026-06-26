@@ -16,9 +16,8 @@ import { Button } from "@/components/ui/button";
 import { getMySmartProfile } from "@/lib/smart-profile.functions";
 import {
   getCustomerPlanOverview,
-  transitionPlanStatus,
 } from "@/lib/plan-management.functions";
-import { generateAiNutritionPlanDraft } from "@/lib/nutrition-plan-ai.functions";
+import { enqueueAutopilotJob, getMyAutopilotJob } from "@/lib/autopilot-jobs.functions";
 
 /**
  * Zeigt Smart-Kunden, deren Ernährungs-Onboarding abgeschlossen ist,
@@ -29,6 +28,7 @@ import { generateAiNutritionPlanDraft } from "@/lib/nutrition-plan-ai.functions"
  *  - smart_nutrition_profile.completed_at gesetzt
  *  - training_weekdays vorhanden
  *  - keinen aktiven Plan (auch kein draft/approved/published)
+ *  - kein offener Autopilot-Job
  *  - pro Session dismissable (sessionStorage)
  */
 export function SmartPlanReadyPopup({ userId }: { userId: string }) {
@@ -36,8 +36,8 @@ export function SmartPlanReadyPopup({ userId }: { userId: string }) {
   const qc = useQueryClient();
   const profileFn = useServerFn(getMySmartProfile);
   const overviewFn = useServerFn(getCustomerPlanOverview);
-  const genFn = useServerFn(generateAiNutritionPlanDraft);
-  const transFn = useServerFn(transitionPlanStatus);
+  const enqueueFn = useServerFn(enqueueAutopilotJob);
+  const jobFn = useServerFn(getMyAutopilotJob);
 
   const [open, setOpen] = useState(false);
   const [dismissed, setDismissed] = useState(false);
@@ -66,13 +66,23 @@ export function SmartPlanReadyPopup({ userId }: { userId: string }) {
       !!profile.data?.training_weekdays?.length,
   });
 
+  const job = useQuery({
+    queryKey: ["autopilot-job", userId],
+    queryFn: () => jobFn(),
+    enabled: !!userId && !dismissed,
+  });
+
+  const hasOpenJob =
+    job.data?.status === "pending" || job.data?.status === "running";
+
   const shouldShow =
     !dismissed &&
     !!profile.data?.completed_at &&
     !!profile.data?.training_weekdays?.length &&
     !!overview.data &&
     !overview.data.active &&
-    !overview.data.next;
+    !overview.data.next &&
+    !hasOpenJob;
 
   useEffect(() => {
     if (shouldShow) setOpen(true);
@@ -80,31 +90,19 @@ export function SmartPlanReadyPopup({ userId }: { userId: string }) {
 
   const generate = useMutation({
     mutationFn: async () => {
-      const draft = await genFn({
-        data: { user_id: userId, start_mode: "today" },
-      });
-      const planId = (draft as any)?.plan_id ?? (draft as any)?.id;
-      if (planId) {
-        try {
-          await transFn({ data: { plan_id: planId, to: "active" } });
-        } catch (e) {
-          // Falls Aktivierung fehlschlägt, liegt der Entwurf trotzdem bereit.
-          console.warn("auto-activate failed", e);
-        }
-      }
-      return draft;
+      // Im Hintergrund über Queue + Cron statt synchron (Cloudflare-Timeout 524).
+      return enqueueFn();
     },
     onSuccess: () => {
-      toast.success("Dein Smart-Ernährungsplan ist startklar!");
-      qc.invalidateQueries({ queryKey: ["plan-overview", userId] });
-      qc.invalidateQueries({ queryKey: ["plan-content"] });
-      qc.invalidateQueries({ queryKey: ["nutrition-targets"] });
+      toast.success("Plan wird im Hintergrund erstellt — du wirst informiert, sobald er bereit ist.");
+      qc.invalidateQueries({ queryKey: ["autopilot-job", userId] });
       setOpen(false);
-      navigate({ to: "/nutrition" });
+      navigate({ to: "/dashboard" });
     },
     onError: (e: any) =>
-      toast.error(e?.message ?? "Plan konnte nicht erstellt werden"),
+      toast.error(e?.message ?? "Plan konnte nicht gestartet werden"),
   });
+
 
   const dismiss = () => {
     try {
@@ -138,7 +136,7 @@ export function SmartPlanReadyPopup({ userId }: { userId: string }) {
             className="w-full bg-gradient-gold text-primary-foreground"
           >
             <Sparkles className="mr-2 h-4 w-4" />
-            {generate.isPending ? "Erstelle Plan…" : "Plan jetzt erstellen"}
+            {generate.isPending ? "Starte Plan…" : "Plan jetzt starten"}
           </Button>
           <Button
             variant="ghost"
