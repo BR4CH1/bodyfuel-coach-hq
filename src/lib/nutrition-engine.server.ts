@@ -79,9 +79,9 @@ const STOPWORDS = new Set([
 const BLOCKING_WARNING_PREFIX = "KRITISCH:";
 
 const STATE_HINTS = {
-  raw: /\b(roh|ungekocht|trocken|dry|raw)\b/i,
-  cooked: /\b(gekocht|gegart|gebraten|gegrillt|gebacken|zubereitet|cooked)\b/i,
-  deli: /\b(aufschnitt|geräuchert|geraeuchert|dose|konserve|abgetropft)\b/i,
+  raw: /\b(roh(?:e|er|es|en|em)?|ungekocht|trocken|dry|raw)\b/i,
+  cooked: /\b(gekocht(?:e|er|es|en|em)?|gegart(?:e|er|es|en|em)?|gebraten(?:e|er|es|en|em)?|gegrillt(?:e|er|es|en|em)?|gebacken(?:e|er|es|en|em)?|zubereitet|cooked)\b/i,
+  deli: /\b(aufschnitt|geräuchert(?:e|er|es|en|em)?|geraeuchert(?:e|er|es|en|em)?|dose|konserve|abgetropft)\b/i,
 };
 
 const PROBE_REWRITES: Array<[RegExp, string]> = [
@@ -138,12 +138,12 @@ function rewrittenProbes(norm: string): string[] {
 function stateScore(rawName: string, row: FoodRow): number {
   const hay = `${row.name} ${(row.aliases ?? []).join(" ")}`.toLowerCase();
   if (STATE_HINTS.raw.test(rawName)) {
-    if (/\b(roh|trocken|ungekocht|raw)\b/.test(hay)) return -30;
-    if (/\b(gekocht|gegart|gebraten|aufschnitt|geräuchert|geraeuchert)\b/.test(hay)) return 30;
+    if (/\b(roh|trocken|ungekocht|raw)\b/.test(hay)) return -40;
+    if (/\b(gekocht|gegart|gebraten|aufschnitt|geräuchert|geraeuchert)\b/.test(hay)) return 40;
   }
   if (STATE_HINTS.cooked.test(rawName)) {
-    if (/\b(gekocht|gegart|gebraten|gegrillt|cooked)\b/.test(hay)) return -30;
-    if (/\b(roh|trocken|ungekocht|raw)\b/.test(hay)) return 30;
+    if (/\b(gekocht|gegart|gebraten|gegrillt|cooked)\b/.test(hay)) return -40;
+    if (/\b(roh|trocken|ungekocht|raw)\b/.test(hay)) return 40;
   }
   if (STATE_HINTS.deli.test(rawName)) {
     if (/\b(aufschnitt|geräuchert|geraeuchert|dose|konserve)\b/.test(hay)) return -30;
@@ -406,24 +406,31 @@ function defaultPieceGrams(name: string): number | null {
 function parseIngredientLine(raw: string): ParsedIngredient | null {
   const original = raw.trim();
   if (!original) return null;
+  // Gramm-Angabe in Klammern = MAßGEBLICHE Gesamtmenge.
+  // Stück/Scheiben davor sind nur Anzeige und werden NICHT multipliziert,
+  // außer der Prefix "je" steht in der Klammer (z. B. "(je 50g)").
   const tail = original.match(/\((je\s*)?(\d+(?:[.,]\d+)?)\s*(g|gramm|ml|l|kg)\)/i);
   if (tail) {
     let amount = parseFloat(tail[2].replace(",", "."));
     const unit = tail[3].toLowerCase();
     if (unit === "kg" || unit === "l") amount *= 1000;
+    const isPerPiece = !!tail[1];
     const beforeTail = original.replace(tail[0], "");
-    const lead = beforeTail.match(
-      /^\s*(\d+(?:[.,]\d+)?|ein(?:e|en|em|er)?)\s*(scheiben?|stück|stueck|stk\.?|wraps?|tortillas?|brötchen|broetchen|semmeln?|riegel)?\s*(.*)$/i,
-    );
-    if (lead) {
-      const countToken = lead[1].toLowerCase();
-      const count = /^ein/.test(countToken) ? 1 : parseFloat(countToken.replace(",", "."));
-      const unitToken = (lead[2] ?? "").toLowerCase();
-      const restName = cleanIngredientName(lead[3] ?? beforeTail);
-      if (Number.isFinite(count) && restName.length >= 3 && (tail[1] || unitToken)) {
-        return { raw: original, name: restName, grams: amount * count };
+    if (isPerPiece) {
+      // "(je Xg)" → mit Stückzahl multiplizieren
+      const lead = beforeTail.match(
+        /^\s*(\d+(?:[.,]\d+)?|ein(?:e|en|em|er)?)\s*(scheiben?|stück|stueck|stk\.?|wraps?|tortillas?|brötchen|broetchen|semmeln?|riegel)?\s*(.*)$/i,
+      );
+      if (lead) {
+        const countToken = lead[1].toLowerCase();
+        const count = /^ein/.test(countToken) ? 1 : parseFloat(countToken.replace(",", "."));
+        const restName = cleanIngredientName(lead[3] ?? beforeTail);
+        if (Number.isFinite(count) && restName.length >= 3) {
+          return { raw: original, name: restName, grams: amount * count };
+        }
       }
     }
+    // Standardfall: Klammer-Gramm ist Gesamtgewicht. Stückzahl ignorieren.
     const name = cleanIngredientName(beforeTail);
     if (name.length >= 3) return { raw: original, name, grams: amount };
   }
