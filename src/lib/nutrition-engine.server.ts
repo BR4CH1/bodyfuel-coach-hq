@@ -481,7 +481,7 @@ function parseIngredientLine(raw: string): ParsedIngredient | null {
     unit = (m[2] ?? "").toLowerCase().trim();
     nameRaw = m[3] ?? "";
   }
-  const name = cleanIngredientName(nameRaw);
+  const name = cleanIngredientName(nameRaw) || (/^(eier?|ei)$/i.test(unit) ? "hühnerei" : "");
   if (!name || name.length < 3) return null;
   if (amount == null) return { raw: original, name, grams: null };
   let grams: number | null = null;
@@ -494,7 +494,8 @@ function parseIngredientLine(raw: string): ParsedIngredient | null {
   else if (/^prise/.test(unit)) grams = 0;
   else if (/^scheibe/.test(unit)) grams = amount * 45;
   else if (/^bund$/.test(unit)) grams = amount * 30;
-  else if (/^(stück|stueck|stk|ei|eier)/.test(unit) || !unit) {
+  else if (/^(eier?|ei)$/.test(unit)) grams = amount * 60;
+  else if (/^(stück|stueck|stk)/.test(unit) || !unit) {
     const pg = defaultPieceGrams(name);
     grams = pg ? amount * pg : null;
   }
