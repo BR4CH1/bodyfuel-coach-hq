@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Loader2, Sparkles, Utensils, Dumbbell, Check, Shuffle, BookOpen, Repeat, PlayCircle, CalendarRange } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
-import { parseNutritionPlan, estimateMealMacros } from "@/lib/nutrition-plan.functions";
+import { parseNutritionPlan, estimateMealMacros, getMealMacroDebug } from "@/lib/nutrition-plan.functions";
 import { parseTrainingPlan } from "@/lib/training.functions";
 import { getDayType } from "@/lib/nutrition.functions";
 import { logInteraction } from "@/lib/meal-feedback.functions";
@@ -28,6 +28,25 @@ type Meal = {
   sort_order: number;
   data_source?: "db_verified" | "db_mixed" | "ai_estimate" | "coach_verified" | null;
   verified_ratio?: number | null;
+  compute_warnings?: string[] | null;
+};
+type MealMacroDebug = {
+  meal_id: string;
+  totals: { kcal: number; protein_g: number; carbs_g: number; fat_g: number };
+  coverage: number;
+  data_source: string;
+  warnings: string[];
+  ingredients: Array<{
+    display: string;
+    parsed_name: string;
+    grams: number;
+    matched_food: string | null;
+    kcal: number;
+    protein_g: number;
+    carbs_g: number;
+    fat_g: number;
+    warning: string | null;
+  }>;
 };
 type Exercise = {
   id: string;
@@ -179,6 +198,7 @@ export function PlanContentView({ clientId, planType }: Props) {
   const parseTraining = useServerFn(parseTrainingPlan);
   const getDayTypeFn = useServerFn(getDayType);
   const estimateMacros = useServerFn(estimateMealMacros);
+  const debugMacros = useServerFn(getMealMacroDebug);
 
   const [plan, setPlan] = useState<Plan | null>(null);
   const [days, setDays] = useState<Day[]>([]);
@@ -194,6 +214,8 @@ export function PlanContentView({ clientId, planType }: Props) {
   const [swapMeal, setSwapMeal] = useState<Meal | null>(null);
   const [skipMeal, setSkipMeal] = useState<Meal | null>(null);
   const [skipped, setSkipped] = useState<Record<string, string>>({}); // meal_id -> reason
+  const [mealDebug, setMealDebug] = useState<Record<string, MealMacroDebug>>({});
+  const [loadingDebugId, setLoadingDebugId] = useState<string>("");
   type Override = {
     id: string;
     plan_meal_id: string;
@@ -517,6 +539,30 @@ export function PlanContentView({ clientId, planType }: Props) {
     }
   };
 
+  const runMacroDebug = async (m: Meal) => {
+    if (!isCoach || planType !== "nutrition") return;
+    setLoadingDebugId(m.id);
+    try {
+      const res = await debugMacros({ data: { meal_id: m.id } }) as MealMacroDebug;
+      setMealDebug((cur) => ({ ...cur, [m.id]: res }));
+      setMeals((arr) => arr.map((x) => x.id === m.id ? {
+        ...x,
+        kcal: res.totals.kcal,
+        protein_g: res.totals.protein_g,
+        carbs_g: res.totals.carbs_g,
+        fat_g: res.totals.fat_g,
+        data_source: res.data_source as Meal["data_source"],
+        verified_ratio: res.coverage,
+        compute_warnings: res.warnings,
+      } : x));
+      toast.success(`Debug neu berechnet: ${res.totals.kcal} kcal · ${res.totals.protein_g}P/${res.totals.carbs_g}KH/${res.totals.fat_g}F`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Debug fehlgeschlagen");
+    } finally {
+      setLoadingDebugId("");
+    }
+  };
+
   if (!plan) return null;
   if (loading) return <div className="text-sm text-muted-foreground">Lade Inhalte…</div>;
 
@@ -675,6 +721,33 @@ export function PlanContentView({ clientId, planType }: Props) {
                           {effFat != null && <span>· F {effFat}g</span>}
                         </div>
                       )}
+                      {isCoach && Array.isArray(m.compute_warnings) && m.compute_warnings.length > 0 && (
+                        <div className="mt-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1.5 text-[11px] text-amber-200">
+                          {m.compute_warnings.slice(0, 2).join(" | ")}
+                        </div>
+                      )}
+                      {isCoach && mealDebug[m.id] && (
+                        <div className="mt-3 overflow-hidden rounded-md border border-border/70 bg-background/60 text-[11px]">
+                          <div className="border-b border-border/60 px-2 py-1.5 font-semibold text-foreground/90">
+                            Debug: {mealDebug[m.id].totals.kcal} kcal · P {mealDebug[m.id].totals.protein_g}g · KH {mealDebug[m.id].totals.carbs_g}g · F {mealDebug[m.id].totals.fat_g}g
+                          </div>
+                          <div className="divide-y divide-border/50">
+                            {mealDebug[m.id].ingredients.map((d, i) => (
+                              <div key={`${m.id}-debug-${i}`} className="grid gap-1 px-2 py-1.5 sm:grid-cols-[1.4fr_0.9fr_0.9fr] sm:items-center">
+                                <div>
+                                  <div className="font-medium text-foreground/90">{d.display}</div>
+                                  <div className="text-muted-foreground">→ {d.parsed_name} · {d.grams}g</div>
+                                </div>
+                                <div className="text-muted-foreground">DB: {d.matched_food ?? "nicht gefunden"}</div>
+                                <div className="text-muted-foreground sm:text-right">
+                                  {d.kcal} kcal · P {d.protein_g} · KH {d.carbs_g} · F {d.fat_g}
+                                </div>
+                                {d.warning && <div className="text-amber-200 sm:col-span-3">{d.warning}</div>}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                       {override && (
                         <div className="mt-2 rounded-md border border-border/60 bg-background/40 px-2 py-1.5 text-[11px] text-muted-foreground">
                           <span className="opacity-70">Ursprünglich geplant:</span>{" "}
@@ -725,6 +798,19 @@ export function PlanContentView({ clientId, planType }: Props) {
                         >
                           <BookOpen className="h-3 w-3" /> Rezept
                         </button>
+                        {isCoach && planType === "nutrition" && (
+                          <button
+                            type="button"
+                            onClick={() => runMacroDebug(m)}
+                            disabled={loadingDebugId === m.id}
+                            className="inline-flex items-center gap-1 rounded-md border border-border bg-background/60 px-2 py-1 text-[10px] font-semibold text-muted-foreground hover:border-gold/50 hover:text-gold disabled:opacity-60"
+                            aria-label="Nährwert-Debug anzeigen"
+                            title="Zutaten einzeln nachrechnen"
+                          >
+                            {loadingDebugId === m.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <AlertTriangle className="h-3 w-3" />}
+                            Debug
+                          </button>
+                        )}
                       </div>
                       {canTrack ? (
                         <button
