@@ -53,12 +53,24 @@ function expandPartnerGeneratedDays(
   planDays: number,
 ): GeneratedDay[] {
   if (!baseDays.length) return [];
+  const pools = new Map<string, GeneratedDay[]>();
+  for (const day of baseDays) {
+    const key = `${day.type_a ?? "training"}:${day.type_b ?? "training"}`;
+    pools.set(key, [...(pools.get(key) ?? []), day]);
+  }
+  const counters = new Map<string, number>();
   return Array.from({ length: planDays }, (_, i): GeneratedDay => {
-    const template = baseDays[i % baseDays.length] ?? baseDays[0];
     const s = schedule[i] ?? schedule[schedule.length - 1];
+    const typeA = s?.type_a ?? "training";
+    const typeB = s?.type_b ?? "training";
+    const key = `${typeA}:${typeB}`;
+    const pool = pools.get(key)?.length ? pools.get(key)! : baseDays;
+    const cursor = counters.get(key) ?? 0;
+    const template = pool[cursor % pool.length] ?? baseDays[i % baseDays.length] ?? baseDays[0];
+    counters.set(key, cursor + 1);
     return {
-      type_a: s?.type_a ?? template.type_a ?? "training",
-      type_b: s?.type_b ?? template.type_b ?? "training",
+      type_a: typeA,
+      type_b: typeB,
       person_a: (template.person_a ?? []).map(clonePersonMeal),
       person_b: (template.person_b ?? []).map(clonePersonMeal),
     };
