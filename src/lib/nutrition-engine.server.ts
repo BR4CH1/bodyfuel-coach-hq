@@ -93,9 +93,9 @@ const PROBE_REWRITES: Array<[RegExp, string]> = [
   [/\bhaehnchenfilet\b/g, "hähnchenbrust"],
   [/\bputenbrustfilet\b/g, "putenbrust"],
   [/\bpute\s+filet\b/g, "putenbrust"],
-  [/\bvollkorn[-\s]?wraps?\b/g, "wraps tortilla weizen"],
-  [/\bwraps?\b/g, "wraps tortilla weizen"],
-  [/\btortillas?\b/g, "wraps tortilla weizen"],
+  [/\bvollkorn[-\s]?wraps?\b/g, "weizenwrap"],
+  [/\bwraps?\b/g, "weizenwrap"],
+  [/\btortillas?\b/g, "tortilla"],
   [/\bvollkornnudeln\b/g, "vollkornnudeln"],
   [/\bvollkornpasta\b/g, "vollkornnudeln"],
   [/\bgrüne\s+bohnen\b/g, "grüne bohnen"],
@@ -106,8 +106,8 @@ const PROBE_REWRITES: Array<[RegExp, string]> = [
   [/\bmöhren(?:stifte|scheiben)?\b/g, "karotte"],
   [/\bmoehren(?:stifte|scheiben)?\b/g, "karotte"],
   [/\bgurken(?:scheiben|stifte)?\b/g, "gurke"],
-  [/\bsalatblätter\b/g, "salat"],
-  [/\bsalatblaetter\b/g, "salat"],
+  [/\bsalatblätter\b/g, "kopfsalat"],
+  [/\bsalatblaetter\b/g, "kopfsalat"],
 ];
 
 function normalize(s: string): string {
