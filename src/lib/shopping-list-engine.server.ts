@@ -662,8 +662,9 @@ export async function generateShoppingListForPlan(opts: {
 }): Promise<{ items: ShoppingItem[]; days: number }> {
   const { apiKey, planId, windowDays } = opts;
 
-  const lines = await fetchMealLines(planId, windowDays);
+  const lines = await fetchMealLines(planId, windowDays, "self");
   if (!lines.length) throw new Error("Plan enthält keine Mahlzeiten.");
+
 
   const prompt = `Du bist Ernährungsassistent. Erstelle aus den folgenden Mahlzeiten EINE konsolidierte Einkaufsliste für ${windowDays} Tage.
 
