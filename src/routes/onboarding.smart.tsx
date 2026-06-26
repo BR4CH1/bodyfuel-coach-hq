@@ -12,8 +12,6 @@ import {
   completeSmartOnboarding,
   getOnboardingStatus,
 } from "@/lib/smart-onboarding.functions";
-import { generateAiNutritionPlanDraft } from "@/lib/nutrition-plan-ai.functions";
-import { activateLatestSmartPlan } from "@/lib/smart-autopublish.functions";
 import { useSession } from "@/lib/bodyfuel/session";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/bodyfuel/Logo";
