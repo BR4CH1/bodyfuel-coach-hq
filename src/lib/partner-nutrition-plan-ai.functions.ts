@@ -556,18 +556,18 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
       pickType: (i: number) => "training" | "rest",
       pickMeals: (g: GeneratedDay) => PersonMeal[],
     ): Promise<{ planId: string; dayIds: string[]; mealsByDay: ComputedPersonMeal[][] }> {
-      const cleanedDays: { name: string; meals: ComputedPersonMeal[]; type: "training" | "rest" }[] = [];
-      for (let i = 0; i < days.length; i++) {
-        const g = days[i];
-        const type = pickType(i);
-        const rawMeals = filterMeals(pickMeals(g));
+      const baseCache = new Map<string, Promise<ComputedPersonMeal[]>>();
+      const computeMealsForDay = async (
+        rawMeals: PersonMeal[],
+        dayIndex: number,
+      ): Promise<ComputedPersonMeal[]> => {
         const slots = new Set(rawMeals.map((m) => m.slot));
         for (const required of ["breakfast", "lunch", "dinner"] as const) {
           if (!slots.has(required)) {
-            throw new Error(`Partner-Plan unvollständig: ${who.name}, Tag ${i + 1}: ${slotLabel(required)} fehlt.`);
+            throw new Error(`Partner-Plan unvollständig: ${who.name}, Tag ${dayIndex + 1}: ${slotLabel(required)} fehlt.`);
           }
         }
-        const ms = await Promise.all(rawMeals.map(async (m, mealIdx) => {
+        return await Promise.all(rawMeals.map(async (m, mealIdx) => {
           const structured = coerceIngredients((m as any).ingredients ?? null);
           const ingredientsForMath = structured.length
             ? structured
@@ -578,7 +578,7 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
           if (!isUsableEngineResult(computed)) {
             const warnings = Array.isArray((computed as any)?.warnings) ? (computed as any).warnings.join(" | ") : "";
             throw new Error(
-              `Nährwerte im Partner-Plan nicht zuverlässig berechenbar (${who.name}, Tag ${i + 1}, Mahlzeit ${mealIdx + 1}: ${m.name}). ${warnings}`,
+              `Nährwerte im Partner-Plan nicht zuverlässig berechenbar (${who.name}, Tag ${dayIndex + 1}, Mahlzeit ${mealIdx + 1}: ${m.name}). ${warnings}`,
             );
           }
           return {
@@ -593,6 +593,20 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
             _verified_ratio: computed.coverage,
           } as ComputedPersonMeal;
         }));
+      };
+
+      const cleanedDays: CleanedPartnerDay[] = [];
+      for (let i = 0; i < days.length; i++) {
+        const g = days[i];
+        const type = pickType(i);
+        const rawMeals = filterMeals(pickMeals(g));
+        const cacheKey = `${clientId}:${type}:${JSON.stringify(rawMeals)}`;
+        let cached = baseCache.get(cacheKey);
+        if (!cached) {
+          cached = computeMealsForDay(rawMeals, i);
+          baseCache.set(cacheKey, cached);
+        }
+        const ms = (await cached).map(cloneComputedPersonMeal);
         cleanedDays.push({
           name: `${schedule[i].label} — ${type === "rest" ? "Restday" : "Trainingstag"}`,
           meals: ms,
