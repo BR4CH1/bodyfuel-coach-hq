@@ -235,6 +235,84 @@ export const estimateMealMacros = createServerFn({ method: "POST" })
     };
   });
 
+export const getMealMacroDebug = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { meal_id: string }) => data)
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+
+    const { data: meal, error: mErr } = await supabase
+      .from("nutrition_plan_meals")
+      .select("id, name, description, ingredients_json, day_id")
+      .eq("id", data.meal_id)
+      .maybeSingle();
+    if (mErr || !meal) throw new Error(mErr?.message || "Mahlzeit nicht gefunden");
+
+    const { data: dayRow } = await supabase
+      .from("nutrition_plan_days")
+      .select("plan_id, nutrition_plans!inner(client_id)")
+      .eq("id", meal.day_id)
+      .maybeSingle();
+    const clientId = (dayRow as any)?.nutrition_plans?.client_id;
+    const { data: isCoach } = await supabase.rpc("has_role", { _user_id: userId, _role: "coach" });
+    if (clientId !== userId && !isCoach) throw new Error("Forbidden");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const {
+      computeMealFromDescription,
+      computeMealFromIngredients,
+      coerceIngredients,
+      parseDescriptionToEngineIngredients,
+    } = await import("./nutrition-engine.server");
+
+    const structured = coerceIngredients((meal as any).ingredients_json ?? null);
+    const ingredients = structured.length
+      ? structured
+      : parseDescriptionToEngineIngredients(meal.description ?? null);
+    const result = structured.length
+      ? await computeMealFromIngredients(supabaseAdmin, structured)
+      : await computeMealFromDescription(supabaseAdmin, meal.description ?? null);
+    if (!result) throw new Error("Keine Zutaten erkannt");
+
+    await supabaseAdmin
+      .from("nutrition_plan_meals")
+      .update({
+        kcal: result.kcal,
+        protein_g: result.protein_g,
+        carbs_g: result.carbs_g,
+        fat_g: result.fat_g,
+        ingredients_json: ingredients.length ? ingredients : null,
+        compute_warnings: result.warnings,
+        data_source: result.data_source,
+        verified_ratio: result.coverage,
+      })
+      .eq("id", meal.id);
+
+    return {
+      meal_id: meal.id,
+      totals: {
+        kcal: result.kcal,
+        protein_g: result.protein_g,
+        carbs_g: result.carbs_g,
+        fat_g: result.fat_g,
+      },
+      coverage: result.coverage,
+      data_source: result.data_source,
+      warnings: result.warnings,
+      ingredients: result.debug.map((d) => ({
+        display: d.input.display ?? d.input.name,
+        parsed_name: d.input.name,
+        grams: d.grams_used,
+        matched_food: d.matched_food?.name ?? null,
+        kcal: d.kcal,
+        protein_g: d.protein_g,
+        carbs_g: d.carbs_g,
+        fat_g: d.fat_g,
+        warning: d.warning,
+      })),
+    };
+  });
+
 export const generateMealRecipe = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: { meal_id: string; force?: boolean }) => data)
