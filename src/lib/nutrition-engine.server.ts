@@ -88,6 +88,10 @@ const STATE_HINTS = {
 };
 
 const PROBE_REWRITES: Array<[RegExp, string]> = [
+  [/\bgekocht(?:e|er|es|en|em)?\s+reis\b/g, "reis weiß gekocht"],
+  [/\breis\s+gekocht(?:e|er|es|en|em)?\b/g, "reis weiß gekocht"],
+  [/\b(?:roh(?:e|er|es|en|em)?|ungekocht|trocken)\s+reis\b/g, "reis weiß roh"],
+  [/\breis\s+(?:roh(?:e|er|es|en|em)?|ungekocht|trocken)\b/g, "reis weiß roh"],
   [/\brinderhackfleisch\s+extra\s+mager\b/g, "rinderhack mager"],
   [/\bextra\s+mager(?:es|er|e|em|en)?\s+rinderhackfleisch\b/g, "rinderhack mager"],
   [/\bmager(?:es|er|e|em|en)?\s+rinderhackfleisch\b/g, "rinderhack mager"],
