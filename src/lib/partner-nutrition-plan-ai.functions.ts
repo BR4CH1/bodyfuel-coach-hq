@@ -497,19 +497,20 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
     } catch {
       throw new Error("Antwort konnte nicht gelesen werden.");
     }
-    const days = (parsed.days ?? []).slice(0, planDays);
-    if (!days.length) {
+    const generatedDays = (parsed.days ?? []).slice(0, aiPlanDays);
+    if (!generatedDays.length) {
       console.error("[partner-plan] AI returned no days. raw=", raw);
       throw new Error("Keine Tage generiert.");
     }
     const countMeals = (g: any) =>
       ((g?.person_a ?? g?.personA ?? g?.a ?? g?.meals_a ?? g?.user_a ?? g?.meals ?? []).length) +
       ((g?.person_b ?? g?.personB ?? g?.b ?? g?.meals_b ?? g?.user_b ?? []).length);
-    const totalMealsReturned = days.reduce((s: number, g: any) => s + countMeals(g), 0);
+    const totalMealsReturned = generatedDays.reduce((s: number, g: any) => s + countMeals(g), 0);
     if (totalMealsReturned === 0) {
       console.error("[partner-plan] AI returned 0 meals across all days. raw=", raw);
       throw new Error("Keine Mahlzeiten geliefert. Bitte erneut versuchen.");
     }
+    const days = expandPartnerGeneratedDays(generatedDays, schedule, planDays);
 
     const forbidden = mergedAllergies; // never tolerate, for anybody
     const filterMeals = (ms: PersonMeal[]) =>
