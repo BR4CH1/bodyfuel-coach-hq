@@ -68,6 +68,7 @@ const STOPWORDS = new Set([
   "roh", "gekocht", "gegart", "gebraten", "gedünstet", "gegrillt",
   "frisch", "trocken", "tk", "tiefgekühlt", "dose", "optional",
   "fettarm", "mager", "magerer", "magere", "magerem", "natur", "pur",
+  "fett", "prozent",
   "light", "zuckerarm", "ungesüßt", "ungesalzen", "gewürfelt",
   "geschnitten", "gerieben", "gehackt", "fein", "grob", "kalt", "warm",
   "scheibe", "scheiben", "stück", "stueck", "stk", "el", "tl",
@@ -105,7 +106,7 @@ function normalize(s: string): string {
     .toLowerCase()
     .replace(/\(.*?\)/g, " ")
     .replace(/[0-9.,]+/g, " ")
-    .replace(/[,;:/]/g, " ")
+    .replace(/[%(),;:/]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
