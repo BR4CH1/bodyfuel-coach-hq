@@ -557,7 +557,40 @@ function extractItems(parsed: any): ShoppingItem[] {
     .filter((item) => item.name);
 }
 
-async function fetchMealLines(planId: string, windowDays: number): Promise<string[]> {
+// Strict pre-cleaner for raw ingredient strings BEFORE they enter the parser.
+// Two responsibilities:
+//   1. Rewrite shared/partner-portion lines ("Name: A g für Ich, B g für X — insgesamt C g")
+//      into a clean "<amount> <unit> <name>" string for the requested scope.
+//   2. Strip meta-only strings (pure "für ... insgesamt ...", "Gemeinsam mit …", etc.).
+function rewriteIngredientLine(rawLine: string, scope: "self" | "combined"): string | null {
+  const line = String(rawLine ?? "").trim();
+  if (!line) return null;
+
+  // Shared per-portion pattern
+  const shared = line.match(
+    /^(.+?):\s*([\d.,]+)\s*(kg|g|ml|l|stück|stk\.?|scheiben?|el|tl)?\s*für\s+(?:ich|mich)\s*,\s*([\d.,]+)\s*(kg|g|ml|l|stück|stk\.?|scheiben?|el|tl)?\s*für\s+[^—–-]+\s*[—–-]\s*insgesamt\s*([\d.,]+)\s*(kg|g|ml|l|stück|stk\.?|scheiben?|el|tl)?/i,
+  );
+  if (shared) {
+    const name = shared[1].trim();
+    if (scope === "combined") {
+      return `${shared[6]} ${shared[7] ?? "g"} ${name}`;
+    }
+    return `${shared[2]} ${shared[3] ?? "g"} ${name}`;
+  }
+
+  // Reject pure meta lines that survived
+  if (/^für\s+.+\binsgesamt\b/i.test(line)) return null;
+  if (/^gemeinsam\s+mit\b/i.test(line)) return null;
+  if (/^(frühstück|mittagessen|abendessen|snack|zwischenmahlzeit)\s*:/i.test(line)) return null;
+
+  return line;
+}
+
+async function fetchMealLines(
+  planId: string,
+  windowDays: number,
+  scope: "self" | "combined" = "self",
+): Promise<string[]> {
   const { data: days } = await supabaseAdmin
     .from("nutrition_plan_days")
     .select("id, sort_order")
@@ -578,8 +611,16 @@ async function fetchMealLines(planId: string, windowDays: number): Promise<strin
         (a.sort_order ?? 0) - (b.sort_order ?? 0),
     )
     .map((m: any) => {
-      const ing = (m.recipe_ingredients ?? []).join(", ");
-      return `- ${m.name}${ing ? " | Zutaten: " + ing : m.description ? " | " + m.description : ""}`;
+      const rawIngs = Array.isArray(m.recipe_ingredients) ? (m.recipe_ingredients as string[]) : [];
+      const cleaned = rawIngs
+        .map((i) => rewriteIngredientLine(i, scope))
+        .filter((i): i is string => !!i);
+      const ing = cleaned.join(", ");
+      // Strip emoji + "Gemeinsam mit …" prefix from displayed meal name so it never reaches the parser.
+      const cleanName = String(m.name ?? "")
+        .replace(/^🍽️\s*/u, "")
+        .replace(/^gemeinsam\s+mit\s+[^—–-]+\s*[—–-]\s*/i, "");
+      return `- ${cleanName}${ing ? " | Zutaten: " + ing : m.description ? " | " + m.description : ""}`;
     });
 }
 
