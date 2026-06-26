@@ -629,7 +629,9 @@ WICHTIG zu name/description:
     } catch {
       throw new Error("Antwort konnte nicht gelesen werden.");
     }
-    const generatedDays = (parsed.days ?? []).slice(0, aiPlanDays);
+    const generatedDays = (parsed.days ?? [])
+      .slice(0, aiPlanDays)
+      .map((d: GeneratedDay, i: number): GeneratedDay => ({ ...d, type: aiSchedule[i]?.type ?? d.type }));
     if (!generatedDays.length) throw new Error("Keine Tage generiert.");
     const days: GeneratedDay[] = expandGeneratedDays(generatedDays, schedule, planDays);
 
