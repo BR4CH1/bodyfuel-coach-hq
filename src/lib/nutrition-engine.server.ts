@@ -79,9 +79,9 @@ const STOPWORDS = new Set([
 const BLOCKING_WARNING_PREFIX = "KRITISCH:";
 
 const STATE_HINTS = {
-  raw: /\b(roh|ungekocht|trocken|dry|raw)\b/i,
-  cooked: /\b(gekocht|gegart|gebraten|gegrillt|gebacken|zubereitet|cooked)\b/i,
-  deli: /\b(aufschnitt|geräuchert|geraeuchert|dose|konserve|abgetropft)\b/i,
+  raw: /\b(roh(?:e|er|es|en|em)?|ungekocht|trocken|dry|raw)\b/i,
+  cooked: /\b(gekocht(?:e|er|es|en|em)?|gegart(?:e|er|es|en|em)?|gebraten(?:e|er|es|en|em)?|gegrillt(?:e|er|es|en|em)?|gebacken(?:e|er|es|en|em)?|zubereitet|cooked)\b/i,
+  deli: /\b(aufschnitt|geräuchert(?:e|er|es|en|em)?|geraeuchert(?:e|er|es|en|em)?|dose|konserve|abgetropft)\b/i,
 };
 
 const PROBE_REWRITES: Array<[RegExp, string]> = [
