@@ -171,12 +171,10 @@ export const estimateMealMacros = createServerFn({ method: "POST" })
   .inputValidator((data: { meal_id: string }) => data)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY fehlt");
 
     const { data: meal, error: mErr } = await supabase
       .from("nutrition_plan_meals")
-      .select("id, name, description, kcal, protein_g, carbs_g, fat_g, day_id")
+      .select("id, name, description, kcal, protein_g, carbs_g, fat_g, ingredients_json, day_id")
       .eq("id", data.meal_id)
       .maybeSingle();
     if (mErr || !meal) throw new Error(mErr?.message || "Mahlzeit nicht gefunden");
@@ -190,48 +188,129 @@ export const estimateMealMacros = createServerFn({ method: "POST" })
     const { data: isCoach } = await supabase.rpc("has_role", { _user_id: userId, _role: "coach" });
     if (clientId !== userId && !isCoach) throw new Error("Forbidden");
 
-    const text = `${meal.name}${meal.description ? " — " + meal.description : ""}`;
-    const prompt = `Schätze die Nährwerte für diese Mahlzeit so realistisch wie möglich auf Basis üblicher Lebensmitteldatenbanken (DGE / USDA).
-Mahlzeit: ${text}
-Antworte ausschließlich mit gültigem JSON in dieser Form (ganzzahlige Werte, keine Einheiten):
-{"kcal": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0}`;
-
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        response_format: { type: "json_object" },
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
-    if (!aiRes.ok) {
-      const txt = await aiRes.text();
-      throw new Error(`Fehler [${aiRes.status}]: ${txt.slice(0, 200)}`);
-    }
-    const aiJson = await aiRes.json();
-    const raw = aiJson?.choices?.[0]?.message?.content ?? "{}";
-    let est: any = {};
-    try {
-      est = typeof raw === "string" ? JSON.parse(raw) : raw;
-    } catch {
-      est = {};
-    }
-    const nz = (v: any) => {
-      const n = Number(v);
-      return Number.isFinite(n) && n >= 0 ? Math.round(n) : 0;
-    };
-    const out = {
-      kcal: nz(est.kcal),
-      protein_g: nz(est.protein_g),
-      carbs_g: nz(est.carbs_g),
-      fat_g: nz(est.fat_g),
-    };
-
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const {
+      computeMealFromDescription,
+      computeMealFromIngredients,
+      coerceIngredients,
+      isUsableEngineResult,
+      parseDescriptionToEngineIngredients,
+    } = await import("./nutrition-engine.server");
+
+    const structured = coerceIngredients((meal as any).ingredients_json ?? null);
+    const ingredients = structured.length
+      ? structured
+      : parseDescriptionToEngineIngredients(meal.description ?? null);
+    const result = structured.length
+      ? await computeMealFromIngredients(supabaseAdmin, structured)
+      : await computeMealFromDescription(supabaseAdmin, meal.description ?? null);
+
+    if (!isUsableEngineResult(result)) {
+      const warnings = Array.isArray((result as any)?.warnings) ? (result as any).warnings.join(" | ") : "";
+      throw new Error(`Nährwerte nicht zuverlässig berechenbar. ${warnings}`.trim());
+    }
+
+    const out = {
+      kcal: result.kcal,
+      protein_g: result.protein_g,
+      carbs_g: result.carbs_g,
+      fat_g: result.fat_g,
+      ingredients_json: ingredients.length ? ingredients : null,
+      compute_warnings: result.warnings,
+      data_source: result.data_source,
+      verified_ratio: result.coverage,
+    };
+
     await supabaseAdmin.from("nutrition_plan_meals").update(out).eq("id", meal.id);
 
-    return out;
+    return {
+      kcal: result.kcal,
+      protein_g: result.protein_g,
+      carbs_g: result.carbs_g,
+      fat_g: result.fat_g,
+      data_source: result.data_source,
+      verified_ratio: result.coverage,
+      compute_warnings: result.warnings,
+      compute_debug: result.debug,
+    };
+  });
+
+export const getMealMacroDebug = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { meal_id: string }) => data)
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+
+    const { data: meal, error: mErr } = await supabase
+      .from("nutrition_plan_meals")
+      .select("id, name, description, ingredients_json, day_id")
+      .eq("id", data.meal_id)
+      .maybeSingle();
+    if (mErr || !meal) throw new Error(mErr?.message || "Mahlzeit nicht gefunden");
+
+    const { data: dayRow } = await supabase
+      .from("nutrition_plan_days")
+      .select("plan_id, nutrition_plans!inner(client_id)")
+      .eq("id", meal.day_id)
+      .maybeSingle();
+    const clientId = (dayRow as any)?.nutrition_plans?.client_id;
+    const { data: isCoach } = await supabase.rpc("has_role", { _user_id: userId, _role: "coach" });
+    if (clientId !== userId && !isCoach) throw new Error("Forbidden");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const {
+      computeMealFromDescription,
+      computeMealFromIngredients,
+      coerceIngredients,
+      parseDescriptionToEngineIngredients,
+    } = await import("./nutrition-engine.server");
+
+    const structured = coerceIngredients((meal as any).ingredients_json ?? null);
+    const ingredients = structured.length
+      ? structured
+      : parseDescriptionToEngineIngredients(meal.description ?? null);
+    const result = structured.length
+      ? await computeMealFromIngredients(supabaseAdmin, structured)
+      : await computeMealFromDescription(supabaseAdmin, meal.description ?? null);
+    if (!result) throw new Error("Keine Zutaten erkannt");
+
+    await supabaseAdmin
+      .from("nutrition_plan_meals")
+      .update({
+        kcal: result.kcal,
+        protein_g: result.protein_g,
+        carbs_g: result.carbs_g,
+        fat_g: result.fat_g,
+        ingredients_json: ingredients.length ? ingredients : null,
+        compute_warnings: result.warnings,
+        data_source: result.data_source,
+        verified_ratio: result.coverage,
+      })
+      .eq("id", meal.id);
+
+    return {
+      meal_id: meal.id,
+      totals: {
+        kcal: result.kcal,
+        protein_g: result.protein_g,
+        carbs_g: result.carbs_g,
+        fat_g: result.fat_g,
+      },
+      coverage: result.coverage,
+      data_source: result.data_source,
+      warnings: result.warnings,
+      ingredients: result.debug.map((d) => ({
+        display: d.input.display ?? d.input.name,
+        parsed_name: d.input.name,
+        grams: d.grams_used,
+        matched_food: d.matched_food?.name ?? null,
+        kcal: d.kcal,
+        protein_g: d.protein_g,
+        carbs_g: d.carbs_g,
+        fat_g: d.fat_g,
+        warning: d.warning,
+      })),
+    };
   });
 
 export const generateMealRecipe = createServerFn({ method: "POST" })

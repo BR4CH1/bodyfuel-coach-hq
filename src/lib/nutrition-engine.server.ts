@@ -53,6 +53,8 @@ type FoodRow = {
   verified_by_coach: boolean;
   source: string;
   aliases: string[] | null;
+  default_state?: string | null;
+  unit_type?: string | null;
 };
 
 const SOURCE_PRIORITY: Record<string, number> = {
@@ -66,9 +68,10 @@ const SOURCE_PRIORITY: Record<string, number> = {
 
 const STOPWORDS = new Set([
   "roh", "gekocht", "gegart", "gebraten", "gedünstet", "gegrillt",
+  "gekochter", "gekochte", "gekochtes", "gekochten", "gekochtem",
   "frisch", "trocken", "tk", "tiefgekühlt", "dose", "optional",
   "fettarm", "mager", "magerer", "magere", "magerem", "natur", "pur",
-  "fett", "prozent",
+  "fett", "prozent", "extra", "groß", "große", "gross", "grosse",
   "light", "zuckerarm", "ungesüßt", "ungesalzen", "gewürfelt",
   "geschnitten", "gerieben", "gehackt", "fein", "grob", "kalt", "warm",
   "scheibe", "scheiben", "stück", "stueck", "stk", "je", "el", "tl",
@@ -85,8 +88,16 @@ const STATE_HINTS = {
 };
 
 const PROBE_REWRITES: Array<[RegExp, string]> = [
+  [/\bgekocht(?:e|er|es|en|em)?\s+reis\b/g, "reis weiß gekocht"],
+  [/\breis\s+gekocht(?:e|er|es|en|em)?\b/g, "reis weiß gekocht"],
+  [/\b(?:roh(?:e|er|es|en|em)?|ungekocht|trocken)\s+reis\b/g, "reis weiß roh"],
+  [/\breis\s+(?:roh(?:e|er|es|en|em)?|ungekocht|trocken)\b/g, "reis weiß roh"],
+  [/\brinderhackfleisch\s+extra\s+mager\b/g, "rinderhack mager"],
+  [/\bextra\s+mager(?:es|er|e|em|en)?\s+rinderhackfleisch\b/g, "rinderhack mager"],
+  [/\bmager(?:es|er|e|em|en)?\s+rinderhackfleisch\b/g, "rinderhack mager"],
   [/\brinderhackfleisch\b/g, "rinderhack mager"],
   [/\bhackfleisch\s+rind\b/g, "rinderhack mager"],
+  [/\bpaprikaschoten?\b/g, "paprika"],
   [/\bhähnchenbrustfilet\b/g, "hähnchenbrust"],
   [/\bhaehnchenbrustfilet\b/g, "hähnchenbrust"],
   [/\bhähnchenfilet\b/g, "hähnchenbrust"],
@@ -130,7 +141,10 @@ function rewrittenProbes(norm: string): string[] {
   const out = new Set<string>();
   for (const [re, replacement] of PROBE_REWRITES) {
     re.lastIndex = 0;
-    if (re.test(norm)) out.add(norm.replace(re, replacement).replace(/\s+/g, " ").trim());
+    if (re.test(norm)) {
+      out.add(norm.replace(re, replacement).replace(/\b(mager)\s+\1\b/g, "$1").replace(/\s+/g, " ").trim());
+      out.add(replacement);
+    }
   }
   return [...out].filter((p) => p.length >= 3);
 }
@@ -192,7 +206,7 @@ export async function lookupFood(
     const { data, error } = await supabase
       .from("nutrition_foods")
       .select(
-        "id,name,kcal_per_100g,protein_per_100g,carbs_per_100g,fat_per_100g,verified_by_coach,source,aliases",
+        "id,name,kcal_per_100g,protein_per_100g,carbs_per_100g,fat_per_100g,verified_by_coach,source,aliases,default_state,unit_type",
       )
       .or(`name.ilike.%${safe}%,aliases.cs.{${safe}}`)
       .limit(15);
@@ -351,6 +365,7 @@ function cleanIngredientName(raw: string): string {
   return raw
     .replace(/\((?:je\s*)?\d+(?:[.,]\d+)?\s*(?:g|gramm|ml|l|kg)\)/gi, " ")
     .replace(/[()]/g, " ")
+    .replace(/^\s*\d+(?:[.,]\d+)?\s*(scheiben?|stück|stueck|stk\.?|wraps?|tortillas?|brötchen|broetchen|semmeln?|riegel)\s+/i, " ")
     .replace(/\bje\s*\d+(?:[.,]\d+)?\s*(?:g|gramm|ml|l|kg)\b/gi, " ")
     .replace(PARSER_STOP_WORDS, " ")
     .replace(/[,;:]/g, " ")
