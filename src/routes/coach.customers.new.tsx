@@ -42,7 +42,7 @@ function NewCustomerForm() {
     package: "coaching" as PackageOption,
     price_eur: 69,
     start_date: new Date().toISOString().slice(0, 10),
-    duration_days: 30,
+    end_date: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
     trial_days: 7,
     notes: "",
     bulls: false,
@@ -65,7 +65,13 @@ function NewCustomerForm() {
     }
     setBusy(true);
     try {
-      await fn({ data: { ...form, origin: window.location.origin } });
+      const startMs = new Date(form.start_date).getTime();
+      const endMs = new Date(form.end_date).getTime();
+      const duration_days = Math.max(
+        1,
+        Math.round((endMs - startMs) / 86400000),
+      );
+      await fn({ data: { ...form, duration_days, origin: window.location.origin } });
       clearFormDraft(DRAFT_KEY);
       toast.success(
         form.skip_invite
@@ -208,12 +214,16 @@ function NewCustomerForm() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Laufzeit (Tage)</Label>
+              <Label>Enddatum</Label>
               <Input
-                type="number"
-                value={form.duration_days}
-                onChange={(e) => setForm({ ...form, duration_days: Number(e.target.value) })}
+                type="date"
+                min={form.start_date}
+                value={form.end_date}
+                onChange={(e) => setForm({ ...form, end_date: e.target.value })}
               />
+              <p className="text-[11px] text-muted-foreground">
+                Die Laufzeit ergibt sich aus Start- und Enddatum.
+              </p>
             </div>
           </div>
         )}
