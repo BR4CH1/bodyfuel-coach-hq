@@ -1,64 +1,64 @@
+## Minderjährigenschutz – Implementierungsplan
 
-# Affiliate-Programm für Partner
+### 1. Datenbank (Migration)
+Neue Felder auf `profiles`:
+- `birthdate` (vorhanden) — bleibt
+- `is_minor boolean` (abgeleitet, gesetzt bei Signup)
+- `requires_guardian_consent boolean`
+- `guardian_name text`
+- `guardian_email text`
+- `guardian_consent_at timestamptz`
+- `guardian_consent_ip text`
+- `guardian_consent_docs jsonb` (`{agb, datenschutz, gesundheitsdaten, widerruf}` mit Version+Zeitstempel)
+- `account_status text` check in (`active`, `pending_guardian_consent`)
 
-Partner bekommen einen persönlichen Link, du siehst wer wen geworben hat und 10% der Erstzahlung des Geworbenen geht automatisch an den Partner — bei allen bezahlten Paketen außer Smart-Gift (0 €).
+Neue Tabelle `guardian_consent_tokens`:
+- `token` (UUID, primär), `user_id`, `guardian_email`, `expires_at`, `consumed_at`, `created_at`
+- RLS: service_role only; öffentliche Token-Validierung läuft über server route.
 
-## Phase 1 — Tracking & Provisions-Übersicht (sofort)
+Trigger: `account_status='pending_guardian_consent'` blockiert Stripe-Checkout-Server-Funktion.
 
-### 1. Datenmodell
-- **`affiliate_partners`**: name, email, slug (z.B. `manu-2026`), commission_pct (default 10), is_active, stripe_connect_account_id (für Phase 2), created_by (Coach), notes
-- **`affiliate_referrals`**: partner_id, referred_user_id, signup_at, source_slug, first_payment_id, commission_amount_eur, commission_status (`pending` / `payable` / `paid` / `void`)
-- **`profiles.referred_by_partner_id`**: neue Spalte zur dauerhaften Zuordnung
-- RLS: nur Coaches lesen/schreiben Partner & Referrals; Partner sehen ihren eigenen Slug & Stats nur über öffentliche Tracking-Seite (kein Login nötig in Phase 1)
+### 2. Signup / Onboarding-Gate
+- Komponente `AgeGate.tsx`: Frage „Bist du mindestens 18?" + Geburtsdatum.
+- Bei <18: Hinweisbox + Formular (Eltern-Name, Eltern-E-Mail).
+- Bei <16: zusätzliche explizite Pflichtkennzeichnung „Zustimmung zwingend erforderlich".
+- Einbau in: `smart.signup.tsx`, `tracker.signup.tsx`, `welcome.tsx` (Self-Service), `onboarding.smart.tsx`.
+- Bei Volljährigkeit: normal weiter.
+- Bei minderjährig: Profile-Felder schreiben, Token erzeugen, Eltern-E-Mail anstoßen, Account auf `pending_guardian_consent`.
 
-### 2. Referral-Tracking
-- Öffentliche Landingpages (`/`, `/smart`, `/bulls`, `/coaching`, `/smart/gift/:code` …) lesen `?ref=slug` und legen ihn in `localStorage` ab (30 Tage TTL)
-- Bei Signup (sowohl regulärer als auch Gift-Code-Flow) wird der Slug serverseitig in `profiles.referred_by_partner_id` gespeichert
-- Gift-Redemption (0 €) erzeugt **kein** Commission-Event (deine Vorgabe „außer Smart-Gift")
+### 3. Eltern Double-Opt-In
+- Server-Funktion `sendGuardianConsentEmail` (createServerFn, service-role nach Auth des Kindes oder offen bei Signup) → erstellt Token, ruft App-Email-Template `guardian-consent` auf.
+- Auth-Template `guardian-consent.tsx` mit Link `/guardian-consent?token=...`.
+- Route `/guardian-consent`: zeigt 4 Pflicht-Checkboxen (AGB, Datenschutz, Gesundheitsdaten-Einwilligung, Widerrufsbelehrung) + Eltern-Name + „Ich bin Erziehungsberechtigte/r".
+- POST → server route `/api/public/guardian-consent` validiert Token, schreibt Zustimmung, setzt `account_status='active'`, Token konsumiert. IP wird mitgespeichert.
 
-### 3. Provisions-Erfassung
-- Nach erfolgreichem `payment_history`-Eintrag (status=`confirmed`) prüft ein DB-Trigger: 
-  - Hat der User `referred_by_partner_id`? 
-  - Gibt es noch keine Provision für diesen User? (Erstzahlung) 
-  - Paket ≠ Smart-Gift?
-- Wenn ja → Insert in `affiliate_referrals` mit 10% des Zahlungsbetrags und `commission_status='payable'`
+### 4. Checkout-Block
+- Stripe-Checkout-Erstellung in `useStripeCheckout` / Backend: vor Session-Creation prüfen, ob `is_minor=true` UND `account_status<>'active'`. Wenn ja → Fehler „Eltern-Bestätigung ausstehend" + Hinweis.
+- UI `UpgradeCard` zeigt für minderjährige, unbestätigte Accounts einen Sperr-Hinweis und CTA „Eltern-E-Mail erneut senden".
+- Eltern werden im Stripe-Checkout-Customer als `email`/`name` eingetragen (Vertragspartner).
 
-### 4. Coach-UI
-- Neue Route `/coach/affiliates`:
-  - Liste der Partner (anlegen/bearbeiten/deaktivieren, Slug-Generator, individuellen %-Satz überschreiben)
-  - Pro Partner: geworbene Kunden, offene/ausgezahlte Provisionen, Link zum Kopieren (`bodyfuel-coaching.com/?ref=slug`)
-  - Globale Tabelle aller fälligen Provisionen mit Filter (offen / ausgezahlt)
-  - Manuell "Als ausgezahlt markieren" als Übergang bis Phase 2 live ist
+### 5. Public-Guard für Minderjährige
+- Ranking-Funktion `get_ranking`: für `is_minor=true` → `display_name` durch `nickname` oder anonym („Athlet*in") ersetzen.
+- Community / Bulls-Listen: gleiche Maskierung + `progress_photos` und `bulls_progress_photos` für Minderjährige niemals öffentlich ausgespielt (zusätzliches WHERE in den Public-Sichten/Komponenten).
+- Vorher-Nachher-Komponenten (`ProgressPhotosCard`, `PhotoAssessmentCard` Public-Pfade): Upload erlaubt, Public-Share-Button für `is_minor` ausgeblendet.
 
-## Phase 2 — Stripe Connect Auto-Payout
+### 6. Profil-Ansicht
+- In `profile.tsx` und `coach.customers.$userId.tsx` Section „Minderjährigenschutz" mit allen gespeicherten Feldern (read-only).
+- Coach kann Status sehen, aber Zustimmung nicht fälschen.
 
-Stripe Connect ist eigenständig und braucht ein paar Voraussetzungen, deshalb getrennt:
+### Technische Details
+- Migration in einem Step inkl. GRANTs + RLS.
+- Token-Route: `src/routes/api/public/guardian-consent.ts` (GET validieren, POST konsumieren).
+- E-Mail: nutzt vorhandene App-Email-Infra (`scaffold_transactional_email`-Template hinzufügen).
+- Stripe-Block: in `src/lib/stripe.functions.ts` / Checkout-ServerFn vor `stripe.checkout.sessions.create`.
 
-### 1. Voraussetzungen
-- Stripe Connect (Express-Accounts) muss in deinem Stripe-Dashboard aktiviert sein (du gehst einmal in dein Stripe → Connect → Get Started, Plattform-Profil ausfüllen). Ich kann das nicht für dich tun.
-- Partner brauchen ein Onboarding (Stripe sammelt Steuer-/Bankdaten direkt von ihnen)
+### Reihenfolge der Edits
+1. DB-Migration (Felder + Tabelle + RLS + Grants)
+2. Server-Fns & Public-Route für Token + Consent
+3. App-Email-Template + Trigger
+4. AgeGate-Komponente + Einbau in Signup-Flows
+5. Stripe-Checkout-Gate
+6. Profil-/Coach-Sichtbarkeit
+7. Public-Guard (Ranking/Community/Photos)
 
-### 2. Flow
-- Im Coach-UI: Button „Stripe-Onboarding-Link für Partner generieren" → erzeugt `AccountLink` über Gateway → URL geht per Mail an den Partner
-- Partner verifiziert sich bei Stripe → wir speichern `stripe_connect_account_id` und `payouts_enabled`
-- Bei jeder fälligen Provision (commission_status=`payable` und Partner hat verifizierten Connect-Account): automatischer `Transfer` an Connect-Account → `commission_status='paid'`, `paid_at`, `stripe_transfer_id` gespeichert
-- Cron-Route `/api/public/hooks/payout-affiliates` (täglich) cleared den Backlog
-
-### 3. Compliance
-- Provisionen werden aus deinem Stripe-Balance an die Partner-Connect-Accounts transferiert. Stripe schickt den Partnern automatisch ihre Auszahlung auf ihr Bankkonto.
-- Die Partner sind selbst für ihre Steuer verantwortlich; Stripe stellt ihnen die Belege.
-
----
-
-## Was ich jetzt baue (Phase 1)
-1. Migration: Tabellen + RLS + Trigger
-2. Server-Functions: Partner CRUD, Referral-Stats, Slug-Validierung, Commission-Generation-Trigger
-3. Coach-UI: `/coach/affiliates` mit Liste, Detail, Provisions-Tabelle
-4. Referral-Tracking: localStorage-Hook + Speichern bei Signup (Smart-Gift- und Standard-Flow)
-5. Link in Coach-Navigation
-
-## Phase 2 starte ich erst auf dein "Ja"
-- Erfordert manuellen Schritt von dir: Stripe Connect im Stripe-Dashboard aktivieren
-- Ohne Connect bleibst du in „manuell auszahlen + abhaken"-Modus (Phase 1 funktioniert komplett ohne Connect)
-
-**Soll ich mit Phase 1 starten?**
+Nach Approval implementiere ich Schritt 1–7 in dieser Reihenfolge.
