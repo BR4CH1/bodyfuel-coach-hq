@@ -647,7 +647,7 @@ WICHTIG zu name/description:
       const name = `${s.wkLabel} — ${typeLabel}`;
       const allowedMeals = (d.meals ?? []).filter((m: GeneratedMeal) => {
         const hay = `${m.name} ${m.description ?? ""} ${JSON.stringify((m as any).ingredients ?? [])}`.toLowerCase();
-        return !forbidden.some((f) => hay.includes(f));
+        return !containsForbiddenFood(hay, forbidden);
       });
       return {
         name,
@@ -657,7 +657,12 @@ WICHTIG zu name/description:
       };
     });
 
-    const missingRequired = rawDays.flatMap((d: RawPlanDay, idx: number) => {
+    const repairedRawDays = rawDays.map((d: RawPlanDay): RawPlanDay => ({
+      ...d,
+      meals: ensureRequiredMealSlots(d.meals, d.type, d.target, forbidden, isNoCook),
+    }));
+
+    const missingRequired = repairedRawDays.flatMap((d: RawPlanDay, idx: number) => {
       const slots = new Set(d.meals.map((m: GeneratedMeal) => m.slot));
       return (["breakfast", "lunch", "dinner"] as const)
         .filter((slot) => !slots.has(slot))
@@ -718,7 +723,7 @@ WICHTIG zu name/description:
         }),
         { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0 },
       );
-      capped = await addDeterministicCorrectionSnacks(capped, d.target, daySums, supabase, computeMealFromIngredients, isUsableEngineResult);
+      capped = await addDeterministicCorrectionSnacks(capped, d.target, daySums, supabase, computeMealFromIngredients, isUsableEngineResult, forbidden);
       const finalSums = capped.reduce(
         (acc: MacroTarget, meal: ComputedGeneratedMeal) => ({
           kcal: acc.kcal + (Number(meal.kcal) || 0),
@@ -742,7 +747,7 @@ WICHTIG zu name/description:
       }
       return capped;
     };
-    const cleaned: CleanedPlanDay[] = await Promise.all(rawDays.map(async (d: RawPlanDay, dayIdx: number): Promise<CleanedPlanDay> => {
+    const cleaned: CleanedPlanDay[] = await Promise.all(repairedRawDays.map(async (d: RawPlanDay, dayIdx: number): Promise<CleanedPlanDay> => {
       const cacheKey = `${d.type}:${JSON.stringify(d.meals)}`;
       let cached = baseCache.get(cacheKey);
       if (!cached) {
