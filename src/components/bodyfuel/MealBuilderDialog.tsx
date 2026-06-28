@@ -304,6 +304,24 @@ export function MealBuilderDialog({
                     ))}
                   </ul>
                 )}
+                {!searching && query.trim() !== "" && results.length > 0 && (
+                  <div className="mt-2 flex justify-center">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={estimateWithAi}
+                      disabled={estimating}
+                      className="text-xs text-muted-foreground"
+                    >
+                      {estimating ? (
+                        <><Loader2 className="h-3 w-3 animate-spin" /> Schätzt…</>
+                      ) : (
+                        <><Sparkles className="h-3 w-3" /> Nichts passt? KI-Schätzung</>
+                      )}
+                    </Button>
+                  </div>
+                )}
+
               </div>
             </>
           ) : (
