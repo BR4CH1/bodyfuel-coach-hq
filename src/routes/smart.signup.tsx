@@ -38,16 +38,41 @@ function SmartSignupPage() {
   const navigate = useNavigate();
   const { openCheckout, closeCheckout, isOpen, checkoutElement } = useStripeCheckout();
   const [busy, setBusy] = useState(false);
+  const fetchStatus = useServerFn(getMyGuardianStatus);
+  const [gateState, setGateState] = useState<
+    "loading" | "needs_gate" | "pending_consent" | "ready"
+  >("loading");
 
-  // Logged-in user landing here → direkt Checkout starten
+  const refreshStatus = async (autoOpen: boolean) => {
+    try {
+      const s: any = await fetchStatus();
+      if (!s?.birthdate) {
+        setGateState("needs_gate");
+        return;
+      }
+      if (s.is_minor && !s.guardian_consent_at) {
+        setGateState("pending_consent");
+        return;
+      }
+      setGateState("ready");
+      if (autoOpen) {
+        if (!isPaymentsConfigured()) {
+          toast.error("Stripe ist noch nicht konfiguriert.");
+          return;
+        }
+        openCheckout({ priceId: "bodyfuel_smart_monthly" });
+      }
+    } catch {
+      setGateState("needs_gate");
+    }
+  };
+
+  // Logged-in user landing here → Status prüfen, dann ggf. Checkout starten
   useEffect(() => {
     if (loading || !supabaseUser) return;
-    if (!isPaymentsConfigured()) {
-      toast.error("Stripe ist noch nicht konfiguriert.");
-      return;
-    }
-    openCheckout({ priceId: "bodyfuel_smart_monthly" });
-  }, [loading, supabaseUser, openCheckout]);
+    refreshStatus(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, supabaseUser]);
 
   const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
