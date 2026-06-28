@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Plus, X, ShieldCheck, Clock, Flame } from "lucide-react";
+import { Plus, X, ShieldCheck, Clock, Flame, Euro } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   coachExtendTrial,
@@ -10,9 +10,12 @@ import {
   coachActivateMember,
   coachStartTrial,
 } from "@/lib/trial.functions";
+import { coachCreatePackage } from "@/lib/coaching.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
 type TrialProfile = {
   trial_status: "none" | "trial" | "trial_expired" | "active";
