@@ -182,7 +182,28 @@ function SmartSignupPage() {
           </form>
         )}
 
-        {supabaseUser && (
+        {supabaseUser && gateState === "needs_gate" && (
+          <div className="mt-6">
+            <AgeGate
+              onAdult={() => refreshStatus(true)}
+              onMinorRequested={() => refreshStatus(false)}
+            />
+          </div>
+        )}
+
+        {supabaseUser && gateState === "pending_consent" && (
+          <div className="mt-6 rounded-2xl border border-gold/30 bg-secondary/40 p-5 text-sm">
+            <p className="font-semibold">Eltern-Zustimmung ausstehend</p>
+            <p className="mt-1 text-muted-foreground">
+              BodyFuel kann von Minderjährigen nur mit Zustimmung eines
+              Erziehungsberechtigten genutzt werden. Sobald deine Eltern den
+              Bestätigungslink aus der E-Mail bestätigt haben, kannst du den
+              Kauf hier abschließen.
+            </p>
+          </div>
+        )}
+
+        {supabaseUser && gateState === "ready" && (
           <Button
             onClick={() => openCheckout({ priceId: "bodyfuel_smart_monthly" })}
             className="mt-6 w-full bg-gradient-gold text-primary-foreground hover:opacity-90"
