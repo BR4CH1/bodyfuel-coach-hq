@@ -2,11 +2,12 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, Plus, Trash2, X, ChefHat } from "lucide-react";
+import { Loader2, Plus, Trash2, X, ChefHat, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { searchFoods, type FoodResult } from "@/lib/nutrition.functions";
+import { searchFoods, estimateFoodFromText, type FoodResult } from "@/lib/nutrition.functions";
 import { saveCustomMeal } from "@/lib/custom-meals.functions";
+
 
 type Ingredient = {
   name: string;
