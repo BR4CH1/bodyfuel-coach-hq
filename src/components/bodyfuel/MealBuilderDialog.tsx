@@ -259,13 +259,28 @@ export function MealBuilderDialog({
                     Tippe los — wähle Zutaten und Menge wie beim normalen Tracking.
                   </p>
                 ) : results.length === 0 ? (
-                  <p className="flex items-center justify-center gap-2 py-6 text-center text-xs text-muted-foreground">
+                  <div className="flex flex-col items-center gap-3 py-6 text-center text-xs text-muted-foreground">
                     {searching ? (
-                      <><Loader2 className="h-3 w-3 animate-spin" /> Suche…</>
+                      <span className="flex items-center gap-2"><Loader2 className="h-3 w-3 animate-spin" /> Suche…</span>
                     ) : (
-                      "Keine Treffer"
+                      <>
+                        <span>Keine Treffer in der Datenbank.</span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={estimateWithAi}
+                          disabled={estimating}
+                        >
+                          {estimating ? (
+                            <><Loader2 className="h-3 w-3 animate-spin" /> Schätzt…</>
+                          ) : (
+                            <><Sparkles className="h-3 w-3" /> Nährwerte mit KI schätzen</>
+                          )}
+                        </Button>
+                      </>
                     )}
-                  </p>
+                  </div>
+
                 ) : (
                   <ul className="divide-y divide-border">
                     {results.map((r, i) => (
