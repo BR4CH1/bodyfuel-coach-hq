@@ -246,6 +246,9 @@ function ProfileContent() {
         </div>
       </section>
 
+      {/* Minderjährigenschutz */}
+      <MinorProtectionSection />
+
       {/* Mein Paket */}
       <MyPackageSection pkg={pkg} />
 
