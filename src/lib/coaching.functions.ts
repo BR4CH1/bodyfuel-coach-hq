@@ -823,6 +823,25 @@ export const updateCustomerPackage = createServerFn({ method: "POST" })
     if (data.end_date !== undefined) patch.end_date = data.end_date;
     if (data.is_active !== undefined) patch.is_active = data.is_active;
     if (data.notes !== undefined) patch.notes = data.notes;
+    // Wenn das Paket gewechselt wird, evtl. bestehende (alte) Zeile mit dem
+    // gleichen (user_id, package) entfernen — sonst kollidiert das UPDATE mit
+    // dem Unique-Index customer_packages_user_pkg_uidx.
+    if (patch.package !== undefined) {
+      const { data: row } = await supabaseAdmin
+        .from("customer_packages")
+        .select("user_id, package")
+        .eq("id", data.package_id)
+        .maybeSingle();
+      if (row && row.package !== patch.package) {
+        await supabaseAdmin
+          .from("customer_packages")
+          .delete()
+          .eq("user_id", row.user_id)
+          .eq("package", patch.package)
+          .neq("id", data.package_id);
+      }
+    }
+
     const { error } = await supabaseAdmin
       .from("customer_packages")
       .update(patch)
