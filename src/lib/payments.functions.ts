@@ -62,6 +62,32 @@ export const createSmartCheckoutSession = createServerFn({ method: "POST" })
     async ({ data, context }): Promise<CheckoutSessionResult> => {
       try {
         const { supabase, userId } = context;
+
+        // ──────────── Minderjährigenschutz ────────────
+        // Minderjährige dürfen keine eigenständigen kostenpflichtigen Buchungen
+        // tätigen. Vertragspartner muss eine erziehungsberechtigte Person sein,
+        // die per Double-Opt-In bestätigt hat.
+        const { data: prof } = await supabase
+          .from("profiles")
+          .select("is_minor, account_status, guardian_consent_at")
+          .eq("id", userId)
+          .maybeSingle();
+        if (prof?.is_minor && !prof.guardian_consent_at) {
+          return {
+            error:
+              "BodyFuel kann von Minderjährigen nur mit Zustimmung eines Erziehungsberechtigten genutzt werden. Bitte lass deine Eltern den Bestätigungslink per E-Mail bestätigen — danach kannst du den Kauf abschließen.",
+          };
+        }
+        if (prof?.account_status === "pending_guardian_consent") {
+          return {
+            error:
+              "Dein Account wartet auf die Bestätigung deiner Eltern. Sobald sie den Link aus der E-Mail bestätigt haben, kannst du den Kauf abschließen.",
+          };
+        }
+        if (prof?.account_status === "blocked") {
+          return { error: "Dein Account ist aktuell gesperrt." };
+        }
+
         const { data: { user } } = await supabase.auth.getUser();
         const stripe = createStripeClient(data.environment);
 
