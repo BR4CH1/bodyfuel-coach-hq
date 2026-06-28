@@ -65,7 +65,13 @@ function NewCustomerForm() {
     }
     setBusy(true);
     try {
-      await fn({ data: { ...form, origin: window.location.origin } });
+      const startMs = new Date(form.start_date).getTime();
+      const endMs = new Date(form.end_date).getTime();
+      const duration_days = Math.max(
+        1,
+        Math.round((endMs - startMs) / 86400000),
+      );
+      await fn({ data: { ...form, duration_days, origin: window.location.origin } });
       clearFormDraft(DRAFT_KEY);
       toast.success(
         form.skip_invite
