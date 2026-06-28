@@ -42,6 +42,26 @@ export function MealBuilderDialog({
   const [amountStr, setAmountStr] = useState("100");
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [saving, setSaving] = useState(false);
+  const [estimating, setEstimating] = useState(false);
+
+  const estimateWithAi = async () => {
+    const term = query.trim();
+    if (!term) return;
+    setEstimating(true);
+    try {
+      const r = await estimateFn({ data: { query: term } });
+      setResults([r]);
+      setPicking(r);
+      setUnit(r.serving_g ? "piece" : "g");
+      setAmountStr(r.serving_g ? "1" : "100");
+      toast.success("Schätzung erstellt – Werte prüfen & übernehmen.");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setEstimating(false);
+    }
+  };
+
 
   // Reset when opened
   useEffect(() => {
