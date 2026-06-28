@@ -922,6 +922,36 @@ export type Database = {
         }
         Relationships: []
       }
+      guardian_consent_tokens: {
+        Row: {
+          consumed_at: string | null
+          created_at: string
+          expires_at: string
+          guardian_email: string
+          guardian_name: string | null
+          token: string
+          user_id: string
+        }
+        Insert: {
+          consumed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          guardian_email: string
+          guardian_name?: string | null
+          token?: string
+          user_id: string
+        }
+        Update: {
+          consumed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          guardian_email?: string
+          guardian_name?: string | null
+          token?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       leads: {
         Row: {
           created_at: string
@@ -1839,6 +1869,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          account_status: string
           activity_level: string | null
           athlete_profile_updated_at: string | null
           birthdate: string | null
@@ -1854,9 +1885,15 @@ export type Database = {
           gender: string | null
           goal_target_date: string | null
           goal_weight_kg: number | null
+          guardian_consent_at: string | null
+          guardian_consent_docs: Json | null
+          guardian_consent_ip: string | null
+          guardian_email: string | null
+          guardian_name: string | null
           height_cm: number | null
           id: string
           injuries: string | null
+          is_minor: boolean
           match_days_per_week: number | null
           mobility_focus: string | null
           mobility_frequency: string | null
@@ -1866,6 +1903,7 @@ export type Database = {
           phone: string | null
           practice_days_per_week: number | null
           referred_by_partner_id: string | null
+          requires_guardian_consent: boolean
           season_phase: string | null
           smart_onboarding_completed_at: string | null
           sport: string | null
@@ -1881,6 +1919,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          account_status?: string
           activity_level?: string | null
           athlete_profile_updated_at?: string | null
           birthdate?: string | null
@@ -1896,9 +1935,15 @@ export type Database = {
           gender?: string | null
           goal_target_date?: string | null
           goal_weight_kg?: number | null
+          guardian_consent_at?: string | null
+          guardian_consent_docs?: Json | null
+          guardian_consent_ip?: string | null
+          guardian_email?: string | null
+          guardian_name?: string | null
           height_cm?: number | null
           id: string
           injuries?: string | null
+          is_minor?: boolean
           match_days_per_week?: number | null
           mobility_focus?: string | null
           mobility_frequency?: string | null
@@ -1908,6 +1953,7 @@ export type Database = {
           phone?: string | null
           practice_days_per_week?: number | null
           referred_by_partner_id?: string | null
+          requires_guardian_consent?: boolean
           season_phase?: string | null
           smart_onboarding_completed_at?: string | null
           sport?: string | null
@@ -1923,6 +1969,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          account_status?: string
           activity_level?: string | null
           athlete_profile_updated_at?: string | null
           birthdate?: string | null
@@ -1938,9 +1985,15 @@ export type Database = {
           gender?: string | null
           goal_target_date?: string | null
           goal_weight_kg?: number | null
+          guardian_consent_at?: string | null
+          guardian_consent_docs?: Json | null
+          guardian_consent_ip?: string | null
+          guardian_email?: string | null
+          guardian_name?: string | null
           height_cm?: number | null
           id?: string
           injuries?: string | null
+          is_minor?: boolean
           match_days_per_week?: number | null
           mobility_focus?: string | null
           mobility_frequency?: string | null
@@ -1950,6 +2003,7 @@ export type Database = {
           phone?: string | null
           practice_days_per_week?: number | null
           referred_by_partner_id?: string | null
+          requires_guardian_consent?: boolean
           season_phase?: string | null
           smart_onboarding_completed_at?: string | null
           sport?: string | null

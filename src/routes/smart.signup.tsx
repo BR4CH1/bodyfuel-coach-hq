@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { toast } from "sonner";
 import { Sparkles, Mail, Lock, User } from "lucide-react";
@@ -11,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/bodyfuel/Logo";
+import { AgeGate } from "@/components/bodyfuel/AgeGate";
+import { getMyGuardianStatus } from "@/lib/guardian.functions";
 import { X } from "lucide-react";
 
 export const Route = createFileRoute("/smart/signup")({
@@ -35,16 +38,41 @@ function SmartSignupPage() {
   const navigate = useNavigate();
   const { openCheckout, closeCheckout, isOpen, checkoutElement } = useStripeCheckout();
   const [busy, setBusy] = useState(false);
+  const fetchStatus = useServerFn(getMyGuardianStatus);
+  const [gateState, setGateState] = useState<
+    "loading" | "needs_gate" | "pending_consent" | "ready"
+  >("loading");
 
-  // Logged-in user landing here → direkt Checkout starten
+  const refreshStatus = async (autoOpen: boolean) => {
+    try {
+      const s: any = await fetchStatus();
+      if (!s?.birthdate) {
+        setGateState("needs_gate");
+        return;
+      }
+      if (s.is_minor && !s.guardian_consent_at) {
+        setGateState("pending_consent");
+        return;
+      }
+      setGateState("ready");
+      if (autoOpen) {
+        if (!isPaymentsConfigured()) {
+          toast.error("Stripe ist noch nicht konfiguriert.");
+          return;
+        }
+        openCheckout({ priceId: "bodyfuel_smart_monthly" });
+      }
+    } catch {
+      setGateState("needs_gate");
+    }
+  };
+
+  // Logged-in user landing here → Status prüfen, dann ggf. Checkout starten
   useEffect(() => {
     if (loading || !supabaseUser) return;
-    if (!isPaymentsConfigured()) {
-      toast.error("Stripe ist noch nicht konfiguriert.");
-      return;
-    }
-    openCheckout({ priceId: "bodyfuel_smart_monthly" });
-  }, [loading, supabaseUser, openCheckout]);
+    refreshStatus(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, supabaseUser]);
 
   const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -154,7 +182,28 @@ function SmartSignupPage() {
           </form>
         )}
 
-        {supabaseUser && (
+        {supabaseUser && gateState === "needs_gate" && (
+          <div className="mt-6">
+            <AgeGate
+              onAdult={() => refreshStatus(true)}
+              onMinorRequested={() => refreshStatus(false)}
+            />
+          </div>
+        )}
+
+        {supabaseUser && gateState === "pending_consent" && (
+          <div className="mt-6 rounded-2xl border border-gold/30 bg-secondary/40 p-5 text-sm">
+            <p className="font-semibold">Eltern-Zustimmung ausstehend</p>
+            <p className="mt-1 text-muted-foreground">
+              BodyFuel kann von Minderjährigen nur mit Zustimmung eines
+              Erziehungsberechtigten genutzt werden. Sobald deine Eltern den
+              Bestätigungslink aus der E-Mail bestätigt haben, kannst du den
+              Kauf hier abschließen.
+            </p>
+          </div>
+        )}
+
+        {supabaseUser && gateState === "ready" && (
           <Button
             onClick={() => openCheckout({ priceId: "bodyfuel_smart_monthly" })}
             className="mt-6 w-full bg-gradient-gold text-primary-foreground hover:opacity-90"
