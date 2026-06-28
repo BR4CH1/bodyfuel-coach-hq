@@ -56,6 +56,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getMyAthleteProfile } from "@/lib/athlete-profile.functions";
 import { AthleteProfileEditor } from "@/components/bodyfuel/AthleteProfileEditor";
 import { MyCheckinsHistorySection } from "@/components/bodyfuel/MyCheckinsHistorySection";
+import { MinorProtectionSection } from "@/components/bodyfuel/MinorProtectionSection";
 import {
   Select,
   SelectContent,
