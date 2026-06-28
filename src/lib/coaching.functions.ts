@@ -382,6 +382,14 @@ export const createCustomer = createServerFn({ method: "POST" })
         end.setDate(end.getDate() + Number(data.duration_days || 30));
       }
 
+      // Vorhandene Pakete deaktivieren, damit kein Doppel-Eintrag entsteht
+      // (z.B. wenn ein bestehender Kunde auf ein anderes Paket umgestellt wird).
+      await supabaseAdmin
+        .from("customer_packages")
+        .update({ is_active: false })
+        .eq("user_id", newUserId)
+        .eq("is_active", true);
+
       const { error: pkgErr } = await supabaseAdmin.from("customer_packages").insert({
         user_id: newUserId,
         package: data.package as PackageKey,
