@@ -40,9 +40,17 @@ export function CoachTrialCard({ userId }: { userId: string }) {
   const endFn = useServerFn(coachEndTrial);
   const activateFn = useServerFn(coachActivateMember);
   const startFn = useServerFn(coachStartTrial);
+  const createPkgFn = useServerFn(coachCreatePackage);
 
   const [customDays, setCustomDays] = useState<number>(7);
   const [startDays, setStartDays] = useState<number>(7);
+
+  // Mitgliedschaft mit Preis einrichten
+  const [pkgKey, setPkgKey] = useState<"smart" | "coaching" | "starter" | "premium">("smart");
+  const [pkgPrice, setPkgPrice] = useState<string>("14.99");
+  const [pkgStart, setPkgStart] = useState<string>(() => new Date().toISOString().slice(0, 10));
+  const [pkgDuration, setPkgDuration] = useState<number>(30);
+  const [pkgNotes, setPkgNotes] = useState<string>("");
 
   const { data, isLoading } = useQuery<TrialProfile | null>({
     queryKey: ["customer-trial", userId],
