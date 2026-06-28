@@ -94,13 +94,28 @@ export const listCustomers = createServerFn({ method: "GET" })
     await assertCoach(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const { data: packages, error } = await supabaseAdmin
+    const { data: packagesRaw, error } = await supabaseAdmin
       .from("customer_packages")
       .select("*")
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
 
-    const userIds = [...new Set((packages ?? []).map((p) => p.user_id))];
+    // Dedupe: ein Eintrag pro Kunde. Aktive Pakete bevorzugen, sonst das
+    // jüngste end_date, sonst das zuletzt erstellte. So tauchen Kunden mit
+    // mehreren historischen Paketen (z.B. nach Paketwechsel) nicht doppelt auf.
+    const byUser = new Map<string, any>();
+    for (const p of packagesRaw ?? []) {
+      const cur = byUser.get(p.user_id);
+      if (!cur) { byUser.set(p.user_id, p); continue; }
+      const better =
+        (p.is_active && !cur.is_active) ||
+        (p.is_active === cur.is_active &&
+          new Date(p.end_date).getTime() > new Date(cur.end_date).getTime());
+      if (better) byUser.set(p.user_id, p);
+    }
+    const packages = [...byUser.values()];
+
+    const userIds = [...new Set(packages.map((p) => p.user_id))];
     if (userIds.length === 0) return [];
 
     const { data: profiles } = await supabaseAdmin
