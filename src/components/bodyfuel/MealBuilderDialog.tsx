@@ -2,11 +2,12 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, Plus, Trash2, X, ChefHat } from "lucide-react";
+import { Loader2, Plus, Trash2, X, ChefHat, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { searchFoods, type FoodResult } from "@/lib/nutrition.functions";
+import { searchFoods, estimateFoodFromText, type FoodResult } from "@/lib/nutrition.functions";
 import { saveCustomMeal } from "@/lib/custom-meals.functions";
+
 
 type Ingredient = {
   name: string;
@@ -28,7 +29,9 @@ export function MealBuilderDialog({
 }) {
   const qc = useQueryClient();
   const searchFn = useServerFn(searchFoods);
+  const estimateFn = useServerFn(estimateFoodFromText);
   const saveFn = useServerFn(saveCustomMeal);
+
 
   const [name, setName] = useState("");
   const [query, setQuery] = useState("");
@@ -39,6 +42,26 @@ export function MealBuilderDialog({
   const [amountStr, setAmountStr] = useState("100");
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [saving, setSaving] = useState(false);
+  const [estimating, setEstimating] = useState(false);
+
+  const estimateWithAi = async () => {
+    const term = query.trim();
+    if (!term) return;
+    setEstimating(true);
+    try {
+      const r = await estimateFn({ data: { query: term } });
+      setResults([r]);
+      setPicking(r);
+      setUnit(r.serving_g ? "piece" : "g");
+      setAmountStr(r.serving_g ? "1" : "100");
+      toast.success("Schätzung erstellt – Werte prüfen & übernehmen.");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setEstimating(false);
+    }
+  };
+
 
   // Reset when opened
   useEffect(() => {
@@ -236,13 +259,28 @@ export function MealBuilderDialog({
                     Tippe los — wähle Zutaten und Menge wie beim normalen Tracking.
                   </p>
                 ) : results.length === 0 ? (
-                  <p className="flex items-center justify-center gap-2 py-6 text-center text-xs text-muted-foreground">
+                  <div className="flex flex-col items-center gap-3 py-6 text-center text-xs text-muted-foreground">
                     {searching ? (
-                      <><Loader2 className="h-3 w-3 animate-spin" /> Suche…</>
+                      <span className="flex items-center gap-2"><Loader2 className="h-3 w-3 animate-spin" /> Suche…</span>
                     ) : (
-                      "Keine Treffer"
+                      <>
+                        <span>Keine Treffer in der Datenbank.</span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={estimateWithAi}
+                          disabled={estimating}
+                        >
+                          {estimating ? (
+                            <><Loader2 className="h-3 w-3 animate-spin" /> Schätzt…</>
+                          ) : (
+                            <><Sparkles className="h-3 w-3" /> Nährwerte mit KI schätzen</>
+                          )}
+                        </Button>
+                      </>
                     )}
-                  </p>
+                  </div>
+
                 ) : (
                   <ul className="divide-y divide-border">
                     {results.map((r, i) => (
@@ -266,6 +304,24 @@ export function MealBuilderDialog({
                     ))}
                   </ul>
                 )}
+                {!searching && query.trim() !== "" && results.length > 0 && (
+                  <div className="mt-2 flex justify-center">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={estimateWithAi}
+                      disabled={estimating}
+                      className="text-xs text-muted-foreground"
+                    >
+                      {estimating ? (
+                        <><Loader2 className="h-3 w-3 animate-spin" /> Schätzt…</>
+                      ) : (
+                        <><Sparkles className="h-3 w-3" /> Nichts passt? KI-Schätzung</>
+                      )}
+                    </Button>
+                  </div>
+                )}
+
               </div>
             </>
           ) : (
