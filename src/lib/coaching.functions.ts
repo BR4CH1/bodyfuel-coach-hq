@@ -283,8 +283,34 @@ export const createCustomer = createServerFn({ method: "POST" })
     });
     if (leadErr) throw new Error(leadErr.message);
 
+    // Prüfen ob ein Auth-User mit dieser E-Mail bereits existiert.
+    // Falls ja: bestehenden Account weiterverwenden (Profil + Pakete updaten),
+    // statt einen Doppelkunden anzulegen.
+    let existingUserId: string | null = null;
+    {
+      const { data: existing } = await supabaseAdmin.auth.admin.listUsers({
+        page: 1,
+        perPage: 1000,
+      });
+      const match = existing.users.find(
+        (u) => (u.email ?? "").toLowerCase() === email.toLowerCase(),
+      );
+      if (match) existingUserId = match.id;
+    }
+
     let newUserId: string;
-    if (data.skip_invite) {
+    if (existingUserId) {
+      newUserId = existingUserId;
+      // Display-Name nur setzen wenn leer, um händische Korrekturen nicht zu überschreiben.
+      const { data: existingProfile } = await supabaseAdmin
+        .from("profiles")
+        .select("display_name")
+        .eq("id", newUserId)
+        .maybeSingle();
+      const profileUpdate: any = { phone: data.phone || null };
+      if (!existingProfile?.display_name) profileUpdate.display_name = displayName;
+      await supabaseAdmin.from("profiles").update(profileUpdate).eq("id", newUserId);
+    } else if (data.skip_invite) {
       // Silent anlegen (z.B. Influencer) – kein Invite-Mail.
       // Zufallspasswort; Coach kann später Reset-Link teilen.
       const randomPassword =
