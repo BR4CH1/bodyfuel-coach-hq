@@ -63,16 +63,68 @@ function mapOff(p: any): FoodResult | null {
 function scoreResult(r: FoodResult, q: string): number {
   const name = r.name.toLowerCase();
   const term = q.toLowerCase();
+  const compactName = compactFoodTerm(name);
+  const compactTerm = compactFoodTerm(term);
   let score = 0;
   if (name === term) score += 100;
+  else if (compactName === compactTerm) score += 95;
   else if (name.startsWith(term)) score += 60;
+  else if (compactName.startsWith(compactTerm)) score += 55;
   else if (name.includes(term)) score += 30;
+  else if (compactName.includes(compactTerm)) score += 25;
   if (r.serving_g) score += 15; // hat Portionsgröße
   if (r.protein_per_100g > 0 && r.carbs_per_100g >= 0 && r.fat_per_100g >= 0) score += 10;
   if (r.brand) score += 3;
   // Kürzere Namen meist generischer / relevanter
   score -= Math.min(20, Math.max(0, name.length - term.length) / 4);
   return score;
+}
+
+function normalizeFoodTerm(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/ä/g, "ae")
+    .replace(/ö/g, "oe")
+    .replace(/ü/g, "ue")
+    .replace(/ß/g, "ss")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function compactFoodTerm(value: string): string {
+  return normalizeFoodTerm(value).replace(/\s+/g, "");
+}
+
+function matchesFoodQuery(name: string, aliases: string[] | null | undefined, query: string): boolean {
+  const normalizedQuery = normalizeFoodTerm(query);
+  const compactQuery = compactFoodTerm(query);
+  if (!normalizedQuery || !compactQuery) return false;
+  const queryTokens = normalizedQuery.split(/\s+/).filter(Boolean);
+  const haystacks = [name, ...(aliases ?? [])].map((v) => ({
+    normalized: normalizeFoodTerm(v),
+    compact: compactFoodTerm(v),
+  }));
+  return haystacks.some((h) => {
+    if (!h.normalized) return false;
+    return (
+      h.normalized.includes(normalizedQuery) ||
+      h.compact.includes(compactQuery) ||
+      queryTokens.every((token) => h.normalized.includes(token) || h.compact.includes(token))
+    );
+  });
+}
+
+function sourcePriority(source: FoodSource | undefined): number {
+  const prio: Record<string, number> = {
+    bodyfuel_verified: 0,
+    bls_4_0: 1,
+    open_food_facts: 2,
+    usda: 3,
+    ai_estimate: 9,
+  };
+  return prio[source ?? ""] ?? 5;
 }
 
 /** Barcode lookup via OpenFoodFacts */
@@ -132,24 +184,27 @@ export const searchFoods = createServerFn({ method: "POST" })
         const { data: rows } = await supabaseAdmin
           .from("nutrition_foods")
           .select(
-            "name, source, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, verified_by_coach, default_state",
+            "name, aliases, source, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, verified_by_coach, default_state",
           )
-          .or(`name.ilike.%${q}%,aliases.cs.{${q.toLowerCase()}}`)
           .eq("needs_review", false)
-          .limit(15);
-        dbRows = (rows ?? []).map((r: any) => ({
-          name: r.name,
-          brand: null,
-          barcode: null,
-          kcal_per_100g: Number(r.kcal_per_100g) || 0,
-          protein_per_100g: Number(r.protein_per_100g) || 0,
-          carbs_per_100g: Number(r.carbs_per_100g) || 0,
-          fat_per_100g: Number(r.fat_per_100g) || 0,
-          serving_g: null,
-          serving_label: r.default_state ? `pro 100 g (${r.default_state})` : null,
-          source: r.source,
-          verified_by_coach: !!r.verified_by_coach,
-        }));
+          .limit(1000);
+        dbRows = (rows ?? [])
+          .filter((r: any) => matchesFoodQuery(r.name, r.aliases, q))
+          .map((r: any) => ({
+            name: r.name,
+            brand: null,
+            barcode: null,
+            kcal_per_100g: Number(r.kcal_per_100g) || 0,
+            protein_per_100g: Number(r.protein_per_100g) || 0,
+            carbs_per_100g: Number(r.carbs_per_100g) || 0,
+            fat_per_100g: Number(r.fat_per_100g) || 0,
+            serving_g: null,
+            serving_label: r.default_state ? `pro 100 g (${r.default_state})` : null,
+            source: r.source,
+            verified_by_coach: !!r.verified_by_coach,
+          }))
+          .sort((a, b) => sourcePriority(a.source) - sourcePriority(b.source) || scoreResult(b, q) - scoreResult(a, q))
+          .slice(0, 15);
       } catch {
         /* ignore */
       }
@@ -649,49 +704,41 @@ export const searchFoodsDb = createServerFn({ method: "POST" })
     const q = data.query.trim();
     if (!q) return [];
     const limit = Math.min(25, Math.max(1, data.limit ?? 15));
-    // ILIKE on name + aliases (text[] -> use array_to_string for cheap fuzzy)
     const { data: rows, error } = await context.supabase
       .from("nutrition_foods")
       .select(
         "name, source, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, verified_by_coach, unit_type, default_state, aliases",
       )
-      .or(`name.ilike.%${q}%,aliases.cs.{${q.toLowerCase()}}`)
       .eq("needs_review", false)
-      .limit(limit);
+      .limit(1000);
     if (error) return [];
     const term = q.toLowerCase();
-    const mapped: FoodResult[] = (rows ?? []).map((r: any) => ({
-      name: r.name,
-      brand: null,
-      barcode: null,
-      kcal_per_100g: Number(r.kcal_per_100g) || 0,
-      protein_per_100g: Number(r.protein_per_100g) || 0,
-      carbs_per_100g: Number(r.carbs_per_100g) || 0,
-      fat_per_100g: Number(r.fat_per_100g) || 0,
-      serving_g: null,
-      serving_label: r.default_state ? `pro 100 g (${r.default_state})` : null,
-      source: r.source,
-      verified_by_coach: !!r.verified_by_coach,
-    }));
-    // Source-Priorität: bodyfuel_verified > bls_4_0 > rest
-    const prio: Record<string, number> = {
-      bodyfuel_verified: 0,
-      bls_4_0: 1,
-      open_food_facts: 2,
-      usda: 3,
-      ai_estimate: 9,
-    };
+    const mapped: FoodResult[] = (rows ?? [])
+      .filter((r: any) => matchesFoodQuery(r.name, r.aliases, q))
+      .map((r: any) => ({
+        name: r.name,
+        brand: null,
+        barcode: null,
+        kcal_per_100g: Number(r.kcal_per_100g) || 0,
+        protein_per_100g: Number(r.protein_per_100g) || 0,
+        carbs_per_100g: Number(r.carbs_per_100g) || 0,
+        fat_per_100g: Number(r.fat_per_100g) || 0,
+        serving_g: null,
+        serving_label: r.default_state ? `pro 100 g (${r.default_state})` : null,
+        source: r.source,
+        verified_by_coach: !!r.verified_by_coach,
+      }));
     mapped.sort((a, b) => {
-      const pa = prio[a.source ?? ""] ?? 5;
-      const pb = prio[b.source ?? ""] ?? 5;
+      const pa = sourcePriority(a.source);
+      const pb = sourcePriority(b.source);
       if (pa !== pb) return pa - pb;
       const an = a.name.toLowerCase();
       const bn = b.name.toLowerCase();
       const ax = an === term ? 0 : an.startsWith(term) ? 1 : 2;
       const bx = bn === term ? 0 : bn.startsWith(term) ? 1 : 2;
-      return ax - bx;
+      return ax - bx || scoreResult(b, q) - scoreResult(a, q);
     });
-    return mapped;
+    return mapped.slice(0, limit);
   });
 
 

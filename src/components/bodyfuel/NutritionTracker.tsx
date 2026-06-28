@@ -76,6 +76,36 @@ function today() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function normalizeFoodSearchTerm(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/ä/g, "ae")
+    .replace(/ö/g, "oe")
+    .replace(/ü/g, "ue")
+    .replace(/ß/g, "ss")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function compactFoodSearchTerm(value: string) {
+  return normalizeFoodSearchTerm(value).replace(/\s+/g, "");
+}
+
+function localFoodMatches(value: string, term: string) {
+  const haystack = normalizeFoodSearchTerm(value);
+  const compactHaystack = compactFoodSearchTerm(value);
+  const needle = normalizeFoodSearchTerm(term);
+  const compactNeedle = compactFoodSearchTerm(term);
+  const tokens = needle.split(/\s+/).filter(Boolean);
+  return (
+    haystack.includes(needle) ||
+    compactHaystack.includes(compactNeedle) ||
+    tokens.every((token) => haystack.includes(token) || compactHaystack.includes(token))
+  );
+}
+
 function SourceBadge({
   source,
   verified,
@@ -502,23 +532,21 @@ export function NutritionTracker() {
       setResults([]);
       return;
     }
+    const local = LOCAL_FOODS.filter(
+      (f) => localFoodMatches(f.name, term) || (f.aliases ?? []).some((a) => localFoodMatches(a, term)),
+    ).map(({ aliases: _a, ...r }) => r);
+    if (local.length > 0) setResults(local);
     setSearching(true);
     try {
-      // 1) Geprüfte BodyFuel/BLS-DB ZUERST
-      const dbResults = await searchDbFn({ data: { query: term, limit: 15 } }).catch(() => [] as FoodResult[]);
-      // 2) Externe Quellen (Open Food Facts) für Marken/Verpacktes
-      const remote = await searchFn({ data: { query: term } });
-      const t = term.toLowerCase();
-      const local = LOCAL_FOODS.filter(
-        (f) =>
-          f.name.toLowerCase().includes(t) ||
-          (f.aliases ?? []).some((a) => a.toLowerCase().includes(t)),
-      ).map(({ aliases: _a, ...r }) => r);
+      const [dbResults, remote] = await Promise.all([
+        searchDbFn({ data: { query: term, limit: 15 } }).catch(() => [] as FoodResult[]),
+        searchFn({ data: { query: term } }).catch(() => [] as FoodResult[]),
+      ]);
       // Reihenfolge: BodyFuel-DB → lokal → OFF
       const seen = new Set<string>();
       const merged: FoodResult[] = [];
       for (const r of [...dbResults, ...local, ...remote]) {
-        const key = (r.barcode || r.name) + "|" + (r.brand ?? "");
+        const key = `${r.barcode || compactFoodSearchTerm(r.name)}|${(r.brand ?? "").toLowerCase()}`;
         if (seen.has(key)) continue;
         seen.add(key);
         merged.push(r);
