@@ -109,6 +109,31 @@ export function CoachTrialCard({ userId }: { userId: string }) {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const createPkg = useMutation({
+    mutationFn: () => {
+      const price = Number.parseFloat(pkgPrice.replace(",", "."));
+      if (!Number.isFinite(price) || price < 0) throw new Error("Ungültiger Preis");
+      return createPkgFn({
+        data: {
+          user_id: userId,
+          package: pkgKey,
+          price_eur: price,
+          start_date: pkgStart,
+          duration_days: pkgDuration,
+          notes: pkgNotes.trim() || undefined,
+        },
+      });
+    },
+    onSuccess: () => {
+      toast.success("Mitgliedschaft eingerichtet.");
+      setPkgNotes("");
+      refresh();
+      qc.invalidateQueries({ queryKey: ["my-package"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+
   if (isLoading) {
     return (
       <div className="rounded-2xl border border-border bg-card p-6">
