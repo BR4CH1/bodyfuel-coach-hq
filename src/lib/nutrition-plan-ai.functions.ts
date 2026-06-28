@@ -1058,9 +1058,12 @@ async function addDeterministicCorrectionSnacks(
   supabase: any,
   computeMealFromIngredients: (supabase: any, ingredients: any[]) => Promise<any>,
   isUsableEngineResult: (result: any) => boolean,
+  forbidden: string[] = [],
 ): Promise<ComputedGeneratedMeal[]> {
   const result = [...meals];
   const addSnack = async (label: string, ingredients: AiIngredient[]) => {
+    const hay = `${label} ${JSON.stringify(ingredients)}`.toLowerCase();
+    if (containsForbiddenFood(hay, forbidden)) return;
     const computed = await computeMealFromIngredients(supabase, ingredients);
     if (!isUsableEngineResult(computed) || computed.kcal < 50 || computed.kcal > MAX_KCAL_PER_MEAL) return;
     result.push({
@@ -1113,6 +1116,128 @@ async function addDeterministicCorrectionSnacks(
   }
 
   return result;
+}
+
+function ensureRequiredMealSlots(
+  meals: GeneratedMeal[],
+  dayType: "training" | "rest",
+  target: MacroTarget,
+  forbidden: string[],
+  isNoCook: boolean,
+): GeneratedMeal[] {
+  const result = [...meals];
+  for (const slot of ["breakfast", "lunch", "dinner"] as const) {
+    if (result.some((meal) => meal.slot === slot)) continue;
+    const fallback = chooseRequiredSlotFallback(slot, dayType, target, forbidden, isNoCook);
+    if (fallback) result.push(fallback);
+  }
+  if (!result.some((meal) => meal.slot === "snack")) {
+    const snack = chooseRequiredSlotFallback("snack", dayType, target, forbidden, isNoCook);
+    if (snack) result.push(snack);
+  }
+  return sortMealsBySlot(result);
+}
+
+function chooseRequiredSlotFallback(
+  slot: GeneratedMeal["slot"],
+  dayType: "training" | "rest",
+  target: MacroTarget,
+  forbidden: string[],
+  isNoCook: boolean,
+): GeneratedMeal | null {
+  const kcalScale = Math.max(0.75, Math.min(1.25, target.kcal / (dayType === "training" ? 2400 : 1900)));
+  const g = (value: number) => Math.max(5, Math.round(value * kcalScale));
+  const candidates: GeneratedMeal[] = [];
+
+  if (slot === "breakfast") {
+    candidates.push(makeMeal("breakfast", "Skyr-Hafer-Beeren-Bowl", [
+      { name: "Skyr natur", grams: g(300) },
+      { name: "Haferflocken", grams: g(60) },
+      { name: "Beeren gemischt", grams: g(100) },
+      { name: "Mandeln", grams: g(15) },
+    ]));
+  } else if (slot === "lunch") {
+    if (isNoCook) {
+      candidates.push(makeMeal("lunch", "Putenbrust-Vollkornbrot-Teller", [
+        { name: "Putenbrust Aufschnitt", grams: g(160) },
+        { name: "Brot Vollkorn (Roggen)", grams: g(120) },
+        { name: "Gurke", grams: g(150) },
+        { name: "Tomaten", grams: g(150) },
+        { name: "Frischkäse light", grams: g(40) },
+      ]));
+    } else {
+      candidates.push(makeMeal("lunch", "Hähnchen-Reis-Brokkoli-Bowl", [
+        { name: "Hähnchenbrust, gegart", grams: g(180) },
+        { name: "Reis weiß, langkorn, gekocht", grams: g(250) },
+        { name: "Brokkoli", grams: g(200) },
+        { name: "Olivenöl", grams: g(10) },
+      ]));
+    }
+  } else if (slot === "dinner") {
+    if (isNoCook) {
+      candidates.push(makeMeal("dinner", "Skyr-Brot-Gemüse-Teller", [
+        { name: "Skyr natur", grams: g(300) },
+        { name: "Brot Vollkorn (Roggen)", grams: g(100) },
+        { name: "Gurke", grams: g(150) },
+        { name: "Tomaten", grams: g(150) },
+        { name: "Mandeln", grams: g(15) },
+      ]));
+    } else {
+      candidates.push(makeMeal("dinner", "Puten-Kartoffel-Gemüse-Teller", [
+        { name: "Putenbrust gegart", grams: g(180) },
+        { name: "Kartoffeln, gekocht", grams: g(300) },
+        { name: "Paprika gelb", grams: g(150) },
+        { name: "Olivenöl", grams: g(10) },
+      ]));
+    }
+  } else {
+    candidates.push(makeMeal("snack", "Skyr-Protein-Snack", [{ name: "Skyr natur", grams: g(250) }]));
+    candidates.push(makeMeal("snack", "Haferflocken-Snack", [{ name: "Haferflocken", grams: g(50) }]));
+  }
+
+  return candidates.find((meal) => !containsForbiddenFood(`${meal.name} ${meal.description}`, forbidden)) ?? null;
+}
+
+function makeMeal(
+  slot: GeneratedMeal["slot"],
+  name: string,
+  ingredients: Array<{ name: string; grams: number }>,
+): GeneratedMeal {
+  const normalizedIngredients = ingredients.map((ing) => ({
+    name: ing.name,
+    amount: ing.grams,
+    unit: "g",
+    grams: ing.grams,
+  }));
+  return {
+    slot,
+    name,
+    description: describeIngredients(normalizedIngredients),
+    ingredients: normalizedIngredients,
+    kcal: 0,
+    protein_g: 0,
+    carbs_g: 0,
+    fat_g: 0,
+  };
+}
+
+function sortMealsBySlot<T extends { slot: GeneratedMeal["slot"] }>(meals: T[]): T[] {
+  const order: Record<GeneratedMeal["slot"], number> = { breakfast: 0, lunch: 1, dinner: 2, snack: 3 };
+  return [...meals].sort((a, b) => order[a.slot] - order[b.slot]);
+}
+
+function containsForbiddenFood(haystack: string, forbidden: string[]): boolean {
+  const hay = haystack.toLowerCase();
+  return forbidden.some((raw) => {
+    const term = raw.toLowerCase().trim();
+    if (!term) return false;
+    const re = new RegExp(`(^|[^a-zäöüß])${escapeRegExp(term)}([^a-zäöüß]|$)`, "i");
+    return re.test(hay);
+  });
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function describeIngredients(ingredients: Array<{ name?: string; grams?: number }>): string {
