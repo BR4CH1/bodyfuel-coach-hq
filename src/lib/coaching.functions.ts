@@ -1132,3 +1132,74 @@ export const getRanking = createServerFn({ method: "POST" })
     rows.sort((a, b) => b.points - a.points);
     return rows;
   });
+
+/**
+ * Coach: Mitgliedschaft mit individuellem Preis für einen Kunden einrichten.
+ * Funktioniert für alle Nutzer (Free, Trial, Mitglied). Deaktiviert bestehende
+ * aktive Pakete und setzt das Profil auf "active".
+ */
+export const coachCreatePackage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (data: {
+      user_id: string;
+      package: PackageKey;
+      price_eur: number;
+      start_date?: string;
+      end_date?: string;
+      duration_days?: number;
+      notes?: string;
+    }) => data,
+  )
+  .handler(async ({ data, context }) => {
+    await assertCoach(context.supabase, context.userId);
+    if (!data.user_id) throw new Error("user_id fehlt");
+    if (!data.package) throw new Error("Paket fehlt");
+    if (!Number.isFinite(data.price_eur) || data.price_eur < 0 || data.price_eur > 100000) {
+      throw new Error("Ungültiger Preis");
+    }
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const today = new Date().toISOString().slice(0, 10);
+    const start = data.start_date || today;
+    let end = data.end_date;
+    if (!end) {
+      const days = Number.isFinite(data.duration_days) && (data.duration_days as number) > 0
+        ? Math.min(3650, Math.floor(data.duration_days as number))
+        : 30;
+      const d = new Date(start);
+      d.setUTCDate(d.getUTCDate() + days);
+      end = d.toISOString().slice(0, 10);
+    }
+
+    // bestehende aktive Pakete deaktivieren (nur eines aktiv).
+    await supabaseAdmin
+      .from("customer_packages")
+      .update({ is_active: false, ended_at: new Date().toISOString() })
+      .eq("user_id", data.user_id)
+      .eq("is_active", true);
+
+    const { data: created, error: insErr } = await supabaseAdmin
+      .from("customer_packages")
+      .insert({
+        user_id: data.user_id,
+        package: data.package,
+        price_eur: data.price_eur,
+        start_date: start,
+        end_date: end,
+        is_active: true,
+        started_at: new Date().toISOString(),
+        notes: data.notes ?? null,
+      })
+      .select("id")
+      .single();
+    if (insErr) throw new Error(insErr.message);
+
+    // Profil auf aktiven Mitgliedsstatus setzen, Trial-Felder zurücksetzen.
+    await supabaseAdmin
+      .from("profiles")
+      .update({ trial_status: "active" })
+      .eq("id", data.user_id);
+
+    return { ok: true, package_id: created?.id ?? null, start_date: start, end_date: end };
+  });

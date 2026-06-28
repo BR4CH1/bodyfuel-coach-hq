@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Plus, X, ShieldCheck, Clock, Flame } from "lucide-react";
+import { Plus, X, ShieldCheck, Clock, Flame, Euro } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   coachExtendTrial,
@@ -10,9 +10,12 @@ import {
   coachActivateMember,
   coachStartTrial,
 } from "@/lib/trial.functions";
+import { coachCreatePackage } from "@/lib/coaching.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
 type TrialProfile = {
   trial_status: "none" | "trial" | "trial_expired" | "active";
@@ -37,9 +40,17 @@ export function CoachTrialCard({ userId }: { userId: string }) {
   const endFn = useServerFn(coachEndTrial);
   const activateFn = useServerFn(coachActivateMember);
   const startFn = useServerFn(coachStartTrial);
+  const createPkgFn = useServerFn(coachCreatePackage);
 
   const [customDays, setCustomDays] = useState<number>(7);
   const [startDays, setStartDays] = useState<number>(7);
+
+  // Mitgliedschaft mit Preis einrichten
+  const [pkgKey, setPkgKey] = useState<"smart" | "coaching" | "starter" | "premium">("smart");
+  const [pkgPrice, setPkgPrice] = useState<string>("14.99");
+  const [pkgStart, setPkgStart] = useState<string>(() => new Date().toISOString().slice(0, 10));
+  const [pkgDuration, setPkgDuration] = useState<number>(30);
+  const [pkgNotes, setPkgNotes] = useState<string>("");
 
   const { data, isLoading } = useQuery<TrialProfile | null>({
     queryKey: ["customer-trial", userId],
@@ -97,6 +108,31 @@ export function CoachTrialCard({ userId }: { userId: string }) {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const createPkg = useMutation({
+    mutationFn: () => {
+      const price = Number.parseFloat(pkgPrice.replace(",", "."));
+      if (!Number.isFinite(price) || price < 0) throw new Error("Ungültiger Preis");
+      return createPkgFn({
+        data: {
+          user_id: userId,
+          package: pkgKey,
+          price_eur: price,
+          start_date: pkgStart,
+          duration_days: pkgDuration,
+          notes: pkgNotes.trim() || undefined,
+        },
+      });
+    },
+    onSuccess: () => {
+      toast.success("Mitgliedschaft eingerichtet.");
+      setPkgNotes("");
+      refresh();
+      qc.invalidateQueries({ queryKey: ["my-package"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
 
   if (isLoading) {
     return (
@@ -285,7 +321,83 @@ export function CoachTrialCard({ userId }: { userId: string }) {
             </Button>
           )}
         </div>
+
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3">
+          <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-emerald-500">
+            <Euro className="h-3.5 w-3.5" /> Mitgliedschaft mit Preis einrichten
+          </div>
+          <p className="mb-3 text-[11px] text-muted-foreground">
+            Funktioniert für jeden Nutzer (Free, Trial, Mitglied). Beendet bestehende aktive Pakete und schaltet den Vollzugang frei.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Paket</Label>
+              <Select value={pkgKey} onValueChange={(v) => setPkgKey(v as typeof pkgKey)}>
+                <SelectTrigger className="mt-1 h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="smart">Smart</SelectItem>
+                  <SelectItem value="coaching">Coaching</SelectItem>
+                  <SelectItem value="starter">Starter</SelectItem>
+                  <SelectItem value="premium">Premium</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Preis (€)</Label>
+              <Input
+                className="mt-1 h-9"
+                inputMode="decimal"
+                value={pkgPrice}
+                onChange={(e) => setPkgPrice(e.target.value)}
+                placeholder="z. B. 14.99"
+              />
+            </div>
+            <div>
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Start</Label>
+              <Input
+                className="mt-1 h-9"
+                type="date"
+                value={pkgStart}
+                onChange={(e) => setPkgStart(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Laufzeit (Tage)</Label>
+              <Input
+                className="mt-1 h-9"
+                type="number"
+                min={1}
+                max={3650}
+                value={pkgDuration}
+                onChange={(e) => setPkgDuration(Math.max(1, Math.min(3650, Number(e.target.value) || 1)))}
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Notiz (optional)</Label>
+              <Textarea
+                className="mt-1 min-h-[60px]"
+                value={pkgNotes}
+                onChange={(e) => setPkgNotes(e.target.value)}
+                placeholder="z. B. Rabatt-Vereinbarung, Sondervertrag …"
+              />
+            </div>
+          </div>
+          <div className="mt-3 flex justify-end">
+            <Button
+              size="sm"
+              className="bg-emerald-500 text-white hover:bg-emerald-600"
+              disabled={createPkg.isPending}
+              onClick={() => createPkg.mutate()}
+            >
+              <ShieldCheck className="mr-1 h-4 w-4" />
+              Mitgliedschaft einrichten
+            </Button>
+          </div>
+        </div>
       </div>
+
     </div>
   );
 }
