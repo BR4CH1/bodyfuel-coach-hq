@@ -90,7 +90,7 @@ export const lookupBarcode = createServerFn({ method: "POST" })
     return mapped;
   });
 
-/** Search foods: Search-a-licious (smart relevance) + legacy OFF fallback. */
+/** Search foods: DB + OFF in parallel mit harten Timeouts — UI hängt nie. */
 export const searchFoods = createServerFn({ method: "POST" })
   .inputValidator((d: { query: string }) => d)
   .handler(async ({ data }) => {
@@ -107,50 +107,74 @@ export const searchFoods = createServerFn({ method: "POST" })
       arr.push(m);
     };
 
-    // 1) Search-a-licious — neue OFF-Suche, deutlich bessere Relevanz
-    try {
-      const url =
-        `https://search.openfoodfacts.org/search?` +
-        `q=${encodeURIComponent(q)}` +
-        `&langs=de,en&page_size=30&fields=code,product_name,product_name_de,generic_name,generic_name_de,brands,nutriments,serving_size,serving_quantity` +
-        `&sort_by=-popularity_key&countries_tags=germany,switzerland,austria`;
-      const res = await fetch(url, {
-        headers: { "User-Agent": "BodyFuelCoaching/1.0 (coach app)" },
-      });
-      if (res.ok) {
-        const json = (await res.json()) as any;
-        for (const p of json.hits ?? json.products ?? []) {
-          pushUnique(mapOff(p));
-        }
+    const fetchWithTimeout = async (url: string, ms: number) => {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), ms);
+      try {
+        const res = await fetch(url, {
+          headers: { "User-Agent": "BodyFuelCoaching/1.0 (coach app)" },
+          signal: ctrl.signal,
+        });
+        if (!res.ok) return null;
+        return (await res.json()) as any;
+      } catch {
+        return null;
+      } finally {
+        clearTimeout(t);
       }
-    } catch {
-      /* fall through */
-    }
+    };
 
-    // 2) Fallback: klassische Suche (DE, dann World), falls Search-a-licious zu wenig liefert
-    if (arr.length < 8) {
-      const fields =
-        "code,product_name,product_name_de,generic_name,generic_name_de,brands,nutriments,serving_size,serving_quantity";
-      const urls = [
-        `https://de.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=25&sort_by=unique_scans_n&fields=${fields}`,
-        `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=25&sort_by=unique_scans_n&fields=${fields}`,
-      ];
-      for (const url of urls) {
-        try {
-          const res = await fetch(url, {
-            headers: { "User-Agent": "BodyFuelCoaching/1.0 (coach app)" },
-          });
-          if (!res.ok) continue;
-          const json = (await res.json()) as any;
-          for (const p of json.products ?? []) pushUnique(mapOff(p));
-          if (arr.length >= 15) break;
-        } catch {
-          /* try next */
-        }
+    // DB-Lookup (geprüfte Lebensmittel)
+    let dbRows: FoodResult[] = [];
+    const dbPromise = (async () => {
+      try {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { data: rows } = await supabaseAdmin
+          .from("nutrition_foods")
+          .select(
+            "name, source, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, verified_by_coach, default_state",
+          )
+          .or(`name.ilike.%${q}%,aliases.cs.{${q.toLowerCase()}}`)
+          .eq("needs_review", false)
+          .limit(15);
+        dbRows = (rows ?? []).map((r: any) => ({
+          name: r.name,
+          brand: null,
+          barcode: null,
+          kcal_per_100g: Number(r.kcal_per_100g) || 0,
+          protein_per_100g: Number(r.protein_per_100g) || 0,
+          carbs_per_100g: Number(r.carbs_per_100g) || 0,
+          fat_per_100g: Number(r.fat_per_100g) || 0,
+          serving_g: null,
+          serving_label: r.default_state ? `pro 100 g (${r.default_state})` : null,
+          source: r.source,
+          verified_by_coach: !!r.verified_by_coach,
+        }));
+      } catch {
+        /* ignore */
       }
-    }
+    })();
 
-    // Eigene Relevanz-Sortierung
+    const offUrl =
+      `https://search.openfoodfacts.org/search?` +
+      `q=${encodeURIComponent(q)}` +
+      `&langs=de,en&page_size=30&fields=code,product_name,product_name_de,generic_name,generic_name_de,brands,nutriments,serving_size,serving_quantity` +
+      `&sort_by=-popularity_key&countries_tags=germany,switzerland,austria`;
+    const fields =
+      "code,product_name,product_name_de,generic_name,generic_name_de,brands,nutriments,serving_size,serving_quantity";
+    const deUrl = `https://de.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=25&sort_by=unique_scans_n&fields=${fields}`;
+
+    // Alles parallel mit hartem Timeout. Egal welche Quelle wegfällt — Suche kommt zurück.
+    const [, offJson, deJson] = await Promise.all([
+      dbPromise,
+      fetchWithTimeout(offUrl, 3500),
+      fetchWithTimeout(deUrl, 3500),
+    ]);
+
+    for (const m of dbRows) pushUnique(m);
+    if (offJson) for (const p of offJson.hits ?? offJson.products ?? []) pushUnique(mapOff(p));
+    if (deJson) for (const p of deJson.products ?? []) pushUnique(mapOff(p));
+
     arr.sort((a, b) => scoreResult(b, q) - scoreResult(a, q));
     return arr.slice(0, 25);
   });
