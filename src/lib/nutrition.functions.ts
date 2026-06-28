@@ -184,24 +184,27 @@ export const searchFoods = createServerFn({ method: "POST" })
         const { data: rows } = await supabaseAdmin
           .from("nutrition_foods")
           .select(
-            "name, source, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, verified_by_coach, default_state",
+            "name, aliases, source, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, verified_by_coach, default_state",
           )
-          .or(`name.ilike.%${q}%,aliases.cs.{${q.toLowerCase()}}`)
           .eq("needs_review", false)
-          .limit(15);
-        dbRows = (rows ?? []).map((r: any) => ({
-          name: r.name,
-          brand: null,
-          barcode: null,
-          kcal_per_100g: Number(r.kcal_per_100g) || 0,
-          protein_per_100g: Number(r.protein_per_100g) || 0,
-          carbs_per_100g: Number(r.carbs_per_100g) || 0,
-          fat_per_100g: Number(r.fat_per_100g) || 0,
-          serving_g: null,
-          serving_label: r.default_state ? `pro 100 g (${r.default_state})` : null,
-          source: r.source,
-          verified_by_coach: !!r.verified_by_coach,
-        }));
+          .limit(1000);
+        dbRows = (rows ?? [])
+          .filter((r: any) => matchesFoodQuery(r.name, r.aliases, q))
+          .map((r: any) => ({
+            name: r.name,
+            brand: null,
+            barcode: null,
+            kcal_per_100g: Number(r.kcal_per_100g) || 0,
+            protein_per_100g: Number(r.protein_per_100g) || 0,
+            carbs_per_100g: Number(r.carbs_per_100g) || 0,
+            fat_per_100g: Number(r.fat_per_100g) || 0,
+            serving_g: null,
+            serving_label: r.default_state ? `pro 100 g (${r.default_state})` : null,
+            source: r.source,
+            verified_by_coach: !!r.verified_by_coach,
+          }))
+          .sort((a, b) => sourcePriority(a.source) - sourcePriority(b.source) || scoreResult(b, q) - scoreResult(a, q))
+          .slice(0, 15);
       } catch {
         /* ignore */
       }
@@ -701,49 +704,41 @@ export const searchFoodsDb = createServerFn({ method: "POST" })
     const q = data.query.trim();
     if (!q) return [];
     const limit = Math.min(25, Math.max(1, data.limit ?? 15));
-    // ILIKE on name + aliases (text[] -> use array_to_string for cheap fuzzy)
     const { data: rows, error } = await context.supabase
       .from("nutrition_foods")
       .select(
         "name, source, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, verified_by_coach, unit_type, default_state, aliases",
       )
-      .or(`name.ilike.%${q}%,aliases.cs.{${q.toLowerCase()}}`)
       .eq("needs_review", false)
-      .limit(limit);
+      .limit(1000);
     if (error) return [];
     const term = q.toLowerCase();
-    const mapped: FoodResult[] = (rows ?? []).map((r: any) => ({
-      name: r.name,
-      brand: null,
-      barcode: null,
-      kcal_per_100g: Number(r.kcal_per_100g) || 0,
-      protein_per_100g: Number(r.protein_per_100g) || 0,
-      carbs_per_100g: Number(r.carbs_per_100g) || 0,
-      fat_per_100g: Number(r.fat_per_100g) || 0,
-      serving_g: null,
-      serving_label: r.default_state ? `pro 100 g (${r.default_state})` : null,
-      source: r.source,
-      verified_by_coach: !!r.verified_by_coach,
-    }));
-    // Source-Priorität: bodyfuel_verified > bls_4_0 > rest
-    const prio: Record<string, number> = {
-      bodyfuel_verified: 0,
-      bls_4_0: 1,
-      open_food_facts: 2,
-      usda: 3,
-      ai_estimate: 9,
-    };
+    const mapped: FoodResult[] = (rows ?? [])
+      .filter((r: any) => matchesFoodQuery(r.name, r.aliases, q))
+      .map((r: any) => ({
+        name: r.name,
+        brand: null,
+        barcode: null,
+        kcal_per_100g: Number(r.kcal_per_100g) || 0,
+        protein_per_100g: Number(r.protein_per_100g) || 0,
+        carbs_per_100g: Number(r.carbs_per_100g) || 0,
+        fat_per_100g: Number(r.fat_per_100g) || 0,
+        serving_g: null,
+        serving_label: r.default_state ? `pro 100 g (${r.default_state})` : null,
+        source: r.source,
+        verified_by_coach: !!r.verified_by_coach,
+      }));
     mapped.sort((a, b) => {
-      const pa = prio[a.source ?? ""] ?? 5;
-      const pb = prio[b.source ?? ""] ?? 5;
+      const pa = sourcePriority(a.source);
+      const pb = sourcePriority(b.source);
       if (pa !== pb) return pa - pb;
       const an = a.name.toLowerCase();
       const bn = b.name.toLowerCase();
       const ax = an === term ? 0 : an.startsWith(term) ? 1 : 2;
       const bx = bn === term ? 0 : bn.startsWith(term) ? 1 : 2;
-      return ax - bx;
+      return ax - bx || scoreResult(b, q) - scoreResult(a, q);
     });
-    return mapped;
+    return mapped.slice(0, limit);
   });
 
 
