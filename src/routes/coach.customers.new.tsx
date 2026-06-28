@@ -214,12 +214,16 @@ function NewCustomerForm() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Laufzeit (Tage)</Label>
+              <Label>Enddatum</Label>
               <Input
-                type="number"
-                value={form.duration_days}
-                onChange={(e) => setForm({ ...form, duration_days: Number(e.target.value) })}
+                type="date"
+                min={form.start_date}
+                value={form.end_date}
+                onChange={(e) => setForm({ ...form, end_date: e.target.value })}
               />
+              <p className="text-[11px] text-muted-foreground">
+                Die Laufzeit ergibt sich aus Start- und Enddatum.
+              </p>
             </div>
           </div>
         )}
