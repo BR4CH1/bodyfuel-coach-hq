@@ -5,8 +5,9 @@ import { toast } from "sonner";
 import { Loader2, Plus, Trash2, X, ChefHat, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { searchFoods, estimateFoodFromText, type FoodResult } from "@/lib/nutrition.functions";
+import { searchFoods, searchFoodsDb, estimateFoodFromText, type FoodResult } from "@/lib/nutrition.functions";
 import { saveCustomMeal } from "@/lib/custom-meals.functions";
+import { LOCAL_FOODS } from "@/lib/bodyfuel/localFoods";
 
 
 type Ingredient = {
@@ -17,6 +18,36 @@ type Ingredient = {
   carbs_g: number;
   fat_g: number;
 };
+
+function normalizeFoodSearchTerm(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/ä/g, "ae")
+    .replace(/ö/g, "oe")
+    .replace(/ü/g, "ue")
+    .replace(/ß/g, "ss")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function compactFoodSearchTerm(value: string) {
+  return normalizeFoodSearchTerm(value).replace(/\s+/g, "");
+}
+
+function localFoodMatches(value: string, term: string) {
+  const haystack = normalizeFoodSearchTerm(value);
+  const compactHaystack = compactFoodSearchTerm(value);
+  const needle = normalizeFoodSearchTerm(term);
+  const compactNeedle = compactFoodSearchTerm(term);
+  const tokens = needle.split(/\s+/).filter(Boolean);
+  return (
+    haystack.includes(needle) ||
+    compactHaystack.includes(compactNeedle) ||
+    tokens.every((token) => haystack.includes(token) || compactHaystack.includes(token))
+  );
+}
 
 export function MealBuilderDialog({
   userId,
@@ -29,6 +60,7 @@ export function MealBuilderDialog({
 }) {
   const qc = useQueryClient();
   const searchFn = useServerFn(searchFoods);
+  const searchDbFn = useServerFn(searchFoodsDb);
   const estimateFn = useServerFn(estimateFoodFromText);
   const saveFn = useServerFn(saveCustomMeal);
 
@@ -83,10 +115,25 @@ export function MealBuilderDialog({
       return;
     }
     const t = setTimeout(async () => {
+      const local = LOCAL_FOODS.filter(
+        (f) => localFoodMatches(f.name, term) || (f.aliases ?? []).some((a) => localFoodMatches(a, term)),
+      ).map(({ aliases: _aliases, ...r }) => r);
+      if (local.length > 0) setResults(local);
       setSearching(true);
       try {
-        const rs = await searchFn({ data: { query: term } });
-        setResults(rs);
+        const [dbResults, remote] = await Promise.all([
+          searchDbFn({ data: { query: term, limit: 15 } }).catch(() => [] as FoodResult[]),
+          searchFn({ data: { query: term } }).catch(() => [] as FoodResult[]),
+        ]);
+        const seen = new Set<string>();
+        const merged: FoodResult[] = [];
+        for (const r of [...dbResults, ...local, ...remote]) {
+          const key = `${r.barcode || compactFoodSearchTerm(r.name)}|${(r.brand ?? "").toLowerCase()}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          merged.push(r);
+        }
+        setResults(merged);
       } catch (e) {
         toast.error((e as Error).message);
       } finally {
@@ -94,7 +141,7 @@ export function MealBuilderDialog({
       }
     }, 300);
     return () => clearTimeout(t);
-  }, [query, open, picking, searchFn]);
+  }, [query, open, picking, searchFn, searchDbFn]);
 
   if (!open) return null;
 
