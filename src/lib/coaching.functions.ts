@@ -94,13 +94,28 @@ export const listCustomers = createServerFn({ method: "GET" })
     await assertCoach(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const { data: packages, error } = await supabaseAdmin
+    const { data: packagesRaw, error } = await supabaseAdmin
       .from("customer_packages")
       .select("*")
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
 
-    const userIds = [...new Set((packages ?? []).map((p) => p.user_id))];
+    // Dedupe: ein Eintrag pro Kunde. Aktive Pakete bevorzugen, sonst das
+    // jüngste end_date, sonst das zuletzt erstellte. So tauchen Kunden mit
+    // mehreren historischen Paketen (z.B. nach Paketwechsel) nicht doppelt auf.
+    const byUser = new Map<string, any>();
+    for (const p of packagesRaw ?? []) {
+      const cur = byUser.get(p.user_id);
+      if (!cur) { byUser.set(p.user_id, p); continue; }
+      const better =
+        (p.is_active && !cur.is_active) ||
+        (p.is_active === cur.is_active &&
+          new Date(p.end_date).getTime() > new Date(cur.end_date).getTime());
+      if (better) byUser.set(p.user_id, p);
+    }
+    const packages = [...byUser.values()];
+
+    const userIds = [...new Set(packages.map((p) => p.user_id))];
     if (userIds.length === 0) return [];
 
     const { data: profiles } = await supabaseAdmin
@@ -268,8 +283,34 @@ export const createCustomer = createServerFn({ method: "POST" })
     });
     if (leadErr) throw new Error(leadErr.message);
 
+    // Prüfen ob ein Auth-User mit dieser E-Mail bereits existiert.
+    // Falls ja: bestehenden Account weiterverwenden (Profil + Pakete updaten),
+    // statt einen Doppelkunden anzulegen.
+    let existingUserId: string | null = null;
+    {
+      const { data: existing } = await supabaseAdmin.auth.admin.listUsers({
+        page: 1,
+        perPage: 1000,
+      });
+      const match = existing.users.find(
+        (u) => (u.email ?? "").toLowerCase() === email.toLowerCase(),
+      );
+      if (match) existingUserId = match.id;
+    }
+
     let newUserId: string;
-    if (data.skip_invite) {
+    if (existingUserId) {
+      newUserId = existingUserId;
+      // Display-Name nur setzen wenn leer, um händische Korrekturen nicht zu überschreiben.
+      const { data: existingProfile } = await supabaseAdmin
+        .from("profiles")
+        .select("display_name")
+        .eq("id", newUserId)
+        .maybeSingle();
+      const profileUpdate: any = { phone: data.phone || null };
+      if (!existingProfile?.display_name) profileUpdate.display_name = displayName;
+      await supabaseAdmin.from("profiles").update(profileUpdate).eq("id", newUserId);
+    } else if (data.skip_invite) {
       // Silent anlegen (z.B. Influencer) – kein Invite-Mail.
       // Zufallspasswort; Coach kann später Reset-Link teilen.
       const randomPassword =
@@ -340,6 +381,14 @@ export const createCustomer = createServerFn({ method: "POST" })
       } else {
         end.setDate(end.getDate() + Number(data.duration_days || 30));
       }
+
+      // Vorhandene Pakete deaktivieren, damit kein Doppel-Eintrag entsteht
+      // (z.B. wenn ein bestehender Kunde auf ein anderes Paket umgestellt wird).
+      await supabaseAdmin
+        .from("customer_packages")
+        .update({ is_active: false })
+        .eq("user_id", newUserId)
+        .eq("is_active", true);
 
       const { error: pkgErr } = await supabaseAdmin.from("customer_packages").insert({
         user_id: newUserId,
