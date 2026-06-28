@@ -44,9 +44,9 @@ export function AgeGate({
     if (age >= 18) {
       setBusy(true);
       try {
-        await fn({ data: { birthdate, guardianName: "—", guardianEmail: "noop@noop.invalid" } as any });
+        await fn({ data: { birthdate } as any });
       } catch {
-        // fallthrough — wir speichern unten direkt
+        // ignorieren — Geburtsdatum wird best-effort gespeichert
       } finally {
         setBusy(false);
       }

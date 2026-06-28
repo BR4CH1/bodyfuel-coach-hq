@@ -25,6 +25,7 @@ import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as MeasurementsRouteImport } from './routes/measurements'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ImpressumRouteImport } from './routes/impressum'
+import { Route as GuardianConsentRouteImport } from './routes/guardian-consent'
 import { Route as DatenschutzRouteImport } from './routes/datenschutz'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as DailyChecklistRouteImport } from './routes/daily-checklist'
@@ -81,6 +82,7 @@ import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/em
 import { Route as CoachPlanPreviewPlanIdRouteImport } from './routes/coach.plan-preview.$planId'
 import { Route as CoachCustomersNewRouteImport } from './routes/coach.customers.new'
 import { Route as CoachCustomersUserIdRouteImport } from './routes/coach.customers.$userId'
+import { Route as ApiPublicGuardianConsentRouteImport } from './routes/api/public/guardian-consent'
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
@@ -173,6 +175,11 @@ const LoginRoute = LoginRouteImport.update({
 const ImpressumRoute = ImpressumRouteImport.update({
   id: '/impressum',
   path: '/impressum',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GuardianConsentRoute = GuardianConsentRouteImport.update({
+  id: '/guardian-consent',
+  path: '/guardian-consent',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DatenschutzRoute = DatenschutzRouteImport.update({
@@ -457,6 +464,12 @@ const CoachCustomersUserIdRoute = CoachCustomersUserIdRouteImport.update({
   path: '/$userId',
   getParentRoute: () => CoachCustomersRoute,
 } as any)
+const ApiPublicGuardianConsentRoute =
+  ApiPublicGuardianConsentRouteImport.update({
+    id: '/api/public/guardian-consent',
+    path: '/api/public/guardian-consent',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const LovableEmailTransactionalSendRoute =
   LovableEmailTransactionalSendRouteImport.update({
     id: '/lovable/email/transactional/send',
@@ -545,6 +558,7 @@ export interface FileRoutesByFullPath {
   '/daily-checklist': typeof DailyChecklistRoute
   '/dashboard': typeof DashboardRoute
   '/datenschutz': typeof DatenschutzRoute
+  '/guardian-consent': typeof GuardianConsentRoute
   '/impressum': typeof ImpressumRoute
   '/login': typeof LoginRoute
   '/measurements': typeof MeasurementsRoute
@@ -593,6 +607,7 @@ export interface FileRoutesByFullPath {
   '/nutrition/': typeof NutritionIndexRoute
   '/smart/': typeof SmartIndexRoute
   '/tracker/': typeof TrackerIndexRoute
+  '/api/public/guardian-consent': typeof ApiPublicGuardianConsentRoute
   '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/coach/plan-preview/$planId': typeof CoachPlanPreviewPlanIdRoute
@@ -631,6 +646,7 @@ export interface FileRoutesByTo {
   '/daily-checklist': typeof DailyChecklistRoute
   '/dashboard': typeof DashboardRoute
   '/datenschutz': typeof DatenschutzRoute
+  '/guardian-consent': typeof GuardianConsentRoute
   '/impressum': typeof ImpressumRoute
   '/login': typeof LoginRoute
   '/measurements': typeof MeasurementsRoute
@@ -675,6 +691,7 @@ export interface FileRoutesByTo {
   '/nutrition': typeof NutritionIndexRoute
   '/smart': typeof SmartIndexRoute
   '/tracker': typeof TrackerIndexRoute
+  '/api/public/guardian-consent': typeof ApiPublicGuardianConsentRoute
   '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/coach/plan-preview/$planId': typeof CoachPlanPreviewPlanIdRoute
@@ -715,6 +732,7 @@ export interface FileRoutesById {
   '/daily-checklist': typeof DailyChecklistRoute
   '/dashboard': typeof DashboardRoute
   '/datenschutz': typeof DatenschutzRoute
+  '/guardian-consent': typeof GuardianConsentRoute
   '/impressum': typeof ImpressumRoute
   '/login': typeof LoginRoute
   '/measurements': typeof MeasurementsRoute
@@ -763,6 +781,7 @@ export interface FileRoutesById {
   '/nutrition/': typeof NutritionIndexRoute
   '/smart/': typeof SmartIndexRoute
   '/tracker/': typeof TrackerIndexRoute
+  '/api/public/guardian-consent': typeof ApiPublicGuardianConsentRoute
   '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/coach/plan-preview/$planId': typeof CoachPlanPreviewPlanIdRoute
@@ -804,6 +823,7 @@ export interface FileRouteTypes {
     | '/daily-checklist'
     | '/dashboard'
     | '/datenschutz'
+    | '/guardian-consent'
     | '/impressum'
     | '/login'
     | '/measurements'
@@ -852,6 +872,7 @@ export interface FileRouteTypes {
     | '/nutrition/'
     | '/smart/'
     | '/tracker/'
+    | '/api/public/guardian-consent'
     | '/coach/customers/$userId'
     | '/coach/customers/new'
     | '/coach/plan-preview/$planId'
@@ -890,6 +911,7 @@ export interface FileRouteTypes {
     | '/daily-checklist'
     | '/dashboard'
     | '/datenschutz'
+    | '/guardian-consent'
     | '/impressum'
     | '/login'
     | '/measurements'
@@ -934,6 +956,7 @@ export interface FileRouteTypes {
     | '/nutrition'
     | '/smart'
     | '/tracker'
+    | '/api/public/guardian-consent'
     | '/coach/customers/$userId'
     | '/coach/customers/new'
     | '/coach/plan-preview/$planId'
@@ -973,6 +996,7 @@ export interface FileRouteTypes {
     | '/daily-checklist'
     | '/dashboard'
     | '/datenschutz'
+    | '/guardian-consent'
     | '/impressum'
     | '/login'
     | '/measurements'
@@ -1021,6 +1045,7 @@ export interface FileRouteTypes {
     | '/nutrition/'
     | '/smart/'
     | '/tracker/'
+    | '/api/public/guardian-consent'
     | '/coach/customers/$userId'
     | '/coach/customers/new'
     | '/coach/plan-preview/$planId'
@@ -1061,6 +1086,7 @@ export interface RootRouteChildren {
   DailyChecklistRoute: typeof DailyChecklistRoute
   DashboardRoute: typeof DashboardRoute
   DatenschutzRoute: typeof DatenschutzRoute
+  GuardianConsentRoute: typeof GuardianConsentRoute
   ImpressumRoute: typeof ImpressumRoute
   LoginRoute: typeof LoginRoute
   MeasurementsRoute: typeof MeasurementsRoute
@@ -1092,6 +1118,7 @@ export interface RootRouteChildren {
   TrackerSignupRoute: typeof TrackerSignupRoute
   BullsIndexRoute: typeof BullsIndexRoute
   TrackerIndexRoute: typeof TrackerIndexRoute
+  ApiPublicGuardianConsentRoute: typeof ApiPublicGuardianConsentRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiPublicHooksCoachDailySummaryRoute: typeof ApiPublicHooksCoachDailySummaryRoute
   ApiPublicHooksPlanRotationRoute: typeof ApiPublicHooksPlanRotationRoute
@@ -1220,6 +1247,13 @@ declare module '@tanstack/react-router' {
       path: '/impressum'
       fullPath: '/impressum'
       preLoaderRoute: typeof ImpressumRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/guardian-consent': {
+      id: '/guardian-consent'
+      path: '/guardian-consent'
+      fullPath: '/guardian-consent'
+      preLoaderRoute: typeof GuardianConsentRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/datenschutz': {
@@ -1614,6 +1648,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CoachCustomersUserIdRouteImport
       parentRoute: typeof CoachCustomersRoute
     }
+    '/api/public/guardian-consent': {
+      id: '/api/public/guardian-consent'
+      path: '/api/public/guardian-consent'
+      fullPath: '/api/public/guardian-consent'
+      preLoaderRoute: typeof ApiPublicGuardianConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lovable/email/transactional/send': {
       id: '/lovable/email/transactional/send'
       path: '/lovable/email/transactional/send'
@@ -1825,6 +1866,7 @@ const rootRouteChildren: RootRouteChildren = {
   DailyChecklistRoute: DailyChecklistRoute,
   DashboardRoute: DashboardRoute,
   DatenschutzRoute: DatenschutzRoute,
+  GuardianConsentRoute: GuardianConsentRoute,
   ImpressumRoute: ImpressumRoute,
   LoginRoute: LoginRoute,
   MeasurementsRoute: MeasurementsRoute,
@@ -1856,6 +1898,7 @@ const rootRouteChildren: RootRouteChildren = {
   TrackerSignupRoute: TrackerSignupRoute,
   BullsIndexRoute: BullsIndexRoute,
   TrackerIndexRoute: TrackerIndexRoute,
+  ApiPublicGuardianConsentRoute: ApiPublicGuardianConsentRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ApiPublicHooksCoachDailySummaryRoute: ApiPublicHooksCoachDailySummaryRoute,
   ApiPublicHooksPlanRotationRoute: ApiPublicHooksPlanRotationRoute,

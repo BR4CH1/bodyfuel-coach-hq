@@ -16,14 +16,14 @@ export const startGuardianConsent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: {
     birthdate: string;
-    guardianName: string;
-    guardianEmail: string;
+    guardianName?: string;
+    guardianEmail?: string;
     minorName?: string;
   }) => {
     return z.object({
       birthdate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-      guardianName: z.string().trim().min(2).max(120),
-      guardianEmail: z.string().trim().email().max(255).transform((s) => s.toLowerCase()),
+      guardianName: z.string().trim().min(2).max(120).optional(),
+      guardianEmail: z.string().trim().email().max(255).transform((s) => s.toLowerCase()).optional(),
       minorName: z.string().trim().max(120).optional(),
     }).parse(data);
   })
@@ -45,6 +45,10 @@ export const startGuardianConsent = createServerFn({ method: "POST" })
         account_status: "active",
       }).eq("id", userId);
       return { ok: true, isMinor: false };
+    }
+
+    if (!data.guardianName || !data.guardianEmail) {
+      return { ok: false, isMinor: true, error: "Eltern-Daten fehlen" };
     }
 
     // Profil als minderjährig markieren + Status auf pending
