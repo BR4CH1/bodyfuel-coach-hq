@@ -29,7 +29,9 @@ export function MealBuilderDialog({
 }) {
   const qc = useQueryClient();
   const searchFn = useServerFn(searchFoods);
+  const estimateFn = useServerFn(estimateFoodFromText);
   const saveFn = useServerFn(saveCustomMeal);
+
 
   const [name, setName] = useState("");
   const [query, setQuery] = useState("");
