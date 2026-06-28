@@ -42,7 +42,7 @@ function NewCustomerForm() {
     package: "coaching" as PackageOption,
     price_eur: 69,
     start_date: new Date().toISOString().slice(0, 10),
-    duration_days: 30,
+    end_date: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
     trial_days: 7,
     notes: "",
     bulls: false,
