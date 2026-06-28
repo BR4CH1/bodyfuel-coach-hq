@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { toast } from "sonner";
 import { Sparkles, Mail, Lock, User } from "lucide-react";
@@ -11,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/bodyfuel/Logo";
+import { AgeGate } from "@/components/bodyfuel/AgeGate";
+import { getMyGuardianStatus } from "@/lib/guardian.functions";
 import { X } from "lucide-react";
 
 export const Route = createFileRoute("/smart/signup")({
