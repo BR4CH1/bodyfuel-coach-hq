@@ -694,6 +694,22 @@ function ExerciseCard({
             </div>
           );
         })}
+        <button
+          type="button"
+          onClick={() => setExtraSets((n) => n + 1)}
+          className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-border/70 px-2 py-2 text-[11px] font-semibold text-muted-foreground hover:border-gold/50 hover:text-gold"
+        >
+          <Plus className="h-3.5 w-3.5" /> Satz hinzufügen
+        </button>
+        {extraSets > 0 && (
+          <button
+            type="button"
+            onClick={() => setExtraSets((n) => Math.max(0, n - 1))}
+            className="mx-auto block text-[10px] text-muted-foreground hover:text-foreground underline"
+          >
+            Letzten Zusatzsatz entfernen
+          </button>
+        )}
       </div>
 
       {/* Per-exercise note for today */}
