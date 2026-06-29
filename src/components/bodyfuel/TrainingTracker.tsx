@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Sparkles, ChevronDown, ChevronRight, Trash2, Loader2, BarChart3, Check } from "lucide-react";
+import { Sparkles, ChevronDown, ChevronRight, Trash2, Loader2, BarChart3, Check, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
 import { parseTrainingPlan, logSet, deleteSetLog } from "@/lib/training.functions";
