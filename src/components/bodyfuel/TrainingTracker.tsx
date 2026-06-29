@@ -486,6 +486,26 @@ function ExerciseCard({
   const setOverride = (n: number, key: "w" | "r", val: string) =>
     setOverrides((cur) => ({ ...cur, [n]: { w: cur[n]?.w ?? "", r: cur[n]?.r ?? "", [key]: val } }));
 
+  // Zusätzliche Sätze, die der Kunde spontan dranhängt (über den Plan hinaus).
+  const extraKey = `bf.tt.extra.${clientId}.${ex.id}.${todayStr}`;
+  const [extraSets, setExtraSets] = useState<number>(() => {
+    if (typeof window === "undefined") return 0;
+    try {
+      const raw = window.localStorage.getItem(extraKey);
+      return raw ? Math.max(0, Number(raw) || 0) : 0;
+    } catch {
+      return 0;
+    }
+  });
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(extraKey, String(extraSets));
+    } catch {
+      /* ignore */
+    }
+  }, [extraSets, extraKey]);
+
   const valueFor = (n: number, key: "w" | "r"): string => {
     const o = overrides[n]?.[key];
     if (o !== undefined && o !== "") return o;
