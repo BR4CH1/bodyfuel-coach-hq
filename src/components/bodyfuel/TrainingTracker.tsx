@@ -614,7 +614,7 @@ function ExerciseCard({
           )}
           <div className="text-right">✓</div>
         </div>
-        {Array.from({ length: Math.max(targetSets, todaysLogs.length) }).map((_, i) => {
+        {Array.from({ length: Math.max(targetSets + extraSets, todaysLogs.length) }).map((_, i) => {
           const setNum = i + 1;
           const log = todaysLogs.find((l) => l.set_number === setNum);
           const done = !!log;
