@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Sparkles, ChevronDown, ChevronRight, Trash2, Loader2, BarChart3, Check } from "lucide-react";
+import { Sparkles, ChevronDown, ChevronRight, Trash2, Loader2, BarChart3, Check, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
 import { parseTrainingPlan, logSet, deleteSetLog } from "@/lib/training.functions";
@@ -486,6 +486,26 @@ function ExerciseCard({
   const setOverride = (n: number, key: "w" | "r", val: string) =>
     setOverrides((cur) => ({ ...cur, [n]: { w: cur[n]?.w ?? "", r: cur[n]?.r ?? "", [key]: val } }));
 
+  // Zusätzliche Sätze, die der Kunde spontan dranhängt (über den Plan hinaus).
+  const extraKey = `bf.tt.extra.${clientId}.${ex.id}.${todayStr}`;
+  const [extraSets, setExtraSets] = useState<number>(() => {
+    if (typeof window === "undefined") return 0;
+    try {
+      const raw = window.localStorage.getItem(extraKey);
+      return raw ? Math.max(0, Number(raw) || 0) : 0;
+    } catch {
+      return 0;
+    }
+  });
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(extraKey, String(extraSets));
+    } catch {
+      /* ignore */
+    }
+  }, [extraSets, extraKey]);
+
   const valueFor = (n: number, key: "w" | "r"): string => {
     const o = overrides[n]?.[key];
     if (o !== undefined && o !== "") return o;
@@ -594,7 +614,7 @@ function ExerciseCard({
           )}
           <div className="text-right">✓</div>
         </div>
-        {Array.from({ length: Math.max(targetSets, todaysLogs.length) }).map((_, i) => {
+        {Array.from({ length: Math.max(targetSets + extraSets, todaysLogs.length) }).map((_, i) => {
           const setNum = i + 1;
           const log = todaysLogs.find((l) => l.set_number === setNum);
           const done = !!log;
@@ -674,6 +694,22 @@ function ExerciseCard({
             </div>
           );
         })}
+        <button
+          type="button"
+          onClick={() => setExtraSets((n) => n + 1)}
+          className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-border/70 px-2 py-2 text-[11px] font-semibold text-muted-foreground hover:border-gold/50 hover:text-gold"
+        >
+          <Plus className="h-3.5 w-3.5" /> Satz hinzufügen
+        </button>
+        {extraSets > 0 && (
+          <button
+            type="button"
+            onClick={() => setExtraSets((n) => Math.max(0, n - 1))}
+            className="mx-auto block text-[10px] text-muted-foreground hover:text-foreground underline"
+          >
+            Letzten Zusatzsatz entfernen
+          </button>
+        )}
       </div>
 
       {/* Per-exercise note for today */}
