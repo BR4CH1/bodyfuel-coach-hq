@@ -111,7 +111,7 @@ export function SmartRenewalCard() {
                 }
                 disabled={trainingMut.isPending || subBlocked}
                 onClick={() => trainingMut.mutate()}
-                label={trainingMut.isPending ? "Wird erstellt…" : "Verlängern"}
+                label={trainingMut.isPending ? "Wird erstellt…" : "Plan erstellen"}
               />
             )}
           </>
