@@ -207,6 +207,9 @@ function CoachGiftsPage() {
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <code className="rounded bg-muted px-2 py-0.5 font-mono text-sm font-bold">{c.code}</code>
+                        <span className="rounded-full bg-gold/15 text-gold px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+                          {c.gift_hubs?.label ?? c.hub_code ?? "Smart"}
+                        </span>
                         {c.label && <span className="text-sm text-muted-foreground truncate">{c.label}</span>}
                         {exhausted && <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] uppercase tracking-wide">Verbraucht</span>}
                         {expired && <span className="rounded-full bg-destructive/10 text-destructive px-2 py-0.5 text-[10px] uppercase tracking-wide">Abgelaufen</span>}
