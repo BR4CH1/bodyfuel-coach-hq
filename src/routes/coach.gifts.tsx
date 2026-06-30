@@ -119,22 +119,35 @@ function CoachGiftsPage() {
         <h2 className="font-display text-lg font-bold mb-4">Neuen Code erstellen</h2>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="hub">Hub / Paket</Label>
+            <Label>Paket</Label>
+            <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">
+              <span className="font-semibold">BodyFuel Smart</span>
+              <span className="text-muted-foreground"> — KI-Ernährungsplan, Tracking (0 €)</span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Jeder Geschenklink schaltet immer das Smart-Paket frei.
+            </p>
+          </div>
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label htmlFor="hub">Zusätzlicher Hub (optional)</Label>
             <Select value={hubCode} onValueChange={setHubCode}>
               <SelectTrigger id="hub">
-                <SelectValue placeholder="Hub wählen" />
+                <SelectValue placeholder="Kein zusätzlicher Hub" />
               </SelectTrigger>
               <SelectContent>
-                {(hubs ?? []).map((h: any) => (
-                  <SelectItem key={h.code} value={h.code}>
-                    {h.label}
-                    {h.description ? ` — ${h.description}` : ""}
-                  </SelectItem>
-                ))}
+                <SelectItem value="smart">Kein zusätzlicher Hub</SelectItem>
+                {(hubs ?? [])
+                  .filter((h: any) => h.kind === "group")
+                  .map((h: any) => (
+                    <SelectItem key={h.code} value={h.code}>
+                      {h.label}
+                      {h.description ? ` — ${h.description}` : ""}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Empfänger registriert sich selbst und erhält für 0 € die gewählte Mitgliedschaft.
+              Optional zusätzlich Zugriff auf einen Hub (z. B. Bulls Hub) gewähren.
             </p>
           </div>
           <div className="space-y-1.5 sm:col-span-2">
