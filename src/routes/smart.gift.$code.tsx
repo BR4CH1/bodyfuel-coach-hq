@@ -101,10 +101,10 @@ function GiftRedeemPage() {
         toast.success("Bitte bestätige deine E-Mail und öffne den Link erneut.");
         return;
       }
-      await redeem({ data: { code } });
+      const res = await redeem({ data: { code } });
       setRedeemed(true);
-      toast.success("Smart freigeschaltet — willkommen!");
-      navigate({ to: "/onboarding/smart" });
+      toast.success(`${info?.valid ? info.hub_label : "Mitgliedschaft"} freigeschaltet — willkommen!`);
+      navigate({ to: res.hub_kind === "group" ? "/bulls" : "/onboarding/smart" });
     } catch (err: any) {
       const msg = /already registered|user already/i.test(err?.message ?? "")
         ? "Diese E-Mail ist bereits registriert. Bitte einloggen, dann öffne den Link erneut."
