@@ -145,7 +145,7 @@ function GiftRedeemPage() {
         ) : (
           <>
             <h1 className="font-display text-2xl font-bold">
-              Glückwunsch — {info.days} Tage Smart geschenkt!
+              Glückwunsch — {info.days} Tage {info.hub_label} geschenkt!
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
               {info.label ? `${info.label} · ` : ""}Erstelle dir kostenlos einen Account und leg sofort los. Keine Zahlungsdaten nötig.
@@ -158,8 +158,8 @@ function GiftRedeemPage() {
                   onClick={async () => {
                     setBusy(true);
                     try {
-                      await redeem({ data: { code } });
-                      navigate({ to: "/onboarding/smart" });
+                      const res = await redeem({ data: { code } });
+                      navigate({ to: res.hub_kind === "group" ? "/bulls" : "/onboarding/smart" });
                     } catch (e: any) {
                       toast.error(e?.message ?? "Fehler");
                     } finally {
