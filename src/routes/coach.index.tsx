@@ -223,188 +223,206 @@ function CoachDashboard() {
   useEffect(() => {
     (async () => {
       setLoading(true);
+      try {
+        // Find all client user_ids
+        const { data: rolesData, error: rolesErr } = await supabase
+          .from("user_roles")
+          .select("user_id")
+          .eq("role", "client");
+        if (rolesErr) console.error("coach dashboard: roles", rolesErr);
+        const ids = (rolesData ?? []).map((r) => r.user_id);
 
-      // Find all client user_ids
-      const { data: rolesData } = await supabase
-        .from("user_roles")
-        .select("user_id")
-        .eq("role", "client");
-      const ids = (rolesData ?? []).map((r) => r.user_id);
-
-      let clientRows: Client[] = [];
-      if (ids.length > 0) {
-        const [profiles, checkins, measurements, foods, sets, plans] = await Promise.all([
-          supabase.from("profiles").select("id, display_name").in("id", ids),
-          supabase
-            .from("weekly_checkins")
-            .select("user_id, week_start, submitted_at")
-            .in("user_id", ids)
-            .order("week_start", { ascending: false }),
-          supabase
-            .from("body_measurements")
-            .select("user_id, weight_kg, measured_at")
-            .in("user_id", ids)
-            .order("measured_at", { ascending: false }),
-          supabase
-            .from("food_entries")
-            .select("user_id, name, created_at")
-            .in("user_id", ids)
-            .order("created_at", { ascending: false })
-            .limit(200),
-          supabase
-            .from("training_set_logs")
-            .select("client_id, performed_at")
-            .in("client_id", ids)
-            .order("performed_at", { ascending: false })
-            .limit(200),
-          supabase
-            .from("nutrition_plans")
-            .select("id, client_id, plan_type, scheduled_end_date, status")
-            .in("client_id", ids)
-            .eq("status", "active"),
-        ]);
-
-        // Compute kcal deviation per client from active nutrition plans
-        const activeNutritionPlans = (plans.data ?? []).filter(
-          (p: any) => p.plan_type === "nutrition",
-        );
-        const nutritionPlanIds = activeNutritionPlans.map((p: any) => p.id);
-        const planToClient = new Map<string, string>();
-        activeNutritionPlans.forEach((p: any) => planToClient.set(p.id, p.client_id));
-
-        const [targetsRes, daysRes] = await Promise.all([
-          supabase
-            .from("nutrition_targets")
-            .select("user_id, kcal, kcal_rest")
-            .in("user_id", ids),
-          nutritionPlanIds.length
-            ? supabase
-                .from("nutrition_plan_days")
-                .select("id, plan_id, name")
-                .in("plan_id", nutritionPlanIds)
-            : Promise.resolve({ data: [] as any[] }),
-        ]);
-        const dayList = (daysRes.data ?? []) as Array<{ id: string; plan_id: string; name: string }>;
-        const dayIds = dayList.map((d) => d.id);
-        const mealsRes = dayIds.length
-          ? await supabase
-              .from("nutrition_plan_meals")
-              .select("day_id, kcal")
-              .in("day_id", dayIds)
-          : { data: [] as any[] };
-        const sumByDay = new Map<string, number>();
-        ((mealsRes.data ?? []) as any[]).forEach((m: any) => {
-          if (m.kcal == null) return;
-          sumByDay.set(m.day_id, (sumByDay.get(m.day_id) ?? 0) + Number(m.kcal));
-        });
-        const targetByUser = new Map<string, { t: number | null; r: number | null }>();
-        ((targetsRes.data ?? []) as any[]).forEach((t: any) => {
-          targetByUser.set(t.user_id, {
-            t: t.kcal ?? null,
-            r: t.kcal_rest ?? t.kcal ?? null,
+        let clientRows: Client[] = [];
+        if (ids.length > 0) {
+          const results = await Promise.allSettled([
+            supabase.from("profiles").select("id, display_name").in("id", ids),
+            supabase
+              .from("weekly_checkins")
+              .select("user_id, week_start, submitted_at")
+              .in("user_id", ids)
+              .order("week_start", { ascending: false }),
+            supabase
+              .from("body_measurements")
+              .select("user_id, weight_kg, measured_at")
+              .in("user_id", ids)
+              .order("measured_at", { ascending: false }),
+            supabase
+              .from("food_entries")
+              .select("user_id, name, created_at")
+              .in("user_id", ids)
+              .order("created_at", { ascending: false })
+              .limit(200),
+            supabase
+              .from("training_set_logs")
+              .select("client_id, performed_at")
+              .in("client_id", ids)
+              .order("performed_at", { ascending: false })
+              .limit(200),
+            supabase
+              .from("nutrition_plans")
+              .select("id, client_id, plan_type, scheduled_end_date, status")
+              .in("client_id", ids)
+              .eq("status", "active"),
+          ]);
+          const get = (i: number): any =>
+            results[i].status === "fulfilled" ? (results[i] as any).value : { data: [] };
+          results.forEach((r, i) => {
+            if (r.status === "rejected") console.error(`coach dashboard q${i} failed`, r.reason);
           });
-        });
-        const kcalDev = new Map<string, { dev: number; dir: "over" | "under" }>();
-        dayList.forEach((d) => {
-          const clientId = planToClient.get(d.plan_id);
-          if (!clientId) return;
-          const tgt = targetByUser.get(clientId);
-          if (!tgt) return;
-          const sum = sumByDay.get(d.id);
-          if (!sum) return;
-          const isRest = /(rest|ruhe|pause)/i.test(d.name || "");
-          const target = isRest ? tgt.r : tgt.t;
-          if (!target) return;
-          const diff = sum - target;
-          const abs = Math.abs(diff);
-          const prev = kcalDev.get(clientId);
-          if (!prev || abs > prev.dev) {
-            kcalDev.set(clientId, { dev: abs, dir: diff >= 0 ? "over" : "under" });
-          }
-        });
+          const profiles = get(0);
+          const checkins = get(1);
+          const measurements = get(2);
+          const foods = get(3);
+          const sets = get(4);
+          const plans = get(5);
 
-        const lastCheckin = new Map<string, string>();
-        (checkins.data ?? []).forEach((c) => {
-          if (!lastCheckin.has(c.user_id)) lastCheckin.set(c.user_id, c.week_start);
-        });
-        const lastWeight = new Map<string, { w: number | null; at: string }>();
-        const weightsByUser = new Map<string, Array<{ w: number; at: string }>>();
-        (measurements.data ?? []).forEach((m) => {
-          if (!lastWeight.has(m.user_id))
-            lastWeight.set(m.user_id, { w: m.weight_kg, at: m.measured_at });
-          if (m.weight_kg != null) {
-            const arr = weightsByUser.get(m.user_id) ?? [];
-            arr.push({ w: Number(m.weight_kg), at: m.measured_at });
-            weightsByUser.set(m.user_id, arr);
-          }
-        });
-        const nowMs = Date.now();
-        const plateauByUser = new Map<string, number>();
-        weightsByUser.forEach((series, uid) => {
-          if (series.length < 2) return;
-          const latest = series[0];
-          const olderRef = series.find((m) => {
-            const age = (nowMs - new Date(m.at).getTime()) / 86400000;
-            return age >= 10 && age <= 21;
+          // Compute kcal deviation per client from active nutrition plans
+          const activeNutritionPlans = (plans.data ?? []).filter(
+            (p: any) => p.plan_type === "nutrition",
+          );
+          const nutritionPlanIds = activeNutritionPlans.map((p: any) => p.id);
+          const planToClient = new Map<string, string>();
+          activeNutritionPlans.forEach((p: any) => planToClient.set(p.id, p.client_id));
+
+          const [targetsRes, daysRes] = await Promise.all([
+            supabase
+              .from("nutrition_targets")
+              .select("user_id, kcal, kcal_rest")
+              .in("user_id", ids)
+              .then((r) => r, () => ({ data: [] as any[] })),
+            nutritionPlanIds.length
+              ? supabase
+                  .from("nutrition_plan_days")
+                  .select("id, plan_id, name")
+                  .in("plan_id", nutritionPlanIds)
+                  .then((r) => r, () => ({ data: [] as any[] }))
+              : Promise.resolve({ data: [] as any[] }),
+          ]);
+          const dayList = (daysRes.data ?? []) as Array<{ id: string; plan_id: string; name: string }>;
+          const dayIds = dayList.map((d) => d.id);
+          const mealsRes = dayIds.length
+            ? await supabase
+                .from("nutrition_plan_meals")
+                .select("day_id, kcal")
+                .in("day_id", dayIds)
+                .then((r) => r, () => ({ data: [] as any[] }))
+            : { data: [] as any[] };
+          const sumByDay = new Map<string, number>();
+          ((mealsRes.data ?? []) as any[]).forEach((m: any) => {
+            if (m.kcal == null) return;
+            sumByDay.set(m.day_id, (sumByDay.get(m.day_id) ?? 0) + Number(m.kcal));
           });
-          if (olderRef && Math.abs(latest.w - olderRef.w) <= 0.3) {
-            plateauByUser.set(
-              uid,
-              Math.round((nowMs - new Date(olderRef.at).getTime()) / 86400000),
-            );
-          }
-        });
-        const lastFood = new Map<string, { at: string; name: string }>();
-        (foods.data ?? []).forEach((f) => {
-          if (!lastFood.has(f.user_id))
-            lastFood.set(f.user_id, { at: f.created_at, name: f.name });
-        });
-        const lastTraining = new Map<string, string>();
-        (sets.data ?? []).forEach((s) => {
-          if (!lastTraining.has(s.client_id)) lastTraining.set(s.client_id, s.performed_at);
-        });
-        const nutritionEnd = new Map<string, string>();
-        const trainingEnd = new Map<string, string>();
-        (plans.data ?? []).forEach((p: any) => {
-          if (!p.scheduled_end_date) return;
-          const map = p.plan_type === "training" ? trainingEnd : nutritionEnd;
-          const existing = map.get(p.client_id);
-          if (!existing || p.scheduled_end_date > existing) {
-            map.set(p.client_id, p.scheduled_end_date);
-          }
-        });
+          const targetByUser = new Map<string, { t: number | null; r: number | null }>();
+          ((targetsRes.data ?? []) as any[]).forEach((t: any) => {
+            targetByUser.set(t.user_id, {
+              t: t.kcal ?? null,
+              r: t.kcal_rest ?? t.kcal ?? null,
+            });
+          });
+          const kcalDev = new Map<string, { dev: number; dir: "over" | "under" }>();
+          dayList.forEach((d) => {
+            const clientId = planToClient.get(d.plan_id);
+            if (!clientId) return;
+            const tgt = targetByUser.get(clientId);
+            if (!tgt) return;
+            const sum = sumByDay.get(d.id);
+            if (!sum) return;
+            const isRest = /(rest|ruhe|pause)/i.test(d.name || "");
+            const target = isRest ? tgt.r : tgt.t;
+            if (!target) return;
+            const diff = sum - target;
+            const abs = Math.abs(diff);
+            const prev = kcalDev.get(clientId);
+            if (!prev || abs > prev.dev) {
+              kcalDev.set(clientId, { dev: abs, dir: diff >= 0 ? "over" : "under" });
+            }
+          });
 
-        clientRows = (profiles.data ?? []).map((p) => ({
-          id: p.id,
-          display_name: p.display_name,
-          last_checkin: lastCheckin.get(p.id) ?? null,
-          last_weight: lastWeight.get(p.id)?.w ?? null,
-          last_weight_at: lastWeight.get(p.id)?.at ?? null,
-          last_nutrition_at: lastFood.get(p.id)?.at ?? null,
-          last_nutrition_name: lastFood.get(p.id)?.name ?? null,
-          last_training_at: lastTraining.get(p.id) ?? null,
-          nutrition_plan_end: nutritionEnd.get(p.id) ?? null,
-          training_plan_end: trainingEnd.get(p.id) ?? null,
-          kcal_dev: kcalDev.get(p.id)?.dev ?? null,
-          kcal_dev_dir: kcalDev.get(p.id)?.dir ?? null,
-          plateau_days: plateauByUser.get(p.id) ?? null,
-        }));
+          const lastCheckin = new Map<string, string>();
+          (checkins.data ?? []).forEach((c: any) => {
+            if (!lastCheckin.has(c.user_id)) lastCheckin.set(c.user_id, c.week_start);
+          });
+          const lastWeight = new Map<string, { w: number | null; at: string }>();
+          const weightsByUser = new Map<string, Array<{ w: number; at: string }>>();
+          (measurements.data ?? []).forEach((m: any) => {
+            if (!lastWeight.has(m.user_id))
+              lastWeight.set(m.user_id, { w: m.weight_kg, at: m.measured_at });
+            if (m.weight_kg != null) {
+              const arr = weightsByUser.get(m.user_id) ?? [];
+              arr.push({ w: Number(m.weight_kg), at: m.measured_at });
+              weightsByUser.set(m.user_id, arr);
+            }
+          });
+          const nowMs = Date.now();
+          const plateauByUser = new Map<string, number>();
+          weightsByUser.forEach((series, uid) => {
+            if (series.length < 2) return;
+            const latest = series[0];
+            const olderRef = series.find((m) => {
+              const age = (nowMs - new Date(m.at).getTime()) / 86400000;
+              return age >= 10 && age <= 21;
+            });
+            if (olderRef && Math.abs(latest.w - olderRef.w) <= 0.3) {
+              plateauByUser.set(
+                uid,
+                Math.round((nowMs - new Date(olderRef.at).getTime()) / 86400000),
+              );
+            }
+          });
+          const lastFood = new Map<string, { at: string; name: string }>();
+          (foods.data ?? []).forEach((f: any) => {
+            if (!lastFood.has(f.user_id))
+              lastFood.set(f.user_id, { at: f.created_at, name: f.name });
+          });
+          const lastTraining = new Map<string, string>();
+          (sets.data ?? []).forEach((s: any) => {
+            if (!lastTraining.has(s.client_id)) lastTraining.set(s.client_id, s.performed_at);
+          });
+          const nutritionEnd = new Map<string, string>();
+          const trainingEnd = new Map<string, string>();
+          (plans.data ?? []).forEach((p: any) => {
+            if (!p.scheduled_end_date) return;
+            const map = p.plan_type === "training" ? trainingEnd : nutritionEnd;
+            const existing = map.get(p.client_id);
+            if (!existing || p.scheduled_end_date > existing) {
+              map.set(p.client_id, p.scheduled_end_date);
+            }
+          });
+
+          clientRows = (profiles.data ?? []).map((p: any) => ({
+            id: p.id,
+            display_name: p.display_name,
+            last_checkin: lastCheckin.get(p.id) ?? null,
+            last_weight: lastWeight.get(p.id)?.w ?? null,
+            last_weight_at: lastWeight.get(p.id)?.at ?? null,
+            last_nutrition_at: lastFood.get(p.id)?.at ?? null,
+            last_nutrition_name: lastFood.get(p.id)?.name ?? null,
+            last_training_at: lastTraining.get(p.id) ?? null,
+            nutrition_plan_end: nutritionEnd.get(p.id) ?? null,
+            training_plan_end: trainingEnd.get(p.id) ?? null,
+            kcal_dev: kcalDev.get(p.id)?.dev ?? null,
+            kcal_dev_dir: kcalDev.get(p.id)?.dir ?? null,
+            plateau_days: plateauByUser.get(p.id) ?? null,
+          }));
+        }
+
+        setClients(clientRows);
+
+        const { data: leadsData } = await supabase
+          .from("leads")
+          .select("id, name, email, goal, created_at")
+          .eq("status", "new")
+          .order("created_at", { ascending: false })
+          .limit(10);
+        setLeads((leadsData as Lead[]) ?? []);
+      } catch (e) {
+        console.error("coach dashboard load failed", e);
+      } finally {
+        setLoading(false);
       }
-
-
-      setClients(clientRows);
-
-      const { data: leadsData } = await supabase
-        .from("leads")
-        .select("id, name, email, goal, created_at")
-        .eq("status", "new")
-        .order("created_at", { ascending: false })
-        .limit(10);
-      setLeads((leadsData as Lead[]) ?? []);
-
-      setLoading(false);
     })();
   }, []);
+
 
   const openWeek = clients.filter((c) => c.last_checkin !== weekStart);
   const inactive = clients
