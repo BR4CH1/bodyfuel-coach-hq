@@ -119,6 +119,25 @@ function CoachGiftsPage() {
         <h2 className="font-display text-lg font-bold mb-4">Neuen Code erstellen</h2>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5 sm:col-span-2">
+            <Label htmlFor="hub">Hub / Paket</Label>
+            <Select value={hubCode} onValueChange={setHubCode}>
+              <SelectTrigger id="hub">
+                <SelectValue placeholder="Hub wählen" />
+              </SelectTrigger>
+              <SelectContent>
+                {(hubs ?? []).map((h: any) => (
+                  <SelectItem key={h.code} value={h.code}>
+                    {h.label}
+                    {h.description ? ` — ${h.description}` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Empfänger registriert sich selbst und erhält für 0 € die gewählte Mitgliedschaft.
+            </p>
+          </div>
+          <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="label">Bezeichnung (optional)</Label>
             <Input
               id="label"
