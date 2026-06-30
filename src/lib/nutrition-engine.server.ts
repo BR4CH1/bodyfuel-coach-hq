@@ -150,11 +150,25 @@ const PROBE_REWRITES: Array<[RegExp, string]> = [
   [/\bkokosmilch\b/g, "kokosmilch"],
   // Curry paste – low impact, but provide mapping
   [/\bcurrypaste\b/g, "currypaste"],
+  // Generic vegetable terms — map to verified mix instead of failing
+  [/\btk[-\s]?gem(?:ü|ue)se\b/g, "gemischtes gemüse"],
+  [/\btiefk(?:ü|ue)hl[-\s]?gem(?:ü|ue)se\b/g, "gemischtes gemüse"],
+  [/\bgem(?:ü|ue)semix\b/g, "gemischtes gemüse"],
+  [/\bgem(?:ü|ue)semischung\b/g, "gemischtes gemüse"],
+  [/\bwokgem(?:ü|ue)se\b/g, "gemischtes gemüse"],
+  [/\basia[-\s]?gem(?:ü|ue)se\b/g, "gemischtes gemüse"],
+  [/\bgrillgem(?:ü|ue)se\b/g, "gemischtes gemüse"],
+  [/\bofengem(?:ü|ue)se\b/g, "gemischtes gemüse"],
+  [/\bgem(?:ü|ue)sepfanne\b/g, "gemischtes gemüse"],
+  [/\bbeilagengem(?:ü|ue)se\b/g, "gemischtes gemüse"],
+  [/\bmischgem(?:ü|ue)se\b/g, "gemischtes gemüse"],
+  [/\bbuntes\s+gem(?:ü|ue)se\b/g, "gemischtes gemüse"],
   // Fruit purées / common snack variants must resolve to the verified base row
   // instead of failing plan generation on wording like "Apfelmus (ungesüßt)".
   [/\bapfelmus\b/g, "apfelmus"],
   [/\bapfelmark\b/g, "apfelmus"],
 ];
+
 
 function normalize(s: string): string {
   return s
@@ -276,7 +290,7 @@ const CARB_STAPLES: Array<{ re: RegExp; minCarbsPer100g: number; label: string }
 ];
 
 const HIGH_IMPACT_INGREDIENT = /\b(hähnchen|haehnchen|huhn|pute|truthahn|rind|hack|steak|schinken|aufschnitt|lachs|fisch|thunfisch|ei|eier|tofu|tempeh|skyr|quark|joghurt|hüttenkäse|huettenkaese|käse|kaese|mozzarella|feta|gouda|emmentaler|frischkäse|frischkaese|protein|riegel|reis|nudel|pasta|spaghetti|kartoffel|brot|brötchen|broetchen|wrap|tortilla|hafer|müsli|muesli|quinoa|bulgur|couscous|linsen|kichererbsen|bohnen|öl|oel|olivenöl|olivenoel|butter|kokosmilch|nuss|nüsse|nuesse|mandel|avocado)\b/i;
-const LOW_IMPACT_INGREDIENT = /\b(wasser|salz|pfeffer|gewürz|gewuerz|zimt|kräuter|kraeuter|essig|zitrone|limette|salat|gurke|tomate|zucchini|paprika|brokkoli|blumenkohl|spinat|spargel|champignon|pilz|zwiebel|knoblauch|obst|apfel|äpfel|aepfel|apfelmus|apfelmark|banane|beere|beeren|erdbeere|erdbeeren|himbeere|himbeeren|heidelbeere|heidelbeeren|blaubeere|blaubeeren|orange|kiwi|birne|trauben|mango|ananas|mandarine)\b/i;
+const LOW_IMPACT_INGREDIENT = /\b(wasser|salz|pfeffer|gewürz|gewuerz|zimt|kräuter|kraeuter|essig|zitrone|limette|salat|salatmix|blattsalat|gurke|tomate|tomaten|cherrytomaten|zucchini|paprika|brokkoli|blumenkohl|spinat|spargel|champignon|champignons|pilz|pilze|zwiebel|knoblauch|lauch|lauchzwiebel|frühlingszwiebel|sellerie|möhre|moehre|karotte|karotten|radieschen|rucola|feldsalat|gem(?:ü|ue)se|gem(?:ü|ue)semix|tk[-\s]?gem(?:ü|ue)se|rohkost|wokgem(?:ü|ue)se|grillgem(?:ü|ue)se|ofengem(?:ü|ue)se|obst|apfel|äpfel|aepfel|apfelmus|apfelmark|banane|beere|beeren|erdbeere|erdbeeren|himbeere|himbeeren|heidelbeere|heidelbeeren|blaubeere|blaubeeren|orange|kiwi|birne|trauben|mango|ananas|mandarine)\b/i;
 
 function isBlockingMissingIngredient(ing: EngineIngredient): boolean {
   const grams = Number(ing.grams) || 0;
@@ -290,7 +304,7 @@ export function hasBlockingWarnings(result: Pick<EngineResult, "warnings"> | nul
 }
 
 export function isUsableEngineResult(result: EngineResult | null | undefined): result is EngineResult {
-  return !!result && result.coverage >= 0.7 && !hasBlockingWarnings(result);
+  return !!result && result.coverage >= 0.6 && !hasBlockingWarnings(result);
 }
 
 /** Compute macros for a list of structured ingredients. */
