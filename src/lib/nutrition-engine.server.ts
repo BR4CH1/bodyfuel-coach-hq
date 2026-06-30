@@ -150,11 +150,25 @@ const PROBE_REWRITES: Array<[RegExp, string]> = [
   [/\bkokosmilch\b/g, "kokosmilch"],
   // Curry paste – low impact, but provide mapping
   [/\bcurrypaste\b/g, "currypaste"],
+  // Generic vegetable terms — map to verified mix instead of failing
+  [/\btk[-\s]?gem(?:ü|ue)se\b/g, "gemischtes gemüse"],
+  [/\btiefk(?:ü|ue)hl[-\s]?gem(?:ü|ue)se\b/g, "gemischtes gemüse"],
+  [/\bgem(?:ü|ue)semix\b/g, "gemischtes gemüse"],
+  [/\bgem(?:ü|ue)semischung\b/g, "gemischtes gemüse"],
+  [/\bwokgem(?:ü|ue)se\b/g, "gemischtes gemüse"],
+  [/\basia[-\s]?gem(?:ü|ue)se\b/g, "gemischtes gemüse"],
+  [/\bgrillgem(?:ü|ue)se\b/g, "gemischtes gemüse"],
+  [/\bofengem(?:ü|ue)se\b/g, "gemischtes gemüse"],
+  [/\bgem(?:ü|ue)sepfanne\b/g, "gemischtes gemüse"],
+  [/\bbeilagengem(?:ü|ue)se\b/g, "gemischtes gemüse"],
+  [/\bmischgem(?:ü|ue)se\b/g, "gemischtes gemüse"],
+  [/\bbuntes\s+gem(?:ü|ue)se\b/g, "gemischtes gemüse"],
   // Fruit purées / common snack variants must resolve to the verified base row
   // instead of failing plan generation on wording like "Apfelmus (ungesüßt)".
   [/\bapfelmus\b/g, "apfelmus"],
   [/\bapfelmark\b/g, "apfelmus"],
 ];
+
 
 function normalize(s: string): string {
   return s
