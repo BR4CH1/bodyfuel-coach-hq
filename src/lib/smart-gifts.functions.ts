@@ -228,7 +228,7 @@ export const redeemGiftCode = createServerFn({ method: "POST" })
       const { error: gErr } = await supabaseAdmin
         .from("user_groups")
         .upsert(
-          { user_id: userId, group_name: groupName },
+          { user_id: userId, group_name: groupName as "bulls" | "premium" | "running_team" | "sgz" },
           { onConflict: "user_id,group_name" },
         );
       if (gErr) throw gErr;
