@@ -241,5 +241,5 @@ export const redeemGiftCode = createServerFn({ method: "POST" })
       .from("smart_gift_redemptions")
       .insert({ code, user_id: userId });
 
-    return { ok: true, days: row.days, hub_code: hub?.code ?? "smart", hub_kind: hubKind };
+    return { ok: true, days: row.days, hub_code: hub?.code ?? "smart", hub_kind: hub?.kind ?? "smart" };
   });
