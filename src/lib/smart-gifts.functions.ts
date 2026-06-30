@@ -176,59 +176,56 @@ export const redeemGiftCode = createServerFn({ method: "POST" })
       kind: "smart" | "group";
       group_name: string | null;
     } | null;
-    const hubKind: "smart" | "group" = hub?.kind ?? "smart";
 
     const today = new Date();
     const end = new Date(today.getTime() + row.days * 24 * 60 * 60 * 1000);
     const fmt = (d: Date) => d.toISOString().slice(0, 10);
 
-    if (hubKind === "smart") {
-      // Upsert smart package — extend end_date if already exists
-      const { data: existing } = await supabaseAdmin
-        .from("customer_packages")
-        .select("id, end_date")
-        .eq("user_id", userId)
-        .eq("package", "smart")
-        .maybeSingle();
+    // 1) Always grant Smart package
+    const { data: existing } = await supabaseAdmin
+      .from("customer_packages")
+      .select("id, end_date")
+      .eq("user_id", userId)
+      .eq("package", "smart")
+      .maybeSingle();
 
-      if (existing) {
-        const currentEnd = existing.end_date ? new Date(existing.end_date) : today;
-        const base = currentEnd.getTime() > today.getTime() ? currentEnd : today;
-        const newEnd = new Date(base.getTime() + row.days * 24 * 60 * 60 * 1000);
-        const { error: uErr } = await supabaseAdmin
-          .from("customer_packages")
-          .update({
-            is_active: true,
-            status: "active",
-            end_date: fmt(newEnd),
-            source: "gift",
-            notes: `Geschenk-Code ${code}${row.label ? ` (${row.label})` : ""}`,
-          })
-          .eq("id", existing.id);
-        if (uErr) throw uErr;
-      } else {
-        const { error: iErr } = await supabaseAdmin.from("customer_packages").insert({
-          user_id: userId,
-          package: "smart",
-          price_eur: 0,
-          start_date: fmt(today),
-          end_date: fmt(end),
+    if (existing) {
+      const currentEnd = existing.end_date ? new Date(existing.end_date) : today;
+      const base = currentEnd.getTime() > today.getTime() ? currentEnd : today;
+      const newEnd = new Date(base.getTime() + row.days * 24 * 60 * 60 * 1000);
+      const { error: uErr } = await supabaseAdmin
+        .from("customer_packages")
+        .update({
           is_active: true,
           status: "active",
+          end_date: fmt(newEnd),
           source: "gift",
-          started_at: today.toISOString(),
           notes: `Geschenk-Code ${code}${row.label ? ` (${row.label})` : ""}`,
-        });
-        if (iErr) throw iErr;
-      }
-    } else if (hubKind === "group") {
-      const groupName = hub?.group_name;
-      if (!groupName) throw new Error("Hub falsch konfiguriert (group_name fehlt)");
-      // Grant group membership (idempotent)
+        })
+        .eq("id", existing.id);
+      if (uErr) throw uErr;
+    } else {
+      const { error: iErr } = await supabaseAdmin.from("customer_packages").insert({
+        user_id: userId,
+        package: "smart",
+        price_eur: 0,
+        start_date: fmt(today),
+        end_date: fmt(end),
+        is_active: true,
+        status: "active",
+        source: "gift",
+        started_at: today.toISOString(),
+        notes: `Geschenk-Code ${code}${row.label ? ` (${row.label})` : ""}`,
+      });
+      if (iErr) throw iErr;
+    }
+
+    // 2) Optionally also grant hub group membership
+    if (hub && hub.kind === "group" && hub.group_name) {
       const { error: gErr } = await supabaseAdmin
         .from("user_groups")
         .upsert(
-          { user_id: userId, group_name: groupName as "bulls" | "premium" | "running_team" | "sgz" },
+          { user_id: userId, group_name: hub.group_name as "bulls" | "premium" | "running_team" | "sgz" },
           { onConflict: "user_id,group_name" },
         );
       if (gErr) throw gErr;
