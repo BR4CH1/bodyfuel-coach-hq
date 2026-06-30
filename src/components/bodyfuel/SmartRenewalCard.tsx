@@ -85,7 +85,7 @@ export function SmartRenewalCard() {
             }
             disabled={nutritionMut.isPending || subBlocked}
             onClick={() => nutritionMut.mutate()}
-            label={nutritionMut.isPending ? "Wird erstellt…" : "Verlängern"}
+            label={nutritionMut.isPending ? "Wird erstellt…" : "Plan erstellen"}
           />
 
         )}
@@ -111,7 +111,7 @@ export function SmartRenewalCard() {
                 }
                 disabled={trainingMut.isPending || subBlocked}
                 onClick={() => trainingMut.mutate()}
-                label={trainingMut.isPending ? "Wird erstellt…" : "Verlängern"}
+                label={trainingMut.isPending ? "Wird erstellt…" : "Plan erstellen"}
               />
             )}
           </>
