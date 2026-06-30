@@ -32,6 +32,7 @@ function CoachGiftsPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const list = useServerFn(listGiftCodes);
+  const listHubs = useServerFn(listGiftHubs);
   const create = useServerFn(createGiftCode);
   const remove = useServerFn(deleteGiftCode);
 
@@ -39,6 +40,13 @@ function CoachGiftsPage() {
   const [days, setDays] = useState(30);
   const [maxUses, setMaxUses] = useState(1);
   const [expires, setExpires] = useState("");
+  const [hubCode, setHubCode] = useState<string>("smart");
+
+  const { data: hubs } = useQuery({
+    queryKey: ["gift-hubs"],
+    queryFn: () => listHubs(),
+    enabled: !loading && isCoach,
+  });
 
   const { data: codes, isLoading } = useQuery({
     queryKey: ["smart-gift-codes"],
@@ -54,6 +62,7 @@ function CoachGiftsPage() {
           days,
           max_uses: maxUses,
           expires_at: expires ? new Date(expires).toISOString() : null,
+          hub_code: hubCode,
         },
       }),
     onSuccess: () => {
