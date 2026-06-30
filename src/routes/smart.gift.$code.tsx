@@ -56,15 +56,15 @@ function GiftRedeemPage() {
     (async () => {
       setBusy(true);
       try {
-        await redeem({ data: { code } });
+        const res = await redeem({ data: { code } });
         setRedeemed(true);
-        toast.success("Smart freigeschaltet — willkommen!");
-        navigate({ to: "/onboarding/smart" });
+        toast.success(`${info.hub_label ?? "Mitgliedschaft"} freigeschaltet — willkommen!`);
+        navigate({ to: res.hub_kind === "group" ? "/bulls" : "/onboarding/smart" });
       } catch (e: any) {
         const msg = e?.message ?? "";
-        // Bereits eingelöst / Code verbraucht → still ignorieren und zum Onboarding leiten
+        // Bereits eingelöst / Code verbraucht → still ignorieren und zum passenden Bereich leiten
         if (/bereits eingelöst|bereits ein/i.test(msg)) {
-          navigate({ to: "/onboarding/smart" });
+          navigate({ to: info.hub_kind === "group" ? "/bulls" : "/onboarding/smart" });
           return;
         }
         toast.error(msg || "Einlösen fehlgeschlagen");
