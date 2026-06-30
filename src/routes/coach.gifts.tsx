@@ -12,7 +12,15 @@ import {
   createGiftCode,
   deleteGiftCode,
   listGiftCodes,
+  listGiftHubs,
 } from "@/lib/smart-gifts.functions";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export const Route = createFileRoute("/coach/gifts")({
   head: () => ({ meta: [{ title: "Smart-Geschenklinks — Coach" }, { name: "robots", content: "noindex" }] }),
