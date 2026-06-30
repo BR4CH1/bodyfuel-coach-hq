@@ -304,7 +304,7 @@ export function hasBlockingWarnings(result: Pick<EngineResult, "warnings"> | nul
 }
 
 export function isUsableEngineResult(result: EngineResult | null | undefined): result is EngineResult {
-  return !!result && result.coverage >= 0.7 && !hasBlockingWarnings(result);
+  return !!result && result.coverage >= 0.6 && !hasBlockingWarnings(result);
 }
 
 /** Compute macros for a list of structured ingredients. */
