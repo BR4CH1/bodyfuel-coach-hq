@@ -922,6 +922,42 @@ export type Database = {
         }
         Relationships: []
       }
+      gift_hubs: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          group_name: string | null
+          is_active: boolean
+          kind: string
+          label: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          group_name?: string | null
+          is_active?: boolean
+          kind: string
+          label: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          group_name?: string | null
+          is_active?: boolean
+          kind?: string
+          label?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       guardian_consent_tokens: {
         Row: {
           consumed_at: string | null
@@ -2148,6 +2184,7 @@ export type Database = {
           created_by: string | null
           days: number
           expires_at: string | null
+          hub_code: string
           label: string | null
           max_uses: number
           uses: number
@@ -2158,6 +2195,7 @@ export type Database = {
           created_by?: string | null
           days?: number
           expires_at?: string | null
+          hub_code?: string
           label?: string | null
           max_uses?: number
           uses?: number
@@ -2168,11 +2206,20 @@ export type Database = {
           created_by?: string | null
           days?: number
           expires_at?: string | null
+          hub_code?: string
           label?: string | null
           max_uses?: number
           uses?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "smart_gift_codes_hub_code_fkey"
+            columns: ["hub_code"]
+            isOneToOne: false
+            referencedRelation: "gift_hubs"
+            referencedColumns: ["code"]
+          },
+        ]
       }
       smart_gift_redemptions: {
         Row: {

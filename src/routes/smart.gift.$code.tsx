@@ -56,15 +56,15 @@ function GiftRedeemPage() {
     (async () => {
       setBusy(true);
       try {
-        await redeem({ data: { code } });
+        const res = await redeem({ data: { code } });
         setRedeemed(true);
-        toast.success("Smart freigeschaltet — willkommen!");
-        navigate({ to: "/onboarding/smart" });
+        toast.success(`${info.hub_label ?? "Mitgliedschaft"} freigeschaltet — willkommen!`);
+        navigate({ to: res.hub_kind === "group" ? "/bulls" : "/onboarding/smart" });
       } catch (e: any) {
         const msg = e?.message ?? "";
-        // Bereits eingelöst / Code verbraucht → still ignorieren und zum Onboarding leiten
+        // Bereits eingelöst / Code verbraucht → still ignorieren und zum passenden Bereich leiten
         if (/bereits eingelöst|bereits ein/i.test(msg)) {
-          navigate({ to: "/onboarding/smart" });
+          navigate({ to: info.hub_kind === "group" ? "/bulls" : "/onboarding/smart" });
           return;
         }
         toast.error(msg || "Einlösen fehlgeschlagen");
@@ -101,10 +101,10 @@ function GiftRedeemPage() {
         toast.success("Bitte bestätige deine E-Mail und öffne den Link erneut.");
         return;
       }
-      await redeem({ data: { code } });
+      const res = await redeem({ data: { code } });
       setRedeemed(true);
-      toast.success("Smart freigeschaltet — willkommen!");
-      navigate({ to: "/onboarding/smart" });
+      toast.success(`${info?.valid ? info.hub_label : "Mitgliedschaft"} freigeschaltet — willkommen!`);
+      navigate({ to: res.hub_kind === "group" ? "/bulls" : "/onboarding/smart" });
     } catch (err: any) {
       const msg = /already registered|user already/i.test(err?.message ?? "")
         ? "Diese E-Mail ist bereits registriert. Bitte einloggen, dann öffne den Link erneut."
@@ -145,7 +145,7 @@ function GiftRedeemPage() {
         ) : (
           <>
             <h1 className="font-display text-2xl font-bold">
-              Glückwunsch — {info.days} Tage Smart geschenkt!
+              Glückwunsch — {info.days} Tage {info.hub_label} geschenkt!
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
               {info.label ? `${info.label} · ` : ""}Erstelle dir kostenlos einen Account und leg sofort los. Keine Zahlungsdaten nötig.
@@ -158,8 +158,8 @@ function GiftRedeemPage() {
                   onClick={async () => {
                     setBusy(true);
                     try {
-                      await redeem({ data: { code } });
-                      navigate({ to: "/onboarding/smart" });
+                      const res = await redeem({ data: { code } });
+                      navigate({ to: res.hub_kind === "group" ? "/bulls" : "/onboarding/smart" });
                     } catch (e: any) {
                       toast.error(e?.message ?? "Fehler");
                     } finally {

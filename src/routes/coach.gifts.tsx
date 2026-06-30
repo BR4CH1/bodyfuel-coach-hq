@@ -12,7 +12,15 @@ import {
   createGiftCode,
   deleteGiftCode,
   listGiftCodes,
+  listGiftHubs,
 } from "@/lib/smart-gifts.functions";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export const Route = createFileRoute("/coach/gifts")({
   head: () => ({ meta: [{ title: "Smart-Geschenklinks — Coach" }, { name: "robots", content: "noindex" }] }),
@@ -24,6 +32,7 @@ function CoachGiftsPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const list = useServerFn(listGiftCodes);
+  const listHubs = useServerFn(listGiftHubs);
   const create = useServerFn(createGiftCode);
   const remove = useServerFn(deleteGiftCode);
 
@@ -31,6 +40,13 @@ function CoachGiftsPage() {
   const [days, setDays] = useState(30);
   const [maxUses, setMaxUses] = useState(1);
   const [expires, setExpires] = useState("");
+  const [hubCode, setHubCode] = useState<string>("smart");
+
+  const { data: hubs } = useQuery({
+    queryKey: ["gift-hubs"],
+    queryFn: () => listHubs(),
+    enabled: !loading && isCoach,
+  });
 
   const { data: codes, isLoading } = useQuery({
     queryKey: ["smart-gift-codes"],
@@ -46,6 +62,7 @@ function CoachGiftsPage() {
           days,
           max_uses: maxUses,
           expires_at: expires ? new Date(expires).toISOString() : null,
+          hub_code: hubCode,
         },
       }),
     onSuccess: () => {
@@ -101,6 +118,25 @@ function CoachGiftsPage() {
       <div className="rounded-2xl border border-border bg-card p-5">
         <h2 className="font-display text-lg font-bold mb-4">Neuen Code erstellen</h2>
         <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label htmlFor="hub">Hub / Paket</Label>
+            <Select value={hubCode} onValueChange={setHubCode}>
+              <SelectTrigger id="hub">
+                <SelectValue placeholder="Hub wählen" />
+              </SelectTrigger>
+              <SelectContent>
+                {(hubs ?? []).map((h: any) => (
+                  <SelectItem key={h.code} value={h.code}>
+                    {h.label}
+                    {h.description ? ` — ${h.description}` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Empfänger registriert sich selbst und erhält für 0 € die gewählte Mitgliedschaft.
+            </p>
+          </div>
           <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="label">Bezeichnung (optional)</Label>
             <Input
@@ -171,6 +207,9 @@ function CoachGiftsPage() {
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <code className="rounded bg-muted px-2 py-0.5 font-mono text-sm font-bold">{c.code}</code>
+                        <span className="rounded-full bg-gold/15 text-gold px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+                          {c.gift_hubs?.label ?? c.hub_code ?? "Smart"}
+                        </span>
                         {c.label && <span className="text-sm text-muted-foreground truncate">{c.label}</span>}
                         {exhausted && <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] uppercase tracking-wide">Verbraucht</span>}
                         {expired && <span className="rounded-full bg-destructive/10 text-destructive px-2 py-0.5 text-[10px] uppercase tracking-wide">Abgelaufen</span>}
