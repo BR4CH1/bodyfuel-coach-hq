@@ -17,6 +17,22 @@ export type EngineIngredient = {
   name: string;          // raw name as written by the AI / user
   grams: number;         // canonical mass in grams (0 = ignore, e.g. water/spices)
   display?: string;      // optional pretty label (e.g. "3 Scheiben Vollkornbrot (100g)")
+  /** Optional stable slug (nutrition_foods.text_id). If set, used as primary key for lookup. */
+  food_id?: string | null;
+};
+
+export type LookupOptions = {
+  /** If true, only Smart-safe foods (safe_for_smart + is_active + verified_by_coach) are accepted. */
+  smartOnly?: boolean;
+};
+
+export type ComputeOptions = LookupOptions & {
+  /**
+   * If true, ingredients that cannot be resolved to a food row (with grams > 0)
+   * produce a BLOCKING warning and mark `has_unresolved = true`. Used by the
+   * Smart plan generator to force needs_review instead of silent 0-kcal rows.
+   */
+  requireResolvedIds?: boolean;
 };
 
 export type IngredientDebug = {
