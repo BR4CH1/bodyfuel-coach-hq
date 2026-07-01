@@ -533,7 +533,19 @@ function RealUserDashboard() {
 
       {supabaseUser && <AutopilotStatusCard userId={supabaseUser.id} />}
       {supabaseUser && <SmartAnalysisCTA />}
-      {supabaseUser && !hasActivePlan && <SmartRenewalCard />}
+      {supabaseUser && planUnderReview && (
+        <div className="rounded-2xl border border-gold/40 bg-gold/5 p-5">
+          <div className="text-xs uppercase tracking-[0.2em] text-gold">Smart Plan</div>
+          <div className="mt-1 font-display text-xl font-semibold">
+            Dein Smart Plan wird gerade geprüft.
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Wir prüfen gerade die Nährwerte, damit dein Plan korrekt ist. Du wirst
+            benachrichtigt, sobald er freigeschaltet ist.
+          </p>
+        </div>
+      )}
+      {supabaseUser && !hasActivePlan && !planUnderReview && <SmartRenewalCard />}
       {supabaseUser && <StrengthCheckStatus variant="block" />}
       {supabaseUser && <PackageExpiryBanner userId={supabaseUser.id} />}
       {supabaseUser && <DailyMacroSummary userId={supabaseUser.id} />}
