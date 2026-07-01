@@ -4,7 +4,7 @@ import { daysUntilNextShopping } from "./shopping-cycle";
 
 type MacroTarget = { kcal: number; protein_g: number; carbs_g: number; fat_g: number };
 type Slot = "breakfast" | "lunch" | "dinner" | "snack";
-type AiIngredient = { name: string; amount?: number; unit?: string; grams?: number };
+type AiIngredient = { name: string; amount?: number; unit?: string; grams?: number; food_id?: string; text_id?: string };
 type PersonMeal = {
   slot: Slot;
   name: string;
@@ -369,6 +369,12 @@ export const generatePartnerNutritionPlanDraft = createServerFn({ method: "POST"
 
     const mergedAllergies = Array.from(new Set([...a.allergies, ...b.allergies].map((s) => s.toLowerCase())));
     const mergedNogos = Array.from(new Set([...a.nogos, ...b.nogos].map((s) => s.toLowerCase())));
+    const forbidden = Array.from(new Set([...mergedAllergies, ...mergedNogos].map((s) => s.trim()).filter(Boolean)));
+    const filterMeals = (ms: PersonMeal[]) =>
+      ms.filter((m) => {
+        const hay = `${m.name} ${m.description ?? ""} ${JSON.stringify((m as any).ingredients ?? [])}`.toLowerCase();
+        return !forbidden.some((f) => hay.includes(f));
+      });
 
     const SHARED = (["breakfast", "lunch", "dinner", "snack"] as const)
       .filter((s) => sharedSlots[s])
@@ -473,6 +479,40 @@ Jede Mahlzeit MUSS aus dieser Erlaubt-Liste komponiert sein. Worte wie "gekocht/
         ? `\n💶 GEMEINSAMES WOCHEN-BUDGET vom Coach: ${combinedBudget} € / Woche (= ~${budgetForPeriod} € für diesen ${planDays}-Tage-Plan, Discounter-Preise DE). Plane Zutaten & Mengen für BEIDE Personen zusammen so, dass die gesamten Lebensmittelkosten dieses Budget NICHT überschreiten. Bevorzuge günstige Proteinquellen und Grundbeilagen; Premium-Zutaten sparsam.\n`
         : "";
 
+    // Geschlossener Lebensmittel-Katalog: Partner-Pläne dürfen keine freien
+    // Zutaten mehr erfinden. Die KI muss text_ids aus nutrition_foods verwenden;
+    // der Server berechnet anschließend ausschließlich gegen diesen Safe-Pool.
+    const { data: safePoolRows } = await supabase
+      .from("nutrition_foods")
+      .select("text_id,name,aliases")
+      .eq("safe_for_smart", true)
+      .eq("is_active", true)
+      .eq("verified_by_coach", true)
+      .order("name", { ascending: true })
+      .limit(600);
+    const safePool = ((safePoolRows as any[]) ?? [])
+      .filter((r) => r?.text_id && r?.name)
+      .map((r) => ({
+        text_id: String(r.text_id),
+        name: String(r.name),
+        aliases: Array.isArray(r.aliases) ? (r.aliases as string[]).slice(0, 4) : [],
+      }));
+    if (!safePool.length) {
+      throw new Error("Kein geprüfter Lebensmittel-Katalog verfügbar — Planerstellung abgebrochen.");
+    }
+    const safePoolPromptLines = safePool
+      .map((f) =>
+        f.aliases.length
+          ? `- ${f.text_id} | ${f.name} (aka ${f.aliases.slice(0, 3).join(", ")})`
+          : `- ${f.text_id} | ${f.name}`,
+      )
+      .join("\n");
+    const foodWhitelistBlock = `\n✅ GESCHLOSSENER LEBENSMITTEL-KATALOG (SAFE FOOD POOL — HART):
+Jede Zutat MUSS ein Feld "food_id" haben, dessen Wert exakt einer text_id aus dieser Liste entspricht. Keine anderen Lebensmittel — keine Synonyme außerhalb der Liste, keine Marken, keine Energy Bars/Proteinriegel/Fertiggerichte, wenn sie nicht als text_id in der Liste stehen. Wenn eine Wunsch-Zutat fehlt, wähle die nächstpassende text_id aus dieser Liste.
+
+Format je Zeile: text_id | Kanonischer Name (aka Alias1, Alias2)
+${safePoolPromptLines}\n`;
+
     const prompt = `Erstelle eine ${aiPlanDays}-Tage-Basiswoche für einen ${planDays}-Tage-Partner-Ernährungsplan für ZWEI Personen, die zusammen essen. Der Server wiederholt diese Basiswoche anschließend bis Tag ${planDays}; antworte deshalb NICHT mit ${planDays} Tagen, sondern exakt mit ${aiPlanDays} Basistagen.
 ${noCookBlock}
 
@@ -493,13 +533,111 @@ NO-GOS für gemeinsame Gerichte vermeiden: ${mergedNogos.join(", ") || "(keine)"
 VORLIEBEN ${a.name}: Lieblings ${[...a.favFoods, ...a.favoriteNames].slice(0, 8).join(", ") || "—"}; mag ${a.liked.slice(0, 6).join(", ") || "—"}; meiden ${[...a.disliked, ...a.skipNames].slice(0, 6).join(", ") || "—"}
 VORLIEBEN ${b.name}: Lieblings ${[...b.favFoods, ...b.favoriteNames].slice(0, 8).join(", ") || "—"}; mag ${b.liked.slice(0, 6).join(", ") || "—"}; meiden ${[...b.disliked, ...b.skipNames].slice(0, 6).join(", ") || "—"}
 ${wishesBlock}${budgetBlock}${equipmentBlock}
+${foodWhitelistBlock}
 ${a.plateauNote ? a.plateauNote + "\n" : ""}${b.plateauNote ? b.plateauNote + "\n" : ""}BASIS-TAGESPLAN:
 ${scheduleLines}
 
 Antworte AUSSCHLIESSLICH mit gültigem JSON:
-{"days":[{"type_a":"training","type_b":"rest","person_a":[{"slot":"breakfast","name":"...","description":"80g X, 200ml Y","ingredients":[{"name":"X","amount":80,"unit":"g"},{"name":"Y","amount":200,"unit":"ml"}],"kcal":0,"protein_g":0,"carbs_g":0,"fat_g":0}], "person_b":[...]}]}
+{"days":[{"type_a":"training","type_b":"rest","person_a":[{"slot":"breakfast","name":"...","description":"80g Haferflocken, 200g Skyr natur","ingredients":[{"food_id":"haferflocken","name":"Haferflocken","amount":80,"unit":"g"},{"food_id":"skyr_natur","name":"Skyr natur","amount":200,"unit":"g"}],"kcal":0,"protein_g":0,"carbs_g":0,"fat_g":0}], "person_b":[...]}]}
 Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/snack). Bei shared-Slots MUSS "name" zwischen person_a und person_b für denselben Slot am selben Tag identisch sein. "description" = NUR kommagetrennte Zutaten mit konkreten Mengen (g, ml, Stück, EL/TL). Niemals "Portion" oder "nach Geschmack".
-🧮 STRUKTURIERTE ZUTATEN SIND PFLICHT: Jede Mahlzeit braucht ein ingredients-Array mit allen Zutaten. Nährwerte dürfen 0 sein — der Server berechnet sie aus der Lebensmittel-DB, KI-Schätzungen werden ignoriert.`;
+🧮 STRUKTURIERTE ZUTATEN SIND PFLICHT — die Berechnung läuft ausschließlich über food_id + Gramm:
+- Jede Mahlzeit braucht ein ingredients-Array mit allen Zutaten.
+- Jede Zutat MUSS "food_id" enthalten — exakt eine text_id aus dem SAFE FOOD POOL oben. Keine Ausnahme.
+- Zusätzlich: "name", "amount", "unit" und bei Stück/Scheibe/EL/TL zusätzlich "grams" als Gesamtgewicht.
+- Nährwerte dürfen 0 sein — der Server berechnet sie deterministisch aus der Lebensmittel-DB, KI-Schätzungen werden ignoriert.
+- Wenn du eine Zutat verwendest, deren food_id NICHT im Katalog steht, wird der komplette Versuch verworfen und neu generiert.`;
+
+    const {
+      computeMealFromIngredients,
+      computeMealFromDescription,
+      coerceIngredients,
+      isUsableEngineResult,
+      parseDescriptionToEngineIngredients,
+    } = await import("./nutrition-engine.server");
+
+    const personA = (g: any): PersonMeal[] =>
+      (g?.person_a ?? g?.personA ?? g?.a ?? g?.meals_a ?? g?.user_a ?? g?.meals ?? []) as PersonMeal[];
+    const personB = (g: any): PersonMeal[] =>
+      (g?.person_b ?? g?.personB ?? g?.b ?? g?.meals_b ?? g?.user_b ?? []) as PersonMeal[];
+
+    async function buildCleanedDaysFor(
+      who: typeof a,
+      expandedDays: GeneratedDay[],
+      pickType: (i: number) => "training" | "rest",
+      pickMeals: (g: GeneratedDay) => PersonMeal[],
+    ): Promise<CleanedPartnerDay[]> {
+      const cleaned: CleanedPartnerDay[] = [];
+      const issues: string[] = [];
+
+      for (let dayIndex = 0; dayIndex < expandedDays.length; dayIndex++) {
+        const rawMeals = filterMeals(pickMeals(expandedDays[dayIndex]));
+        const slots = new Set(rawMeals.map((m) => m.slot));
+        for (const required of ["breakfast", "lunch", "dinner"] as const) {
+          if (!slots.has(required)) {
+            issues.push(`${who.name}, Tag ${dayIndex + 1}: ${slotLabel(required)} fehlt oder wurde wegen No-Go/Allergie entfernt`);
+          }
+        }
+
+        const meals: ComputedPersonMeal[] = [];
+        for (let mealIdx = 0; mealIdx < rawMeals.length; mealIdx++) {
+          const m = rawMeals[mealIdx];
+          const structured = coerceIngredients((m as any).ingredients ?? null);
+          const ingredientsForMath = structured.length
+            ? structured
+            : parseDescriptionToEngineIngredients(m.description ?? null);
+          const computed = structured.length
+            ? await computeMealFromIngredients(supabase, structured, { smartOnly: true, requireResolvedIds: true })
+            : await computeMealFromDescription(supabase, m.description ?? null, { smartOnly: true, requireResolvedIds: true });
+
+          if (!isUsableEngineResult(computed)) {
+            const unresolved = ((computed as any)?.unresolved_ingredients ?? [])
+              .map((u: any) => `${u.name}${u.food_id ? ` (food_id="${u.food_id}")` : ""}`)
+              .join(", ");
+            const warnings = Array.isArray((computed as any)?.warnings) ? (computed as any).warnings.join(" | ") : "";
+            issues.push(
+              `${who.name}, Tag ${dayIndex + 1}, Mahlzeit ${mealIdx + 1} (${m.name}): ${unresolved || warnings || "nicht aus Safe-Pool berechenbar"}`,
+            );
+            continue;
+          }
+
+          meals.push({
+            ...m,
+            ingredients: ingredientsForMath,
+            kcal: computed.kcal,
+            protein_g: computed.protein_g,
+            carbs_g: computed.carbs_g,
+            fat_g: computed.fat_g,
+            _compute_warnings: computed.warnings,
+            _data_source: computed.data_source,
+            _verified_ratio: computed.coverage,
+          } as ComputedPersonMeal);
+        }
+
+        cleaned.push({
+          name: `${schedule[dayIndex].label} — ${pickType(dayIndex) === "rest" ? "Restday" : "Trainingstag"}`,
+          meals,
+          type: pickType(dayIndex),
+        });
+      }
+
+      if (issues.length) {
+        const err = new Error(issues.slice(0, 12).join("; ")) as Error & { issues?: string[] };
+        err.issues = issues;
+        throw err;
+      }
+      return cleaned;
+    }
+
+    async function prepareGeneratedDays(baseDays: GeneratedDay[]): Promise<{
+      days: GeneratedDay[];
+      aCleaned: CleanedPartnerDay[];
+      bCleaned: CleanedPartnerDay[];
+    }> {
+      const expandedDays = expandPartnerGeneratedDays(baseDays, schedule, planDays);
+      const aCleaned = await buildCleanedDaysFor(a, expandedDays, (i) => schedule[i].type_a, (g) => personA(g));
+      const bCleaned = await buildCleanedDaysFor(b, expandedDays, (i) => schedule[i].type_b, (g) => personB(g));
+      return { days: expandedDays, aCleaned, bCleaned };
+    }
 
     // Robust: bis zu 3 Versuche. Gemini-2.5-flash liefert im JSON-Modus
     // gelegentlich einen leeren String zurück (Reasoning-Budget verbraucht,
@@ -510,7 +648,9 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
       ((g?.person_b ?? g?.personB ?? g?.b ?? g?.meals_b ?? g?.user_b ?? []).length);
 
     let generatedDays: GeneratedDay[] = [];
+    let prepared: Awaited<ReturnType<typeof prepareGeneratedDays>> | null = null;
     let lastRawSample = "";
+    let correctionNote = "";
     const attempts: Array<{ model: string; extra: string }> = [
       { model: "google/gemini-2.5-flash", extra: "" },
       { model: "google/gemini-2.5-flash", extra: "\n\nWICHTIG: Antworte SOFORT mit dem JSON — keine leere Antwort, kein Fließtext, kein Kommentar. Wenn du unsicher bist, verwende Standard-Zutaten aus der Erlaubt-Liste." },
@@ -525,7 +665,7 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
         body: JSON.stringify({
           model,
           response_format: { type: "json_object" },
-          messages: [{ role: "user", content: prompt + extra }],
+          messages: [{ role: "user", content: prompt + extra + correctionNote }],
         }),
       });
       if (aiRes.status === 429) throw new Error("Rate-Limit erreicht.");
@@ -552,8 +692,20 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
         }));
       const totalMeals = candidate.reduce((s: number, g: any) => s + countMeals(g), 0);
       if (candidate.length && totalMeals > 0) {
-        generatedDays = candidate;
-        break;
+        try {
+          prepared = await prepareGeneratedDays(candidate);
+          generatedDays = candidate;
+          break;
+        } catch (e: any) {
+          const issues = Array.isArray(e?.issues) ? e.issues : [e?.message ?? "unbekannter Fehler"];
+          console.warn(
+            `[partner-plan] attempt ${att + 1}/${attempts.length} failed safe-pool validation (model=${model}).`,
+            issues.slice(0, 8),
+          );
+          const uniqueBad = Array.from(new Set(issues.map((x: string) => String(x)))).slice(0, 20);
+          correctionNote = `\n\n⚠️ RETRY-KORREKTUR: Der vorherige Versuch enthielt Zutaten/Mahlzeiten, die NICHT eindeutig aus dem SAFE FOOD POOL berechenbar waren oder wegen No-Go/Allergie entfernt wurden:\n- ${uniqueBad.join("\n- ")}\n\nGeneriere den Plan komplett neu. Verwende AUSSCHLIESSLICH food_id-Werte aus dem SAFE FOOD POOL. Ersetze Energy Bar/Proteinriegel/Fertigprodukte durch konkrete Katalog-Zutaten, sofern kein passender food_id existiert.`;
+          continue;
+        }
       }
       console.warn(
         `[partner-plan] attempt ${att + 1}/${attempts.length} unusable (days=${candidate.length}, meals=${totalMeals}, model=${model}). sample=`,
@@ -561,20 +713,11 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
       );
     }
 
-    if (!generatedDays.length) {
+    if (!generatedDays.length || !prepared) {
       throw new Error(
-        "Die KI hat keinen Plan geliefert (mehrfach leere Antwort). Bitte in 30 Sekunden erneut versuchen.",
+        "Der Partner-Plan konnte nicht sauber aus vorhandenen Datenbank-Lebensmitteln erstellt werden. Bitte erneut versuchen oder den Lebensmittel-Katalog erweitern.",
       );
     }
-
-    const days = expandPartnerGeneratedDays(generatedDays, schedule, planDays);
-
-    const forbidden = mergedAllergies; // never tolerate, for anybody
-    const filterMeals = (ms: PersonMeal[]) =>
-      ms.filter((m) => {
-        const hay = `${m.name} ${m.description ?? ""}`.toLowerCase();
-        return !forbidden.some((f) => hay.includes(f));
-      });
 
     // Archive existing pending plans for both users.
     await supabase
@@ -588,77 +731,11 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
     const end = new Date(start);
     end.setDate(end.getDate() + planDays - 1);
 
-    const {
-      computeMealFromIngredients,
-      computeMealFromDescription,
-      coerceIngredients,
-      isUsableEngineResult,
-      parseDescriptionToEngineIngredients,
-    } = await import("./nutrition-engine.server");
-
     async function insertPlanFor(
       who: typeof a,
       clientId: string,
-      pickType: (i: number) => "training" | "rest",
-      pickMeals: (g: GeneratedDay) => PersonMeal[],
+      cleanedDays: CleanedPartnerDay[],
     ): Promise<{ planId: string; dayIds: string[]; mealsByDay: ComputedPersonMeal[][] }> {
-      const baseCache = new Map<string, Promise<ComputedPersonMeal[]>>();
-      const computeMealsForDay = async (
-        rawMeals: PersonMeal[],
-        dayIndex: number,
-      ): Promise<ComputedPersonMeal[]> => {
-        const slots = new Set(rawMeals.map((m) => m.slot));
-        for (const required of ["breakfast", "lunch", "dinner"] as const) {
-          if (!slots.has(required)) {
-            throw new Error(`Partner-Plan unvollständig: ${who.name}, Tag ${dayIndex + 1}: ${slotLabel(required)} fehlt.`);
-          }
-        }
-        return await Promise.all(rawMeals.map(async (m, mealIdx) => {
-          const structured = coerceIngredients((m as any).ingredients ?? null);
-          const ingredientsForMath = structured.length
-            ? structured
-            : parseDescriptionToEngineIngredients(m.description ?? null);
-          const computed = structured.length
-            ? await computeMealFromIngredients(supabase, structured)
-            : await computeMealFromDescription(supabase, m.description ?? null);
-          if (!isUsableEngineResult(computed)) {
-            const warnings = Array.isArray((computed as any)?.warnings) ? (computed as any).warnings.join(" | ") : "";
-            throw new Error(
-              `Nährwerte im Partner-Plan nicht zuverlässig berechenbar (${who.name}, Tag ${dayIndex + 1}, Mahlzeit ${mealIdx + 1}: ${m.name}). ${warnings}`,
-            );
-          }
-          return {
-            ...m,
-            ingredients: ingredientsForMath,
-            kcal: computed.kcal,
-            protein_g: computed.protein_g,
-            carbs_g: computed.carbs_g,
-            fat_g: computed.fat_g,
-            _compute_warnings: computed.warnings,
-            _data_source: computed.data_source,
-            _verified_ratio: computed.coverage,
-          } as ComputedPersonMeal;
-        }));
-      };
-
-      const cleanedDays: CleanedPartnerDay[] = [];
-      for (let i = 0; i < days.length; i++) {
-        const g = days[i];
-        const type = pickType(i);
-        const rawMeals = filterMeals(pickMeals(g));
-        const cacheKey = `${clientId}:${type}:${JSON.stringify(rawMeals)}`;
-        let cached = baseCache.get(cacheKey);
-        if (!cached) {
-          cached = computeMealsForDay(rawMeals, i);
-          baseCache.set(cacheKey, cached);
-        }
-        const ms = (await cached).map(cloneComputedPersonMeal);
-        cleanedDays.push({
-          name: `${schedule[i].label} — ${type === "rest" ? "Restday" : "Trainingstag"}`,
-          meals: ms,
-          type,
-        });
-      }
       const sums = cleanedDays.reduce(
         (acc, d) => {
           for (const m of d.meals) {
@@ -713,13 +790,8 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
       return { planId: planRow.id, dayIds, mealsByDay };
     }
 
-    const personA = (g: any): PersonMeal[] =>
-      (g?.person_a ?? g?.personA ?? g?.a ?? g?.meals_a ?? g?.user_a ?? g?.meals ?? []) as PersonMeal[];
-    const personB = (g: any): PersonMeal[] =>
-      (g?.person_b ?? g?.personB ?? g?.b ?? g?.meals_b ?? g?.user_b ?? []) as PersonMeal[];
-
-    const A = await insertPlanFor(a, data.user_a, (i) => schedule[i].type_a, (g) => personA(g));
-    const B = await insertPlanFor(b, data.user_b, (i) => schedule[i].type_b, (g) => personB(g));
+    const A = await insertPlanFor(a, data.user_a, prepared.aCleaned);
+    const B = await insertPlanFor(b, data.user_b, prepared.bCleaned);
 
     // Insert meals; capture IDs to link shared pairs.
     const insertMealsFor = async (
