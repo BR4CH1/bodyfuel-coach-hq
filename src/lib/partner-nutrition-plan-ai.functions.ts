@@ -501,44 +501,72 @@ Antworte AUSSCHLIESSLICH mit gültigem JSON:
 Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/snack). Bei shared-Slots MUSS "name" zwischen person_a und person_b für denselben Slot am selben Tag identisch sein. "description" = NUR kommagetrennte Zutaten mit konkreten Mengen (g, ml, Stück, EL/TL). Niemals "Portion" oder "nach Geschmack".
 🧮 STRUKTURIERTE ZUTATEN SIND PFLICHT: Jede Mahlzeit braucht ein ingredients-Array mit allen Zutaten. Nährwerte dürfen 0 sein — der Server berechnet sie aus der Lebensmittel-DB, KI-Schätzungen werden ignoriert.`;
 
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        response_format: { type: "json_object" },
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
-    if (aiRes.status === 429) throw new Error("Rate-Limit erreicht.");
-    if (aiRes.status === 402) throw new Error("Guthaben aufgebraucht.");
-    if (!aiRes.ok) throw new Error(`Fehler [${aiRes.status}]`);
-    const raw = (await aiRes.json())?.choices?.[0]?.message?.content ?? "{}";
-    let parsed: { days?: GeneratedDay[] } = {};
-    try {
-      parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
-    } catch {
-      throw new Error("Antwort konnte nicht gelesen werden.");
-    }
-    const generatedDays = (parsed.days ?? [])
-      .slice(0, aiPlanDays)
-      .map((d: GeneratedDay, i: number): GeneratedDay => ({
-        ...d,
-        type_a: aiSchedule[i]?.type_a ?? d.type_a,
-        type_b: aiSchedule[i]?.type_b ?? d.type_b,
-      }));
-    if (!generatedDays.length) {
-      console.error("[partner-plan] AI returned no days. raw=", raw);
-      throw new Error("Keine Tage generiert.");
-    }
+    // Robust: bis zu 3 Versuche. Gemini-2.5-flash liefert im JSON-Modus
+    // gelegentlich einen leeren String zurück (Reasoning-Budget verbraucht,
+    // aber kein Content). In dem Fall retry und schließlich auf Pro-Modell
+    // wechseln, statt den Coach mit „Keine Mahlzeiten geliefert" abzuwürgen.
     const countMeals = (g: any) =>
       ((g?.person_a ?? g?.personA ?? g?.a ?? g?.meals_a ?? g?.user_a ?? g?.meals ?? []).length) +
       ((g?.person_b ?? g?.personB ?? g?.b ?? g?.meals_b ?? g?.user_b ?? []).length);
-    const totalMealsReturned = generatedDays.reduce((s: number, g: any) => s + countMeals(g), 0);
-    if (totalMealsReturned === 0) {
-      console.error("[partner-plan] AI returned 0 meals across all days. raw=", raw);
-      throw new Error("Keine Mahlzeiten geliefert. Bitte erneut versuchen.");
+
+    let generatedDays: GeneratedDay[] = [];
+    let lastRawSample = "";
+    const attempts: Array<{ model: string; extra: string }> = [
+      { model: "google/gemini-2.5-flash", extra: "" },
+      { model: "google/gemini-2.5-flash", extra: "\n\nWICHTIG: Antworte SOFORT mit dem JSON — keine leere Antwort, kein Fließtext, kein Kommentar. Wenn du unsicher bist, verwende Standard-Zutaten aus der Erlaubt-Liste." },
+      { model: "google/gemini-2.5-pro", extra: "\n\nWICHTIG: Antworte SOFORT mit dem vollständigen JSON gemäß Schema. Keine leere Antwort." },
+    ];
+
+    for (let att = 0; att < attempts.length; att++) {
+      const { model, extra } = attempts[att];
+      const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
+        body: JSON.stringify({
+          model,
+          response_format: { type: "json_object" },
+          messages: [{ role: "user", content: prompt + extra }],
+        }),
+      });
+      if (aiRes.status === 429) throw new Error("Rate-Limit erreicht.");
+      if (aiRes.status === 402) throw new Error("Guthaben aufgebraucht.");
+      if (!aiRes.ok) {
+        if (att === attempts.length - 1) throw new Error(`Fehler [${aiRes.status}]`);
+        continue;
+      }
+      const raw = (await aiRes.json())?.choices?.[0]?.message?.content ?? "{}";
+      lastRawSample = typeof raw === "string" ? raw.slice(0, 300) : JSON.stringify(raw).slice(0, 300);
+      let parsed: { days?: GeneratedDay[] } = {};
+      try {
+        parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+      } catch {
+        console.warn(`[partner-plan] attempt ${att + 1}/${attempts.length}: JSON parse failed. sample=`, lastRawSample);
+        continue;
+      }
+      const candidate = (parsed.days ?? [])
+        .slice(0, aiPlanDays)
+        .map((d: GeneratedDay, i: number): GeneratedDay => ({
+          ...d,
+          type_a: aiSchedule[i]?.type_a ?? d.type_a,
+          type_b: aiSchedule[i]?.type_b ?? d.type_b,
+        }));
+      const totalMeals = candidate.reduce((s: number, g: any) => s + countMeals(g), 0);
+      if (candidate.length && totalMeals > 0) {
+        generatedDays = candidate;
+        break;
+      }
+      console.warn(
+        `[partner-plan] attempt ${att + 1}/${attempts.length} unusable (days=${candidate.length}, meals=${totalMeals}, model=${model}). sample=`,
+        lastRawSample,
+      );
     }
+
+    if (!generatedDays.length) {
+      throw new Error(
+        "Die KI hat keinen Plan geliefert (mehrfach leere Antwort). Bitte in 30 Sekunden erneut versuchen.",
+      );
+    }
+
     const days = expandPartnerGeneratedDays(generatedDays, schedule, planDays);
 
     const forbidden = mergedAllergies; // never tolerate, for anybody
