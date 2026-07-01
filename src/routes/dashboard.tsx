@@ -418,14 +418,17 @@ function RealUserDashboard() {
       setTrainedToday((tCount ?? 0) > 0);
 
       // Prüfe ob aktiver Plan existiert (Ernährung oder Training)
-      const { data: activePlan } = await supabase
+      const { data: planRows } = await supabase
         .from("nutrition_plans")
-        .select("id")
+        .select("id, status")
         .eq("client_id", supabaseUser.id)
-        .eq("status", "active")
-        .limit(1)
-        .maybeSingle();
-      setHasActivePlan(!!activePlan);
+        .in("status", ["active", "needs_review"]);
+      const rows = (planRows as { id: string; status: string }[] | null) ?? [];
+      setHasActivePlan(rows.some((r) => r.status === "active"));
+      setPlanUnderReview(
+        rows.some((r) => r.status === "needs_review") &&
+          !rows.some((r) => r.status === "active"),
+      );
 
       setLoading(false);
     })();
