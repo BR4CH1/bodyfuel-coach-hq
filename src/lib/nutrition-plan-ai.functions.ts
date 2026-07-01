@@ -544,17 +544,40 @@ Die Kalorien-/Makro-Ziele sind auf aktuelles Gewicht, Wunschgewicht und Training
       ? `\n💶 WOCHEN-BUDGET vom Coach: ${weeklyBudget} € / Woche → für diesen ${planDays}-Tage-Plan max. ~${budgetPerPeriod} € an Lebensmittelkosten (Discounter-Preise DE). Wähle Zutaten & Mengen so, dass die Gesamteinkaufskosten dieses Budget NICHT überschreiten. Bevorzuge saisonale/günstige Proteinquellen (Hähnchenbrust, Quark, Eier, Hülsenfrüchte, Thunfisch i. W., Hackfleisch), Grundbeilagen (Reis, Haferflocken, Kartoffeln, Nudeln) und tiefgekühltes Gemüse. Premium-Zutaten (Lachs, Rindersteak, Avocado, Nüsse) sparsam einsetzen.`
       : "";
 
-    const { data: foodRows } = await supabase
+    // ---------- Safe Food Pool (geschlossener Katalog für Smart) ----------
+    // Ausschließlich Lebensmittel mit safe_for_smart + is_active + verified_by_coach.
+    // Die KI darf NUR text_ids aus dieser Liste in ingredients[].food_id verwenden.
+    const { data: safePoolRows } = await supabase
       .from("nutrition_foods")
-      .select("name")
-      .eq("needs_review", false)
+      .select("text_id,name,aliases")
+      .eq("safe_for_smart", true)
+      .eq("is_active", true)
+      .eq("verified_by_coach", true)
       .order("name", { ascending: true })
-      .limit(350);
-    const foodWhitelist = Array.from(
-      new Set(((foodRows as any[]) ?? []).map((f) => String(f.name ?? "").trim()).filter(Boolean)),
-    ).join(", ");
-    const foodWhitelistBlock = foodWhitelist
-      ? `\n✅ ZUTATEN-WHITELIST FÜR SICHERE BERECHNUNG (HART): Verwende in ingredients.name AUSSCHLIESSLICH diese Lebensmittel-Namen. Wenn ein Wunsch-Lebensmittel nicht exakt in der Liste steht, wähle die nächstpassende Alternative aus dieser Liste. Keine neuen Fantasie-Zutaten erzeugen.\n${foodWhitelist}\n`
+      .limit(600);
+    const safePool = ((safePoolRows as any[]) ?? [])
+      .filter((r) => r?.text_id && r?.name)
+      .map((r) => ({
+        text_id: String(r.text_id),
+        name: String(r.name),
+        aliases: Array.isArray(r.aliases) ? (r.aliases as string[]).slice(0, 4) : [],
+      }));
+    const safePoolTextIds = new Set(safePool.map((f) => f.text_id));
+    // Für den Prompt kompakt formatieren (text_id + kanonischer Name + wichtigste Aliase).
+    const safePoolPromptLines = safePool
+      .map((f) =>
+        f.aliases.length
+          ? `- ${f.text_id} | ${f.name} (aka ${f.aliases.slice(0, 3).join(", ")})`
+          : `- ${f.text_id} | ${f.name}`,
+      )
+      .join("\n");
+    const foodWhitelistBlock = safePoolPromptLines
+      ? `\n✅ GESCHLOSSENER LEBENSMITTEL-KATALOG (SAFE FOOD POOL — HART):
+Jede Zutat MUSS ein Feld "food_id" haben, dessen Wert exakt einer text_id aus dieser Liste entspricht. Keine anderen Lebensmittel — auch keine ähnlichen Synonyme, keine Marken, keine Freitext-Neuerfindungen. Wenn eine Wunsch-Zutat fehlt, wähle die nächstpassende text_id aus dieser Liste.
+
+Format je Zeile: text_id | Kanonischer Name (aka Alias1, Alias2)
+${safePoolPromptLines}
+`
       : "";
 
     const prompt = `Erstelle eine ${aiPlanDays}-Tage-Basiswoche für einen ${planDays}-Tage-Ernährungsplan. PFLICHT pro Tag: genau 1 Frühstück (slot:"breakfast"), 1 Mittagessen (slot:"lunch"), 1 Abendessen (slot:"dinner") + mindestens 1 Snack (slot:"snack"). Diese 3 Hauptmahlzeiten sind NICHT optional — fehlt eine, ist der Plan ungültig. Der Server wiederholt passende Training-/Restday-Basistage anschließend bis Tag ${planDays}; antworte deshalb NICHT mit ${planDays} Tagen, sondern exakt mit ${aiPlanDays} Basistagen.
