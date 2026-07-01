@@ -933,23 +933,26 @@ WICHTIG zu name/description:
       }
     }
 
-    // Auto-generate shopping list for this draft so the customer sees it under "Nächste Einkaufsliste".
-    try {
-      const { generateShoppingListForPlan } = await import("./shopping-list-engine.server");
-      await generateShoppingListForPlan({
-        supabase,
-        apiKey,
-        planId: planRow.id,
-        windowDays: planDays,
-      });
-    } catch (e) {
-      // Non-fatal: list can be generated on demand from the UI.
-      console.warn("Auto shopping list failed:", e);
+    // Auto-generate shopping list — nur bei einem sauber aufgelösten Plan.
+    // needs_review-Pläne bekommen KEINE Einkaufsliste, da Zutaten unklar sind.
+    if (!hasUnresolved) {
+      try {
+        const { generateShoppingListForPlan } = await import("./shopping-list-engine.server");
+        await generateShoppingListForPlan({
+          supabase,
+          apiKey,
+          planId: planRow.id,
+          windowDays: planDays,
+        });
+      } catch (e) {
+        // Non-fatal: list can be generated on demand from the UI.
+        console.warn("Auto shopping list failed:", e);
+      }
     }
 
     // Only mark wishes as consumed when the AI actually used them in the plan;
     // unused wishes stay pending so they roll into the next plan.
-    if (approvedWishIds.length) {
+    if (approvedWishIds.length && !hasUnresolved) {
       const haystack = cleaned
         .flatMap((d) => d.meals.map((m: ComputedGeneratedMeal) => `${m.name} ${m.description ?? ""}`))
         .join(" | ")
@@ -969,13 +972,39 @@ WICHTIG zu name/description:
       }
     }
 
-
-
+    // Coach-Alert für needs_review-Pläne (unabhängig vom individuellen Coach).
+    // Wir schreiben eine coach_task_state-Zeile pro Coach, damit sie im Dashboard auftaucht.
+    if (hasUnresolved) {
+      try {
+        const uniqueBad = Array.from(
+          new Set(lastUnresolved.map((u) => `${u.meal}: „${u.name}"${u.food_id ? ` (food_id="${u.food_id}")` : ""}`)),
+        ).slice(0, 15);
+        const note = `Smart-Plan ${planRow.id} wurde als NEEDS_REVIEW gespeichert. Zutaten ohne eindeutige food_id im Safe-Pool:\n- ${uniqueBad.join("\n- ")}`;
+        const { data: coachRoles } = await supabase
+          .from("user_roles")
+          .select("user_id")
+          .eq("role", "coach");
+        const rows = ((coachRoles as any[] | null) ?? []).map((r) => ({
+          coach_id: r.user_id,
+          task_key: `plan_needs_review:${planRow.id}`,
+          note,
+        }));
+        if (rows.length) {
+          await supabase.from("coach_task_state").upsert(rows, { onConflict: "coach_id,task_key" });
+        }
+      } catch (e) {
+        console.warn("coach_task_state alert failed:", e);
+      }
+    }
 
     return {
       ok: true,
       plan_id: planRow.id,
-      status: "draft",
+      status: planStatus,
+      needs_review: hasUnresolved,
+      unresolved: hasUnresolved
+        ? lastUnresolved.slice(0, 20).map((u) => ({ meal: u.meal, name: u.name, food_id: u.food_id }))
+        : [],
       days: cleaned.length,
       meals: cleaned.reduce((s, d) => s + d.meals.length, 0),
       avg_kcal: avgKcal,
