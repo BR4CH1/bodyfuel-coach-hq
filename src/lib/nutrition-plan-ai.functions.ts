@@ -631,72 +631,6 @@ WICHTIG zu name/description:
 
 
 
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        response_format: { type: "json_object" },
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
-    if (aiRes.status === 429) throw new Error("Rate-Limit erreicht — bitte gleich nochmal versuchen.");
-    if (aiRes.status === 402) throw new Error("Guthaben aufgebraucht — bitte aufladen.");
-    if (!aiRes.ok) {
-      const txt = await aiRes.text();
-      throw new Error(`Fehler [${aiRes.status}]: ${txt.slice(0, 200)}`);
-    }
-    const aiJson = await aiRes.json();
-    const raw = aiJson?.choices?.[0]?.message?.content ?? "{}";
-    let parsed: { days?: GeneratedDay[] } = {};
-    try {
-      parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
-    } catch {
-      throw new Error("Antwort konnte nicht gelesen werden.");
-    }
-    const generatedDays = (parsed.days ?? [])
-      .slice(0, aiPlanDays)
-      .map((d: GeneratedDay, i: number): GeneratedDay => ({ ...d, type: aiSchedule[i]?.type ?? d.type }));
-    if (!generatedDays.length) throw new Error("Keine Tage generiert.");
-    const days: GeneratedDay[] = expandGeneratedDays(generatedDays, schedule, planDays);
-
-    // Hard filter + authoritative day type from `schedule`.
-    // Wichtig: Makros werden ab hier ausschließlich aus Zutaten + Food-DB
-    // berechnet. KI-Werte werden nicht mehr skaliert oder übernommen.
-    const forbidden = [...expandedAllergies, ...expandedNogo]
-      .map((s) => s.toLowerCase().trim())
-      .filter(Boolean);
-    const rawDays: RawPlanDay[] = days.map((d: GeneratedDay, i: number): RawPlanDay => {
-      const s = schedule[i] ?? schedule[schedule.length - 1];
-      const typeLabel = s.type === "rest" ? "Restday" : "Trainingstag";
-      const name = `${s.wkLabel} — ${typeLabel}`;
-      const allowedMeals = (d.meals ?? []).filter((m: GeneratedMeal) => {
-        const hay = `${m.name} ${m.description ?? ""} ${JSON.stringify((m as any).ingredients ?? [])}`.toLowerCase();
-        return !containsForbiddenFood(hay, forbidden);
-      });
-      return {
-        name,
-        type: s.type,
-        target: s.type === "rest" ? restTargets : trainingTargets,
-        meals: allowedMeals,
-      };
-    });
-
-    const repairedRawDays = rawDays.map((d: RawPlanDay): RawPlanDay => ({
-      ...d,
-      meals: ensureRequiredMealSlots(d.meals, d.type, d.target, forbidden, isNoCook),
-    }));
-
-    const missingRequired = repairedRawDays.flatMap((d: RawPlanDay, idx: number) => {
-      const slots = new Set(d.meals.map((m: GeneratedMeal) => m.slot));
-      return (["breakfast", "lunch", "dinner"] as const)
-        .filter((slot) => !slots.has(slot))
-        .map((slot) => `Tag ${idx + 1}: ${labelForSlot(slot)} fehlt`);
-    });
-    if (missingRequired.length) {
-      throw new Error(`Plan unvollständig: ${missingRequired.slice(0, 6).join("; ")}. Bitte erneut generieren.`);
-    }
-
     const {
       computeMealFromIngredients,
       computeMealFromDescription,
@@ -705,83 +639,183 @@ WICHTIG zu name/description:
       parseDescriptionToEngineIngredients,
     } = await import("./nutrition-engine.server");
 
-    const baseCache = new Map<string, Promise<ComputedGeneratedMeal[]>>();
-    const computeDayMeals = async (d: RawPlanDay, dayIdx: number): Promise<ComputedGeneratedMeal[]> => {
-      const computed = await Promise.all(d.meals.map(async (m: GeneratedMeal, mealIdx: number) => {
-        const structured = coerceIngredients((m as any).ingredients ?? null);
-        const ingredientsForMath = structured.length
-          ? structured
-          : parseDescriptionToEngineIngredients(m.description ?? null);
-        const result = structured.length
-          ? await computeMealFromIngredients(supabase, structured)
-          : await computeMealFromDescription(supabase, m.description ?? null);
+    const forbidden = [...expandedAllergies, ...expandedNogo]
+      .map((s) => s.toLowerCase().trim())
+      .filter(Boolean);
 
-        if (!isUsableEngineResult(result)) {
-          const resultAny: any = result;
-          const warningList: string[] = Array.isArray(resultAny?.warnings) ? resultAny.warnings : [];
-          const warnings = warningList.length ? ` Hinweise: ${warningList.join(" | ")}` : "";
-          throw new Error(
-            `Nährwerte nicht zuverlässig berechenbar (${d.name}, Mahlzeit ${mealIdx + 1}: ${m.name}).${warnings} Bitte Lebensmittel-DB ergänzen oder Plan erneut generieren.`,
-          );
-        }
+    async function runAiAttempt(correctionNote: string): Promise<GeneratedDay[]> {
+      const finalPrompt = correctionNote ? `${prompt}\n\n${correctionNote}` : prompt;
+      const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          response_format: { type: "json_object" },
+          messages: [{ role: "user", content: finalPrompt }],
+        }),
+      });
+      if (aiRes.status === 429) throw new Error("Rate-Limit erreicht — bitte gleich nochmal versuchen.");
+      if (aiRes.status === 402) throw new Error("Guthaben aufgebraucht — bitte aufladen.");
+      if (!aiRes.ok) {
+        const txt = await aiRes.text();
+        throw new Error(`Fehler [${aiRes.status}]: ${txt.slice(0, 200)}`);
+      }
+      const aiJson = await aiRes.json();
+      const raw = aiJson?.choices?.[0]?.message?.content ?? "{}";
+      let parsed: { days?: GeneratedDay[] } = {};
+      try {
+        parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+      } catch {
+        throw new Error("Antwort konnte nicht gelesen werden.");
+      }
+      const generatedDays = (parsed.days ?? [])
+        .slice(0, aiPlanDays)
+        .map((d: GeneratedDay, i: number): GeneratedDay => ({ ...d, type: aiSchedule[i]?.type ?? d.type }));
+      if (!generatedDays.length) throw new Error("Keine Tage generiert.");
+      return generatedDays;
+    }
 
+    // Auto-Repair-Schleife: bis zu 2 Retries, falls die KI food_ids liefert,
+    // die nicht im Safe-Pool sind. Beim Retry bekommt die KI eine konkrete
+    // Fehlerliste + die Anweisung, ausschließlich text_ids aus dem Pool zu nutzen.
+    const MAX_ATTEMPTS = 3;
+    let lastCleaned: CleanedPlanDay[] | null = null;
+    let lastUnresolved: Array<{ day: string; meal: string; name: string; food_id: string | null }> = [];
+    let correctionNote = "";
+
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      const generatedDays = await runAiAttempt(correctionNote);
+      const days: GeneratedDay[] = expandGeneratedDays(generatedDays, schedule, planDays);
+
+      const rawDays: RawPlanDay[] = days.map((d: GeneratedDay, i: number): RawPlanDay => {
+        const s = schedule[i] ?? schedule[schedule.length - 1];
+        const typeLabel = s.type === "rest" ? "Restday" : "Trainingstag";
+        const name = `${s.wkLabel} — ${typeLabel}`;
+        const allowedMeals = (d.meals ?? []).filter((m: GeneratedMeal) => {
+          const hay = `${m.name} ${m.description ?? ""} ${JSON.stringify((m as any).ingredients ?? [])}`.toLowerCase();
+          return !containsForbiddenFood(hay, forbidden);
+        });
         return {
-          ...m,
-          ingredients: ingredientsForMath,
-          kcal: result.kcal,
-          protein_g: result.protein_g,
-          carbs_g: result.carbs_g,
-          fat_g: result.fat_g,
-          _compute_warnings: result.warnings,
-          _data_source: result.data_source,
-          _verified_ratio: result.coverage,
-        } as ComputedGeneratedMeal;
+          name,
+          type: s.type,
+          target: s.type === "rest" ? restTargets : trainingTargets,
+          meals: allowedMeals,
+        };
+      });
+
+      const repairedRawDays = rawDays.map((d: RawPlanDay): RawPlanDay => ({
+        ...d,
+        meals: ensureRequiredMealSlots(d.meals, d.type, d.target, forbidden, isNoCook),
       }));
 
-      let capped = splitOversizedMeals(computed);
-      const daySums = capped.reduce(
-        (acc: MacroTarget, meal: ComputedGeneratedMeal) => ({
-          kcal: acc.kcal + (Number(meal.kcal) || 0),
-          protein_g: acc.protein_g + (Number(meal.protein_g) || 0),
-          carbs_g: acc.carbs_g + (Number(meal.carbs_g) || 0),
-          fat_g: acc.fat_g + (Number(meal.fat_g) || 0),
-        }),
-        { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0 },
-      );
-      capped = await addDeterministicCorrectionSnacks(capped, d.target, daySums, supabase, computeMealFromIngredients, isUsableEngineResult, forbidden);
-      const finalSums = capped.reduce(
-        (acc: MacroTarget, meal: ComputedGeneratedMeal) => ({
-          kcal: acc.kcal + (Number(meal.kcal) || 0),
-          protein_g: acc.protein_g + (Number(meal.protein_g) || 0),
-          carbs_g: acc.carbs_g + (Number(meal.carbs_g) || 0),
-          fat_g: acc.fat_g + (Number(meal.fat_g) || 0),
-        }),
-        { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0 },
-      );
-      const kcalDiff = Math.abs(finalSums.kcal - d.target.kcal) / Math.max(1, d.target.kcal);
-      const macroOff =
-        Math.abs(finalSums.protein_g - d.target.protein_g) > 20 ||
-        Math.abs(finalSums.carbs_g - d.target.carbs_g) > 30 ||
-        Math.abs(finalSums.fat_g - d.target.fat_g) > 20;
-      if (kcalDiff > 0.15 || macroOff) {
-        console.warn("Nutrition plan target deviation", {
-          day: dayIdx + 1,
-          target: d.target,
-          actual: finalSums,
-        });
+      const missingRequired = repairedRawDays.flatMap((d: RawPlanDay, idx: number) => {
+        const slots = new Set(d.meals.map((m: GeneratedMeal) => m.slot));
+        return (["breakfast", "lunch", "dinner"] as const)
+          .filter((slot) => !slots.has(slot))
+          .map((slot) => `Tag ${idx + 1}: ${labelForSlot(slot)} fehlt`);
+      });
+      if (missingRequired.length && attempt >= MAX_ATTEMPTS) {
+        throw new Error(`Plan unvollständig: ${missingRequired.slice(0, 6).join("; ")}.`);
       }
-      return capped;
-    };
-    const cleaned: CleanedPlanDay[] = await Promise.all(repairedRawDays.map(async (d: RawPlanDay, dayIdx: number): Promise<CleanedPlanDay> => {
-      const cacheKey = `${d.type}:${JSON.stringify(d.meals)}`;
-      let cached = baseCache.get(cacheKey);
-      if (!cached) {
-        cached = computeDayMeals(d, dayIdx);
-        baseCache.set(cacheKey, cached);
+      if (missingRequired.length) {
+        correctionNote = `⚠️ RETRY (${attempt}/${MAX_ATTEMPTS - 1}): Es fehlten Pflicht-Mahlzeiten: ${missingRequired.join("; ")}. Bitte JETZT wirklich für JEDEN Basistag Frühstück + Mittag + Abend + mind. 1 Snack liefern.`;
+        continue;
       }
-      const meals = (await cached).map(cloneComputedMealForExpandedDay);
-      return { name: d.name, type: d.type, meals };
-    }));
+
+      // ---- Compute meals in tolerant mode (Smart-Pool + resolved-ID pflicht) ----
+      const attemptUnresolved: typeof lastUnresolved = [];
+      const baseCache = new Map<string, Promise<ComputedGeneratedMeal[]>>();
+
+      const computeDayMeals = async (d: RawPlanDay, dayIdx: number): Promise<ComputedGeneratedMeal[]> => {
+        const computed = await Promise.all(d.meals.map(async (m: GeneratedMeal) => {
+          const structured = coerceIngredients((m as any).ingredients ?? null);
+          const ingredientsForMath = structured.length
+            ? structured
+            : parseDescriptionToEngineIngredients(m.description ?? null);
+          const result = structured.length
+            ? await computeMealFromIngredients(supabase, structured, { smartOnly: true, requireResolvedIds: true })
+            : await computeMealFromDescription(supabase, m.description ?? null, { smartOnly: true, requireResolvedIds: true });
+
+          const unresolved = (result?.unresolved_ingredients ?? []) as Array<{ name: string; food_id?: string | null; grams: number }>;
+          for (const u of unresolved) {
+            attemptUnresolved.push({ day: d.name, meal: m.name, name: u.name, food_id: u.food_id ?? null });
+          }
+
+          const usable = isUsableEngineResult(result);
+          const kcal = usable ? result!.kcal : 0;
+          const protein_g = usable ? result!.protein_g : 0;
+          const carbs_g = usable ? result!.carbs_g : 0;
+          const fat_g = usable ? result!.fat_g : 0;
+
+          return {
+            ...m,
+            ingredients: ingredientsForMath,
+            kcal,
+            protein_g,
+            carbs_g,
+            fat_g,
+            _compute_warnings: result?.warnings ?? [],
+            _data_source: result?.data_source ?? "ai_estimate",
+            _verified_ratio: result?.coverage ?? 0,
+          } as ComputedGeneratedMeal;
+        }));
+
+        let capped = splitOversizedMeals(computed);
+        const daySums = capped.reduce(
+          (acc: MacroTarget, meal: ComputedGeneratedMeal) => ({
+            kcal: acc.kcal + (Number(meal.kcal) || 0),
+            protein_g: acc.protein_g + (Number(meal.protein_g) || 0),
+            carbs_g: acc.carbs_g + (Number(meal.carbs_g) || 0),
+            fat_g: acc.fat_g + (Number(meal.fat_g) || 0),
+          }),
+          { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0 },
+        );
+        capped = await addDeterministicCorrectionSnacks(capped, d.target, daySums, supabase, computeMealFromIngredients, isUsableEngineResult, forbidden);
+        const finalSums = capped.reduce(
+          (acc: MacroTarget, meal: ComputedGeneratedMeal) => ({
+            kcal: acc.kcal + (Number(meal.kcal) || 0),
+            protein_g: acc.protein_g + (Number(meal.protein_g) || 0),
+            carbs_g: acc.carbs_g + (Number(meal.carbs_g) || 0),
+            fat_g: acc.fat_g + (Number(meal.fat_g) || 0),
+          }),
+          { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0 },
+        );
+        const kcalDiff = Math.abs(finalSums.kcal - d.target.kcal) / Math.max(1, d.target.kcal);
+        const macroOff =
+          Math.abs(finalSums.protein_g - d.target.protein_g) > 20 ||
+          Math.abs(finalSums.carbs_g - d.target.carbs_g) > 30 ||
+          Math.abs(finalSums.fat_g - d.target.fat_g) > 20;
+        if (kcalDiff > 0.15 || macroOff) {
+          console.warn("Nutrition plan target deviation", { day: dayIdx + 1, target: d.target, actual: finalSums });
+        }
+        return capped;
+      };
+
+      const cleaned: CleanedPlanDay[] = await Promise.all(repairedRawDays.map(async (d: RawPlanDay, dayIdx: number): Promise<CleanedPlanDay> => {
+        const cacheKey = `${d.type}:${JSON.stringify(d.meals)}`;
+        let cached = baseCache.get(cacheKey);
+        if (!cached) {
+          cached = computeDayMeals(d, dayIdx);
+          baseCache.set(cacheKey, cached);
+        }
+        const meals = (await cached).map(cloneComputedMealForExpandedDay);
+        return { name: d.name, type: d.type, meals };
+      }));
+
+      lastCleaned = cleaned;
+      lastUnresolved = attemptUnresolved;
+
+      if (attemptUnresolved.length === 0) break;
+
+      if (attempt < MAX_ATTEMPTS) {
+        const uniqueBad = Array.from(new Set(attemptUnresolved.map((u) => `${u.name}${u.food_id ? ` (food_id="${u.food_id}")` : ""}`))).slice(0, 20);
+        correctionNote = `⚠️ RETRY ${attempt}/${MAX_ATTEMPTS - 1}: Folgende Zutaten waren im vorherigen Versuch NICHT im geschlossenen Lebensmittel-Katalog:\n- ${uniqueBad.join("\n- ")}\n\nBitte generiere den Plan komplett neu und verwende AUSSCHLIESSLICH text_ids aus dem SAFE FOOD POOL oben. Jede Zutat MUSS ein Feld "food_id" mit einer text_id aus der Liste haben. Wähle die nächstpassende Alternative für die oben genannten Zutaten.`;
+      }
+    }
+
+    const cleaned = lastCleaned!;
+    const hasUnresolved = lastUnresolved.length > 0;
+
 
 
 
