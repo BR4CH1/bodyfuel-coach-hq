@@ -719,8 +719,6 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
       );
     }
 
-    const days = prepared.days;
-
     // Archive existing pending plans for both users.
     await supabase
       .from("nutrition_plans")
