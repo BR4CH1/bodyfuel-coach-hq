@@ -610,15 +610,17 @@ ${prepHint} ${budgetHint}
 
 
 Antworte AUSSCHLIESSLICH mit gültigem JSON in folgender Form:
-{"days":[{"name":"Tag 1","type":"training","meals":[{"slot":"breakfast","name":"Overnight Oats","description":"80g Haferflocken, 250ml Milch 1,5%, 150g Skyr natur, 100g Beeren gemischt, 15g Chia-Samen, 15g Mandeln","ingredients":[{"name":"Haferflocken","amount":80,"unit":"g"},{"name":"Milch 1,5%","amount":250,"unit":"ml","grams":250},{"name":"Skyr natur","amount":150,"unit":"g"},{"name":"Beeren gemischt","amount":100,"unit":"g"},{"name":"Chia-Samen","amount":15,"unit":"g"},{"name":"Mandeln","amount":15,"unit":"g"}],"kcal":0,"protein_g":0,"carbs_g":0,"fat_g":0}]}]}
+{"days":[{"name":"Tag 1","type":"training","meals":[{"slot":"breakfast","name":"Overnight Oats","description":"80g Haferflocken, 250ml Milch 1,5%, 150g Skyr natur, 100g Beeren gemischt, 15g Chia-Samen, 15g Mandeln","ingredients":[{"food_id":"haferflocken","name":"Haferflocken","amount":80,"unit":"g"},{"food_id":"milch_1_5","name":"Milch 1,5%","amount":250,"unit":"ml","grams":250},{"food_id":"skyr_natur","name":"Skyr natur","amount":150,"unit":"g"},{"food_id":"beeren_gemischt","name":"Beeren gemischt","amount":100,"unit":"g"},{"food_id":"chia_samen","name":"Chia-Samen","amount":15,"unit":"g"},{"food_id":"mandeln","name":"Mandeln","amount":15,"unit":"g"}],"kcal":0,"protein_g":0,"carbs_g":0,"fat_g":0}]}]}
 
-🧮 STRUKTURIERTE ZUTATEN SIND PFLICHT — die Berechnung läuft NICHT über den Description-Text:
+🧮 STRUKTURIERTE ZUTATEN SIND PFLICHT — die Berechnung läuft ausschließlich über food_id + Gramm:
 - Jede Mahlzeit MUSS ein "ingredients"-Array enthalten, mit JEDER einzelnen Zutat aus der Description.
-- Für "ingredients[].name" NUR Namen aus der Zutaten-Whitelist verwenden — exakt so geschrieben wie in der Liste.
-- Jede Zutat braucht "name" + numerisches "amount" + "unit" (g, ml, EL, TL, Stück). Bei Stück/Scheibe/EL/TL MUSS zusätzlich das Gewicht in Gramm angegeben werden, z. B. {"name":"Vollkornbrot","amount":100,"unit":"g","grams":100}.
-- "amount" + "unit" müssen genau zur Mengenangabe im Description-Text passen. Beispiel: Description „3 Scheiben Vollkornbrot (100g)" → ingredient {"name":"Vollkornbrot","amount":100,"unit":"g"}.
-- Nährwerte ("kcal","protein_g","carbs_g","fat_g") darfst du auf 0 setzen — sie werden vom Server aus den Zutaten neu berechnet. Schätze NIEMALS selbst.
-- Wasser, Gewürze, Salz, Pfeffer, Zimt: in "ingredients" mit amount:0 oder unit:"prise" angeben (zählen nicht in die Makros).
+- Jede Zutat MUSS ein Feld "food_id" haben — der Wert ist eine text_id aus dem GESCHLOSSENEN LEBENSMITTEL-KATALOG oben. Keine Ausnahme.
+- Zusätzlich: "name" (Anzeige-Name, darf der kanonische Name sein), "amount" (Zahl) und "unit" (g, ml, EL, TL, Stück). Bei Stück/Scheibe/EL/TL MUSS zusätzlich "grams" mit dem Gesamtgewicht angegeben werden.
+- "amount" + "unit" müssen genau zur Mengenangabe im Description-Text passen.
+- Nährwerte ("kcal","protein_g","carbs_g","fat_g") IMMER auf 0 setzen — der Server berechnet sie deterministisch aus food_id + Gramm. Schätze NIEMALS selbst.
+- Wasser, Gewürze, Salz, Pfeffer, Zimt: in "ingredients" mit amount:0 oder unit:"prise" angeben (zählen nicht in die Makros). food_id ist trotzdem Pflicht, sofern im Katalog vorhanden — sonst weglassen.
+
+❌ Wenn du eine Zutat verwendest, deren food_id NICHT im Katalog steht, wird die gesamte Mahlzeit verworfen und ggf. der Plan zur Coach-Prüfung markiert.
 
 Genau ${aiPlanDays} Basistage in der vorgegebenen Reihenfolge, mindestens 4 Mahlzeiten pro Tag (Frühstück, Mittag, Abend, Snack), bei Bedarf zusätzliche Snacks ergänzen. KEINE Mahlzeit über 850 kcal. Jeder Tag MUSS ein Feld "type" mit "training" ODER "rest" enthalten (passend zum Basis-Tagesplan oben). Tagessummen müssen die jeweiligen Ziele treffen.
 
