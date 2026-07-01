@@ -217,14 +217,37 @@ export const getCoachRadar = createServerFn({ method: "GET" })
     );
 
     type PlanEnd = { end: string | null; status: string };
+    type PlanReview = {
+      id: string;
+      title: string | null;
+      start: string | null;
+      end: string | null;
+    };
     const nutritionPlanByUser = new Map<string, PlanEnd>();
     const trainingPlanByUser = new Map<string, PlanEnd>();
     const nutritionQueued = new Set<string>();
     const trainingQueued = new Set<string>();
+    const nutritionReviewByUser = new Map<string, PlanReview>();
+    const trainingReviewByUser = new Map<string, PlanReview>();
     ((plans as any).data ?? []).forEach((p: any) => {
       const isTraining = p.plan_type === "training";
       const map = isTraining ? trainingPlanByUser : nutritionPlanByUser;
       const queuedSet = isTraining ? trainingQueued : nutritionQueued;
+      const reviewMap = isTraining ? trainingReviewByUser : nutritionReviewByUser;
+      if (p.status === "needs_review") {
+        // Treat as queued so we don't fire a "no active plan" alert
+        // while a plan is waiting for coach review.
+        queuedSet.add(p.client_id);
+        if (!reviewMap.has(p.client_id)) {
+          reviewMap.set(p.client_id, {
+            id: p.id,
+            title: p.title ?? null,
+            start: p.scheduled_start_date ?? null,
+            end: p.scheduled_end_date ?? null,
+          });
+        }
+        return;
+      }
       if (p.status === "approved" || p.status === "draft") {
         queuedSet.add(p.client_id);
       }
@@ -235,6 +258,28 @@ export const getCoachRadar = createServerFn({ method: "GET" })
         map.set(p.client_id, { end: p.scheduled_end_date ?? null, status: p.status });
       }
     });
+
+    // Load review notes written by the plan generator so we can surface
+    // "which ingredient failed" details on the coach task.
+    const reviewNoteByPlanId = new Map<string, string>();
+    const reviewPlanIds = [
+      ...Array.from(nutritionReviewByUser.values()).map((v) => v.id),
+      ...Array.from(trainingReviewByUser.values()).map((v) => v.id),
+    ];
+    if (reviewPlanIds.length) {
+      const { data: notes } = await supabase
+        .from("coach_task_state")
+        .select("task_key, note")
+        .eq("coach_id", userId)
+        .in(
+          "task_key",
+          reviewPlanIds.map((id) => `plan_needs_review:${id}`),
+        );
+      ((notes as any[] | null) ?? []).forEach((n) => {
+        const planId = String(n.task_key).replace(/^plan_needs_review:/, "");
+        if (n.note) reviewNoteByPlanId.set(planId, String(n.note));
+      });
+    }
 
     const lastTraining = new Map<string, number>();
     ((sets as any).data ?? []).forEach((s: any) => {
