@@ -352,13 +352,25 @@ export function isUsableEngineResult(result: EngineResult | null | undefined): r
   return !!result && result.coverage >= 0.6 && !hasBlockingWarnings(result);
 }
 
+/** Strict variant for Smart plans: every weighted ingredient must resolve to a food row. */
+export function isFullyResolvedResult(result: EngineResult | null | undefined): result is EngineResult {
+  return (
+    !!result &&
+    (result.unresolved_ingredients?.length ?? 0) === 0 &&
+    !hasBlockingWarnings(result) &&
+    result.coverage >= 0.98
+  );
+}
+
 /** Compute macros for a list of structured ingredients. */
 export async function computeMealFromIngredients(
   supabase: any,
   ingredients: EngineIngredient[],
+  opts: ComputeOptions = {},
 ): Promise<EngineResult> {
   const debug: IngredientDebug[] = [];
   const warnings: string[] = [];
+  const unresolved: EngineResult["unresolved_ingredients"] = [];
   let kcal = 0, p = 0, c = 0, f = 0;
   let totalGrams = 0, matchedGrams = 0;
   let anyMatched = false;
@@ -376,12 +388,22 @@ export async function computeMealFromIngredients(
       continue;
     }
 
-    const food = await lookupFood(supabase, ing.name);
+    // Resolve: prefer explicit food_id (text_id) → deterministic. Fallback to fuzzy name lookup.
+    let food: FoodRow | null = null;
+    if (ing.food_id) {
+      food = await lookupFoodByTextId(supabase, ing.food_id, { smartOnly: opts.smartOnly });
+    }
+    if (!food) {
+      food = await lookupFood(supabase, ing.name, { smartOnly: opts.smartOnly });
+    }
     totalGrams += grams;
     if (!food) {
       anyMissed = true;
-      const blocking = isBlockingMissingIngredient(ing);
-      const w = `${blocking ? BLOCKING_WARNING_PREFIX + " " : ""}Zutat nicht in DB gefunden: „${ing.name}" (${grams} g) — Nährwerte ignoriert.`;
+      unresolved.push({ name: ing.name, food_id: ing.food_id ?? null, grams });
+      const isBlocking = opts.requireResolvedIds || isBlockingMissingIngredient(ing);
+      const prefix = isBlocking ? BLOCKING_WARNING_PREFIX + " " : "";
+      const idInfo = ing.food_id ? ` [food_id="${ing.food_id}" nicht im ${opts.smartOnly ? "Safe-Pool" : "Katalog"}]` : "";
+      const w = `${prefix}Zutat nicht in DB gefunden: „${ing.name}"${idInfo} (${grams} g) — Nährwerte ignoriert.`;
       warnings.push(w);
       debug.push({
         input: ing, matched_food: null, grams_used: grams,
