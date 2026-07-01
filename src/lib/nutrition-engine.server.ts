@@ -17,6 +17,22 @@ export type EngineIngredient = {
   name: string;          // raw name as written by the AI / user
   grams: number;         // canonical mass in grams (0 = ignore, e.g. water/spices)
   display?: string;      // optional pretty label (e.g. "3 Scheiben Vollkornbrot (100g)")
+  /** Optional stable slug (nutrition_foods.text_id). If set, used as primary key for lookup. */
+  food_id?: string | null;
+};
+
+export type LookupOptions = {
+  /** If true, only Smart-safe foods (safe_for_smart + is_active + verified_by_coach) are accepted. */
+  smartOnly?: boolean;
+};
+
+export type ComputeOptions = LookupOptions & {
+  /**
+   * If true, ingredients that cannot be resolved to a food row (with grams > 0)
+   * produce a BLOCKING warning and mark `has_unresolved = true`. Used by the
+   * Smart plan generator to force needs_review instead of silent 0-kcal rows.
+   */
+  requireResolvedIds?: boolean;
 };
 
 export type IngredientDebug = {
@@ -39,18 +55,23 @@ export type EngineResult = {
   data_source: "db_verified" | "db_mixed" | "ai_estimate";
   warnings: string[];
   debug: IngredientDebug[];
+  /** Names/food_ids of ingredients (grams > 0) that could NOT be resolved to a food row. */
+  unresolved_ingredients: Array<{ name: string; food_id?: string | null; grams: number }>;
 };
 
 // ---------- Food lookup ----------
 
 type FoodRow = {
   id: string;
+  text_id?: string | null;
   name: string;
   kcal_per_100g: number;
   protein_per_100g: number;
   carbs_per_100g: number;
   fat_per_100g: number;
   verified_by_coach: boolean;
+  is_active?: boolean | null;
+  safe_for_smart?: boolean | null;
   source: string;
   aliases: string[] | null;
   default_state?: string | null;
@@ -230,10 +251,34 @@ function rowMatchScore(row: FoodRow, safe: string, rawName: string): number {
   return score;
 }
 
+const FOOD_SELECT =
+  "id,text_id,name,kcal_per_100g,protein_per_100g,carbs_per_100g,fat_per_100g,verified_by_coach,is_active,safe_for_smart,source,aliases,default_state,unit_type";
+
+function applySmartFilter<Q extends { eq: (col: string, val: any) => Q }>(q: Q, smartOnly?: boolean): Q {
+  if (!smartOnly) return q;
+  return q.eq("safe_for_smart", true).eq("is_active", true).eq("verified_by_coach", true);
+}
+
+/** Direct lookup by stable text_id / slug. Fastest path — no fuzzy matching. */
+export async function lookupFoodByTextId(
+  supabase: any,
+  textId: string,
+  opts: LookupOptions = {},
+): Promise<FoodRow | null> {
+  const id = String(textId ?? "").trim().toLowerCase();
+  if (!id) return null;
+  let q = supabase.from("nutrition_foods").select(FOOD_SELECT).eq("text_id", id).limit(1);
+  q = applySmartFilter(q, opts.smartOnly);
+  const { data, error } = await q;
+  if (error || !data?.length) return null;
+  return data[0] as FoodRow;
+}
+
 /** Try a sequence of progressively shorter probes against name + aliases. */
 export async function lookupFood(
   supabase: any,
   rawName: string,
+  opts: LookupOptions = {},
 ): Promise<FoodRow | null> {
   const norm = normalize(rawName);
   const toks = tokens(rawName);
@@ -254,13 +299,13 @@ export async function lookupFood(
   for (const probe of probes) {
     const safe = probe.replace(/[,()%{}]/g, "").slice(0, 60);
     if (!safe) continue;
-    const { data, error } = await supabase
+    let q = supabase
       .from("nutrition_foods")
-      .select(
-        "id,name,kcal_per_100g,protein_per_100g,carbs_per_100g,fat_per_100g,verified_by_coach,source,aliases,default_state,unit_type",
-      )
+      .select(FOOD_SELECT)
       .or(`name.ilike.%${safe}%,aliases.cs.{${safe}}`)
       .limit(15);
+    q = applySmartFilter(q, opts.smartOnly);
+    const { data, error } = await q;
     if (error || !data?.length) continue;
 
     const rows = (data as FoodRow[]).filter((r) => {
@@ -307,13 +352,25 @@ export function isUsableEngineResult(result: EngineResult | null | undefined): r
   return !!result && result.coverage >= 0.6 && !hasBlockingWarnings(result);
 }
 
+/** Strict variant for Smart plans: every weighted ingredient must resolve to a food row. */
+export function isFullyResolvedResult(result: EngineResult | null | undefined): result is EngineResult {
+  return (
+    !!result &&
+    (result.unresolved_ingredients?.length ?? 0) === 0 &&
+    !hasBlockingWarnings(result) &&
+    result.coverage >= 0.98
+  );
+}
+
 /** Compute macros for a list of structured ingredients. */
 export async function computeMealFromIngredients(
   supabase: any,
   ingredients: EngineIngredient[],
+  opts: ComputeOptions = {},
 ): Promise<EngineResult> {
   const debug: IngredientDebug[] = [];
   const warnings: string[] = [];
+  const unresolved: EngineResult["unresolved_ingredients"] = [];
   let kcal = 0, p = 0, c = 0, f = 0;
   let totalGrams = 0, matchedGrams = 0;
   let anyMatched = false;
@@ -331,12 +388,22 @@ export async function computeMealFromIngredients(
       continue;
     }
 
-    const food = await lookupFood(supabase, ing.name);
+    // Resolve: prefer explicit food_id (text_id) → deterministic. Fallback to fuzzy name lookup.
+    let food: FoodRow | null = null;
+    if (ing.food_id) {
+      food = await lookupFoodByTextId(supabase, ing.food_id, { smartOnly: opts.smartOnly });
+    }
+    if (!food) {
+      food = await lookupFood(supabase, ing.name, { smartOnly: opts.smartOnly });
+    }
     totalGrams += grams;
     if (!food) {
       anyMissed = true;
-      const blocking = isBlockingMissingIngredient(ing);
-      const w = `${blocking ? BLOCKING_WARNING_PREFIX + " " : ""}Zutat nicht in DB gefunden: „${ing.name}" (${grams} g) — Nährwerte ignoriert.`;
+      unresolved.push({ name: ing.name, food_id: ing.food_id ?? null, grams });
+      const isBlocking = opts.requireResolvedIds || isBlockingMissingIngredient(ing);
+      const prefix = isBlocking ? BLOCKING_WARNING_PREFIX + " " : "";
+      const idInfo = ing.food_id ? ` [food_id="${ing.food_id}" nicht im ${opts.smartOnly ? "Safe-Pool" : "Katalog"}]` : "";
+      const w = `${prefix}Zutat nicht in DB gefunden: „${ing.name}"${idInfo} (${grams} g) — Nährwerte ignoriert.`;
       warnings.push(w);
       debug.push({
         input: ing, matched_food: null, grams_used: grams,
@@ -402,6 +469,7 @@ export async function computeMealFromIngredients(
     data_source,
     warnings,
     debug,
+    unresolved_ingredients: unresolved,
   };
 }
 
@@ -546,10 +614,11 @@ export function parseDescriptionToEngineIngredients(description: string | null |
 export async function computeMealFromDescription(
   supabase: any,
   description: string | null | undefined,
+  opts: ComputeOptions = {},
 ): Promise<EngineResult | null> {
   const ingredients = parseDescriptionToEngineIngredients(description);
   if (!ingredients.length) return null;
-  return computeMealFromIngredients(supabase, ingredients);
+  return computeMealFromIngredients(supabase, ingredients, opts);
 }
 
 function round1(n: number): number {
@@ -580,10 +649,13 @@ export function coerceIngredients(raw: unknown): EngineIngredient[] {
       else if (u === "prise" || u === "prisen") grams = 0; // spices ignored
       else grams = 0; // unknown unit → ignore for math
     }
+    const foodIdRaw = (r as any).food_id ?? (r as any).text_id ?? (r as any).id;
+    const food_id = typeof foodIdRaw === "string" && foodIdRaw.trim() ? foodIdRaw.trim().toLowerCase() : null;
     out.push({
       name,
       grams: Math.max(0, Math.round(grams)),
       display: typeof r.display === "string" ? r.display : undefined,
+      food_id,
     });
   }
   return out;

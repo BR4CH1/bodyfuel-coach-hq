@@ -1234,6 +1234,7 @@ export type Database = {
           fat_per_100g: number
           fiber_per_100g: number | null
           id: string
+          is_active: boolean
           kcal_per_100g: number
           license: string | null
           name: string
@@ -1241,11 +1242,13 @@ export type Database = {
           notes: string | null
           protein_per_100g: number
           review_reason: string | null
+          safe_for_smart: boolean
           salt_per_100g: number | null
           source: Database["public"]["Enums"]["nutrition_food_source"]
           source_id: string | null
           source_name: string | null
           sugar_per_100g: number | null
+          text_id: string
           unit_type: Database["public"]["Enums"]["nutrition_food_unit"]
           updated_at: string
           verified_at: string | null
@@ -1264,6 +1267,7 @@ export type Database = {
           fat_per_100g?: number
           fiber_per_100g?: number | null
           id?: string
+          is_active?: boolean
           kcal_per_100g: number
           license?: string | null
           name: string
@@ -1271,11 +1275,13 @@ export type Database = {
           notes?: string | null
           protein_per_100g?: number
           review_reason?: string | null
+          safe_for_smart?: boolean
           salt_per_100g?: number | null
           source?: Database["public"]["Enums"]["nutrition_food_source"]
           source_id?: string | null
           source_name?: string | null
           sugar_per_100g?: number | null
+          text_id: string
           unit_type?: Database["public"]["Enums"]["nutrition_food_unit"]
           updated_at?: string
           verified_at?: string | null
@@ -1294,6 +1300,7 @@ export type Database = {
           fat_per_100g?: number
           fiber_per_100g?: number | null
           id?: string
+          is_active?: boolean
           kcal_per_100g?: number
           license?: string | null
           name?: string
@@ -1301,11 +1308,13 @@ export type Database = {
           notes?: string | null
           protein_per_100g?: number
           review_reason?: string | null
+          safe_for_smart?: boolean
           salt_per_100g?: number | null
           source?: Database["public"]["Enums"]["nutrition_food_source"]
           source_id?: string | null
           source_name?: string | null
           sugar_per_100g?: number | null
+          text_id?: string
           unit_type?: Database["public"]["Enums"]["nutrition_food_unit"]
           updated_at?: string
           verified_at?: string | null
@@ -3102,6 +3111,7 @@ export type Database = {
         }
         Returns: number
       }
+      nutrition_foods_slugify: { Args: { _name: string }; Returns: string }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
