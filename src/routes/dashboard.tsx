@@ -333,6 +333,7 @@ function RealUserDashboard() {
   }>({ total: 0, daily: 0, perf: 0, streak: 0, longest: 0, level: 1 });
   const [loading, setLoading] = useState(true);
   const [hasActivePlan, setHasActivePlan] = useState(false);
+  const [planUnderReview, setPlanUnderReview] = useState(false);
 
   const todayStr = new Date().toISOString().slice(0, 10);
 
@@ -417,14 +418,17 @@ function RealUserDashboard() {
       setTrainedToday((tCount ?? 0) > 0);
 
       // Prüfe ob aktiver Plan existiert (Ernährung oder Training)
-      const { data: activePlan } = await supabase
+      const { data: planRows } = await supabase
         .from("nutrition_plans")
-        .select("id")
+        .select("id, status")
         .eq("client_id", supabaseUser.id)
-        .eq("status", "active")
-        .limit(1)
-        .maybeSingle();
-      setHasActivePlan(!!activePlan);
+        .in("status", ["active", "needs_review"]);
+      const rows = (planRows as { id: string; status: string }[] | null) ?? [];
+      setHasActivePlan(rows.some((r) => r.status === "active"));
+      setPlanUnderReview(
+        rows.some((r) => r.status === "needs_review") &&
+          !rows.some((r) => r.status === "active"),
+      );
 
       setLoading(false);
     })();
@@ -529,7 +533,19 @@ function RealUserDashboard() {
 
       {supabaseUser && <AutopilotStatusCard userId={supabaseUser.id} />}
       {supabaseUser && <SmartAnalysisCTA />}
-      {supabaseUser && !hasActivePlan && <SmartRenewalCard />}
+      {supabaseUser && planUnderReview && (
+        <div className="rounded-2xl border border-gold/40 bg-gold/5 p-5">
+          <div className="text-xs uppercase tracking-[0.2em] text-gold">Smart Plan</div>
+          <div className="mt-1 font-display text-xl font-semibold">
+            Dein Smart Plan wird gerade geprüft.
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Wir prüfen gerade die Nährwerte, damit dein Plan korrekt ist. Du wirst
+            benachrichtigt, sobald er freigeschaltet ist.
+          </p>
+        </div>
+      )}
+      {supabaseUser && !hasActivePlan && !planUnderReview && <SmartRenewalCard />}
       {supabaseUser && <StrengthCheckStatus variant="block" />}
       {supabaseUser && <PackageExpiryBanner userId={supabaseUser.id} />}
       {supabaseUser && <DailyMacroSummary userId={supabaseUser.id} />}

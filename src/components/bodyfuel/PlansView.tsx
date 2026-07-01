@@ -81,18 +81,23 @@ export function PlansView({
       return;
     }
     setLoading(true);
-    supabase
+    let query = supabase
       .from("nutrition_plans")
       .select("*")
       .eq("client_id", effectiveClientId)
-      .eq("plan_type", planType)
+      .eq("plan_type", planType);
+    if (!isCoach) {
+      // Kunden sehen keine Pläne, die noch geprüft werden müssen.
+      query = query.neq("status", "needs_review");
+    }
+    query
       .order("created_at", { ascending: false })
       .then(({ data, error }) => {
         if (error) toast.error(error.message);
         setPlans((data as Plan[]) ?? []);
         setLoading(false);
       });
-  }, [effectiveClientId, planType]);
+  }, [effectiveClientId, planType, isCoach]);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
