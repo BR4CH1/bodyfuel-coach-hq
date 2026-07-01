@@ -449,6 +449,36 @@ export const getCoachRadar = createServerFn({ method: "GET" })
         }
       }
 
+      // ----- PLAN REVIEW (needs_review) -----
+      const reviewChecks: Array<["nutrition" | "training", PlanReview | undefined]> = [
+        ["nutrition", nutritionReviewByUser.get(p.id)],
+        ["training", trainingReviewByUser.get(p.id)],
+      ];
+      for (const [kind, review] of reviewChecks) {
+        if (!review) continue;
+        const label = kind === "nutrition" ? "Ernährungsplan" : "Trainingsplan";
+        const period =
+          review.start && review.end
+            ? `${new Date(review.start).toLocaleDateString("de-DE")} – ${new Date(review.end).toLocaleDateString("de-DE")}`
+            : "Zeitraum offen";
+        const note = reviewNoteByPlanId.get(review.id);
+        const detail = note
+          ? `${period}\n${note}`
+          : `${period}\nZutaten müssen vor Freigabe geprüft werden.`;
+        critical++;
+        reasons.push(`${label} prüfen`);
+        pushTask({
+          user_id: p.id,
+          name,
+          priority: "critical",
+          kind: "plan_review",
+          title: `${label} prüfen — bereit zur Freigabe`,
+          detail,
+          keySuffix: `${kind}:${review.id}`,
+        });
+      }
+
+
       // ----- WEIGHT -----
       const series = (weightsByUser.get(p.id) ?? [])
         .slice()
