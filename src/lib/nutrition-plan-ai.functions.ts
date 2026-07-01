@@ -853,17 +853,21 @@ WICHTIG zu name/description:
     const isoDate = (d: Date) => d.toISOString().slice(0, 10);
 
 
-    // Create the draft plan
+    // Plan-Status: needs_review, sobald mind. eine Zutat NICHT eindeutig auf
+    // eine food_id/text_id aus dem Safe-Pool aufgelöst werden konnte.
+    // Ein needs_review-Plan wird NICHT aktiviert und der Coach bekommt einen Alert.
+    const planStatus: "draft" | "needs_review" = hasUnresolved ? "needs_review" : "draft";
+    const planTitleBase = data.title?.trim() || `Smart-Plan — ${new Date().toLocaleDateString("de-DE")}`;
+    const planTitle = hasUnresolved ? `${planTitleBase} (Prüfung nötig)` : planTitleBase;
+
     const { data: planRow, error: planErr } = await supabase
       .from("nutrition_plans")
       .insert({
         client_id: target,
-        title:
-          data.title?.trim() ||
-          `Smart-Plan — ${new Date().toLocaleDateString("de-DE")}`,
+        title: planTitle,
         plan_type: "nutrition",
         is_active: false,
-        status: "draft",
+        status: planStatus,
         generated_by: "ai_auto",
         source: "smart_ai",
         uploaded_by: userId,
