@@ -333,6 +333,7 @@ function RealUserDashboard() {
   }>({ total: 0, daily: 0, perf: 0, streak: 0, longest: 0, level: 1 });
   const [loading, setLoading] = useState(true);
   const [hasActivePlan, setHasActivePlan] = useState(false);
+  const [planUnderReview, setPlanUnderReview] = useState(false);
 
   const todayStr = new Date().toISOString().slice(0, 10);
 
