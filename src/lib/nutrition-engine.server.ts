@@ -251,10 +251,34 @@ function rowMatchScore(row: FoodRow, safe: string, rawName: string): number {
   return score;
 }
 
+const FOOD_SELECT =
+  "id,text_id,name,kcal_per_100g,protein_per_100g,carbs_per_100g,fat_per_100g,verified_by_coach,is_active,safe_for_smart,source,aliases,default_state,unit_type";
+
+function applySmartFilter<Q extends { eq: (col: string, val: any) => Q }>(q: Q, smartOnly?: boolean): Q {
+  if (!smartOnly) return q;
+  return q.eq("safe_for_smart", true).eq("is_active", true).eq("verified_by_coach", true);
+}
+
+/** Direct lookup by stable text_id / slug. Fastest path — no fuzzy matching. */
+export async function lookupFoodByTextId(
+  supabase: any,
+  textId: string,
+  opts: LookupOptions = {},
+): Promise<FoodRow | null> {
+  const id = String(textId ?? "").trim().toLowerCase();
+  if (!id) return null;
+  let q = supabase.from("nutrition_foods").select(FOOD_SELECT).eq("text_id", id).limit(1);
+  q = applySmartFilter(q, opts.smartOnly);
+  const { data, error } = await q;
+  if (error || !data?.length) return null;
+  return data[0] as FoodRow;
+}
+
 /** Try a sequence of progressively shorter probes against name + aliases. */
 export async function lookupFood(
   supabase: any,
   rawName: string,
+  opts: LookupOptions = {},
 ): Promise<FoodRow | null> {
   const norm = normalize(rawName);
   const toks = tokens(rawName);
@@ -275,13 +299,13 @@ export async function lookupFood(
   for (const probe of probes) {
     const safe = probe.replace(/[,()%{}]/g, "").slice(0, 60);
     if (!safe) continue;
-    const { data, error } = await supabase
+    let q = supabase
       .from("nutrition_foods")
-      .select(
-        "id,name,kcal_per_100g,protein_per_100g,carbs_per_100g,fat_per_100g,verified_by_coach,source,aliases,default_state,unit_type",
-      )
+      .select(FOOD_SELECT)
       .or(`name.ilike.%${safe}%,aliases.cs.{${safe}}`)
       .limit(15);
+    q = applySmartFilter(q, opts.smartOnly);
+    const { data, error } = await q;
     if (error || !data?.length) continue;
 
     const rows = (data as FoodRow[]).filter((r) => {
