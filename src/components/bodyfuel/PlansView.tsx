@@ -97,7 +97,7 @@ export function PlansView({
         setPlans((data as Plan[]) ?? []);
         setLoading(false);
       });
-  }, [effectiveClientId, planType]);
+  }, [effectiveClientId, planType, isCoach]);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
