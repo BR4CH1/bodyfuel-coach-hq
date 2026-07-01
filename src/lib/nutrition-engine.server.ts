@@ -469,6 +469,7 @@ export async function computeMealFromIngredients(
     data_source,
     warnings,
     debug,
+    unresolved_ingredients: unresolved,
   };
 }
 
