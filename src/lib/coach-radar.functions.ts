@@ -14,6 +14,7 @@ export type TaskPriority = "critical" | "important" | "info";
 export type TaskKind =
   | "no_plan"
   | "plan_ending"
+  | "plan_review"
   | "weight_extreme"
   | "manual_approval"
   | "checkin_overdue"
