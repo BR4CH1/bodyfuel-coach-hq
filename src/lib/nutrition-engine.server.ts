@@ -614,10 +614,11 @@ export function parseDescriptionToEngineIngredients(description: string | null |
 export async function computeMealFromDescription(
   supabase: any,
   description: string | null | undefined,
+  opts: ComputeOptions = {},
 ): Promise<EngineResult | null> {
   const ingredients = parseDescriptionToEngineIngredients(description);
   if (!ingredients.length) return null;
-  return computeMealFromIngredients(supabase, ingredients);
+  return computeMealFromIngredients(supabase, ingredients, opts);
 }
 
 function round1(n: number): number {
@@ -648,10 +649,13 @@ export function coerceIngredients(raw: unknown): EngineIngredient[] {
       else if (u === "prise" || u === "prisen") grams = 0; // spices ignored
       else grams = 0; // unknown unit → ignore for math
     }
+    const foodIdRaw = (r as any).food_id ?? (r as any).text_id ?? (r as any).id;
+    const food_id = typeof foodIdRaw === "string" && foodIdRaw.trim() ? foodIdRaw.trim().toLowerCase() : null;
     out.push({
       name,
       grams: Math.max(0, Math.round(grams)),
       display: typeof r.display === "string" ? r.display : undefined,
+      food_id,
     });
   }
   return out;
