@@ -21,7 +21,7 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
-  const { loginAs, supabaseUser, isCoach } = useSession();
+  const { loginAs, supabaseUser, isCoach, loading } = useSession();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -41,8 +41,22 @@ function LoginPage() {
   }, []);
 
   useEffect(() => {
-    if (supabaseUser) navigate({ to: isCoach ? "/coach" : "/dashboard" });
-  }, [supabaseUser, isCoach, navigate]);
+    if (loading) return;
+    if (supabaseUser) navigate({ to: isCoach ? "/coach" : "/dashboard", replace: true });
+  }, [supabaseUser, isCoach, loading, navigate]);
+
+  if (loading || supabaseUser) {
+    return (
+      <div className="grid min-h-screen place-items-center bg-background text-foreground">
+        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-gold">
+            <Flame className="h-5 w-5 text-primary-foreground" strokeWidth={2.5} />
+          </div>
+          Lädt…
+        </div>
+      </div>
+    );
+  }
 
   const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

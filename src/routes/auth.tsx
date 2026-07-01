@@ -18,7 +18,7 @@ const emailSchema = z.string().trim().email("Ungültige Email").max(255);
 const pwSchema = z.string().min(6, "Mindestens 6 Zeichen").max(100);
 
 function AuthPage() {
-  const { supabaseUser, profile, isCoach, isFreeUser } = useSession();
+  const { supabaseUser, profile, isCoach, isFreeUser, loading } = useSession();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -78,7 +78,18 @@ function AuthPage() {
     }
   };
 
-  if (supabaseUser && profile) return null;
+  if (loading || supabaseUser) {
+    return (
+      <div className="grid min-h-screen place-items-center bg-background text-foreground">
+        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-gold">
+            <Flame className="h-5 w-5 text-primary-foreground" strokeWidth={2.5} />
+          </div>
+          Lädt…
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-10">
