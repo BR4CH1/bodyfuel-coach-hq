@@ -55,18 +55,23 @@ export type EngineResult = {
   data_source: "db_verified" | "db_mixed" | "ai_estimate";
   warnings: string[];
   debug: IngredientDebug[];
+  /** Names/food_ids of ingredients (grams > 0) that could NOT be resolved to a food row. */
+  unresolved_ingredients: Array<{ name: string; food_id?: string | null; grams: number }>;
 };
 
 // ---------- Food lookup ----------
 
 type FoodRow = {
   id: string;
+  text_id?: string | null;
   name: string;
   kcal_per_100g: number;
   protein_per_100g: number;
   carbs_per_100g: number;
   fat_per_100g: number;
   verified_by_coach: boolean;
+  is_active?: boolean | null;
+  safe_for_smart?: boolean | null;
   source: string;
   aliases: string[] | null;
   default_state?: string | null;
