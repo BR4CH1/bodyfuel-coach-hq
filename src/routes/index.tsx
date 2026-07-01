@@ -76,6 +76,34 @@ export const Route = createFileRoute("/")({
 /* ------------------------------------------------------------------ */
 
 function LandingPage() {
+  const { supabaseUser, loading } = useSession();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // PWA auto-route: if a stored Supabase session exists, send the user
+    // straight into the app instead of showing them the marketing landing
+    // page. `/app` handles role-based dispatch and shows its own splash.
+    if (loading) return;
+    if (supabaseUser) {
+      navigate({ to: "/app", replace: true });
+    }
+  }, [supabaseUser, loading, navigate]);
+
+  // While the session is being restored (esp. on iOS PWA cold start),
+  // render a neutral splash instead of flashing the landing/login page.
+  if (loading || supabaseUser) {
+    return (
+      <div className="grid min-h-screen place-items-center bg-background text-foreground">
+        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+          <span className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-gold text-primary-foreground shadow-gold">
+            <Flame className="h-5 w-5" />
+          </span>
+          Lädt…
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Header />

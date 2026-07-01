@@ -3,7 +3,7 @@
   "name": "BodyFuel Coaching",
   "short_name": "BodyFuel",
   "description": "Dein persönliches Coaching für Ernährung, Training und Recovery.",
-  "start_url": "/",
+  "start_url": "/app",
   "scope": "/",
   "display": "standalone",
   "background_color": "#0a0a0a",
