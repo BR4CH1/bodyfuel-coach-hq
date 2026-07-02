@@ -39,6 +39,9 @@ export type SmartOnboardingInput = {
   extra_favorites?: string | null;
   extra_nogos?: string | null;
   extra_allergies?: string | null;
+  // Ernährungsform (vegan / vegetarisch / …)
+  diet_style?: "omnivore" | "flexitarian" | "pescetarian" | "vegetarian" | "vegan" | "other" | null;
+  diet_notes?: string | null;
 };
 
 export const completeSmartOnboarding = createServerFn({ method: "POST" })
