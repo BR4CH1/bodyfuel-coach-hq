@@ -156,6 +156,7 @@ function NutritionIndex() {
             )}
             <MacroTargetsCard userId={supabaseUser?.id} />
             {supabaseUser?.id && <PlateauWarning userId={supabaseUser.id} />}
+            {supabaseUser?.id && profile?.completed_at && <DietPreferencesCard />}
             {supabaseUser?.id && (
               <MealWishesCard userId={supabaseUser.id} mode="client" />
             )}
