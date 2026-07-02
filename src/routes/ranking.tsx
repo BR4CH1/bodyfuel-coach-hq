@@ -60,16 +60,21 @@ function RankingPage() {
 
   const [sort, setSort] = useState<SortKey>("total");
   const [nickInput, setNickInput] = useState("");
+  const [editOpen, setEditOpen] = useState(false);
+
 
   const saveMut = useMutation({
     mutationFn: (nickname: string) => setNickFn({ data: { nickname } }),
     onSuccess: () => {
       toast.success("Nickname gespeichert");
+      setEditOpen(false);
+      setNickInput("");
       qc.invalidateQueries({ queryKey: ["my-nickname"] });
       qc.invalidateQueries({ queryKey: ["ranking"] });
     },
     onError: (e: any) => toast.error(e.message),
   });
+
 
   const sorted = [...(data ?? [])]
     .filter((e) => e.nickname) // only entries with nickname
@@ -144,12 +149,60 @@ function RankingPage() {
             ))}
           </div>
 
-          {myIdx >= 0 && (
-            <div className="rounded-2xl border border-gold/40 bg-gold/5 p-4 text-sm">
-              Deine Position: <span className="font-display text-lg text-gold">#{myIdx + 1}</span> von {sorted.length}
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-gold/40 bg-gold/5 p-4 text-sm">
+            <div>
+              {myIdx >= 0 ? (
+                <>
+                  Deine Position: <span className="font-display text-lg text-gold">#{myIdx + 1}</span> von {sorted.length}
+                </>
+              ) : (
+                <span className="text-muted-foreground">Noch keine Punkte im aktuellen Ranking.</span>
+              )}
               <span className="ml-2 text-muted-foreground">(als {myNick?.nickname})</span>
             </div>
-          )}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setNickInput(myNick?.nickname ?? "");
+                setEditOpen(true);
+              }}
+            >
+              Nickname ändern
+            </Button>
+          </div>
+
+          <Dialog open={editOpen} onOpenChange={setEditOpen}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Nickname ändern</DialogTitle>
+                <DialogDescription>
+                  2–20 Zeichen, nur Buchstaben, Zahlen, _ oder -. Der Name muss einzigartig sein.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-3">
+                <Label htmlFor="nick-edit">Neuer Nickname</Label>
+                <Input
+                  id="nick-edit"
+                  value={nickInput}
+                  onChange={(e) => setNickInput(e.target.value)}
+                  maxLength={20}
+                  autoFocus
+                />
+                <div className="flex justify-end gap-2">
+                  <Button variant="ghost" onClick={() => setEditOpen(false)}>Abbrechen</Button>
+                  <Button
+                    disabled={saveMut.isPending || nickInput.trim().length < 2 || nickInput.trim() === myNick?.nickname}
+                    onClick={() => saveMut.mutate(nickInput.trim())}
+                  >
+                    {saveMut.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Speichern
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
 
           {isLoading ? (
             <p className="text-sm text-muted-foreground">Lade Ranking…</p>
