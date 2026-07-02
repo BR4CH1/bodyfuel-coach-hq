@@ -66,7 +66,7 @@ export const suggestMealSwaps = createServerFn({ method: "POST" })
         .limit(20),
       supabase
         .from("smart_nutrition_profile")
-        .select("favorite_foods, nogo_foods, allergies, extra_favorites, extra_nogos, extra_allergies, meal_prep_style, budget_band")
+        .select("favorite_foods, nogo_foods, allergies, extra_favorites, extra_nogos, extra_allergies, meal_prep_style, budget_band, diet_style, diet_notes")
         .eq("user_id", userId)
         .maybeSingle(),
       supabase
