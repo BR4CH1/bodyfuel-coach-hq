@@ -97,6 +97,8 @@ export const completeSmartOnboarding = createServerFn({ method: "POST" })
       "extra_favorites",
       "extra_nogos",
       "extra_allergies",
+      "diet_style",
+      "diet_notes",
     ];
     for (const k of map) {
       const v = data[k];
