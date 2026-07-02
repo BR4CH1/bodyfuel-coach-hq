@@ -509,13 +509,37 @@ GENAU 4 Wochen. Jede Woche GENAU 7 Tage (Mo, Di, Mi, Do, Fr, Sa, So in dieser Re
     .select("id").single();
   if (planErr || !planRow) throw new Error(planErr?.message ?? "Plan konnte nicht angelegt werden");
 
+  // Ordnung Mo..So — passt zur weekday-Erkennung im Client (PlanContentView).
+  const WEEKDAY_ORDER = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"];
+  const WEEKDAY_SHORT: Record<string, string> = {
+    monday: "Mo", tuesday: "Di", wednesday: "Mi", thursday: "Do",
+    friday: "Fr", saturday: "Sa", sunday: "So",
+  };
+  const trainDaySet = new Set(trainingDayKeys);
+
   let totalEx = 0;
   let totalDays = 0;
   for (const w of weeks) {
-    for (let i = 0; i < w.days.length; i++) {
-      const d = w.days[i];
-      const baseName = stripAkzessoires((d.name && String(d.name).trim()) || `Tag ${i + 1}`);
-      const dayName = d.focus ? `${baseName} — ${stripAkzessoires(String(d.focus))}` : baseName;
+    // Generierte Tage der Reihe nach an die gewünschten Wochentage verteilen.
+    let genIdx = 0;
+    for (let i = 0; i < WEEKDAY_ORDER.length; i++) {
+      const wd = WEEKDAY_ORDER[i];
+      const wdShort = WEEKDAY_SHORT[wd];
+      const isTrainingDay = trainDaySet.has(wd);
+      let dayName: string;
+      let dayExercises: GenEx[] = [];
+
+      if (isTrainingDay && genIdx < w.days.length) {
+        const d = w.days[genIdx++];
+        const baseName = stripAkzessoires((d.name && String(d.name).trim()) || `Trainingstag ${genIdx}`);
+        const focus = d.focus ? stripAkzessoires(String(d.focus)) : "";
+        dayName = `${wdShort} — ${focus ? `${baseName} — ${focus}` : baseName}`;
+        dayExercises = d.exercises ?? [];
+      } else {
+        // Ruhetag (kein Training an diesem Wochentag)
+        dayName = `${wdShort} — Ruhetag`;
+      }
+
       const { data: dayRow, error: dayErr } = await supabase
         .from("training_days")
         .insert({
@@ -528,7 +552,9 @@ GENAU 4 Wochen. Jede Woche GENAU 7 Tage (Mo, Di, Mi, Do, Fr, Sa, So in dieser Re
       if (dayErr || !dayRow) continue;
       totalDays++;
 
-      const rows = (d.exercises ?? [])
+      if (!dayExercises.length) continue;
+
+      const rows = dayExercises
         .map((e, idx) => {
           const cleanName = stripAkzessoires(String(e.name ?? "").trim()).slice(0, 200);
           const clampedWeights = clampWeightsForExercise(
