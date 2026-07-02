@@ -54,12 +54,14 @@ export function MealSwapDialog({
   const [error, setError] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [applyingIdx, setApplyingIdx] = useState<number | null>(null);
+  const [userNote, setUserNote] = useState("");
 
-  const load = async () => {
+  const load = async (noteOverride?: string) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchSwaps({ data: { meal_id: meal.id } });
+      const note = (noteOverride ?? userNote).trim();
+      const res = await fetchSwaps({ data: { meal_id: meal.id, user_note: note || null } });
       setSuggestions(res.suggestions);
       if (!res.suggestions.length) {
         setError("Keine passenden Alternativen mit ±5 % Makros gefunden. Versuch es nochmal.");
