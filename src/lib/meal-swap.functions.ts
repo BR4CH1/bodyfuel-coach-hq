@@ -131,6 +131,9 @@ HARTE REGEL — ABWEICHUNG MAX ±5%:
 🚨 ABSOLUTE AUSSCHLÜSSE (höchste Priorität, NIEMALS verwenden!):
 ${allergyList.length ? "ALLERGIEN/UNVERTRÄGLICHKEITEN: " + allergyList.join(", ") : "(keine)"}
 ${nogoList.length ? "NO-GO LEBENSMITTEL: " + nogoList.join(", ") : "(keine)"}
+${p.diet_style ? `ERNÄHRUNGSFORM (HART): ${p.diet_style}${p.diet_style === "vegan" ? " — KEINE tierischen Produkte (kein Fleisch, Fisch, Ei, Milch, Käse, Quark, Skyr, Joghurt, Butter, Honig)." : p.diet_style === "vegetarian" ? " — KEIN Fleisch, KEIN Fisch/Meeresfrüchte. Milch/Eier erlaubt." : p.diet_style === "pescetarian" ? " — KEIN Fleisch. Fisch/Meeresfrüchte erlaubt." : p.diet_style === "flexitarian" ? " — überwiegend pflanzlich." : ""}` : ""}
+${p.diet_notes ? "ERNÄHRUNGS-DETAILS: " + p.diet_notes : ""}
+${data.user_note ? `\n🎯 SPEZIELLER WUNSCH DES KUNDEN FÜR DIESEN TAUSCH (MUSS befolgt werden):\n"${data.user_note}"` : ""}
 
 KUNDEN-VORLIEBEN (berücksichtigen!):
 ${favFoods.length ? "Lieblings-Lebensmittel (Profil): " + favFoods.join(", ") : ""}
