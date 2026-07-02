@@ -190,7 +190,7 @@ export function MealSwapDialog({
                 </div>
               ))}
               <button
-                onClick={load}
+                onClick={() => load()}
                 className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-border bg-background/40 px-3 py-2 text-xs hover:border-gold/50"
               >
                 <Shuffle className="h-3.5 w-3.5" /> Andere Vorschläge
