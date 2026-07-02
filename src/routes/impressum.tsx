@@ -29,7 +29,7 @@ function ImpressumPage() {
           </section>
           <section>
             <h2 className="font-display text-lg font-bold">Kontakt</h2>
-            <p className="mt-2">E-Mail: <a href="mailto:kontakt@bodyfuel-coaching.com" className="text-gold hover:underline">kontakt@bodyfuel-coaching.com</a></p>
+            <p className="mt-2">E-Mail: <a href="mailto:info@bodyfuel-coaching.com" className="text-gold hover:underline">info@bodyfuel-coaching.com</a></p>
           </section>
           <section>
             <h2 className="font-display text-lg font-bold">Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV</h2>

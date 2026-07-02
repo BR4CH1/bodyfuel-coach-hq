@@ -166,16 +166,17 @@ function SmartAutopilot() {
         </div>
 
         <div className="mt-8 flex flex-wrap items-center gap-3">
-          <Link to="/smart/signup">
+          <Link to="/trial">
             <Button className="bg-gradient-gold text-primary-foreground shadow-gold hover:opacity-90">
-              Smart für 14,99 € starten
+              BodyFuel Smart 7 Tage gratis testen
               <ArrowRight className="ml-1 h-4 w-4" />
             </Button>
           </Link>
-          <a href="#pakete" className="text-xs text-muted-foreground hover:text-foreground">
-            Smart vs. Coaching vergleichen →
-          </a>
+          <Link to="/smart" className="text-xs text-muted-foreground hover:text-foreground">
+            Mehr über Smart erfahren →
+          </Link>
         </div>
+
       </div>
     </section>
   );
@@ -1514,16 +1515,27 @@ function Footer() {
             <CookieSettingsLink />
           </FooterCol>
           <FooterCol title="Kontakt">
-            <a href="#kontakt" className="inline-flex items-center gap-2 hover:text-foreground">
-              <Mail className="h-3.5 w-3.5" /> Anfrage senden
+            <a href="mailto:info@bodyfuel-coaching.com" className="inline-flex items-center gap-2 hover:text-foreground">
+              <Mail className="h-3.5 w-3.5" /> info@bodyfuel-coaching.com
             </a>
-            <a href="#" className="inline-flex items-center gap-2 hover:text-foreground">
-              <Instagram className="h-3.5 w-3.5" /> Instagram
+            <a
+              href="https://instagram.com/bodyfuel_coaching"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 hover:text-foreground"
+            >
+              <Instagram className="h-3.5 w-3.5" /> @bodyfuel_coaching
             </a>
-            <a href="#" className="inline-flex items-center gap-2 hover:text-foreground">
-              <Phone className="h-3.5 w-3.5" /> Telefon
+            <a
+              href="https://wa.me/4915205696462"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 hover:text-foreground"
+            >
+              <Phone className="h-3.5 w-3.5" /> WhatsApp Business
             </a>
           </FooterCol>
+
         </div>
         <div className="mt-10 flex flex-col items-start justify-between gap-3 border-t border-border pt-6 text-xs text-muted-foreground sm:flex-row sm:items-center">
           <div>© {new Date().getFullYear()} BODYFUEL Nutrition Coaching. Alle Rechte vorbehalten.</div>
