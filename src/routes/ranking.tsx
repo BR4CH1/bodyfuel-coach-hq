@@ -60,6 +60,8 @@ function RankingPage() {
 
   const [sort, setSort] = useState<SortKey>("total");
   const [nickInput, setNickInput] = useState("");
+  const [editOpen, setEditOpen] = useState(false);
+
 
   const saveMut = useMutation({
     mutationFn: (nickname: string) => setNickFn({ data: { nickname } }),
