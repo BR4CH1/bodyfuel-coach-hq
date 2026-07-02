@@ -67,11 +67,14 @@ function RankingPage() {
     mutationFn: (nickname: string) => setNickFn({ data: { nickname } }),
     onSuccess: () => {
       toast.success("Nickname gespeichert");
+      setEditOpen(false);
+      setNickInput("");
       qc.invalidateQueries({ queryKey: ["my-nickname"] });
       qc.invalidateQueries({ queryKey: ["ranking"] });
     },
     onError: (e: any) => toast.error(e.message),
   });
+
 
   const sorted = [...(data ?? [])]
     .filter((e) => e.nickname) // only entries with nickname
