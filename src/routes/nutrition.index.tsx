@@ -16,6 +16,7 @@ import { getMySmartProfile } from "@/lib/smart-profile.functions";
 import { MealWishesCard } from "@/components/bodyfuel/MealWishesCard";
 import { CustomMealsCard } from "@/components/bodyfuel/CustomMealsCard";
 import { PlateauWarning } from "@/components/bodyfuel/PlateauWarning";
+import { DietPreferencesCard } from "@/components/bodyfuel/DietPreferencesCard";
 
 
 export const Route = createFileRoute("/nutrition/")({
@@ -155,6 +156,7 @@ function NutritionIndex() {
             )}
             <MacroTargetsCard userId={supabaseUser?.id} />
             {supabaseUser?.id && <PlateauWarning userId={supabaseUser.id} />}
+            {supabaseUser?.id && profile?.completed_at && <DietPreferencesCard />}
             {supabaseUser?.id && (
               <MealWishesCard userId={supabaseUser.id} mode="client" />
             )}
