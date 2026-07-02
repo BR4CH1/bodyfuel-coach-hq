@@ -103,6 +103,8 @@ type Form = {
   favorite_foods: string[]; nogo_foods: string[];
   allergies: string[]; intolerances: string[];
   extra_favorites: string; extra_nogos: string; extra_allergies: string;
+  diet_style: "" | "omnivore" | "flexitarian" | "pescetarian" | "vegetarian" | "vegan" | "other";
+  diet_notes: string;
 };
 
 const EMPTY: Form = {
@@ -113,6 +115,7 @@ const EMPTY: Form = {
   budget_band: "", weekly_budget_eur: "", variety_level: "",
   favorite_foods: [], nogo_foods: [], allergies: [], intolerances: [],
   extra_favorites: "", extra_nogos: "", extra_allergies: "",
+  diet_style: "", diet_notes: "",
 };
 
 function SmartOnboardingPage() {
