@@ -27,7 +27,7 @@ function DatenschutzPage() {
           <Section title="1. Verantwortlicher">
             <p>Verantwortlich für die Datenverarbeitung auf dieser Website ist:</p>
             <p>Manuel Schrader<br />BodyFuel Coaching<br />Preisstraße 31<br />45355 Essen<br />Deutschland</p>
-            <p>E-Mail: <a href="mailto:kontakt@bodyfuel-coaching.com" className="text-gold hover:underline">kontakt@bodyfuel-coaching.com</a></p>
+            <p>E-Mail: <a href="mailto:info@bodyfuel-coaching.com" className="text-gold hover:underline">info@bodyfuel-coaching.com</a></p>
           </Section>
 
           <Section title="2. Erhebung und Speicherung personenbezogener Daten">

@@ -9,25 +9,30 @@ import {
   CheckCircle2,
   ArrowRight,
   Zap,
+  Mail,
+  Instagram,
+  MessageCircle,
 } from "lucide-react";
 import { Logo } from "@/components/bodyfuel/Logo";
 
 export const Route = createFileRoute("/smart/")({
   head: () => ({
     meta: [
-      { title: "BodyFuel Smart — Dein persönlicher Autopilot für nur 14,99 €" },
+      { title: "BodyFuel Smart — 7 Tage gratis testen" },
       {
         name: "description",
         content:
-          "BodyFuel Smart: Vollautomatischer Ernährungs- und Trainingsplan, smarte Einkaufsliste, Tracking & Fortschritt — für 14,99 € im Monat. Jetzt starten.",
+          "BodyFuel Smart: Training & Ernährung digital planen. 7 Tage gratis testen — ohne Zahlungsdaten. Danach optional für 14,99 €/Monat weiterführen.",
       },
-      { property: "og:title", content: "BodyFuel Smart — 14,99 €/Monat" },
+      { property: "og:title", content: "BodyFuel Smart — 7 Tage gratis testen" },
       {
         property: "og:description",
         content:
-          "Dein persönlicher Autopilot für Ernährung, Training und Fortschritt. Kein Coach nötig, voll automatisiert.",
+          "Dein smarter Einstieg in Training & Ernährung. 7 Tage gratis, ohne Zahlungsdaten.",
       },
+      { property: "og:url", content: "https://bodyfuel-coaching.com/smart" },
     ],
+    links: [{ rel: "canonical", href: "https://bodyfuel-coaching.com/smart" }],
   }),
   component: SmartLandingPage,
 });
@@ -42,53 +47,56 @@ function SmartLandingPage() {
             <Logo />
           </Link>
           <Link
-            to="/smart/signup"
+            to="/trial"
             className="rounded-lg bg-gradient-gold px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90"
           >
-            Jetzt starten
+            7 Tage gratis testen
           </Link>
         </div>
       </header>
 
       {/* Hero */}
       <section className="relative overflow-hidden border-b border-border">
-        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
+        <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-24">
           <div className="inline-flex items-center gap-2 rounded-full border border-gold/40 bg-gold/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-gold">
-            <Sparkles className="h-3.5 w-3.5" /> BodyFuel Autopilot
+            <Sparkles className="h-3.5 w-3.5" /> BodyFuel Smart
           </div>
           <h1 className="mt-5 font-display text-4xl font-bold leading-tight sm:text-6xl">
-            Dein persönlicher Autopilot.<br />
-            <span className="text-gold">Für nur 14,99 € im Monat.</span>
+            Dein smarter Einstieg in<br />
+            <span className="text-gold">Training & Ernährung.</span>
           </h1>
-          <p className="mt-5 max-w-2xl text-lg text-muted-foreground">
-            BodyFuel Smart erstellt vollautomatisch deinen Ernährungs- und Trainingsplan,
-            packt deine Einkaufsliste und zeigt dir jeden Tag, wie du näher an dein Ziel kommst.
-            Kein Coach nötig — alles läuft für dich.
+          <p className="mt-4 text-lg font-medium text-foreground/90">
+            Training & Ernährung digital planen.
           </p>
+          <p className="mt-3 max-w-2xl text-base text-muted-foreground">
+            BodyFuel Smart erstellt automatisch deinen Ernährungs- und Trainingsplan,
+            packt deine Einkaufsliste und zeigt dir jeden Tag, wie du näher an dein Ziel kommst.
+          </p>
+
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Link
-              to="/smart/signup"
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-gold px-6 py-3 font-semibold text-primary-foreground hover:opacity-90"
+              to="/trial"
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-gold px-6 py-3 font-semibold text-primary-foreground shadow-gold hover:opacity-90"
             >
-              Jetzt für 14,99 € starten
+              BodyFuel Smart 7 Tage gratis testen
               <ArrowRight className="h-4 w-4" />
             </Link>
-            <Link
-              to="/"
-              hash="pakete"
-              className="text-sm text-muted-foreground hover:text-foreground"
-            >
-              Lieber 1:1-Coaching? →
-            </Link>
+            <span className="text-xs text-muted-foreground">
+              Ohne Zahlungsdaten · endet automatisch
+            </span>
           </div>
+
+          <p className="mt-3 text-xs text-muted-foreground">
+            Nach dem Test kannst du Smart für 14,99 €/Monat weiterführen — komplett freiwillig.
+          </p>
         </div>
       </section>
 
-      {/* Was ist Autopilot */}
+      {/* Was ist Smart */}
       <section className="border-b border-border">
         <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
           <h2 className="font-display text-3xl font-bold sm:text-4xl">
-            Was macht der Autopilot für dich?
+            Was macht BodyFuel Smart für dich?
           </h2>
           <p className="mt-3 max-w-2xl text-muted-foreground">
             Du gibst einmal dein Ziel, deine Lieblings-Lebensmittel und deinen Trainingsalltag ein —
@@ -119,7 +127,7 @@ function SmartLandingPage() {
             <Feature
               icon={<Zap className="h-5 w-5" />}
               title="Strength Check"
-              text="Miss deine Kraft viertel­jährlich und sieh deinen echten Fortschritt."
+              text="Miss deine Kraft regelmäßig und sieh deinen echten Fortschritt."
             />
             <Feature
               icon={<Trophy className="h-5 w-5" />}
@@ -127,11 +135,40 @@ function SmartLandingPage() {
               text="Punkte, Streaks und Achievements halten dich am Ball."
             />
           </div>
+
+          <div className="mt-10">
+            <Link
+              to="/trial"
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-gold px-6 py-3 font-semibold text-primary-foreground hover:opacity-90"
+            >
+              Smart kostenlos testen <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* So läuft der 7-Tage-Test */}
+      <section className="border-b border-border bg-card/40">
+        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+          <h2 className="font-display text-3xl font-bold sm:text-4xl">
+            So läuft dein 7-Tage-Test
+          </h2>
+          <div className="mt-8 grid gap-4 sm:grid-cols-3">
+            <Step n={1} title="Kostenlos starten">
+              Klicke auf „7 Tage gratis testen", erstelle einen Account oder logge dich ein.
+            </Step>
+            <Step n={2} title="Sofort loslegen">
+              Du bekommst 7 Tage vollen Zugriff auf BodyFuel Smart — ohne Zahlungsdaten.
+            </Step>
+            <Step n={3} title="Frei entscheiden">
+              Nach 7 Tagen endet der Test automatisch. Wenn du magst, führst du Smart für 14,99 €/Monat weiter.
+            </Step>
+          </div>
         </div>
       </section>
 
       {/* Smart vs Coaching */}
-      <section id="vergleich" className="border-b border-border bg-card/40">
+      <section id="vergleich" className="border-b border-border">
         <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
           <h2 className="font-display text-3xl font-bold sm:text-4xl">Smart vs. Coaching</h2>
           <p className="mt-3 text-muted-foreground">
@@ -139,17 +176,17 @@ function SmartLandingPage() {
           </p>
 
           <div className="mt-10 grid gap-5 lg:grid-cols-2">
-          <PlanCard
+            <PlanCard
               name="BodyFuel Smart"
               price="14,99 €"
-              tagline="Dein persönlicher Fitness-Autopilot."
+              tagline="Training & Ernährung digital planen — auf Autopilot."
               items={[
                 "Individueller Ernährungs- & Trainingsplan",
                 "Automatische Anpassungen & Verlängerung",
                 "Tracker, Tagespunkte & Community inklusive",
                 "Selbstständig mit intelligenter Unterstützung",
               ]}
-              cta={{ to: "/smart/signup", label: "Smart starten" }}
+              cta={{ to: "/trial", label: "7 Tage gratis testen" }}
               highlight
             />
             <PlanCard
@@ -173,13 +210,18 @@ function SmartLandingPage() {
         <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
           <h2 className="font-display text-3xl font-bold">FAQ</h2>
           <div className="mt-6 space-y-4">
+            <Faq q="Ist der 7-Tage-Test wirklich kostenlos?">
+              Ja. Du gibst keine Zahlungsdaten an, und der Test endet nach 7 Tagen automatisch.
+              Danach kannst du Smart freiwillig für 14,99 €/Monat weiterführen.
+            </Faq>
             <Faq q="Brauche ich Vorkenntnisse?">
-              Nein. Das Onboarding fragt alles ab, was Autopilot braucht — danach läuft alles automatisch.
+              Nein. Das Onboarding fragt alles ab, was Smart braucht — danach läuft alles automatisch.
             </Faq>
             <Faq q="Kann ich jederzeit kündigen?">
-              Ja. Smart läuft Monat für Monat. Du kannst jederzeit beenden oder auf Coaching wechseln.
+              Ja. Smart läuft nach dem Test Monat für Monat. Du kannst jederzeit beenden
+              oder auf Coaching wechseln.
             </Faq>
-            <Faq q="Was kostet Smart?">
+            <Faq q="Was kostet Smart nach dem Test?">
               14,99 € pro Monat. Alle Funktionen sind inklusive.
             </Faq>
             <Faq q="Ist ein Coach beteiligt?">
@@ -193,16 +235,53 @@ function SmartLandingPage() {
       {/* Final CTA */}
       <section className="border-b border-border">
         <div className="mx-auto max-w-3xl px-4 py-16 text-center sm:px-6">
-          <h2 className="font-display text-3xl font-bold sm:text-4xl">Bereit für Autopilot?</h2>
+          <h2 className="font-display text-3xl font-bold sm:text-4xl">
+            Bereit für deinen digitalen Trainings- und Ernährungsbegleiter?
+          </h2>
           <p className="mt-3 text-muted-foreground">
             Registrieren. Onboarding. Plan steht. So einfach ist es.
           </p>
           <Link
-            to="/smart/signup"
-            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-gradient-gold px-6 py-3 font-semibold text-primary-foreground hover:opacity-90"
+            to="/trial"
+            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-gradient-gold px-6 py-3 font-semibold text-primary-foreground shadow-gold hover:opacity-90"
           >
-            Jetzt für 14,99 € starten <ArrowRight className="h-4 w-4" />
+            BodyFuel Smart 7 Tage gratis testen <ArrowRight className="h-4 w-4" />
           </Link>
+          <p className="mt-3 text-xs text-muted-foreground">
+            Ohne Zahlungsdaten. Endet automatisch nach 7 Tagen.
+          </p>
+        </div>
+      </section>
+
+      {/* Kontakt */}
+      <section className="border-b border-border bg-card/30">
+        <div className="mx-auto max-w-3xl px-4 py-14 text-center sm:px-6">
+          <h2 className="font-display text-2xl font-bold">Kontakt</h2>
+          <p className="mt-2 text-sm text-muted-foreground">BodyFuel Coaching</p>
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-4 text-sm">
+            <a
+              href="mailto:info@bodyfuel-coaching.com"
+              className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 hover:border-gold/40"
+            >
+              <Mail className="h-4 w-4 text-gold" /> info@bodyfuel-coaching.com
+            </a>
+            <a
+              href="https://instagram.com/bodyfuel_coaching"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 hover:border-gold/40"
+            >
+              <Instagram className="h-4 w-4 text-gold" /> @bodyfuel_coaching
+            </a>
+            <a
+              href="https://wa.me/4915205696462"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 hover:border-gold/40"
+            >
+              <MessageCircle className="h-4 w-4 text-gold" /> WhatsApp
+            </a>
+          </div>
         </div>
       </section>
 
@@ -225,6 +304,18 @@ function Feature({ icon, title, text }: { icon: React.ReactNode; title: string; 
   );
 }
 
+function Step({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl border border-border bg-background p-6">
+      <div className="grid h-9 w-9 place-items-center rounded-full bg-gradient-gold font-display text-sm font-bold text-primary-foreground">
+        {n}
+      </div>
+      <h3 className="mt-3 font-display text-lg font-semibold">{title}</h3>
+      <p className="mt-1 text-sm text-muted-foreground">{children}</p>
+    </div>
+  );
+}
+
 function PlanCard({
   name,
   price,
@@ -237,7 +328,7 @@ function PlanCard({
   price: string;
   tagline: string;
   items: string[];
-  cta: { to: "/" | "/smart/signup"; hash?: string; label: string };
+  cta: { to: "/" | "/trial"; hash?: string; label: string };
   highlight?: boolean;
 }) {
   return (
