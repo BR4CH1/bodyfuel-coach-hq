@@ -596,6 +596,9 @@ ${targetsBlock}
 🚨 ABSOLUTE AUSSCHLÜSSE — niemals verwenden (Kategorien gelten für ALLE Varianten, inkl. geräuchert/getrocknet/eingelegt/pulver/-mehl/-milch):
 ${allergyList.length ? "ALLERGIEN: " + allergyList.join(", ") + (expandedAllergies.length > allergyList.length ? " — gilt auch für: " + expandedAllergies.filter(t => !allergyList.map(a=>a.toLowerCase()).includes(t)).join(", ") : "") : "(keine)"}
 ${nogoList.length ? "NO-GO: " + nogoList.join(", ") + (expandedNogo.length > nogoList.length ? " — gilt auch für: " + expandedNogo.filter(t => !nogoList.map(a=>a.toLowerCase()).includes(t)).join(", ") : "") : "(keine)"}
+${p.diet_style ? `ERNÄHRUNGSFORM (HART): ${p.diet_style}${p.diet_style === "vegan" ? " — KEINE tierischen Produkte (kein Fleisch, Fisch, Ei, Milch, Käse, Quark, Skyr, Joghurt, Butter, Honig)." : p.diet_style === "vegetarian" ? " — KEIN Fleisch, KEIN Fisch/Meeresfrüchte. Milchprodukte und Eier erlaubt." : p.diet_style === "pescetarian" ? " — KEIN Fleisch (Rind/Schwein/Geflügel/Lamm/Wild). Fisch, Meeresfrüchte, Milch, Eier erlaubt." : p.diet_style === "flexitarian" ? " — überwiegend pflanzlich, Fleisch/Fisch nur sparsam." : ""}` : ""}
+${p.diet_notes ? "ERNÄHRUNGS-DETAILS: " + p.diet_notes : ""}
+
 
 KUNDEN-VORLIEBEN (priorisieren):
 ${favFoods.length ? "Lieblings-Foods: " + favFoods.join(", ") : ""}
