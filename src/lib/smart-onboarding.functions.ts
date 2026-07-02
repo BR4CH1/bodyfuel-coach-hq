@@ -39,6 +39,9 @@ export type SmartOnboardingInput = {
   extra_favorites?: string | null;
   extra_nogos?: string | null;
   extra_allergies?: string | null;
+  // Ernährungsform (vegan / vegetarisch / …)
+  diet_style?: "omnivore" | "flexitarian" | "pescetarian" | "vegetarian" | "vegan" | "other" | null;
+  diet_notes?: string | null;
 };
 
 export const completeSmartOnboarding = createServerFn({ method: "POST" })
@@ -94,6 +97,8 @@ export const completeSmartOnboarding = createServerFn({ method: "POST" })
       "extra_favorites",
       "extra_nogos",
       "extra_allergies",
+      "diet_style",
+      "diet_notes",
     ];
     for (const k of map) {
       const v = data[k];

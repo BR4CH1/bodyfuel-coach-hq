@@ -2267,6 +2267,8 @@ export type Database = {
           budget_band: string | null
           completed_at: string | null
           created_at: string
+          diet_notes: string | null
+          diet_style: string | null
           eating_style: string | null
           extra_allergies: string | null
           extra_favorites: string | null
@@ -2299,6 +2301,8 @@ export type Database = {
           budget_band?: string | null
           completed_at?: string | null
           created_at?: string
+          diet_notes?: string | null
+          diet_style?: string | null
           eating_style?: string | null
           extra_allergies?: string | null
           extra_favorites?: string | null
@@ -2331,6 +2335,8 @@ export type Database = {
           budget_band?: string | null
           completed_at?: string | null
           created_at?: string
+          diet_notes?: string | null
+          diet_style?: string | null
           eating_style?: string | null
           extra_allergies?: string | null
           extra_favorites?: string | null

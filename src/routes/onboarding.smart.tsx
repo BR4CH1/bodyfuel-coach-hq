@@ -103,6 +103,8 @@ type Form = {
   favorite_foods: string[]; nogo_foods: string[];
   allergies: string[]; intolerances: string[];
   extra_favorites: string; extra_nogos: string; extra_allergies: string;
+  diet_style: "" | "omnivore" | "flexitarian" | "pescetarian" | "vegetarian" | "vegan" | "other";
+  diet_notes: string;
 };
 
 const EMPTY: Form = {
@@ -113,6 +115,7 @@ const EMPTY: Form = {
   budget_band: "", weekly_budget_eur: "", variety_level: "",
   favorite_foods: [], nogo_foods: [], allergies: [], intolerances: [],
   extra_favorites: "", extra_nogos: "", extra_allergies: "",
+  diet_style: "", diet_notes: "",
 };
 
 function SmartOnboardingPage() {
@@ -187,6 +190,8 @@ function SmartOnboardingPage() {
           extra_favorites: form.extra_favorites || null,
           extra_nogos: form.extra_nogos || null,
           extra_allergies: form.extra_allergies || null,
+          diet_style: form.diet_style || null,
+          diet_notes: form.diet_notes || null,
         },
       });
       // Pläne werden im Hintergrund (Queue + Cron) generiert, damit das
@@ -304,6 +309,35 @@ function SmartOnboardingPage() {
       title: "Wie viel Abwechslung?",
       valid: !!form.variety_level,
       body: <SegBtns options={VARIETY.map((g)=>({v:g.v,l:g.l}))} value={form.variety_level} onChange={(v) => upd("variety_level", v as any)} block />,
+    },
+    {
+      title: "Ernährungsform",
+      valid: !!form.diet_style,
+      body: (
+        <div className="space-y-4">
+          <SegBtns
+            options={[
+              { v: "omnivore", l: "Alles (Omnivor)" },
+              { v: "flexitarian", l: "Flexitarisch" },
+              { v: "pescetarian", l: "Pescetarisch" },
+              { v: "vegetarian", l: "Vegetarisch" },
+              { v: "vegan", l: "Vegan" },
+              { v: "other", l: "Andere" },
+            ]}
+            value={form.diet_style}
+            onChange={(v) => upd("diet_style", v as any)}
+            block
+          />
+          <Field label="Details / Ausnahmen (optional)">
+            <Textarea
+              rows={3}
+              value={form.diet_notes}
+              onChange={(e) => upd("diet_notes", e.target.value)}
+              placeholder="z.B. kein Schweinefleisch, nur Bio-Fleisch, gelegentlich Fisch, keine tierischen Produkte außer Honig ..."
+            />
+          </Field>
+        </div>
+      ),
     },
     {
       title: "Lebensmittel",
