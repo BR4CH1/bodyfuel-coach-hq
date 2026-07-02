@@ -22,6 +22,10 @@ export type SmartNutritionProfile = {
   training_weekdays: string[];
   kitchen_equipment: string[];
   kitchen_equipment_notes: string | null;
+  diet_style:
+    | "omnivore" | "flexitarian" | "pescetarian"
+    | "vegetarian" | "vegan" | "other" | null;
+  diet_notes: string | null;
 };
 
 
