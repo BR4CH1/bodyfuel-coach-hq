@@ -190,6 +190,8 @@ function SmartOnboardingPage() {
           extra_favorites: form.extra_favorites || null,
           extra_nogos: form.extra_nogos || null,
           extra_allergies: form.extra_allergies || null,
+          diet_style: form.diet_style || null,
+          diet_notes: form.diet_notes || null,
         },
       });
       // Pläne werden im Hintergrund (Queue + Cron) generiert, damit das
