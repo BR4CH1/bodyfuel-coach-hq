@@ -319,15 +319,16 @@ function TrialBanner() {
           <div className="relative flex flex-col items-start justify-between gap-5 sm:flex-row sm:items-center">
             <div>
               <div className="inline-flex items-center gap-2 rounded-full border border-gold/40 bg-background/60 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-gold">
-                <Sparkles className="h-3 w-3" /> 7 Tage gratis testen
+                <Sparkles className="h-3 w-3" /> BodyFuel Smart · 7 Tage gratis
               </div>
               <h2 className="mt-3 font-display text-2xl font-bold sm:text-3xl">
-                Probier BODYFUEL <span className="text-gradient-gold">kostenlos.</span>
+                BodyFuel Smart <span className="text-gradient-gold">7 Tage gratis testen.</span>
               </h2>
               <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-                Starter-Trainingsplan, Starter-Ernährungsplan, Tracking, Level-System &
-                Fortschritt — 7 Tage kostenlos. Keine Zahlungsdaten nötig.
+                Training & Ernährung digital planen — mit dem kompletten Smart-System.
+                7 Tage kostenlos, ohne Zahlungsdaten.
               </p>
+
             </div>
             <Link to="/trial">
               <Button
