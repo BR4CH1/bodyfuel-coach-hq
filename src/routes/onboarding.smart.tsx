@@ -311,6 +311,35 @@ function SmartOnboardingPage() {
       body: <SegBtns options={VARIETY.map((g)=>({v:g.v,l:g.l}))} value={form.variety_level} onChange={(v) => upd("variety_level", v as any)} block />,
     },
     {
+      title: "Ernährungsform",
+      valid: !!form.diet_style,
+      body: (
+        <div className="space-y-4">
+          <SegBtns
+            options={[
+              { v: "omnivore", l: "Alles (Omnivor)" },
+              { v: "flexitarian", l: "Flexitarisch" },
+              { v: "pescetarian", l: "Pescetarisch" },
+              { v: "vegetarian", l: "Vegetarisch" },
+              { v: "vegan", l: "Vegan" },
+              { v: "other", l: "Andere" },
+            ]}
+            value={form.diet_style}
+            onChange={(v) => upd("diet_style", v as any)}
+            block
+          />
+          <Field label="Details / Ausnahmen (optional)">
+            <Textarea
+              rows={3}
+              value={form.diet_notes}
+              onChange={(e) => upd("diet_notes", e.target.value)}
+              placeholder="z.B. kein Schweinefleisch, nur Bio-Fleisch, gelegentlich Fisch, keine tierischen Produkte außer Honig ..."
+            />
+          </Field>
+        </div>
+      ),
+    },
+    {
       title: "Lebensmittel",
       valid: true,
       body: (
