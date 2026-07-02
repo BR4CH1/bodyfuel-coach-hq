@@ -16,6 +16,7 @@ import { getMySmartProfile } from "@/lib/smart-profile.functions";
 import { MealWishesCard } from "@/components/bodyfuel/MealWishesCard";
 import { CustomMealsCard } from "@/components/bodyfuel/CustomMealsCard";
 import { PlateauWarning } from "@/components/bodyfuel/PlateauWarning";
+import { DietPreferencesCard } from "@/components/bodyfuel/DietPreferencesCard";
 
 
 export const Route = createFileRoute("/nutrition/")({
