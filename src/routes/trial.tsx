@@ -1,6 +1,17 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Flame, Lock, Mail, User, Check, Sparkles } from "lucide-react";
+import {
+  Flame,
+  Lock,
+  Mail,
+  User,
+  Check,
+  Sparkles,
+  Dumbbell,
+  Salad,
+  ShoppingCart,
+  LineChart,
+} from "lucide-react";
 import { z } from "zod";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
@@ -14,28 +25,30 @@ import { Label } from "@/components/ui/label";
 export const Route = createFileRoute("/trial")({
   head: () => ({
     meta: [
-      { title: "7 Tage kostenlos testen — BODYFUEL" },
+      { title: "BodyFuel Smart — 7 Tage gratis testen" },
       {
         name: "description",
         content:
-          "Teste BODYFUEL 7 Tage gratis: Starter-Trainingsplan, Starter-Ernährungsplan, Tracking, Ranking und Fortschritts-Graphen. Keine Zahlungsdaten nötig.",
+          "Teste BodyFuel Smart 7 Tage gratis: automatischer Ernährungs- und Trainingsplan, Einkaufsliste, Tracking und Fortschritt. Ohne Zahlungsdaten.",
       },
-      { property: "og:title", content: "BODYFUEL – 7 Tage kostenlos testen" },
+      { property: "og:title", content: "BodyFuel Smart – 7 Tage gratis testen" },
       {
         property: "og:description",
         content:
-          "Starter-Trainingsplan, Starter-Ernährungsplan, Tracking & Fortschritte – 7 Tage gratis testen.",
+          "Training & Ernährung digital planen. 7 Tage gratis, ohne Zahlungsdaten. Danach optional für 14,99 €/Monat weiterführen.",
       },
+      { property: "og:url", content: "https://bodyfuel-coaching.com/trial" },
     ],
+    links: [{ rel: "canonical", href: "https://bodyfuel-coaching.com/trial" }],
   }),
-  component: TrialSignupPage,
+  component: SmartTrialSignupPage,
 });
 
 const nameSchema = z.string().trim().min(2, "Bitte deinen Namen eingeben").max(80);
 const emailSchema = z.string().trim().email("Ungültige E-Mail").max(255);
 const pwSchema = z.string().min(8, "Mindestens 8 Zeichen").max(100);
 
-function TrialSignupPage() {
+function SmartTrialSignupPage() {
   const { supabaseUser } = useSession();
   const navigate = useNavigate();
   const startTrialFn = useServerFn(startMyTrial);
@@ -44,9 +57,19 @@ function TrialSignupPage() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
+  // Bereits eingeloggt? → Smart-Trial aktivieren und ins Onboarding schicken.
   useEffect(() => {
-    if (supabaseUser) navigate({ to: "/dashboard" });
-  }, [supabaseUser, navigate]);
+    if (!supabaseUser) return;
+    (async () => {
+      try {
+        await startTrialFn();
+      } catch (err) {
+        console.error("startMyTrial failed", err);
+      }
+      navigate({ to: "/onboarding/smart" });
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supabaseUser]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,9 +83,7 @@ function TrialSignupPage() {
     setBusy(true);
     try {
       const origin =
-        typeof window !== "undefined" ? window.location.origin : "https://bodyfuel-coach-hq.lovable.app";
-      // Vor dem Signup markieren: wird nach E-Mail-Bestätigung beim Dashboard-Load
-      // verwendet, um den Trial automatisch zu starten.
+        typeof window !== "undefined" ? window.location.origin : "https://bodyfuel-coaching.com";
       if (typeof window !== "undefined") {
         localStorage.setItem("bodyfuel.trial.pending", "1");
       }
@@ -70,13 +91,12 @@ function TrialSignupPage() {
         email: ev.data,
         password: pv.data,
         options: {
-          emailRedirectTo: `${origin}/dashboard?trial=started`,
-          data: { display_name: nv.data, role: "client" },
+          emailRedirectTo: `${origin}/trial`,
+          data: { display_name: nv.data, role: "client", tier: "smart" },
         },
       });
       if (error) throw error;
 
-      // Falls Auto-Confirm aktiv: Session existiert -> Trial sofort starten.
       if (signUp.session) {
         try {
           await startTrialFn();
@@ -86,15 +106,14 @@ function TrialSignupPage() {
         } catch (err) {
           console.error("startMyTrial failed", err);
         }
-        toast.success("Dein 7-Tage-Test wurde aktiviert!");
+        toast.success("Dein 7-Tage-Test von BodyFuel Smart ist aktiviert!");
         if (typeof window !== "undefined") {
           sessionStorage.setItem("bodyfuel.trial.welcome", "1");
         }
-        navigate({ to: "/dashboard", search: { trial: "started" } as any });
+        navigate({ to: "/onboarding/smart" });
       } else {
         toast.success("Bitte bestätige deine E-Mail-Adresse, um zu starten.");
       }
-
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Registrierung fehlgeschlagen";
       toast.error(msg);
@@ -109,38 +128,41 @@ function TrialSignupPage() {
         {/* Linke Seite: USP */}
         <div className="flex flex-col justify-center space-y-6">
           <div className="inline-flex items-center gap-2 self-start rounded-full border border-gold/40 bg-gold/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-gold">
-            <Sparkles className="h-3.5 w-3.5" /> Gratis testen
+            <Sparkles className="h-3.5 w-3.5" /> BodyFuel Smart · 7 Tage gratis
           </div>
           <h1 className="font-display text-4xl font-bold leading-tight sm:text-5xl">
-            7 Tage <span className="text-gold">BODYFUEL</span> – kostenlos & unverbindlich
+            <span className="text-gold">BodyFuel Smart</span> 7 Tage gratis testen
           </h1>
+          <p className="text-lg font-medium text-foreground/90">
+            Training & Ernährung digital planen.
+          </p>
           <p className="text-muted-foreground">
-            Lerne die Plattform kennen, sammle erste Erfolge und entscheide nach 7 Tagen, ob du
-            deine individuelle Mitgliedschaft aktivieren willst.
+            Voller Zugriff auf das komplette Smart-System — 7 Tage lang, ohne Zahlungsdaten.
+            Danach entscheidest du frei, ob du für 14,99 €/Monat weitermachst.
           </p>
 
           <ul className="space-y-3 text-sm">
             {[
-              "Starter-Trainingsplan (A/B/C)",
-              "Starter-Ernährungsplan – Trainingstag & Restday",
-              "Gewicht-, Wasser-, Schritte- & Schlaftracking",
-              "Punkte- und Ranking-System mit Fortschritts-Graphen",
-              "Kein Abo, keine Kreditkarte – endet automatisch",
-            ].map((f) => (
-              <li key={f} className="flex items-start gap-2">
-                <Check className="mt-0.5 h-4 w-4 shrink-0 text-gold" />
-                <span>{f}</span>
+              { icon: Salad, t: "Automatischer Ernährungsplan (individuell, mit Rezepten)" },
+              { icon: Dumbbell, t: "Automatischer Trainingsplan (auf Equipment & Tage abgestimmt)" },
+              { icon: ShoppingCart, t: "Smarte Einkaufsliste — sortiert und in deinem Budget" },
+              { icon: LineChart, t: "Tracking, Prognose, Ranking & Fortschritt" },
+              { icon: Check, t: "Kein Abo, keine Kreditkarte — endet automatisch nach 7 Tagen" },
+            ].map(({ icon: Icon, t }) => (
+              <li key={t} className="flex items-start gap-2">
+                <Icon className="mt-0.5 h-4 w-4 shrink-0 text-gold" />
+                <span>{t}</span>
               </li>
             ))}
           </ul>
 
           <div className="rounded-2xl border border-border bg-card/60 p-4 text-xs text-muted-foreground">
             <p className="font-display text-sm font-bold text-foreground">
-              🔒 Nicht im Test enthalten
+              So läuft dein Test
             </p>
             <p className="mt-1">
-              Individuelle Pläne, Coach Check-ins, WhatsApp-Support und Smart-Anpassungen werden erst
-              nach Aktivierung deiner Mitgliedschaft freigeschaltet.
+              Account anlegen → kurzes Smart-Onboarding → dein persönlicher Plan steht.
+              Nach 7 Tagen endet der Test automatisch; du wirst rechtzeitig informiert.
             </p>
           </div>
         </div>
@@ -149,7 +171,7 @@ function TrialSignupPage() {
         <div className="rounded-3xl border border-gold/30 bg-gradient-to-b from-gold/10 to-transparent p-6 sm:p-8">
           <div className="mb-4 flex items-center gap-2 text-gold">
             <Flame className="h-5 w-5" />
-            <span className="text-xs font-bold uppercase tracking-[0.2em]">7 Tage gratis</span>
+            <span className="text-xs font-bold uppercase tracking-[0.2em]">Smart · 7 Tage gratis</span>
           </div>
           <h2 className="font-display text-2xl font-bold">Kostenlos starten</h2>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -207,7 +229,7 @@ function TrialSignupPage() {
               disabled={busy}
               className="h-12 w-full bg-gradient-gold text-base font-bold text-primary-foreground"
             >
-              {busy ? "Wird erstellt…" : "🔥 7 Tage kostenlos testen"}
+              {busy ? "Wird erstellt…" : "BodyFuel Smart 7 Tage gratis testen"}
             </Button>
 
             <p className="text-center text-xs text-muted-foreground">

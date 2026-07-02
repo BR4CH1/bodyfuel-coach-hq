@@ -124,7 +124,7 @@ export const ensureTrialTrainingPlan = createServerFn({ method: "POST" })
     return r;
   });
 
-/** Wird vom Trial-Signup nach Auth-Signup aufgerufen, um den Trial zu starten. */
+/** Wird vom Smart-Trial-Signup nach Auth-Signup aufgerufen, um den 7-Tage-Smart-Trial zu starten. */
 export const startMyTrial = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -135,12 +135,8 @@ export const startMyTrial = createServerFn({ method: "POST" })
       .eq("id", context.userId)
       .maybeSingle();
 
-    // Wenn bereits aktiv/trial/abgelaufen, Trainingsplan trotzdem sicherstellen.
+    // Wenn bereits aktiv/trial/abgelaufen, Status unverändert zurückgeben.
     if (existing && existing.trial_status !== "none") {
-      if (existing.trial_status === "trial") {
-        try { await seedTrialTrainingPlanFor(context.userId); } catch (e) { console.error(e); }
-        try { await seedTrialNutritionTargetsFor(context.userId); } catch (e) { console.error(e); }
-      }
       return {
         ok: true,
         trial_status: existing.trial_status,
@@ -156,10 +152,12 @@ export const startMyTrial = createServerFn({ method: "POST" })
       .update({ trial_status: "trial", trial_start: start, trial_end: end })
       .eq("id", context.userId);
     if (error) throw new Error(error.message);
-    try { await seedTrialTrainingPlanFor(context.userId); } catch (e) { console.error(e); }
-    try { await seedTrialNutritionTargetsFor(context.userId); } catch (e) { console.error(e); }
+    // Hinweis: Kein Seed eines generischen Starter-Plans mehr — der Smart-Trial
+    // führt den User direkt in das Smart-Onboarding, das den echten Smart-Plan
+    // erstellt.
     return { ok: true, trial_status: "trial" as const, trial_start: start, trial_end: end };
   });
+
 
 
 /** Coach: Trial verlängern (beliebige Tageszahl 1–365). Verlängert auch abgelaufene Trials. */
