@@ -145,22 +145,27 @@ export const saveBuilderPlan = createServerFn({ method: "POST" })
           days: data.days.map((d) => ({
             name: d.name,
             type: d.type,
-            meals: d.meals.map((m) => ({
-              slot: m.slot,
-              name: m.name,
-              description: m.description ?? null,
-              ingredients: m.ingredients.map((i) => ({ name: i.name, grams: i.grams })),
-            })),
+            meals: d.meals.map((m) => {
+              const f = m.portion_factor && m.portion_factor > 0 ? m.portion_factor : 1;
+              return {
+                slot: m.slot,
+                name: m.name,
+                description: m.description ?? null,
+                ingredients: m.ingredients.map((i) => ({
+                  name: i.name,
+                  grams: Math.round((i.grams ?? 0) * f),
+                })),
+              };
+            }),
           })),
         },
       },
     } as any);
 
-    // Post-save: enrich saved meals with meal_slot / library_meal_id / is_locked
+    // Post-save: enrich saved meals with meal_slot / library_meal_id / is_locked / linked_prep_group
     if ((result as any)?.plan_id) {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const planId = (result as any).plan_id as string;
-      // Fetch created day rows with dates in order
       const { data: dayRows } = await supabaseAdmin
         .from("nutrition_plan_days")
         .select("id, day_date, name")
@@ -183,6 +188,7 @@ export const saveBuilderPlan = createServerFn({ method: "POST" })
               meal_slot: src.slot,
               library_meal_id: src.library_meal_id ?? null,
               is_locked: !!src.is_locked,
+              linked_prep_group: src.linked_prep_group ?? null,
             } as any)
             .eq("id", mealArr[mi].id);
         }
