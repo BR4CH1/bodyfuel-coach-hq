@@ -118,6 +118,9 @@ export const getCoachRadar = createServerFn({ method: "GET" })
       photos,
       drafts,
       resolutions,
+      pkgs,
+      subs,
+      referrals,
     ] = await Promise.all([
       supabase
         .from("profiles")
@@ -183,11 +186,60 @@ export const getCoachRadar = createServerFn({ method: "GET" })
         .select("alert_key, resolved_at")
         .eq("coach_user_id", userId)
         .gte("resolved_at", since7dIso),
+      supabase
+        .from("customer_packages")
+        .select("user_id, package, source, status, started_at, created_at")
+        .in("user_id", ids)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("subscriptions")
+        .select("user_id, product_id, status, created_at")
+        .in("user_id", ids)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("affiliate_referrals")
+        .select("referred_user_id, source_slug, partner_id, signup_at, affiliate_partners(name, slug)")
+        .in("referred_user_id", ids),
     ]);
 
     const resolvedSet = new Set<string>(
       (resolutions.data ?? []).map((r: any) => r.alert_key),
     );
+
+    // ---- signup enrichment (package + source) ----
+    const PKG_LABEL: Record<string, string> = {
+      smart: "BodyFuel Smart",
+      smart_trial: "Smart Trial (7 Tage)",
+      coaching: "1:1 Coaching",
+      coaching_premium: "Coaching Premium",
+      free: "Free",
+      trial: "Trial",
+    };
+    const prettyPkg = (raw?: string | null) => {
+      if (!raw) return null;
+      const key = String(raw).toLowerCase();
+      return PKG_LABEL[key] ?? raw;
+    };
+    const packageByUser = new Map<string, string>();
+    ((pkgs as any).data ?? []).forEach((p: any) => {
+      if (packageByUser.has(p.user_id)) return; // first = most recent
+      const label = prettyPkg(p.package);
+      if (label) packageByUser.set(p.user_id, label);
+    });
+    ((subs as any).data ?? []).forEach((s: any) => {
+      if (packageByUser.has(s.user_id)) return;
+      if (s.product_id) packageByUser.set(s.user_id, String(s.product_id));
+    });
+
+    const sourceByUser = new Map<string, string>();
+    ((referrals as any).data ?? []).forEach((r: any) => {
+      const partnerName = r.affiliate_partners?.name ?? r.affiliate_partners?.slug ?? r.source_slug;
+      if (partnerName) sourceByUser.set(r.referred_user_id, `Partner: ${partnerName}`);
+    });
+    ((pkgs as any).data ?? []).forEach((p: any) => {
+      if (sourceByUser.has(p.user_id)) return;
+      if (p.source) sourceByUser.set(p.user_id, String(p.source));
+    });
 
     // ---- group helpers ----
     const weightsByUser = new Map<string, Array<{ w: number; at: string }>>();
@@ -378,7 +430,11 @@ export const getCoachRadar = createServerFn({ method: "GET" })
             priority: "info",
             kind: "new_customer",
             title: "Neue Anmeldung",
-            detail: `Vor ${Math.max(0, Math.floor(ageDays))} Tagen beigetreten`,
+            detail: [
+              `Vor ${Math.max(0, Math.floor(ageDays))} Tagen beigetreten`,
+              packageByUser.get(p.id) ? `Paket: ${packageByUser.get(p.id)}` : null,
+              sourceByUser.get(p.id) ? `Quelle: ${sourceByUser.get(p.id)}` : null,
+            ].filter(Boolean).join(" · "),
             keySuffix: new Date(p.created_at).toISOString().slice(0, 10),
           });
         }
