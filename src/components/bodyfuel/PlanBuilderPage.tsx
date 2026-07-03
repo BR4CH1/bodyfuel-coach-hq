@@ -36,7 +36,20 @@ import {
   Sparkles,
   Link2,
   Link2Off,
+  Undo2,
+  Wand2,
 } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type Slot = "breakfast" | "lunch" | "dinner" | "snack";
 const SLOTS: { key: Slot; label: string }[] = [
