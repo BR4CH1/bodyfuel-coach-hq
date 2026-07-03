@@ -1,69 +1,72 @@
-## Ziel
 
-Pro Kunde beliebig viele Ernährungsplan-Zeiträume speichern, wochenweise anhängen können, ohne bestehende Pläne zu überschreiben. Bestehende Anzeigen bleiben funktionsfähig.
+# Plan Builder im Coach-Bereich
 
-## Vorhandene Struktur (nutze ich weiter)
+Das ist ein sehr großes Feature (17 Teilfunktionen). Ich schlage vor, es in **4 Phasen** zu bauen, damit du früh eine funktionierende Version testen kannst und wir nicht ein 3.000-Zeilen-PR ohne Feedback schicken.
 
-Die Tabelle `nutrition_plans` unterstützt bereits `scheduled_start_date`, `scheduled_end_date`, `weeks_count`, `status` (draft/approved/published/active/archived), `plan_type`. Es gibt keine harte `current_plan_id` / `next_plan_id` — Rotation läuft heute schon über Datumsbereich. Kein Schema-Umbau nötig.
+Zwei Vorab-Entscheidungen brauche ich von dir, sonst baue ich in eine falsche Richtung:
 
-Problem heute: `saveCoachNutritionPlanDraft` archiviert beim Import **alle** draft/approved/published-Pläne des Kunden. Genau das brechen wir auf.
+**A) Mahlzeiten-Datenbank:** Die verlangte Struktur (Kategorie, Zutaten, Makros, Mealprep-Flags, Budget, Kochaufwand, …) existiert **so noch nicht**. Wir haben `nutrition_foods` (Zutaten pro 100 g) und `custom_meals` (freie Coach-Meals ohne Tags). Zwei Wege:
+- **A1**: Neue Tabelle `coach_meal_library` mit allen geforderten Feldern + Seed mit ~30–50 Standardgerichten (Frühstück/Mittag/Abend/Snack).
+- **A2**: `custom_meals` erweitern (Migration + alle bestehenden Meals brauchen Backfill für Kategorie/Tags — sonst fallen sie durch den Filter).
 
-## Umsetzung
+Ich empfehle **A1** — sauberer, bricht nichts, kann später zusammengeführt werden.
 
-### 1. Import-Modi (Server)
+**B) Auto-Fill-Logik (Punkt 14 „Tag/Woche automatisch"):** Zwei Optionen:
+- **B1 Deterministisch**: Score-basierte Auswahl (Makro-Nähe, Präferenzen) — sofort, kostenlos, reproduzierbar.
+- **B2 KI (Lovable AI Gateway)**: Gemini bekommt Kundenprofil + Meal-Library und schlägt Tage vor — flexibler, aber Credits, langsamer.
 
-Neuer Parameter `mode` in `saveCoachNutritionPlanDraft`:
+Ich empfehle **B1** für v1 (Punkt 6 „Score" brauchen wir eh), B2 optional später.
 
-- `new_plan` (Default für ersten Plan) — neuer Plan, keine Archivierung anderer aktiver Pläne
-- `append_week` (Default wenn Zielplan angegeben) — hängt Tage als neue Woche an bestehenden Plan; `weeks_count` und `scheduled_end_date` werden erweitert
-- `replace_week` — ersetzt Tage mit gegebener `week_number` im Zielplan
-- `replace_plan` — archiviert einen bestimmten `target_plan_id` und ersetzt ihn
-- Kein pauschales „archiviere alle Pläne" mehr.
+---
 
-Zusätzlicher Pre-Check-Server-Fn `checkNutritionPlanConflict({ client_id, start_date, end_date })`: liefert überlappende Pläne zurück, damit UI die Rückfrage stellen kann („Zeitraum belegt — Abbrechen / Zeitraum ersetzen / Trotzdem zusätzlich").
+## Phase 1 — Fundament (Schema + Einstieg)
 
-### 2. Historie-Fetcher
+1. Migration:
+   - Neue Tabelle `coach_meal_library` mit allen Feldern aus Punkt 17 (Kategorie-Enum, Makros, Tags[], no_go_ingredients[], suitable_training/rest, mealprep_ok, eat_cold, effort/budget-Enum, main_protein, main_carb, Zutaten als JSONB).
+   - Spalte `meal_slot` (breakfast/lunch/dinner/snack) + `is_locked` + `linked_prep_group` (für Mittag+Abend-Kopplung, Punkt 12) auf `nutrition_plan_meals`.
+   - Grants + RLS (Coach liest/schreibt Library; Kunden lesen nur veröffentlichte Pläne — bereits vorhanden).
+   - Seed-Migration mit ~40 Standardmeals.
+2. Button „Plan manuell erstellen" auf Kundenprofil-Ernährungs-Tab, öffnet neue Route `/coach/customers/$userId/plan-builder`.
 
-`listCustomerNutritionPlans({ client_id })` — Coach-only, liefert alle Pläne mit `id, title, status, source, generated_by, scheduled_start_date, scheduled_end_date, weeks_count, created_at`, sortiert nach `scheduled_start_date DESC`. Server-seitig in drei Buckets aufgeteilt: `current` (Heute ∈ Zeitraum), `upcoming` (Start > heute), `past` (Ende < heute).
+## Phase 2 — Builder-UI (Kern)
 
-Kundenseitig: `listMyPublishedNutritionPlans()` — nur `status in ('active','published')`, gruppiert nach Plan und `week_number`.
+3. Route `coach.customers.$userId.plan-builder.tsx` — mobilfreundliches Layout:
+   - **Oben**: Zeitraum (Start/Ende, Wochenzahl, Trainingstage aus Profil), Kunden-Zusammenfassung (Ziele, No-Gos, Allergien).
+   - **Sticky Bilanz-Panel** (Punkt 7): Ziel vs. geplant vs. Abweichung, farbcodiert grün/gelb/rot (Schwellen ±5 %/±10 %).
+   - **Tages-Slots**: Frühstück / Mittag / Abend / Snack als Karten mit Button „Mahlzeit auswählen" → Bottom-Sheet mit gefilterter+gescorter Liste (Punkt 4–6). Kein Drag&Drop in v1 (mobil bricht, Punkt 8 erlaubt Alternative).
+   - Pro Mahlzeit: Tauschen / Menge anpassen / Entfernen / Fixieren (Punkt 9, 11).
+4. Filter-/Score-Engine (`src/lib/plan-builder.functions.ts`):
+   - Hard-Filter: Allergien, No-Gos, Budget, Mealprep-Stil.
+   - Soft-Score: Makro-Nähe zum Restbedarf des Tages, Lieblingsfoods-Bonus, Trainings-/Restday-Fit → 4 Stufen.
+5. Portions-Autoscale (Punkt 10): „Mengen anpassen" skaliert Zutaten proportional bis kcal ±30 nah am Ziel, Coach bestätigt.
 
-### 3. UI Coach — Kundenprofil `/coach/customers/$userId`
+## Phase 3 — Wochenplanung + Komfort
 
-Neue Sektion `NutritionPlanHistoryCard`:
+6. Tag kopieren / Woche kopieren / Meal auf mehrere Tage / Trainingstag- + Restday-Template (Punkt 13).
+7. Mealprep-Kopplung Mittag+Abend (Punkt 12): eine Hauptmahlzeit → zwei Slots via `linked_prep_group`, Portionen automatisch geteilt.
+8. „Tag automatisch füllen" + „Woche automatisch vorschlagen" (B1 Score-basiert, Punkt 14).
 
-- Aktueller Plan (großer Block, Link „Öffnen")
-- Kommende Pläne (Liste)
-- Vergangene Pläne (collapsible, letzte 10)
-- Aktionen pro Zeile: Öffnen · Als aktiv setzen · Archivieren
+## Phase 4 — Speichern & Verzahnung
 
-### 4. UI Coach — Import (`coach.import-plan.tsx`)
+9. Speichern als Entwurf / Aktiv / Veröffentlicht — nutzt bestehende `saveCoachNutritionPlanDraft` (mit `mode: new_plan` oder `append_week`) und die letzte Woche gebauten History-Buckets. Kein Neubau der Persistenz.
+10. Kunde sieht veröffentlichte Pläne wie gehabt in `PlansView` — nichts an bestehendem Import/Reader wird geändert.
 
-Vor dem Speichern:
-
-- Dropdown „Speichern als" mit den 4 Modi
-- Wenn `append_week` / `replace_week`: Select mit bestehenden Plänen des Kunden (aus Historie-Fetcher) + Wochennummer
-- Nach Klick auf Speichern: automatischer Konflikt-Check; bei Treffer Bestätigungs-Dialog
-
-Default: wenn Kunde bereits einen aktuellen Plan hat → `append_week`, sonst `new_plan`.
-
-### 5. Kundenansicht Ernährung
-
-`PlansView` / `nutrition.index.tsx` bekommt Zusatz „Alle Wochen" — Tabs `Woche 1..N` innerhalb eines Plans, plus Auswahl bei mehreren veröffentlichten Plänen. Nicht disruptiv: aktueller Plan-Reader bleibt Default.
-
-### 6. Sicherheits-Netz
-
-- `saveCoachTrainingPlanDraft` bleibt unverändert (User-Anfrage betrifft nur Ernährung).
-- Keine Migration nötig; RLS auf `nutrition_plans` bleibt.
-- Der Zeitraum-Check nutzt Datumsüberlappung `[start, end]` — Archivierte werden ignoriert.
+---
 
 ## Technische Details
 
-- Server: `src/lib/coach-plan-import.functions.ts` (Signatur erweitern), `src/lib/coach-plan-history.functions.ts` (neu, Historie + Konflikt-Check + Status-Aktionen).
-- UI: `src/components/bodyfuel/CoachNutritionPlanHistoryCard.tsx` (neu), `src/routes/coach.import-plan.tsx` (Modi-Auswahl + Konflikt-Dialog), `src/routes/coach.customers.$userId.tsx` (Historie-Card einbinden), `src/components/bodyfuel/PlansView.tsx` (Wochen-Tabs, falls mehrere Pläne).
-- Types: nach Server-Änderung wird `types.ts` nicht angefasst — Schema bleibt gleich.
+- **Server fns** (`src/lib/plan-builder.functions.ts`): `listMealLibrary(filter)`, `scoreMealsForSlot({customerId, dayType, remainingTargets})`, `autoFillDay`, `autoFillWeek`, `savePlanFromBuilder(mode)`.
+- **Kundendaten-Loader**: liest `smart_nutrition_profile` + `nutrition_targets` + Trainingstage aus `smart_nutrition_profile.training_days`.
+- **Nichts kaputt**: Import-Route, Reader, History-Card, `nutrition_plans`-Struktur bleiben unangetastet. Neue Spalten sind additiv mit Defaults.
+- **Mobil**: Bottom-Sheet-Auswahl, Tap-Targets ≥ 44 px, Sticky-Bilanz kollabiert oben.
 
-## Out of Scope
+## Out of Scope v1
 
-- Trainingsplan-Historie (analog machbar, aber nicht angefragt).
-- Automatische Wochen-Rotation / Cron-Anpassung (bestehende `plan-rotation.ts` funktioniert weiter über Datumsbereiche).
+- Pre-/Post-Workout-Slots (Punkt 3 „optional später") — Enum lässt Platz.
+- KI-Auto-Fill (B2) — Score-Version reicht laut Punkt 14.
+- Drag & Drop Desktop — Button-Flow funktioniert auf beiden.
+- Migration bestehender `custom_meals` → `coach_meal_library` — separat, wenn du das willst.
+
+---
+
+**Bitte bestätige A1+B1** (oder wähle anders), dann starte ich mit Phase 1. Wenn du willst, kann ich Phase 1+2 in einem Rutsch bauen und Phase 3+4 danach.
