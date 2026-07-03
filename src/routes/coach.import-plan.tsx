@@ -62,6 +62,7 @@ function ImportPage() {
   const saveTrFn = useServerFn(saveCoachTrainingPlanDraft);
   const parseNuFn = useServerFn(parseCoachNutritionPlan);
   const saveNuFn = useServerFn(saveCoachNutritionPlanDraft);
+  const listPlansFn = useServerFn(listCustomerNutritionPlans);
 
   const [mode, setMode] = useState<Mode>("upload");
   const [busy, setBusy] = useState(false);
@@ -73,6 +74,18 @@ function ImportPage() {
   });
   const [nuPlan, setNuPlan] = useState<ImportedNutritionPlan>({
     title: "", days: [emptyNutritionDay()],
+  });
+
+  // Speicher-Modi (nur Ernährung)
+  const [saveMode, setSaveMode] = useState<NutritionSaveMode>("new_plan");
+  const [targetPlanId, setTargetPlanId] = useState<string>("");
+  const [targetWeekNumber, setTargetWeekNumber] = useState<number>(2);
+  const [startDate, setStartDate] = useState<string>(new Date().toISOString().slice(0, 10));
+
+  const plansQuery = useQuery({
+    queryKey: ["coach-nutrition-plans", client],
+    queryFn: () => listPlansFn({ data: { client_id: client } }),
+    enabled: !!client && type === "nutrition" && !!supabaseUser && isCoach,
   });
 
   if (!supabaseUser) return <p className="text-sm text-muted-foreground">Bitte einloggen.</p>;
