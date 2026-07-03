@@ -136,6 +136,7 @@ export type BuilderMeal = {
 export type BuilderDay = {
   name: string;
   type: "training" | "rest";
+  typeOverride?: boolean; // true when coach toggled manually
   meals: BuilderMeal[];
   prepCoupleLunchDinner?: boolean;
 };

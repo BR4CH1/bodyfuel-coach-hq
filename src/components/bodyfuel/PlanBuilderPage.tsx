@@ -211,9 +211,13 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
         const isTrain = trainingWeekdays.includes(weekday);
         const existing = prev[i];
         const dateLabel = `${weekdayLabels[weekday]} ${String(d.getUTCDate()).padStart(2, "0")}.${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+        // Auto-derive from trainingWeekdays unless the coach toggled manually
+        const autoType: "training" | "rest" = isTrain ? "training" : "rest";
+        const type = existing?.typeOverride ? existing.type : autoType;
         next.push({
           name: `Tag ${i + 1} · ${dateLabel}`,
-          type: existing?.type ?? (isTrain ? "training" : "rest"),
+          type,
+          typeOverride: existing?.typeOverride ?? false,
           meals: existing?.meals ?? [],
           prepCoupleLunchDinner: existing?.prepCoupleLunchDinner ?? false,
         });
@@ -401,6 +405,18 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
                 Restday: {ctxQ.data.targets.kcal_rest} kcal · {ctxQ.data.targets.protein_rest}P/
                 {ctxQ.data.targets.carbs_rest}C/{ctxQ.data.targets.fat_rest}F
               </Badge>
+            </div>
+            <div>
+              Trainingstage laut Profil:{" "}
+              <b>
+                {ctxQ.data.trainingWeekdays.length === 0
+                  ? "keine hinterlegt"
+                  : ctxQ.data.trainingWeekdays
+                      .slice()
+                      .sort()
+                      .map((w) => ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"][w])
+                      .join(", ")}
+              </b>
             </div>
             {ctxQ.data.dietStyle && (
               <div>
@@ -633,7 +649,13 @@ function DayCard({
           <Badge
             variant={day.type === "training" ? "default" : "secondary"}
             className="cursor-pointer"
-            onClick={() => onChange((d) => ({ ...d, type: d.type === "training" ? "rest" : "training" }))}
+            onClick={() =>
+              onChange((d) => ({
+                ...d,
+                type: d.type === "training" ? "rest" : "training",
+                typeOverride: true,
+              }))
+            }
           >
             {day.type === "training" ? "Trainingstag" : "Restday"}
           </Badge>
