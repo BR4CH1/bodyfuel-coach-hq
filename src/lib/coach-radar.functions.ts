@@ -206,6 +206,41 @@ export const getCoachRadar = createServerFn({ method: "GET" })
       (resolutions.data ?? []).map((r: any) => r.alert_key),
     );
 
+    // ---- signup enrichment (package + source) ----
+    const PKG_LABEL: Record<string, string> = {
+      smart: "BodyFuel Smart",
+      smart_trial: "Smart Trial (7 Tage)",
+      coaching: "1:1 Coaching",
+      coaching_premium: "Coaching Premium",
+      free: "Free",
+      trial: "Trial",
+    };
+    const prettyPkg = (raw?: string | null) => {
+      if (!raw) return null;
+      const key = String(raw).toLowerCase();
+      return PKG_LABEL[key] ?? raw;
+    };
+    const packageByUser = new Map<string, string>();
+    ((pkgs as any).data ?? []).forEach((p: any) => {
+      if (packageByUser.has(p.user_id)) return; // first = most recent
+      const label = prettyPkg(p.package);
+      if (label) packageByUser.set(p.user_id, label);
+    });
+    ((subs as any).data ?? []).forEach((s: any) => {
+      if (packageByUser.has(s.user_id)) return;
+      if (s.product_id) packageByUser.set(s.user_id, String(s.product_id));
+    });
+
+    const sourceByUser = new Map<string, string>();
+    ((referrals as any).data ?? []).forEach((r: any) => {
+      const partnerName = r.affiliate_partners?.name ?? r.affiliate_partners?.slug ?? r.source_slug;
+      if (partnerName) sourceByUser.set(r.referred_user_id, `Partner: ${partnerName}`);
+    });
+    ((pkgs as any).data ?? []).forEach((p: any) => {
+      if (sourceByUser.has(p.user_id)) return;
+      if (p.source) sourceByUser.set(p.user_id, String(p.source));
+    });
+
     // ---- group helpers ----
     const weightsByUser = new Map<string, Array<{ w: number; at: string }>>();
     ((measurements as any).data ?? []).forEach((m: any) => {
