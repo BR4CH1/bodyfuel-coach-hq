@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Upload, FileText, Type, Plus, Trash2, Loader2, Save, Wand2 } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
@@ -18,7 +19,9 @@ import {
   type ImportedNutritionPlan,
   type ImportedNutritionDay,
   type ImportedNutritionMeal,
+  type NutritionSaveMode,
 } from "@/lib/coach-plan-import.functions";
+import { listCustomerNutritionPlans } from "@/lib/coach-plan-history.functions";
 
 type PlanType = "training" | "nutrition";
 type Mode = "upload" | "text" | "manual";
@@ -59,6 +62,7 @@ function ImportPage() {
   const saveTrFn = useServerFn(saveCoachTrainingPlanDraft);
   const parseNuFn = useServerFn(parseCoachNutritionPlan);
   const saveNuFn = useServerFn(saveCoachNutritionPlanDraft);
+  const listPlansFn = useServerFn(listCustomerNutritionPlans);
 
   const [mode, setMode] = useState<Mode>("upload");
   const [busy, setBusy] = useState(false);
@@ -70,6 +74,18 @@ function ImportPage() {
   });
   const [nuPlan, setNuPlan] = useState<ImportedNutritionPlan>({
     title: "", days: [emptyNutritionDay()],
+  });
+
+  // Speicher-Modi (nur Ernährung)
+  const [saveMode, setSaveMode] = useState<NutritionSaveMode>("new_plan");
+  const [targetPlanId, setTargetPlanId] = useState<string>("");
+  const [targetWeekNumber, setTargetWeekNumber] = useState<number>(2);
+  const [startDate, setStartDate] = useState<string>(new Date().toISOString().slice(0, 10));
+
+  const plansQuery = useQuery({
+    queryKey: ["coach-nutrition-plans", client],
+    queryFn: () => listPlansFn({ data: { client_id: client } }),
+    enabled: !!client && type === "nutrition" && !!supabaseUser && isCoach,
   });
 
   if (!supabaseUser) return <p className="text-sm text-muted-foreground">Bitte einloggen.</p>;
@@ -127,6 +143,23 @@ function ImportPage() {
     }
   };
 
+  const doSaveNutrition = async (cleaned: ImportedNutritionPlan, force: boolean) => {
+    const payload: any = {
+      client_id: client,
+      plan: cleaned,
+      title: nuPlan.title,
+      mode: saveMode,
+      force,
+    };
+    if (saveMode === "append_week" || saveMode === "replace_week" || saveMode === "replace_plan") {
+      if (!targetPlanId) throw new Error("Bitte einen Zielplan auswählen.");
+      payload.target_plan_id = targetPlanId;
+    }
+    if (saveMode === "replace_week") payload.target_week_number = targetWeekNumber;
+    if (saveMode === "new_plan" || saveMode === "replace_plan") payload.start_date = startDate;
+    await saveNuFn({ data: payload });
+  };
+
   const save = async () => {
     setSaving(true);
     try {
@@ -157,9 +190,24 @@ function ImportPage() {
             }))
             .filter((d) => d.meals.length),
         };
-        await saveNuFn({ data: { client_id: client, plan: cleaned, title: nuPlan.title } });
+        try {
+          await doSaveNutrition(cleaned, false);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : "";
+          if (msg.startsWith("CONFLICT:")) {
+            const ok = window.confirm(
+              "Für diesen Zeitraum existiert bereits ein Plan.\n\n" +
+              "OK  = Trotzdem zusätzlich als neuen Plan speichern\n" +
+              "Abbrechen = Import stoppen (dann oben 'An bestehenden anhängen' oder 'Ersetzen' wählen)",
+            );
+            if (!ok) { setSaving(false); return; }
+            await doSaveNutrition(cleaned, true);
+          } else {
+            throw err;
+          }
+        }
       }
-      toast.success("Plan als Entwurf gespeichert.");
+      toast.success("Plan gespeichert.");
       navigate({ to: "/coach/customers/$userId", params: { userId: client } });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Speichern fehlgeschlagen");
@@ -228,6 +276,21 @@ function ImportPage() {
         </div>
       )}
 
+      {type === "nutrition" && (
+        <NutritionSaveModeCard
+          plans={plansQuery.data?.all ?? []}
+          isLoading={plansQuery.isLoading}
+          mode={saveMode}
+          setMode={setSaveMode}
+          targetPlanId={targetPlanId}
+          setTargetPlanId={setTargetPlanId}
+          targetWeekNumber={targetWeekNumber}
+          setTargetWeekNumber={setTargetWeekNumber}
+          startDate={startDate}
+          setStartDate={setStartDate}
+        />
+      )}
+
       {type === "training" ? (
         <TrainingEditor plan={trPlan} setPlan={setTrPlan} />
       ) : (
@@ -244,6 +307,103 @@ function ImportPage() {
           Als Entwurf speichern
         </button>
       </div>
+    </div>
+  );
+}
+
+function NutritionSaveModeCard({
+  plans, isLoading, mode, setMode, targetPlanId, setTargetPlanId,
+  targetWeekNumber, setTargetWeekNumber, startDate, setStartDate,
+}: {
+  plans: Array<{ id: string; title: string | null; scheduled_start_date: string | null; scheduled_end_date: string | null; weeks_count: number | null; status: string | null }>;
+  isLoading: boolean;
+  mode: NutritionSaveMode;
+  setMode: (m: NutritionSaveMode) => void;
+  targetPlanId: string;
+  setTargetPlanId: (id: string) => void;
+  targetWeekNumber: number;
+  setTargetWeekNumber: (n: number) => void;
+  startDate: string;
+  setStartDate: (d: string) => void;
+}) {
+  const active = plans.filter((p) => p.status !== "archived");
+  const options: { value: NutritionSaveMode; label: string; hint: string }[] = [
+    { value: "append_week", label: "An bestehenden Plan anhängen", hint: "Neue Woche wird angehängt" },
+    { value: "new_plan", label: "Als neuen Plan speichern", hint: "Zusätzlicher Plan, andere bleiben" },
+    { value: "replace_week", label: "Bestehende Woche ersetzen", hint: "Tage einer Woche werden ersetzt" },
+    { value: "replace_plan", label: "Kompletten Plan ersetzen", hint: "Zielplan wird archiviert" },
+  ];
+  return (
+    <div className="rounded-2xl border border-gold/30 bg-card p-5">
+      <h2 className="font-display text-lg font-bold">Speichern als</h2>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Bestimme, wie dieser Import beim Kunden abgelegt wird. Es wird nichts automatisch überschrieben.
+      </p>
+
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        {options.map((o) => (
+          <button
+            key={o.value}
+            onClick={() => setMode(o.value)}
+            className={`rounded-xl border px-3 py-2 text-left text-xs transition ${
+              mode === o.value
+                ? "border-gold/60 bg-gold/10"
+                : "border-border bg-background/40 hover:border-gold/40"
+            }`}
+          >
+            <p className="text-sm font-semibold">{o.label}</p>
+            <p className="text-[11px] text-muted-foreground">{o.hint}</p>
+          </button>
+        ))}
+      </div>
+
+      {(mode === "append_week" || mode === "replace_week" || mode === "replace_plan") && (
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <label className="text-xs">
+            <span className="mb-1 block font-semibold text-muted-foreground">Zielplan</span>
+            <select
+              value={targetPlanId}
+              onChange={(e) => setTargetPlanId(e.target.value)}
+              className="w-full rounded-md border border-input bg-background px-2 py-2 text-sm"
+              disabled={isLoading}
+            >
+              <option value="">— wählen —</option>
+              {active.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {(p.title || "Ohne Titel") +
+                    (p.scheduled_start_date ? ` — ${p.scheduled_start_date}` : "") +
+                    (p.weeks_count ? ` (${p.weeks_count} Wo.)` : "")}
+                </option>
+              ))}
+            </select>
+          </label>
+          {mode === "replace_week" && (
+            <label className="text-xs">
+              <span className="mb-1 block font-semibold text-muted-foreground">Wochennummer</span>
+              <input
+                type="number"
+                min={1}
+                max={52}
+                value={targetWeekNumber}
+                onChange={(e) => setTargetWeekNumber(Math.max(1, Number(e.target.value) || 1))}
+                className="w-full rounded-md border border-input bg-background px-2 py-2 text-sm"
+              />
+            </label>
+          )}
+        </div>
+      )}
+
+      {(mode === "new_plan" || mode === "replace_plan") && (
+        <label className="mt-4 block text-xs">
+          <span className="mb-1 block font-semibold text-muted-foreground">Startdatum</span>
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="w-full max-w-xs rounded-md border border-input bg-background px-2 py-2 text-sm"
+          />
+        </label>
+      )}
     </div>
   );
 }

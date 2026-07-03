@@ -355,18 +355,37 @@ function approxGramsFromUnit(name: string, amount: number, unit: string): number
   return amount;
 }
 
+export type NutritionSaveMode = "new_plan" | "append_week" | "replace_week" | "replace_plan";
+
 /**
- * Speichert einen vom Coach importierten Ernährungsplan als Draft für den Kunden.
- * - Rechnet Nährwerte über die Nutrition-Engine aus den Zutaten.
- * - Archiviert vorherige draft/approved/published Ernährungspläne.
+ * Speichert einen vom Coach importierten Ernährungsplan.
+ * Modi:
+ *  - new_plan (Default): Neuer Plan, keine anderen Pläne werden archiviert.
+ *  - append_week: Hängt die enthaltenen Tage als NEUE Woche an target_plan_id an.
+ *  - replace_week: Ersetzt die Tage von target_plan_id + target_week_number.
+ *  - replace_plan: Archiviert target_plan_id und legt einen neuen Plan an.
+ * Optional start_date überschreibt das Anfangsdatum (nur new_plan / replace_plan).
+ * `force=true` überspringt den Konflikt-Check.
  */
 export const saveCoachNutritionPlanDraft = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { client_id: string; plan: ImportedNutritionPlan; title?: string }) => d)
+  .inputValidator(
+    (d: {
+      client_id: string;
+      plan: ImportedNutritionPlan;
+      title?: string;
+      mode?: NutritionSaveMode;
+      target_plan_id?: string;
+      target_week_number?: number;
+      start_date?: string;
+      force?: boolean;
+    }) => d,
+  )
   .handler(async ({ data, context }) => {
     await assertCoach(context);
     const plan = normalizeNutritionPlan(data.plan);
     if (!plan.days.length) throw new Error("Plan enthält keine Tage.");
+    const mode: NutritionSaveMode = data.mode ?? "new_plan";
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { computeMealFromIngredients } = await import("./nutrition-engine.server");
@@ -423,24 +442,166 @@ export const saveCoachNutritionPlanDraft = createServerFn({ method: "POST" })
       dailySum.f += daySum.f;
       dayCount += 1;
     }
+    if (computedDays.every((d) => d.meals.length === 0)) {
+      throw new Error("Keine Mahlzeiten erkannt.");
+    }
 
     const avgKcal = Math.round((dailySum.kcal / Math.max(1, dayCount)) / 50) * 50;
     const avgP = Math.round(dailySum.p / Math.max(1, dayCount));
     const avgC = Math.round(dailySum.c / Math.max(1, dayCount));
     const avgF = Math.round(dailySum.f / Math.max(1, dayCount));
 
-    // Archive existing non-active nutrition plans
-    await supabaseAdmin
-      .from("nutrition_plans")
-      .update({ status: "archived" } as any)
-      .eq("client_id", data.client_id)
-      .eq("plan_type", "nutrition")
-      .in("status", ["draft", "approved", "published"]);
+    // ─────── APPEND / REPLACE WEEK ───────
+    if (mode === "append_week" || mode === "replace_week") {
+      if (!data.target_plan_id) throw new Error("Zielplan fehlt.");
+      const { data: target, error: tErr } = await supabaseAdmin
+        .from("nutrition_plans")
+        .select("id, client_id, plan_type, weeks_count, scheduled_start_date, scheduled_end_date, status")
+        .eq("id", data.target_plan_id)
+        .single();
+      if (tErr || !target) throw new Error("Zielplan nicht gefunden.");
+      if (target.client_id !== data.client_id || target.plan_type !== "nutrition") {
+        throw new Error("Zielplan passt nicht zum Kunden.");
+      }
 
+      let weekNumber: number;
+      if (mode === "replace_week") {
+        weekNumber = Math.max(1, Number(data.target_week_number ?? 0));
+        if (!weekNumber) throw new Error("Wochennummer fehlt.");
+        // Delete existing days for that week (meals cascade)
+        await supabaseAdmin
+          .from("nutrition_plan_days")
+          .delete()
+          .eq("plan_id", target.id)
+          .eq("week_number", weekNumber);
+      } else {
+        // append_week: next free week
+        const { data: maxRow } = await supabaseAdmin
+          .from("nutrition_plan_days")
+          .select("week_number")
+          .eq("plan_id", target.id)
+          .order("week_number", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        weekNumber = Math.max(target.weeks_count ?? 0, maxRow?.week_number ?? 0) + 1;
+      }
+
+      // Insert days & meals
+      let insertedMeals = 0;
+      const { data: maxSort } = await supabaseAdmin
+        .from("nutrition_plan_days")
+        .select("sort_order")
+        .eq("plan_id", target.id)
+        .order("sort_order", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const baseSort = (maxSort?.sort_order ?? -1) + 1;
+
+      for (let i = 0; i < computedDays.length; i++) {
+        const d = computedDays[i];
+        const { data: dayRow, error: dErr } = await supabaseAdmin
+          .from("nutrition_plan_days")
+          .insert({
+            plan_id: target.id,
+            name: d.name,
+            sort_order: baseSort + i,
+            week_number: weekNumber,
+          } as any)
+          .select("id").single();
+        if (dErr || !dayRow) continue;
+
+        let snackCounter = 0;
+        const mealRows = d.meals.map((m, idx) => {
+          let slotLabel: string;
+          if (m.slot === "breakfast") slotLabel = "Frühstück";
+          else if (m.slot === "lunch") slotLabel = "Mittagessen";
+          else if (m.slot === "dinner") slotLabel = "Abendessen";
+          else { snackCounter += 1; slotLabel = `Snack ${snackCounter}`; }
+          return {
+            day_id: dayRow.id,
+            name: `${d.name} — ${slotLabel}: ${m.name}`,
+            description: m.description ?? null,
+            ingredients_json: m.ingredients.length ? m.ingredients.map((ing) => ({
+              name: ing.name,
+              grams: Number(ing.grams ?? 0) || null,
+              amount: ing.amount ?? null,
+              unit: ing.unit ?? null,
+            })) : null,
+            compute_warnings: m.warnings,
+            kcal: m.kcal, protein_g: m.protein_g, carbs_g: m.carbs_g, fat_g: m.fat_g,
+            sort_order: idx,
+            data_source: m.data_source,
+            verified_ratio: m.verified_ratio,
+          };
+        });
+        if (mealRows.length) {
+          const { error: mErr } = await supabaseAdmin
+            .from("nutrition_plan_meals").insert(mealRows as any);
+          if (!mErr) insertedMeals += mealRows.length;
+        }
+      }
+
+      // Update plan totals: weeks_count and scheduled_end_date extension
+      if (mode === "append_week") {
+        const newWeeksCount = Math.max(target.weeks_count ?? 0, weekNumber);
+        const patch: any = { weeks_count: newWeeksCount };
+        if (target.scheduled_start_date) {
+          const startDate = new Date(target.scheduled_start_date + "T00:00:00Z");
+          const newEnd = new Date(startDate);
+          newEnd.setUTCDate(newEnd.getUTCDate() + newWeeksCount * 7 - 1);
+          const newEndStr = newEnd.toISOString().slice(0, 10);
+          if (!target.scheduled_end_date || target.scheduled_end_date < newEndStr) {
+            patch.scheduled_end_date = newEndStr;
+          }
+        }
+        await supabaseAdmin.from("nutrition_plans").update(patch).eq("id", target.id);
+      }
+
+      return {
+        ok: true,
+        plan_id: target.id,
+        week_number: weekNumber,
+        days: computedDays.length,
+        meals: insertedMeals,
+        mode,
+      };
+    }
+
+    // ─────── NEW PLAN / REPLACE PLAN ───────
     const today = new Date();
-    const start = today.toISOString().slice(0, 10);
-    const end = new Date(today);
-    end.setDate(end.getDate() + computedDays.length - 1);
+    const start = data.start_date ?? today.toISOString().slice(0, 10);
+    const startDate = new Date(start + "T00:00:00Z");
+    const endDate = new Date(startDate);
+    endDate.setUTCDate(endDate.getUTCDate() + computedDays.length - 1);
+
+    // Konflikt-Check (soft): nur wenn nicht force
+    if (!data.force && mode === "new_plan") {
+      const startStr = startDate.toISOString().slice(0, 10);
+      const endStr = endDate.toISOString().slice(0, 10);
+      const { data: conflicts } = await supabaseAdmin
+        .from("nutrition_plans")
+        .select("id,title,scheduled_start_date,scheduled_end_date,status")
+        .eq("client_id", data.client_id)
+        .eq("plan_type", "nutrition")
+        .neq("status", "archived")
+        .lte("scheduled_start_date", endStr)
+        .gte("scheduled_end_date", startStr);
+      if (conflicts && conflicts.length > 0) {
+        throw new Error(
+          "CONFLICT: Für diesen Zeitraum existiert bereits ein Plan. Bitte im Import-Dialog eine Option wählen.",
+        );
+      }
+    }
+
+    if (mode === "replace_plan") {
+      if (!data.target_plan_id) throw new Error("Zielplan fehlt.");
+      await supabaseAdmin
+        .from("nutrition_plans")
+        .update({ status: "archived", archived_at: new Date().toISOString() } as any)
+        .eq("id", data.target_plan_id)
+        .eq("client_id", data.client_id)
+        .eq("plan_type", "nutrition");
+    }
 
     const { data: planRow, error: planErr } = await supabaseAdmin
       .from("nutrition_plans")
@@ -456,8 +617,9 @@ export const saveCoachNutritionPlanDraft = createServerFn({ method: "POST" })
         uploaded_by: context.userId,
         file_path: `ai-generated/${data.client_id}/coach-nutrition-${Date.now()}.json`,
         file_name: "coach-nutrition.json",
-        scheduled_start_date: start,
-        scheduled_end_date: end.toISOString().slice(0, 10),
+        scheduled_start_date: startDate.toISOString().slice(0, 10),
+        scheduled_end_date: endDate.toISOString().slice(0, 10),
+        weeks_count: Math.max(1, Math.ceil(computedDays.length / 7)),
         kcal: avgKcal,
         protein_g: avgP,
         carbs_g: avgC,
@@ -471,7 +633,7 @@ export const saveCoachNutritionPlanDraft = createServerFn({ method: "POST" })
       const d = computedDays[i];
       const { data: dayRow, error: dErr } = await supabaseAdmin
         .from("nutrition_plan_days")
-        .insert({ plan_id: planRow.id, name: d.name, sort_order: i } as any)
+        .insert({ plan_id: planRow.id, name: d.name, sort_order: i, week_number: 1 } as any)
         .select("id").single();
       if (dErr || !dayRow) continue;
 
@@ -525,5 +687,6 @@ export const saveCoachNutritionPlanDraft = createServerFn({ method: "POST" })
       // non-fatal
     }
 
-    return { ok: true, plan_id: planRow.id, days: computedDays.length, meals: totalMeals };
+    return { ok: true, plan_id: planRow.id, days: computedDays.length, meals: totalMeals, mode };
   });
+
