@@ -490,6 +490,93 @@ export type Database = {
         }
         Relationships: []
       }
+      coach_meal_library: {
+        Row: {
+          budget: Database["public"]["Enums"]["meal_budget_level"]
+          carbs_g: number
+          category: Database["public"]["Enums"]["meal_slot_kind"]
+          created_at: string
+          created_by: string | null
+          description: string | null
+          eat_cold: boolean
+          effort: Database["public"]["Enums"]["meal_effort_level"]
+          fat_g: number
+          id: string
+          ingredients: Json
+          instructions: string | null
+          is_active: boolean
+          is_system: boolean
+          kcal: number
+          main_carb: string | null
+          main_protein: string | null
+          mealprep_ok: boolean
+          name: string
+          no_go_ingredients: string[]
+          portion_label: string | null
+          protein_g: number
+          suitable_rest: boolean
+          suitable_training: boolean
+          tags: string[]
+          updated_at: string
+        }
+        Insert: {
+          budget?: Database["public"]["Enums"]["meal_budget_level"]
+          carbs_g?: number
+          category: Database["public"]["Enums"]["meal_slot_kind"]
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          eat_cold?: boolean
+          effort?: Database["public"]["Enums"]["meal_effort_level"]
+          fat_g?: number
+          id?: string
+          ingredients?: Json
+          instructions?: string | null
+          is_active?: boolean
+          is_system?: boolean
+          kcal?: number
+          main_carb?: string | null
+          main_protein?: string | null
+          mealprep_ok?: boolean
+          name: string
+          no_go_ingredients?: string[]
+          portion_label?: string | null
+          protein_g?: number
+          suitable_rest?: boolean
+          suitable_training?: boolean
+          tags?: string[]
+          updated_at?: string
+        }
+        Update: {
+          budget?: Database["public"]["Enums"]["meal_budget_level"]
+          carbs_g?: number
+          category?: Database["public"]["Enums"]["meal_slot_kind"]
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          eat_cold?: boolean
+          effort?: Database["public"]["Enums"]["meal_effort_level"]
+          fat_g?: number
+          id?: string
+          ingredients?: Json
+          instructions?: string | null
+          is_active?: boolean
+          is_system?: boolean
+          kcal?: number
+          main_carb?: string | null
+          main_protein?: string | null
+          mealprep_ok?: boolean
+          name?: string
+          no_go_ingredients?: string[]
+          portion_label?: string | null
+          protein_g?: number
+          suitable_rest?: boolean
+          suitable_training?: boolean
+          tags?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       coach_messages: {
         Row: {
           body: string
@@ -1453,8 +1540,12 @@ export type Database = {
           fat_g: number | null
           id: string
           ingredients_json: Json | null
+          is_locked: boolean
           is_shared: boolean
           kcal: number | null
+          library_meal_id: string | null
+          linked_prep_group: string | null
+          meal_slot: Database["public"]["Enums"]["meal_slot_kind"] | null
           name: string
           partner_meal_id: string | null
           protein_g: number | null
@@ -1475,8 +1566,12 @@ export type Database = {
           fat_g?: number | null
           id?: string
           ingredients_json?: Json | null
+          is_locked?: boolean
           is_shared?: boolean
           kcal?: number | null
+          library_meal_id?: string | null
+          linked_prep_group?: string | null
+          meal_slot?: Database["public"]["Enums"]["meal_slot_kind"] | null
           name: string
           partner_meal_id?: string | null
           protein_g?: number | null
@@ -1497,8 +1592,12 @@ export type Database = {
           fat_g?: number | null
           id?: string
           ingredients_json?: Json | null
+          is_locked?: boolean
           is_shared?: boolean
           kcal?: number | null
+          library_meal_id?: string | null
+          linked_prep_group?: string | null
+          meal_slot?: Database["public"]["Enums"]["meal_slot_kind"] | null
           name?: string
           partner_meal_id?: string | null
           protein_g?: number | null
@@ -1514,6 +1613,13 @@ export type Database = {
             columns: ["day_id"]
             isOneToOne: false
             referencedRelation: "nutrition_plan_days"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nutrition_plan_meals_library_meal_id_fkey"
+            columns: ["library_meal_id"]
+            isOneToOne: false
+            referencedRelation: "coach_meal_library"
             referencedColumns: ["id"]
           },
           {
@@ -3162,6 +3268,15 @@ export type Database = {
         | "DB"
         | "KP"
         | "COACH"
+      meal_budget_level: "low" | "medium" | "high"
+      meal_effort_level: "low" | "medium" | "high"
+      meal_slot_kind:
+        | "breakfast"
+        | "lunch"
+        | "dinner"
+        | "snack"
+        | "pre_workout"
+        | "post_workout"
       nutrition_food_source:
         | "bls_4_0"
         | "open_food_facts"
@@ -3322,6 +3437,16 @@ export const Constants = {
         "DB",
         "KP",
         "COACH",
+      ],
+      meal_budget_level: ["low", "medium", "high"],
+      meal_effort_level: ["low", "medium", "high"],
+      meal_slot_kind: [
+        "breakfast",
+        "lunch",
+        "dinner",
+        "snack",
+        "pre_workout",
+        "post_workout",
       ],
       nutrition_food_source: [
         "bls_4_0",
