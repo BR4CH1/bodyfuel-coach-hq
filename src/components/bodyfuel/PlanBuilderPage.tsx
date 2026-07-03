@@ -615,72 +615,13 @@ function DayCard({
 
   const autoFillDay = () => {
     onChange((d) => {
-      let meals = [...d.meals];
-      const remaining = () => {
-        const t = target;
-        const cur = meals.reduce(
-          (acc, m) => {
-            const mm = mealMacros(m, library);
-            return {
-              kcal: acc.kcal + mm.kcal,
-              p: acc.p + mm.p,
-              c: acc.c + mm.c,
-              f: acc.f + mm.f,
-            };
-          },
-          { kcal: 0, p: 0, c: 0, f: 0 },
+      const res = autoFillDayImpl(d, ctx, library, "empty_only");
+      if (res.missing.length > 0) {
+        toast.warning(
+          `Für ${res.missing.length} Slot(s) wurde keine passende Mahlzeit gefunden. Bitte Mahlzeitendatenbank erweitern oder Filter prüfen.`,
         );
-        return { kcal: t.kcal - cur.kcal, p: t.p - cur.p, c: t.c - cur.c, f: t.f - cur.f };
-      };
-
-      const slotOrder: Slot[] = ["breakfast", "lunch", "dinner", "snack"];
-      for (const slot of slotOrder) {
-        const existing = meals.find((m) => m.slot === slot);
-        if (existing && existing.is_locked) continue;
-        if (existing && !existing.is_locked) {
-          // ersetze nur, wenn deutlich besser? → Behalte manuell gesetzte; auffüllen tut nur leere Slots
-          continue;
-        }
-        // Für Kopplung: wenn aktiv und slot lunch → auch dinner mitfüllen
-        const candidates = library
-          .filter((m) => m.category === slot)
-          .map((m) => ({ meal: m, ...scoreMeal(m, ctx, d.type, remaining()) }))
-          .filter((x) => x.score > 0)
-          .sort((a, b) => b.score - a.score);
-        const best = candidates[0];
-        if (!best) continue;
-        if (d.prepCoupleLunchDinner && (slot === "lunch" || slot === "dinner")) {
-          // Nur einmal setzen, dann beide
-          const already = meals.find((m) => m.slot === (slot === "lunch" ? "dinner" : "lunch"));
-          if (already && already.library_meal_id) {
-            // Der Partner ist schon gesetzt → spiegel diesen
-            const src = library.find((x) => x.id === already.library_meal_id);
-            if (src) {
-              const groupId = already.linked_prep_group ?? makeGroupId();
-              meals = meals.map((m) =>
-                m.linked_prep_group === groupId || m.slot === already.slot
-                  ? { ...m, linked_prep_group: groupId }
-                  : m,
-              );
-              const clone = mealFromLibrary(src, slot, 1, groupId);
-              if (slot === "dinner") clone.description = (src.description ?? "") + " (Portion 2 aus Mealprep)";
-              meals = meals.filter((m) => m.slot !== slot);
-              meals.push(clone);
-            }
-            continue;
-          }
-          const groupId = makeGroupId();
-          const lunch = mealFromLibrary(best.meal, "lunch", 1, groupId);
-          const dinner = mealFromLibrary(best.meal, "dinner", 1, groupId);
-          dinner.description = (best.meal.description ?? "") + " (Portion 2 aus Mealprep)";
-          meals = meals.filter((m) => m.slot !== "lunch" && m.slot !== "dinner");
-          meals.push(lunch, dinner);
-          continue;
-        }
-        meals = meals.filter((m) => m.slot !== slot);
-        meals.push(mealFromLibrary(best.meal, slot));
       }
-      return { ...d, meals };
+      return res.day;
     });
   };
 
