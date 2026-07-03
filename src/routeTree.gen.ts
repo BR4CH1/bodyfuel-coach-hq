@@ -89,6 +89,7 @@ import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/l
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
+import { Route as CoachCustomersUserIdPlanBuilderRouteImport } from './routes/coach.customers.$userId.plan-builder'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicHooksTrialRemindersRouteImport } from './routes/api/public/hooks/trial-reminders'
 import { Route as ApiPublicHooksSendFeatureNewsRouteImport } from './routes/api/public/hooks/send-feature-news'
@@ -504,6 +505,12 @@ const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
   path: '/lovable/email/auth/preview',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CoachCustomersUserIdPlanBuilderRoute =
+  CoachCustomersUserIdPlanBuilderRouteImport.update({
+    id: '/plan-builder',
+    path: '/plan-builder',
+    getParentRoute: () => CoachCustomersUserIdRoute,
+  } as any)
 const ApiPublicPaymentsWebhookRoute =
   ApiPublicPaymentsWebhookRouteImport.update({
     id: '/api/public/payments/webhook',
@@ -615,7 +622,7 @@ export interface FileRoutesByFullPath {
   '/smart/': typeof SmartIndexRoute
   '/tracker/': typeof TrackerIndexRoute
   '/api/public/guardian-consent': typeof ApiPublicGuardianConsentRoute
-  '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
+  '/coach/customers/$userId': typeof CoachCustomersUserIdRouteWithChildren
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/coach/plan-preview/$planId': typeof CoachPlanPreviewPlanIdRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
@@ -637,6 +644,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/send-feature-news': typeof ApiPublicHooksSendFeatureNewsRoute
   '/api/public/hooks/trial-reminders': typeof ApiPublicHooksTrialRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/coach/customers/$userId/plan-builder': typeof CoachCustomersUserIdPlanBuilderRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -700,7 +708,7 @@ export interface FileRoutesByTo {
   '/smart': typeof SmartIndexRoute
   '/tracker': typeof TrackerIndexRoute
   '/api/public/guardian-consent': typeof ApiPublicGuardianConsentRoute
-  '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
+  '/coach/customers/$userId': typeof CoachCustomersUserIdRouteWithChildren
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/coach/plan-preview/$planId': typeof CoachPlanPreviewPlanIdRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
@@ -722,6 +730,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/send-feature-news': typeof ApiPublicHooksSendFeatureNewsRoute
   '/api/public/hooks/trial-reminders': typeof ApiPublicHooksTrialRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/coach/customers/$userId/plan-builder': typeof CoachCustomersUserIdPlanBuilderRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -791,7 +800,7 @@ export interface FileRoutesById {
   '/smart/': typeof SmartIndexRoute
   '/tracker/': typeof TrackerIndexRoute
   '/api/public/guardian-consent': typeof ApiPublicGuardianConsentRoute
-  '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
+  '/coach/customers/$userId': typeof CoachCustomersUserIdRouteWithChildren
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/coach/plan-preview/$planId': typeof CoachPlanPreviewPlanIdRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
@@ -813,6 +822,7 @@ export interface FileRoutesById {
   '/api/public/hooks/send-feature-news': typeof ApiPublicHooksSendFeatureNewsRoute
   '/api/public/hooks/trial-reminders': typeof ApiPublicHooksTrialRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/coach/customers/$userId/plan-builder': typeof CoachCustomersUserIdPlanBuilderRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -905,6 +915,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/send-feature-news'
     | '/api/public/hooks/trial-reminders'
     | '/api/public/payments/webhook'
+    | '/coach/customers/$userId/plan-builder'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -990,6 +1001,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/send-feature-news'
     | '/api/public/hooks/trial-reminders'
     | '/api/public/payments/webhook'
+    | '/coach/customers/$userId/plan-builder'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -1080,6 +1092,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/send-feature-news'
     | '/api/public/hooks/trial-reminders'
     | '/api/public/payments/webhook'
+    | '/coach/customers/$userId/plan-builder'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -1709,6 +1722,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailAuthPreviewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/coach/customers/$userId/plan-builder': {
+      id: '/coach/customers/$userId/plan-builder'
+      path: '/plan-builder'
+      fullPath: '/coach/customers/$userId/plan-builder'
+      preLoaderRoute: typeof CoachCustomersUserIdPlanBuilderRouteImport
+      parentRoute: typeof CoachCustomersUserIdRoute
+    }
     '/api/public/payments/webhook': {
       id: '/api/public/payments/webhook'
       path: '/api/public/payments/webhook'
@@ -1768,14 +1788,25 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface CoachCustomersUserIdRouteChildren {
+  CoachCustomersUserIdPlanBuilderRoute: typeof CoachCustomersUserIdPlanBuilderRoute
+}
+
+const CoachCustomersUserIdRouteChildren: CoachCustomersUserIdRouteChildren = {
+  CoachCustomersUserIdPlanBuilderRoute: CoachCustomersUserIdPlanBuilderRoute,
+}
+
+const CoachCustomersUserIdRouteWithChildren =
+  CoachCustomersUserIdRoute._addFileChildren(CoachCustomersUserIdRouteChildren)
+
 interface CoachCustomersRouteChildren {
-  CoachCustomersUserIdRoute: typeof CoachCustomersUserIdRoute
+  CoachCustomersUserIdRoute: typeof CoachCustomersUserIdRouteWithChildren
   CoachCustomersNewRoute: typeof CoachCustomersNewRoute
   CoachCustomersIndexRoute: typeof CoachCustomersIndexRoute
 }
 
 const CoachCustomersRouteChildren: CoachCustomersRouteChildren = {
-  CoachCustomersUserIdRoute: CoachCustomersUserIdRoute,
+  CoachCustomersUserIdRoute: CoachCustomersUserIdRouteWithChildren,
   CoachCustomersNewRoute: CoachCustomersNewRoute,
   CoachCustomersIndexRoute: CoachCustomersIndexRoute,
 }
