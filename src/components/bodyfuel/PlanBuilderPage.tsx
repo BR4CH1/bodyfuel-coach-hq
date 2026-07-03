@@ -100,6 +100,83 @@ function mealMacros(m: BuilderMeal, library: LibraryMeal[]) {
   };
 }
 
+export type AutoFillMode = "empty_only" | "all_unlocked";
+
+export function targetsFor(day: BuilderDay, ctx: CustomerPlanContext) {
+  return day.type === "training"
+    ? { kcal: ctx.targets.kcal_train, p: ctx.targets.protein_train, c: ctx.targets.carbs_train, f: ctx.targets.fat_train }
+    : { kcal: ctx.targets.kcal_rest, p: ctx.targets.protein_rest, c: ctx.targets.carbs_rest, f: ctx.targets.fat_rest };
+}
+
+// Returns { day, missing: Slot[] } — never touches locked meals.
+export function autoFillDayImpl(
+  day: BuilderDay,
+  ctx: CustomerPlanContext,
+  library: LibraryMeal[],
+  mode: AutoFillMode,
+): { day: BuilderDay; missing: Slot[] } {
+  let meals: BuilderMeal[] = day.meals.map((m) => ({ ...m }));
+  // In "all_unlocked" mode: remove unlocked meals before filling
+  if (mode === "all_unlocked") {
+    meals = meals.filter((m) => m.is_locked);
+  }
+  const target = targetsFor(day, ctx);
+  const slotOrder: Slot[] = ["breakfast", "lunch", "dinner", "snack"];
+  const missing: Slot[] = [];
+
+  const remaining = () => {
+    const cur = meals.reduce(
+      (acc, m) => {
+        const mm = mealMacros(m, library);
+        return { kcal: acc.kcal + mm.kcal, p: acc.p + mm.p, c: acc.c + mm.c, f: acc.f + mm.f };
+      },
+      { kcal: 0, p: 0, c: 0, f: 0 },
+    );
+    return { kcal: target.kcal - cur.kcal, p: target.p - cur.p, c: target.c - cur.c, f: target.f - cur.f };
+  };
+
+  for (const slot of slotOrder) {
+    const existing = meals.find((m) => m.slot === slot);
+    if (existing) continue; // locked or (empty_only) user meal → keep
+
+    const candidates = library
+      .filter((m) => m.category === slot)
+      .map((m) => ({ meal: m, ...scoreMeal(m, ctx, day.type, remaining()) }))
+      .filter((x) => x.score > 0)
+      .sort((a, b) => b.score - a.score);
+    const best = candidates[0];
+    if (!best) {
+      missing.push(slot);
+      continue;
+    }
+
+    if (day.prepCoupleLunchDinner && (slot === "lunch" || slot === "dinner")) {
+      const partner = meals.find((m) => m.slot === (slot === "lunch" ? "dinner" : "lunch"));
+      if (partner && partner.library_meal_id) {
+        // Partner already set (probably locked) → mirror it into this slot
+        const src = library.find((x) => x.id === partner.library_meal_id);
+        if (src) {
+          const groupId = partner.linked_prep_group ?? makeGroupId();
+          meals = meals.map((m) => (m.slot === partner.slot ? { ...m, linked_prep_group: groupId } : m));
+          const clone = mealFromLibrary(src, slot, 1, groupId);
+          if (slot === "dinner") clone.description = (src.description ?? "") + " (Portion 2 aus Mealprep)";
+          meals.push(clone);
+        }
+        continue;
+      }
+      const groupId = makeGroupId();
+      const lunch = mealFromLibrary(best.meal, "lunch", 1, groupId);
+      const dinner = mealFromLibrary(best.meal, "dinner", 1, groupId);
+      dinner.description = (best.meal.description ?? "") + " (Portion 2 aus Mealprep)";
+      meals = meals.filter((m) => m.slot !== "lunch" && m.slot !== "dinner" || m.is_locked);
+      meals.push(lunch, dinner);
+      continue;
+    }
+    meals.push(mealFromLibrary(best.meal, slot));
+  }
+  return { day: { ...day, meals }, missing };
+}
+
 export function PlanBuilderPage({ userId }: { userId: string }) {
   const navigate = useNavigate();
   const listLib = useServerFn(listMealLibrary);
