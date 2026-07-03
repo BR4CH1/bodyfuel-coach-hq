@@ -72,8 +72,12 @@ export const getCustomerPlanContext = createServerFn({ method: "POST" })
       context.supabase.from("nutrition_targets").select("*").eq("user_id", data.customerId).maybeSingle(),
     ]);
 
-    const merge = (a?: string[] | null, b?: string[] | null) =>
-      [...(a ?? []), ...(b ?? [])].map((s) => String(s).trim().toLowerCase()).filter(Boolean);
+    const toList = (v: any): string[] => {
+      if (!v) return [];
+      if (Array.isArray(v)) return v.map((s) => String(s).trim().toLowerCase()).filter(Boolean);
+      return String(v).split(/[,\n;]+/).map((s) => s.trim().toLowerCase()).filter(Boolean);
+    };
+    const merge = (...vs: any[]) => Array.from(new Set(vs.flatMap(toList)));
 
     return {
       targets: {
