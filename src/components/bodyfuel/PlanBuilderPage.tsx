@@ -211,9 +211,13 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
         const isTrain = trainingWeekdays.includes(weekday);
         const existing = prev[i];
         const dateLabel = `${weekdayLabels[weekday]} ${String(d.getUTCDate()).padStart(2, "0")}.${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+        // Auto-derive from trainingWeekdays unless the coach toggled manually
+        const autoType: "training" | "rest" = isTrain ? "training" : "rest";
+        const type = existing?.typeOverride ? existing.type : autoType;
         next.push({
           name: `Tag ${i + 1} · ${dateLabel}`,
-          type: existing?.type ?? (isTrain ? "training" : "rest"),
+          type,
+          typeOverride: existing?.typeOverride ?? false,
           meals: existing?.meals ?? [],
           prepCoupleLunchDinner: existing?.prepCoupleLunchDinner ?? false,
         });
