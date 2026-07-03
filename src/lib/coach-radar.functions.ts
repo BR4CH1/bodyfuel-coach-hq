@@ -118,6 +118,9 @@ export const getCoachRadar = createServerFn({ method: "GET" })
       photos,
       drafts,
       resolutions,
+      pkgs,
+      subs,
+      referrals,
     ] = await Promise.all([
       supabase
         .from("profiles")
