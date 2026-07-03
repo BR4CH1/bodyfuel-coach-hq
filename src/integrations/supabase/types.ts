@@ -1360,6 +1360,7 @@ export type Database = {
           name: string
           plan_id: string
           sort_order: number
+          week_number: number
         }
         Insert: {
           created_at?: string
@@ -1367,6 +1368,7 @@ export type Database = {
           name: string
           plan_id: string
           sort_order?: number
+          week_number?: number
         }
         Update: {
           created_at?: string
@@ -1374,6 +1376,7 @@ export type Database = {
           name?: string
           plan_id?: string
           sort_order?: number
+          week_number?: number
         }
         Relationships: [
           {
