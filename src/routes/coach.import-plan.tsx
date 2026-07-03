@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Upload, FileText, Type, Plus, Trash2, Loader2, Save, Wand2 } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
@@ -18,7 +19,9 @@ import {
   type ImportedNutritionPlan,
   type ImportedNutritionDay,
   type ImportedNutritionMeal,
+  type NutritionSaveMode,
 } from "@/lib/coach-plan-import.functions";
+import { listCustomerNutritionPlans } from "@/lib/coach-plan-history.functions";
 
 type PlanType = "training" | "nutrition";
 type Mode = "upload" | "text" | "manual";
