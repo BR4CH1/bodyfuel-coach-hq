@@ -186,6 +186,20 @@ export const getCoachRadar = createServerFn({ method: "GET" })
         .select("alert_key, resolved_at")
         .eq("coach_user_id", userId)
         .gte("resolved_at", since7dIso),
+      supabase
+        .from("customer_packages")
+        .select("user_id, package, source, status, started_at, created_at")
+        .in("user_id", ids)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("subscriptions")
+        .select("user_id, product_id, status, created_at")
+        .in("user_id", ids)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("affiliate_referrals")
+        .select("referred_user_id, source_slug, partner_id, signup_at, affiliate_partners(name, slug)")
+        .in("referred_user_id", ids),
     ]);
 
     const resolvedSet = new Set<string>(
