@@ -309,12 +309,56 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
 
   return (
     <div className="mx-auto max-w-4xl space-y-4 p-4 pb-32">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Button variant="ghost" size="sm" onClick={() => navigate({ to: "/coach/customers/$userId", params: { userId } })}>
           <ArrowLeft className="mr-1 h-4 w-4" /> Zurück
         </Button>
         <h1 className="font-display text-lg font-bold">Plan manuell erstellen</h1>
+        <div className="ml-auto flex flex-wrap gap-1">
+          <Button size="sm" variant="secondary" onClick={() => { setWeekMode("empty_only"); setWeekConfirmOpen(true); }}>
+            <Wand2 className="mr-1 h-3 w-3" />
+            Woche automatisch füllen
+          </Button>
+          {undoSnapshot && (
+            <Button size="sm" variant="outline" onClick={undoWeekFill}>
+              <Undo2 className="mr-1 h-3 w-3" />
+              Rückgängig
+            </Button>
+          )}
+        </div>
       </div>
+
+      <AlertDialog open={weekConfirmOpen} onOpenChange={setWeekConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Woche automatisch füllen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Fixierte Mahlzeiten bleiben immer erhalten. Vor der Aktion wird ein Snapshot gespeichert
+              — du kannst über „Rückgängig“ zurückkehren.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <RadioGroup value={weekMode} onValueChange={(v) => setWeekMode(v as AutoFillMode)} className="space-y-2 py-2">
+            <label className="flex items-start gap-2 text-sm">
+              <RadioGroupItem value="empty_only" className="mt-0.5" />
+              <div>
+                <div className="font-medium">Nur leere Slots füllen</div>
+                <div className="text-xs text-muted-foreground">Bestehende Mahlzeiten bleiben unverändert.</div>
+              </div>
+            </label>
+            <label className="flex items-start gap-2 text-sm">
+              <RadioGroupItem value="all_unlocked" className="mt-0.5" />
+              <div>
+                <div className="font-medium">Alle nicht fixierten Slots neu füllen</div>
+                <div className="text-xs text-muted-foreground">Ersetzt nicht-fixierte Mahlzeiten durch neue Vorschläge.</div>
+              </div>
+            </label>
+          </RadioGroup>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction onClick={() => runAutoFillWeek(weekMode)}>Ausführen</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Card>
         <CardHeader className="pb-3">
