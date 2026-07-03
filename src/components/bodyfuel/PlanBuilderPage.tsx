@@ -406,6 +406,18 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
                 {ctxQ.data.targets.carbs_rest}C/{ctxQ.data.targets.fat_rest}F
               </Badge>
             </div>
+            <div>
+              Trainingstage laut Profil:{" "}
+              <b>
+                {ctxQ.data.trainingWeekdays.length === 0
+                  ? "keine hinterlegt"
+                  : ctxQ.data.trainingWeekdays
+                      .slice()
+                      .sort()
+                      .map((w) => ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"][w])
+                      .join(", ")}
+              </b>
+            </div>
             {ctxQ.data.dietStyle && (
               <div>
                 Ernährungsform: <b>{ctxQ.data.dietStyle}</b>
