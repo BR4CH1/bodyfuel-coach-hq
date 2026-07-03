@@ -184,32 +184,43 @@ export const saveBuilderPlan = createServerFn({ method: "POST" })
     } as any);
 
     // Post-save: enrich saved meals with meal_slot / library_meal_id / is_locked / linked_prep_group
+    // and persist per-day day_type + day_date
     if ((result as any)?.plan_id) {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const planId = (result as any).plan_id as string;
       const { data: dayRows } = await supabaseAdmin
         .from("nutrition_plan_days")
-        .select("id, day_date, name")
+        .select("id, sort_order")
         .eq("plan_id", planId)
-        .order("day_date");
-      const dayIds = (dayRows ?? []).map((r: any) => r.id);
-      for (let di = 0; di < data.days.length && di < dayIds.length; di++) {
-        const dayId = dayIds[di];
+        .order("sort_order");
+      const dayArr = dayRows ?? [];
+      for (let di = 0; di < data.days.length && di < dayArr.length; di++) {
+        const dayId = dayArr[di].id;
+        const src = data.days[di];
+        // compute date for this day
+        const base = new Date(data.startDate + "T00:00:00Z");
+        base.setUTCDate(base.getUTCDate() + di);
+        const iso = base.toISOString().slice(0, 10);
+        await supabaseAdmin
+          .from("nutrition_plan_days")
+          .update({ day_type: src.type, day_date: iso } as any)
+          .eq("id", dayId);
+
         const { data: mealRows } = await supabaseAdmin
           .from("nutrition_plan_meals")
           .select("id, sort_order")
           .eq("day_id", dayId)
           .order("sort_order");
         const mealArr = mealRows ?? [];
-        for (let mi = 0; mi < data.days[di].meals.length && mi < mealArr.length; mi++) {
-          const src = data.days[di].meals[mi];
+        for (let mi = 0; mi < src.meals.length && mi < mealArr.length; mi++) {
+          const m = src.meals[mi];
           await supabaseAdmin
             .from("nutrition_plan_meals")
             .update({
-              meal_slot: src.slot,
-              library_meal_id: src.library_meal_id ?? null,
-              is_locked: !!src.is_locked,
-              linked_prep_group: src.linked_prep_group ?? null,
+              meal_slot: m.slot,
+              library_meal_id: m.library_meal_id ?? null,
+              is_locked: !!m.is_locked,
+              linked_prep_group: m.linked_prep_group ?? null,
             } as any)
             .eq("id", mealArr[mi].id);
         }

@@ -36,7 +36,20 @@ import {
   Sparkles,
   Link2,
   Link2Off,
+  Undo2,
+  Wand2,
 } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type Slot = "breakfast" | "lunch" | "dinner" | "snack";
 const SLOTS: { key: Slot; label: string }[] = [
@@ -87,6 +100,83 @@ function mealMacros(m: BuilderMeal, library: LibraryMeal[]) {
   };
 }
 
+export type AutoFillMode = "empty_only" | "all_unlocked";
+
+export function targetsFor(day: BuilderDay, ctx: CustomerPlanContext) {
+  return day.type === "training"
+    ? { kcal: ctx.targets.kcal_train, p: ctx.targets.protein_train, c: ctx.targets.carbs_train, f: ctx.targets.fat_train }
+    : { kcal: ctx.targets.kcal_rest, p: ctx.targets.protein_rest, c: ctx.targets.carbs_rest, f: ctx.targets.fat_rest };
+}
+
+// Returns { day, missing: Slot[] } — never touches locked meals.
+export function autoFillDayImpl(
+  day: BuilderDay,
+  ctx: CustomerPlanContext,
+  library: LibraryMeal[],
+  mode: AutoFillMode,
+): { day: BuilderDay; missing: Slot[] } {
+  let meals: BuilderMeal[] = day.meals.map((m) => ({ ...m }));
+  // In "all_unlocked" mode: remove unlocked meals before filling
+  if (mode === "all_unlocked") {
+    meals = meals.filter((m) => m.is_locked);
+  }
+  const target = targetsFor(day, ctx);
+  const slotOrder: Slot[] = ["breakfast", "lunch", "dinner", "snack"];
+  const missing: Slot[] = [];
+
+  const remaining = () => {
+    const cur = meals.reduce(
+      (acc, m) => {
+        const mm = mealMacros(m, library);
+        return { kcal: acc.kcal + mm.kcal, p: acc.p + mm.p, c: acc.c + mm.c, f: acc.f + mm.f };
+      },
+      { kcal: 0, p: 0, c: 0, f: 0 },
+    );
+    return { kcal: target.kcal - cur.kcal, p: target.p - cur.p, c: target.c - cur.c, f: target.f - cur.f };
+  };
+
+  for (const slot of slotOrder) {
+    const existing = meals.find((m) => m.slot === slot);
+    if (existing) continue; // locked or (empty_only) user meal → keep
+
+    const candidates = library
+      .filter((m) => m.category === slot)
+      .map((m) => ({ meal: m, ...scoreMeal(m, ctx, day.type, remaining()) }))
+      .filter((x) => x.score > 0)
+      .sort((a, b) => b.score - a.score);
+    const best = candidates[0];
+    if (!best) {
+      missing.push(slot);
+      continue;
+    }
+
+    if (day.prepCoupleLunchDinner && (slot === "lunch" || slot === "dinner")) {
+      const partner = meals.find((m) => m.slot === (slot === "lunch" ? "dinner" : "lunch"));
+      if (partner && partner.library_meal_id) {
+        // Partner already set (probably locked) → mirror it into this slot
+        const src = library.find((x) => x.id === partner.library_meal_id);
+        if (src) {
+          const groupId = partner.linked_prep_group ?? makeGroupId();
+          meals = meals.map((m) => (m.slot === partner.slot ? { ...m, linked_prep_group: groupId } : m));
+          const clone = mealFromLibrary(src, slot, 1, groupId);
+          if (slot === "dinner") clone.description = (src.description ?? "") + " (Portion 2 aus Mealprep)";
+          meals.push(clone);
+        }
+        continue;
+      }
+      const groupId = makeGroupId();
+      const lunch = mealFromLibrary(best.meal, "lunch", 1, groupId);
+      const dinner = mealFromLibrary(best.meal, "dinner", 1, groupId);
+      dinner.description = (best.meal.description ?? "") + " (Portion 2 aus Mealprep)";
+      meals = meals.filter((m) => m.slot !== "lunch" && m.slot !== "dinner" || m.is_locked);
+      meals.push(lunch, dinner);
+      continue;
+    }
+    meals.push(mealFromLibrary(best.meal, slot));
+  }
+  return { day: { ...day, meals }, missing };
+}
+
 export function PlanBuilderPage({ userId }: { userId: string }) {
   const navigate = useNavigate();
   const listLib = useServerFn(listMealLibrary);
@@ -103,6 +193,9 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
   const [numDays, setNumDays] = useState(7);
   const [title, setTitle] = useState("Wochenplan");
   const [saving, setSaving] = useState(false);
+  const [weekConfirmOpen, setWeekConfirmOpen] = useState(false);
+  const [weekMode, setWeekMode] = useState<AutoFillMode>("empty_only");
+  const [undoSnapshot, setUndoSnapshot] = useState<BuilderDay[] | null>(null);
 
   const trainingWeekdays = ctxQ.data?.trainingWeekdays ?? [];
   const [days, setDays] = useState<BuilderDay[]>(() => []);
@@ -179,6 +272,36 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
     });
   };
 
+  const runAutoFillWeek = (mode: AutoFillMode) => {
+    const ctx = ctxQ.data;
+    const lib = libQ.data ?? [];
+    if (!ctx) return;
+    // Snapshot for undo (deep clone)
+    setUndoSnapshot(days.map((d) => ({ ...d, meals: d.meals.map((m) => ({ ...m, ingredients: m.ingredients.map((i) => ({ ...i })) })) })));
+    let missingCount = 0;
+    setDays((prev) =>
+      prev.map((d) => {
+        const res = autoFillDayImpl(d, ctx, lib, mode);
+        missingCount += res.missing.length;
+        return res.day;
+      }),
+    );
+    if (missingCount > 0) {
+      toast.warning(
+        `${missingCount} Slots ohne passenden Vorschlag. Für diese Slots wurde keine passende Mahlzeit gefunden. Bitte Mahlzeitendatenbank erweitern oder Filter prüfen.`,
+      );
+    } else {
+      toast.success("Woche automatisch gefüllt");
+    }
+  };
+
+  const undoWeekFill = () => {
+    if (!undoSnapshot) return;
+    setDays(undoSnapshot);
+    setUndoSnapshot(null);
+    toast.success("Rückgängig gemacht");
+  };
+
   if (libQ.isLoading || ctxQ.isLoading) {
     return <div className="p-6 text-sm text-muted-foreground">Lade …</div>;
   }
@@ -186,12 +309,56 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
 
   return (
     <div className="mx-auto max-w-4xl space-y-4 p-4 pb-32">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Button variant="ghost" size="sm" onClick={() => navigate({ to: "/coach/customers/$userId", params: { userId } })}>
           <ArrowLeft className="mr-1 h-4 w-4" /> Zurück
         </Button>
         <h1 className="font-display text-lg font-bold">Plan manuell erstellen</h1>
+        <div className="ml-auto flex flex-wrap gap-1">
+          <Button size="sm" variant="secondary" onClick={() => { setWeekMode("empty_only"); setWeekConfirmOpen(true); }}>
+            <Wand2 className="mr-1 h-3 w-3" />
+            Woche automatisch füllen
+          </Button>
+          {undoSnapshot && (
+            <Button size="sm" variant="outline" onClick={undoWeekFill}>
+              <Undo2 className="mr-1 h-3 w-3" />
+              Rückgängig
+            </Button>
+          )}
+        </div>
       </div>
+
+      <AlertDialog open={weekConfirmOpen} onOpenChange={setWeekConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Woche automatisch füllen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Fixierte Mahlzeiten bleiben immer erhalten. Vor der Aktion wird ein Snapshot gespeichert
+              — du kannst über „Rückgängig“ zurückkehren.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <RadioGroup value={weekMode} onValueChange={(v) => setWeekMode(v as AutoFillMode)} className="space-y-2 py-2">
+            <label className="flex items-start gap-2 text-sm">
+              <RadioGroupItem value="empty_only" className="mt-0.5" />
+              <div>
+                <div className="font-medium">Nur leere Slots füllen</div>
+                <div className="text-xs text-muted-foreground">Bestehende Mahlzeiten bleiben unverändert.</div>
+              </div>
+            </label>
+            <label className="flex items-start gap-2 text-sm">
+              <RadioGroupItem value="all_unlocked" className="mt-0.5" />
+              <div>
+                <div className="font-medium">Alle nicht fixierten Slots neu füllen</div>
+                <div className="text-xs text-muted-foreground">Ersetzt nicht-fixierte Mahlzeiten durch neue Vorschläge.</div>
+              </div>
+            </label>
+          </RadioGroup>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction onClick={() => runAutoFillWeek(weekMode)}>Ausführen</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Card>
         <CardHeader className="pb-3">
@@ -448,72 +615,13 @@ function DayCard({
 
   const autoFillDay = () => {
     onChange((d) => {
-      let meals = [...d.meals];
-      const remaining = () => {
-        const t = target;
-        const cur = meals.reduce(
-          (acc, m) => {
-            const mm = mealMacros(m, library);
-            return {
-              kcal: acc.kcal + mm.kcal,
-              p: acc.p + mm.p,
-              c: acc.c + mm.c,
-              f: acc.f + mm.f,
-            };
-          },
-          { kcal: 0, p: 0, c: 0, f: 0 },
+      const res = autoFillDayImpl(d, ctx, library, "empty_only");
+      if (res.missing.length > 0) {
+        toast.warning(
+          `Für ${res.missing.length} Slot(s) wurde keine passende Mahlzeit gefunden. Bitte Mahlzeitendatenbank erweitern oder Filter prüfen.`,
         );
-        return { kcal: t.kcal - cur.kcal, p: t.p - cur.p, c: t.c - cur.c, f: t.f - cur.f };
-      };
-
-      const slotOrder: Slot[] = ["breakfast", "lunch", "dinner", "snack"];
-      for (const slot of slotOrder) {
-        const existing = meals.find((m) => m.slot === slot);
-        if (existing && existing.is_locked) continue;
-        if (existing && !existing.is_locked) {
-          // ersetze nur, wenn deutlich besser? → Behalte manuell gesetzte; auffüllen tut nur leere Slots
-          continue;
-        }
-        // Für Kopplung: wenn aktiv und slot lunch → auch dinner mitfüllen
-        const candidates = library
-          .filter((m) => m.category === slot)
-          .map((m) => ({ meal: m, ...scoreMeal(m, ctx, d.type, remaining()) }))
-          .filter((x) => x.score > 0)
-          .sort((a, b) => b.score - a.score);
-        const best = candidates[0];
-        if (!best) continue;
-        if (d.prepCoupleLunchDinner && (slot === "lunch" || slot === "dinner")) {
-          // Nur einmal setzen, dann beide
-          const already = meals.find((m) => m.slot === (slot === "lunch" ? "dinner" : "lunch"));
-          if (already && already.library_meal_id) {
-            // Der Partner ist schon gesetzt → spiegel diesen
-            const src = library.find((x) => x.id === already.library_meal_id);
-            if (src) {
-              const groupId = already.linked_prep_group ?? makeGroupId();
-              meals = meals.map((m) =>
-                m.linked_prep_group === groupId || m.slot === already.slot
-                  ? { ...m, linked_prep_group: groupId }
-                  : m,
-              );
-              const clone = mealFromLibrary(src, slot, 1, groupId);
-              if (slot === "dinner") clone.description = (src.description ?? "") + " (Portion 2 aus Mealprep)";
-              meals = meals.filter((m) => m.slot !== slot);
-              meals.push(clone);
-            }
-            continue;
-          }
-          const groupId = makeGroupId();
-          const lunch = mealFromLibrary(best.meal, "lunch", 1, groupId);
-          const dinner = mealFromLibrary(best.meal, "dinner", 1, groupId);
-          dinner.description = (best.meal.description ?? "") + " (Portion 2 aus Mealprep)";
-          meals = meals.filter((m) => m.slot !== "lunch" && m.slot !== "dinner");
-          meals.push(lunch, dinner);
-          continue;
-        }
-        meals = meals.filter((m) => m.slot !== slot);
-        meals.push(mealFromLibrary(best.meal, slot));
       }
-      return { ...d, meals };
+      return res.day;
     });
   };
 
