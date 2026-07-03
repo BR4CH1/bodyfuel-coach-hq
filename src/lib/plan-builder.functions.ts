@@ -59,7 +59,7 @@ export const listMealLibrary = createServerFn({ method: "GET" })
       .order("category")
       .order("name");
     if (error) throw error;
-    return (data ?? []) as LibraryMeal[];
+    return (data ?? []) as unknown as LibraryMeal[];
   });
 
 export const getCustomerPlanContext = createServerFn({ method: "POST" })
