@@ -1,4 +1,4 @@
-import { createFileRoute, useParams, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useParams, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useEffect } from "react";
@@ -665,12 +665,10 @@ function CustomerDetail() {
             <NutritionTargetsEditor userId={userId} />
             <SmartNutritionInsightsCard userId={userId} />
             <PlanManagementCard userId={userId} />
-            <Button
-              variant="secondary"
-              className="w-full"
-              onClick={() => navigate({ to: "/coach/plan-builder/$userId", params: { userId } })}
-            >
-              Plan manuell erstellen
+            <Button variant="secondary" className="w-full" asChild>
+              <Link to="/coach/plan-builder/$userId" params={{ userId }}>
+                Plan manuell erstellen
+              </Link>
             </Button>
             <CoachNutritionPlanHistoryCard userId={userId} />
             <CoachKitchenEquipmentCard userId={userId} />
