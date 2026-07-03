@@ -272,6 +272,36 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
     });
   };
 
+  const runAutoFillWeek = (mode: AutoFillMode) => {
+    const ctx = ctxQ.data;
+    const lib = libQ.data ?? [];
+    if (!ctx) return;
+    // Snapshot for undo (deep clone)
+    setUndoSnapshot(days.map((d) => ({ ...d, meals: d.meals.map((m) => ({ ...m, ingredients: m.ingredients.map((i) => ({ ...i })) })) })));
+    let missingCount = 0;
+    setDays((prev) =>
+      prev.map((d) => {
+        const res = autoFillDayImpl(d, ctx, lib, mode);
+        missingCount += res.missing.length;
+        return res.day;
+      }),
+    );
+    if (missingCount > 0) {
+      toast.warning(
+        `${missingCount} Slots ohne passenden Vorschlag. Für diese Slots wurde keine passende Mahlzeit gefunden. Bitte Mahlzeitendatenbank erweitern oder Filter prüfen.`,
+      );
+    } else {
+      toast.success("Woche automatisch gefüllt");
+    }
+  };
+
+  const undoWeekFill = () => {
+    if (!undoSnapshot) return;
+    setDays(undoSnapshot);
+    setUndoSnapshot(null);
+    toast.success("Rückgängig gemacht");
+  };
+
   if (libQ.isLoading || ctxQ.isLoading) {
     return <div className="p-6 text-sm text-muted-foreground">Lade …</div>;
   }
