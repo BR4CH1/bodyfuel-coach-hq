@@ -9,6 +9,27 @@ async function assertCoach(ctx: { supabase: any; userId: string }) {
   if (!isCoach) throw new Error("Nur für Coaches.");
 }
 
+// 0=Sun..6=Sat, matches JS Date.getUTCDay()
+const WEEKDAY_MAP: Record<string, number> = {
+  sunday: 0, sun: 0, so: 0, sonntag: 0, "0": 0, "7": 0,
+  monday: 1, mon: 1, mo: 1, montag: 1, "1": 1,
+  tuesday: 2, tue: 2, tues: 2, di: 2, dienstag: 2, "2": 2,
+  wednesday: 3, wed: 3, mi: 3, mittwoch: 3, "3": 3,
+  thursday: 4, thu: 4, thur: 4, thurs: 4, do: 4, donnerstag: 4, "4": 4,
+  friday: 5, fri: 5, fr: 5, freitag: 5, "5": 5,
+  saturday: 6, sat: 6, sa: 6, samstag: 6, sonnabend: 6, "6": 6,
+};
+function normalizeWeekdays(v: any): number[] {
+  if (!Array.isArray(v)) return [];
+  const out = new Set<number>();
+  for (const raw of v) {
+    if (raw == null) continue;
+    const key = String(raw).trim().toLowerCase();
+    if (key in WEEKDAY_MAP) out.add(WEEKDAY_MAP[key]);
+  }
+  return Array.from(out);
+}
+
 export type LibraryMeal = {
   id: string;
   name: string;
