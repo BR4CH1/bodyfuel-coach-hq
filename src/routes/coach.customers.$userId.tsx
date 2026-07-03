@@ -49,6 +49,7 @@ import { AiCheckinDraftCard } from "@/components/bodyfuel/AiCheckinDraftCard";
 import { PlanAdjustmentsCard } from "@/components/bodyfuel/PlanAdjustmentsCard";
 import { PlanManagementCard } from "@/components/bodyfuel/PlanManagementCard";
 import { TrainingPlanManagementCard } from "@/components/bodyfuel/TrainingPlanManagementCard";
+import { CoachNutritionPlanHistoryCard } from "@/components/bodyfuel/CoachNutritionPlanHistoryCard";
 import { MealWishesCard } from "@/components/bodyfuel/MealWishesCard";
 import { CoachKitchenEquipmentCard } from "@/components/bodyfuel/CoachKitchenEquipmentCard";
 import { ProgressPhotosCard } from "@/components/bodyfuel/ProgressPhotosCard";
