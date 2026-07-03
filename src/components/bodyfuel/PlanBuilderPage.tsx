@@ -637,7 +637,13 @@ function DayCard({
           <Badge
             variant={day.type === "training" ? "default" : "secondary"}
             className="cursor-pointer"
-            onClick={() => onChange((d) => ({ ...d, type: d.type === "training" ? "rest" : "training" }))}
+            onClick={() =>
+              onChange((d) => ({
+                ...d,
+                type: d.type === "training" ? "rest" : "training",
+                typeOverride: true,
+              }))
+            }
           >
             {day.type === "training" ? "Trainingstag" : "Restday"}
           </Badge>
