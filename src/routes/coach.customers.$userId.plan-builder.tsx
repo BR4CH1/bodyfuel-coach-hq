@@ -40,7 +40,19 @@ import {
 
 export const Route = createFileRoute("/coach/customers/$userId/plan-builder")({
   head: () => ({ meta: [{ title: "Plan Builder" }] }),
-  component: PlanBuilderPage,
+  component: () => (
+    <AppLayout>
+      <PlanBuilderPage />
+    </AppLayout>
+  ),
+  errorComponent: ({ error }) => (
+    <div className="p-6 text-sm text-destructive">
+      Plan-Builder Fehler: {(error as any)?.message ?? String(error)}
+    </div>
+  ),
+  notFoundComponent: () => (
+    <div className="p-6 text-sm text-muted-foreground">Seite nicht gefunden.</div>
+  ),
 });
 
 type Slot = "breakfast" | "lunch" | "dinner" | "snack";
