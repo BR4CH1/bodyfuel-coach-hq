@@ -193,6 +193,9 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
   const [numDays, setNumDays] = useState(7);
   const [title, setTitle] = useState("Wochenplan");
   const [saving, setSaving] = useState(false);
+  const [weekConfirmOpen, setWeekConfirmOpen] = useState(false);
+  const [weekMode, setWeekMode] = useState<AutoFillMode>("empty_only");
+  const [undoSnapshot, setUndoSnapshot] = useState<BuilderDay[] | null>(null);
 
   const trainingWeekdays = ctxQ.data?.trainingWeekdays ?? [];
   const [days, setDays] = useState<BuilderDay[]>(() => []);
