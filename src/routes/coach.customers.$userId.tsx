@@ -665,6 +665,13 @@ function CustomerDetail() {
             <NutritionTargetsEditor userId={userId} />
             <SmartNutritionInsightsCard userId={userId} />
             <PlanManagementCard userId={userId} />
+            <Button
+              variant="secondary"
+              className="w-full"
+              onClick={() => navigate({ to: "/coach/customers/$userId/plan-builder", params: { userId } })}
+            >
+              Plan manuell erstellen
+            </Button>
             <CoachNutritionPlanHistoryCard userId={userId} />
             <CoachKitchenEquipmentCard userId={userId} />
             <MealWishesCard userId={userId} mode="coach" />
