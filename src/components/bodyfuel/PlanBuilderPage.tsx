@@ -1,5 +1,4 @@
-import { AppLayout } from "@/components/bodyfuel/AppLayout";
-import { createFileRoute, useParams, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
@@ -38,28 +37,6 @@ import {
   Link2,
   Link2Off,
 } from "lucide-react";
-
-export const Route = createFileRoute("/coach/customers/$userId/plan-builder")({
-  head: () => ({ meta: [{ title: "Plan Builder" }] }),
-  component: CustomerPlanBuilderRoute,
-  errorComponent: ({ error }) => (
-    <div className="p-6 text-sm text-destructive">
-      Plan-Builder Fehler: {(error as any)?.message ?? String(error)}
-    </div>
-  ),
-  notFoundComponent: () => (
-    <div className="p-6 text-sm text-muted-foreground">Seite nicht gefunden.</div>
-  ),
-});
-
-function CustomerPlanBuilderRoute() {
-  const { userId } = useParams({ from: "/coach/customers/$userId/plan-builder" });
-  return (
-    <AppLayout>
-      <PlanBuilderPage userId={userId} />
-    </AppLayout>
-  );
-}
 
 type Slot = "breakfast" | "lunch" | "dinner" | "snack";
 const SLOTS: { key: Slot; label: string }[] = [

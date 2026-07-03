@@ -1,6 +1,6 @@
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
+import { PlanBuilderPage } from "@/components/bodyfuel/PlanBuilderPage";
 import { createFileRoute, useParams } from "@tanstack/react-router";
-import { PlanBuilderPage } from "./coach.customers.$userId.plan-builder";
 
 export const Route = createFileRoute("/coach/plan-builder/$userId")({
   head: () => ({ meta: [{ title: "Plan manuell erstellen — BODYFUEL" }] }),
