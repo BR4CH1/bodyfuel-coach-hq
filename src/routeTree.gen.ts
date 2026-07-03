@@ -81,6 +81,7 @@ import { Route as TrackerAppAchievementsRouteImport } from './routes/tracker.app
 import { Route as SmartGiftCodeRouteImport } from './routes/smart.gift.$code'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as CoachPlanPreviewPlanIdRouteImport } from './routes/coach.plan-preview.$planId'
+import { Route as CoachPlanBuilderUserIdRouteImport } from './routes/coach.plan-builder.$userId'
 import { Route as CoachCustomersNewRouteImport } from './routes/coach.customers.new'
 import { Route as CoachCustomersUserIdRouteImport } from './routes/coach.customers.$userId'
 import { Route as ApiPublicGuardianConsentRouteImport } from './routes/api/public/guardian-consent'
@@ -461,6 +462,11 @@ const CoachPlanPreviewPlanIdRoute = CoachPlanPreviewPlanIdRouteImport.update({
   path: '/plan-preview/$planId',
   getParentRoute: () => CoachRoute,
 } as any)
+const CoachPlanBuilderUserIdRoute = CoachPlanBuilderUserIdRouteImport.update({
+  id: '/plan-builder/$userId',
+  path: '/plan-builder/$userId',
+  getParentRoute: () => CoachRoute,
+} as any)
 const CoachCustomersNewRoute = CoachCustomersNewRouteImport.update({
   id: '/new',
   path: '/new',
@@ -624,6 +630,7 @@ export interface FileRoutesByFullPath {
   '/api/public/guardian-consent': typeof ApiPublicGuardianConsentRoute
   '/coach/customers/$userId': typeof CoachCustomersUserIdRouteWithChildren
   '/coach/customers/new': typeof CoachCustomersNewRoute
+  '/coach/plan-builder/$userId': typeof CoachPlanBuilderUserIdRoute
   '/coach/plan-preview/$planId': typeof CoachPlanPreviewPlanIdRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/smart/gift/$code': typeof SmartGiftCodeRoute
@@ -710,6 +717,7 @@ export interface FileRoutesByTo {
   '/api/public/guardian-consent': typeof ApiPublicGuardianConsentRoute
   '/coach/customers/$userId': typeof CoachCustomersUserIdRouteWithChildren
   '/coach/customers/new': typeof CoachCustomersNewRoute
+  '/coach/plan-builder/$userId': typeof CoachPlanBuilderUserIdRoute
   '/coach/plan-preview/$planId': typeof CoachPlanPreviewPlanIdRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/smart/gift/$code': typeof SmartGiftCodeRoute
@@ -802,6 +810,7 @@ export interface FileRoutesById {
   '/api/public/guardian-consent': typeof ApiPublicGuardianConsentRoute
   '/coach/customers/$userId': typeof CoachCustomersUserIdRouteWithChildren
   '/coach/customers/new': typeof CoachCustomersNewRoute
+  '/coach/plan-builder/$userId': typeof CoachPlanBuilderUserIdRoute
   '/coach/plan-preview/$planId': typeof CoachPlanPreviewPlanIdRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/smart/gift/$code': typeof SmartGiftCodeRoute
@@ -895,6 +904,7 @@ export interface FileRouteTypes {
     | '/api/public/guardian-consent'
     | '/coach/customers/$userId'
     | '/coach/customers/new'
+    | '/coach/plan-builder/$userId'
     | '/coach/plan-preview/$planId'
     | '/lovable/email/suppression'
     | '/smart/gift/$code'
@@ -981,6 +991,7 @@ export interface FileRouteTypes {
     | '/api/public/guardian-consent'
     | '/coach/customers/$userId'
     | '/coach/customers/new'
+    | '/coach/plan-builder/$userId'
     | '/coach/plan-preview/$planId'
     | '/lovable/email/suppression'
     | '/smart/gift/$code'
@@ -1072,6 +1083,7 @@ export interface FileRouteTypes {
     | '/api/public/guardian-consent'
     | '/coach/customers/$userId'
     | '/coach/customers/new'
+    | '/coach/plan-builder/$userId'
     | '/coach/plan-preview/$planId'
     | '/lovable/email/suppression'
     | '/smart/gift/$code'
@@ -1666,6 +1678,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CoachPlanPreviewPlanIdRouteImport
       parentRoute: typeof CoachRoute
     }
+    '/coach/plan-builder/$userId': {
+      id: '/coach/plan-builder/$userId'
+      path: '/plan-builder/$userId'
+      fullPath: '/coach/plan-builder/$userId'
+      preLoaderRoute: typeof CoachPlanBuilderUserIdRouteImport
+      parentRoute: typeof CoachRoute
+    }
     '/coach/customers/new': {
       id: '/coach/customers/new'
       path: '/new'
@@ -1826,6 +1845,7 @@ interface CoachRouteChildren {
   CoachPackageRequestsRoute: typeof CoachPackageRequestsRoute
   CoachReviewsRoute: typeof CoachReviewsRoute
   CoachIndexRoute: typeof CoachIndexRoute
+  CoachPlanBuilderUserIdRoute: typeof CoachPlanBuilderUserIdRoute
   CoachPlanPreviewPlanIdRoute: typeof CoachPlanPreviewPlanIdRoute
 }
 
@@ -1840,6 +1860,7 @@ const CoachRouteChildren: CoachRouteChildren = {
   CoachPackageRequestsRoute: CoachPackageRequestsRoute,
   CoachReviewsRoute: CoachReviewsRoute,
   CoachIndexRoute: CoachIndexRoute,
+  CoachPlanBuilderUserIdRoute: CoachPlanBuilderUserIdRoute,
   CoachPlanPreviewPlanIdRoute: CoachPlanPreviewPlanIdRoute,
 }
 
