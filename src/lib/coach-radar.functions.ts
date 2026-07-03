@@ -430,7 +430,11 @@ export const getCoachRadar = createServerFn({ method: "GET" })
             priority: "info",
             kind: "new_customer",
             title: "Neue Anmeldung",
-            detail: `Vor ${Math.max(0, Math.floor(ageDays))} Tagen beigetreten`,
+            detail: [
+              `Vor ${Math.max(0, Math.floor(ageDays))} Tagen beigetreten`,
+              packageByUser.get(p.id) ? `Paket: ${packageByUser.get(p.id)}` : null,
+              sourceByUser.get(p.id) ? `Quelle: ${sourceByUser.get(p.id)}` : null,
+            ].filter(Boolean).join(" · "),
             keySuffix: new Date(p.created_at).toISOString().slice(0, 10),
           });
         }
