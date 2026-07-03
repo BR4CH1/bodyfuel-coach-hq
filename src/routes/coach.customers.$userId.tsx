@@ -668,7 +668,7 @@ function CustomerDetail() {
             <Button
               variant="secondary"
               className="w-full"
-              onClick={() => navigate({ to: "/coach/customers/$userId/plan-builder", params: { userId } })}
+              onClick={() => navigate({ to: "/coach/plan-builder/$userId", params: { userId } })}
             >
               Plan manuell erstellen
             </Button>

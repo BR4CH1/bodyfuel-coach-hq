@@ -41,11 +41,7 @@ import {
 
 export const Route = createFileRoute("/coach/customers/$userId/plan-builder")({
   head: () => ({ meta: [{ title: "Plan Builder" }] }),
-  component: () => (
-    <AppLayout>
-      <PlanBuilderPage />
-    </AppLayout>
-  ),
+  component: CustomerPlanBuilderRoute,
   errorComponent: ({ error }) => (
     <div className="p-6 text-sm text-destructive">
       Plan-Builder Fehler: {(error as any)?.message ?? String(error)}
@@ -55,6 +51,15 @@ export const Route = createFileRoute("/coach/customers/$userId/plan-builder")({
     <div className="p-6 text-sm text-muted-foreground">Seite nicht gefunden.</div>
   ),
 });
+
+function CustomerPlanBuilderRoute() {
+  const { userId } = useParams({ from: "/coach/customers/$userId/plan-builder" });
+  return (
+    <AppLayout>
+      <PlanBuilderPage userId={userId} />
+    </AppLayout>
+  );
+}
 
 type Slot = "breakfast" | "lunch" | "dinner" | "snack";
 const SLOTS: { key: Slot; label: string }[] = [
@@ -105,8 +110,7 @@ function mealMacros(m: BuilderMeal, library: LibraryMeal[]) {
   };
 }
 
-function PlanBuilderPage() {
-  const { userId } = useParams({ from: "/coach/customers/$userId/plan-builder" });
+export function PlanBuilderPage({ userId }: { userId: string }) {
   const navigate = useNavigate();
   const listLib = useServerFn(listMealLibrary);
   const getCtx = useServerFn(getCustomerPlanContext);
