@@ -110,13 +110,16 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
   useMemo(() => {
     setDays((prev) => {
       const next: BuilderDay[] = [];
+      const weekdayLabels = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
       for (let i = 0; i < numDays; i++) {
         const iso = addDays(startDate, i);
-        const weekday = new Date(iso + "T00:00:00Z").getUTCDay();
+        const d = new Date(iso + "T00:00:00Z");
+        const weekday = d.getUTCDay();
         const isTrain = trainingWeekdays.includes(weekday);
         const existing = prev[i];
+        const dateLabel = `${weekdayLabels[weekday]} ${String(d.getUTCDate()).padStart(2, "0")}.${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
         next.push({
-          name: `Tag ${i + 1}`,
+          name: `Tag ${i + 1} · ${dateLabel}`,
           type: existing?.type ?? (isTrain ? "training" : "rest"),
           meals: existing?.meals ?? [],
           prepCoupleLunchDinner: existing?.prepCoupleLunchDinner ?? false,
