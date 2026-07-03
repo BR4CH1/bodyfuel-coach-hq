@@ -311,6 +311,103 @@ function ImportPage() {
   );
 }
 
+function NutritionSaveModeCard({
+  plans, isLoading, mode, setMode, targetPlanId, setTargetPlanId,
+  targetWeekNumber, setTargetWeekNumber, startDate, setStartDate,
+}: {
+  plans: Array<{ id: string; title: string | null; scheduled_start_date: string | null; scheduled_end_date: string | null; weeks_count: number | null; status: string | null }>;
+  isLoading: boolean;
+  mode: NutritionSaveMode;
+  setMode: (m: NutritionSaveMode) => void;
+  targetPlanId: string;
+  setTargetPlanId: (id: string) => void;
+  targetWeekNumber: number;
+  setTargetWeekNumber: (n: number) => void;
+  startDate: string;
+  setStartDate: (d: string) => void;
+}) {
+  const active = plans.filter((p) => p.status !== "archived");
+  const options: { value: NutritionSaveMode; label: string; hint: string }[] = [
+    { value: "append_week", label: "An bestehenden Plan anhängen", hint: "Neue Woche wird angehängt" },
+    { value: "new_plan", label: "Als neuen Plan speichern", hint: "Zusätzlicher Plan, andere bleiben" },
+    { value: "replace_week", label: "Bestehende Woche ersetzen", hint: "Tage einer Woche werden ersetzt" },
+    { value: "replace_plan", label: "Kompletten Plan ersetzen", hint: "Zielplan wird archiviert" },
+  ];
+  return (
+    <div className="rounded-2xl border border-gold/30 bg-card p-5">
+      <h2 className="font-display text-lg font-bold">Speichern als</h2>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Bestimme, wie dieser Import beim Kunden abgelegt wird. Es wird nichts automatisch überschrieben.
+      </p>
+
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        {options.map((o) => (
+          <button
+            key={o.value}
+            onClick={() => setMode(o.value)}
+            className={`rounded-xl border px-3 py-2 text-left text-xs transition ${
+              mode === o.value
+                ? "border-gold/60 bg-gold/10"
+                : "border-border bg-background/40 hover:border-gold/40"
+            }`}
+          >
+            <p className="text-sm font-semibold">{o.label}</p>
+            <p className="text-[11px] text-muted-foreground">{o.hint}</p>
+          </button>
+        ))}
+      </div>
+
+      {(mode === "append_week" || mode === "replace_week" || mode === "replace_plan") && (
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <label className="text-xs">
+            <span className="mb-1 block font-semibold text-muted-foreground">Zielplan</span>
+            <select
+              value={targetPlanId}
+              onChange={(e) => setTargetPlanId(e.target.value)}
+              className="w-full rounded-md border border-input bg-background px-2 py-2 text-sm"
+              disabled={isLoading}
+            >
+              <option value="">— wählen —</option>
+              {active.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {(p.title || "Ohne Titel") +
+                    (p.scheduled_start_date ? ` — ${p.scheduled_start_date}` : "") +
+                    (p.weeks_count ? ` (${p.weeks_count} Wo.)` : "")}
+                </option>
+              ))}
+            </select>
+          </label>
+          {mode === "replace_week" && (
+            <label className="text-xs">
+              <span className="mb-1 block font-semibold text-muted-foreground">Wochennummer</span>
+              <input
+                type="number"
+                min={1}
+                max={52}
+                value={targetWeekNumber}
+                onChange={(e) => setTargetWeekNumber(Math.max(1, Number(e.target.value) || 1))}
+                className="w-full rounded-md border border-input bg-background px-2 py-2 text-sm"
+              />
+            </label>
+          )}
+        </div>
+      )}
+
+      {(mode === "new_plan" || mode === "replace_plan") && (
+        <label className="mt-4 block text-xs">
+          <span className="mb-1 block font-semibold text-muted-foreground">Startdatum</span>
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="w-full max-w-xs rounded-md border border-input bg-background px-2 py-2 text-sm"
+          />
+        </label>
+      )}
+    </div>
+  );
+}
+
 function ModeBtn({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
   return (
     <button
