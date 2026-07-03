@@ -143,6 +143,23 @@ function ImportPage() {
     }
   };
 
+  const doSaveNutrition = async (cleaned: ImportedNutritionPlan, force: boolean) => {
+    const payload: any = {
+      client_id: client,
+      plan: cleaned,
+      title: nuPlan.title,
+      mode: saveMode,
+      force,
+    };
+    if (saveMode === "append_week" || saveMode === "replace_week" || saveMode === "replace_plan") {
+      if (!targetPlanId) throw new Error("Bitte einen Zielplan auswählen.");
+      payload.target_plan_id = targetPlanId;
+    }
+    if (saveMode === "replace_week") payload.target_week_number = targetWeekNumber;
+    if (saveMode === "new_plan" || saveMode === "replace_plan") payload.start_date = startDate;
+    await saveNuFn({ data: payload });
+  };
+
   const save = async () => {
     setSaving(true);
     try {
@@ -173,9 +190,24 @@ function ImportPage() {
             }))
             .filter((d) => d.meals.length),
         };
-        await saveNuFn({ data: { client_id: client, plan: cleaned, title: nuPlan.title } });
+        try {
+          await doSaveNutrition(cleaned, false);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : "";
+          if (msg.startsWith("CONFLICT:")) {
+            const ok = window.confirm(
+              "Für diesen Zeitraum existiert bereits ein Plan.\n\n" +
+              "OK  = Trotzdem zusätzlich als neuen Plan speichern\n" +
+              "Abbrechen = Import stoppen (dann oben 'An bestehenden anhängen' oder 'Ersetzen' wählen)",
+            );
+            if (!ok) { setSaving(false); return; }
+            await doSaveNutrition(cleaned, true);
+          } else {
+            throw err;
+          }
+        }
       }
-      toast.success("Plan als Entwurf gespeichert.");
+      toast.success("Plan gespeichert.");
       navigate({ to: "/coach/customers/$userId", params: { userId: client } });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Speichern fehlgeschlagen");
