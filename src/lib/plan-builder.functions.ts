@@ -109,11 +109,14 @@ export type BuilderMeal = {
   ingredients: Array<{ name: string; grams: number }>;
   library_meal_id?: string | null;
   is_locked?: boolean;
+  portion_factor?: number; // 1.0 = normale Portion
+  linked_prep_group?: string | null;
 };
 export type BuilderDay = {
   name: string;
   type: "training" | "rest";
   meals: BuilderMeal[];
+  prepCoupleLunchDinner?: boolean;
 };
 
 export const saveBuilderPlan = createServerFn({ method: "POST" })
