@@ -97,7 +97,7 @@ export const getCustomerPlanContext = createServerFn({ method: "POST" })
       dietStyle: prof?.diet_style ?? null,
       budgetBand: prof?.budget_band ?? null,
       mealPrepStyle: prof?.meal_prep_style ?? null,
-      trainingWeekdays: Array.isArray(prof?.training_weekdays) ? prof!.training_weekdays.map((n: any) => Number(n)) : [],
+      trainingWeekdays: normalizeWeekdays(prof?.training_weekdays),
     };
   });
 
