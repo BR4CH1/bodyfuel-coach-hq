@@ -276,6 +276,21 @@ function ImportPage() {
         </div>
       )}
 
+      {type === "nutrition" && (
+        <NutritionSaveModeCard
+          plans={plansQuery.data?.all ?? []}
+          isLoading={plansQuery.isLoading}
+          mode={saveMode}
+          setMode={setSaveMode}
+          targetPlanId={targetPlanId}
+          setTargetPlanId={setTargetPlanId}
+          targetWeekNumber={targetWeekNumber}
+          setTargetWeekNumber={setTargetWeekNumber}
+          startDate={startDate}
+          setStartDate={setStartDate}
+        />
+      )}
+
       {type === "training" ? (
         <TrainingEditor plan={trPlan} setPlan={setTrPlan} />
       ) : (
