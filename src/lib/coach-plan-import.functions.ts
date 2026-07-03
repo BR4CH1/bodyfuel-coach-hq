@@ -29,7 +29,7 @@ async function callGateway(messages: any[]): Promise<any> {
     body: JSON.stringify({
       model: "google/gemini-2.5-flash",
       response_format: { type: "json_object" },
-      max_tokens: 16000,
+      max_tokens: 60000,
       messages,
     }),
   });
@@ -40,10 +40,16 @@ async function callGateway(messages: any[]): Promise<any> {
     throw new Error(`KI-Fehler [${res.status}]: ${txt.slice(0, 200)}`);
   }
   const json = await res.json();
+  const finish = json?.choices?.[0]?.finish_reason;
   const raw = json?.choices?.[0]?.message?.content ?? "{}";
   try {
     return typeof raw === "string" ? JSON.parse(raw) : raw;
   } catch {
+    if (finish === "length") {
+      throw new Error(
+        "Der Plan ist zu lang für einen KI-Import in einem Schritt. Bitte in kleineren Abschnitten (z.B. eine Woche pro Import) einfügen.",
+      );
+    }
     throw new Error("Antwort konnte nicht gelesen werden.");
   }
 }
