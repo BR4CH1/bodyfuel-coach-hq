@@ -1443,6 +1443,8 @@ export type Database = {
       nutrition_plan_days: {
         Row: {
           created_at: string
+          day_date: string | null
+          day_type: string | null
           id: string
           name: string
           plan_id: string
@@ -1451,6 +1453,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          day_date?: string | null
+          day_type?: string | null
           id?: string
           name: string
           plan_id: string
@@ -1459,6 +1463,8 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          day_date?: string | null
+          day_type?: string | null
           id?: string
           name?: string
           plan_id?: string
