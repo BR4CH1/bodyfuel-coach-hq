@@ -29,7 +29,30 @@ function isoToday(): string {
   const diff = (8 - day) % 7 || 7;
   d.setDate(d.getDate() + diff);
   return d.toISOString().slice(0, 10);
+function weightFromBaseline(lib: LibraryExercise, b: StrengthBaseline): string | null {
+  const n = (lib.name || "").toLowerCase();
+  const pat = (lib.movement_pattern || "").toLowerCase();
+  const m = (lib.primary_muscle || "").toLowerCase();
+  let kg: number | null = null;
+  if (/bank(druck|drücken)|bench|brustpresse|chest press/.test(n)) kg = b.bench_press_kg;
+  else if (/schulterdr(ück|uck)|shoulder press|overhead|military/.test(n)) kg = b.shoulder_press_kg;
+  else if (/kniebeug|squat/.test(n)) kg = b.squat_kg;
+  else if (/kreuzheb|deadlift|romanian/.test(n)) kg = b.deadlift_kg;
+  else if (/latzug|lat pulldown|pulldown/.test(n)) kg = b.lat_pulldown_kg;
+  else if (/ruder|row/.test(n)) kg = b.row_kg;
+  else if (/beinpresse|leg press/.test(n)) kg = b.leg_press_kg;
+  else if (/beinbeuger|leg curl/.test(n)) kg = b.leg_curl_kg;
+  else {
+    if (pat === "horizontal_push" || m === "chest") kg = b.bench_press_kg;
+    else if (pat === "vertical_push" || m === "shoulders") kg = b.shoulder_press_kg;
+    else if (pat === "squat" || m === "quads") kg = b.squat_kg;
+    else if (pat === "hinge" || m === "hamstrings") kg = b.deadlift_kg;
+    else if (pat === "vertical_pull" || m === "lats") kg = b.lat_pulldown_kg;
+    else if (pat === "horizontal_pull" || m === "back") kg = b.row_kg;
+  }
+  return kg && kg > 0 ? String(kg) : null;
 }
+
 
 export function TrainingPlanBuilderPage({ userId, planId }: { userId: string; planId?: string }) {
   const navigate = useNavigate();
