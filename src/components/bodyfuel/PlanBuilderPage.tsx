@@ -694,12 +694,14 @@ function DayCard({
   ctx,
   onChange,
   onCopy,
+  hideHeaderActions,
 }: {
   day: BuilderDay;
   library: LibraryMeal[];
   ctx: CustomerPlanContext;
   onChange: (u: (d: BuilderDay) => BuilderDay) => void;
   onCopy: () => void;
+  hideHeaderActions?: boolean;
 }) {
   const target =
     day.type === "training"
