@@ -81,7 +81,9 @@ function applyV2Scores<T extends StrengthCheck>(
   const isV2 = (check as { score_algorithm_version?: number | null }).score_algorithm_version === SCORE_ALGORITHM_VERSION;
   if (isV2) return check;
 
-  const bw = bodyweightOverride ?? check.bodyweight_kg;
+  const bw = bodyweightOverride
+    ?? (check as { scoring_bodyweight_kg?: number | null }).scoring_bodyweight_kg
+    ?? check.bodyweight_kg;
   const v2 = computeCheckV2(results, bw);
   return {
     ...check,
