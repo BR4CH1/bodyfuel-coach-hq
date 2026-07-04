@@ -322,20 +322,42 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
     });
   };
 
+  const cloneDays = (arr: BuilderDay[]): BuilderDay[] =>
+    arr.map((d) => ({
+      ...d,
+      meals: d.meals.map((m) => ({ ...m, ingredients: m.ingredients.map((i) => ({ ...i })) })),
+    }));
+
   const runAutoFillWeek = (mode: AutoFillMode) => {
     const ctx = ctxQ.data;
     const lib = libQ.data ?? [];
     if (!ctx) return;
-    // Snapshot for undo (deep clone)
-    setUndoSnapshot(days.map((d) => ({ ...d, meals: d.meals.map((m) => ({ ...m, ingredients: m.ingredients.map((i) => ({ ...i })) })) })));
+    setUndoSnapshot({
+      client: cloneDays(days),
+      partner: partnerMode ? cloneDays(partnerDays) : null,
+    });
     let missingCount = 0;
-    setDays((prev) =>
-      prev.map((d) => {
-        const res = autoFillDayImpl(d, ctx, lib, mode);
-        missingCount += res.missing.length;
-        return res.day;
-      }),
-    );
+    if (partnerMode && partnerCtxQ.data) {
+      const pCtx = partnerCtxQ.data;
+      const nextClient: BuilderDay[] = [];
+      const nextPartner: BuilderDay[] = [];
+      for (let i = 0; i < days.length; i++) {
+        const pair = autoFillDayPair(days[i], partnerDays[i], ctx, pCtx, lib, mode);
+        missingCount += pair.missing;
+        nextClient.push(pair.client);
+        nextPartner.push(pair.partner);
+      }
+      setDays(nextClient);
+      setPartnerDays(nextPartner);
+    } else {
+      setDays((prev) =>
+        prev.map((d) => {
+          const res = autoFillDayImpl(d, ctx, lib, mode);
+          missingCount += res.missing.length;
+          return res.day;
+        }),
+      );
+    }
     if (missingCount > 0) {
       toast.warning(
         `${missingCount} Slots ohne passenden Vorschlag. Für diese Slots wurde keine passende Mahlzeit gefunden. Bitte Mahlzeitendatenbank erweitern oder Filter prüfen.`,
@@ -347,7 +369,8 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
 
   const undoWeekFill = () => {
     if (!undoSnapshot) return;
-    setDays(undoSnapshot);
+    setDays(undoSnapshot.client);
+    if (undoSnapshot.partner) setPartnerDays(undoSnapshot.partner);
     setUndoSnapshot(null);
     toast.success("Rückgängig gemacht");
   };
