@@ -458,6 +458,7 @@ function DayCard({
   onUpdateEx,
   onAddEx,
   onRemoveEx,
+  onRemoveDay,
 }: {
   day: BuilderTrainingDay;
   library: LibraryExercise[];
@@ -465,6 +466,7 @@ function DayCard({
   onUpdateEx: (idx: number, patch: Partial<BuilderTrainingExercise>) => void;
   onAddEx: (lib?: LibraryExercise) => void;
   onRemoveEx: (idx: number) => void;
+  onRemoveDay: () => void;
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   return (
@@ -497,6 +499,15 @@ function DayCard({
             className={`rounded-md border px-2 py-1 text-[10px] ${day.type === "rest" ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}
           >
             Ruhetag
+          </button>
+          <button
+            onClick={() => {
+              if (confirm(`Tag "${day.name || WD_LONG[day.weekday]}" wirklich löschen?`)) onRemoveDay();
+            }}
+            title="Tag löschen"
+            className="rounded-md border border-border px-2 py-1 text-[10px] text-destructive hover:bg-destructive/10"
+          >
+            <Trash2 className="h-3 w-3" />
           </button>
         </div>
       </div>
