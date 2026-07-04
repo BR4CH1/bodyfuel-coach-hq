@@ -140,7 +140,7 @@ export const getCustomerTrainingContext = createServerFn({ method: "POST" })
     return {
       displayName: prof?.display_name ?? null,
       trainingWeekdays: normalizeWeekdays((snp as any)?.training_weekdays),
-      experienceLevel: (snp as any)?.experience_level ?? null,
+      experienceLevel: null,
       mainGoal: (prof as any)?.training_goal ?? null,
       bodyweightKg: (check as any)?.scoring_bodyweight_kg ?? (bm && bm.length ? Number((bm[0] as any).weight_kg) : null),
       baseline,
