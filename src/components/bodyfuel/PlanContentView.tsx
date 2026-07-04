@@ -652,7 +652,20 @@ export function PlanContentView({ clientId, planType }: Props) {
 
           <div className="mt-3 space-y-3">
             {planType === "nutrition"
-              ? meals.filter((m) => itemToVirtual[m.id] === activeDay).map((m) => {
+              ? (() => {
+                  const SLOT_ORDER: Record<string, number> = { breakfast: 0, snack: 1, lunch: 2, dinner: 3 };
+                  return meals
+                    .filter((m) => itemToVirtual[m.id] === activeDay)
+                    .slice()
+                    .sort((a, b) => {
+                      const sa = slotFromName(itemDisplayName[a.id] ?? a.name) ?? slotFromName(a.name);
+                      const sb = slotFromName(itemDisplayName[b.id] ?? b.name) ?? slotFromName(b.name);
+                      const oa = sa ? SLOT_ORDER[sa] : 99;
+                      const ob = sb ? SLOT_ORDER[sb] : 99;
+                      if (oa !== ob) return oa - ob;
+                      return a.sort_order - b.sort_order;
+                    });
+                })().map((m) => {
                   const override = overrides[m.id];
                   const effName = override?.name ?? (itemDisplayName[m.id] ?? m.name);
                   const effDescription = override ? override.description : m.description;
