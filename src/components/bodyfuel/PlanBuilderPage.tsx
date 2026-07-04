@@ -757,10 +757,12 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
             partnerDay={partnerDays[di]}
             clientCtx={ctxQ.data!}
             partnerCtx={partnerCtxQ.data}
+            clientName="Kunde"
+            partnerName={partnerName}
             library={libQ.data ?? []}
             onClientChange={(u) => setDay(di, u)}
             onPartnerChange={(u) => setPartnerDay(di, u)}
-            onCopy={() => copyDay(di)}
+            onCopy={() => setCopyChoiceIdx(di)}
           />
         ) : (
           <DayCard
@@ -769,7 +771,7 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
             library={libQ.data ?? []}
             ctx={ctxQ.data!}
             onChange={(u) => setDay(di, u)}
-            onCopy={() => copyDay(di)}
+            onCopy={() => copyClientDay(di)}
           />
         ),
       )}
