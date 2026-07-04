@@ -20,11 +20,15 @@ import {
   listMealLibrary,
   getCustomerPlanContext,
   saveBuilderPlan,
+  saveBuilderPartnerPlan,
   type LibraryMeal,
   type CustomerPlanContext,
   type BuilderDay,
   type BuilderMeal,
 } from "@/lib/plan-builder.functions";
+import { getPartnerLink } from "@/lib/partner.functions";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Users } from "lucide-react";
 import {
   ArrowLeft,
   Lock,
