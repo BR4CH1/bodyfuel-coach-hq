@@ -9,11 +9,13 @@ import {
   getCustomerTrainingContext,
   saveBuilderTrainingPlan,
   saveBuilderPartnerTrainingPlan,
+  loadTrainingPlanForBuilder,
   type BuilderTrainingDay,
   type BuilderTrainingExercise,
   type LibraryExercise,
 } from "@/lib/training-plan-builder.functions";
 import { autoFillTrainingPlan, emptyPlan } from "@/lib/training-autofill";
+
 
 const WD_LABEL = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
 const WD_LONG = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
