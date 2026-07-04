@@ -181,6 +181,105 @@ export function autoFillDayImpl(
   return { day: { ...day, meals }, missing };
 }
 
+// Auto-fill for two linked days (partner mode).
+// Strategy per slot: prefer a shared meal (score > 0 for both, quantities scaled per person).
+// Fallback: independent picks per person.
+export function autoFillDayPair(
+  clientDay: BuilderDay,
+  partnerDay: BuilderDay,
+  clientCtx: CustomerPlanContext,
+  partnerCtx: CustomerPlanContext,
+  library: LibraryMeal[],
+  mode: AutoFillMode,
+): { client: BuilderDay; partner: BuilderDay; missing: number } {
+  const filterKeep = (arr: BuilderMeal[]) => (mode === "all_unlocked" ? arr.filter((m) => m.is_locked) : arr.map((m) => ({ ...m })));
+  let clientMeals: BuilderMeal[] = filterKeep(clientDay.meals);
+  let partnerMeals: BuilderMeal[] = filterKeep(partnerDay.meals);
+
+  const slotOrder: Slot[] = ["breakfast", "lunch", "dinner", "snack"];
+  let missing = 0;
+
+  const remainingFor = (meals: BuilderMeal[], day: BuilderDay, ctx: CustomerPlanContext) => {
+    const t = targetsFor(day, ctx);
+    const cur = meals.reduce(
+      (acc, m) => {
+        const mm = mealMacros(m, library);
+        return { kcal: acc.kcal + mm.kcal, p: acc.p + mm.p, c: acc.c + mm.c, f: acc.f + mm.f };
+      },
+      { kcal: 0, p: 0, c: 0, f: 0 },
+    );
+    return { kcal: t.kcal - cur.kcal, p: t.p - cur.p, c: t.c - cur.c, f: t.f - cur.f };
+  };
+
+  for (const slot of slotOrder) {
+    const cExisting = clientMeals.find((m) => m.slot === slot);
+    const pExisting = partnerMeals.find((m) => m.slot === slot);
+    // Only fill where BOTH slots are empty (locked/existing on either side → skip shared logic)
+    if (cExisting && pExisting) continue;
+
+    if (!cExisting && !pExisting) {
+      const cRem = remainingFor(clientMeals, clientDay, clientCtx);
+      const pRem = remainingFor(partnerMeals, partnerDay, partnerCtx);
+      const scored = library
+        .filter((m) => m.category === slot)
+        .map((m) => {
+          const sc = scoreMeal(m, clientCtx, clientDay.type, cRem);
+          const sp = scoreMeal(m, partnerCtx, partnerDay.type, pRem);
+          return { meal: m, combined: sc.score + sp.score, sc: sc.score, sp: sp.score };
+        })
+        .filter((x) => x.sc > 0 && x.sp > 0)
+        .sort((a, b) => b.combined - a.combined);
+      const best = scored[0];
+      if (best) {
+        const group = makeGroupId();
+        // per-person kcal scaling
+        const scale = (rem: { kcal: number }, kcal: number) => {
+          if (!kcal) return 1;
+          const target = Math.max(200, rem.kcal);
+          const raw = target / kcal;
+          return Math.max(0.25, Math.min(2, Math.round(raw * 4) / 4));
+        };
+        const clientFactor = scale(cRem, best.meal.kcal);
+        const partnerFactor = scale(pRem, best.meal.kcal);
+        const cMeal = mealFromLibrary(best.meal, slot, clientFactor, null);
+        cMeal.linked_partner_group = group;
+        const pMeal = mealFromLibrary(best.meal, slot, partnerFactor, null);
+        pMeal.linked_partner_group = group;
+        clientMeals.push(cMeal);
+        partnerMeals.push(pMeal);
+        continue;
+      }
+    }
+    // Fallback: independent picks per side (only where side is empty)
+    if (!cExisting) {
+      const cRem = remainingFor(clientMeals, clientDay, clientCtx);
+      const cCand = library
+        .filter((m) => m.category === slot)
+        .map((m) => ({ meal: m, ...scoreMeal(m, clientCtx, clientDay.type, cRem) }))
+        .filter((x) => x.score > 0)
+        .sort((a, b) => b.score - a.score)[0];
+      if (cCand) clientMeals.push(mealFromLibrary(cCand.meal, slot));
+      else missing++;
+    }
+    if (!pExisting) {
+      const pRem = remainingFor(partnerMeals, partnerDay, partnerCtx);
+      const pCand = library
+        .filter((m) => m.category === slot)
+        .map((m) => ({ meal: m, ...scoreMeal(m, partnerCtx, partnerDay.type, pRem) }))
+        .filter((x) => x.score > 0)
+        .sort((a, b) => b.score - a.score)[0];
+      if (pCand) partnerMeals.push(mealFromLibrary(pCand.meal, slot));
+      else missing++;
+    }
+  }
+
+  return {
+    client: { ...clientDay, meals: clientMeals },
+    partner: { ...partnerDay, meals: partnerMeals },
+    missing,
+  };
+}
+
 export function PlanBuilderPage({ userId }: { userId: string }) {
   const navigate = useNavigate();
   const listLib = useServerFn(listMealLibrary);
