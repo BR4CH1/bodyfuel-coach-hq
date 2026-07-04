@@ -384,7 +384,6 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
             <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
           </div>
           <div>
-          <div>
             <Label>Enddatum</Label>
             <Input
               type="date"
@@ -393,6 +392,7 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
               onChange={(e) => setEndDate(e.target.value)}
             />
           </div>
+        </CardContent>
       </Card>
 
       {ctxQ.data && (
