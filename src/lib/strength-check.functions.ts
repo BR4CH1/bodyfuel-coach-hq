@@ -45,6 +45,8 @@ export type StrengthCheck = {
   performed_at: string;
   status: "draft" | "completed";
   bodyweight_kg: number | null;
+  /** Exaktes Körpergewicht, das für Strength Score V2 verwendet wurde (reproduzierbar). */
+  scoring_bodyweight_kg?: number | null;
   notes: string | null;
   score_lower: number | null;
   score_push: number | null;
@@ -79,7 +81,9 @@ function applyV2Scores<T extends StrengthCheck>(
   const isV2 = (check as { score_algorithm_version?: number | null }).score_algorithm_version === SCORE_ALGORITHM_VERSION;
   if (isV2) return check;
 
-  const bw = bodyweightOverride ?? check.bodyweight_kg;
+  const bw = bodyweightOverride
+    ?? (check as { scoring_bodyweight_kg?: number | null }).scoring_bodyweight_kg
+    ?? check.bodyweight_kg;
   const v2 = computeCheckV2(results, bw);
   return {
     ...check,
@@ -272,7 +276,7 @@ export const completeStrengthCheck = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const { data: chk } = await supabase
       .from("strength_checks")
-      .select("id, user_id, status, bodyweight_kg")
+      .select("id, user_id, status, bodyweight_kg, performed_at")
       .eq("id", data.check_id)
       .maybeSingle();
     if (!chk || chk.user_id !== userId) throw new Error("Nicht gefunden");
@@ -286,18 +290,44 @@ export const completeStrengthCheck = createServerFn({ method: "POST" })
     const rawResults = (fullResults ?? []) as unknown as RawResult[];
     if (rawResults.length < 4) throw new Error("Bitte mindestens 4 Tests eintragen.");
 
-    // Resolve bodyweight (payload → check.bodyweight_kg → last body_measurement).
-    let bodyweight: number | null = data.bodyweight_kg ?? (chk as { bodyweight_kg: number | null }).bodyweight_kg ?? null;
+    // Resolve scoring bodyweight per priority:
+    //  1) explicit payload value
+    //  2) bodyweight already stored on the check (entered at test time)
+    //  3) latest body_measurement measured AT or BEFORE performed_at
+    //  4) nearest body_measurement (fallback when no prior measurement exists)
+    const performedAt = (chk as { performed_at: string }).performed_at;
+    let bodyweight: number | null =
+      data.bodyweight_kg ?? (chk as { bodyweight_kg: number | null }).bodyweight_kg ?? null;
     if (bodyweight == null) {
-      const { data: bm } = await supabase
+      const { data: bmBefore } = await supabase
         .from("body_measurements")
-        .select("weight_kg")
+        .select("weight_kg, measured_at")
         .eq("user_id", userId)
         .not("weight_kg", "is", null)
+        .lte("measured_at", performedAt)
         .order("measured_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-      if (bm?.weight_kg != null) bodyweight = Number(bm.weight_kg);
+      if (bmBefore?.weight_kg != null) {
+        bodyweight = Number(bmBefore.weight_kg);
+      } else {
+        const { data: bmAny } = await supabase
+          .from("body_measurements")
+          .select("weight_kg, measured_at")
+          .eq("user_id", userId)
+          .not("weight_kg", "is", null)
+          .order("measured_at", { ascending: true });
+        if (bmAny && bmAny.length > 0) {
+          const target = new Date(performedAt).getTime();
+          let best = bmAny[0];
+          let bestDiff = Math.abs(new Date(best.measured_at).getTime() - target);
+          for (const row of bmAny) {
+            const diff = Math.abs(new Date(row.measured_at).getTime() - target);
+            if (diff < bestDiff) { best = row; bestDiff = diff; }
+          }
+          if (best?.weight_kg != null) bodyweight = Number(best.weight_kg);
+        }
+      }
     }
 
     // Compute Strength Score V2 (single source of truth).
@@ -306,6 +336,7 @@ export const completeStrengthCheck = createServerFn({ method: "POST" })
     const update: {
       status: "completed";
       bodyweight_kg?: number | null;
+      scoring_bodyweight_kg: number | null;
       notes?: string | null;
       score_lower: number | null;
       score_push: number | null;
@@ -318,6 +349,7 @@ export const completeStrengthCheck = createServerFn({ method: "POST" })
       score_calculated_at: string;
     } = {
       status: "completed",
+      scoring_bodyweight_kg: bodyweight,
       score_lower: v2.categories.lower.score,
       score_push: v2.categories.push.score,
       score_pull: v2.categories.pull.score,

@@ -2576,6 +2576,7 @@ export type Database = {
           score_pull: number | null
           score_push: number | null
           score_total: number | null
+          scoring_bodyweight_kg: number | null
           status: Database["public"]["Enums"]["strength_check_status"]
           updated_at: string
           user_id: string
@@ -2596,6 +2597,7 @@ export type Database = {
           score_pull?: number | null
           score_push?: number | null
           score_total?: number | null
+          scoring_bodyweight_kg?: number | null
           status?: Database["public"]["Enums"]["strength_check_status"]
           updated_at?: string
           user_id: string
@@ -2616,6 +2618,7 @@ export type Database = {
           score_pull?: number | null
           score_push?: number | null
           score_total?: number | null
+          scoring_bodyweight_kg?: number | null
           status?: Database["public"]["Enums"]["strength_check_status"]
           updated_at?: string
           user_id?: string
