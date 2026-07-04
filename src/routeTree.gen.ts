@@ -80,6 +80,7 @@ import { Route as TrackerAppActivityRouteImport } from './routes/tracker.app.act
 import { Route as TrackerAppAchievementsRouteImport } from './routes/tracker.app.achievements'
 import { Route as SmartGiftCodeRouteImport } from './routes/smart.gift.$code'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
+import { Route as CoachTrainingBuilderUserIdRouteImport } from './routes/coach.training-builder.$userId'
 import { Route as CoachPlanPreviewPlanIdRouteImport } from './routes/coach.plan-preview.$planId'
 import { Route as CoachPlanBuilderUserIdRouteImport } from './routes/coach.plan-builder.$userId'
 import { Route as CoachCustomersNewRouteImport } from './routes/coach.customers.new'
@@ -456,6 +457,12 @@ const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
   path: '/lovable/email/suppression',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CoachTrainingBuilderUserIdRoute =
+  CoachTrainingBuilderUserIdRouteImport.update({
+    id: '/training-builder/$userId',
+    path: '/training-builder/$userId',
+    getParentRoute: () => CoachRoute,
+  } as any)
 const CoachPlanPreviewPlanIdRoute = CoachPlanPreviewPlanIdRouteImport.update({
   id: '/plan-preview/$planId',
   path: '/plan-preview/$planId',
@@ -625,6 +632,7 @@ export interface FileRoutesByFullPath {
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/coach/plan-builder/$userId': typeof CoachPlanBuilderUserIdRoute
   '/coach/plan-preview/$planId': typeof CoachPlanPreviewPlanIdRoute
+  '/coach/training-builder/$userId': typeof CoachTrainingBuilderUserIdRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/smart/gift/$code': typeof SmartGiftCodeRoute
   '/tracker/app/achievements': typeof TrackerAppAchievementsRoute
@@ -711,6 +719,7 @@ export interface FileRoutesByTo {
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/coach/plan-builder/$userId': typeof CoachPlanBuilderUserIdRoute
   '/coach/plan-preview/$planId': typeof CoachPlanPreviewPlanIdRoute
+  '/coach/training-builder/$userId': typeof CoachTrainingBuilderUserIdRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/smart/gift/$code': typeof SmartGiftCodeRoute
   '/tracker/app/achievements': typeof TrackerAppAchievementsRoute
@@ -803,6 +812,7 @@ export interface FileRoutesById {
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/coach/plan-builder/$userId': typeof CoachPlanBuilderUserIdRoute
   '/coach/plan-preview/$planId': typeof CoachPlanPreviewPlanIdRoute
+  '/coach/training-builder/$userId': typeof CoachTrainingBuilderUserIdRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/smart/gift/$code': typeof SmartGiftCodeRoute
   '/tracker/app/achievements': typeof TrackerAppAchievementsRoute
@@ -896,6 +906,7 @@ export interface FileRouteTypes {
     | '/coach/customers/new'
     | '/coach/plan-builder/$userId'
     | '/coach/plan-preview/$planId'
+    | '/coach/training-builder/$userId'
     | '/lovable/email/suppression'
     | '/smart/gift/$code'
     | '/tracker/app/achievements'
@@ -982,6 +993,7 @@ export interface FileRouteTypes {
     | '/coach/customers/new'
     | '/coach/plan-builder/$userId'
     | '/coach/plan-preview/$planId'
+    | '/coach/training-builder/$userId'
     | '/lovable/email/suppression'
     | '/smart/gift/$code'
     | '/tracker/app/achievements'
@@ -1073,6 +1085,7 @@ export interface FileRouteTypes {
     | '/coach/customers/new'
     | '/coach/plan-builder/$userId'
     | '/coach/plan-preview/$planId'
+    | '/coach/training-builder/$userId'
     | '/lovable/email/suppression'
     | '/smart/gift/$code'
     | '/tracker/app/achievements'
@@ -1658,6 +1671,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailSuppressionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/coach/training-builder/$userId': {
+      id: '/coach/training-builder/$userId'
+      path: '/training-builder/$userId'
+      fullPath: '/coach/training-builder/$userId'
+      preLoaderRoute: typeof CoachTrainingBuilderUserIdRouteImport
+      parentRoute: typeof CoachRoute
+    }
     '/coach/plan-preview/$planId': {
       id: '/coach/plan-preview/$planId'
       path: '/plan-preview/$planId'
@@ -1816,6 +1836,7 @@ interface CoachRouteChildren {
   CoachIndexRoute: typeof CoachIndexRoute
   CoachPlanBuilderUserIdRoute: typeof CoachPlanBuilderUserIdRoute
   CoachPlanPreviewPlanIdRoute: typeof CoachPlanPreviewPlanIdRoute
+  CoachTrainingBuilderUserIdRoute: typeof CoachTrainingBuilderUserIdRoute
 }
 
 const CoachRouteChildren: CoachRouteChildren = {
@@ -1831,6 +1852,7 @@ const CoachRouteChildren: CoachRouteChildren = {
   CoachIndexRoute: CoachIndexRoute,
   CoachPlanBuilderUserIdRoute: CoachPlanBuilderUserIdRoute,
   CoachPlanPreviewPlanIdRoute: CoachPlanPreviewPlanIdRoute,
+  CoachTrainingBuilderUserIdRoute: CoachTrainingBuilderUserIdRoute,
 }
 
 const CoachRouteWithChildren = CoachRoute._addFileChildren(CoachRouteChildren)
@@ -1961,13 +1983,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

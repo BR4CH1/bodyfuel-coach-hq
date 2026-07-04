@@ -1,73 +1,100 @@
-# Partnerplan im Plan Builder
+## Ziel
 
-Bestehende Tabellen (`nutrition_partners`, `nutrition_plans.partner_plan_id`, `nutrition_plans.is_partner_plan`, `nutrition_plan_meals.partner_meal_id`) reichen aus – keine Migration nötig.
+Ein manueller Trainings-Plan-Builder für Coaches, funktional analog zum bestehenden `PlanBuilderPage.tsx` (Ernährung). Mehrere Wochen, Übungen pro Trainingstag mit Sätzen/Wdh/Gewicht/RIR/Pause/Notiz, Draft + Publish, Auto-Fill-Vorschlag, Partner-Kopplung, kuratierte Übungsbibliothek + Freitext-Fallback.
 
-## 1. Datenmodell im Builder
+## Datenmodell — bestehendes wiederverwenden
 
-`BuilderMeal` bekommt zwei neue Felder:
-- `linked_partner_group?: string` – gemeinsame ID, wenn Kunde- und Partner-Mahlzeit gekoppelt sind (gleiche Rezeptbasis).
-- `ingredients` bleibt pro Person; bei gekoppelter Mahlzeit wird Name/Zutatennamen aus der Master-Seite (Kunde) übernommen, die Grammzahlen sind pro Seite eigen.
+Der Smart-AI-Trainingsplan schreibt bereits in:
 
-`BuilderDay` wird pro Person geführt:
-```
-BuilderPlan = {
-  client: BuilderDay[]      // wie heute
-  partner?: BuilderDay[]    // gleiche Länge, gleiche Datumsreihe
-}
-```
-Der Partner hat eigene `type` (train/rest, aus `partner.trainingWeekdays`), eigene Ziele, eigene Bilanz.
+- `nutrition_plans` mit `plan_type='training'` (Container: `client_id`, `title`, `status`, `scheduled_start_date`, `weeks_count`, `is_partner_plan`, `partner_plan_id`)
+- `training_days` (`plan_id`, `name`, `sort_order`, `week_number`)
+- `training_exercises` (`day_id`, `name`, `category`, `target_sets`, `target_reps`, `target_weights`, `rest_seconds`, `notes`, `sort_order`)
 
-## 2. Server-Funktionen (`src/lib/plan-builder.functions.ts`)
+→ Kein Schema-Umbau für den Core-Plan nötig. Zusätze:
 
-Erweitern, nichts parallel neu aufbauen:
+1. Neue kuratierte Übungsbibliothek `coach_exercise_library` (analog `coach_meal_library`):
+   - `id`, `name`, `category` (barbell/dumbbell/machine/cable/cardio/core/bodyweight), `primary_muscle`, `secondary_muscles text[]`, `equipment text[]`, `movement_pattern` (squat/hinge/push_h/push_v/pull_h/pull_v/carry/core/cardio), `is_unilateral`, `difficulty` (beg/int/adv), `default_sets`, `default_reps`, `default_rest_seconds`, `notes`, `is_active`, `created_at`, `updated_at`.
+   - GRANT SELECT authenticated; RLS: alle authentifizierten lesen, nur Coach schreibt.
+   - Seed-Migration mit ~60–80 Standardübungen abgedeckt über alle Movement Patterns.
 
-- `getCustomerPlanContext` bleibt; wird für Partner ein zweites Mal aufgerufen (`{ customerId: partnerId }`).
-- Neue `saveBuilderPartnerPlan({ customerId, partnerId, title, startDate, clientDays, partnerDays, publish })`:
-  1. Ruft bestehende Draft-Speicherung `saveCoachNutritionPlanDraft` zweimal auf (einmal je Person), setzt `mode: "new_plan"`, `force: true`.
-  2. Danach mit `supabaseAdmin`:
-     - `nutrition_plans.is_partner_plan = true` für beide.
-     - Kreuz-Update `partner_plan_id` (A↔B).
-     - Für jede Tages-Position: passende Mahlzeiten anhand `sort_order` + `linked_partner_group` matchen und `partner_meal_id` kreuzverlinken (nur für gekoppelte Slots).
-     - Persistiert wie bisher `meal_slot`, `library_meal_id`, `is_locked`, `linked_prep_group`, `day_type`, `day_date`.
+2. Zusätzliche Spalten in `training_exercises`:
+   - `library_exercise_id uuid` (nullable, FK → `coach_exercise_library.id` ON DELETE SET NULL)
+   - `target_rir smallint`
+   - `is_locked boolean DEFAULT false`
+   - `linked_partner_group text` (Kopplung an Partner-Übung)
+   Optional: `partner_exercise_id uuid` (Kreuzverknüpfung analog `partner_meal_id`).
 
-## 3. UI-Änderungen (`src/components/bodyfuel/PlanBuilderPage.tsx`)
+3. Zusätzliche Spalte in `training_days`:
+   - `day_date date` (analog `nutrition_plan_days.day_date`)
 
-- **Sichtbarkeit Toggle**: neuer `getPartnerLink({ user_id: userId })`-Aufruf. Wenn `partner_id` existiert, oben Toggle „Partnerplan mit {partner_name}".
-- **Aktivierung**: lädt `getCustomerPlanContext` für Partner + baut parallelen `partnerDays`-State analog `buildDays` (eigene `autoType` aus `partner.trainingWeekdays`, eigene Ziele).
-- **Layout pro Tag** (mobile-first):
-  - Zwei Tabs „Kunde | Partner" (weil zwei Spalten nebeneinander auf 402 px CSS nicht funktionieren).
-  - Auf ≥ md optional zweispaltig.
-  - Jede Seite zeigt eigene Ziele, eigene Bilanz, eigenen Train/Rest-Toggle.
-- **Gekoppelte Mahlzeit**:
-  - Neuer Chip „Gemeinsam" pro Slot. Klick öffnet gemeinsame Rezeptauswahl (Filter: für BEIDE erlaubt: keine `no_go`, keine `allergien`, keine `intoleranzen`).
-  - Zutaten identisch benannt, Grammzahlen pro Person editierbar.
-  - Namens-/Rezeptänderungen synchronisieren beide Seiten (`linked_partner_group`).
-  - Reine Mengenänderung ändert nur die aktive Seite.
-- **Getrennte Mahlzeit**: normale Slot-Bearbeitung, nur eine Seite betroffen.
-- **Live-Makros**: bereits vorhandene `computeMealTotals` × `portion_factor` pro Person.
+Alles in einer Migration, danach Types-Regenerierung.
 
-## 4. Auto-Fill für Partner
+## Server-Funktionen (`src/lib/training-plan-builder.functions.ts`)
 
-Neuer Helper `autoFillDayPair(dayIdx)` und `runAutoFillWeekPair(mode)`:
-1. Kandidatenpool = `libraryMeals` gefiltert auf beide Kontexte (Union der No-Gos/Allergien/Intoleranzen).
-2. Für jeden Slot: bevorzugt gemeinsame Mahlzeit; Portionsfaktor pro Person so wählen, dass Zielabweichung minimal ist (einfache Skalierung nach kcal-Anteil pro Slot).
-3. Wenn kein gemeinsames Rezept möglich (z. B. Trainingstag vs. Restday-Präferenz kollidiert), fallback: getrennte Rezepte je Person mit den bestehenden `pickMeal`-Filtern.
-4. `is_locked` schützt weiterhin – pro Person unabhängig.
-5. Mealprep-Kopplung Mittag/Abend bleibt pro Person; falls beide `prepCoupleLunchDinner` haben und die Mahlzeit gekoppelt ist, Rezept identisch, Mengen pro Person.
-6. Fehler-Toasts wie heute.
+Neu, spiegelt `plan-builder.functions.ts`:
 
-## 5. Reihenfolge im Code
+- `listExerciseLibrary()` — coach-only, alle aktiven Bibliotheks-Übungen.
+- `getCustomerTrainingContext({ customerId })` — liefert:
+  - `trainingWeekdays` aus `smart_nutrition_profile.training_weekdays` (fallback aus letzten `training_sessions`),
+  - `experienceLevel`, `mainGoal` aus `profiles`/`smart_nutrition_profile`,
+  - `equipmentAvailable` (Bulls/Home/Gym),
+  - Startgewichte aus letztem Strength-Check (V2 e1RM/×0.75 als Woche-1-Baseline für Bench, Squat, Deadlift, OHP, Row, Lat Pulldown, Leg Press, Leg Curl),
+  - `injuries` / Kontraindikationen.
+- `saveBuilderTrainingPlan({ customerId, title, startDate, weeksCount, days, publish })`
+  - `days: BuilderTrainingDay[]` — pro `week_number` × Wochentag genau ein Eintrag, `type: "training" | "rest"`, `exercises[]` mit `slot`, `library_exercise_id?`, `name`, `category`, `target_sets`, `target_reps`, `target_weights`, `target_rir`, `rest_seconds`, `notes`, `is_locked`, `linked_partner_group?`.
+  - Legt `nutrition_plans` mit `plan_type='training'` + `training_days` + `training_exercises` an, alte Draft/Approved-Trainingspläne desselben Kunden werden archiviert (wie AI-Core Zeile 478–483).
+  - `publish=true` → `status='active'`.
+- `saveBuilderPartnerTrainingPlan({ customerId, partnerId, ... clientDays, partnerDays, publish })`
+  - Zwei Aufrufe an internen `persistBuilderTrainingPlan`, danach:
+    - `is_partner_plan=true` und `partner_plan_id` kreuzweise setzen,
+    - `training_exercises.partner_exercise_id` anhand `linked_partner_group` kreuzverlinken.
 
-1. `plan-builder.functions.ts`: neue Types + `saveBuilderPartnerPlan`.
-2. `PlanBuilderPage.tsx`: Partner-State + Toggle + Tabs + Bilanz pro Person.
-3. Gekoppelte Rezeptbasis + Portion pro Person + `partner_meal_id`-Persistenz.
-4. Auto-Fill Tag/Woche für Partner (gemeinsame Präferenz zuerst).
-5. Speichern via `saveBuilderPartnerPlan` wenn Partner-Modus aktiv, sonst weiter `saveBuilderPlan`.
+Alle Funktionen: `.middleware([requireSupabaseAuth])` + `assertCoach`.
 
-## 6. Nicht Bestandteil
+## UI
 
-- Keine Änderung am AI-Partnerplan-Flow.
-- Keine neue Tabelle/Spalte.
-- Keine automatische Freischaltung ohne aktiven Partnerlink.
+Neue Route: `src/routes/coach.training-builder.$userId.tsx` → rendert neue Komponente `TrainingPlanBuilderPage` unter `AppLayout`.
 
-Nach Freigabe setze ich Schritt 1–5 in dieser Reihenfolge um.
+Neue Komponente: `src/components/bodyfuel/TrainingPlanBuilderPage.tsx` — analog zu `PlanBuilderPage.tsx`, aber mit Trainings-Semantik:
+
+- **Header**: Titel, Startdatum, Wochenanzahl (1–8, Default 4, Woche 4 automatisch Deload-Vorschlag), Publish-Toggle.
+- **Wochennavigation**: Tabs Woche 1..N + „alle Wochen".
+- **Pro Tag** (Mo–So):
+  - Toggle Trainingstag/Ruhetag (Default aus `trainingWeekdays`, manuell überschreibbar).
+  - Bei Trainingstag: Fokus-Titel („Push", „Unterkörper", …).
+  - Liste von Übungen (Drag-Sort), pro Übung:
+    - Übungs-Picker (kuratierte Bibliothek mit Filter Muskelgruppe/Equipment, Freitext-Fallback),
+    - Sätze (Number), Wdh („8" oder „8,8,10"), Gewicht („60" oder „60,62,65"), RIR (0–5), Pause (Sek.), Notiz, 🔒 Lock, „Gemeinsam mit Partner"-Chip.
+  - Add-Button für weitere Übungen; Copy-Day, Copy-Week, Clear-Day.
+- **Auto-Fill**: „Vorschlag Tag" / „Vorschlag Woche" ruft eine reine Client-Heuristik `autoFillTrainingWeek(context)` auf:
+  - Movement-Pattern-Verteilung nach Split (Full-Body / Push-Pull-Legs / Upper-Lower je nach Anzahl Trainingstage),
+  - Startgewichte aus Strength-Check als Baseline (`e1RM × 0.75`, gerundet auf 2.5 kg), Progression pro Woche wie AI-Core (`weekCapFactor`),
+  - respektiert `is_locked`,
+  - Partner-Modus wählt bevorzugt Übungen, die für beide Movement-Patterns identisch sind.
+- **Live-Zusammenfassung** pro Tag: Anzahl Sätze, geschätztes Volumen, Muskelabdeckung.
+- **Partner-Toggle** (analog Ernährungsplan): wenn `nutrition_partners` gesetzt, „Partnerplan mit {Name}" freischaltbar → Tabs „Kunde | Partner", Auto-Fill koppelt gemeinsame Trainingstage.
+- **Speichern**: „Als Entwurf speichern" bzw. „Für Kunden aktivieren" ruft `saveBuilderTrainingPlan` / `saveBuilderPartnerTrainingPlan`.
+- Nach Speichern: Redirect auf `/coach/plan-preview/$planId` (existiert bereits, funktioniert mit `plan_type='training'`).
+
+## Reihenfolge im Code
+
+1. Migration:
+   - `coach_exercise_library` + GRANT + RLS + Seed.
+   - `ALTER training_exercises ADD library_exercise_id, target_rir, is_locked, linked_partner_group, partner_exercise_id`.
+   - `ALTER training_days ADD day_date`.
+2. `src/lib/training-plan-builder.functions.ts` (Types + 4 Server-Funktionen).
+3. `src/lib/training-autofill.ts` (reiner TS-Helper für Vorschlagsgenerierung).
+4. `src/components/bodyfuel/TrainingPlanBuilderPage.tsx`.
+5. `src/routes/coach.training-builder.$userId.tsx`.
+6. Einstiegspunkt: Button „Manuell Trainingsplan erstellen" in `TrainingPlanManagementCard.tsx` bzw. der Coach-Kundenansicht (nur wo bereits AI-Plan-Buttons existieren).
+
+## Nicht Bestandteil
+
+- Keine Änderung am AI-Trainingsplan-Flow.
+- Keine Änderung an der Kunden-App-Trainingsansicht — sie liest bereits `training_days`/`training_exercises` und zeigt alle neuen Felder auf Wunsch später an (`target_rir` wird als optionale Info gerendert, sobald das UI dafür ergänzt wird — im ersten Wurf nicht Pflicht).
+- Keine Progression-Automatik über 8 Wochen hinaus, keine Periodisierungsmodelle.
+- Kein Selfservice-Builder für Endkunden.
+
+## Nach Freigabe
+
+Ich starte mit Schritt 1 (Migration inkl. Seed). Sobald die Migration freigegeben und die Types regeneriert sind, lege ich Server-Funktionen, Auto-Fill-Helper, UI und Route an — jeweils in dedizierten Commits/Batches.
