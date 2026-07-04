@@ -1175,6 +1175,7 @@ function MealSlotRow({
   onFactor,
   onLockToggle,
   onRemove,
+  partnerLink,
 }: {
   slot: Slot;
   label: string;
@@ -1188,6 +1189,7 @@ function MealSlotRow({
   onFactor: (f: number) => void;
   onLockToggle: () => void;
   onRemove: () => void;
+  partnerLink?: PartnerSlotLink;
 }) {
   const mm = meal ? mealMacros(meal, library) : { kcal: 0, p: 0, c: 0, f: 0 };
   const factor = meal?.portion_factor ?? 1;
@@ -1197,15 +1199,23 @@ function MealSlotRow({
     onFactor(clamped);
   };
 
+  const coupled = !!partnerLink?.isCoupled;
+
   return (
     <div className="rounded-lg border border-border p-2">
       <div className="mb-1 flex items-center justify-between">
-        <div className="flex items-center gap-2 text-xs font-medium">
+        <div className="flex flex-wrap items-center gap-1 text-xs font-medium">
           {label}
           {meal?.linked_prep_group && (
             <Badge variant="outline" className="gap-1 px-1 py-0 text-[9px]">
               <Link2 className="h-2.5 w-2.5" />
               Prep
+            </Badge>
+          )}
+          {coupled && (
+            <Badge className="gap-1 bg-emerald-500/15 px-1 py-0 text-[9px] text-emerald-600 hover:bg-emerald-500/20">
+              <Link2 className="h-2.5 w-2.5" />
+              Gemeinsam
             </Badge>
           )}
         </div>
@@ -1253,53 +1263,125 @@ function MealSlotRow({
 
           {/* Aktionen */}
           <div className="flex flex-wrap gap-1">
-            <MealPickerDialog
-              trigger={
-                <Button size="sm" variant="outline" className="h-7 text-xs">
-                  <Shuffle className="mr-1 h-3 w-3" />
-                  Tauschen
+            {coupled ? (
+              <>
+                <MealPickerDialog
+                  trigger={
+                    <Button size="sm" variant="outline" className="h-7 text-xs">
+                      <Shuffle className="mr-1 h-3 w-3" />
+                      Für beide tauschen
+                    </Button>
+                  }
+                  title={`${label} für beide tauschen`}
+                  slot={slot}
+                  library={library}
+                  ctx={ctx}
+                  dayType={dayType}
+                  remaining={remaining}
+                  onPick={(lib) => partnerLink!.onSwapForBoth(lib)}
+                />
+                <MealPickerDialog
+                  trigger={
+                    <Button size="sm" variant="ghost" className="h-7 text-xs">
+                      Nur für {partnerLink!.selfName} tauschen
+                    </Button>
+                  }
+                  title={`${label} nur für ${partnerLink!.selfName} tauschen`}
+                  slot={slot}
+                  library={library}
+                  ctx={ctx}
+                  dayType={dayType}
+                  remaining={remaining}
+                  onPick={(lib) => {
+                    partnerLink!.onUncouple();
+                    onSwap(lib);
+                  }}
+                />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 text-xs text-muted-foreground"
+                  onClick={partnerLink!.onUncouple}
+                >
+                  <Link2Off className="mr-1 h-3 w-3" />
+                  Kopplung lösen
                 </Button>
-              }
-              title={`${label} tauschen`}
-              slot={slot}
-              library={library}
-              ctx={ctx}
-              dayType={dayType}
-              remaining={remaining}
-              onPick={onSwap}
-            />
-            <MealPickerDialog
-              trigger={
-                <Button size="sm" variant="ghost" className="h-7 text-xs">
-                  Alternative anzeigen
-                </Button>
-              }
-              title={`Alternativen für ${label}`}
-              slot={slot}
-              library={library}
-              ctx={ctx}
-              dayType={dayType}
-              remaining={remaining}
-              onPick={onSwap}
-              excludeId={meal.library_meal_id ?? null}
-            />
+              </>
+            ) : (
+              <>
+                <MealPickerDialog
+                  trigger={
+                    <Button size="sm" variant="outline" className="h-7 text-xs">
+                      <Shuffle className="mr-1 h-3 w-3" />
+                      Tauschen
+                    </Button>
+                  }
+                  title={`${label} tauschen`}
+                  slot={slot}
+                  library={library}
+                  ctx={ctx}
+                  dayType={dayType}
+                  remaining={remaining}
+                  onPick={onSwap}
+                />
+                <MealPickerDialog
+                  trigger={
+                    <Button size="sm" variant="ghost" className="h-7 text-xs">
+                      Alternative anzeigen
+                    </Button>
+                  }
+                  title={`Alternativen für ${label}`}
+                  slot={slot}
+                  library={library}
+                  ctx={ctx}
+                  dayType={dayType}
+                  remaining={remaining}
+                  onPick={onSwap}
+                  excludeId={meal.library_meal_id ?? null}
+                />
+                {partnerLink && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="h-7 text-xs"
+                    onClick={partnerLink.onCouple}
+                  >
+                    <Link2 className="mr-1 h-3 w-3" />
+                    Mit {partnerLink.partnerName} koppeln
+                  </Button>
+                )}
+              </>
+            )}
           </div>
         </div>
       ) : (
-        <MealPickerDialog
-          trigger={
-            <Button size="sm" variant="outline" className="w-full">
-              Mahlzeit auswählen
+        <div className="space-y-1">
+          <MealPickerDialog
+            trigger={
+              <Button size="sm" variant="outline" className="w-full">
+                Mahlzeit auswählen
+              </Button>
+            }
+            title={`Mahlzeit für ${label}`}
+            slot={slot}
+            library={library}
+            ctx={ctx}
+            dayType={dayType}
+            remaining={remaining}
+            onPick={onPick}
+          />
+          {partnerLink && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="w-full text-xs"
+              onClick={partnerLink.onCouple}
+            >
+              <Link2 className="mr-1 h-3 w-3" />
+              Von {partnerLink.partnerName} übernehmen
             </Button>
-          }
-          title={`Mahlzeit für ${label}`}
-          slot={slot}
-          library={library}
-          ctx={ctx}
-          dayType={dayType}
-          remaining={remaining}
-          onPick={onPick}
-        />
+          )}
+        </div>
       )}
     </div>
   );
