@@ -379,6 +379,12 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
   const partnerId = partnerLinkQ.data?.partner_id ?? null;
   const partnerName = partnerLinkQ.data?.partner_name ?? "Partner";
   const [partnerMode, setPartnerMode] = useState(false);
+  const [sharedSlots, setSharedSlots] = useState<SharedSlotsMap>({
+    breakfast: false,
+    lunch: false,
+    dinner: true,
+    snack: false,
+  });
   const partnerCtxQ = useQuery({
     queryKey: ["plan-ctx", partnerId],
     queryFn: () => getCtx({ data: { customerId: partnerId! } }),
