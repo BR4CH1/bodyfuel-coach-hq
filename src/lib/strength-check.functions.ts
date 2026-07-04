@@ -133,9 +133,13 @@ export const getMyStrengthStatus = createServerFn({ method: "GET" })
     const today = new Date();
     const dueDays = due ? daysBetween(today, due) : null;
 
+    const lastWithV2 = last
+      ? { ...applyV2Scores(last as StrengthCheck, results as RawResult[]), results }
+      : null;
+
     return {
       has_ever_completed: !!last,
-      last: last ? { ...(last as StrengthCheck), results } : null,
+      last: lastWithV2,
       next_due_at: due ? due.toISOString().slice(0, 10) : null,
       is_overdue: due ? today >= due : false,
       days_until_due: dueDays,
@@ -146,13 +150,38 @@ export const getMyStrengthHistory = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
-    const { data } = await supabase
+    // Need full row + results to recompute V2.
+    const { data: checks } = await supabase
       .from("strength_checks")
-      .select("id, performed_at, score_lower, score_push, score_pull, score_core, score_total")
+      .select("*")
       .eq("user_id", userId)
       .eq("status", "completed")
       .order("performed_at", { ascending: true });
-    return (data ?? []) as Array<Pick<StrengthCheck, "id" | "performed_at" | "score_lower" | "score_push" | "score_pull" | "score_core" | "score_total">>;
+    const rows = (checks ?? []) as StrengthCheck[];
+    if (rows.length === 0) return [] as Array<Pick<StrengthCheck, "id" | "performed_at" | "score_lower" | "score_push" | "score_pull" | "score_core" | "score_total">>;
+    const ids = rows.map((r) => r.id);
+    const { data: allResults } = await supabase
+      .from("strength_check_results")
+      .select("*")
+      .in("check_id", ids);
+    const byCheck = new Map<string, RawResult[]>();
+    for (const r of (allResults ?? []) as (RawResult & { check_id: string })[]) {
+      const list = byCheck.get(r.check_id) ?? [];
+      list.push(r);
+      byCheck.set(r.check_id, list);
+    }
+    return rows.map((row) => {
+      const withV2 = applyV2Scores(row, byCheck.get(row.id) ?? []);
+      return {
+        id: withV2.id,
+        performed_at: withV2.performed_at,
+        score_lower: withV2.score_lower,
+        score_push: withV2.score_push,
+        score_pull: withV2.score_pull,
+        score_core: withV2.score_core,
+        score_total: withV2.score_total,
+      };
+    });
   });
 
 export const startStrengthCheck = createServerFn({ method: "POST" })
