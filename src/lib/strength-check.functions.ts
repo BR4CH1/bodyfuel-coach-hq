@@ -45,6 +45,8 @@ export type StrengthCheck = {
   performed_at: string;
   status: "draft" | "completed";
   bodyweight_kg: number | null;
+  /** Exaktes Körpergewicht, das für Strength Score V2 verwendet wurde (reproduzierbar). */
+  scoring_bodyweight_kg?: number | null;
   notes: string | null;
   score_lower: number | null;
   score_push: number | null;
