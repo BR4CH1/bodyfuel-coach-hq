@@ -319,14 +319,14 @@ export const completeStrengthCheck = createServerFn({ method: "POST" })
       score_core: v2.categories.core.score,
       score_total: v2.overall.score,
       score_algorithm_version: SCORE_ALGORITHM_VERSION,
-      category_confidence: {
+      category_confidence: ({
         lower: v2.categories.lower,
         push: v2.categories.push,
         pull: v2.categories.pull,
         core: v2.categories.core,
         overall: v2.overall,
-      },
-      exercise_calcs: v2.exercises,
+      } as unknown) as Json,
+      exercise_calcs: (v2.exercises as unknown) as Json,
       score_calculated_at: new Date().toISOString(),
     };
     if (data.bodyweight_kg != null) update.bodyweight_kg = data.bodyweight_kg;
