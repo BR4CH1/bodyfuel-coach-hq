@@ -186,6 +186,8 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
   const listLib = useServerFn(listMealLibrary);
   const getCtx = useServerFn(getCustomerPlanContext);
   const save = useServerFn(saveBuilderPlan);
+  const savePartner = useServerFn(saveBuilderPartnerPlan);
+  const partnerLinkFn = useServerFn(getPartnerLink);
 
   const libQ = useQuery({ queryKey: ["meal-library"], queryFn: () => listLib() });
   const ctxQ = useQuery({
