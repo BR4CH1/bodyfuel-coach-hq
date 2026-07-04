@@ -523,15 +523,46 @@ function TextField({ label, value, onChange }: { label: string; value: string | 
   );
 }
 
+const MUSCLE_GROUPS: { key: string; label: string; muscles: string[] }[] = [
+  { key: "chest", label: "Brust", muscles: ["chest", "upper_chest"] },
+  { key: "back", label: "Rücken", muscles: ["back", "lats", "traps", "lower_back", "rear_delts"] },
+  { key: "shoulders", label: "Schultern", muscles: ["shoulders", "side_delts", "front_delts"] },
+  { key: "arms", label: "Arme", muscles: ["biceps", "triceps", "forearms"] },
+  { key: "legs", label: "Beine", muscles: ["quads", "hamstrings", "glutes", "calves", "adductors", "abductors", "hips"] },
+  { key: "core", label: "Bauch", muscles: ["core", "obliques"] },
+  { key: "cardio", label: "Cardio", muscles: ["cardio"] },
+  { key: "stretch", label: "Dehnung", muscles: [] }, // by category
+];
+
+function groupOf(l: LibraryExercise): string {
+  if (l.category === "stretch") return "stretch";
+  const pm = (l.primary_muscle || "").toLowerCase();
+  for (const g of MUSCLE_GROUPS) {
+    if (g.muscles.includes(pm)) return g.key;
+  }
+  return "other";
+}
+
 function ExercisePicker({ library, onPick, onClose }: { library: LibraryExercise[]; onPick: (l: LibraryExercise) => void; onClose: () => void }) {
   const [q, setQ] = useState("");
+  const [group, setGroup] = useState<string>("chest");
+
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
-    if (!term) return library.slice(0, 40);
-    return library
-      .filter((l) => l.name.toLowerCase().includes(term) || l.primary_muscle.toLowerCase().includes(term) || l.movement_pattern.toLowerCase().includes(term))
-      .slice(0, 60);
-  }, [library, q]);
+    let list = library;
+    if (term) {
+      list = list.filter(
+        (l) =>
+          l.name.toLowerCase().includes(term) ||
+          l.primary_muscle.toLowerCase().includes(term) ||
+          l.movement_pattern.toLowerCase().includes(term),
+      );
+    } else {
+      list = list.filter((l) => groupOf(l) === group);
+    }
+    return list.slice().sort((a, b) => a.name.localeCompare(b.name, "de"));
+  }, [library, q, group]);
+
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-3 sm:items-center" onClick={onClose}>
       <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
@@ -546,7 +577,23 @@ function ExercisePicker({ library, onPick, onClose }: { library: LibraryExercise
           placeholder="Suche (Name, Muskel, Pattern)…"
           className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
         />
+        {!q.trim() && (
+          <div className="mt-2 flex flex-wrap gap-1">
+            {MUSCLE_GROUPS.map((g) => (
+              <button
+                key={g.key}
+                onClick={() => setGroup(g.key)}
+                className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${group === g.key ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-muted"}`}
+              >
+                {g.label}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="mt-2 max-h-[60vh] space-y-1 overflow-y-auto">
+          {filtered.length === 0 && (
+            <p className="py-4 text-center text-xs text-muted-foreground">Keine Übungen gefunden.</p>
+          )}
           {filtered.map((l) => (
             <button
               key={l.id}
@@ -564,3 +611,4 @@ function ExercisePicker({ library, onPick, onClose }: { library: LibraryExercise
     </div>
   );
 }
+
