@@ -63,6 +63,16 @@ const SLOTS: { key: Slot; label: string }[] = [
   { key: "snack", label: "Snack" },
 ];
 
+// Partner coupling ops per slot (passed to DayCard/MealSlotRow only in partner mode)
+export type PartnerSlotLink = {
+  selfName: string;
+  partnerName: string;
+  isCoupled: boolean;
+  onCouple: () => void;
+  onUncouple: () => void;
+  onSwapForBoth: (lib: LibraryMeal) => void;
+};
+
 function isoDate(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
@@ -280,6 +290,56 @@ export function autoFillDayPair(
   };
 }
 
+// Re-scales unlocked meal portions so day kcal ≈ target kcal.
+export function rebalanceDay(day: BuilderDay, ctx: CustomerPlanContext, library: LibraryMeal[]): BuilderDay {
+  const t = targetsFor(day, ctx).kcal;
+  const cur = day.meals.reduce((s, m) => s + mealMacros(m, library).kcal, 0);
+  if (!t || !cur) return day;
+  const scale = t / cur;
+  if (scale > 0.92 && scale < 1.08) return day;
+  return {
+    ...day,
+    meals: day.meals.map((m) => {
+      if (m.is_locked) return m;
+      const nf = Math.max(0.25, Math.min(4, Math.round(((m.portion_factor ?? 1) * scale) * 4) / 4));
+      return { ...m, portion_factor: nf };
+    }),
+  };
+}
+
+// Deep-copy meals for day-copy: fresh linked_prep_group + linked_partner_group IDs (shared across a paired copy via caller-supplied maps).
+function remapMealsForCopy(
+  arr: BuilderMeal[],
+  groupMap: Map<string, string>,
+  prepMap: Map<string, string>,
+): BuilderMeal[] {
+  return arr.map((m) => {
+    let lpg: string | null = null;
+    if (m.linked_partner_group) {
+      if (!groupMap.has(m.linked_partner_group)) groupMap.set(m.linked_partner_group, makeGroupId());
+      lpg = groupMap.get(m.linked_partner_group)!;
+    }
+    let prep: string | null = null;
+    if (m.linked_prep_group) {
+      if (!prepMap.has(m.linked_prep_group)) prepMap.set(m.linked_prep_group, makeGroupId());
+      prep = prepMap.get(m.linked_prep_group)!;
+    }
+    return {
+      ...m,
+      ingredients: m.ingredients.map((i) => ({ ...i })),
+      linked_prep_group: prep,
+      linked_partner_group: lpg,
+    };
+  });
+}
+
+// Scale a portion factor from one person to another based on their kcal targets. Snapped to 0.25.
+function scaleFactorToTarget(fromFactor: number, fromTargetKcal: number, toTargetKcal: number): number {
+  if (!fromTargetKcal || !toTargetKcal) return fromFactor;
+  const raw = fromFactor * (toTargetKcal / fromTargetKcal);
+  return Math.max(0.25, Math.min(4, Math.round(raw * 4) / 4));
+}
+
 export function PlanBuilderPage({ userId }: { userId: string }) {
   const navigate = useNavigate();
   const listLib = useServerFn(listMealLibrary);
@@ -389,37 +449,86 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
     }
   };
 
-  const copyDay = (idx: number) => {
+  const copyClientDay = (idx: number) => {
+    const ctx = ctxQ.data;
+    const lib = libQ.data ?? [];
+    if (!ctx) return;
     setDays((prev) => {
+      if (idx + 1 >= prev.length) return prev;
       const src = prev[idx];
-      if (!src) return prev;
       const next = [...prev];
-      for (let i = idx + 1; i < next.length; i++) {
-        if (next[i].type === src.type) {
-          next[i] = {
-            ...next[i],
-            prepCoupleLunchDinner: src.prepCoupleLunchDinner,
-            meals: src.meals.map((m) => ({
-              ...m,
-              ingredients: m.ingredients.map((x) => ({ ...x })),
-              // Neue Gruppen-IDs pro Tag
-              linked_prep_group: m.linked_prep_group ? makeGroupId() + "-" + m.slot : null,
-            })),
-          };
-          // gleiche Gruppe für lunch+dinner im Zieltag
-          const g = makeGroupId();
-          next[i].meals = next[i].meals.map((m) => {
-            if (src.prepCoupleLunchDinner && (m.slot === "lunch" || m.slot === "dinner")) {
-              return { ...m, linked_prep_group: g };
-            }
-            return m;
-          });
-          break;
-        }
-      }
+      const groupMap = new Map<string, string>();
+      const prepMap = new Map<string, string>();
+      const copiedMeals = remapMealsForCopy(src.meals, groupMap, prepMap).map((m) => ({
+        ...m,
+        linked_partner_group: null,
+      }));
+      next[idx + 1] = rebalanceDay(
+        { ...next[idx + 1], prepCoupleLunchDinner: src.prepCoupleLunchDinner, meals: copiedMeals },
+        ctx,
+        lib,
+      );
       return next;
     });
   };
+
+  const copyPartnerDay = (idx: number) => {
+    const ctx = partnerCtxQ.data;
+    const lib = libQ.data ?? [];
+    if (!ctx) return;
+    setPartnerDays((prev) => {
+      if (idx + 1 >= prev.length) return prev;
+      const src = prev[idx];
+      const next = [...prev];
+      const groupMap = new Map<string, string>();
+      const prepMap = new Map<string, string>();
+      const copiedMeals = remapMealsForCopy(src.meals, groupMap, prepMap).map((m) => ({
+        ...m,
+        linked_partner_group: null,
+      }));
+      next[idx + 1] = rebalanceDay(
+        { ...next[idx + 1], prepCoupleLunchDinner: src.prepCoupleLunchDinner, meals: copiedMeals },
+        ctx,
+        lib,
+      );
+      return next;
+    });
+  };
+
+  const copyDayPair = (idx: number) => {
+    const cCtx = ctxQ.data;
+    const pCtx = partnerCtxQ.data;
+    const lib = libQ.data ?? [];
+    if (!cCtx || !pCtx) return;
+    if (idx + 1 >= days.length) return;
+    const groupMap = new Map<string, string>();
+    const prepMapC = new Map<string, string>();
+    const prepMapP = new Map<string, string>();
+    const srcC = days[idx];
+    const srcP = partnerDays[idx];
+    const remappedC = remapMealsForCopy(srcC.meals, groupMap, prepMapC);
+    const remappedP = remapMealsForCopy(srcP.meals, groupMap, prepMapP);
+    setDays((prev) => {
+      const next = [...prev];
+      next[idx + 1] = rebalanceDay(
+        { ...next[idx + 1], prepCoupleLunchDinner: srcC.prepCoupleLunchDinner, meals: remappedC },
+        cCtx,
+        lib,
+      );
+      return next;
+    });
+    setPartnerDays((prev) => {
+      const next = [...prev];
+      next[idx + 1] = rebalanceDay(
+        { ...next[idx + 1], prepCoupleLunchDinner: srcP.prepCoupleLunchDinner, meals: remappedP },
+        pCtx,
+        lib,
+      );
+      return next;
+    });
+  };
+
+  const [copyChoiceIdx, setCopyChoiceIdx] = useState<number | null>(null);
 
   const cloneDays = (arr: BuilderDay[]): BuilderDay[] =>
     arr.map((d) => ({
@@ -658,10 +767,12 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
             partnerDay={partnerDays[di]}
             clientCtx={ctxQ.data!}
             partnerCtx={partnerCtxQ.data}
+            clientName="Kunde"
+            partnerName={partnerName}
             library={libQ.data ?? []}
             onClientChange={(u) => setDay(di, u)}
             onPartnerChange={(u) => setPartnerDay(di, u)}
-            onCopy={() => copyDay(di)}
+            onCopy={() => setCopyChoiceIdx(di)}
           />
         ) : (
           <DayCard
@@ -670,10 +781,54 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
             library={libQ.data ?? []}
             ctx={ctxQ.data!}
             onChange={(u) => setDay(di, u)}
-            onCopy={() => copyDay(di)}
+            onCopy={() => copyClientDay(di)}
           />
         ),
       )}
+
+      <AlertDialog open={copyChoiceIdx !== null} onOpenChange={(o) => !o && setCopyChoiceIdx(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tag auf nächsten Tag kopieren</AlertDialogTitle>
+            <AlertDialogDescription>
+              Der Trainingstag-/Restday-Status des Zieltages bleibt erhalten. Portionen werden nach dem
+              Kopieren auf das jeweilige Tagesziel neu skaliert.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="grid gap-2 py-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (copyChoiceIdx !== null) copyClientDay(copyChoiceIdx);
+                setCopyChoiceIdx(null);
+              }}
+            >
+              Nur Kunde kopieren
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (copyChoiceIdx !== null) copyPartnerDay(copyChoiceIdx);
+                setCopyChoiceIdx(null);
+              }}
+            >
+              Nur {partnerName} kopieren
+            </Button>
+            <Button
+              onClick={() => {
+                if (copyChoiceIdx !== null) copyDayPair(copyChoiceIdx);
+                setCopyChoiceIdx(null);
+              }}
+            >
+              Beide kopieren (Kopplung bleibt erhalten)
+            </Button>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
 
       <div className="sticky bottom-0 flex gap-2 border-t border-border bg-background/95 p-3 backdrop-blur">
         <Button variant="outline" className="flex-1" disabled={saving} onClick={() => handleSave(false)}>
@@ -695,6 +850,7 @@ function DayCard({
   onChange,
   onCopy,
   hideHeaderActions,
+  partnerLinkForSlot,
 }: {
   day: BuilderDay;
   library: LibraryMeal[];
@@ -702,6 +858,7 @@ function DayCard({
   onChange: (u: (d: BuilderDay) => BuilderDay) => void;
   onCopy: () => void;
   hideHeaderActions?: boolean;
+  partnerLinkForSlot?: (slot: Slot) => PartnerSlotLink | undefined;
 }) {
   const target =
     day.type === "training"
@@ -995,6 +1152,7 @@ function DayCard({
                 updateMealAtSlot(slot.key, (m) => ({ ...m, is_locked: !m.is_locked }))
               }
               onRemove={() => removeMealAtSlot(slot.key)}
+              partnerLink={partnerLinkForSlot?.(slot.key)}
             />
           );
         })}
@@ -1017,6 +1175,7 @@ function MealSlotRow({
   onFactor,
   onLockToggle,
   onRemove,
+  partnerLink,
 }: {
   slot: Slot;
   label: string;
@@ -1030,6 +1189,7 @@ function MealSlotRow({
   onFactor: (f: number) => void;
   onLockToggle: () => void;
   onRemove: () => void;
+  partnerLink?: PartnerSlotLink;
 }) {
   const mm = meal ? mealMacros(meal, library) : { kcal: 0, p: 0, c: 0, f: 0 };
   const factor = meal?.portion_factor ?? 1;
@@ -1039,15 +1199,23 @@ function MealSlotRow({
     onFactor(clamped);
   };
 
+  const coupled = !!partnerLink?.isCoupled;
+
   return (
     <div className="rounded-lg border border-border p-2">
       <div className="mb-1 flex items-center justify-between">
-        <div className="flex items-center gap-2 text-xs font-medium">
+        <div className="flex flex-wrap items-center gap-1 text-xs font-medium">
           {label}
           {meal?.linked_prep_group && (
             <Badge variant="outline" className="gap-1 px-1 py-0 text-[9px]">
               <Link2 className="h-2.5 w-2.5" />
               Prep
+            </Badge>
+          )}
+          {coupled && (
+            <Badge className="gap-1 bg-emerald-500/15 px-1 py-0 text-[9px] text-emerald-600 hover:bg-emerald-500/20">
+              <Link2 className="h-2.5 w-2.5" />
+              Gemeinsam
             </Badge>
           )}
         </div>
@@ -1095,53 +1263,125 @@ function MealSlotRow({
 
           {/* Aktionen */}
           <div className="flex flex-wrap gap-1">
-            <MealPickerDialog
-              trigger={
-                <Button size="sm" variant="outline" className="h-7 text-xs">
-                  <Shuffle className="mr-1 h-3 w-3" />
-                  Tauschen
+            {coupled ? (
+              <>
+                <MealPickerDialog
+                  trigger={
+                    <Button size="sm" variant="outline" className="h-7 text-xs">
+                      <Shuffle className="mr-1 h-3 w-3" />
+                      Für beide tauschen
+                    </Button>
+                  }
+                  title={`${label} für beide tauschen`}
+                  slot={slot}
+                  library={library}
+                  ctx={ctx}
+                  dayType={dayType}
+                  remaining={remaining}
+                  onPick={(lib) => partnerLink!.onSwapForBoth(lib)}
+                />
+                <MealPickerDialog
+                  trigger={
+                    <Button size="sm" variant="ghost" className="h-7 text-xs">
+                      Nur für {partnerLink!.selfName} tauschen
+                    </Button>
+                  }
+                  title={`${label} nur für ${partnerLink!.selfName} tauschen`}
+                  slot={slot}
+                  library={library}
+                  ctx={ctx}
+                  dayType={dayType}
+                  remaining={remaining}
+                  onPick={(lib) => {
+                    partnerLink!.onUncouple();
+                    onSwap(lib);
+                  }}
+                />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 text-xs text-muted-foreground"
+                  onClick={partnerLink!.onUncouple}
+                >
+                  <Link2Off className="mr-1 h-3 w-3" />
+                  Kopplung lösen
                 </Button>
-              }
-              title={`${label} tauschen`}
-              slot={slot}
-              library={library}
-              ctx={ctx}
-              dayType={dayType}
-              remaining={remaining}
-              onPick={onSwap}
-            />
-            <MealPickerDialog
-              trigger={
-                <Button size="sm" variant="ghost" className="h-7 text-xs">
-                  Alternative anzeigen
-                </Button>
-              }
-              title={`Alternativen für ${label}`}
-              slot={slot}
-              library={library}
-              ctx={ctx}
-              dayType={dayType}
-              remaining={remaining}
-              onPick={onSwap}
-              excludeId={meal.library_meal_id ?? null}
-            />
+              </>
+            ) : (
+              <>
+                <MealPickerDialog
+                  trigger={
+                    <Button size="sm" variant="outline" className="h-7 text-xs">
+                      <Shuffle className="mr-1 h-3 w-3" />
+                      Tauschen
+                    </Button>
+                  }
+                  title={`${label} tauschen`}
+                  slot={slot}
+                  library={library}
+                  ctx={ctx}
+                  dayType={dayType}
+                  remaining={remaining}
+                  onPick={onSwap}
+                />
+                <MealPickerDialog
+                  trigger={
+                    <Button size="sm" variant="ghost" className="h-7 text-xs">
+                      Alternative anzeigen
+                    </Button>
+                  }
+                  title={`Alternativen für ${label}`}
+                  slot={slot}
+                  library={library}
+                  ctx={ctx}
+                  dayType={dayType}
+                  remaining={remaining}
+                  onPick={onSwap}
+                  excludeId={meal.library_meal_id ?? null}
+                />
+                {partnerLink && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="h-7 text-xs"
+                    onClick={partnerLink.onCouple}
+                  >
+                    <Link2 className="mr-1 h-3 w-3" />
+                    Mit {partnerLink.partnerName} koppeln
+                  </Button>
+                )}
+              </>
+            )}
           </div>
         </div>
       ) : (
-        <MealPickerDialog
-          trigger={
-            <Button size="sm" variant="outline" className="w-full">
-              Mahlzeit auswählen
+        <div className="space-y-1">
+          <MealPickerDialog
+            trigger={
+              <Button size="sm" variant="outline" className="w-full">
+                Mahlzeit auswählen
+              </Button>
+            }
+            title={`Mahlzeit für ${label}`}
+            slot={slot}
+            library={library}
+            ctx={ctx}
+            dayType={dayType}
+            remaining={remaining}
+            onPick={onPick}
+          />
+          {partnerLink && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="w-full text-xs"
+              onClick={partnerLink.onCouple}
+            >
+              <Link2 className="mr-1 h-3 w-3" />
+              Von {partnerLink.partnerName} übernehmen
             </Button>
-          }
-          title={`Mahlzeit für ${label}`}
-          slot={slot}
-          library={library}
-          ctx={ctx}
-          dayType={dayType}
-          remaining={remaining}
-          onPick={onPick}
-        />
+          )}
+        </div>
       )}
     </div>
   );
@@ -1316,6 +1556,8 @@ function PartnerDayBlock({
   partnerDay,
   clientCtx,
   partnerCtx,
+  clientName,
+  partnerName,
   library,
   onClientChange,
   onPartnerChange,
@@ -1325,6 +1567,8 @@ function PartnerDayBlock({
   partnerDay: BuilderDay;
   clientCtx: CustomerPlanContext;
   partnerCtx: CustomerPlanContext;
+  clientName: string;
+  partnerName: string;
   library: LibraryMeal[];
   onClientChange: (u: (d: BuilderDay) => BuilderDay) => void;
   onPartnerChange: (u: (d: BuilderDay) => BuilderDay) => void;
@@ -1354,7 +1598,6 @@ function PartnerDayBlock({
                   description: cm.description ?? null,
                   library_meal_id: cm.library_meal_id ?? null,
                   ingredients: cm.ingredients.map((i) => ({ ...i })),
-                  // keep m.portion_factor, m.is_locked, m.linked_prep_group
                 }
               : m,
           ),
@@ -1373,6 +1616,149 @@ function PartnerDayBlock({
       );
     }
   };
+
+  const cTargetKcal = targetsFor(clientDay, clientCtx).kcal;
+  const pTargetKcal = targetsFor(partnerDay, partnerCtx).kcal;
+
+  // Couple a slot: mirror recipe to the other side, scale portion to their target.
+  // "from" = which side is the master (has the meal to mirror).
+  const coupleSlot = (slot: Slot, from: "client" | "partner") => {
+    const cM = clientDay.meals.find((m) => m.slot === slot);
+    const pM = partnerDay.meals.find((m) => m.slot === slot);
+    const group = makeGroupId();
+    if (from === "client") {
+      if (!cM) return;
+      const scaledFactor = scaleFactorToTarget(cM.portion_factor ?? 1, cTargetKcal, pTargetKcal);
+      onClientChange((d) => ({
+        ...d,
+        meals: d.meals.map((m) => (m.slot === slot ? { ...m, linked_partner_group: group } : m)),
+      }));
+      if (pM) {
+        // Both exist — link group, rescale partner factor, sync recipe via useEffect.
+        onPartnerChange((d) => ({
+          ...d,
+          meals: d.meals.map((m) =>
+            m.slot === slot ? { ...m, linked_partner_group: group, portion_factor: scaledFactor } : m,
+          ),
+        }));
+      } else {
+        // Clone recipe to partner slot with scaled portion.
+        const clone: BuilderMeal = {
+          ...cM,
+          ingredients: cM.ingredients.map((i) => ({ ...i })),
+          linked_prep_group: null,
+          linked_partner_group: group,
+          portion_factor: scaledFactor,
+          is_locked: false,
+        };
+        onPartnerChange((d) => ({ ...d, meals: [...d.meals.filter((m) => m.slot !== slot), clone] }));
+      }
+    } else {
+      if (!pM) return;
+      const scaledFactor = scaleFactorToTarget(pM.portion_factor ?? 1, pTargetKcal, cTargetKcal);
+      onPartnerChange((d) => ({
+        ...d,
+        meals: d.meals.map((m) => (m.slot === slot ? { ...m, linked_partner_group: group } : m)),
+      }));
+      if (cM) {
+        onClientChange((d) => ({
+          ...d,
+          meals: d.meals.map((m) =>
+            m.slot === slot ? { ...m, linked_partner_group: group, portion_factor: scaledFactor } : m,
+          ),
+        }));
+      } else {
+        const clone: BuilderMeal = {
+          ...pM,
+          ingredients: pM.ingredients.map((i) => ({ ...i })),
+          linked_prep_group: null,
+          linked_partner_group: group,
+          portion_factor: scaledFactor,
+          is_locked: false,
+        };
+        onClientChange((d) => ({ ...d, meals: [...d.meals.filter((m) => m.slot !== slot), clone] }));
+      }
+    }
+  };
+
+  const uncoupleSlot = (slot: Slot) => {
+    onClientChange((d) => ({
+      ...d,
+      meals: d.meals.map((m) => (m.slot === slot ? { ...m, linked_partner_group: null } : m)),
+    }));
+    onPartnerChange((d) => ({
+      ...d,
+      meals: d.meals.map((m) => (m.slot === slot ? { ...m, linked_partner_group: null } : m)),
+    }));
+  };
+
+  // Swap for both: update recipe on both sides, keep group, rescale "other" factor to target.
+  const swapCoupled = (slot: Slot, lib: LibraryMeal, from: "client" | "partner") => {
+    const ing = (lib.ingredients ?? []).map((i) => ({ name: i.name, grams: Math.round(i.amount_g ?? 0) }));
+    const patch = {
+      name: lib.name,
+      description: lib.description,
+      library_meal_id: lib.id,
+      ingredients: ing,
+    };
+    const cM = clientDay.meals.find((m) => m.slot === slot);
+    const pM = partnerDay.meals.find((m) => m.slot === slot);
+    const baseFactor =
+      from === "client" ? cM?.portion_factor ?? 1 : pM?.portion_factor ?? 1;
+    const otherFactor =
+      from === "client"
+        ? scaleFactorToTarget(baseFactor, cTargetKcal, pTargetKcal)
+        : scaleFactorToTarget(baseFactor, pTargetKcal, cTargetKcal);
+    onClientChange((d) => ({
+      ...d,
+      meals: d.meals.map((m) =>
+        m.slot === slot
+          ? {
+              ...m,
+              ...patch,
+              ingredients: patch.ingredients.map((i) => ({ ...i })),
+              portion_factor: from === "client" ? m.portion_factor ?? 1 : otherFactor,
+            }
+          : m,
+      ),
+    }));
+    onPartnerChange((d) => ({
+      ...d,
+      meals: d.meals.map((m) =>
+        m.slot === slot
+          ? {
+              ...m,
+              ...patch,
+              ingredients: patch.ingredients.map((i) => ({ ...i })),
+              portion_factor: from === "partner" ? m.portion_factor ?? 1 : otherFactor,
+            }
+          : m,
+      ),
+    }));
+  };
+
+  const isCoupled = (slot: Slot) => {
+    const cM = clientDay.meals.find((m) => m.slot === slot);
+    const pM = partnerDay.meals.find((m) => m.slot === slot);
+    return !!(cM?.linked_partner_group && pM?.linked_partner_group === cM.linked_partner_group);
+  };
+
+  const linkForClient = (slot: Slot): PartnerSlotLink => ({
+    selfName: clientName,
+    partnerName,
+    isCoupled: isCoupled(slot),
+    onCouple: () => coupleSlot(slot, "client"),
+    onUncouple: () => uncoupleSlot(slot),
+    onSwapForBoth: (lib) => swapCoupled(slot, lib, "client"),
+  });
+  const linkForPartner = (slot: Slot): PartnerSlotLink => ({
+    selfName: partnerName,
+    partnerName: clientName,
+    isCoupled: isCoupled(slot),
+    onCouple: () => coupleSlot(slot, "partner"),
+    onUncouple: () => uncoupleSlot(slot),
+    onSwapForBoth: (lib) => swapCoupled(slot, lib, "partner"),
+  });
 
   return (
     <Card>
@@ -1397,8 +1783,8 @@ function PartnerDayBlock({
       <CardContent>
         <Tabs defaultValue="client">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="client">Kunde</TabsTrigger>
-            <TabsTrigger value="partner">Partner</TabsTrigger>
+            <TabsTrigger value="client">{clientName}</TabsTrigger>
+            <TabsTrigger value="partner">{partnerName}</TabsTrigger>
           </TabsList>
           <TabsContent value="client" className="mt-3">
             <DayCard
@@ -1408,6 +1794,7 @@ function PartnerDayBlock({
               onChange={onClientChange}
               onCopy={onCopy}
               hideHeaderActions
+              partnerLinkForSlot={linkForClient}
             />
           </TabsContent>
           <TabsContent value="partner" className="mt-3">
@@ -1418,6 +1805,7 @@ function PartnerDayBlock({
               onChange={onPartnerChange}
               onCopy={onCopy}
               hideHeaderActions
+              partnerLinkForSlot={linkForPartner}
             />
           </TabsContent>
         </Tabs>
