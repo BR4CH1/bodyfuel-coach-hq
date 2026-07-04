@@ -124,17 +124,17 @@ export const getMyStrengthStatus = createServerFn({ method: "GET" })
       const { data: rs } = await supabase
         .from("strength_check_results")
         .select("*")
-        .eq("check_id", (last as StrengthCheck).id);
+        .eq("check_id", (last as unknown as StrengthCheck).id);
       results = (rs as StrengthResult[]) ?? [];
     }
 
-    const lastDate = last ? new Date((last as StrengthCheck).performed_at) : null;
+    const lastDate = last ? new Date((last as unknown as StrengthCheck).performed_at) : null;
     const due = lastDate ? new Date(lastDate.getTime() + 42 * 86400000) : null;
     const today = new Date();
     const dueDays = due ? daysBetween(today, due) : null;
 
     const lastWithV2 = last
-      ? { ...applyV2Scores(last as StrengthCheck, results as RawResult[]), results }
+      ? { ...applyV2Scores(last as unknown as StrengthCheck, results as RawResult[]), results }
       : null;
 
     return {
@@ -157,7 +157,7 @@ export const getMyStrengthHistory = createServerFn({ method: "GET" })
       .eq("user_id", userId)
       .eq("status", "completed")
       .order("performed_at", { ascending: true });
-    const rows = (checks ?? []) as StrengthCheck[];
+    const rows = (checks ?? []) as unknown as StrengthCheck[];
     if (rows.length === 0) return [] as Array<Pick<StrengthCheck, "id" | "performed_at" | "score_lower" | "score_push" | "score_pull" | "score_core" | "score_total">>;
     const ids = rows.map((r) => r.id);
     const { data: allResults } = await supabase
@@ -199,13 +199,13 @@ export const startStrengthCheck = createServerFn({ method: "POST" })
       .limit(1)
       .maybeSingle();
     if (existing) {
-      if (data.bodyweight_kg && !(existing as StrengthCheck).bodyweight_kg) {
+      if (data.bodyweight_kg && !(existing as unknown as StrengthCheck).bodyweight_kg) {
         await supabase
           .from("strength_checks")
           .update({ bodyweight_kg: data.bodyweight_kg })
-          .eq("id", (existing as StrengthCheck).id);
+          .eq("id", (existing as unknown as StrengthCheck).id);
       }
-      return existing as StrengthCheck;
+      return existing as unknown as StrengthCheck;
     }
     const { data: row, error } = await supabase
       .from("strength_checks")
@@ -213,7 +213,7 @@ export const startStrengthCheck = createServerFn({ method: "POST" })
       .select()
       .single();
     if (error) throw new Error(error.message);
-    return row as StrengthCheck;
+    return row as unknown as StrengthCheck;
   });
 
 export const saveStrengthResult = createServerFn({ method: "POST" })
@@ -295,7 +295,7 @@ export const completeStrengthCheck = createServerFn({ method: "POST" })
       .from("strength_check_results")
       .select("*")
       .eq("check_id", data.check_id);
-    return applyV2Scores(row as StrengthCheck, (fullResults ?? []) as RawResult[]);
+    return applyV2Scores(row as unknown as StrengthCheck, (fullResults ?? []) as RawResult[]);
   });
 
 export const deleteStrengthResult = createServerFn({ method: "POST" })
@@ -328,7 +328,7 @@ export const getCustomerStrengthOverview = createServerFn({ method: "GET" })
       .eq("user_id", data.user_id)
       .eq("status", "completed")
       .order("performed_at", { ascending: true });
-    const rawHistory = (history ?? []) as StrengthCheck[];
+    const rawHistory = (history ?? []) as unknown as StrengthCheck[];
 
     // Load ALL results in one query, then recompute V2 per check.
     const ids = rawHistory.map((c) => c.id);
