@@ -559,7 +559,7 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
       const nextClient: BuilderDay[] = [];
       const nextPartner: BuilderDay[] = [];
       for (let i = 0; i < days.length; i++) {
-        const pair = autoFillDayPair(days[i], partnerDays[i], ctx, pCtx, lib, mode);
+        const pair = autoFillDayPair(days[i], partnerDays[i], ctx, pCtx, lib, mode, sharedSlots);
         missingCount += pair.missing;
         nextClient.push(pair.client);
         nextPartner.push(pair.partner);
