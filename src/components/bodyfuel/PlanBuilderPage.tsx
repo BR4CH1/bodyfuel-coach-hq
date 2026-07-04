@@ -1152,6 +1152,7 @@ function DayCard({
                 updateMealAtSlot(slot.key, (m) => ({ ...m, is_locked: !m.is_locked }))
               }
               onRemove={() => removeMealAtSlot(slot.key)}
+              partnerLink={partnerLinkForSlot?.(slot.key)}
             />
           );
         })}
