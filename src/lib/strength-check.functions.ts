@@ -74,6 +74,11 @@ function applyV2Scores<T extends StrengthCheck>(
   results: RawResult[],
   bodyweightOverride?: number | null,
 ): T {
+  // Legacy fallback: if the row was written under the old algorithm we
+  // recompute V2 on the fly from raw results. New rows already store V2.
+  const isV2 = (check as { score_algorithm_version?: number | null }).score_algorithm_version === SCORE_ALGORITHM_VERSION;
+  if (isV2) return check;
+
   const bw = bodyweightOverride ?? check.bodyweight_kg;
   const v2 = computeCheckV2(results, bw);
   return {
