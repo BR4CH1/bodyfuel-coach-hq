@@ -194,6 +194,8 @@ export function autoFillDayImpl(
 // Auto-fill for two linked days (partner mode).
 // Strategy per slot: prefer a shared meal (score > 0 for both, quantities scaled per person).
 // Fallback: independent picks per person.
+export type SharedSlotsMap = Record<Slot, boolean>;
+
 export function autoFillDayPair(
   clientDay: BuilderDay,
   partnerDay: BuilderDay,
@@ -201,6 +203,7 @@ export function autoFillDayPair(
   partnerCtx: CustomerPlanContext,
   library: LibraryMeal[],
   mode: AutoFillMode,
+  sharedSlots: SharedSlotsMap = { breakfast: true, lunch: true, dinner: true, snack: true },
 ): { client: BuilderDay; partner: BuilderDay; missing: number } {
   const filterKeep = (arr: BuilderMeal[]) => (mode === "all_unlocked" ? arr.filter((m) => m.is_locked) : arr.map((m) => ({ ...m })));
   let clientMeals: BuilderMeal[] = filterKeep(clientDay.meals);
@@ -227,7 +230,7 @@ export function autoFillDayPair(
     // Only fill where BOTH slots are empty (locked/existing on either side → skip shared logic)
     if (cExisting && pExisting) continue;
 
-    if (!cExisting && !pExisting) {
+    if (sharedSlots[slot] && !cExisting && !pExisting) {
       const cRem = remainingFor(clientMeals, clientDay, clientCtx);
       const pRem = remainingFor(partnerMeals, partnerDay, partnerCtx);
       const scored = library
@@ -376,6 +379,12 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
   const partnerId = partnerLinkQ.data?.partner_id ?? null;
   const partnerName = partnerLinkQ.data?.partner_name ?? "Partner";
   const [partnerMode, setPartnerMode] = useState(false);
+  const [sharedSlots, setSharedSlots] = useState<SharedSlotsMap>({
+    breakfast: false,
+    lunch: false,
+    dinner: true,
+    snack: false,
+  });
   const partnerCtxQ = useQuery({
     queryKey: ["plan-ctx", partnerId],
     queryFn: () => getCtx({ data: { customerId: partnerId! } }),
@@ -550,7 +559,7 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
       const nextClient: BuilderDay[] = [];
       const nextPartner: BuilderDay[] = [];
       for (let i = 0; i < days.length; i++) {
-        const pair = autoFillDayPair(days[i], partnerDays[i], ctx, pCtx, lib, mode);
+        const pair = autoFillDayPair(days[i], partnerDays[i], ctx, pCtx, lib, mode, sharedSlots);
         missingCount += pair.missing;
         nextClient.push(pair.client);
         nextPartner.push(pair.partner);
@@ -759,6 +768,33 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
         </Card>
       )}
 
+      {partnerMode && partnerCtxQ.data && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Gemeinsame Mahlzeiten mit {partnerName}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-xs">
+            <div className="text-muted-foreground">
+              Nur ausgewählte Slots werden beim Auto-Fill als Paar geplant (gleiches Rezept, individuelle Portionen).
+              Nicht angehakte Slots werden pro Person unabhängig geplant.
+            </div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {(SLOTS as ReadonlyArray<{ key: Slot; label: string }>).map((s) => (
+                <label key={s.key} className="flex items-center gap-2 rounded-md border border-border bg-background/40 px-2 py-1.5">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4"
+                    checked={sharedSlots[s.key]}
+                    onChange={(e) => setSharedSlots((prev) => ({ ...prev, [s.key]: e.target.checked }))}
+                  />
+                  {s.label}
+                </label>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {days.map((day, di) =>
         partnerMode && partnerCtxQ.data && partnerDays[di] ? (
           <PartnerDayBlock
@@ -770,6 +806,7 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
             clientName="Kunde"
             partnerName={partnerName}
             library={libQ.data ?? []}
+            sharedSlots={sharedSlots}
             onClientChange={(u) => setDay(di, u)}
             onPartnerChange={(u) => setPartnerDay(di, u)}
             onCopy={() => setCopyChoiceIdx(di)}
@@ -1559,6 +1596,7 @@ function PartnerDayBlock({
   clientName,
   partnerName,
   library,
+  sharedSlots,
   onClientChange,
   onPartnerChange,
   onCopy,
@@ -1570,6 +1608,7 @@ function PartnerDayBlock({
   clientName: string;
   partnerName: string;
   library: LibraryMeal[];
+  sharedSlots: SharedSlotsMap;
   onClientChange: (u: (d: BuilderDay) => BuilderDay) => void;
   onPartnerChange: (u: (d: BuilderDay) => BuilderDay) => void;
   onCopy: () => void;
@@ -1607,7 +1646,7 @@ function PartnerDayBlock({
   }, [clientDay.meals]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const autoFillPair = () => {
-    const res = autoFillDayPair(clientDay, partnerDay, clientCtx, partnerCtx, library, "empty_only");
+    const res = autoFillDayPair(clientDay, partnerDay, clientCtx, partnerCtx, library, "empty_only", sharedSlots);
     onClientChange(() => res.client);
     onPartnerChange(() => res.partner);
     if (res.missing > 0) {
