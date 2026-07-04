@@ -1,3 +1,5 @@
+import { STRENGTH_SCORE_COLOR_HEX, getStrengthScoreColor } from "@/lib/strengthScoreV2";
+
 export function StrengthScoreDonut({
   value,
   label,
@@ -13,14 +15,7 @@ export function StrengthScoreDonut({
   const c = 2 * Math.PI * r;
   const pct = Math.max(0, Math.min(100, value ?? 0));
   const dash = (pct / 100) * c;
-  const color =
-    value == null
-      ? "var(--muted-foreground)"
-      : value >= 75
-        ? "rgb(52 211 153)" // emerald
-        : value >= 50
-          ? "var(--gold, #d4a82e)"
-          : "rgb(248 113 113)"; // red
+  const color = STRENGTH_SCORE_COLOR_HEX[getStrengthScoreColor(value)];
 
   return (
     <div className="flex flex-col items-center gap-1">
