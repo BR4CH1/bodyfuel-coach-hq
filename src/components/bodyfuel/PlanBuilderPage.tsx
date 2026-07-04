@@ -850,6 +850,7 @@ function DayCard({
   onChange,
   onCopy,
   hideHeaderActions,
+  partnerLinkForSlot,
 }: {
   day: BuilderDay;
   library: LibraryMeal[];
@@ -857,6 +858,7 @@ function DayCard({
   onChange: (u: (d: BuilderDay) => BuilderDay) => void;
   onCopy: () => void;
   hideHeaderActions?: boolean;
+  partnerLinkForSlot?: (slot: Slot) => PartnerSlotLink | undefined;
 }) {
   const target =
     day.type === "training"
