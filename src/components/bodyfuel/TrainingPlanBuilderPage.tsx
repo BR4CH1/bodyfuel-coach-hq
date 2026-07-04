@@ -13,6 +13,7 @@ import {
   type BuilderTrainingDay,
   type BuilderTrainingExercise,
   type LibraryExercise,
+  type StrengthBaseline,
 } from "@/lib/training-plan-builder.functions";
 import { autoFillTrainingPlan, emptyPlan } from "@/lib/training-autofill";
 
@@ -29,6 +30,31 @@ function isoToday(): string {
   d.setDate(d.getDate() + diff);
   return d.toISOString().slice(0, 10);
 }
+
+function weightFromBaseline(lib: LibraryExercise, b: StrengthBaseline): string | null {
+  const n = (lib.name || "").toLowerCase();
+  const pat = (lib.movement_pattern || "").toLowerCase();
+  const m = (lib.primary_muscle || "").toLowerCase();
+  let kg: number | null = null;
+  if (/bank(druck|drücken)|bench|brustpresse|chest press/.test(n)) kg = b.bench_press_kg;
+  else if (/schulterdr(ück|uck)|shoulder press|overhead|military/.test(n)) kg = b.shoulder_press_kg;
+  else if (/kniebeug|squat/.test(n)) kg = b.squat_kg;
+  else if (/kreuzheb|deadlift|romanian/.test(n)) kg = b.deadlift_kg;
+  else if (/latzug|lat pulldown|pulldown/.test(n)) kg = b.lat_pulldown_kg;
+  else if (/ruder|row/.test(n)) kg = b.row_kg;
+  else if (/beinpresse|leg press/.test(n)) kg = b.leg_press_kg;
+  else if (/beinbeuger|leg curl/.test(n)) kg = b.leg_curl_kg;
+  else {
+    if (pat === "horizontal_push" || m === "chest") kg = b.bench_press_kg;
+    else if (pat === "vertical_push" || m === "shoulders") kg = b.shoulder_press_kg;
+    else if (pat === "squat" || m === "quads") kg = b.squat_kg;
+    else if (pat === "hinge" || m === "hamstrings") kg = b.deadlift_kg;
+    else if (pat === "vertical_pull" || m === "lats") kg = b.lat_pulldown_kg;
+    else if (pat === "horizontal_pull" || m === "back") kg = b.row_kg;
+  }
+  return kg && kg > 0 ? String(kg) : null;
+}
+
 
 export function TrainingPlanBuilderPage({ userId, planId }: { userId: string; planId?: string }) {
   const navigate = useNavigate();
@@ -102,15 +128,20 @@ export function TrainingPlanBuilderPage({ userId, planId }: { userId: string; pl
     [days, activeWeek],
   );
 
+  const activeBaseline = (activeSide === "client" ? ctx : partnerCtx)?.baseline ?? null;
+
+  function mutateDays(fn: (prev: BuilderTrainingDay[]) => BuilderTrainingDay[]) {
+    if (activeSide === "client") setClientDays((prev) => (prev ? fn(prev) : prev));
+    else setPartnerDays((prev) => (prev ? fn(prev) : prev));
+  }
+
   function updateDay(week: number, weekday: number, patch: Partial<BuilderTrainingDay>) {
-    if (!days) return;
-    setDays(days.map((d) => (d.week_number === week && d.weekday === weekday ? { ...d, ...patch } : d)));
+    mutateDays((prev) => prev.map((d) => (d.week_number === week && d.weekday === weekday ? { ...d, ...patch } : d)));
   }
 
   function updateExercise(week: number, weekday: number, idx: number, patch: Partial<BuilderTrainingExercise>) {
-    if (!days) return;
-    setDays(
-      days.map((d) => {
+    mutateDays((prev) =>
+      prev.map((d) => {
         if (d.week_number !== week || d.weekday !== weekday) return d;
         const exs = [...d.exercises];
         exs[idx] = { ...exs[idx], ...patch };
@@ -120,7 +151,7 @@ export function TrainingPlanBuilderPage({ userId, planId }: { userId: string; pl
   }
 
   function addExercise(week: number, weekday: number, lib?: LibraryExercise) {
-    if (!days) return;
+    const suggestedKg = lib && activeBaseline ? weightFromBaseline(lib, activeBaseline) : null;
     const newEx: BuilderTrainingExercise = lib
       ? {
           library_exercise_id: lib.id,
@@ -128,7 +159,7 @@ export function TrainingPlanBuilderPage({ userId, planId }: { userId: string; pl
           category: lib.category,
           target_sets: lib.default_sets,
           target_reps: lib.default_reps,
-          target_weights: null,
+          target_weights: suggestedKg,
           target_rir: 2,
           rest_seconds: lib.default_rest_seconds,
           notes: lib.notes,
@@ -146,17 +177,19 @@ export function TrainingPlanBuilderPage({ userId, planId }: { userId: string; pl
           notes: null,
           is_locked: false,
         };
-    setDays(
-      days.map((d) =>
+    mutateDays((prev) =>
+      prev.map((d) =>
         d.week_number === week && d.weekday === weekday ? { ...d, exercises: [...d.exercises, newEx] } : d,
       ),
     );
+    if (lib && suggestedKg) {
+      toast.success(`${lib.name}: ${suggestedKg} kg aus Strength-Test`);
+    }
   }
 
   function removeExercise(week: number, weekday: number, idx: number) {
-    if (!days) return;
-    setDays(
-      days.map((d) => {
+    mutateDays((prev) =>
+      prev.map((d) => {
         if (d.week_number !== week || d.weekday !== weekday) return d;
         return { ...d, exercises: d.exercises.filter((_, i) => i !== idx) };
       }),
@@ -164,43 +197,45 @@ export function TrainingPlanBuilderPage({ userId, planId }: { userId: string; pl
   }
 
   function removeDay(week: number, weekday: number) {
-    if (!days) return;
-    setDays(days.filter((d) => !(d.week_number === week && d.weekday === weekday)));
+    mutateDays((prev) => prev.filter((d) => !(d.week_number === week && d.weekday === weekday)));
+    toast.success("Tag gelöscht");
   }
 
   function addDay(week: number, weekday: number) {
-    if (!days) return;
-    if (days.some((d) => d.week_number === week && d.weekday === weekday)) {
-      toast.error("Tag existiert bereits");
-      return;
-    }
-    setDays([
-      ...days,
-      {
-        week_number: week,
-        weekday,
-        name: WD_LONG[weekday],
-        type: "training",
-        exercises: [],
-      } as BuilderTrainingDay,
-    ]);
+    mutateDays((prev) => {
+      if (prev.some((d) => d.week_number === week && d.weekday === weekday)) {
+        toast.error("Tag existiert bereits");
+        return prev;
+      }
+      return [
+        ...prev,
+        {
+          week_number: week,
+          weekday,
+          name: WD_LONG[weekday],
+          type: "training",
+          exercises: [],
+        } as BuilderTrainingDay,
+      ];
+    });
   }
 
   function copyWeek(from: number, to: number) {
-    if (!days) return;
     if (from === to) return;
-    const src = days.filter((d) => d.week_number === from);
-    if (!src.length) {
-      toast.error(`Woche ${from} ist leer`);
-      return;
-    }
-    const cloned: BuilderTrainingDay[] = src.map((d) => ({
-      ...d,
-      week_number: to,
-      exercises: d.exercises.map((ex) => ({ ...ex })),
-    }));
-    setDays([...days.filter((d) => d.week_number !== to), ...cloned]);
-    toast.success(`Woche ${from} → Woche ${to} kopiert`);
+    mutateDays((prev) => {
+      const src = prev.filter((d) => d.week_number === from);
+      if (!src.length) {
+        toast.error(`Woche ${from} ist leer`);
+        return prev;
+      }
+      const cloned: BuilderTrainingDay[] = src.map((d) => ({
+        ...d,
+        week_number: to,
+        exercises: d.exercises.map((ex) => ({ ...ex })),
+      }));
+      toast.success(`Woche ${from} → Woche ${to} kopiert`);
+      return [...prev.filter((d) => d.week_number !== to), ...cloned];
+    });
   }
 
   function runAutoFillWeek() {
