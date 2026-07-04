@@ -497,11 +497,12 @@ function PlanColumn(props: {
 
           <div className="mt-3 flex flex-wrap gap-2">
             <a
-              href={`/coach/${plan.id}`}
+              href={`/coach/plan-builder/${userId}?planId=${plan.id}`}
               className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-2.5 py-1.5 text-xs font-medium hover:bg-accent"
             >
               <Pencil className="h-3.5 w-3.5" /> Bearbeiten
             </a>
+
             <a
               href={`/coach/plan-preview/${plan.id}`}
               className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-2.5 py-1.5 text-xs font-medium hover:bg-accent"
