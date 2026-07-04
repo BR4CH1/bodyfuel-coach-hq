@@ -289,7 +289,13 @@ export const completeStrengthCheck = createServerFn({ method: "POST" })
       .select()
       .single();
     if (error) throw new Error(error.message);
-    return row as StrengthCheck;
+
+    // Fetch raw results and overwrite score_* with V2 for the returned row.
+    const { data: fullResults } = await supabase
+      .from("strength_check_results")
+      .select("*")
+      .eq("check_id", data.check_id);
+    return applyV2Scores(row as StrengthCheck, (fullResults ?? []) as RawResult[]);
   });
 
 export const deleteStrengthResult = createServerFn({ method: "POST" })
