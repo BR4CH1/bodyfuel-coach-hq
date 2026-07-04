@@ -93,7 +93,7 @@ export const getCustomerTrainingContext = createServerFn({ method: "POST" })
     const [{ data: prof }, { data: snp }, { data: bm }, { data: check }, { data: partnerRows }] =
       await Promise.all([
         context.supabase.from("profiles").select("display_name, training_goal").eq("id", cid).maybeSingle(),
-        context.supabase.from("smart_nutrition_profile").select("training_weekdays, experience_level").eq("user_id", cid).maybeSingle(),
+        context.supabase.from("smart_nutrition_profile").select("training_weekdays").eq("user_id", cid).maybeSingle(),
         context.supabase.from("body_measurements").select("weight_kg, measured_at").eq("user_id", cid).not("weight_kg", "is", null).order("measured_at", { ascending: false }).limit(1),
         context.supabase.from("strength_checks").select("id, exercise_calcs, scoring_bodyweight_kg").eq("user_id", cid).eq("status", "completed").order("performed_at", { ascending: false }).limit(1).maybeSingle(),
         context.supabase.from("nutrition_partners").select("user_a, user_b").or(`user_a.eq.${cid},user_b.eq.${cid}`).limit(1),
