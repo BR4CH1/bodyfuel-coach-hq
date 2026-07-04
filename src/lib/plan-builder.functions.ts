@@ -132,6 +132,7 @@ export type BuilderMeal = {
   is_locked?: boolean;
   portion_factor?: number; // 1.0 = normale Portion
   linked_prep_group?: string | null;
+  linked_partner_group?: string | null; // shared id when meal is coupled with partner's meal
 };
 export type BuilderDay = {
   name: string;
@@ -141,97 +142,196 @@ export type BuilderDay = {
   prepCoupleLunchDinner?: boolean;
 };
 
+async function persistBuilderPlan(
+  supabase: any,
+  data: {
+    customerId: string;
+    title: string;
+    startDate: string;
+    days: BuilderDay[];
+    publish?: boolean;
+  },
+): Promise<{ plan_id: string }> {
+  const { saveCoachNutritionPlanDraft } = await import("./coach-plan-import.functions");
+  const result = await saveCoachNutritionPlanDraft({
+    data: {
+      client_id: data.customerId,
+      title: data.title,
+      start_date: data.startDate,
+      mode: "new_plan",
+      force: true,
+      plan: {
+        title: data.title,
+        days: data.days.map((d) => ({
+          name: d.name,
+          type: d.type,
+          meals: d.meals.map((m) => {
+            const f = m.portion_factor && m.portion_factor > 0 ? m.portion_factor : 1;
+            return {
+              slot: m.slot,
+              name: m.name,
+              description: m.description ?? null,
+              ingredients: m.ingredients.map((i) => ({
+                name: i.name,
+                grams: Math.round((i.grams ?? 0) * f),
+              })),
+            };
+          }),
+        })),
+      },
+    },
+  } as any);
+
+  const planId = (result as any)?.plan_id as string | undefined;
+  if (!planId) throw new Error("Speichern fehlgeschlagen");
+
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: dayRows } = await supabaseAdmin
+    .from("nutrition_plan_days")
+    .select("id, sort_order")
+    .eq("plan_id", planId)
+    .order("sort_order");
+  const dayArr = dayRows ?? [];
+  for (let di = 0; di < data.days.length && di < dayArr.length; di++) {
+    const dayId = dayArr[di].id;
+    const src = data.days[di];
+    const base = new Date(data.startDate + "T00:00:00Z");
+    base.setUTCDate(base.getUTCDate() + di);
+    const iso = base.toISOString().slice(0, 10);
+    await supabaseAdmin
+      .from("nutrition_plan_days")
+      .update({ day_type: src.type, day_date: iso } as any)
+      .eq("id", dayId);
+
+    const { data: mealRows } = await supabaseAdmin
+      .from("nutrition_plan_meals")
+      .select("id, sort_order")
+      .eq("day_id", dayId)
+      .order("sort_order");
+    const mealArr = mealRows ?? [];
+    for (let mi = 0; mi < src.meals.length && mi < mealArr.length; mi++) {
+      const m = src.meals[mi];
+      await supabaseAdmin
+        .from("nutrition_plan_meals")
+        .update({
+          meal_slot: m.slot,
+          library_meal_id: m.library_meal_id ?? null,
+          is_locked: !!m.is_locked,
+          linked_prep_group: m.linked_prep_group ?? null,
+        } as any)
+        .eq("id", mealArr[mi].id);
+    }
+  }
+  if (data.publish) {
+    await supabaseAdmin
+      .from("nutrition_plans")
+      .update({ status: "active" } as any)
+      .eq("id", planId);
+  }
+  return { plan_id: planId };
+}
+
 export const saveBuilderPlan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
     (d: {
       customerId: string;
       title: string;
-      startDate: string; // YYYY-MM-DD
+      startDate: string;
       days: BuilderDay[];
       publish?: boolean;
     }) => d,
   )
   .handler(async ({ data, context }) => {
     await assertCoach(context);
-    const { saveCoachNutritionPlanDraft } = await import("./coach-plan-import.functions");
-    const result = await saveCoachNutritionPlanDraft({
-      data: {
-        client_id: data.customerId,
-        title: data.title,
-        start_date: data.startDate,
-        mode: "new_plan",
-        force: true,
-        plan: {
-          title: data.title,
-          days: data.days.map((d) => ({
-            name: d.name,
-            type: d.type,
-            meals: d.meals.map((m) => {
-              const f = m.portion_factor && m.portion_factor > 0 ? m.portion_factor : 1;
-              return {
-                slot: m.slot,
-                name: m.name,
-                description: m.description ?? null,
-                ingredients: m.ingredients.map((i) => ({
-                  name: i.name,
-                  grams: Math.round((i.grams ?? 0) * f),
-                })),
-              };
-            }),
-          })),
-        },
-      },
-    } as any);
+    return await persistBuilderPlan(context.supabase, data);
+  });
 
-    // Post-save: enrich saved meals with meal_slot / library_meal_id / is_locked / linked_prep_group
-    // and persist per-day day_type + day_date
-    if ((result as any)?.plan_id) {
-      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      const planId = (result as any).plan_id as string;
-      const { data: dayRows } = await supabaseAdmin
-        .from("nutrition_plan_days")
-        .select("id, sort_order")
-        .eq("plan_id", planId)
-        .order("sort_order");
-      const dayArr = dayRows ?? [];
-      for (let di = 0; di < data.days.length && di < dayArr.length; di++) {
-        const dayId = dayArr[di].id;
-        const src = data.days[di];
-        // compute date for this day
-        const base = new Date(data.startDate + "T00:00:00Z");
-        base.setUTCDate(base.getUTCDate() + di);
-        const iso = base.toISOString().slice(0, 10);
-        await supabaseAdmin
-          .from("nutrition_plan_days")
-          .update({ day_type: src.type, day_date: iso } as any)
-          .eq("id", dayId);
+/**
+ * Speichert einen Partnerplan: zwei einzelne Pläne + Kreuz-Verknüpfung.
+ * partner_plan_id (Plan) und partner_meal_id (Mahlzeit) werden gesetzt,
+ * damit AI- und manuelle Partnerpläne dieselbe Datenstruktur nutzen.
+ */
+export const saveBuilderPartnerPlan = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (d: {
+      customerId: string;
+      partnerId: string;
+      title: string;
+      startDate: string;
+      clientDays: BuilderDay[];
+      partnerDays: BuilderDay[];
+      publish?: boolean;
+    }) => d,
+  )
+  .handler(async ({ data, context }) => {
+    await assertCoach(context);
+    if (data.clientDays.length !== data.partnerDays.length) {
+      throw new Error("Kunde- und Partner-Tage müssen gleich lang sein.");
+    }
+    const A = await persistBuilderPlan(context.supabase, {
+      customerId: data.customerId,
+      title: data.title,
+      startDate: data.startDate,
+      days: data.clientDays,
+      publish: data.publish,
+    });
+    const B = await persistBuilderPlan(context.supabase, {
+      customerId: data.partnerId,
+      title: data.title,
+      startDate: data.startDate,
+      days: data.partnerDays,
+      publish: data.publish,
+    });
 
-        const { data: mealRows } = await supabaseAdmin
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin
+      .from("nutrition_plans")
+      .update({ is_partner_plan: true, partner_plan_id: B.plan_id } as any)
+      .eq("id", A.plan_id);
+    await supabaseAdmin
+      .from("nutrition_plans")
+      .update({ is_partner_plan: true, partner_plan_id: A.plan_id } as any)
+      .eq("id", B.plan_id);
+
+    // Cross-link partner_meal_id where linked_partner_group matches.
+    const [{ data: daysA }, { data: daysB }] = await Promise.all([
+      supabaseAdmin.from("nutrition_plan_days").select("id, sort_order").eq("plan_id", A.plan_id).order("sort_order"),
+      supabaseAdmin.from("nutrition_plan_days").select("id, sort_order").eq("plan_id", B.plan_id).order("sort_order"),
+    ]);
+    const dA = daysA ?? [];
+    const dB = daysB ?? [];
+    for (let i = 0; i < Math.min(dA.length, dB.length); i++) {
+      const [{ data: mealsA }, { data: mealsB }] = await Promise.all([
+        supabaseAdmin
           .from("nutrition_plan_meals")
-          .select("id, sort_order")
-          .eq("day_id", dayId)
-          .order("sort_order");
-        const mealArr = mealRows ?? [];
-        for (let mi = 0; mi < src.meals.length && mi < mealArr.length; mi++) {
-          const m = src.meals[mi];
-          await supabaseAdmin
-            .from("nutrition_plan_meals")
-            .update({
-              meal_slot: m.slot,
-              library_meal_id: m.library_meal_id ?? null,
-              is_locked: !!m.is_locked,
-              linked_prep_group: m.linked_prep_group ?? null,
-            } as any)
-            .eq("id", mealArr[mi].id);
-        }
-      }
-      if (data.publish) {
-        await supabaseAdmin
-          .from("nutrition_plans")
-          .update({ status: "active" } as any)
-          .eq("id", planId);
+          .select("id, sort_order, meal_slot")
+          .eq("day_id", dA[i].id)
+          .order("sort_order"),
+        supabaseAdmin
+          .from("nutrition_plan_meals")
+          .select("id, sort_order, meal_slot")
+          .eq("day_id", dB[i].id)
+          .order("sort_order"),
+      ]);
+      const mA = mealsA ?? [];
+      const mB = mealsB ?? [];
+      const srcA = data.clientDays[i]?.meals ?? [];
+      const srcB = data.partnerDays[i]?.meals ?? [];
+      // Iterate srcA in same order the persist step wrote them.
+      for (let ai = 0; ai < srcA.length && ai < mA.length; ai++) {
+        const grp = srcA[ai].linked_partner_group;
+        if (!grp) continue;
+        const bIdxSrc = srcB.findIndex((m) => m.linked_partner_group === grp);
+        if (bIdxSrc < 0 || bIdxSrc >= mB.length) continue;
+        const aId = mA[ai].id;
+        const bId = mB[bIdxSrc].id;
+        await supabaseAdmin.from("nutrition_plan_meals").update({ partner_meal_id: bId } as any).eq("id", aId);
+        await supabaseAdmin.from("nutrition_plan_meals").update({ partner_meal_id: aId } as any).eq("id", bId);
       }
     }
-    return result;
+
+    return { ok: true, client_plan_id: A.plan_id, partner_plan_id: B.plan_id };
   });
+
