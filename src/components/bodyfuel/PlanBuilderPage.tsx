@@ -280,6 +280,56 @@ export function autoFillDayPair(
   };
 }
 
+// Re-scales unlocked meal portions so day kcal ≈ target kcal.
+export function rebalanceDay(day: BuilderDay, ctx: CustomerPlanContext, library: LibraryMeal[]): BuilderDay {
+  const t = targetsFor(day, ctx).kcal;
+  const cur = day.meals.reduce((s, m) => s + mealMacros(m, library).kcal, 0);
+  if (!t || !cur) return day;
+  const scale = t / cur;
+  if (scale > 0.92 && scale < 1.08) return day;
+  return {
+    ...day,
+    meals: day.meals.map((m) => {
+      if (m.is_locked) return m;
+      const nf = Math.max(0.25, Math.min(4, Math.round(((m.portion_factor ?? 1) * scale) * 4) / 4));
+      return { ...m, portion_factor: nf };
+    }),
+  };
+}
+
+// Deep-copy meals for day-copy: fresh linked_prep_group + linked_partner_group IDs (shared across a paired copy via caller-supplied maps).
+function remapMealsForCopy(
+  arr: BuilderMeal[],
+  groupMap: Map<string, string>,
+  prepMap: Map<string, string>,
+): BuilderMeal[] {
+  return arr.map((m) => {
+    let lpg: string | null = null;
+    if (m.linked_partner_group) {
+      if (!groupMap.has(m.linked_partner_group)) groupMap.set(m.linked_partner_group, makeGroupId());
+      lpg = groupMap.get(m.linked_partner_group)!;
+    }
+    let prep: string | null = null;
+    if (m.linked_prep_group) {
+      if (!prepMap.has(m.linked_prep_group)) prepMap.set(m.linked_prep_group, makeGroupId());
+      prep = prepMap.get(m.linked_prep_group)!;
+    }
+    return {
+      ...m,
+      ingredients: m.ingredients.map((i) => ({ ...i })),
+      linked_prep_group: prep,
+      linked_partner_group: lpg,
+    };
+  });
+}
+
+// Scale a portion factor from one person to another based on their kcal targets. Snapped to 0.25.
+function scaleFactorToTarget(fromFactor: number, fromTargetKcal: number, toTargetKcal: number): number {
+  if (!fromTargetKcal || !toTargetKcal) return fromFactor;
+  const raw = fromFactor * (toTargetKcal / fromTargetKcal);
+  return Math.max(0.25, Math.min(4, Math.round(raw * 4) / 4));
+}
+
 export function PlanBuilderPage({ userId }: { userId: string }) {
   const navigate = useNavigate();
   const listLib = useServerFn(listMealLibrary);
