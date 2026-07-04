@@ -308,8 +308,8 @@ export const completeStrengthCheck = createServerFn({ method: "POST" })
       score_core: number | null;
       score_total: number | null;
       score_algorithm_version: number;
-      category_confidence: unknown;
-      exercise_calcs: unknown;
+      category_confidence: Json;
+      exercise_calcs: Json;
       score_calculated_at: string;
     } = {
       status: "completed",
