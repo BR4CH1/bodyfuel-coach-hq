@@ -165,12 +165,14 @@ export function TrainingPlanManagementCard({ userId }: { userId: string }) {
           <TrainingPlanColumn
             label="Aktiver Plan"
             tone="active"
+            userId={userId}
             plan={data?.active ?? null}
             onArchive={(id) => trans.mutate({ id, to: "archived" })}
           />
           <TrainingPlanColumn
             label="Nächster Plan"
             tone="next"
+            userId={userId}
             plan={data?.next ?? null}
             onApprove={(id) => trans.mutate({ id, to: "approved" })}
             onPublish={(id) => trans.mutate({ id, to: "published" })}
@@ -193,6 +195,7 @@ export function TrainingPlanManagementCard({ userId }: { userId: string }) {
                 .catch((e) => toast.error(e?.message ?? "Fehler"))
             }
           />
+
         </div>
       )}
 
@@ -251,6 +254,7 @@ export function TrainingPlanManagementCard({ userId }: { userId: string }) {
 function TrainingPlanColumn(props: {
   label: string;
   tone: "active" | "next";
+  userId: string;
   plan: any | null;
   onArchive?: (id: string) => void;
   onApprove?: (id: string) => void;
@@ -259,7 +263,8 @@ function TrainingPlanColumn(props: {
   onDelete?: (id: string) => void;
   onUpdateDates?: (id: string, start: string | null, end: string | null) => void;
 }) {
-  const { label, tone, plan } = props;
+  const { label, tone, plan, userId } = props;
+
   const [editDates, setEditDates] = useState(false);
   const [start, setStart] = useState<string>(plan?.scheduled_start_date ?? "");
   const [end, setEnd] = useState<string>(plan?.scheduled_end_date ?? "");
@@ -340,11 +345,12 @@ function TrainingPlanColumn(props: {
 
           <div className="mt-3 flex flex-wrap gap-2">
             <a
-              href={`/coach/${plan.id}`}
+              href={`/coach/training-builder/${userId}?planId=${plan.id}`}
               className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-2.5 py-1.5 text-xs font-medium hover:bg-accent"
             >
               <Pencil className="h-3.5 w-3.5" /> Bearbeiten
             </a>
+
             <a
               href={`/coach/plan-preview/${plan.id}`}
               className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-2.5 py-1.5 text-xs font-medium hover:bg-accent"

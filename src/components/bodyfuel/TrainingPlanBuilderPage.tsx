@@ -9,11 +9,13 @@ import {
   getCustomerTrainingContext,
   saveBuilderTrainingPlan,
   saveBuilderPartnerTrainingPlan,
+  loadTrainingPlanForBuilder,
   type BuilderTrainingDay,
   type BuilderTrainingExercise,
   type LibraryExercise,
 } from "@/lib/training-plan-builder.functions";
 import { autoFillTrainingPlan, emptyPlan } from "@/lib/training-autofill";
+
 
 const WD_LABEL = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
 const WD_LONG = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
@@ -28,13 +30,14 @@ function isoToday(): string {
   return d.toISOString().slice(0, 10);
 }
 
-export function TrainingPlanBuilderPage({ userId }: { userId: string }) {
+export function TrainingPlanBuilderPage({ userId, planId }: { userId: string; planId?: string }) {
   const navigate = useNavigate();
 
   const ctxFn = useServerFn(getCustomerTrainingContext);
   const libFn = useServerFn(listExerciseLibrary);
   const saveFn = useServerFn(saveBuilderTrainingPlan);
   const savePartnerFn = useServerFn(saveBuilderPartnerTrainingPlan);
+  const loadFn = useServerFn(loadTrainingPlanForBuilder);
 
   const ctxQ = useQuery({
     queryKey: ["training-builder-ctx", userId],
@@ -45,6 +48,11 @@ export function TrainingPlanBuilderPage({ userId }: { userId: string }) {
     queryKey: ["training-builder-ctx", ctxQ.data?.partnerId],
     queryFn: () => ctxFn({ data: { customerId: ctxQ.data!.partnerId! } }),
     enabled: !!ctxQ.data?.partnerId,
+  });
+  const loadedQ = useQuery({
+    queryKey: ["training-builder-load", planId],
+    queryFn: () => loadFn({ data: { planId: planId! } }),
+    enabled: !!planId,
   });
 
   const [title, setTitle] = useState("Trainingsplan");
@@ -57,6 +65,7 @@ export function TrainingPlanBuilderPage({ userId }: { userId: string }) {
 
   const [clientDays, setClientDays] = useState<BuilderTrainingDay[] | null>(null);
   const [partnerDays, setPartnerDays] = useState<BuilderTrainingDay[] | null>(null);
+  const [loadedPlanApplied, setLoadedPlanApplied] = useState(false);
 
   const ctx = ctxQ.data;
   const partnerCtx = partnerCtxQ.data;
@@ -69,11 +78,24 @@ export function TrainingPlanBuilderPage({ userId }: { userId: string }) {
   const days = activeSide === "client" ? clientDays : partnerDays;
   const setDays = activeSide === "client" ? setClientDays : setPartnerDays;
 
+  // Preload from existing plan when planId is present
   useEffect(() => {
+    if (planId && loadedQ.data && !loadedPlanApplied) {
+      setTitle(loadedQ.data.title);
+      setStartDate(loadedQ.data.startDate);
+      setWeeksCount(loadedQ.data.weeksCount);
+      setClientDays(loadedQ.data.days);
+      setLoadedPlanApplied(true);
+    }
+  }, [planId, loadedQ.data, loadedPlanApplied]);
+
+  useEffect(() => {
+    if (planId && !loadedPlanApplied) return; // wait for load
     if (!clientDays && ctx) setClientDays(emptyPlan(weeksCount, clientWeekdays));
     if (partnerMode && !partnerDays && partnerCtx) setPartnerDays(emptyPlan(weeksCount, partnerWeekdays));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ctx, partnerCtx, partnerMode, weeksCount]);
+  }, [ctx, partnerCtx, partnerMode, weeksCount, planId, loadedPlanApplied]);
+
 
   const currentWeekDays = useMemo(
     () => (days ?? []).filter((d) => d.week_number === activeWeek).sort((a, b) => WD_ORDER.indexOf(a.weekday) - WD_ORDER.indexOf(b.weekday)),

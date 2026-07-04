@@ -21,12 +21,14 @@ import {
   getCustomerPlanContext,
   saveBuilderPlan,
   saveBuilderPartnerPlan,
+  loadNutritionPlanForBuilder,
   type LibraryMeal,
   type CustomerPlanContext,
   type BuilderDay,
   type BuilderMeal,
 } from "@/lib/plan-builder.functions";
 import { getPartnerLink } from "@/lib/partner.functions";
+
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Users } from "lucide-react";
 import {
@@ -343,18 +345,24 @@ function scaleFactorToTarget(fromFactor: number, fromTargetKcal: number, toTarge
   return Math.max(0.25, Math.min(4, Math.round(raw * 4) / 4));
 }
 
-export function PlanBuilderPage({ userId }: { userId: string }) {
+export function PlanBuilderPage({ userId, planId }: { userId: string; planId?: string }) {
   const navigate = useNavigate();
   const listLib = useServerFn(listMealLibrary);
   const getCtx = useServerFn(getCustomerPlanContext);
   const save = useServerFn(saveBuilderPlan);
   const savePartner = useServerFn(saveBuilderPartnerPlan);
   const partnerLinkFn = useServerFn(getPartnerLink);
+  const loadFn = useServerFn(loadNutritionPlanForBuilder);
 
   const libQ = useQuery({ queryKey: ["meal-library"], queryFn: () => listLib() });
   const ctxQ = useQuery({
     queryKey: ["plan-ctx", userId],
     queryFn: () => getCtx({ data: { customerId: userId } }),
+  });
+  const loadedQ = useQuery({
+    queryKey: ["plan-builder-load", planId],
+    queryFn: () => loadFn({ data: { planId: planId! } }),
+    enabled: !!planId,
   });
 
   const [startDate, setStartDate] = useState(isoDate(new Date()));
@@ -370,6 +378,8 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
   const [weekConfirmOpen, setWeekConfirmOpen] = useState(false);
   const [weekMode, setWeekMode] = useState<AutoFillMode>("empty_only");
   const [undoSnapshot, setUndoSnapshot] = useState<{ client: BuilderDay[]; partner: BuilderDay[] | null } | null>(null);
+  const [loadedPlanApplied, setLoadedPlanApplied] = useState(false);
+
 
   // ---------- Partner ----------
   const partnerLinkQ = useQuery({
@@ -423,6 +433,17 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
     if (partnerMode) setPartnerDays((prev) => build(prev, partnerTrainingWeekdays));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startDate, numDays, trainingWeekdays.join(","), partnerTrainingWeekdays.join(","), partnerMode]);
+
+  // Preload existing plan into builder state (once, when planId is provided)
+  useEffect(() => {
+    if (!planId || !loadedQ.data || loadedPlanApplied) return;
+    setTitle(loadedQ.data.title);
+    setStartDate(loadedQ.data.startDate);
+    setEndDate(loadedQ.data.endDate);
+    setDays(loadedQ.data.days);
+    setLoadedPlanApplied(true);
+  }, [planId, loadedQ.data, loadedPlanApplied]);
+
 
   const setDay = (idx: number, upd: (d: BuilderDay) => BuilderDay) => {
     setDays((prev) => prev.map((d, i) => (i === idx ? upd(d) : d)));
