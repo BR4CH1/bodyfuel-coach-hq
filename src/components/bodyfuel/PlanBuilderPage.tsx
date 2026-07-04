@@ -1299,3 +1299,119 @@ function MealPickerDialog({
     </Dialog>
   );
 }
+
+// ---------- Partner day block: two DayCards + shared pair-autofill ----------
+function PartnerDayBlock({
+  clientDay,
+  partnerDay,
+  clientCtx,
+  partnerCtx,
+  library,
+  onClientChange,
+  onPartnerChange,
+  onCopy,
+}: {
+  clientDay: BuilderDay;
+  partnerDay: BuilderDay;
+  clientCtx: CustomerPlanContext;
+  partnerCtx: CustomerPlanContext;
+  library: LibraryMeal[];
+  onClientChange: (u: (d: BuilderDay) => BuilderDay) => void;
+  onPartnerChange: (u: (d: BuilderDay) => BuilderDay) => void;
+  onCopy: () => void;
+}) {
+  // Sync coupled meals (same linked_partner_group) → recipe from client mirrors to partner.
+  // Portion factor stays per person. Runs after render.
+  useEffect(() => {
+    for (const cm of clientDay.meals) {
+      if (!cm.linked_partner_group) continue;
+      const pm = partnerDay.meals.find((x) => x.linked_partner_group === cm.linked_partner_group);
+      if (!pm) continue;
+      const differentRecipe =
+        pm.library_meal_id !== cm.library_meal_id ||
+        pm.name !== cm.name ||
+        pm.ingredients.length !== cm.ingredients.length ||
+        pm.ingredients.some((ing, i) => ing.name !== cm.ingredients[i]?.name);
+      if (differentRecipe) {
+        onPartnerChange((d) => ({
+          ...d,
+          meals: d.meals.map((m) =>
+            m.linked_partner_group === cm.linked_partner_group
+              ? {
+                  ...m,
+                  slot: cm.slot,
+                  name: cm.name,
+                  description: cm.description ?? null,
+                  library_meal_id: cm.library_meal_id ?? null,
+                  ingredients: cm.ingredients.map((i) => ({ ...i })),
+                  // keep m.portion_factor, m.is_locked, m.linked_prep_group
+                }
+              : m,
+          ),
+        }));
+      }
+    }
+  }, [clientDay.meals]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const autoFillPair = () => {
+    const res = autoFillDayPair(clientDay, partnerDay, clientCtx, partnerCtx, library, "empty_only");
+    onClientChange(() => res.client);
+    onPartnerChange(() => res.partner);
+    if (res.missing > 0) {
+      toast.warning(
+        `Für ${res.missing} Slot(s) wurde keine passende Mahlzeit gefunden. Bitte Mahlzeitendatenbank erweitern oder Filter prüfen.`,
+      );
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <div className="flex items-center gap-2">
+          <CardTitle className="text-sm">{clientDay.name}</CardTitle>
+          <Badge variant="outline" className="gap-1 text-[10px]">
+            <Users className="h-3 w-3" /> Partnerplan
+          </Badge>
+        </div>
+        <div className="flex flex-wrap gap-1">
+          <Button size="sm" variant="secondary" onClick={autoFillPair}>
+            <Sparkles className="mr-1 h-3 w-3" />
+            Tag füllen (Paar)
+          </Button>
+          <Button size="sm" variant="ghost" onClick={onCopy}>
+            <Copy className="mr-1 h-3 w-3" />
+            auf nächsten Tag
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <Tabs defaultValue="client">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="client">Kunde</TabsTrigger>
+            <TabsTrigger value="partner">Partner</TabsTrigger>
+          </TabsList>
+          <TabsContent value="client" className="mt-3">
+            <DayCard
+              day={clientDay}
+              library={library}
+              ctx={clientCtx}
+              onChange={onClientChange}
+              onCopy={onCopy}
+              hideHeaderActions
+            />
+          </TabsContent>
+          <TabsContent value="partner" className="mt-3">
+            <DayCard
+              day={partnerDay}
+              library={library}
+              ctx={partnerCtx}
+              onChange={onPartnerChange}
+              onCopy={onCopy}
+              hideHeaderActions
+            />
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+    </Card>
+  );
+}
