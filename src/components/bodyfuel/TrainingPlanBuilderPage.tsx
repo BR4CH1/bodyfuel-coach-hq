@@ -29,6 +29,8 @@ function isoToday(): string {
   const diff = (8 - day) % 7 || 7;
   d.setDate(d.getDate() + diff);
   return d.toISOString().slice(0, 10);
+}
+
 function weightFromBaseline(lib: LibraryExercise, b: StrengthBaseline): string | null {
   const n = (lib.name || "").toLowerCase();
   const pat = (lib.movement_pattern || "").toLowerCase();
