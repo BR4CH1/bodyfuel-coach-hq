@@ -3,7 +3,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Lock, LockOpen, Sparkles, Trash2, Users } from "lucide-react";
+import { ArrowLeft, Plus, Lock, LockOpen, Sparkles, Trash2, Users, Pencil } from "lucide-react";
 import {
   listExerciseLibrary,
   getCustomerTrainingContext,
@@ -390,12 +390,15 @@ function DayCard({
             <span className="rounded bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase">{WD_LABEL[day.weekday]}</span>
             <span className="text-xs text-muted-foreground">{WD_LONG[day.weekday]}</span>
           </div>
-          <input
-            value={day.name}
-            onChange={(e) => onUpdateDay({ name: e.target.value })}
-            disabled={day.type === "rest"}
-            className="mt-1 w-full border-none bg-transparent p-0 text-sm font-semibold outline-none disabled:text-muted-foreground"
-          />
+          <div className="mt-1 flex items-center gap-2">
+            <input
+              value={day.name}
+              onChange={(e) => onUpdateDay({ name: e.target.value })}
+              placeholder="Tag-Name (z.B. Push Day)"
+              className="flex-1 rounded-md border border-border bg-background px-2 py-1 text-sm font-semibold outline-none focus:border-primary"
+            />
+            <Pencil className="h-3 w-3 text-muted-foreground" />
+          </div>
         </div>
         <div className="flex gap-1">
           <button
