@@ -349,7 +349,7 @@ export const getCustomerStrengthOverview = createServerFn({ method: "GET" })
 
     const historyV2 = rawHistory.map((c) => applyV2Scores(c, byCheck.get(c.id) ?? []));
     const last = historyV2.length ? historyV2[historyV2.length - 1] : null;
-    const lastResults = last ? (byCheck.get(last.id) ?? []) as StrengthResult[] : [];
+    const lastResults = last ? (byCheck.get(last.id) ?? []) as unknown as StrengthResult[] : [];
 
     return {
       history: historyV2,
