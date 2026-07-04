@@ -368,3 +368,94 @@ export const saveBuilderPartnerTrainingPlan = createServerFn({ method: "POST" })
 
     return { ok: true, client_plan_id: A.plan_id, partner_plan_id: B.plan_id };
   });
+
+// -------- Load existing training plan for editing --------
+
+export type LoadedTrainingPlan = {
+  plan_id: string;
+  title: string;
+  startDate: string;   // ISO Monday
+  weeksCount: number;
+  days: BuilderTrainingDay[];
+};
+
+export const loadTrainingPlanForBuilder = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { planId: string }) => d)
+  .handler(async ({ data, context }): Promise<LoadedTrainingPlan> => {
+    await assertCoach(context);
+    const { data: plan, error: pErr } = await context.supabase
+      .from("nutrition_plans")
+      .select("id, title, scheduled_start_date, scheduled_end_date, weeks_count, plan_type")
+      .eq("id", data.planId)
+      .maybeSingle();
+    if (pErr || !plan) throw new Error(pErr?.message ?? "Plan nicht gefunden");
+    if ((plan as any).plan_type !== "training") throw new Error("Kein Trainingsplan");
+
+    const { data: dayRows } = await context.supabase
+      .from("training_days")
+      .select("id, sort_order, name, week_number, day_date")
+      .eq("plan_id", data.planId)
+      .order("sort_order");
+
+    const dayIds = ((dayRows ?? []) as any[]).map((r) => r.id);
+    const exRes = dayIds.length
+      ? await context.supabase
+          .from("training_exercises")
+          .select("id, day_id, sort_order, name, category, target_sets, target_reps, target_weights, target_rir, rest_seconds, notes, is_locked, linked_partner_group, library_exercise_id")
+          .in("day_id", dayIds)
+          .order("sort_order")
+      : ({ data: [] as any[] } as any);
+
+    const byDay = new Map<string, any[]>();
+    for (const ex of ((exRes.data ?? []) as any[])) {
+      const arr = byDay.get(ex.day_id) ?? [];
+      arr.push(ex);
+      byDay.set(ex.day_id, arr);
+    }
+
+    const startIso = (plan as any).scheduled_start_date ?? new Date().toISOString().slice(0, 10);
+    const weeksCount = Math.max(1, Number((plan as any).weeks_count ?? 1));
+
+    // Determine weekday from day_date; fall back to Mo..So sort_order
+    const days: BuilderTrainingDay[] = ((dayRows ?? []) as any[]).map((d, idx) => {
+      let weekday = 1;
+      if (d.day_date) {
+        weekday = new Date(d.day_date + "T00:00:00Z").getUTCDay();
+      } else {
+        // sort_order runs Mo..So repeatedly: 0->Mo(1),1->Di(2),...,5->Sa(6),6->So(0)
+        const order = [1, 2, 3, 4, 5, 6, 0];
+        weekday = order[idx % 7];
+      }
+      const exs = (byDay.get(d.id) ?? []).map((ex: any): BuilderTrainingExercise => ({
+        library_exercise_id: ex.library_exercise_id ?? null,
+        name: ex.name ?? "",
+        category: ex.category ?? null,
+        target_sets: ex.target_sets ?? null,
+        target_reps: ex.target_reps ?? null,
+        target_weights: ex.target_weights ?? null,
+        target_rir: ex.target_rir ?? null,
+        rest_seconds: ex.rest_seconds ?? null,
+        notes: ex.notes ?? null,
+        is_locked: !!ex.is_locked,
+        linked_partner_group: ex.linked_partner_group ?? null,
+      }));
+      const isRest = /ruhetag|rest/i.test(d.name ?? "") || exs.length === 0;
+      return {
+        week_number: Math.max(1, Number(d.week_number ?? Math.floor(idx / 7) + 1)),
+        weekday,
+        name: d.name ?? "",
+        type: isRest ? "rest" : "training",
+        exercises: exs,
+      };
+    });
+
+    return {
+      plan_id: (plan as any).id,
+      title: (plan as any).title ?? "Trainingsplan",
+      startDate: startIso,
+      weeksCount,
+      days,
+    };
+  });
+
