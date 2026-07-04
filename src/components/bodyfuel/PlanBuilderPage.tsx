@@ -806,6 +806,7 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
             clientName="Kunde"
             partnerName={partnerName}
             library={libQ.data ?? []}
+            sharedSlots={sharedSlots}
             onClientChange={(u) => setDay(di, u)}
             onPartnerChange={(u) => setPartnerDay(di, u)}
             onCopy={() => setCopyChoiceIdx(di)}
