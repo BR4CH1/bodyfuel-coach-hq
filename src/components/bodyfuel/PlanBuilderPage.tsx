@@ -1,7 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -20,11 +20,15 @@ import {
   listMealLibrary,
   getCustomerPlanContext,
   saveBuilderPlan,
+  saveBuilderPartnerPlan,
   type LibraryMeal,
   type CustomerPlanContext,
   type BuilderDay,
   type BuilderMeal,
 } from "@/lib/plan-builder.functions";
+import { getPartnerLink } from "@/lib/partner.functions";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Users } from "lucide-react";
 import {
   ArrowLeft,
   Lock,
@@ -177,11 +181,112 @@ export function autoFillDayImpl(
   return { day: { ...day, meals }, missing };
 }
 
+// Auto-fill for two linked days (partner mode).
+// Strategy per slot: prefer a shared meal (score > 0 for both, quantities scaled per person).
+// Fallback: independent picks per person.
+export function autoFillDayPair(
+  clientDay: BuilderDay,
+  partnerDay: BuilderDay,
+  clientCtx: CustomerPlanContext,
+  partnerCtx: CustomerPlanContext,
+  library: LibraryMeal[],
+  mode: AutoFillMode,
+): { client: BuilderDay; partner: BuilderDay; missing: number } {
+  const filterKeep = (arr: BuilderMeal[]) => (mode === "all_unlocked" ? arr.filter((m) => m.is_locked) : arr.map((m) => ({ ...m })));
+  let clientMeals: BuilderMeal[] = filterKeep(clientDay.meals);
+  let partnerMeals: BuilderMeal[] = filterKeep(partnerDay.meals);
+
+  const slotOrder: Slot[] = ["breakfast", "lunch", "dinner", "snack"];
+  let missing = 0;
+
+  const remainingFor = (meals: BuilderMeal[], day: BuilderDay, ctx: CustomerPlanContext) => {
+    const t = targetsFor(day, ctx);
+    const cur = meals.reduce(
+      (acc, m) => {
+        const mm = mealMacros(m, library);
+        return { kcal: acc.kcal + mm.kcal, p: acc.p + mm.p, c: acc.c + mm.c, f: acc.f + mm.f };
+      },
+      { kcal: 0, p: 0, c: 0, f: 0 },
+    );
+    return { kcal: t.kcal - cur.kcal, p: t.p - cur.p, c: t.c - cur.c, f: t.f - cur.f };
+  };
+
+  for (const slot of slotOrder) {
+    const cExisting = clientMeals.find((m) => m.slot === slot);
+    const pExisting = partnerMeals.find((m) => m.slot === slot);
+    // Only fill where BOTH slots are empty (locked/existing on either side → skip shared logic)
+    if (cExisting && pExisting) continue;
+
+    if (!cExisting && !pExisting) {
+      const cRem = remainingFor(clientMeals, clientDay, clientCtx);
+      const pRem = remainingFor(partnerMeals, partnerDay, partnerCtx);
+      const scored = library
+        .filter((m) => m.category === slot)
+        .map((m) => {
+          const sc = scoreMeal(m, clientCtx, clientDay.type, cRem);
+          const sp = scoreMeal(m, partnerCtx, partnerDay.type, pRem);
+          return { meal: m, combined: sc.score + sp.score, sc: sc.score, sp: sp.score };
+        })
+        .filter((x) => x.sc > 0 && x.sp > 0)
+        .sort((a, b) => b.combined - a.combined);
+      const best = scored[0];
+      if (best) {
+        const group = makeGroupId();
+        // per-person kcal scaling
+        const scale = (rem: { kcal: number }, kcal: number) => {
+          if (!kcal) return 1;
+          const target = Math.max(200, rem.kcal);
+          const raw = target / kcal;
+          return Math.max(0.25, Math.min(2, Math.round(raw * 4) / 4));
+        };
+        const clientFactor = scale(cRem, best.meal.kcal);
+        const partnerFactor = scale(pRem, best.meal.kcal);
+        const cMeal = mealFromLibrary(best.meal, slot, clientFactor, null);
+        cMeal.linked_partner_group = group;
+        const pMeal = mealFromLibrary(best.meal, slot, partnerFactor, null);
+        pMeal.linked_partner_group = group;
+        clientMeals.push(cMeal);
+        partnerMeals.push(pMeal);
+        continue;
+      }
+    }
+    // Fallback: independent picks per side (only where side is empty)
+    if (!cExisting) {
+      const cRem = remainingFor(clientMeals, clientDay, clientCtx);
+      const cCand = library
+        .filter((m) => m.category === slot)
+        .map((m) => ({ meal: m, ...scoreMeal(m, clientCtx, clientDay.type, cRem) }))
+        .filter((x) => x.score > 0)
+        .sort((a, b) => b.score - a.score)[0];
+      if (cCand) clientMeals.push(mealFromLibrary(cCand.meal, slot));
+      else missing++;
+    }
+    if (!pExisting) {
+      const pRem = remainingFor(partnerMeals, partnerDay, partnerCtx);
+      const pCand = library
+        .filter((m) => m.category === slot)
+        .map((m) => ({ meal: m, ...scoreMeal(m, partnerCtx, partnerDay.type, pRem) }))
+        .filter((x) => x.score > 0)
+        .sort((a, b) => b.score - a.score)[0];
+      if (pCand) partnerMeals.push(mealFromLibrary(pCand.meal, slot));
+      else missing++;
+    }
+  }
+
+  return {
+    client: { ...clientDay, meals: clientMeals },
+    partner: { ...partnerDay, meals: partnerMeals },
+    missing,
+  };
+}
+
 export function PlanBuilderPage({ userId }: { userId: string }) {
   const navigate = useNavigate();
   const listLib = useServerFn(listMealLibrary);
   const getCtx = useServerFn(getCustomerPlanContext);
   const save = useServerFn(saveBuilderPlan);
+  const savePartner = useServerFn(saveBuilderPartnerPlan);
+  const partnerLinkFn = useServerFn(getPartnerLink);
 
   const libQ = useQuery({ queryKey: ["meal-library"], queryFn: () => listLib() });
   const ctxQ = useQuery({
@@ -201,23 +306,38 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
   const [saving, setSaving] = useState(false);
   const [weekConfirmOpen, setWeekConfirmOpen] = useState(false);
   const [weekMode, setWeekMode] = useState<AutoFillMode>("empty_only");
-  const [undoSnapshot, setUndoSnapshot] = useState<BuilderDay[] | null>(null);
+  const [undoSnapshot, setUndoSnapshot] = useState<{ client: BuilderDay[]; partner: BuilderDay[] | null } | null>(null);
+
+  // ---------- Partner ----------
+  const partnerLinkQ = useQuery({
+    queryKey: ["plan-builder-partner", userId],
+    queryFn: () => partnerLinkFn({ data: { user_id: userId } }),
+  });
+  const partnerId = partnerLinkQ.data?.partner_id ?? null;
+  const partnerName = partnerLinkQ.data?.partner_name ?? "Partner";
+  const [partnerMode, setPartnerMode] = useState(false);
+  const partnerCtxQ = useQuery({
+    queryKey: ["plan-ctx", partnerId],
+    queryFn: () => getCtx({ data: { customerId: partnerId! } }),
+    enabled: !!partnerId && partnerMode,
+  });
+  const partnerTrainingWeekdays = partnerCtxQ.data?.trainingWeekdays ?? [];
 
   const trainingWeekdays = ctxQ.data?.trainingWeekdays ?? [];
   const [days, setDays] = useState<BuilderDay[]>(() => []);
+  const [partnerDays, setPartnerDays] = useState<BuilderDay[]>(() => []);
 
   useMemo(() => {
-    setDays((prev) => {
+    const build = (prev: BuilderDay[], twd: number[]): BuilderDay[] => {
       const next: BuilderDay[] = [];
       const weekdayLabels = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
       for (let i = 0; i < numDays; i++) {
         const iso = addDays(startDate, i);
         const d = new Date(iso + "T00:00:00Z");
         const weekday = d.getUTCDay();
-        const isTrain = trainingWeekdays.includes(weekday);
+        const isTrain = twd.includes(weekday);
         const existing = prev[i];
         const dateLabel = `${weekdayLabels[weekday]} ${String(d.getUTCDate()).padStart(2, "0")}.${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
-        // Auto-derive from trainingWeekdays unless the coach toggled manually
         const autoType: "training" | "rest" = isTrain ? "training" : "rest";
         const type = existing?.typeOverride ? existing.type : autoType;
         next.push({
@@ -229,18 +349,37 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
         });
       }
       return next;
-    });
+    };
+    setDays((prev) => build(prev, trainingWeekdays));
+    if (partnerMode) setPartnerDays((prev) => build(prev, partnerTrainingWeekdays));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startDate, numDays, trainingWeekdays.join(",")]);
+  }, [startDate, numDays, trainingWeekdays.join(","), partnerTrainingWeekdays.join(","), partnerMode]);
 
   const setDay = (idx: number, upd: (d: BuilderDay) => BuilderDay) => {
     setDays((prev) => prev.map((d, i) => (i === idx ? upd(d) : d)));
+  };
+  const setPartnerDay = (idx: number, upd: (d: BuilderDay) => BuilderDay) => {
+    setPartnerDays((prev) => prev.map((d, i) => (i === idx ? upd(d) : d)));
   };
 
   const handleSave = async (publish: boolean) => {
     try {
       setSaving(true);
-      await save({ data: { customerId: userId, title, startDate, days, publish } } as any);
+      if (partnerMode && partnerId) {
+        await savePartner({
+          data: {
+            customerId: userId,
+            partnerId,
+            title,
+            startDate,
+            clientDays: days,
+            partnerDays,
+            publish,
+          },
+        } as any);
+      } else {
+        await save({ data: { customerId: userId, title, startDate, days, publish } } as any);
+      }
       toast.success(publish ? "Plan veröffentlicht" : "Plan als Entwurf gespeichert");
       navigate({ to: "/coach/customers/$userId", params: { userId } });
     } catch (e: any) {
@@ -282,20 +421,42 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
     });
   };
 
+  const cloneDays = (arr: BuilderDay[]): BuilderDay[] =>
+    arr.map((d) => ({
+      ...d,
+      meals: d.meals.map((m) => ({ ...m, ingredients: m.ingredients.map((i) => ({ ...i })) })),
+    }));
+
   const runAutoFillWeek = (mode: AutoFillMode) => {
     const ctx = ctxQ.data;
     const lib = libQ.data ?? [];
     if (!ctx) return;
-    // Snapshot for undo (deep clone)
-    setUndoSnapshot(days.map((d) => ({ ...d, meals: d.meals.map((m) => ({ ...m, ingredients: m.ingredients.map((i) => ({ ...i })) })) })));
+    setUndoSnapshot({
+      client: cloneDays(days),
+      partner: partnerMode ? cloneDays(partnerDays) : null,
+    });
     let missingCount = 0;
-    setDays((prev) =>
-      prev.map((d) => {
-        const res = autoFillDayImpl(d, ctx, lib, mode);
-        missingCount += res.missing.length;
-        return res.day;
-      }),
-    );
+    if (partnerMode && partnerCtxQ.data) {
+      const pCtx = partnerCtxQ.data;
+      const nextClient: BuilderDay[] = [];
+      const nextPartner: BuilderDay[] = [];
+      for (let i = 0; i < days.length; i++) {
+        const pair = autoFillDayPair(days[i], partnerDays[i], ctx, pCtx, lib, mode);
+        missingCount += pair.missing;
+        nextClient.push(pair.client);
+        nextPartner.push(pair.partner);
+      }
+      setDays(nextClient);
+      setPartnerDays(nextPartner);
+    } else {
+      setDays((prev) =>
+        prev.map((d) => {
+          const res = autoFillDayImpl(d, ctx, lib, mode);
+          missingCount += res.missing.length;
+          return res.day;
+        }),
+      );
+    }
     if (missingCount > 0) {
       toast.warning(
         `${missingCount} Slots ohne passenden Vorschlag. Für diese Slots wurde keine passende Mahlzeit gefunden. Bitte Mahlzeitendatenbank erweitern oder Filter prüfen.`,
@@ -307,7 +468,8 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
 
   const undoWeekFill = () => {
     if (!undoSnapshot) return;
-    setDays(undoSnapshot);
+    setDays(undoSnapshot.client);
+    if (undoSnapshot.partner) setPartnerDays(undoSnapshot.partner);
     setUndoSnapshot(null);
     toast.success("Rückgängig gemacht");
   };
@@ -437,16 +599,81 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
         </Card>
       )}
 
-      {days.map((day, di) => (
-        <DayCard
-          key={di}
-          day={day}
-          library={libQ.data ?? []}
-          ctx={ctxQ.data!}
-          onChange={(u) => setDay(di, u)}
-          onCopy={() => copyDay(di)}
-        />
-      ))}
+      {partnerId && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <Users className="h-4 w-4 text-emerald-500" />
+              Partnerplan
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center justify-between gap-3 text-xs">
+            <div>
+              Gemeinsamer Plan mit <b>{partnerName}</b>. Zwei verknüpfte Pläne mit eigenen Zielen und Portionen pro Person.
+            </div>
+            <Switch checked={partnerMode} onCheckedChange={setPartnerMode} />
+          </CardContent>
+        </Card>
+      )}
+
+      {partnerMode && partnerCtxQ.data && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Partnerprofil · {partnerName}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-xs">
+            <div className="flex flex-wrap gap-1">
+              <Badge variant="outline">
+                Trainingstag: {partnerCtxQ.data.targets.kcal_train} kcal · {partnerCtxQ.data.targets.protein_train}P/
+                {partnerCtxQ.data.targets.carbs_train}C/{partnerCtxQ.data.targets.fat_train}F
+              </Badge>
+              <Badge variant="outline">
+                Restday: {partnerCtxQ.data.targets.kcal_rest} kcal · {partnerCtxQ.data.targets.protein_rest}P/
+                {partnerCtxQ.data.targets.carbs_rest}C/{partnerCtxQ.data.targets.fat_rest}F
+              </Badge>
+            </div>
+            <div>
+              Trainingstage:{" "}
+              <b>
+                {partnerCtxQ.data.trainingWeekdays.length === 0
+                  ? "keine hinterlegt"
+                  : partnerCtxQ.data.trainingWeekdays
+                      .slice()
+                      .sort()
+                      .map((w) => ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"][w])
+                      .join(", ")}
+              </b>
+            </div>
+            {partnerCtxQ.data.allergies.length > 0 && <div>Allergien: {partnerCtxQ.data.allergies.join(", ")}</div>}
+            {partnerCtxQ.data.noGoFoods.length > 0 && <div>No-Gos: {partnerCtxQ.data.noGoFoods.join(", ")}</div>}
+          </CardContent>
+        </Card>
+      )}
+
+      {days.map((day, di) =>
+        partnerMode && partnerCtxQ.data && partnerDays[di] ? (
+          <PartnerDayBlock
+            key={di}
+            clientDay={day}
+            partnerDay={partnerDays[di]}
+            clientCtx={ctxQ.data!}
+            partnerCtx={partnerCtxQ.data}
+            library={libQ.data ?? []}
+            onClientChange={(u) => setDay(di, u)}
+            onPartnerChange={(u) => setPartnerDay(di, u)}
+            onCopy={() => copyDay(di)}
+          />
+        ) : (
+          <DayCard
+            key={di}
+            day={day}
+            library={libQ.data ?? []}
+            ctx={ctxQ.data!}
+            onChange={(u) => setDay(di, u)}
+            onCopy={() => copyDay(di)}
+          />
+        ),
+      )}
 
       <div className="sticky bottom-0 flex gap-2 border-t border-border bg-background/95 p-3 backdrop-blur">
         <Button variant="outline" className="flex-1" disabled={saving} onClick={() => handleSave(false)}>
@@ -467,12 +694,14 @@ function DayCard({
   ctx,
   onChange,
   onCopy,
+  hideHeaderActions,
 }: {
   day: BuilderDay;
   library: LibraryMeal[];
   ctx: CustomerPlanContext;
   onChange: (u: (d: BuilderDay) => BuilderDay) => void;
   onCopy: () => void;
+  hideHeaderActions?: boolean;
 }) {
   const target =
     day.type === "training"
@@ -650,7 +879,7 @@ function DayCard({
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <div className="flex items-center gap-2">
-          <CardTitle className="text-sm">{day.name}</CardTitle>
+          {!hideHeaderActions && <CardTitle className="text-sm">{day.name}</CardTitle>}
           <Badge
             variant={day.type === "training" ? "default" : "secondary"}
             className="cursor-pointer"
@@ -665,16 +894,24 @@ function DayCard({
             {day.type === "training" ? "Trainingstag" : "Restday"}
           </Badge>
         </div>
-        <div className="flex flex-wrap gap-1">
-          <Button size="sm" variant="secondary" onClick={autoFillDay}>
+        {!hideHeaderActions && (
+          <div className="flex flex-wrap gap-1">
+            <Button size="sm" variant="secondary" onClick={autoFillDay}>
+              <Sparkles className="mr-1 h-3 w-3" />
+              Tag automatisch füllen
+            </Button>
+            <Button size="sm" variant="ghost" onClick={onCopy}>
+              <Copy className="mr-1 h-3 w-3" />
+              auf nächsten Tag
+            </Button>
+          </div>
+        )}
+        {hideHeaderActions && (
+          <Button size="sm" variant="ghost" onClick={autoFillDay}>
             <Sparkles className="mr-1 h-3 w-3" />
-            Tag automatisch füllen
+            Tag füllen
           </Button>
-          <Button size="sm" variant="ghost" onClick={onCopy}>
-            <Copy className="mr-1 h-3 w-3" />
-            auf nächsten Tag
-          </Button>
-        </div>
+        )}
       </CardHeader>
       <CardContent className="space-y-2">
         {/* Balance */}
@@ -1070,5 +1307,121 @@ function MealPickerDialog({
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ---------- Partner day block: two DayCards + shared pair-autofill ----------
+function PartnerDayBlock({
+  clientDay,
+  partnerDay,
+  clientCtx,
+  partnerCtx,
+  library,
+  onClientChange,
+  onPartnerChange,
+  onCopy,
+}: {
+  clientDay: BuilderDay;
+  partnerDay: BuilderDay;
+  clientCtx: CustomerPlanContext;
+  partnerCtx: CustomerPlanContext;
+  library: LibraryMeal[];
+  onClientChange: (u: (d: BuilderDay) => BuilderDay) => void;
+  onPartnerChange: (u: (d: BuilderDay) => BuilderDay) => void;
+  onCopy: () => void;
+}) {
+  // Sync coupled meals (same linked_partner_group) → recipe from client mirrors to partner.
+  // Portion factor stays per person. Runs after render.
+  useEffect(() => {
+    for (const cm of clientDay.meals) {
+      if (!cm.linked_partner_group) continue;
+      const pm = partnerDay.meals.find((x) => x.linked_partner_group === cm.linked_partner_group);
+      if (!pm) continue;
+      const differentRecipe =
+        pm.library_meal_id !== cm.library_meal_id ||
+        pm.name !== cm.name ||
+        pm.ingredients.length !== cm.ingredients.length ||
+        pm.ingredients.some((ing, i) => ing.name !== cm.ingredients[i]?.name);
+      if (differentRecipe) {
+        onPartnerChange((d) => ({
+          ...d,
+          meals: d.meals.map((m) =>
+            m.linked_partner_group === cm.linked_partner_group
+              ? {
+                  ...m,
+                  slot: cm.slot,
+                  name: cm.name,
+                  description: cm.description ?? null,
+                  library_meal_id: cm.library_meal_id ?? null,
+                  ingredients: cm.ingredients.map((i) => ({ ...i })),
+                  // keep m.portion_factor, m.is_locked, m.linked_prep_group
+                }
+              : m,
+          ),
+        }));
+      }
+    }
+  }, [clientDay.meals]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const autoFillPair = () => {
+    const res = autoFillDayPair(clientDay, partnerDay, clientCtx, partnerCtx, library, "empty_only");
+    onClientChange(() => res.client);
+    onPartnerChange(() => res.partner);
+    if (res.missing > 0) {
+      toast.warning(
+        `Für ${res.missing} Slot(s) wurde keine passende Mahlzeit gefunden. Bitte Mahlzeitendatenbank erweitern oder Filter prüfen.`,
+      );
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <div className="flex items-center gap-2">
+          <CardTitle className="text-sm">{clientDay.name}</CardTitle>
+          <Badge variant="outline" className="gap-1 text-[10px]">
+            <Users className="h-3 w-3" /> Partnerplan
+          </Badge>
+        </div>
+        <div className="flex flex-wrap gap-1">
+          <Button size="sm" variant="secondary" onClick={autoFillPair}>
+            <Sparkles className="mr-1 h-3 w-3" />
+            Tag füllen (Paar)
+          </Button>
+          <Button size="sm" variant="ghost" onClick={onCopy}>
+            <Copy className="mr-1 h-3 w-3" />
+            auf nächsten Tag
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <Tabs defaultValue="client">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="client">Kunde</TabsTrigger>
+            <TabsTrigger value="partner">Partner</TabsTrigger>
+          </TabsList>
+          <TabsContent value="client" className="mt-3">
+            <DayCard
+              day={clientDay}
+              library={library}
+              ctx={clientCtx}
+              onChange={onClientChange}
+              onCopy={onCopy}
+              hideHeaderActions
+            />
+          </TabsContent>
+          <TabsContent value="partner" className="mt-3">
+            <DayCard
+              day={partnerDay}
+              library={library}
+              ctx={partnerCtx}
+              onChange={onPartnerChange}
+              onCopy={onCopy}
+              hideHeaderActions
+            />
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+    </Card>
   );
 }
