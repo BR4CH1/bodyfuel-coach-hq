@@ -69,11 +69,11 @@ export function TrainingPlanBuilderPage({ userId }: { userId: string }) {
   const days = activeSide === "client" ? clientDays : partnerDays;
   const setDays = activeSide === "client" ? setClientDays : setPartnerDays;
 
-  const ensureInit = () => {
+  useEffect(() => {
     if (!clientDays && ctx) setClientDays(emptyPlan(weeksCount, clientWeekdays));
     if (partnerMode && !partnerDays && partnerCtx) setPartnerDays(emptyPlan(weeksCount, partnerWeekdays));
-  };
-  useMemo(ensureInit, [ctx, partnerCtx, partnerMode, weeksCount]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ctx, partnerCtx, partnerMode, weeksCount]);
 
   const currentWeekDays = useMemo(
     () => (days ?? []).filter((d) => d.week_number === activeWeek).sort((a, b) => WD_ORDER.indexOf(a.weekday) - WD_ORDER.indexOf(b.weekday)),
