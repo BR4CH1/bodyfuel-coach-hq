@@ -190,7 +190,13 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
   });
 
   const [startDate, setStartDate] = useState(isoDate(new Date()));
-  const [numDays, setNumDays] = useState(7);
+  const [endDate, setEndDate] = useState(addDays(isoDate(new Date()), 6));
+  const numDays = useMemo(() => {
+    const s = new Date(startDate + "T00:00:00Z").getTime();
+    const e = new Date(endDate + "T00:00:00Z").getTime();
+    if (!isFinite(s) || !isFinite(e) || e < s) return 1;
+    return Math.min(28, Math.max(1, Math.round((e - s) / 86400000) + 1));
+  }, [startDate, endDate]);
   const [title, setTitle] = useState("Wochenplan");
   const [saving, setSaving] = useState(false);
   const [weekConfirmOpen, setWeekConfirmOpen] = useState(false);
