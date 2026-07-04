@@ -163,6 +163,46 @@ export function TrainingPlanBuilderPage({ userId, planId }: { userId: string; pl
     );
   }
 
+  function removeDay(week: number, weekday: number) {
+    if (!days) return;
+    setDays(days.filter((d) => !(d.week_number === week && d.weekday === weekday)));
+  }
+
+  function addDay(week: number, weekday: number) {
+    if (!days) return;
+    if (days.some((d) => d.week_number === week && d.weekday === weekday)) {
+      toast.error("Tag existiert bereits");
+      return;
+    }
+    setDays([
+      ...days,
+      {
+        week_number: week,
+        weekday,
+        name: WD_LONG[weekday],
+        type: "training",
+        exercises: [],
+      } as BuilderTrainingDay,
+    ]);
+  }
+
+  function copyWeek(from: number, to: number) {
+    if (!days) return;
+    if (from === to) return;
+    const src = days.filter((d) => d.week_number === from);
+    if (!src.length) {
+      toast.error(`Woche ${from} ist leer`);
+      return;
+    }
+    const cloned: BuilderTrainingDay[] = src.map((d) => ({
+      ...d,
+      week_number: to,
+      exercises: d.exercises.map((ex) => ({ ...ex })),
+    }));
+    setDays([...days.filter((d) => d.week_number !== to), ...cloned]);
+    toast.success(`Woche ${from} → Woche ${to} kopiert`);
+  }
+
   function runAutoFillWeek() {
     if (!ctx || !days) return;
     const wds = (days.filter((d) => d.week_number === activeWeek && d.type === "training").map((d) => d.weekday));
