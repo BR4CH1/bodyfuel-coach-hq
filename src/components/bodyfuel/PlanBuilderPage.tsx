@@ -768,6 +768,33 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
         </Card>
       )}
 
+      {partnerMode && partnerCtxQ.data && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Gemeinsame Mahlzeiten mit {partnerName}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-xs">
+            <div className="text-muted-foreground">
+              Nur ausgewählte Slots werden beim Auto-Fill als Paar geplant (gleiches Rezept, individuelle Portionen).
+              Nicht angehakte Slots werden pro Person unabhängig geplant.
+            </div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {(SLOTS as ReadonlyArray<{ key: Slot; label: string }>).map((s) => (
+                <label key={s.key} className="flex items-center gap-2 rounded-md border border-border bg-background/40 px-2 py-1.5">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4"
+                    checked={sharedSlots[s.key]}
+                    onChange={(e) => setSharedSlots((prev) => ({ ...prev, [s.key]: e.target.checked }))}
+                  />
+                  {s.label}
+                </label>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {days.map((day, di) =>
         partnerMode && partnerCtxQ.data && partnerDays[di] ? (
           <PartnerDayBlock
