@@ -1,5 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import {
+  SCORE_ALGORITHM_VERSION,
+  computeCheckV2,
+  type CategoryScore,
+  type ExerciseCalc,
+  type RawResult,
+} from "@/lib/strengthScoreV2";
 
 export type StrengthTestKey =
   | "leg_press"
@@ -44,7 +51,48 @@ export type StrengthCheck = {
   score_core: number | null;
   score_total: number | null;
   completed_at: string | null;
+  /** V2 additions — computed on read from raw results. */
+  score_algorithm_version?: number;
+  category_confidence?: {
+    lower: CategoryScore;
+    push: CategoryScore;
+    pull: CategoryScore;
+    core: CategoryScore;
+    overall: CategoryScore;
+  };
+  exercise_calcs?: Record<StrengthTestKey, ExerciseCalc>;
 };
+
+/**
+ * Overwrites `score_*` fields on a completed check with Strength Score V2
+ * values computed from raw results + bodyweight. Draft rows are returned
+ * unchanged.
+ */
+function applyV2Scores<T extends StrengthCheck>(
+  check: T,
+  results: RawResult[],
+  bodyweightOverride?: number | null,
+): T {
+  const bw = bodyweightOverride ?? check.bodyweight_kg;
+  const v2 = computeCheckV2(results, bw);
+  return {
+    ...check,
+    score_lower: v2.categories.lower.score,
+    score_push: v2.categories.push.score,
+    score_pull: v2.categories.pull.score,
+    score_core: v2.categories.core.score,
+    score_total: v2.overall.score,
+    score_algorithm_version: SCORE_ALGORITHM_VERSION,
+    category_confidence: {
+      lower: v2.categories.lower,
+      push: v2.categories.push,
+      pull: v2.categories.pull,
+      core: v2.categories.core,
+      overall: v2.overall,
+    },
+    exercise_calcs: v2.exercises,
+  };
+}
 
 export type StrengthStatus = {
   has_ever_completed: boolean;
@@ -85,9 +133,13 @@ export const getMyStrengthStatus = createServerFn({ method: "GET" })
     const today = new Date();
     const dueDays = due ? daysBetween(today, due) : null;
 
+    const lastWithV2 = last
+      ? { ...applyV2Scores(last as StrengthCheck, results as RawResult[]), results }
+      : null;
+
     return {
       has_ever_completed: !!last,
-      last: last ? { ...(last as StrengthCheck), results } : null,
+      last: lastWithV2,
       next_due_at: due ? due.toISOString().slice(0, 10) : null,
       is_overdue: due ? today >= due : false,
       days_until_due: dueDays,
@@ -98,13 +150,38 @@ export const getMyStrengthHistory = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
-    const { data } = await supabase
+    // Need full row + results to recompute V2.
+    const { data: checks } = await supabase
       .from("strength_checks")
-      .select("id, performed_at, score_lower, score_push, score_pull, score_core, score_total")
+      .select("*")
       .eq("user_id", userId)
       .eq("status", "completed")
       .order("performed_at", { ascending: true });
-    return (data ?? []) as Array<Pick<StrengthCheck, "id" | "performed_at" | "score_lower" | "score_push" | "score_pull" | "score_core" | "score_total">>;
+    const rows = (checks ?? []) as StrengthCheck[];
+    if (rows.length === 0) return [] as Array<Pick<StrengthCheck, "id" | "performed_at" | "score_lower" | "score_push" | "score_pull" | "score_core" | "score_total">>;
+    const ids = rows.map((r) => r.id);
+    const { data: allResults } = await supabase
+      .from("strength_check_results")
+      .select("*")
+      .in("check_id", ids);
+    const byCheck = new Map<string, RawResult[]>();
+    for (const r of (allResults ?? []) as (RawResult & { check_id: string })[]) {
+      const list = byCheck.get(r.check_id) ?? [];
+      list.push(r);
+      byCheck.set(r.check_id, list);
+    }
+    return rows.map((row) => {
+      const withV2 = applyV2Scores(row, byCheck.get(row.id) ?? []);
+      return {
+        id: withV2.id,
+        performed_at: withV2.performed_at,
+        score_lower: withV2.score_lower,
+        score_push: withV2.score_push,
+        score_pull: withV2.score_pull,
+        score_core: withV2.score_core,
+        score_total: withV2.score_total,
+      };
+    });
   });
 
 export const startStrengthCheck = createServerFn({ method: "POST" })
@@ -212,7 +289,13 @@ export const completeStrengthCheck = createServerFn({ method: "POST" })
       .select()
       .single();
     if (error) throw new Error(error.message);
-    return row as StrengthCheck;
+
+    // Fetch raw results and overwrite score_* with V2 for the returned row.
+    const { data: fullResults } = await supabase
+      .from("strength_check_results")
+      .select("*")
+      .eq("check_id", data.check_id);
+    return applyV2Scores(row as StrengthCheck, (fullResults ?? []) as RawResult[]);
   });
 
 export const deleteStrengthResult = createServerFn({ method: "POST" })
@@ -245,18 +328,31 @@ export const getCustomerStrengthOverview = createServerFn({ method: "GET" })
       .eq("user_id", data.user_id)
       .eq("status", "completed")
       .order("performed_at", { ascending: true });
-    const last = (history ?? []).slice(-1)[0] as StrengthCheck | undefined;
+    const rawHistory = (history ?? []) as StrengthCheck[];
 
-    let lastResults: StrengthResult[] = [];
-    if (last) {
+    // Load ALL results in one query, then recompute V2 per check.
+    const ids = rawHistory.map((c) => c.id);
+    let allResults: (RawResult & { check_id: string })[] = [];
+    if (ids.length) {
       const { data: rs } = await supabase
         .from("strength_check_results")
         .select("*")
-        .eq("check_id", last.id);
-      lastResults = (rs as StrengthResult[]) ?? [];
+        .in("check_id", ids);
+      allResults = (rs as (RawResult & { check_id: string })[]) ?? [];
     }
+    const byCheck = new Map<string, (RawResult & { check_id: string })[]>();
+    for (const r of allResults) {
+      const list = byCheck.get(r.check_id) ?? [];
+      list.push(r);
+      byCheck.set(r.check_id, list);
+    }
+
+    const historyV2 = rawHistory.map((c) => applyV2Scores(c, byCheck.get(c.id) ?? []));
+    const last = historyV2.length ? historyV2[historyV2.length - 1] : null;
+    const lastResults = last ? (byCheck.get(last.id) ?? []) as unknown as StrengthResult[] : [];
+
     return {
-      history: (history ?? []) as StrengthCheck[],
+      history: historyV2,
       last: last ? { ...last, results: lastResults } : null,
     };
   });

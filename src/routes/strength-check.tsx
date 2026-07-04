@@ -493,11 +493,12 @@ function IntroScreen({
 }
 
 function ResultScreen({ check, previous, onClose }: { check: StrengthCheck; previous: StrengthCheck | null; onClose: () => void }) {
+  const conf = check.category_confidence;
   const groups = [
-    { key: "score_lower", label: "Unterkörper" },
-    { key: "score_push", label: "Push" },
-    { key: "score_pull", label: "Pull" },
-    { key: "score_core", label: "Core" },
+    { key: "score_lower", label: "Unterkörper", cat: conf?.lower },
+    { key: "score_push", label: "Push", cat: conf?.push },
+    { key: "score_pull", label: "Pull", cat: conf?.pull },
+    { key: "score_core", label: "Core", cat: conf?.core },
   ] as const;
 
   return (
@@ -527,9 +528,10 @@ function ResultScreen({ check, previous, onClose }: { check: StrengthCheck; prev
         {groups.map((g) => {
           const val = check[g.key];
           const prev = previous?.[g.key] ?? null;
-          return <ScoreTile key={g.key} label={g.label} value={val} previous={prev} />;
+          return <ScoreTile key={g.key} label={g.label} value={val} previous={prev} cat={g.cat} />;
         })}
       </div>
+
 
 
       <AthleteProfileBanner force />
@@ -559,12 +561,18 @@ function ResultScreen({ check, previous, onClose }: { check: StrengthCheck; prev
   );
 }
 
-function ScoreTile({ label, value, previous }: { label: string; value: number | null; previous: number | null }) {
+function ScoreTile({ label, value, previous, cat }: { label: string; value: number | null; previous: number | null; cat?: { used: number; total: number } }) {
   const delta = value != null && previous != null ? value - previous : null;
+  const incomplete = cat && cat.total > 1 && cat.used < cat.total;
   return (
     <div className="flex flex-col items-center gap-2 rounded-xl border border-border bg-card p-4">
       <StrengthScoreDonut value={value} size={84} stroke={9} />
       <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</div>
+      {incomplete && (
+        <div className="text-[10px] text-amber-400/80">
+          {cat!.used} von {cat!.total} Tests
+        </div>
+      )}
       {delta != null && (
         <div className={`text-[11px] ${delta >= 0 ? "text-emerald-400" : "text-red-400"}`}>
           {delta >= 0 ? "+" : ""}{delta} ggü. vorher
