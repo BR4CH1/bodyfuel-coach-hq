@@ -13,6 +13,7 @@ import {
   type BuilderTrainingDay,
   type BuilderTrainingExercise,
   type LibraryExercise,
+  type StrengthBaseline,
 } from "@/lib/training-plan-builder.functions";
 import { autoFillTrainingPlan, emptyPlan } from "@/lib/training-autofill";
 
