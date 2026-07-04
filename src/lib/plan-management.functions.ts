@@ -220,8 +220,13 @@ export const transitionPlanStatus = createServerFn({ method: "POST" })
       }
     }
 
-    // Auto-apply nutrition targets when a plan becomes active
-    if (data.to === "active") {
+    // Auto-apply nutrition targets when a plan becomes active.
+    // NUR für AI-generierte Pläne (smart_ai) – diese berechnen die Zielwerte
+    // selbst. Manuelle Coach-Pläne (Plan Builder, Import) werden vom Coach
+    // an die BESTEHENDEN Zielwerte des Kunden angepasst; sie dürfen die
+    // nutrition_targets NIEMALS überschreiben.
+    const planSource = String((plan as any).source ?? "").toLowerCase();
+    if (data.to === "active" && planSource === "smart_ai") {
       try {
         const { computeTargetsFromPlanDB, deriveRestFromTraining } = await import("./nutrition.functions");
         const t = await computeTargetsFromPlanDB(supabase, data.plan_id);
