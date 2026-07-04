@@ -328,18 +328,31 @@ export const getCustomerStrengthOverview = createServerFn({ method: "GET" })
       .eq("user_id", data.user_id)
       .eq("status", "completed")
       .order("performed_at", { ascending: true });
-    const last = (history ?? []).slice(-1)[0] as StrengthCheck | undefined;
+    const rawHistory = (history ?? []) as StrengthCheck[];
 
-    let lastResults: StrengthResult[] = [];
-    if (last) {
+    // Load ALL results in one query, then recompute V2 per check.
+    const ids = rawHistory.map((c) => c.id);
+    let allResults: (RawResult & { check_id: string })[] = [];
+    if (ids.length) {
       const { data: rs } = await supabase
         .from("strength_check_results")
         .select("*")
-        .eq("check_id", last.id);
-      lastResults = (rs as StrengthResult[]) ?? [];
+        .in("check_id", ids);
+      allResults = (rs as (RawResult & { check_id: string })[]) ?? [];
     }
+    const byCheck = new Map<string, (RawResult & { check_id: string })[]>();
+    for (const r of allResults) {
+      const list = byCheck.get(r.check_id) ?? [];
+      list.push(r);
+      byCheck.set(r.check_id, list);
+    }
+
+    const historyV2 = rawHistory.map((c) => applyV2Scores(c, byCheck.get(c.id) ?? []));
+    const last = historyV2.length ? historyV2[historyV2.length - 1] : null;
+    const lastResults = last ? (byCheck.get(last.id) ?? []) as StrengthResult[] : [];
+
     return {
-      history: (history ?? []) as StrengthCheck[],
+      history: historyV2,
       last: last ? { ...last, results: lastResults } : null,
     };
   });
