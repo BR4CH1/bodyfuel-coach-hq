@@ -312,13 +312,16 @@ export function PlanManagementCard({ userId }: { userId: string }) {
           <PlanColumn
             label="Aktiver Plan"
             tone="active"
+            userId={userId}
             plan={data?.active ?? null}
             onArchive={(id) => trans.mutate({ id, to: "archived" })}
           />
           <PlanColumn
             label="Nächster Plan"
             tone="next"
+            userId={userId}
             plan={data?.next ?? null}
+
             onApprove={(id) => trans.mutate({ id, to: "approved" })}
             onPublish={(id) => trans.mutate({ id, to: "published" })}
             onActivate={(id) => trans.mutate({ id, to: "active" })}
