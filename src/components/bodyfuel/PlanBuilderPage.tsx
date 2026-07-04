@@ -1646,7 +1646,7 @@ function PartnerDayBlock({
   }, [clientDay.meals]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const autoFillPair = () => {
-    const res = autoFillDayPair(clientDay, partnerDay, clientCtx, partnerCtx, library, "empty_only");
+    const res = autoFillDayPair(clientDay, partnerDay, clientCtx, partnerCtx, library, "empty_only", sharedSlots);
     onClientChange(() => res.client);
     onPartnerChange(() => res.partner);
     if (res.missing > 0) {
