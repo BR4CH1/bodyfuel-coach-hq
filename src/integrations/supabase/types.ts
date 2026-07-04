@@ -2562,11 +2562,15 @@ export type Database = {
       strength_checks: {
         Row: {
           bodyweight_kg: number | null
+          category_confidence: Json | null
           completed_at: string | null
           created_at: string
+          exercise_calcs: Json | null
           id: string
           notes: string | null
           performed_at: string
+          score_algorithm_version: number | null
+          score_calculated_at: string | null
           score_core: number | null
           score_lower: number | null
           score_pull: number | null
@@ -2578,11 +2582,15 @@ export type Database = {
         }
         Insert: {
           bodyweight_kg?: number | null
+          category_confidence?: Json | null
           completed_at?: string | null
           created_at?: string
+          exercise_calcs?: Json | null
           id?: string
           notes?: string | null
           performed_at?: string
+          score_algorithm_version?: number | null
+          score_calculated_at?: string | null
           score_core?: number | null
           score_lower?: number | null
           score_pull?: number | null
@@ -2594,11 +2602,15 @@ export type Database = {
         }
         Update: {
           bodyweight_kg?: number | null
+          category_confidence?: Json | null
           completed_at?: string | null
           created_at?: string
+          exercise_calcs?: Json | null
           id?: string
           notes?: string | null
           performed_at?: string
+          score_algorithm_version?: number | null
+          score_calculated_at?: string | null
           score_core?: number | null
           score_lower?: number | null
           score_pull?: number | null
@@ -3242,20 +3254,6 @@ export type Database = {
         }[]
       }
       recompute_user_points: { Args: { _user_id: string }; Returns: undefined }
-      sc_interp: {
-        Args: { _anchors: number[]; _value: number }
-        Returns: number
-      }
-      sc_score_for_test: {
-        Args: {
-          _bodyweight: number
-          _duration_seconds: number
-          _e1rm: number
-          _gender: string
-          _test: Database["public"]["Enums"]["strength_test_key"]
-        }
-        Returns: number
-      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
     }
