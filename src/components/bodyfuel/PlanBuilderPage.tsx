@@ -345,18 +345,24 @@ function scaleFactorToTarget(fromFactor: number, fromTargetKcal: number, toTarge
   return Math.max(0.25, Math.min(4, Math.round(raw * 4) / 4));
 }
 
-export function PlanBuilderPage({ userId }: { userId: string }) {
+export function PlanBuilderPage({ userId, planId }: { userId: string; planId?: string }) {
   const navigate = useNavigate();
   const listLib = useServerFn(listMealLibrary);
   const getCtx = useServerFn(getCustomerPlanContext);
   const save = useServerFn(saveBuilderPlan);
   const savePartner = useServerFn(saveBuilderPartnerPlan);
   const partnerLinkFn = useServerFn(getPartnerLink);
+  const loadFn = useServerFn(loadNutritionPlanForBuilder);
 
   const libQ = useQuery({ queryKey: ["meal-library"], queryFn: () => listLib() });
   const ctxQ = useQuery({
     queryKey: ["plan-ctx", userId],
     queryFn: () => getCtx({ data: { customerId: userId } }),
+  });
+  const loadedQ = useQuery({
+    queryKey: ["plan-builder-load", planId],
+    queryFn: () => loadFn({ data: { planId: planId! } }),
+    enabled: !!planId,
   });
 
   const [startDate, setStartDate] = useState(isoDate(new Date()));
@@ -372,6 +378,8 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
   const [weekConfirmOpen, setWeekConfirmOpen] = useState(false);
   const [weekMode, setWeekMode] = useState<AutoFillMode>("empty_only");
   const [undoSnapshot, setUndoSnapshot] = useState<{ client: BuilderDay[]; partner: BuilderDay[] | null } | null>(null);
+  const [loadedPlanApplied, setLoadedPlanApplied] = useState(false);
+
 
   // ---------- Partner ----------
   const partnerLinkQ = useQuery({
