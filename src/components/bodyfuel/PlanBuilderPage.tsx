@@ -1596,6 +1596,7 @@ function PartnerDayBlock({
   clientName,
   partnerName,
   library,
+  sharedSlots,
   onClientChange,
   onPartnerChange,
   onCopy,
@@ -1607,6 +1608,7 @@ function PartnerDayBlock({
   clientName: string;
   partnerName: string;
   library: LibraryMeal[];
+  sharedSlots: SharedSlotsMap;
   onClientChange: (u: (d: BuilderDay) => BuilderDay) => void;
   onPartnerChange: (u: (d: BuilderDay) => BuilderDay) => void;
   onCopy: () => void;
