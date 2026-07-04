@@ -490,6 +490,63 @@ export type Database = {
         }
         Relationships: []
       }
+      coach_exercise_library: {
+        Row: {
+          category: string
+          created_at: string
+          default_reps: string
+          default_rest_seconds: number
+          default_sets: number
+          difficulty: string
+          equipment: string[]
+          id: string
+          is_active: boolean
+          is_unilateral: boolean
+          movement_pattern: string
+          name: string
+          notes: string | null
+          primary_muscle: string
+          secondary_muscles: string[]
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          default_reps?: string
+          default_rest_seconds?: number
+          default_sets?: number
+          difficulty?: string
+          equipment?: string[]
+          id?: string
+          is_active?: boolean
+          is_unilateral?: boolean
+          movement_pattern: string
+          name: string
+          notes?: string | null
+          primary_muscle: string
+          secondary_muscles?: string[]
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          default_reps?: string
+          default_rest_seconds?: number
+          default_sets?: number
+          difficulty?: string
+          equipment?: string[]
+          id?: string
+          is_active?: boolean
+          is_unilateral?: boolean
+          movement_pattern?: string
+          name?: string
+          notes?: string | null
+          primary_muscle?: string
+          secondary_muscles?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       coach_meal_library: {
         Row: {
           budget: Database["public"]["Enums"]["meal_budget_level"]
@@ -2700,6 +2757,7 @@ export type Database = {
       training_days: {
         Row: {
           created_at: string
+          day_date: string | null
           id: string
           name: string
           plan_id: string
@@ -2708,6 +2766,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          day_date?: string | null
           id?: string
           name: string
           plan_id: string
@@ -2716,6 +2775,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          day_date?: string | null
           id?: string
           name?: string
           plan_id?: string
@@ -2776,11 +2836,16 @@ export type Database = {
           created_at: string
           day_id: string
           id: string
+          is_locked: boolean
+          library_exercise_id: string | null
+          linked_partner_group: string | null
           name: string
           notes: string | null
+          partner_exercise_id: string | null
           rest_seconds: number | null
           sort_order: number
           target_reps: string | null
+          target_rir: number | null
           target_sets: number | null
           target_weights: string | null
         }
@@ -2789,11 +2854,16 @@ export type Database = {
           created_at?: string
           day_id: string
           id?: string
+          is_locked?: boolean
+          library_exercise_id?: string | null
+          linked_partner_group?: string | null
           name: string
           notes?: string | null
+          partner_exercise_id?: string | null
           rest_seconds?: number | null
           sort_order?: number
           target_reps?: string | null
+          target_rir?: number | null
           target_sets?: number | null
           target_weights?: string | null
         }
@@ -2802,11 +2872,16 @@ export type Database = {
           created_at?: string
           day_id?: string
           id?: string
+          is_locked?: boolean
+          library_exercise_id?: string | null
+          linked_partner_group?: string | null
           name?: string
           notes?: string | null
+          partner_exercise_id?: string | null
           rest_seconds?: number | null
           sort_order?: number
           target_reps?: string | null
+          target_rir?: number | null
           target_sets?: number | null
           target_weights?: string | null
         }
@@ -2816,6 +2891,13 @@ export type Database = {
             columns: ["day_id"]
             isOneToOne: false
             referencedRelation: "training_days"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_exercises_library_exercise_id_fkey"
+            columns: ["library_exercise_id"]
+            isOneToOne: false
+            referencedRelation: "coach_exercise_library"
             referencedColumns: ["id"]
           },
         ]
