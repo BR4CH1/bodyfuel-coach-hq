@@ -395,6 +395,7 @@ export function PlanManagementCard({ userId }: { userId: string }) {
 function PlanColumn(props: {
   label: string;
   tone: "active" | "next";
+  userId: string;
   plan: any | null;
   onArchive?: (id: string) => void;
   onApprove?: (id: string) => void;
@@ -403,10 +404,11 @@ function PlanColumn(props: {
   onDelete?: (id: string) => void;
   onUpdateDates?: (id: string, start: string | null, end: string | null) => void;
 }) {
-  const { label, tone, plan } = props;
+  const { label, tone, plan, userId } = props;
   const [editDates, setEditDates] = useState(false);
   const [start, setStart] = useState<string>(plan?.scheduled_start_date ?? "");
   const [end, setEnd] = useState<string>(plan?.scheduled_end_date ?? "");
+
 
   return (
     <div
