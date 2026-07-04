@@ -3,7 +3,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Lock, LockOpen, Sparkles, Trash2, Users } from "lucide-react";
+import { ArrowLeft, Plus, Lock, LockOpen, Sparkles, Trash2, Users, Pencil } from "lucide-react";
 import {
   listExerciseLibrary,
   getCustomerTrainingContext,
