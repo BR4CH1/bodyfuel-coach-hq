@@ -1,5 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import {
+  SCORE_ALGORITHM_VERSION,
+  computeCheckV2,
+  type CategoryScore,
+  type ExerciseCalc,
+  type RawResult,
+} from "@/lib/strengthScoreV2";
 
 export type StrengthTestKey =
   | "leg_press"
@@ -44,7 +51,48 @@ export type StrengthCheck = {
   score_core: number | null;
   score_total: number | null;
   completed_at: string | null;
+  /** V2 additions — computed on read from raw results. */
+  score_algorithm_version?: number;
+  category_confidence?: {
+    lower: CategoryScore;
+    push: CategoryScore;
+    pull: CategoryScore;
+    core: CategoryScore;
+    overall: CategoryScore;
+  };
+  exercise_calcs?: Record<StrengthTestKey, ExerciseCalc>;
 };
+
+/**
+ * Overwrites `score_*` fields on a completed check with Strength Score V2
+ * values computed from raw results + bodyweight. Draft rows are returned
+ * unchanged.
+ */
+function applyV2Scores<T extends StrengthCheck>(
+  check: T,
+  results: RawResult[],
+  bodyweightOverride?: number | null,
+): T {
+  const bw = bodyweightOverride ?? check.bodyweight_kg;
+  const v2 = computeCheckV2(results, bw);
+  return {
+    ...check,
+    score_lower: v2.categories.lower.score,
+    score_push: v2.categories.push.score,
+    score_pull: v2.categories.pull.score,
+    score_core: v2.categories.core.score,
+    score_total: v2.overall.score,
+    score_algorithm_version: SCORE_ALGORITHM_VERSION,
+    category_confidence: {
+      lower: v2.categories.lower,
+      push: v2.categories.push,
+      pull: v2.categories.pull,
+      core: v2.categories.core,
+      overall: v2.overall,
+    },
+    exercise_calcs: v2.exercises,
+  };
+}
 
 export type StrengthStatus = {
   has_ever_completed: boolean;
