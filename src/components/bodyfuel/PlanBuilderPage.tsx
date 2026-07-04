@@ -384,16 +384,15 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
             <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
           </div>
           <div>
-            <Label>Anzahl Tage</Label>
+          <div>
+            <Label>Enddatum</Label>
             <Input
-              type="number"
-              min={1}
-              max={28}
-              value={numDays}
-              onChange={(e) => setNumDays(Math.max(1, Math.min(28, Number(e.target.value) || 1)))}
+              type="date"
+              value={endDate}
+              min={startDate}
+              onChange={(e) => setEndDate(e.target.value)}
             />
           </div>
-        </CardContent>
       </Card>
 
       {ctxQ.data && (
