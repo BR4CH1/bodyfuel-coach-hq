@@ -776,6 +776,50 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
         ),
       )}
 
+      <AlertDialog open={copyChoiceIdx !== null} onOpenChange={(o) => !o && setCopyChoiceIdx(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tag auf nächsten Tag kopieren</AlertDialogTitle>
+            <AlertDialogDescription>
+              Der Trainingstag-/Restday-Status des Zieltages bleibt erhalten. Portionen werden nach dem
+              Kopieren auf das jeweilige Tagesziel neu skaliert.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="grid gap-2 py-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (copyChoiceIdx !== null) copyClientDay(copyChoiceIdx);
+                setCopyChoiceIdx(null);
+              }}
+            >
+              Nur Kunde kopieren
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (copyChoiceIdx !== null) copyPartnerDay(copyChoiceIdx);
+                setCopyChoiceIdx(null);
+              }}
+            >
+              Nur {partnerName} kopieren
+            </Button>
+            <Button
+              onClick={() => {
+                if (copyChoiceIdx !== null) copyDayPair(copyChoiceIdx);
+                setCopyChoiceIdx(null);
+              }}
+            >
+              Beide kopieren (Kopplung bleibt erhalten)
+            </Button>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+
       <div className="sticky bottom-0 flex gap-2 border-t border-border bg-background/95 p-3 backdrop-blur">
         <Button variant="outline" className="flex-1" disabled={saving} onClick={() => handleSave(false)}>
           Als Entwurf speichern
