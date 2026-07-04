@@ -599,16 +599,81 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
         </Card>
       )}
 
-      {days.map((day, di) => (
-        <DayCard
-          key={di}
-          day={day}
-          library={libQ.data ?? []}
-          ctx={ctxQ.data!}
-          onChange={(u) => setDay(di, u)}
-          onCopy={() => copyDay(di)}
-        />
-      ))}
+      {partnerId && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <Users className="h-4 w-4 text-emerald-500" />
+              Partnerplan
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center justify-between gap-3 text-xs">
+            <div>
+              Gemeinsamer Plan mit <b>{partnerName}</b>. Zwei verknüpfte Pläne mit eigenen Zielen und Portionen pro Person.
+            </div>
+            <Switch checked={partnerMode} onCheckedChange={setPartnerMode} />
+          </CardContent>
+        </Card>
+      )}
+
+      {partnerMode && partnerCtxQ.data && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Partnerprofil · {partnerName}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-xs">
+            <div className="flex flex-wrap gap-1">
+              <Badge variant="outline">
+                Trainingstag: {partnerCtxQ.data.targets.kcal_train} kcal · {partnerCtxQ.data.targets.protein_train}P/
+                {partnerCtxQ.data.targets.carbs_train}C/{partnerCtxQ.data.targets.fat_train}F
+              </Badge>
+              <Badge variant="outline">
+                Restday: {partnerCtxQ.data.targets.kcal_rest} kcal · {partnerCtxQ.data.targets.protein_rest}P/
+                {partnerCtxQ.data.targets.carbs_rest}C/{partnerCtxQ.data.targets.fat_rest}F
+              </Badge>
+            </div>
+            <div>
+              Trainingstage:{" "}
+              <b>
+                {partnerCtxQ.data.trainingWeekdays.length === 0
+                  ? "keine hinterlegt"
+                  : partnerCtxQ.data.trainingWeekdays
+                      .slice()
+                      .sort()
+                      .map((w) => ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"][w])
+                      .join(", ")}
+              </b>
+            </div>
+            {partnerCtxQ.data.allergies.length > 0 && <div>Allergien: {partnerCtxQ.data.allergies.join(", ")}</div>}
+            {partnerCtxQ.data.noGoFoods.length > 0 && <div>No-Gos: {partnerCtxQ.data.noGoFoods.join(", ")}</div>}
+          </CardContent>
+        </Card>
+      )}
+
+      {days.map((day, di) =>
+        partnerMode && partnerCtxQ.data && partnerDays[di] ? (
+          <PartnerDayBlock
+            key={di}
+            clientDay={day}
+            partnerDay={partnerDays[di]}
+            clientCtx={ctxQ.data!}
+            partnerCtx={partnerCtxQ.data}
+            library={libQ.data ?? []}
+            onClientChange={(u) => setDay(di, u)}
+            onPartnerChange={(u) => setPartnerDay(di, u)}
+            onCopy={() => copyDay(di)}
+          />
+        ) : (
+          <DayCard
+            key={di}
+            day={day}
+            library={libQ.data ?? []}
+            ctx={ctxQ.data!}
+            onChange={(u) => setDay(di, u)}
+            onCopy={() => copyDay(di)}
+          />
+        ),
+      )}
 
       <div className="sticky bottom-0 flex gap-2 border-t border-border bg-background/95 p-3 backdrop-blur">
         <Button variant="outline" className="flex-1" disabled={saving} onClick={() => handleSave(false)}>
