@@ -207,23 +207,38 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
   const [saving, setSaving] = useState(false);
   const [weekConfirmOpen, setWeekConfirmOpen] = useState(false);
   const [weekMode, setWeekMode] = useState<AutoFillMode>("empty_only");
-  const [undoSnapshot, setUndoSnapshot] = useState<BuilderDay[] | null>(null);
+  const [undoSnapshot, setUndoSnapshot] = useState<{ client: BuilderDay[]; partner: BuilderDay[] | null } | null>(null);
+
+  // ---------- Partner ----------
+  const partnerLinkQ = useQuery({
+    queryKey: ["plan-builder-partner", userId],
+    queryFn: () => partnerLinkFn({ data: { user_id: userId } }),
+  });
+  const partnerId = partnerLinkQ.data?.partner_id ?? null;
+  const partnerName = partnerLinkQ.data?.partner_name ?? "Partner";
+  const [partnerMode, setPartnerMode] = useState(false);
+  const partnerCtxQ = useQuery({
+    queryKey: ["plan-ctx", partnerId],
+    queryFn: () => getCtx({ data: { customerId: partnerId! } }),
+    enabled: !!partnerId && partnerMode,
+  });
+  const partnerTrainingWeekdays = partnerCtxQ.data?.trainingWeekdays ?? [];
 
   const trainingWeekdays = ctxQ.data?.trainingWeekdays ?? [];
   const [days, setDays] = useState<BuilderDay[]>(() => []);
+  const [partnerDays, setPartnerDays] = useState<BuilderDay[]>(() => []);
 
   useMemo(() => {
-    setDays((prev) => {
+    const build = (prev: BuilderDay[], twd: number[]): BuilderDay[] => {
       const next: BuilderDay[] = [];
       const weekdayLabels = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
       for (let i = 0; i < numDays; i++) {
         const iso = addDays(startDate, i);
         const d = new Date(iso + "T00:00:00Z");
         const weekday = d.getUTCDay();
-        const isTrain = trainingWeekdays.includes(weekday);
+        const isTrain = twd.includes(weekday);
         const existing = prev[i];
         const dateLabel = `${weekdayLabels[weekday]} ${String(d.getUTCDate()).padStart(2, "0")}.${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
-        // Auto-derive from trainingWeekdays unless the coach toggled manually
         const autoType: "training" | "rest" = isTrain ? "training" : "rest";
         const type = existing?.typeOverride ? existing.type : autoType;
         next.push({
@@ -235,18 +250,37 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
         });
       }
       return next;
-    });
+    };
+    setDays((prev) => build(prev, trainingWeekdays));
+    if (partnerMode) setPartnerDays((prev) => build(prev, partnerTrainingWeekdays));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startDate, numDays, trainingWeekdays.join(",")]);
+  }, [startDate, numDays, trainingWeekdays.join(","), partnerTrainingWeekdays.join(","), partnerMode]);
 
   const setDay = (idx: number, upd: (d: BuilderDay) => BuilderDay) => {
     setDays((prev) => prev.map((d, i) => (i === idx ? upd(d) : d)));
+  };
+  const setPartnerDay = (idx: number, upd: (d: BuilderDay) => BuilderDay) => {
+    setPartnerDays((prev) => prev.map((d, i) => (i === idx ? upd(d) : d)));
   };
 
   const handleSave = async (publish: boolean) => {
     try {
       setSaving(true);
-      await save({ data: { customerId: userId, title, startDate, days, publish } } as any);
+      if (partnerMode && partnerId) {
+        await savePartner({
+          data: {
+            customerId: userId,
+            partnerId,
+            title,
+            startDate,
+            clientDays: days,
+            partnerDays,
+            publish,
+          },
+        } as any);
+      } else {
+        await save({ data: { customerId: userId, title, startDate, days, publish } } as any);
+      }
       toast.success(publish ? "Plan veröffentlicht" : "Plan als Entwurf gespeichert");
       navigate({ to: "/coach/customers/$userId", params: { userId } });
     } catch (e: any) {
