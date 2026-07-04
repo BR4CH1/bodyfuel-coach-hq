@@ -439,37 +439,86 @@ export function PlanBuilderPage({ userId }: { userId: string }) {
     }
   };
 
-  const copyDay = (idx: number) => {
+  const copyClientDay = (idx: number) => {
+    const ctx = ctxQ.data;
+    const lib = libQ.data ?? [];
+    if (!ctx) return;
     setDays((prev) => {
+      if (idx + 1 >= prev.length) return prev;
       const src = prev[idx];
-      if (!src) return prev;
       const next = [...prev];
-      for (let i = idx + 1; i < next.length; i++) {
-        if (next[i].type === src.type) {
-          next[i] = {
-            ...next[i],
-            prepCoupleLunchDinner: src.prepCoupleLunchDinner,
-            meals: src.meals.map((m) => ({
-              ...m,
-              ingredients: m.ingredients.map((x) => ({ ...x })),
-              // Neue Gruppen-IDs pro Tag
-              linked_prep_group: m.linked_prep_group ? makeGroupId() + "-" + m.slot : null,
-            })),
-          };
-          // gleiche Gruppe für lunch+dinner im Zieltag
-          const g = makeGroupId();
-          next[i].meals = next[i].meals.map((m) => {
-            if (src.prepCoupleLunchDinner && (m.slot === "lunch" || m.slot === "dinner")) {
-              return { ...m, linked_prep_group: g };
-            }
-            return m;
-          });
-          break;
-        }
-      }
+      const groupMap = new Map<string, string>();
+      const prepMap = new Map<string, string>();
+      const copiedMeals = remapMealsForCopy(src.meals, groupMap, prepMap).map((m) => ({
+        ...m,
+        linked_partner_group: null,
+      }));
+      next[idx + 1] = rebalanceDay(
+        { ...next[idx + 1], prepCoupleLunchDinner: src.prepCoupleLunchDinner, meals: copiedMeals },
+        ctx,
+        lib,
+      );
       return next;
     });
   };
+
+  const copyPartnerDay = (idx: number) => {
+    const ctx = partnerCtxQ.data;
+    const lib = libQ.data ?? [];
+    if (!ctx) return;
+    setPartnerDays((prev) => {
+      if (idx + 1 >= prev.length) return prev;
+      const src = prev[idx];
+      const next = [...prev];
+      const groupMap = new Map<string, string>();
+      const prepMap = new Map<string, string>();
+      const copiedMeals = remapMealsForCopy(src.meals, groupMap, prepMap).map((m) => ({
+        ...m,
+        linked_partner_group: null,
+      }));
+      next[idx + 1] = rebalanceDay(
+        { ...next[idx + 1], prepCoupleLunchDinner: src.prepCoupleLunchDinner, meals: copiedMeals },
+        ctx,
+        lib,
+      );
+      return next;
+    });
+  };
+
+  const copyDayPair = (idx: number) => {
+    const cCtx = ctxQ.data;
+    const pCtx = partnerCtxQ.data;
+    const lib = libQ.data ?? [];
+    if (!cCtx || !pCtx) return;
+    if (idx + 1 >= days.length) return;
+    const groupMap = new Map<string, string>();
+    const prepMapC = new Map<string, string>();
+    const prepMapP = new Map<string, string>();
+    const srcC = days[idx];
+    const srcP = partnerDays[idx];
+    const remappedC = remapMealsForCopy(srcC.meals, groupMap, prepMapC);
+    const remappedP = remapMealsForCopy(srcP.meals, groupMap, prepMapP);
+    setDays((prev) => {
+      const next = [...prev];
+      next[idx + 1] = rebalanceDay(
+        { ...next[idx + 1], prepCoupleLunchDinner: srcC.prepCoupleLunchDinner, meals: remappedC },
+        cCtx,
+        lib,
+      );
+      return next;
+    });
+    setPartnerDays((prev) => {
+      const next = [...prev];
+      next[idx + 1] = rebalanceDay(
+        { ...next[idx + 1], prepCoupleLunchDinner: srcP.prepCoupleLunchDinner, meals: remappedP },
+        pCtx,
+        lib,
+      );
+      return next;
+    });
+  };
+
+  const [copyChoiceIdx, setCopyChoiceIdx] = useState<number | null>(null);
 
   const cloneDays = (arr: BuilderDay[]): BuilderDay[] =>
     arr.map((d) => ({
