@@ -63,6 +63,16 @@ const SLOTS: { key: Slot; label: string }[] = [
   { key: "snack", label: "Snack" },
 ];
 
+// Partner coupling ops per slot (passed to DayCard/MealSlotRow only in partner mode)
+export type PartnerSlotLink = {
+  selfName: string;
+  partnerName: string;
+  isCoupled: boolean;
+  onCouple: () => void;
+  onUncouple: () => void;
+  onSwapForBoth: (lib: LibraryMeal) => void;
+};
+
 function isoDate(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
