@@ -493,11 +493,12 @@ function IntroScreen({
 }
 
 function ResultScreen({ check, previous, onClose }: { check: StrengthCheck; previous: StrengthCheck | null; onClose: () => void }) {
+  const conf = check.category_confidence;
   const groups = [
-    { key: "score_lower", label: "Unterkörper" },
-    { key: "score_push", label: "Push" },
-    { key: "score_pull", label: "Pull" },
-    { key: "score_core", label: "Core" },
+    { key: "score_lower", label: "Unterkörper", cat: conf?.lower },
+    { key: "score_push", label: "Push", cat: conf?.push },
+    { key: "score_pull", label: "Pull", cat: conf?.pull },
+    { key: "score_core", label: "Core", cat: conf?.core },
   ] as const;
 
   return (
@@ -527,9 +528,10 @@ function ResultScreen({ check, previous, onClose }: { check: StrengthCheck; prev
         {groups.map((g) => {
           const val = check[g.key];
           const prev = previous?.[g.key] ?? null;
-          return <ScoreTile key={g.key} label={g.label} value={val} previous={prev} />;
+          return <ScoreTile key={g.key} label={g.label} value={val} previous={prev} cat={g.cat} />;
         })}
       </div>
+
 
 
       <AthleteProfileBanner force />
