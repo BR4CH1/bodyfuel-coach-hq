@@ -434,6 +434,17 @@ export function PlanBuilderPage({ userId, planId }: { userId: string; planId?: s
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startDate, numDays, trainingWeekdays.join(","), partnerTrainingWeekdays.join(","), partnerMode]);
 
+  // Preload existing plan into builder state (once, when planId is provided)
+  useEffect(() => {
+    if (!planId || !loadedQ.data || loadedPlanApplied) return;
+    setTitle(loadedQ.data.title);
+    setStartDate(loadedQ.data.startDate);
+    setEndDate(loadedQ.data.endDate);
+    setDays(loadedQ.data.days);
+    setLoadedPlanApplied(true);
+  }, [planId, loadedQ.data, loadedPlanApplied]);
+
+
   const setDay = (idx: number, upd: (d: BuilderDay) => BuilderDay) => {
     setDays((prev) => prev.map((d, i) => (i === idx ? upd(d) : d)));
   };
