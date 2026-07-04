@@ -194,6 +194,8 @@ export function autoFillDayImpl(
 // Auto-fill for two linked days (partner mode).
 // Strategy per slot: prefer a shared meal (score > 0 for both, quantities scaled per person).
 // Fallback: independent picks per person.
+export type SharedSlotsMap = Record<Slot, boolean>;
+
 export function autoFillDayPair(
   clientDay: BuilderDay,
   partnerDay: BuilderDay,
@@ -201,6 +203,7 @@ export function autoFillDayPair(
   partnerCtx: CustomerPlanContext,
   library: LibraryMeal[],
   mode: AutoFillMode,
+  sharedSlots: SharedSlotsMap = { breakfast: true, lunch: true, dinner: true, snack: true },
 ): { client: BuilderDay; partner: BuilderDay; missing: number } {
   const filterKeep = (arr: BuilderMeal[]) => (mode === "all_unlocked" ? arr.filter((m) => m.is_locked) : arr.map((m) => ({ ...m })));
   let clientMeals: BuilderMeal[] = filterKeep(clientDay.meals);
