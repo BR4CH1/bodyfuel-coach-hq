@@ -266,22 +266,71 @@ export const completeStrengthCheck = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const { data: chk } = await supabase
       .from("strength_checks")
-      .select("id, user_id, status")
+      .select("id, user_id, status, bodyweight_kg")
       .eq("id", data.check_id)
       .maybeSingle();
     if (!chk || chk.user_id !== userId) throw new Error("Nicht gefunden");
     if (chk.status === "completed") throw new Error("Bereits abgeschlossen");
 
-    // Require at least 4 of 7 tests entered
-    const { data: results } = await supabase
+    // Load full raw results.
+    const { data: fullResults } = await supabase
       .from("strength_check_results")
-      .select("test_key")
+      .select("*")
       .eq("check_id", data.check_id);
-    if (!results || results.length < 4) throw new Error("Bitte mindestens 4 Tests eintragen.");
+    const rawResults = (fullResults ?? []) as unknown as RawResult[];
+    if (rawResults.length < 4) throw new Error("Bitte mindestens 4 Tests eintragen.");
 
-    const update: { status: "completed"; bodyweight_kg?: number | null; notes?: string | null } = { status: "completed" };
+    // Resolve bodyweight (payload → check.bodyweight_kg → last body_measurement).
+    let bodyweight: number | null = data.bodyweight_kg ?? (chk as { bodyweight_kg: number | null }).bodyweight_kg ?? null;
+    if (bodyweight == null) {
+      const { data: bm } = await supabase
+        .from("body_measurements")
+        .select("weight_kg")
+        .eq("user_id", userId)
+        .not("weight_kg", "is", null)
+        .order("measured_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (bm?.weight_kg != null) bodyweight = Number(bm.weight_kg);
+    }
+
+    // Compute Strength Score V2 (single source of truth).
+    const v2 = computeCheckV2(rawResults, bodyweight);
+
+    const update: {
+      status: "completed";
+      bodyweight_kg?: number | null;
+      notes?: string | null;
+      score_lower: number | null;
+      score_push: number | null;
+      score_pull: number | null;
+      score_core: number | null;
+      score_total: number | null;
+      score_algorithm_version: number;
+      category_confidence: unknown;
+      exercise_calcs: unknown;
+      score_calculated_at: string;
+    } = {
+      status: "completed",
+      score_lower: v2.categories.lower.score,
+      score_push: v2.categories.push.score,
+      score_pull: v2.categories.pull.score,
+      score_core: v2.categories.core.score,
+      score_total: v2.overall.score,
+      score_algorithm_version: SCORE_ALGORITHM_VERSION,
+      category_confidence: {
+        lower: v2.categories.lower,
+        push: v2.categories.push,
+        pull: v2.categories.pull,
+        core: v2.categories.core,
+        overall: v2.overall,
+      },
+      exercise_calcs: v2.exercises,
+      score_calculated_at: new Date().toISOString(),
+    };
     if (data.bodyweight_kg != null) update.bodyweight_kg = data.bodyweight_kg;
     if (data.notes != null) update.notes = data.notes.slice(0, 1000);
+
     const { data: row, error } = await supabase
       .from("strength_checks")
       .update(update)
@@ -289,13 +338,7 @@ export const completeStrengthCheck = createServerFn({ method: "POST" })
       .select()
       .single();
     if (error) throw new Error(error.message);
-
-    // Fetch raw results and overwrite score_* with V2 for the returned row.
-    const { data: fullResults } = await supabase
-      .from("strength_check_results")
-      .select("*")
-      .eq("check_id", data.check_id);
-    return applyV2Scores(row as unknown as StrengthCheck, (fullResults ?? []) as RawResult[]);
+    return row as unknown as StrengthCheck;
   });
 
 export const deleteStrengthResult = createServerFn({ method: "POST" })
