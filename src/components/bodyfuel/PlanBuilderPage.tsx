@@ -879,7 +879,7 @@ function DayCard({
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <div className="flex items-center gap-2">
-          <CardTitle className="text-sm">{day.name}</CardTitle>
+          {!hideHeaderActions && <CardTitle className="text-sm">{day.name}</CardTitle>}
           <Badge
             variant={day.type === "training" ? "default" : "secondary"}
             className="cursor-pointer"
@@ -894,16 +894,24 @@ function DayCard({
             {day.type === "training" ? "Trainingstag" : "Restday"}
           </Badge>
         </div>
-        <div className="flex flex-wrap gap-1">
-          <Button size="sm" variant="secondary" onClick={autoFillDay}>
+        {!hideHeaderActions && (
+          <div className="flex flex-wrap gap-1">
+            <Button size="sm" variant="secondary" onClick={autoFillDay}>
+              <Sparkles className="mr-1 h-3 w-3" />
+              Tag automatisch füllen
+            </Button>
+            <Button size="sm" variant="ghost" onClick={onCopy}>
+              <Copy className="mr-1 h-3 w-3" />
+              auf nächsten Tag
+            </Button>
+          </div>
+        )}
+        {hideHeaderActions && (
+          <Button size="sm" variant="ghost" onClick={autoFillDay}>
             <Sparkles className="mr-1 h-3 w-3" />
-            Tag automatisch füllen
+            Tag füllen
           </Button>
-          <Button size="sm" variant="ghost" onClick={onCopy}>
-            <Copy className="mr-1 h-3 w-3" />
-            auf nächsten Tag
-          </Button>
-        </div>
+        )}
       </CardHeader>
       <CardContent className="space-y-2">
         {/* Balance */}
