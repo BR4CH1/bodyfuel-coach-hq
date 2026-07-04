@@ -163,6 +163,46 @@ export function TrainingPlanBuilderPage({ userId, planId }: { userId: string; pl
     );
   }
 
+  function removeDay(week: number, weekday: number) {
+    if (!days) return;
+    setDays(days.filter((d) => !(d.week_number === week && d.weekday === weekday)));
+  }
+
+  function addDay(week: number, weekday: number) {
+    if (!days) return;
+    if (days.some((d) => d.week_number === week && d.weekday === weekday)) {
+      toast.error("Tag existiert bereits");
+      return;
+    }
+    setDays([
+      ...days,
+      {
+        week_number: week,
+        weekday,
+        name: WD_LONG[weekday],
+        type: "training",
+        exercises: [],
+      } as BuilderTrainingDay,
+    ]);
+  }
+
+  function copyWeek(from: number, to: number) {
+    if (!days) return;
+    if (from === to) return;
+    const src = days.filter((d) => d.week_number === from);
+    if (!src.length) {
+      toast.error(`Woche ${from} ist leer`);
+      return;
+    }
+    const cloned: BuilderTrainingDay[] = src.map((d) => ({
+      ...d,
+      week_number: to,
+      exercises: d.exercises.map((ex) => ({ ...ex })),
+    }));
+    setDays([...days.filter((d) => d.week_number !== to), ...cloned]);
+    toast.success(`Woche ${from} → Woche ${to} kopiert`);
+  }
+
   function runAutoFillWeek() {
     if (!ctx || !days) return;
     const wds = (days.filter((d) => d.week_number === activeWeek && d.type === "training").map((d) => d.weekday));
@@ -337,6 +377,45 @@ export function TrainingPlanBuilderPage({ userId, planId }: { userId: string; pl
         </div>
       </div>
 
+      {/* Week actions */}
+      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-card p-3">
+        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Woche {activeWeek}</span>
+        {weeksCount > 1 && (
+          <div className="flex items-center gap-1">
+            <span className="text-xs text-muted-foreground">kopieren nach:</span>
+            {Array.from({ length: weeksCount }).map((_, i) => {
+              const w = i + 1;
+              if (w === activeWeek) return null;
+              return (
+                <button
+                  key={w}
+                  onClick={() => copyWeek(activeWeek, w)}
+                  className="rounded-md border border-border px-2 py-1 text-xs hover:bg-muted"
+                >
+                  W{w}
+                </button>
+              );
+            })}
+          </div>
+        )}
+        <div className="ml-auto flex items-center gap-1">
+          <span className="text-xs text-muted-foreground">Tag hinzufügen:</span>
+          {[1, 2, 3, 4, 5, 6, 0].map((wd) => {
+            const exists = (days ?? []).some((d) => d.week_number === activeWeek && d.weekday === wd);
+            if (exists) return null;
+            return (
+              <button
+                key={wd}
+                onClick={() => addDay(activeWeek, wd)}
+                className="rounded-md border border-border px-2 py-1 text-[10px] font-semibold uppercase hover:bg-muted"
+              >
+                {WD_LABEL[wd]}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Days */}
       <div className="space-y-3">
         {currentWeekDays.map((d) => (
@@ -348,8 +427,14 @@ export function TrainingPlanBuilderPage({ userId, planId }: { userId: string; pl
             onUpdateEx={(idx, patch) => updateExercise(d.week_number, d.weekday, idx, patch)}
             onAddEx={(lib) => addExercise(d.week_number, d.weekday, lib)}
             onRemoveEx={(idx) => removeExercise(d.week_number, d.weekday, idx)}
+            onRemoveDay={() => removeDay(d.week_number, d.weekday)}
           />
         ))}
+        {currentWeekDays.length === 0 && (
+          <div className="rounded-2xl border border-dashed border-border bg-card p-6 text-center text-sm text-muted-foreground">
+            Keine Tage in Woche {activeWeek}. Füge oben Tage hinzu.
+          </div>
+        )}
       </div>
 
       {/* Save */}
@@ -373,6 +458,7 @@ function DayCard({
   onUpdateEx,
   onAddEx,
   onRemoveEx,
+  onRemoveDay,
 }: {
   day: BuilderTrainingDay;
   library: LibraryExercise[];
@@ -380,6 +466,7 @@ function DayCard({
   onUpdateEx: (idx: number, patch: Partial<BuilderTrainingExercise>) => void;
   onAddEx: (lib?: LibraryExercise) => void;
   onRemoveEx: (idx: number) => void;
+  onRemoveDay: () => void;
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   return (
@@ -412,6 +499,15 @@ function DayCard({
             className={`rounded-md border px-2 py-1 text-[10px] ${day.type === "rest" ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}
           >
             Ruhetag
+          </button>
+          <button
+            onClick={() => {
+              if (confirm(`Tag "${day.name || WD_LONG[day.weekday]}" wirklich löschen?`)) onRemoveDay();
+            }}
+            title="Tag löschen"
+            className="rounded-md border border-border px-2 py-1 text-[10px] text-destructive hover:bg-destructive/10"
+          >
+            <Trash2 className="h-3 w-3" />
           </button>
         </div>
       </div>
