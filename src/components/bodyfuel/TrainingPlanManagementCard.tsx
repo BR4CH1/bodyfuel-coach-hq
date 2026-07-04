@@ -165,12 +165,14 @@ export function TrainingPlanManagementCard({ userId }: { userId: string }) {
           <TrainingPlanColumn
             label="Aktiver Plan"
             tone="active"
+            userId={userId}
             plan={data?.active ?? null}
             onArchive={(id) => trans.mutate({ id, to: "archived" })}
           />
           <TrainingPlanColumn
             label="Nächster Plan"
             tone="next"
+            userId={userId}
             plan={data?.next ?? null}
             onApprove={(id) => trans.mutate({ id, to: "approved" })}
             onPublish={(id) => trans.mutate({ id, to: "published" })}
@@ -193,6 +195,7 @@ export function TrainingPlanManagementCard({ userId }: { userId: string }) {
                 .catch((e) => toast.error(e?.message ?? "Fehler"))
             }
           />
+
         </div>
       )}
 
