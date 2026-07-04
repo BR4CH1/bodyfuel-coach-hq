@@ -230,7 +230,7 @@ export function autoFillDayPair(
     // Only fill where BOTH slots are empty (locked/existing on either side → skip shared logic)
     if (cExisting && pExisting) continue;
 
-    if (!cExisting && !pExisting) {
+    if (sharedSlots[slot] && !cExisting && !pExisting) {
       const cRem = remainingFor(clientMeals, clientDay, clientCtx);
       const pRem = remainingFor(partnerMeals, partnerDay, partnerCtx);
       const scored = library
