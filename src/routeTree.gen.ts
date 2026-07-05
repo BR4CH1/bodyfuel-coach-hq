@@ -23,6 +23,7 @@ import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as NutritionRouteImport } from './routes/nutrition'
 import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as MeasurementsRouteImport } from './routes/measurements'
+import { Route as McpRouteImport } from './routes/mcp'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ImpressumRouteImport } from './routes/impressum'
 import { Route as GuardianConsentRouteImport } from './routes/guardian-consent'
@@ -69,6 +70,8 @@ import { Route as BullsRecoveryRouteImport } from './routes/bulls.recovery'
 import { Route as BullsPhotosRouteImport } from './routes/bulls.photos'
 import { Route as BullsNutritionRouteImport } from './routes/bulls.nutrition'
 import { Route as BullsBenchmarksRouteImport } from './routes/bulls.benchmarks'
+import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as TrackerAppIndexRouteImport } from './routes/tracker.app.index'
 import { Route as CoachCustomersIndexRouteImport } from './routes/coach.customers.index'
 import { Route as TrackerAppWeightRouteImport } from './routes/tracker.app.weight'
@@ -86,6 +89,7 @@ import { Route as CoachPlanBuilderUserIdRouteImport } from './routes/coach.plan-
 import { Route as CoachCustomersNewRouteImport } from './routes/coach.customers.new'
 import { Route as CoachCustomersUserIdRouteImport } from './routes/coach.customers.$userId'
 import { Route as ApiPublicGuardianConsentRouteImport } from './routes/api/public/guardian-consent'
+import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
@@ -169,6 +173,11 @@ const MessagesRoute = MessagesRouteImport.update({
 const MeasurementsRoute = MeasurementsRouteImport.update({
   id: '/measurements',
   path: '/measurements',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -403,6 +412,18 @@ const BullsBenchmarksRoute = BullsBenchmarksRouteImport.update({
   path: '/bulls/benchmarks',
   getParentRoute: () => rootRouteImport,
 } as any)
+const Char91DotwellKnownChar93OauthProtectedResourceRoute =
+  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
+    id: '/.well-known/oauth-protected-resource',
+    path: '/.well-known/oauth-protected-resource',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const Char91DotmcpChar93ListToolsRoute =
+  Char91DotmcpChar93ListToolsRouteImport.update({
+    id: '/.mcp/list-tools',
+    path: '/.mcp/list-tools',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const TrackerAppIndexRoute = TrackerAppIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -488,6 +509,12 @@ const ApiPublicGuardianConsentRoute =
   ApiPublicGuardianConsentRouteImport.update({
     id: '/api/public/guardian-consent',
     path: '/api/public/guardian-consent',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const Char91DotmcpChar93InvokeToolToolRoute =
+  Char91DotmcpChar93InvokeToolToolRouteImport.update({
+    id: '/.mcp/invoke-tool/$tool',
+    path: '/.mcp/invoke-tool/$tool',
     getParentRoute: () => rootRouteImport,
   } as any)
 const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
@@ -586,6 +613,7 @@ export interface FileRoutesByFullPath {
   '/guardian-consent': typeof GuardianConsentRoute
   '/impressum': typeof ImpressumRoute
   '/login': typeof LoginRoute
+  '/mcp': typeof McpRoute
   '/measurements': typeof MeasurementsRoute
   '/messages': typeof MessagesRoute
   '/nutrition': typeof NutritionRouteWithChildren
@@ -600,6 +628,8 @@ export interface FileRoutesByFullPath {
   '/trust': typeof TrustRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/welcome': typeof WelcomeRoute
+  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
   '/bulls/nutrition': typeof BullsNutritionRoute
   '/bulls/photos': typeof BullsPhotosRoute
@@ -634,6 +664,7 @@ export interface FileRoutesByFullPath {
   '/smart/': typeof SmartIndexRoute
   '/tracker/': typeof TrackerIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
+  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/public/guardian-consent': typeof ApiPublicGuardianConsentRoute
   '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
   '/coach/customers/new': typeof CoachCustomersNewRoute
@@ -678,6 +709,7 @@ export interface FileRoutesByTo {
   '/guardian-consent': typeof GuardianConsentRoute
   '/impressum': typeof ImpressumRoute
   '/login': typeof LoginRoute
+  '/mcp': typeof McpRoute
   '/measurements': typeof MeasurementsRoute
   '/messages': typeof MessagesRoute
   '/profile': typeof ProfileRoute
@@ -690,6 +722,8 @@ export interface FileRoutesByTo {
   '/trust': typeof TrustRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/welcome': typeof WelcomeRoute
+  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
   '/bulls/nutrition': typeof BullsNutritionRoute
   '/bulls/photos': typeof BullsPhotosRoute
@@ -722,6 +756,7 @@ export interface FileRoutesByTo {
   '/smart': typeof SmartIndexRoute
   '/tracker': typeof TrackerIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
+  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/public/guardian-consent': typeof ApiPublicGuardianConsentRoute
   '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
   '/coach/customers/new': typeof CoachCustomersNewRoute
@@ -768,6 +803,7 @@ export interface FileRoutesById {
   '/guardian-consent': typeof GuardianConsentRoute
   '/impressum': typeof ImpressumRoute
   '/login': typeof LoginRoute
+  '/mcp': typeof McpRoute
   '/measurements': typeof MeasurementsRoute
   '/messages': typeof MessagesRoute
   '/nutrition': typeof NutritionRouteWithChildren
@@ -782,6 +818,8 @@ export interface FileRoutesById {
   '/trust': typeof TrustRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/welcome': typeof WelcomeRoute
+  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
   '/bulls/nutrition': typeof BullsNutritionRoute
   '/bulls/photos': typeof BullsPhotosRoute
@@ -816,6 +854,7 @@ export interface FileRoutesById {
   '/smart/': typeof SmartIndexRoute
   '/tracker/': typeof TrackerIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
+  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/public/guardian-consent': typeof ApiPublicGuardianConsentRoute
   '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
   '/coach/customers/new': typeof CoachCustomersNewRoute
@@ -863,6 +902,7 @@ export interface FileRouteTypes {
     | '/guardian-consent'
     | '/impressum'
     | '/login'
+    | '/mcp'
     | '/measurements'
     | '/messages'
     | '/nutrition'
@@ -877,6 +917,8 @@ export interface FileRouteTypes {
     | '/trust'
     | '/unsubscribe'
     | '/welcome'
+    | '/.mcp/list-tools'
+    | '/.well-known/oauth-protected-resource'
     | '/bulls/benchmarks'
     | '/bulls/nutrition'
     | '/bulls/photos'
@@ -911,6 +953,7 @@ export interface FileRouteTypes {
     | '/smart/'
     | '/tracker/'
     | '/.lovable/oauth/consent'
+    | '/.mcp/invoke-tool/$tool'
     | '/api/public/guardian-consent'
     | '/coach/customers/$userId'
     | '/coach/customers/new'
@@ -955,6 +998,7 @@ export interface FileRouteTypes {
     | '/guardian-consent'
     | '/impressum'
     | '/login'
+    | '/mcp'
     | '/measurements'
     | '/messages'
     | '/profile'
@@ -967,6 +1011,8 @@ export interface FileRouteTypes {
     | '/trust'
     | '/unsubscribe'
     | '/welcome'
+    | '/.mcp/list-tools'
+    | '/.well-known/oauth-protected-resource'
     | '/bulls/benchmarks'
     | '/bulls/nutrition'
     | '/bulls/photos'
@@ -999,6 +1045,7 @@ export interface FileRouteTypes {
     | '/smart'
     | '/tracker'
     | '/.lovable/oauth/consent'
+    | '/.mcp/invoke-tool/$tool'
     | '/api/public/guardian-consent'
     | '/coach/customers/$userId'
     | '/coach/customers/new'
@@ -1044,6 +1091,7 @@ export interface FileRouteTypes {
     | '/guardian-consent'
     | '/impressum'
     | '/login'
+    | '/mcp'
     | '/measurements'
     | '/messages'
     | '/nutrition'
@@ -1058,6 +1106,8 @@ export interface FileRouteTypes {
     | '/trust'
     | '/unsubscribe'
     | '/welcome'
+    | '/.mcp/list-tools'
+    | '/.well-known/oauth-protected-resource'
     | '/bulls/benchmarks'
     | '/bulls/nutrition'
     | '/bulls/photos'
@@ -1092,6 +1142,7 @@ export interface FileRouteTypes {
     | '/smart/'
     | '/tracker/'
     | '/.lovable/oauth/consent'
+    | '/.mcp/invoke-tool/$tool'
     | '/api/public/guardian-consent'
     | '/coach/customers/$userId'
     | '/coach/customers/new'
@@ -1138,6 +1189,7 @@ export interface RootRouteChildren {
   GuardianConsentRoute: typeof GuardianConsentRoute
   ImpressumRoute: typeof ImpressumRoute
   LoginRoute: typeof LoginRoute
+  McpRoute: typeof McpRoute
   MeasurementsRoute: typeof MeasurementsRoute
   MessagesRoute: typeof MessagesRoute
   NutritionRoute: typeof NutritionRouteWithChildren
@@ -1152,6 +1204,8 @@ export interface RootRouteChildren {
   TrustRoute: typeof TrustRoute
   UnsubscribeRoute: typeof UnsubscribeRoute
   WelcomeRoute: typeof WelcomeRoute
+  Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
+  Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   BullsBenchmarksRoute: typeof BullsBenchmarksRoute
   BullsNutritionRoute: typeof BullsNutritionRoute
   BullsPhotosRoute: typeof BullsPhotosRoute
@@ -1168,6 +1222,7 @@ export interface RootRouteChildren {
   BullsIndexRoute: typeof BullsIndexRoute
   TrackerIndexRoute: typeof TrackerIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
+  Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiPublicGuardianConsentRoute: typeof ApiPublicGuardianConsentRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiPublicHooksCoachDailySummaryRoute: typeof ApiPublicHooksCoachDailySummaryRoute
@@ -1283,6 +1338,13 @@ declare module '@tanstack/react-router' {
       path: '/measurements'
       fullPath: '/measurements'
       preLoaderRoute: typeof MeasurementsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -1607,6 +1669,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BullsBenchmarksRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.mcp/list-tools': {
+      id: '/.mcp/list-tools'
+      path: '/.mcp/list-tools'
+      fullPath: '/.mcp/list-tools'
+      preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tracker/app/': {
       id: '/tracker/app/'
       path: '/'
@@ -1724,6 +1800,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/guardian-consent'
       fullPath: '/api/public/guardian-consent'
       preLoaderRoute: typeof ApiPublicGuardianConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.mcp/invoke-tool/$tool': {
+      id: '/.mcp/invoke-tool/$tool'
+      path: '/.mcp/invoke-tool/$tool'
+      fullPath: '/.mcp/invoke-tool/$tool'
+      preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/.lovable/oauth/consent': {
@@ -1953,6 +2036,7 @@ const rootRouteChildren: RootRouteChildren = {
   GuardianConsentRoute: GuardianConsentRoute,
   ImpressumRoute: ImpressumRoute,
   LoginRoute: LoginRoute,
+  McpRoute: McpRoute,
   MeasurementsRoute: MeasurementsRoute,
   MessagesRoute: MessagesRoute,
   NutritionRoute: NutritionRouteWithChildren,
@@ -1967,6 +2051,9 @@ const rootRouteChildren: RootRouteChildren = {
   TrustRoute: TrustRoute,
   UnsubscribeRoute: UnsubscribeRoute,
   WelcomeRoute: WelcomeRoute,
+  Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
+  Char91DotwellKnownChar93OauthProtectedResourceRoute:
+    Char91DotwellKnownChar93OauthProtectedResourceRoute,
   BullsBenchmarksRoute: BullsBenchmarksRoute,
   BullsNutritionRoute: BullsNutritionRoute,
   BullsPhotosRoute: BullsPhotosRoute,
@@ -1983,6 +2070,7 @@ const rootRouteChildren: RootRouteChildren = {
   BullsIndexRoute: BullsIndexRoute,
   TrackerIndexRoute: TrackerIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
+  Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiPublicGuardianConsentRoute: ApiPublicGuardianConsentRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ApiPublicHooksCoachDailySummaryRoute: ApiPublicHooksCoachDailySummaryRoute,
