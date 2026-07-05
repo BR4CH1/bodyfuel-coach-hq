@@ -23,6 +23,7 @@ const pwSchema = z.string().min(6, "Mindestens 6 Zeichen").max(100);
 function AuthPage() {
   const { supabaseUser, profile, isCoach, isFreeUser, loading } = useSession();
   const navigate = useNavigate();
+  const { next } = Route.useSearch();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
