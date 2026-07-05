@@ -30,6 +30,10 @@ function AuthPage() {
 
   useEffect(() => {
     if (!supabaseUser) return;
+    if (next) {
+      window.location.href = next;
+      return;
+    }
     if (isCoach) {
       navigate({ to: "/coach" });
       return;
@@ -45,7 +49,7 @@ function AuthPage() {
         .eq("user_id", supabaseUser.id);
       navigate({ to: (count ?? 0) === 0 ? "/measurements" : "/dashboard" });
     })();
-  }, [supabaseUser, isCoach, isFreeUser, navigate]);
+  }, [supabaseUser, isCoach, isFreeUser, navigate, next]);
 
   const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
