@@ -86,6 +86,7 @@ import { Route as CoachPlanBuilderUserIdRouteImport } from './routes/coach.plan-
 import { Route as CoachCustomersNewRouteImport } from './routes/coach.customers.new'
 import { Route as CoachCustomersUserIdRouteImport } from './routes/coach.customers.$userId'
 import { Route as ApiPublicGuardianConsentRouteImport } from './routes/api/public/guardian-consent'
+import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
@@ -489,6 +490,11 @@ const ApiPublicGuardianConsentRoute =
     path: '/api/public/guardian-consent',
     getParentRoute: () => rootRouteImport,
   } as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LovableEmailTransactionalSendRoute =
   LovableEmailTransactionalSendRouteImport.update({
     id: '/lovable/email/transactional/send',
@@ -627,6 +633,7 @@ export interface FileRoutesByFullPath {
   '/nutrition/': typeof NutritionIndexRoute
   '/smart/': typeof SmartIndexRoute
   '/tracker/': typeof TrackerIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/public/guardian-consent': typeof ApiPublicGuardianConsentRoute
   '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
   '/coach/customers/new': typeof CoachCustomersNewRoute
@@ -714,6 +721,7 @@ export interface FileRoutesByTo {
   '/nutrition': typeof NutritionIndexRoute
   '/smart': typeof SmartIndexRoute
   '/tracker': typeof TrackerIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/public/guardian-consent': typeof ApiPublicGuardianConsentRoute
   '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
   '/coach/customers/new': typeof CoachCustomersNewRoute
@@ -807,6 +815,7 @@ export interface FileRoutesById {
   '/nutrition/': typeof NutritionIndexRoute
   '/smart/': typeof SmartIndexRoute
   '/tracker/': typeof TrackerIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/api/public/guardian-consent': typeof ApiPublicGuardianConsentRoute
   '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
   '/coach/customers/new': typeof CoachCustomersNewRoute
@@ -901,6 +910,7 @@ export interface FileRouteTypes {
     | '/nutrition/'
     | '/smart/'
     | '/tracker/'
+    | '/.lovable/oauth/consent'
     | '/api/public/guardian-consent'
     | '/coach/customers/$userId'
     | '/coach/customers/new'
@@ -988,6 +998,7 @@ export interface FileRouteTypes {
     | '/nutrition'
     | '/smart'
     | '/tracker'
+    | '/.lovable/oauth/consent'
     | '/api/public/guardian-consent'
     | '/coach/customers/$userId'
     | '/coach/customers/new'
@@ -1080,6 +1091,7 @@ export interface FileRouteTypes {
     | '/nutrition/'
     | '/smart/'
     | '/tracker/'
+    | '/.lovable/oauth/consent'
     | '/api/public/guardian-consent'
     | '/coach/customers/$userId'
     | '/coach/customers/new'
@@ -1155,6 +1167,7 @@ export interface RootRouteChildren {
   TrackerSignupRoute: typeof TrackerSignupRoute
   BullsIndexRoute: typeof BullsIndexRoute
   TrackerIndexRoute: typeof TrackerIndexRoute
+  DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   ApiPublicGuardianConsentRoute: typeof ApiPublicGuardianConsentRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiPublicHooksCoachDailySummaryRoute: typeof ApiPublicHooksCoachDailySummaryRoute
@@ -1713,6 +1726,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicGuardianConsentRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lovable/email/transactional/send': {
       id: '/lovable/email/transactional/send'
       path: '/lovable/email/transactional/send'
@@ -1962,6 +1982,7 @@ const rootRouteChildren: RootRouteChildren = {
   TrackerSignupRoute: TrackerSignupRoute,
   BullsIndexRoute: BullsIndexRoute,
   TrackerIndexRoute: TrackerIndexRoute,
+  DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   ApiPublicGuardianConsentRoute: ApiPublicGuardianConsentRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ApiPublicHooksCoachDailySummaryRoute: ApiPublicHooksCoachDailySummaryRoute,
