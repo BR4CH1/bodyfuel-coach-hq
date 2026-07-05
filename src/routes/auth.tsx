@@ -11,6 +11,9 @@ import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Login — BODYFUEL" }] }),
+  validateSearch: (s: Record<string, unknown>) => ({
+    next: typeof s.next === "string" && s.next.startsWith("/") && !s.next.startsWith("//") ? s.next : undefined,
+  }),
   component: AuthPage,
 });
 
@@ -20,12 +23,17 @@ const pwSchema = z.string().min(6, "Mindestens 6 Zeichen").max(100);
 function AuthPage() {
   const { supabaseUser, profile, isCoach, isFreeUser, loading } = useSession();
   const navigate = useNavigate();
+  const { next } = Route.useSearch();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!supabaseUser) return;
+    if (next) {
+      window.location.href = next;
+      return;
+    }
     if (isCoach) {
       navigate({ to: "/coach" });
       return;
@@ -41,7 +49,7 @@ function AuthPage() {
         .eq("user_id", supabaseUser.id);
       navigate({ to: (count ?? 0) === 0 ? "/measurements" : "/dashboard" });
     })();
-  }, [supabaseUser, isCoach, isFreeUser, navigate]);
+  }, [supabaseUser, isCoach, isFreeUser, navigate, next]);
 
   const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
