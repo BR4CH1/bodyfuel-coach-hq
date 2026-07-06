@@ -178,15 +178,15 @@ function OrgIndex() {
     );
   }
 
-  // Signed in but no membership/staff.
-  if (ctx && !ctx.membership && !ctx.staff && !ctx.is_super_admin) {
+  // Signed in but no usable role in this org.
+  if (ctx && flags && flags.role === "none" && !flags.isSuperAdmin) {
     return (
       <div className="min-h-screen bg-background text-foreground">
         <div className="mx-auto flex min-h-screen max-w-lg flex-col items-center justify-center px-6 py-16 text-center">
           <h1 className="font-display text-2xl font-bold">Kein Zugriff</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Du bist bei BODYFUEL angemeldet, hast aber keinen Zugang zu {org.name}. Bitte fordere
-            einen Einladungslink bei deiner Organisation an.
+            Du bist bei BODYFUEL angemeldet, hast aber keine aktive Rolle bei {org.name}. Bitte
+            fordere einen Einladungslink bei deiner Organisation an.
           </p>
           <Button asChild variant="outline" className="mt-6">
             <Link to="/dashboard">Zurück zu BODYFUEL</Link>
