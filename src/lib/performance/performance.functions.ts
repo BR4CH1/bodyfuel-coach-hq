@@ -99,7 +99,7 @@ export const createTestDefinition = createServerFn({ method: "POST" })
         result_selection: data.result_selection ?? "best",
         required: data.required ?? false,
         recommended_retest_days: data.recommended_retest_days ?? null,
-        protocol: data.protocol ?? {},
+        protocol: (data.protocol ?? {}) as never,
         description: data.description ?? null,
       })
       .select("*")
@@ -133,7 +133,7 @@ export const createMetricDefinition = createServerFn({ method: "POST" })
         metric_type: data.metric_type ?? (data.calculation_type === "direct" ? "raw_test" : "derived"),
         calculation_type: data.calculation_type,
         direction: data.direction ?? "higher_is_better",
-        config: data.config ?? {},
+        config: (data.config ?? {}) as never,
         unit: data.unit ?? null,
       })
       .select("*")
