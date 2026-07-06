@@ -24,7 +24,13 @@ export type OrganizationMembership = {
 export type OrganizationContext = {
   organization: OrganizationSummary;
   membership: OrganizationMembership | null;
-  staff: { role: string; permissions: string[]; team_id: string | null } | null;
+  staff: {
+    role: string;
+    permissions: string[];
+    team_id: string | null;
+    function_label: string | null;
+    onboarding_completed_at: string | null;
+  } | null;
   features: { feature: string; enabled: boolean }[];
   teams: { id: string; name: string; slug: string; sport: string | null; age_group: string | null }[];
   team_membership: {
@@ -38,6 +44,12 @@ export type OrganizationContext = {
     personal_goal: string | null;
   } | null;
   is_super_admin: boolean;
+  profile: {
+    display_name: string | null;
+    nickname: string | null;
+    birthdate: string | null;
+    height_cm: number | null;
+  } | null;
 };
 
 const SAFE_ORG_COLUMNS =
