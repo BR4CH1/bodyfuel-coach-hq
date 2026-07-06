@@ -148,8 +148,8 @@ function CoachRadar({ data, orgId }: { data: CoachAnalytics; orgId: string }) {
 }
 
 function RadarBucket({
-  title, tone, items,
-}: { title: string; tone: "red" | "yellow" | "green"; items: CoachAnalytics["radar"]["critical"] }) {
+  title, tone, items, orgId,
+}: { title: string; tone: "red" | "yellow" | "green"; items: CoachAnalytics["radar"]["critical"]; orgId: string }) {
   const toneCls =
     tone === "red" ? "border-red-500/30 bg-red-500/5" :
     tone === "yellow" ? "border-yellow-500/30 bg-yellow-500/5" :
@@ -168,10 +168,16 @@ function RadarBucket({
         <ul className="space-y-2">
           {items.slice(0, 5).map((it) => (
             <li key={it.user_id} className="text-sm">
-              <div className="font-semibold">{it.name}</div>
-              <div className="text-[11px] text-muted-foreground">
-                {it.position ?? "—"} · {it.reason}
-              </div>
+              <Link
+                to="/coach/teams/$orgId/athletes/$userId"
+                params={{ orgId, userId: it.user_id }}
+                className="block hover:underline"
+              >
+                <div className="font-semibold">{it.name}</div>
+                <div className="text-[11px] text-muted-foreground">
+                  {it.position ?? "—"} · {it.reason}
+                </div>
+              </Link>
             </li>
           ))}
           {items.length > 5 && (
