@@ -1,9 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSession } from "@/lib/bodyfuel/session";
 import { getOrganizationContext } from "@/lib/organizations/organizations.functions";
+import { deriveOrgRole } from "@/lib/organizations/org-role";
 import { Button } from "@/components/ui/button";
 import { Route as OrgLayoutRoute } from "./$orgSlug";
 import { getOrgMode, setOrgMode, setActiveContext } from "@/components/organizations/OrganizationContextSwitcher";
@@ -24,67 +25,80 @@ function OrgIndex() {
   });
   const [needsChoice, setNeedsChoice] = useState(false);
 
+  const flags = useMemo(() => {
+    if (!ctx) return null;
+    return deriveOrgRole({
+      membership: ctx.membership,
+      staff: ctx.staff,
+      is_super_admin: ctx.is_super_admin,
+    });
+  }, [ctx]);
+
   useEffect(() => {
-    if (!supabaseUser || !ctx) return;
-    const hasAthlete = !!ctx.membership;
-    const hasStaff = !!ctx.staff;
-    const isSuper = !!ctx.is_super_admin;
-    if (!hasAthlete && !hasStaff && !isSuper) return;
+    if (!supabaseUser || !ctx || !flags) return;
+
+    // Kein Zugriff überhaupt → Landing bleibt, wird unten gerendert.
+    if (flags.role === "none" && !flags.isSuperAdmin) return;
 
     setActiveContext(org.slug);
 
-    if (hasAthlete && !hasStaff && !isSuper) {
-      if (!ctx.membership!.onboarding_completed) {
+    const staffOnboardingDone = !!(ctx.staff as any)?.onboarding_completed_at;
+    const athleteOnboardingDone = !!ctx.membership?.onboarding_completed;
+
+    const goStaff = () => {
+      setOrgMode(org.slug, "staff");
+      if (flags.isAnyStaff && !staffOnboardingDone) {
+        navigate({ to: "/$orgSlug/onboarding", params: { orgSlug: org.slug }, replace: true });
+        return;
+      }
+      // Rollenbasiertes Ziel: Vereinsleitung → Leitungs-Dashboard (Phase B),
+      // Coach/Staff → Coach-Cockpit. Bis Leitungs-Dashboard existiert, landen
+      // Org-Admins ebenfalls auf dem Coach-Cockpit ihres Vereins.
+      navigate({ to: "/coach/teams/$orgId", params: { orgId: ctx.organization.id }, replace: true });
+    };
+
+    const goAthlete = () => {
+      setOrgMode(org.slug, "athlete");
+      if (!athleteOnboardingDone) {
         navigate({ to: "/$orgSlug/onboarding", params: { orgSlug: org.slug }, replace: true });
       } else {
         navigate({ to: "/$orgSlug/home", params: { orgSlug: org.slug }, replace: true });
       }
+    };
+
+    // Reiner Athlet → Athletenbereich.
+    if (flags.isAthleteOnly) {
+      goAthlete();
       return;
     }
 
-    if (!hasAthlete && (hasStaff || isSuper)) {
-      setOrgMode(org.slug, "staff");
-      // Staff-Onboarding: wenn noch kein onboarding_completed_at gesetzt ist,
-      // erst die Basisdaten-/Funktions-Erhebung durchlaufen.
-      if (hasStaff && !(ctx.staff as any)?.onboarding_completed_at) {
-        navigate({ to: "/$orgSlug/onboarding", params: { orgSlug: org.slug }, replace: true });
-      } else {
-        navigate({ to: "/coach/teams/$orgId", params: { orgId: ctx.organization.id }, replace: true });
-      }
+    // Kein Athlet, aber Staff/Admin/Super → Staff-Bereich.
+    if (!flags.isPlayer && (flags.isAnyStaff || flags.isSuperAdmin)) {
+      goStaff();
       return;
     }
 
-    // Dual role: on first use (no persisted mode), prompt.
+    // Dual (Player + Staff) → Kontext-Wahl beim ersten Mal.
     const stored = getOrgMode(org.slug);
     if (!stored) {
       setNeedsChoice(true);
       return;
     }
-    if (stored === "staff") {
-      if (hasStaff && !(ctx.staff as any)?.onboarding_completed_at) {
-        navigate({ to: "/$orgSlug/onboarding", params: { orgSlug: org.slug }, replace: true });
-      } else {
-        navigate({ to: "/coach/teams/$orgId", params: { orgId: ctx.organization.id }, replace: true });
-      }
-    } else {
-      if (ctx.membership && !ctx.membership.onboarding_completed) {
-        navigate({ to: "/$orgSlug/onboarding", params: { orgSlug: org.slug }, replace: true });
-      } else {
-        navigate({ to: "/$orgSlug/home", params: { orgSlug: org.slug }, replace: true });
-      }
-    }
-  }, [supabaseUser, ctx, navigate, org.slug]);
+    if (stored === "staff") goStaff();
+    else goAthlete();
+  }, [supabaseUser, ctx, flags, navigate, org.slug]);
 
   const chooseMode = (mode: "athlete" | "staff") => {
     setOrgMode(org.slug, mode);
     setNeedsChoice(false);
+    if (!ctx || !flags) return;
     if (mode === "staff") {
-      if (ctx?.staff && !(ctx.staff as any)?.onboarding_completed_at) {
+      if (flags.isAnyStaff && !(ctx.staff as any)?.onboarding_completed_at) {
         navigate({ to: "/$orgSlug/onboarding", params: { orgSlug: org.slug }, replace: true });
       } else {
-        navigate({ to: "/coach/teams/$orgId", params: { orgId: ctx!.organization.id }, replace: true });
+        navigate({ to: "/coach/teams/$orgId", params: { orgId: ctx.organization.id }, replace: true });
       }
-    } else if (ctx?.membership && !ctx.membership.onboarding_completed) {
+    } else if (ctx.membership && !ctx.membership.onboarding_completed) {
       navigate({ to: "/$orgSlug/onboarding", params: { orgSlug: org.slug }, replace: true });
     } else {
       navigate({ to: "/$orgSlug/home", params: { orgSlug: org.slug }, replace: true });
