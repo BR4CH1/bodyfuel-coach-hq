@@ -182,7 +182,21 @@ export const listPerformanceSessions = createServerFn({ method: "GET" })
 
 export const createPerformanceSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { organization_id: string; battery_id: string; name: string; test_date: string; team_id?: string | null; athlete_user_ids: string[] }) => d)
+  .inputValidator((d: {
+    organization_id: string;
+    battery_id: string;
+    name: string;
+    test_date: string;
+    team_id?: string | null;
+    athlete_user_ids: string[];
+    test_day?: "field" | "strength" | "full" | null;
+    entry_mode?: "by_test" | "by_athlete";
+    location?: string | null;
+    measurement_method_default?: string | null;
+    notes?: string | null;
+    mode?: "test" | "production";
+    bodyweight_snapshots?: Array<{ user_id: string; weight_kg: number; source?: string }>;
+  }) => d)
   .handler(async ({ data, context }) => {
     const { data: session, error } = await context.supabase
       .from("performance_test_sessions")
@@ -194,7 +208,13 @@ export const createPerformanceSession = createServerFn({ method: "POST" })
         test_date: data.test_date,
         status: "planned",
         created_by: context.userId,
-      })
+        test_day: data.test_day ?? null,
+        entry_mode: data.entry_mode ?? "by_test",
+        location: data.location ?? null,
+        measurement_method_default: data.measurement_method_default ?? null,
+        notes: data.notes ?? null,
+        mode: data.mode ?? "test",
+      } as never)
       .select("*")
       .single();
     if (error || !session) throw new Error(error?.message ?? "Failed to create session");
@@ -203,7 +223,212 @@ export const createPerformanceSession = createServerFn({ method: "POST" })
         data.athlete_user_ids.map((uid) => ({ session_id: session.id, user_id: uid })),
       );
     }
+    if (data.bodyweight_snapshots && data.bodyweight_snapshots.length > 0) {
+      await context.supabase.from("performance_session_context_snapshots").insert(
+        data.bodyweight_snapshots.map((s) => ({
+          session_id: session.id,
+          organization_id: data.organization_id,
+          user_id: s.user_id,
+          context_key: "bodyweight_kg",
+          numeric_value: s.weight_kg,
+          unit: "kg",
+          source: s.source ?? "manual",
+          captured_at: new Date().toISOString(),
+        })),
+      );
+    }
     return session;
+  });
+
+export const updatePerformanceSession = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { session_id: string; patch: Partial<{ name: string; test_date: string; location: string | null; entry_mode: "by_test" | "by_athlete"; measurement_method_default: string | null; notes: string | null; test_day: "field" | "strength" | "full" | null }> }) => d)
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("performance_test_sessions")
+      .update(data.patch as never)
+      .eq("id", data.session_id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const startPerformanceSession = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { session_id: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("performance_test_sessions")
+      .update({ status: "in_progress" })
+      .eq("id", data.session_id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const cancelPerformanceSession = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { session_id: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("performance_test_sessions")
+      .update({ status: "canceled" })
+      .eq("id", data.session_id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const upsertSessionBodyweightSnapshot = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { session_id: string; organization_id: string; user_id: string; weight_kg: number; source?: string }) => d)
+  .handler(async ({ data, context }) => {
+    // Delete existing bodyweight_kg snapshot for this session/user, then insert.
+    await context.supabase
+      .from("performance_session_context_snapshots")
+      .delete()
+      .eq("session_id", data.session_id)
+      .eq("user_id", data.user_id)
+      .eq("context_key", "bodyweight_kg");
+    const { error } = await context.supabase
+      .from("performance_session_context_snapshots")
+      .insert({
+        session_id: data.session_id,
+        organization_id: data.organization_id,
+        user_id: data.user_id,
+        context_key: "bodyweight_kg",
+        numeric_value: data.weight_kg,
+        unit: "kg",
+        source: data.source ?? "manual",
+        captured_at: new Date().toISOString(),
+      });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/**
+ * Roster für Test-Session-Auswahl. Athletes = organization_memberships mit role='athlete'
+ * plus deren Team + Position + ob bereits ein Performance-Profile existiert.
+ */
+export const listOrgAthletesForPerformance = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { organization_id: string; team_id?: string | null }) => d)
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: memberships } = await supabase
+      .from("organization_memberships")
+      .select("user_id, status, onboarding_completed")
+      .eq("organization_id", data.organization_id)
+      .eq("role", "athlete")
+      .eq("status", "active");
+    const userIds = (memberships ?? []).map((m) => m.user_id);
+    if (userIds.length === 0) return { athletes: [] as Array<{ user_id: string; name: string; team_id: string | null; team_name: string | null; position: string | null; onboarding_completed: boolean; profile_status: "NO_PROFILE" | "INCOMPLETE" | "PROFILE_AVAILABLE"; last_bodyweight_kg: number | null }> };
+
+    const [teamsRes, profilesRes, perfProfilesRes, bullsRes] = await Promise.all([
+      supabase
+        .from("team_memberships")
+        .select("user_id, position, team_id, organization_teams!inner(id, name, organization_id)")
+        .in("user_id", userIds)
+        .eq("organization_teams.organization_id", data.organization_id),
+      supabase.from("profiles").select("id, display_name").in("id", userIds),
+      supabase.from("performance_athlete_profiles").select("user_id, overall_score, data_coverage").eq("organization_id", data.organization_id).in("user_id", userIds),
+      supabase.from("bulls_profiles").select("user_id, weight_kg").in("user_id", userIds),
+    ]);
+
+    const byUser = new Map(userIds.map((u) => [u, {
+      user_id: u,
+      name: "",
+      team_id: null as string | null,
+      team_name: null as string | null,
+      position: null as string | null,
+      onboarding_completed: false,
+      profile_status: "NO_PROFILE" as "NO_PROFILE" | "INCOMPLETE" | "PROFILE_AVAILABLE",
+      last_bodyweight_kg: null as number | null,
+    }]));
+    for (const m of memberships ?? []) {
+      const row = byUser.get(m.user_id); if (row) row.onboarding_completed = m.onboarding_completed ?? false;
+    }
+    for (const p of profilesRes.data ?? []) {
+      const row = byUser.get(p.id); if (row) row.name = p.display_name ?? "";
+    }
+    for (const t of teamsRes.data ?? []) {
+      const row = byUser.get(t.user_id);
+      if (!row) continue;
+      if (data.team_id && t.team_id !== data.team_id) continue;
+      row.team_id = t.team_id;
+      row.position = t.position ?? null;
+      row.team_name = (t.organization_teams as any)?.name ?? null;
+    }
+    for (const p of perfProfilesRes.data ?? []) {
+      const row = byUser.get(p.user_id); if (!row) continue;
+      row.profile_status = p.overall_score == null
+        ? "INCOMPLETE"
+        : "PROFILE_AVAILABLE";
+    }
+    for (const b of bullsRes.data ?? []) {
+      const row = byUser.get(b.user_id); if (row) row.last_bodyweight_kg = b.weight_kg != null ? Number(b.weight_kg) : null;
+    }
+    let athletes = Array.from(byUser.values());
+    if (data.team_id) athletes = athletes.filter((a) => a.team_id === data.team_id);
+    athletes.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+    return { athletes };
+  });
+
+/**
+ * Session progress: per Athlete/Test → OK/PROVISIONAL/INCOMPLETE/NO_VALID_ATTEMPTS/REVIEW_REQUIRED
+ * Wird von der Session-UI und der Completion-Review verwendet.
+ */
+export const getPerformanceSessionProgress = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { session_id: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { computeTestResult } = await import("./test-result");
+    const { supabase } = context;
+    const { data: session } = await supabase.from("performance_test_sessions").select("*").eq("id", data.session_id).single();
+    if (!session) throw new Error("Session not found");
+    const [{ data: athletes }, { data: attempts }, { data: battery }] = await Promise.all([
+      supabase.from("performance_test_session_athletes").select("*").eq("session_id", data.session_id),
+      supabase.from("performance_test_attempts").select("id, user_id, test_definition_id, raw_value, unit_snapshot, valid, measured_at").eq("session_id", data.session_id),
+      supabase.from("performance_test_batteries").select("id").eq("id", session.battery_id).single(),
+    ]);
+    const testsRes = battery ? await supabase.from("performance_test_definitions").select("*").eq("battery_id", battery.id).eq("active", true).order("order_index") : { data: [] };
+    const tests = testsRes.data ?? [];
+
+    type Cell = { user_id: string; test_definition_id: string; status: string; valid_count: number; selected_value: number | null; unit: string | null; incomplete_reason?: string };
+    const cells: Cell[] = [];
+    for (const a of athletes ?? []) {
+      for (const t of tests) {
+        const testAttempts = (attempts ?? []).filter((x) => x.user_id === a.user_id && x.test_definition_id === t.id);
+        const r = computeTestResult({
+          attempts: testAttempts.map((x) => ({ id: x.id, raw_value: Number(x.raw_value), unit_snapshot: x.unit_snapshot, valid: x.valid, measured_at: x.measured_at })),
+          method: (t.result_selection as any) ?? "best",
+          direction: (t.direction as any) ?? "higher_is_better",
+          unit: t.unit,
+          config: (t.config as any) ?? null,
+        });
+        cells.push({
+          user_id: a.user_id,
+          test_definition_id: t.id,
+          status: r.test_status,
+          valid_count: r.valid_count,
+          selected_value: r.selected_value,
+          unit: r.unit ?? null,
+          incomplete_reason: r.incomplete_reason,
+        });
+      }
+    }
+    const totalCells = cells.length;
+    const completeCells = cells.filter((c) => c.status === "OK").length;
+    const athletesComplete = (athletes ?? []).filter((a) => tests.every((t) => cells.find((c) => c.user_id === a.user_id && c.test_definition_id === t.id)?.status === "OK")).length;
+    return {
+      session,
+      tests,
+      athletes: athletes ?? [],
+      cells,
+      progress: {
+        athletes_total: athletes?.length ?? 0,
+        athletes_complete: athletesComplete,
+        cells_total: totalCells,
+        cells_complete: completeCells,
+      },
+    };
   });
 
 export const getPerformanceSession = createServerFn({ method: "GET" })
