@@ -36,6 +36,7 @@ import { Route as CheckInRouteImport } from './routes/check-in'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as AchievementsRouteImport } from './routes/achievements'
+import { Route as OrgSlugRouteImport } from './routes/$orgSlug'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TrackerIndexRouteImport } from './routes/tracker.index'
 import { Route as SmartIndexRouteImport } from './routes/smart.index'
@@ -238,6 +239,11 @@ const AppRoute = AppRouteImport.update({
 const AchievementsRoute = AchievementsRouteImport.update({
   id: '/achievements',
   path: '/achievements',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OrgSlugRoute = OrgSlugRouteImport.update({
+  id: '/$orgSlug',
+  path: '/$orgSlug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -601,6 +607,7 @@ const ApiPublicHooksCoachDailySummaryRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/$orgSlug': typeof OrgSlugRoute
   '/achievements': typeof AchievementsRoute
   '/app': typeof AppRoute
   '/auth': typeof AuthRoute
@@ -698,6 +705,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/$orgSlug': typeof OrgSlugRoute
   '/achievements': typeof AchievementsRoute
   '/app': typeof AppRoute
   '/auth': typeof AuthRoute
@@ -791,6 +799,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/$orgSlug': typeof OrgSlugRoute
   '/achievements': typeof AchievementsRoute
   '/app': typeof AppRoute
   '/auth': typeof AuthRoute
@@ -890,6 +899,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/$orgSlug'
     | '/achievements'
     | '/app'
     | '/auth'
@@ -987,6 +997,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/$orgSlug'
     | '/achievements'
     | '/app'
     | '/auth'
@@ -1079,6 +1090,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/$orgSlug'
     | '/achievements'
     | '/app'
     | '/auth'
@@ -1177,6 +1189,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  OrgSlugRoute: typeof OrgSlugRoute
   AchievementsRoute: typeof AchievementsRoute
   AppRoute: typeof AppRoute
   AuthRoute: typeof AuthRoute
@@ -1429,6 +1442,13 @@ declare module '@tanstack/react-router' {
       path: '/achievements'
       fullPath: '/achievements'
       preLoaderRoute: typeof AchievementsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/$orgSlug': {
+      id: '/$orgSlug'
+      path: '/$orgSlug'
+      fullPath: '/$orgSlug'
+      preLoaderRoute: typeof OrgSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -2024,6 +2044,7 @@ const TrackerAppRouteWithChildren = TrackerAppRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  OrgSlugRoute: OrgSlugRoute,
   AchievementsRoute: AchievementsRoute,
   AppRoute: AppRoute,
   AuthRoute: AuthRoute,
