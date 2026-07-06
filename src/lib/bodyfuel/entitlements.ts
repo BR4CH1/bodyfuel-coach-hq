@@ -21,6 +21,8 @@ export type Entitlements = {
   hasTeamAccess: boolean;
   /** Coach-Rolle auf Plattformebene (BodyFuel Coach, nicht Vereinscoach) */
   isPlatformCoach: boolean;
+  /** Slug des primären Vereins des Nutzers, für Redirects. Nur gesetzt bei hasTeamAccess. */
+  primaryOrgSlug: string | null;
   loading: boolean;
 };
 
@@ -31,6 +33,7 @@ const EMPTY: Entitlements = {
   hasAnyPersonalBodyfuel: false,
   hasTeamAccess: false,
   isPlatformCoach: false,
+  primaryOrgSlug: null,
   loading: false,
 };
 
@@ -54,11 +57,11 @@ export function useEntitlements(): Entitlements {
           .eq("is_active", true),
         supabase
           .from("organization_memberships")
-          .select("id, status")
+          .select("organization_id, status, organization:organizations!inner(slug, status)")
           .eq("user_id", uid),
         supabase
           .from("staff_assignments")
-          .select("id")
+          .select("organization_id, organization:organizations!inner(slug, status)")
           .eq("user_id", uid),
       ]);
 
@@ -72,16 +75,25 @@ export function useEntitlements(): Entitlements {
         activeKeys.has("starter") ||
         activeKeys.has("premium");
 
-      const activeOrgMem = ((orgMemRes.data ?? []) as { status: string | null }[]).some(
-        (m) => !m.status || m.status === "active",
-      );
-      const hasStaff = (staffRes.data ?? []).length > 0;
+      const memRows = (orgMemRes.data ?? []) as Array<{
+        status: string | null;
+        organization: { slug: string; status: string } | null;
+      }>;
+      const activeMemSlugs = memRows
+        .filter((r) => (!r.status || r.status === "active") && r.organization?.status === "active")
+        .map((r) => r.organization!.slug);
 
-      return {
-        hasBodyfuelSmart,
-        hasBodyfuelCoaching,
-        hasTeamAccess: activeOrgMem || hasStaff,
-      };
+      const staffRows = (staffRes.data ?? []) as Array<{
+        organization: { slug: string; status: string } | null;
+      }>;
+      const staffSlugs = staffRows
+        .filter((r) => r.organization?.status === "active")
+        .map((r) => r.organization!.slug);
+
+      const primaryOrgSlug = activeMemSlugs[0] ?? staffSlugs[0] ?? null;
+      const hasTeamAccess = primaryOrgSlug !== null;
+
+      return { hasBodyfuelSmart, hasBodyfuelCoaching, hasTeamAccess, primaryOrgSlug };
     },
   });
 
@@ -90,7 +102,13 @@ export function useEntitlements(): Entitlements {
   }
   if (!supabaseUser) return EMPTY;
 
-  const d = q.data ?? { hasBodyfuelSmart: false, hasBodyfuelCoaching: false, hasTeamAccess: false };
+  const d =
+    q.data ?? {
+      hasBodyfuelSmart: false,
+      hasBodyfuelCoaching: false,
+      hasTeamAccess: false,
+      primaryOrgSlug: null as string | null,
+    };
   const hasAny = d.hasBodyfuelSmart || d.hasBodyfuelCoaching;
 
   return {
@@ -100,6 +118,7 @@ export function useEntitlements(): Entitlements {
     hasAnyPersonalBodyfuel: hasAny,
     hasTeamAccess: d.hasTeamAccess,
     isPlatformCoach: isCoach,
+    primaryOrgSlug: d.primaryOrgSlug,
     loading: false,
   };
 }
