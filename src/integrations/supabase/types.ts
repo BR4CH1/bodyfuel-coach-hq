@@ -4702,7 +4702,9 @@ export type Database = {
       staff_assignments: {
         Row: {
           created_at: string
+          function_label: string | null
           id: string
+          onboarding_completed_at: string | null
           organization_id: string
           permissions: string[]
           role: Database["public"]["Enums"]["organization_role"]
@@ -4712,7 +4714,9 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          function_label?: string | null
           id?: string
+          onboarding_completed_at?: string | null
           organization_id: string
           permissions?: string[]
           role?: Database["public"]["Enums"]["organization_role"]
@@ -4722,7 +4726,9 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          function_label?: string | null
           id?: string
+          onboarding_completed_at?: string | null
           organization_id?: string
           permissions?: string[]
           role?: Database["public"]["Enums"]["organization_role"]
