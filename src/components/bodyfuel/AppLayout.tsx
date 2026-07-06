@@ -39,6 +39,7 @@ const bullsNavItem = { to: "/bulls", label: "Bulls Hub", icon: Shield };
 const coachNav = [
   { to: "/coach", label: "Dashboard", icon: LayoutDashboard },
   { to: "/coach/customers", label: "Kunden", icon: Users },
+  { to: "/coach/teams", label: "Teams", icon: Users2 },
   { to: "/coach/leads", label: "Anfragen", icon: Inbox },
   { to: "/coach/reviews", label: "Bewertungen", icon: Trophy },
 ];
