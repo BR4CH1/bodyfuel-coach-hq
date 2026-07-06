@@ -13,6 +13,21 @@ import {
   getOrgAthletesOnboardingAudit,
   listOrgStaffWithProfiles,
 } from "@/lib/organizations/task-engine.functions";
+import {
+  listOrgChallenges,
+  createOrgChallenge,
+  listChallengeRules,
+  upsertChallengeRule,
+  awardChallengeBonus,
+  listOrgCommunityPosts,
+  createOrgCommunityPost,
+  listOrgAthleticPlans,
+  createOrgAthleticPlan,
+  updateOrgAthleticPlanStatus,
+  addOrgStaff,
+  removeOrgStaff,
+  STAFF_PRESETS,
+} from "@/lib/organizations/operating-loop.functions";
 
 export const Route = createFileRoute("/coach/teams/$orgId")({
   head: () => ({ meta: [{ title: "Organisation — BODYFUEL Coach" }] }),
