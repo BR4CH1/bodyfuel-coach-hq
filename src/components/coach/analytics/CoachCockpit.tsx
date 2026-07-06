@@ -29,9 +29,9 @@ export function CoachCockpit({ orgId }: { orgId: string }) {
   return (
     <div className="space-y-8">
       <TeamPulse data={data} />
-      <CoachRadar data={data} />
+      <CoachRadar data={data} orgId={orgId} />
       <PositionGroupsAnalysis data={data} />
-      <AttentionList data={data} />
+      <AttentionList data={data} orgId={orgId} />
       {data.data_sparse && (
         <div className="rounded-lg border border-border bg-muted/30 p-4 text-xs text-muted-foreground">
           Datengrundlage ist noch dünn. Sobald mehr Trainings, Tasks und Check-ins vorliegen,
