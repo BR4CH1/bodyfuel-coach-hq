@@ -537,11 +537,13 @@ export const getAthletePerformanceProfile = createServerFn({ method: "GET" })
       .maybeSingle();
     if (!profile) return { profile: null };
 
-    const [domains, metricScores, focusAreas, domainsMeta] = await Promise.all([
+    const [domains, metricScores, focusAreas, domainsMeta, metricDefs, retestRows] = await Promise.all([
       supabase.from("performance_athlete_domain_scores").select("*").eq("profile_id", profile.id),
       supabase.from("performance_athlete_metric_scores").select("*").eq("profile_id", profile.id),
       supabase.from("performance_athlete_focus_areas").select("*").eq("user_id", uid).eq("framework_id", profile.framework_id).order("priority"),
       supabase.from("performance_domains").select("id, key, name, active").eq("framework_id", profile.framework_id),
+      supabase.from("performance_metric_definitions").select("id, key, name, unit, domain_id, active").eq("framework_id", profile.framework_id),
+      supabase.from("performance_retest_schedule").select("test_definition_id, next_retest_due, last_tested_at").eq("organization_id", data.organization_id).eq("user_id", uid).order("next_retest_due", { ascending: true }),
     ]);
     return {
       profile,
@@ -549,6 +551,8 @@ export const getAthletePerformanceProfile = createServerFn({ method: "GET" })
       metricScores: metricScores.data ?? [],
       focusAreas: focusAreas.data ?? [],
       domains: domainsMeta.data ?? [],
+      metricDefinitions: metricDefs.data ?? [],
+      nextRetest: retestRows.data?.[0] ?? null,
     };
   });
 
