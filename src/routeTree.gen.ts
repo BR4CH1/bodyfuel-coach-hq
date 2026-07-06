@@ -89,6 +89,7 @@ import { Route as TrackerAppAchievementsRouteImport } from './routes/tracker.app
 import { Route as SmartGiftCodeRouteImport } from './routes/smart.gift.$code'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as CoachTrainingBuilderUserIdRouteImport } from './routes/coach.training-builder.$userId'
+import { Route as CoachTeamsOrgIdRouteImport } from './routes/coach.teams.$orgId'
 import { Route as CoachPlanPreviewPlanIdRouteImport } from './routes/coach.plan-preview.$planId'
 import { Route as CoachPlanBuilderUserIdRouteImport } from './routes/coach.plan-builder.$userId'
 import { Route as CoachCustomersNewRouteImport } from './routes/coach.customers.new'
@@ -516,6 +517,11 @@ const CoachTrainingBuilderUserIdRoute =
     path: '/training-builder/$userId',
     getParentRoute: () => CoachRoute,
   } as any)
+const CoachTeamsOrgIdRoute = CoachTeamsOrgIdRouteImport.update({
+  id: '/teams/$orgId',
+  path: '/teams/$orgId',
+  getParentRoute: () => CoachRoute,
+} as any)
 const CoachPlanPreviewPlanIdRoute = CoachPlanPreviewPlanIdRouteImport.update({
   id: '/plan-preview/$planId',
   path: '/plan-preview/$planId',
@@ -711,6 +717,7 @@ export interface FileRoutesByFullPath {
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/coach/plan-builder/$userId': typeof CoachPlanBuilderUserIdRoute
   '/coach/plan-preview/$planId': typeof CoachPlanPreviewPlanIdRoute
+  '/coach/teams/$orgId': typeof CoachTeamsOrgIdRoute
   '/coach/training-builder/$userId': typeof CoachTrainingBuilderUserIdRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/smart/gift/$code': typeof SmartGiftCodeRoute
@@ -808,6 +815,7 @@ export interface FileRoutesByTo {
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/coach/plan-builder/$userId': typeof CoachPlanBuilderUserIdRoute
   '/coach/plan-preview/$planId': typeof CoachPlanPreviewPlanIdRoute
+  '/coach/teams/$orgId': typeof CoachTeamsOrgIdRoute
   '/coach/training-builder/$userId': typeof CoachTrainingBuilderUserIdRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/smart/gift/$code': typeof SmartGiftCodeRoute
@@ -912,6 +920,7 @@ export interface FileRoutesById {
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/coach/plan-builder/$userId': typeof CoachPlanBuilderUserIdRoute
   '/coach/plan-preview/$planId': typeof CoachPlanPreviewPlanIdRoute
+  '/coach/teams/$orgId': typeof CoachTeamsOrgIdRoute
   '/coach/training-builder/$userId': typeof CoachTrainingBuilderUserIdRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/smart/gift/$code': typeof SmartGiftCodeRoute
@@ -1017,6 +1026,7 @@ export interface FileRouteTypes {
     | '/coach/customers/new'
     | '/coach/plan-builder/$userId'
     | '/coach/plan-preview/$planId'
+    | '/coach/teams/$orgId'
     | '/coach/training-builder/$userId'
     | '/lovable/email/suppression'
     | '/smart/gift/$code'
@@ -1114,6 +1124,7 @@ export interface FileRouteTypes {
     | '/coach/customers/new'
     | '/coach/plan-builder/$userId'
     | '/coach/plan-preview/$planId'
+    | '/coach/teams/$orgId'
     | '/coach/training-builder/$userId'
     | '/lovable/email/suppression'
     | '/smart/gift/$code'
@@ -1217,6 +1228,7 @@ export interface FileRouteTypes {
     | '/coach/customers/new'
     | '/coach/plan-builder/$userId'
     | '/coach/plan-preview/$planId'
+    | '/coach/teams/$orgId'
     | '/coach/training-builder/$userId'
     | '/lovable/email/suppression'
     | '/smart/gift/$code'
@@ -1873,6 +1885,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CoachTrainingBuilderUserIdRouteImport
       parentRoute: typeof CoachRoute
     }
+    '/coach/teams/$orgId': {
+      id: '/coach/teams/$orgId'
+      path: '/teams/$orgId'
+      fullPath: '/coach/teams/$orgId'
+      preLoaderRoute: typeof CoachTeamsOrgIdRouteImport
+      parentRoute: typeof CoachRoute
+    }
     '/coach/plan-preview/$planId': {
       id: '/coach/plan-preview/$planId'
       path: '/plan-preview/$planId'
@@ -2069,6 +2088,7 @@ interface CoachRouteChildren {
   CoachIndexRoute: typeof CoachIndexRoute
   CoachPlanBuilderUserIdRoute: typeof CoachPlanBuilderUserIdRoute
   CoachPlanPreviewPlanIdRoute: typeof CoachPlanPreviewPlanIdRoute
+  CoachTeamsOrgIdRoute: typeof CoachTeamsOrgIdRoute
   CoachTrainingBuilderUserIdRoute: typeof CoachTrainingBuilderUserIdRoute
   CoachTeamsIndexRoute: typeof CoachTeamsIndexRoute
 }
@@ -2086,6 +2106,7 @@ const CoachRouteChildren: CoachRouteChildren = {
   CoachIndexRoute: CoachIndexRoute,
   CoachPlanBuilderUserIdRoute: CoachPlanBuilderUserIdRoute,
   CoachPlanPreviewPlanIdRoute: CoachPlanPreviewPlanIdRoute,
+  CoachTeamsOrgIdRoute: CoachTeamsOrgIdRoute,
   CoachTrainingBuilderUserIdRoute: CoachTrainingBuilderUserIdRoute,
   CoachTeamsIndexRoute: CoachTeamsIndexRoute,
 }
