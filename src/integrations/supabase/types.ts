@@ -2566,6 +2566,7 @@ export type Database = {
           id: string
           invite_token: string
           organization_id: string
+          permissions: string[]
           status: Database["public"]["Enums"]["organization_invite_status"]
           team_id: string | null
           updated_at: string
@@ -2581,6 +2582,7 @@ export type Database = {
           id?: string
           invite_token: string
           organization_id: string
+          permissions?: string[]
           status?: Database["public"]["Enums"]["organization_invite_status"]
           team_id?: string | null
           updated_at?: string
@@ -2596,6 +2598,7 @@ export type Database = {
           id?: string
           invite_token?: string
           organization_id?: string
+          permissions?: string[]
           status?: Database["public"]["Enums"]["organization_invite_status"]
           team_id?: string | null
           updated_at?: string
@@ -4400,6 +4403,10 @@ export type Database = {
       }
     }
     Functions: {
+      accept_organization_invite: {
+        Args: { _token: string; _user_id: string }
+        Returns: Json
+      }
       are_nutrition_partners: {
         Args: { _a: string; _b: string }
         Returns: boolean
@@ -4426,6 +4433,7 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      find_user_id_by_email: { Args: { _email: string }; Returns: string }
       get_ranking: {
         Args: never
         Returns: {

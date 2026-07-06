@@ -541,32 +541,71 @@ async function awardPointsForEvent(
 // STAFF
 // ============================================================
 
-export const STAFF_PRESETS: Record<string, { role: string; permissions: string[] }> = {
+export const STAFF_PRESETS: Record<string, { role: string; permissions: string[]; scope_hint?: "org" | "team" }> = {
   ORGANIZATION_ADMIN: {
     role: "organization_admin",
-    permissions: ["view_members", "manage_training", "manage_challenges", "manage_community", "manage_staff"],
+    scope_hint: "org",
+    permissions: [
+      "view_members", "manage_members",
+      "view_training", "manage_training",
+      "view_performance", "manage_performance",
+      "view_checkins",
+      "view_nutrition",
+      "manage_challenges", "manage_ranking",
+      "manage_community",
+      "manage_staff",
+      "manage_organization",
+    ],
   },
   TEAM_COACH: {
     role: "coach",
-    permissions: ["view_members", "manage_training"],
+    scope_hint: "team",
+    permissions: [
+      "view_members",
+      "view_training", "manage_training",
+      "view_checkins",
+      "manage_challenges",
+      "manage_community",
+    ],
   },
   PERFORMANCE_COACH: {
     role: "staff",
-    permissions: ["view_members", "manage_training"],
+    scope_hint: "team",
+    permissions: [
+      "view_members",
+      "view_training", "manage_training",
+      "view_performance", "manage_performance",
+      "view_checkins",
+    ],
   },
   NUTRITION_COACH: {
     role: "staff",
-    permissions: ["view_members"],
+    scope_hint: "org",
+    permissions: ["view_members", "view_nutrition"],
   },
   COMMUNITY_MANAGER: {
     role: "staff",
-    permissions: ["view_members", "manage_community"],
+    scope_hint: "org",
+    permissions: ["manage_challenges", "manage_ranking", "manage_community"],
   },
   CUSTOM: {
     role: "staff",
+    scope_hint: "org",
     permissions: [],
   },
 };
+
+export const ALL_PERMISSIONS = [
+  "view_members", "manage_members",
+  "view_training", "manage_training",
+  "view_performance", "manage_performance",
+  "view_checkins",
+  "view_nutrition",
+  "manage_challenges", "manage_ranking",
+  "manage_community",
+  "manage_staff",
+  "manage_organization",
+] as const;
 
 export const addOrgStaff = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -580,7 +619,6 @@ export const addOrgStaff = createServerFn({ method: "POST" })
   }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    // Only org admin or platform coach may add staff (RLS enforces this too)
     const [isCoachRes, isAdminRes] = await Promise.all([
       supabase.rpc("has_role", { _user_id: userId, _role: "coach" }),
       supabase.rpc("is_org_admin", { _user: userId, _org: data.organization_id }),
@@ -588,50 +626,62 @@ export const addOrgStaff = createServerFn({ method: "POST" })
     if (!isCoachRes.data && !isAdminRes.data) throw new Error("Kein Zugriff.");
 
     let targetUserId = data.user_id ?? null;
+    let existingUserFound = false;
+
     if (!targetUserId && data.email) {
-      // Search existing user by profile email is not exposed; fall back to display_name lookup is unsafe.
-      // We defer email-based invite to organization_invites.
-      const { data: inv, error: invErr } = await supabase
-        .from("organization_invites")
-        .insert({
-          organization_id: data.organization_id,
-          email: data.email.toLowerCase(),
-          assigned_role: data.role as any,
-          team_id: data.team_id ?? null,
-          created_by: userId,
-          invite_token: crypto.randomUUID().replace(/-/g, ""),
-          status: "pending" as any,
-        })
-        .select("id")
-        .single();
-      if (invErr) throw new Error(invErr.message);
-
-      return { invited_id: (inv as any).id };
+      // Try to find an existing user by email (SECURITY DEFINER against auth.users).
+      const { data: found } = await (supabase as any).rpc("find_user_id_by_email", {
+        _email: data.email.toLowerCase().trim(),
+      });
+      if (found) {
+        targetUserId = found as string;
+        existingUserFound = true;
+      }
     }
-    if (!targetUserId) throw new Error("Bitte User oder E-Mail angeben.");
 
-    const { error } = await supabase.from("staff_assignments").upsert(
-      {
-        user_id: targetUserId,
+    if (targetUserId) {
+      const { error } = await supabase.from("staff_assignments").upsert(
+        {
+          user_id: targetUserId,
+          organization_id: data.organization_id,
+          team_id: data.team_id ?? null,
+          role: data.role as any,
+          permissions: data.permissions,
+        } as any,
+        { onConflict: "user_id,organization_id,team_id" } as any,
+      );
+      if (error) throw new Error(error.message);
+      return { ok: true, existing_user: existingUserFound };
+    }
+
+    if (!data.email) throw new Error("Bitte User oder E-Mail angeben.");
+    const { data: inv, error: invErr } = await supabase
+      .from("organization_invites")
+      .insert({
         organization_id: data.organization_id,
+        email: data.email.toLowerCase().trim(),
+        assigned_role: data.role as any,
         team_id: data.team_id ?? null,
-        role: data.role as any,
-        permissions: data.permissions,
-      },
-      { onConflict: "user_id,organization_id,team_id" },
-    );
-    if (error) throw new Error(error.message);
-    return { ok: true };
+        permissions: data.permissions as any,
+        created_by: userId,
+        invite_token: crypto.randomUUID().replace(/-/g, ""),
+        status: "pending" as any,
+      } as any)
+      .select("id")
+      .single();
+    if (invErr) throw new Error(invErr.message);
+    return { invited_id: (inv as any).id, invited: true };
   });
 
 export const updateOrgStaffPermissions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id: string; role?: string; permissions?: string[] }) => d)
+  .inputValidator((d: { id: string; role?: string; permissions?: string[]; team_id?: string | null }) => d)
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const patch: any = {};
     if (data.role) patch.role = data.role;
     if (data.permissions) patch.permissions = data.permissions;
+    if (data.team_id !== undefined) patch.team_id = data.team_id;
     const { error } = await supabase.from("staff_assignments").update(patch).eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -645,6 +695,48 @@ export const removeOrgStaff = createServerFn({ method: "POST" })
     const { error } = await supabase.from("staff_assignments").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+/** List pending staff invites for an org. */
+export const listOrgStaffInvites = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { organization_id: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: rows, error } = await supabase
+      .from("organization_invites")
+      .select("id, email, assigned_role, team_id, status, expires_at, created_at")
+      .eq("organization_id", data.organization_id)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
+export const revokeOrgStaffInvite = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { id: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { error } = await supabase
+      .from("organization_invites")
+      .update({ status: "revoked" as any })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/** Accept an invite as the currently-signed-in user. */
+export const acceptOrgStaffInvite = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { invite_token: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+    const { data: result, error } = await (context.supabase as any).rpc("accept_organization_invite", {
+      _token: data.invite_token,
+      _user_id: userId,
+    });
+    if (error) throw new Error(error.message);
+    return result;
   });
 
 // ============================================================

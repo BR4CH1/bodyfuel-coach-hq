@@ -26,7 +26,11 @@ import {
   updateOrgAthleticPlanStatus,
   addOrgStaff,
   removeOrgStaff,
+  updateOrgStaffPermissions,
+  listOrgStaffInvites,
+  revokeOrgStaffInvite,
   STAFF_PRESETS,
+  ALL_PERMISSIONS,
 } from "@/lib/organizations/operating-loop.functions";
 
 export const Route = createFileRoute("/coach/teams/$orgId")({
@@ -185,7 +189,7 @@ function CoachOrgDetail() {
           <Empty>Ranking spiegelt Punkte aus aktiven Org-Challenges (Ledger `organization_challenge_point_events`). Ohne aktive Challenge leer.</Empty>
         )}
         {tab === "community" && <CommunityTab orgId={orgId} />}
-        {tab === "staff" && <StaffTab orgId={orgId} />}
+        {tab === "staff" && <StaffTab orgId={orgId} teams={data.teams as any[]} />}
 
         {tab === "settings" && (
           <ul className="grid gap-2 sm:grid-cols-2">
@@ -312,44 +316,126 @@ function TrainingTab({ orgId }: { orgId: string }) {
       </div>
       {msg && <div className="text-xs text-green-500">{msg}</div>}
       <Card title="Team Training Schedule (Wochenplan)">
-        <div className="space-y-2">
-          {WEEKDAYS.map((label, weekday) => {
-            const existing = teamSchedules.find((s) => s.weekday === weekday);
-            const active = !!existing?.active;
-            return (
-              <div key={weekday} className="flex items-center justify-between gap-3 border-b border-border py-1 text-sm">
-                <div className="font-semibold">{label}</div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="time"
-                    defaultValue={existing?.start_time ?? "19:30"}
-                    id={`start-${weekday}`}
-                    className="rounded border border-border bg-background px-2 py-0.5 text-xs"
-                  />
-                  <button
-                    onClick={() => {
-                      const start = (document.getElementById(`start-${weekday}`) as HTMLInputElement).value;
-                      const next = teamSchedules
-                        .filter((s) => s.weekday !== weekday)
-                        .map((s) => ({ weekday: s.weekday, start_time: s.start_time, end_time: s.end_time, title: s.title, active: s.active }));
-                      next.push({ weekday, start_time: start, end_time: null, title: "Team Training", active: !active });
-                      saveMut.mutate(next);
-                    }}
-                    className={`rounded px-3 py-1 text-[10px] uppercase tracking-wider ${
-                      active ? "bg-green-500/20 text-green-500" : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {active ? "aktiv" : "inaktiv"}
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+        <ScheduleEditor
+          teamId={teamId}
+          entries={teamSchedules}
+          onSave={(entries) => saveMut.mutate(entries)}
+          saving={saveMut.isPending}
+        />
+        <div className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
+          Änderungen synchronisieren sich beim nächsten Task-Engine-Lauf: <strong>zukünftige offene</strong>{" "}
+          Team-Training-Tasks werden angepasst oder gelöscht. <strong>Abgeschlossene historische</strong>{" "}
+          Tasks bleiben unverändert.
         </div>
       </Card>
       <Card title="Athletic Plans">
         <Empty>Athletic-Plan-Composer folgt. Plan-Sessions werden nach Anlage automatisch als Tasks erzeugt.</Empty>
       </Card>
+    </div>
+  );
+}
+
+function ScheduleEditor({
+  teamId,
+  entries,
+  onSave,
+  saving,
+}: {
+  teamId: string | null;
+  entries: any[];
+  onSave: (rows: any[]) => void;
+  saving: boolean;
+}) {
+  type Row = { weekday: number; title: string; start_time: string; end_time: string; active: boolean };
+  const initial = (): Row[] =>
+    WEEKDAYS.map((_, w) => {
+      const e = entries.find((s) => s.weekday === w);
+      return {
+        weekday: w,
+        title: e?.title ?? "Team Training",
+        start_time: (e?.start_time ?? "").slice(0, 5) || "",
+        end_time: (e?.end_time ?? "").slice(0, 5) || "",
+        active: !!e?.active,
+      };
+    });
+  const [rows, setRows] = useState<Row[]>(initial);
+  // Reset when teamId or entries change
+  const key = `${teamId}::${entries.map((e) => `${e.id}:${e.start_time}:${e.end_time}:${e.title}:${e.active}`).join("|")}`;
+  const [lastKey, setLastKey] = useState(key);
+  if (key !== lastKey) {
+    setLastKey(key);
+    setRows(initial());
+  }
+  const patch = (w: number, p: Partial<Row>) =>
+    setRows((rs) => rs.map((r) => (r.weekday === w ? { ...r, ...p } : r)));
+
+  return (
+    <div className="space-y-2">
+      <div className="hidden gap-2 px-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground sm:grid sm:grid-cols-[80px_1fr_80px_80px_80px_60px]">
+        <div>Tag</div>
+        <div>Titel</div>
+        <div>Start</div>
+        <div>Ende</div>
+        <div>Status</div>
+        <div />
+      </div>
+      {rows.map((r) => (
+        <div
+          key={r.weekday}
+          className="grid grid-cols-2 gap-2 border-b border-border py-2 text-sm sm:grid-cols-[80px_1fr_80px_80px_80px_60px] sm:items-center"
+        >
+          <div className="font-semibold sm:col-span-1">{WEEKDAYS[r.weekday]}</div>
+          <input
+            value={r.title}
+            onChange={(e) => patch(r.weekday, { title: e.target.value })}
+            className="col-span-2 rounded border border-border bg-background px-2 py-1 text-xs sm:col-span-1"
+            placeholder="Team Training"
+          />
+          <input
+            type="time"
+            value={r.start_time}
+            onChange={(e) => patch(r.weekday, { start_time: e.target.value })}
+            className="rounded border border-border bg-background px-2 py-1 text-xs"
+          />
+          <input
+            type="time"
+            value={r.end_time}
+            onChange={(e) => patch(r.weekday, { end_time: e.target.value })}
+            className="rounded border border-border bg-background px-2 py-1 text-xs"
+          />
+          <button
+            type="button"
+            onClick={() => patch(r.weekday, { active: !r.active })}
+            className={`rounded px-2 py-1 text-[10px] uppercase tracking-wider ${
+              r.active ? "bg-green-500/20 text-green-500" : "bg-muted text-muted-foreground"
+            }`}
+          >
+            {r.active ? "aktiv" : "inaktiv"}
+          </button>
+          <div />
+        </div>
+      ))}
+      <div className="flex justify-end pt-2">
+        <button
+          disabled={saving || !teamId}
+          onClick={() =>
+            onSave(
+              rows
+                .filter((r) => r.active || entries.some((e) => e.weekday === r.weekday))
+                .map((r) => ({
+                  weekday: r.weekday,
+                  title: r.title || "Team Training",
+                  start_time: r.start_time || null,
+                  end_time: r.end_time || null,
+                  active: r.active,
+                })),
+            )
+          }
+          className="rounded bg-primary px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-primary-foreground disabled:opacity-50"
+        >
+          {saving ? "Speichert…" : "Schedule speichern"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -472,34 +558,383 @@ function TasksTab({ orgId, teams }: { orgId: string; teams: any[] }) {
   );
 }
 
-function StaffTab({ orgId }: { orgId: string }) {
+function StaffTab({ orgId, teams }: { orgId: string; teams: any[] }) {
+  const qc = useQueryClient();
   const fetchStaff = useServerFn(listOrgStaffWithProfiles);
-  const { data, isLoading } = useQuery({
+  const fetchInvites = useServerFn(listOrgStaffInvites);
+  const addFn = useServerFn(addOrgStaff);
+  const updateFn = useServerFn(updateOrgStaffPermissions);
+  const removeFn = useServerFn(removeOrgStaff);
+  const revokeFn = useServerFn(revokeOrgStaffInvite);
+
+  const staffQ = useQuery({
     queryKey: ["org-staff", orgId],
     queryFn: () => fetchStaff({ data: { organization_id: orgId } }),
   });
-  if (isLoading || !data) return <div className="text-xs text-muted-foreground">Lädt…</div>;
-  if ((data as any[]).length === 0) return <Empty>Noch kein Staff zugewiesen.</Empty>;
+  const invitesQ = useQuery({
+    queryKey: ["org-staff-invites", orgId],
+    queryFn: () => fetchInvites({ data: { organization_id: orgId } }),
+  });
+
+  const [showAdd, setShowAdd] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ["org-staff", orgId] });
+    qc.invalidateQueries({ queryKey: ["org-staff-invites", orgId] });
+  };
+
+  const removeMut = useMutation({
+    mutationFn: (id: string) => removeFn({ data: { id } }),
+    onSuccess: () => invalidate(),
+  });
+  const revokeMut = useMutation({
+    mutationFn: (id: string) => revokeFn({ data: { id } }),
+    onSuccess: () => invalidate(),
+  });
+
+  const staff = (staffQ.data as any[]) ?? [];
+  const invites = ((invitesQ.data as any[]) ?? []).filter((i) => i.status === "pending");
+
   return (
-    <ul className="space-y-2">
-      {(data as any[]).map((s) => (
-        <li key={s.id} className="flex items-center justify-between rounded-lg border border-border bg-card p-3 text-sm">
-          <div>
-            <div className="font-semibold">{s.name}</div>
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-              {s.role}{s.team_name ? ` · ${s.team_name}` : " · Organisationsweit"}
-            </div>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="text-xs uppercase tracking-wider text-muted-foreground">
+          {staff.length} Staff · {invites.length} offene Einladungen
+        </div>
+        <button
+          onClick={() => setShowAdd(true)}
+          className="rounded bg-primary px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-primary-foreground"
+        >
+          + Staff hinzufügen
+        </button>
+      </div>
+
+      {msg && <div className="text-xs text-green-500">{msg}</div>}
+
+      {staffQ.isLoading ? (
+        <div className="text-xs text-muted-foreground">Lädt…</div>
+      ) : staff.length === 0 ? (
+        <Empty>Noch kein Staff zugewiesen.</Empty>
+      ) : (
+        <ul className="space-y-2">
+          {staff.map((s) => (
+            <StaffRow
+              key={s.id}
+              row={s}
+              teams={teams}
+              onSave={async (patch) => {
+                await updateFn({ data: { id: s.id, ...patch } });
+                invalidate();
+                setMsg("Aktualisiert.");
+              }}
+              onRemove={() => removeMut.mutate(s.id)}
+            />
+          ))}
+        </ul>
+      )}
+
+      <Card title="Offene Einladungen">
+        {invites.length === 0 ? (
+          <Empty>Keine offenen Einladungen.</Empty>
+        ) : (
+          <ul className="space-y-2">
+            {invites.map((inv: any) => (
+              <li
+                key={inv.id}
+                className="flex items-center justify-between rounded border border-border bg-background p-2 text-sm"
+              >
+                <div>
+                  <div className="font-mono text-xs">{inv.email}</div>
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    {inv.assigned_role} · läuft ab{" "}
+                    {inv.expires_at ? new Date(inv.expires_at).toLocaleDateString("de-DE") : "—"}
+                  </div>
+                </div>
+                <button
+                  onClick={() => revokeMut.mutate(inv.id)}
+                  className="text-[10px] uppercase tracking-wider text-red-500"
+                >
+                  Zurückziehen
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
+      {showAdd && (
+        <AddStaffModal
+          teams={teams}
+          onClose={() => setShowAdd(false)}
+          onSubmit={async (payload) => {
+            const res: any = await addFn({ data: { organization_id: orgId, ...payload } });
+            invalidate();
+            setShowAdd(false);
+            setMsg(
+              res?.invited
+                ? `Einladung an ${payload.email} versendet.`
+                : res?.existing_user
+                  ? "Bestehender BODYFUEL User als Staff hinzugefügt."
+                  : "Staff hinzugefügt.",
+            );
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function StaffRow({
+  row,
+  teams,
+  onSave,
+  onRemove,
+}: {
+  row: any;
+  teams: any[];
+  onSave: (patch: { role?: string; permissions?: string[]; team_id?: string | null }) => Promise<void>;
+  onRemove: () => void;
+}) {
+  const [edit, setEdit] = useState(false);
+  const [perms, setPerms] = useState<string[]>(row.permissions ?? []);
+  const [teamId, setTeamId] = useState<string | null>(row.team_id ?? null);
+  const toggle = (p: string) =>
+    setPerms((cur) => (cur.includes(p) ? cur.filter((x) => x !== p) : [...cur, p]));
+
+  return (
+    <li className="rounded-lg border border-border bg-card p-3 text-sm">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="font-semibold">{row.name}</div>
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            {row.role}
+            {" · "}
+            {row.team_name ? `Team: ${row.team_name}` : "Organisationsweit"}
           </div>
-          {s.permissions?.length ? (
-            <div className="hidden gap-1 sm:flex">
-              {s.permissions.slice(0, 3).map((p: string) => (
-                <span key={p} className="rounded bg-muted px-2 py-0.5 text-[10px] uppercase tracking-wider">{p}</span>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setEdit((e) => !e)}
+            className="text-[10px] uppercase tracking-wider text-primary"
+          >
+            {edit ? "Schließen" : "Bearbeiten"}
+          </button>
+          <button
+            onClick={onRemove}
+            className="text-[10px] uppercase tracking-wider text-red-500"
+          >
+            Entfernen
+          </button>
+        </div>
+      </div>
+
+      {!edit && row.permissions?.length ? (
+        <div className="mt-2 flex flex-wrap gap-1">
+          {row.permissions.map((p: string) => (
+            <span key={p} className="rounded bg-muted px-2 py-0.5 text-[10px] uppercase tracking-wider">
+              {p}
+            </span>
+          ))}
+        </div>
+      ) : null}
+
+      {edit && (
+        <div className="mt-3 space-y-3 border-t border-border pt-3">
+          <div>
+            <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Team Scope
+            </div>
+            <select
+              value={teamId ?? ""}
+              onChange={(e) => setTeamId(e.target.value || null)}
+              className="w-full rounded border border-border bg-background px-2 py-1 text-xs"
+            >
+              <option value="">Organisationsweit</option>
+              {teams.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Permissions
+            </div>
+            <div className="grid grid-cols-2 gap-1">
+              {ALL_PERMISSIONS.map((p) => (
+                <label key={p} className="flex items-center gap-2 text-[11px]">
+                  <input
+                    type="checkbox"
+                    checked={perms.includes(p)}
+                    onChange={() => toggle(p)}
+                  />
+                  <span>{p}</span>
+                </label>
               ))}
             </div>
-          ) : null}
-        </li>
-      ))}
-    </ul>
+          </div>
+          <button
+            onClick={async () => {
+              await onSave({ permissions: perms, team_id: teamId });
+              setEdit(false);
+            }}
+            className="rounded bg-primary px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary-foreground"
+          >
+            Speichern
+          </button>
+        </div>
+      )}
+    </li>
+  );
+}
+
+function AddStaffModal({
+  teams,
+  onClose,
+  onSubmit,
+}: {
+  teams: any[];
+  onClose: () => void;
+  onSubmit: (p: {
+    email: string;
+    role: string;
+    team_id: string | null;
+    permissions: string[];
+  }) => Promise<void>;
+}) {
+  const [email, setEmail] = useState("");
+  const [presetKey, setPresetKey] = useState<keyof typeof STAFF_PRESETS>("TEAM_COACH");
+  const preset = STAFF_PRESETS[presetKey];
+  const [perms, setPerms] = useState<string[]>(preset.permissions);
+  const [teamId, setTeamId] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  // Sync perms when preset changes
+  const applyPreset = (k: keyof typeof STAFF_PRESETS) => {
+    setPresetKey(k);
+    setPerms([...STAFF_PRESETS[k].permissions]);
+  };
+
+  const toggle = (p: string) =>
+    setPerms((cur) => (cur.includes(p) ? cur.filter((x) => x !== p) : [...cur, p]));
+
+  const submit = async () => {
+    if (!email) {
+      setErr("E-Mail erforderlich.");
+      return;
+    }
+    setSubmitting(true);
+    setErr(null);
+    try {
+      await onSubmit({
+        email: email.trim(),
+        role: preset.role,
+        team_id: teamId,
+        permissions: perms,
+      });
+    } catch (e: any) {
+      setErr(e?.message || "Fehler.");
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4">
+      <div className="w-full max-w-lg space-y-4 rounded-lg border border-border bg-card p-5 text-sm">
+        <div className="flex items-center justify-between">
+          <h3 className="font-display text-lg font-bold">Staff hinzufügen</h3>
+          <button onClick={onClose} className="text-xs text-muted-foreground">
+            ✕
+          </button>
+        </div>
+
+        <div>
+          <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            E-Mail
+          </label>
+          <input
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="staff@example.com"
+            className="mt-1 w-full rounded border border-border bg-background px-2 py-1"
+            autoFocus
+          />
+          <div className="mt-1 text-[10px] text-muted-foreground">
+            Existiert bereits ein BODYFUEL Account, wird er sofort zugeordnet – keine Account-Duplikation. Sonst wird ein Invite-Token erstellt.
+          </div>
+        </div>
+
+        <div>
+          <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            Rolle (Preset)
+          </label>
+          <select
+            value={presetKey}
+            onChange={(e) => applyPreset(e.target.value as any)}
+            className="mt-1 w-full rounded border border-border bg-background px-2 py-1"
+          >
+            {Object.keys(STAFF_PRESETS).map((k) => (
+              <option key={k} value={k}>
+                {k.replace(/_/g, " ")}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            Team Scope {preset.scope_hint === "team" ? "(empfohlen)" : "(optional)"}
+          </label>
+          <select
+            value={teamId ?? ""}
+            onChange={(e) => setTeamId(e.target.value || null)}
+            className="mt-1 w-full rounded border border-border bg-background px-2 py-1"
+          >
+            <option value="">Organisationsweit</option>
+            {teams.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            Permissions
+          </label>
+          <div className="mt-1 grid grid-cols-2 gap-1">
+            {ALL_PERMISSIONS.map((p) => (
+              <label key={p} className="flex items-center gap-2 text-[11px]">
+                <input type="checkbox" checked={perms.includes(p)} onChange={() => toggle(p)} />
+                <span>{p}</span>
+              </label>
+            ))}
+          </div>
+          <div className="mt-1 text-[10px] text-muted-foreground">
+            Presets sind Vorschläge. Individuell anpassbar.
+          </div>
+        </div>
+
+        {err && <div className="text-xs text-red-500">{err}</div>}
+
+        <div className="flex justify-end gap-2 pt-2">
+          <button onClick={onClose} className="rounded border border-border px-3 py-1 text-xs">
+            Abbrechen
+          </button>
+          <button
+            onClick={submit}
+            disabled={submitting}
+            className="rounded bg-primary px-4 py-1 text-xs font-semibold uppercase tracking-wider text-primary-foreground disabled:opacity-50"
+          >
+            {submitting ? "Speichert…" : "Hinzufügen"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
