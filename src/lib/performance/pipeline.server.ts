@@ -356,7 +356,7 @@ export async function runPerformanceProfileCalculation(
           score: r.score,
           benchmark_model_id: r.benchmark_model_id,
           benchmark_version: r.benchmark_version,
-          comparison_group: r.comparison_group,
+          comparison_group: r.comparison_group as never,
           sample_size: r.sample_size,
         })),
       );
@@ -372,7 +372,7 @@ export async function runPerformanceProfileCalculation(
           user_id: userId,
           domain_id: d.domain_id,
           score: d.score,
-          contributing_metrics: d.contributing,
+          contributing_metrics: d.contributing as never,
         })),
       );
     }
