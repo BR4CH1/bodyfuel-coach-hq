@@ -302,7 +302,8 @@ export const getOrgRanking = createServerFn({ method: "GET" })
     return { org, entries, my_rank: myRank >= 0 ? myRank + 1 : null };
   });
 
-/** Enhanced onboarding v2: writes team_memberships extended fields + onboarding_completed. */
+/** Enhanced onboarding v2: writes profile basics, team_memberships extended fields,
+ *  optional initial body measurement (weight_kg), and marks onboarding_completed. */
 export const completeOrganizationOnboardingV2 = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
@@ -316,10 +317,42 @@ export const completeOrganizationOnboardingV2 = createServerFn({ method: "POST" 
       available_training_days?: number[] | null;
       limitations?: string | null;
       personal_goal?: string | null;
+      // Basisdaten (nur schreiben wenn übergeben)
+      display_name?: string | null;
+      nickname?: string | null;
+      birthdate?: string | null;
+      // Athletische Basisdaten
+      height_cm?: number | null;
+      weight_kg?: number | null;
     }) => d,
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+
+    // Profil-Basisdaten aktualisieren (nur Felder, die geliefert wurden).
+    const profileUpdate: Record<string, unknown> = {};
+    if (data.display_name !== undefined && data.display_name !== null && data.display_name !== "")
+      profileUpdate.display_name = data.display_name;
+    if (data.nickname !== undefined) profileUpdate.nickname = data.nickname || null;
+    if (data.birthdate !== undefined && data.birthdate !== null && data.birthdate !== "")
+      profileUpdate.birthdate = data.birthdate;
+    if (data.height_cm !== undefined && data.height_cm !== null)
+      profileUpdate.height_cm = data.height_cm;
+    if (Object.keys(profileUpdate).length > 0) {
+      const { error: pErr } = await supabase.from("profiles").update(profileUpdate).eq("id", userId);
+      if (pErr) throw new Error(pErr.message);
+    }
+
+    // Aktuelles Gewicht in body_measurements ablegen (nur wenn geliefert).
+    if (data.weight_kg !== undefined && data.weight_kg !== null && data.weight_kg > 0) {
+      const { error: bmErr } = await supabase.from("body_measurements").insert({
+        user_id: userId,
+        weight_kg: data.weight_kg,
+        notes: "onboarding",
+      });
+      if (bmErr) throw new Error(bmErr.message);
+    }
+
     const { error: tmErr } = await supabase.from("team_memberships").upsert(
       {
         user_id: userId,
@@ -342,6 +375,46 @@ export const completeOrganizationOnboardingV2 = createServerFn({ method: "POST" 
       .eq("user_id", userId)
       .eq("organization_id", data.organization_id);
     if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/** Staff-/Coach-Onboarding: Basisdaten + optionale Funktionsbeschreibung.
+ *  KEINE Größe, KEIN Gewicht, KEINE Position. */
+export const completeStaffOrganizationOnboarding = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (d: {
+      organization_id: string;
+      display_name?: string | null;
+      nickname?: string | null;
+      birthdate?: string | null;
+      function_label?: string | null;
+    }) => d,
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+
+    const profileUpdate: Record<string, unknown> = {};
+    if (data.display_name !== undefined && data.display_name !== null && data.display_name !== "")
+      profileUpdate.display_name = data.display_name;
+    if (data.nickname !== undefined) profileUpdate.nickname = data.nickname || null;
+    if (data.birthdate !== undefined && data.birthdate !== null && data.birthdate !== "")
+      profileUpdate.birthdate = data.birthdate;
+    if (Object.keys(profileUpdate).length > 0) {
+      const { error: pErr } = await supabase.from("profiles").update(profileUpdate).eq("id", userId);
+      if (pErr) throw new Error(pErr.message);
+    }
+
+    const { error: sErr } = await supabase
+      .from("staff_assignments")
+      .update({
+        function_label: data.function_label ?? null,
+        onboarding_completed_at: new Date().toISOString(),
+      })
+      .eq("user_id", userId)
+      .eq("organization_id", data.organization_id);
+    if (sErr) throw new Error(sErr.message);
+
     return { ok: true };
   });
 
