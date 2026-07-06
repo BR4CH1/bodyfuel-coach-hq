@@ -246,8 +246,16 @@ function AthletesTab({ orgId }: { orgId: string }) {
         </thead>
         <tbody>
           {(data.athletes as any[]).map((a) => (
-            <tr key={a.user_id} className="border-t border-border">
-              <td className="px-3 py-2 font-semibold">{a.name}</td>
+            <tr key={a.user_id} className="border-t border-border hover:bg-muted/40">
+              <td className="px-3 py-2 font-semibold">
+                <Link
+                  to="/coach/teams/$orgId/athletes/$userId"
+                  params={{ orgId, userId: a.user_id }}
+                  className="hover:underline"
+                >
+                  {a.name}
+                </Link>
+              </td>
               <td className="px-3 py-2">
                 {a.derived_complete ? (
                   <span className="text-green-500">ABGESCHLOSSEN</span>

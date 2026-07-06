@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { classifyAthlete, STATUS_LABEL, type AthleteStatus } from "./coach-analytics.rules";
+import { classifyAthlete, explainAthlete, STATUS_LABEL, type AthleteStatus } from "./coach-analytics.rules";
 
 /**
  * Analytische Coach-Sicht auf einen einzelnen Athleten.
@@ -396,41 +396,20 @@ export const getCoachAthleteDetail = createServerFn({ method: "GET" })
     };
     const statusKey = classifyAthlete(signal);
 
-    // ---- Radar-Trigger (rekonstruiert aus denselben Signalen)
-    const radarTriggers: Array<{ kind: string; label: string; detail: string }> = [];
-    if (daysInactive != null && daysInactive >= 14) {
-      radarTriggers.push({ kind: "inactivity", label: "Inaktivität", detail: `${daysInactive} Tage keine Aktivität` });
-    } else if (daysInactive != null && daysInactive >= 7) {
-      radarTriggers.push({ kind: "inactivity", label: "Inaktivität", detail: `${daysInactive} Tage keine Aktivität` });
-    }
-    if (complianceDelta != null && complianceDelta <= -10) {
-      radarTriggers.push({
-        kind: "compliance",
-        label: "Compliance ↓",
-        detail: `${complianceDelta} Prozentpunkte ggü. Vorwoche`,
-      });
-    } else if (complianceDelta != null && complianceDelta >= 20) {
-      radarTriggers.push({
-        kind: "compliance",
-        label: "Compliance ↑",
-        detail: `+${complianceDelta} Prozentpunkte ggü. Vorwoche`,
-      });
-    }
-    if (compliance != null && compliance < 40) {
-      radarTriggers.push({
-        kind: "compliance_low",
-        label: "Compliance niedrig",
-        detail: `nur ${compliance} % in dieser Woche`,
-      });
-    }
-    // Aufeinanderfolgende, nicht abgeschlossene Athletik-Einheiten (letzte 3)
+    // ---- Radar-Trigger — SHARED source of truth (coach-analytics.rules.ts)
+    const radarTriggers: Array<{ kind: string; label: string; detail: string }> = [
+      ...explainAthlete(signal),
+    ];
+    // Trainings-Streak: 2+ Athletik-Einheiten in Folge nicht abgeschlossen
     const athleticSessions = tasks
       .filter((t) => t.task_type === "athletic_training")
       .slice(0, 3);
-    const missedStreak = athleticSessions.every(
-      (t) => t.status === "missed" || t.status === "skipped" || t.status === "open"
-    );
-    if (athleticSessions.length >= 2 && missedStreak) {
+    const missedStreak =
+      athleticSessions.length >= 2 &&
+      athleticSessions.every(
+        (t) => t.status === "missed" || t.status === "skipped" || t.status === "open"
+      );
+    if (missedStreak) {
       radarTriggers.push({
         kind: "training",
         label: "Training",
