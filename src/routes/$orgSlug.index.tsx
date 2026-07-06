@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSession } from "@/lib/bodyfuel/session";
 import { getOrganizationContext } from "@/lib/organizations/organizations.functions";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ function OrgIndex() {
     enabled: !!supabaseUser,
     queryFn: () => fetchCtx({ data: { slug: org.slug } }),
   });
+  const [needsChoice, setNeedsChoice] = useState(false);
 
   useEffect(() => {
     if (!supabaseUser || !ctx) return;
@@ -32,7 +33,6 @@ function OrgIndex() {
 
     setActiveContext(org.slug);
 
-    // Athlete-only → athlete home (with onboarding gate).
     if (hasAthlete && !hasStaff && !isSuper) {
       if (!ctx.membership!.onboarding_completed) {
         navigate({ to: "/$orgSlug/onboarding", params: { orgSlug: org.slug }, replace: true });
@@ -42,16 +42,19 @@ function OrgIndex() {
       return;
     }
 
-    // Staff-only (or super admin without athlete membership) → coach dashboard.
     if (!hasAthlete && (hasStaff || isSuper)) {
       setOrgMode(org.slug, "staff");
       navigate({ to: "/coach/teams/$orgId", params: { orgId: ctx.organization.id }, replace: true });
       return;
     }
 
-    // Dual role: honour persisted mode, default to athlete.
-    const mode = getOrgMode(org.slug) ?? "athlete";
-    if (mode === "staff") {
+    // Dual role: on first use (no persisted mode), prompt.
+    const stored = getOrgMode(org.slug);
+    if (!stored) {
+      setNeedsChoice(true);
+      return;
+    }
+    if (stored === "staff") {
       navigate({ to: "/coach/teams/$orgId", params: { orgId: ctx.organization.id }, replace: true });
     } else {
       if (ctx.membership && !ctx.membership.onboarding_completed) {
@@ -62,10 +65,52 @@ function OrgIndex() {
     }
   }, [supabaseUser, ctx, navigate, org.slug]);
 
+  const chooseMode = (mode: "athlete" | "staff") => {
+    setOrgMode(org.slug, mode);
+    setNeedsChoice(false);
+    if (mode === "staff") {
+      navigate({ to: "/coach/teams/$orgId", params: { orgId: ctx!.organization.id }, replace: true });
+    } else if (ctx?.membership && !ctx.membership.onboarding_completed) {
+      navigate({ to: "/$orgSlug/onboarding", params: { orgSlug: org.slug }, replace: true });
+    } else {
+      navigate({ to: "/$orgSlug/home", params: { orgSlug: org.slug }, replace: true });
+    }
+  };
 
   if (loading || (supabaseUser && isFetching && !ctx)) {
     return <div className="grid min-h-screen place-items-center text-muted-foreground">Laden…</div>;
   }
+
+  if (needsChoice && ctx) {
+    const bg = org.primary_color ?? "#111111";
+    return (
+      <div className="min-h-screen bg-background text-foreground">
+        <div className="mx-auto flex min-h-screen max-w-lg flex-col items-center justify-center px-6 py-16 text-center">
+          {org.logo_url ? (
+            <img src={org.logo_url} alt={org.name} className="mb-6 h-20 w-20 rounded-full object-cover" />
+          ) : null}
+          <h1 className="font-display text-2xl font-bold uppercase tracking-wide">
+            Wie möchtest du {org.name} öffnen?
+          </h1>
+          <p className="mt-3 text-sm text-muted-foreground">
+            Du hast in dieser Organisation sowohl einen Athleten- als auch einen Staffzugang.
+          </p>
+          <div className="mt-8 grid w-full gap-3">
+            <Button size="lg" style={{ background: bg }} onClick={() => chooseMode("athlete")}>
+              Athletenbereich
+            </Button>
+            <Button size="lg" variant="outline" onClick={() => chooseMode("staff")}>
+              Staffbereich
+            </Button>
+          </div>
+          <p className="mt-6 text-xs text-muted-foreground">
+            Du kannst später jederzeit über den Kontext-Switcher wechseln.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
 
   const bg = org.primary_color ?? "#111111";
 
