@@ -77,6 +77,7 @@ import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]
 import { Route as OrgSlugTrainingRouteImport } from './routes/$orgSlug.training'
 import { Route as OrgSlugRankingRouteImport } from './routes/$orgSlug.ranking'
 import { Route as OrgSlugProfilRouteImport } from './routes/$orgSlug.profil'
+import { Route as OrgSlugPerformanceRouteImport } from './routes/$orgSlug.performance'
 import { Route as OrgSlugOnboardingRouteImport } from './routes/$orgSlug.onboarding'
 import { Route as OrgSlugHomeRouteImport } from './routes/$orgSlug.home'
 import { Route as OrgSlugCommunityRouteImport } from './routes/$orgSlug.community'
@@ -108,6 +109,7 @@ import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/l
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
+import { Route as CoachTeamsOrgIdPerformanceRouteImport } from './routes/coach.teams.$orgId.performance'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicHooksTrialRemindersRouteImport } from './routes/api/public/hooks/trial-reminders'
 import { Route as ApiPublicHooksSendFeatureNewsRouteImport } from './routes/api/public/hooks/send-feature-news'
@@ -462,6 +464,11 @@ const OrgSlugProfilRoute = OrgSlugProfilRouteImport.update({
   path: '/profil',
   getParentRoute: () => OrgSlugRoute,
 } as any)
+const OrgSlugPerformanceRoute = OrgSlugPerformanceRouteImport.update({
+  id: '/performance',
+  path: '/performance',
+  getParentRoute: () => OrgSlugRoute,
+} as any)
 const OrgSlugOnboardingRoute = OrgSlugOnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
@@ -624,6 +631,12 @@ const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
   path: '/lovable/email/auth/preview',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CoachTeamsOrgIdPerformanceRoute =
+  CoachTeamsOrgIdPerformanceRouteImport.update({
+    id: '/performance',
+    path: '/performance',
+    getParentRoute: () => CoachTeamsOrgIdRoute,
+  } as any)
 const ApiPublicPaymentsWebhookRoute =
   ApiPublicPaymentsWebhookRouteImport.update({
     id: '/api/public/payments/webhook',
@@ -712,6 +725,7 @@ export interface FileRoutesByFullPath {
   '/$orgSlug/community': typeof OrgSlugCommunityRoute
   '/$orgSlug/home': typeof OrgSlugHomeRoute
   '/$orgSlug/onboarding': typeof OrgSlugOnboardingRoute
+  '/$orgSlug/performance': typeof OrgSlugPerformanceRoute
   '/$orgSlug/profil': typeof OrgSlugProfilRoute
   '/$orgSlug/ranking': typeof OrgSlugRankingRoute
   '/$orgSlug/training': typeof OrgSlugTrainingRoute
@@ -760,7 +774,7 @@ export interface FileRoutesByFullPath {
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/coach/plan-builder/$userId': typeof CoachPlanBuilderUserIdRoute
   '/coach/plan-preview/$planId': typeof CoachPlanPreviewPlanIdRoute
-  '/coach/teams/$orgId': typeof CoachTeamsOrgIdRoute
+  '/coach/teams/$orgId': typeof CoachTeamsOrgIdRouteWithChildren
   '/coach/training-builder/$userId': typeof CoachTrainingBuilderUserIdRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/smart/gift/$code': typeof SmartGiftCodeRoute
@@ -783,6 +797,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/send-feature-news': typeof ApiPublicHooksSendFeatureNewsRoute
   '/api/public/hooks/trial-reminders': typeof ApiPublicHooksTrialRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/coach/teams/$orgId/performance': typeof CoachTeamsOrgIdPerformanceRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -818,6 +833,7 @@ export interface FileRoutesByTo {
   '/$orgSlug/community': typeof OrgSlugCommunityRoute
   '/$orgSlug/home': typeof OrgSlugHomeRoute
   '/$orgSlug/onboarding': typeof OrgSlugOnboardingRoute
+  '/$orgSlug/performance': typeof OrgSlugPerformanceRoute
   '/$orgSlug/profil': typeof OrgSlugProfilRoute
   '/$orgSlug/ranking': typeof OrgSlugRankingRoute
   '/$orgSlug/training': typeof OrgSlugTrainingRoute
@@ -864,7 +880,7 @@ export interface FileRoutesByTo {
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/coach/plan-builder/$userId': typeof CoachPlanBuilderUserIdRoute
   '/coach/plan-preview/$planId': typeof CoachPlanPreviewPlanIdRoute
-  '/coach/teams/$orgId': typeof CoachTeamsOrgIdRoute
+  '/coach/teams/$orgId': typeof CoachTeamsOrgIdRouteWithChildren
   '/coach/training-builder/$userId': typeof CoachTrainingBuilderUserIdRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/smart/gift/$code': typeof SmartGiftCodeRoute
@@ -887,6 +903,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/send-feature-news': typeof ApiPublicHooksSendFeatureNewsRoute
   '/api/public/hooks/trial-reminders': typeof ApiPublicHooksTrialRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/coach/teams/$orgId/performance': typeof CoachTeamsOrgIdPerformanceRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -927,6 +944,7 @@ export interface FileRoutesById {
   '/$orgSlug/community': typeof OrgSlugCommunityRoute
   '/$orgSlug/home': typeof OrgSlugHomeRoute
   '/$orgSlug/onboarding': typeof OrgSlugOnboardingRoute
+  '/$orgSlug/performance': typeof OrgSlugPerformanceRoute
   '/$orgSlug/profil': typeof OrgSlugProfilRoute
   '/$orgSlug/ranking': typeof OrgSlugRankingRoute
   '/$orgSlug/training': typeof OrgSlugTrainingRoute
@@ -975,7 +993,7 @@ export interface FileRoutesById {
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/coach/plan-builder/$userId': typeof CoachPlanBuilderUserIdRoute
   '/coach/plan-preview/$planId': typeof CoachPlanPreviewPlanIdRoute
-  '/coach/teams/$orgId': typeof CoachTeamsOrgIdRoute
+  '/coach/teams/$orgId': typeof CoachTeamsOrgIdRouteWithChildren
   '/coach/training-builder/$userId': typeof CoachTrainingBuilderUserIdRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/smart/gift/$code': typeof SmartGiftCodeRoute
@@ -998,6 +1016,7 @@ export interface FileRoutesById {
   '/api/public/hooks/send-feature-news': typeof ApiPublicHooksSendFeatureNewsRoute
   '/api/public/hooks/trial-reminders': typeof ApiPublicHooksTrialRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/coach/teams/$orgId/performance': typeof CoachTeamsOrgIdPerformanceRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -1039,6 +1058,7 @@ export interface FileRouteTypes {
     | '/$orgSlug/community'
     | '/$orgSlug/home'
     | '/$orgSlug/onboarding'
+    | '/$orgSlug/performance'
     | '/$orgSlug/profil'
     | '/$orgSlug/ranking'
     | '/$orgSlug/training'
@@ -1110,6 +1130,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/send-feature-news'
     | '/api/public/hooks/trial-reminders'
     | '/api/public/payments/webhook'
+    | '/coach/teams/$orgId/performance'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -1145,6 +1166,7 @@ export interface FileRouteTypes {
     | '/$orgSlug/community'
     | '/$orgSlug/home'
     | '/$orgSlug/onboarding'
+    | '/$orgSlug/performance'
     | '/$orgSlug/profil'
     | '/$orgSlug/ranking'
     | '/$orgSlug/training'
@@ -1214,6 +1236,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/send-feature-news'
     | '/api/public/hooks/trial-reminders'
     | '/api/public/payments/webhook'
+    | '/coach/teams/$orgId/performance'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -1253,6 +1276,7 @@ export interface FileRouteTypes {
     | '/$orgSlug/community'
     | '/$orgSlug/home'
     | '/$orgSlug/onboarding'
+    | '/$orgSlug/performance'
     | '/$orgSlug/profil'
     | '/$orgSlug/ranking'
     | '/$orgSlug/training'
@@ -1324,6 +1348,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/send-feature-news'
     | '/api/public/hooks/trial-reminders'
     | '/api/public/payments/webhook'
+    | '/coach/teams/$orgId/performance'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -1876,6 +1901,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrgSlugProfilRouteImport
       parentRoute: typeof OrgSlugRoute
     }
+    '/$orgSlug/performance': {
+      id: '/$orgSlug/performance'
+      path: '/performance'
+      fullPath: '/$orgSlug/performance'
+      preLoaderRoute: typeof OrgSlugPerformanceRouteImport
+      parentRoute: typeof OrgSlugRoute
+    }
     '/$orgSlug/onboarding': {
       id: '/$orgSlug/onboarding'
       path: '/onboarding'
@@ -2093,6 +2125,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailAuthPreviewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/coach/teams/$orgId/performance': {
+      id: '/coach/teams/$orgId/performance'
+      path: '/performance'
+      fullPath: '/coach/teams/$orgId/performance'
+      preLoaderRoute: typeof CoachTeamsOrgIdPerformanceRouteImport
+      parentRoute: typeof CoachTeamsOrgIdRoute
+    }
     '/api/public/payments/webhook': {
       id: '/api/public/payments/webhook'
       path: '/api/public/payments/webhook'
@@ -2163,6 +2202,7 @@ interface OrgSlugRouteChildren {
   OrgSlugCommunityRoute: typeof OrgSlugCommunityRoute
   OrgSlugHomeRoute: typeof OrgSlugHomeRoute
   OrgSlugOnboardingRoute: typeof OrgSlugOnboardingRoute
+  OrgSlugPerformanceRoute: typeof OrgSlugPerformanceRoute
   OrgSlugProfilRoute: typeof OrgSlugProfilRoute
   OrgSlugRankingRoute: typeof OrgSlugRankingRoute
   OrgSlugTrainingRoute: typeof OrgSlugTrainingRoute
@@ -2175,6 +2215,7 @@ const OrgSlugRouteChildren: OrgSlugRouteChildren = {
   OrgSlugCommunityRoute: OrgSlugCommunityRoute,
   OrgSlugHomeRoute: OrgSlugHomeRoute,
   OrgSlugOnboardingRoute: OrgSlugOnboardingRoute,
+  OrgSlugPerformanceRoute: OrgSlugPerformanceRoute,
   OrgSlugProfilRoute: OrgSlugProfilRoute,
   OrgSlugRankingRoute: OrgSlugRankingRoute,
   OrgSlugTrainingRoute: OrgSlugTrainingRoute,
@@ -2202,6 +2243,18 @@ const CoachCustomersRouteWithChildren = CoachCustomersRoute._addFileChildren(
   CoachCustomersRouteChildren,
 )
 
+interface CoachTeamsOrgIdRouteChildren {
+  CoachTeamsOrgIdPerformanceRoute: typeof CoachTeamsOrgIdPerformanceRoute
+}
+
+const CoachTeamsOrgIdRouteChildren: CoachTeamsOrgIdRouteChildren = {
+  CoachTeamsOrgIdPerformanceRoute: CoachTeamsOrgIdPerformanceRoute,
+}
+
+const CoachTeamsOrgIdRouteWithChildren = CoachTeamsOrgIdRoute._addFileChildren(
+  CoachTeamsOrgIdRouteChildren,
+)
+
 interface CoachRouteChildren {
   CoachClientIdRoute: typeof CoachClientIdRoute
   CoachAffiliatesRoute: typeof CoachAffiliatesRoute
@@ -2215,7 +2268,7 @@ interface CoachRouteChildren {
   CoachIndexRoute: typeof CoachIndexRoute
   CoachPlanBuilderUserIdRoute: typeof CoachPlanBuilderUserIdRoute
   CoachPlanPreviewPlanIdRoute: typeof CoachPlanPreviewPlanIdRoute
-  CoachTeamsOrgIdRoute: typeof CoachTeamsOrgIdRoute
+  CoachTeamsOrgIdRoute: typeof CoachTeamsOrgIdRouteWithChildren
   CoachTrainingBuilderUserIdRoute: typeof CoachTrainingBuilderUserIdRoute
   CoachTeamsIndexRoute: typeof CoachTeamsIndexRoute
 }
@@ -2233,7 +2286,7 @@ const CoachRouteChildren: CoachRouteChildren = {
   CoachIndexRoute: CoachIndexRoute,
   CoachPlanBuilderUserIdRoute: CoachPlanBuilderUserIdRoute,
   CoachPlanPreviewPlanIdRoute: CoachPlanPreviewPlanIdRoute,
-  CoachTeamsOrgIdRoute: CoachTeamsOrgIdRoute,
+  CoachTeamsOrgIdRoute: CoachTeamsOrgIdRouteWithChildren,
   CoachTrainingBuilderUserIdRoute: CoachTrainingBuilderUserIdRoute,
   CoachTeamsIndexRoute: CoachTeamsIndexRoute,
 }
