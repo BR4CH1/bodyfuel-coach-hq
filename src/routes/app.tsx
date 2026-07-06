@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { Flame } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
+import { useEntitlements } from "@/lib/bodyfuel/entitlements";
 
 export const Route = createFileRoute("/app")({
   head: () => ({ meta: [{ title: "App — BODYFUEL" }] }),
@@ -11,10 +12,11 @@ export const Route = createFileRoute("/app")({
 
 function AppEntryPage() {
   const { supabaseUser, isCoach, isFreeUser, loading } = useSession();
+  const ent = useEntitlements();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (loading) return;
+    if (loading || ent.loading) return;
 
     if (!supabaseUser) {
       navigate({ to: "/auth", replace: true });
@@ -28,6 +30,16 @@ function AppEntryPage() {
 
     if (isFreeUser) {
       navigate({ to: "/tracker/app", replace: true });
+      return;
+    }
+
+    // Team-only Nutzer: direkt in den Verein leiten, KEIN persönliches Dashboard.
+    if (ent.hasTeamAccess && !ent.hasAnyPersonalBodyfuel && ent.primaryOrgSlug) {
+      navigate({
+        to: "/$orgSlug",
+        params: { orgSlug: ent.primaryOrgSlug },
+        replace: true,
+      });
       return;
     }
 
@@ -45,7 +57,17 @@ function AppEntryPage() {
     return () => {
       cancelled = true;
     };
-  }, [supabaseUser, isCoach, isFreeUser, loading, navigate]);
+  }, [
+    supabaseUser,
+    isCoach,
+    isFreeUser,
+    loading,
+    navigate,
+    ent.loading,
+    ent.hasTeamAccess,
+    ent.hasAnyPersonalBodyfuel,
+    ent.primaryOrgSlug,
+  ]);
 
   return (
     <div className="grid min-h-screen place-items-center bg-background text-foreground">
