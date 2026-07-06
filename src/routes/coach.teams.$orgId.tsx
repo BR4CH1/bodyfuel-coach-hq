@@ -225,7 +225,27 @@ function CoachOrgDetail() {
           </div>
         )}
 
-        {tab === "athletes" && <AthletesTab orgId={orgId} teamFilter={athleteTeamFilter} teams={data.teams as any[]} onFilter={setAthleteTeamFilter} />}
+        {tab === "athletes" && (
+          <AthletesTab
+            orgId={orgId}
+            teamFilter={athleteTeamFilter}
+            teams={data.teams as any[]}
+            allowedUserIds={
+              athleteTeamFilter
+                ? new Set(
+                    (data.athletes as any[])
+                      .filter((a) => {
+                        const teamName = (data.teams as any[]).find((t) => t.id === athleteTeamFilter)?.name;
+                        return a.team_name === teamName;
+                      })
+                      .map((a) => a.user_id),
+                  )
+                : null
+            }
+            onClearFilter={() => setAthleteTeamFilter(null)}
+          />
+        )}
+
         {tab === "teams" && (
           <ul className="grid gap-2 sm:grid-cols-2">
             {(data.teams as any[]).map((t) => {
