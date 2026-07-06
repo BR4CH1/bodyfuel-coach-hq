@@ -869,14 +869,16 @@ function AddStaffModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4">
-      <div className="w-full max-w-lg space-y-4 rounded-lg border border-border bg-card p-5 text-sm">
-        <div className="flex items-center justify-between">
-          <h3 className="font-display text-lg font-bold">Staff hinzufügen</h3>
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-4 sm:items-center">
+      <div className="my-4 flex max-h-[calc(100dvh-2rem)] w-full max-w-lg flex-col rounded-lg border border-border bg-card text-sm">
+        <div className="sticky top-0 flex items-center justify-between rounded-t-lg border-b border-border bg-card px-5 py-4">
+          <h3 className="font-display text-lg font-bold">Trainer / Mitarbeiter hinzufügen</h3>
           <button onClick={onClose} className="text-xs text-muted-foreground">
             ✕
           </button>
         </div>
+        <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
+
 
         <div>
           <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
