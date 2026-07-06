@@ -49,6 +49,22 @@ function OrgHome() {
     if (supabaseUser) setActiveContext(org.slug);
   }, [supabaseUser, loading, org.slug, navigate]);
 
+  // Best-effort task-engine trigger on load (idempotent, safe to call).
+  const engine = useServerFn(runOrgTaskEngine);
+  useEffect(() => {
+    if (!supabaseUser) return;
+    const key = `org-engine-${org.slug}-${new Date().toISOString().slice(0, 10)}`;
+    if (typeof sessionStorage !== "undefined" && sessionStorage.getItem(key)) return;
+    engine({ data: { organization_id: (org as any).id, horizon_days: 7 } })
+      .then(() => {
+        try { sessionStorage.setItem(key, "1"); } catch {}
+        qc.invalidateQueries({ queryKey: ["org-home", org.slug] });
+      })
+      .catch(() => { /* silent */ });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supabaseUser, org.slug]);
+
+
   const { data, isLoading, error } = useQuery({
     queryKey: ["org-home", org.slug, supabaseUser?.id ?? "anon"],
     enabled: !!supabaseUser,
