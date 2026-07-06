@@ -37,7 +37,7 @@ export function deriveDevelopmentFocusAreas(input: FocusInput): FocusOutput {
 
   const scored = eligible.map((d) => {
     const gap = 1 - (d.score! / 100);
-    const trendPenalty = d.trend === "declining" ? 0.1 : d.trend === "stagnant" as unknown ? 0.05 : 0;
+    const trendPenalty = d.trend === "declining" ? 0.1 : 0;
     const signal = d.position_weight * gap + trendPenalty;
     const reasons: string[] = [];
     if (d.position_weight >= 0.15) reasons.push("HIGH_POSITION_IMPORTANCE");
