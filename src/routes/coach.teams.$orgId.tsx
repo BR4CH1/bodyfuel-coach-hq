@@ -76,6 +76,8 @@ function CoachOrgDetail() {
     queryFn: () => fetch({ data: { orgId } }),
   });
   const [tab, setTab] = useState("cockpit");
+  const [athleteTeamFilter, setAthleteTeamFilter] = useState<string | null>(null);
+
 
   if (isLoading || !data || !data.org) {
     return <div className="text-sm text-muted-foreground">Lädt…</div>;
