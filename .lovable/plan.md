@@ -48,7 +48,7 @@ Info-/Upgrade-Landing für Nur-Vereins-Accounts. Kein Zugang zu Smart-Plänen, E
 
 ---
 
-## Phase 2 — Rollenbasiertes Onboarding
+## Phase 2 — Rollenbasiertes Onboarding ✅ ABGESCHLOSSEN
 
 Ziel: „Coach" wird nie als Position gespeichert. Coaches durchlaufen kein Athleten-Onboarding.
 
