@@ -74,7 +74,7 @@ function CoachOrgDetail() {
     queryKey: ["coach-org-detail", orgId],
     queryFn: () => fetch({ data: { orgId } }),
   });
-  const [tab, setTab] = useState("overview");
+  const [tab, setTab] = useState("cockpit");
 
   if (isLoading || !data || !data.org) {
     return <div className="text-sm text-muted-foreground">Lädt…</div>;
