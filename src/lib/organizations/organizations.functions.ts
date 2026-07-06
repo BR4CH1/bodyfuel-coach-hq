@@ -165,7 +165,7 @@ export const getOrganizationContext = createServerFn({ method: "GET" })
     if (!org) return null;
     const orgId = (org as { id: string }).id;
 
-    const [membershipRes, staffRes, featuresRes, teamsRes, teamMembershipRes, superAdminRes] =
+    const [membershipRes, staffRes, featuresRes, teamsRes, teamMembershipRes, superAdminRes, profileRes] =
       await Promise.all([
         supabase
           .from("organization_memberships")
@@ -175,7 +175,7 @@ export const getOrganizationContext = createServerFn({ method: "GET" })
           .maybeSingle(),
         supabase
           .from("staff_assignments")
-          .select("role, permissions, team_id")
+          .select("role, permissions, team_id, function_label, onboarding_completed_at")
           .eq("user_id", userId)
           .eq("organization_id", orgId)
           .maybeSingle(),
@@ -193,6 +193,11 @@ export const getOrganizationContext = createServerFn({ method: "GET" })
           .select("team_id, position, secondary_position, jersey_number, gym_access, available_training_days, limitations, personal_goal, team:organization_teams!inner(organization_id)")
           .eq("user_id", userId),
         supabase.rpc("has_role", { _user_id: userId, _role: "coach" }),
+        supabase
+          .from("profiles")
+          .select("display_name, nickname, birthdate, height_cm")
+          .eq("id", userId)
+          .maybeSingle(),
       ]);
 
     const teamMembership =
@@ -216,6 +221,8 @@ export const getOrganizationContext = createServerFn({ method: "GET" })
             role: (staffRes.data as any).role,
             permissions: ((staffRes.data as any).permissions ?? []) as string[],
             team_id: (staffRes.data as any).team_id ?? null,
+            function_label: (staffRes.data as any).function_label ?? null,
+            onboarding_completed_at: (staffRes.data as any).onboarding_completed_at ?? null,
           }
         : null,
       features: (featuresRes.data ?? []) as { feature: string; enabled: boolean }[],
@@ -233,6 +240,14 @@ export const getOrganizationContext = createServerFn({ method: "GET" })
           }
         : null,
       is_super_admin: !!superAdminRes.data,
+      profile: profileRes.data
+        ? {
+            display_name: (profileRes.data as any).display_name ?? null,
+            nickname: (profileRes.data as any).nickname ?? null,
+            birthdate: (profileRes.data as any).birthdate ?? null,
+            height_cm: (profileRes.data as any).height_cm ?? null,
+          }
+        : null,
     };
   });
 
