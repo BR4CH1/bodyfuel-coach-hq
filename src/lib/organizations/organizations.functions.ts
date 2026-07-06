@@ -395,6 +395,14 @@ export const acceptOrganizationInvite = createServerFn({ method: "POST" })
         { onConflict: "user_id,organization_id" },
       );
       if (memErr) throw new Error(memErr.message);
+
+      if (invite.team_id) {
+        const { error: tmErr } = await supabaseAdmin.from("team_memberships").upsert(
+          { user_id: userId, team_id: invite.team_id, status: "active" },
+          { onConflict: "user_id,team_id" },
+        );
+        if (tmErr) throw new Error(tmErr.message);
+      }
     } else {
       // Staff-Einladung: Zugehörigkeit als neutrale Membership + Rolle in
       // staff_assignments mit den Permissions aus der Einladung.
