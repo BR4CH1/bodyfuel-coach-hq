@@ -261,23 +261,24 @@ export async function runPerformanceProfileCalculation(
       domainRows.push({ domain_id: d.id, score: res.score, coverage: res.data_coverage, contributing: res.contributing });
     }
 
-    // 6e. Position profile weights
-    const { data: profileRow } = await supabase
-      .from("organization_memberships")
-      .select("position, team_id")
-      .eq("organization_id", session.organization_id)
+    // 6e. Position profile weights — position lives on team_memberships scoped to org teams
+    const { data: teamRows } = await supabase
+      .from("team_memberships")
+      .select("position, team_id, organization_teams!inner(organization_id)")
       .eq("user_id", userId)
-      .maybeSingle();
+      .eq("organization_teams.organization_id", session.organization_id)
+      .limit(1);
+    const position = teamRows?.[0]?.position ?? null;
 
     let positionProfileId: string | null = null;
     let positionProfileActive = false;
     let positionWeights: Array<{ domain_id: string; weight: number }> = [];
-    if (profileRow?.position) {
+    if (position) {
       const { data: posProfile } = await supabase
         .from("performance_position_profiles")
         .select("id, status")
         .eq("framework_id", framework_id)
-        .eq("position_key", profileRow.position)
+        .eq("position_key", position)
         .maybeSingle();
       if (posProfile) {
         positionProfileId = posProfile.id;
