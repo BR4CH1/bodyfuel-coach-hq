@@ -32,6 +32,15 @@ import {
   STAFF_PRESETS,
   ALL_PERMISSIONS,
 } from "@/lib/organizations/operating-loop.functions";
+import {
+  PERMISSION_LABELS,
+  PRESET_LABELS,
+  permissionLabel,
+  permissionDescription,
+  roleLabelFromDbRole,
+  scopeLabel,
+  type PresetKey,
+} from "@/lib/organizations/staff-labels";
 
 export const Route = createFileRoute("/coach/teams/$orgId")({
   head: () => ({ meta: [{ title: "Organisation — BODYFUEL Coach" }] }),
