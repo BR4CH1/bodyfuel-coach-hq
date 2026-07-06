@@ -1018,8 +1018,9 @@ function AddStaffModal({
 
 
         {err && <div className="text-xs text-red-500">{err}</div>}
+        </div>
 
-        <div className="flex justify-end gap-2 pt-2">
+        <div className="sticky bottom-0 flex justify-end gap-2 rounded-b-lg border-t border-border bg-card px-5 py-3">
           <button onClick={onClose} className="rounded border border-border px-3 py-1 text-xs">
             Abbrechen
           </button>
@@ -1035,6 +1036,7 @@ function AddStaffModal({
     </div>
   );
 }
+
 
 function Stat({ label, value }: { label: string; value: React.ReactNode }) {
   return (
