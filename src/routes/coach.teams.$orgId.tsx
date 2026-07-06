@@ -135,6 +135,28 @@ function CoachOrgDetail() {
         </div>
       </div>
 
+      {caller && (
+        <div className="mt-4 rounded-lg border border-border bg-card/50 p-3">
+          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider">
+            <span
+              className={
+                caller.experience === "org_admin"
+                  ? "rounded bg-amber-500/20 px-2 py-0.5 text-amber-500"
+                  : caller.experience === "head_coach"
+                  ? "rounded bg-blue-500/20 px-2 py-0.5 text-blue-500"
+                  : "rounded bg-muted px-2 py-0.5 text-muted-foreground"
+              }
+            >
+              {experienceLabel}
+            </span>
+            {caller.is_bodyfuel_coach && (
+              <span className="rounded bg-primary/20 px-2 py-0.5 text-primary">BODYFUEL Coach</span>
+            )}
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">{experienceHint}</p>
+        </div>
+      )}
+
       <section className="mt-6 grid gap-3 sm:grid-cols-2 md:grid-cols-4">
         <Stat label="Athleten" value={data.athletes.length} />
         <Stat label="Staff" value={data.staff.length} />
@@ -144,6 +166,7 @@ function CoachOrgDetail() {
           value={data.weekly_compliance != null ? `${data.weekly_compliance}%` : "—"}
         />
       </section>
+
 
       <div className="mt-6 flex flex-wrap gap-1 border-b border-border">
         {visibleTabs.map((t) => (
