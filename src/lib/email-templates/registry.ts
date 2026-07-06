@@ -25,4 +25,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'coach-daily-summary': coachDailySummaryTemplate,
   'bodyfuel-update': bodyfuelUpdateTemplate,
   'guardian-consent': guardianConsentTemplate,
+  'staff-invite': staffInviteTemplate,
 }
