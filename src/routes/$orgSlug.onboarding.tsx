@@ -71,11 +71,16 @@ function OrgOnboarding() {
 
   useEffect(() => {
     if (!ctx) return;
-    if (ctx.team_membership?.team_id) setTeamId(ctx.team_membership.team_id);
+    const tm: any = ctx.team_membership;
+    if (tm?.team_id) setTeamId(tm.team_id);
     else if (ctx.teams.length === 1) setTeamId(ctx.teams[0].id);
-    if (ctx.team_membership?.position) setPrimary(ctx.team_membership.position);
-    if (ctx.team_membership?.secondary_position) setSecondary(ctx.team_membership.secondary_position);
-    if (ctx.team_membership?.jersey_number != null) setJersey(String(ctx.team_membership.jersey_number));
+    if (tm?.position) setPrimary(tm.position);
+    if (tm?.secondary_position) setSecondary(tm.secondary_position);
+    if (tm?.jersey_number != null) setJersey(String(tm.jersey_number));
+    if (tm?.gym_access) setGym(tm.gym_access);
+    if (Array.isArray(tm?.available_training_days)) setDays(tm.available_training_days);
+    if (tm?.limitations) setLimitations(tm.limitations);
+    if (tm?.personal_goal) setGoal(tm.personal_goal);
   }, [ctx]);
 
   const save = useMutation({
