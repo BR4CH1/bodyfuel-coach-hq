@@ -133,6 +133,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <Link to={isCoach ? "/coach" : "/dashboard"}>
             <Logo showTagline />
           </Link>
+          <div className="mt-3">
+            <OrganizationContextSwitcher compact />
+          </div>
         </div>
         <nav className="flex-1 space-y-1 p-3">
           {nav.map((item) => {
