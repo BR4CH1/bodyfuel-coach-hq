@@ -18,7 +18,6 @@ import {
   completePerformanceSession,
   getPerformanceTeamMatrix,
 } from "@/lib/performance/performance.functions";
-import { getOrgCoachDetail } from "@/lib/organizations/athlete.functions";
 import { selectPerformanceResult, type Direction, type ResultSelectionMethod } from "@/lib/performance";
 
 export const Route = createFileRoute("/coach/teams/$orgId/performance")({
@@ -40,12 +39,6 @@ function CoachPerformancePage() {
   const frameworkQ = useQuery({
     queryKey: ["perf-fw", orgId],
     queryFn: () => fetchFramework({ data: { organization_id: orgId } }),
-  });
-
-  const fetchDetail = useServerFn(getOrgCoachDetail);
-  const detailQ = useQuery({
-    queryKey: ["org-detail", orgId],
-    queryFn: () => fetchDetail({ data: { organization_id: orgId } }),
   });
 
   const fw = frameworkQ.data;
