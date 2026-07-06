@@ -175,8 +175,29 @@ function InviteAccept() {
   }
 
   if (supabaseUser) {
-    return <Centered>Zugang wird aktiviert…</Centered>;
+    const inviteEmail = info.email?.trim().toLowerCase();
+    const userEmail = supabaseUser.email?.trim().toLowerCase();
+    const mismatch = !!inviteEmail && !!userEmail && inviteEmail !== userEmail;
+    if (mismatch) {
+      return (
+        <Centered>
+          <h1 className="font-display text-xl font-semibold">Falscher Account</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Diese Einladung ist für{" "}
+            <span className="text-foreground">{info.email}</span> ausgestellt.
+            Du bist als{" "}
+            <span className="text-foreground">{supabaseUser.email}</span>{" "}
+            eingeloggt.
+          </p>
+          <Button className="mt-6" onClick={signOutAndReload}>
+            Ausloggen & mit richtiger E-Mail annehmen
+          </Button>
+        </Centered>
+      );
+    }
+    return <Centered>Zugang wird aktiviert…{error ? ` (${error})` : ""}</Centered>;
   }
+
 
   const roleLabel = roleLabelFromDbRole(info.role);
   const scope = scopeLabel(info.team_name);
