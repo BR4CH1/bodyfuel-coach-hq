@@ -337,6 +337,13 @@ function StaffOnboarding({ ctx }: { ctx: NonNullable<Awaited<ReturnType<typeof g
   const [functionLabel, setFunctionLabel] = useState(ctx.staff?.function_label ?? "");
   const [functionCustom, setFunctionCustom] = useState("");
 
+  const staffOptions = useMemo<string[]>(() => {
+    const role = ctx.staff?.role;
+    if (role === "organization_admin") return STAFF_FUNCTION_OPTIONS_ORG_ADMIN;
+    if (role === "coach") return STAFF_FUNCTION_OPTIONS_COACH;
+    return STAFF_FUNCTION_OPTIONS_STAFF;
+  }, [ctx.staff?.role]);
+
   const save = useMutation({
     mutationFn: async () => {
       if (!displayName.trim()) throw new Error("Bitte Namen angeben.");
