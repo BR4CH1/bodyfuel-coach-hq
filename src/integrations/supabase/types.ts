@@ -2174,7 +2174,11 @@ export type Database = {
           link_target: string | null
           organization_id: string
           payload: Json
+          points: number | null
+          scheduled_date: string | null
           scheduled_for: string
+          source_id: string | null
+          source_type: string | null
           status: string
           subtitle: string | null
           task_type: string
@@ -2190,7 +2194,11 @@ export type Database = {
           link_target?: string | null
           organization_id: string
           payload?: Json
+          points?: number | null
+          scheduled_date?: string | null
           scheduled_for?: string
+          source_id?: string | null
+          source_type?: string | null
           status?: string
           subtitle?: string | null
           task_type: string
@@ -2206,7 +2214,11 @@ export type Database = {
           link_target?: string | null
           organization_id?: string
           payload?: Json
+          points?: number | null
+          scheduled_date?: string | null
           scheduled_for?: string
+          source_id?: string | null
+          source_type?: string | null
           status?: string
           subtitle?: string | null
           task_type?: string
@@ -2225,6 +2237,50 @@ export type Database = {
           },
           {
             foreignKeyName: "organization_tasks_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "organization_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_team_training_schedule: {
+        Row: {
+          active: boolean
+          created_at: string
+          end_time: string | null
+          id: string
+          start_time: string | null
+          team_id: string
+          title: string
+          updated_at: string
+          weekday: number
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          end_time?: string | null
+          id?: string
+          start_time?: string | null
+          team_id: string
+          title?: string
+          updated_at?: string
+          weekday: number
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          end_time?: string | null
+          id?: string
+          start_time?: string | null
+          team_id?: string
+          title?: string
+          updated_at?: string
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_team_training_schedule_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "organization_teams"
