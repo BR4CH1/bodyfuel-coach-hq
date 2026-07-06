@@ -138,6 +138,7 @@ function CoachOrgDetail() {
       </div>
 
       <div className="mt-5">
+        {tab === "cockpit" && <CoachCockpit orgId={orgId} />}
         {tab === "overview" && (
           <div className="grid gap-4 md:grid-cols-2">
             <Card title="Aktuelle Challenge">
