@@ -624,7 +624,7 @@ function StaffTab({ orgId, teams }: { orgId: string; teams: any[] }) {
       {staffQ.isLoading ? (
         <div className="text-xs text-muted-foreground">Lädt…</div>
       ) : staff.length === 0 ? (
-        <Empty>Noch kein Staff zugewiesen.</Empty>
+        <Empty>Noch keine Trainer oder Mitarbeiter zugewiesen.</Empty>
       ) : (
         <ul className="space-y-2">
           {staff.map((s) => (
