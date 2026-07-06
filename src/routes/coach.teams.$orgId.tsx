@@ -326,59 +326,91 @@ function CoachOrgDetail() {
   );
 }
 
-function AthletesTab({ orgId }: { orgId: string }) {
+function AthletesTab({
+  orgId,
+  teamFilter,
+  teams,
+  allowedUserIds,
+  onClearFilter,
+}: {
+  orgId: string;
+  teamFilter: string | null;
+  teams: any[];
+  allowedUserIds: Set<string> | null;
+  onClearFilter: () => void;
+}) {
   const fetchAudit = useServerFn(getOrgAthletesOnboardingAudit);
   const { data, isLoading } = useQuery({
     queryKey: ["org-onboarding-audit", orgId],
     queryFn: () => fetchAudit({ data: { organization_id: orgId } }),
   });
   if (isLoading || !data) return <div className="text-xs text-muted-foreground">Lädt…</div>;
+  const rows = allowedUserIds
+    ? (data.athletes as any[]).filter((a) => allowedUserIds.has(a.user_id))
+    : (data.athletes as any[]);
+  const filterTeam = teamFilter ? teams.find((t) => t.id === teamFilter) : null;
   return (
-    <div className="overflow-x-auto rounded-lg border border-border">
-      <table className="w-full text-sm">
-        <thead className="bg-secondary text-left text-[10px] uppercase tracking-wider text-muted-foreground">
-          <tr>
-            <th className="px-3 py-2">Name</th>
-            <th className="px-3 py-2">Onboarding</th>
-            <th className="px-3 py-2">Fehlende Organization-Daten</th>
-          </tr>
-        </thead>
-        <tbody>
-          {(data.athletes as any[]).map((a) => (
-            <tr key={a.user_id} className="border-t border-border hover:bg-muted/40">
-              <td className="px-3 py-2 font-semibold">
-                <Link
-                  to="/coach/teams/$orgId/athletes/$userId"
-                  params={{ orgId, userId: a.user_id }}
-                  className="hover:underline"
-                >
-                  {a.name}
-                </Link>
-              </td>
-              <td className="px-3 py-2">
-                {a.derived_complete ? (
-                  <span className="text-green-500">ABGESCHLOSSEN</span>
-                ) : (
-                  <span className="text-yellow-500">OFFEN</span>
-                )}
-              </td>
-              <td className="px-3 py-2 text-xs text-muted-foreground">
-                {a.missing.length === 0 ? "—" : a.missing.join(", ")}
-              </td>
-            </tr>
-          ))}
-          {data.athletes.length === 0 && (
+    <div className="space-y-2">
+      {filterTeam && (
+        <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs">
+          <span>
+            Gefiltert nach Team: <strong>{filterTeam.name}</strong> ({rows.length})
+          </span>
+          <button
+            onClick={onClearFilter}
+            className="rounded border border-border px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+          >
+            Filter entfernen
+          </button>
+        </div>
+      )}
+      <div className="overflow-x-auto rounded-lg border border-border">
+        <table className="w-full text-sm">
+          <thead className="bg-secondary text-left text-[10px] uppercase tracking-wider text-muted-foreground">
             <tr>
-              <td colSpan={3} className="px-3 py-6 text-center text-sm text-muted-foreground">
-                Noch keine Athleten.
-              </td>
+              <th className="px-3 py-2">Name</th>
+              <th className="px-3 py-2">Onboarding</th>
+              <th className="px-3 py-2">Fehlende Organization-Daten</th>
             </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((a) => (
+              <tr key={a.user_id} className="border-t border-border hover:bg-muted/40">
+                <td className="px-3 py-2 font-semibold">
+                  <Link
+                    to="/coach/teams/$orgId/athletes/$userId"
+                    params={{ orgId, userId: a.user_id }}
+                    className="hover:underline"
+                  >
+                    {a.name}
+                  </Link>
+                </td>
+                <td className="px-3 py-2">
+                  {a.derived_complete ? (
+                    <span className="text-green-500">ABGESCHLOSSEN</span>
+                  ) : (
+                    <span className="text-yellow-500">OFFEN</span>
+                  )}
+                </td>
+                <td className="px-3 py-2 text-xs text-muted-foreground">
+                  {a.missing.length === 0 ? "—" : a.missing.join(", ")}
+                </td>
+              </tr>
+            ))}
+            {rows.length === 0 && (
+              <tr>
+                <td colSpan={3} className="px-3 py-6 text-center text-sm text-muted-foreground">
+                  {filterTeam ? "Keine Athleten in diesem Team." : "Noch keine Athleten."}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
+
 
 function TrainingTab({ orgId }: { orgId: string }) {
   const qc = useQueryClient();
