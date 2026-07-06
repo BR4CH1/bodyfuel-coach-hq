@@ -119,6 +119,7 @@ import { Route as ApiPublicHooksProcessAutopilotJobsRouteImport } from './routes
 import { Route as ApiPublicHooksPlanRotationRouteImport } from './routes/api/public/hooks/plan-rotation'
 import { Route as ApiPublicHooksOrgTaskEngineRouteImport } from './routes/api/public/hooks/org-task-engine'
 import { Route as ApiPublicHooksCoachDailySummaryRouteImport } from './routes/api/public/hooks/coach-daily-summary'
+import { Route as CoachTeamsOrgIdPerformanceSessionSessionIdRouteImport } from './routes/coach.teams.$orgId.performance.session.$sessionId'
 
 const WelcomeRoute = WelcomeRouteImport.update({
   id: '/welcome',
@@ -691,6 +692,12 @@ const ApiPublicHooksCoachDailySummaryRoute =
     path: '/api/public/hooks/coach-daily-summary',
     getParentRoute: () => rootRouteImport,
   } as any)
+const CoachTeamsOrgIdPerformanceSessionSessionIdRoute =
+  CoachTeamsOrgIdPerformanceSessionSessionIdRouteImport.update({
+    id: '/session/$sessionId',
+    path: '/session/$sessionId',
+    getParentRoute: () => CoachTeamsOrgIdPerformanceRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -797,12 +804,13 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/send-feature-news': typeof ApiPublicHooksSendFeatureNewsRoute
   '/api/public/hooks/trial-reminders': typeof ApiPublicHooksTrialRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
-  '/coach/teams/$orgId/performance': typeof CoachTeamsOrgIdPerformanceRoute
+  '/coach/teams/$orgId/performance': typeof CoachTeamsOrgIdPerformanceRouteWithChildren
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
+  '/coach/teams/$orgId/performance/session/$sessionId': typeof CoachTeamsOrgIdPerformanceSessionSessionIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -903,12 +911,13 @@ export interface FileRoutesByTo {
   '/api/public/hooks/send-feature-news': typeof ApiPublicHooksSendFeatureNewsRoute
   '/api/public/hooks/trial-reminders': typeof ApiPublicHooksTrialRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
-  '/coach/teams/$orgId/performance': typeof CoachTeamsOrgIdPerformanceRoute
+  '/coach/teams/$orgId/performance': typeof CoachTeamsOrgIdPerformanceRouteWithChildren
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
+  '/coach/teams/$orgId/performance/session/$sessionId': typeof CoachTeamsOrgIdPerformanceSessionSessionIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -1016,12 +1025,13 @@ export interface FileRoutesById {
   '/api/public/hooks/send-feature-news': typeof ApiPublicHooksSendFeatureNewsRoute
   '/api/public/hooks/trial-reminders': typeof ApiPublicHooksTrialRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
-  '/coach/teams/$orgId/performance': typeof CoachTeamsOrgIdPerformanceRoute
+  '/coach/teams/$orgId/performance': typeof CoachTeamsOrgIdPerformanceRouteWithChildren
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
+  '/coach/teams/$orgId/performance/session/$sessionId': typeof CoachTeamsOrgIdPerformanceSessionSessionIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -1136,6 +1146,7 @@ export interface FileRouteTypes {
     | '/lovable/email/queue/process'
     | '/lovable/email/transactional/preview'
     | '/lovable/email/transactional/send'
+    | '/coach/teams/$orgId/performance/session/$sessionId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -1242,6 +1253,7 @@ export interface FileRouteTypes {
     | '/lovable/email/queue/process'
     | '/lovable/email/transactional/preview'
     | '/lovable/email/transactional/send'
+    | '/coach/teams/$orgId/performance/session/$sessionId'
   id:
     | '__root__'
     | '/'
@@ -1354,6 +1366,7 @@ export interface FileRouteTypes {
     | '/lovable/email/queue/process'
     | '/lovable/email/transactional/preview'
     | '/lovable/email/transactional/send'
+    | '/coach/teams/$orgId/performance/session/$sessionId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -2195,6 +2208,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksCoachDailySummaryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/coach/teams/$orgId/performance/session/$sessionId': {
+      id: '/coach/teams/$orgId/performance/session/$sessionId'
+      path: '/session/$sessionId'
+      fullPath: '/coach/teams/$orgId/performance/session/$sessionId'
+      preLoaderRoute: typeof CoachTeamsOrgIdPerformanceSessionSessionIdRouteImport
+      parentRoute: typeof CoachTeamsOrgIdPerformanceRoute
+    }
   }
 }
 
@@ -2243,12 +2263,27 @@ const CoachCustomersRouteWithChildren = CoachCustomersRoute._addFileChildren(
   CoachCustomersRouteChildren,
 )
 
+interface CoachTeamsOrgIdPerformanceRouteChildren {
+  CoachTeamsOrgIdPerformanceSessionSessionIdRoute: typeof CoachTeamsOrgIdPerformanceSessionSessionIdRoute
+}
+
+const CoachTeamsOrgIdPerformanceRouteChildren: CoachTeamsOrgIdPerformanceRouteChildren =
+  {
+    CoachTeamsOrgIdPerformanceSessionSessionIdRoute:
+      CoachTeamsOrgIdPerformanceSessionSessionIdRoute,
+  }
+
+const CoachTeamsOrgIdPerformanceRouteWithChildren =
+  CoachTeamsOrgIdPerformanceRoute._addFileChildren(
+    CoachTeamsOrgIdPerformanceRouteChildren,
+  )
+
 interface CoachTeamsOrgIdRouteChildren {
-  CoachTeamsOrgIdPerformanceRoute: typeof CoachTeamsOrgIdPerformanceRoute
+  CoachTeamsOrgIdPerformanceRoute: typeof CoachTeamsOrgIdPerformanceRouteWithChildren
 }
 
 const CoachTeamsOrgIdRouteChildren: CoachTeamsOrgIdRouteChildren = {
-  CoachTeamsOrgIdPerformanceRoute: CoachTeamsOrgIdPerformanceRoute,
+  CoachTeamsOrgIdPerformanceRoute: CoachTeamsOrgIdPerformanceRouteWithChildren,
 }
 
 const CoachTeamsOrgIdRouteWithChildren = CoachTeamsOrgIdRoute._addFileChildren(
