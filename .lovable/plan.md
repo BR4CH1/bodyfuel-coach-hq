@@ -1,100 +1,113 @@
-## Ziel
 
-Ein manueller Trainings-Plan-Builder für Coaches, funktional analog zum bestehenden `PlanBuilderPage.tsx` (Ernährung). Mehrere Wochen, Übungen pro Trainingstag mit Sätzen/Wdh/Gewicht/RIR/Pause/Notiz, Draft + Publish, Auto-Fill-Vorschlag, Partner-Kopplung, kuratierte Übungsbibliothek + Freitext-Fallback.
+# Multi-Organization Grundlage für BodyFuel
 
-## Datenmodell — bestehendes wiederverwenden
+Ziel: generisches, skalierbares Org-System. Bestehende Accounts, Rollen, Smart-/Coaching-Logik und `bulls_*` Daten bleiben unangetastet. Bulls wird schrittweise als erste Organisation abgebildet — aber nicht hart verdrahtet.
 
-Der Smart-AI-Trainingsplan schreibt bereits in:
+Dieser Plan liefert **Fundament + Routing + Coach-Menü + Bulls als erste Org (Datenmigration light)**. Feature-Module (Ranking pro Org, Challenges pro Org, Community pro Org) sind Folge-Iterationen und explizit **nicht** Teil dieses Plans.
 
-- `nutrition_plans` mit `plan_type='training'` (Container: `client_id`, `title`, `status`, `scheduled_start_date`, `weeks_count`, `is_partner_plan`, `partner_plan_id`)
-- `training_days` (`plan_id`, `name`, `sort_order`, `week_number`)
-- `training_exercises` (`day_id`, `name`, `category`, `target_sets`, `target_reps`, `target_weights`, `rest_seconds`, `notes`, `sort_order`)
+---
 
-→ Kein Schema-Umbau für den Core-Plan nötig. Zusätze:
+## 1. Datenbank (eine Migration)
 
-1. Neue kuratierte Übungsbibliothek `coach_exercise_library` (analog `coach_meal_library`):
-   - `id`, `name`, `category` (barbell/dumbbell/machine/cable/cardio/core/bodyweight), `primary_muscle`, `secondary_muscles text[]`, `equipment text[]`, `movement_pattern` (squat/hinge/push_h/push_v/pull_h/pull_v/carry/core/cardio), `is_unilateral`, `difficulty` (beg/int/adv), `default_sets`, `default_reps`, `default_rest_seconds`, `notes`, `is_active`, `created_at`, `updated_at`.
-   - GRANT SELECT authenticated; RLS: alle authentifizierten lesen, nur Coach schreibt.
-   - Seed-Migration mit ~60–80 Standardübungen abgedeckt über alle Movement Patterns.
+Neue Tabellen im `public` Schema, alle mit RLS + GRANTs:
 
-2. Zusätzliche Spalten in `training_exercises`:
-   - `library_exercise_id uuid` (nullable, FK → `coach_exercise_library.id` ON DELETE SET NULL)
-   - `target_rir smallint`
-   - `is_locked boolean DEFAULT false`
-   - `linked_partner_group text` (Kopplung an Partner-Übung)
-   Optional: `partner_exercise_id uuid` (Kreuzverknüpfung analog `partner_meal_id`).
+- `organizations` — `id, name, slug (unique, lower, regex), organization_type enum, logo_url, primary_color, secondary_color, status enum(active|inactive|archived), created_at, updated_at`
+- `organization_teams` — `id, organization_id, name, slug, sport, age_group, status, created_at, updated_at`, unique `(organization_id, slug)`
+- `organization_memberships` — `id, user_id, organization_id, role enum(athlete|member|staff|coach|organization_admin), status enum(active|invited|inactive|removed), onboarding_completed bool, joined_at, created_at, updated_at`, unique `(user_id, organization_id)`
+- `team_memberships` — `id, user_id, team_id, position, secondary_position, jersey_number, status, created_at, updated_at`, unique `(user_id, team_id)`
+- `organization_invites` — `id, organization_id, team_id nullable, email nullable, assigned_role, invite_token (unique), expires_at, status enum(pending|accepted|expired|revoked), created_by, created_at`
+- `staff_assignments` — `id, user_id, organization_id, team_id nullable, role, permissions text[], created_at, updated_at`, unique `(user_id, organization_id, team_id)`
+- `organization_features` — `id, organization_id, feature text, enabled bool, config jsonb`, unique `(organization_id, feature)`
 
-3. Zusätzliche Spalte in `training_days`:
-   - `day_date date` (analog `nutrition_plan_days.day_date`)
+Enums als eigene Postgres `type`s.
 
-Alles in einer Migration, danach Types-Regenerierung.
+**Reserved slugs**: Trigger auf `organizations` verbietet Slugs, die bestehende Top-Level-Routen kollidieren würden (`auth`, `login`, `dashboard`, `nutrition`, `training`, `messages`, `community`, `profile`, `coach`, `admin`, `tracker`, `smart`, `bulls` bleibt frei für Migration, `ranking`, `achievements`, `checkout`, `impressum`, `datenschutz`, `trust`, `welcome`, `api`, `app`, `mcp`, `lovable`, `well-known`, `onboarding`, `measurements`, `progress`, `strength-check`, `check-in`, `training-import`, `daily-checklist`, `unsubscribe`, `guardian-consent`).
 
-## Server-Funktionen (`src/lib/training-plan-builder.functions.ts`)
+**Security-Definer Helpers** (analog `has_role`):
+- `is_org_member(_user uuid, _org uuid) returns bool`
+- `is_org_staff(_user uuid, _org uuid, _permission text default null) returns bool`
+- `is_org_admin(_user uuid, _org uuid) returns bool` (super_admin via `has_role('coach')` inklusive)
 
-Neu, spiegelt `plan-builder.functions.ts`:
+**RLS**:
+- `organizations`: SELECT für alle Mitglieder + Staff + `has_role('coach')`. Nur `has_role('coach')` oder org_admin managen.
+- `organization_teams`: SELECT wenn Org-Mitglied/Staff. Manage: org_admin/staff mit `manage_organization`.
+- `organization_memberships`: SELECT eigene Zeile ODER Staff/Admin derselben Org. Manage: org_admin, Staff mit `manage_members`, `has_role('coach')`.
+- `team_memberships`: analog, gescoped über Team → Org.
+- `organization_invites`: SELECT Staff der Org. Insert Staff mit `manage_members`. Öffentlich einlösbar über Server-Function `redeemInvite` (kein direkter Client-Select über Token).
+- `staff_assignments`: SELECT eigene + org_admin. Manage: org_admin, `has_role('coach')`.
+- `organization_features`: SELECT alle Mitglieder derselben Org; Manage org_admin.
 
-- `listExerciseLibrary()` — coach-only, alle aktiven Bibliotheks-Übungen.
-- `getCustomerTrainingContext({ customerId })` — liefert:
-  - `trainingWeekdays` aus `smart_nutrition_profile.training_weekdays` (fallback aus letzten `training_sessions`),
-  - `experienceLevel`, `mainGoal` aus `profiles`/`smart_nutrition_profile`,
-  - `equipmentAvailable` (Bulls/Home/Gym),
-  - Startgewichte aus letztem Strength-Check (V2 e1RM/×0.75 als Woche-1-Baseline für Bench, Squat, Deadlift, OHP, Row, Lat Pulldown, Leg Press, Leg Curl),
-  - `injuries` / Kontraindikationen.
-- `saveBuilderTrainingPlan({ customerId, title, startDate, weeksCount, days, publish })`
-  - `days: BuilderTrainingDay[]` — pro `week_number` × Wochentag genau ein Eintrag, `type: "training" | "rest"`, `exercises[]` mit `slot`, `library_exercise_id?`, `name`, `category`, `target_sets`, `target_reps`, `target_weights`, `target_rir`, `rest_seconds`, `notes`, `is_locked`, `linked_partner_group?`.
-  - Legt `nutrition_plans` mit `plan_type='training'` + `training_days` + `training_exercises` an, alte Draft/Approved-Trainingspläne desselben Kunden werden archiviert (wie AI-Core Zeile 478–483).
-  - `publish=true` → `status='active'`.
-- `saveBuilderPartnerTrainingPlan({ customerId, partnerId, ... clientDays, partnerDays, publish })`
-  - Zwei Aufrufe an internen `persistBuilderTrainingPlan`, danach:
-    - `is_partner_plan=true` und `partner_plan_id` kreuzweise setzen,
-    - `training_exercises.partner_exercise_id` anhand `linked_partner_group` kreuzverlinken.
+Kein Löschen/Überschreiben bestehender Tabellen. Keine `is_*_user` Booleans.
 
-Alle Funktionen: `.middleware([requireSupabaseAuth])` + `assertCoach`.
+## 2. Bulls als erste Organisation (Daten-Bootstrap, nicht-destruktiv)
 
-## UI
+In derselben Migration:
+- Row in `organizations` einfügen (`slug='bulls'`, `organization_type='sports_club'`, Farben aus bestehendem Bulls-Theme).
+- Ein `organization_teams` Row `Seniors`.
+- Backfill: für jeden User mit `user_groups.group_name='bulls'` → `organization_memberships (role='athlete', status='active', onboarding_completed = EXISTS(bulls_profiles))`.
+- Features aktivieren, die die Bulls-Seiten heute nutzen.
+- `user_groups` und `bulls_*` Tabellen bleiben **unverändert und aktiv** — die neuen Tabellen laufen parallel. Migration der Bulls-Routen auf das generische System erfolgt in einer Folge-Iteration.
 
-Neue Route: `src/routes/coach.training-builder.$userId.tsx` → rendert neue Komponente `TrainingPlanBuilderPage` unter `AppLayout`.
+## 3. Routing (`/:orgSlug`)
 
-Neue Komponente: `src/components/bodyfuel/TrainingPlanBuilderPage.tsx` — analog zu `PlanBuilderPage.tsx`, aber mit Trainings-Semantik:
+Neue TanStack-Routen:
+- `src/routes/org.$slug.tsx` — Layout mit `beforeLoad`: lädt Org via Server-Fn `getOrganizationBySlug` (publishable client, `status='active'`, safe columns). 404 → notFound.
+- `src/routes/org.$slug.index.tsx` — Login/Membership/Onboarding/Home-Weiche im Component (kein `_authenticated`-Wrap, weil unauth Landing gezeigt werden muss).
 
-- **Header**: Titel, Startdatum, Wochenanzahl (1–8, Default 4, Woche 4 automatisch Deload-Vorschlag), Publish-Toggle.
-- **Wochennavigation**: Tabs Woche 1..N + „alle Wochen".
-- **Pro Tag** (Mo–So):
-  - Toggle Trainingstag/Ruhetag (Default aus `trainingWeekdays`, manuell überschreibbar).
-  - Bei Trainingstag: Fokus-Titel („Push", „Unterkörper", …).
-  - Liste von Übungen (Drag-Sort), pro Übung:
-    - Übungs-Picker (kuratierte Bibliothek mit Filter Muskelgruppe/Equipment, Freitext-Fallback),
-    - Sätze (Number), Wdh („8" oder „8,8,10"), Gewicht („60" oder „60,62,65"), RIR (0–5), Pause (Sek.), Notiz, 🔒 Lock, „Gemeinsam mit Partner"-Chip.
-  - Add-Button für weitere Übungen; Copy-Day, Copy-Week, Clear-Day.
-- **Auto-Fill**: „Vorschlag Tag" / „Vorschlag Woche" ruft eine reine Client-Heuristik `autoFillTrainingWeek(context)` auf:
-  - Movement-Pattern-Verteilung nach Split (Full-Body / Push-Pull-Legs / Upper-Lower je nach Anzahl Trainingstage),
-  - Startgewichte aus Strength-Check als Baseline (`e1RM × 0.75`, gerundet auf 2.5 kg), Progression pro Woche wie AI-Core (`weekCapFactor`),
-  - respektiert `is_locked`,
-  - Partner-Modus wählt bevorzugt Übungen, die für beide Movement-Patterns identisch sind.
-- **Live-Zusammenfassung** pro Tag: Anzahl Sätze, geschätztes Volumen, Muskelabdeckung.
-- **Partner-Toggle** (analog Ernährungsplan): wenn `nutrition_partners` gesetzt, „Partnerplan mit {Name}" freischaltbar → Tabs „Kunde | Partner", Auto-Fill koppelt gemeinsame Trainingstage.
-- **Speichern**: „Als Entwurf speichern" bzw. „Für Kunden aktivieren" ruft `saveBuilderTrainingPlan` / `saveBuilderPartnerTrainingPlan`.
-- Nach Speichern: Redirect auf `/coach/plan-preview/$planId` (existiert bereits, funktioniert mit `plan_type='training'`).
+Ablauf im Component:
+1. Nicht eingeloggt → gebrandete Login-/Signup-Karte, danach zurück auf `/:slug`.
+2. Eingeloggt + keine `organization_membership` → geschützte Access-Seite („Kein Zugriff — bitte Einladungslink anfordern").
+3. Membership vorhanden + `onboarding_completed=false` → Redirect `/:slug/onboarding`.
+4. Fertig → Redirect `/:slug/home`.
 
-## Reihenfolge im Code
+Weitere Routen als Stubs (leere Layouts mit Feature-Gate):
+- `org.$slug.onboarding.tsx`
+- `org.$slug.home.tsx`
+- `org.$slug.invite.$token.tsx` — ruft `acceptOrganizationInvite` Server-Fn auf.
 
-1. Migration:
-   - `coach_exercise_library` + GRANT + RLS + Seed.
-   - `ALTER training_exercises ADD library_exercise_id, target_rir, is_locked, linked_partner_group, partner_exercise_id`.
-   - `ALTER training_days ADD day_date`.
-2. `src/lib/training-plan-builder.functions.ts` (Types + 4 Server-Funktionen).
-3. `src/lib/training-autofill.ts` (reiner TS-Helper für Vorschlagsgenerierung).
-4. `src/components/bodyfuel/TrainingPlanBuilderPage.tsx`.
-5. `src/routes/coach.training-builder.$userId.tsx`.
-6. Einstiegspunkt: Button „Manuell Trainingsplan erstellen" in `TrainingPlanManagementCard.tsx` bzw. der Coach-Kundenansicht (nur wo bereits AI-Plan-Buttons existieren).
+Bestehende Top-Level-Routen bleiben; Slug-Kollision wird DB-seitig verhindert.
 
-## Nicht Bestandteil
+## 4. Server Functions (`src/lib/organizations/*.functions.ts`)
 
-- Keine Änderung am AI-Trainingsplan-Flow.
-- Keine Änderung an der Kunden-App-Trainingsansicht — sie liest bereits `training_days`/`training_exercises` und zeigt alle neuen Felder auf Wunsch später an (`target_rir` wird als optionale Info gerendert, sobald das UI dafür ergänzt wird — im ersten Wurf nicht Pflicht).
-- Keine Progression-Automatik über 8 Wochen hinaus, keine Periodisierungsmodelle.
-- Kein Selfservice-Builder für Endkunden.
+- `getOrganizationBySlug({ slug })` — public read (server publishable client).
+- `getMyOrganizations()` — auth, listet Memberships + Org-Kern + Features.
+- `getOrganizationContext({ slug })` — auth, gibt Membership + Team + Features + Permissions.
+- `createOrganizationInvite(...)` — auth, staff-only.
+- `acceptOrganizationInvite({ token })` — auth, erstellt `organization_memberships` + ggf. `team_memberships`, markiert Invite `accepted`.
+- `listOrganizationsForCoach()` — auth, `has_role('coach')`.
 
-## Nach Freigabe
+Alle mit `requireSupabaseAuth` (außer `getOrganizationBySlug`).
 
-Ich starte mit Schritt 1 (Migration inkl. Seed). Sobald die Migration freigegeben und die Types regeneriert sind, lege ich Server-Funktionen, Auto-Fill-Helper, UI und Route an — jeweils in dedizierten Commits/Batches.
+## 5. Context Switcher
+
+- `src/lib/organizations/context.tsx` — `OrganizationProvider` mit aktuellem Org-Slug (aus Route-Match) + `useOrganizationContext()`.
+- Kleiner Switcher in `AppLayout` (Desktop-Sidebar + Mobile-Top): zeigt "Mein BodyFuel" + jede aktive Membership. Klick navigiert zu `/:slug/home` bzw. `/dashboard`.
+- Branding (primary/secondary color, Logo) via CSS-Variablen im Org-Layout, keine harten Themes.
+
+## 6. Coach Dashboard — Teams Menü
+
+- Neuer Nav-Eintrag `Teams` in `coachNav`.
+- Route `src/routes/coach.teams.tsx` (Übersicht) + `src/routes/coach.teams.$orgId.tsx` (Org-Admin-Seite mit Tabs: Übersicht, Mitglieder, Teams, Staff, Einstellungen; weitere Tabs Feature-gated und im ersten Schritt als Placeholder-Panels).
+- Liste dynamisch via `listOrganizationsForCoach`, keine hardcoded Namen.
+- Sichtbarkeit über `staff_assignments` + `has_role('coach')` (super admin).
+
+## 7. Existing-User Add-on Onboarding (Rahmen)
+
+- `org.$slug.onboarding.tsx` liest bestehende `profiles`/`body_measurements` und fragt nur fehlende + org-spezifische Felder (Position, Team, Jersey, Gym-Setup, Einschränkungen) ab. Speichert in `team_memberships` + optionalem `organization_member_profiles` jsonb-Feld (kommt in Folge-Iteration falls nötig — Bulls nutzt weiter `bulls_profiles`, bis Migration greift).
+- Setzt `organization_memberships.onboarding_completed=true`.
+
+Konkrete Formularfelder pro Org sind Folge-Iteration; im ersten Wurf: Position + Team + Jersey Number als generische Felder.
+
+## 8. Nicht in diesem Schritt
+
+- Migration der Bulls-Datenbereiche (`bulls_weight_logs`, `bulls_progress_photos`, …) auf `organization_*` — kommt in Folge, aktuell parallel.
+- Org-eigene Rankings/Challenges/Community-Feeds — nur Feature-Flags, keine UI.
+- RWE- und SGZ-Seed-Daten — Anlage erfolgt später via Admin-UI.
+
+## Technische Details (kompakt)
+
+- Tabellen: siehe §1. Alle GRANTs für `authenticated` + `service_role`; kein `anon` außer für die Org-Landing-Seite (public read auf `organizations` mit `status='active'` und Whitelisted Columns via `TO anon` SELECT-Policy — nur `id, name, slug, organization_type, logo_url, primary_color, secondary_color`).
+- Enums werden neu erstellt (`organization_type`, `organization_role`, `membership_status`, `invite_status`, `team_status`).
+- Route-Naming: TanStack-Dot-Konvention (`org.$slug.tsx` = `/org/$slug`). Wir nutzen aber `$slug.tsx` direkt auf Top-Level? — **Nein**, um Slug-Kollisionen mit bestehenden Routen zu vermeiden, nutzen wir Prefix `/o/:slug` NICHT vom User gefordert. Der User will `/bulls` direkt. Kompromiss: Slug direkt auf Top-Level, aber DB-Trigger blockt reservierte Namen; Route-Datei ist `src/routes/$orgSlug.tsx` mit `beforeLoad`, das per Server-Fn prüft und bei "keine Org" via `throw notFound()` an globales 404-Handling durchreicht. Bestehende Top-Level-Dateien (`dashboard.tsx` etc.) haben Vorrang, weil TanStack statische Routen vor dynamischen matcht — daher sicher.
+
+Nach Migration werden alle abhängigen Files (Server-Fns, Routen, Context, Coach-Menü) angelegt bzw. erweitert.

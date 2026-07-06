@@ -36,12 +36,14 @@ import { Route as CheckInRouteImport } from './routes/check-in'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as AchievementsRouteImport } from './routes/achievements'
+import { Route as OrgSlugRouteImport } from './routes/$orgSlug'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TrackerIndexRouteImport } from './routes/tracker.index'
 import { Route as SmartIndexRouteImport } from './routes/smart.index'
 import { Route as NutritionIndexRouteImport } from './routes/nutrition.index'
 import { Route as CoachIndexRouteImport } from './routes/coach.index'
 import { Route as BullsIndexRouteImport } from './routes/bulls.index'
+import { Route as OrgSlugIndexRouteImport } from './routes/$orgSlug.index'
 import { Route as TrackerSignupRouteImport } from './routes/tracker.signup'
 import { Route as TrackerLoginRouteImport } from './routes/tracker.login'
 import { Route as TrackerAppRouteImport } from './routes/tracker.app'
@@ -72,7 +74,10 @@ import { Route as BullsNutritionRouteImport } from './routes/bulls.nutrition'
 import { Route as BullsBenchmarksRouteImport } from './routes/bulls.benchmarks'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
+import { Route as OrgSlugOnboardingRouteImport } from './routes/$orgSlug.onboarding'
+import { Route as OrgSlugHomeRouteImport } from './routes/$orgSlug.home'
 import { Route as TrackerAppIndexRouteImport } from './routes/tracker.app.index'
+import { Route as CoachTeamsIndexRouteImport } from './routes/coach.teams.index'
 import { Route as CoachCustomersIndexRouteImport } from './routes/coach.customers.index'
 import { Route as TrackerAppWeightRouteImport } from './routes/tracker.app.weight'
 import { Route as TrackerAppWaterRouteImport } from './routes/tracker.app.water'
@@ -84,6 +89,7 @@ import { Route as TrackerAppAchievementsRouteImport } from './routes/tracker.app
 import { Route as SmartGiftCodeRouteImport } from './routes/smart.gift.$code'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as CoachTrainingBuilderUserIdRouteImport } from './routes/coach.training-builder.$userId'
+import { Route as CoachTeamsOrgIdRouteImport } from './routes/coach.teams.$orgId'
 import { Route as CoachPlanPreviewPlanIdRouteImport } from './routes/coach.plan-preview.$planId'
 import { Route as CoachPlanBuilderUserIdRouteImport } from './routes/coach.plan-builder.$userId'
 import { Route as CoachCustomersNewRouteImport } from './routes/coach.customers.new'
@@ -91,6 +97,7 @@ import { Route as CoachCustomersUserIdRouteImport } from './routes/coach.custome
 import { Route as ApiPublicGuardianConsentRouteImport } from './routes/api/public/guardian-consent'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
+import { Route as OrgSlugInviteTokenRouteImport } from './routes/$orgSlug.invite.$token'
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
@@ -240,6 +247,11 @@ const AchievementsRoute = AchievementsRouteImport.update({
   path: '/achievements',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OrgSlugRoute = OrgSlugRouteImport.update({
+  id: '/$orgSlug',
+  path: '/$orgSlug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -269,6 +281,11 @@ const BullsIndexRoute = BullsIndexRouteImport.update({
   id: '/bulls/',
   path: '/bulls/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const OrgSlugIndexRoute = OrgSlugIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => OrgSlugRoute,
 } as any)
 const TrackerSignupRoute = TrackerSignupRouteImport.update({
   id: '/tracker/signup',
@@ -424,10 +441,25 @@ const Char91DotmcpChar93ListToolsRoute =
     path: '/.mcp/list-tools',
     getParentRoute: () => rootRouteImport,
   } as any)
+const OrgSlugOnboardingRoute = OrgSlugOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => OrgSlugRoute,
+} as any)
+const OrgSlugHomeRoute = OrgSlugHomeRouteImport.update({
+  id: '/home',
+  path: '/home',
+  getParentRoute: () => OrgSlugRoute,
+} as any)
 const TrackerAppIndexRoute = TrackerAppIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => TrackerAppRoute,
+} as any)
+const CoachTeamsIndexRoute = CoachTeamsIndexRouteImport.update({
+  id: '/teams/',
+  path: '/teams/',
+  getParentRoute: () => CoachRoute,
 } as any)
 const CoachCustomersIndexRoute = CoachCustomersIndexRouteImport.update({
   id: '/',
@@ -485,6 +517,11 @@ const CoachTrainingBuilderUserIdRoute =
     path: '/training-builder/$userId',
     getParentRoute: () => CoachRoute,
   } as any)
+const CoachTeamsOrgIdRoute = CoachTeamsOrgIdRouteImport.update({
+  id: '/teams/$orgId',
+  path: '/teams/$orgId',
+  getParentRoute: () => CoachRoute,
+} as any)
 const CoachPlanPreviewPlanIdRoute = CoachPlanPreviewPlanIdRouteImport.update({
   id: '/plan-preview/$planId',
   path: '/plan-preview/$planId',
@@ -521,6 +558,11 @@ const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
   id: '/.lovable/oauth/consent',
   path: '/.lovable/oauth/consent',
   getParentRoute: () => rootRouteImport,
+} as any)
+const OrgSlugInviteTokenRoute = OrgSlugInviteTokenRouteImport.update({
+  id: '/invite/$token',
+  path: '/invite/$token',
+  getParentRoute: () => OrgSlugRoute,
 } as any)
 const LovableEmailTransactionalSendRoute =
   LovableEmailTransactionalSendRouteImport.update({
@@ -601,6 +643,7 @@ const ApiPublicHooksCoachDailySummaryRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/$orgSlug': typeof OrgSlugRouteWithChildren
   '/achievements': typeof AchievementsRoute
   '/app': typeof AppRoute
   '/auth': typeof AuthRoute
@@ -628,6 +671,8 @@ export interface FileRoutesByFullPath {
   '/trust': typeof TrustRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/welcome': typeof WelcomeRoute
+  '/$orgSlug/home': typeof OrgSlugHomeRoute
+  '/$orgSlug/onboarding': typeof OrgSlugOnboardingRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
@@ -658,11 +703,13 @@ export interface FileRoutesByFullPath {
   '/tracker/app': typeof TrackerAppRouteWithChildren
   '/tracker/login': typeof TrackerLoginRoute
   '/tracker/signup': typeof TrackerSignupRoute
+  '/$orgSlug/': typeof OrgSlugIndexRoute
   '/bulls/': typeof BullsIndexRoute
   '/coach/': typeof CoachIndexRoute
   '/nutrition/': typeof NutritionIndexRoute
   '/smart/': typeof SmartIndexRoute
   '/tracker/': typeof TrackerIndexRoute
+  '/$orgSlug/invite/$token': typeof OrgSlugInviteTokenRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/public/guardian-consent': typeof ApiPublicGuardianConsentRoute
@@ -670,6 +717,7 @@ export interface FileRoutesByFullPath {
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/coach/plan-builder/$userId': typeof CoachPlanBuilderUserIdRoute
   '/coach/plan-preview/$planId': typeof CoachPlanPreviewPlanIdRoute
+  '/coach/teams/$orgId': typeof CoachTeamsOrgIdRoute
   '/coach/training-builder/$userId': typeof CoachTrainingBuilderUserIdRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/smart/gift/$code': typeof SmartGiftCodeRoute
@@ -681,6 +729,7 @@ export interface FileRoutesByFullPath {
   '/tracker/app/water': typeof TrackerAppWaterRoute
   '/tracker/app/weight': typeof TrackerAppWeightRoute
   '/coach/customers/': typeof CoachCustomersIndexRoute
+  '/coach/teams/': typeof CoachTeamsIndexRoute
   '/tracker/app/': typeof TrackerAppIndexRoute
   '/api/public/hooks/coach-daily-summary': typeof ApiPublicHooksCoachDailySummaryRoute
   '/api/public/hooks/plan-rotation': typeof ApiPublicHooksPlanRotationRoute
@@ -722,6 +771,8 @@ export interface FileRoutesByTo {
   '/trust': typeof TrustRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/welcome': typeof WelcomeRoute
+  '/$orgSlug/home': typeof OrgSlugHomeRoute
+  '/$orgSlug/onboarding': typeof OrgSlugOnboardingRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
@@ -750,11 +801,13 @@ export interface FileRoutesByTo {
   '/smart/trial': typeof SmartTrialRoute
   '/tracker/login': typeof TrackerLoginRoute
   '/tracker/signup': typeof TrackerSignupRoute
+  '/$orgSlug': typeof OrgSlugIndexRoute
   '/bulls': typeof BullsIndexRoute
   '/coach': typeof CoachIndexRoute
   '/nutrition': typeof NutritionIndexRoute
   '/smart': typeof SmartIndexRoute
   '/tracker': typeof TrackerIndexRoute
+  '/$orgSlug/invite/$token': typeof OrgSlugInviteTokenRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/public/guardian-consent': typeof ApiPublicGuardianConsentRoute
@@ -762,6 +815,7 @@ export interface FileRoutesByTo {
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/coach/plan-builder/$userId': typeof CoachPlanBuilderUserIdRoute
   '/coach/plan-preview/$planId': typeof CoachPlanPreviewPlanIdRoute
+  '/coach/teams/$orgId': typeof CoachTeamsOrgIdRoute
   '/coach/training-builder/$userId': typeof CoachTrainingBuilderUserIdRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/smart/gift/$code': typeof SmartGiftCodeRoute
@@ -773,6 +827,7 @@ export interface FileRoutesByTo {
   '/tracker/app/water': typeof TrackerAppWaterRoute
   '/tracker/app/weight': typeof TrackerAppWeightRoute
   '/coach/customers': typeof CoachCustomersIndexRoute
+  '/coach/teams': typeof CoachTeamsIndexRoute
   '/tracker/app': typeof TrackerAppIndexRoute
   '/api/public/hooks/coach-daily-summary': typeof ApiPublicHooksCoachDailySummaryRoute
   '/api/public/hooks/plan-rotation': typeof ApiPublicHooksPlanRotationRoute
@@ -791,6 +846,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/$orgSlug': typeof OrgSlugRouteWithChildren
   '/achievements': typeof AchievementsRoute
   '/app': typeof AppRoute
   '/auth': typeof AuthRoute
@@ -818,6 +874,8 @@ export interface FileRoutesById {
   '/trust': typeof TrustRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/welcome': typeof WelcomeRoute
+  '/$orgSlug/home': typeof OrgSlugHomeRoute
+  '/$orgSlug/onboarding': typeof OrgSlugOnboardingRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
@@ -848,11 +906,13 @@ export interface FileRoutesById {
   '/tracker/app': typeof TrackerAppRouteWithChildren
   '/tracker/login': typeof TrackerLoginRoute
   '/tracker/signup': typeof TrackerSignupRoute
+  '/$orgSlug/': typeof OrgSlugIndexRoute
   '/bulls/': typeof BullsIndexRoute
   '/coach/': typeof CoachIndexRoute
   '/nutrition/': typeof NutritionIndexRoute
   '/smart/': typeof SmartIndexRoute
   '/tracker/': typeof TrackerIndexRoute
+  '/$orgSlug/invite/$token': typeof OrgSlugInviteTokenRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/public/guardian-consent': typeof ApiPublicGuardianConsentRoute
@@ -860,6 +920,7 @@ export interface FileRoutesById {
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/coach/plan-builder/$userId': typeof CoachPlanBuilderUserIdRoute
   '/coach/plan-preview/$planId': typeof CoachPlanPreviewPlanIdRoute
+  '/coach/teams/$orgId': typeof CoachTeamsOrgIdRoute
   '/coach/training-builder/$userId': typeof CoachTrainingBuilderUserIdRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/smart/gift/$code': typeof SmartGiftCodeRoute
@@ -871,6 +932,7 @@ export interface FileRoutesById {
   '/tracker/app/water': typeof TrackerAppWaterRoute
   '/tracker/app/weight': typeof TrackerAppWeightRoute
   '/coach/customers/': typeof CoachCustomersIndexRoute
+  '/coach/teams/': typeof CoachTeamsIndexRoute
   '/tracker/app/': typeof TrackerAppIndexRoute
   '/api/public/hooks/coach-daily-summary': typeof ApiPublicHooksCoachDailySummaryRoute
   '/api/public/hooks/plan-rotation': typeof ApiPublicHooksPlanRotationRoute
@@ -890,6 +952,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/$orgSlug'
     | '/achievements'
     | '/app'
     | '/auth'
@@ -917,6 +980,8 @@ export interface FileRouteTypes {
     | '/trust'
     | '/unsubscribe'
     | '/welcome'
+    | '/$orgSlug/home'
+    | '/$orgSlug/onboarding'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/bulls/benchmarks'
@@ -947,11 +1012,13 @@ export interface FileRouteTypes {
     | '/tracker/app'
     | '/tracker/login'
     | '/tracker/signup'
+    | '/$orgSlug/'
     | '/bulls/'
     | '/coach/'
     | '/nutrition/'
     | '/smart/'
     | '/tracker/'
+    | '/$orgSlug/invite/$token'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/api/public/guardian-consent'
@@ -959,6 +1026,7 @@ export interface FileRouteTypes {
     | '/coach/customers/new'
     | '/coach/plan-builder/$userId'
     | '/coach/plan-preview/$planId'
+    | '/coach/teams/$orgId'
     | '/coach/training-builder/$userId'
     | '/lovable/email/suppression'
     | '/smart/gift/$code'
@@ -970,6 +1038,7 @@ export interface FileRouteTypes {
     | '/tracker/app/water'
     | '/tracker/app/weight'
     | '/coach/customers/'
+    | '/coach/teams/'
     | '/tracker/app/'
     | '/api/public/hooks/coach-daily-summary'
     | '/api/public/hooks/plan-rotation'
@@ -1011,6 +1080,8 @@ export interface FileRouteTypes {
     | '/trust'
     | '/unsubscribe'
     | '/welcome'
+    | '/$orgSlug/home'
+    | '/$orgSlug/onboarding'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/bulls/benchmarks'
@@ -1039,11 +1110,13 @@ export interface FileRouteTypes {
     | '/smart/trial'
     | '/tracker/login'
     | '/tracker/signup'
+    | '/$orgSlug'
     | '/bulls'
     | '/coach'
     | '/nutrition'
     | '/smart'
     | '/tracker'
+    | '/$orgSlug/invite/$token'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/api/public/guardian-consent'
@@ -1051,6 +1124,7 @@ export interface FileRouteTypes {
     | '/coach/customers/new'
     | '/coach/plan-builder/$userId'
     | '/coach/plan-preview/$planId'
+    | '/coach/teams/$orgId'
     | '/coach/training-builder/$userId'
     | '/lovable/email/suppression'
     | '/smart/gift/$code'
@@ -1062,6 +1136,7 @@ export interface FileRouteTypes {
     | '/tracker/app/water'
     | '/tracker/app/weight'
     | '/coach/customers'
+    | '/coach/teams'
     | '/tracker/app'
     | '/api/public/hooks/coach-daily-summary'
     | '/api/public/hooks/plan-rotation'
@@ -1079,6 +1154,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/$orgSlug'
     | '/achievements'
     | '/app'
     | '/auth'
@@ -1106,6 +1182,8 @@ export interface FileRouteTypes {
     | '/trust'
     | '/unsubscribe'
     | '/welcome'
+    | '/$orgSlug/home'
+    | '/$orgSlug/onboarding'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/bulls/benchmarks'
@@ -1136,11 +1214,13 @@ export interface FileRouteTypes {
     | '/tracker/app'
     | '/tracker/login'
     | '/tracker/signup'
+    | '/$orgSlug/'
     | '/bulls/'
     | '/coach/'
     | '/nutrition/'
     | '/smart/'
     | '/tracker/'
+    | '/$orgSlug/invite/$token'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/api/public/guardian-consent'
@@ -1148,6 +1228,7 @@ export interface FileRouteTypes {
     | '/coach/customers/new'
     | '/coach/plan-builder/$userId'
     | '/coach/plan-preview/$planId'
+    | '/coach/teams/$orgId'
     | '/coach/training-builder/$userId'
     | '/lovable/email/suppression'
     | '/smart/gift/$code'
@@ -1159,6 +1240,7 @@ export interface FileRouteTypes {
     | '/tracker/app/water'
     | '/tracker/app/weight'
     | '/coach/customers/'
+    | '/coach/teams/'
     | '/tracker/app/'
     | '/api/public/hooks/coach-daily-summary'
     | '/api/public/hooks/plan-rotation'
@@ -1177,6 +1259,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  OrgSlugRoute: typeof OrgSlugRouteWithChildren
   AchievementsRoute: typeof AchievementsRoute
   AppRoute: typeof AppRoute
   AuthRoute: typeof AuthRoute
@@ -1431,6 +1514,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AchievementsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/$orgSlug': {
+      id: '/$orgSlug'
+      path: '/$orgSlug'
+      fullPath: '/$orgSlug'
+      preLoaderRoute: typeof OrgSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -1472,6 +1562,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/bulls/'
       preLoaderRoute: typeof BullsIndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/$orgSlug/': {
+      id: '/$orgSlug/'
+      path: '/'
+      fullPath: '/$orgSlug/'
+      preLoaderRoute: typeof OrgSlugIndexRouteImport
+      parentRoute: typeof OrgSlugRoute
     }
     '/tracker/signup': {
       id: '/tracker/signup'
@@ -1683,12 +1780,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/$orgSlug/onboarding': {
+      id: '/$orgSlug/onboarding'
+      path: '/onboarding'
+      fullPath: '/$orgSlug/onboarding'
+      preLoaderRoute: typeof OrgSlugOnboardingRouteImport
+      parentRoute: typeof OrgSlugRoute
+    }
+    '/$orgSlug/home': {
+      id: '/$orgSlug/home'
+      path: '/home'
+      fullPath: '/$orgSlug/home'
+      preLoaderRoute: typeof OrgSlugHomeRouteImport
+      parentRoute: typeof OrgSlugRoute
+    }
     '/tracker/app/': {
       id: '/tracker/app/'
       path: '/'
       fullPath: '/tracker/app/'
       preLoaderRoute: typeof TrackerAppIndexRouteImport
       parentRoute: typeof TrackerAppRoute
+    }
+    '/coach/teams/': {
+      id: '/coach/teams/'
+      path: '/teams'
+      fullPath: '/coach/teams/'
+      preLoaderRoute: typeof CoachTeamsIndexRouteImport
+      parentRoute: typeof CoachRoute
     }
     '/coach/customers/': {
       id: '/coach/customers/'
@@ -1767,6 +1885,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CoachTrainingBuilderUserIdRouteImport
       parentRoute: typeof CoachRoute
     }
+    '/coach/teams/$orgId': {
+      id: '/coach/teams/$orgId'
+      path: '/teams/$orgId'
+      fullPath: '/coach/teams/$orgId'
+      preLoaderRoute: typeof CoachTeamsOrgIdRouteImport
+      parentRoute: typeof CoachRoute
+    }
     '/coach/plan-preview/$planId': {
       id: '/coach/plan-preview/$planId'
       path: '/plan-preview/$planId'
@@ -1815,6 +1940,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/.lovable/oauth/consent'
       preLoaderRoute: typeof DotlovableOauthConsentRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/$orgSlug/invite/$token': {
+      id: '/$orgSlug/invite/$token'
+      path: '/invite/$token'
+      fullPath: '/$orgSlug/invite/$token'
+      preLoaderRoute: typeof OrgSlugInviteTokenRouteImport
+      parentRoute: typeof OrgSlugRoute
     }
     '/lovable/email/transactional/send': {
       id: '/lovable/email/transactional/send'
@@ -1910,6 +2042,23 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface OrgSlugRouteChildren {
+  OrgSlugHomeRoute: typeof OrgSlugHomeRoute
+  OrgSlugOnboardingRoute: typeof OrgSlugOnboardingRoute
+  OrgSlugIndexRoute: typeof OrgSlugIndexRoute
+  OrgSlugInviteTokenRoute: typeof OrgSlugInviteTokenRoute
+}
+
+const OrgSlugRouteChildren: OrgSlugRouteChildren = {
+  OrgSlugHomeRoute: OrgSlugHomeRoute,
+  OrgSlugOnboardingRoute: OrgSlugOnboardingRoute,
+  OrgSlugIndexRoute: OrgSlugIndexRoute,
+  OrgSlugInviteTokenRoute: OrgSlugInviteTokenRoute,
+}
+
+const OrgSlugRouteWithChildren =
+  OrgSlugRoute._addFileChildren(OrgSlugRouteChildren)
+
 interface CoachCustomersRouteChildren {
   CoachCustomersUserIdRoute: typeof CoachCustomersUserIdRoute
   CoachCustomersNewRoute: typeof CoachCustomersNewRoute
@@ -1939,7 +2088,9 @@ interface CoachRouteChildren {
   CoachIndexRoute: typeof CoachIndexRoute
   CoachPlanBuilderUserIdRoute: typeof CoachPlanBuilderUserIdRoute
   CoachPlanPreviewPlanIdRoute: typeof CoachPlanPreviewPlanIdRoute
+  CoachTeamsOrgIdRoute: typeof CoachTeamsOrgIdRoute
   CoachTrainingBuilderUserIdRoute: typeof CoachTrainingBuilderUserIdRoute
+  CoachTeamsIndexRoute: typeof CoachTeamsIndexRoute
 }
 
 const CoachRouteChildren: CoachRouteChildren = {
@@ -1955,7 +2106,9 @@ const CoachRouteChildren: CoachRouteChildren = {
   CoachIndexRoute: CoachIndexRoute,
   CoachPlanBuilderUserIdRoute: CoachPlanBuilderUserIdRoute,
   CoachPlanPreviewPlanIdRoute: CoachPlanPreviewPlanIdRoute,
+  CoachTeamsOrgIdRoute: CoachTeamsOrgIdRoute,
   CoachTrainingBuilderUserIdRoute: CoachTrainingBuilderUserIdRoute,
+  CoachTeamsIndexRoute: CoachTeamsIndexRoute,
 }
 
 const CoachRouteWithChildren = CoachRoute._addFileChildren(CoachRouteChildren)
@@ -2024,6 +2177,7 @@ const TrackerAppRouteWithChildren = TrackerAppRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  OrgSlugRoute: OrgSlugRouteWithChildren,
   AchievementsRoute: AchievementsRoute,
   AppRoute: AppRoute,
   AuthRoute: AuthRoute,
