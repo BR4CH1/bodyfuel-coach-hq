@@ -311,24 +311,50 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
       {/* Mobile bottom nav */}
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 backdrop-blur lg:hidden">
-        <div className={`grid grid-cols-${Math.min(mobileNav.length, 7)}`} style={{ gridTemplateColumns: `repeat(${Math.min(mobileNav.length, 7)}, minmax(0, 1fr))` }}>
-          {mobileNav.slice(0, 7).map((item) => {
-            const active = item.to === "/coach" ? pathname === "/coach" : pathname.startsWith(item.to);
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.to}
-                to={item.to}
-                className={`flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium ${
-                  active ? "text-gold" : "text-muted-foreground"
-                }`}
-              >
-                <Icon className="h-5 w-5" />
-                {item.label}
-              </Link>
-            );
-          })}
-        </div>
+        {teamOnlyNav && entitlements.primaryOrgSlug ? (
+          <div className="grid grid-cols-2">
+            <Link
+              to="/$orgSlug"
+              params={{ orgSlug: entitlements.primaryOrgSlug }}
+              className={`flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium ${
+                pathname.startsWith(`/${entitlements.primaryOrgSlug}`)
+                  ? "text-gold"
+                  : "text-muted-foreground"
+              }`}
+            >
+              <Users2 className="h-5 w-5" />
+              Verein
+            </Link>
+            <Link
+              to="/mein-bodyfuel"
+              className={`flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium ${
+                pathname.startsWith("/mein-bodyfuel") ? "text-gold" : "text-muted-foreground"
+              }`}
+            >
+              <Sparkles className="h-5 w-5" />
+              Mein BodyFuel
+            </Link>
+          </div>
+        ) : (
+          <div className={`grid grid-cols-${Math.min(mobileNav.length, 7)}`} style={{ gridTemplateColumns: `repeat(${Math.min(mobileNav.length, 7)}, minmax(0, 1fr))` }}>
+            {mobileNav.slice(0, 7).map((item) => {
+              const active = item.to === "/coach" ? pathname === "/coach" : pathname.startsWith(item.to);
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className={`flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium ${
+                    active ? "text-gold" : "text-muted-foreground"
+                  }`}
+                >
+                  <Icon className="h-5 w-5" />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </nav>
 
       <ReviewPrompt />
