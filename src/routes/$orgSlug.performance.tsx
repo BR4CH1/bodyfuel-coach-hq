@@ -1,23 +1,25 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { OrgAthleteLayout } from "@/components/organizations/OrgAthleteLayout";
 import { getAthletePerformanceProfile } from "@/lib/performance/performance.functions";
-import { getMyOrganizationBySlug } from "@/lib/organizations/organizations.functions";
+import { getOrganizationBySlug } from "@/lib/organizations/organizations.functions";
 
 export const Route = createFileRoute("/$orgSlug/performance")({
   head: () => ({ meta: [{ title: "Performance Profile" }] }),
   component: () => (
-    <OrgAthleteLayout>
-      <AthletePerformancePage />
-    </OrgAthleteLayout>
+    <div className="min-h-screen bg-background pb-20 text-foreground">
+      <div className="mx-auto max-w-3xl p-4">
+        <AthletePerformancePage />
+      </div>
+    </div>
   ),
 });
 
 function AthletePerformancePage() {
   const { orgSlug } = Route.useParams();
-  const fetchOrg = useServerFn(getMyOrganizationBySlug);
+  const fetchOrg = useServerFn(getOrganizationBySlug);
   const orgQ = useQuery({ queryKey: ["org", orgSlug], queryFn: () => fetchOrg({ data: { slug: orgSlug } }) });
+  const orgId = orgQ.data?.id;
 
   const orgId = orgQ.data?.organization?.id;
   const fetchProfile = useServerFn(getAthletePerformanceProfile);

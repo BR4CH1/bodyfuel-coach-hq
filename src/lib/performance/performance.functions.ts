@@ -341,17 +341,21 @@ export const getPerformanceTeamMatrix = createServerFn({ method: "GET" })
       ? await supabase.from("performance_athlete_domain_scores").select("profile_id, domain_id, score").in("profile_id", profileIds)
       : { data: [] as never[] };
     const userIds = (profiles ?? []).map((p) => p.user_id);
-    const membershipsRes = userIds.length
-      ? await supabase.from("organization_memberships").select("user_id, position, team_id").eq("organization_id", data.organization_id).in("user_id", userIds)
+    const teamRowsRes = userIds.length
+      ? await context.supabase
+          .from("team_memberships")
+          .select("user_id, position, team_id, organization_teams!inner(organization_id)")
+          .in("user_id", userIds)
+          .eq("organization_teams.organization_id", data.organization_id)
       : { data: [] as never[] };
     const profilesFetch = userIds.length
-      ? await supabase.from("profiles").select("user_id, name").in("user_id", userIds)
+      ? await context.supabase.from("profiles").select("id, display_name").in("id", userIds)
       : { data: [] as never[] };
     return {
       profiles: profiles ?? [],
       domainScores: domainScoresRes.data ?? [],
-      memberships: membershipsRes.data ?? [],
-      users: profilesFetch.data ?? [],
+      memberships: (teamRowsRes.data ?? []).map((r) => ({ user_id: r.user_id, position: r.position, team_id: r.team_id })),
+      users: (profilesFetch.data ?? []).map((u) => ({ user_id: u.id, name: u.display_name ?? "" })),
     };
   });
 
