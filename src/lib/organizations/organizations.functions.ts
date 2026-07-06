@@ -155,6 +155,10 @@ export const getOrganizationContext = createServerFn({ method: "GET" })
             position: (teamMembership as any).position ?? null,
             secondary_position: (teamMembership as any).secondary_position ?? null,
             jersey_number: (teamMembership as any).jersey_number ?? null,
+            gym_access: (teamMembership as any).gym_access ?? null,
+            available_training_days: (teamMembership as any).available_training_days ?? null,
+            limitations: (teamMembership as any).limitations ?? null,
+            personal_goal: (teamMembership as any).personal_goal ?? null,
           }
         : null,
       is_super_admin: !!superAdminRes.data,
