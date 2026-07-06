@@ -41,6 +41,7 @@ import {
   scopeLabel,
   type PresetKey,
 } from "@/lib/organizations/staff-labels";
+import { CoachCockpit } from "@/components/coach/analytics/CoachCockpit";
 
 export const Route = createFileRoute("/coach/teams/$orgId")({
   head: () => ({ meta: [{ title: "Organisation — BODYFUEL Coach" }] }),
@@ -52,6 +53,7 @@ export const Route = createFileRoute("/coach/teams/$orgId")({
 });
 
 const ALL_TABS = [
+  { key: "cockpit", label: "Cockpit", feature: null },
   { key: "overview", label: "Übersicht", feature: null },
   { key: "athletes", label: "Athleten", feature: null },
   { key: "teams", label: "Teams", feature: null },
@@ -73,7 +75,7 @@ function CoachOrgDetail() {
     queryKey: ["coach-org-detail", orgId],
     queryFn: () => fetch({ data: { orgId } }),
   });
-  const [tab, setTab] = useState("overview");
+  const [tab, setTab] = useState("cockpit");
 
   if (isLoading || !data || !data.org) {
     return <div className="text-sm text-muted-foreground">Lädt…</div>;
@@ -137,6 +139,7 @@ function CoachOrgDetail() {
       </div>
 
       <div className="mt-5">
+        {tab === "cockpit" && <CoachCockpit orgId={orgId} />}
         {tab === "overview" && (
           <div className="grid gap-4 md:grid-cols-2">
             <Card title="Aktuelle Challenge">

@@ -104,7 +104,7 @@ Der Nav-Eintrag „Training" im Vereinsbereich linkt bereits auf `/$orgSlug/trai
 
 ---
 
-## Phase 4 — Analytisches Coach-Cockpit
+## Phase 4 — Analytisches Coach-Cockpit ✅ ABGESCHLOSSEN (MVP)
 
 Größte inhaltliche Änderung. Ersetzt den bisherigen Tab-basierten Coach-Screen NICHT — er wird um einen neuen Dashboard-Tab ergänzt und dieser als Default gesetzt. Bestehende Tabs (Athleten, Teams, Training, Tasks, Challenges, Ranking, Community, Staff, Einstellungen) bleiben unverändert.
 
