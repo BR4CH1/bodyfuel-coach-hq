@@ -76,6 +76,8 @@ function CoachOrgDetail() {
     queryFn: () => fetch({ data: { orgId } }),
   });
   const [tab, setTab] = useState("cockpit");
+  const [athleteTeamFilter, setAthleteTeamFilter] = useState<string | null>(null);
+
 
   if (isLoading || !data || !data.org) {
     return <div className="text-sm text-muted-foreground">Lädt…</div>;
@@ -84,6 +86,25 @@ function CoachOrgDetail() {
   const features = data.features as { feature: string; enabled: boolean }[];
   const featureOn = (k: string) => features.some((f) => f.feature === k && f.enabled);
   const visibleTabs = ALL_TABS.filter((t) => t.feature === null || featureOn(t.feature));
+  const caller = (data as any).caller as { experience: string; is_bodyfuel_coach: boolean; team_id: string | null } | undefined;
+  const teamKpis = ((data as any).team_kpis ?? []) as Array<{ team_id: string; athletes: number; weekly_compliance: number | null; pending_onboardings: number }>;
+  const experienceLabel =
+    caller?.experience === "org_admin" ? "Vereinsleitung"
+    : caller?.experience === "head_coach" ? "Head Coach"
+    : caller?.experience === "team_coach" ? "Teamcoach"
+    : caller?.experience === "staff" ? "Staff"
+    : "Coach";
+  const experienceHint =
+    caller?.experience === "org_admin"
+      ? "Vereinsweiter Zugriff auf Analytics, Teams, Athleten und Staff."
+      : caller?.experience === "head_coach"
+      ? "Vereinsweiter Analytics-Zugriff für den Head Coach."
+      : caller?.experience === "team_coach"
+      ? "Analytics deiner zugewiesenen Teams und Athleten."
+      : caller?.experience === "staff"
+      ? "Analytics innerhalb deiner Staff-Berechtigungen."
+      : "BODYFUEL-Coach Analytics-Zugang.";
+
 
   return (
     <div>
@@ -114,6 +135,28 @@ function CoachOrgDetail() {
         </div>
       </div>
 
+      {caller && (
+        <div className="mt-4 rounded-lg border border-border bg-card/50 p-3">
+          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider">
+            <span
+              className={
+                caller.experience === "org_admin"
+                  ? "rounded bg-amber-500/20 px-2 py-0.5 text-amber-500"
+                  : caller.experience === "head_coach"
+                  ? "rounded bg-blue-500/20 px-2 py-0.5 text-blue-500"
+                  : "rounded bg-muted px-2 py-0.5 text-muted-foreground"
+              }
+            >
+              {experienceLabel}
+            </span>
+            {caller.is_bodyfuel_coach && (
+              <span className="rounded bg-primary/20 px-2 py-0.5 text-primary">BODYFUEL Coach</span>
+            )}
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">{experienceHint}</p>
+        </div>
+      )}
+
       <section className="mt-6 grid gap-3 sm:grid-cols-2 md:grid-cols-4">
         <Stat label="Athleten" value={data.athletes.length} />
         <Stat label="Staff" value={data.staff.length} />
@@ -123,6 +166,7 @@ function CoachOrgDetail() {
           value={data.weekly_compliance != null ? `${data.weekly_compliance}%` : "—"}
         />
       </section>
+
 
       <div className="mt-6 flex flex-wrap gap-1 border-b border-border">
         {visibleTabs.map((t) => (
@@ -181,19 +225,74 @@ function CoachOrgDetail() {
           </div>
         )}
 
-        {tab === "athletes" && <AthletesTab orgId={orgId} />}
+        {tab === "athletes" && (
+          <AthletesTab
+            orgId={orgId}
+            teamFilter={athleteTeamFilter}
+            teams={data.teams as any[]}
+            allowedUserIds={
+              athleteTeamFilter
+                ? new Set(
+                    (data.athletes as any[])
+                      .filter((a) => {
+                        const teamName = (data.teams as any[]).find((t) => t.id === athleteTeamFilter)?.name;
+                        return a.team_name === teamName;
+                      })
+                      .map((a) => a.user_id),
+                  )
+                : null
+            }
+            onClearFilter={() => setAthleteTeamFilter(null)}
+          />
+        )}
+
         {tab === "teams" && (
           <ul className="grid gap-2 sm:grid-cols-2">
-            {(data.teams as any[]).map((t) => (
-              <li key={t.id} className="rounded-lg border border-border bg-card p-4">
-                <div className="font-semibold">{t.name}</div>
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                  {t.sport ?? "—"} {t.age_group ? `· ${t.age_group}` : ""}
-                </div>
+            {(data.teams as any[]).map((t) => {
+              const kpi = teamKpis.find((k) => k.team_id === t.id);
+              return (
+                <li key={t.id} className="rounded-lg border border-border bg-card p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <div className="font-semibold">{t.name}</div>
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                        {t.sport ?? "—"} {t.age_group ? `· ${t.age_group}` : ""}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => { setAthleteTeamFilter(t.id); setTab("athletes"); }}
+                      className="rounded border border-border px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                    >
+                      Athleten →
+                    </button>
+                  </div>
+                  <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                    <div className="rounded bg-muted/40 p-2">
+                      <div className="font-display text-lg font-bold">{kpi?.athletes ?? 0}</div>
+                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Athleten</div>
+                    </div>
+                    <div className="rounded bg-muted/40 p-2">
+                      <div className="font-display text-lg font-bold">
+                        {kpi?.weekly_compliance != null ? `${kpi.weekly_compliance}%` : "—"}
+                      </div>
+                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Compliance</div>
+                    </div>
+                    <div className="rounded bg-muted/40 p-2">
+                      <div className="font-display text-lg font-bold">{kpi?.pending_onboardings ?? 0}</div>
+                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Offen</div>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+            {(data.teams as any[]).length === 0 && (
+              <li className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
+                Noch keine Teams angelegt.
               </li>
-            ))}
+            )}
           </ul>
         )}
+
         {tab === "training" && <TrainingTab orgId={orgId} />}
         {tab === "tasks" && <TasksTab orgId={orgId} teams={data.teams as any[]} />}
         {tab === "challenges" && <ChallengesTab orgId={orgId} teams={data.teams as any[]} />}
@@ -227,59 +326,91 @@ function CoachOrgDetail() {
   );
 }
 
-function AthletesTab({ orgId }: { orgId: string }) {
+function AthletesTab({
+  orgId,
+  teamFilter,
+  teams,
+  allowedUserIds,
+  onClearFilter,
+}: {
+  orgId: string;
+  teamFilter: string | null;
+  teams: any[];
+  allowedUserIds: Set<string> | null;
+  onClearFilter: () => void;
+}) {
   const fetchAudit = useServerFn(getOrgAthletesOnboardingAudit);
   const { data, isLoading } = useQuery({
     queryKey: ["org-onboarding-audit", orgId],
     queryFn: () => fetchAudit({ data: { organization_id: orgId } }),
   });
   if (isLoading || !data) return <div className="text-xs text-muted-foreground">Lädt…</div>;
+  const rows = allowedUserIds
+    ? (data.athletes as any[]).filter((a) => allowedUserIds.has(a.user_id))
+    : (data.athletes as any[]);
+  const filterTeam = teamFilter ? teams.find((t) => t.id === teamFilter) : null;
   return (
-    <div className="overflow-x-auto rounded-lg border border-border">
-      <table className="w-full text-sm">
-        <thead className="bg-secondary text-left text-[10px] uppercase tracking-wider text-muted-foreground">
-          <tr>
-            <th className="px-3 py-2">Name</th>
-            <th className="px-3 py-2">Onboarding</th>
-            <th className="px-3 py-2">Fehlende Organization-Daten</th>
-          </tr>
-        </thead>
-        <tbody>
-          {(data.athletes as any[]).map((a) => (
-            <tr key={a.user_id} className="border-t border-border hover:bg-muted/40">
-              <td className="px-3 py-2 font-semibold">
-                <Link
-                  to="/coach/teams/$orgId/athletes/$userId"
-                  params={{ orgId, userId: a.user_id }}
-                  className="hover:underline"
-                >
-                  {a.name}
-                </Link>
-              </td>
-              <td className="px-3 py-2">
-                {a.derived_complete ? (
-                  <span className="text-green-500">ABGESCHLOSSEN</span>
-                ) : (
-                  <span className="text-yellow-500">OFFEN</span>
-                )}
-              </td>
-              <td className="px-3 py-2 text-xs text-muted-foreground">
-                {a.missing.length === 0 ? "—" : a.missing.join(", ")}
-              </td>
-            </tr>
-          ))}
-          {data.athletes.length === 0 && (
+    <div className="space-y-2">
+      {filterTeam && (
+        <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs">
+          <span>
+            Gefiltert nach Team: <strong>{filterTeam.name}</strong> ({rows.length})
+          </span>
+          <button
+            onClick={onClearFilter}
+            className="rounded border border-border px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+          >
+            Filter entfernen
+          </button>
+        </div>
+      )}
+      <div className="overflow-x-auto rounded-lg border border-border">
+        <table className="w-full text-sm">
+          <thead className="bg-secondary text-left text-[10px] uppercase tracking-wider text-muted-foreground">
             <tr>
-              <td colSpan={3} className="px-3 py-6 text-center text-sm text-muted-foreground">
-                Noch keine Athleten.
-              </td>
+              <th className="px-3 py-2">Name</th>
+              <th className="px-3 py-2">Onboarding</th>
+              <th className="px-3 py-2">Fehlende Organization-Daten</th>
             </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((a) => (
+              <tr key={a.user_id} className="border-t border-border hover:bg-muted/40">
+                <td className="px-3 py-2 font-semibold">
+                  <Link
+                    to="/coach/teams/$orgId/athletes/$userId"
+                    params={{ orgId, userId: a.user_id }}
+                    className="hover:underline"
+                  >
+                    {a.name}
+                  </Link>
+                </td>
+                <td className="px-3 py-2">
+                  {a.derived_complete ? (
+                    <span className="text-green-500">ABGESCHLOSSEN</span>
+                  ) : (
+                    <span className="text-yellow-500">OFFEN</span>
+                  )}
+                </td>
+                <td className="px-3 py-2 text-xs text-muted-foreground">
+                  {a.missing.length === 0 ? "—" : a.missing.join(", ")}
+                </td>
+              </tr>
+            ))}
+            {rows.length === 0 && (
+              <tr>
+                <td colSpan={3} className="px-3 py-6 text-center text-sm text-muted-foreground">
+                  {filterTeam ? "Keine Athleten in diesem Team." : "Noch keine Athleten."}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
+
 
 function TrainingTab({ orgId }: { orgId: string }) {
   const qc = useQueryClient();

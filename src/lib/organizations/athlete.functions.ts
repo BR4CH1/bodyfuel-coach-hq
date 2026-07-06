@@ -425,17 +425,18 @@ export const getOrgCoachDetail = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
-    // Authorization: coach role OR org admin/staff
+    // Authorization: coach role OR org admin/staff on this org
     const { data: isCoach } = await supabase.rpc("has_role", { _user_id: userId, _role: "coach" });
-    if (!isCoach) {
-      const { data: staff } = await supabase
-        .from("staff_assignments")
-        .select("id")
-        .eq("user_id", userId)
-        .eq("organization_id", data.orgId)
-        .maybeSingle();
-      if (!staff) throw new Error("Kein Zugriff.");
+    const { data: callerStaff } = await supabase
+      .from("staff_assignments")
+      .select("id, role, permissions, team_id")
+      .eq("user_id", userId)
+      .eq("organization_id", data.orgId)
+      .maybeSingle();
+    if (!isCoach && !callerStaff) {
+      throw new Error("Kein Zugriff.");
     }
+
 
     const [orgRes, teamsRes, membersRes, staffRes, featuresRes, challengesRes, activityRes] =
       await Promise.all([
@@ -522,9 +523,50 @@ export const getOrgCoachDetail = createServerFn({ method: "GET" })
         };
       });
 
+    // Per-team KPI aggregation for leadership drilldown
+    const tasksByUser = new Map<string, { total: number; done: number }>();
+    for (const t of (weekTasks ?? []) as any[]) {
+      const b = tasksByUser.get(t.user_id) ?? { total: 0, done: 0 };
+      b.total++; if (t.status === "done") b.done++;
+      tasksByUser.set(t.user_id, b);
+    }
+    const teamKpis = ((teamsRes.data ?? []) as any[]).map((t) => {
+      const teamAthletes = athletes.filter((a) => {
+        const tm = teamMemberships.find((x) => x.user_id === a.user_id);
+        return tm?.team_id === t.id;
+      });
+      let total = 0, done = 0;
+      for (const a of teamAthletes) {
+        const b = tasksByUser.get(a.user_id);
+        if (b) { total += b.total; done += b.done; }
+      }
+      return {
+        team_id: t.id,
+        athletes: teamAthletes.length,
+        weekly_compliance: total > 0 ? Math.round((done / total) * 100) : null,
+        pending_onboardings: teamAthletes.filter((a) => !a.onboarding_completed).length,
+      };
+    });
+
+    // Derive caller experience label
+    const callerIsCoach = !!isCoach;
+    const staffRole = callerStaff?.role ?? null;
+    const perms = new Set((callerStaff?.permissions ?? []) as string[]);
+    const callerExperience: "org_admin" | "head_coach" | "team_coach" | "staff" | "coach" =
+      staffRole === "organization_admin"
+        ? "org_admin"
+        : staffRole === "coach" && perms.has("manage_organization")
+        ? "head_coach"
+        : staffRole === "coach"
+        ? "team_coach"
+        : staffRole === "staff"
+        ? "staff"
+        : "coach";
+
     return {
       org: orgRes.data,
       teams: teamsRes.data ?? [],
+      team_kpis: teamKpis,
       athletes,
       staff: staffRes.data ?? [],
       features: featuresRes.data ?? [],
@@ -532,5 +574,11 @@ export const getOrgCoachDetail = createServerFn({ method: "GET" })
       activity: activityRes.data ?? [],
       pending_onboardings: athletes.filter((a) => !a.onboarding_completed).length,
       weekly_compliance: weeklyCompliance,
+      caller: {
+        experience: callerExperience,
+        is_bodyfuel_coach: callerIsCoach,
+        team_id: callerStaff?.team_id ?? null,
+      },
     };
   });
+
