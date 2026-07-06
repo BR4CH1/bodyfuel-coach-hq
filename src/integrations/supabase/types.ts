@@ -4057,41 +4057,62 @@ export type Database = {
       performance_test_sessions: {
         Row: {
           battery_id: string
+          completed_at: string | null
+          completion_notes: string | null
           created_at: string
           created_by: string | null
+          entry_mode: string | null
           id: string
+          location: string | null
+          measurement_method_default: string | null
+          mode: string | null
           name: string
           notes: string | null
           organization_id: string
           status: string
           team_id: string | null
           test_date: string
+          test_day: string | null
           updated_at: string
         }
         Insert: {
           battery_id: string
+          completed_at?: string | null
+          completion_notes?: string | null
           created_at?: string
           created_by?: string | null
+          entry_mode?: string | null
           id?: string
+          location?: string | null
+          measurement_method_default?: string | null
+          mode?: string | null
           name: string
           notes?: string | null
           organization_id: string
           status?: string
           team_id?: string | null
           test_date: string
+          test_day?: string | null
           updated_at?: string
         }
         Update: {
           battery_id?: string
+          completed_at?: string | null
+          completion_notes?: string | null
           created_at?: string
           created_by?: string | null
+          entry_mode?: string | null
           id?: string
+          location?: string | null
+          measurement_method_default?: string | null
+          mode?: string | null
           name?: string
           notes?: string | null
           organization_id?: string
           status?: string
           team_id?: string | null
           test_date?: string
+          test_day?: string | null
           updated_at?: string
         }
         Relationships: [

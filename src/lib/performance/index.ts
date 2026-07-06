@@ -6,3 +6,4 @@ export * from "./derived-metrics";
 export * from "./scoring";
 export * from "./focus";
 export * from "./retest";
+export * from "./test-result";

@@ -206,3 +206,53 @@ Yes — technically. The engine has no American-football assumption:
 - Radar Chart Component — Empty-State-first Athleten-Ansicht ist da, das Radar folgt sobald mehrere Sessions Daten liefern.
 
 Alles davon blockiert die aktuelle Pipeline nicht — sie sind additive Erweiterungen.
+
+---
+
+## Test Session Flow V1 (funktionaler Rohbau)
+
+### Wizard
+Coach → Teams → Bulls → Performance → Test-Sessions → `+ PERFORMANCE TEST SESSION`.
+Sechs Schritte: Battery → Test Day → Athleten → Basics → Snapshot → Confirm.
+
+- **Battery**: Nur Bulls Core Battery V1 wählbar. Da Framework/Battery `draft` sind, zeigt der Wizard permanent `DRAFT FRAMEWORK · TEST MODE`. Session wird mit `mode='test'` gespeichert.
+- **Test Day**: `field` / `strength` / `full`. Wert landet auf `performance_test_sessions.test_day` und filtert in der Live-Entry-UI Tests anhand `protocol.testing_day_group`.
+- **Athleten**: Roster via `listOrgAthletesForPerformance` (organization_memberships role='athlete' + team + position + Profile-Status). Athleten ohne Position bekommen inline Warnung `POSITION REQUIRED FOR POSITION-WEIGHTED OVERALL PROFILE`, dürfen aber ausgewählt werden.
+- **Basics**: Session-Name (Default `<Battery> – <Day-Label> – <Datum>`), Test-Date, Location, Measurement-Method-Default, Notes.
+- **Snapshot**: Für `strength`/`full` — pro Athlete Bodyweight-Snapshot. Bestehender Wert aus `bulls_profiles.weight_kg` kann als Quelle „übernommen" werden; wird als eigener `performance_session_context_snapshots.context_key='bodyweight_kg'` gespeichert. Persönliche BodyFuel-Daten bleiben unverändert.
+- **Confirm** → `createPerformanceSession` mit allen Feldern + Snapshots-Batch. Redirect zur mobilen Session-Route.
+
+### Live Entry (mobile-first)
+Route: `/coach/teams/$orgId/performance/session/$sessionId`.
+
+- Sticky Header: Session-Name, Test-Day-Label, `X / Y Results Complete`, Status-Badge, `TEST MODE`, Start-/Abschließen-Actions.
+- Modus-Umschalter `BY TEST` / `BY ATHLETE` (persistiert via `updatePerformanceSession.entry_mode`).
+- Zwei Selects (Athlete, Test) mit „letzte Auswahl bleibt aktiv" via Index-State — bei Wechsel des Athleten bleibt der aktive Test erhalten.
+- Test-Karte mit Protokoll-Button (Modal aus `test.protocol` JSON), Attempt-Liste, `+ Versuch`-Numeric-Input (`inputMode='decimal'`), Live-`Selected Result` via `computeTestResult`.
+- Raw Attempts sind immutable — nur `ALS UNGÜLTIG MARKIEREN` mit Reason-Prompt setzt `valid=false, invalid_reason`.
+- Sticky Bottom-Bar: „Vorheriger/Nächster Athlet" bzw. „Vorheriger/Nächster Test" je nach Modus.
+- „Offene Results anzeigen": Liste aller Athlete/Test-Kombinationen ohne `status='OK'`.
+
+### RAST Validierung
+`computeTestResult` (in `src/lib/performance/test-result.ts`) liest `test.config.required_valid_attempts` und `max_valid_attempts`:
+
+| Valid-Count | test_status | Selected Value |
+| --- | --- | --- |
+| `0` | `NO_VALID_ATTEMPTS` | null |
+| `1…5` (< required=6) | `PROVISIONAL` | ja (nur Anzeige, keine Metric) |
+| `6` (= required) | `OK` | arithmetisches Mittel, `source_attempt_ids` = die 6 |
+| `7+` (> required oder > max) | `REVIEW_REQUIRED` | null — Coach muss invalidieren |
+
+Pipeline (`pipeline.server.ts`) akzeptiert nur `test_status='OK'` als finalen Wert. `PROVISIONAL`, `INCOMPLETE`, `REVIEW_REQUIRED` erzeugen keine Metrik → kein Conditioning-Domain-Score → kein finaler Overall aus diesem Test.
+
+### Session Progress
+`getPerformanceSessionProgress` liefert je Athlete/Test eine Zelle mit `status`. Progress-Aggregation zählt nur `OK` als „complete" — keine 0-Werte, keine Attempt-Count-Heuristik.
+
+### Completion Review + Pipeline
+Review-View listet `Athletes complete/total` und `Results complete/total` plus Liste unvollständiger Zellen. `SESSION TROTZDEM ABSCHLIESSEN` erfordert manage_performance und triggert `completePerformanceSession` → `runPerformanceProfileCalculation`. Draft-Position-Profiles / Draft-Benchmarks (min_sample_size=10) lehnen Peer-Scores korrekt ab → Athleten erhalten Baseline ohne fiktiven Overall.
+
+### Athlete Baseline-View
+`/$orgSlug/performance` zeigt bei `overall_score=null` den Baseline-Zustand: „Performance Baseline aufgezeichnet", Available Results aus `performance_athlete_metric_scores.selected_value` (auch ohne Peer-Score), Data Coverage, Missing Metrics, nächster Retest aus `performance_retest_schedule`. Keine 0-Scores, keine fiktiven Werte.
+
+### No Demo Data
+Migration hat ausschließlich Spalten hinzugefügt (`test_day`, `entry_mode`, `location`, `measurement_method_default`, `completed_at`, `completion_notes`, `mode`). Keine INSERTs auf Bulls-User. Bulls-Framework bleibt `draft` mit `READY FOR COACH REVIEW`.
