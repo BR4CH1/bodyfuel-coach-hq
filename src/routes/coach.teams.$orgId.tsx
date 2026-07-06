@@ -713,21 +713,25 @@ function StaffRow({
 
   return (
     <li className="rounded-lg border border-border bg-card p-3 text-sm">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
           <div className="font-semibold">{row.name}</div>
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            {row.role}
-            {" · "}
-            {row.team_name ? `Team: ${row.team_name}` : "Organisationsweit"}
+          <div className="text-[11px] text-muted-foreground">
+            {roleLabelFromDbRole(row.role)}
+          </div>
+          <div className="mt-0.5 text-[11px] text-muted-foreground">
+            Zuständigkeit: {scopeLabel(row.team_name)}
+          </div>
+          <div className="mt-0.5 text-[11px] text-muted-foreground">
+            Berechtigungen: {row.permissions?.length ?? 0} Bereiche freigegeben
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex shrink-0 gap-2">
           <button
             onClick={() => setEdit((e) => !e)}
             className="text-[10px] uppercase tracking-wider text-primary"
           >
-            {edit ? "Schließen" : "Bearbeiten"}
+            {edit ? "Schließen" : "Berechtigungen ansehen"}
           </button>
           <button
             onClick={onRemove}
@@ -741,55 +745,69 @@ function StaffRow({
       {!edit && row.permissions?.length ? (
         <div className="mt-2 flex flex-wrap gap-1">
           {row.permissions.map((p: string) => (
-            <span key={p} className="rounded bg-muted px-2 py-0.5 text-[10px] uppercase tracking-wider">
-              {p}
+            <span
+              key={p}
+              className="rounded bg-muted px-2 py-0.5 text-[10px] font-medium"
+            >
+              {permissionLabel(p)}
             </span>
           ))}
         </div>
       ) : null}
 
       {edit && (
-        <div className="mt-3 space-y-3 border-t border-border pt-3">
+        <div className="mt-3 space-y-4 border-t border-border pt-3">
           <div>
             <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Team Scope
+              Zuständigkeit
             </div>
             <select
               value={teamId ?? ""}
               onChange={(e) => setTeamId(e.target.value || null)}
               className="w-full rounded border border-border bg-background px-2 py-1 text-xs"
             >
-              <option value="">Organisationsweit</option>
+              <option value="">Gesamter Verein</option>
               {teams.map((t) => (
                 <option key={t.id} value={t.id}>
-                  {t.name}
+                  Team: {t.name}
                 </option>
               ))}
             </select>
+            <div className="mt-1 text-[10px] text-muted-foreground">
+              Die Zuständigkeit legt fest, für welche Teams diese Person Zugriff erhält.
+            </div>
           </div>
           <div>
             <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Permissions
+              Berechtigungen
             </div>
-            <div className="grid grid-cols-2 gap-1">
-              {ALL_PERMISSIONS.map((p) => (
-                <label key={p} className="flex items-center gap-2 text-[11px]">
-                  <input
-                    type="checkbox"
-                    checked={perms.includes(p)}
-                    onChange={() => toggle(p)}
-                  />
-                  <span>{p}</span>
-                </label>
+            <ul className="space-y-2">
+              {(Object.keys(PERMISSION_LABELS) as (keyof typeof PERMISSION_LABELS)[]).map((p) => (
+                <li key={p} className="rounded border border-border bg-background p-2">
+                  <label className="flex cursor-pointer items-start gap-2 text-[12px]">
+                    <input
+                      type="checkbox"
+                      checked={perms.includes(p)}
+                      onChange={() => toggle(p)}
+                      className="mt-0.5"
+                    />
+                    <span>
+                      <span className="font-semibold">{PERMISSION_LABELS[p].label}</span>
+                      <span className="block text-[10px] text-muted-foreground">
+                        {PERMISSION_LABELS[p].description}
+                      </span>
+                    </span>
+                  </label>
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
           <button
             onClick={async () => {
               await onSave({ permissions: perms, team_id: teamId });
               setEdit(false);
             }}
-            className="rounded bg-primary px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary-foreground"
+            className="rounded bg-primary px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-primary-foreground"
           >
             Speichern
           </button>
