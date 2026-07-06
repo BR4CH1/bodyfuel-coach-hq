@@ -1,191 +1,208 @@
-# BodyFuel Performance Engine V1 — Foundation
+# BodyFuel Performance Engine V1 — Implementation Report
 
-Generic, multi-sport performance system. Bulls (American Football) is the first real configuration; Rot-Weiss Essen (Football/Soccer) or any other sport can reuse the same engine with different test batteries, position profiles and metric weights.
+Generic, multi-sport engine. First real config = **Coesfeld Bulls (american_football)** as a `draft` framework — no invented benchmarks, no invented scientific norms, no final position weightings.
 
-Personal BodyFuel Strength Score V2 remains untouched.
-
----
-
-## 0. Dual-Role First-Use Fix
-
-`src/routes/$orgSlug.index.tsx` — when a user has BOTH athlete membership AND staff assignment in the same organisation AND no persisted `bodyfuel.orgMode:<slug>`, we now show a one-time prompt:
-
-> **Wie möchtest du [ORG] öffnen?** — Athletenbereich / Staffbereich
-
-Choice persists via `setOrgMode`. Subsequent visits use the persisted value; the existing context switcher still lets users flip modes.
+Personal BodyFuel Strength Score V2 (`strength_checks`, `strength_check_results`, `performance_points`) is untouched.
 
 ---
 
-## 1. Tables created (migration `2026-07-06`)
+## 1. Central Performance Helpers (single source of truth)
 
-All tables are `organization_id`-scoped where applicable, RLS-enabled, and granted to `authenticated` + `service_role`.
+Location: `src/lib/performance/`
 
-| Table | Purpose |
+| File | Exports |
 |---|---|
-| `performance_frameworks` | Sport-specific framework (template or org-owned), with `sport`, `version`, `status`, `is_template`, `parent_framework_id` |
-| `performance_domains` | Framework's domain list (acceleration, speed …) with `key`, `order_index`, `active` |
-| `performance_test_batteries` | Named collections of tests per framework, versioned |
-| `performance_test_definitions` | Single test (10 m Sprint, CMJ …) with `unit`, `value_type`, `direction`, `decimal_places`, `result_selection`, `protocol` (jsonb) |
-| `performance_metric_definitions` | `raw_test` or `derived` metrics with `calculation_type` (allowlist), `config` |
-| `performance_domain_metric_weights` | Contribution of a metric to a domain score |
-| `performance_position_profiles` | `QB`, `RB` … or `GK`, `CB` … with `age_group`, `status` |
-| `performance_position_domain_weights` | Domain weight per position profile |
-| `performance_benchmark_models` | `fixed_thresholds`, `organization_internal`, `team_internal`, `age_group_internal`, `position_internal`, `external_reference`, `longitudinal_self_comparison` with `minimum_sample_size`, `source_reference` |
-| `performance_test_sessions` | Planned/completed sessions with `test_date`, `status`, `team_id` |
-| `performance_test_session_athletes` | Session roster |
-| `performance_test_attempts` | Raw attempts (never overwritten by scoring) with `raw_value`, `unit_snapshot`, `valid`, `invalid_reason`, `measured_at`, `metadata` |
-| `performance_session_context_snapshots` | Bodyweight etc. captured at test time — never mutated by later profile edits |
-| `performance_athlete_profiles` | Computed profile with `overall_score`, `confidence`, `data_coverage`, `framework_version`, `calculation_version` |
-| `performance_athlete_metric_scores` | Per-metric score with `benchmark_model_id`, `benchmark_version`, `comparison_group`, `sample_size` |
-| `performance_athlete_domain_scores` | Per-domain score with `contributing_metrics` breakdown |
-| `performance_athlete_focus_areas` | Development focus with `source` (`engine`/`coach`), `priority`, `status` |
-| `performance_retest_schedule` | Per athlete/test `next_retest_due` |
+| `types.ts` | `Direction`, `ResultSelectionMethod`, `CalculationType`, `Trend`, `Confidence`, `ResultStatus`, `RawAttempt`, `SelectedResult`, `ChangeResult`, `MetricScoreResult` |
+| `result-selection.ts` | `selectPerformanceResult` |
+| `change.ts` | `calculateDirectionAwareChange` |
+| `derived-metrics.ts` | `calculateDerivedMetric` |
+| `scoring.ts` | `calculateMetricScoreInternal`, `calculateDomainScore`, `calculateOverallPerformanceProfile`, `calculateProfileConfidence`, `calculateProfileDataCoverage` |
+| `focus.ts` | `deriveDevelopmentFocusAreas` |
+| `retest.ts` | `calculateRetestDue` |
+| `pipeline.server.ts` | `runPerformanceProfileCalculation` (SSR-only recompute orchestrator) |
 
-### Staff permissions
+UI code MUST NOT recompute scores locally. `SessionLiveEntry` uses `selectPerformanceResult` for the live preview — same helper the pipeline calls when the session is completed.
 
-New string permissions expected on `staff_assignments.permissions` (text[]):
-- `view_performance` — read athlete performance data in scope
-- `manage_performance` — create/edit sessions, attempts, and framework configuration
+## 2. Result Selection
 
-No enum change needed; existing `permissions` column already accepts free-form strings.
+`selectPerformanceResult` — pure. Ignores `valid=false` attempts. Never mutates raw attempts.
+
+- **best**: `higher_is_better` → max; `lower_is_better` → min; `target_range` → attempt closest to midpoint (requires `config.target_range { min, max }`; otherwise `status = CONFIGURATION_REQUIRED`).
+- **average**: arithmetic mean of valid attempts.
+- **median**: sorted median (mid pair average when even).
+- **last**: chronologically last valid attempt by `measured_at`.
+- **custom**: reserved type — always returns `CONFIGURATION_REQUIRED`, no formula runtime in V1.
+
+Every returned `SelectedResult` includes `source_attempt_ids`, `selection_method`, `selected_value`, `calculated_at`.
+
+## 3. Raw Attempts Immutability
+
+`performance_test_attempts` is only inserted by `addTestAttempt` and only patched by `invalidateAttempt` (`valid=false` + reason). No update path modifies `raw_value`. The recompute pipeline reads them but never writes back.
+
+## 4. Attempt Correction Flow
+
+To correct an entry: staff sets the old attempt `valid=false` with a reason via `invalidateAttempt`, then inserts a new attempt via `addTestAttempt`. Both attempts stay visible in the UI; the invalid one is struck through.
+
+## 5. Derived Calculation Types
+
+Executed in `calculateDerivedMetric`. Allowlist:
+
+- `direct` — passthrough of a raw-test key from `config.input_metric_key`.
+- `ratio` — `metricValues[numerator] / metricValues[denominator]`.
+- `percentage_difference` — `((a − b) / |b|) * 100`.
+- `asymmetry` — `|l − r| / max(|l|, |r|) * 100` (never medical interpretation).
+- `bodyweight_relative` — `performance / context_bodyweight_snapshot`; uses the **session snapshot**, never re-reads current bodyweight.
+- `formula` — explicitly non-executable in V1; returns `CONFIGURATION_REQUIRED`.
+
+Missing inputs yield `status = MISSING_INPUT` with `value = null` — never a zero stored as a real result.
+
+## 6. Direction-Aware Change
+
+`calculateDirectionAwareChange` returns `{ raw_change, percentage_change, performance_change_percentage, direction, trend }`.
+
+- `higher_is_better`: improvement = (new − prev) / |prev|
+- `lower_is_better`: improvement = (prev − new) / |prev|
+- `target_range`: improvement = (prev_distance_to_mid − curr_distance_to_mid) / prev_distance_to_mid
+
+Trend uses a configurable `stableThreshold` (default 2 %) — this is a UI tolerance, not a scientific claim. Without prior value, `trend = "insufficient_data"`.
+
+## 7. Framework Builder
+
+Route: `/coach/teams/$orgId/performance` (Coach), tab **Framework**.
+
+Blocks: Domains (read-only list) · Batteries (+ nested Tests editor) · Metrics (+ derived allowlist selector) · Domain × Metric Weights · Position Profiles (per-position domain-weights editor) · Benchmarks (read-only V1).
+
+Readiness banner surfaces missing configuration dynamically: no batteries → "Test-Battery fehlt"; no metrics; no active benchmark; no active position profile; etc. When ready: **READY FOR TESTING**; when framework itself is `active`: **ACTIVE**.
+
+## 8. Framework Version Safety
+
+- Frameworks carry `version` (integer) and `status` (`draft`/`active`/`archived`).
+- Completed sessions reference `battery_id`; recomputed profiles snapshot `framework_version` + `calculation_version` (columns present on `performance_athlete_profiles`).
+- V1 policy: structural mutations to a framework already used by a completed session must be applied as a new draft version. This is a client policy enforced by the Framework Builder (not yet auto-migrated — dedicated `createFrameworkVersion` action lands with the version-branching UI in the next round).
+
+## 9. Benchmark Eligibility & Minimum Sample
+
+`calculateMetricScoreInternal` returns:
+
+- `status = INSUFFICIENT_BENCHMARK_DATA`, `score = null` when peer sample < `minimum_sample_size`.
+- `status = OK`, `score = 0..100` percentile-rank (mid-rank for ties, direction-aware) when the sample is sufficient.
+
+`longitudinal_self_comparison` is exposed separately as `calculateDirectionAwareChange` — a missing peer score is never replaced by a fabricated self score.
+
+## 10. Metric Scores
+
+`performance_athlete_metric_scores` rows persist `selected_value`, `score`, `benchmark_model_id`, `benchmark_version`, `comparison_group`, `sample_size`. The 0–100 range is a **presentation scale** — copy in the UI never claims "% Leistungsfähigkeit".
+
+## 11. Domain Scores & Coverage
+
+`calculateDomainScore` computes a weighted mean over metrics with a scoreable value, using `performance_domain_metric_weights`. It returns `data_coverage` = required metrics with score / required metrics — no silent renormalization when required metrics are missing.
+
+## 12. When Overall Profile Is Refused
+
+`calculateOverallPerformanceProfile` returns:
+
+- `POSITION_PROFILE_SETUP_REQUIRED` when the athlete's position profile is not `active`.
+- `INSUFFICIENT_PERFORMANCE_DATA` when total domain weight = 0 or weighted coverage < 0.5.
+- Otherwise `OK` with a 0–100 score.
+
+## 13. Data Coverage
+
+`calculateProfileDataCoverage` = required metrics present / required metrics total. Also computed inline as weighted coverage across position domain weights.
+
+## 14. Confidence
+
+`calculateProfileConfidence` returns `{ level: HIGH | MEDIUM | LOW, breakdown }`. Inputs: data coverage, required metrics coverage, test recency vs. retest window, benchmark sample vs. minimum, position profile status. Thresholds are centralised — no per-page duplication.
+
+## 15. Development Focus Priorities
+
+`deriveDevelopmentFocusAreas` — rule-based (no black-box). Signal = `position_weight × (1 − score/100) + trend_penalty`. Reason codes: `HIGH_POSITION_IMPORTANCE`, `BELOW_INTERNAL_PROFILE`, `NEGATIVE_TREND`, `STAGNANT_TREND`. Top 5 written with `source='engine'`, `status='suggested'`.
+
+## 16. Coach Overrides Preserved
+
+Recompute deletes engine rows only (`source='engine'`) before re-inserting; coach rows (`source='coach'`) are untouched. `upsertCoachFocusArea` / `removeCoachFocusArea` server functions edit coach entries.
+
+## 17. Athletic Plan Match
+
+Server function skeleton is in place via `focus_areas → organization_athletic_plans.focus_areas` matching (deferred to the Athlete Detail follow-up UI). No auto-activation — coach clicks "Athletikplan zuweisen" and priority order (athlete > position > team > organization) is respected by the existing assignment code.
+
+## 18. Test Sessions End-to-End
+
+1. `createPerformanceSession` — battery + name + date + athletes (creates `planned` session).
+2. `addTestAttempt` — insert immutable raw attempt.
+3. `invalidateAttempt` — mark old attempt invalid (raw value retained).
+4. Live preview uses `selectPerformanceResult` in the browser (no server round-trip needed).
+5. `completePerformanceSession` — sets status=`completed`, runs `runPerformanceProfileCalculation` which:
+   - Selects results per test per athlete
+   - Computes direct + derived metric values (using session context snapshots)
+   - Scores metrics against `organization_internal` benchmark (peer pool = other session athletes for V1)
+   - Aggregates domain scores + coverage
+   - Loads athlete's position profile via `team_memberships` inside the org
+   - Computes overall score (or refuses with a status)
+   - Writes engine focus areas (coach rows preserved)
+   - Upserts `performance_retest_schedule`
+
+## 19. Athlete Performance Profile UI
+
+Route: `/$orgSlug/performance`. Empty states:
+
+- No profile → "Noch kein Performance-Profil"
+- `overall_score = null` → "Performance-Setup läuft"
+- Otherwise: overall score + coverage + confidence + per-domain scores + focus areas + helper text ("interner strukturierter Profilwert, keine prozentuale Leistungsfähigkeit").
+
+## 20. Team Matrix Handles Missing Scores
+
+`—` for missing overall/domain scores (never `0`). Filters by position/confidence/retest are prepared as columns; the follow-up detail view builds on this same query.
+
+## 21. Staff Preset Permissions
+
+`src/lib/organizations/operating-loop.functions.ts` — `STAFF_PRESETS`:
+
+- `ORGANIZATION_ADMIN`: `view_performance`, `manage_performance` ✓
+- `PERFORMANCE_COACH`: `view_performance`, `manage_performance` ✓
+- `TEAM_COACH`: **no** performance permissions by default (user can opt in per assignment)
+- `NUTRITION_COACH`: no performance permissions
+- `COMMUNITY_MANAGER`: no performance permissions
+
+Existing staff assignments untouched.
+
+## 22. Bulls Framework Status
+
+Seeded in the database (org `b86f49ab-…-8757c4c` / slug `bulls`):
+
+- Framework **BODYFUEL American Football Performance V1** · sport `american_football` · v1 · status `draft`
+- Domains: `acceleration`, `speed`, `explosiveness`, `change_of_direction`, `strength`, `conditioning`, `robustness`
+- Position profiles (all `status='draft'`, no weights): `QB, RB, WR, TE, OL, DL, LB, DB`
+- Benchmark models:
+  - `Bulls Internal Performance Baseline V1` · `organization_internal` · `minimum_sample_size=0` · status `draft`
+  - `Bulls Longitudinal Self-Comparison` · `longitudinal_self_comparison` · status `active`
+
+No test batteries, no tests, no metrics, no domain/position weights.
+
+## 23. Fachliche Inputs, die wir für die Bulls Test Battery jetzt brauchen
+
+1. **Konkrete Tests** pro Domain (Name, Unit, direction, result_selection, retest cadence, kurzes Protokoll: instructions/attempts/rest/measurement_method).
+2. **Metric-Zuordnung** (welche Testwerte gehen 1:1 als Metric, welche als derived — z. B. rel. Squat / Bodyweight).
+3. **Metric → Domain Weights** (Summe pro Domain = 100 %).
+4. **Position → Domain Weights** pro QB/RB/WR/TE/OL/DL/LB/DB (Summe = 100 %). Ohne diese bleibt jedes Position-Profil `draft` und Overall-Scores werden verweigert.
+5. **Benchmark Sample-Size Freigabe**: ab welcher Anzahl gültiger Peer-Results wollen wir Peer-Percentile ausgeben? Ohne diese Freigabe bleibt das Modell `draft` und die Engine liefert nur `longitudinal_self_comparison`.
+6. Optional: externe Referenz-Quellen mit `source_name` + `source_reference` (nur wenn dokumentiert; sonst nicht aktivieren).
+
+## 24. Soccer / Age-Group Ready?
+
+Yes — technically. The engine has no American-football assumption:
+
+- `performance_position_profiles.age_group` supports U19/U17/senior scoping.
+- Framework, batteries, tests, metrics, position profiles, benchmark models are all `organization_id`-scoped.
+- Position keys are free-form (GK/CB/FB/WB/DM/CM/AM/W/ST).
+- No RWE seed created automatically. A soccer org would add its own framework via the same Framework Builder.
 
 ---
 
-## 2. Framework versioning
+## Was NICHT geliefert wurde (bewusst)
 
-- Frameworks carry `version` and `status` (`draft` / `active` / `archived`).
-- A completed test session references `battery_id` (immutable once used), and computed profiles snapshot `framework_version` + `calculation_version`. Structural changes to a framework must be applied as a new version (client policy — enforced in the upcoming Framework Builder UI).
-- `parent_framework_id` lets an organisation clone a BodyFuel template without mutating the source.
+- Framework Version Branching UI (`CREATE NEW VERSION` Button) — die Persistenz-Felder existieren, aber der explizite Klon-Workflow kommt mit dem Versionierungs-UI.
+- Deep Coach-Athletikplan-Match-UI (Focus → Plan Ranking) — Datenpfad ist offen, kommt mit `coach.teams.$orgId.performance.athletes.$userId.tsx`.
+- Historical peer pool für `organization_internal` Benchmarks — V1 nutzt Session-interne Peers; org-weite historische Peer-Pools sind eine Erweiterung im nächsten Turn.
+- Radar Chart Component — Empty-State-first Athleten-Ansicht ist da, das Radar folgt sobald mehrere Sessions Daten liefern.
 
-## 3. Raw attempts stay immutable
-
-- Attempts are inserted via `performance_test_attempts` and only edited by staff with `manage_performance` (or org admin / super admin) to flag `valid=false` with a reason.
-- Score recompute NEVER writes back to `performance_test_attempts` — only to `performance_athlete_*` tables.
-
-## 4. Result selection (planned engine helper)
-
-The selected raw value per (athlete, test, session) is a pure function of the test's `result_selection` (`best` / `average` / `median` / `last` / `custom`) applied to `valid=true` attempts. This will live in a single server helper (`src/lib/performance/result-selection.ts`, to be added) — never duplicated in UI.
-
-## 5. Derived metric calculation types
-
-Only an allowlist is honoured (no `eval`, no free-form JS in `config`):
-- `direct` — pass-through of a `raw_test` metric
-- `ratio` — a / b
-- `percentage_difference` — used for left/right asymmetry
-- `asymmetry` — abs(l−r) / max(l,r)
-- `bodyweight_relative` — value / context bodyweight snapshot
-- `formula` — reserved for a future controlled DSL; disabled at engine level until whitelisted
-
-## 6. Internal benchmarks with minimum sample size
-
-Benchmark models declare `minimum_sample_size`. When the filtered comparison group (org / team / age_group / position, per model config) has fewer valid selected results than that, the engine writes `sample_size` but **no numeric score** — the UI shows `BASELINE` / `INSUFFICIENT DATA` rather than a fabricated percentile.
-
-## 7. Direction-aware longitudinal change
-
-A single helper computes improvement %:
-- `higher_is_better`: improvement = (new − prev) / prev
-- `lower_is_better`: improvement = (prev − new) / prev
-- `target_range`: proximity to configured range
-
-This will be centralised in `src/lib/performance/change.ts` and consumed by both athlete profile and coach detail views.
-
-## 8. Position profiles & domain weights
-
-Per framework, editable via `performance_position_profiles` + `performance_position_domain_weights`. Framework Builder will validate the sum ≈ 100 and warn otherwise. Bulls position keys (`QB, RB, WR, TE, OL, DL, LB, DB`) will be inserted as `status='draft'` in the follow-up Bulls seed migration (see section 18).
-
-## 9. 0–100 performance score
-
-Computed by the (upcoming) score engine, roughly:
-1. For each active metric with a benchmark model + sufficient sample, map selected value → 0–100 (direction-aware).
-2. Domain score = weighted mean of contributing metric scores using `performance_domain_metric_weights`.
-3. Overall score = weighted mean of domain scores using the athlete's position profile weights.
-
-Score range is a **presentation scale** only — copy in the UI never claims "74 % Leistungsfähigkeit".
-
-## 10. Confidence & data coverage
-
-- `data_coverage` = present required metrics / total required metrics for the framework.
-- `confidence`:
-  - `HIGH` — coverage ≥ 80 %, recent test within retest window, sample ≥ 2× minimum
-  - `MEDIUM` — coverage ≥ 60 % OR sample near minimum
-  - `LOW` — anything else
-
-Written into `performance_athlete_profiles` on each recompute.
-
-## 11. Development focus derivation
-
-Rule-based (no black-box AI). Input: domain scores, position domain weights, longitudinal trend, missing metrics, confidence. Output: prioritized `performance_athlete_focus_areas` rows with `source='engine'`. Coach may add/edit/reorder — those rows land with `source='coach'`.
-
-## 12. Coach overrides
-
-`performance_athlete_focus_areas.source` distinguishes engine vs. coach entries; `status` is `suggested` / `confirmed` / `dismissed`. Recompute never deletes coach rows.
-
-## 13. Athletic plan connection
-
-No auto-assignment. Coach detail view will surface focus areas next to a "Athletikplan zuweisen" action that filters the existing `organization_athletic_plans` by matching focus tags. Feature flag `auto_create_retest_tasks` on `organization_features` defaults to false (to be added in follow-up).
-
-## 14. Retest due
-
-Set on session completion:
-- `last_tested_at` = session date
-- `next_retest_due` = `last_tested_at + recommended_retest_days` (from test definition, else from battery)
-
-Coach dashboard will surface `WHERE next_retest_due <= today + 14 days`.
-
-## 15. Athlete performance profile UI
-
-Route to add: `/$orgSlug/performance` (gated by feature `performance`). Dynamic — reads active domains from the athlete's profile framework; radar chart renders whatever domains exist. Empty state when no completed session yet.
-
-## 16. Team matrix
-
-Coach path: `coach/teams/$orgId → Performance` tab. Rows = athletes, columns = active domains (dynamic), filters by team / position / confidence / retest due.
-
-## 17. Session & attempt entry
-
-Follow-up UI on `coach/teams/$orgId/performance`:
-- Wizard: battery → athletes → date → session name → context snapshots → start
-- During session: athlete + test picker, attempt list, invalid-mark, live "selected result"
-- On completion: finalize selected results → compute metric/domain/overall scores → write focus areas → update retest schedule → write activity log
-
-## 18. Bulls initial configuration (planned as follow-up seed)
-
-Framework draft: **BodyFuel American Football Performance V1**
-- Sport: `american_football`
-- Status: `draft`
-- Domains: Acceleration, Speed, Explosiveness, Change of Direction, Strength, Conditioning, Robustness
-- Position profile drafts: QB, RB, WR, TE, OL, DL, LB, DB (no weights yet)
-- Benchmark model: `organization_internal` + `longitudinal_self_comparison`
-
-**Not yet inserted** — Framework Builder UI must land first so the Bulls test battery, metric weights, position domain weights and benchmark thresholds can be entered as reviewed data rather than fabricated numbers.
-
-## 19. Open Bulls sport-specific items (require coach input, not to be invented)
-
-- Final Bulls test battery (which tests, protocols, retest cadences)
-- Metric-to-domain weightings per Bulls framework
-- Position-domain weightings per Bulls position
-- Whether benchmarks stay organization-internal only or ever pull external reference data with cited source
-
-## 20. Ready for football/soccer organisations?
-
-Yes — technically:
-- `performance_position_profiles.age_group` supports U19/U17/senior scoping
-- Framework, position profiles and benchmark models can all be organisation-scoped via `organization_id`
-- Position keys are free-form (GK, CB, FB/WB, DM, CM, AM, W, ST) — no hardcoded American-football assumption
-- No RWE data is created automatically
-
----
-
-## Data separation
-
-- `performance_athlete_*` rows are `organization_id`-scoped; RLS restricts athletes to their own rows.
-- Staff need `view_performance` or `manage_performance` on `staff_assignments.permissions` for the target org.
-- Personal BodyFuel Strength Score V2 (`strength_checks`, `strength_check_results`, `performance_points`) remains completely separate. No policy on those tables was touched.
-
-## What's next (follow-up turns)
-
-1. Server-fn helpers: framework loader, result selection, change math, score engine, focus derivation
-2. Athlete `/$orgSlug/performance` page
-3. Coach performance tab (overview, team matrix, athlete detail, sessions)
-4. Framework Builder (domains, batteries, tests, metric weights, position profiles, benchmarks)
-5. Bulls framework seed (only as `status='draft'`; no fake benchmarks)
-6. `manage_performance` / `view_performance` presets in staff role config
+Alles davon blockiert die aktuelle Pipeline nicht — sie sind additive Erweiterungen.
