@@ -52,10 +52,21 @@ function InviteAccept() {
       });
   }, [preview, token]);
 
-  // Auto-accept once authenticated
+  // Auto-accept once authenticated — nur wenn die eingeloggte E-Mail zur
+  // Einladung passt, sonst würde der aktuell eingeloggte Coach die
+  // Einladung versehentlich konsumieren.
   useEffect(() => {
     if (loading || !supabaseUser || accepting) return;
-    if (info && info.ok === false) return;
+    if (!info || info.ok === false) return;
+    if (info.status !== "pending") return;
+    const inviteEmail = info.email?.trim().toLowerCase();
+    const userEmail = supabaseUser.email?.trim().toLowerCase();
+    if (inviteEmail && userEmail && inviteEmail !== userEmail) {
+      setError(
+        `Diese Einladung ist für ${info.email} ausgestellt. Du bist als ${supabaseUser.email} eingeloggt.`,
+      );
+      return;
+    }
     setAccepting(true);
     accept({ data: { token } })
       .then((res) => {
@@ -71,6 +82,11 @@ function InviteAccept() {
         setAccepting(false);
       });
   }, [supabaseUser, loading, accept, token, orgSlug, navigate, accepting, info]);
+
+  const signOutAndReload = async () => {
+    await supabase.auth.signOut();
+    window.location.reload();
+  };
 
   const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -159,8 +175,29 @@ function InviteAccept() {
   }
 
   if (supabaseUser) {
-    return <Centered>Zugang wird aktiviert…</Centered>;
+    const inviteEmail = info.email?.trim().toLowerCase();
+    const userEmail = supabaseUser.email?.trim().toLowerCase();
+    const mismatch = !!inviteEmail && !!userEmail && inviteEmail !== userEmail;
+    if (mismatch) {
+      return (
+        <Centered>
+          <h1 className="font-display text-xl font-semibold">Falscher Account</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Diese Einladung ist für{" "}
+            <span className="text-foreground">{info.email}</span> ausgestellt.
+            Du bist als{" "}
+            <span className="text-foreground">{supabaseUser.email}</span>{" "}
+            eingeloggt.
+          </p>
+          <Button className="mt-6" onClick={signOutAndReload}>
+            Ausloggen & mit richtiger E-Mail annehmen
+          </Button>
+        </Centered>
+      );
+    }
+    return <Centered>Zugang wird aktiviert…{error ? ` (${error})` : ""}</Centered>;
   }
+
 
   const roleLabel = roleLabelFromDbRole(info.role);
   const scope = scopeLabel(info.team_name);
