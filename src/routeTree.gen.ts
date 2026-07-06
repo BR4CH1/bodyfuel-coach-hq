@@ -22,6 +22,7 @@ import { Route as ProgressRouteImport } from './routes/progress'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as NutritionRouteImport } from './routes/nutrition'
 import { Route as MessagesRouteImport } from './routes/messages'
+import { Route as MeinBodyfuelRouteImport } from './routes/mein-bodyfuel'
 import { Route as MeasurementsRouteImport } from './routes/measurements'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as LoginRouteImport } from './routes/login'
@@ -184,6 +185,11 @@ const NutritionRoute = NutritionRouteImport.update({
 const MessagesRoute = MessagesRouteImport.update({
   id: '/messages',
   path: '/messages',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MeinBodyfuelRoute = MeinBodyfuelRouteImport.update({
+  id: '/mein-bodyfuel',
+  path: '/mein-bodyfuel',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MeasurementsRoute = MeasurementsRouteImport.update({
@@ -716,6 +722,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/measurements': typeof MeasurementsRoute
+  '/mein-bodyfuel': typeof MeinBodyfuelRoute
   '/messages': typeof MessagesRoute
   '/nutrition': typeof NutritionRouteWithChildren
   '/profile': typeof ProfileRoute
@@ -827,6 +834,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/measurements': typeof MeasurementsRoute
+  '/mein-bodyfuel': typeof MeinBodyfuelRoute
   '/messages': typeof MessagesRoute
   '/profile': typeof ProfileRoute
   '/progress': typeof ProgressRoute
@@ -937,6 +945,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/measurements': typeof MeasurementsRoute
+  '/mein-bodyfuel': typeof MeinBodyfuelRoute
   '/messages': typeof MessagesRoute
   '/nutrition': typeof NutritionRouteWithChildren
   '/profile': typeof ProfileRoute
@@ -1052,6 +1061,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/mcp'
     | '/measurements'
+    | '/mein-bodyfuel'
     | '/messages'
     | '/nutrition'
     | '/profile'
@@ -1163,6 +1173,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/mcp'
     | '/measurements'
+    | '/mein-bodyfuel'
     | '/messages'
     | '/profile'
     | '/progress'
@@ -1272,6 +1283,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/mcp'
     | '/measurements'
+    | '/mein-bodyfuel'
     | '/messages'
     | '/nutrition'
     | '/profile'
@@ -1386,6 +1398,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   McpRoute: typeof McpRoute
   MeasurementsRoute: typeof MeasurementsRoute
+  MeinBodyfuelRoute: typeof MeinBodyfuelRoute
   MessagesRoute: typeof MessagesRoute
   NutritionRoute: typeof NutritionRouteWithChildren
   ProfileRoute: typeof ProfileRoute
@@ -1527,6 +1540,13 @@ declare module '@tanstack/react-router' {
       path: '/messages'
       fullPath: '/messages'
       preLoaderRoute: typeof MessagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mein-bodyfuel': {
+      id: '/mein-bodyfuel'
+      path: '/mein-bodyfuel'
+      fullPath: '/mein-bodyfuel'
+      preLoaderRoute: typeof MeinBodyfuelRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/measurements': {
@@ -2407,6 +2427,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   McpRoute: McpRoute,
   MeasurementsRoute: MeasurementsRoute,
+  MeinBodyfuelRoute: MeinBodyfuelRoute,
   MessagesRoute: MessagesRoute,
   NutritionRoute: NutritionRouteWithChildren,
   ProfileRoute: ProfileRoute,

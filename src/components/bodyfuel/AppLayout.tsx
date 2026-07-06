@@ -16,9 +16,11 @@ import {
   MessageCircle,
   Bell,
   Users2,
+  Sparkles,
 } from "lucide-react";
 import { getMyUnreadCount, getCoachInbox } from "@/lib/coach-messages.functions";
 import { useSession } from "@/lib/bodyfuel/session";
+import { useEntitlements } from "@/lib/bodyfuel/entitlements";
 import { Logo } from "./Logo";
 import { getLevel } from "@/lib/bodyfuel/data";
 import { totalPoints } from "@/lib/bodyfuel/data";
@@ -49,11 +51,22 @@ const coachNav = [
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const { user, isCoach, isFreeUser, supabaseUser, profile, loading, logout, hasGroup } = useSession();
+  const entitlements = useEntitlements();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isBullsRoute = pathname.startsWith("/bulls");
   const freeBullsAccess = isFreeUser && isBullsRoute && hasGroup("bulls");
   const freeRankingAccess = isFreeUser && pathname.startsWith("/ranking");
+
+  // Team-only Nutzer: Vereinsmitglied/-staff OHNE persönliches BodyFuel-Paket
+  // und ohne Plattform-Coach-Rolle. Diese Nutzer haben keinen Zugriff auf die
+  // persönlichen Client-Bereiche (/dashboard, /training, /nutrition, ...).
+  const isTeamOnlyUser =
+    !entitlements.loading &&
+    !isCoach &&
+    !isFreeUser &&
+    entitlements.hasTeamAccess &&
+    !entitlements.hasAnyPersonalBodyfuel;
 
   useEffect(() => {
     if (loading) return;
@@ -62,6 +75,30 @@ export function AppLayout({ children }: { children: ReactNode }) {
       navigate({ to: "/tracker/app" });
     }
   }, [user, supabaseUser, loading, navigate, isFreeUser, pathname, hasGroup]);
+
+  // Team-only Redirect: persönliche Client-Routen sind ohne Smart/Coaching gesperrt.
+  useEffect(() => {
+    if (!isTeamOnlyUser) return;
+    const personalPrefixes = [
+      "/dashboard",
+      "/training",
+      "/nutrition",
+      "/messages",
+      "/community",
+      "/profile",
+      "/measurements",
+      "/progress",
+      "/check-in",
+      "/achievements",
+      "/strength-check",
+      "/daily-checklist",
+    ];
+    const isPersonal = personalPrefixes.some((p) => pathname === p || pathname.startsWith(p + "/"));
+    if (!isPersonal) return;
+    const slug = entitlements.primaryOrgSlug;
+    if (slug) navigate({ to: "/$orgSlug", params: { orgSlug: slug }, replace: true });
+    else navigate({ to: "/mein-bodyfuel", replace: true });
+  }, [isTeamOnlyUser, pathname, entitlements.primaryOrgSlug, navigate]);
 
   // Hard-Gate: BodyFuel Smart Nutzer müssen Onboarding abschließen, bevor sie in die App kommen.
   const [smartGateChecked, setSmartGateChecked] = useState(false);
@@ -114,15 +151,31 @@ export function AppLayout({ children }: { children: ReactNode }) {
   if (isFreeUser && !freeBullsAccess && !freeRankingAccess) return null;
   if (!smartGateChecked) return null;
 
-  const baseNav = isCoach ? coachNav : clientNav;
-  const nav = !isCoach && hasGroup("bulls") ? [...baseNav, bullsNavItem] : baseNav;
+  // Nav-Auswahl:
+  // 1) Plattform-Coach → coachNav
+  // 2) Team-only Nutzer → reduzierte Vereins-Nav (Zum Verein + Mein BodyFuel)
+  // 3) Sonst → klassische Client-Nav (+ Bulls, wenn Gruppe vorhanden)
+  const teamOnlyNav = isTeamOnlyUser && entitlements.primaryOrgSlug
+    ? [
+        { to: `/${entitlements.primaryOrgSlug}`, label: "Zum Verein", icon: Users2 },
+        { to: "/mein-bodyfuel", label: "Mein BodyFuel", icon: Sparkles },
+      ]
+    : null;
+  const baseNav = isCoach ? coachNav : (teamOnlyNav ?? clientNav);
+  const nav = !isCoach && !teamOnlyNav && hasGroup("bulls") ? [...baseNav, bullsNavItem] : baseNav;
   // Mobile bottom nav: Coach-Chat ist in die obere Leiste gewandert
   const mobileNav = nav.filter((item) => item.to !== "/messages");
   const points = user ? totalPoints(user) : 0;
   const { level } = getLevel(points);
   const displayName = user?.name ?? profile?.display_name ?? supabaseUser?.email ?? "Coach";
   const avatar = user?.avatar ?? (displayName.slice(0, 2).toUpperCase());
-  const roleLabel = user ? level.name : isCoach ? "Coach" : "Mitglied";
+  const roleLabel = isTeamOnlyUser
+    ? "Vereinsmitglied"
+    : user
+    ? level.name
+    : isCoach
+    ? "Coach"
+    : "Mitglied";
   const chatHref = isCoach ? "/coach" : "/messages";
 
   return (
@@ -138,24 +191,52 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </div>
         </div>
         <nav className="flex-1 space-y-1 p-3">
-          {nav.map((item) => {
-            const active = item.to === "/coach" ? pathname === "/coach" : pathname.startsWith(item.to);
-            const Icon = item.icon;
-            return (
+          {teamOnlyNav && entitlements.primaryOrgSlug ? (
+            <>
               <Link
-                key={item.to}
-                to={item.to}
+                to="/$orgSlug"
+                params={{ orgSlug: entitlements.primaryOrgSlug }}
                 className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                  active
+                  pathname.startsWith(`/${entitlements.primaryOrgSlug}`)
                     ? "bg-accent text-gold"
                     : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                 }`}
               >
-                <Icon className="h-4 w-4" />
-                {item.label}
+                <Users2 className="h-4 w-4" />
+                Zum Verein
               </Link>
-            );
-          })}
+              <Link
+                to="/mein-bodyfuel"
+                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                  pathname.startsWith("/mein-bodyfuel")
+                    ? "bg-accent text-gold"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                }`}
+              >
+                <Sparkles className="h-4 w-4" />
+                Mein BodyFuel
+              </Link>
+            </>
+          ) : (
+            nav.map((item) => {
+              const active = item.to === "/coach" ? pathname === "/coach" : pathname.startsWith(item.to);
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                    active
+                      ? "bg-accent text-gold"
+                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {item.label}
+                </Link>
+              );
+            })
+          )}
         </nav>
         <div className="border-t border-border p-3">
           <div className="flex items-center gap-3 rounded-lg bg-secondary/60 p-3">
@@ -230,28 +311,54 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
       {/* Mobile bottom nav */}
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 backdrop-blur lg:hidden">
-        <div className={`grid grid-cols-${Math.min(mobileNav.length, 7)}`} style={{ gridTemplateColumns: `repeat(${Math.min(mobileNav.length, 7)}, minmax(0, 1fr))` }}>
-          {mobileNav.slice(0, 7).map((item) => {
-            const active = item.to === "/coach" ? pathname === "/coach" : pathname.startsWith(item.to);
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.to}
-                to={item.to}
-                className={`flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium ${
-                  active ? "text-gold" : "text-muted-foreground"
-                }`}
-              >
-                <Icon className="h-5 w-5" />
-                {item.label}
-              </Link>
-            );
-          })}
-        </div>
+        {teamOnlyNav && entitlements.primaryOrgSlug ? (
+          <div className="grid grid-cols-2">
+            <Link
+              to="/$orgSlug"
+              params={{ orgSlug: entitlements.primaryOrgSlug }}
+              className={`flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium ${
+                pathname.startsWith(`/${entitlements.primaryOrgSlug}`)
+                  ? "text-gold"
+                  : "text-muted-foreground"
+              }`}
+            >
+              <Users2 className="h-5 w-5" />
+              Verein
+            </Link>
+            <Link
+              to="/mein-bodyfuel"
+              className={`flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium ${
+                pathname.startsWith("/mein-bodyfuel") ? "text-gold" : "text-muted-foreground"
+              }`}
+            >
+              <Sparkles className="h-5 w-5" />
+              Mein BodyFuel
+            </Link>
+          </div>
+        ) : (
+          <div className={`grid grid-cols-${Math.min(mobileNav.length, 7)}`} style={{ gridTemplateColumns: `repeat(${Math.min(mobileNav.length, 7)}, minmax(0, 1fr))` }}>
+            {mobileNav.slice(0, 7).map((item) => {
+              const active = item.to === "/coach" ? pathname === "/coach" : pathname.startsWith(item.to);
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className={`flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium ${
+                    active ? "text-gold" : "text-muted-foreground"
+                  }`}
+                >
+                  <Icon className="h-5 w-5" />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </nav>
 
       <ReviewPrompt />
-      {!isCoach && !isFreeUser && supabaseUser?.id && (
+      {!isCoach && !isFreeUser && !isTeamOnlyUser && supabaseUser?.id && (
         <SmartPlanReadyPopup userId={supabaseUser.id} />
       )}
     </div>
