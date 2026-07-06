@@ -225,19 +225,54 @@ function CoachOrgDetail() {
           </div>
         )}
 
-        {tab === "athletes" && <AthletesTab orgId={orgId} />}
+        {tab === "athletes" && <AthletesTab orgId={orgId} teamFilter={athleteTeamFilter} teams={data.teams as any[]} onFilter={setAthleteTeamFilter} />}
         {tab === "teams" && (
           <ul className="grid gap-2 sm:grid-cols-2">
-            {(data.teams as any[]).map((t) => (
-              <li key={t.id} className="rounded-lg border border-border bg-card p-4">
-                <div className="font-semibold">{t.name}</div>
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                  {t.sport ?? "—"} {t.age_group ? `· ${t.age_group}` : ""}
-                </div>
+            {(data.teams as any[]).map((t) => {
+              const kpi = teamKpis.find((k) => k.team_id === t.id);
+              return (
+                <li key={t.id} className="rounded-lg border border-border bg-card p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <div className="font-semibold">{t.name}</div>
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                        {t.sport ?? "—"} {t.age_group ? `· ${t.age_group}` : ""}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => { setAthleteTeamFilter(t.id); setTab("athletes"); }}
+                      className="rounded border border-border px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                    >
+                      Athleten →
+                    </button>
+                  </div>
+                  <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                    <div className="rounded bg-muted/40 p-2">
+                      <div className="font-display text-lg font-bold">{kpi?.athletes ?? 0}</div>
+                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Athleten</div>
+                    </div>
+                    <div className="rounded bg-muted/40 p-2">
+                      <div className="font-display text-lg font-bold">
+                        {kpi?.weekly_compliance != null ? `${kpi.weekly_compliance}%` : "—"}
+                      </div>
+                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Compliance</div>
+                    </div>
+                    <div className="rounded bg-muted/40 p-2">
+                      <div className="font-display text-lg font-bold">{kpi?.pending_onboardings ?? 0}</div>
+                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Offen</div>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+            {(data.teams as any[]).length === 0 && (
+              <li className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
+                Noch keine Teams angelegt.
               </li>
-            ))}
+            )}
           </ul>
         )}
+
         {tab === "training" && <TrainingTab orgId={orgId} />}
         {tab === "tasks" && <TasksTab orgId={orgId} teams={data.teams as any[]} />}
         {tab === "challenges" && <ChallengesTab orgId={orgId} teams={data.teams as any[]} />}
