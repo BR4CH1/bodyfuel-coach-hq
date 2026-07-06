@@ -656,6 +656,7 @@ export const addOrgStaff = createServerFn({ method: "POST" })
     }
 
     if (!data.email) throw new Error("Bitte User oder E-Mail angeben.");
+    const inviteToken = crypto.randomUUID().replace(/-/g, "");
     const { data: inv, error: invErr } = await supabase
       .from("organization_invites")
       .insert({
@@ -665,12 +666,77 @@ export const addOrgStaff = createServerFn({ method: "POST" })
         team_id: data.team_id ?? null,
         permissions: data.permissions as any,
         created_by: userId,
-        invite_token: crypto.randomUUID().replace(/-/g, ""),
+        invite_token: inviteToken,
         status: "pending" as any,
       } as any)
       .select("id")
       .single();
     if (invErr) throw new Error(invErr.message);
+
+    // Send invitation email via the transactional email pipeline.
+    // Any failure here must not roll back the invite row; the coach can
+    // resend later.
+    try {
+      const [{ data: org }, { data: team }] = await Promise.all([
+        supabase
+          .from("organizations")
+          .select("slug, name")
+          .eq("id", data.organization_id)
+          .maybeSingle(),
+        data.team_id
+          ? supabase.from("organization_teams").select("name").eq("id", data.team_id).maybeSingle()
+          : Promise.resolve({ data: null as { name: string } | null }),
+      ]);
+      const [{ data: inviterProfile }] = await Promise.all([
+        supabase.from("profiles").select("display_name").eq("id", userId).maybeSingle(),
+      ]);
+      const roleLabelMap: Record<string, string> = {
+        organization_admin: "Vereinsleitung / Administrator",
+        coach: "Head Coach / Teamcoach",
+        staff: "Trainer / Mitarbeiter",
+      };
+      const request = getRequest();
+      const origin = request?.headers.get("origin")
+        ?? (() => {
+             const host = request?.headers.get("host");
+             const proto = request?.headers.get("x-forwarded-proto") ?? "https";
+             return host ? `${proto}://${host}` : "https://bodyfuel-coaching.com";
+           })();
+      const inviteUrl = org?.slug
+        ? `${origin}/${org.slug}/invite/${inviteToken}`
+        : `${origin}/invite/${inviteToken}`;
+      const authHeader = request?.headers.get("authorization");
+      if (authHeader) {
+        const sendRes = await fetch(`${origin}/lovable/email/transactional/send`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: authHeader,
+          },
+          body: JSON.stringify({
+            templateName: "staff-invite",
+            recipientEmail: data.email.toLowerCase().trim(),
+            idempotencyKey: `staff-invite:${(inv as any).id}`,
+            templateData: {
+              organizationName: (org as any)?.name ?? "BODYFUEL",
+              roleLabel: roleLabelMap[data.role] ?? data.role,
+              scopeLabel: team?.name ? `Team: ${team.name}` : "Gesamter Verein",
+              inviteUrl,
+              inviterName: (inviterProfile as any)?.display_name ?? undefined,
+            },
+          }),
+        });
+        if (!sendRes.ok) {
+          const body = await sendRes.text();
+          console.error("[addOrgStaff] transactional send failed", sendRes.status, body);
+        }
+      } else {
+        console.warn("[addOrgStaff] no auth header available, invite email not sent");
+      }
+    } catch (e) {
+      console.error("[addOrgStaff] invite email dispatch error", e);
+    }
+
     return { invited_id: (inv as any).id, invited: true };
   });
 
