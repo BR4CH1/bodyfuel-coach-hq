@@ -4,6 +4,7 @@ import { template as featureNewsJuneTemplate } from './feature-news-june'
 import { template as coachDailySummaryTemplate } from './coach-daily-summary'
 import { template as bodyfuelUpdateTemplate } from './bodyfuel-update'
 import { template as guardianConsentTemplate } from './guardian-consent'
+import { template as staffInviteTemplate } from './staff-invite'
 
 export interface TemplateEntry {
   component: ComponentType<any>
@@ -24,4 +25,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'coach-daily-summary': coachDailySummaryTemplate,
   'bodyfuel-update': bodyfuelUpdateTemplate,
   'guardian-consent': guardianConsentTemplate,
+  'staff-invite': staffInviteTemplate,
 }
