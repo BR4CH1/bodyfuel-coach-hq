@@ -358,7 +358,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
       </nav>
 
       <ReviewPrompt />
-      {!isCoach && !isFreeUser && supabaseUser?.id && (
+      {!isCoach && !isFreeUser && !isTeamOnlyUser && supabaseUser?.id && (
         <SmartPlanReadyPopup userId={supabaseUser.id} />
       )}
     </div>
