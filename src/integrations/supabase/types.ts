@@ -2958,6 +2958,586 @@ export type Database = {
           },
         ]
       }
+      performance_athlete_domain_scores: {
+        Row: {
+          calculated_at: string
+          contributing_metrics: Json
+          domain_id: string
+          id: string
+          organization_id: string
+          profile_id: string
+          score: number | null
+          user_id: string
+        }
+        Insert: {
+          calculated_at?: string
+          contributing_metrics?: Json
+          domain_id: string
+          id?: string
+          organization_id: string
+          profile_id: string
+          score?: number | null
+          user_id: string
+        }
+        Update: {
+          calculated_at?: string
+          contributing_metrics?: Json
+          domain_id?: string
+          id?: string
+          organization_id?: string
+          profile_id?: string
+          score?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_athlete_domain_scores_domain_id_fkey"
+            columns: ["domain_id"]
+            isOneToOne: false
+            referencedRelation: "performance_domains"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_athlete_domain_scores_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_athlete_domain_scores_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "performance_athlete_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      performance_athlete_focus_areas: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          domain_id: string | null
+          framework_id: string
+          id: string
+          label: string
+          metric_definition_id: string | null
+          organization_id: string
+          priority: number
+          rationale: string | null
+          source: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          domain_id?: string | null
+          framework_id: string
+          id?: string
+          label: string
+          metric_definition_id?: string | null
+          organization_id: string
+          priority?: number
+          rationale?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          domain_id?: string | null
+          framework_id?: string
+          id?: string
+          label?: string
+          metric_definition_id?: string | null
+          organization_id?: string
+          priority?: number
+          rationale?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_athlete_focus_areas_domain_id_fkey"
+            columns: ["domain_id"]
+            isOneToOne: false
+            referencedRelation: "performance_domains"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_athlete_focus_areas_framework_id_fkey"
+            columns: ["framework_id"]
+            isOneToOne: false
+            referencedRelation: "performance_frameworks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_athlete_focus_areas_metric_definition_id_fkey"
+            columns: ["metric_definition_id"]
+            isOneToOne: false
+            referencedRelation: "performance_metric_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_athlete_focus_areas_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      performance_athlete_metric_scores: {
+        Row: {
+          benchmark_model_id: string | null
+          benchmark_version: number | null
+          calculated_at: string
+          comparison_group: Json
+          id: string
+          metric_definition_id: string
+          organization_id: string
+          profile_id: string
+          sample_size: number | null
+          score: number | null
+          selected_value: number | null
+          unit: string | null
+          user_id: string
+        }
+        Insert: {
+          benchmark_model_id?: string | null
+          benchmark_version?: number | null
+          calculated_at?: string
+          comparison_group?: Json
+          id?: string
+          metric_definition_id: string
+          organization_id: string
+          profile_id: string
+          sample_size?: number | null
+          score?: number | null
+          selected_value?: number | null
+          unit?: string | null
+          user_id: string
+        }
+        Update: {
+          benchmark_model_id?: string | null
+          benchmark_version?: number | null
+          calculated_at?: string
+          comparison_group?: Json
+          id?: string
+          metric_definition_id?: string
+          organization_id?: string
+          profile_id?: string
+          sample_size?: number | null
+          score?: number | null
+          selected_value?: number | null
+          unit?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_athlete_metric_scores_benchmark_model_id_fkey"
+            columns: ["benchmark_model_id"]
+            isOneToOne: false
+            referencedRelation: "performance_benchmark_models"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_athlete_metric_scores_metric_definition_id_fkey"
+            columns: ["metric_definition_id"]
+            isOneToOne: false
+            referencedRelation: "performance_metric_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_athlete_metric_scores_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_athlete_metric_scores_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "performance_athlete_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      performance_athlete_profiles: {
+        Row: {
+          benchmark_model_id: string | null
+          calculated_at: string
+          calculation_version: number
+          confidence: string | null
+          created_at: string
+          data_coverage: number | null
+          framework_id: string
+          framework_version: number
+          id: string
+          missing_metrics: Json
+          organization_id: string
+          overall_score: number | null
+          position_profile_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          benchmark_model_id?: string | null
+          calculated_at?: string
+          calculation_version?: number
+          confidence?: string | null
+          created_at?: string
+          data_coverage?: number | null
+          framework_id: string
+          framework_version: number
+          id?: string
+          missing_metrics?: Json
+          organization_id: string
+          overall_score?: number | null
+          position_profile_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          benchmark_model_id?: string | null
+          calculated_at?: string
+          calculation_version?: number
+          confidence?: string | null
+          created_at?: string
+          data_coverage?: number | null
+          framework_id?: string
+          framework_version?: number
+          id?: string
+          missing_metrics?: Json
+          organization_id?: string
+          overall_score?: number | null
+          position_profile_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_athlete_profiles_benchmark_model_id_fkey"
+            columns: ["benchmark_model_id"]
+            isOneToOne: false
+            referencedRelation: "performance_benchmark_models"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_athlete_profiles_framework_id_fkey"
+            columns: ["framework_id"]
+            isOneToOne: false
+            referencedRelation: "performance_frameworks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_athlete_profiles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_athlete_profiles_position_profile_id_fkey"
+            columns: ["position_profile_id"]
+            isOneToOne: false
+            referencedRelation: "performance_position_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      performance_benchmark_models: {
+        Row: {
+          benchmark_type: string
+          config: Json
+          created_at: string
+          framework_id: string
+          id: string
+          minimum_sample_size: number
+          name: string
+          organization_id: string | null
+          source_reference: string | null
+          status: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          benchmark_type: string
+          config?: Json
+          created_at?: string
+          framework_id: string
+          id?: string
+          minimum_sample_size?: number
+          name: string
+          organization_id?: string | null
+          source_reference?: string | null
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          benchmark_type?: string
+          config?: Json
+          created_at?: string
+          framework_id?: string
+          id?: string
+          minimum_sample_size?: number
+          name?: string
+          organization_id?: string | null
+          source_reference?: string | null
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_benchmark_models_framework_id_fkey"
+            columns: ["framework_id"]
+            isOneToOne: false
+            referencedRelation: "performance_frameworks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_benchmark_models_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      performance_domain_metric_weights: {
+        Row: {
+          active: boolean
+          created_at: string
+          domain_id: string
+          framework_id: string
+          id: string
+          metric_definition_id: string
+          updated_at: string
+          weight: number
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          domain_id: string
+          framework_id: string
+          id?: string
+          metric_definition_id: string
+          updated_at?: string
+          weight?: number
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          domain_id?: string
+          framework_id?: string
+          id?: string
+          metric_definition_id?: string
+          updated_at?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_domain_metric_weights_domain_id_fkey"
+            columns: ["domain_id"]
+            isOneToOne: false
+            referencedRelation: "performance_domains"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_domain_metric_weights_framework_id_fkey"
+            columns: ["framework_id"]
+            isOneToOne: false
+            referencedRelation: "performance_frameworks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_domain_metric_weights_metric_definition_id_fkey"
+            columns: ["metric_definition_id"]
+            isOneToOne: false
+            referencedRelation: "performance_metric_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      performance_domains: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          framework_id: string
+          id: string
+          key: string
+          name: string
+          order_index: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          framework_id: string
+          id?: string
+          key: string
+          name: string
+          order_index?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          framework_id?: string
+          id?: string
+          key?: string
+          name?: string
+          order_index?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_domains_framework_id_fkey"
+            columns: ["framework_id"]
+            isOneToOne: false
+            referencedRelation: "performance_frameworks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      performance_frameworks: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_template: boolean
+          name: string
+          organization_id: string | null
+          parent_framework_id: string | null
+          sport: string
+          status: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_template?: boolean
+          name: string
+          organization_id?: string | null
+          parent_framework_id?: string | null
+          sport: string
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_template?: boolean
+          name?: string
+          organization_id?: string | null
+          parent_framework_id?: string | null
+          sport?: string
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_frameworks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_frameworks_parent_framework_id_fkey"
+            columns: ["parent_framework_id"]
+            isOneToOne: false
+            referencedRelation: "performance_frameworks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      performance_metric_definitions: {
+        Row: {
+          active: boolean
+          calculation_type: string
+          config: Json
+          created_at: string
+          direction: string
+          domain_id: string | null
+          framework_id: string
+          id: string
+          key: string
+          metric_type: string
+          name: string
+          order_index: number
+          unit: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          calculation_type?: string
+          config?: Json
+          created_at?: string
+          direction?: string
+          domain_id?: string | null
+          framework_id: string
+          id?: string
+          key: string
+          metric_type?: string
+          name: string
+          order_index?: number
+          unit?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          calculation_type?: string
+          config?: Json
+          created_at?: string
+          direction?: string
+          domain_id?: string | null
+          framework_id?: string
+          id?: string
+          key?: string
+          metric_type?: string
+          name?: string
+          order_index?: number
+          unit?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_metric_definitions_domain_id_fkey"
+            columns: ["domain_id"]
+            isOneToOne: false
+            referencedRelation: "performance_domains"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_metric_definitions_framework_id_fkey"
+            columns: ["framework_id"]
+            isOneToOne: false
+            referencedRelation: "performance_frameworks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       performance_points: {
         Row: {
           approved: boolean
@@ -3007,6 +3587,533 @@ export type Database = {
             columns: ["exercise_id"]
             isOneToOne: false
             referencedRelation: "training_exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      performance_position_domain_weights: {
+        Row: {
+          created_at: string
+          domain_id: string
+          id: string
+          position_profile_id: string
+          updated_at: string
+          weight: number
+        }
+        Insert: {
+          created_at?: string
+          domain_id: string
+          id?: string
+          position_profile_id: string
+          updated_at?: string
+          weight?: number
+        }
+        Update: {
+          created_at?: string
+          domain_id?: string
+          id?: string
+          position_profile_id?: string
+          updated_at?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_position_domain_weights_domain_id_fkey"
+            columns: ["domain_id"]
+            isOneToOne: false
+            referencedRelation: "performance_domains"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_position_domain_weights_position_profile_id_fkey"
+            columns: ["position_profile_id"]
+            isOneToOne: false
+            referencedRelation: "performance_position_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      performance_position_profiles: {
+        Row: {
+          age_group: string | null
+          created_at: string
+          framework_id: string
+          id: string
+          organization_id: string | null
+          position_group: string | null
+          position_key: string
+          position_name: string
+          sport: string
+          status: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          age_group?: string | null
+          created_at?: string
+          framework_id: string
+          id?: string
+          organization_id?: string | null
+          position_group?: string | null
+          position_key: string
+          position_name: string
+          sport: string
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          age_group?: string | null
+          created_at?: string
+          framework_id?: string
+          id?: string
+          organization_id?: string | null
+          position_group?: string | null
+          position_key?: string
+          position_name?: string
+          sport?: string
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_position_profiles_framework_id_fkey"
+            columns: ["framework_id"]
+            isOneToOne: false
+            referencedRelation: "performance_frameworks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_position_profiles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      performance_retest_schedule: {
+        Row: {
+          auto_created: boolean
+          battery_id: string | null
+          created_at: string
+          id: string
+          last_tested_at: string | null
+          next_retest_due: string
+          organization_id: string
+          test_definition_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          auto_created?: boolean
+          battery_id?: string | null
+          created_at?: string
+          id?: string
+          last_tested_at?: string | null
+          next_retest_due: string
+          organization_id: string
+          test_definition_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          auto_created?: boolean
+          battery_id?: string | null
+          created_at?: string
+          id?: string
+          last_tested_at?: string | null
+          next_retest_due?: string
+          organization_id?: string
+          test_definition_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_retest_schedule_battery_id_fkey"
+            columns: ["battery_id"]
+            isOneToOne: false
+            referencedRelation: "performance_test_batteries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_retest_schedule_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_retest_schedule_test_definition_id_fkey"
+            columns: ["test_definition_id"]
+            isOneToOne: false
+            referencedRelation: "performance_test_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      performance_session_context_snapshots: {
+        Row: {
+          captured_at: string
+          context_key: string
+          created_at: string
+          id: string
+          numeric_value: number | null
+          organization_id: string
+          session_id: string
+          source: string | null
+          text_value: string | null
+          unit: string | null
+          user_id: string
+        }
+        Insert: {
+          captured_at?: string
+          context_key: string
+          created_at?: string
+          id?: string
+          numeric_value?: number | null
+          organization_id: string
+          session_id: string
+          source?: string | null
+          text_value?: string | null
+          unit?: string | null
+          user_id: string
+        }
+        Update: {
+          captured_at?: string
+          context_key?: string
+          created_at?: string
+          id?: string
+          numeric_value?: number | null
+          organization_id?: string
+          session_id?: string
+          source?: string | null
+          text_value?: string | null
+          unit?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_session_context_snapshots_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_session_context_snapshots_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "performance_test_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      performance_test_attempts: {
+        Row: {
+          attempt_number: number
+          created_at: string
+          entered_by: string | null
+          id: string
+          invalid_reason: string | null
+          measured_at: string
+          metadata: Json
+          organization_id: string
+          raw_value: number
+          session_id: string
+          test_definition_id: string
+          unit_snapshot: string
+          user_id: string
+          valid: boolean
+        }
+        Insert: {
+          attempt_number?: number
+          created_at?: string
+          entered_by?: string | null
+          id?: string
+          invalid_reason?: string | null
+          measured_at?: string
+          metadata?: Json
+          organization_id: string
+          raw_value: number
+          session_id: string
+          test_definition_id: string
+          unit_snapshot: string
+          user_id: string
+          valid?: boolean
+        }
+        Update: {
+          attempt_number?: number
+          created_at?: string
+          entered_by?: string | null
+          id?: string
+          invalid_reason?: string | null
+          measured_at?: string
+          metadata?: Json
+          organization_id?: string
+          raw_value?: number
+          session_id?: string
+          test_definition_id?: string
+          unit_snapshot?: string
+          user_id?: string
+          valid?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_test_attempts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_test_attempts_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "performance_test_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_test_attempts_test_definition_id_fkey"
+            columns: ["test_definition_id"]
+            isOneToOne: false
+            referencedRelation: "performance_test_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      performance_test_batteries: {
+        Row: {
+          created_at: string
+          description: string | null
+          framework_id: string
+          id: string
+          name: string
+          organization_id: string | null
+          recommended_retest_days: number | null
+          status: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          framework_id: string
+          id?: string
+          name: string
+          organization_id?: string | null
+          recommended_retest_days?: number | null
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          framework_id?: string
+          id?: string
+          name?: string
+          organization_id?: string | null
+          recommended_retest_days?: number | null
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_test_batteries_framework_id_fkey"
+            columns: ["framework_id"]
+            isOneToOne: false
+            referencedRelation: "performance_frameworks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_test_batteries_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      performance_test_definitions: {
+        Row: {
+          active: boolean
+          battery_id: string
+          config: Json
+          created_at: string
+          decimal_places: number
+          description: string | null
+          direction: string
+          domain_id: string | null
+          id: string
+          key: string
+          name: string
+          order_index: number
+          protocol: Json
+          recommended_retest_days: number | null
+          required: boolean
+          result_selection: string
+          unit: string
+          updated_at: string
+          value_type: string
+        }
+        Insert: {
+          active?: boolean
+          battery_id: string
+          config?: Json
+          created_at?: string
+          decimal_places?: number
+          description?: string | null
+          direction?: string
+          domain_id?: string | null
+          id?: string
+          key: string
+          name: string
+          order_index?: number
+          protocol?: Json
+          recommended_retest_days?: number | null
+          required?: boolean
+          result_selection?: string
+          unit: string
+          updated_at?: string
+          value_type: string
+        }
+        Update: {
+          active?: boolean
+          battery_id?: string
+          config?: Json
+          created_at?: string
+          decimal_places?: number
+          description?: string | null
+          direction?: string
+          domain_id?: string | null
+          id?: string
+          key?: string
+          name?: string
+          order_index?: number
+          protocol?: Json
+          recommended_retest_days?: number | null
+          required?: boolean
+          result_selection?: string
+          unit?: string
+          updated_at?: string
+          value_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_test_definitions_battery_id_fkey"
+            columns: ["battery_id"]
+            isOneToOne: false
+            referencedRelation: "performance_test_batteries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_test_definitions_domain_id_fkey"
+            columns: ["domain_id"]
+            isOneToOne: false
+            referencedRelation: "performance_domains"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      performance_test_session_athletes: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string | null
+          session_id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          session_id: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          session_id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_test_session_athletes_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "performance_test_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      performance_test_sessions: {
+        Row: {
+          battery_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          notes: string | null
+          organization_id: string
+          status: string
+          team_id: string | null
+          test_date: string
+          updated_at: string
+        }
+        Insert: {
+          battery_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          organization_id: string
+          status?: string
+          team_id?: string | null
+          test_date: string
+          updated_at?: string
+        }
+        Update: {
+          battery_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          organization_id?: string
+          status?: string
+          team_id?: string | null
+          test_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_test_sessions_battery_id_fkey"
+            columns: ["battery_id"]
+            isOneToOne: false
+            referencedRelation: "performance_test_batteries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_test_sessions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_test_sessions_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "organization_teams"
             referencedColumns: ["id"]
           },
         ]
