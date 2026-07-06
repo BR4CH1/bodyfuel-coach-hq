@@ -1,83 +1,97 @@
+# Bulls Organization Flow — Audit & Umsetzungsplan
 
-# Bulls Athlete Flow — Proof of Concept für generisches Organization System
+Zuerst ausgeführte Bestandsaufnahme (echte DB-Werte), dann ein umsetzbarer Plan. Vor der Umsetzung bitte einmal absegnen — insbesondere die Legacy-Bewertung in Abschnitt 2/3, da dort das Risiko unerwünschter Datenverschiebungen liegt.
 
-Analyse-Ergebnis (Ist-Zustand):
-- `organizations`: Coesfeld Bulls existiert (`slug=bulls`)
-- `organization_teams`: 1 Team `Seniors`
-- `organization_memberships`: 10 Athleten bereits als `athlete` gebacktfillt (4 mit `onboarding_completed=true`, 6 mit `false`)
-- `bulls_profiles`: 1 Datensatz mit `position`, `main_goal`, `weight_kg`, `height_cm`
-- `bulls_weight_logs`: 1 Datensatz — noch NICHT an Organizations gebunden
-- Legacy `user_groups.group_name='bulls'` → 10 User, deckungsgleich mit Memberships
-- Alle Kernstrukturen (Brand Provider, `$orgSlug` Routen, Coach Teams Dashboard) stehen bereits
+## 1) Audit-Ergebnisse (live aus der DB)
 
-## Umsetzungsplan
+**Bulls-Legacy-Tabellen (Datenbestand):**
+- `bulls_profiles` — 4 Zeilen. Felder: `weight_kg, height_cm, position (enum), main_goal (enum), onboarded_at`. → Persönliche Athletendaten + Organization-Onboarding-Daten vermischt.
+- `bulls_weight_logs` — 2 Zeilen. Felder: `user_id, log_date, weight_kg`. → **Persönliche BodyFuel-Daten**, nicht Organization-Eigentum.
+- `bulls_progress_photos` — 0 Zeilen. → Persönliche Daten.
+- `bulls_hub_events` — 13 Zeilen. Felder: `user_id, kind, occurred_at` (z. B. `onboarding_complete`, `nutrition_plan_opened`). → Reine Usage-Events, keine Punkte.
 
-### 1. Datenmodell-Erweiterungen (1 Migration)
-Neue generische Tabellen (organization-scoped, RLS aktiv, GRANTs gesetzt):
+**Vermeintliche "Bulls Challenge Points":**
+- Es existiert **keine** dedizierte Bulls-Challenge-/Ranking-Tabelle.
+- `performance_points` (96 Zeilen, 5/10 Bulls-User) und `user_points` (18 User global) sind **globale BodyFuel-Smart-Punkte** (`pr_volume, pr_weight, pr_e1rm, strength_check_done, streak_7`). Nicht organisationsbezogen, nicht challenge-basiert.
+- `organization_challenges` / `organization_challenge_progress`: 0 / 0 Zeilen. `/bulls/ranking` liest aktuell also weder eine echte Legacy-Ranglistenhistorie noch eine gefüllte neue Tabelle — es gibt schlicht keine "verlorene" Historie.
 
-- `organization_tasks` — generische Tages-Aufgaben pro Athlet
-  Felder: `organization_id`, `team_id?`, `user_id`, `task_type` (text — z.B. `team_training`, `athletic_training`, `daily_checkin`, `challenge`, `recovery`, `hydration`), `title`, `subtitle?`, `scheduled_for` (timestamptz), `duration_min?`, `status` (`open|done|skipped`), `link_target?`, `payload jsonb`
-- `organization_challenges` — Challenges pro Org/Team
-  Felder: `organization_id`, `team_id?`, `name`, `description?`, `starts_at`, `ends_at`, `status`, `config jsonb`
-- `organization_challenge_progress` — Punkte pro User pro Challenge
-  Felder: `challenge_id`, `user_id`, `points`, `updated_at`
-- `organization_activity_log` — für "Letzte Organization Aktivitäten"
-  Felder: `organization_id`, `user_id`, `event_type`, `payload jsonb`
-- `organization_athletic_plans` — getrennt vom persönlichen Trainingsplan
-  Felder: `organization_id`, `team_id?`, `user_id`, `name`, `focus_areas text[]`, `week_start date`, `payload jsonb`, `status`
-- Erweiterung `team_memberships`: Spalten `primary_position`, `secondary_position`, `jersey_number`, `gym_access`, `available_training_days int[]`, `limitations text`, `personal_goal` — nur ergänzen, bestehende Struktur nicht umbauen.
+**Community-Feature:** `organization_features` für Bulls → `community.enabled = false`.
+**Onboarding:** 10 Bulls-Mitglieder, davon 6 mit `onboarding_completed = false`.
 
-RLS-Policies verwenden neue Helper `is_org_member(uuid)` / `is_org_staff(uuid)` (existieren bereits).
+## 2) Mapping-Doku (kein Move, nur Doku + Bridge)
 
-### 2. Server Functions (`src/lib/organizations/*.functions.ts`)
-- `getOrgHomeData({ slug })` — Membership + Team + Tasks heute + Status-Cards + aktive Challenge
-- `getOrgTasks({ slug, range })` / `completeOrgTask({ taskId })`
-- `getOrgAthleticTraining({ slug })` — Plan, Woche, Position, Focus Areas
-- `getOrgRanking({ slug, teamId? })` — Team Rank aus `organization_challenge_progress` + `performance_points`
-- `completeOrganizationOnboarding` (existiert) → erweitern um team_membership upsert mit neuen Feldern
-- Coach: `getOrgDetail({ orgId })`, `listOrgAthletes({ orgId })`
-- Alle `.middleware([requireSupabaseAuth])`; alle mit Membership-Check (403 wenn kein Zugriff).
+Als Datei `docs/bulls-legacy-mapping.md` anlegen. Pro Legacy-Objekt: Inhalt, User-Bezug, Klassifikation, Zielmodell, Empfehlung. Zusammenfassung:
 
-### 3. Routen & UI
-Athlete Organization Flow (bereits vorhandene `$orgSlug` Routen erweitern/befüllen):
-- `$orgSlug.home.tsx` → **BullsAthleteHome** Komponente (generisch, org-driven Branding)
-  Sections: Header, HEUTE, DEIN STATUS (4 Cards, feature-gated), NÄCHSTE AUFGABEN, AKTIVE CHALLENGE
-- `$orgSlug.training.tsx` → Athletiktraining Startseite (HEUTE, DEIN PLAN, DIESE WOCHE, POSITION, FOKUS)
-- `$orgSlug.ranking.tsx` → Team-Ranking (feature-gated)
-- `$orgSlug.community.tsx` → Placeholder (feature-gated, "coming soon")
-- `$orgSlug.profil.tsx` → Membership/Team Daten + Link zu persönlichem BodyFuel
-- `$orgSlug.onboarding.tsx` → erweitertes Onboarding mit Team/Position/Jersey/Gym/Days/Limitations/Goal (existierende Datei überarbeiten; überspringt Name/Größe/Gewicht falls bereits vorhanden)
+| Legacy | Klassifikation | Empfehlung |
+|---|---|---|
+| `bulls_profiles.weight_kg/height_cm` | Persönlich | Bleibt. Beim Org-Onboarding nur **lesen**, nicht kopieren. Neue Fragen nur wenn `NULL`. |
+| `bulls_profiles.position/main_goal/onboarded_at` | Organization | Bridge: beim Onboarding in `team_memberships.position` / `personal_goal` spiegeln, `onboarding_completed=true` setzen, wenn vollständig. Legacy-Tabelle bleibt read-only. |
+| `bulls_weight_logs` | **Persönlich** | Nicht in Org-Sichten zeigen. Bleibt als persönliche Gewichtsspur. Coach-Bulls-Ansicht bekommt keinen Zugriff. |
+| `bulls_progress_photos` | Persönlich | Bleibt. |
+| `bulls_hub_events` | Analytics | Read-only Bridge in `organization_activity_log` (Anzeige-Join zur Laufzeit), keine Kopie. |
+| `bulls.*` Legacy-Routen | UI | Bleiben vorerst bestehen; neue Org-Flow läuft parallel unter `/$orgSlug`. Kein Löschen in dieser Phase. |
+| `performance_points`, `user_points` | Global (persönlich) | Bleiben persönlich. **Nicht** ins Bulls-Ranking übernehmen. |
 
-Layout-Komponenten:
-- `OrgAthleteLayout` — Bottom-Nav dynamisch aus `organization_features`
-- `OrganizationContextSwitcher` — im bestehenden AppLayout Sidebar/Header; zeigt "MEIN BODYFUEL" + alle Memberships; persistiert `activeContext` in `localStorage`
-- Direktaufruf `/bulls` → setzt Context = bulls; normales Dashboard-Öffnen ändert Context NICHT automatisch
+**Wichtige Konsequenz:** Es gibt keine "echte Bulls-Challenge-Historie" die verloren gehen könnte. Das neue Org-Challenge-System startet bewusst leer. Der Plan schreibt das im Bericht klar so aus.
 
-Coach Dashboard:
-- `coach.teams.$orgId.tsx` erweitern: Header (Name, Type, Status), 4 Cards (Athleten/Staff/Teams/Weekly Compliance), Sektionen (Aktuelle Challenge, Offene Onboardings, Aktivitäten), Tabs feature-gated (Übersicht/Athleten/Teams/Training/Challenges/Ranking/Community/Staff/Einstellungen)
-- Athleten-Tab: Liste mit Name/Team/Position/Onboarding/Compliance/LastActive; Klick → Detail mit klarer Trennung `PERSONAL BODYFUEL DATA` vs `COESFELD BULLS DATA`
+## 3) Community aktivieren
 
-### 4. Migration bestehender Bulls-User
-Zusammenfassung dokumentieren, KEINE aggressive Massen-Zuordnung:
-- **Bereits sicher migriert**: 10 User via `user_groups='bulls'` → `organization_memberships` (existierender Backfill)
-- **`bulls_profiles`** (1 Datensatz): Migrations-Skript, das `position` → `team_memberships.primary_position` und `main_goal` → `personal_goal` überträgt, wenn user_id-Match. Onboarding_completed NICHT automatisch flippen.
-- **`bulls_weight_logs`** (1 Datensatz): bleibt vorerst unverändert, Migration deferred (später als organization_activity oder eigene org-scoped Weight-Historie).
-- **`bulls_progress_photos`, `bulls_hub_events`**: bleiben unverändert; noch nicht org-gebunden.
-- Kein Löschen, kein Überschreiben.
+- `organization_features` für Bulls: `community.enabled = true` (via insert-Tool, kein Schema-Change).
+- Athlete-BottomNav und Coach-Tabs sind bereits feature-gated → werden automatisch sichtbar.
+- Keine neue Community-Architektur. `$orgSlug.community.tsx` bleibt Placeholder mit "Community Board folgt" — als Fundament für späteres org-scoped Board. Keine Verknüpfung mit dem bestehenden globalen `/community` Hub (unterschiedliche Scopes).
 
-### 5. Features aktivieren
-Insert in `organization_features` für Bulls: `home`, `athletic_training`, `ranking`, `challenges`, `community` (community=false zunächst, Rest=true).
+## 4) Onboarding-Status-Anzeige (Coach → Bulls → Athleten)
 
-## Bewusst NICHT in dieser Phase
-- Performance Profile Algorithmus (nur Placeholder-Card)
-- Vollständiges Athletic Development Plan-System (nur Startseite)
-- Community-Feed-Implementation
-- Migration von `bulls_weight_logs`/`bulls_progress_photos` in Organization-Tabellen
-- Weitere Organisationen (RWE, SGZ)
+- Server-fn `getOrgAthletesOnboarding(orgId)` erweitern: pro Membership berechnen welche **erforderlichen** Felder in `team_memberships` fehlen (`position`, `jersey_number`, `gym_access`, `available_training_days`) sowie `weight_kg/height_cm` aus `bulls_profiles` oder `profiles`.
+- Wenn alle erforderlichen Felder gesetzt → `onboarding_completed=true` automatisch backfillen (idempotent, nur `false→true`).
+- UI: Liste mit `Name | Status (OFFEN/ABGESCHLOSSEN) | Fehlende Felder`.
+- Onboarding-Route (`$orgSlug.onboarding.tsx`): bereits vorhandene Werte vorbelegen, nur fehlende Felder abfragen.
 
-## Abschluss-Report nach Umsetzung
-Ich liefere am Ende die 7-Punkte-Zusammenfassung wie gefordert.
+## 5) Task Engine (idempotent)
 
----
+Neue Server-fn `runOrgTaskEngine({ organizationId, date })`, aufrufbar von Coach-UI und vom Athlete-Home-Loader (heutiger Tag).
 
-**Umfang**: 1 Migration + ~15 neue/erweiterte Dateien. Bitte Plan bestätigen, dann setze ich um.
+Sources → Tasks:
+1. **team_training_schedule** (neue Tabelle, siehe unten) → 1 Task pro Team-Mitglied pro geplantem Wochentag.
+2. **organization_athletic_plans** (`payload.sessions[]` mit `scheduled_date`) → `athletic_training`-Tasks.
+3. **organization_challenges** aktive → `challenge`-Tasks (falls `config.daily=true`).
+4. **daily_checkin_enabled** in `organization_features.checkins.config` → `daily_checkin`-Task pro Tag/Athlet (nur konfigurierte Wochentage). Verlinkt auf bestehenden Check-in-Flow, **keine Readiness**.
+5. **Manuelle Staff-Tasks** → direkt via Insert erzeugt, nicht regeneriert.
+
+**Idempotenz:** UNIQUE-Index `(organization_id, user_id, task_type, source_type, source_id, scheduled_for::date)` → `ON CONFLICT DO NOTHING`. Nur regenerierbare Sources (1–4) fallen unter Engine; manuelle Tasks (5) haben `source_type='manual'` und bleiben unberührt.
+
+## 6) Neue Tabellen (1 Migration)
+
+- `organization_team_training_schedule (team_id, weekday int, start_time, end_time, title, active, timestamps)` + GRANT + RLS: Staff read/write, Members read.
+- `organization_tasks` erweitern: `source_type text`, `source_id uuid`, `points int`, plus o. g. UNIQUE-Index. `link_target` bleibt.
+- `organization_features` — Feature-Row `checkins` mit `config jsonb` (`daily_checkin_enabled, checkin_days[], checkin_available_from, checkin_due_time`); Standardwerte für Bulls seedbar.
+- Seed (Insert-Tool, kein Schema): Bulls Seniors → Dienstag + Freitag, `title='Team Training'`, `active=true`.
+
+## 7) Coach-Organization-UI (Tabs funktional)
+
+- **Training-Tab**: Team-Training-Schedule-Editor (Wochentage toggeln, Uhrzeit optional). Athletic-Plans-Liste (read + placeholder-Editor "folgt" bleibt für Plan-Composer).
+- **Challenges-Tab**: Aktive Challenge (falls vorhanden), Teilnehmerliste + Punktestand aus `organization_challenge_progress`. Historie leer mit klarem Hinweis "Noch keine Challenge-Historie". Kein Rückgriff auf `performance_points`.
+- **Tasks-Tab** (neu, in Übersicht): Heutige Tasks der Org, Filter Team + Status, Button "Manuelle Aufgabe anlegen" (Zielgruppe Org/Team/Athlet, Datum, Titel, Typ).
+- **Staff-Tab**: Join `staff_assignments` → `profiles.first_name/last_name` (kein E-Mail). Anzeige: Name, Rolle, Org-Scope, Team-Scope.
+
+## 8) Nicht Teil dieser Phase
+
+- Kein Performance Profile, keine Scores (Acceleration/Speed/…).
+- Kein Community-Board-Feed.
+- Keine destruktive Legacy-Migration.
+- Keine Löschung von `bulls.*` Routen.
+- Kein Umbau von Smart/Coaching/Nutrition/Persönlichem Training.
+
+## 9) Abschlussbericht (nach Umsetzung)
+
+Ich beantworte die 10 Punkte aus deinem Auftrag inkl. konkreter User-IDs mit offenem Onboarding und den jeweils fehlenden Feldern.
+
+## Technische Deliverables
+
+- 1 Migration: `organization_team_training_schedule` + Erweiterungen `organization_tasks` + Trigger.
+- 3 Insert-Ops: Community-Feature aktivieren, Checkins-Feature-Config seeden, Bulls-Seniors-Schedule Di/Fr seeden.
+- Server-Fns: `runOrgTaskEngine`, `listOrgTasks`, `createManualOrgTask`, `getOrgAthletesOnboarding`, `upsertTeamTrainingSchedule`, `listOrgStaffWithProfiles`.
+- Route-Erweiterungen: `coach.teams.$orgId.tsx` (Training/Challenges/Tasks/Staff), `$orgSlug.home.tsx` (Task-Engine-Aufruf beim Laden), `$orgSlug.onboarding.tsx` (Prefill + Skip vorhandener Felder).
+- Docs: `docs/bulls-legacy-mapping.md`.
+
+Freigabe bitte, dann setze ich in dieser Reihenfolge um: Migration → Feature-Flags → Task Engine + Schedule → Coach-UI-Tabs → Onboarding-Prefill → Bericht.
