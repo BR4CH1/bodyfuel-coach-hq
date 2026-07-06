@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { classifyAthlete, STATUS_LABEL, type AthleteStatus } from "./coach-analytics.rules";
+import { classifyAthlete, explainAthlete, STATUS_LABEL, type AthleteStatus } from "./coach-analytics.rules";
 
 /**
  * Analytische Coach-Sicht auf einen einzelnen Athleten.
