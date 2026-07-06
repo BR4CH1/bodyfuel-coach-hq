@@ -247,7 +247,6 @@ function SessionsPanel({ orgId, fw }: { orgId: string; fw: FrameworkData }) {
   const fetchList = useServerFn(listPerformanceSessions);
   const q = useQuery({ queryKey: ["perf-sessions", orgId], queryFn: () => fetchList({ data: { organization_id: orgId } }) });
   const [wizardOpen, setWizardOpen] = useState(false);
-  const [openId, setOpenId] = useState<string | null>(null);
 
   return (
     <div className="space-y-4">
@@ -255,9 +254,9 @@ function SessionsPanel({ orgId, fw }: { orgId: string; fw: FrameworkData }) {
         <div className="text-sm text-muted-foreground">Performance-Test-Sessions dieser Organisation.</div>
         <button
           onClick={() => setWizardOpen((v) => !v)}
-          className="rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground"
+          className="rounded-md bg-primary px-3 py-1.5 text-sm font-semibold uppercase tracking-widest text-primary-foreground"
         >
-          {wizardOpen ? "Abbrechen" : "+ Session"}
+          {wizardOpen ? "Abbrechen" : "+ Performance Test Session"}
         </button>
       </div>
 
@@ -271,223 +270,303 @@ function SessionsPanel({ orgId, fw }: { orgId: string; fw: FrameworkData }) {
         <ul className="divide-y divide-border rounded-lg border border-border bg-card">
           {(q.data ?? []).map((s) => (
             <li key={s.id} className="flex items-center justify-between p-3">
-              <div>
-                <div className="font-semibold">{s.name}</div>
+              <div className="min-w-0">
+                <div className="truncate font-semibold">{s.name}</div>
                 <div className="text-xs text-muted-foreground">{s.test_date} · {s.status}</div>
               </div>
-              <button onClick={() => setOpenId(openId === s.id ? null : s.id)} className="text-sm text-primary underline">
-                {openId === s.id ? "Schließen" : "Öffnen"}
-              </button>
+              <Link
+                to="/coach/teams/$orgId/performance/session/$sessionId"
+                params={{ orgId, sessionId: s.id }}
+                className="rounded bg-primary px-2 py-1 text-xs font-semibold text-primary-foreground"
+              >Öffnen</Link>
             </li>
           ))}
         </ul>
       )}
-
-      {openId && <SessionLiveEntry sessionId={openId} onCompleted={() => { setOpenId(null); q.refetch(); }} />}
     </div>
   );
 }
 
+type WizStep = "battery" | "day" | "athletes" | "basics" | "snapshot" | "confirm";
+
 function SessionWizard({ orgId, fw, onDone }: { orgId: string; fw: FrameworkData; onDone: () => void }) {
-  const [name, setName] = useState("");
-  const [testDate, setTestDate] = useState(new Date().toISOString().slice(0, 10));
-  const [batteryId, setBatteryId] = useState(fw?.batteries?.[0]?.id ?? "");
-  const [athleteIds, setAthleteIds] = useState("");
+  const navigate = useNavigate();
   const create = useServerFn(createPerformanceSession);
+  const fetchAthletes = useServerFn(listOrgAthletesForPerformance);
+
+  const [step, setStep] = useState<WizStep>("battery");
+  const [batteryId, setBatteryId] = useState(fw?.batteries?.[0]?.id ?? "");
+  const [testDay, setTestDay] = useState<"field" | "strength" | "full">("field");
+  const [testDate, setTestDate] = useState(new Date().toISOString().slice(0, 10));
+  const [name, setName] = useState("");
+  const [location, setLocation] = useState("");
+  const [measurementDefault, setMeasurementDefault] = useState("");
+  const [notes, setNotes] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [snapshots, setSnapshots] = useState<Record<string, string>>({});
+
+  const battery = fw?.batteries?.find((b) => b.id === batteryId);
+  const battStatus = battery?.status ?? "draft";
+  const testMode = battStatus === "draft";
+
+  const rosterQ = useQuery({
+    queryKey: ["perf-roster", orgId],
+    queryFn: () => fetchAthletes({ data: { organization_id: orgId } }),
+    enabled: step !== "battery" && step !== "day",
+  });
+
+  const athletes = rosterQ.data?.athletes ?? [];
+
+  const defaultName = useMemo(() => {
+    if (name) return name;
+    const label = testDay === "field" ? "Field Testing" : testDay === "strength" ? "Strength Testing" : "Full Battery";
+    return `${battery?.name ?? "Session"} – ${label} – ${testDate}`;
+  }, [name, battery, testDay, testDate]);
+
   const m = useMutation({
     mutationFn: () =>
       create({
         data: {
           organization_id: orgId,
           battery_id: batteryId,
-          name,
+          name: defaultName,
           test_date: testDate,
-          athlete_user_ids: athleteIds.split(",").map((s) => s.trim()).filter(Boolean),
+          test_day: testDay,
+          entry_mode: "by_test",
+          location: location || null,
+          measurement_method_default: measurementDefault || null,
+          notes: notes || null,
+          mode: testMode ? "test" : "production",
+          athlete_user_ids: Array.from(selectedIds),
+          bodyweight_snapshots: Object.entries(snapshots)
+            .filter(([, v]) => v && !isNaN(Number(v)))
+            .map(([user_id, v]) => ({ user_id, weight_kg: Number(v), source: "manual" })),
         },
       }),
-    onSuccess: onDone,
+    onSuccess: (session: any) => {
+      onDone();
+      navigate({ to: "/coach/teams/$orgId/performance/session/$sessionId", params: { orgId, sessionId: session.id } });
+    },
   });
 
+  const strengthOrFull = testDay === "strength" || testDay === "full";
+
   return (
-    <div className="rounded-lg border border-border bg-card p-4 space-y-3">
-      <div className="font-semibold">Neue Test-Session</div>
-      <label className="block text-sm">
-        Name
-        <input value={name} onChange={(e) => setName(e.target.value)} className="mt-1 w-full rounded-md border border-border bg-background p-2" placeholder="z. B. Bulls Preseason 2026" />
-      </label>
-      <div className="grid grid-cols-2 gap-3">
-        <label className="block text-sm">
-          Datum
-          <input type="date" value={testDate} onChange={(e) => setTestDate(e.target.value)} className="mt-1 w-full rounded-md border border-border bg-background p-2" />
-        </label>
-        <label className="block text-sm">
-          Test-Battery
-          <select value={batteryId} onChange={(e) => setBatteryId(e.target.value)} className="mt-1 w-full rounded-md border border-border bg-background p-2">
+    <div className="rounded-lg border border-border bg-card p-4 space-y-4">
+      <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-muted-foreground">
+        <b>Neue Session</b>
+        <span>·</span>
+        <span>{step.toUpperCase()}</span>
+        {testMode && <span className="ml-auto rounded-full bg-amber-500/20 px-2 py-0.5 font-bold text-amber-700">DRAFT FRAMEWORK · TEST MODE</span>}
+      </div>
+
+      {step === "battery" && (
+        <div className="space-y-3">
+          <div className="text-sm font-semibold">1. Test-Battery wählen</div>
+          <select value={batteryId} onChange={(e) => setBatteryId(e.target.value)} className="w-full rounded border border-border bg-background p-2 text-sm">
             <option value="">— wählen —</option>
             {(fw?.batteries ?? []).map((b) => (
               <option key={b.id} value={b.id}>{b.name} ({b.status})</option>
             ))}
           </select>
-        </label>
-      </div>
-      <label className="block text-sm">
-        Athlet-User-IDs (kommagetrennt)
-        <textarea value={athleteIds} onChange={(e) => setAthleteIds(e.target.value)} className="mt-1 w-full rounded-md border border-border bg-background p-2 h-20 font-mono text-xs" placeholder="uuid1, uuid2, …" />
-      </label>
-      <button
-        disabled={!name || !batteryId || m.isPending}
-        onClick={() => m.mutate()}
-        className="rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
-      >
-        {m.isPending ? "Erstelle…" : "Session anlegen"}
-      </button>
-      {m.error && <div className="text-xs text-destructive">{(m.error as Error).message}</div>}
-    </div>
-  );
-}
-
-function SessionLiveEntry({ sessionId, onCompleted }: { sessionId: string; onCompleted: () => void }) {
-  const fetchSession = useServerFn(getPerformanceSession);
-  const q = useQuery({ queryKey: ["perf-session", sessionId], queryFn: () => fetchSession({ data: { session_id: sessionId } }) });
-  const qc = useQueryClient();
-  const addFn = useServerFn(addTestAttempt);
-  const invFn = useServerFn(invalidateAttempt);
-  const completeFn = useServerFn(completePerformanceSession);
-
-  const [selectedAthlete, setSelectedAthlete] = useState<string>("");
-  const [selectedTest, setSelectedTest] = useState<string>("");
-  const [value, setValue] = useState<string>("");
-
-  if (q.isLoading) return <div className="text-sm text-muted-foreground">Laden…</div>;
-  if (!q.data) return null;
-  const { session, tests, athletes, attempts } = q.data;
-
-  const test = tests.find((t) => t.id === selectedTest);
-  const attemptsForCombo = attempts.filter((a) => a.user_id === selectedAthlete && a.test_definition_id === selectedTest);
-  const selected = test && attemptsForCombo.length > 0
-    ? selectPerformanceResult({
-        attempts: attemptsForCombo.map((a) => ({ id: a.id, raw_value: Number(a.raw_value), unit_snapshot: a.unit_snapshot, valid: a.valid, measured_at: a.measured_at })),
-        method: (test.result_selection as ResultSelectionMethod) ?? "best",
-        direction: (test.direction as Direction) ?? "higher_is_better",
-        unit: test.unit,
-      })
-    : null;
-
-  return (
-    <div className="mt-3 rounded-lg border border-primary/40 bg-card p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="font-display text-lg font-bold">{session.name}</div>
-          <div className="text-xs text-muted-foreground">{session.test_date} · Status: {session.status}</div>
-        </div>
-        {session.status !== "completed" && (
-          <button
-            onClick={async () => {
-              const r = await completeFn({ data: { session_id: sessionId } });
-              alert(`Fertig. Profile aktualisiert: ${r.profiles_updated}`);
-              onCompleted();
-            }}
-            className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white"
-          >
-            Session abschließen
-          </button>
-        )}
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <label className="block text-sm">
-          Athlet
-          <select value={selectedAthlete} onChange={(e) => setSelectedAthlete(e.target.value)} className="mt-1 w-full rounded-md border border-border bg-background p-2">
-            <option value="">—</option>
-            {athletes.map((a) => (
-              <option key={a.user_id} value={a.user_id}>{a.user_id.slice(0, 8)}</option>
-            ))}
-          </select>
-        </label>
-        <label className="block text-sm">
-          Test
-          <select value={selectedTest} onChange={(e) => setSelectedTest(e.target.value)} className="mt-1 w-full rounded-md border border-border bg-background p-2">
-            <option value="">—</option>
-            {tests.map((t) => (
-              <option key={t.id} value={t.id}>{t.name} ({t.unit})</option>
-            ))}
-          </select>
-        </label>
-      </div>
-
-      {test && selectedAthlete && (
-        <>
-          <div className="rounded-md bg-secondary p-3 text-sm">
-            <div className="font-semibold">Versuche</div>
-            <ul className="mt-2 space-y-1">
-              {attemptsForCombo.map((a) => (
-                <li key={a.id} className={`flex items-center justify-between ${!a.valid ? "text-muted-foreground line-through" : ""}`}>
-                  <span>#{a.attempt_number} · {a.raw_value} {a.unit_snapshot} · {new Date(a.measured_at).toLocaleTimeString()}</span>
-                  {a.valid && (
-                    <button
-                      onClick={async () => {
-                        const reason = prompt("Grund für Invalidierung?") ?? "";
-                        if (!reason) return;
-                        await invFn({ data: { attempt_id: a.id, reason } });
-                        qc.invalidateQueries({ queryKey: ["perf-session", sessionId] });
-                      }}
-                      className="text-xs text-destructive underline"
-                    >
-                      Invalid markieren
-                    </button>
-                  )}
-                </li>
-              ))}
-              {attemptsForCombo.length === 0 && <li className="text-muted-foreground">Noch keine Versuche.</li>}
-            </ul>
-
-            <div className="mt-3 flex items-center gap-2">
-              <input
-                type="number"
-                step="any"
-                value={value}
-                onChange={(e) => setValue(e.target.value)}
-                placeholder={`Wert in ${test.unit}`}
-                className="flex-1 rounded-md border border-border bg-background p-2 text-sm"
-              />
-              <button
-                disabled={!value}
-                onClick={async () => {
-                  await addFn({
-                    data: {
-                      session_id: sessionId,
-                      user_id: selectedAthlete,
-                      test_definition_id: selectedTest,
-                      raw_value: Number(value),
-                      unit_snapshot: test.unit,
-                      attempt_number: attemptsForCombo.length + 1,
-                      organization_id: session.organization_id,
-                    },
-                  });
-                  setValue("");
-                  qc.invalidateQueries({ queryKey: ["perf-session", sessionId] });
-                }}
-                className="rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
-              >
-                + Versuch
-              </button>
-            </div>
-          </div>
-
-          {selected && (
-            <div className="rounded-md border border-border p-3 text-sm">
-              <div className="text-xs uppercase tracking-widest text-muted-foreground">Selected Result</div>
-              <div className="mt-1 font-bold">
-                {selected.status === "OK" ? `${selected.selected_value} ${selected.unit}` : selected.status}
-              </div>
-              <div className="text-xs text-muted-foreground">Methode: {selected.selection_method}</div>
+          {testMode && (
+            <div className="rounded bg-amber-500/10 border border-amber-500/40 p-2 text-xs">
+              Diese Battery ist <b>DRAFT</b>. Nutzung im <b>TEST MODE</b> — Ergebnisse gehen nicht in produktive Peer-Vergleiche ein.
             </div>
           )}
-        </>
+          <div className="flex justify-end">
+            <button disabled={!batteryId} onClick={() => setStep("day")} className="rounded bg-primary px-3 py-1.5 text-sm font-bold uppercase text-primary-foreground disabled:opacity-50">Weiter</button>
+          </div>
+        </div>
+      )}
+
+      {step === "day" && (
+        <div className="space-y-3">
+          <div className="text-sm font-semibold">2. Test-Tag</div>
+          <div className="grid grid-cols-3 gap-2">
+            {(["field", "strength", "full"] as const).map((d) => (
+              <button key={d} onClick={() => setTestDay(d)} className={`rounded border p-3 text-xs font-bold uppercase ${testDay === d ? "border-primary bg-primary/10" : "border-border bg-secondary"}`}>
+                {d === "field" ? "Field Test Day" : d === "strength" ? "Strength Test Day" : "Full Battery"}
+              </button>
+            ))}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            Field Test Day: Sprints, Jumps, A505, RAST · Strength Test Day: Bodyweight Snapshot, Trap Bar, Bench · Full Battery: alle Tests (nur mit manage_performance).
+          </div>
+          <div className="flex justify-between">
+            <button onClick={() => setStep("battery")} className="text-xs uppercase text-muted-foreground">◀ Zurück</button>
+            <button onClick={() => setStep("athletes")} className="rounded bg-primary px-3 py-1.5 text-sm font-bold uppercase text-primary-foreground">Weiter</button>
+          </div>
+        </div>
+      )}
+
+      {step === "athletes" && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="text-sm font-semibold">3. Athleten</div>
+            <div className="flex gap-2 text-[10px] uppercase">
+              <button onClick={() => setSelectedIds(new Set(athletes.map((a) => a.user_id)))} className="rounded bg-secondary px-2 py-1 font-bold">Alle</button>
+              <button onClick={() => setSelectedIds(new Set())} className="rounded bg-secondary px-2 py-1 font-bold">Keine</button>
+            </div>
+          </div>
+          {rosterQ.isLoading ? (
+            <div className="text-xs text-muted-foreground">Roster lädt…</div>
+          ) : athletes.length === 0 ? (
+            <div className="text-xs text-muted-foreground">Keine aktiven Athlete-Members.</div>
+          ) : (
+            <ul className="max-h-72 divide-y divide-border overflow-y-auto rounded border border-border">
+              {athletes.map((a) => {
+                const sel = selectedIds.has(a.user_id);
+                return (
+                  <li key={a.user_id}>
+                    <label className="flex items-center gap-2 p-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={sel}
+                        onChange={(e) => {
+                          const n = new Set(selectedIds);
+                          if (e.target.checked) n.add(a.user_id); else n.delete(a.user_id);
+                          setSelectedIds(n);
+                        }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="truncate font-semibold">{a.name || a.user_id.slice(0, 8)}</div>
+                        <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                          {a.team_name ?? "kein Team"} · {a.position ?? "keine Position"} · {a.profile_status}
+                          {!a.onboarding_completed && " · Onboarding offen"}
+                        </div>
+                      </div>
+                    </label>
+                    {!a.position && sel && (
+                      <div className="border-t border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[10px] uppercase text-amber-700">
+                        Position required for position-weighted overall profile
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          <div className="flex justify-between">
+            <button onClick={() => setStep("day")} className="text-xs uppercase text-muted-foreground">◀ Zurück</button>
+            <button disabled={selectedIds.size === 0} onClick={() => setStep("basics")} className="rounded bg-primary px-3 py-1.5 text-sm font-bold uppercase text-primary-foreground disabled:opacity-50">Weiter ({selectedIds.size})</button>
+          </div>
+        </div>
+      )}
+
+      {step === "basics" && (
+        <div className="space-y-3">
+          <div className="text-sm font-semibold">4. Session-Basisdaten</div>
+          <label className="block text-sm">
+            <span className="text-xs uppercase text-muted-foreground">Session Name</span>
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder={defaultName} className="mt-1 w-full rounded border border-border bg-background p-2" />
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="block text-sm">
+              <span className="text-xs uppercase text-muted-foreground">Test Date</span>
+              <input type="date" value={testDate} onChange={(e) => setTestDate(e.target.value)} className="mt-1 w-full rounded border border-border bg-background p-2" />
+            </label>
+            <label className="block text-sm">
+              <span className="text-xs uppercase text-muted-foreground">Location (opt.)</span>
+              <input value={location} onChange={(e) => setLocation(e.target.value)} className="mt-1 w-full rounded border border-border bg-background p-2" />
+            </label>
+          </div>
+          <label className="block text-sm">
+            <span className="text-xs uppercase text-muted-foreground">Measurement Method Default (opt.)</span>
+            <input value={measurementDefault} onChange={(e) => setMeasurementDefault(e.target.value)} placeholder="z. B. Photocells, Kraftmessplatte…" className="mt-1 w-full rounded border border-border bg-background p-2" />
+          </label>
+          <label className="block text-sm">
+            <span className="text-xs uppercase text-muted-foreground">Notes (opt.)</span>
+            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="mt-1 w-full rounded border border-border bg-background p-2" rows={2} />
+          </label>
+          <div className="flex justify-between">
+            <button onClick={() => setStep("athletes")} className="text-xs uppercase text-muted-foreground">◀ Zurück</button>
+            <button onClick={() => setStep(strengthOrFull ? "snapshot" : "confirm")} className="rounded bg-primary px-3 py-1.5 text-sm font-bold uppercase text-primary-foreground">Weiter</button>
+          </div>
+        </div>
+      )}
+
+      {step === "snapshot" && (
+        <div className="space-y-3">
+          <div className="text-sm font-semibold">5. Bodyweight Snapshots</div>
+          <div className="text-xs text-muted-foreground">
+            Für Strength-Tests (Trap Bar, Bench) wird ein Session-Bodyweight-Snapshot benötigt. Er wird ausschließlich für diese Performance-Session gespeichert und verändert keine persönlichen BodyFuel-Daten.
+          </div>
+          <ul className="divide-y divide-border rounded border border-border">
+            {Array.from(selectedIds).map((uid) => {
+              const a = athletes.find((x) => x.user_id === uid);
+              const last = a?.last_bodyweight_kg;
+              return (
+                <li key={uid} className="grid grid-cols-[1fr_auto] items-center gap-2 p-2">
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-semibold">{a?.name || uid.slice(0, 8)}</div>
+                    <div className="text-[10px] uppercase text-muted-foreground">
+                      {last ? `Letzter Wert: ${last} kg` : "REQUIRED"}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {last != null && (
+                      <button
+                        onClick={() => setSnapshots((s) => ({ ...s, [uid]: String(last) }))}
+                        className="rounded bg-secondary px-2 py-1 text-[10px] font-bold uppercase"
+                      >Übernehmen</button>
+                    )}
+                    <input
+                      type="number"
+                      step="0.1"
+                      inputMode="decimal"
+                      value={snapshots[uid] ?? ""}
+                      onChange={(e) => setSnapshots((s) => ({ ...s, [uid]: e.target.value }))}
+                      placeholder="kg"
+                      className="w-20 rounded border border-border bg-background p-1 text-sm tabular-nums"
+                    />
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="flex justify-between">
+            <button onClick={() => setStep("basics")} className="text-xs uppercase text-muted-foreground">◀ Zurück</button>
+            <button onClick={() => setStep("confirm")} className="rounded bg-primary px-3 py-1.5 text-sm font-bold uppercase text-primary-foreground">Weiter</button>
+          </div>
+        </div>
+      )}
+
+      {step === "confirm" && (
+        <div className="space-y-3">
+          <div className="text-sm font-semibold">6. Session anlegen</div>
+          <dl className="grid grid-cols-2 gap-2 text-xs">
+            <Line k="Battery" v={battery?.name ?? ""} />
+            <Line k="Test Day" v={testDay} />
+            <Line k="Datum" v={testDate} />
+            <Line k="Athleten" v={String(selectedIds.size)} />
+            <Line k="Location" v={location || "—"} />
+            <Line k="Measurement Default" v={measurementDefault || "—"} />
+            <Line k="Snapshots" v={String(Object.values(snapshots).filter(Boolean).length)} />
+            <Line k="Modus" v={testMode ? "TEST MODE" : "PRODUCTION"} />
+          </dl>
+          <div className="flex justify-between">
+            <button onClick={() => setStep(strengthOrFull ? "snapshot" : "basics")} className="text-xs uppercase text-muted-foreground">◀ Zurück</button>
+            <button disabled={m.isPending} onClick={() => m.mutate()} className="rounded bg-emerald-600 px-3 py-1.5 text-sm font-bold uppercase text-white disabled:opacity-50">
+              {m.isPending ? "Erstelle…" : "Session erstellen"}
+            </button>
+          </div>
+          {m.error && <div className="text-xs text-destructive">{(m.error as Error).message}</div>}
+        </div>
       )}
     </div>
   );
 }
+
+function Line({ k, v }: { k: string; v: string }) {
+  return (
+    <div>
+      <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{k}</div>
+      <div className="font-semibold">{v}</div>
+    </div>
+  );
+}
+
 
 // ============================================================
 // FRAMEWORK BUILDER
