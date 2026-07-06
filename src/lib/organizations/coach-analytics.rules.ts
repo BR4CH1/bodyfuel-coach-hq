@@ -56,3 +56,32 @@ export const STATUS_LABEL: Record<AthleteStatus, string> = {
   stable: "Stabil",
   positive: "Positiv",
 };
+
+export type AthleteTrigger = { kind: string; label: string; detail: string };
+
+/**
+ * Erklärt die Klassifikation regelbasiert.
+ * Einzige Wahrheit für Coach Radar / Aufmerksamkeitsliste / Drilldown-Trigger.
+ * Reihenfolge bleibt mit `classifyAthlete` konsistent.
+ */
+export function explainAthlete(s: AthleteSignal): AthleteTrigger[] {
+  const t: AthleteTrigger[] = [];
+  if (s.days_inactive != null && s.days_inactive >= 14) {
+    t.push({ kind: "inactivity_critical", label: "Inaktivität", detail: `${s.days_inactive} Tage keine Aktivität` });
+  } else if (s.days_inactive != null && s.days_inactive >= 7) {
+    t.push({ kind: "inactivity", label: "Inaktivität", detail: `${s.days_inactive} Tage keine Aktivität` });
+  }
+  if (s.compliance != null && s.compliance < 30) {
+    t.push({ kind: "compliance_critical", label: "Compliance", detail: `nur ${s.compliance} % in dieser Woche` });
+  } else if (s.compliance != null && s.compliance < 50) {
+    t.push({ kind: "compliance_low", label: "Compliance", detail: `nur ${s.compliance} % in dieser Woche` });
+  }
+  if (s.compliance_delta != null && s.compliance_delta <= -25) {
+    t.push({ kind: "compliance_drop_critical", label: "Compliance ↓", detail: `${s.compliance_delta} Prozentpunkte ggü. Vorwoche` });
+  } else if (s.compliance_delta != null && s.compliance_delta <= -10) {
+    t.push({ kind: "compliance_drop", label: "Compliance ↓", detail: `${s.compliance_delta} Prozentpunkte ggü. Vorwoche` });
+  } else if (s.compliance_delta != null && s.compliance_delta >= 20) {
+    t.push({ kind: "compliance_rise", label: "Compliance ↑", detail: `+${s.compliance_delta} Prozentpunkte ggü. Vorwoche` });
+  }
+  return t;
+}
