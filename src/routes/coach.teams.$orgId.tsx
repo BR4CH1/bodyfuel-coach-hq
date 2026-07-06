@@ -609,13 +609,13 @@ function StaffTab({ orgId, teams }: { orgId: string; teams: any[] }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="text-xs uppercase tracking-wider text-muted-foreground">
-          {staff.length} Staff · {invites.length} offene Einladungen
+          {staff.length} Trainer & Mitarbeiter · {invites.length} offene Einladungen
         </div>
         <button
           onClick={() => setShowAdd(true)}
           className="rounded bg-primary px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-primary-foreground"
         >
-          + Staff hinzufügen
+          + Trainer / Mitarbeiter hinzufügen
         </button>
       </div>
 
