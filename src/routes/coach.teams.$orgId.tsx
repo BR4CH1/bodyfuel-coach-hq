@@ -165,31 +165,13 @@ function CoachOrgDetail() {
         )}
         {tab === "training" && <TrainingTab orgId={orgId} />}
         {tab === "tasks" && <TasksTab orgId={orgId} teams={data.teams as any[]} />}
-        {tab === "challenges" && (
-          <div className="space-y-3">
-            {data.active_challenge ? (
-              <Card title={(data.active_challenge as any).name}>
-                <div className="text-xs text-muted-foreground">
-                  {(data.active_challenge as any).starts_at && (
-                    <>ab {new Date((data.active_challenge as any).starts_at).toLocaleDateString("de-DE")} </>
-                  )}
-                  {(data.active_challenge as any).ends_at && (
-                    <>bis {new Date((data.active_challenge as any).ends_at).toLocaleDateString("de-DE")}</>
-                  )}
-                </div>
-              </Card>
-            ) : (
-              <Empty>Keine aktive Challenge. Es existieren aktuell keine Legacy-Bulls-Challenge-Punkte, die migriert werden müssten — Historie startet bewusst leer.</Empty>
-            )}
-          </div>
-        )}
+        {tab === "challenges" && <ChallengesTab orgId={orgId} teams={data.teams as any[]} />}
         {tab === "ranking" && (
-          <Empty>Ranking spiegelt Punkte aus aktiven Org-Challenges. Ohne aktive Challenge leer.</Empty>
+          <Empty>Ranking spiegelt Punkte aus aktiven Org-Challenges (Ledger `organization_challenge_point_events`). Ohne aktive Challenge leer.</Empty>
         )}
-        {tab === "community" && (
-          <Empty>Community-Board folgt (organisationsintern, Members/Staff/Challenges).</Empty>
-        )}
+        {tab === "community" && <CommunityTab orgId={orgId} />}
         {tab === "staff" && <StaffTab orgId={orgId} />}
+
         {tab === "settings" && (
           <ul className="grid gap-2 sm:grid-cols-2">
             {features.map((f) => (
