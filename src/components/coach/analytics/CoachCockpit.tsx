@@ -243,7 +243,7 @@ function PositionGroupsAnalysis({ data }: { data: CoachAnalytics }) {
 
 // -------------------------- Attention List --------------------------
 
-function AttentionList({ data }: { data: CoachAnalytics }) {
+function AttentionList({ data, orgId }: { data: CoachAnalytics; orgId: string }) {
   const items = data.attention_list;
   return (
     <section>
@@ -255,34 +255,40 @@ function AttentionList({ data }: { data: CoachAnalytics }) {
       ) : (
         <ul className="divide-y divide-border rounded-lg border border-border bg-card">
           {items.slice(0, 25).map((a) => (
-            <li key={a.user_id} className="flex items-center justify-between gap-3 px-3 py-2.5">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <StatusDot status={a.status} />
-                  <div className="truncate font-semibold">{a.name}</div>
+            <li key={a.user_id}>
+              <Link
+                to="/coach/teams/$orgId/athletes/$userId"
+                params={{ orgId, userId: a.user_id }}
+                className="flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-muted/40"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <StatusDot status={a.status} />
+                    <div className="truncate font-semibold">{a.name}</div>
+                  </div>
+                  <div className="mt-0.5 text-[11px] text-muted-foreground">
+                    {a.position ?? "—"}{a.team_name ? ` · ${a.team_name}` : ""}
+                  </div>
                 </div>
-                <div className="mt-0.5 text-[11px] text-muted-foreground">
-                  {a.position ?? "—"}{a.team_name ? ` · ${a.team_name}` : ""}
+                <div className="text-right">
+                  <div className="text-sm font-semibold">
+                    {a.compliance != null ? `${a.compliance}%` : "—"}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">
+                    {a.compliance_delta == null
+                      ? "—"
+                      : a.compliance_delta > 0
+                      ? `+${a.compliance_delta}%`
+                      : `${a.compliance_delta}%`}
+                    {a.last_active_days != null && a.last_active_days >= 3 && (
+                      <> · {a.last_active_days}d inaktiv</>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <div className="text-right">
-                <div className="text-sm font-semibold">
-                  {a.compliance != null ? `${a.compliance}%` : "—"}
-                </div>
-                <div className="text-[10px] text-muted-foreground">
-                  {a.compliance_delta == null
-                    ? "—"
-                    : a.compliance_delta > 0
-                    ? `+${a.compliance_delta}%`
-                    : `${a.compliance_delta}%`}
-                  {a.last_active_days != null && a.last_active_days >= 3 && (
-                    <> · {a.last_active_days}d inaktiv</>
-                  )}
-                </div>
-              </div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                {STATUS_LABEL[a.status]}
-              </span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  {STATUS_LABEL[a.status]}
+                </span>
+              </Link>
             </li>
           ))}
         </ul>
