@@ -41,6 +41,7 @@ import {
   scopeLabel,
   type PresetKey,
 } from "@/lib/organizations/staff-labels";
+import { CoachCockpit } from "@/components/coach/analytics/CoachCockpit";
 
 export const Route = createFileRoute("/coach/teams/$orgId")({
   head: () => ({ meta: [{ title: "Organisation — BODYFUEL Coach" }] }),
