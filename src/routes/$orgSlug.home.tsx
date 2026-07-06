@@ -81,6 +81,15 @@ function OrgHome() {
     );
   }
 
+  // Coach-Guard: Wenn User Staff/Coach ohne Player-Rolle ist, gehört er nicht
+  // ins Athleten-Home. Redirect ins Coach-Cockpit.
+  const isPlayer = !!data.membership && (data.membership as any).role === "athlete";
+  const isStaffOrCoach = !!(data.staff || data.is_super_admin);
+  if (!isPlayer && isStaffOrCoach) {
+    navigate({ to: "/coach/teams/$orgId", params: { orgId: (data.org as any).id }, replace: true });
+    return null;
+  }
+
   // Onboarding gate
   if (data.membership && !data.membership.onboarding_completed) {
     navigate({ to: "/$orgSlug/onboarding", params: { orgSlug: org.slug }, replace: true });

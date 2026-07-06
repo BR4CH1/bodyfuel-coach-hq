@@ -82,7 +82,7 @@ Additiv: `staff_assignments.function_label text NULL`. Keine Umbenennungen, kein
 
 ---
 
-## Phase 3 — Rollenbasierte Navigation & Home-Dispatcher
+## Phase 3 — Rollenbasierte Navigation & Home-Dispatcher ✅ ABGESCHLOSSEN
 
 ### `src/routes/$orgSlug.index.tsx` und `$orgSlug.home.tsx`
 - Bereits vorhandener Dispatcher wird geschärft: Staff-only-User → weiterhin `/coach/teams/$orgId`. Neu: **Player+Coach-Dual-Rolle** landet standardmäßig im Modus, der zuletzt gewählt wurde; kein „Coach sieht Spieler-Home"-Fallback mehr.
