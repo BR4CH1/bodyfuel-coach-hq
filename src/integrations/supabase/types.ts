@@ -1837,6 +1837,190 @@ export type Database = {
         }
         Relationships: []
       }
+      organization_activity_log: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          organization_id: string
+          payload: Json
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          organization_id: string
+          payload?: Json
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          organization_id?: string
+          payload?: Json
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_activity_log_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_athletic_plans: {
+        Row: {
+          created_at: string
+          focus_areas: string[]
+          id: string
+          name: string
+          organization_id: string
+          payload: Json
+          status: string
+          team_id: string | null
+          updated_at: string
+          user_id: string
+          week_start: string | null
+        }
+        Insert: {
+          created_at?: string
+          focus_areas?: string[]
+          id?: string
+          name: string
+          organization_id: string
+          payload?: Json
+          status?: string
+          team_id?: string | null
+          updated_at?: string
+          user_id: string
+          week_start?: string | null
+        }
+        Update: {
+          created_at?: string
+          focus_areas?: string[]
+          id?: string
+          name?: string
+          organization_id?: string
+          payload?: Json
+          status?: string
+          team_id?: string | null
+          updated_at?: string
+          user_id?: string
+          week_start?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_athletic_plans_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_athletic_plans_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "organization_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_challenge_progress: {
+        Row: {
+          challenge_id: string
+          created_at: string
+          id: string
+          points: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          challenge_id: string
+          created_at?: string
+          id?: string
+          points?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          challenge_id?: string
+          created_at?: string
+          id?: string
+          points?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_challenge_progress_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "organization_challenges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_challenges: {
+        Row: {
+          config: Json
+          created_at: string
+          description: string | null
+          ends_at: string | null
+          id: string
+          name: string
+          organization_id: string
+          starts_at: string
+          status: string
+          team_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          config?: Json
+          created_at?: string
+          description?: string | null
+          ends_at?: string | null
+          id?: string
+          name: string
+          organization_id: string
+          starts_at?: string
+          status?: string
+          team_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          description?: string | null
+          ends_at?: string | null
+          id?: string
+          name?: string
+          organization_id?: string
+          starts_at?: string
+          status?: string
+          team_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_challenges_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_challenges_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "organization_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_features: {
         Row: {
           config: Json
@@ -1978,6 +2162,72 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_tasks: {
+        Row: {
+          created_at: string
+          duration_min: number | null
+          id: string
+          link_target: string | null
+          organization_id: string
+          payload: Json
+          scheduled_for: string
+          status: string
+          subtitle: string | null
+          task_type: string
+          team_id: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          duration_min?: number | null
+          id?: string
+          link_target?: string | null
+          organization_id: string
+          payload?: Json
+          scheduled_for?: string
+          status?: string
+          subtitle?: string | null
+          task_type: string
+          team_id?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          duration_min?: number | null
+          id?: string
+          link_target?: string | null
+          organization_id?: string
+          payload?: Json
+          scheduled_for?: string
+          status?: string
+          subtitle?: string | null
+          task_type?: string
+          team_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_tasks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_tasks_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "organization_teams"
             referencedColumns: ["id"]
           },
         ]
@@ -3032,9 +3282,13 @@ export type Database = {
       }
       team_memberships: {
         Row: {
+          available_training_days: number[] | null
           created_at: string
+          gym_access: string | null
           id: string
           jersey_number: number | null
+          limitations: string | null
+          personal_goal: string | null
           position: string | null
           secondary_position: string | null
           status: Database["public"]["Enums"]["team_membership_status"]
@@ -3043,9 +3297,13 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          available_training_days?: number[] | null
           created_at?: string
+          gym_access?: string | null
           id?: string
           jersey_number?: number | null
+          limitations?: string | null
+          personal_goal?: string | null
           position?: string | null
           secondary_position?: string | null
           status?: Database["public"]["Enums"]["team_membership_status"]
@@ -3054,9 +3312,13 @@ export type Database = {
           user_id: string
         }
         Update: {
+          available_training_days?: number[] | null
           created_at?: string
+          gym_access?: string | null
           id?: string
           jersey_number?: number | null
+          limitations?: string | null
+          personal_goal?: string | null
           position?: string | null
           secondary_position?: string | null
           status?: Database["public"]["Enums"]["team_membership_status"]

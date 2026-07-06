@@ -1,113 +1,83 @@
 
-# Multi-Organization Grundlage für BodyFuel
+# Bulls Athlete Flow — Proof of Concept für generisches Organization System
 
-Ziel: generisches, skalierbares Org-System. Bestehende Accounts, Rollen, Smart-/Coaching-Logik und `bulls_*` Daten bleiben unangetastet. Bulls wird schrittweise als erste Organisation abgebildet — aber nicht hart verdrahtet.
+Analyse-Ergebnis (Ist-Zustand):
+- `organizations`: Coesfeld Bulls existiert (`slug=bulls`)
+- `organization_teams`: 1 Team `Seniors`
+- `organization_memberships`: 10 Athleten bereits als `athlete` gebacktfillt (4 mit `onboarding_completed=true`, 6 mit `false`)
+- `bulls_profiles`: 1 Datensatz mit `position`, `main_goal`, `weight_kg`, `height_cm`
+- `bulls_weight_logs`: 1 Datensatz — noch NICHT an Organizations gebunden
+- Legacy `user_groups.group_name='bulls'` → 10 User, deckungsgleich mit Memberships
+- Alle Kernstrukturen (Brand Provider, `$orgSlug` Routen, Coach Teams Dashboard) stehen bereits
 
-Dieser Plan liefert **Fundament + Routing + Coach-Menü + Bulls als erste Org (Datenmigration light)**. Feature-Module (Ranking pro Org, Challenges pro Org, Community pro Org) sind Folge-Iterationen und explizit **nicht** Teil dieses Plans.
+## Umsetzungsplan
+
+### 1. Datenmodell-Erweiterungen (1 Migration)
+Neue generische Tabellen (organization-scoped, RLS aktiv, GRANTs gesetzt):
+
+- `organization_tasks` — generische Tages-Aufgaben pro Athlet
+  Felder: `organization_id`, `team_id?`, `user_id`, `task_type` (text — z.B. `team_training`, `athletic_training`, `daily_checkin`, `challenge`, `recovery`, `hydration`), `title`, `subtitle?`, `scheduled_for` (timestamptz), `duration_min?`, `status` (`open|done|skipped`), `link_target?`, `payload jsonb`
+- `organization_challenges` — Challenges pro Org/Team
+  Felder: `organization_id`, `team_id?`, `name`, `description?`, `starts_at`, `ends_at`, `status`, `config jsonb`
+- `organization_challenge_progress` — Punkte pro User pro Challenge
+  Felder: `challenge_id`, `user_id`, `points`, `updated_at`
+- `organization_activity_log` — für "Letzte Organization Aktivitäten"
+  Felder: `organization_id`, `user_id`, `event_type`, `payload jsonb`
+- `organization_athletic_plans` — getrennt vom persönlichen Trainingsplan
+  Felder: `organization_id`, `team_id?`, `user_id`, `name`, `focus_areas text[]`, `week_start date`, `payload jsonb`, `status`
+- Erweiterung `team_memberships`: Spalten `primary_position`, `secondary_position`, `jersey_number`, `gym_access`, `available_training_days int[]`, `limitations text`, `personal_goal` — nur ergänzen, bestehende Struktur nicht umbauen.
+
+RLS-Policies verwenden neue Helper `is_org_member(uuid)` / `is_org_staff(uuid)` (existieren bereits).
+
+### 2. Server Functions (`src/lib/organizations/*.functions.ts`)
+- `getOrgHomeData({ slug })` — Membership + Team + Tasks heute + Status-Cards + aktive Challenge
+- `getOrgTasks({ slug, range })` / `completeOrgTask({ taskId })`
+- `getOrgAthleticTraining({ slug })` — Plan, Woche, Position, Focus Areas
+- `getOrgRanking({ slug, teamId? })` — Team Rank aus `organization_challenge_progress` + `performance_points`
+- `completeOrganizationOnboarding` (existiert) → erweitern um team_membership upsert mit neuen Feldern
+- Coach: `getOrgDetail({ orgId })`, `listOrgAthletes({ orgId })`
+- Alle `.middleware([requireSupabaseAuth])`; alle mit Membership-Check (403 wenn kein Zugriff).
+
+### 3. Routen & UI
+Athlete Organization Flow (bereits vorhandene `$orgSlug` Routen erweitern/befüllen):
+- `$orgSlug.home.tsx` → **BullsAthleteHome** Komponente (generisch, org-driven Branding)
+  Sections: Header, HEUTE, DEIN STATUS (4 Cards, feature-gated), NÄCHSTE AUFGABEN, AKTIVE CHALLENGE
+- `$orgSlug.training.tsx` → Athletiktraining Startseite (HEUTE, DEIN PLAN, DIESE WOCHE, POSITION, FOKUS)
+- `$orgSlug.ranking.tsx` → Team-Ranking (feature-gated)
+- `$orgSlug.community.tsx` → Placeholder (feature-gated, "coming soon")
+- `$orgSlug.profil.tsx` → Membership/Team Daten + Link zu persönlichem BodyFuel
+- `$orgSlug.onboarding.tsx` → erweitertes Onboarding mit Team/Position/Jersey/Gym/Days/Limitations/Goal (existierende Datei überarbeiten; überspringt Name/Größe/Gewicht falls bereits vorhanden)
+
+Layout-Komponenten:
+- `OrgAthleteLayout` — Bottom-Nav dynamisch aus `organization_features`
+- `OrganizationContextSwitcher` — im bestehenden AppLayout Sidebar/Header; zeigt "MEIN BODYFUEL" + alle Memberships; persistiert `activeContext` in `localStorage`
+- Direktaufruf `/bulls` → setzt Context = bulls; normales Dashboard-Öffnen ändert Context NICHT automatisch
+
+Coach Dashboard:
+- `coach.teams.$orgId.tsx` erweitern: Header (Name, Type, Status), 4 Cards (Athleten/Staff/Teams/Weekly Compliance), Sektionen (Aktuelle Challenge, Offene Onboardings, Aktivitäten), Tabs feature-gated (Übersicht/Athleten/Teams/Training/Challenges/Ranking/Community/Staff/Einstellungen)
+- Athleten-Tab: Liste mit Name/Team/Position/Onboarding/Compliance/LastActive; Klick → Detail mit klarer Trennung `PERSONAL BODYFUEL DATA` vs `COESFELD BULLS DATA`
+
+### 4. Migration bestehender Bulls-User
+Zusammenfassung dokumentieren, KEINE aggressive Massen-Zuordnung:
+- **Bereits sicher migriert**: 10 User via `user_groups='bulls'` → `organization_memberships` (existierender Backfill)
+- **`bulls_profiles`** (1 Datensatz): Migrations-Skript, das `position` → `team_memberships.primary_position` und `main_goal` → `personal_goal` überträgt, wenn user_id-Match. Onboarding_completed NICHT automatisch flippen.
+- **`bulls_weight_logs`** (1 Datensatz): bleibt vorerst unverändert, Migration deferred (später als organization_activity oder eigene org-scoped Weight-Historie).
+- **`bulls_progress_photos`, `bulls_hub_events`**: bleiben unverändert; noch nicht org-gebunden.
+- Kein Löschen, kein Überschreiben.
+
+### 5. Features aktivieren
+Insert in `organization_features` für Bulls: `home`, `athletic_training`, `ranking`, `challenges`, `community` (community=false zunächst, Rest=true).
+
+## Bewusst NICHT in dieser Phase
+- Performance Profile Algorithmus (nur Placeholder-Card)
+- Vollständiges Athletic Development Plan-System (nur Startseite)
+- Community-Feed-Implementation
+- Migration von `bulls_weight_logs`/`bulls_progress_photos` in Organization-Tabellen
+- Weitere Organisationen (RWE, SGZ)
+
+## Abschluss-Report nach Umsetzung
+Ich liefere am Ende die 7-Punkte-Zusammenfassung wie gefordert.
 
 ---
 
-## 1. Datenbank (eine Migration)
-
-Neue Tabellen im `public` Schema, alle mit RLS + GRANTs:
-
-- `organizations` — `id, name, slug (unique, lower, regex), organization_type enum, logo_url, primary_color, secondary_color, status enum(active|inactive|archived), created_at, updated_at`
-- `organization_teams` — `id, organization_id, name, slug, sport, age_group, status, created_at, updated_at`, unique `(organization_id, slug)`
-- `organization_memberships` — `id, user_id, organization_id, role enum(athlete|member|staff|coach|organization_admin), status enum(active|invited|inactive|removed), onboarding_completed bool, joined_at, created_at, updated_at`, unique `(user_id, organization_id)`
-- `team_memberships` — `id, user_id, team_id, position, secondary_position, jersey_number, status, created_at, updated_at`, unique `(user_id, team_id)`
-- `organization_invites` — `id, organization_id, team_id nullable, email nullable, assigned_role, invite_token (unique), expires_at, status enum(pending|accepted|expired|revoked), created_by, created_at`
-- `staff_assignments` — `id, user_id, organization_id, team_id nullable, role, permissions text[], created_at, updated_at`, unique `(user_id, organization_id, team_id)`
-- `organization_features` — `id, organization_id, feature text, enabled bool, config jsonb`, unique `(organization_id, feature)`
-
-Enums als eigene Postgres `type`s.
-
-**Reserved slugs**: Trigger auf `organizations` verbietet Slugs, die bestehende Top-Level-Routen kollidieren würden (`auth`, `login`, `dashboard`, `nutrition`, `training`, `messages`, `community`, `profile`, `coach`, `admin`, `tracker`, `smart`, `bulls` bleibt frei für Migration, `ranking`, `achievements`, `checkout`, `impressum`, `datenschutz`, `trust`, `welcome`, `api`, `app`, `mcp`, `lovable`, `well-known`, `onboarding`, `measurements`, `progress`, `strength-check`, `check-in`, `training-import`, `daily-checklist`, `unsubscribe`, `guardian-consent`).
-
-**Security-Definer Helpers** (analog `has_role`):
-- `is_org_member(_user uuid, _org uuid) returns bool`
-- `is_org_staff(_user uuid, _org uuid, _permission text default null) returns bool`
-- `is_org_admin(_user uuid, _org uuid) returns bool` (super_admin via `has_role('coach')` inklusive)
-
-**RLS**:
-- `organizations`: SELECT für alle Mitglieder + Staff + `has_role('coach')`. Nur `has_role('coach')` oder org_admin managen.
-- `organization_teams`: SELECT wenn Org-Mitglied/Staff. Manage: org_admin/staff mit `manage_organization`.
-- `organization_memberships`: SELECT eigene Zeile ODER Staff/Admin derselben Org. Manage: org_admin, Staff mit `manage_members`, `has_role('coach')`.
-- `team_memberships`: analog, gescoped über Team → Org.
-- `organization_invites`: SELECT Staff der Org. Insert Staff mit `manage_members`. Öffentlich einlösbar über Server-Function `redeemInvite` (kein direkter Client-Select über Token).
-- `staff_assignments`: SELECT eigene + org_admin. Manage: org_admin, `has_role('coach')`.
-- `organization_features`: SELECT alle Mitglieder derselben Org; Manage org_admin.
-
-Kein Löschen/Überschreiben bestehender Tabellen. Keine `is_*_user` Booleans.
-
-## 2. Bulls als erste Organisation (Daten-Bootstrap, nicht-destruktiv)
-
-In derselben Migration:
-- Row in `organizations` einfügen (`slug='bulls'`, `organization_type='sports_club'`, Farben aus bestehendem Bulls-Theme).
-- Ein `organization_teams` Row `Seniors`.
-- Backfill: für jeden User mit `user_groups.group_name='bulls'` → `organization_memberships (role='athlete', status='active', onboarding_completed = EXISTS(bulls_profiles))`.
-- Features aktivieren, die die Bulls-Seiten heute nutzen.
-- `user_groups` und `bulls_*` Tabellen bleiben **unverändert und aktiv** — die neuen Tabellen laufen parallel. Migration der Bulls-Routen auf das generische System erfolgt in einer Folge-Iteration.
-
-## 3. Routing (`/:orgSlug`)
-
-Neue TanStack-Routen:
-- `src/routes/org.$slug.tsx` — Layout mit `beforeLoad`: lädt Org via Server-Fn `getOrganizationBySlug` (publishable client, `status='active'`, safe columns). 404 → notFound.
-- `src/routes/org.$slug.index.tsx` — Login/Membership/Onboarding/Home-Weiche im Component (kein `_authenticated`-Wrap, weil unauth Landing gezeigt werden muss).
-
-Ablauf im Component:
-1. Nicht eingeloggt → gebrandete Login-/Signup-Karte, danach zurück auf `/:slug`.
-2. Eingeloggt + keine `organization_membership` → geschützte Access-Seite („Kein Zugriff — bitte Einladungslink anfordern").
-3. Membership vorhanden + `onboarding_completed=false` → Redirect `/:slug/onboarding`.
-4. Fertig → Redirect `/:slug/home`.
-
-Weitere Routen als Stubs (leere Layouts mit Feature-Gate):
-- `org.$slug.onboarding.tsx`
-- `org.$slug.home.tsx`
-- `org.$slug.invite.$token.tsx` — ruft `acceptOrganizationInvite` Server-Fn auf.
-
-Bestehende Top-Level-Routen bleiben; Slug-Kollision wird DB-seitig verhindert.
-
-## 4. Server Functions (`src/lib/organizations/*.functions.ts`)
-
-- `getOrganizationBySlug({ slug })` — public read (server publishable client).
-- `getMyOrganizations()` — auth, listet Memberships + Org-Kern + Features.
-- `getOrganizationContext({ slug })` — auth, gibt Membership + Team + Features + Permissions.
-- `createOrganizationInvite(...)` — auth, staff-only.
-- `acceptOrganizationInvite({ token })` — auth, erstellt `organization_memberships` + ggf. `team_memberships`, markiert Invite `accepted`.
-- `listOrganizationsForCoach()` — auth, `has_role('coach')`.
-
-Alle mit `requireSupabaseAuth` (außer `getOrganizationBySlug`).
-
-## 5. Context Switcher
-
-- `src/lib/organizations/context.tsx` — `OrganizationProvider` mit aktuellem Org-Slug (aus Route-Match) + `useOrganizationContext()`.
-- Kleiner Switcher in `AppLayout` (Desktop-Sidebar + Mobile-Top): zeigt "Mein BodyFuel" + jede aktive Membership. Klick navigiert zu `/:slug/home` bzw. `/dashboard`.
-- Branding (primary/secondary color, Logo) via CSS-Variablen im Org-Layout, keine harten Themes.
-
-## 6. Coach Dashboard — Teams Menü
-
-- Neuer Nav-Eintrag `Teams` in `coachNav`.
-- Route `src/routes/coach.teams.tsx` (Übersicht) + `src/routes/coach.teams.$orgId.tsx` (Org-Admin-Seite mit Tabs: Übersicht, Mitglieder, Teams, Staff, Einstellungen; weitere Tabs Feature-gated und im ersten Schritt als Placeholder-Panels).
-- Liste dynamisch via `listOrganizationsForCoach`, keine hardcoded Namen.
-- Sichtbarkeit über `staff_assignments` + `has_role('coach')` (super admin).
-
-## 7. Existing-User Add-on Onboarding (Rahmen)
-
-- `org.$slug.onboarding.tsx` liest bestehende `profiles`/`body_measurements` und fragt nur fehlende + org-spezifische Felder (Position, Team, Jersey, Gym-Setup, Einschränkungen) ab. Speichert in `team_memberships` + optionalem `organization_member_profiles` jsonb-Feld (kommt in Folge-Iteration falls nötig — Bulls nutzt weiter `bulls_profiles`, bis Migration greift).
-- Setzt `organization_memberships.onboarding_completed=true`.
-
-Konkrete Formularfelder pro Org sind Folge-Iteration; im ersten Wurf: Position + Team + Jersey Number als generische Felder.
-
-## 8. Nicht in diesem Schritt
-
-- Migration der Bulls-Datenbereiche (`bulls_weight_logs`, `bulls_progress_photos`, …) auf `organization_*` — kommt in Folge, aktuell parallel.
-- Org-eigene Rankings/Challenges/Community-Feeds — nur Feature-Flags, keine UI.
-- RWE- und SGZ-Seed-Daten — Anlage erfolgt später via Admin-UI.
-
-## Technische Details (kompakt)
-
-- Tabellen: siehe §1. Alle GRANTs für `authenticated` + `service_role`; kein `anon` außer für die Org-Landing-Seite (public read auf `organizations` mit `status='active'` und Whitelisted Columns via `TO anon` SELECT-Policy — nur `id, name, slug, organization_type, logo_url, primary_color, secondary_color`).
-- Enums werden neu erstellt (`organization_type`, `organization_role`, `membership_status`, `invite_status`, `team_status`).
-- Route-Naming: TanStack-Dot-Konvention (`org.$slug.tsx` = `/org/$slug`). Wir nutzen aber `$slug.tsx` direkt auf Top-Level? — **Nein**, um Slug-Kollisionen mit bestehenden Routen zu vermeiden, nutzen wir Prefix `/o/:slug` NICHT vom User gefordert. Der User will `/bulls` direkt. Kompromiss: Slug direkt auf Top-Level, aber DB-Trigger blockt reservierte Namen; Route-Datei ist `src/routes/$orgSlug.tsx` mit `beforeLoad`, das per Server-Fn prüft und bei "keine Org" via `throw notFound()` an globales 404-Handling durchreicht. Bestehende Top-Level-Dateien (`dashboard.tsx` etc.) haben Vorrang, weil TanStack statische Routen vor dynamischen matcht — daher sicher.
-
-Nach Migration werden alle abhängigen Files (Server-Fns, Routen, Context, Coach-Menü) angelegt bzw. erweitert.
+**Umfang**: 1 Migration + ~15 neue/erweiterte Dateien. Bitte Plan bestätigen, dann setze ich um.

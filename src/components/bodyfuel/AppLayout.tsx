@@ -24,6 +24,7 @@ import { getLevel } from "@/lib/bodyfuel/data";
 import { totalPoints } from "@/lib/bodyfuel/data";
 import { ReviewPrompt } from "./ReviewPrompt";
 import { SmartPlanReadyPopup } from "./SmartPlanReadyPopup";
+import { OrganizationContextSwitcher } from "@/components/organizations/OrganizationContextSwitcher";
 
 const clientNav = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -132,6 +133,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <Link to={isCoach ? "/coach" : "/dashboard"}>
             <Logo showTagline />
           </Link>
+          <div className="mt-3">
+            <OrganizationContextSwitcher compact />
+          </div>
         </div>
         <nav className="flex-1 space-y-1 p-3">
           {nav.map((item) => {
@@ -182,6 +186,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <Logo />
         </Link>
         <div className="flex items-center gap-1">
+          <OrganizationContextSwitcher compact />
           {!isFreeUser && (
             <>
               <Link
