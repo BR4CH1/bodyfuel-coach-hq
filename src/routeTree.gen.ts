@@ -77,6 +77,7 @@ import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]
 import { Route as OrgSlugOnboardingRouteImport } from './routes/$orgSlug.onboarding'
 import { Route as OrgSlugHomeRouteImport } from './routes/$orgSlug.home'
 import { Route as TrackerAppIndexRouteImport } from './routes/tracker.app.index'
+import { Route as CoachTeamsIndexRouteImport } from './routes/coach.teams.index'
 import { Route as CoachCustomersIndexRouteImport } from './routes/coach.customers.index'
 import { Route as TrackerAppWeightRouteImport } from './routes/tracker.app.weight'
 import { Route as TrackerAppWaterRouteImport } from './routes/tracker.app.water'
@@ -454,6 +455,11 @@ const TrackerAppIndexRoute = TrackerAppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => TrackerAppRoute,
 } as any)
+const CoachTeamsIndexRoute = CoachTeamsIndexRouteImport.update({
+  id: '/teams/',
+  path: '/teams/',
+  getParentRoute: () => CoachRoute,
+} as any)
 const CoachCustomersIndexRoute = CoachCustomersIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -716,6 +722,7 @@ export interface FileRoutesByFullPath {
   '/tracker/app/water': typeof TrackerAppWaterRoute
   '/tracker/app/weight': typeof TrackerAppWeightRoute
   '/coach/customers/': typeof CoachCustomersIndexRoute
+  '/coach/teams/': typeof CoachTeamsIndexRoute
   '/tracker/app/': typeof TrackerAppIndexRoute
   '/api/public/hooks/coach-daily-summary': typeof ApiPublicHooksCoachDailySummaryRoute
   '/api/public/hooks/plan-rotation': typeof ApiPublicHooksPlanRotationRoute
@@ -812,6 +819,7 @@ export interface FileRoutesByTo {
   '/tracker/app/water': typeof TrackerAppWaterRoute
   '/tracker/app/weight': typeof TrackerAppWeightRoute
   '/coach/customers': typeof CoachCustomersIndexRoute
+  '/coach/teams': typeof CoachTeamsIndexRoute
   '/tracker/app': typeof TrackerAppIndexRoute
   '/api/public/hooks/coach-daily-summary': typeof ApiPublicHooksCoachDailySummaryRoute
   '/api/public/hooks/plan-rotation': typeof ApiPublicHooksPlanRotationRoute
@@ -915,6 +923,7 @@ export interface FileRoutesById {
   '/tracker/app/water': typeof TrackerAppWaterRoute
   '/tracker/app/weight': typeof TrackerAppWeightRoute
   '/coach/customers/': typeof CoachCustomersIndexRoute
+  '/coach/teams/': typeof CoachTeamsIndexRoute
   '/tracker/app/': typeof TrackerAppIndexRoute
   '/api/public/hooks/coach-daily-summary': typeof ApiPublicHooksCoachDailySummaryRoute
   '/api/public/hooks/plan-rotation': typeof ApiPublicHooksPlanRotationRoute
@@ -1019,6 +1028,7 @@ export interface FileRouteTypes {
     | '/tracker/app/water'
     | '/tracker/app/weight'
     | '/coach/customers/'
+    | '/coach/teams/'
     | '/tracker/app/'
     | '/api/public/hooks/coach-daily-summary'
     | '/api/public/hooks/plan-rotation'
@@ -1115,6 +1125,7 @@ export interface FileRouteTypes {
     | '/tracker/app/water'
     | '/tracker/app/weight'
     | '/coach/customers'
+    | '/coach/teams'
     | '/tracker/app'
     | '/api/public/hooks/coach-daily-summary'
     | '/api/public/hooks/plan-rotation'
@@ -1217,6 +1228,7 @@ export interface FileRouteTypes {
     | '/tracker/app/water'
     | '/tracker/app/weight'
     | '/coach/customers/'
+    | '/coach/teams/'
     | '/tracker/app/'
     | '/api/public/hooks/coach-daily-summary'
     | '/api/public/hooks/plan-rotation'
@@ -1777,6 +1789,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TrackerAppIndexRouteImport
       parentRoute: typeof TrackerAppRoute
     }
+    '/coach/teams/': {
+      id: '/coach/teams/'
+      path: '/teams'
+      fullPath: '/coach/teams/'
+      preLoaderRoute: typeof CoachTeamsIndexRouteImport
+      parentRoute: typeof CoachRoute
+    }
     '/coach/customers/': {
       id: '/coach/customers/'
       path: '/'
@@ -2051,6 +2070,7 @@ interface CoachRouteChildren {
   CoachPlanBuilderUserIdRoute: typeof CoachPlanBuilderUserIdRoute
   CoachPlanPreviewPlanIdRoute: typeof CoachPlanPreviewPlanIdRoute
   CoachTrainingBuilderUserIdRoute: typeof CoachTrainingBuilderUserIdRoute
+  CoachTeamsIndexRoute: typeof CoachTeamsIndexRoute
 }
 
 const CoachRouteChildren: CoachRouteChildren = {
@@ -2067,6 +2087,7 @@ const CoachRouteChildren: CoachRouteChildren = {
   CoachPlanBuilderUserIdRoute: CoachPlanBuilderUserIdRoute,
   CoachPlanPreviewPlanIdRoute: CoachPlanPreviewPlanIdRoute,
   CoachTrainingBuilderUserIdRoute: CoachTrainingBuilderUserIdRoute,
+  CoachTeamsIndexRoute: CoachTeamsIndexRoute,
 }
 
 const CoachRouteWithChildren = CoachRoute._addFileChildren(CoachRouteChildren)
