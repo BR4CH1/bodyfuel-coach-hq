@@ -60,7 +60,7 @@ const ALL_TABS = [
   { key: "challenges", label: "Challenges", feature: "challenges" },
   { key: "ranking", label: "Ranking", feature: "ranking" },
   { key: "community", label: "Community", feature: "community" },
-  { key: "staff", label: "Staff", feature: null },
+  { key: "staff", label: "Trainer & Mitarbeiter", feature: null },
   { key: "settings", label: "Einstellungen", feature: null },
 ];
 
