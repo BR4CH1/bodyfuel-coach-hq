@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -12,13 +12,9 @@ import {
   upsertPositionDomainWeight,
   listPerformanceSessions,
   createPerformanceSession,
-  getPerformanceSession,
-  addTestAttempt,
-  invalidateAttempt,
-  completePerformanceSession,
   getPerformanceTeamMatrix,
+  listOrgAthletesForPerformance,
 } from "@/lib/performance/performance.functions";
-import { selectPerformanceResult, type Direction, type ResultSelectionMethod } from "@/lib/performance";
 
 export const Route = createFileRoute("/coach/teams/$orgId/performance")({
   head: () => ({ meta: [{ title: "Performance — BODYFUEL Coach" }] }),
