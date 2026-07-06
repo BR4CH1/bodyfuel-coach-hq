@@ -119,7 +119,7 @@ export const getOrganizationContext = createServerFn({ method: "GET" })
           .eq("status", "active"),
         supabase
           .from("team_memberships")
-          .select("team_id, position, secondary_position, jersey_number, team:organization_teams!inner(organization_id)")
+          .select("team_id, position, secondary_position, jersey_number, gym_access, available_training_days, limitations, personal_goal, team:organization_teams!inner(organization_id)")
           .eq("user_id", userId),
         supabase.rpc("has_role", { _user_id: userId, _role: "coach" }),
       ]);
