@@ -125,7 +125,7 @@ function TrendChip({ delta, suffix }: { delta: number | null; suffix: string }) 
 
 // -------------------------- Coach Radar --------------------------
 
-function CoachRadar({ data }: { data: CoachAnalytics }) {
+function CoachRadar({ data, orgId }: { data: CoachAnalytics; orgId: string }) {
   const { critical, watch, positive } = data.radar;
   const isEmpty = critical.length === 0 && watch.length === 0 && positive.length === 0;
   return (
@@ -138,9 +138,9 @@ function CoachRadar({ data }: { data: CoachAnalytics }) {
         </div>
       ) : (
         <div className="grid gap-3 md:grid-cols-3">
-          <RadarBucket title="Kritisch" tone="red" items={critical} />
-          <RadarBucket title="Beobachten" tone="yellow" items={watch} />
-          <RadarBucket title="Positiv" tone="green" items={positive} />
+          <RadarBucket title="Kritisch" tone="red" items={critical} orgId={orgId} />
+          <RadarBucket title="Beobachten" tone="yellow" items={watch} orgId={orgId} />
+          <RadarBucket title="Positiv" tone="green" items={positive} orgId={orgId} />
         </div>
       )}
     </section>
