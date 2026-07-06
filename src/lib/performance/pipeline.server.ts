@@ -11,6 +11,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import {
   selectPerformanceResult,
+  computeTestResult,
   calculateDerivedMetric,
   calculateMetricScoreInternal,
   calculateDomainScore,
@@ -21,6 +22,7 @@ import {
   type Direction,
   type ResultSelectionMethod,
   type CalculationType,
+  type TestConfig,
 } from "@/lib/performance";
 
 type SB = SupabaseClient<Database>;
