@@ -425,17 +425,18 @@ export const getOrgCoachDetail = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
-    // Authorization: coach role OR org admin/staff
+    // Authorization: coach role OR org admin/staff on this org
     const { data: isCoach } = await supabase.rpc("has_role", { _user_id: userId, _role: "coach" });
-    if (!isCoach) {
-      const { data: staff } = await supabase
-        .from("staff_assignments")
-        .select("id")
-        .eq("user_id", userId)
-        .eq("organization_id", data.orgId)
-        .maybeSingle();
-      if (!staff) throw new Error("Kein Zugriff.");
+    const { data: callerStaff } = await supabase
+      .from("staff_assignments")
+      .select("id, role, permissions, team_id")
+      .eq("user_id", userId)
+      .eq("organization_id", data.orgId)
+      .maybeSingle();
+    if (!isCoach && !callerStaff) {
+      throw new Error("Kein Zugriff.");
     }
+
 
     const [orgRes, teamsRes, membersRes, staffRes, featuresRes, challengesRes, activityRes] =
       await Promise.all([
