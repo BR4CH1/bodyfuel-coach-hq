@@ -265,6 +265,49 @@ export const completeOrganizationOnboarding = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/** Public: preview an invite (no auth) so the invite page can render a
+ *  Willkommens-/Onboarding-Screen bevor Login/Signup passiert. */
+export const getInvitePreview = createServerFn({ method: "GET" })
+  .inputValidator((d: { token: string }) => ({ token: String(d.token).trim() }))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: invite } = await supabaseAdmin
+      .from("organization_invites")
+      .select("email, assigned_role, status, expires_at, organization_id, team_id")
+      .eq("invite_token", data.token)
+      .maybeSingle();
+    if (!invite) return { ok: false as const, reason: "not_found" as const };
+    const expired =
+      !!invite.expires_at && new Date(invite.expires_at) < new Date();
+    const effectiveStatus = expired ? "expired" : String(invite.status);
+    const { data: org } = await supabaseAdmin
+      .from("organizations")
+      .select("name, slug, logo_url")
+      .eq("id", invite.organization_id)
+      .maybeSingle();
+    let teamName: string | null = null;
+    if (invite.team_id) {
+      const { data: t } = await supabaseAdmin
+        .from("organization_teams")
+        .select("name")
+        .eq("id", invite.team_id)
+        .maybeSingle();
+      teamName = (t as { name?: string } | null)?.name ?? null;
+    }
+    return {
+      ok: true as const,
+      email: invite.email,
+      role: invite.assigned_role,
+      status: effectiveStatus,
+      organization: {
+        name: (org as { name?: string } | null)?.name ?? "",
+        slug: (org as { slug?: string } | null)?.slug ?? "",
+        logo_url: (org as { logo_url?: string | null } | null)?.logo_url ?? null,
+      },
+      team_name: teamName,
+    };
+  });
+
 /** Accept an invite token — creates the org (and optionally team) membership. */
 export const acceptOrganizationInvite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
