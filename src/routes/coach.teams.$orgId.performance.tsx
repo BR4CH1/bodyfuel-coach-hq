@@ -53,7 +53,7 @@ function CoachPerformancePage() {
           </div>
           <h1 className="font-display text-2xl font-bold">Performance</h1>
           <p className="text-sm text-muted-foreground">
-            Generische Multi-Sport Performance Engine V1 · {detailQ.data?.organization?.name ?? ""}
+            Generische Multi-Sport Performance Engine V1
           </p>
         </div>
       </header>
