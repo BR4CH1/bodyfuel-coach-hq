@@ -313,7 +313,7 @@ export const acceptOrganizationInvite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { token: string }) => ({ token: String(d.token).trim() }))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+    const { supabase, userId, claims } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const { data: invite, error: invErr } = await supabaseAdmin
@@ -323,6 +323,22 @@ export const acceptOrganizationInvite = createServerFn({ method: "POST" })
       .maybeSingle();
     if (invErr) throw new Error(invErr.message);
     if (!invite) throw new Error("Einladung nicht gefunden.");
+
+    // Guard: only the invited email address may accept. Prevents another
+    // signed-in user (z. B. der einladende Coach) vom versehentlichen
+    // Konsumieren der Einladung beim Klick auf den Link.
+    const callerEmail = String(
+      (claims as { email?: string } | undefined)?.email ?? "",
+    )
+      .trim()
+      .toLowerCase();
+    const inviteEmail = String(invite.email ?? "").trim().toLowerCase();
+    if (inviteEmail && callerEmail && inviteEmail !== callerEmail) {
+      throw new Error(
+        "Diese Einladung ist für eine andere E-Mail-Adresse ausgestellt. Bitte melde dich mit der eingeladenen Adresse an.",
+      );
+    }
+
     if (invite.status !== "pending") throw new Error("Einladung nicht mehr gültig.");
     if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
       await supabaseAdmin
