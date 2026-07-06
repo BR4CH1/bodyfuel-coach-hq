@@ -37,7 +37,11 @@ const GOAL_OPTIONS: { v: string; l: string }[] = [
   { v: "Overall Athletic Development", l: "Athletische Grundlagen (Allround)" },
 ];
 
-const STAFF_FUNCTION_OPTIONS = [
+// Sichtbare Funktions-Labels. Diese Auswahl ist rein kosmetisch — die
+// technische Rolle (`staff_assignments.role`) wird ausschließlich über die
+// Einladung/den Vereinsgründungspfad gesetzt und hier NICHT geändert.
+// Wir zeigen deshalb nur solche Labels, die zur tatsächlichen Rolle passen.
+const STAFF_FUNCTION_OPTIONS_COACH = [
   "Head Coach",
   "Offensive Coordinator",
   "Defensive Coordinator",
@@ -46,7 +50,20 @@ const STAFF_FUNCTION_OPTIONS = [
   "Special Teams Coach",
   "Athletik- / Strength & Conditioning Coach",
   "Player Care / Medical",
+  "Sonstige",
+];
+const STAFF_FUNCTION_OPTIONS_ORG_ADMIN = [
   "Vereinsleitung",
+  "1. Vorsitz",
+  "2. Vorsitz",
+  "Sportlicher Leiter",
+  "Geschäftsstelle",
+  "Sonstige",
+];
+const STAFF_FUNCTION_OPTIONS_STAFF = [
+  "Player Care / Medical",
+  "Video-Analyst",
+  "Team-Manager",
   "Sonstige",
 ];
 
