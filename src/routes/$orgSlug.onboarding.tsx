@@ -398,7 +398,7 @@ function StaffOnboarding({ ctx }: { ctx: NonNullable<Awaited<ReturnType<typeof g
             <Select value={functionLabel} onValueChange={setFunctionLabel}>
               <SelectTrigger><SelectValue placeholder="Auswählen" /></SelectTrigger>
               <SelectContent>
-                {STAFF_FUNCTION_OPTIONS.map((o) => (
+                {staffOptions.map((o: string) => (
                   <SelectItem key={o} value={o}>{o}</SelectItem>
                 ))}
               </SelectContent>
