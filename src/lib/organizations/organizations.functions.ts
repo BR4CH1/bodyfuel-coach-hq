@@ -32,6 +32,10 @@ export type OrganizationContext = {
     position: string | null;
     secondary_position: string | null;
     jersey_number: number | null;
+    gym_access: string | null;
+    available_training_days: number[] | null;
+    limitations: string | null;
+    personal_goal: string | null;
   } | null;
   is_super_admin: boolean;
 };
