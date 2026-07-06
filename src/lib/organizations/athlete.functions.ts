@@ -330,7 +330,7 @@ export const completeOrganizationOnboardingV2 = createServerFn({ method: "POST" 
     const { supabase, userId } = context;
 
     // Profil-Basisdaten aktualisieren (nur Felder, die geliefert wurden).
-    const profileUpdate: Record<string, unknown> = {};
+    const profileUpdate: { display_name?: string; nickname?: string | null; birthdate?: string; height_cm?: number } = {};
     if (data.display_name !== undefined && data.display_name !== null && data.display_name !== "")
       profileUpdate.display_name = data.display_name;
     if (data.nickname !== undefined) profileUpdate.nickname = data.nickname || null;
@@ -394,7 +394,7 @@ export const completeStaffOrganizationOnboarding = createServerFn({ method: "POS
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
-    const profileUpdate: Record<string, unknown> = {};
+    const profileUpdate: { display_name?: string; nickname?: string | null; birthdate?: string; height_cm?: number } = {};
     if (data.display_name !== undefined && data.display_name !== null && data.display_name !== "")
       profileUpdate.display_name = data.display_name;
     if (data.nickname !== undefined) profileUpdate.nickname = data.nickname || null;
