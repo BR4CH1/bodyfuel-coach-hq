@@ -74,8 +74,12 @@ import { Route as BullsNutritionRouteImport } from './routes/bulls.nutrition'
 import { Route as BullsBenchmarksRouteImport } from './routes/bulls.benchmarks'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
+import { Route as OrgSlugTrainingRouteImport } from './routes/$orgSlug.training'
+import { Route as OrgSlugRankingRouteImport } from './routes/$orgSlug.ranking'
+import { Route as OrgSlugProfilRouteImport } from './routes/$orgSlug.profil'
 import { Route as OrgSlugOnboardingRouteImport } from './routes/$orgSlug.onboarding'
 import { Route as OrgSlugHomeRouteImport } from './routes/$orgSlug.home'
+import { Route as OrgSlugCommunityRouteImport } from './routes/$orgSlug.community'
 import { Route as TrackerAppIndexRouteImport } from './routes/tracker.app.index'
 import { Route as CoachTeamsIndexRouteImport } from './routes/coach.teams.index'
 import { Route as CoachCustomersIndexRouteImport } from './routes/coach.customers.index'
@@ -441,6 +445,21 @@ const Char91DotmcpChar93ListToolsRoute =
     path: '/.mcp/list-tools',
     getParentRoute: () => rootRouteImport,
   } as any)
+const OrgSlugTrainingRoute = OrgSlugTrainingRouteImport.update({
+  id: '/training',
+  path: '/training',
+  getParentRoute: () => OrgSlugRoute,
+} as any)
+const OrgSlugRankingRoute = OrgSlugRankingRouteImport.update({
+  id: '/ranking',
+  path: '/ranking',
+  getParentRoute: () => OrgSlugRoute,
+} as any)
+const OrgSlugProfilRoute = OrgSlugProfilRouteImport.update({
+  id: '/profil',
+  path: '/profil',
+  getParentRoute: () => OrgSlugRoute,
+} as any)
 const OrgSlugOnboardingRoute = OrgSlugOnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
@@ -449,6 +468,11 @@ const OrgSlugOnboardingRoute = OrgSlugOnboardingRouteImport.update({
 const OrgSlugHomeRoute = OrgSlugHomeRouteImport.update({
   id: '/home',
   path: '/home',
+  getParentRoute: () => OrgSlugRoute,
+} as any)
+const OrgSlugCommunityRoute = OrgSlugCommunityRouteImport.update({
+  id: '/community',
+  path: '/community',
   getParentRoute: () => OrgSlugRoute,
 } as any)
 const TrackerAppIndexRoute = TrackerAppIndexRouteImport.update({
@@ -671,8 +695,12 @@ export interface FileRoutesByFullPath {
   '/trust': typeof TrustRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/welcome': typeof WelcomeRoute
+  '/$orgSlug/community': typeof OrgSlugCommunityRoute
   '/$orgSlug/home': typeof OrgSlugHomeRoute
   '/$orgSlug/onboarding': typeof OrgSlugOnboardingRoute
+  '/$orgSlug/profil': typeof OrgSlugProfilRoute
+  '/$orgSlug/ranking': typeof OrgSlugRankingRoute
+  '/$orgSlug/training': typeof OrgSlugTrainingRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
@@ -771,8 +799,12 @@ export interface FileRoutesByTo {
   '/trust': typeof TrustRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/welcome': typeof WelcomeRoute
+  '/$orgSlug/community': typeof OrgSlugCommunityRoute
   '/$orgSlug/home': typeof OrgSlugHomeRoute
   '/$orgSlug/onboarding': typeof OrgSlugOnboardingRoute
+  '/$orgSlug/profil': typeof OrgSlugProfilRoute
+  '/$orgSlug/ranking': typeof OrgSlugRankingRoute
+  '/$orgSlug/training': typeof OrgSlugTrainingRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
@@ -874,8 +906,12 @@ export interface FileRoutesById {
   '/trust': typeof TrustRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/welcome': typeof WelcomeRoute
+  '/$orgSlug/community': typeof OrgSlugCommunityRoute
   '/$orgSlug/home': typeof OrgSlugHomeRoute
   '/$orgSlug/onboarding': typeof OrgSlugOnboardingRoute
+  '/$orgSlug/profil': typeof OrgSlugProfilRoute
+  '/$orgSlug/ranking': typeof OrgSlugRankingRoute
+  '/$orgSlug/training': typeof OrgSlugTrainingRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
@@ -980,8 +1016,12 @@ export interface FileRouteTypes {
     | '/trust'
     | '/unsubscribe'
     | '/welcome'
+    | '/$orgSlug/community'
     | '/$orgSlug/home'
     | '/$orgSlug/onboarding'
+    | '/$orgSlug/profil'
+    | '/$orgSlug/ranking'
+    | '/$orgSlug/training'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/bulls/benchmarks'
@@ -1080,8 +1120,12 @@ export interface FileRouteTypes {
     | '/trust'
     | '/unsubscribe'
     | '/welcome'
+    | '/$orgSlug/community'
     | '/$orgSlug/home'
     | '/$orgSlug/onboarding'
+    | '/$orgSlug/profil'
+    | '/$orgSlug/ranking'
+    | '/$orgSlug/training'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/bulls/benchmarks'
@@ -1182,8 +1226,12 @@ export interface FileRouteTypes {
     | '/trust'
     | '/unsubscribe'
     | '/welcome'
+    | '/$orgSlug/community'
     | '/$orgSlug/home'
     | '/$orgSlug/onboarding'
+    | '/$orgSlug/profil'
+    | '/$orgSlug/ranking'
+    | '/$orgSlug/training'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/bulls/benchmarks'
@@ -1780,6 +1828,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/$orgSlug/training': {
+      id: '/$orgSlug/training'
+      path: '/training'
+      fullPath: '/$orgSlug/training'
+      preLoaderRoute: typeof OrgSlugTrainingRouteImport
+      parentRoute: typeof OrgSlugRoute
+    }
+    '/$orgSlug/ranking': {
+      id: '/$orgSlug/ranking'
+      path: '/ranking'
+      fullPath: '/$orgSlug/ranking'
+      preLoaderRoute: typeof OrgSlugRankingRouteImport
+      parentRoute: typeof OrgSlugRoute
+    }
+    '/$orgSlug/profil': {
+      id: '/$orgSlug/profil'
+      path: '/profil'
+      fullPath: '/$orgSlug/profil'
+      preLoaderRoute: typeof OrgSlugProfilRouteImport
+      parentRoute: typeof OrgSlugRoute
+    }
     '/$orgSlug/onboarding': {
       id: '/$orgSlug/onboarding'
       path: '/onboarding'
@@ -1792,6 +1861,13 @@ declare module '@tanstack/react-router' {
       path: '/home'
       fullPath: '/$orgSlug/home'
       preLoaderRoute: typeof OrgSlugHomeRouteImport
+      parentRoute: typeof OrgSlugRoute
+    }
+    '/$orgSlug/community': {
+      id: '/$orgSlug/community'
+      path: '/community'
+      fullPath: '/$orgSlug/community'
+      preLoaderRoute: typeof OrgSlugCommunityRouteImport
       parentRoute: typeof OrgSlugRoute
     }
     '/tracker/app/': {
@@ -2043,15 +2119,23 @@ declare module '@tanstack/react-router' {
 }
 
 interface OrgSlugRouteChildren {
+  OrgSlugCommunityRoute: typeof OrgSlugCommunityRoute
   OrgSlugHomeRoute: typeof OrgSlugHomeRoute
   OrgSlugOnboardingRoute: typeof OrgSlugOnboardingRoute
+  OrgSlugProfilRoute: typeof OrgSlugProfilRoute
+  OrgSlugRankingRoute: typeof OrgSlugRankingRoute
+  OrgSlugTrainingRoute: typeof OrgSlugTrainingRoute
   OrgSlugIndexRoute: typeof OrgSlugIndexRoute
   OrgSlugInviteTokenRoute: typeof OrgSlugInviteTokenRoute
 }
 
 const OrgSlugRouteChildren: OrgSlugRouteChildren = {
+  OrgSlugCommunityRoute: OrgSlugCommunityRoute,
   OrgSlugHomeRoute: OrgSlugHomeRoute,
   OrgSlugOnboardingRoute: OrgSlugOnboardingRoute,
+  OrgSlugProfilRoute: OrgSlugProfilRoute,
+  OrgSlugRankingRoute: OrgSlugRankingRoute,
+  OrgSlugTrainingRoute: OrgSlugTrainingRoute,
   OrgSlugIndexRoute: OrgSlugIndexRoute,
   OrgSlugInviteTokenRoute: OrgSlugInviteTokenRoute,
 }
@@ -2246,13 +2330,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
