@@ -52,6 +52,7 @@ export const Route = createFileRoute("/coach/teams/$orgId")({
 });
 
 const ALL_TABS = [
+  { key: "cockpit", label: "Cockpit", feature: null },
   { key: "overview", label: "Übersicht", feature: null },
   { key: "athletes", label: "Athleten", feature: null },
   { key: "teams", label: "Teams", feature: null },
