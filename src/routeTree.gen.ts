@@ -43,6 +43,7 @@ import { Route as SmartIndexRouteImport } from './routes/smart.index'
 import { Route as NutritionIndexRouteImport } from './routes/nutrition.index'
 import { Route as CoachIndexRouteImport } from './routes/coach.index'
 import { Route as BullsIndexRouteImport } from './routes/bulls.index'
+import { Route as OrgSlugIndexRouteImport } from './routes/$orgSlug.index'
 import { Route as TrackerSignupRouteImport } from './routes/tracker.signup'
 import { Route as TrackerLoginRouteImport } from './routes/tracker.login'
 import { Route as TrackerAppRouteImport } from './routes/tracker.app'
@@ -275,6 +276,11 @@ const BullsIndexRoute = BullsIndexRouteImport.update({
   id: '/bulls/',
   path: '/bulls/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const OrgSlugIndexRoute = OrgSlugIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => OrgSlugRoute,
 } as any)
 const TrackerSignupRoute = TrackerSignupRouteImport.update({
   id: '/tracker/signup',
@@ -607,7 +613,7 @@ const ApiPublicHooksCoachDailySummaryRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/$orgSlug': typeof OrgSlugRoute
+  '/$orgSlug': typeof OrgSlugRouteWithChildren
   '/achievements': typeof AchievementsRoute
   '/app': typeof AppRoute
   '/auth': typeof AuthRoute
@@ -665,6 +671,7 @@ export interface FileRoutesByFullPath {
   '/tracker/app': typeof TrackerAppRouteWithChildren
   '/tracker/login': typeof TrackerLoginRoute
   '/tracker/signup': typeof TrackerSignupRoute
+  '/$orgSlug/': typeof OrgSlugIndexRoute
   '/bulls/': typeof BullsIndexRoute
   '/coach/': typeof CoachIndexRoute
   '/nutrition/': typeof NutritionIndexRoute
@@ -705,7 +712,6 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/$orgSlug': typeof OrgSlugRoute
   '/achievements': typeof AchievementsRoute
   '/app': typeof AppRoute
   '/auth': typeof AuthRoute
@@ -758,6 +764,7 @@ export interface FileRoutesByTo {
   '/smart/trial': typeof SmartTrialRoute
   '/tracker/login': typeof TrackerLoginRoute
   '/tracker/signup': typeof TrackerSignupRoute
+  '/$orgSlug': typeof OrgSlugIndexRoute
   '/bulls': typeof BullsIndexRoute
   '/coach': typeof CoachIndexRoute
   '/nutrition': typeof NutritionIndexRoute
@@ -799,7 +806,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/$orgSlug': typeof OrgSlugRoute
+  '/$orgSlug': typeof OrgSlugRouteWithChildren
   '/achievements': typeof AchievementsRoute
   '/app': typeof AppRoute
   '/auth': typeof AuthRoute
@@ -857,6 +864,7 @@ export interface FileRoutesById {
   '/tracker/app': typeof TrackerAppRouteWithChildren
   '/tracker/login': typeof TrackerLoginRoute
   '/tracker/signup': typeof TrackerSignupRoute
+  '/$orgSlug/': typeof OrgSlugIndexRoute
   '/bulls/': typeof BullsIndexRoute
   '/coach/': typeof CoachIndexRoute
   '/nutrition/': typeof NutritionIndexRoute
@@ -957,6 +965,7 @@ export interface FileRouteTypes {
     | '/tracker/app'
     | '/tracker/login'
     | '/tracker/signup'
+    | '/$orgSlug/'
     | '/bulls/'
     | '/coach/'
     | '/nutrition/'
@@ -997,7 +1006,6 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/$orgSlug'
     | '/achievements'
     | '/app'
     | '/auth'
@@ -1050,6 +1058,7 @@ export interface FileRouteTypes {
     | '/smart/trial'
     | '/tracker/login'
     | '/tracker/signup'
+    | '/$orgSlug'
     | '/bulls'
     | '/coach'
     | '/nutrition'
@@ -1148,6 +1157,7 @@ export interface FileRouteTypes {
     | '/tracker/app'
     | '/tracker/login'
     | '/tracker/signup'
+    | '/$orgSlug/'
     | '/bulls/'
     | '/coach/'
     | '/nutrition/'
@@ -1189,7 +1199,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  OrgSlugRoute: typeof OrgSlugRoute
+  OrgSlugRoute: typeof OrgSlugRouteWithChildren
   AchievementsRoute: typeof AchievementsRoute
   AppRoute: typeof AppRoute
   AuthRoute: typeof AuthRoute
@@ -1492,6 +1502,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/bulls/'
       preLoaderRoute: typeof BullsIndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/$orgSlug/': {
+      id: '/$orgSlug/'
+      path: '/'
+      fullPath: '/$orgSlug/'
+      preLoaderRoute: typeof OrgSlugIndexRouteImport
+      parentRoute: typeof OrgSlugRoute
     }
     '/tracker/signup': {
       id: '/tracker/signup'
@@ -1930,6 +1947,17 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface OrgSlugRouteChildren {
+  OrgSlugIndexRoute: typeof OrgSlugIndexRoute
+}
+
+const OrgSlugRouteChildren: OrgSlugRouteChildren = {
+  OrgSlugIndexRoute: OrgSlugIndexRoute,
+}
+
+const OrgSlugRouteWithChildren =
+  OrgSlugRoute._addFileChildren(OrgSlugRouteChildren)
+
 interface CoachCustomersRouteChildren {
   CoachCustomersUserIdRoute: typeof CoachCustomersUserIdRoute
   CoachCustomersNewRoute: typeof CoachCustomersNewRoute
@@ -2044,7 +2072,7 @@ const TrackerAppRouteWithChildren = TrackerAppRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  OrgSlugRoute: OrgSlugRoute,
+  OrgSlugRoute: OrgSlugRouteWithChildren,
   AchievementsRoute: AchievementsRoute,
   AppRoute: AppRoute,
   AuthRoute: AuthRoute,
