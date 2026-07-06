@@ -499,6 +499,7 @@ export type Database = {
           default_sets: number
           difficulty: string
           equipment: string[]
+          exercise_type: string
           id: string
           is_active: boolean
           is_unilateral: boolean
@@ -517,6 +518,7 @@ export type Database = {
           default_sets?: number
           difficulty?: string
           equipment?: string[]
+          exercise_type?: string
           id?: string
           is_active?: boolean
           is_unilateral?: boolean
@@ -535,6 +537,7 @@ export type Database = {
           default_sets?: number
           difficulty?: string
           equipment?: string[]
+          exercise_type?: string
           id?: string
           is_active?: boolean
           is_unilateral?: boolean
@@ -804,8 +807,11 @@ export type Database = {
           check_date: string
           created_at: string
           id: string
+          organization_id: string | null
           points: number
+          source_task_id: string | null
           tasks: Json
+          team_id: string | null
           updated_at: string
           user_id: string
         }
@@ -813,8 +819,11 @@ export type Database = {
           check_date: string
           created_at?: string
           id?: string
+          organization_id?: string | null
           points?: number
+          source_task_id?: string | null
           tasks?: Json
+          team_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -822,12 +831,37 @@ export type Database = {
           check_date?: string
           created_at?: string
           id?: string
+          organization_id?: string | null
           points?: number
+          source_task_id?: string | null
           tasks?: Json
+          team_id?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "daily_checks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_checks_source_task_id_fkey"
+            columns: ["source_task_id"]
+            isOneToOne: false
+            referencedRelation: "organization_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_checks_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "organization_teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       day_type_overrides: {
         Row: {
@@ -1872,44 +1906,242 @@ export type Database = {
           },
         ]
       }
+      organization_athletic_plan_assignments: {
+        Row: {
+          active: boolean
+          athlete_user_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          organization_id: string
+          plan_id: string
+          position: string | null
+          scope_type: string
+          team_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          athlete_user_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          organization_id: string
+          plan_id: string
+          position?: string | null
+          scope_type: string
+          team_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          athlete_user_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          organization_id?: string
+          plan_id?: string
+          position?: string | null
+          scope_type?: string
+          team_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_athletic_plan_assignments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_athletic_plan_assignments_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "organization_athletic_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_athletic_plan_assignments_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "organization_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_athletic_plan_exercises: {
+        Row: {
+          created_at: string
+          duration_seconds: number | null
+          exercise_id: string | null
+          id: string
+          intensity_target: string | null
+          notes: string | null
+          order_index: number
+          reps: string | null
+          rest_seconds: number | null
+          rir: number | null
+          session_id: string
+          sets: number | null
+          tempo: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          duration_seconds?: number | null
+          exercise_id?: string | null
+          id?: string
+          intensity_target?: string | null
+          notes?: string | null
+          order_index?: number
+          reps?: string | null
+          rest_seconds?: number | null
+          rir?: number | null
+          session_id: string
+          sets?: number | null
+          tempo?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          duration_seconds?: number | null
+          exercise_id?: string | null
+          id?: string
+          intensity_target?: string | null
+          notes?: string | null
+          order_index?: number
+          reps?: string | null
+          rest_seconds?: number | null
+          rir?: number | null
+          session_id?: string
+          sets?: number | null
+          tempo?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_athletic_plan_exercises_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "coach_exercise_library"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_athletic_plan_exercises_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "organization_athletic_plan_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_athletic_plan_sessions: {
+        Row: {
+          created_at: string
+          description: string | null
+          estimated_duration_minutes: number | null
+          focus_areas: string[]
+          id: string
+          order_index: number
+          plan_id: string
+          scheduled_weekdays: number[]
+          session_name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          estimated_duration_minutes?: number | null
+          focus_areas?: string[]
+          id?: string
+          order_index?: number
+          plan_id: string
+          scheduled_weekdays?: number[]
+          session_name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          estimated_duration_minutes?: number | null
+          focus_areas?: string[]
+          id?: string
+          order_index?: number
+          plan_id?: string
+          scheduled_weekdays?: number[]
+          session_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_athletic_plan_sessions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "organization_athletic_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_athletic_plans: {
         Row: {
           created_at: string
+          created_by: string | null
+          description: string | null
+          end_date: string | null
           focus_areas: string[]
           id: string
           name: string
           organization_id: string
           payload: Json
+          position: string | null
+          sport: string | null
+          start_date: string | null
           status: string
           team_id: string | null
           updated_at: string
-          user_id: string
+          updated_by: string | null
+          user_id: string | null
           week_start: string | null
         }
         Insert: {
           created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date?: string | null
           focus_areas?: string[]
           id?: string
           name: string
           organization_id: string
           payload?: Json
+          position?: string | null
+          sport?: string | null
+          start_date?: string | null
           status?: string
           team_id?: string | null
           updated_at?: string
-          user_id: string
+          updated_by?: string | null
+          user_id?: string | null
           week_start?: string | null
         }
         Update: {
           created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date?: string | null
           focus_areas?: string[]
           id?: string
           name?: string
           organization_id?: string
           payload?: Json
+          position?: string | null
+          sport?: string | null
+          start_date?: string | null
           status?: string
           team_id?: string | null
           updated_at?: string
-          user_id?: string
+          updated_by?: string | null
+          user_id?: string | null
           week_start?: string | null
         }
         Relationships: [
@@ -1925,6 +2157,150 @@ export type Database = {
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "organization_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_athletic_session_completions: {
+        Row: {
+          completed_at: string
+          created_at: string
+          duration_minutes: number | null
+          id: string
+          notes: string | null
+          organization_id: string
+          payload: Json
+          plan_id: string | null
+          rating: number | null
+          session_id: string | null
+          task_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          created_at?: string
+          duration_minutes?: number | null
+          id?: string
+          notes?: string | null
+          organization_id: string
+          payload?: Json
+          plan_id?: string | null
+          rating?: number | null
+          session_id?: string | null
+          task_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          created_at?: string
+          duration_minutes?: number | null
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          payload?: Json
+          plan_id?: string | null
+          rating?: number | null
+          session_id?: string | null
+          task_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_athletic_session_completions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_athletic_session_completions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "organization_athletic_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_athletic_session_completions_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "organization_athletic_plan_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_athletic_session_completions_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "organization_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_challenge_point_events: {
+        Row: {
+          challenge_id: string
+          created_at: string
+          created_by: string | null
+          event_date: string
+          id: string
+          metadata: Json
+          organization_id: string
+          points: number
+          rule_id: string | null
+          source_id: string | null
+          source_type: string
+          user_id: string
+        }
+        Insert: {
+          challenge_id: string
+          created_at?: string
+          created_by?: string | null
+          event_date?: string
+          id?: string
+          metadata?: Json
+          organization_id: string
+          points: number
+          rule_id?: string | null
+          source_id?: string | null
+          source_type: string
+          user_id: string
+        }
+        Update: {
+          challenge_id?: string
+          created_at?: string
+          created_by?: string | null
+          event_date?: string
+          id?: string
+          metadata?: Json
+          organization_id?: string
+          points?: number
+          rule_id?: string | null
+          source_id?: string | null
+          source_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_challenge_point_events_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "organization_challenges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_challenge_point_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_challenge_point_events_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "organization_challenge_rules"
             referencedColumns: ["id"]
           },
         ]
@@ -1964,10 +2340,67 @@ export type Database = {
           },
         ]
       }
+      organization_challenge_rules: {
+        Row: {
+          active: boolean
+          challenge_id: string
+          config: Json
+          created_at: string
+          description: string | null
+          frequency: string
+          id: string
+          max_per_day: number | null
+          max_total: number | null
+          points: number
+          rule_type: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          challenge_id: string
+          config?: Json
+          created_at?: string
+          description?: string | null
+          frequency?: string
+          id?: string
+          max_per_day?: number | null
+          max_total?: number | null
+          points?: number
+          rule_type: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          challenge_id?: string
+          config?: Json
+          created_at?: string
+          description?: string | null
+          frequency?: string
+          id?: string
+          max_per_day?: number | null
+          max_total?: number | null
+          points?: number
+          rule_type?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_challenge_rules_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "organization_challenges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_challenges: {
         Row: {
           config: Json
           created_at: string
+          created_by: string | null
           description: string | null
           ends_at: string | null
           id: string
@@ -1977,10 +2410,12 @@ export type Database = {
           status: string
           team_id: string | null
           updated_at: string
+          visibility_scope: string
         }
         Insert: {
           config?: Json
           created_at?: string
+          created_by?: string | null
           description?: string | null
           ends_at?: string | null
           id?: string
@@ -1990,10 +2425,12 @@ export type Database = {
           status?: string
           team_id?: string | null
           updated_at?: string
+          visibility_scope?: string
         }
         Update: {
           config?: Json
           created_at?: string
+          created_by?: string | null
           description?: string | null
           ends_at?: string | null
           id?: string
@@ -2003,6 +2440,7 @@ export type Database = {
           status?: string
           team_id?: string | null
           updated_at?: string
+          visibility_scope?: string
         }
         Relationships: [
           {
@@ -2014,6 +2452,63 @@ export type Database = {
           },
           {
             foreignKeyName: "organization_challenges_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "organization_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_community_posts: {
+        Row: {
+          author_role_snapshot: string
+          author_user_id: string
+          content: string
+          created_at: string
+          id: string
+          metadata: Json
+          organization_id: string
+          post_type: string
+          status: string
+          team_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          author_role_snapshot?: string
+          author_user_id: string
+          content: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          organization_id: string
+          post_type?: string
+          status?: string
+          team_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          author_role_snapshot?: string
+          author_user_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          organization_id?: string
+          post_type?: string
+          status?: string
+          team_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_community_posts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_community_posts_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "organization_teams"
@@ -2341,6 +2836,7 @@ export type Database = {
           organization_type: Database["public"]["Enums"]["organization_type"]
           primary_color: string | null
           secondary_color: string | null
+          settings: Json
           slug: string
           status: Database["public"]["Enums"]["organization_status"]
           updated_at: string
@@ -2353,6 +2849,7 @@ export type Database = {
           organization_type?: Database["public"]["Enums"]["organization_type"]
           primary_color?: string | null
           secondary_color?: string | null
+          settings?: Json
           slug: string
           status?: Database["public"]["Enums"]["organization_status"]
           updated_at?: string
@@ -2365,6 +2862,7 @@ export type Database = {
           organization_type?: Database["public"]["Enums"]["organization_type"]
           primary_color?: string | null
           secondary_color?: string | null
+          settings?: Json
           slug?: string
           status?: Database["public"]["Enums"]["organization_status"]
           updated_at?: string

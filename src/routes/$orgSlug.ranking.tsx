@@ -4,7 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { ChevronLeft, Trophy } from "lucide-react";
 import { useSession } from "@/lib/bodyfuel/session";
-import { getOrgRanking, getOrgHomeData } from "@/lib/organizations/athlete.functions";
+import { getOrgHomeData } from "@/lib/organizations/athlete.functions";
+import { getOrgChallengeRanking } from "@/lib/organizations/operating-loop.functions";
 import { OrgAthleteLayout } from "@/components/organizations/OrgAthleteLayout";
 import { Route as OrgLayoutRoute } from "./$orgSlug";
 
@@ -16,7 +17,7 @@ function OrgRanking() {
   const { org } = OrgLayoutRoute.useLoaderData();
   const { supabaseUser, loading } = useSession();
   const navigate = useNavigate();
-  const fetchRanking = useServerFn(getOrgRanking);
+  const fetchRanking = useServerFn(getOrgChallengeRanking);
   const fetchHome = useServerFn(getOrgHomeData);
 
   useEffect(() => {
@@ -25,7 +26,7 @@ function OrgRanking() {
   }, [supabaseUser, loading, org.slug, navigate]);
 
   const { data } = useQuery({
-    queryKey: ["org-ranking", org.slug, supabaseUser?.id ?? "anon"],
+    queryKey: ["org-ranking-ledger", org.slug, supabaseUser?.id ?? "anon"],
     enabled: !!supabaseUser,
     queryFn: () => fetchRanking({ data: { slug: org.slug } }),
   });
@@ -38,7 +39,9 @@ function OrgRanking() {
   if (!data || !home) return <div className="grid min-h-screen place-items-center text-muted-foreground">Laden…</div>;
 
   const primary = org.primary_color ?? "#e11d48";
-  const entries = data.entries as any[];
+  const entries = (data.entries as any[]) ?? [];
+  const active = (data as any).active_challenge;
+  const past = ((data as any).past_challenges ?? []) as any[];
 
   return (
     <OrgAthleteLayout slug={org.slug} features={home.features as any} primaryColor={primary}>
@@ -55,13 +58,32 @@ function OrgRanking() {
         </Link>
         <div className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-80">{org.name}</div>
         <h1 className="font-display text-2xl font-bold">Ranking</h1>
+        {active && <p className="mt-1 text-xs opacity-80">Challenge: {active.name}</p>}
       </header>
 
       <main className="mx-auto max-w-md px-4 py-5">
-        {entries.length === 0 ? (
+        {!active ? (
           <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
             <Trophy className="mx-auto mb-2 h-8 w-8 opacity-40" />
-            Noch keine Ranking-Daten. Sobald eine Challenge läuft, siehst du hier deine Platzierung.
+            <p className="font-semibold">Aktuell läuft keine Team-Challenge.</p>
+            <p className="mt-2 text-xs">Sobald deine Organisation eine neue Challenge startet, erscheint hier die Rangliste.</p>
+            {past.length > 0 && (
+              <div className="mt-6 text-left">
+                <div className="mb-2 text-[10px] uppercase tracking-wider text-muted-foreground">Abgeschlossene Challenges</div>
+                <ul className="space-y-1 text-xs">
+                  {past.map((p) => (
+                    <li key={p.id} className="rounded border border-border bg-card p-2">
+                      <div className="font-semibold">{p.name}</div>
+                      {p.ends_at && <div className="text-muted-foreground">bis {new Date(p.ends_at).toLocaleDateString("de-DE")}</div>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        ) : entries.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+            Noch keine Punkte in dieser Challenge. Sei die*der Erste!
           </div>
         ) : (
           <ul className="space-y-1">

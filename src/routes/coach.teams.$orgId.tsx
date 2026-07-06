@@ -306,10 +306,12 @@ function TrainingTab({ orgId }: { orgId: string }) {
         <button
           onClick={() => regenMut.mutate()}
           disabled={regenMut.isPending}
-          className="ml-auto rounded bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground disabled:opacity-50"
+          className="ml-auto rounded bg-primary px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary-foreground disabled:opacity-50"
+          title="Manueller Fallback. Die tägliche Synchronisierung läuft automatisch via pg_cron um 03:00 UTC."
         >
-          Task Engine ausführen
+          {regenMut.isPending ? "Läuft…" : "Tasks jetzt synchronisieren"}
         </button>
+
       </div>
       {msg && <div className="text-xs text-green-500">{msg}</div>}
       <Card title="Team Training Schedule (Wochenplan)">
