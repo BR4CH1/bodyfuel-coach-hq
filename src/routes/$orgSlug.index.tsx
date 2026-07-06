@@ -79,7 +79,11 @@ function OrgIndex() {
     setOrgMode(org.slug, mode);
     setNeedsChoice(false);
     if (mode === "staff") {
-      navigate({ to: "/coach/teams/$orgId", params: { orgId: ctx!.organization.id }, replace: true });
+      if (ctx?.staff && !(ctx.staff as any)?.onboarding_completed_at) {
+        navigate({ to: "/$orgSlug/onboarding", params: { orgSlug: org.slug }, replace: true });
+      } else {
+        navigate({ to: "/coach/teams/$orgId", params: { orgId: ctx!.organization.id }, replace: true });
+      }
     } else if (ctx?.membership && !ctx.membership.onboarding_completed) {
       navigate({ to: "/$orgSlug/onboarding", params: { orgSlug: org.slug }, replace: true });
     } else {
