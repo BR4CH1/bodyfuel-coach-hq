@@ -375,23 +375,51 @@ export const acceptOrganizationInvite = createServerFn({ method: "POST" })
       throw new Error("Einladung abgelaufen.");
     }
 
-    const { error: memErr } = await supabaseAdmin.from("organization_memberships").upsert(
-      {
-        user_id: userId,
-        organization_id: invite.organization_id,
-        role: invite.assigned_role,
-        status: "active",
-      },
-      { onConflict: "user_id,organization_id" },
-    );
-    if (memErr) throw new Error(memErr.message);
+    // Fachliche Trennung:
+    // - `organization_memberships` = Zugehörigkeit + Athletenrolle. Für
+    //   Staff-Einladungen speichern wir hier NUR den neutralen Marker
+    //   `member`, damit Athletenlogik/Home-Redirects sie nicht als Spieler
+    //   interpretieren.
+    // - `staff_assignments` = tatsächliche Vereinsrolle + Berechtigungen.
+    const assignedRole = invite.assigned_role;
+    const isAthleteInvite = assignedRole === "athlete";
 
-    if (invite.team_id) {
-      const { error: tmErr } = await supabaseAdmin.from("team_memberships").upsert(
-        { user_id: userId, team_id: invite.team_id, status: "active" },
-        { onConflict: "user_id,team_id" },
+    if (isAthleteInvite) {
+      const { error: memErr } = await supabaseAdmin.from("organization_memberships").upsert(
+        {
+          user_id: userId,
+          organization_id: invite.organization_id,
+          role: "athlete",
+          status: "active",
+        },
+        { onConflict: "user_id,organization_id" },
       );
-      if (tmErr) throw new Error(tmErr.message);
+      if (memErr) throw new Error(memErr.message);
+    } else {
+      // Staff-Einladung: Zugehörigkeit als neutrale Membership + Rolle in
+      // staff_assignments mit den Permissions aus der Einladung.
+      const { error: memErr } = await supabaseAdmin.from("organization_memberships").upsert(
+        {
+          user_id: userId,
+          organization_id: invite.organization_id,
+          role: "member",
+          status: "active",
+        },
+        { onConflict: "user_id,organization_id" },
+      );
+      if (memErr) throw new Error(memErr.message);
+
+      const { error: staffErr } = await supabaseAdmin.from("staff_assignments").upsert(
+        {
+          user_id: userId,
+          organization_id: invite.organization_id,
+          team_id: invite.team_id ?? null,
+          role: assignedRole,
+          permissions: invite.permissions ?? [],
+        },
+        { onConflict: "user_id,organization_id,team_id" },
+      );
+      if (staffErr) throw new Error(staffErr.message);
     }
 
     await supabaseAdmin
