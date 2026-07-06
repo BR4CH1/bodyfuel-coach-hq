@@ -21,7 +21,6 @@ function AthletePerformancePage() {
   const orgQ = useQuery({ queryKey: ["org", orgSlug], queryFn: () => fetchOrg({ data: { slug: orgSlug } }) });
   const orgId = orgQ.data?.id;
 
-  const orgId = orgQ.data?.organization?.id;
   const fetchProfile = useServerFn(getAthletePerformanceProfile);
   const profQ = useQuery({
     queryKey: ["perf-athlete", orgId],
