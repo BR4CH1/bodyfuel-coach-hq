@@ -74,6 +74,7 @@ import { Route as BullsNutritionRouteImport } from './routes/bulls.nutrition'
 import { Route as BullsBenchmarksRouteImport } from './routes/bulls.benchmarks'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
+import { Route as OrgSlugOnboardingRouteImport } from './routes/$orgSlug.onboarding'
 import { Route as TrackerAppIndexRouteImport } from './routes/tracker.app.index'
 import { Route as CoachCustomersIndexRouteImport } from './routes/coach.customers.index'
 import { Route as TrackerAppWeightRouteImport } from './routes/tracker.app.weight'
@@ -436,6 +437,11 @@ const Char91DotmcpChar93ListToolsRoute =
     path: '/.mcp/list-tools',
     getParentRoute: () => rootRouteImport,
   } as any)
+const OrgSlugOnboardingRoute = OrgSlugOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => OrgSlugRoute,
+} as any)
 const TrackerAppIndexRoute = TrackerAppIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -641,6 +647,7 @@ export interface FileRoutesByFullPath {
   '/trust': typeof TrustRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/welcome': typeof WelcomeRoute
+  '/$orgSlug/onboarding': typeof OrgSlugOnboardingRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
@@ -736,6 +743,7 @@ export interface FileRoutesByTo {
   '/trust': typeof TrustRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/welcome': typeof WelcomeRoute
+  '/$orgSlug/onboarding': typeof OrgSlugOnboardingRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
@@ -834,6 +842,7 @@ export interface FileRoutesById {
   '/trust': typeof TrustRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/welcome': typeof WelcomeRoute
+  '/$orgSlug/onboarding': typeof OrgSlugOnboardingRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
@@ -935,6 +944,7 @@ export interface FileRouteTypes {
     | '/trust'
     | '/unsubscribe'
     | '/welcome'
+    | '/$orgSlug/onboarding'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/bulls/benchmarks'
@@ -1030,6 +1040,7 @@ export interface FileRouteTypes {
     | '/trust'
     | '/unsubscribe'
     | '/welcome'
+    | '/$orgSlug/onboarding'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/bulls/benchmarks'
@@ -1127,6 +1138,7 @@ export interface FileRouteTypes {
     | '/trust'
     | '/unsubscribe'
     | '/welcome'
+    | '/$orgSlug/onboarding'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/bulls/benchmarks'
@@ -1720,6 +1732,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/$orgSlug/onboarding': {
+      id: '/$orgSlug/onboarding'
+      path: '/onboarding'
+      fullPath: '/$orgSlug/onboarding'
+      preLoaderRoute: typeof OrgSlugOnboardingRouteImport
+      parentRoute: typeof OrgSlugRoute
+    }
     '/tracker/app/': {
       id: '/tracker/app/'
       path: '/'
@@ -1948,10 +1967,12 @@ declare module '@tanstack/react-router' {
 }
 
 interface OrgSlugRouteChildren {
+  OrgSlugOnboardingRoute: typeof OrgSlugOnboardingRoute
   OrgSlugIndexRoute: typeof OrgSlugIndexRoute
 }
 
 const OrgSlugRouteChildren: OrgSlugRouteChildren = {
+  OrgSlugOnboardingRoute: OrgSlugOnboardingRoute,
   OrgSlugIndexRoute: OrgSlugIndexRoute,
 }
 
