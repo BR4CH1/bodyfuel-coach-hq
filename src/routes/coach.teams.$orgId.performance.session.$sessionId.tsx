@@ -282,7 +282,7 @@ function SessionPage() {
                         {Number(selected.selected_value).toFixed(currentTest.decimal_places ?? 2)} <span className="text-sm text-muted-foreground">{selected.unit}</span>
                       </div>
                       <div className="text-[10px] uppercase text-muted-foreground">
-                        {selected.selection_method === "best" ? `BEST OF ${selected.valid_count} VALID` : `${selected.selection_method.toUpperCase()} OF ${selected.valid_count} VALID`}
+                        {selected.selection_method === "best" ? `BEST OF ${selected.valid_count} VALID` : `${(selected.selection_method ?? "").toString().toUpperCase()} OF ${selected.valid_count} VALID`}
                       </div>
                     </>
                   ) : selected.test_status === "PROVISIONAL" ? (
