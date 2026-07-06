@@ -182,6 +182,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <Logo />
         </Link>
         <div className="flex items-center gap-1">
+          <OrganizationContextSwitcher compact />
           {!isFreeUser && (
             <>
               <Link
