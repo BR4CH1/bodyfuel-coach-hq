@@ -236,7 +236,7 @@ function AthletesTab({ orgId }: { orgId: string }) {
             <tr key={a.user_id} className="border-t border-border">
               <td className="px-3 py-2 font-semibold">{a.name}</td>
               <td className="px-3 py-2">
-                {a.onboarding_completed || a.derived_complete ? (
+                {a.derived_complete ? (
                   <span className="text-green-500">ABGESCHLOSSEN</span>
                 ) : (
                   <span className="text-yellow-500">OFFEN</span>
