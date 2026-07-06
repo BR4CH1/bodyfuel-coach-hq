@@ -191,24 +191,52 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </div>
         </div>
         <nav className="flex-1 space-y-1 p-3">
-          {nav.map((item) => {
-            const active = item.to === "/coach" ? pathname === "/coach" : pathname.startsWith(item.to);
-            const Icon = item.icon;
-            return (
+          {teamOnlyNav && entitlements.primaryOrgSlug ? (
+            <>
               <Link
-                key={item.to}
-                to={item.to}
+                to="/$orgSlug"
+                params={{ orgSlug: entitlements.primaryOrgSlug }}
                 className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                  active
+                  pathname.startsWith(`/${entitlements.primaryOrgSlug}`)
                     ? "bg-accent text-gold"
                     : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                 }`}
               >
-                <Icon className="h-4 w-4" />
-                {item.label}
+                <Users2 className="h-4 w-4" />
+                Zum Verein
               </Link>
-            );
-          })}
+              <Link
+                to="/mein-bodyfuel"
+                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                  pathname.startsWith("/mein-bodyfuel")
+                    ? "bg-accent text-gold"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                }`}
+              >
+                <Sparkles className="h-4 w-4" />
+                Mein BodyFuel
+              </Link>
+            </>
+          ) : (
+            nav.map((item) => {
+              const active = item.to === "/coach" ? pathname === "/coach" : pathname.startsWith(item.to);
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                    active
+                      ? "bg-accent text-gold"
+                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {item.label}
+                </Link>
+              );
+            })
+          )}
         </nav>
         <div className="border-t border-border p-3">
           <div className="flex items-center gap-3 rounded-lg bg-secondary/60 p-3">
