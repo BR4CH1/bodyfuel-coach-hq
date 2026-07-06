@@ -656,7 +656,7 @@ function StaffTab({ orgId, teams }: { orgId: string; teams: any[] }) {
                 <div>
                   <div className="font-mono text-xs">{inv.email}</div>
                   <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                    {inv.assigned_role} · läuft ab{" "}
+                    {roleLabelFromDbRole(inv.assigned_role)} · läuft ab{" "}
                     {inv.expires_at ? new Date(inv.expires_at).toLocaleDateString("de-DE") : "—"}
                   </div>
                 </div>
