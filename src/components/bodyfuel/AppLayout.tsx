@@ -151,15 +151,31 @@ export function AppLayout({ children }: { children: ReactNode }) {
   if (isFreeUser && !freeBullsAccess && !freeRankingAccess) return null;
   if (!smartGateChecked) return null;
 
-  const baseNav = isCoach ? coachNav : clientNav;
-  const nav = !isCoach && hasGroup("bulls") ? [...baseNav, bullsNavItem] : baseNav;
+  // Nav-Auswahl:
+  // 1) Plattform-Coach → coachNav
+  // 2) Team-only Nutzer → reduzierte Vereins-Nav (Zum Verein + Mein BodyFuel)
+  // 3) Sonst → klassische Client-Nav (+ Bulls, wenn Gruppe vorhanden)
+  const teamOnlyNav = isTeamOnlyUser && entitlements.primaryOrgSlug
+    ? [
+        { to: `/${entitlements.primaryOrgSlug}`, label: "Zum Verein", icon: Users2 },
+        { to: "/mein-bodyfuel", label: "Mein BodyFuel", icon: Sparkles },
+      ]
+    : null;
+  const baseNav = isCoach ? coachNav : (teamOnlyNav ?? clientNav);
+  const nav = !isCoach && !teamOnlyNav && hasGroup("bulls") ? [...baseNav, bullsNavItem] : baseNav;
   // Mobile bottom nav: Coach-Chat ist in die obere Leiste gewandert
   const mobileNav = nav.filter((item) => item.to !== "/messages");
   const points = user ? totalPoints(user) : 0;
   const { level } = getLevel(points);
   const displayName = user?.name ?? profile?.display_name ?? supabaseUser?.email ?? "Coach";
   const avatar = user?.avatar ?? (displayName.slice(0, 2).toUpperCase());
-  const roleLabel = user ? level.name : isCoach ? "Coach" : "Mitglied";
+  const roleLabel = isTeamOnlyUser
+    ? "Vereinsmitglied"
+    : user
+    ? level.name
+    : isCoach
+    ? "Coach"
+    : "Mitglied";
   const chatHref = isCoach ? "/coach" : "/messages";
 
   return (
