@@ -88,14 +88,19 @@ function InviteAccept() {
     setBusy(true);
     try {
       if (mode === "signup") {
-        const { error: err } = await supabase.auth.signUp({
+        const { data: signUpData, error: err } = await supabase.auth.signUp({
           email: normEmail,
           password,
           options: { emailRedirectTo: `${window.location.origin}/${orgSlug}/invite/${token}` },
         });
         if (err) throw err;
-        // If email confirmation is disabled the user is signed in; the accept-effect kicks in.
-        toast.success("Account erstellt.");
+        if (!signUpData.session) {
+          toast.info(
+            "Account erstellt. Bitte prüfe dein E-Mail Postfach und bestätige den Link, um fortzufahren.",
+          );
+        } else {
+          toast.success("Account erstellt.");
+        }
       } else {
         const { error: err } = await supabase.auth.signInWithPassword({
           email: normEmail,
