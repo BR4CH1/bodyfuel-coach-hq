@@ -16,9 +16,11 @@ import {
   MessageCircle,
   Bell,
   Users2,
+  Sparkles,
 } from "lucide-react";
 import { getMyUnreadCount, getCoachInbox } from "@/lib/coach-messages.functions";
 import { useSession } from "@/lib/bodyfuel/session";
+import { useEntitlements } from "@/lib/bodyfuel/entitlements";
 import { Logo } from "./Logo";
 import { getLevel } from "@/lib/bodyfuel/data";
 import { totalPoints } from "@/lib/bodyfuel/data";
