@@ -40,14 +40,10 @@ export const runOrgTaskEngine = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const orgId = data.organization_id;
 
-    // Authorization: caller must be a member OR staff of org OR platform coach.
-    const [memRes, staffRes, coachRes] = await Promise.all([
-      supabase
-        .from("organization_memberships")
-        .select("user_id")
-        .eq("organization_id", orgId)
-        .eq("user_id", userId)
-        .maybeSingle(),
+    // Authorization: staff of the org OR platform coach can run the engine.
+    // Athletes cannot INSERT into organization_tasks per RLS, so restricting
+    // the engine here avoids silent failures.
+    const [staffRes, coachRes] = await Promise.all([
       supabase
         .from("staff_assignments")
         .select("id")
@@ -56,8 +52,8 @@ export const runOrgTaskEngine = createServerFn({ method: "POST" })
         .maybeSingle(),
       supabase.rpc("has_role", { _user_id: userId, _role: "coach" }),
     ]);
-    if (!memRes.data && !staffRes.data && !coachRes.data) {
-      throw new Error("Kein Zugriff auf diese Organisation.");
+    if (!staffRes.data && !coachRes.data) {
+      throw new Error("Task Engine erfordert Staff- oder Coach-Berechtigung.");
     }
 
     // Load org context
