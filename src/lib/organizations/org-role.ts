@@ -112,11 +112,7 @@ export function deriveOrgRole(input: OrgRoleInput): OrgRoleFlags {
   // reiner Athlet. Dual-Roles werden über einen Kontext-Switcher an anderer
   // Stelle aufgelöst.
   const experience: OrgExperience =
-    role === "player" && isAnyStaff
-      ? "athlete" // (nicht erreichbar, aber defensiv)
-      : role === "none"
-      ? "none"
-      : role;
+    role === "player" ? "athlete" : role === "none" ? "none" : role;
 
   const roleLabel = (r: OrgRole) =>
     r === "org_admin"
