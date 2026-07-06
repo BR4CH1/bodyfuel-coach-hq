@@ -6,6 +6,7 @@ import { useSession } from "@/lib/bodyfuel/session";
 import { getOrganizationContext } from "@/lib/organizations/organizations.functions";
 import { Button } from "@/components/ui/button";
 import { Route as OrgLayoutRoute } from "./$orgSlug";
+import { getOrgMode, setOrgMode, setActiveContext } from "@/components/organizations/OrganizationContextSwitcher";
 
 export const Route = createFileRoute("/$orgSlug/")({
   component: OrgIndex,
@@ -24,13 +25,43 @@ function OrgIndex() {
 
   useEffect(() => {
     if (!supabaseUser || !ctx) return;
-    if (!ctx.membership && !ctx.staff && !ctx.is_super_admin) return;
-    if (ctx.membership && !ctx.membership.onboarding_completed) {
-      navigate({ to: "/$orgSlug/onboarding", params: { orgSlug: org.slug }, replace: true });
+    const hasAthlete = !!ctx.membership;
+    const hasStaff = !!ctx.staff;
+    const isSuper = !!ctx.is_super_admin;
+    if (!hasAthlete && !hasStaff && !isSuper) return;
+
+    setActiveContext(org.slug);
+
+    // Athlete-only → athlete home (with onboarding gate).
+    if (hasAthlete && !hasStaff && !isSuper) {
+      if (!ctx.membership!.onboarding_completed) {
+        navigate({ to: "/$orgSlug/onboarding", params: { orgSlug: org.slug }, replace: true });
+      } else {
+        navigate({ to: "/$orgSlug/home", params: { orgSlug: org.slug }, replace: true });
+      }
+      return;
+    }
+
+    // Staff-only (or super admin without athlete membership) → coach dashboard.
+    if (!hasAthlete && (hasStaff || isSuper)) {
+      setOrgMode(org.slug, "staff");
+      navigate({ to: "/coach/teams/$orgId", params: { orgId: ctx.organization.id }, replace: true });
+      return;
+    }
+
+    // Dual role: honour persisted mode, default to athlete.
+    const mode = getOrgMode(org.slug) ?? "athlete";
+    if (mode === "staff") {
+      navigate({ to: "/coach/teams/$orgId", params: { orgId: ctx.organization.id }, replace: true });
     } else {
-      navigate({ to: "/$orgSlug/home", params: { orgSlug: org.slug }, replace: true });
+      if (ctx.membership && !ctx.membership.onboarding_completed) {
+        navigate({ to: "/$orgSlug/onboarding", params: { orgSlug: org.slug }, replace: true });
+      } else {
+        navigate({ to: "/$orgSlug/home", params: { orgSlug: org.slug }, replace: true });
+      }
     }
   }, [supabaseUser, ctx, navigate, org.slug]);
+
 
   if (loading || (supabaseUser && isFetching && !ctx)) {
     return <div className="grid min-h-screen place-items-center text-muted-foreground">Laden…</div>;

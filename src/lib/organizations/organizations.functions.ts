@@ -82,6 +82,61 @@ export const getMyOrganizations = createServerFn({ method: "GET" })
     return (data ?? []) as unknown as OrganizationMembership[];
   });
 
+export type OrgContextEntry = {
+  organization: OrganizationSummary;
+  athlete: { role: string; onboarding_completed: boolean } | null;
+  staff: { role: string; permissions: string[]; team_id: string | null } | null;
+};
+
+/** Unified list: every organization the user can access as athlete OR staff. */
+export const getMyOrgContexts = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<OrgContextEntry[]> => {
+    const { supabase, userId } = context;
+    const [memRes, staffRes] = await Promise.all([
+      supabase
+        .from("organization_memberships")
+        .select(
+          `organization_id, role, onboarding_completed,
+           organization:organizations!inner(${SAFE_ORG_COLUMNS})`,
+        )
+        .eq("user_id", userId)
+        .eq("status", "active"),
+      supabase
+        .from("staff_assignments")
+        .select(
+          `organization_id, role, permissions, team_id,
+           organization:organizations!inner(${SAFE_ORG_COLUMNS})`,
+        )
+        .eq("user_id", userId),
+    ]);
+    if (memRes.error) throw new Error(memRes.error.message);
+    if (staffRes.error) throw new Error(staffRes.error.message);
+
+    const byId = new Map<string, OrgContextEntry>();
+    for (const m of (memRes.data ?? []) as any[]) {
+      const org = m.organization as OrganizationSummary;
+      if (!org) continue;
+      byId.set(org.id, {
+        organization: org,
+        athlete: { role: m.role, onboarding_completed: !!m.onboarding_completed },
+        staff: null,
+      });
+    }
+    for (const s of (staffRes.data ?? []) as any[]) {
+      const org = s.organization as OrganizationSummary;
+      if (!org) continue;
+      const existing = byId.get(org.id) ?? { organization: org, athlete: null, staff: null };
+      existing.staff = {
+        role: s.role,
+        permissions: (s.permissions ?? []) as string[],
+        team_id: s.team_id ?? null,
+      };
+      byId.set(org.id, existing);
+    }
+    return Array.from(byId.values());
+  });
+
 /** Full org context for the signed-in user (membership, staff, features, teams). */
 export const getOrganizationContext = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
