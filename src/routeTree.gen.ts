@@ -120,6 +120,7 @@ import { Route as ApiPublicHooksProcessAutopilotJobsRouteImport } from './routes
 import { Route as ApiPublicHooksPlanRotationRouteImport } from './routes/api/public/hooks/plan-rotation'
 import { Route as ApiPublicHooksOrgTaskEngineRouteImport } from './routes/api/public/hooks/org-task-engine'
 import { Route as ApiPublicHooksCoachDailySummaryRouteImport } from './routes/api/public/hooks/coach-daily-summary'
+import { Route as CoachTeamsOrgIdAthletesUserIdRouteImport } from './routes/coach.teams.$orgId.athletes.$userId'
 import { Route as CoachTeamsOrgIdPerformanceSessionSessionIdRouteImport } from './routes/coach.teams.$orgId.performance.session.$sessionId'
 
 const WelcomeRoute = WelcomeRouteImport.update({
@@ -698,6 +699,12 @@ const ApiPublicHooksCoachDailySummaryRoute =
     path: '/api/public/hooks/coach-daily-summary',
     getParentRoute: () => rootRouteImport,
   } as any)
+const CoachTeamsOrgIdAthletesUserIdRoute =
+  CoachTeamsOrgIdAthletesUserIdRouteImport.update({
+    id: '/athletes/$userId',
+    path: '/athletes/$userId',
+    getParentRoute: () => CoachTeamsOrgIdRoute,
+  } as any)
 const CoachTeamsOrgIdPerformanceSessionSessionIdRoute =
   CoachTeamsOrgIdPerformanceSessionSessionIdRouteImport.update({
     id: '/session/$sessionId',
@@ -817,6 +824,7 @@ export interface FileRoutesByFullPath {
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
+  '/coach/teams/$orgId/athletes/$userId': typeof CoachTeamsOrgIdAthletesUserIdRoute
   '/coach/teams/$orgId/performance/session/$sessionId': typeof CoachTeamsOrgIdPerformanceSessionSessionIdRoute
 }
 export interface FileRoutesByTo {
@@ -925,6 +933,7 @@ export interface FileRoutesByTo {
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
+  '/coach/teams/$orgId/athletes/$userId': typeof CoachTeamsOrgIdAthletesUserIdRoute
   '/coach/teams/$orgId/performance/session/$sessionId': typeof CoachTeamsOrgIdPerformanceSessionSessionIdRoute
 }
 export interface FileRoutesById {
@@ -1040,6 +1049,7 @@ export interface FileRoutesById {
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
+  '/coach/teams/$orgId/athletes/$userId': typeof CoachTeamsOrgIdAthletesUserIdRoute
   '/coach/teams/$orgId/performance/session/$sessionId': typeof CoachTeamsOrgIdPerformanceSessionSessionIdRoute
 }
 export interface FileRouteTypes {
@@ -1156,6 +1166,7 @@ export interface FileRouteTypes {
     | '/lovable/email/queue/process'
     | '/lovable/email/transactional/preview'
     | '/lovable/email/transactional/send'
+    | '/coach/teams/$orgId/athletes/$userId'
     | '/coach/teams/$orgId/performance/session/$sessionId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -1264,6 +1275,7 @@ export interface FileRouteTypes {
     | '/lovable/email/queue/process'
     | '/lovable/email/transactional/preview'
     | '/lovable/email/transactional/send'
+    | '/coach/teams/$orgId/athletes/$userId'
     | '/coach/teams/$orgId/performance/session/$sessionId'
   id:
     | '__root__'
@@ -1378,6 +1390,7 @@ export interface FileRouteTypes {
     | '/lovable/email/queue/process'
     | '/lovable/email/transactional/preview'
     | '/lovable/email/transactional/send'
+    | '/coach/teams/$orgId/athletes/$userId'
     | '/coach/teams/$orgId/performance/session/$sessionId'
   fileRoutesById: FileRoutesById
 }
@@ -2228,6 +2241,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksCoachDailySummaryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/coach/teams/$orgId/athletes/$userId': {
+      id: '/coach/teams/$orgId/athletes/$userId'
+      path: '/athletes/$userId'
+      fullPath: '/coach/teams/$orgId/athletes/$userId'
+      preLoaderRoute: typeof CoachTeamsOrgIdAthletesUserIdRouteImport
+      parentRoute: typeof CoachTeamsOrgIdRoute
+    }
     '/coach/teams/$orgId/performance/session/$sessionId': {
       id: '/coach/teams/$orgId/performance/session/$sessionId'
       path: '/session/$sessionId'
@@ -2300,10 +2320,12 @@ const CoachTeamsOrgIdPerformanceRouteWithChildren =
 
 interface CoachTeamsOrgIdRouteChildren {
   CoachTeamsOrgIdPerformanceRoute: typeof CoachTeamsOrgIdPerformanceRouteWithChildren
+  CoachTeamsOrgIdAthletesUserIdRoute: typeof CoachTeamsOrgIdAthletesUserIdRoute
 }
 
 const CoachTeamsOrgIdRouteChildren: CoachTeamsOrgIdRouteChildren = {
   CoachTeamsOrgIdPerformanceRoute: CoachTeamsOrgIdPerformanceRouteWithChildren,
+  CoachTeamsOrgIdAthletesUserIdRoute: CoachTeamsOrgIdAthletesUserIdRoute,
 }
 
 const CoachTeamsOrgIdRouteWithChildren = CoachTeamsOrgIdRoute._addFileChildren(
