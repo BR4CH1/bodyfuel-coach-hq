@@ -1837,6 +1837,234 @@ export type Database = {
         }
         Relationships: []
       }
+      organization_features: {
+        Row: {
+          config: Json
+          created_at: string
+          enabled: boolean
+          feature: string
+          id: string
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          config?: Json
+          created_at?: string
+          enabled?: boolean
+          feature: string
+          id?: string
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          enabled?: boolean
+          feature?: string
+          id?: string
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_features_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_invites: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          assigned_role: Database["public"]["Enums"]["organization_role"]
+          created_at: string
+          created_by: string | null
+          email: string | null
+          expires_at: string | null
+          id: string
+          invite_token: string
+          organization_id: string
+          status: Database["public"]["Enums"]["organization_invite_status"]
+          team_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          assigned_role?: Database["public"]["Enums"]["organization_role"]
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          expires_at?: string | null
+          id?: string
+          invite_token: string
+          organization_id: string
+          status?: Database["public"]["Enums"]["organization_invite_status"]
+          team_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          assigned_role?: Database["public"]["Enums"]["organization_role"]
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          expires_at?: string | null
+          id?: string
+          invite_token?: string
+          organization_id?: string
+          status?: Database["public"]["Enums"]["organization_invite_status"]
+          team_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_invites_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_invites_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "organization_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_memberships: {
+        Row: {
+          created_at: string
+          id: string
+          joined_at: string
+          onboarding_completed: boolean
+          organization_id: string
+          role: Database["public"]["Enums"]["organization_role"]
+          status: Database["public"]["Enums"]["organization_membership_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          joined_at?: string
+          onboarding_completed?: boolean
+          organization_id: string
+          role?: Database["public"]["Enums"]["organization_role"]
+          status?: Database["public"]["Enums"]["organization_membership_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          joined_at?: string
+          onboarding_completed?: boolean
+          organization_id?: string
+          role?: Database["public"]["Enums"]["organization_role"]
+          status?: Database["public"]["Enums"]["organization_membership_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_memberships_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_teams: {
+        Row: {
+          age_group: string | null
+          created_at: string
+          id: string
+          name: string
+          organization_id: string
+          slug: string
+          sport: string | null
+          status: Database["public"]["Enums"]["organization_team_status"]
+          updated_at: string
+        }
+        Insert: {
+          age_group?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          organization_id: string
+          slug: string
+          sport?: string | null
+          status?: Database["public"]["Enums"]["organization_team_status"]
+          updated_at?: string
+        }
+        Update: {
+          age_group?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          organization_id?: string
+          slug?: string
+          sport?: string | null
+          status?: Database["public"]["Enums"]["organization_team_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_teams_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          created_at: string
+          id: string
+          logo_url: string | null
+          name: string
+          organization_type: Database["public"]["Enums"]["organization_type"]
+          primary_color: string | null
+          secondary_color: string | null
+          slug: string
+          status: Database["public"]["Enums"]["organization_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          name: string
+          organization_type?: Database["public"]["Enums"]["organization_type"]
+          primary_color?: string | null
+          secondary_color?: string | null
+          slug: string
+          status?: Database["public"]["Enums"]["organization_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          name?: string
+          organization_type?: Database["public"]["Enums"]["organization_type"]
+          primary_color?: string | null
+          secondary_color?: string | null
+          slug?: string
+          status?: Database["public"]["Enums"]["organization_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       package_requests: {
         Row: {
           coach_note: string | null
@@ -2536,6 +2764,54 @@ export type Database = {
         }
         Relationships: []
       }
+      staff_assignments: {
+        Row: {
+          created_at: string
+          id: string
+          organization_id: string
+          permissions: string[]
+          role: Database["public"]["Enums"]["organization_role"]
+          team_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organization_id: string
+          permissions?: string[]
+          role?: Database["public"]["Enums"]["organization_role"]
+          team_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organization_id?: string
+          permissions?: string[]
+          role?: Database["public"]["Enums"]["organization_role"]
+          team_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_assignments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_assignments_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "organization_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       strength_check_reminders: {
         Row: {
           created_at: string
@@ -2753,6 +3029,50 @@ export type Database = {
           reason?: string
         }
         Relationships: []
+      }
+      team_memberships: {
+        Row: {
+          created_at: string
+          id: string
+          jersey_number: number | null
+          position: string | null
+          secondary_position: string | null
+          status: Database["public"]["Enums"]["team_membership_status"]
+          team_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          jersey_number?: number | null
+          position?: string | null
+          secondary_position?: string | null
+          status?: Database["public"]["Enums"]["team_membership_status"]
+          team_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          jersey_number?: number | null
+          position?: string | null
+          secondary_position?: string | null
+          status?: Database["public"]["Enums"]["team_membership_status"]
+          team_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_memberships_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "organization_teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       training_days: {
         Row: {
@@ -3320,6 +3640,12 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_org_admin: { Args: { _org: string; _user: string }; Returns: boolean }
+      is_org_member: { Args: { _org: string; _user: string }; Returns: boolean }
+      is_org_staff: {
+        Args: { _org: string; _permission?: string; _user: string }
+        Returns: boolean
+      }
       move_to_dlq: {
         Args: {
           dlq_name: string
@@ -3375,6 +3701,21 @@ export type Database = {
         | "manual"
       nutrition_food_state: "raw" | "cooked" | "n_a"
       nutrition_food_unit: "raw" | "cooked" | "ml" | "piece"
+      organization_invite_status: "pending" | "accepted" | "expired" | "revoked"
+      organization_membership_status:
+        | "active"
+        | "invited"
+        | "inactive"
+        | "removed"
+      organization_role:
+        | "athlete"
+        | "member"
+        | "staff"
+        | "coach"
+        | "organization_admin"
+      organization_status: "active" | "inactive" | "archived"
+      organization_team_status: "active" | "inactive" | "archived"
+      organization_type: "sports_club" | "team" | "gym" | "company" | "other"
       strength_check_status: "draft" | "completed"
       strength_reminder_kind: "upcoming" | "due"
       strength_test_key:
@@ -3385,6 +3726,7 @@ export type Database = {
         | "lat_pulldown"
         | "cable_row"
         | "plank"
+      team_membership_status: "active" | "inactive" | "removed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3547,6 +3889,23 @@ export const Constants = {
       ],
       nutrition_food_state: ["raw", "cooked", "n_a"],
       nutrition_food_unit: ["raw", "cooked", "ml", "piece"],
+      organization_invite_status: ["pending", "accepted", "expired", "revoked"],
+      organization_membership_status: [
+        "active",
+        "invited",
+        "inactive",
+        "removed",
+      ],
+      organization_role: [
+        "athlete",
+        "member",
+        "staff",
+        "coach",
+        "organization_admin",
+      ],
+      organization_status: ["active", "inactive", "archived"],
+      organization_team_status: ["active", "inactive", "archived"],
+      organization_type: ["sports_club", "team", "gym", "company", "other"],
       strength_check_status: ["draft", "completed"],
       strength_reminder_kind: ["upcoming", "due"],
       strength_test_key: [
@@ -3558,6 +3917,7 @@ export const Constants = {
         "cable_row",
         "plank",
       ],
+      team_membership_status: ["active", "inactive", "removed"],
     },
   },
 } as const
