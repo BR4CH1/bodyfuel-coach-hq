@@ -86,6 +86,25 @@ function CoachOrgDetail() {
   const features = data.features as { feature: string; enabled: boolean }[];
   const featureOn = (k: string) => features.some((f) => f.feature === k && f.enabled);
   const visibleTabs = ALL_TABS.filter((t) => t.feature === null || featureOn(t.feature));
+  const caller = (data as any).caller as { experience: string; is_bodyfuel_coach: boolean; team_id: string | null } | undefined;
+  const teamKpis = ((data as any).team_kpis ?? []) as Array<{ team_id: string; athletes: number; weekly_compliance: number | null; pending_onboardings: number }>;
+  const experienceLabel =
+    caller?.experience === "org_admin" ? "Vereinsleitung"
+    : caller?.experience === "head_coach" ? "Head Coach"
+    : caller?.experience === "team_coach" ? "Teamcoach"
+    : caller?.experience === "staff" ? "Staff"
+    : "Coach";
+  const experienceHint =
+    caller?.experience === "org_admin"
+      ? "Vereinsweiter Zugriff auf Analytics, Teams, Athleten und Staff."
+      : caller?.experience === "head_coach"
+      ? "Vereinsweiter Analytics-Zugriff für den Head Coach."
+      : caller?.experience === "team_coach"
+      ? "Analytics deiner zugewiesenen Teams und Athleten."
+      : caller?.experience === "staff"
+      ? "Analytics innerhalb deiner Staff-Berechtigungen."
+      : "BODYFUEL-Coach Analytics-Zugang.";
+
 
   return (
     <div>
