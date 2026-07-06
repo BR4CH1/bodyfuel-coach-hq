@@ -9,6 +9,7 @@ import {
   getOrgHomeData,
   updateOrgTaskStatus,
 } from "@/lib/organizations/athlete.functions";
+
 import { OrgAthleteLayout } from "@/components/organizations/OrgAthleteLayout";
 import { OrganizationContextSwitcher, setActiveContext } from "@/components/organizations/OrganizationContextSwitcher";
 import { Route as OrgLayoutRoute } from "./$orgSlug";
@@ -47,6 +48,10 @@ function OrgHome() {
       navigate({ to: "/$orgSlug", params: { orgSlug: org.slug }, replace: true });
     if (supabaseUser) setActiveContext(org.slug);
   }, [supabaseUser, loading, org.slug, navigate]);
+
+  // Task Engine wird zentral aus dem Coach-Dashboard ausgelöst (Staff/Coach-Berechtigung erforderlich).
+
+
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["org-home", org.slug, supabaseUser?.id ?? "anon"],

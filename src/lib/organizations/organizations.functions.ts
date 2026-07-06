@@ -32,6 +32,10 @@ export type OrganizationContext = {
     position: string | null;
     secondary_position: string | null;
     jersey_number: number | null;
+    gym_access: string | null;
+    available_training_days: number[] | null;
+    limitations: string | null;
+    personal_goal: string | null;
   } | null;
   is_super_admin: boolean;
 };
@@ -119,7 +123,7 @@ export const getOrganizationContext = createServerFn({ method: "GET" })
           .eq("status", "active"),
         supabase
           .from("team_memberships")
-          .select("team_id, position, secondary_position, jersey_number, team:organization_teams!inner(organization_id)")
+          .select("team_id, position, secondary_position, jersey_number, gym_access, available_training_days, limitations, personal_goal, team:organization_teams!inner(organization_id)")
           .eq("user_id", userId),
         supabase.rpc("has_role", { _user_id: userId, _role: "coach" }),
       ]);
@@ -155,6 +159,10 @@ export const getOrganizationContext = createServerFn({ method: "GET" })
             position: (teamMembership as any).position ?? null,
             secondary_position: (teamMembership as any).secondary_position ?? null,
             jersey_number: (teamMembership as any).jersey_number ?? null,
+            gym_access: (teamMembership as any).gym_access ?? null,
+            available_training_days: (teamMembership as any).available_training_days ?? null,
+            limitations: (teamMembership as any).limitations ?? null,
+            personal_goal: (teamMembership as any).personal_goal ?? null,
           }
         : null,
       is_super_admin: !!superAdminRes.data,
