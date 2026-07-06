@@ -256,3 +256,20 @@ Review-View listet `Athletes complete/total` und `Results complete/total` plus L
 
 ### No Demo Data
 Migration hat ausschließlich Spalten hinzugefügt (`test_day`, `entry_mode`, `location`, `measurement_method_default`, `completed_at`, `completion_notes`, `mode`). Keine INSERTs auf Bulls-User. Bulls-Framework bleibt `draft` mit `READY FOR COACH REVIEW`.
+
+---
+
+## Staff-UI: Vereinsfreundliche Bezeichnungen (Post-Performance V1)
+
+Rein sichtbare Änderungen — interne Role- und Permission-Keys in DB, RLS und Server-Functions wurden NICHT verändert.
+
+1. **Zentrale Label-Map:** `src/lib/organizations/staff-labels.ts`
+   Exportiert `PERMISSION_LABELS`, `PRESET_LABELS`, `permissionLabel()`, `permissionDescription()`, `roleLabelFromDbRole()`, `scopeLabel()`. Alle Staff-UI-Bausteine importieren aus dieser Datei — Labels werden nicht mehr in Components hardcodiert.
+2. **Sichtbare Rollenbezeichnungen** (Preset-Auswahl im "Trainer / Mitarbeiter hinzufügen"-Modal):
+   Vereinsleitung / Administrator · Head Coach / Teamcoach · Athletik- & Performance Coach · Ernährungscoach · Community & Challenges · Individuelle Rolle.
+   In der Staff-Übersicht wird die in `staff_assignments.role` gespeicherte technische Rolle über `roleLabelFromDbRole()` gemappt (`organization_admin` → Vereinsleitung, `coach` → Head Coach, `staff` → "Trainer / Mitarbeiter").
+3. **Zuständigkeit (Scope):** "Gesamter Verein" bzw. "Team: <Teamname>". Helper: *"Die Zuständigkeit legt fest, für welche Teams diese Person Zugriff erhält."*
+4. **Technische Permission Keys in der normalen UI entfernt.** Weder im Modal noch in der Staff-Liste erscheinen `view_performance`, `manage_training` etc. — nur noch die deutschen Labels aus der Map. Die Keys existieren weiterhin ausschließlich intern (DB, RLS, Server-Fn, `ALL_PERMISSIONS`-Konstante).
+5. **Permission-Beschreibungen:** Jede Berechtigung wird als eigene Card/Zeile mit fetter Bezeichnung und Sub-Zeile aus `PERMISSION_LABELS[key].description` angezeigt (mobile-first: eine Berechtigung pro Zeile, keine enge 2-Spalten-Matrix mehr).
+6. **Staff-Übersicht:** Zeigt Name, sichtbare Rollenbezeichnung, "Zuständigkeit: …" und "Berechtigungen: N Bereiche freigegeben" plus Chip-Liste der gewährten Labels. Button "Berechtigungen ansehen" öffnet Detail-Editor. Tab-Label heißt "Trainer & Mitarbeiter" statt "Staff".
+7. **Interne Keys und RLS unverändert:** `STAFF_PRESETS`/`ALL_PERMISSIONS` in `operating-loop.functions.ts`, `has_role`, RLS-Policies, Server-Function-Middleware und Permission-Checks blieben bit-identisch. Nur UI-Rendering wurde angepasst.

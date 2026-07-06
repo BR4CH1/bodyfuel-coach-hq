@@ -32,6 +32,15 @@ import {
   STAFF_PRESETS,
   ALL_PERMISSIONS,
 } from "@/lib/organizations/operating-loop.functions";
+import {
+  PERMISSION_LABELS,
+  PRESET_LABELS,
+  permissionLabel,
+  permissionDescription,
+  roleLabelFromDbRole,
+  scopeLabel,
+  type PresetKey,
+} from "@/lib/organizations/staff-labels";
 
 export const Route = createFileRoute("/coach/teams/$orgId")({
   head: () => ({ meta: [{ title: "Organisation — BODYFUEL Coach" }] }),
@@ -51,7 +60,7 @@ const ALL_TABS = [
   { key: "challenges", label: "Challenges", feature: "challenges" },
   { key: "ranking", label: "Ranking", feature: "ranking" },
   { key: "community", label: "Community", feature: "community" },
-  { key: "staff", label: "Staff", feature: null },
+  { key: "staff", label: "Trainer & Mitarbeiter", feature: null },
   { key: "settings", label: "Einstellungen", feature: null },
 ];
 
@@ -600,13 +609,13 @@ function StaffTab({ orgId, teams }: { orgId: string; teams: any[] }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="text-xs uppercase tracking-wider text-muted-foreground">
-          {staff.length} Staff · {invites.length} offene Einladungen
+          {staff.length} Trainer & Mitarbeiter · {invites.length} offene Einladungen
         </div>
         <button
           onClick={() => setShowAdd(true)}
           className="rounded bg-primary px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-primary-foreground"
         >
-          + Staff hinzufügen
+          + Trainer / Mitarbeiter hinzufügen
         </button>
       </div>
 
@@ -615,7 +624,7 @@ function StaffTab({ orgId, teams }: { orgId: string; teams: any[] }) {
       {staffQ.isLoading ? (
         <div className="text-xs text-muted-foreground">Lädt…</div>
       ) : staff.length === 0 ? (
-        <Empty>Noch kein Staff zugewiesen.</Empty>
+        <Empty>Noch keine Trainer oder Mitarbeiter zugewiesen.</Empty>
       ) : (
         <ul className="space-y-2">
           {staff.map((s) => (
@@ -647,7 +656,7 @@ function StaffTab({ orgId, teams }: { orgId: string; teams: any[] }) {
                 <div>
                   <div className="font-mono text-xs">{inv.email}</div>
                   <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                    {inv.assigned_role} · läuft ab{" "}
+                    {roleLabelFromDbRole(inv.assigned_role)} · läuft ab{" "}
                     {inv.expires_at ? new Date(inv.expires_at).toLocaleDateString("de-DE") : "—"}
                   </div>
                 </div>
@@ -704,21 +713,25 @@ function StaffRow({
 
   return (
     <li className="rounded-lg border border-border bg-card p-3 text-sm">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
           <div className="font-semibold">{row.name}</div>
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            {row.role}
-            {" · "}
-            {row.team_name ? `Team: ${row.team_name}` : "Organisationsweit"}
+          <div className="text-[11px] text-muted-foreground">
+            {roleLabelFromDbRole(row.role)}
+          </div>
+          <div className="mt-0.5 text-[11px] text-muted-foreground">
+            Zuständigkeit: {scopeLabel(row.team_name)}
+          </div>
+          <div className="mt-0.5 text-[11px] text-muted-foreground">
+            Berechtigungen: {row.permissions?.length ?? 0} Bereiche freigegeben
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex shrink-0 gap-2">
           <button
             onClick={() => setEdit((e) => !e)}
             className="text-[10px] uppercase tracking-wider text-primary"
           >
-            {edit ? "Schließen" : "Bearbeiten"}
+            {edit ? "Schließen" : "Berechtigungen ansehen"}
           </button>
           <button
             onClick={onRemove}
@@ -732,55 +745,69 @@ function StaffRow({
       {!edit && row.permissions?.length ? (
         <div className="mt-2 flex flex-wrap gap-1">
           {row.permissions.map((p: string) => (
-            <span key={p} className="rounded bg-muted px-2 py-0.5 text-[10px] uppercase tracking-wider">
-              {p}
+            <span
+              key={p}
+              className="rounded bg-muted px-2 py-0.5 text-[10px] font-medium"
+            >
+              {permissionLabel(p)}
             </span>
           ))}
         </div>
       ) : null}
 
       {edit && (
-        <div className="mt-3 space-y-3 border-t border-border pt-3">
+        <div className="mt-3 space-y-4 border-t border-border pt-3">
           <div>
             <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Team Scope
+              Zuständigkeit
             </div>
             <select
               value={teamId ?? ""}
               onChange={(e) => setTeamId(e.target.value || null)}
               className="w-full rounded border border-border bg-background px-2 py-1 text-xs"
             >
-              <option value="">Organisationsweit</option>
+              <option value="">Gesamter Verein</option>
               {teams.map((t) => (
                 <option key={t.id} value={t.id}>
-                  {t.name}
+                  Team: {t.name}
                 </option>
               ))}
             </select>
+            <div className="mt-1 text-[10px] text-muted-foreground">
+              Die Zuständigkeit legt fest, für welche Teams diese Person Zugriff erhält.
+            </div>
           </div>
           <div>
             <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Permissions
+              Berechtigungen
             </div>
-            <div className="grid grid-cols-2 gap-1">
-              {ALL_PERMISSIONS.map((p) => (
-                <label key={p} className="flex items-center gap-2 text-[11px]">
-                  <input
-                    type="checkbox"
-                    checked={perms.includes(p)}
-                    onChange={() => toggle(p)}
-                  />
-                  <span>{p}</span>
-                </label>
+            <ul className="space-y-2">
+              {(Object.keys(PERMISSION_LABELS) as (keyof typeof PERMISSION_LABELS)[]).map((p) => (
+                <li key={p} className="rounded border border-border bg-background p-2">
+                  <label className="flex cursor-pointer items-start gap-2 text-[12px]">
+                    <input
+                      type="checkbox"
+                      checked={perms.includes(p)}
+                      onChange={() => toggle(p)}
+                      className="mt-0.5"
+                    />
+                    <span>
+                      <span className="font-semibold">{PERMISSION_LABELS[p].label}</span>
+                      <span className="block text-[10px] text-muted-foreground">
+                        {PERMISSION_LABELS[p].description}
+                      </span>
+                    </span>
+                  </label>
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
           <button
             onClick={async () => {
               await onSave({ permissions: perms, team_id: teamId });
               setEdit(false);
             }}
-            className="rounded bg-primary px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary-foreground"
+            className="rounded bg-primary px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-primary-foreground"
           >
             Speichern
           </button>
@@ -869,55 +896,124 @@ function AddStaffModal({
 
         <div>
           <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-            Rolle (Preset)
+            Funktion im Verein
           </label>
           <select
             value={presetKey}
             onChange={(e) => applyPreset(e.target.value as any)}
             className="mt-1 w-full rounded border border-border bg-background px-2 py-1"
           >
-            {Object.keys(STAFF_PRESETS).map((k) => (
+            {(Object.keys(STAFF_PRESETS) as PresetKey[]).map((k) => (
               <option key={k} value={k}>
-                {k.replace(/_/g, " ")}
+                {PRESET_LABELS[k].label}
               </option>
             ))}
           </select>
+          <div className="mt-1 text-[10px] text-muted-foreground">
+            {PRESET_LABELS[presetKey as PresetKey]?.description}
+          </div>
         </div>
 
         <div>
           <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-            Team Scope {preset.scope_hint === "team" ? "(empfohlen)" : "(optional)"}
+            Zuständigkeit {preset.scope_hint === "team" ? "(empfohlen: einzelnes Team)" : "(optional)"}
           </label>
           <select
             value={teamId ?? ""}
             onChange={(e) => setTeamId(e.target.value || null)}
             className="mt-1 w-full rounded border border-border bg-background px-2 py-1"
           >
-            <option value="">Organisationsweit</option>
+            <option value="">Gesamter Verein</option>
             {teams.map((t) => (
               <option key={t.id} value={t.id}>
-                {t.name}
+                Team: {t.name}
               </option>
             ))}
           </select>
+          <div className="mt-1 text-[10px] text-muted-foreground">
+            Die Zuständigkeit legt fest, für welche Teams diese Person Zugriff erhält.
+          </div>
         </div>
 
         <div>
           <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-            Permissions
+            Berechtigungen
           </label>
-          <div className="mt-1 grid grid-cols-2 gap-1">
-            {ALL_PERMISSIONS.map((p) => (
-              <label key={p} className="flex items-center gap-2 text-[11px]">
-                <input type="checkbox" checked={perms.includes(p)} onChange={() => toggle(p)} />
-                <span>{p}</span>
-              </label>
-            ))}
-          </div>
           <div className="mt-1 text-[10px] text-muted-foreground">
-            Presets sind Vorschläge. Individuell anpassbar.
+            Die Funktion schlägt passende Berechtigungen vor. Du kannst sie individuell anpassen.
+          </div>
+          <ul className="mt-2 space-y-2">
+            {(Object.keys(PERMISSION_LABELS) as (keyof typeof PERMISSION_LABELS)[]).map((p) => (
+              <li key={p} className="rounded border border-border bg-background p-2">
+                <label className="flex cursor-pointer items-start gap-2 text-[12px]">
+                  <input
+                    type="checkbox"
+                    checked={perms.includes(p)}
+                    onChange={() => toggle(p)}
+                    className="mt-0.5"
+                  />
+                  <span>
+                    <span className="font-semibold">{PERMISSION_LABELS[p].label}</span>
+                    <span className="block text-[10px] text-muted-foreground">
+                      {PERMISSION_LABELS[p].description}
+                    </span>
+                  </span>
+                </label>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="rounded-lg border border-border bg-background p-3">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            Zusammenfassung
+          </div>
+          <div className="mt-1 text-sm font-semibold">
+            {PRESET_LABELS[presetKey as PresetKey]?.label}
+          </div>
+          <div className="mt-2 text-[11px]">
+            <span className="text-muted-foreground">Zuständigkeit: </span>
+            {teamId
+              ? `Team: ${teams.find((t) => t.id === teamId)?.name ?? "—"}`
+              : "Gesamter Verein"}
+          </div>
+          <div className="mt-2">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Zugriff
+            </div>
+            <ul className="mt-1 space-y-0.5 text-[11px]">
+              {perms.length === 0 ? (
+                <li className="text-muted-foreground">Keine Berechtigungen ausgewählt.</li>
+              ) : (
+                perms.map((p) => (
+                  <li key={p}>✓ {permissionLabel(p)}</li>
+                ))
+              )}
+            </ul>
+          </div>
+          {(() => {
+            const missing = (Object.keys(PERMISSION_LABELS) as string[]).filter(
+              (p) => !perms.includes(p),
+            );
+            if (!missing.length) return null;
+            return (
+              <div className="mt-2">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Kein Zugriff
+                </div>
+                <ul className="mt-1 space-y-0.5 text-[11px] text-muted-foreground">
+                  {missing.map((p) => (
+                    <li key={p}>– {permissionLabel(p)}</li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })()}
+          <div className="mt-2 text-[10px] text-muted-foreground">
+            Berechtigungen bleiben individuell anpassbar.
           </div>
         </div>
+
 
         {err && <div className="text-xs text-red-500">{err}</div>}
 
