@@ -95,6 +95,7 @@ import { Route as CoachCustomersUserIdRouteImport } from './routes/coach.custome
 import { Route as ApiPublicGuardianConsentRouteImport } from './routes/api/public/guardian-consent'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
+import { Route as OrgSlugInviteTokenRouteImport } from './routes/$orgSlug.invite.$token'
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
@@ -546,6 +547,11 @@ const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
   path: '/.lovable/oauth/consent',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OrgSlugInviteTokenRoute = OrgSlugInviteTokenRouteImport.update({
+  id: '/invite/$token',
+  path: '/invite/$token',
+  getParentRoute: () => OrgSlugRoute,
+} as any)
 const LovableEmailTransactionalSendRoute =
   LovableEmailTransactionalSendRouteImport.update({
     id: '/lovable/email/transactional/send',
@@ -691,6 +697,7 @@ export interface FileRoutesByFullPath {
   '/nutrition/': typeof NutritionIndexRoute
   '/smart/': typeof SmartIndexRoute
   '/tracker/': typeof TrackerIndexRoute
+  '/$orgSlug/invite/$token': typeof OrgSlugInviteTokenRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/public/guardian-consent': typeof ApiPublicGuardianConsentRoute
@@ -786,6 +793,7 @@ export interface FileRoutesByTo {
   '/nutrition': typeof NutritionIndexRoute
   '/smart': typeof SmartIndexRoute
   '/tracker': typeof TrackerIndexRoute
+  '/$orgSlug/invite/$token': typeof OrgSlugInviteTokenRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/public/guardian-consent': typeof ApiPublicGuardianConsentRoute
@@ -888,6 +896,7 @@ export interface FileRoutesById {
   '/nutrition/': typeof NutritionIndexRoute
   '/smart/': typeof SmartIndexRoute
   '/tracker/': typeof TrackerIndexRoute
+  '/$orgSlug/invite/$token': typeof OrgSlugInviteTokenRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/public/guardian-consent': typeof ApiPublicGuardianConsentRoute
@@ -991,6 +1000,7 @@ export interface FileRouteTypes {
     | '/nutrition/'
     | '/smart/'
     | '/tracker/'
+    | '/$orgSlug/invite/$token'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/api/public/guardian-consent'
@@ -1086,6 +1096,7 @@ export interface FileRouteTypes {
     | '/nutrition'
     | '/smart'
     | '/tracker'
+    | '/$orgSlug/invite/$token'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/api/public/guardian-consent'
@@ -1187,6 +1198,7 @@ export interface FileRouteTypes {
     | '/nutrition/'
     | '/smart/'
     | '/tracker/'
+    | '/$orgSlug/invite/$token'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/api/public/guardian-consent'
@@ -1891,6 +1903,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DotlovableOauthConsentRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/$orgSlug/invite/$token': {
+      id: '/$orgSlug/invite/$token'
+      path: '/invite/$token'
+      fullPath: '/$orgSlug/invite/$token'
+      preLoaderRoute: typeof OrgSlugInviteTokenRouteImport
+      parentRoute: typeof OrgSlugRoute
+    }
     '/lovable/email/transactional/send': {
       id: '/lovable/email/transactional/send'
       path: '/lovable/email/transactional/send'
@@ -1989,12 +2008,14 @@ interface OrgSlugRouteChildren {
   OrgSlugHomeRoute: typeof OrgSlugHomeRoute
   OrgSlugOnboardingRoute: typeof OrgSlugOnboardingRoute
   OrgSlugIndexRoute: typeof OrgSlugIndexRoute
+  OrgSlugInviteTokenRoute: typeof OrgSlugInviteTokenRoute
 }
 
 const OrgSlugRouteChildren: OrgSlugRouteChildren = {
   OrgSlugHomeRoute: OrgSlugHomeRoute,
   OrgSlugOnboardingRoute: OrgSlugOnboardingRoute,
   OrgSlugIndexRoute: OrgSlugIndexRoute,
+  OrgSlugInviteTokenRoute: OrgSlugInviteTokenRoute,
 }
 
 const OrgSlugRouteWithChildren =
