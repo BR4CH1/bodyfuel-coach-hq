@@ -102,6 +102,7 @@ import { Route as ApiPublicGuardianConsentRouteImport } from './routes/api/publi
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as OrgSlugInviteTokenRouteImport } from './routes/$orgSlug.invite.$token'
+import { Route as OrgSlugAthleticSessionIdRouteImport } from './routes/$orgSlug.athletic.$sessionId'
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
@@ -114,6 +115,7 @@ import { Route as ApiPublicHooksRegenTrainingPlansRouteImport } from './routes/a
 import { Route as ApiPublicHooksRegenNutritionPlansRouteImport } from './routes/api/public/hooks/regen-nutrition-plans'
 import { Route as ApiPublicHooksProcessAutopilotJobsRouteImport } from './routes/api/public/hooks/process-autopilot-jobs'
 import { Route as ApiPublicHooksPlanRotationRouteImport } from './routes/api/public/hooks/plan-rotation'
+import { Route as ApiPublicHooksOrgTaskEngineRouteImport } from './routes/api/public/hooks/org-task-engine'
 import { Route as ApiPublicHooksCoachDailySummaryRouteImport } from './routes/api/public/hooks/coach-daily-summary'
 
 const WelcomeRoute = WelcomeRouteImport.update({
@@ -588,6 +590,12 @@ const OrgSlugInviteTokenRoute = OrgSlugInviteTokenRouteImport.update({
   path: '/invite/$token',
   getParentRoute: () => OrgSlugRoute,
 } as any)
+const OrgSlugAthleticSessionIdRoute =
+  OrgSlugAthleticSessionIdRouteImport.update({
+    id: '/athletic/$sessionId',
+    path: '/athletic/$sessionId',
+    getParentRoute: () => OrgSlugRoute,
+  } as any)
 const LovableEmailTransactionalSendRoute =
   LovableEmailTransactionalSendRouteImport.update({
     id: '/lovable/email/transactional/send',
@@ -656,6 +664,12 @@ const ApiPublicHooksPlanRotationRoute =
   ApiPublicHooksPlanRotationRouteImport.update({
     id: '/api/public/hooks/plan-rotation',
     path: '/api/public/hooks/plan-rotation',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksOrgTaskEngineRoute =
+  ApiPublicHooksOrgTaskEngineRouteImport.update({
+    id: '/api/public/hooks/org-task-engine',
+    path: '/api/public/hooks/org-task-engine',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicHooksCoachDailySummaryRoute =
@@ -737,6 +751,7 @@ export interface FileRoutesByFullPath {
   '/nutrition/': typeof NutritionIndexRoute
   '/smart/': typeof SmartIndexRoute
   '/tracker/': typeof TrackerIndexRoute
+  '/$orgSlug/athletic/$sessionId': typeof OrgSlugAthleticSessionIdRoute
   '/$orgSlug/invite/$token': typeof OrgSlugInviteTokenRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -760,6 +775,7 @@ export interface FileRoutesByFullPath {
   '/coach/teams/': typeof CoachTeamsIndexRoute
   '/tracker/app/': typeof TrackerAppIndexRoute
   '/api/public/hooks/coach-daily-summary': typeof ApiPublicHooksCoachDailySummaryRoute
+  '/api/public/hooks/org-task-engine': typeof ApiPublicHooksOrgTaskEngineRoute
   '/api/public/hooks/plan-rotation': typeof ApiPublicHooksPlanRotationRoute
   '/api/public/hooks/process-autopilot-jobs': typeof ApiPublicHooksProcessAutopilotJobsRoute
   '/api/public/hooks/regen-nutrition-plans': typeof ApiPublicHooksRegenNutritionPlansRoute
@@ -839,6 +855,7 @@ export interface FileRoutesByTo {
   '/nutrition': typeof NutritionIndexRoute
   '/smart': typeof SmartIndexRoute
   '/tracker': typeof TrackerIndexRoute
+  '/$orgSlug/athletic/$sessionId': typeof OrgSlugAthleticSessionIdRoute
   '/$orgSlug/invite/$token': typeof OrgSlugInviteTokenRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -862,6 +879,7 @@ export interface FileRoutesByTo {
   '/coach/teams': typeof CoachTeamsIndexRoute
   '/tracker/app': typeof TrackerAppIndexRoute
   '/api/public/hooks/coach-daily-summary': typeof ApiPublicHooksCoachDailySummaryRoute
+  '/api/public/hooks/org-task-engine': typeof ApiPublicHooksOrgTaskEngineRoute
   '/api/public/hooks/plan-rotation': typeof ApiPublicHooksPlanRotationRoute
   '/api/public/hooks/process-autopilot-jobs': typeof ApiPublicHooksProcessAutopilotJobsRoute
   '/api/public/hooks/regen-nutrition-plans': typeof ApiPublicHooksRegenNutritionPlansRoute
@@ -948,6 +966,7 @@ export interface FileRoutesById {
   '/nutrition/': typeof NutritionIndexRoute
   '/smart/': typeof SmartIndexRoute
   '/tracker/': typeof TrackerIndexRoute
+  '/$orgSlug/athletic/$sessionId': typeof OrgSlugAthleticSessionIdRoute
   '/$orgSlug/invite/$token': typeof OrgSlugInviteTokenRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -971,6 +990,7 @@ export interface FileRoutesById {
   '/coach/teams/': typeof CoachTeamsIndexRoute
   '/tracker/app/': typeof TrackerAppIndexRoute
   '/api/public/hooks/coach-daily-summary': typeof ApiPublicHooksCoachDailySummaryRoute
+  '/api/public/hooks/org-task-engine': typeof ApiPublicHooksOrgTaskEngineRoute
   '/api/public/hooks/plan-rotation': typeof ApiPublicHooksPlanRotationRoute
   '/api/public/hooks/process-autopilot-jobs': typeof ApiPublicHooksProcessAutopilotJobsRoute
   '/api/public/hooks/regen-nutrition-plans': typeof ApiPublicHooksRegenNutritionPlansRoute
@@ -1058,6 +1078,7 @@ export interface FileRouteTypes {
     | '/nutrition/'
     | '/smart/'
     | '/tracker/'
+    | '/$orgSlug/athletic/$sessionId'
     | '/$orgSlug/invite/$token'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -1081,6 +1102,7 @@ export interface FileRouteTypes {
     | '/coach/teams/'
     | '/tracker/app/'
     | '/api/public/hooks/coach-daily-summary'
+    | '/api/public/hooks/org-task-engine'
     | '/api/public/hooks/plan-rotation'
     | '/api/public/hooks/process-autopilot-jobs'
     | '/api/public/hooks/regen-nutrition-plans'
@@ -1160,6 +1182,7 @@ export interface FileRouteTypes {
     | '/nutrition'
     | '/smart'
     | '/tracker'
+    | '/$orgSlug/athletic/$sessionId'
     | '/$orgSlug/invite/$token'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -1183,6 +1206,7 @@ export interface FileRouteTypes {
     | '/coach/teams'
     | '/tracker/app'
     | '/api/public/hooks/coach-daily-summary'
+    | '/api/public/hooks/org-task-engine'
     | '/api/public/hooks/plan-rotation'
     | '/api/public/hooks/process-autopilot-jobs'
     | '/api/public/hooks/regen-nutrition-plans'
@@ -1268,6 +1292,7 @@ export interface FileRouteTypes {
     | '/nutrition/'
     | '/smart/'
     | '/tracker/'
+    | '/$orgSlug/athletic/$sessionId'
     | '/$orgSlug/invite/$token'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -1291,6 +1316,7 @@ export interface FileRouteTypes {
     | '/coach/teams/'
     | '/tracker/app/'
     | '/api/public/hooks/coach-daily-summary'
+    | '/api/public/hooks/org-task-engine'
     | '/api/public/hooks/plan-rotation'
     | '/api/public/hooks/process-autopilot-jobs'
     | '/api/public/hooks/regen-nutrition-plans'
@@ -1357,6 +1383,7 @@ export interface RootRouteChildren {
   ApiPublicGuardianConsentRoute: typeof ApiPublicGuardianConsentRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiPublicHooksCoachDailySummaryRoute: typeof ApiPublicHooksCoachDailySummaryRoute
+  ApiPublicHooksOrgTaskEngineRoute: typeof ApiPublicHooksOrgTaskEngineRoute
   ApiPublicHooksPlanRotationRoute: typeof ApiPublicHooksPlanRotationRoute
   ApiPublicHooksProcessAutopilotJobsRoute: typeof ApiPublicHooksProcessAutopilotJobsRoute
   ApiPublicHooksRegenNutritionPlansRoute: typeof ApiPublicHooksRegenNutritionPlansRoute
@@ -2024,6 +2051,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrgSlugInviteTokenRouteImport
       parentRoute: typeof OrgSlugRoute
     }
+    '/$orgSlug/athletic/$sessionId': {
+      id: '/$orgSlug/athletic/$sessionId'
+      path: '/athletic/$sessionId'
+      fullPath: '/$orgSlug/athletic/$sessionId'
+      preLoaderRoute: typeof OrgSlugAthleticSessionIdRouteImport
+      parentRoute: typeof OrgSlugRoute
+    }
     '/lovable/email/transactional/send': {
       id: '/lovable/email/transactional/send'
       path: '/lovable/email/transactional/send'
@@ -2108,6 +2142,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksPlanRotationRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/org-task-engine': {
+      id: '/api/public/hooks/org-task-engine'
+      path: '/api/public/hooks/org-task-engine'
+      fullPath: '/api/public/hooks/org-task-engine'
+      preLoaderRoute: typeof ApiPublicHooksOrgTaskEngineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/coach-daily-summary': {
       id: '/api/public/hooks/coach-daily-summary'
       path: '/api/public/hooks/coach-daily-summary'
@@ -2126,6 +2167,7 @@ interface OrgSlugRouteChildren {
   OrgSlugRankingRoute: typeof OrgSlugRankingRoute
   OrgSlugTrainingRoute: typeof OrgSlugTrainingRoute
   OrgSlugIndexRoute: typeof OrgSlugIndexRoute
+  OrgSlugAthleticSessionIdRoute: typeof OrgSlugAthleticSessionIdRoute
   OrgSlugInviteTokenRoute: typeof OrgSlugInviteTokenRoute
 }
 
@@ -2137,6 +2179,7 @@ const OrgSlugRouteChildren: OrgSlugRouteChildren = {
   OrgSlugRankingRoute: OrgSlugRankingRoute,
   OrgSlugTrainingRoute: OrgSlugTrainingRoute,
   OrgSlugIndexRoute: OrgSlugIndexRoute,
+  OrgSlugAthleticSessionIdRoute: OrgSlugAthleticSessionIdRoute,
   OrgSlugInviteTokenRoute: OrgSlugInviteTokenRoute,
 }
 
@@ -2312,6 +2355,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicGuardianConsentRoute: ApiPublicGuardianConsentRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ApiPublicHooksCoachDailySummaryRoute: ApiPublicHooksCoachDailySummaryRoute,
+  ApiPublicHooksOrgTaskEngineRoute: ApiPublicHooksOrgTaskEngineRoute,
   ApiPublicHooksPlanRotationRoute: ApiPublicHooksPlanRotationRoute,
   ApiPublicHooksProcessAutopilotJobsRoute:
     ApiPublicHooksProcessAutopilotJobsRoute,

@@ -1,26 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-
-/**
- * Organization Task Engine
- *
- * Idempotently generates organization_tasks from these sources:
- *   1. organization_team_training_schedule       -> task_type='team_training'
- *   2. organization_athletic_plans (payload)     -> task_type='athletic_training'
- *   3. organization_challenges (active, daily)   -> task_type='challenge'
- *   4. organization_features (checkins config)   -> task_type='daily_checkin'
- * Manual staff tasks (source_type='manual') are inserted directly by
- * createManualOrgTask and are NEVER touched by the engine.
- *
- * Idempotency: uniqueness on (org, user, task_type, source_type, source_id,
- * scheduled_date) via partial unique index -> ON CONFLICT DO NOTHING.
- */
-
-type EngineInput = { organization_id: string; horizon_days?: number };
-
-function dateOnlyIso(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
+import { runOrgTaskEngineWithClient } from "./task-engine.server";
 
 function combineDateTime(dateStr: string, timeStr: string | null): string {
   const time = timeStr ?? "09:00:00";
@@ -30,19 +10,25 @@ function combineDateTime(dateStr: string, timeStr: string | null): string {
   return d.toISOString();
 }
 
+
+/**
+ * Manual "TASKS JETZT SYNCHRONISIEREN" trigger (coach button).
+ * Automatic daily execution runs via /api/public/hooks/org-task-engine
+ * scheduled with pg_cron. Both paths call the same idempotent helper.
+ */
+
+type EngineInput = { organization_id: string; horizon_days?: number };
+
 export const runOrgTaskEngine = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: EngineInput) => ({
     organization_id: String(d.organization_id),
-    horizon_days: Math.min(Math.max(d.horizon_days ?? 7, 1), 30),
+    horizon_days: Math.min(Math.max(d.horizon_days ?? 14, 1), 30),
   }))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const orgId = data.organization_id;
 
-    // Authorization: staff of the org OR platform coach can run the engine.
-    // Athletes cannot INSERT into organization_tasks per RLS, so restricting
-    // the engine here avoids silent failures.
     const [staffRes, coachRes] = await Promise.all([
       supabase
         .from("staff_assignments")
@@ -56,179 +42,15 @@ export const runOrgTaskEngine = createServerFn({ method: "POST" })
       throw new Error("Task Engine erfordert Staff- oder Coach-Berechtigung.");
     }
 
-    // Load org context
-    const [teamsRes, membershipsRes, teamMembershipsRes, featuresRes, schedulesRes, plansRes, challengesRes] =
-      await Promise.all([
-        supabase.from("organization_teams").select("id").eq("organization_id", orgId),
-        supabase
-          .from("organization_memberships")
-          .select("user_id, status")
-          .eq("organization_id", orgId)
-          .eq("status", "active"),
-        supabase.from("team_memberships").select("user_id, team_id, status"),
-        supabase.from("organization_features").select("feature, enabled, config").eq("organization_id", orgId),
-        supabase.from("organization_team_training_schedule").select("id, team_id, weekday, start_time, title, active"),
-        supabase
-          .from("organization_athletic_plans")
-          .select("id, user_id, team_id, name, payload, status")
-          .eq("organization_id", orgId)
-          .eq("status", "active"),
-        supabase
-          .from("organization_challenges")
-          .select("id, name, config, starts_at, ends_at, status")
-          .eq("organization_id", orgId)
-          .eq("status", "active"),
-      ]);
-
-    const teamIds = new Set<string>(((teamsRes.data ?? []) as any[]).map((t) => t.id));
-    const memberIds = new Set<string>(((membershipsRes.data ?? []) as any[]).map((m) => m.user_id));
-    const teamMemberships = ((teamMembershipsRes.data ?? []) as any[]).filter(
-      (tm) => teamIds.has(tm.team_id) && memberIds.has(tm.user_id) && tm.status !== "inactive",
-    );
-    const featureMap = new Map<string, { enabled: boolean; config: any }>();
-    for (const f of (featuresRes.data ?? []) as any[]) {
-      featureMap.set(f.feature, { enabled: !!f.enabled, config: f.config ?? {} });
-    }
-
-    // Build rows to insert
-    const rows: any[] = [];
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    for (let offset = 0; offset < data.horizon_days; offset++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() + offset);
-      const dateIso = dateOnlyIso(date);
-      const weekday = date.getDay(); // 0=Sun..6=Sat
-
-      // 1) Team training schedule
-      const schedules = ((schedulesRes.data ?? []) as any[]).filter(
-        (s) => teamIds.has(s.team_id) && s.active && s.weekday === weekday,
-      );
-      for (const s of schedules) {
-        const usersInTeam = teamMemberships.filter((tm) => tm.team_id === s.team_id);
-        for (const tm of usersInTeam) {
-          rows.push({
-            organization_id: orgId,
-            team_id: s.team_id,
-            user_id: tm.user_id,
-            task_type: "team_training",
-            title: s.title || "Team Training",
-            subtitle: null,
-            scheduled_for: combineDateTime(dateIso, s.start_time),
-            scheduled_date: dateIso,
-            status: "open",
-            source_type: "team_training_schedule",
-            source_id: s.id,
-            link_target: null,
-            payload: {},
-          });
-        }
-      }
-
-      // 4) Daily check-in
-      const checkins = featureMap.get("checkins");
-      if (checkins?.enabled) {
-        const cfg = checkins.config || {};
-        const enabled = cfg.daily_checkin_enabled !== false;
-        const days: number[] = Array.isArray(cfg.checkin_days) ? cfg.checkin_days : [0, 1, 2, 3, 4, 5, 6];
-        if (enabled && days.includes(weekday)) {
-          for (const uid of memberIds) {
-            rows.push({
-              organization_id: orgId,
-              team_id: null,
-              user_id: uid,
-              task_type: "daily_checkin",
-              title: "Daily Check-in",
-              subtitle: "Wie geht's dir heute?",
-              scheduled_for: combineDateTime(dateIso, cfg.checkin_available_from ?? "08:00"),
-              scheduled_date: dateIso,
-              status: "open",
-              source_type: "daily_checkin_config",
-              source_id: orgId, // stable per org+day
-              link_target: "/daily-check",
-              payload: { due_time: cfg.checkin_due_time ?? null },
-            });
-          }
-        }
-      }
-
-      // 3) Active challenges (daily task if config.daily === true)
-      for (const ch of (challengesRes.data ?? []) as any[]) {
-        const cfg = ch.config ?? {};
-        if (cfg.daily !== true) continue;
-        // Only within challenge date range
-        if (ch.starts_at && new Date(ch.starts_at) > date) continue;
-        if (ch.ends_at && new Date(ch.ends_at) < date) continue;
-        for (const uid of memberIds) {
-          rows.push({
-            organization_id: orgId,
-            team_id: null,
-            user_id: uid,
-            task_type: "challenge",
-            title: ch.name || "Challenge Aufgabe",
-            subtitle: cfg.subtitle ?? null,
-            scheduled_for: combineDateTime(dateIso, cfg.time ?? "12:00"),
-            scheduled_date: dateIso,
-            status: "open",
-            source_type: "challenge",
-            source_id: ch.id,
-            link_target: null,
-            payload: { challenge_id: ch.id },
-            points: typeof cfg.points === "number" ? cfg.points : null,
-          });
-        }
-      }
-    }
-
-    // 2) Athletic plans: expand payload.sessions[]
-    for (const plan of (plansRes.data ?? []) as any[]) {
-      const sessions: any[] = Array.isArray(plan.payload?.sessions) ? plan.payload.sessions : [];
-      for (const sess of sessions) {
-        if (!sess?.scheduled_date) continue;
-        const d = new Date(`${sess.scheduled_date}T00:00:00`);
-        if (d < today) continue;
-        const diff = Math.floor((d.getTime() - today.getTime()) / 86400000);
-        if (diff >= data.horizon_days) continue;
-        const targets = plan.user_id
-          ? [plan.user_id]
-          : plan.team_id
-          ? teamMemberships.filter((tm) => tm.team_id === plan.team_id).map((tm) => tm.user_id)
-          : [];
-        for (const uid of targets) {
-          rows.push({
-            organization_id: orgId,
-            team_id: plan.team_id ?? null,
-            user_id: uid,
-            task_type: "athletic_training",
-            title: sess.title || plan.name || "Athletic Training",
-            subtitle: sess.subtitle ?? null,
-            scheduled_for: combineDateTime(sess.scheduled_date, sess.time ?? "17:00"),
-            scheduled_date: sess.scheduled_date,
-            status: "open",
-            source_type: "athletic_plan",
-            source_id: plan.id,
-            duration_min: sess.duration_min ?? null,
-            link_target: null,
-            payload: { session: sess },
-          });
-        }
-      }
-    }
-
-    if (rows.length === 0) return { inserted: 0, considered: 0 };
-
-    // Insert with idempotent conflict handling (unique partial index)
-    const { error, count } = await supabase
-      .from("organization_tasks")
-      .upsert(rows, {
-        onConflict: "organization_id,user_id,task_type,source_type,source_id,scheduled_date",
-        ignoreDuplicates: true,
-        count: "exact",
-      });
-    if (error) throw new Error(error.message);
-    return { inserted: count ?? 0, considered: rows.length };
+    const result = await runOrgTaskEngineWithClient(supabase, orgId, data.horizon_days);
+    return {
+      inserted: result.created_task_count,
+      considered: result.created_task_count + result.skipped_duplicate_count,
+      removed_stale: result.removed_stale_count,
+      errors: result.error_details,
+    };
   });
+
 
 /** List tasks for a given day (org-wide) — coach only. */
 export const listOrgTasksForDay = createServerFn({ method: "GET" })

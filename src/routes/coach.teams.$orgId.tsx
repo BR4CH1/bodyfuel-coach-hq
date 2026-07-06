@@ -13,6 +13,21 @@ import {
   getOrgAthletesOnboardingAudit,
   listOrgStaffWithProfiles,
 } from "@/lib/organizations/task-engine.functions";
+import {
+  listOrgChallenges,
+  createOrgChallenge,
+  listChallengeRules,
+  upsertChallengeRule,
+  awardChallengeBonus,
+  listOrgCommunityPosts,
+  createOrgCommunityPost,
+  listOrgAthleticPlans,
+  createOrgAthleticPlan,
+  updateOrgAthleticPlanStatus,
+  addOrgStaff,
+  removeOrgStaff,
+  STAFF_PRESETS,
+} from "@/lib/organizations/operating-loop.functions";
 
 export const Route = createFileRoute("/coach/teams/$orgId")({
   head: () => ({ meta: [{ title: "Organisation — BODYFUEL Coach" }] }),
@@ -165,31 +180,13 @@ function CoachOrgDetail() {
         )}
         {tab === "training" && <TrainingTab orgId={orgId} />}
         {tab === "tasks" && <TasksTab orgId={orgId} teams={data.teams as any[]} />}
-        {tab === "challenges" && (
-          <div className="space-y-3">
-            {data.active_challenge ? (
-              <Card title={(data.active_challenge as any).name}>
-                <div className="text-xs text-muted-foreground">
-                  {(data.active_challenge as any).starts_at && (
-                    <>ab {new Date((data.active_challenge as any).starts_at).toLocaleDateString("de-DE")} </>
-                  )}
-                  {(data.active_challenge as any).ends_at && (
-                    <>bis {new Date((data.active_challenge as any).ends_at).toLocaleDateString("de-DE")}</>
-                  )}
-                </div>
-              </Card>
-            ) : (
-              <Empty>Keine aktive Challenge. Es existieren aktuell keine Legacy-Bulls-Challenge-Punkte, die migriert werden müssten — Historie startet bewusst leer.</Empty>
-            )}
-          </div>
-        )}
+        {tab === "challenges" && <ChallengesTab orgId={orgId} teams={data.teams as any[]} />}
         {tab === "ranking" && (
-          <Empty>Ranking spiegelt Punkte aus aktiven Org-Challenges. Ohne aktive Challenge leer.</Empty>
+          <Empty>Ranking spiegelt Punkte aus aktiven Org-Challenges (Ledger `organization_challenge_point_events`). Ohne aktive Challenge leer.</Empty>
         )}
-        {tab === "community" && (
-          <Empty>Community-Board folgt (organisationsintern, Members/Staff/Challenges).</Empty>
-        )}
+        {tab === "community" && <CommunityTab orgId={orgId} />}
         {tab === "staff" && <StaffTab orgId={orgId} />}
+
         {tab === "settings" && (
           <ul className="grid gap-2 sm:grid-cols-2">
             {features.map((f) => (
@@ -306,10 +303,12 @@ function TrainingTab({ orgId }: { orgId: string }) {
         <button
           onClick={() => regenMut.mutate()}
           disabled={regenMut.isPending}
-          className="ml-auto rounded bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground disabled:opacity-50"
+          className="ml-auto rounded bg-primary px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary-foreground disabled:opacity-50"
+          title="Manueller Fallback. Die tägliche Synchronisierung läuft automatisch via pg_cron um 03:00 UTC."
         >
-          Task Engine ausführen
+          {regenMut.isPending ? "Läuft…" : "Tasks jetzt synchronisieren"}
         </button>
+
       </div>
       {msg && <div className="text-xs text-green-500">{msg}</div>}
       <Card title="Team Training Schedule (Wochenplan)">
@@ -527,3 +526,264 @@ function Empty({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+
+// ============================================================
+// CHALLENGES TAB
+// ============================================================
+function ChallengesTab({ orgId, teams }: { orgId: string; teams: any[] }) {
+  const qc = useQueryClient();
+  const listFn = useServerFn(listOrgChallenges);
+  const createFn = useServerFn(createOrgChallenge);
+  const { data } = useQuery({
+    queryKey: ["org-challenges", orgId],
+    queryFn: () => listFn({ data: { organization_id: orgId } }),
+  });
+  const [show, setShow] = useState(false);
+  const [name, setName] = useState("");
+  const [desc, setDesc] = useState("");
+  const [start, setStart] = useState(new Date().toISOString().slice(0, 10));
+  const [end, setEnd] = useState("");
+  const [teamId, setTeamId] = useState<string>("");
+  const [selected, setSelected] = useState<string | null>(null);
+  const createMut = useMutation({
+    mutationFn: () =>
+      createFn({
+        data: {
+          organization_id: orgId,
+          name,
+          description: desc || null,
+          starts_at: new Date(`${start}T00:00:00Z`).toISOString(),
+          ends_at: end ? new Date(`${end}T23:59:59Z`).toISOString() : null,
+          team_id: teamId || null,
+          visibility_scope: "organization",
+        },
+      }),
+    onSuccess: () => {
+      setShow(false);
+      setName("");
+      setDesc("");
+      setEnd("");
+      qc.invalidateQueries({ queryKey: ["org-challenges", orgId] });
+    },
+  });
+  const challenges = ((data as any)?.challenges ?? []) as any[];
+  const now = new Date();
+  const active = challenges.filter((c) => c.status === "active" && (!c.ends_at || new Date(c.ends_at) >= now));
+  const planned = challenges.filter((c) => c.status === "active" && new Date(c.starts_at) > now);
+  const past = challenges.filter((c) => c.status === "archived" || (c.ends_at && new Date(c.ends_at) < now));
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold">Organization Challenges</h3>
+        <button
+          onClick={() => setShow((v) => !v)}
+          className="rounded bg-primary px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary-foreground"
+        >
+          + Challenge erstellen
+        </button>
+      </div>
+      {show && (
+        <div className="rounded-lg border border-border bg-card p-3 text-sm">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" className="rounded border border-border bg-background px-2 py-1" />
+            <select value={teamId} onChange={(e) => setTeamId(e.target.value)} className="rounded border border-border bg-background px-2 py-1">
+              <option value="">Organisationsweit</option>
+              {teams.map((t) => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+            <input type="date" value={start} onChange={(e) => setStart(e.target.value)} className="rounded border border-border bg-background px-2 py-1" />
+            <input type="date" value={end} onChange={(e) => setEnd(e.target.value)} className="rounded border border-border bg-background px-2 py-1" />
+            <textarea value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Beschreibung" rows={2} className="sm:col-span-2 rounded border border-border bg-background px-2 py-1" />
+          </div>
+          <button
+            onClick={() => name.trim() && createMut.mutate()}
+            disabled={!name.trim() || createMut.isPending}
+            className="mt-2 rounded bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground disabled:opacity-50"
+          >
+            Speichern
+          </button>
+        </div>
+      )}
+      <ChallengeSection title="AKTIV" items={active} onSelect={setSelected} />
+      <ChallengeSection title="GEPLANT" items={planned} onSelect={setSelected} />
+      <ChallengeSection title="ABGESCHLOSSEN" items={past} onSelect={setSelected} />
+      {selected && <ChallengeRuleEditor challengeId={selected} onClose={() => setSelected(null)} />}
+    </div>
+  );
+}
+
+function ChallengeSection({ title, items, onSelect }: { title: string; items: any[]; onSelect: (id: string) => void }) {
+  return (
+    <div>
+      <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{title}</div>
+      {items.length === 0 ? (
+        <Empty>Keine Einträge.</Empty>
+      ) : (
+        <ul className="space-y-2">
+          {items.map((c) => (
+            <li key={c.id} className="flex items-center justify-between rounded-lg border border-border bg-card p-3 text-sm">
+              <div>
+                <div className="font-semibold">{c.name}</div>
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  {c.starts_at && new Date(c.starts_at).toLocaleDateString("de-DE")}
+                  {c.ends_at && ` – ${new Date(c.ends_at).toLocaleDateString("de-DE")}`}
+                </div>
+              </div>
+              <button onClick={() => onSelect(c.id)} className="rounded border border-border px-2 py-1 text-[10px] uppercase tracking-wider">
+                Rules
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function ChallengeRuleEditor({ challengeId, onClose }: { challengeId: string; onClose: () => void }) {
+  const qc = useQueryClient();
+  const listFn = useServerFn(listChallengeRules);
+  const saveFn = useServerFn(upsertChallengeRule);
+  const bonusFn = useServerFn(awardChallengeBonus);
+  const { data } = useQuery({
+    queryKey: ["challenge-rules", challengeId],
+    queryFn: () => listFn({ data: { challenge_id: challengeId } }),
+  });
+  const [ruleType, setRuleType] = useState("daily_checkin");
+  const [title, setTitle] = useState("");
+  const [points, setPoints] = useState(2);
+  const [frequency, setFrequency] = useState("daily");
+  const [bonusUser, setBonusUser] = useState("");
+  const [bonusPts, setBonusPts] = useState(5);
+  const [bonusReason, setBonusReason] = useState("");
+  const saveMut = useMutation({
+    mutationFn: () =>
+      saveFn({
+        data: { challenge_id: challengeId, rule_type: ruleType, title: title || ruleType, points, frequency },
+      }),
+    onSuccess: () => {
+      setTitle("");
+      qc.invalidateQueries({ queryKey: ["challenge-rules", challengeId] });
+    },
+  });
+  const bonusMut = useMutation({
+    mutationFn: () => bonusFn({ data: { challenge_id: challengeId, user_id: bonusUser, points: bonusPts, reason: bonusReason || undefined } }),
+    onSuccess: () => {
+      setBonusUser("");
+      setBonusReason("");
+    },
+  });
+  return (
+    <div className="rounded-lg border border-primary bg-card p-3">
+      <div className="mb-2 flex items-center justify-between">
+        <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Rules</div>
+        <button onClick={onClose} className="text-xs text-muted-foreground">✕</button>
+      </div>
+      <ul className="mb-3 space-y-1 text-sm">
+        {((data as any)?.rules ?? []).map((r: any) => (
+          <li key={r.id} className="flex justify-between rounded border border-border bg-background px-2 py-1">
+            <span>{r.title} <span className="text-muted-foreground">({r.rule_type})</span></span>
+            <span className="font-semibold">+{r.points} · {r.frequency}</span>
+          </li>
+        ))}
+        {(!(data as any)?.rules?.length) && <li className="text-xs text-muted-foreground">Noch keine Regeln.</li>}
+      </ul>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <select value={ruleType} onChange={(e) => setRuleType(e.target.value)} className="rounded border border-border bg-background px-2 py-1 text-sm">
+          {["daily_task","daily_checkin","training_completed","athletic_training_completed","team_training_attendance","hydration","nutrition","recovery","manual_bonus","custom"].map((r) => (
+            <option key={r} value={r}>{r}</option>
+          ))}
+        </select>
+        <select value={frequency} onChange={(e) => setFrequency(e.target.value)} className="rounded border border-border bg-background px-2 py-1 text-sm">
+          <option value="daily">daily</option>
+          <option value="per_completion">per_completion</option>
+          <option value="once">once</option>
+          <option value="weekly">weekly</option>
+        </select>
+        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Titel" className="rounded border border-border bg-background px-2 py-1 text-sm" />
+        <input type="number" value={points} onChange={(e) => setPoints(parseInt(e.target.value, 10) || 0)} placeholder="Punkte" className="rounded border border-border bg-background px-2 py-1 text-sm" />
+      </div>
+      <button onClick={() => saveMut.mutate()} disabled={saveMut.isPending} className="mt-2 rounded bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground disabled:opacity-50">
+        Rule speichern
+      </button>
+
+      <div className="mt-4 border-t border-border pt-3">
+        <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Manual Bonus</div>
+        <div className="grid gap-2 sm:grid-cols-3">
+          <input value={bonusUser} onChange={(e) => setBonusUser(e.target.value)} placeholder="User-ID" className="rounded border border-border bg-background px-2 py-1 text-xs" />
+          <input type="number" value={bonusPts} onChange={(e) => setBonusPts(parseInt(e.target.value, 10) || 0)} placeholder="Punkte" className="rounded border border-border bg-background px-2 py-1 text-xs" />
+          <input value={bonusReason} onChange={(e) => setBonusReason(e.target.value)} placeholder="Grund" className="rounded border border-border bg-background px-2 py-1 text-xs" />
+        </div>
+        <button onClick={() => bonusUser && bonusMut.mutate()} disabled={!bonusUser || bonusMut.isPending} className="mt-2 rounded border border-border px-3 py-1 text-xs disabled:opacity-50">
+          Bonus vergeben
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// COMMUNITY TAB
+// ============================================================
+function CommunityTab({ orgId }: { orgId: string }) {
+  const qc = useQueryClient();
+  const listFn = useServerFn(listOrgCommunityPosts);
+  const createFn = useServerFn(createOrgCommunityPost);
+  // We need the slug — fetch via org-detail query already loaded; re-derive.
+  const { data: detail } = useQuery({
+    queryKey: ["coach-org-detail", orgId],
+    queryFn: () => Promise.resolve(null), // uses cached data
+    enabled: false,
+  });
+  const slug = ((detail as any)?.org?.slug as string) ?? "";
+  const { data } = useQuery({
+    queryKey: ["org-community-coach", orgId],
+    queryFn: () => listFn({ data: { slug: slug || "" } }),
+    enabled: !!slug,
+  });
+  const [content, setContent] = useState("");
+  const [postType, setPostType] = useState("staff_update");
+  const mut = useMutation({
+    mutationFn: () => createFn({ data: { organization_id: orgId, content, post_type: postType } }),
+    onSuccess: () => {
+      setContent("");
+      qc.invalidateQueries({ queryKey: ["org-community-coach", orgId] });
+    },
+  });
+  if (!slug) return <Empty>Community-Feed lädt…</Empty>;
+  const posts = ((data as any)?.posts ?? []) as any[];
+  return (
+    <div className="space-y-3">
+      <div className="rounded-lg border border-border bg-card p-3">
+        <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Neuer Beitrag</div>
+        <select value={postType} onChange={(e) => setPostType(e.target.value)} className="mb-2 w-full rounded border border-border bg-background px-2 py-1 text-xs">
+          {["staff_update","announcement","training","challenge","achievement","general"].map((t) => (
+            <option key={t} value={t}>{t}</option>
+          ))}
+        </select>
+        <textarea value={content} onChange={(e) => setContent(e.target.value)} rows={3} className="w-full rounded border border-border bg-background px-2 py-1 text-sm" placeholder="Inhalt" />
+        <button onClick={() => content.trim() && mut.mutate()} disabled={!content.trim() || mut.isPending} className="mt-2 rounded bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground disabled:opacity-50">
+          Posten
+        </button>
+      </div>
+      {posts.length === 0 ? (
+        <Empty>Noch keine Beiträge.</Empty>
+      ) : (
+        <ul className="space-y-2">
+          {posts.map((p) => (
+            <li key={p.id} className="rounded-lg border border-border bg-card p-3 text-sm">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span className="font-semibold">{p.author_name}</span>
+                <span>{new Date(p.created_at).toLocaleString("de-DE")}</span>
+              </div>
+              <div className="mt-1 whitespace-pre-wrap">{p.content}</div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
