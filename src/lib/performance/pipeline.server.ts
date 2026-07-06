@@ -114,7 +114,7 @@ export async function runPerformanceProfileCalculation(
     const selectedByTestKey = new Map<string, number | null>();
     for (const t of tests ?? []) {
       const attempts = attemptsByTest.get(t.id) ?? [];
-      const sel = selectPerformanceResult({
+      const sel = computeTestResult({
         attempts: attempts.map((a) => ({
           id: a.id,
           raw_value: Number(a.raw_value),
@@ -125,8 +125,11 @@ export async function runPerformanceProfileCalculation(
         method: (t.result_selection as ResultSelectionMethod) ?? "best",
         direction: (t.direction as Direction) ?? "higher_is_better",
         unit: t.unit,
+        config: (t.config as TestConfig) ?? null,
       });
-      selectedByTestKey.set(t.key, sel.status === "OK" ? sel.selected_value : null);
+      // Only OK counts as a final selected value — PROVISIONAL/INCOMPLETE/REVIEW never
+      // feed metrics/scores/domains. This is the RAST safeguard.
+      selectedByTestKey.set(t.key, sel.test_status === "OK" ? sel.selected_value : null);
     }
 
     // 6b. Metric values (direct + derived)
