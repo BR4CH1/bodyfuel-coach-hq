@@ -896,55 +896,124 @@ function AddStaffModal({
 
         <div>
           <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-            Rolle (Preset)
+            Funktion im Verein
           </label>
           <select
             value={presetKey}
             onChange={(e) => applyPreset(e.target.value as any)}
             className="mt-1 w-full rounded border border-border bg-background px-2 py-1"
           >
-            {Object.keys(STAFF_PRESETS).map((k) => (
+            {(Object.keys(STAFF_PRESETS) as PresetKey[]).map((k) => (
               <option key={k} value={k}>
-                {k.replace(/_/g, " ")}
+                {PRESET_LABELS[k].label}
               </option>
             ))}
           </select>
+          <div className="mt-1 text-[10px] text-muted-foreground">
+            {PRESET_LABELS[presetKey as PresetKey]?.description}
+          </div>
         </div>
 
         <div>
           <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-            Team Scope {preset.scope_hint === "team" ? "(empfohlen)" : "(optional)"}
+            Zuständigkeit {preset.scope_hint === "team" ? "(empfohlen: einzelnes Team)" : "(optional)"}
           </label>
           <select
             value={teamId ?? ""}
             onChange={(e) => setTeamId(e.target.value || null)}
             className="mt-1 w-full rounded border border-border bg-background px-2 py-1"
           >
-            <option value="">Organisationsweit</option>
+            <option value="">Gesamter Verein</option>
             {teams.map((t) => (
               <option key={t.id} value={t.id}>
-                {t.name}
+                Team: {t.name}
               </option>
             ))}
           </select>
+          <div className="mt-1 text-[10px] text-muted-foreground">
+            Die Zuständigkeit legt fest, für welche Teams diese Person Zugriff erhält.
+          </div>
         </div>
 
         <div>
           <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-            Permissions
+            Berechtigungen
           </label>
-          <div className="mt-1 grid grid-cols-2 gap-1">
-            {ALL_PERMISSIONS.map((p) => (
-              <label key={p} className="flex items-center gap-2 text-[11px]">
-                <input type="checkbox" checked={perms.includes(p)} onChange={() => toggle(p)} />
-                <span>{p}</span>
-              </label>
-            ))}
-          </div>
           <div className="mt-1 text-[10px] text-muted-foreground">
-            Presets sind Vorschläge. Individuell anpassbar.
+            Die Funktion schlägt passende Berechtigungen vor. Du kannst sie individuell anpassen.
+          </div>
+          <ul className="mt-2 space-y-2">
+            {(Object.keys(PERMISSION_LABELS) as (keyof typeof PERMISSION_LABELS)[]).map((p) => (
+              <li key={p} className="rounded border border-border bg-background p-2">
+                <label className="flex cursor-pointer items-start gap-2 text-[12px]">
+                  <input
+                    type="checkbox"
+                    checked={perms.includes(p)}
+                    onChange={() => toggle(p)}
+                    className="mt-0.5"
+                  />
+                  <span>
+                    <span className="font-semibold">{PERMISSION_LABELS[p].label}</span>
+                    <span className="block text-[10px] text-muted-foreground">
+                      {PERMISSION_LABELS[p].description}
+                    </span>
+                  </span>
+                </label>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="rounded-lg border border-border bg-background p-3">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            Zusammenfassung
+          </div>
+          <div className="mt-1 text-sm font-semibold">
+            {PRESET_LABELS[presetKey as PresetKey]?.label}
+          </div>
+          <div className="mt-2 text-[11px]">
+            <span className="text-muted-foreground">Zuständigkeit: </span>
+            {teamId
+              ? `Team: ${teams.find((t) => t.id === teamId)?.name ?? "—"}`
+              : "Gesamter Verein"}
+          </div>
+          <div className="mt-2">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Zugriff
+            </div>
+            <ul className="mt-1 space-y-0.5 text-[11px]">
+              {perms.length === 0 ? (
+                <li className="text-muted-foreground">Keine Berechtigungen ausgewählt.</li>
+              ) : (
+                perms.map((p) => (
+                  <li key={p}>✓ {permissionLabel(p)}</li>
+                ))
+              )}
+            </ul>
+          </div>
+          {(() => {
+            const missing = (Object.keys(PERMISSION_LABELS) as string[]).filter(
+              (p) => !perms.includes(p),
+            );
+            if (!missing.length) return null;
+            return (
+              <div className="mt-2">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Kein Zugriff
+                </div>
+                <ul className="mt-1 space-y-0.5 text-[11px] text-muted-foreground">
+                  {missing.map((p) => (
+                    <li key={p}>– {permissionLabel(p)}</li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })()}
+          <div className="mt-2 text-[10px] text-muted-foreground">
+            Berechtigungen bleiben individuell anpassbar.
           </div>
         </div>
+
 
         {err && <div className="text-xs text-red-500">{err}</div>}
 
