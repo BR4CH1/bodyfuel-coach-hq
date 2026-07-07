@@ -1,12 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Utensils, Heart, ShoppingCart, Carrot, Sparkles } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { ChevronLeft, ChevronRight, Utensils, Heart, ShoppingCart, Carrot, Sparkles, RefreshCw } from "lucide-react";
 import { useSession } from "@/lib/bodyfuel/session";
 import { useTrial } from "@/hooks/use-trial";
 import { getMySmartProfile } from "@/lib/smart-profile.functions";
 import { getOrgHomeData } from "@/lib/organizations/athlete.functions";
+import { enqueueAutopilotJob, getMyAutopilotJob } from "@/lib/autopilot-jobs.functions";
 import { OrgAthleteLayout } from "@/components/organizations/OrgAthleteLayout";
+import { AutopilotStatusCard } from "@/components/bodyfuel/AutopilotStatusCard";
 import { MacroTargetsCard } from "@/components/bodyfuel/MacroTargetsCard";
 import { PlanContentView } from "@/components/bodyfuel/PlanContentView";
 import { WeekScheduleCard } from "@/components/bodyfuel/WeekScheduleCard";
@@ -15,6 +18,7 @@ import { DietPreferencesCard } from "@/components/bodyfuel/DietPreferencesCard";
 import { MealWishesCard } from "@/components/bodyfuel/MealWishesCard";
 import { CustomMealsCard } from "@/components/bodyfuel/CustomMealsCard";
 import { TrialNutritionPlan } from "@/components/bodyfuel/TrialPlanView";
+import { Button } from "@/components/ui/button";
 import { Route as OrgLayoutRoute } from "./$orgSlug";
 
 export const Route = createFileRoute("/$orgSlug/nutrition/")({
@@ -44,6 +48,24 @@ function OrgNutrition() {
   const needsTrainingDays =
     !!profile?.completed_at && !(profile?.training_weekdays?.length);
 
+  const qc = useQueryClient();
+  const fetchJob = useServerFn(getMyAutopilotJob);
+  const { data: job } = useQuery({
+    queryKey: ["autopilot-job", supabaseUser?.id ?? "anon"],
+    queryFn: () => fetchJob(),
+    enabled: !!supabaseUser?.id,
+  });
+  const enqueueFn = useServerFn(enqueueAutopilotJob);
+  const regen = useMutation({
+    mutationFn: () => enqueueFn({ data: { mode: "nutrition_only" } }),
+    onSuccess: () => {
+      toast.success("Neuer Ernährungsplan wird im Hintergrund erstellt.");
+      qc.invalidateQueries({ queryKey: ["autopilot-job"] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Konnte nicht gestartet werden"),
+  });
+  const jobRunning = job?.status === "pending" || job?.status === "running";
+
   const primary = org.primary_color ?? "#e11d48";
 
   return (
@@ -64,6 +86,26 @@ function OrgNutrition() {
       </header>
 
       <main className="mx-auto max-w-md space-y-5 px-4 py-5">
+        {supabaseUser?.id && <AutopilotStatusCard userId={supabaseUser.id} />}
+        {supabaseUser?.id && !jobRunning && (
+          <div className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4">
+            <div>
+              <div className="text-sm font-bold">Smart-Ernährungsplan</div>
+              <div className="text-xs text-muted-foreground">
+                Neu generieren, wenn sich Ziele, Gewicht oder Vorlieben geändert haben.
+              </div>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => regen.mutate()}
+              disabled={regen.isPending}
+            >
+              <RefreshCw className={`mr-2 h-4 w-4 ${regen.isPending ? "animate-spin" : ""}`} />
+              {regen.isPending ? "Starte…" : "Neu"}
+            </Button>
+          </div>
+        )}
         {needsOnboarding && (
           <Link
             to="/onboarding/smart-nutrition"

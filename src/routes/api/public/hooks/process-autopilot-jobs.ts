@@ -65,9 +65,20 @@ export const Route = createFileRoute("/api/public/hooks/process-autopilot-jobs")
               });
               const planId = (res as any)?.plan_id ?? (res as any)?.id ?? null;
               await activateLatestPlan(supabaseAdmin, job.user_id, "nutrition");
+              // nutrition_only: skip training step and mark done.
+              const isNutritionOnly = (job as any).mode === "nutrition_only";
               await supabaseAdmin
                 .from("smart_autopilot_jobs")
-                .update({ step: "training", nutrition_plan_id: planId })
+                .update(
+                  isNutritionOnly
+                    ? {
+                        status: "done",
+                        step: "done",
+                        nutrition_plan_id: planId,
+                        finished_at: new Date().toISOString(),
+                      }
+                    : { step: "training", nutrition_plan_id: planId },
+                )
                 .eq("id", job.id);
               results.push({ id: job.id, step: "nutrition", ok: true });
               continue;

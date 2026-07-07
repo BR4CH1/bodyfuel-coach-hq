@@ -375,7 +375,71 @@ export const completeOrganizationOnboardingV2 = createServerFn({ method: "POST" 
       .eq("user_id", userId)
       .eq("organization_id", data.organization_id);
     if (error) throw new Error(error.message);
-    return { ok: true };
+
+    // Smart-Ernährungsplan-Generierung für Team-Athleten anstoßen:
+    //  1) minimales smart_nutrition_profile setzen (completed_at + Trainingstage)
+    //  2) Autopilot-Job mit mode='nutrition_only' in die Queue legen.
+    // Der Coach betreut den Athletik-/Trainingsplan im Vereinskontext,
+    // deshalb wird KEIN Trainingsplan automatisch generiert.
+    let autopilot_job_id: string | null = null;
+    try {
+      const dayMap: Record<number, string> = {
+        1: "monday",
+        2: "tuesday",
+        3: "wednesday",
+        4: "thursday",
+        5: "friday",
+        6: "saturday",
+        0: "sunday",
+      };
+      const training_weekdays =
+        data.available_training_days && data.available_training_days.length
+          ? data.available_training_days
+              .map((n) => dayMap[n])
+              .filter((v): v is string => !!v)
+          : null;
+
+      const snpPatch: Record<string, any> = {
+        user_id: userId,
+        completed_at: new Date().toISOString(),
+        auto_publish: true,
+      };
+      if (training_weekdays) snpPatch.training_weekdays = training_weekdays;
+
+      await supabase
+        .from("smart_nutrition_profile")
+        .upsert(snpPatch as any, { onConflict: "user_id" });
+
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: existing } = await supabaseAdmin
+        .from("smart_autopilot_jobs")
+        .select("id")
+        .eq("user_id", userId)
+        .in("status", ["pending", "running"])
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (existing?.id) {
+        autopilot_job_id = existing.id;
+      } else {
+        const { data: created } = await supabaseAdmin
+          .from("smart_autopilot_jobs")
+          .insert({
+            user_id: userId,
+            status: "pending",
+            step: "nutrition",
+            mode: "nutrition_only",
+          } as any)
+          .select("id")
+          .single();
+        autopilot_job_id = created?.id ?? null;
+      }
+    } catch (e) {
+      // Onboarding nicht blockieren, wenn Queue-Insert fehlschlägt.
+      console.error("autopilot enqueue failed", e);
+    }
+
+    return { ok: true, autopilot_job_id };
   });
 
 /** Staff-/Coach-Onboarding: Basisdaten + optionale Funktionsbeschreibung.

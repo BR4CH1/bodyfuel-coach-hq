@@ -28,9 +28,11 @@ export const getMyAutopilotJob = createServerFn({ method: "GET" })
  */
 export const enqueueAutopilotJob = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((d: { mode?: "full" | "nutrition_only" } | undefined) => d ?? {})
+  .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const mode = data?.mode ?? "full";
 
     const { data: existing } = await supabase
       .from("smart_autopilot_jobs")
@@ -42,11 +44,11 @@ export const enqueueAutopilotJob = createServerFn({ method: "POST" })
       .maybeSingle();
     if (existing?.id) return { job_id: existing.id, reused: true };
 
-    const { data, error } = await supabaseAdmin
+    const { data: created, error } = await supabaseAdmin
       .from("smart_autopilot_jobs")
-      .insert({ user_id: userId, status: "pending", step: "nutrition" })
+      .insert({ user_id: userId, status: "pending", step: "nutrition", mode } as any)
       .select("id")
       .single();
     if (error) throw new Error(error.message);
-    return { job_id: data.id, reused: false };
+    return { job_id: created.id, reused: false };
   });
