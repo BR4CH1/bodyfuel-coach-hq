@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { assertCoachOrOrgStaffForAthlete } from "@/lib/organizations/org-coach-access.server";
+import { assertCoachOrOrgStaffForAthlete } from "@/lib/organizations/org-coach-access";
 
 async function assertCoach(supabase: any, userId: string) {
   const { data } = await supabase.rpc("has_role", { _user_id: userId, _role: "coach" });
