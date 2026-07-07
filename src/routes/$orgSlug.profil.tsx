@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { ChevronLeft } from "lucide-react";
 import { useSession } from "@/lib/bodyfuel/session";
+import { useEntitlements } from "@/lib/bodyfuel/entitlements";
 import { getOrgHomeData } from "@/lib/organizations/athlete.functions";
 import { OrgAthleteLayout } from "@/components/organizations/OrgAthleteLayout";
 import { Route as OrgLayoutRoute } from "./$orgSlug";
