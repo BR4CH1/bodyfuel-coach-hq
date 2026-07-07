@@ -65,11 +65,11 @@ export function useEntitlements(): Entitlements {
           .eq("is_active", true),
         supabase
           .from("organization_memberships")
-          .select("organization_id, status, organization:organizations!inner(slug, status)")
+          .select("organization_id, status, organization:organizations!inner(id, slug, status)")
           .eq("user_id", uid),
         supabase
           .from("staff_assignments")
-          .select("organization_id, organization:organizations!inner(slug, status)")
+          .select("organization_id, role, permissions, organization:organizations!inner(id, slug, status)")
           .eq("user_id", uid),
       ]);
 
@@ -85,23 +85,47 @@ export function useEntitlements(): Entitlements {
 
       const memRows = (orgMemRes.data ?? []) as Array<{
         status: string | null;
-        organization: { slug: string; status: string } | null;
+        organization: { id: string; slug: string; status: string } | null;
       }>;
-      const activeMemSlugs = memRows
+      const activeMems = memRows
         .filter((r) => (!r.status || r.status === "active") && r.organization?.status === "active")
-        .map((r) => r.organization!.slug);
+        .map((r) => r.organization!);
 
       const staffRows = (staffRes.data ?? []) as Array<{
-        organization: { slug: string; status: string } | null;
+        role: string | null;
+        permissions: string[] | null;
+        organization: { id: string; slug: string; status: string } | null;
       }>;
-      const staffSlugs = staffRows
-        .filter((r) => r.organization?.status === "active")
-        .map((r) => r.organization!.slug);
+      const activeStaff = staffRows.filter((r) => r.organization?.status === "active");
 
-      const primaryOrgSlug = activeMemSlugs[0] ?? staffSlugs[0] ?? null;
+      const primaryOrg = activeMems[0] ?? activeStaff[0]?.organization ?? null;
+      const primaryOrgSlug = primaryOrg?.slug ?? null;
+      const primaryOrgId = primaryOrg?.id ?? null;
       const hasTeamAccess = primaryOrgSlug !== null;
 
-      return { hasBodyfuelSmart, hasBodyfuelCoaching, hasTeamAccess, primaryOrgSlug };
+      // Staff-Rolle im primären Verein bestimmen (Priorität:
+      // organization_admin > head_coach > team_coach > staff)
+      const rank = (r: string | null, perms: string[] | null): number => {
+        if (r === "organization_admin") return 4;
+        if (r === "coach" && (perms ?? []).includes("manage_organization")) return 3;
+        if (r === "coach") return 2;
+        if (r === "staff") return 1;
+        return 0;
+      };
+      const staffInPrimary = activeStaff
+        .filter((r) => r.organization?.id === primaryOrgId)
+        .sort((a, b) => rank(b.role, b.permissions) - rank(a.role, a.permissions))[0];
+      let primaryStaffRole: StaffRoleKey | null = null;
+      if (staffInPrimary) {
+        const rk = rank(staffInPrimary.role, staffInPrimary.permissions);
+        primaryStaffRole =
+          rk === 4 ? "organization_admin" :
+          rk === 3 ? "head_coach" :
+          rk === 2 ? "team_coach" :
+          rk === 1 ? "staff" : null;
+      }
+
+      return { hasBodyfuelSmart, hasBodyfuelCoaching, hasTeamAccess, primaryOrgSlug, primaryOrgId, primaryStaffRole };
     },
   });
 
@@ -116,6 +140,8 @@ export function useEntitlements(): Entitlements {
       hasBodyfuelCoaching: false,
       hasTeamAccess: false,
       primaryOrgSlug: null as string | null,
+      primaryOrgId: null as string | null,
+      primaryStaffRole: null as StaffRoleKey | null,
     };
   const hasAny = d.hasBodyfuelSmart || d.hasBodyfuelCoaching;
 
@@ -127,6 +153,8 @@ export function useEntitlements(): Entitlements {
     hasTeamAccess: d.hasTeamAccess,
     isPlatformCoach: isCoach,
     primaryOrgSlug: d.primaryOrgSlug,
+    primaryOrgId: d.primaryOrgId,
+    primaryStaffRole: d.primaryStaffRole,
     loading: false,
   };
 }
