@@ -17,7 +17,7 @@ import { CustomMealsCard } from "@/components/bodyfuel/CustomMealsCard";
 import { TrialNutritionPlan } from "@/components/bodyfuel/TrialPlanView";
 import { Route as OrgLayoutRoute } from "./$orgSlug";
 
-export const Route = createFileRoute("/$orgSlug/nutrition")({
+export const Route = createFileRoute("/$orgSlug/nutrition/")({
   head: () => ({ meta: [{ title: "Ernährung — BODYFUEL" }] }),
   component: OrgNutrition,
 });

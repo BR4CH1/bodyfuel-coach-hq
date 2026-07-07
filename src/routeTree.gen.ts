@@ -70,7 +70,6 @@ import { Route as BullsWeightRouteImport } from './routes/bulls.weight'
 import { Route as BullsTrainingRouteImport } from './routes/bulls.training'
 import { Route as BullsRecoveryRouteImport } from './routes/bulls.recovery'
 import { Route as BullsPhotosRouteImport } from './routes/bulls.photos'
-import { Route as BullsNutritionRouteImport } from './routes/bulls.nutrition'
 import { Route as BullsBenchmarksRouteImport } from './routes/bulls.benchmarks'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
@@ -79,12 +78,13 @@ import { Route as OrgSlugRankingRouteImport } from './routes/$orgSlug.ranking'
 import { Route as OrgSlugProfilRouteImport } from './routes/$orgSlug.profil'
 import { Route as OrgSlugPerformanceRouteImport } from './routes/$orgSlug.performance'
 import { Route as OrgSlugOnboardingRouteImport } from './routes/$orgSlug.onboarding'
-import { Route as OrgSlugNutritionRouteImport } from './routes/$orgSlug.nutrition'
 import { Route as OrgSlugHomeRouteImport } from './routes/$orgSlug.home'
 import { Route as OrgSlugCommunityRouteImport } from './routes/$orgSlug.community'
 import { Route as TrackerAppIndexRouteImport } from './routes/tracker.app.index'
 import { Route as CoachTeamsIndexRouteImport } from './routes/coach.teams.index'
 import { Route as CoachCustomersIndexRouteImport } from './routes/coach.customers.index'
+import { Route as BullsNutritionIndexRouteImport } from './routes/bulls.nutrition.index'
+import { Route as OrgSlugNutritionIndexRouteImport } from './routes/$orgSlug.nutrition.index'
 import { Route as TrackerAppWeightRouteImport } from './routes/tracker.app.weight'
 import { Route as TrackerAppWaterRouteImport } from './routes/tracker.app.water'
 import { Route as TrackerAppTrainingRouteImport } from './routes/tracker.app.training'
@@ -436,11 +436,6 @@ const BullsPhotosRoute = BullsPhotosRouteImport.update({
   path: '/bulls/photos',
   getParentRoute: () => rootRouteImport,
 } as any)
-const BullsNutritionRoute = BullsNutritionRouteImport.update({
-  id: '/bulls/nutrition',
-  path: '/bulls/nutrition',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const BullsBenchmarksRoute = BullsBenchmarksRouteImport.update({
   id: '/bulls/benchmarks',
   path: '/bulls/benchmarks',
@@ -483,11 +478,6 @@ const OrgSlugOnboardingRoute = OrgSlugOnboardingRouteImport.update({
   path: '/onboarding',
   getParentRoute: () => OrgSlugRoute,
 } as any)
-const OrgSlugNutritionRoute = OrgSlugNutritionRouteImport.update({
-  id: '/nutrition',
-  path: '/nutrition',
-  getParentRoute: () => OrgSlugRoute,
-} as any)
 const OrgSlugHomeRoute = OrgSlugHomeRouteImport.update({
   id: '/home',
   path: '/home',
@@ -512,6 +502,16 @@ const CoachCustomersIndexRoute = CoachCustomersIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => CoachCustomersRoute,
+} as any)
+const BullsNutritionIndexRoute = BullsNutritionIndexRouteImport.update({
+  id: '/bulls/nutrition/',
+  path: '/bulls/nutrition/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OrgSlugNutritionIndexRoute = OrgSlugNutritionIndexRouteImport.update({
+  id: '/nutrition/',
+  path: '/nutrition/',
+  getParentRoute: () => OrgSlugRoute,
 } as any)
 const TrackerAppWeightRoute = TrackerAppWeightRouteImport.update({
   id: '/weight',
@@ -590,19 +590,19 @@ const CoachCustomersUserIdRoute = CoachCustomersUserIdRouteImport.update({
   getParentRoute: () => CoachCustomersRoute,
 } as any)
 const BullsNutritionTrackingRoute = BullsNutritionTrackingRouteImport.update({
-  id: '/tracking',
-  path: '/tracking',
-  getParentRoute: () => BullsNutritionRoute,
+  id: '/bulls/nutrition/tracking',
+  path: '/bulls/nutrition/tracking',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const BullsNutritionShoppingRoute = BullsNutritionShoppingRouteImport.update({
-  id: '/shopping',
-  path: '/shopping',
-  getParentRoute: () => BullsNutritionRoute,
+  id: '/bulls/nutrition/shopping',
+  path: '/bulls/nutrition/shopping',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const BullsNutritionFavoritesRoute = BullsNutritionFavoritesRouteImport.update({
-  id: '/favorites',
-  path: '/favorites',
-  getParentRoute: () => BullsNutritionRoute,
+  id: '/bulls/nutrition/favorites',
+  path: '/bulls/nutrition/favorites',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicGuardianConsentRoute =
   ApiPublicGuardianConsentRouteImport.update({
@@ -623,21 +623,21 @@ const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
 } as any)
 const OrgSlugNutritionTrackingRoute =
   OrgSlugNutritionTrackingRouteImport.update({
-    id: '/tracking',
-    path: '/tracking',
-    getParentRoute: () => OrgSlugNutritionRoute,
+    id: '/nutrition/tracking',
+    path: '/nutrition/tracking',
+    getParentRoute: () => OrgSlugRoute,
   } as any)
 const OrgSlugNutritionShoppingRoute =
   OrgSlugNutritionShoppingRouteImport.update({
-    id: '/shopping',
-    path: '/shopping',
-    getParentRoute: () => OrgSlugNutritionRoute,
+    id: '/nutrition/shopping',
+    path: '/nutrition/shopping',
+    getParentRoute: () => OrgSlugRoute,
   } as any)
 const OrgSlugNutritionFavoritesRoute =
   OrgSlugNutritionFavoritesRouteImport.update({
-    id: '/favorites',
-    path: '/favorites',
-    getParentRoute: () => OrgSlugNutritionRoute,
+    id: '/nutrition/favorites',
+    path: '/nutrition/favorites',
+    getParentRoute: () => OrgSlugRoute,
   } as any)
 const OrgSlugInviteTokenRoute = OrgSlugInviteTokenRouteImport.update({
   id: '/invite/$token',
@@ -784,7 +784,6 @@ export interface FileRoutesByFullPath {
   '/welcome': typeof WelcomeRoute
   '/$orgSlug/community': typeof OrgSlugCommunityRoute
   '/$orgSlug/home': typeof OrgSlugHomeRoute
-  '/$orgSlug/nutrition': typeof OrgSlugNutritionRouteWithChildren
   '/$orgSlug/onboarding': typeof OrgSlugOnboardingRoute
   '/$orgSlug/performance': typeof OrgSlugPerformanceRoute
   '/$orgSlug/profil': typeof OrgSlugProfilRoute
@@ -793,7 +792,6 @@ export interface FileRoutesByFullPath {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
-  '/bulls/nutrition': typeof BullsNutritionRouteWithChildren
   '/bulls/photos': typeof BullsPhotosRoute
   '/bulls/recovery': typeof BullsRecoveryRoute
   '/bulls/training': typeof BullsTrainingRoute
@@ -851,6 +849,8 @@ export interface FileRoutesByFullPath {
   '/tracker/app/training': typeof TrackerAppTrainingRoute
   '/tracker/app/water': typeof TrackerAppWaterRoute
   '/tracker/app/weight': typeof TrackerAppWeightRoute
+  '/$orgSlug/nutrition/': typeof OrgSlugNutritionIndexRoute
+  '/bulls/nutrition/': typeof BullsNutritionIndexRoute
   '/coach/customers/': typeof CoachCustomersIndexRoute
   '/coach/teams/': typeof CoachTeamsIndexRoute
   '/tracker/app/': typeof TrackerAppIndexRoute
@@ -901,7 +901,6 @@ export interface FileRoutesByTo {
   '/welcome': typeof WelcomeRoute
   '/$orgSlug/community': typeof OrgSlugCommunityRoute
   '/$orgSlug/home': typeof OrgSlugHomeRoute
-  '/$orgSlug/nutrition': typeof OrgSlugNutritionRouteWithChildren
   '/$orgSlug/onboarding': typeof OrgSlugOnboardingRoute
   '/$orgSlug/performance': typeof OrgSlugPerformanceRoute
   '/$orgSlug/profil': typeof OrgSlugProfilRoute
@@ -910,7 +909,6 @@ export interface FileRoutesByTo {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
-  '/bulls/nutrition': typeof BullsNutritionRouteWithChildren
   '/bulls/photos': typeof BullsPhotosRoute
   '/bulls/recovery': typeof BullsRecoveryRoute
   '/bulls/training': typeof BullsTrainingRoute
@@ -966,6 +964,8 @@ export interface FileRoutesByTo {
   '/tracker/app/training': typeof TrackerAppTrainingRoute
   '/tracker/app/water': typeof TrackerAppWaterRoute
   '/tracker/app/weight': typeof TrackerAppWeightRoute
+  '/$orgSlug/nutrition': typeof OrgSlugNutritionIndexRoute
+  '/bulls/nutrition': typeof BullsNutritionIndexRoute
   '/coach/customers': typeof CoachCustomersIndexRoute
   '/coach/teams': typeof CoachTeamsIndexRoute
   '/tracker/app': typeof TrackerAppIndexRoute
@@ -1021,7 +1021,6 @@ export interface FileRoutesById {
   '/welcome': typeof WelcomeRoute
   '/$orgSlug/community': typeof OrgSlugCommunityRoute
   '/$orgSlug/home': typeof OrgSlugHomeRoute
-  '/$orgSlug/nutrition': typeof OrgSlugNutritionRouteWithChildren
   '/$orgSlug/onboarding': typeof OrgSlugOnboardingRoute
   '/$orgSlug/performance': typeof OrgSlugPerformanceRoute
   '/$orgSlug/profil': typeof OrgSlugProfilRoute
@@ -1030,7 +1029,6 @@ export interface FileRoutesById {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
-  '/bulls/nutrition': typeof BullsNutritionRouteWithChildren
   '/bulls/photos': typeof BullsPhotosRoute
   '/bulls/recovery': typeof BullsRecoveryRoute
   '/bulls/training': typeof BullsTrainingRoute
@@ -1088,6 +1086,8 @@ export interface FileRoutesById {
   '/tracker/app/training': typeof TrackerAppTrainingRoute
   '/tracker/app/water': typeof TrackerAppWaterRoute
   '/tracker/app/weight': typeof TrackerAppWeightRoute
+  '/$orgSlug/nutrition/': typeof OrgSlugNutritionIndexRoute
+  '/bulls/nutrition/': typeof BullsNutritionIndexRoute
   '/coach/customers/': typeof CoachCustomersIndexRoute
   '/coach/teams/': typeof CoachTeamsIndexRoute
   '/tracker/app/': typeof TrackerAppIndexRoute
@@ -1144,7 +1144,6 @@ export interface FileRouteTypes {
     | '/welcome'
     | '/$orgSlug/community'
     | '/$orgSlug/home'
-    | '/$orgSlug/nutrition'
     | '/$orgSlug/onboarding'
     | '/$orgSlug/performance'
     | '/$orgSlug/profil'
@@ -1153,7 +1152,6 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/bulls/benchmarks'
-    | '/bulls/nutrition'
     | '/bulls/photos'
     | '/bulls/recovery'
     | '/bulls/training'
@@ -1211,6 +1209,8 @@ export interface FileRouteTypes {
     | '/tracker/app/training'
     | '/tracker/app/water'
     | '/tracker/app/weight'
+    | '/$orgSlug/nutrition/'
+    | '/bulls/nutrition/'
     | '/coach/customers/'
     | '/coach/teams/'
     | '/tracker/app/'
@@ -1261,7 +1261,6 @@ export interface FileRouteTypes {
     | '/welcome'
     | '/$orgSlug/community'
     | '/$orgSlug/home'
-    | '/$orgSlug/nutrition'
     | '/$orgSlug/onboarding'
     | '/$orgSlug/performance'
     | '/$orgSlug/profil'
@@ -1270,7 +1269,6 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/bulls/benchmarks'
-    | '/bulls/nutrition'
     | '/bulls/photos'
     | '/bulls/recovery'
     | '/bulls/training'
@@ -1326,6 +1324,8 @@ export interface FileRouteTypes {
     | '/tracker/app/training'
     | '/tracker/app/water'
     | '/tracker/app/weight'
+    | '/$orgSlug/nutrition'
+    | '/bulls/nutrition'
     | '/coach/customers'
     | '/coach/teams'
     | '/tracker/app'
@@ -1380,7 +1380,6 @@ export interface FileRouteTypes {
     | '/welcome'
     | '/$orgSlug/community'
     | '/$orgSlug/home'
-    | '/$orgSlug/nutrition'
     | '/$orgSlug/onboarding'
     | '/$orgSlug/performance'
     | '/$orgSlug/profil'
@@ -1389,7 +1388,6 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/bulls/benchmarks'
-    | '/bulls/nutrition'
     | '/bulls/photos'
     | '/bulls/recovery'
     | '/bulls/training'
@@ -1447,6 +1445,8 @@ export interface FileRouteTypes {
     | '/tracker/app/training'
     | '/tracker/app/water'
     | '/tracker/app/weight'
+    | '/$orgSlug/nutrition/'
+    | '/bulls/nutrition/'
     | '/coach/customers/'
     | '/coach/teams/'
     | '/tracker/app/'
@@ -1503,7 +1503,6 @@ export interface RootRouteChildren {
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   BullsBenchmarksRoute: typeof BullsBenchmarksRoute
-  BullsNutritionRoute: typeof BullsNutritionRouteWithChildren
   BullsPhotosRoute: typeof BullsPhotosRoute
   BullsRecoveryRoute: typeof BullsRecoveryRoute
   BullsTrainingRoute: typeof BullsTrainingRoute
@@ -1519,7 +1518,11 @@ export interface RootRouteChildren {
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiPublicGuardianConsentRoute: typeof ApiPublicGuardianConsentRoute
+  BullsNutritionFavoritesRoute: typeof BullsNutritionFavoritesRoute
+  BullsNutritionShoppingRoute: typeof BullsNutritionShoppingRoute
+  BullsNutritionTrackingRoute: typeof BullsNutritionTrackingRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
+  BullsNutritionIndexRoute: typeof BullsNutritionIndexRoute
   ApiPublicHooksCoachDailySummaryRoute: typeof ApiPublicHooksCoachDailySummaryRoute
   ApiPublicHooksOrgTaskEngineRoute: typeof ApiPublicHooksOrgTaskEngineRoute
   ApiPublicHooksPlanRotationRoute: typeof ApiPublicHooksPlanRotationRoute
@@ -1965,13 +1968,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BullsPhotosRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/bulls/nutrition': {
-      id: '/bulls/nutrition'
-      path: '/bulls/nutrition'
-      fullPath: '/bulls/nutrition'
-      preLoaderRoute: typeof BullsNutritionRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/bulls/benchmarks': {
       id: '/bulls/benchmarks'
       path: '/bulls/benchmarks'
@@ -2028,13 +2024,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrgSlugOnboardingRouteImport
       parentRoute: typeof OrgSlugRoute
     }
-    '/$orgSlug/nutrition': {
-      id: '/$orgSlug/nutrition'
-      path: '/nutrition'
-      fullPath: '/$orgSlug/nutrition'
-      preLoaderRoute: typeof OrgSlugNutritionRouteImport
-      parentRoute: typeof OrgSlugRoute
-    }
     '/$orgSlug/home': {
       id: '/$orgSlug/home'
       path: '/home'
@@ -2069,6 +2058,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/coach/customers/'
       preLoaderRoute: typeof CoachCustomersIndexRouteImport
       parentRoute: typeof CoachCustomersRoute
+    }
+    '/bulls/nutrition/': {
+      id: '/bulls/nutrition/'
+      path: '/bulls/nutrition'
+      fullPath: '/bulls/nutrition/'
+      preLoaderRoute: typeof BullsNutritionIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/$orgSlug/nutrition/': {
+      id: '/$orgSlug/nutrition/'
+      path: '/nutrition'
+      fullPath: '/$orgSlug/nutrition/'
+      preLoaderRoute: typeof OrgSlugNutritionIndexRouteImport
+      parentRoute: typeof OrgSlugRoute
     }
     '/tracker/app/weight': {
       id: '/tracker/app/weight'
@@ -2177,24 +2180,24 @@ declare module '@tanstack/react-router' {
     }
     '/bulls/nutrition/tracking': {
       id: '/bulls/nutrition/tracking'
-      path: '/tracking'
+      path: '/bulls/nutrition/tracking'
       fullPath: '/bulls/nutrition/tracking'
       preLoaderRoute: typeof BullsNutritionTrackingRouteImport
-      parentRoute: typeof BullsNutritionRoute
+      parentRoute: typeof rootRouteImport
     }
     '/bulls/nutrition/shopping': {
       id: '/bulls/nutrition/shopping'
-      path: '/shopping'
+      path: '/bulls/nutrition/shopping'
       fullPath: '/bulls/nutrition/shopping'
       preLoaderRoute: typeof BullsNutritionShoppingRouteImport
-      parentRoute: typeof BullsNutritionRoute
+      parentRoute: typeof rootRouteImport
     }
     '/bulls/nutrition/favorites': {
       id: '/bulls/nutrition/favorites'
-      path: '/favorites'
+      path: '/bulls/nutrition/favorites'
       fullPath: '/bulls/nutrition/favorites'
       preLoaderRoute: typeof BullsNutritionFavoritesRouteImport
-      parentRoute: typeof BullsNutritionRoute
+      parentRoute: typeof rootRouteImport
     }
     '/api/public/guardian-consent': {
       id: '/api/public/guardian-consent'
@@ -2219,24 +2222,24 @@ declare module '@tanstack/react-router' {
     }
     '/$orgSlug/nutrition/tracking': {
       id: '/$orgSlug/nutrition/tracking'
-      path: '/tracking'
+      path: '/nutrition/tracking'
       fullPath: '/$orgSlug/nutrition/tracking'
       preLoaderRoute: typeof OrgSlugNutritionTrackingRouteImport
-      parentRoute: typeof OrgSlugNutritionRoute
+      parentRoute: typeof OrgSlugRoute
     }
     '/$orgSlug/nutrition/shopping': {
       id: '/$orgSlug/nutrition/shopping'
-      path: '/shopping'
+      path: '/nutrition/shopping'
       fullPath: '/$orgSlug/nutrition/shopping'
       preLoaderRoute: typeof OrgSlugNutritionShoppingRouteImport
-      parentRoute: typeof OrgSlugNutritionRoute
+      parentRoute: typeof OrgSlugRoute
     }
     '/$orgSlug/nutrition/favorites': {
       id: '/$orgSlug/nutrition/favorites'
-      path: '/favorites'
+      path: '/nutrition/favorites'
       fullPath: '/$orgSlug/nutrition/favorites'
       preLoaderRoute: typeof OrgSlugNutritionFavoritesRouteImport
-      parentRoute: typeof OrgSlugNutritionRoute
+      parentRoute: typeof OrgSlugRoute
     }
     '/$orgSlug/invite/$token': {
       id: '/$orgSlug/invite/$token'
@@ -2374,25 +2377,9 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface OrgSlugNutritionRouteChildren {
-  OrgSlugNutritionFavoritesRoute: typeof OrgSlugNutritionFavoritesRoute
-  OrgSlugNutritionShoppingRoute: typeof OrgSlugNutritionShoppingRoute
-  OrgSlugNutritionTrackingRoute: typeof OrgSlugNutritionTrackingRoute
-}
-
-const OrgSlugNutritionRouteChildren: OrgSlugNutritionRouteChildren = {
-  OrgSlugNutritionFavoritesRoute: OrgSlugNutritionFavoritesRoute,
-  OrgSlugNutritionShoppingRoute: OrgSlugNutritionShoppingRoute,
-  OrgSlugNutritionTrackingRoute: OrgSlugNutritionTrackingRoute,
-}
-
-const OrgSlugNutritionRouteWithChildren =
-  OrgSlugNutritionRoute._addFileChildren(OrgSlugNutritionRouteChildren)
-
 interface OrgSlugRouteChildren {
   OrgSlugCommunityRoute: typeof OrgSlugCommunityRoute
   OrgSlugHomeRoute: typeof OrgSlugHomeRoute
-  OrgSlugNutritionRoute: typeof OrgSlugNutritionRouteWithChildren
   OrgSlugOnboardingRoute: typeof OrgSlugOnboardingRoute
   OrgSlugPerformanceRoute: typeof OrgSlugPerformanceRoute
   OrgSlugProfilRoute: typeof OrgSlugProfilRoute
@@ -2401,12 +2388,15 @@ interface OrgSlugRouteChildren {
   OrgSlugIndexRoute: typeof OrgSlugIndexRoute
   OrgSlugAthleticSessionIdRoute: typeof OrgSlugAthleticSessionIdRoute
   OrgSlugInviteTokenRoute: typeof OrgSlugInviteTokenRoute
+  OrgSlugNutritionFavoritesRoute: typeof OrgSlugNutritionFavoritesRoute
+  OrgSlugNutritionShoppingRoute: typeof OrgSlugNutritionShoppingRoute
+  OrgSlugNutritionTrackingRoute: typeof OrgSlugNutritionTrackingRoute
+  OrgSlugNutritionIndexRoute: typeof OrgSlugNutritionIndexRoute
 }
 
 const OrgSlugRouteChildren: OrgSlugRouteChildren = {
   OrgSlugCommunityRoute: OrgSlugCommunityRoute,
   OrgSlugHomeRoute: OrgSlugHomeRoute,
-  OrgSlugNutritionRoute: OrgSlugNutritionRouteWithChildren,
   OrgSlugOnboardingRoute: OrgSlugOnboardingRoute,
   OrgSlugPerformanceRoute: OrgSlugPerformanceRoute,
   OrgSlugProfilRoute: OrgSlugProfilRoute,
@@ -2415,6 +2405,10 @@ const OrgSlugRouteChildren: OrgSlugRouteChildren = {
   OrgSlugIndexRoute: OrgSlugIndexRoute,
   OrgSlugAthleticSessionIdRoute: OrgSlugAthleticSessionIdRoute,
   OrgSlugInviteTokenRoute: OrgSlugInviteTokenRoute,
+  OrgSlugNutritionFavoritesRoute: OrgSlugNutritionFavoritesRoute,
+  OrgSlugNutritionShoppingRoute: OrgSlugNutritionShoppingRoute,
+  OrgSlugNutritionTrackingRoute: OrgSlugNutritionTrackingRoute,
+  OrgSlugNutritionIndexRoute: OrgSlugNutritionIndexRoute,
 }
 
 const OrgSlugRouteWithChildren =
@@ -2539,22 +2533,6 @@ const SmartRouteChildren: SmartRouteChildren = {
 
 const SmartRouteWithChildren = SmartRoute._addFileChildren(SmartRouteChildren)
 
-interface BullsNutritionRouteChildren {
-  BullsNutritionFavoritesRoute: typeof BullsNutritionFavoritesRoute
-  BullsNutritionShoppingRoute: typeof BullsNutritionShoppingRoute
-  BullsNutritionTrackingRoute: typeof BullsNutritionTrackingRoute
-}
-
-const BullsNutritionRouteChildren: BullsNutritionRouteChildren = {
-  BullsNutritionFavoritesRoute: BullsNutritionFavoritesRoute,
-  BullsNutritionShoppingRoute: BullsNutritionShoppingRoute,
-  BullsNutritionTrackingRoute: BullsNutritionTrackingRoute,
-}
-
-const BullsNutritionRouteWithChildren = BullsNutritionRoute._addFileChildren(
-  BullsNutritionRouteChildren,
-)
-
 interface TrackerAppRouteChildren {
   TrackerAppAchievementsRoute: typeof TrackerAppAchievementsRoute
   TrackerAppActivityRoute: typeof TrackerAppActivityRoute
@@ -2616,7 +2594,6 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   BullsBenchmarksRoute: BullsBenchmarksRoute,
-  BullsNutritionRoute: BullsNutritionRouteWithChildren,
   BullsPhotosRoute: BullsPhotosRoute,
   BullsRecoveryRoute: BullsRecoveryRoute,
   BullsTrainingRoute: BullsTrainingRoute,
@@ -2632,7 +2609,11 @@ const rootRouteChildren: RootRouteChildren = {
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiPublicGuardianConsentRoute: ApiPublicGuardianConsentRoute,
+  BullsNutritionFavoritesRoute: BullsNutritionFavoritesRoute,
+  BullsNutritionShoppingRoute: BullsNutritionShoppingRoute,
+  BullsNutritionTrackingRoute: BullsNutritionTrackingRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
+  BullsNutritionIndexRoute: BullsNutritionIndexRoute,
   ApiPublicHooksCoachDailySummaryRoute: ApiPublicHooksCoachDailySummaryRoute,
   ApiPublicHooksOrgTaskEngineRoute: ApiPublicHooksOrgTaskEngineRoute,
   ApiPublicHooksPlanRotationRoute: ApiPublicHooksPlanRotationRoute,

@@ -19,7 +19,7 @@ import { MealWishesCard } from "@/components/bodyfuel/MealWishesCard";
 import { CustomMealsCard } from "@/components/bodyfuel/CustomMealsCard";
 import { TrialNutritionPlan } from "@/components/bodyfuel/TrialPlanView";
 
-export const Route = createFileRoute("/bulls/nutrition")({
+export const Route = createFileRoute("/bulls/nutrition/")({
   head: () => ({ meta: [{ title: "Ernährung — Bulls Hub" }] }),
   component: () => (
     <AppLayout>
