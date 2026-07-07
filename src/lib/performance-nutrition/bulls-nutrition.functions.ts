@@ -229,6 +229,7 @@ export const getBullsDailyNutritionTargets = createServerFn({ method: "POST" })
     let dayTypeSource: "manual" | "auto";
     let sessionIntensity: SessionIntensity | null =
       data.session_intensity ?? null;
+    let legacyOverrideIgnored = false;
 
     if (data.day_type) {
       dayType = data.day_type;
@@ -240,9 +241,9 @@ export const getBullsDailyNutritionTargets = createServerFn({ method: "POST" })
         .eq("user_id", userId)
         .eq("entry_date", data.date)
         .maybeSingle();
-      const normalized = normalizeOverrideKind((dto as any)?.kind ?? null);
-      if (normalized) {
-        dayType = normalized;
+      const norm = normalizeOverrideKind((dto as any)?.kind ?? null);
+      if (norm.dayType) {
+        dayType = norm.dayType;
         dayTypeSource = "manual";
         if (sessionIntensity == null) {
           const si = (dto as any)?.session_intensity ?? null;
@@ -253,6 +254,7 @@ export const getBullsDailyNutritionTargets = createServerFn({ method: "POST" })
       } else {
         dayType = "rest";
         dayTypeSource = "auto";
+        if (norm.legacy) legacyOverrideIgnored = true;
       }
     }
 
