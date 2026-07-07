@@ -110,6 +110,16 @@ function CoachDashboard() {
   const extendPlanFn = useServerFn(extendClientPlan);
   const genDraftFn = useServerFn(generateCheckinDraft);
   const radarFn = useServerFn(getCoachRadar);
+  const perfStatsFn = useServerFn(listPerformanceCheckStats);
+
+  const perfStatsQuery = useQuery({
+    queryKey: ["bulls-perf-stats-coach-nav"],
+    queryFn: () => perfStatsFn(),
+    retry: false,
+    staleTime: 60_000,
+  });
+  const perfPending = perfStatsQuery.data?.pending ?? 0;
+  const showPerfNav = !!perfStatsQuery.data;
 
   const radarQuery = useQuery({
     queryKey: ["coach-radar"],
