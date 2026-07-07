@@ -176,6 +176,11 @@ function AthleteOnboarding({ ctx }: { ctx: NonNullable<Awaited<ReturnType<typeof
   const [limitations, setLimitations] = useState("");
   const [goal, setGoal] = useState("");
 
+  // Performance Nutrition Engine V1 — org-scoped
+  const [energySex, setEnergySex] = useState<string>("");
+  const [baselineActivity, setBaselineActivity] = useState<string>("");
+  const [nutritionGoal, setNutritionGoal] = useState<string>("");
+
   useEffect(() => {
     const tm: any = ctx.team_membership;
     if (tm?.team_id) setTeamId(tm.team_id);
