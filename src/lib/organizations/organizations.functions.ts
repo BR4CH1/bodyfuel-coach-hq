@@ -397,12 +397,37 @@ export const acceptOrganizationInvite = createServerFn({ method: "POST" })
       if (memErr) throw new Error(memErr.message);
 
       if (invite.team_id) {
-        const { error: tmErr } = await supabaseAdmin.from("team_memberships").upsert(
-          { user_id: userId, team_id: invite.team_id, status: "active" },
-          { onConflict: "user_id,team_id" },
-        );
+        // Invite-Prefill: Position/Trikotnummer aus der Einladung übernehmen,
+        // damit das Athleten-Onboarding die Felder vorbelegen kann. Bestehende
+        // Werte bei Wiederannahme nicht überschreiben — deshalb erst prüfen.
+        const { data: existingTm } = await supabaseAdmin
+          .from("team_memberships")
+          .select("position, secondary_position, jersey_number")
+          .eq("user_id", userId)
+          .eq("team_id", invite.team_id)
+          .maybeSingle();
+        const invAny = invite as any;
+        const tmPayload: Record<string, unknown> = {
+          user_id: userId,
+          team_id: invite.team_id,
+          status: "active",
+        };
+        if (!(existingTm as any)?.position && invAny.athlete_primary_position) {
+          tmPayload.position = invAny.athlete_primary_position;
+        }
+        if (!(existingTm as any)?.secondary_position && invAny.athlete_secondary_position) {
+          tmPayload.secondary_position = invAny.athlete_secondary_position;
+        }
+        if ((existingTm as any)?.jersey_number == null && invAny.athlete_jersey_number != null) {
+          tmPayload.jersey_number = invAny.athlete_jersey_number;
+        }
+        const { error: tmErr } = await supabaseAdmin
+          .from("team_memberships")
+          .upsert(tmPayload as any, { onConflict: "user_id,team_id" });
+
         if (tmErr) throw new Error(tmErr.message);
       }
+
     } else {
       // Staff-Einladung: Zugehörigkeit als neutrale Membership + Rolle in
       // staff_assignments mit den Permissions aus der Einladung.
