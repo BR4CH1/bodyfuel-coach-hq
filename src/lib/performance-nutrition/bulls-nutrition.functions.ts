@@ -111,9 +111,26 @@ function toMacroDTO(r: PerformanceNutritionResult): BullsMacroDTO | null {
   };
 }
 
-function normalizeOverrideKind(kind: string | null | undefined): BullsDayType | null {
-  if (!kind) return null;
-  if (kind === "training") return "football_training"; // legacy compat
+/**
+ * Normalize a `day_type_overrides.kind` value read from the shared table into
+ * one of the five real Performance Day Types.
+ *
+ * Contract:
+ *   - Only the five real Performance Day Types resolve to a concrete kind.
+ *   - Legacy personal writers (`DayTypePrompt`, personal `WeekScheduleCard`,
+ *     `TrialPlanView`) still write "training"/"rest". Those values are
+ *     AMBIGUOUS in the Performance context (a personal "training" day may be
+ *     strength, football, double-session or a game day). We MUST NOT silently
+ *     map "training" to `football_training` — that would produce a false
+ *     positive classification. Legacy values return `null` and force the
+ *     Performance layer to fall back to REST + surface a flag so the coach
+ *     sees that the day needs an explicit Performance day-type entry.
+ */
+function normalizeOverrideKind(kind: string | null | undefined): {
+  dayType: BullsDayType | null;
+  legacy: boolean;
+} {
+  if (!kind) return { dayType: null, legacy: false };
   if (
     kind === "rest" ||
     kind === "strength" ||
@@ -121,9 +138,16 @@ function normalizeOverrideKind(kind: string | null | undefined): BullsDayType | 
     kind === "game_day" ||
     kind === "double_session"
   ) {
-    return kind;
+    // Note: legacy personal "rest" carries the same semantic as Performance
+    // "rest" — treating it as REST is safe. Legacy personal "training" is
+    // NOT safe and is handled below.
+    return { dayType: kind as BullsDayType, legacy: false };
   }
-  return null;
+  if (kind === "training") {
+    // Ambiguous legacy value from personal BodyFuel writers.
+    return { dayType: null, legacy: true };
+  }
+  return { dayType: null, legacy: false };
 }
 
 export const getBullsDailyNutritionTargets = createServerFn({ method: "POST" })
@@ -205,6 +229,7 @@ export const getBullsDailyNutritionTargets = createServerFn({ method: "POST" })
     let dayTypeSource: "manual" | "auto";
     let sessionIntensity: SessionIntensity | null =
       data.session_intensity ?? null;
+    let legacyOverrideIgnored = false;
 
     if (data.day_type) {
       dayType = data.day_type;
@@ -216,9 +241,9 @@ export const getBullsDailyNutritionTargets = createServerFn({ method: "POST" })
         .eq("user_id", userId)
         .eq("entry_date", data.date)
         .maybeSingle();
-      const normalized = normalizeOverrideKind((dto as any)?.kind ?? null);
-      if (normalized) {
-        dayType = normalized;
+      const norm = normalizeOverrideKind((dto as any)?.kind ?? null);
+      if (norm.dayType) {
+        dayType = norm.dayType;
         dayTypeSource = "manual";
         if (sessionIntensity == null) {
           const si = (dto as any)?.session_intensity ?? null;
@@ -229,6 +254,7 @@ export const getBullsDailyNutritionTargets = createServerFn({ method: "POST" })
       } else {
         dayType = "rest";
         dayTypeSource = "auto";
+        if (norm.legacy) legacyOverrideIgnored = true;
       }
     }
 
@@ -281,6 +307,9 @@ export const getBullsDailyNutritionTargets = createServerFn({ method: "POST" })
     }
 
     const active = results[dayType];
+    const flags = legacyOverrideIgnored
+      ? [...active.flags, "LEGACY_TRAINING_OVERRIDE_IGNORED"]
+      : active.flags;
 
     return {
       organizationId,
@@ -295,23 +324,36 @@ export const getBullsDailyNutritionTargets = createServerFn({ method: "POST" })
       perDayTypeTargets,
       trainingTargets: perDayTypeTargets.football_training,
       restTargets: perDayTypeTargets.rest,
-      flags: active.flags,
+      flags,
       engineVersion: active.engineVersion,
     };
   });
 
 /**
  * Set the Bulls day-type override for a date.
- * kind=null clears the override (falls back to auto = REST).
+ *
+ * Contract: only the five real Performance Day Types are accepted. Legacy
+ * "training" / "rest" values from personal writers are NOT allowed here —
+ * they cannot be disambiguated in the Performance context. `kind=null`
+ * clears the override (falls back to auto = REST).
  */
 export const setBullsDayType = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
     (d: {
       date: string;
-      kind: BullsDayType | BullsDayTypeSimple | null;
+      kind: BullsDayType | null;
       session_intensity?: SessionIntensity | null;
-    }) => d,
+    }) => {
+      if (d.kind != null && !ALL_BULLS_DAY_TYPES.includes(d.kind)) {
+        throw new Error(
+          `Ungültiger Day Type "${String(
+            d.kind,
+          )}" — nur rest/strength/football_training/game_day/double_session sind erlaubt.`,
+        );
+      }
+      return d;
+    },
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;

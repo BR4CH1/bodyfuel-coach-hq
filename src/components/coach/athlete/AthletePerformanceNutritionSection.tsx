@@ -67,6 +67,8 @@ const FLAG_LABEL: Record<string, string> = {
   AGE_VALUE_REVIEW: "Alter außerhalb Plausibilitätsbereich",
   COACH_OVERRIDE_ACTIVE: "Coach-Override aktiv",
   SESSION_INTENSITY_DEFAULT_APPLIED: "Session-Intensität: Standardwert",
+  LEGACY_TRAINING_OVERRIDE_IGNORED:
+    "Legacy Trainings-Override erkannt — bitte neu als Performance Day Type setzen",
 };
 
 // Presentational-only flags we hide from the coach flag list (already surfaced

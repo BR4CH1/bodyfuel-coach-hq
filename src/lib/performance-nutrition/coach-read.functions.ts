@@ -205,8 +205,11 @@ export const getCoachAthletePerformanceNutrition = createServerFn({ method: "POS
       ? Number(calib.personal_calibration_kcal)
       : 0;
 
-    // 6) Day type on requested date (else REST)
+    // 6) Day type on requested date (only real Performance Day Types are
+    //    honoured — legacy "training" is ambiguous and falls back to REST +
+    //    surfaces a flag for the coach).
     let activeDayType: CoachDayTypeKey = "rest";
+    let legacyOverrideIgnored = false;
     const { data: dto } = await supabase
       .from("day_type_overrides")
       .select("kind")
@@ -214,8 +217,7 @@ export const getCoachAthletePerformanceNutrition = createServerFn({ method: "POS
       .eq("entry_date", data.date)
       .maybeSingle();
     const kind = (dto as any)?.kind ?? null;
-    if (kind === "training") activeDayType = "football_training";
-    else if (
+    if (
       kind === "rest" ||
       kind === "strength" ||
       kind === "football_training" ||
@@ -223,6 +225,8 @@ export const getCoachAthletePerformanceNutrition = createServerFn({ method: "POS
       kind === "double_session"
     ) {
       activeDayType = kind;
+    } else if (kind === "training") {
+      legacyOverrideIgnored = true; // ambiguous — keep REST fallback
     }
 
     // 7) Last stored calculation (for engine status "letzte Berechnung")
@@ -273,6 +277,7 @@ export const getCoachAthletePerformanceNutrition = createServerFn({ method: "POS
     }
 
     const baselineStatus = activeResult?.status ?? "MISSING_DATA";
+    if (legacyOverrideIgnored) flagSet.add("LEGACY_TRAINING_OVERRIDE_IGNORED");
     const aggregatedFlags = Array.from(flagSet);
     const missing = flagsToMissing(aggregatedFlags);
 
