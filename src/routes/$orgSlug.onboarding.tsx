@@ -261,7 +261,7 @@ function AthleteOnboarding({ ctx }: { ctx: NonNullable<Awaited<ReturnType<typeof
         .select(
           "favorite_foods, extra_favorites, nogo_foods, extra_nogos, allergies, extra_allergies, intolerances, diet_style, diet_notes, eating_style, meal_prep_style",
         )
-        .eq("user_id", ctx.profile?.id ?? "")
+        .eq("user_id", supabaseUser?.id ?? "")
         .maybeSingle();
       if (cancelled || !snp) return;
       const s = snp as Record<string, any>;
