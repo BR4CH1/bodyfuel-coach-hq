@@ -427,28 +427,22 @@ export function NutritionTracker({
         try {
           const b = await getBullsTargetsFn({ data: { date } });
           if (cancelled) return;
-          if (b.trainingTargets) {
+          // Use the ACTIVE engine target for the resolved day type — supports
+          // all 5 Bulls day types (rest / strength / football_training /
+          // game_day / double_session). No hardcoded training/rest split.
+          if (b.targets) {
             setBaseTargets({
-              kcal: b.trainingTargets.kcal,
-              protein_g: b.trainingTargets.protein_g,
-              carbs_g: b.trainingTargets.carbs_g,
-              fat_g: b.trainingTargets.fat_g,
+              kcal: b.targets.kcal,
+              protein_g: b.targets.protein_g,
+              carbs_g: b.targets.carbs_g,
+              fat_g: b.targets.fat_g,
               water_glasses: DEFAULT_TARGETS.water_glasses,
             });
           } else {
             setBaseTargets(DEFAULT_TARGETS);
           }
-          if (b.restTargets) {
-            setRestTargets({
-              kcal: b.restTargets.kcal,
-              protein_g: b.restTargets.protein_g,
-              carbs_g: b.restTargets.carbs_g,
-              fat_g: b.restTargets.fat_g,
-              water_glasses: DEFAULT_TARGETS.water_glasses,
-            });
-          } else {
-            setRestTargets(null);
-          }
+          // restTargets kept null in Bulls — 5 day types, no binary fallback.
+          setRestTargets(null);
           setDayTypeState(b.dayType);
           setDayTypeSource(b.dayTypeSource);
         } catch (err) {
