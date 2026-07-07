@@ -37,6 +37,28 @@ const GOAL_OPTIONS: { v: string; l: string }[] = [
   { v: "Overall Athletic Development", l: "Athletische Grundlagen (Allround)" },
 ];
 
+// Performance Nutrition Engine V1 — org-scoped Energie-/Zielparameter.
+// Wichtig: getrennt vom persönlichen BodyFuel-Smart-Kontext.
+const ENERGY_SEX_OPTIONS = [
+  { v: "MALE", l: "Männlich" },
+  { v: "FEMALE", l: "Weiblich" },
+  { v: "UNSPECIFIED", l: "Keine Angabe (Coach-Review nötig)" },
+] as const;
+
+const BASELINE_ACTIVITY_OPTIONS = [
+  { v: "MOSTLY_SEATED", l: "Überwiegend sitzend (Büro/Schule)" },
+  { v: "MIXED", l: "Gemischt (teils sitzend, teils aktiv)" },
+  { v: "PHYSICALLY_ACTIVE", l: "Körperlich aktiv (viel auf den Beinen)" },
+  { v: "VERY_PHYSICALLY_ACTIVE", l: "Sehr körperlich aktiv (Bau/Handwerk)" },
+] as const;
+
+const PERFORMANCE_NUTRITION_GOAL_OPTIONS = [
+  { v: "FAT_LOSS", l: "Körperfett reduzieren" },
+  { v: "MAINTENANCE", l: "Gewicht halten" },
+  { v: "PERFORMANCE", l: "Leistung / Performance" },
+  { v: "MUSCLE_GAIN", l: "Muskelaufbau" },
+] as const;
+
 // Sichtbare Funktions-Labels. Diese Auswahl ist rein kosmetisch — die
 // technische Rolle (`staff_assignments.role`) wird ausschließlich über die
 // Einladung/den Vereinsgründungspfad gesetzt und hier NICHT geändert.
