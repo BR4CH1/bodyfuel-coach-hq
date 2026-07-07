@@ -27,6 +27,7 @@ import {
   getAthleteNutritionSchedule,
   upsertAthleteNutritionSchedule,
 } from "@/lib/organizations/roster-schedule.functions";
+import { TeamGroupAthletePicker, type PickerValue } from "@/components/organizations/TeamGroupAthletePicker";
 import {
   listOrgChallenges,
   createOrgChallenge,
