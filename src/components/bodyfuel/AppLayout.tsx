@@ -104,6 +104,31 @@ export function AppLayout({ children }: { children: ReactNode }) {
     }
   }, [user, supabaseUser, loading, navigate, isFreeUser, pathname, hasGroup]);
 
+  // Wenn ein Vereinskontext aktiv ist (z. B. „COESFELD BULLS"), sollen
+  // persönliche Athleten-Bereiche automatisch in den Vereins-Hub geleitet
+  // werden. Dort greift OrgAthleteLayout mit Vereins-Nav & -Theme.
+  useEffect(() => {
+    if (loading || isCoach || isFreeUser) return;
+    const activeSlug = getActiveContext();
+    if (!activeSlug) return;
+    const personalToOrg: Record<string, string> = {
+      "/dashboard": "home",
+      "/nutrition": "nutrition",
+      "/training": "training",
+      "/community": "community",
+    };
+    for (const [prefix, target] of Object.entries(personalToOrg)) {
+      if (pathname === prefix || pathname.startsWith(prefix + "/")) {
+        navigate({
+          to: `/$orgSlug/${target}` as any,
+          params: { orgSlug: activeSlug },
+          replace: true,
+        });
+        return;
+      }
+    }
+  }, [loading, isCoach, isFreeUser, pathname, navigate]);
+
   // Redirect für Vereins-Staff (Vereinsleitung / Head Coach / Team Coach / Staff):
   // Persönliche Athleten-Routen wie /measurements, /progress, /check-in gehören
   // nicht zur Coach-Erfahrung. Coaches landen stattdessen im Cockpit.
