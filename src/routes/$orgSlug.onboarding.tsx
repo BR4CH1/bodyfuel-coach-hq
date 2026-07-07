@@ -9,6 +9,8 @@ import {
   completeOrganizationOnboardingV2,
   completeStaffOrganizationOnboarding,
 } from "@/lib/organizations/athlete.functions";
+import { savePerformanceNutritionPreferences } from "@/lib/performance-nutrition/onboarding.functions";
+import { supabase } from "@/integrations/supabase/client";
 import { deriveOrgRole } from "@/lib/organizations/org-role";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
