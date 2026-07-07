@@ -272,9 +272,17 @@ function FeedPane({ primary }: { primary: string }) {
                     {new Date(p.created_at).toLocaleDateString("de-DE")}
                   </div>
                 </div>
-                <div className="mt-2 whitespace-pre-wrap text-sm">{p.content}</div>
+                {p.content && <div className="mt-2 whitespace-pre-wrap text-sm">{p.content}</div>}
+                {p.image_url && (
+                  <img
+                    src={p.image_url}
+                    alt="Community-Foto"
+                    className="mt-2 max-h-96 w-full rounded object-cover"
+                    loading="lazy"
+                  />
+                )}
               </li>
-            );
+
           })}
         </ul>
       )}
