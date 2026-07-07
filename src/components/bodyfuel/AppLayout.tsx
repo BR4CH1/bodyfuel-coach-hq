@@ -122,8 +122,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
     };
     for (const [prefix, target] of Object.entries(personalToOrg)) {
       if (pathname === prefix || pathname.startsWith(prefix + "/")) {
+        const suffix = pathname === prefix ? "" : pathname.slice(prefix.length);
         navigate({
-          to: `/$orgSlug/${target}`,
+          to: `/$orgSlug/${target}${suffix}`,
           params: { orgSlug: activeSlug } as any,
           replace: true,
         } as any);
