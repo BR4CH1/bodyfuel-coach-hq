@@ -648,8 +648,13 @@ function StaffTab({ orgId, teams }: { orgId: string; teams: any[] }) {
   };
 
   const removeMut = useMutation({
-    mutationFn: (id: string) => removeFn({ data: { id } }),
-    onSuccess: () => invalidate(),
+    mutationFn: (v: { id: string; delete_account: boolean }) =>
+      removeFn({ data: { id: v.id, delete_account: v.delete_account } }),
+    onSuccess: (res: any) => {
+      invalidate();
+      setMsg(res?.deleted_account ? "Konto vollständig gelöscht." : "Aus Verein entfernt.");
+    },
+    onError: (err: any) => setMsg(err?.message ?? "Fehler beim Entfernen."),
   });
   const revokeMut = useMutation({
     mutationFn: (id: string) => revokeFn({ data: { id } }),
@@ -691,7 +696,9 @@ function StaffTab({ orgId, teams }: { orgId: string; teams: any[] }) {
                 invalidate();
                 setMsg("Aktualisiert.");
               }}
-              onRemove={() => removeMut.mutate(s.id)}
+              onRemove={(deleteAccount) =>
+                removeMut.mutate({ id: s.id, delete_account: deleteAccount })
+              }
             />
           ))}
         </ul>
