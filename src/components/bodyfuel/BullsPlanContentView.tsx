@@ -266,7 +266,7 @@ export function BullsPlanContentView() {
             protein_g: s.protein_g,
             carbs_g: s.carbs_g,
             fat_g: s.fat_g,
-            source: `plan:${m.id}`,
+            source: `perf_plan:${m.id}`,
           })
           .select("id")
           .single();
