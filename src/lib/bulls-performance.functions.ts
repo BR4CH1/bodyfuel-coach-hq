@@ -10,18 +10,37 @@ async function assertBulls(supabase: any, userId: string) {
   if (!data) throw new Error("Kein Bulls-Zugang");
 }
 
+/**
+ * Coach access für Bulls Performance Checks:
+ *   - Platform-Coach (public.has_role(uid, 'coach')) — BodyFuel / Manuel.
+ *   - Staff des Bulls-Vereins mit role 'organization_admin' oder 'coach'
+ *     (deckt Leiter/Admin, Headcoach und Coach ab; "Headcoach" = Coach mit
+ *     manage_organization permission).
+ * Ein reiner Bulls-Spieler (nur user_group/team_membership, kein staff_row)
+ * besteht diese Prüfung NIE.
+ */
 async function isCoachOrStaff(supabase: any, userId: string): Promise<boolean> {
   const [{ data: coachRow }, { data: staffRows }] = await Promise.all([
     supabase.rpc("has_role", { _user_id: userId, _role: "coach" }),
     supabase
       .from("staff_assignments")
-      .select("role")
+      .select("role, organization:organizations!inner(slug, status)")
       .eq("user_id", userId)
       .in("role", ["organization_admin", "coach"])
+      .eq("organization.slug", "bulls")
+      .eq("organization.status", "active")
       .limit(1),
   ]);
   return !!coachRow || (Array.isArray(staffRows) && staffRows.length > 0);
 }
+
+/** Öffentlich (auth-only): sagt dem Aufrufer, ob er auf die Coach-Fläche darf. */
+export const getMyPerformanceAccess = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const canCoach = await isCoachOrStaff(context.supabase, context.userId);
+    return { canCoach };
+  });
 
 // -------------------- PLAYER --------------------
 
