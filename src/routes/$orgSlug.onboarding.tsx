@@ -503,6 +503,93 @@ function AthleteOnboarding({ ctx }: { ctx: NonNullable<Awaited<ReturnType<typeof
           </Field>
         </div>
 
+        <SectionHeader className="mt-6">Ernährungsform</SectionHeader>
+        <div className="grid gap-4">
+          <Field label="Wie ernährst du dich? *">
+            <Select value={dietStyle} onValueChange={setDietStyle}>
+              <SelectTrigger><SelectValue placeholder="Auswählen" /></SelectTrigger>
+              <SelectContent>
+                {DIET_STYLE_OPTIONS.map((o) => (
+                  <SelectItem key={o.v} value={o.v}>{o.l}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label="Anmerkungen zur Ernährung (optional)">
+            <Textarea value={dietNotes} onChange={(e) => setDietNotes(e.target.value)} rows={2} placeholder="z.B. wenig Rotes Fleisch, kein Schweinefleisch..." />
+          </Field>
+        </div>
+
+        <SectionHeader className="mt-6">Lieblingsfoods</SectionHeader>
+        <div className="grid gap-3">
+          <Field label="Was isst du besonders gerne?">
+            <ChipGrid items={FAVORITE_FOODS_CHIPS} selected={favFoods} onChange={setFavFoods} bg={bg} />
+          </Field>
+          <Field label="Weitere Lieblingsfoods (optional)">
+            <Textarea value={extraFavs} onChange={(e) => setExtraFavs(e.target.value)} rows={2} placeholder="Kommagetrennt: z.B. Süßkartoffel, Linsen, Tofu" />
+          </Field>
+        </div>
+
+        <SectionHeader className="mt-6">Was du NICHT essen willst</SectionHeader>
+        <div className="grid gap-3">
+          <Field label="No-Gos aus der Liste">
+            <ChipGrid items={FAVORITE_FOODS_CHIPS} selected={nogoFoods} onChange={setNogoFoods} bg={bg} />
+          </Field>
+          <Field label="Weitere No-Gos (optional)">
+            <Textarea value={extraNogos} onChange={(e) => setExtraNogos(e.target.value)} rows={2} placeholder="Kommagetrennt: z.B. Rosenkohl, Sellerie" />
+          </Field>
+        </div>
+
+        <SectionHeader className="mt-6">Allergien & Unverträglichkeiten</SectionHeader>
+        <p className="mb-3 text-[11px] text-muted-foreground">
+          Sicherheitsrelevant — dein Plan wird streng gefiltert. Wenn du keine hast, wähle einfach nichts aus und tippe auf „Keine Allergien / Unverträglichkeiten".
+        </p>
+        <div className="grid gap-3">
+          <Field label="Allergien">
+            <ChipGrid items={ALLERGY_CHIPS} selected={allergies} onChange={(v) => { setAllergies(v); setAllergiesTouched(true); }} bg={bg} />
+          </Field>
+          <Field label="Weitere Allergien (optional)">
+            <Input value={extraAllergies} onChange={(e) => setExtraAllergies(e.target.value)} placeholder="Kommagetrennt" />
+          </Field>
+          <Field label="Unverträglichkeiten">
+            <ChipGrid items={INTOLERANCE_CHIPS} selected={intolerances} onChange={(v) => { setIntolerances(v); setIntolerancesTouched(true); }} bg={bg} />
+          </Field>
+          {(!allergiesTouched || !intolerancesTouched) && (
+            <button
+              type="button"
+              onClick={() => { setAllergies([]); setAllergiesTouched(true); setIntolerances([]); setIntolerancesTouched(true); }}
+              className="mt-1 self-start rounded-md border border-border bg-card px-3 py-1.5 text-xs font-semibold"
+            >
+              Keine Allergien / Unverträglichkeiten
+            </button>
+          )}
+        </div>
+
+        <SectionHeader className="mt-6">Essalltag & Meal Prep</SectionHeader>
+        <div className="grid gap-4">
+          <Field label="Wie möchtest du deine Mahlzeiten vorbereiten? *">
+            <Select value={mealPrepStyle} onValueChange={setMealPrepStyle}>
+              <SelectTrigger><SelectValue placeholder="Auswählen" /></SelectTrigger>
+              <SelectContent>
+                {MEAL_PREP_STYLE_OPTIONS.map((o) => (
+                  <SelectItem key={o.v} value={o.v}>{o.l}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label="Grundsätzlicher Essalltag (optional)">
+            <Select value={eatingStyle} onValueChange={setEatingStyle}>
+              <SelectTrigger><SelectValue placeholder="Auswählen" /></SelectTrigger>
+              <SelectContent>
+                {EATING_STYLE_OPTIONS.map((o) => (
+                  <SelectItem key={o.v} value={o.v}>{o.l}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+        </div>
+
+
 
 
         <Button
