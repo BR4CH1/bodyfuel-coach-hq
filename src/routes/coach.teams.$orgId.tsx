@@ -584,7 +584,7 @@ function TasksTab({ orgId, teams }: { orgId: string; teams: any[] }) {
     },
     onSuccess: () => {
       setTitle("");
-      setPick((p) => ({ ...p, athlete_user_id: null, athlete_name: null }));
+      setPick((p: PickerValue) => ({ ...p, athlete_user_id: null, athlete_name: null }));
       qc.invalidateQueries({ queryKey: ["org-tasks", orgId] });
     },
   });
