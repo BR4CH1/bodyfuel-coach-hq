@@ -221,6 +221,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
     if (loading || !supabaseUser || isCoach) return;
     if (
       pathname.startsWith("/auth") ||
+      pathname.startsWith("/coach") ||
       pathname.startsWith("/profile") ||
       pathname.startsWith("/onboarding") ||
       /^\/[^/]+\/onboarding(\/|$)/.test(pathname)

@@ -1,6 +1,6 @@
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import {
   Activity,
   ArrowDownRight,
@@ -168,16 +168,12 @@ function RadarBucket({
         <ul className="space-y-2">
           {items.slice(0, 5).map((it) => (
             <li key={it.user_id} className="text-sm">
-              <Link
-                to="/coach/teams/$orgId/athletes/$userId"
-                params={{ orgId, userId: it.user_id }}
-                className="block hover:underline"
-              >
+              <AthleteRowLink orgId={orgId} userId={it.user_id} className="block touch-manipulation rounded hover:underline active:bg-muted/40">
                 <div className="font-semibold">{it.name}</div>
                 <div className="text-[11px] text-muted-foreground">
                   {it.position ?? "—"} · {it.reason}
                 </div>
-              </Link>
+              </AthleteRowLink>
             </li>
           ))}
           {items.length > 5 && (
@@ -256,10 +252,10 @@ function AttentionList({ data, orgId }: { data: CoachAnalytics; orgId: string })
         <ul className="divide-y divide-border rounded-lg border border-border bg-card">
           {items.slice(0, 25).map((a) => (
             <li key={a.user_id}>
-              <Link
-                to="/coach/teams/$orgId/athletes/$userId"
-                params={{ orgId, userId: a.user_id }}
-                className="flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-muted/40"
+              <AthleteRowLink
+                orgId={orgId}
+                userId={a.user_id}
+                className="flex touch-manipulation items-center justify-between gap-3 px-3 py-2.5 hover:bg-muted/40 active:bg-muted/60"
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
@@ -288,7 +284,7 @@ function AttentionList({ data, orgId }: { data: CoachAnalytics; orgId: string })
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                   {STATUS_LABEL[a.status]}
                 </span>
-              </Link>
+              </AthleteRowLink>
             </li>
           ))}
         </ul>
@@ -313,5 +309,34 @@ function SectionTitle({ children, icon }: { children: React.ReactNode; icon?: Re
       {icon}
       {children}
     </h2>
+  );
+}
+
+function AthleteRowLink({
+  orgId,
+  userId,
+  className,
+  children,
+}: {
+  orgId: string;
+  userId: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const navigate = useNavigate();
+  return (
+    <Link
+      to="/coach/teams/$orgId/athletes/$userId"
+      params={{ orgId, userId }}
+      preload="intent"
+      onClick={(event) => {
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        event.preventDefault();
+        navigate({ to: "/coach/teams/$orgId/athletes/$userId", params: { orgId, userId } });
+      }}
+      className={className}
+    >
+      {children}
+    </Link>
   );
 }
