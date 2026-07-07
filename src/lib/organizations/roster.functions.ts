@@ -273,3 +273,160 @@ export const removeAthleteFromTeam = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+/**
+ * Existierende BODYFUEL-Nutzer suchen (nach E-Mail oder Anzeigename), um sie
+ * einem Verein/Team hinzuzufügen. Nur für Rollen mit Roster-Verwaltungsrecht.
+ * Nutzt supabaseAdmin (RLS-Bypass), gibt aber ausschließlich minimale
+ * Identifikationsfelder zurück und keine sensiblen Profil-Daten.
+ */
+export const searchExistingAthletes = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { organization_id: string; query: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    await assertCanManageRoster({ supabase, userId, organization_id: data.organization_id });
+
+    const q = data.query.trim();
+    if (q.length < 2) return [] as Array<{
+      user_id: string; display_name: string | null; email: string | null;
+      already_in_org: boolean;
+    }>;
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const isEmail = q.includes("@");
+
+    // 1) Kandidaten-User-IDs sammeln
+    const candidateIds = new Set<string>();
+    const emailMap = new Map<string, string>(); // user_id -> email
+
+    if (isEmail) {
+      const { data: authRows } = await (supabaseAdmin as any)
+        .from("users")
+        .select("id, email")
+        .schema("auth" as any)
+        .ilike("email", `%${q}%`)
+        .limit(20);
+      // schema('auth') via PostgREST wird i. d. R. nicht freigegeben — fallback:
+      if (!authRows) {
+        try {
+          const { data } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 });
+          const needle = q.toLowerCase();
+          for (const u of data.users) {
+            if (u.email?.toLowerCase().includes(needle)) {
+              candidateIds.add(u.id);
+              if (u.email) emailMap.set(u.id, u.email);
+              if (candidateIds.size >= 20) break;
+            }
+          }
+        } catch {
+          /* ignore */
+        }
+      } else {
+        for (const r of authRows as any[]) {
+          candidateIds.add(r.id);
+          emailMap.set(r.id, r.email);
+        }
+      }
+    }
+
+    // 2) Profil-Suche nach display_name (immer)
+    const { data: profs } = await supabaseAdmin
+      .from("profiles")
+      .select("id, display_name")
+      .ilike("display_name", `%${q}%`)
+      .limit(20);
+    for (const p of (profs ?? []) as any[]) candidateIds.add(p.id);
+
+    if (candidateIds.size === 0) return [];
+
+    const ids = Array.from(candidateIds).slice(0, 30);
+
+    // 3) Bereits in dieser Org?
+    const { data: existingMems } = await supabaseAdmin
+      .from("organization_memberships")
+      .select("user_id")
+      .eq("organization_id", data.organization_id)
+      .in("user_id", ids);
+    const inOrg = new Set((existingMems ?? []).map((m: any) => m.user_id));
+
+    // 4) Anzeigenamen holen (falls oben nur via auth gefunden)
+    const { data: allProfs } = await supabaseAdmin
+      .from("profiles")
+      .select("id, display_name")
+      .in("id", ids);
+    const nameMap = new Map<string, string | null>();
+    for (const p of (allProfs ?? []) as any[]) nameMap.set(p.id, p.display_name ?? null);
+
+    // 5) E-Mails auffüllen (falls Suche über Namen kam)
+    const missingEmailIds = ids.filter((id) => !emailMap.has(id));
+    if (missingEmailIds.length > 0) {
+      try {
+        const { data } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 });
+        for (const u of data.users) {
+          if (missingEmailIds.includes(u.id) && u.email) emailMap.set(u.id, u.email);
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
+    return ids.map((id) => ({
+      user_id: id,
+      display_name: nameMap.get(id) ?? null,
+      email: emailMap.get(id) ?? null,
+      already_in_org: inOrg.has(id),
+    }));
+  });
+
+/** Bestehenden Nutzer direkt einem Team der Organisation hinzufügen. */
+export const addExistingUserToTeam = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (d: {
+      organization_id: string;
+      team_id: string;
+      user_id: string;
+      primary_position?: string | null;
+      secondary_position?: string | null;
+      jersey_number?: number | null;
+    }) => d,
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    await assertCanManageRoster({
+      supabase,
+      userId,
+      organization_id: data.organization_id,
+      team_id: data.team_id,
+    });
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { error: memErr } = await supabaseAdmin.from("organization_memberships").upsert(
+      {
+        user_id: data.user_id,
+        organization_id: data.organization_id,
+        role: "athlete" as any,
+        status: "active" as any,
+      } as any,
+      { onConflict: "user_id,organization_id" },
+    );
+    if (memErr) throw new Error(memErr.message);
+
+    const tmPayload: Record<string, unknown> = {
+      user_id: data.user_id,
+      team_id: data.team_id,
+      status: "active",
+    };
+    if (data.primary_position) tmPayload.position = data.primary_position;
+    if (data.secondary_position) tmPayload.secondary_position = data.secondary_position;
+    if (data.jersey_number != null) tmPayload.jersey_number = data.jersey_number;
+
+    const { error: tmErr } = await supabaseAdmin
+      .from("team_memberships")
+      .upsert(tmPayload as any, { onConflict: "user_id,team_id" });
+    if (tmErr) throw new Error(tmErr.message);
+
+    return { ok: true };
+  });
+
