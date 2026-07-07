@@ -72,9 +72,9 @@ function ModulePage() {
                   params: { moduleId: mod.id, testId: t.id },
                 });
               }}
-              className="flex w-full items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4 text-left transition hover:border-bulls-red/60"
+              className="flex w-full touch-manipulation items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4 text-left transition hover:border-bulls-red/60 active:scale-[0.99] active:border-bulls-red/80"
             >
-              <div className="min-w-0">
+              <div className="pointer-events-none min-w-0">
                 <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{t.short}</div>
                 <div className="font-display text-lg font-bold">{t.name}</div>
                 <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
@@ -107,7 +107,7 @@ function ModulePage() {
                   )}
                 </div>
               </div>
-              <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
+              <ChevronRight className="pointer-events-none h-5 w-5 shrink-0 text-muted-foreground" />
             </Link>
           );
         })}
