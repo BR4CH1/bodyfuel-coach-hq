@@ -185,7 +185,9 @@ export function BullsPlanContentView() {
       setOverrides(ovMap);
       const trackedMap: Record<string, string> = {};
       ((entryRows as { id: string; source: string }[]) ?? []).forEach((r) => {
-        const id = r.source.slice("plan:".length);
+        const id = r.source.startsWith("perf_plan:")
+          ? r.source.slice("perf_plan:".length)
+          : r.source.slice("plan:".length);
         trackedMap[id] = r.id;
       });
       setTracked(trackedMap);
