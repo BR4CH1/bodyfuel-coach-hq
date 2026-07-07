@@ -224,7 +224,8 @@ export const getBullsDailyNutritionTargets = createServerFn({ method: "POST" })
     const position: string | null =
       tmRows && tmRows.length ? (tmRows[0] as any).position ?? null : null;
 
-    // 5) Day-type + session intensity resolution
+    // 5) Day-type + session intensity resolution — ALWAYS via the central
+    //    Performance Day Type Resolver (structural + manual, priority ladder).
     let dayType: BullsDayType;
     let dayTypeSource: "manual" | "auto";
     let sessionIntensity: SessionIntensity | null =
@@ -235,26 +236,34 @@ export const getBullsDailyNutritionTargets = createServerFn({ method: "POST" })
       dayType = data.day_type;
       dayTypeSource = "manual";
     } else {
-      const { data: dto } = await supabase
-        .from("day_type_overrides")
-        .select("kind, session_intensity")
-        .eq("user_id", userId)
-        .eq("entry_date", data.date)
-        .maybeSingle();
-      const norm = normalizeOverrideKind((dto as any)?.kind ?? null);
-      if (norm.dayType) {
-        dayType = norm.dayType;
-        dayTypeSource = "manual";
-        if (sessionIntensity == null) {
-          const si = (dto as any)?.session_intensity ?? null;
-          if (si === "LIGHT" || si === "MODERATE" || si === "HARD") {
-            sessionIntensity = si;
-          }
+      const signals = await collectPerformanceDayTypeSignals(supabase, {
+        organizationId,
+        userId,
+        date: data.date,
+      });
+      const resolution = resolvePerformanceDayTypeFromSignals(signals);
+      dayType = resolution.dayType;
+      dayTypeSource =
+        resolution.source === "manual_override" ? "manual" : "auto";
+      if (resolution.flags.includes("LEGACY_TRAINING_OVERRIDE_IGNORED")) {
+        legacyOverrideIgnored = true;
+      }
+
+      // Session intensity from the same override row (only when the manual
+      // override was honoured — otherwise structural detection has no
+      // intensity signal).
+      if (sessionIntensity == null && resolution.source === "manual_override") {
+        const { data: dtoRow } = await supabase
+          .from("day_type_overrides")
+          .select("session_intensity")
+          .eq("user_id", userId)
+          .eq("entry_date", data.date)
+          .maybeSingle();
+        const si = (dtoRow as { session_intensity?: string | null } | null)
+          ?.session_intensity ?? null;
+        if (si === "LIGHT" || si === "MODERATE" || si === "HARD") {
+          sessionIntensity = si;
         }
-      } else {
-        dayType = "rest";
-        dayTypeSource = "auto";
-        if (norm.legacy) legacyOverrideIgnored = true;
       }
     }
 
