@@ -423,7 +423,8 @@ export const acceptOrganizationInvite = createServerFn({ method: "POST" })
         }
         const { error: tmErr } = await supabaseAdmin
           .from("team_memberships")
-          .upsert(tmPayload, { onConflict: "user_id,team_id" });
+          .upsert(tmPayload as any, { onConflict: "user_id,team_id" });
+
         if (tmErr) throw new Error(tmErr.message);
       }
 
