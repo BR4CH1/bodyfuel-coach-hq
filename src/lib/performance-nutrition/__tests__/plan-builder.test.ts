@@ -2,6 +2,9 @@ import { describe, it, expect } from "vitest";
 import {
   pickMealsForDay,
   reoptimizeExistingDay,
+  violatesDiet,
+  violatesAllergy,
+  mealPrepFitScore,
   type PoolMeal,
   type AthletePreferences,
   type ExistingMeal,
