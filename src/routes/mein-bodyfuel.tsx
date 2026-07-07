@@ -22,6 +22,18 @@ export const Route = createFileRoute("/mein-bodyfuel")({
 function MeinBodyFuelPage() {
   const ent = useEntitlements();
   const hasPersonal = ent.hasAnyPersonalBodyfuel;
+  const isTeamOnly = !ent.loading && ent.hasTeamAccess && !hasPersonal && !ent.isPlatformCoach;
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isTeamOnly && ent.primaryOrgSlug) {
+      navigate({ to: "/$orgSlug", params: { orgSlug: ent.primaryOrgSlug }, replace: true });
+    }
+  }, [isTeamOnly, ent.primaryOrgSlug, navigate]);
+
+  if (isTeamOnly) return null;
+
+
 
   return (
     <AppLayout>
