@@ -761,3 +761,38 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </div>
   );
 }
+
+function ChipGrid({
+  items,
+  selected,
+  onChange,
+  bg,
+}: {
+  items: string[];
+  selected: string[];
+  onChange: (next: string[]) => void;
+  bg: string;
+}) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {items.map((it) => {
+        const on = selected.includes(it);
+        return (
+          <button
+            key={it}
+            type="button"
+            onClick={() =>
+              onChange(on ? selected.filter((x) => x !== it) : [...selected, it])
+            }
+            className={`rounded-md border px-3 py-1.5 text-xs font-semibold ${
+              on ? "border-transparent text-white" : "border-border bg-card"
+            }`}
+            style={on ? { background: bg } : {}}
+          >
+            {it}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
