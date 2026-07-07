@@ -79,7 +79,12 @@ export const updateAthleteTask = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId: callerId } = context;
     await assertCoachAccess(supabase, callerId, data.orgId);
-    const update: Record<string, unknown> = {};
+    const update: {
+      title?: string;
+      subtitle?: string | null;
+      scheduled_for?: string;
+      status?: string;
+    } = {};
     if (data.patch.title !== undefined) update.title = data.patch.title;
     if (data.patch.subtitle !== undefined) update.subtitle = data.patch.subtitle;
     if (data.patch.scheduledFor !== undefined) update.scheduled_for = data.patch.scheduledFor;
