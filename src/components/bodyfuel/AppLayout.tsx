@@ -419,9 +419,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
       </main>
 
       {/* Mobile bottom nav */}
-      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 backdrop-blur lg:hidden">
-        <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(mobileNav.length, 7)}, minmax(0, 1fr))` }}>
-          {mobileNav.slice(0, 7).map((item) => {
+      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 backdrop-blur lg:hidden pb-[env(safe-area-inset-bottom)]">
+        <div className="flex overflow-x-auto no-scrollbar">
+          {mobileNav.map((item) => {
             const hash = (item as any).hash as string | undefined;
             const currentHash = (routeHash ?? "").replace(/^#/, "");
             const activePath = (item as any).activePath ?? item.to;
@@ -432,18 +432,21 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 ? pathname === activePath && (currentHash || "cockpit") === hash
                 : pathname.startsWith(activePath);
             const Icon = item.icon;
+            const label = (item.label === "Vereins-Cockpit" || item.label === "Leitungs-Cockpit" || item.label === "Coach-Cockpit")
+              ? "Cockpit"
+              : item.label;
             return (
               <Link
                 key={`${item.to}#${hash ?? ""}-${item.label}`}
                 to={item.to as any}
                 params={(item as any).params}
                 hash={hash}
-                className={`flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium ${
+                className={`flex shrink-0 basis-[72px] flex-col items-center gap-1 py-2.5 text-[11px] font-medium ${
                   active ? "text-gold" : "text-muted-foreground"
                 }`}
               >
-                <Icon className="h-5 w-5" />
-                {item.label}
+                <Icon className="h-5 w-5 shrink-0" />
+                <span className="truncate max-w-[68px]">{label}</span>
               </Link>
             );
           })}
