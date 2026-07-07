@@ -10,6 +10,8 @@ const slugSchema = z
   .max(40)
   .regex(/^[a-z0-9][a-z0-9-]*[a-z0-9]$/, "Slug: nur a-z, 0-9, Bindestrich");
 
+const partnerPublicFields = "id, name, email, slug, commission_pct, is_active, notes, created_at, updated_at";
+
 async function assertCoach(supabase: any, userId: string) {
   const { data } = await supabase.rpc("has_role", { _user_id: userId, _role: "coach" });
   if (!data) throw new Error("Forbidden");
@@ -23,7 +25,7 @@ export const listAffiliatePartners = createServerFn({ method: "GET" })
 
     const { data: partners, error } = await supabaseAdmin
       .from("affiliate_partners")
-      .select("*")
+      .select(partnerPublicFields)
       .order("created_at", { ascending: false });
     if (error) throw error;
 
@@ -75,7 +77,7 @@ export const createAffiliatePartner = createServerFn({ method: "POST" })
         notes: data.notes ?? null,
         created_by: context.userId,
       })
-      .select()
+      .select(partnerPublicFields)
       .single();
     if (error) {
       if (String(error.message).includes("duplicate")) throw new Error("Slug bereits vergeben");
@@ -107,7 +109,7 @@ export const updateAffiliatePartner = createServerFn({ method: "POST" })
       .from("affiliate_partners")
       .update(data.patch)
       .eq("id", data.id)
-      .select()
+      .select(partnerPublicFields)
       .single();
     if (error) throw error;
     return row;

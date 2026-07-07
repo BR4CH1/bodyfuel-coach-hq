@@ -104,7 +104,7 @@ function NutritionPage() {
 
       <div className="grid gap-3 sm:grid-cols-3">
         <Link
-          to="/nutrition/tracking"
+          to="/bulls/nutrition/tracking"
           className="flex items-center gap-3 rounded-2xl border border-gold/50 bg-gradient-to-br from-accent/40 to-card p-4 transition hover:border-gold"
         >
           <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-gold text-primary-foreground">
@@ -116,7 +116,7 @@ function NutritionPage() {
           </div>
         </Link>
         <Link
-          to="/nutrition/favorites"
+          to="/bulls/nutrition/favorites"
           className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4"
         >
           <div className="grid h-10 w-10 place-items-center rounded-xl bg-rose-500/15 text-rose-500">
@@ -128,7 +128,7 @@ function NutritionPage() {
           </div>
         </Link>
         <Link
-          to="/nutrition/shopping"
+          to="/bulls/nutrition/shopping"
           className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4"
         >
           <div className="grid h-10 w-10 place-items-center rounded-xl bg-gold/15 text-gold">

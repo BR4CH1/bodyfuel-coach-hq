@@ -100,6 +100,9 @@ import { Route as CoachPlanPreviewPlanIdRouteImport } from './routes/coach.plan-
 import { Route as CoachPlanBuilderUserIdRouteImport } from './routes/coach.plan-builder.$userId'
 import { Route as CoachCustomersNewRouteImport } from './routes/coach.customers.new'
 import { Route as CoachCustomersUserIdRouteImport } from './routes/coach.customers.$userId'
+import { Route as BullsNutritionTrackingRouteImport } from './routes/bulls.nutrition.tracking'
+import { Route as BullsNutritionShoppingRouteImport } from './routes/bulls.nutrition.shopping'
+import { Route as BullsNutritionFavoritesRouteImport } from './routes/bulls.nutrition.favorites'
 import { Route as ApiPublicGuardianConsentRouteImport } from './routes/api/public/guardian-consent'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
@@ -583,6 +586,21 @@ const CoachCustomersUserIdRoute = CoachCustomersUserIdRouteImport.update({
   path: '/$userId',
   getParentRoute: () => CoachCustomersRoute,
 } as any)
+const BullsNutritionTrackingRoute = BullsNutritionTrackingRouteImport.update({
+  id: '/tracking',
+  path: '/tracking',
+  getParentRoute: () => BullsNutritionRoute,
+} as any)
+const BullsNutritionShoppingRoute = BullsNutritionShoppingRouteImport.update({
+  id: '/shopping',
+  path: '/shopping',
+  getParentRoute: () => BullsNutritionRoute,
+} as any)
+const BullsNutritionFavoritesRoute = BullsNutritionFavoritesRouteImport.update({
+  id: '/favorites',
+  path: '/favorites',
+  getParentRoute: () => BullsNutritionRoute,
+} as any)
 const ApiPublicGuardianConsentRoute =
   ApiPublicGuardianConsentRouteImport.update({
     id: '/api/public/guardian-consent',
@@ -754,7 +772,7 @@ export interface FileRoutesByFullPath {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
-  '/bulls/nutrition': typeof BullsNutritionRoute
+  '/bulls/nutrition': typeof BullsNutritionRouteWithChildren
   '/bulls/photos': typeof BullsPhotosRoute
   '/bulls/recovery': typeof BullsRecoveryRoute
   '/bulls/training': typeof BullsTrainingRoute
@@ -791,6 +809,9 @@ export interface FileRoutesByFullPath {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/public/guardian-consent': typeof ApiPublicGuardianConsentRoute
+  '/bulls/nutrition/favorites': typeof BullsNutritionFavoritesRoute
+  '/bulls/nutrition/shopping': typeof BullsNutritionShoppingRoute
+  '/bulls/nutrition/tracking': typeof BullsNutritionTrackingRoute
   '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/coach/plan-builder/$userId': typeof CoachPlanBuilderUserIdRoute
@@ -865,7 +886,7 @@ export interface FileRoutesByTo {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
-  '/bulls/nutrition': typeof BullsNutritionRoute
+  '/bulls/nutrition': typeof BullsNutritionRouteWithChildren
   '/bulls/photos': typeof BullsPhotosRoute
   '/bulls/recovery': typeof BullsRecoveryRoute
   '/bulls/training': typeof BullsTrainingRoute
@@ -900,6 +921,9 @@ export interface FileRoutesByTo {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/public/guardian-consent': typeof ApiPublicGuardianConsentRoute
+  '/bulls/nutrition/favorites': typeof BullsNutritionFavoritesRoute
+  '/bulls/nutrition/shopping': typeof BullsNutritionShoppingRoute
+  '/bulls/nutrition/tracking': typeof BullsNutritionTrackingRoute
   '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/coach/plan-builder/$userId': typeof CoachPlanBuilderUserIdRoute
@@ -979,7 +1003,7 @@ export interface FileRoutesById {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
-  '/bulls/nutrition': typeof BullsNutritionRoute
+  '/bulls/nutrition': typeof BullsNutritionRouteWithChildren
   '/bulls/photos': typeof BullsPhotosRoute
   '/bulls/recovery': typeof BullsRecoveryRoute
   '/bulls/training': typeof BullsTrainingRoute
@@ -1016,6 +1040,9 @@ export interface FileRoutesById {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/public/guardian-consent': typeof ApiPublicGuardianConsentRoute
+  '/bulls/nutrition/favorites': typeof BullsNutritionFavoritesRoute
+  '/bulls/nutrition/shopping': typeof BullsNutritionShoppingRoute
+  '/bulls/nutrition/tracking': typeof BullsNutritionTrackingRoute
   '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/coach/plan-builder/$userId': typeof CoachPlanBuilderUserIdRoute
@@ -1133,6 +1160,9 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/api/public/guardian-consent'
+    | '/bulls/nutrition/favorites'
+    | '/bulls/nutrition/shopping'
+    | '/bulls/nutrition/tracking'
     | '/coach/customers/$userId'
     | '/coach/customers/new'
     | '/coach/plan-builder/$userId'
@@ -1242,6 +1272,9 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/api/public/guardian-consent'
+    | '/bulls/nutrition/favorites'
+    | '/bulls/nutrition/shopping'
+    | '/bulls/nutrition/tracking'
     | '/coach/customers/$userId'
     | '/coach/customers/new'
     | '/coach/plan-builder/$userId'
@@ -1357,6 +1390,9 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/api/public/guardian-consent'
+    | '/bulls/nutrition/favorites'
+    | '/bulls/nutrition/shopping'
+    | '/bulls/nutrition/tracking'
     | '/coach/customers/$userId'
     | '/coach/customers/new'
     | '/coach/plan-builder/$userId'
@@ -1428,7 +1464,7 @@ export interface RootRouteChildren {
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   BullsBenchmarksRoute: typeof BullsBenchmarksRoute
-  BullsNutritionRoute: typeof BullsNutritionRoute
+  BullsNutritionRoute: typeof BullsNutritionRouteWithChildren
   BullsPhotosRoute: typeof BullsPhotosRoute
   BullsRecoveryRoute: typeof BullsRecoveryRoute
   BullsTrainingRoute: typeof BullsTrainingRoute
@@ -2100,6 +2136,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CoachCustomersUserIdRouteImport
       parentRoute: typeof CoachCustomersRoute
     }
+    '/bulls/nutrition/tracking': {
+      id: '/bulls/nutrition/tracking'
+      path: '/tracking'
+      fullPath: '/bulls/nutrition/tracking'
+      preLoaderRoute: typeof BullsNutritionTrackingRouteImport
+      parentRoute: typeof BullsNutritionRoute
+    }
+    '/bulls/nutrition/shopping': {
+      id: '/bulls/nutrition/shopping'
+      path: '/shopping'
+      fullPath: '/bulls/nutrition/shopping'
+      preLoaderRoute: typeof BullsNutritionShoppingRouteImport
+      parentRoute: typeof BullsNutritionRoute
+    }
+    '/bulls/nutrition/favorites': {
+      id: '/bulls/nutrition/favorites'
+      path: '/favorites'
+      fullPath: '/bulls/nutrition/favorites'
+      preLoaderRoute: typeof BullsNutritionFavoritesRouteImport
+      parentRoute: typeof BullsNutritionRoute
+    }
     '/api/public/guardian-consent': {
       id: '/api/public/guardian-consent'
       path: '/api/public/guardian-consent'
@@ -2407,6 +2464,22 @@ const SmartRouteChildren: SmartRouteChildren = {
 
 const SmartRouteWithChildren = SmartRoute._addFileChildren(SmartRouteChildren)
 
+interface BullsNutritionRouteChildren {
+  BullsNutritionFavoritesRoute: typeof BullsNutritionFavoritesRoute
+  BullsNutritionShoppingRoute: typeof BullsNutritionShoppingRoute
+  BullsNutritionTrackingRoute: typeof BullsNutritionTrackingRoute
+}
+
+const BullsNutritionRouteChildren: BullsNutritionRouteChildren = {
+  BullsNutritionFavoritesRoute: BullsNutritionFavoritesRoute,
+  BullsNutritionShoppingRoute: BullsNutritionShoppingRoute,
+  BullsNutritionTrackingRoute: BullsNutritionTrackingRoute,
+}
+
+const BullsNutritionRouteWithChildren = BullsNutritionRoute._addFileChildren(
+  BullsNutritionRouteChildren,
+)
+
 interface TrackerAppRouteChildren {
   TrackerAppAchievementsRoute: typeof TrackerAppAchievementsRoute
   TrackerAppActivityRoute: typeof TrackerAppActivityRoute
@@ -2468,7 +2541,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   BullsBenchmarksRoute: BullsBenchmarksRoute,
-  BullsNutritionRoute: BullsNutritionRoute,
+  BullsNutritionRoute: BullsNutritionRouteWithChildren,
   BullsPhotosRoute: BullsPhotosRoute,
   BullsRecoveryRoute: BullsRecoveryRoute,
   BullsTrainingRoute: BullsTrainingRoute,
