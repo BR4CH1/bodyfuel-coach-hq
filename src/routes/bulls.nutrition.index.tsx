@@ -142,7 +142,7 @@ function NutritionPage() {
       </div>
 
       {supabaseUser?.id && profile?.completed_at && <WeekScheduleCard userId={supabaseUser.id} />}
-      <MacroTargetsCard userId={supabaseUser?.id} />
+      <MacroTargetsCard userId={supabaseUser?.id} variant="bulls" />
       {supabaseUser?.id && <PlateauWarning userId={supabaseUser.id} />}
       {supabaseUser?.id && profile?.completed_at && <DietPreferencesCard />}
       {supabaseUser?.id && <MealWishesCard userId={supabaseUser.id} mode="client" />}

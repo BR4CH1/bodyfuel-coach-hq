@@ -22,7 +22,7 @@ export const Route = createFileRoute("/bulls/nutrition/tracking")({
             title="Tracker"
             subtitle="Kalorien, Makros & Mahlzeiten — direkt im Bulls Hub."
           />
-          <NutritionTracker />
+          <NutritionTracker variant="bulls" />
         </div>
       </BullsGate>
     </AppLayout>

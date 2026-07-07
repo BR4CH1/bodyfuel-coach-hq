@@ -21,6 +21,10 @@ import {
   type FoodResult,
   type DayType,
 } from "@/lib/nutrition.functions";
+import {
+  getBullsDailyNutritionTargets,
+  setBullsDayType,
+} from "@/lib/performance-nutrition/bulls-nutrition.functions";
 import { listCustomMeals, type CustomMeal } from "@/lib/custom-meals.functions";
 import { LOCAL_FOODS } from "@/lib/bodyfuel/localFoods";
 
@@ -205,11 +209,16 @@ function Ring({
   );
 }
 
-export function NutritionTracker() {
+export function NutritionTracker({
+  variant = "personal",
+}: {
+  variant?: "personal" | "bulls";
+}) {
   const { supabaseUser, isCoach } = useSession();
   const userId = supabaseUser?.id;
   const [date, setDate] = useState<string>(() => today());
   const isToday = date === today();
+  const isBulls = variant === "bulls";
 
   const [baseTargets, setBaseTargets] = useState<Targets>(DEFAULT_TARGETS);
   const [restTargets, setRestTargets] = useState<Targets | null>(null);
@@ -364,6 +373,8 @@ export function NutritionTracker() {
   const getTargetsFn = useServerFn(getNutritionTargets);
   const getDayTypeFn = useServerFn(getDayType);
   const setDayTypeFn = useServerFn(setDayType);
+  const getBullsTargetsFn = useServerFn(getBullsDailyNutritionTargets);
+  const setBullsDayTypeFn = useServerFn(setBullsDayType);
   const searchFn = useServerFn(searchFoods);
   const searchDbFn = useServerFn(searchFoodsDb);
   const lookupFn = useServerFn(lookupBarcode);
@@ -394,8 +405,7 @@ export function NutritionTracker() {
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const [t, e, w, d] = await Promise.all([
-        getTargetsFn({ data: { user_id: userId } }),
+      const [entriesRes, waterRes] = await Promise.all([
         supabase
           .from("food_entries")
           .select("id, meal, name, brand, serving_g, kcal, protein_g, carbs_g, fat_g, source")
@@ -408,41 +418,81 @@ export function NutritionTracker() {
           .eq("user_id", userId)
           .eq("entry_date", date)
           .maybeSingle(),
-        getDayTypeFn({ data: { user_id: userId, date } }),
       ]);
-      if (cancelled) return;
-      if (t) {
-        setBaseTargets({
-          kcal: t.kcal,
-          protein_g: t.protein_g,
-          carbs_g: t.carbs_g,
-          fat_g: t.fat_g,
-          water_glasses: t.water_glasses,
-        });
-        if (t.kcal_rest != null) {
-          setRestTargets({
-            kcal: t.kcal_rest,
-            protein_g: t.protein_g_rest ?? t.protein_g,
-            carbs_g: t.carbs_g_rest ?? t.carbs_g,
-            fat_g: t.fat_g_rest ?? t.fat_g,
+
+      if (isBulls) {
+        // BULLS: engine (org-scoped Performance Nutrition Engine) is the single
+        // source of truth. No local fallback, no hardcoded rest/training kcal.
+        try {
+          const b = await getBullsTargetsFn({ data: { date } });
+          if (cancelled) return;
+          if (b.trainingTargets) {
+            setBaseTargets({
+              kcal: b.trainingTargets.kcal,
+              protein_g: b.trainingTargets.protein_g,
+              carbs_g: b.trainingTargets.carbs_g,
+              fat_g: b.trainingTargets.fat_g,
+              water_glasses: DEFAULT_TARGETS.water_glasses,
+            });
+          } else {
+            setBaseTargets(DEFAULT_TARGETS);
+          }
+          if (b.restTargets) {
+            setRestTargets({
+              kcal: b.restTargets.kcal,
+              protein_g: b.restTargets.protein_g,
+              carbs_g: b.restTargets.carbs_g,
+              fat_g: b.restTargets.fat_g,
+              water_glasses: DEFAULT_TARGETS.water_glasses,
+            });
+          } else {
+            setRestTargets(null);
+          }
+          setDayTypeState(b.dayType);
+          setDayTypeSource(b.dayTypeSource);
+        } catch (err) {
+          if (!cancelled) toast.error((err as Error).message);
+        }
+      } else {
+        const [t, d] = await Promise.all([
+          getTargetsFn({ data: { user_id: userId } }),
+          getDayTypeFn({ data: { user_id: userId, date } }),
+        ]);
+        if (cancelled) return;
+        if (t) {
+          setBaseTargets({
+            kcal: t.kcal,
+            protein_g: t.protein_g,
+            carbs_g: t.carbs_g,
+            fat_g: t.fat_g,
             water_glasses: t.water_glasses,
           });
-        } else {
-          setRestTargets(null);
+          if (t.kcal_rest != null) {
+            setRestTargets({
+              kcal: t.kcal_rest,
+              protein_g: t.protein_g_rest ?? t.protein_g,
+              carbs_g: t.carbs_g_rest ?? t.carbs_g,
+              fat_g: t.fat_g_rest ?? t.fat_g,
+              water_glasses: t.water_glasses,
+            });
+          } else {
+            setRestTargets(null);
+          }
         }
+        setDayTypeState(d.kind);
+        setDayTypeSource(d.source);
       }
-      const rows = ((e.data as FoodEntry[]) ?? []).map((r) => ({ ...r }));
+
+      const rows = ((entriesRes.data as FoodEntry[]) ?? []).map((r) => ({ ...r }));
       setPlanMealKinds({});
       setAllEntries(rows);
-      setWaterGlasses(w.data?.glasses ?? 0);
-      setDayTypeState(d.kind);
-      setDayTypeSource(d.source);
+      setWaterGlasses(waterRes.data?.glasses ?? 0);
       setLoading(false);
     })();
     return () => {
       cancelled = true;
     };
-  }, [userId, date, getTargetsFn, getDayTypeFn]);
+  }, [userId, date, isBulls, getTargetsFn, getDayTypeFn, getBullsTargetsFn]);
 
   const toggleDayType = async () => {
     if (!userId) return;
@@ -451,7 +501,31 @@ export function NutritionTracker() {
     setDayTypeState(next);
     setDayTypeSource("manual");
     try {
-      await setDayTypeFn({ data: { user_id: userId, date, kind: next } });
+      if (isBulls) {
+        await setBullsDayTypeFn({ data: { date, kind: next } });
+        // Refresh engine result so targets follow the new day type
+        const b = await getBullsTargetsFn({ data: { date } });
+        if (b.trainingTargets) {
+          setBaseTargets({
+            kcal: b.trainingTargets.kcal,
+            protein_g: b.trainingTargets.protein_g,
+            carbs_g: b.trainingTargets.carbs_g,
+            fat_g: b.trainingTargets.fat_g,
+            water_glasses: DEFAULT_TARGETS.water_glasses,
+          });
+        }
+        if (b.restTargets) {
+          setRestTargets({
+            kcal: b.restTargets.kcal,
+            protein_g: b.restTargets.protein_g,
+            carbs_g: b.restTargets.carbs_g,
+            fat_g: b.restTargets.fat_g,
+            water_glasses: DEFAULT_TARGETS.water_glasses,
+          });
+        }
+      } else {
+        await setDayTypeFn({ data: { user_id: userId, date, kind: next } });
+      }
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -463,16 +537,24 @@ export function NutritionTracker() {
     if (!userId) return;
     setSavingDayType(true);
     try {
-      await setDayTypeFn({ data: { user_id: userId, date, kind: null } });
-      const d = await getDayTypeFn({ data: { user_id: userId, date } });
-      setDayTypeState(d.kind);
-      setDayTypeSource(d.source);
+      if (isBulls) {
+        await setBullsDayTypeFn({ data: { date, kind: null } });
+        const b = await getBullsTargetsFn({ data: { date } });
+        setDayTypeState(b.dayType);
+        setDayTypeSource(b.dayTypeSource);
+      } else {
+        await setDayTypeFn({ data: { user_id: userId, date, kind: null } });
+        const d = await getDayTypeFn({ data: { user_id: userId, date } });
+        setDayTypeState(d.kind);
+        setDayTypeSource(d.source);
+      }
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
       setSavingDayType(false);
     }
   };
+
 
 
   const totals = useMemo(() => {
