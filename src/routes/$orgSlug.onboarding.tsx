@@ -349,6 +349,49 @@ function AthleteOnboarding({ ctx }: { ctx: NonNullable<Awaited<ReturnType<typeof
           </Field>
         </div>
 
+        <SectionHeader className="mt-6">Ernährung & Aktivität</SectionHeader>
+        <p className="mb-3 text-[11px] text-muted-foreground">
+          Grundlage für dein persönliches Kalorien- und Makro-Ziel im {org.name}-Bereich.
+          Diese Angaben fließen ausschließlich in die vereinsinterne Performance-Berechnung ein.
+        </p>
+        <div className="grid gap-4">
+          <Field label="Biologisches Geschlecht (für Energieberechnung) *">
+            <Select value={energySex} onValueChange={setEnergySex}>
+              <SelectTrigger><SelectValue placeholder="Auswählen" /></SelectTrigger>
+              <SelectContent>
+                {ENERGY_SEX_OPTIONS.map((o) => (
+                  <SelectItem key={o.v} value={o.v}>{o.l}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="mt-1 text-[10px] text-muted-foreground">
+              Wird nur zur Berechnung des Energiebedarfs verwendet (DRI 2023).
+            </p>
+          </Field>
+          <Field label="Alltagsaktivität (ohne Football-/Athletik-Training) *">
+            <Select value={baselineActivity} onValueChange={setBaselineActivity}>
+              <SelectTrigger><SelectValue placeholder="Auswählen" /></SelectTrigger>
+              <SelectContent>
+                {BASELINE_ACTIVITY_OPTIONS.map((o) => (
+                  <SelectItem key={o.v} value={o.v}>{o.l}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label="Ernährungsziel *">
+            <Select value={nutritionGoal} onValueChange={setNutritionGoal}>
+              <SelectTrigger><SelectValue placeholder="Auswählen" /></SelectTrigger>
+              <SelectContent>
+                {PERFORMANCE_NUTRITION_GOAL_OPTIONS.map((o) => (
+                  <SelectItem key={o.v} value={o.v}>{o.l}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+        </div>
+
+
+
         <Button
           size="lg"
           className="mt-8 w-full text-white"
