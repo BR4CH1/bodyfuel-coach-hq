@@ -1,107 +1,184 @@
-# BodyFuel Performance Auto Plan Pipeline V1
 
-Ziel: Bulls-/Performance-Athleten erhalten Ernährungspläne automatisch, sobald der Coach Teamtraining plant. Kein „Plan erstellen"-Button mehr im Bulls Hub. Persönlicher BodyFuel-Kontext bleibt unangetastet.
+# BodyFuel Performance Onboarding — Unified Flow
 
-## Bestandsaufnahme (recon)
+## Was der Audit ergeben hat
 
-Wiederverwendbar (unverändert): `getBullsDailyNutritionTargets`, `getNutritionTargetForDate`, Performance-Engine, `resolvePerformanceDayType`, `nutrition_plans/_days/_meals/_meal_overrides`, `nutrition_plan_meals.is_locked` + `linked_prep_group`, `coach_meal_library` (Recipe Pool inkl. `suitable_training/rest`, `meal_slot`, `no_go_ingredients`, `mealprep_ok`), `food_entries` (Tracking), `smart_autopilot_jobs` + `/api/public/hooks/process-autopilot-jobs.ts` (Cron-Worker).
+**Bestehende Source of Truth für persönliche Nutrition-Präferenzen: `smart_nutrition_profile`.**
+Sie hat bereits alle relevanten Spalten — sie wird nur nicht in den Performance-Flow eingebunden:
 
-Fehlt / muss neu: org-Scoping auf `nutrition_plans`, per-Datum-Adressierung, `modification_source`, deterministischer Meal-Selektor aus `coach_meal_library` (kein LLM), Team-Job-Tabelle, Trigger-Wiring, Reoptimizer, Team-Publish-Hook.
+| Kategorie | Spalten in `smart_nutrition_profile` |
+|---|---|
+| Lieblingsfoods | `favorite_foods[]`, `extra_favorites` |
+| No-Gos | `nogo_foods[]`, `extra_nogos` |
+| Allergien | `allergies[]`, `extra_allergies` |
+| Unverträglichkeiten | `intolerances[]` |
+| Ernährungsform | `diet_style`, `diet_notes` |
+| Mahlzeitenstruktur | `eating_style`, `meal_prep_style`, `meal_prep_days`, `variety_level` |
+| Küche | `kitchen_equipment[]`, `kitchen_equipment_notes` |
 
-## Umsetzung (in dieser Reihenfolge)
+**Performance-spezifisch bleibt** in `performance_nutrition_profiles`:
+`sex_for_energy_calculation`, `baseline_daily_activity`, `performance_goal`, `organization_id`.
 
-### 1. DB-Schema-Erweiterungen (Migration, additiv)
+**Aktueller Bulls-Plan-Builder liest nur `nogo_foods`** und ignoriert Allergien, Diätform, Unverträglichkeiten und Mealprep-Präferenzen komplett. Das ist der Sicherheits- und Personalisierungs-Kernfehler, den wir hier fixen.
 
-- `nutrition_plans`: `organization_id uuid null`, `performance_context bool default false`. Partial-Index `unique (client_id, organization_id) where performance_context and status='active'` — 1 aktiver Performance-Plan pro (User, Org).
-- `nutrition_plan_days`: `plan_date date null`. Backfill nicht nötig (nur Performance-Pläne setzen es).
-- `nutrition_plan_meals`: `modification_source text null` — Enum via CHECK: `auto_generated|athlete_swapped|athlete_locked|coach_fixed`.
-- `performance_plan_jobs`: `id, organization_id, team_id null, week_start date, trigger text, status (pending|processing|completed|completed_with_errors|failed), total/processed/generated/updated/skipped/failed counts, started_at/completed_at, created_by, unique (organization_id, team_id, week_start, trigger, coalesce(dedupe_key,'')) where status in ('pending','processing')` — verhindert Doppel-Jobs.
-- `performance_plan_history`: `id, user_id, organization_id, date, trigger, action (GENERATED|REOPTIMIZED|NO_CHANGE|SKIPPED_PAST_DATE|SKIPPED_PROFILE_INCOMPLETE|SKIPPED_TRACKED_DAY|FAILED), previous_day_type, new_day_type, previous_target_kcal, new_target_kcal, engine_version, job_id, flags jsonb, created_at`.
-- RLS: Athlet liest eigene History; Coach/Staff der Org liest alle. Jobs: Staff read/insert.
-- GRANTs für `authenticated` + `service_role` gemäß Cloud-Regeln.
+**Datenlage in Coesfeld Bulls Seniors (13 Athleten):**
+- `performance_nutrition_profiles`: **0 Rows** → alle blockiert.
+- `smart_nutrition_profile`: 9 Rows vorhanden, 4 fehlen (Nassim, Patrick, Sven, Manuel-dup).
+- Bekim: SNP komplett (Favs, `diet_style=omnivore`, `meal_prep_style=meal_prep`). Fehlt: PNP-Row (sex/activity/goal).
+- Lars: SNP teilweise (Favs, `meal_prep_style=2_3_week`, aber `diet_style=NULL`). Fehlt: PNP-Row + diet_style.
 
-### 2. Pure Meal-Selektor (kein LLM, kein I/O)
+## Architekturgrundsatz
 
-Datei `src/lib/performance-nutrition/plan-builder.ts`:
+- **Ein Athleten-Onboarding**, mobil, unter `/$orgSlug/onboarding`.
+- Persönliche Präferenzen → **immer** `smart_nutrition_profile` (upsert, bestehende Werte bleiben).
+- Performance-Kontext → `performance_nutrition_profiles` (org-scoped).
+- Biometrie → `profiles` + `body_measurements` (nur wenn leer/veraltet).
+- **Keine neue Präferenztabelle. Keine doppelten No-Go-/Allergie-Listen.**
 
-- `pickMealsForDay({ target, dayType, preferences, poolMeals })` — greedy + backtracking:
-  1. Slot-Reihenfolge: `breakfast → lunch → dinner → snack (optional) → pre_workout (bei training/game/double)`.
-  2. Filter Pool: `suitable_training/rest` je DayType, `no_go_ingredients ∩ athlete no-gos = ∅`, Slot-Match.
-  3. Wähle Meal mit geringster Protein-Distanz zum Slot-Anteil, dann Kalorien-Distanz.
-  4. Skaliere Portion (linear auf kcal), cap [0.5×, 2.0×]. Bei Cap: nächste Kandidatin.
-  5. Prüfe Ziele: kcal ±5 %, protein ±10 %, carbs ±10 %, fat ±10 %. Bei Training: Protein/Carb-Floor > kcal-Exaktheit.
-- `reoptimizeExistingDay({ existingMeals, newTarget, locked, prepGroups, tracked })` — Prioritäts-Ladder: (a) Mengen skalieren, (b) Snack ergänzen, (c) eine ungelockte Mahlzeit ersetzen, (d) Tag komplett neu. `linked_prep_group` erhält einheitlichen Skalierungsfaktor über gekoppelte Meals.
-- Unit-testbar, deterministisch (Seed via `user_id+date`).
+## Änderungen im Detail
 
-### 3. Athleten-Pipeline (Server-Fn)
+### 1. Onboarding-Wizard erweitern
+**Datei:** `src/routes/$orgSlug.onboarding.tsx` (aktuell 3-Feld-Formular → 10-Schritt-Wizard).
 
-`src/lib/performance-nutrition/auto-plan.functions.ts`:
+10 Schritte, alle bestehenden Chip-Grids/Enums aus `onboarding.smart.tsx` und `onboarding.smart-nutrition.tsx` **wiederverwenden** (kein neues UI-Kit, keine neuen Enums):
 
-- `generateOrUpdatePerformanceNutritionWeek({ organizationId, userId, weekStart, trigger, jobId? })`:
-  - Für jedes Datum weekStart..+6:
-    - `date < today` → `SKIPPED_PAST_DATE`.
-    - `collectPerformanceDayTypeSignals` + `resolvePerformanceDayTypeFromSignals` (Resolver, schon fertig).
-    - `getNutritionTargetForDate` (org-scoped, active target aus Read Layer).
-    - Bei `MISSING_DATA`/kein Target → `SKIPPED_PROFILE_INCOMPLETE`.
-    - Bestehenden Performance-Plan-Day laden (`nutrition_plans where organization_id AND performance_context AND client_id=user AND status='active'`, dann `plan_date=date`). Vergleiche `previous_day_type/kcal` mit `new_*`.
-    - Unverändert → `NO_CHANGE`.
-    - Tag existiert nicht → `pickMealsForDay` → INSERT `plan_day` + `plan_meals` (`modification_source='auto_generated'`) → `GENERATED`.
-    - Tag existiert & Änderung → `reoptimizeExistingDay` (respektiert `is_locked`, `modification_source in (athlete_locked, coach_fixed)`, `linked_prep_group`, getrackte Meals via `food_entries`-Prefix `perf_plan:*`) → `REOPTIMIZED`.
-    - `date === today` + Tracking vorhanden → nur ungetrackte Slots reoptimieren, sonst `SKIPPED_TRACKED_DAY` oder Flag `ACTIVE_DAY_REPLAN_REVIEW_REQUIRED`.
-  - Alles in `performance_plan_history` protokollieren (`job_id`).
-  - Rückgabe: `{ generated, updated, skipped, failed, actions[] }`.
+| # | Schritt | Felder | Zieltabelle |
+|---|---|---|---|
+| 1 | Athletenprofil | `gender`, `birthdate`, `height_cm`, aktuelles `weight_kg`, `position` | `profiles`, `body_measurements`, `team_memberships.position` |
+| 2 | Performance-Ziel | 5 Optionen → `performance_goal` | `performance_nutrition_profiles` |
+| 3 | Alltag | 4 Optionen → `baseline_daily_activity` | `performance_nutrition_profiles` |
+| 4 | Lieblingsfoods | `favorite_foods[]` + `extra_favorites` (Chip-Grid aus Smart, 16 Items) | `smart_nutrition_profile` |
+| 5 | No-Gos | `nogo_foods[]` + `extra_nogos` (Chip-Grid aus smart-nutrition) | `smart_nutrition_profile` |
+| 6 | Allergien & Unverträglichkeiten | `allergies[]` + `extra_allergies` + `intolerances[]` | `smart_nutrition_profile` |
+| 7 | Ernährungsform | `diet_style` (6 Optionen: omnivore/flexitarian/pescetarian/vegetarian/vegan/other) + `diet_notes` | `smart_nutrition_profile` |
+| 8 | Essensalltag | `eating_style` + `meal_prep_days` (nur wenn meal_prep) | `smart_nutrition_profile` |
+| 9 | Kochen & Mealprep | `meal_prep_style`, `kitchen_equipment[]` (falls Zeit) | `smart_nutrition_profile` |
+| 10 | Zusammenfassung | Read-only Übersicht + „Performance-Profil abschließen" | — |
 
-### 4. Team-Pipeline & Job-Worker
+Bestehende Werte pro Schritt vorbefüllen. Für Bekim würden Schritte 4/5/6/7/9 vollständig vorbelegt sein; er bestätigt nur.
 
-- `processPublishedPerformanceWeek({ organizationId, teamId, weekStart, trigger, createdBy })` schreibt eine `performance_plan_jobs`-Zeile (Unique-Index verhindert Doppel-Job) und weckt den Cron-Worker.
-- **Wiederverwendung** von `smart_autopilot_jobs` NICHT — es ist personal-scoped und hat kein Org/Team. Stattdessen neue Route `/api/public/hooks/process-performance-plan-jobs.ts` nach dem gleichen Muster (1 Athlet pro Request-Iteration, Retry, `attempts<3`). pg_cron-Job alle 30 s.
-- Worker-Loop: pending Job holen (SKIP LOCKED), erste noch nicht verarbeitete Athlete-ID aus `active team_memberships` mit `performance_nutrition_profiles`-Row auswählen, `generateOrUpdatePerformanceNutritionWeek` aufrufen, Zähler updaten, bei letztem Athleten `completed`/`completed_with_errors`. Ein Athletenfehler stoppt den Job nicht.
-- Concurrency: Row-Level `SELECT ... FOR UPDATE SKIP LOCKED` auf Jobs + Athlet-Fortschritts-Tracking via `performance_plan_history` (bereits geschriebene History-Zeile = Athlet fertig für diesen Job).
+Für Position (`team_memberships.position`): nur schreiben, wenn leer — bestehende Position (z. B. Bekim=QB) bleibt.
 
-### 5. Trigger-Wiring
+`sex_for_energy_calculation` wird **automatisch aus `profiles.gender`** abgeleitet (`male→MALE`, `female→FEMALE`, `other→UNSPECIFIED`) — keine zusätzliche Frage.
 
-- `type PerformancePlanTrigger = "WEEK_PUBLISHED"|"TEAM_SCHEDULE_CHANGED"|"GAME_ADDED"|"GAME_REMOVED"|"ATHLETIC_PLAN_CHANGED"|"PERFORMANCE_PROFILE_COMPLETED"|"PERFORMANCE_GOAL_CHANGED"|"WEIGHT_TARGET_RECALCULATED"|"CALIBRATION_CHANGED"`.
-- Da kein expliziter Team-Publish-Flow existiert: die Team-Training-Schreib-Server-Fns (`organization_team_training_schedule` upsert/delete) erhalten am Ende einen `enqueuePerformancePlanJob(trigger='TEAM_SCHEDULE_CHANGED')`-Call für die betroffene Woche. Athleten-Trigger (`PERFORMANCE_PROFILE_COMPLETED`, `PERFORMANCE_GOAL_CHANGED`, `CALIBRATION_CHANGED`) enqueuen einen Single-Athlete-Job (team_id=null).
-- Der Coach drückt keinen zusätzlichen Button.
+### 2. Neuer Completion-Server-Fn
+**Neue Datei:** `src/lib/performance-nutrition/onboarding.functions.ts`
 
-### 6. UI-Anpassung (minimal)
+Zwei Server-Fns mit `requireSupabaseAuth`:
 
-- `BullsPlanContentView`: leerer State zeigt „Deine Performance-Woche wird vorbereitet." wenn `performance_plan_jobs` pending/processing für die Woche existiert, sonst „Noch kein Plan — dein Coach hat noch keine Woche geplant." Kein „Plan erstellen"-Button mehr. Plan-Read bleibt via bestehende Query (jetzt gefiltert auf `performance_context=true` + `organization_id`).
-- Persönlicher BodyFuel-Read-Path bleibt unverändert (`performance_context=false OR IS NULL`).
+- `completePerformanceOnboarding({ organizationId, ...allFields })` — atomarer Upsert-Batch:
+  1. `profiles` upsert (nur leere/geänderte Biometrie-Felder)
+  2. `body_measurements` insert (nur wenn Gewicht neu)
+  3. `smart_nutrition_profile` upsert (**bestehende Werte bleiben, wenn Client sie nicht mitschickt** — dedizierte „preserve" Logik über sparse payload)
+  4. `performance_nutrition_profiles` upsert (unique auf `(user_id, organization_id)`)
+  5. Server-side Validierung: engineReady + mealPlanningReady
+  6. Wenn beides `true` → `performance_plan_jobs` insert mit `trigger='PERFORMANCE_PROFILE_COMPLETED'` (der bestehende Unique-Index verhindert Duplikate)
 
-### 7. Idempotenz & Dual-Role-Trennung
+- `getPerformanceOnboardingCompletion({ organizationId })` — Read-only Status:
+  ```ts
+  {
+    status: "COMPLETE" | "PARTIAL" | "MISSING",
+    engineReady: boolean,          // biometrics + PNP komplett
+    mealPlanningReady: boolean,    // SNP Pflichtfelder komplett
+    missingPerformanceFields: string[],
+    missingNutritionFields: string[],
+    completionPercent: number,
+  }
+  ```
 
-- Idempotenz: (a) Job-Unique-Index, (b) Vergleich previous vs. current im Athleten-Loop → `NO_CHANGE`, (c) `plan_meal` UPSERT auf `(day_id, sort_order)` mit `modification_source='auto_generated'` (nur diese Zeilen dürfen ersetzt werden).
-- Dual-Role: Alle Reads/Writes der Pipeline filtern hart auf `performance_context=true` + `organization_id`. Persönliche Pläne (`performance_context=false`) werden nie berührt.
+**mealPlanningReady-Pflichtfelder** (bewusst restriktiv, damit der Plan-Builder sicher ist):
+`diet_style` gesetzt UND `allergies` und `intolerances` gepflegt (bewusster Athletencheck; leere Arrays sind ok, aber `NULL` = ungeprüft = nicht ready) UND `meal_prep_style` gesetzt.
 
-### 8. Tests (vitest)
+### 3. Plan-Builder härten
+**Dateien:** `src/lib/performance-nutrition/plan-builder.ts`, `.../auto-plan.functions.ts`
 
-`src/lib/performance-nutrition/__tests__/`:
-- `plan-builder.test.ts` — Meal-Selektor pure (Ziel-Toleranzen, Slot-Reihenfolge, No-Go-Filter, Skalierungs-Cap).
-- `reoptimizer.test.ts` — Ladder (Mengen → Snack → Ersetzen → Neu), Locked-Respekt, Mealprep-Konsistenz, getrackte Slots geschützt.
-- `auto-plan-flow.test.ts` — mit In-Memory-Supabase-Mock: 15 Szenarien aus dem Auftrag (neue Woche, identisch, REST→FT, FT+STR→DS, Game, Vergangenheit, heute mit/ohne Tracking, locked, mealprep, unvollständiges Profil, Dual-Role, 1 Fehler in 50, doppelter Job, Youth ohne Target).
-
-## Technische Details (kompakt)
-
-```text
-Trigger (Coach save / Athlete profile) 
-  → enqueuePerformancePlanJob (INSERT performance_plan_jobs)
-  → pg_cron (30 s)
-  → /api/public/hooks/process-performance-plan-jobs (apikey)
-  → für jeden Athleten: generateOrUpdatePerformanceNutritionWeek
-      → resolvePerformanceDayType   (bereits fertig)
-      → getNutritionTargetForDate   (bereits fertig)
-      → pickMealsForDay | reoptimizeExistingDay
-      → INSERT/UPDATE nutrition_plans/_days/_meals   (org-scoped, performance_context=true)
-      → INSERT performance_plan_history
+**a) `AthletePreferences` erweitern** (`plan-builder.ts`):
+```ts
+type AthletePreferences = {
+  no_go_ingredients: string[];
+  extra_nogo_terms: string[];      // free-text tokenized
+  allergy_tokens: string[];         // aus allergies + extra_allergies + intolerances
+  diet_style: "omnivore" | "flexitarian" | "pescetarian" | "vegetarian" | "vegan" | "other" | null;
+  meal_prep_style: "daily" | "2_3_week" | "meal_prep" | "low_effort" | null;
+  wants_snack: boolean;             // aus eating_style abgeleitet, nicht mehr hardcoded
+}
 ```
 
-## Ausdrücklich NICHT in diesem Schritt
+**b) Neue Filter im Meal-Pool** (zusätzlich zu `violatesNoGo`):
+- `violatesDiet(meal, diet_style)` — Fisch/Fleisch/Ei/Milch je nach Diät ausschließen. Nutzt bestehende Meal-Tags aus `coach_meal_library` (Feld `dietary_tags[]` oder `contains_animal_products`, je nach Schema — der Impl-Schritt prüft die genaue Spalte).
+- `violatesAllergy(meal, allergy_tokens)` — Ingredient-Match auf `no_go_ingredients`-artigem String-Contains, aber gegen `allergy_tokens` und mit **fail-safe reject** (bei Zweideutigkeit rejecten, nicht akzeptieren — Sicherheit vor Auswahl).
+- `mealPrepFitScore(meal, meal_prep_style)` — Soft-Score, kein Hard-Filter (bevorzugt Meal-Prep-taugliche Meals bei `meal_prep`, one-shot Meals bei `daily`).
 
-Session-Intensity-UI, Coach-Override-Actions, Push-Notifications, Änderungen am persönlichen Plan-Erstellen-Flow, LLM-basierte Meal-Generierung für Performance (deterministischer Selektor aus `coach_meal_library`).
+**c) `auto-plan.functions.ts` erweitern:**
+- SELECT auf `smart_nutrition_profile` um alle relevanten Spalten erweitern.
+- Neuer `profileMissing`-Guard: zusätzlich `!snp?.diet_style` oder `snp?.allergies IS NULL` → `SKIPPED_PROFILE_INCOMPLETE` mit klarem `reason`-Feld im History-Row.
+- Preferences-Objekt bauen und an `pickMealsForDay` / `reoptimizeExistingDay` weitergeben.
 
-## Offene Fragen zur Freigabe
+**d) `wants_snack`** aus `eating_style` ableiten:
+- `eating_style === "meal_prep"` → true
+- `eating_style === "fresh"` und `meal_prep_days` klein → true
+- Sonst true (Default bleibt; explizite Athletensteuerung kommt später wenn nötig).
 
-1. **`coach_meal_library` als alleiniger Recipe Pool für Performance ok?** Fallback: wenn Pool zu klein/lückig für einen Slot, `SKIPPED_PROFILE_INCOMPLETE` mit Flag `LIBRARY_TOO_SPARSE` (kein LLM-Fallback in V1).
-2. **`nutrition_plans.organization_id` + `performance_context`-Flag ok?** Alternative wäre eine separate `performance_nutrition_plan_assignments`-Tabelle — mehr Umbau, weniger Reuse.
-3. Migration führt einen additiven Change auf `nutrition_plans` durch (nullable Spalten, kein Backfill). Freigabe für die Migration erteilst du beim Migrationsschritt selbst.
+### 4. Bulls Hub Completion-Card
+**Datei:** `src/components/bodyfuel/BullsPlanContentView.tsx` (bestehend, minimale Ergänzung).
+
+Wenn `getPerformanceOnboardingCompletion` `status !== "COMPLETE"`:
+- Card mit Text „Dein Performance-Profil ist noch nicht vollständig." + Zähler „Uns fehlen noch N Angaben." + Button „Profil vervollständigen" → `/$orgSlug/onboarding` mit Query-Param `?resume=1`.
+- Wenn `COMPLETE` aber Job noch `pending/processing`: „Deine Performance-Woche wird vorbereitet."
+- Wenn Plan da: bestehende Plan-View.
+
+Keine technischen Begriffe, keine Statuscodes im UI.
+
+### 5. Resume-Modus im Wizard
+Wenn `?resume=1`:
+- `getPerformanceOnboardingCompletion` beim Mount aufrufen.
+- Fehlende Felder ermitteln, Wizard direkt auf ersten fehlenden Schritt springen.
+- Bereits-vollständige Schritte als grüne Checks in der Progress-Bar anzeigen (nicht überspringen — Athlet kann optional zurück).
+
+### 6. Bootstrap-Read für bestehende 13 Bulls-Athleten
+Keine Migration mit Defaults. Keine Auto-Werte.
+
+Stattdessen: `getPerformanceOnboardingCompletion` funktioniert bereits für sie — sobald sie den Bulls Hub öffnen, sehen sie die Completion-Card. Ein separater Report-Endpoint für Coach-Sicht (welcher Athlet in welchem Status) kommt in einem Folgeschritt, nicht in diesem.
+
+## Nicht in diesem Schritt
+
+- Coach-Overrides pro Athlet.
+- Session-Intensity-UI.
+- Neue Push Notifications.
+- Änderung des Smart-Nutrition-Onboardings selbst.
+- Datenwriting in bestehende Athletenprofile ohne Athletenaktion.
+
+## Technische Notizen (für den Impl-Schritt)
+
+**Dateien, die berührt werden:**
+- `src/routes/$orgSlug.onboarding.tsx` — Wizard erweitern (10 Schritte statt 3 Felder).
+- `src/lib/performance-nutrition/onboarding.functions.ts` — **NEU**: `completePerformanceOnboarding`, `getPerformanceOnboardingCompletion`.
+- `src/lib/performance-nutrition/plan-builder.ts` — `AthletePreferences` erweitern, `violatesDiet` / `violatesAllergy` / `mealPrepFitScore` hinzu.
+- `src/lib/performance-nutrition/auto-plan.functions.ts` — SNP-SELECT erweitern, Preferences-Objekt bauen, härterer `profileMissing`-Guard.
+- `src/lib/performance-nutrition/__tests__/plan-builder.test.ts` — neue Tests: `violatesDiet`, `violatesAllergy`, allergiehartes Reject, `mealPlanningReady`-Skip.
+- `src/components/bodyfuel/BullsPlanContentView.tsx` — Completion-Card + „Profil vervollständigen"-Button.
+- Kein DB-Migration nötig für den Kernpfad (alle Spalten existieren).
+
+**Sparse Upsert für SNP:** damit der Wizard bestehende Bekim-Favoriten nicht überschreibt, wenn er sie unangetastet lässt, wird der Server-Fn nur die **explizit im Payload gesetzten** Felder in den `UPDATE`-Teil aufnehmen. Zod validiert das mit `.partial()`.
+
+**Allergie-Sicherheit:** `allergy_tokens` mergt `allergies[]` + tokenisierte `extra_allergies` + `intolerances[]`. Der `violatesAllergy`-Filter macht substring-match ohne Ambiguitätstoleranz (z. B. „Nüsse" matcht „Cashew" nicht — deshalb prüfen wir auch gegen `meal.no_go_ingredients` und `meal.contains_allergens`, sofern vorhanden). Bei fehlenden Meal-Metadaten Reject-by-default für die betreffende Allergie-Klasse.
+
+**Reihenfolge des Impl-Schritts (nach Freigabe):**
+1. Server-Fns + Reader (`onboarding.functions.ts`, Zod-Schemas).
+2. Plan-Builder-Extension + neue Filter + Tests.
+3. Wizard-UI mit sparse Prefill (10 Schritte).
+4. BullsPlanContentView Completion-Card.
+5. Alle Tests grün, dann Report mit Bekim/Lars/13-Athleten-Status.
+
+## Abschließender Report nach Impl (auf Auftragswunsch)
+
+Ich liefere danach:
+- SNP-Feldliste (aus diesem Audit übernommen).
+- Welche Felder das neue Bulls-Onboarding wiederverwendet: alle 12 Nutrition-Felder, kein Duplikat.
+- Was Bekim heute bereits hat (SNP fast komplett, PNP fehlt).
+- Was Lars heute bereits hat (SNP partial, `diet_style` fehlt, PNP fehlt).
+- Was Bekim noch braucht: PNP (sex leitbar aus profiles.gender=male → MALE, baseline_daily_activity, performance_goal).
+- Was Lars noch braucht: `diet_style` + PNP.
+- Aufschlüsselung der 13 Seniors nach COMPLETE / PARTIAL / MISSING (aus dem Audit ergibt sich schon: 0 COMPLETE, 9 PARTIAL, 4 MISSING).
+- Bestätigung, dass Plan-Builder nun Likes/No-Gos/Allergien/Unverträglichkeiten/Diät/Mealprep berücksichtigt.
+- Bestätigung, dass keine doppelte Nutrition-Preference-Struktur entstanden ist.
