@@ -111,15 +111,24 @@ function CoachDashboard() {
   const genDraftFn = useServerFn(generateCheckinDraft);
   const radarFn = useServerFn(getCoachRadar);
   const perfStatsFn = useServerFn(listPerformanceCheckStats);
+  const perfAccessFn = useServerFn(getMyPerformanceAccess);
+
+  const perfAccessQuery = useQuery({
+    queryKey: ["bulls-perf-access-coach-nav"],
+    queryFn: () => perfAccessFn(),
+    retry: false,
+    staleTime: 60_000,
+  });
+  const showPerfNav = perfAccessQuery.data?.canCoach === true;
 
   const perfStatsQuery = useQuery({
     queryKey: ["bulls-perf-stats-coach-nav"],
     queryFn: () => perfStatsFn(),
     retry: false,
     staleTime: 60_000,
+    enabled: showPerfNav,
   });
   const perfPending = perfStatsQuery.data?.pending ?? 0;
-  const showPerfNav = !!perfStatsQuery.data;
 
   const radarQuery = useQuery({
     queryKey: ["coach-radar"],
