@@ -63,6 +63,7 @@ import { Route as CoachImportPlanRouteImport } from './routes/coach.import-plan'
 import { Route as CoachGiftsRouteImport } from './routes/coach.gifts'
 import { Route as CoachFoodsRouteImport } from './routes/coach.foods'
 import { Route as CoachCustomersRouteImport } from './routes/coach.customers'
+import { Route as CoachBullsPerformanceRouteImport } from './routes/coach.bulls-performance'
 import { Route as CoachAffiliatesRouteImport } from './routes/coach.affiliates'
 import { Route as CoachClientIdRouteImport } from './routes/coach.$clientId'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
@@ -70,6 +71,7 @@ import { Route as BullsWeightRouteImport } from './routes/bulls.weight'
 import { Route as BullsTrainingRouteImport } from './routes/bulls.training'
 import { Route as BullsRecoveryRouteImport } from './routes/bulls.recovery'
 import { Route as BullsPhotosRouteImport } from './routes/bulls.photos'
+import { Route as BullsPerformanceRouteImport } from './routes/bulls.performance'
 import { Route as BullsNutritionRouteImport } from './routes/bulls.nutrition'
 import { Route as BullsBenchmarksRouteImport } from './routes/bulls.benchmarks'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
@@ -85,6 +87,7 @@ import { Route as OrgSlugCommunityRouteImport } from './routes/$orgSlug.communit
 import { Route as TrackerAppIndexRouteImport } from './routes/tracker.app.index'
 import { Route as CoachTeamsIndexRouteImport } from './routes/coach.teams.index'
 import { Route as CoachCustomersIndexRouteImport } from './routes/coach.customers.index'
+import { Route as BullsPerformanceIndexRouteImport } from './routes/bulls.performance.index'
 import { Route as BullsNutritionIndexRouteImport } from './routes/bulls.nutrition.index'
 import { Route as OrgSlugNutritionIndexRouteImport } from './routes/$orgSlug.nutrition.index'
 import { Route as TrackerAppWeightRouteImport } from './routes/tracker.app.weight'
@@ -102,6 +105,7 @@ import { Route as CoachPlanPreviewPlanIdRouteImport } from './routes/coach.plan-
 import { Route as CoachPlanBuilderUserIdRouteImport } from './routes/coach.plan-builder.$userId'
 import { Route as CoachCustomersNewRouteImport } from './routes/coach.customers.new'
 import { Route as CoachCustomersUserIdRouteImport } from './routes/coach.customers.$userId'
+import { Route as BullsPerformanceModuleIdRouteImport } from './routes/bulls.performance.$moduleId'
 import { Route as BullsNutritionTrackingRouteImport } from './routes/bulls.nutrition.tracking'
 import { Route as BullsNutritionShoppingRouteImport } from './routes/bulls.nutrition.shopping'
 import { Route as BullsNutritionFavoritesRouteImport } from './routes/bulls.nutrition.favorites'
@@ -119,6 +123,7 @@ import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/e
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as CoachTeamsOrgIdPerformanceRouteImport } from './routes/coach.teams.$orgId.performance'
+import { Route as BullsPerformanceModuleIdTestIdRouteImport } from './routes/bulls.performance.$moduleId.$testId'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicHooksTrialRemindersRouteImport } from './routes/api/public/hooks/trial-reminders'
 import { Route as ApiPublicHooksSendFeatureNewsRouteImport } from './routes/api/public/hooks/send-feature-news'
@@ -403,6 +408,11 @@ const CoachCustomersRoute = CoachCustomersRouteImport.update({
   path: '/customers',
   getParentRoute: () => CoachRoute,
 } as any)
+const CoachBullsPerformanceRoute = CoachBullsPerformanceRouteImport.update({
+  id: '/bulls-performance',
+  path: '/bulls-performance',
+  getParentRoute: () => CoachRoute,
+} as any)
 const CoachAffiliatesRoute = CoachAffiliatesRouteImport.update({
   id: '/affiliates',
   path: '/affiliates',
@@ -436,6 +446,11 @@ const BullsRecoveryRoute = BullsRecoveryRouteImport.update({
 const BullsPhotosRoute = BullsPhotosRouteImport.update({
   id: '/bulls/photos',
   path: '/bulls/photos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BullsPerformanceRoute = BullsPerformanceRouteImport.update({
+  id: '/bulls/performance',
+  path: '/bulls/performance',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BullsNutritionRoute = BullsNutritionRouteImport.update({
@@ -514,6 +529,11 @@ const CoachCustomersIndexRoute = CoachCustomersIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => CoachCustomersRoute,
+} as any)
+const BullsPerformanceIndexRoute = BullsPerformanceIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => BullsPerformanceRoute,
 } as any)
 const BullsNutritionIndexRoute = BullsNutritionIndexRouteImport.update({
   id: '/',
@@ -601,6 +621,12 @@ const CoachCustomersUserIdRoute = CoachCustomersUserIdRouteImport.update({
   path: '/$userId',
   getParentRoute: () => CoachCustomersRoute,
 } as any)
+const BullsPerformanceModuleIdRoute =
+  BullsPerformanceModuleIdRouteImport.update({
+    id: '/$moduleId',
+    path: '/$moduleId',
+    getParentRoute: () => BullsPerformanceRoute,
+  } as any)
 const BullsNutritionTrackingRoute = BullsNutritionTrackingRouteImport.update({
   id: '/tracking',
   path: '/tracking',
@@ -695,6 +721,12 @@ const CoachTeamsOrgIdPerformanceRoute =
     id: '/performance',
     path: '/performance',
     getParentRoute: () => CoachTeamsOrgIdRoute,
+  } as any)
+const BullsPerformanceModuleIdTestIdRoute =
+  BullsPerformanceModuleIdTestIdRouteImport.update({
+    id: '/$testId',
+    path: '/$testId',
+    getParentRoute: () => BullsPerformanceModuleIdRoute,
   } as any)
 const ApiPublicPaymentsWebhookRoute =
   ApiPublicPaymentsWebhookRouteImport.update({
@@ -806,6 +838,7 @@ export interface FileRoutesByFullPath {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
   '/bulls/nutrition': typeof BullsNutritionRouteWithChildren
+  '/bulls/performance': typeof BullsPerformanceRouteWithChildren
   '/bulls/photos': typeof BullsPhotosRoute
   '/bulls/recovery': typeof BullsRecoveryRoute
   '/bulls/training': typeof BullsTrainingRoute
@@ -813,6 +846,7 @@ export interface FileRoutesByFullPath {
   '/checkout/return': typeof CheckoutReturnRoute
   '/coach/$clientId': typeof CoachClientIdRoute
   '/coach/affiliates': typeof CoachAffiliatesRoute
+  '/coach/bulls-performance': typeof CoachBullsPerformanceRoute
   '/coach/customers': typeof CoachCustomersRouteWithChildren
   '/coach/foods': typeof CoachFoodsRoute
   '/coach/gifts': typeof CoachGiftsRoute
@@ -848,6 +882,7 @@ export interface FileRoutesByFullPath {
   '/bulls/nutrition/favorites': typeof BullsNutritionFavoritesRoute
   '/bulls/nutrition/shopping': typeof BullsNutritionShoppingRoute
   '/bulls/nutrition/tracking': typeof BullsNutritionTrackingRoute
+  '/bulls/performance/$moduleId': typeof BullsPerformanceModuleIdRouteWithChildren
   '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/coach/plan-builder/$userId': typeof CoachPlanBuilderUserIdRoute
@@ -865,6 +900,7 @@ export interface FileRoutesByFullPath {
   '/tracker/app/weight': typeof TrackerAppWeightRoute
   '/$orgSlug/nutrition/': typeof OrgSlugNutritionIndexRoute
   '/bulls/nutrition/': typeof BullsNutritionIndexRoute
+  '/bulls/performance/': typeof BullsPerformanceIndexRoute
   '/coach/customers/': typeof CoachCustomersIndexRoute
   '/coach/teams/': typeof CoachTeamsIndexRoute
   '/tracker/app/': typeof TrackerAppIndexRoute
@@ -877,6 +913,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/send-feature-news': typeof ApiPublicHooksSendFeatureNewsRoute
   '/api/public/hooks/trial-reminders': typeof ApiPublicHooksTrialRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/bulls/performance/$moduleId/$testId': typeof BullsPerformanceModuleIdTestIdRoute
   '/coach/teams/$orgId/performance': typeof CoachTeamsOrgIdPerformanceRouteWithChildren
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -930,6 +967,7 @@ export interface FileRoutesByTo {
   '/checkout/return': typeof CheckoutReturnRoute
   '/coach/$clientId': typeof CoachClientIdRoute
   '/coach/affiliates': typeof CoachAffiliatesRoute
+  '/coach/bulls-performance': typeof CoachBullsPerformanceRoute
   '/coach/foods': typeof CoachFoodsRoute
   '/coach/gifts': typeof CoachGiftsRoute
   '/coach/import-plan': typeof CoachImportPlanRoute
@@ -963,6 +1001,7 @@ export interface FileRoutesByTo {
   '/bulls/nutrition/favorites': typeof BullsNutritionFavoritesRoute
   '/bulls/nutrition/shopping': typeof BullsNutritionShoppingRoute
   '/bulls/nutrition/tracking': typeof BullsNutritionTrackingRoute
+  '/bulls/performance/$moduleId': typeof BullsPerformanceModuleIdRouteWithChildren
   '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/coach/plan-builder/$userId': typeof CoachPlanBuilderUserIdRoute
@@ -980,6 +1019,7 @@ export interface FileRoutesByTo {
   '/tracker/app/weight': typeof TrackerAppWeightRoute
   '/$orgSlug/nutrition': typeof OrgSlugNutritionIndexRoute
   '/bulls/nutrition': typeof BullsNutritionIndexRoute
+  '/bulls/performance': typeof BullsPerformanceIndexRoute
   '/coach/customers': typeof CoachCustomersIndexRoute
   '/coach/teams': typeof CoachTeamsIndexRoute
   '/tracker/app': typeof TrackerAppIndexRoute
@@ -992,6 +1032,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/send-feature-news': typeof ApiPublicHooksSendFeatureNewsRoute
   '/api/public/hooks/trial-reminders': typeof ApiPublicHooksTrialRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/bulls/performance/$moduleId/$testId': typeof BullsPerformanceModuleIdTestIdRoute
   '/coach/teams/$orgId/performance': typeof CoachTeamsOrgIdPerformanceRouteWithChildren
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -1045,6 +1086,7 @@ export interface FileRoutesById {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
   '/bulls/nutrition': typeof BullsNutritionRouteWithChildren
+  '/bulls/performance': typeof BullsPerformanceRouteWithChildren
   '/bulls/photos': typeof BullsPhotosRoute
   '/bulls/recovery': typeof BullsRecoveryRoute
   '/bulls/training': typeof BullsTrainingRoute
@@ -1052,6 +1094,7 @@ export interface FileRoutesById {
   '/checkout/return': typeof CheckoutReturnRoute
   '/coach/$clientId': typeof CoachClientIdRoute
   '/coach/affiliates': typeof CoachAffiliatesRoute
+  '/coach/bulls-performance': typeof CoachBullsPerformanceRoute
   '/coach/customers': typeof CoachCustomersRouteWithChildren
   '/coach/foods': typeof CoachFoodsRoute
   '/coach/gifts': typeof CoachGiftsRoute
@@ -1087,6 +1130,7 @@ export interface FileRoutesById {
   '/bulls/nutrition/favorites': typeof BullsNutritionFavoritesRoute
   '/bulls/nutrition/shopping': typeof BullsNutritionShoppingRoute
   '/bulls/nutrition/tracking': typeof BullsNutritionTrackingRoute
+  '/bulls/performance/$moduleId': typeof BullsPerformanceModuleIdRouteWithChildren
   '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/coach/plan-builder/$userId': typeof CoachPlanBuilderUserIdRoute
@@ -1104,6 +1148,7 @@ export interface FileRoutesById {
   '/tracker/app/weight': typeof TrackerAppWeightRoute
   '/$orgSlug/nutrition/': typeof OrgSlugNutritionIndexRoute
   '/bulls/nutrition/': typeof BullsNutritionIndexRoute
+  '/bulls/performance/': typeof BullsPerformanceIndexRoute
   '/coach/customers/': typeof CoachCustomersIndexRoute
   '/coach/teams/': typeof CoachTeamsIndexRoute
   '/tracker/app/': typeof TrackerAppIndexRoute
@@ -1116,6 +1161,7 @@ export interface FileRoutesById {
   '/api/public/hooks/send-feature-news': typeof ApiPublicHooksSendFeatureNewsRoute
   '/api/public/hooks/trial-reminders': typeof ApiPublicHooksTrialRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/bulls/performance/$moduleId/$testId': typeof BullsPerformanceModuleIdTestIdRoute
   '/coach/teams/$orgId/performance': typeof CoachTeamsOrgIdPerformanceRouteWithChildren
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -1170,6 +1216,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/bulls/benchmarks'
     | '/bulls/nutrition'
+    | '/bulls/performance'
     | '/bulls/photos'
     | '/bulls/recovery'
     | '/bulls/training'
@@ -1177,6 +1224,7 @@ export interface FileRouteTypes {
     | '/checkout/return'
     | '/coach/$clientId'
     | '/coach/affiliates'
+    | '/coach/bulls-performance'
     | '/coach/customers'
     | '/coach/foods'
     | '/coach/gifts'
@@ -1212,6 +1260,7 @@ export interface FileRouteTypes {
     | '/bulls/nutrition/favorites'
     | '/bulls/nutrition/shopping'
     | '/bulls/nutrition/tracking'
+    | '/bulls/performance/$moduleId'
     | '/coach/customers/$userId'
     | '/coach/customers/new'
     | '/coach/plan-builder/$userId'
@@ -1229,6 +1278,7 @@ export interface FileRouteTypes {
     | '/tracker/app/weight'
     | '/$orgSlug/nutrition/'
     | '/bulls/nutrition/'
+    | '/bulls/performance/'
     | '/coach/customers/'
     | '/coach/teams/'
     | '/tracker/app/'
@@ -1241,6 +1291,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/send-feature-news'
     | '/api/public/hooks/trial-reminders'
     | '/api/public/payments/webhook'
+    | '/bulls/performance/$moduleId/$testId'
     | '/coach/teams/$orgId/performance'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -1294,6 +1345,7 @@ export interface FileRouteTypes {
     | '/checkout/return'
     | '/coach/$clientId'
     | '/coach/affiliates'
+    | '/coach/bulls-performance'
     | '/coach/foods'
     | '/coach/gifts'
     | '/coach/import-plan'
@@ -1327,6 +1379,7 @@ export interface FileRouteTypes {
     | '/bulls/nutrition/favorites'
     | '/bulls/nutrition/shopping'
     | '/bulls/nutrition/tracking'
+    | '/bulls/performance/$moduleId'
     | '/coach/customers/$userId'
     | '/coach/customers/new'
     | '/coach/plan-builder/$userId'
@@ -1344,6 +1397,7 @@ export interface FileRouteTypes {
     | '/tracker/app/weight'
     | '/$orgSlug/nutrition'
     | '/bulls/nutrition'
+    | '/bulls/performance'
     | '/coach/customers'
     | '/coach/teams'
     | '/tracker/app'
@@ -1356,6 +1410,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/send-feature-news'
     | '/api/public/hooks/trial-reminders'
     | '/api/public/payments/webhook'
+    | '/bulls/performance/$moduleId/$testId'
     | '/coach/teams/$orgId/performance'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -1408,6 +1463,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/bulls/benchmarks'
     | '/bulls/nutrition'
+    | '/bulls/performance'
     | '/bulls/photos'
     | '/bulls/recovery'
     | '/bulls/training'
@@ -1415,6 +1471,7 @@ export interface FileRouteTypes {
     | '/checkout/return'
     | '/coach/$clientId'
     | '/coach/affiliates'
+    | '/coach/bulls-performance'
     | '/coach/customers'
     | '/coach/foods'
     | '/coach/gifts'
@@ -1450,6 +1507,7 @@ export interface FileRouteTypes {
     | '/bulls/nutrition/favorites'
     | '/bulls/nutrition/shopping'
     | '/bulls/nutrition/tracking'
+    | '/bulls/performance/$moduleId'
     | '/coach/customers/$userId'
     | '/coach/customers/new'
     | '/coach/plan-builder/$userId'
@@ -1467,6 +1525,7 @@ export interface FileRouteTypes {
     | '/tracker/app/weight'
     | '/$orgSlug/nutrition/'
     | '/bulls/nutrition/'
+    | '/bulls/performance/'
     | '/coach/customers/'
     | '/coach/teams/'
     | '/tracker/app/'
@@ -1479,6 +1538,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/send-feature-news'
     | '/api/public/hooks/trial-reminders'
     | '/api/public/payments/webhook'
+    | '/bulls/performance/$moduleId/$testId'
     | '/coach/teams/$orgId/performance'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -1524,6 +1584,7 @@ export interface RootRouteChildren {
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   BullsBenchmarksRoute: typeof BullsBenchmarksRoute
   BullsNutritionRoute: typeof BullsNutritionRouteWithChildren
+  BullsPerformanceRoute: typeof BullsPerformanceRouteWithChildren
   BullsPhotosRoute: typeof BullsPhotosRoute
   BullsRecoveryRoute: typeof BullsRecoveryRoute
   BullsTrainingRoute: typeof BullsTrainingRoute
@@ -1936,6 +1997,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CoachCustomersRouteImport
       parentRoute: typeof CoachRoute
     }
+    '/coach/bulls-performance': {
+      id: '/coach/bulls-performance'
+      path: '/bulls-performance'
+      fullPath: '/coach/bulls-performance'
+      preLoaderRoute: typeof CoachBullsPerformanceRouteImport
+      parentRoute: typeof CoachRoute
+    }
     '/coach/affiliates': {
       id: '/coach/affiliates'
       path: '/affiliates'
@@ -1983,6 +2051,13 @@ declare module '@tanstack/react-router' {
       path: '/bulls/photos'
       fullPath: '/bulls/photos'
       preLoaderRoute: typeof BullsPhotosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bulls/performance': {
+      id: '/bulls/performance'
+      path: '/bulls/performance'
+      fullPath: '/bulls/performance'
+      preLoaderRoute: typeof BullsPerformanceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/bulls/nutrition': {
@@ -2089,6 +2164,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/coach/customers/'
       preLoaderRoute: typeof CoachCustomersIndexRouteImport
       parentRoute: typeof CoachCustomersRoute
+    }
+    '/bulls/performance/': {
+      id: '/bulls/performance/'
+      path: '/'
+      fullPath: '/bulls/performance/'
+      preLoaderRoute: typeof BullsPerformanceIndexRouteImport
+      parentRoute: typeof BullsPerformanceRoute
     }
     '/bulls/nutrition/': {
       id: '/bulls/nutrition/'
@@ -2209,6 +2291,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CoachCustomersUserIdRouteImport
       parentRoute: typeof CoachCustomersRoute
     }
+    '/bulls/performance/$moduleId': {
+      id: '/bulls/performance/$moduleId'
+      path: '/$moduleId'
+      fullPath: '/bulls/performance/$moduleId'
+      preLoaderRoute: typeof BullsPerformanceModuleIdRouteImport
+      parentRoute: typeof BullsPerformanceRoute
+    }
     '/bulls/nutrition/tracking': {
       id: '/bulls/nutrition/tracking'
       path: '/tracking'
@@ -2327,6 +2416,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/coach/teams/$orgId/performance'
       preLoaderRoute: typeof CoachTeamsOrgIdPerformanceRouteImport
       parentRoute: typeof CoachTeamsOrgIdRoute
+    }
+    '/bulls/performance/$moduleId/$testId': {
+      id: '/bulls/performance/$moduleId/$testId'
+      path: '/$testId'
+      fullPath: '/bulls/performance/$moduleId/$testId'
+      preLoaderRoute: typeof BullsPerformanceModuleIdTestIdRouteImport
+      parentRoute: typeof BullsPerformanceModuleIdRoute
     }
     '/api/public/payments/webhook': {
       id: '/api/public/payments/webhook'
@@ -2504,6 +2600,7 @@ const CoachTeamsOrgIdRouteWithChildren = CoachTeamsOrgIdRoute._addFileChildren(
 interface CoachRouteChildren {
   CoachClientIdRoute: typeof CoachClientIdRoute
   CoachAffiliatesRoute: typeof CoachAffiliatesRoute
+  CoachBullsPerformanceRoute: typeof CoachBullsPerformanceRoute
   CoachCustomersRoute: typeof CoachCustomersRouteWithChildren
   CoachFoodsRoute: typeof CoachFoodsRoute
   CoachGiftsRoute: typeof CoachGiftsRoute
@@ -2522,6 +2619,7 @@ interface CoachRouteChildren {
 const CoachRouteChildren: CoachRouteChildren = {
   CoachClientIdRoute: CoachClientIdRoute,
   CoachAffiliatesRoute: CoachAffiliatesRoute,
+  CoachBullsPerformanceRoute: CoachBullsPerformanceRoute,
   CoachCustomersRoute: CoachCustomersRouteWithChildren,
   CoachFoodsRoute: CoachFoodsRoute,
   CoachGiftsRoute: CoachGiftsRoute,
@@ -2593,6 +2691,33 @@ const BullsNutritionRouteWithChildren = BullsNutritionRoute._addFileChildren(
   BullsNutritionRouteChildren,
 )
 
+interface BullsPerformanceModuleIdRouteChildren {
+  BullsPerformanceModuleIdTestIdRoute: typeof BullsPerformanceModuleIdTestIdRoute
+}
+
+const BullsPerformanceModuleIdRouteChildren: BullsPerformanceModuleIdRouteChildren =
+  {
+    BullsPerformanceModuleIdTestIdRoute: BullsPerformanceModuleIdTestIdRoute,
+  }
+
+const BullsPerformanceModuleIdRouteWithChildren =
+  BullsPerformanceModuleIdRoute._addFileChildren(
+    BullsPerformanceModuleIdRouteChildren,
+  )
+
+interface BullsPerformanceRouteChildren {
+  BullsPerformanceModuleIdRoute: typeof BullsPerformanceModuleIdRouteWithChildren
+  BullsPerformanceIndexRoute: typeof BullsPerformanceIndexRoute
+}
+
+const BullsPerformanceRouteChildren: BullsPerformanceRouteChildren = {
+  BullsPerformanceModuleIdRoute: BullsPerformanceModuleIdRouteWithChildren,
+  BullsPerformanceIndexRoute: BullsPerformanceIndexRoute,
+}
+
+const BullsPerformanceRouteWithChildren =
+  BullsPerformanceRoute._addFileChildren(BullsPerformanceRouteChildren)
+
 interface TrackerAppRouteChildren {
   TrackerAppAchievementsRoute: typeof TrackerAppAchievementsRoute
   TrackerAppActivityRoute: typeof TrackerAppActivityRoute
@@ -2655,6 +2780,7 @@ const rootRouteChildren: RootRouteChildren = {
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   BullsBenchmarksRoute: BullsBenchmarksRoute,
   BullsNutritionRoute: BullsNutritionRouteWithChildren,
+  BullsPerformanceRoute: BullsPerformanceRouteWithChildren,
   BullsPhotosRoute: BullsPhotosRoute,
   BullsRecoveryRoute: BullsRecoveryRoute,
   BullsTrainingRoute: BullsTrainingRoute,

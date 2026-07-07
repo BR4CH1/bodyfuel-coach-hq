@@ -456,6 +456,93 @@ export type Database = {
         }
         Relationships: []
       }
+      bulls_performance_tests: {
+        Row: {
+          bodyweight_kg: number | null
+          coach_corrected_value: number | null
+          coach_note: string | null
+          created_at: string
+          footwear: string | null
+          id: string
+          measurement_method: string | null
+          module_id: string
+          performance_profile: string
+          performed_at: string
+          position_snapshot: string | null
+          rejection_reason: string | null
+          reps: number | null
+          result_unit: string
+          result_value: number
+          rir: number | null
+          surface: string | null
+          test_id: string
+          updated_at: string
+          user_id: string
+          variant: string | null
+          verification_status: string
+          verified_at: string | null
+          verified_by: string | null
+          video_path: string | null
+          video_uploaded_at: string | null
+        }
+        Insert: {
+          bodyweight_kg?: number | null
+          coach_corrected_value?: number | null
+          coach_note?: string | null
+          created_at?: string
+          footwear?: string | null
+          id?: string
+          measurement_method?: string | null
+          module_id: string
+          performance_profile?: string
+          performed_at?: string
+          position_snapshot?: string | null
+          rejection_reason?: string | null
+          reps?: number | null
+          result_unit: string
+          result_value: number
+          rir?: number | null
+          surface?: string | null
+          test_id: string
+          updated_at?: string
+          user_id: string
+          variant?: string | null
+          verification_status?: string
+          verified_at?: string | null
+          verified_by?: string | null
+          video_path?: string | null
+          video_uploaded_at?: string | null
+        }
+        Update: {
+          bodyweight_kg?: number | null
+          coach_corrected_value?: number | null
+          coach_note?: string | null
+          created_at?: string
+          footwear?: string | null
+          id?: string
+          measurement_method?: string | null
+          module_id?: string
+          performance_profile?: string
+          performed_at?: string
+          position_snapshot?: string | null
+          rejection_reason?: string | null
+          reps?: number | null
+          result_unit?: string
+          result_value?: number
+          rir?: number | null
+          surface?: string | null
+          test_id?: string
+          updated_at?: string
+          user_id?: string
+          variant?: string | null
+          verification_status?: string
+          verified_at?: string | null
+          verified_by?: string | null
+          video_path?: string | null
+          video_uploaded_at?: string | null
+        }
+        Relationships: []
+      }
       bulls_profiles: {
         Row: {
           email: string
