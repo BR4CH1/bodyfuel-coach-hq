@@ -21,7 +21,7 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
-  const { loginAs, supabaseUser, isCoach, loading } = useSession();
+  const { loginAs, supabaseUser, loading } = useSession();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -42,8 +42,8 @@ function LoginPage() {
 
   useEffect(() => {
     if (loading) return;
-    if (supabaseUser) navigate({ to: isCoach ? "/coach" : "/dashboard", replace: true });
-  }, [supabaseUser, isCoach, loading, navigate]);
+    if (supabaseUser) navigate({ to: "/app", replace: true });
+  }, [supabaseUser, loading, navigate]);
 
   if (loading || supabaseUser) {
     return (

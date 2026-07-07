@@ -21,7 +21,7 @@ const emailSchema = z.string().trim().email("Ungültige Email").max(255);
 const pwSchema = z.string().min(6, "Mindestens 6 Zeichen").max(100);
 
 function AuthPage() {
-  const { supabaseUser, profile, isCoach, isFreeUser, loading } = useSession();
+  const { supabaseUser, loading } = useSession();
   const navigate = useNavigate();
   const { next } = Route.useSearch();
   const [email, setEmail] = useState("");
@@ -29,27 +29,14 @@ function AuthPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    if (loading) return;
     if (!supabaseUser) return;
     if (next) {
       window.location.href = next;
       return;
     }
-    if (isCoach) {
-      navigate({ to: "/coach" });
-      return;
-    }
-    if (isFreeUser) {
-      navigate({ to: "/tracker/app" });
-      return;
-    }
-    (async () => {
-      const { count } = await supabase
-        .from("body_measurements")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", supabaseUser.id);
-      navigate({ to: (count ?? 0) === 0 ? "/measurements" : "/dashboard" });
-    })();
-  }, [supabaseUser, isCoach, isFreeUser, navigate, next]);
+    navigate({ to: "/app", replace: true });
+  }, [supabaseUser, loading, navigate, next]);
 
   const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
