@@ -491,34 +491,30 @@ export function NutritionTracker({
 
   const toggleDayType = async () => {
     if (!userId) return;
-    const next: DayType = dayType === "training" ? "rest" : "training";
     setSavingDayType(true);
-    setDayTypeState(next);
     setDayTypeSource("manual");
     try {
       if (isBulls) {
+        // In Bulls the tracker keeps a simple rest ↔ football_training toggle
+        // (the full 5-way selection lives in BullsWeekScheduleCard /
+        // BullsPlanContentView). Any non-rest current type flips to rest.
+        const next: BullsDayType = dayType === "rest" ? "football_training" : "rest";
+        setDayTypeState(next);
         await setBullsDayTypeFn({ data: { date, kind: next } });
-        // Refresh engine result so targets follow the new day type
         const b = await getBullsTargetsFn({ data: { date } });
-        if (b.trainingTargets) {
+        if (b.targets) {
           setBaseTargets({
-            kcal: b.trainingTargets.kcal,
-            protein_g: b.trainingTargets.protein_g,
-            carbs_g: b.trainingTargets.carbs_g,
-            fat_g: b.trainingTargets.fat_g,
+            kcal: b.targets.kcal,
+            protein_g: b.targets.protein_g,
+            carbs_g: b.targets.carbs_g,
+            fat_g: b.targets.fat_g,
             water_glasses: DEFAULT_TARGETS.water_glasses,
           });
         }
-        if (b.restTargets) {
-          setRestTargets({
-            kcal: b.restTargets.kcal,
-            protein_g: b.restTargets.protein_g,
-            carbs_g: b.restTargets.carbs_g,
-            fat_g: b.restTargets.fat_g,
-            water_glasses: DEFAULT_TARGETS.water_glasses,
-          });
-        }
+        setDayTypeState(b.dayType);
       } else {
+        const next: DayType = dayType === "training" ? "rest" : "training";
+        setDayTypeState(next);
         await setDayTypeFn({ data: { user_id: userId, date, kind: next } });
       }
     } catch (err) {
