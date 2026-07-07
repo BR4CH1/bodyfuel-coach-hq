@@ -160,7 +160,7 @@ export function AthletesTab({
                   params: { orgId, userId: a.user_id },
                 });
               }}
-              className="flex items-center gap-3 px-3 py-3 hover:bg-muted/40"
+              className="flex touch-manipulation items-center gap-3 px-3 py-3 hover:bg-muted/40 active:bg-muted/60"
             >
               <div className="min-w-0 flex-1 pr-10">
                 <div className="truncate text-sm font-semibold">{a.name}</div>

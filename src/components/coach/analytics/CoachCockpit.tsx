@@ -1,6 +1,6 @@
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import {
   Activity,
   ArrowDownRight,
@@ -168,16 +168,12 @@ function RadarBucket({
         <ul className="space-y-2">
           {items.slice(0, 5).map((it) => (
             <li key={it.user_id} className="text-sm">
-              <Link
-                to="/coach/teams/$orgId/athletes/$userId"
-                params={{ orgId, userId: it.user_id }}
-                className="block hover:underline"
-              >
+              <AthleteRowLink orgId={orgId} userId={it.user_id} className="block touch-manipulation rounded hover:underline active:bg-muted/40">
                 <div className="font-semibold">{it.name}</div>
                 <div className="text-[11px] text-muted-foreground">
                   {it.position ?? "—"} · {it.reason}
                 </div>
-              </Link>
+              </AthleteRowLink>
             </li>
           ))}
           {items.length > 5 && (
