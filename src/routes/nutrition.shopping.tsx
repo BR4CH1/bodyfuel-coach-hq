@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { Button } from "@/components/ui/button";
+import { useSession } from "@/lib/bodyfuel/session";
+import { getActiveContext } from "@/components/organizations/OrganizationContextSwitcher";
 import {
   generateShoppingList,
   getMyShoppingLists,
@@ -25,12 +27,23 @@ import { formatDateRange } from "@/lib/format-date-range";
 
 export const Route = createFileRoute("/nutrition/shopping")({
   head: () => ({ meta: [{ title: "Einkaufsliste — BODYFUEL" }] }),
-  component: () => (
+  component: NutritionShoppingPage,
+});
+
+function NutritionShoppingPage() {
+  const { isCoach, hasGroup } = useSession();
+  const bullsSlug = getActiveContext() ?? "coesfeld-bulls";
+
+  if (!isCoach && hasGroup("bulls")) {
+    return <Navigate to="/$orgSlug/nutrition/shopping" params={{ orgSlug: bullsSlug }} replace />;
+  }
+
+  return (
     <AppLayout>
       <ShoppingListContent backTo="/nutrition" />
     </AppLayout>
-  ),
-});
+  );
+}
 
 type Item = { name: string; quantity: string; category: string; checked?: boolean };
 

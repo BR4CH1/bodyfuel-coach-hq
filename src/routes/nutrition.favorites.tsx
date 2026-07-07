@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Heart, Search, ChevronLeft, Star, Loader2, BookOpen } from "lucide-react";
@@ -6,15 +6,27 @@ import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { listMyFavorites } from "@/lib/meal-feedback.functions";
 import { RecipeDialog } from "@/components/bodyfuel/RecipeDialog";
 import { useSession } from "@/lib/bodyfuel/session";
+import { getActiveContext } from "@/components/organizations/OrganizationContextSwitcher";
 
 export const Route = createFileRoute("/nutrition/favorites")({
   head: () => ({ meta: [{ title: "Meine Favoriten — BODYFUEL" }] }),
-  component: () => (
+  component: NutritionFavoritesPage,
+});
+
+function NutritionFavoritesPage() {
+  const { isCoach, hasGroup } = useSession();
+  const bullsSlug = getActiveContext() ?? "coesfeld-bulls";
+
+  if (!isCoach && hasGroup("bulls")) {
+    return <Navigate to="/$orgSlug/nutrition/favorites" params={{ orgSlug: bullsSlug }} replace />;
+  }
+
+  return (
     <AppLayout>
       <NutritionFavoritesContent backTo="/nutrition" />
     </AppLayout>
-  ),
-});
+  );
+}
 
 type Item = {
   favorite_id: string;
