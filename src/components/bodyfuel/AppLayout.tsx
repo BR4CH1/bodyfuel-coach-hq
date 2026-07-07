@@ -71,6 +71,27 @@ export function AppLayout({ children }: { children: ReactNode }) {
     entitlements.hasTeamAccess &&
     !entitlements.hasAnyPersonalBodyfuel;
 
+  const orgId = entitlements.primaryOrgId;
+  const orgSlug = entitlements.primaryOrgSlug;
+  const staffRole = entitlements.primaryStaffRole;
+  const cockpitBase = orgId ? `/coach/teams/${orgId}` : null;
+
+  // Hooks müssen immer vor möglichen early returns stehen. Dieser Query wurde
+  // nachträglich unter die Returns verschoben und konnte Logins/Dashboards
+  // mit einem Hook-Order-Fehler abbrechen.
+  const { data: orgTeamCount = 0 } = useQuery({
+    queryKey: ["sidebar-org-team-count", orgId],
+    enabled: !!orgId && (staffRole === "organization_admin" || staffRole === "head_coach"),
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("organization_teams")
+        .select("id", { head: true, count: "exact" })
+        .eq("organization_id", orgId!);
+      return count ?? 0;
+    },
+  });
+
   useEffect(() => {
     if (loading) return;
     if (!user && !supabaseUser) navigate({ to: "/login" });
@@ -197,25 +218,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
   // Rollenabhängige Vereins-Navigation. Source of Truth ist
   // `entitlements.primaryStaffRole` (siehe useEntitlements — spiegelt
   // deriveOrgRole).
-  const orgId = entitlements.primaryOrgId;
-  const orgSlug = entitlements.primaryOrgSlug;
-  const staffRole = entitlements.primaryStaffRole;
-  const cockpitBase = orgId ? `/coach/teams/${orgId}` : null;
-
   // Teams-Link nur einblenden, wenn der Verein mehrere Teams hat. Bei genau
   // einem Team wird der Team-Kontext ohnehin direkt verwendet.
-  const { data: orgTeamCount = 0 } = useQuery({
-    queryKey: ["sidebar-org-team-count", orgId],
-    enabled: !!orgId && (staffRole === "organization_admin" || staffRole === "head_coach"),
-    staleTime: 5 * 60_000,
-    queryFn: async () => {
-      const { count } = await supabase
-        .from("organization_teams")
-        .select("id", { head: true, count: "exact" })
-        .eq("organization_id", orgId!);
-      return count ?? 0;
-    },
-  });
   const showTeamsLink = orgTeamCount > 1;
 
   const buildStaffNav = () => {
