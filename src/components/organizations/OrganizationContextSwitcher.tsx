@@ -9,14 +9,21 @@ import { useSession } from "@/lib/bodyfuel/session";
 const ACTIVE_KEY = "bodyfuel.activeContext";
 const MODE_PREFIX = "bodyfuel.orgMode:"; // per-org mode: "athlete" | "staff"
 const PERSONAL_CONTEXT = "personal";
+const PERSONAL_CONTEXT_ALIASES = new Set([PERSONAL_CONTEXT, "bodyfuel", "mein-bodyfuel", "mein_bodyfuel"]);
 
 export function getActiveContext(): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem(ACTIVE_KEY);
+  const value = localStorage.getItem(ACTIVE_KEY);
+  if (!value) return null;
+  if (PERSONAL_CONTEXT_ALIASES.has(value)) {
+    localStorage.removeItem(ACTIVE_KEY);
+    return null;
+  }
+  return value;
 }
 export function setActiveContext(slug: string | null) {
   if (typeof window === "undefined") return;
-  if (slug && slug !== PERSONAL_CONTEXT) localStorage.setItem(ACTIVE_KEY, slug);
+  if (slug && !PERSONAL_CONTEXT_ALIASES.has(slug)) localStorage.setItem(ACTIVE_KEY, slug);
   else localStorage.removeItem(ACTIVE_KEY);
   window.dispatchEvent(new CustomEvent("bodyfuel:active-context-change"));
 }
