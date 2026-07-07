@@ -1934,6 +1934,7 @@ export type Database = {
           library_meal_id: string | null
           linked_prep_group: string | null
           meal_slot: Database["public"]["Enums"]["meal_slot_kind"] | null
+          modification_source: string | null
           name: string
           partner_meal_id: string | null
           protein_g: number | null
@@ -1960,6 +1961,7 @@ export type Database = {
           library_meal_id?: string | null
           linked_prep_group?: string | null
           meal_slot?: Database["public"]["Enums"]["meal_slot_kind"] | null
+          modification_source?: string | null
           name: string
           partner_meal_id?: string | null
           protein_g?: number | null
@@ -1986,6 +1988,7 @@ export type Database = {
           library_meal_id?: string | null
           linked_prep_group?: string | null
           meal_slot?: Database["public"]["Enums"]["meal_slot_kind"] | null
+          modification_source?: string | null
           name?: string
           partner_meal_id?: string | null
           protein_g?: number | null
@@ -2035,7 +2038,9 @@ export type Database = {
           is_partner_plan: boolean
           kcal: number | null
           last_auto_generated_at: string | null
+          organization_id: string | null
           partner_plan_id: string | null
+          performance_context: boolean
           plan_type: string
           pre_plan_note: string | null
           protein_g: number | null
@@ -2063,7 +2068,9 @@ export type Database = {
           is_partner_plan?: boolean
           kcal?: number | null
           last_auto_generated_at?: string | null
+          organization_id?: string | null
           partner_plan_id?: string | null
+          performance_context?: boolean
           plan_type?: string
           pre_plan_note?: string | null
           protein_g?: number | null
@@ -2091,7 +2098,9 @@ export type Database = {
           is_partner_plan?: boolean
           kcal?: number | null
           last_auto_generated_at?: string | null
+          organization_id?: string | null
           partner_plan_id?: string | null
+          performance_context?: boolean
           plan_type?: string
           pre_plan_note?: string | null
           protein_g?: number | null
@@ -2105,6 +2114,13 @@ export type Database = {
           weeks_count?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "nutrition_plans_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "nutrition_plans_partner_plan_id_fkey"
             columns: ["partner_plan_id"]
@@ -4187,6 +4203,169 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      performance_plan_history: {
+        Row: {
+          action: string
+          created_at: string
+          date: string
+          engine_version: string | null
+          flags: Json
+          id: string
+          job_id: string | null
+          message: string | null
+          new_day_type: string | null
+          new_target_kcal: number | null
+          organization_id: string
+          plan_id: string | null
+          previous_day_type: string | null
+          previous_target_kcal: number | null
+          trigger: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          date: string
+          engine_version?: string | null
+          flags?: Json
+          id?: string
+          job_id?: string | null
+          message?: string | null
+          new_day_type?: string | null
+          new_target_kcal?: number | null
+          organization_id: string
+          plan_id?: string | null
+          previous_day_type?: string | null
+          previous_target_kcal?: number | null
+          trigger: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          date?: string
+          engine_version?: string | null
+          flags?: Json
+          id?: string
+          job_id?: string | null
+          message?: string | null
+          new_day_type?: string | null
+          new_target_kcal?: number | null
+          organization_id?: string
+          plan_id?: string | null
+          previous_day_type?: string | null
+          previous_target_kcal?: number | null
+          trigger?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_plan_history_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "performance_plan_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_plan_history_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_plan_history_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "nutrition_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      performance_plan_jobs: {
+        Row: {
+          athlete_user_id: string | null
+          attempts: number
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          failed_count: number
+          generated_count: number
+          id: string
+          last_error: string | null
+          organization_id: string
+          processed_athletes: number
+          skipped_count: number
+          started_at: string | null
+          status: string
+          team_id: string | null
+          total_athletes: number
+          trigger: string
+          updated_at: string
+          updated_count: number
+          week_start: string
+        }
+        Insert: {
+          athlete_user_id?: string | null
+          attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          failed_count?: number
+          generated_count?: number
+          id?: string
+          last_error?: string | null
+          organization_id: string
+          processed_athletes?: number
+          skipped_count?: number
+          started_at?: string | null
+          status?: string
+          team_id?: string | null
+          total_athletes?: number
+          trigger: string
+          updated_at?: string
+          updated_count?: number
+          week_start: string
+        }
+        Update: {
+          athlete_user_id?: string | null
+          attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          failed_count?: number
+          generated_count?: number
+          id?: string
+          last_error?: string | null
+          organization_id?: string
+          processed_athletes?: number
+          skipped_count?: number
+          started_at?: string | null
+          status?: string
+          team_id?: string | null
+          total_athletes?: number
+          trigger?: string
+          updated_at?: string
+          updated_count?: number
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_plan_jobs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_plan_jobs_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "organization_teams"
             referencedColumns: ["id"]
           },
         ]
