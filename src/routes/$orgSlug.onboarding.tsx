@@ -218,6 +218,23 @@ function AthleteOnboarding({ ctx }: { ctx: NonNullable<Awaited<ReturnType<typeof
   const [baselineActivity, setBaselineActivity] = useState<string>("");
   const [nutritionGoal, setNutritionGoal] = useState<string>("");
 
+  // Persönliche Ernährungspräferenzen (source of truth: smart_nutrition_profile)
+  const [favFoods, setFavFoods] = useState<string[]>([]);
+  const [extraFavs, setExtraFavs] = useState<string>("");
+  const [nogoFoods, setNogoFoods] = useState<string[]>([]);
+  const [extraNogos, setExtraNogos] = useState<string>("");
+  const [allergies, setAllergies] = useState<string[]>([]);
+  const [extraAllergies, setExtraAllergies] = useState<string>("");
+  const [intolerances, setIntolerances] = useState<string[]>([]);
+  const [dietStyle, setDietStyle] = useState<string>("");
+  const [dietNotes, setDietNotes] = useState<string>("");
+  const [eatingStyle, setEatingStyle] = useState<string>("");
+  const [mealPrepStyle, setMealPrepStyle] = useState<string>("");
+  const [allergiesTouched, setAllergiesTouched] = useState(false);
+  const [intolerancesTouched, setIntolerancesTouched] = useState(false);
+
+  const savePrefs = useServerFn(savePerformanceNutritionPreferences);
+
   useEffect(() => {
     const tm: any = ctx.team_membership;
     if (tm?.team_id) setTeamId(tm.team_id);
@@ -229,7 +246,40 @@ function AthleteOnboarding({ ctx }: { ctx: NonNullable<Awaited<ReturnType<typeof
     if (Array.isArray(tm?.available_training_days)) setDays(tm.available_training_days);
     if (tm?.limitations) setLimitations(tm.limitations);
     if (tm?.personal_goal) setGoal(tm.personal_goal);
+    // Auto-Ableitung: Geschlecht aus profiles → Energieberechnung.
+    const g = (ctx.profile as { gender?: string | null } | null)?.gender ?? null;
+    if (g) setEnergySex(deriveEnergySex(g));
   }, [ctx]);
+
+  // Prefill der SNP-Präferenzen (falls Athlet bereits Smart-Onboarding hatte).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: snp } = await supabase
+        .from("smart_nutrition_profile")
+        .select(
+          "favorite_foods, extra_favorites, nogo_foods, extra_nogos, allergies, extra_allergies, intolerances, diet_style, diet_notes, eating_style, meal_prep_style",
+        )
+        .eq("user_id", ctx.profile?.id ?? "")
+        .maybeSingle();
+      if (cancelled || !snp) return;
+      const s = snp as Record<string, any>;
+      if (Array.isArray(s.favorite_foods)) setFavFoods(s.favorite_foods);
+      if (s.extra_favorites) setExtraFavs(s.extra_favorites);
+      if (Array.isArray(s.nogo_foods)) setNogoFoods(s.nogo_foods);
+      if (s.extra_nogos) setExtraNogos(s.extra_nogos);
+      if (Array.isArray(s.allergies)) { setAllergies(s.allergies); setAllergiesTouched(true); }
+      if (s.extra_allergies) setExtraAllergies(s.extra_allergies);
+      if (Array.isArray(s.intolerances)) { setIntolerances(s.intolerances); setIntolerancesTouched(true); }
+      if (s.diet_style) setDietStyle(s.diet_style);
+      if (s.diet_notes) setDietNotes(s.diet_notes);
+      if (s.eating_style) setEatingStyle(s.eating_style);
+      if (s.meal_prep_style) setMealPrepStyle(s.meal_prep_style);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [ctx.profile?.id]);
 
   const save = useMutation({
     mutationFn: async () => {
