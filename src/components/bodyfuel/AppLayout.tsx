@@ -327,9 +327,16 @@ export function AppLayout({ children }: { children: ReactNode }) {
         .map((item: any) => {
           if (item.to === "/dashboard") return { ...item, to: "/bulls", label: "Home", icon: Home };
           if (item.to === "/nutrition") return { ...item, to: "/bulls/nutrition", icon: Apple };
-          if (item.to === "/training") return { ...item, to: "/bulls/training" };
+          if (item.to === "/training") return { ...item, to: "/bulls/training", icon: Dumbbell };
           if (item.to === "/profile") return { ...item, icon: User };
           return item;
+        })
+        // Bulls-Reihenfolge: Home · Training · Ernährung · Community · Profil
+        .sort((a: any, b: any) => {
+          const order = ["/bulls", "/bulls/training", "/bulls/nutrition", "/community", "/profile"];
+          const ia = order.indexOf(a.to);
+          const ib = order.indexOf(b.to);
+          return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
         })
     : navWithBulls;
   // Mobile bottom nav: Coach-Chat ist in die obere Leiste gewandert
