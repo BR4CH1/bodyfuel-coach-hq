@@ -1,5 +1,21 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { isGlobalCoach, assertCoachOrOrgStaffForAthlete } from "@/lib/organizations/org-coach-access";
+
+// Erlaubt: Ziel-User ist Caller selbst, ODER Caller ist globaler Coach,
+// ODER Caller ist Org-Staff mit `manage_nutrition`-Berechtigung für diesen
+// Athleten. Wird von den Meal-Compute-Fns unten verwendet, damit auch
+// Vereins-Coaches (Bulls & Co.) Rezepte / Makros nachrechnen können.
+async function assertMealAccess(
+  ctx: { supabase: any; userId: string },
+  clientId: string | null,
+) {
+  if (clientId && clientId === ctx.userId) return;
+  if (await isGlobalCoach(ctx.supabase, ctx.userId)) return;
+  if (!clientId) throw new Error("Forbidden");
+  await assertCoachOrOrgStaffForAthlete(ctx, clientId, "nutrition");
+}
+
 
 type ParsedMeal = {
   name: string;
