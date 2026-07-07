@@ -12,6 +12,7 @@ import { OrgAthleteLayout } from "@/components/organizations/OrgAthleteLayout";
 import { AutopilotStatusCard } from "@/components/bodyfuel/AutopilotStatusCard";
 import { MacroTargetsCard } from "@/components/bodyfuel/MacroTargetsCard";
 import { PlanContentView } from "@/components/bodyfuel/PlanContentView";
+import { BullsPlanContentView } from "@/components/bodyfuel/BullsPlanContentView";
 import { WeekScheduleCard } from "@/components/bodyfuel/WeekScheduleCard";
 import { PlateauWarning } from "@/components/bodyfuel/PlateauWarning";
 import { DietPreferencesCard } from "@/components/bodyfuel/DietPreferencesCard";
