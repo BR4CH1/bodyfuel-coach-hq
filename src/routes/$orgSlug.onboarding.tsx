@@ -293,7 +293,13 @@ function AthleteOnboarding({ ctx }: { ctx: NonNullable<Awaited<ReturnType<typeof
       if (!energySex) throw new Error("Bitte Angabe zum biologischen Geschlecht für die Energieberechnung.");
       if (!baselineActivity) throw new Error("Bitte Alltagsaktivität angeben.");
       if (!nutritionGoal) throw new Error("Bitte Ernährungsziel angeben.");
-      return complete({
+      if (!dietStyle) throw new Error("Bitte Ernährungsform angeben.");
+      if (!mealPrepStyle) throw new Error("Bitte angeben, wie du kochen willst.");
+      if (!allergiesTouched) throw new Error("Bitte bestätige, ob du Allergien hast (auch ohne Auswahl).");
+      if (!intolerancesTouched) throw new Error("Bitte bestätige, ob du Unverträglichkeiten hast (auch ohne Auswahl).");
+
+      // 1) Basisdaten + PNP-Engine-Felder + org membership.
+      await complete({
         data: {
           organization_id: ctx.organization.id,
           team_id: teamId,
@@ -321,6 +327,25 @@ function AthleteOnboarding({ ctx }: { ctx: NonNullable<Awaited<ReturnType<typeof
             | "MUSCLE_GAIN",
         },
       });
+
+      // 2) Persönliche Nutrition-Präferenzen (SNP) — sparse upsert.
+      await savePrefs({
+        data: {
+          organizationId: ctx.organization.id,
+          favorite_foods: favFoods,
+          extra_favorites: extraFavs || null,
+          nogo_foods: nogoFoods,
+          extra_nogos: extraNogos || null,
+          allergies: allergies,
+          extra_allergies: extraAllergies || null,
+          intolerances: intolerances,
+          diet_style: dietStyle,
+          diet_notes: dietNotes || null,
+          eating_style: eatingStyle || null,
+          meal_prep_style: mealPrepStyle,
+        },
+      });
+      return { ok: true };
     },
     onSuccess: () => {
       toast.success(`Willkommen bei ${org.name}!`);
