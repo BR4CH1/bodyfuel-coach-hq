@@ -90,16 +90,13 @@ export const listTeamAthletesForAssign = createServerFn({ method: "GET" })
     if (!uids.length) return [];
     const { data: profs } = await supabase
       .from("profiles")
-      .select("id, display_name, first_name, last_name")
+      .select("id, display_name, nickname")
       .in("id", uids);
     const profMap = new Map<string, any>();
     for (const p of (profs ?? []) as any[]) profMap.set(p.id, p);
     const merged = rows.map((r) => {
       const p = profMap.get(r.user_id);
-      const name =
-        p?.display_name ||
-        [p?.first_name, p?.last_name].filter(Boolean).join(" ") ||
-        "Athlet";
+      const name = p?.display_name || p?.nickname || "Athlet";
       return {
         user_id: r.user_id,
         name,

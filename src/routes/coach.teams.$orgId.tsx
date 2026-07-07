@@ -301,12 +301,17 @@ function CoachOrgDetail() {
         )}
 
         {tab === "training" && <TrainingTab orgId={orgId} />}
-        {tab === "tasks" && <TasksTab orgId={orgId} teams={data.teams as any[]} />}
-        {tab === "challenges" && <ChallengesTab orgId={orgId} teams={data.teams as any[]} />}
-        {tab === "ranking" && (
-          <Empty>Ranking spiegelt Punkte aus aktiven Org-Challenges (Ledger `organization_challenge_point_events`). Ohne aktive Challenge leer.</Empty>
+        {tab === "nutrition" && (
+          <NutritionScheduleCard orgId={orgId} teams={(data.teams as any[]) ?? []} />
         )}
-        {tab === "community" && <CommunityTab orgId={orgId} />}
+        {tab === "tasks" && <TasksTab orgId={orgId} teams={data.teams as any[]} />}
+        {(tab === "community" || tab === "challenges" || tab === "ranking") && (
+          <CommunityHub
+            orgId={orgId}
+            teams={data.teams as any[]}
+            initialSubTab={tab === "challenges" ? "challenges" : tab === "ranking" ? "ranking" : "feed"}
+          />
+        )}
         {tab === "staff" && <StaffTab orgId={orgId} teams={data.teams as any[]} />}
 
         {tab === "settings" && (
@@ -515,7 +520,7 @@ function TrainingTab({ orgId }: { orgId: string }) {
         )}
       </Card>
 
-      <NutritionScheduleCard orgId={orgId} teams={(teamsQ.data.teams as any[]) ?? []} />
+      
 
       <Card title="Athletic Plans">
         <Empty>Athletic-Plan-Composer folgt. Plan-Sessions werden nach Anlage automatisch als Tasks erzeugt.</Empty>
@@ -1764,6 +1769,44 @@ function CommunityTab({ orgId }: { orgId: string }) {
             </li>
           ))}
         </ul>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// COMMUNITY HUB — mit Sub-Tabs Feed / Challenges / Ranking
+// ============================================================
+function CommunityHub({
+  orgId,
+  teams,
+  initialSubTab,
+}: {
+  orgId: string;
+  teams: any[];
+  initialSubTab: "feed" | "challenges" | "ranking";
+}) {
+  const [sub, setSub] = useState<"feed" | "challenges" | "ranking">(initialSubTab);
+  useEffect(() => setSub(initialSubTab), [initialSubTab]);
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-2 border-b border-border">
+        {(["feed", "challenges", "ranking"] as const).map((k) => (
+          <button
+            key={k}
+            onClick={() => setSub(k)}
+            className={`px-3 py-2 text-xs font-semibold uppercase tracking-wider ${
+              sub === k ? "border-b-2 border-primary text-foreground" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {k === "feed" ? "Feed" : k === "challenges" ? "Challenges" : "Ranking"}
+          </button>
+        ))}
+      </div>
+      {sub === "feed" && <CommunityTab orgId={orgId} />}
+      {sub === "challenges" && <ChallengesTab orgId={orgId} teams={teams} />}
+      {sub === "ranking" && (
+        <Empty>Ranking spiegelt Punkte aus aktiven Org-Challenges (Ledger `organization_challenge_point_events`). Ohne aktive Challenge leer.</Empty>
       )}
     </div>
   );
