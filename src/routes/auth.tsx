@@ -27,6 +27,10 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  // Beitrittslinks (next=/join/...) starten direkt im Registrieren-Modus.
+  const [mode, setMode] = useState<"signin" | "signup">(
+    next && next.startsWith("/join/") ? "signup" : "signin",
+  );
 
   useEffect(() => {
     if (loading) return;
@@ -40,14 +44,12 @@ function AuthPage() {
 
   const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // Read directly from the form to catch browser-autofilled values that
-    // sometimes don't trigger React's onChange (Chrome/Safari password manager).
     const form = e.currentTarget;
     const fd = new FormData(form);
     const rawEmail = (fd.get("email") ?? email ?? "").toString();
     const rawPw = (fd.get("password") ?? password ?? "").toString();
     const normalizedEmail = rawEmail.trim().toLowerCase();
-    const normalizedPw = rawPw; // do not trim — passwords may contain spaces intentionally
+    const normalizedPw = rawPw;
 
     const ev = emailSchema.safeParse(normalizedEmail);
     const pv = pwSchema.safeParse(normalizedPw);
@@ -56,16 +58,36 @@ function AuthPage() {
 
     setBusy(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: ev.data,
-        password: pv.data,
-      });
-      if (error) throw error;
-      toast.success("Willkommen zurück!");
+      if (mode === "signup") {
+        const emailRedirectTo =
+          typeof window !== "undefined"
+            ? `${window.location.origin}${next ?? "/app"}`
+            : undefined;
+        const { data, error } = await supabase.auth.signUp({
+          email: ev.data,
+          password: pv.data,
+          options: { emailRedirectTo },
+        });
+        if (error) throw error;
+        if (!data.session) {
+          toast.success("Account erstellt. Bitte bestätige deine E-Mail, um fortzufahren.");
+        } else {
+          toast.success("Account erstellt!");
+        }
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: ev.data,
+          password: pv.data,
+        });
+        if (error) throw error;
+        toast.success("Willkommen zurück!");
+      }
     } catch (err: unknown) {
-      const raw = err instanceof Error ? err.message : "Login fehlgeschlagen";
+      const raw = err instanceof Error ? err.message : "Fehler";
       const msg = /invalid login credentials/i.test(raw)
         ? "E-Mail oder Passwort falsch. Tipp: E-Mail bitte neu eintippen (Autofill kann fehlerhaft sein)."
+        : /already registered|user already/i.test(raw)
+        ? "Diese E-Mail ist bereits registriert. Bitte einloggen."
         : raw;
       toast.error(msg);
     } finally {
@@ -106,10 +128,13 @@ function AuthPage() {
           </div>
         </div>
 
-        <h2 className="font-display text-2xl font-bold">Willkommen zurück</h2>
+        <h2 className="font-display text-2xl font-bold">
+          {mode === "signup" ? "Account erstellen" : "Willkommen zurück"}
+        </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Melde dich mit deinen Zugangsdaten an. Neue Kunden erhalten ihren
-          Login per E-Mail nach dem Erstgespräch.
+          {mode === "signup"
+            ? "Erstelle deinen kostenlosen BODYFUEL-Account, um deinem Team beizutreten."
+            : "Melde dich mit deinen Zugangsdaten an."}
         </p>
 
         <form onSubmit={submit} className="mt-6 space-y-4">
@@ -146,7 +171,7 @@ function AuthPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 className="pl-9"
                 required
-                autoComplete="current-password"
+                autoComplete={mode === "signup" ? "new-password" : "current-password"}
               />
 
             </div>
@@ -157,23 +182,29 @@ function AuthPage() {
             disabled={busy}
             className="w-full bg-gradient-gold text-primary-foreground hover:opacity-90"
           >
-            {busy ? "..." : "Einloggen"}
+            {busy ? "..." : mode === "signup" ? "Registrieren" : "Einloggen"}
           </Button>
         </form>
 
         <div className="mt-6 space-y-2 text-center text-xs text-muted-foreground">
           <div>
-            Noch kein Kunde?{" "}
-            <Link to="/" className="text-gold hover:underline">
-              Kostenloses Erstgespräch anfragen
-            </Link>
+            {mode === "signup" ? "Schon einen Account?" : "Noch keinen Account?"}{" "}
+            <button
+              type="button"
+              onClick={() => setMode(mode === "signup" ? "signin" : "signup")}
+              className="text-gold hover:underline"
+            >
+              {mode === "signup" ? "Einloggen" : "Jetzt registrieren"}
+            </button>
           </div>
-          <div>
-            oder{" "}
-            <Link to="/login" className="text-gold hover:underline">
-              Demo-Login ohne Account
-            </Link>
-          </div>
+          {mode === "signin" && (
+            <div>
+              oder{" "}
+              <Link to="/login" className="text-gold hover:underline">
+                Demo-Login ohne Account
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </div>
