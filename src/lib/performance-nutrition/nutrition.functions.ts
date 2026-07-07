@@ -147,6 +147,17 @@ export const getNutritionTargetForDate = createServerFn({ method: "POST" })
       tmRows && tmRows.length ? (tmRows[0] as any).position ?? null : null;
 
     // 5) Day type: explicit → override → REST
+    //    Legacy personal writers still upsert kind="training"/"rest" into the
+    //    shared day_type_overrides table. "training" is ambiguous in the
+    //    Performance context (could be strength/football/game/double session),
+    //    so it is NOT silently mapped — it falls back to REST.
+    const REAL_DAY_TYPES: readonly PerformanceDayType[] = [
+      "REST",
+      "STRENGTH",
+      "FOOTBALL_TRAINING",
+      "GAME_DAY",
+      "DOUBLE_SESSION",
+    ];
     let dayType: PerformanceDayType = data.day_type ?? "REST";
     if (!data.day_type) {
       const { data: dto } = await supabase
@@ -155,7 +166,10 @@ export const getNutritionTargetForDate = createServerFn({ method: "POST" })
         .eq("user_id", userId)
         .eq("entry_date", data.date)
         .maybeSingle();
-      if (dto?.kind) dayType = dto.kind as PerformanceDayType;
+      const raw = (dto as any)?.kind ?? null;
+      if (raw && REAL_DAY_TYPES.includes(raw as PerformanceDayType)) {
+        dayType = raw as PerformanceDayType;
+      }
     }
 
     // 6) Calibration — org-scoped, adults only (engine enforces youth=0)
