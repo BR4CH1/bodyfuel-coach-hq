@@ -89,7 +89,8 @@ function CoachOrgDetail() {
   const org: any = data.org;
   const features = data.features as { feature: string; enabled: boolean }[];
   const featureOn = (k: string) => features.some((f) => f.feature === k && f.enabled);
-  const visibleTabs = ALL_TABS.filter((t) => t.feature === null || featureOn(t.feature));
+  void featureOn;
+
   const caller = (data as any).caller as { experience: string; is_bodyfuel_coach: boolean; team_id: string | null } | undefined;
   const teamKpis = ((data as any).team_kpis ?? []) as Array<{ team_id: string; athletes: number; weekly_compliance: number | null; pending_onboardings: number }>;
   const experienceLabel =
