@@ -19,6 +19,10 @@ import {
   ClipboardList,
 } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
+import { MacroTargetsCard } from "@/components/bodyfuel/MacroTargetsCard";
+import { NutritionTargetsEditor } from "@/components/bodyfuel/NutritionTargetsEditor";
+import { PlanManagementCard } from "@/components/bodyfuel/PlanManagementCard";
+import { TrainingPlanManagementCard } from "@/components/bodyfuel/TrainingPlanManagementCard";
 import {
   getCoachAthleteDetail,
   type CoachAthleteDetail,
@@ -60,7 +64,10 @@ function AthleteDrilldown() {
       <BackLink orgId={orgId} />
 
       <Header data={data} />
+      <BuilderActions orgId={orgId} userId={userId} />
       <CoachSummary data={data} />
+      <AthleteNutritionBuilder userId={userId} />
+      <AthleteTrainingBuilder userId={userId} />
       <AthletePulse data={data} />
       <RadarTriggers data={data} />
       <Development data={data} />
@@ -736,12 +743,58 @@ function OpenItems({ data }: { data: CoachAthleteDetail }) {
 }
 
 // ---------- coach actions ----------
+function BuilderActions({ orgId, userId }: { orgId: string; userId: string }) {
+  return (
+    <Section title="Builder" icon={<ClipboardList className="h-4 w-4" />}>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <Link
+          to="/coach/plan-builder/$userId"
+          params={{ userId }}
+          search={{ orgId }}
+          className="rounded-lg border border-border bg-card p-4 hover:bg-muted/40"
+        >
+          <div className="text-sm font-semibold">Ernährungsplan erstellen</div>
+          <div className="mt-1 text-[11px] text-muted-foreground">BODYFUEL Plan-Builder mit allen Gerichten.</div>
+        </Link>
+        <Link
+          to="/coach/training-builder/$userId"
+          params={{ userId }}
+          search={{ orgId }}
+          className="rounded-lg border border-border bg-card p-4 hover:bg-muted/40"
+        >
+          <div className="text-sm font-semibold">Trainingsplan erstellen</div>
+          <div className="mt-1 text-[11px] text-muted-foreground">BODYFUEL Trainings-Builder mit allen Übungen.</div>
+        </Link>
+      </div>
+    </Section>
+  );
+}
+
+function AthleteNutritionBuilder({ userId }: { userId: string }) {
+  return (
+    <Section title="Ernährung" icon={<ListChecks className="h-4 w-4" />}>
+      <div className="space-y-3">
+        <MacroTargetsCard userId={userId} />
+        <NutritionTargetsEditor userId={userId} />
+        <PlanManagementCard userId={userId} returnOrgId={Route.useParams().orgId} />
+      </div>
+    </Section>
+  );
+}
+
+function AthleteTrainingBuilder({ userId }: { userId: string }) {
+  return (
+    <Section title="Training" icon={<Dumbbell className="h-4 w-4" />}>
+      <TrainingPlanManagementCard userId={userId} returnOrgId={Route.useParams().orgId} />
+    </Section>
+  );
+}
+
 function CoachActions() {
   return (
     <Section title="Coach Aktionen" icon={<ClipboardList className="h-4 w-4" />}>
       <div className="rounded-lg border border-border bg-card p-4 text-xs text-muted-foreground">
-        Aktionen wie „Aufgabe zuweisen“ oder „Athletik-Einheit zuweisen“ werden aus dem
-        Team-Bereich heraus ausgeführt, sobald der jeweilige Flow unterstützt ist.
+        Aufgaben wie Check-ins oder manuelle Team-To-dos werden weiterhin im Team-Bereich geplant.
       </div>
     </Section>
   );

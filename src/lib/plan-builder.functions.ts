@@ -1,13 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-
-async function assertCoach(ctx: { supabase: any; userId: string }) {
-  const { data: isCoach } = await ctx.supabase.rpc("has_role", {
-    _user_id: ctx.userId,
-    _role: "coach",
-  });
-  if (!isCoach) throw new Error("Nur für Coaches.");
-}
+import {
+  assertCoachOrOrgStaffForAthlete,
+  assertGlobalCoachOrAnyOrgCoach,
+} from "@/lib/organizations/org-coach-access";
 
 // 0=Sun..6=Sat, matches JS Date.getUTCDay()
 const WEEKDAY_MAP: Record<string, number> = {
@@ -72,8 +68,9 @@ export type CustomerPlanContext = {
 export const listMealLibrary = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<LibraryMeal[]> => {
-    await assertCoach(context);
-    const { data, error } = await context.supabase
+    await assertGlobalCoachOrAnyOrgCoach(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin
       .from("coach_meal_library")
       .select("*")
       .eq("is_active", true)
@@ -87,10 +84,11 @@ export const getCustomerPlanContext = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { customerId: string }) => d)
   .handler(async ({ data, context }): Promise<CustomerPlanContext> => {
-    await assertCoach(context);
+    await assertCoachOrOrgStaffForAthlete(context, data.customerId, "nutrition");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const [{ data: prof }, { data: tgt }] = await Promise.all([
-      context.supabase.from("smart_nutrition_profile").select("*").eq("user_id", data.customerId).maybeSingle(),
-      context.supabase.from("nutrition_targets").select("*").eq("user_id", data.customerId).maybeSingle(),
+      supabaseAdmin.from("smart_nutrition_profile").select("*").eq("user_id", data.customerId).maybeSingle(),
+      supabaseAdmin.from("nutrition_targets").select("*").eq("user_id", data.customerId).maybeSingle(),
     ]);
 
     const toList = (v: any): string[] => {
@@ -243,7 +241,7 @@ export const saveBuilderPlan = createServerFn({ method: "POST" })
     }) => d,
   )
   .handler(async ({ data, context }) => {
-    await assertCoach(context);
+    await assertCoachOrOrgStaffForAthlete(context, data.customerId, "nutrition");
     return await persistBuilderPlan(context.supabase, data);
   });
 
@@ -266,7 +264,8 @@ export const saveBuilderPartnerPlan = createServerFn({ method: "POST" })
     }) => d,
   )
   .handler(async ({ data, context }) => {
-    await assertCoach(context);
+    await assertCoachOrOrgStaffForAthlete(context, data.customerId, "nutrition");
+    await assertCoachOrOrgStaffForAthlete(context, data.partnerId, "nutrition");
     if (data.clientDays.length !== data.partnerDays.length) {
       throw new Error("Kunde- und Partner-Tage müssen gleich lang sein.");
     }
@@ -349,16 +348,17 @@ export const loadNutritionPlanForBuilder = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { planId: string }) => d)
   .handler(async ({ data, context }): Promise<LoadedBuilderPlan> => {
-    await assertCoach(context);
-    const { data: plan, error: pErr } = await context.supabase
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: plan, error: pErr } = await supabaseAdmin
       .from("nutrition_plans")
-      .select("id, title, scheduled_start_date, scheduled_end_date, plan_type")
+      .select("id, client_id, title, scheduled_start_date, scheduled_end_date, plan_type")
       .eq("id", data.planId)
       .maybeSingle();
     if (pErr || !plan) throw new Error(pErr?.message ?? "Plan nicht gefunden");
     if ((plan as any).plan_type === "training") throw new Error("Kein Ernährungsplan");
+    await assertCoachOrOrgStaffForAthlete(context, (plan as any).client_id, "nutrition");
 
-    const { data: dayRows } = await context.supabase
+    const { data: dayRows } = await supabaseAdmin
       .from("nutrition_plan_days")
       .select("id, sort_order, day_type, day_date")
       .eq("plan_id", data.planId)
@@ -366,7 +366,7 @@ export const loadNutritionPlanForBuilder = createServerFn({ method: "POST" })
 
     const dayIds = ((dayRows ?? []) as any[]).map((r) => r.id);
     const mealRes = dayIds.length
-      ? await context.supabase
+      ? await supabaseAdmin
           .from("nutrition_plan_meals")
           .select("id, day_id, sort_order, meal_slot, name, description, library_meal_id, is_locked, linked_prep_group, ingredients_json")
           .in("day_id", dayIds)

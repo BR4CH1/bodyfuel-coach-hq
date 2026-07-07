@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { assertCoachOrOrgStaffForAthlete } from "@/lib/organizations/org-coach-access";
 
 async function assertCoach(supabase: any, userId: string) {
   const { data } = await supabase.rpc("has_role", { _user_id: userId, _role: "coach" });
@@ -47,11 +48,12 @@ export const getPartnerLink = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { user_id: string }) => d)
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
-    const { data: isCoach } = await supabase.rpc("has_role", { _user_id: userId, _role: "coach" });
-    if (data.user_id !== userId && !isCoach) throw new Error("Forbidden");
+    if (data.user_id !== context.userId) {
+      await assertCoachOrOrgStaffForAthlete(context, data.user_id, "nutrition");
+    }
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const { data: link } = await supabase
+    const { data: link } = await supabaseAdmin
       .from("nutrition_partners")
       .select("id, user_a, user_b")
       .or(`user_a.eq.${data.user_id},user_b.eq.${data.user_id}`)
@@ -59,7 +61,7 @@ export const getPartnerLink = createServerFn({ method: "POST" })
     if (!link) return null;
 
     const partnerId = (link.user_a === data.user_id ? link.user_b : link.user_a) as string;
-    const { data: prof } = await supabase
+    const { data: prof } = await supabaseAdmin
       .from("profiles")
       .select("id, display_name")
       .eq("id", partnerId)

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { UserPlus, Copy, X, MoreHorizontal, Search, ChevronRight } from "lucide-react";
@@ -31,6 +31,7 @@ export function AthletesTab({
   allowedUserIds: Set<string> | null;
   onClearFilter: () => void;
 }) {
+  const navigate = useNavigate();
   const qc = useQueryClient();
   const fetchAudit = useServerFn(getOrgAthletesOnboardingAudit);
   const fetchPerm = useServerFn(canManageRoster);
@@ -52,12 +53,32 @@ export function AthletesTab({
   });
 
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   if (isLoading || !audit) return <div className="text-xs text-muted-foreground">Lädt…</div>;
 
   const rows = allowedUserIds
     ? (audit.athletes as any[]).filter((a) => allowedUserIds.has(a.user_id))
     : (audit.athletes as any[]);
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const visibleRows = normalizedSearch
+    ? rows.filter((a) =>
+        [a.name, ...(a.missing ?? [])]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase()
+          .includes(normalizedSearch),
+      )
+    : rows;
+  const visiblePending = normalizedSearch
+    ? (pending as any[]).filter((p) =>
+        [p.first_name, p.last_name, p.primary_position, p.jersey_number ? `#${p.jersey_number}` : null]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase()
+          .includes(normalizedSearch),
+      )
+    : (pending as any[]);
   const filterTeam = teamFilter ? teams.find((t) => t.id === teamFilter) : null;
   const canManage = !!perm?.ok;
 
@@ -101,12 +122,31 @@ export function AthletesTab({
         </div>
       )}
 
+      <label className="relative block">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <input
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Spieler nach Namen suchen…"
+          className="w-full rounded-lg border border-border bg-card py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-primary"
+        />
+      </label>
+
       <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
-        {rows.map((a) => (
+        {visibleRows.map((a) => (
           <li key={a.user_id} className="relative">
             <Link
               to="/coach/teams/$orgId/athletes/$userId"
               params={{ orgId, userId: a.user_id }}
+              preload="intent"
+              onClick={(event) => {
+                if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                event.preventDefault();
+                navigate({
+                  to: "/coach/teams/$orgId/athletes/$userId",
+                  params: { orgId, userId: a.user_id },
+                });
+              }}
               className="flex items-center gap-3 px-3 py-3 hover:bg-muted/40"
             >
               <div className="min-w-0 flex-1 pr-10">
@@ -139,7 +179,7 @@ export function AthletesTab({
             )}
           </li>
         ))}
-        {(pending as any[]).map((p) => (
+        {visiblePending.map((p) => (
           <li
             key={`pending-${p.id}`}
             className="flex items-center gap-3 bg-yellow-500/5 px-3 py-3"
@@ -162,9 +202,13 @@ export function AthletesTab({
             {canManage && <PendingActions id={p.id} onDone={invalidate} />}
           </li>
         ))}
-        {rows.length === 0 && (pending as any[]).length === 0 && (
+        {visibleRows.length === 0 && visiblePending.length === 0 && (
           <li className="px-3 py-6 text-center text-sm text-muted-foreground">
-            {filterTeam ? "Keine Athleten in diesem Team." : "Noch keine Athleten."}
+            {normalizedSearch
+              ? "Kein Spieler zu dieser Suche gefunden."
+              : filterTeam
+              ? "Keine Athleten in diesem Team."
+              : "Noch keine Athleten."}
           </li>
         )}
       </ul>

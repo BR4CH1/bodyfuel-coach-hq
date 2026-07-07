@@ -2,12 +2,13 @@ import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { TrainingPlanBuilderPage } from "@/components/bodyfuel/TrainingPlanBuilderPage";
 import { createFileRoute, useParams, useSearch } from "@tanstack/react-router";
 
-type Search = { planId?: string };
+type Search = { planId?: string; orgId?: string };
 
 export const Route = createFileRoute("/coach/training-builder/$userId")({
   head: () => ({ meta: [{ title: "Trainingsplan manuell erstellen — BODYFUEL" }] }),
   validateSearch: (search: Record<string, unknown>): Search => ({
     planId: typeof search.planId === "string" ? search.planId : undefined,
+    orgId: typeof search.orgId === "string" ? search.orgId : undefined,
   }),
   component: CoachTrainingBuilderRoute,
   errorComponent: ({ error }) => (
@@ -22,10 +23,10 @@ export const Route = createFileRoute("/coach/training-builder/$userId")({
 
 function CoachTrainingBuilderRoute() {
   const { userId } = useParams({ from: "/coach/training-builder/$userId" });
-  const { planId } = useSearch({ from: "/coach/training-builder/$userId" });
+  const { planId, orgId } = useSearch({ from: "/coach/training-builder/$userId" });
   return (
     <AppLayout>
-      <TrainingPlanBuilderPage userId={userId} planId={planId} />
+      <TrainingPlanBuilderPage userId={userId} planId={planId} returnOrgId={orgId} />
     </AppLayout>
   );
 }

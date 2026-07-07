@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { assertCoachOrOrgStaffForAthlete } from "@/lib/organizations/org-coach-access";
 
 export type SmartNutritionProfile = {
   user_id: string;
@@ -64,8 +65,13 @@ export const getCustomerSmartProfile = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { user_id: string }) => d)
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
-    const { data: row } = await supabase
+    const db = data.user_id === context.userId
+      ? context.supabase
+      : (await import("@/integrations/supabase/client.server")).supabaseAdmin;
+    if (data.user_id !== context.userId) {
+      await assertCoachOrOrgStaffForAthlete(context, data.user_id, "nutrition");
+    }
+    const { data: row } = await db
       .from("smart_nutrition_profile")
       .select("*")
       .eq("user_id", data.user_id)
@@ -79,12 +85,8 @@ export const setCustomerWeeklyBudget = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { user_id: string; weekly_budget_eur: number | null }) => d)
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
-    const { data: isCoach } = await supabase.rpc("has_role", {
-      _user_id: userId,
-      _role: "coach",
-    });
-    if (!isCoach) throw new Error("Forbidden");
+    await assertCoachOrOrgStaffForAthlete(context, data.user_id, "nutrition");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const value =
       data.weekly_budget_eur == null || Number.isNaN(Number(data.weekly_budget_eur))
         ? null
@@ -92,7 +94,7 @@ export const setCustomerWeeklyBudget = createServerFn({ method: "POST" })
 
     // Mirror to nutrition partner if linked
     const targetIds = new Set<string>([data.user_id]);
-    const { data: link } = await supabase
+    const { data: link } = await supabaseAdmin
       .from("nutrition_partners")
       .select("user_a, user_b")
       .or(`user_a.eq.${data.user_id},user_b.eq.${data.user_id}`)
@@ -106,7 +108,7 @@ export const setCustomerWeeklyBudget = createServerFn({ method: "POST" })
       user_id: uid,
       weekly_budget_eur: value,
     }));
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from("smart_nutrition_profile")
       .upsert(rows, { onConflict: "user_id" });
     if (error) throw new Error(error.message);

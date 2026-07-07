@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -53,7 +54,7 @@ function fmtDate(s: string | null) {
   });
 }
 
-export function PlanManagementCard({ userId }: { userId: string }) {
+export function PlanManagementCard({ userId, returnOrgId }: { userId: string; returnOrgId?: string }) {
   const qc = useQueryClient();
   const getFn = useServerFn(getCustomerPlanOverview);
   const genFn = useServerFn(generateAiNutritionPlanDraft);
@@ -224,12 +225,25 @@ export function PlanManagementCard({ userId }: { userId: string }) {
             </button>
           )}
           <a
-            href={`/coach/import-plan?type=nutrition&client=${userId}`}
+            href={
+              returnOrgId
+                ? `/coach/import-plan?type=nutrition&client=${userId}&orgId=${returnOrgId}`
+                : `/coach/import-plan?type=nutrition&client=${userId}`
+            }
             className="inline-flex items-center gap-2 rounded-lg border border-gold/40 bg-background px-3 py-2 text-sm font-semibold hover:bg-accent"
           >
             <Sparkles className="h-4 w-4" />
             Eigenen Plan importieren
           </a>
+          <Link
+            to="/coach/plan-builder/$userId"
+            params={{ userId }}
+            search={returnOrgId ? { orgId: returnOrgId } : {}}
+            className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm font-semibold hover:bg-accent"
+          >
+            <Pencil className="h-4 w-4" />
+            Manuell erstellen
+          </Link>
         </div>
       </div>
 

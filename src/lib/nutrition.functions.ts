@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { assertCoachOrOrgStaffForAthlete } from "@/lib/organizations/org-coach-access";
 
 export type FoodSource =
   | "bls_4_0"
@@ -260,7 +261,7 @@ export const setNutritionTargets = createServerFn({ method: "POST" })
     }) => d,
   )
   .handler(async ({ data, context }) => {
-    await assertCoach(context.supabase, context.userId);
+    await assertCoachOrOrgStaffForAthlete(context, data.user_id, "nutrition");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const nz = (v: number | null | undefined) =>
       v == null || !isFinite(Number(v)) ? null : Math.max(0, Math.round(Number(v)));
@@ -302,10 +303,12 @@ export const getNutritionTargets = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { user_id: string }) => d)
   .handler(async ({ data, context }) => {
+    let db = context.supabase;
     if (data.user_id !== context.userId) {
-      await assertCoach(context.supabase, context.userId);
+      await assertCoachOrOrgStaffForAthlete(context, data.user_id, "nutrition");
+      db = (await import("@/integrations/supabase/client.server")).supabaseAdmin;
     }
-    const { data: row, error } = await context.supabase
+    const { data: row, error } = await db
       .from("nutrition_targets")
       .select("*")
       .eq("user_id", data.user_id)
@@ -501,7 +504,7 @@ export const extractTargetsFromPlan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { user_id: string }) => d)
   .handler(async ({ data, context }) => {
-    await assertCoach(context.supabase, context.userId);
+    await assertCoachOrOrgStaffForAthlete(context, data.user_id, "nutrition");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: plan } = await supabaseAdmin

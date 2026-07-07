@@ -345,7 +345,15 @@ function scaleFactorToTarget(fromFactor: number, fromTargetKcal: number, toTarge
   return Math.max(0.25, Math.min(4, Math.round(raw * 4) / 4));
 }
 
-export function PlanBuilderPage({ userId, planId }: { userId: string; planId?: string }) {
+export function PlanBuilderPage({
+  userId,
+  planId,
+  returnOrgId,
+}: {
+  userId: string;
+  planId?: string;
+  returnOrgId?: string;
+}) {
   const navigate = useNavigate();
   const listLib = useServerFn(listMealLibrary);
   const getCtx = useServerFn(getCustomerPlanContext);
@@ -471,7 +479,14 @@ export function PlanBuilderPage({ userId, planId }: { userId: string; planId?: s
         await save({ data: { customerId: userId, title, startDate, days, publish } } as any);
       }
       toast.success(publish ? "Plan veröffentlicht" : "Plan als Entwurf gespeichert");
-      navigate({ to: "/coach/customers/$userId", params: { userId } });
+      if (returnOrgId) {
+        navigate({
+          to: "/coach/teams/$orgId/athletes/$userId",
+          params: { orgId: returnOrgId, userId },
+        });
+      } else {
+        navigate({ to: "/coach/customers/$userId", params: { userId } });
+      }
     } catch (e: any) {
       toast.error(e?.message ?? "Speichern fehlgeschlagen");
     } finally {
@@ -621,7 +636,18 @@ export function PlanBuilderPage({ userId, planId }: { userId: string; planId?: s
   return (
     <div className="mx-auto max-w-4xl space-y-4 p-4 pb-32">
       <div className="flex flex-wrap items-center gap-2">
-        <Button variant="ghost" size="sm" onClick={() => navigate({ to: "/coach/customers/$userId", params: { userId } })}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() =>
+            returnOrgId
+              ? navigate({
+                  to: "/coach/teams/$orgId/athletes/$userId",
+                  params: { orgId: returnOrgId, userId },
+                })
+              : navigate({ to: "/coach/customers/$userId", params: { userId } })
+          }
+        >
           <ArrowLeft className="mr-1 h-4 w-4" /> Zurück
         </Button>
         <h1 className="font-display text-lg font-bold">Plan manuell erstellen</h1>
