@@ -70,6 +70,7 @@ function AthleteDrilldown() {
       <BodyData data={data} />
       <OpenItems data={data} />
       <CoachActions />
+      <DangerZone orgId={orgId} userId={userId} displayName={data.athlete.display_name} />
     </div>
   );
 }
