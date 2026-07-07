@@ -27,6 +27,10 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  // Beitrittslinks (next=/join/...) starten direkt im Registrieren-Modus.
+  const [mode, setMode] = useState<"signin" | "signup">(
+    next && next.startsWith("/join/") ? "signup" : "signin",
+  );
 
   useEffect(() => {
     if (loading) return;
@@ -40,14 +44,12 @@ function AuthPage() {
 
   const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // Read directly from the form to catch browser-autofilled values that
-    // sometimes don't trigger React's onChange (Chrome/Safari password manager).
     const form = e.currentTarget;
     const fd = new FormData(form);
     const rawEmail = (fd.get("email") ?? email ?? "").toString();
     const rawPw = (fd.get("password") ?? password ?? "").toString();
     const normalizedEmail = rawEmail.trim().toLowerCase();
-    const normalizedPw = rawPw; // do not trim — passwords may contain spaces intentionally
+    const normalizedPw = rawPw;
 
     const ev = emailSchema.safeParse(normalizedEmail);
     const pv = pwSchema.safeParse(normalizedPw);
@@ -56,16 +58,36 @@ function AuthPage() {
 
     setBusy(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: ev.data,
-        password: pv.data,
-      });
-      if (error) throw error;
-      toast.success("Willkommen zurück!");
+      if (mode === "signup") {
+        const emailRedirectTo =
+          typeof window !== "undefined"
+            ? `${window.location.origin}${next ?? "/app"}`
+            : undefined;
+        const { data, error } = await supabase.auth.signUp({
+          email: ev.data,
+          password: pv.data,
+          options: { emailRedirectTo },
+        });
+        if (error) throw error;
+        if (!data.session) {
+          toast.success("Account erstellt. Bitte bestätige deine E-Mail, um fortzufahren.");
+        } else {
+          toast.success("Account erstellt!");
+        }
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: ev.data,
+          password: pv.data,
+        });
+        if (error) throw error;
+        toast.success("Willkommen zurück!");
+      }
     } catch (err: unknown) {
-      const raw = err instanceof Error ? err.message : "Login fehlgeschlagen";
+      const raw = err instanceof Error ? err.message : "Fehler";
       const msg = /invalid login credentials/i.test(raw)
         ? "E-Mail oder Passwort falsch. Tipp: E-Mail bitte neu eintippen (Autofill kann fehlerhaft sein)."
+        : /already registered|user already/i.test(raw)
+        ? "Diese E-Mail ist bereits registriert. Bitte einloggen."
         : raw;
       toast.error(msg);
     } finally {
