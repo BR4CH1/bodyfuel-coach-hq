@@ -113,6 +113,9 @@ function FeedPane({ primary }: { primary: string }) {
   const createPost = useServerFn(createOrgCommunityPost);
   const [content, setContent] = useState("");
   const [postType, setPostType] = useState("general");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const { data: feed } = useQuery({
     queryKey: ["org-community", org.slug, supabaseUser?.id ?? "anon"],
@@ -120,24 +123,65 @@ function FeedPane({ primary }: { primary: string }) {
     queryFn: () => fetchPosts({ data: { slug: org.slug } }),
   });
 
+  const orgId = (feed as any)?.org?.id as string | undefined;
+
+  function onPickImage(e: React.ChangeEvent<HTMLInputElement>) {
+    setUploadError(null);
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f) return;
+    if (!f.type.startsWith("image/")) {
+      setUploadError("Bitte ein Bild auswählen.");
+      return;
+    }
+    if (f.size > 8 * 1024 * 1024) {
+      setUploadError("Maximal 8 MB pro Bild.");
+      return;
+    }
+    setImageFile(f);
+    setImagePreview(URL.createObjectURL(f));
+  }
+
+  function clearImage() {
+    setImageFile(null);
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setImagePreview(null);
+  }
+
   const createMut = useMutation({
-    mutationFn: (input: { content: string; post_type: string }) =>
-      createPost({
+    mutationFn: async (input: { content: string; post_type: string }) => {
+      if (!orgId || !supabaseUser?.id) throw new Error("Kein Zugriff");
+      let image_path: string | null = null;
+      if (imageFile) {
+        const ext = (imageFile.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+        const path = `${orgId}/${supabaseUser.id}/${crypto.randomUUID()}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from("community-photos")
+          .upload(path, imageFile, { contentType: imageFile.type, upsert: false });
+        if (upErr) throw new Error(upErr.message);
+        image_path = path;
+      }
+      return createPost({
         data: {
-          organization_id: (feed as any)?.org?.id,
+          organization_id: orgId,
           content: input.content,
           post_type: input.post_type,
+          image_path,
         },
-      }),
+      });
+    },
     onSuccess: () => {
       setContent("");
+      clearImage();
       qc.invalidateQueries({ queryKey: ["org-community", org.slug] });
     },
+    onError: (e: any) => setUploadError(e?.message ?? "Fehler beim Posten"),
   });
 
   const posts = (feed?.posts as any[]) ?? [];
   const canPost = feed?.can_post ?? false;
   const isStaff = feed?.is_staff ?? false;
+  const hasBody = !!content.trim() || !!imageFile;
 
   return (
     <main className="mx-auto max-w-md space-y-4 px-4 py-5">
@@ -164,23 +208,43 @@ function FeedPane({ primary }: { primary: string }) {
             rows={3}
             className="w-full rounded border border-border bg-background px-2 py-1 text-sm"
           />
-          <div className="mt-2 flex justify-end">
+          {imagePreview && (
+            <div className="relative mt-2">
+              <img src={imagePreview} alt="Vorschau" className="max-h-64 w-full rounded object-cover" />
+              <button
+                type="button"
+                onClick={clearImage}
+                className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-black/70 text-white"
+                aria-label="Foto entfernen"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+          {uploadError && <div className="mt-2 text-xs text-rose-500">{uploadError}</div>}
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <label className="inline-flex cursor-pointer items-center gap-1 rounded border border-border px-2 py-1 text-xs text-muted-foreground hover:text-foreground">
+              <ImagePlus className="h-3.5 w-3.5" />
+              Foto
+              <input type="file" accept="image/*" className="hidden" onChange={onPickImage} />
+            </label>
             <button
               onClick={() =>
-                content.trim() &&
+                hasBody &&
                 createMut.mutate({
                   content: content.trim(),
                   post_type: isStaff ? postType : "general",
                 })
               }
-              disabled={!content.trim() || createMut.isPending}
+              disabled={!hasBody || createMut.isPending}
               className="inline-flex items-center gap-1 rounded bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground disabled:opacity-50"
             >
-              <MessageSquarePlus className="h-3 w-3" /> Posten
+              <MessageSquarePlus className="h-3 w-3" /> {createMut.isPending ? "Posten…" : "Posten"}
             </button>
           </div>
         </div>
       )}
+
 
       {posts.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
