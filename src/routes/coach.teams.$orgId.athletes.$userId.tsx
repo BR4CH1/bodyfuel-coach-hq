@@ -102,7 +102,7 @@ function AthleteProfile() {
       </div>
 
       {tab === "overview" && <AthleteOverviewTab data={data} />}
-      {tab === "tasks" && <AthleteTasksTab data={data} />}
+      {tab === "tasks" && <AthleteTasksTab data={data} orgId={orgId} userId={userId} />}
       {tab === "checkins" && <AthleteCheckinsTab data={data} />}
       {tab === "performance" && <AthletePerformanceTab data={data} orgId={orgId} />}
       {tab === "training" && <AthleteTrainingTab data={data} orgId={orgId} userId={userId} />}
