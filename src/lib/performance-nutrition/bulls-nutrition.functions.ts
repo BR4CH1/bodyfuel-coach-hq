@@ -20,6 +20,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { calculatePerformanceNutritionTarget } from "./engine";
+import { collectPerformanceDayTypeSignals } from "./day-type-resolver.functions";
+import { resolvePerformanceDayTypeFromSignals } from "./day-type-resolver";
 import type {
   BaselineDailyActivity,
   EnergySex,
