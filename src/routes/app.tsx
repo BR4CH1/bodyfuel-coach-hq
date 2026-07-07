@@ -78,6 +78,8 @@ function AppEntryPage() {
     ent.hasTeamAccess,
     ent.hasAnyPersonalBodyfuel,
     ent.primaryOrgSlug,
+    ent.primaryOrgId,
+    ent.primaryStaffRole,
   ]);
 
   return (
