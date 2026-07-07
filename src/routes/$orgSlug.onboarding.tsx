@@ -194,6 +194,7 @@ function OrgOnboardingDispatcher() {
 
 function AthleteOnboarding({ ctx }: { ctx: NonNullable<Awaited<ReturnType<typeof getOrganizationContext>>> }) {
   const { org } = OrgLayoutRoute.useLoaderData();
+  const { supabaseUser } = useSession();
   const navigate = useNavigate();
   const complete = useServerFn(completeOrganizationOnboardingV2);
 
