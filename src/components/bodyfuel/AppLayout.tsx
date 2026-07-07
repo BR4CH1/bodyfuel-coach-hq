@@ -93,11 +93,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
       "/strength-check",
       "/daily-checklist",
     ];
-    const isPersonal = personalPrefixes.some((p) => pathname === p || pathname.startsWith(p + "/"));
+    const isPersonal =
+      personalPrefixes.some((p) => pathname === p || pathname.startsWith(p + "/")) ||
+      pathname === "/mein-bodyfuel" ||
+      pathname.startsWith("/mein-bodyfuel/");
     if (!isPersonal) return;
     const slug = entitlements.primaryOrgSlug;
     if (slug) navigate({ to: "/$orgSlug", params: { orgSlug: slug }, replace: true });
-    else navigate({ to: "/mein-bodyfuel", replace: true });
   }, [isTeamOnlyUser, pathname, entitlements.primaryOrgSlug, navigate]);
 
   // Hard-Gate: BodyFuel Smart Nutzer müssen Onboarding abschließen, bevor sie in die App kommen.
