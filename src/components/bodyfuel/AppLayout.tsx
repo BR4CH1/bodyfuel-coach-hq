@@ -212,6 +212,44 @@ export function AppLayout({ children }: { children: ReactNode }) {
     return () => { cancelled = true; };
   }, [loading, supabaseUser, isCoach, isFreeUser, pathname, navigate]);
 
+  // Bulls / Organisations-Onboarding-Gate: Bestehende Bulls-Spieler haben
+  // bislang kein Onboarding durchlaufen. Wenn sie sich erneut anmelden, muss
+  // das Onboarding automatisch erscheinen — unabhängig davon, welche Route sie
+  // öffnen (/bulls, /dashboard, /nutrition, ...). Ausgenommen sind Auth-,
+  // Profil- und die Onboarding-Route selbst.
+  useEffect(() => {
+    if (loading || !supabaseUser || isCoach) return;
+    if (
+      pathname.startsWith("/auth") ||
+      pathname.startsWith("/profile") ||
+      pathname.startsWith("/onboarding") ||
+      /^\/[^/]+\/onboarding(\/|$)/.test(pathname)
+    ) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("organization_memberships")
+        .select("onboarding_completed, organization:organizations!inner(slug, status)")
+        .eq("user_id", supabaseUser.id)
+        .eq("status", "active")
+        .order("created_at", { ascending: true });
+      if (cancelled || !data) return;
+      const pending = (data as any[]).find(
+        (m) => m.organization?.status === "active" && !m.onboarding_completed && m.organization?.slug,
+      );
+      if (pending) {
+        navigate({
+          to: "/$orgSlug/onboarding",
+          params: { orgSlug: pending.organization.slug } as any,
+          replace: true,
+        } as any);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [loading, supabaseUser, isCoach, pathname, navigate]);
+
+
+
   // Ungelesene Nachrichten für Glocke — Hooks müssen VOR jedem early return aufgerufen werden
   const myUnreadFn = useServerFn(getMyUnreadCount);
   const coachInboxFn = useServerFn(getCoachInbox);
