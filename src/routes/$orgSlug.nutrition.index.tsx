@@ -217,14 +217,24 @@ function OrgNutrition() {
           <ChevronRight className="h-5 w-5 text-muted-foreground" />
         </Link>
 
-        {supabaseUser?.id && profile?.completed_at && <WeekScheduleCard userId={supabaseUser.id} />}
-        <MacroTargetsCard userId={supabaseUser?.id} />
+        {supabaseUser?.id && (
+          <WeekScheduleCard
+            userId={supabaseUser.id}
+            variant={org.slug === "bulls" ? "bulls" : "personal"}
+          />
+        )}
+        <MacroTargetsCard
+          userId={supabaseUser?.id}
+          variant={org.slug === "bulls" ? "bulls" : "personal"}
+        />
         {supabaseUser?.id && <PlateauWarning userId={supabaseUser.id} />}
         {supabaseUser?.id && profile?.completed_at && <DietPreferencesCard />}
         {supabaseUser?.id && <MealWishesCard userId={supabaseUser.id} mode="client" />}
         {supabaseUser?.id && <CustomMealsCard userId={supabaseUser.id} />}
 
-        {isTrial || isExpired ? (
+        {org.slug === "bulls" ? (
+          supabaseUser?.id && <BullsPlanContentView />
+        ) : isTrial || isExpired ? (
           <TrialNutritionPlan />
         ) : (
           supabaseUser?.id && <PlanContentView clientId={supabaseUser.id} planType="nutrition" />
