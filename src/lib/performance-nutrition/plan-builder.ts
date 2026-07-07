@@ -96,6 +96,10 @@ const SLOT_ORDER: Record<PerformanceDayType, SlotKind[]> = {
     "pre_workout",
     "post_workout",
   ],
+  // Reserved future day types default to a training-style slot layout.
+  SPEED: ["breakfast", "lunch", "dinner", "snack", "pre_workout"],
+  CONDITIONING: ["breakfast", "lunch", "dinner", "snack", "pre_workout"],
+  RECOVERY: ["breakfast", "lunch", "dinner", "snack"],
 };
 
 // Slot share of kcal (must sum to <=1). Snack absorbs the remainder.
