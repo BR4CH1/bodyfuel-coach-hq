@@ -48,6 +48,24 @@ function OrgNutrition() {
   const needsTrainingDays =
     !!profile?.completed_at && !(profile?.training_weekdays?.length);
 
+  const qc = useQueryClient();
+  const fetchJob = useServerFn(getMyAutopilotJob);
+  const { data: job } = useQuery({
+    queryKey: ["autopilot-job", supabaseUser?.id ?? "anon"],
+    queryFn: () => fetchJob(),
+    enabled: !!supabaseUser?.id,
+  });
+  const enqueueFn = useServerFn(enqueueAutopilotJob);
+  const regen = useMutation({
+    mutationFn: () => enqueueFn({ data: { mode: "nutrition_only" } }),
+    onSuccess: () => {
+      toast.success("Neuer Ernährungsplan wird im Hintergrund erstellt.");
+      qc.invalidateQueries({ queryKey: ["autopilot-job"] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Konnte nicht gestartet werden"),
+  });
+  const jobRunning = job?.status === "pending" || job?.status === "running";
+
   const primary = org.primary_color ?? "#e11d48";
 
   return (
