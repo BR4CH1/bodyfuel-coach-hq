@@ -492,12 +492,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 to={item.to as any}
                 params={(item as any).params}
                 hash={hash}
-                className={`flex shrink-0 basis-[72px] flex-col items-center gap-1 py-2.5 text-[11px] font-medium ${
-                  active ? "text-gold" : "text-muted-foreground"
-                }`}
+                className={`flex shrink-0 basis-[72px] flex-col items-center gap-1 py-2.5 font-medium ${
+                  isBullsRoute ? "text-[10px] uppercase tracking-wider" : "text-[11px]"
+                } ${active ? "text-gold" : "text-muted-foreground"}`}
               >
-                <Icon className="h-5 w-5 shrink-0" />
-                <span className="truncate max-w-[68px]">{label}</span>
+                <Icon className="h-5 w-5 shrink-0" strokeWidth={active && isBullsRoute ? 2.4 : undefined} />
+                <span className={`truncate max-w-[68px] ${active && isBullsRoute ? "font-bold" : ""}`}>{label}</span>
               </Link>
             );
           })}
