@@ -55,6 +55,7 @@ import { Route as NutritionTrackingRouteImport } from './routes/nutrition.tracki
 import { Route as NutritionShoppingRouteImport } from './routes/nutrition.shopping'
 import { Route as NutritionRecipeFromIngredientsRouteImport } from './routes/nutrition.recipe-from-ingredients'
 import { Route as NutritionFavoritesRouteImport } from './routes/nutrition.favorites'
+import { Route as JoinTokenRouteImport } from './routes/join.$token'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as CoachReviewsRouteImport } from './routes/coach.reviews'
 import { Route as CoachPackageRequestsRouteImport } from './routes/coach.package-requests'
@@ -370,6 +371,11 @@ const NutritionFavoritesRoute = NutritionFavoritesRouteImport.update({
   id: '/favorites',
   path: '/favorites',
   getParentRoute: () => NutritionRoute,
+} as any)
+const JoinTokenRoute = JoinTokenRouteImport.update({
+  id: '/join/$token',
+  path: '/join/$token',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
   id: '/email/unsubscribe',
@@ -875,6 +881,7 @@ export interface FileRoutesByFullPath {
   '/coach/package-requests': typeof CoachPackageRequestsRoute
   '/coach/reviews': typeof CoachReviewsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/join/$token': typeof JoinTokenRoute
   '/nutrition/favorites': typeof NutritionFavoritesRoute
   '/nutrition/recipe-from-ingredients': typeof NutritionRecipeFromIngredientsRoute
   '/nutrition/shopping': typeof NutritionShoppingRoute
@@ -998,6 +1005,7 @@ export interface FileRoutesByTo {
   '/coach/package-requests': typeof CoachPackageRequestsRoute
   '/coach/reviews': typeof CoachReviewsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/join/$token': typeof JoinTokenRoute
   '/nutrition/favorites': typeof NutritionFavoritesRoute
   '/nutrition/recipe-from-ingredients': typeof NutritionRecipeFromIngredientsRoute
   '/nutrition/shopping': typeof NutritionShoppingRoute
@@ -1127,6 +1135,7 @@ export interface FileRoutesById {
   '/coach/package-requests': typeof CoachPackageRequestsRoute
   '/coach/reviews': typeof CoachReviewsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/join/$token': typeof JoinTokenRoute
   '/nutrition/favorites': typeof NutritionFavoritesRoute
   '/nutrition/recipe-from-ingredients': typeof NutritionRecipeFromIngredientsRoute
   '/nutrition/shopping': typeof NutritionShoppingRoute
@@ -1260,6 +1269,7 @@ export interface FileRouteTypes {
     | '/coach/package-requests'
     | '/coach/reviews'
     | '/email/unsubscribe'
+    | '/join/$token'
     | '/nutrition/favorites'
     | '/nutrition/recipe-from-ingredients'
     | '/nutrition/shopping'
@@ -1383,6 +1393,7 @@ export interface FileRouteTypes {
     | '/coach/package-requests'
     | '/coach/reviews'
     | '/email/unsubscribe'
+    | '/join/$token'
     | '/nutrition/favorites'
     | '/nutrition/recipe-from-ingredients'
     | '/nutrition/shopping'
@@ -1511,6 +1522,7 @@ export interface FileRouteTypes {
     | '/coach/package-requests'
     | '/coach/reviews'
     | '/email/unsubscribe'
+    | '/join/$token'
     | '/nutrition/favorites'
     | '/nutrition/recipe-from-ingredients'
     | '/nutrition/shopping'
@@ -1625,6 +1637,7 @@ export interface RootRouteChildren {
   BullsWeightRoute: typeof BullsWeightRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
+  JoinTokenRoute: typeof JoinTokenRoute
   OnboardingSmartRoute: typeof OnboardingSmartRoute
   OnboardingSmartNutritionRoute: typeof OnboardingSmartNutritionRoute
   TrackerAppRoute: typeof TrackerAppRouteWithChildren
@@ -1974,6 +1987,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/nutrition/favorites'
       preLoaderRoute: typeof NutritionFavoritesRouteImport
       parentRoute: typeof NutritionRoute
+    }
+    '/join/$token': {
+      id: '/join/$token'
+      path: '/join/$token'
+      fullPath: '/join/$token'
+      preLoaderRoute: typeof JoinTokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/email/unsubscribe': {
       id: '/email/unsubscribe'
@@ -2847,6 +2867,7 @@ const rootRouteChildren: RootRouteChildren = {
   BullsWeightRoute: BullsWeightRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
+  JoinTokenRoute: JoinTokenRoute,
   OnboardingSmartRoute: OnboardingSmartRoute,
   OnboardingSmartNutritionRoute: OnboardingSmartNutritionRoute,
   TrackerAppRoute: TrackerAppRouteWithChildren,
