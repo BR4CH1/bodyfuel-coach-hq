@@ -18,6 +18,7 @@ export function AthleteNutritionTab({
   const c = data.compliance;
   return (
     <div className="space-y-4">
+      <AthletePerformanceNutritionSection orgId={orgId} userId={userId} />
       <Section title="Compliance" icon={<Users className="h-4 w-4" />}>
         <div className="grid grid-cols-2 gap-2">
           <TinyMetric label="Aktuelle Woche" value={fmtPct(c.current_week)} />
