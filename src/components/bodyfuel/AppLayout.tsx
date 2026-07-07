@@ -29,7 +29,7 @@ import { getLevel } from "@/lib/bodyfuel/data";
 import { totalPoints } from "@/lib/bodyfuel/data";
 import { ReviewPrompt } from "./ReviewPrompt";
 import { SmartPlanReadyPopup } from "./SmartPlanReadyPopup";
-import { OrganizationContextSwitcher } from "@/components/organizations/OrganizationContextSwitcher";
+import { OrganizationContextSwitcher, getActiveContext } from "@/components/organizations/OrganizationContextSwitcher";
 
 const clientNav = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
