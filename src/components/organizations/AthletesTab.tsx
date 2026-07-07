@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { UserPlus, Copy, X, MoreHorizontal, Search } from "lucide-react";
+import { UserPlus, Copy, X, MoreHorizontal, Search, ChevronRight } from "lucide-react";
 import { getOrgAthletesOnboardingAudit } from "@/lib/organizations/task-engine.functions";
 import {
   canManageRoster,
