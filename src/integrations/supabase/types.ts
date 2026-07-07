@@ -2559,6 +2559,9 @@ export type Database = {
           accepted_at: string | null
           accepted_by: string | null
           assigned_role: Database["public"]["Enums"]["organization_role"]
+          athlete_jersey_number: number | null
+          athlete_primary_position: string | null
+          athlete_secondary_position: string | null
           created_at: string
           created_by: string | null
           email: string | null
@@ -2575,6 +2578,9 @@ export type Database = {
           accepted_at?: string | null
           accepted_by?: string | null
           assigned_role?: Database["public"]["Enums"]["organization_role"]
+          athlete_jersey_number?: number | null
+          athlete_primary_position?: string | null
+          athlete_secondary_position?: string | null
           created_at?: string
           created_by?: string | null
           email?: string | null
@@ -2591,6 +2597,9 @@ export type Database = {
           accepted_at?: string | null
           accepted_by?: string | null
           assigned_role?: Database["public"]["Enums"]["organization_role"]
+          athlete_jersey_number?: number | null
+          athlete_primary_position?: string | null
+          athlete_secondary_position?: string | null
           created_at?: string
           created_by?: string | null
           email?: string | null
@@ -4437,6 +4446,78 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      roster_pending_athletes: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          date_of_birth: string | null
+          first_name: string
+          height_cm: number | null
+          id: string
+          jersey_number: number | null
+          last_name: string
+          linked_user_id: string | null
+          note: string | null
+          organization_id: string
+          primary_position: string | null
+          secondary_position: string | null
+          team_id: string | null
+          updated_at: string
+          weight_kg: number | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          date_of_birth?: string | null
+          first_name: string
+          height_cm?: number | null
+          id?: string
+          jersey_number?: number | null
+          last_name: string
+          linked_user_id?: string | null
+          note?: string | null
+          organization_id: string
+          primary_position?: string | null
+          secondary_position?: string | null
+          team_id?: string | null
+          updated_at?: string
+          weight_kg?: number | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          date_of_birth?: string | null
+          first_name?: string
+          height_cm?: number | null
+          id?: string
+          jersey_number?: number | null
+          last_name?: string
+          linked_user_id?: string | null
+          note?: string | null
+          organization_id?: string
+          primary_position?: string | null
+          secondary_position?: string | null
+          team_id?: string | null
+          updated_at?: string
+          weight_kg?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roster_pending_athletes_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "roster_pending_athletes_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "organization_teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       shopping_lists: {
         Row: {

@@ -266,6 +266,7 @@ export const getOrgAthletesOnboardingAudit = createServerFn({ method: "GET" })
           onboarding_completed: !!m.onboarding_completed,
           derived_complete: complete,
           missing,
+          team_id: t?.team_id ?? null,
         };
       });
 
