@@ -145,11 +145,86 @@ function suitableForDayType(m: PoolMeal, dayType: PerformanceDayType): boolean {
 }
 
 function violatesNoGo(m: PoolMeal, athlete: AthletePreferences): boolean {
-  if (!athlete.no_go_ingredients?.length) return false;
-  const denylist = new Set(
-    athlete.no_go_ingredients.map((s) => s.toLowerCase().trim()),
-  );
-  return m.no_go_ingredients.some((n) => denylist.has(n.toLowerCase().trim()));
+  const denyList: string[] = [];
+  if (athlete.no_go_ingredients?.length) {
+    denyList.push(...athlete.no_go_ingredients.map((s) => s.toLowerCase().trim()));
+  }
+  if (athlete.extra_nogo_terms?.length) {
+    denyList.push(
+      ...athlete.extra_nogo_terms
+        .map((s) => s.toLowerCase().trim())
+        .filter((s) => s.length >= 3),
+    );
+  }
+  if (!denyList.length) return false;
+  const denySet = new Set(denyList);
+  if (m.no_go_ingredients.some((n) => denySet.has(n.toLowerCase().trim()))) return true;
+  const hay = `${m.name} ${m.description ?? ""}`.toLowerCase();
+  return denyList.some((term) => term.length >= 3 && hay.includes(term));
+}
+
+// --- Diet & Allergen Sicherheitsfilter -------------------------------------
+
+const DIET_MARKERS = {
+  meat: [
+    "hähnchen", "hahnchen", "huhn", "pute", "truthahn", "rind", "beef", "steak",
+    "schwein", "pork", "wurst", "salami", "schinken", "speck", "bacon", "hack",
+    "lamm", "wild",
+  ],
+  fish: [
+    "fisch", "lachs", "salmon", "thunfisch", "tuna", "kabeljau", "forelle",
+    "sardine", "hering", "makrele", "shrimp", "garnele", "meeresfrüchte",
+  ],
+  dairy: [
+    "milch", "milk", "käse", "kase", "cheese", "quark", "skyr", "joghurt",
+    "yogurt", "butter", "sahne", "cream", "mozzarella", "feta", "parmesan",
+  ],
+  egg: ["ei ", "eier", "eiweiß", "eigelb", "omelett", "rührei", "spiegelei"],
+} as const;
+
+function containsAny(hay: string, needles: readonly string[]): boolean {
+  return needles.some((n) => hay.includes(n));
+}
+
+export function violatesDiet(m: PoolMeal, diet: DietStyle | null | undefined): boolean {
+  if (!diet || diet === "omnivore" || diet === "other" || diet === "flexitarian") return false;
+  const hay = `${m.name} ${m.description ?? ""} ${m.no_go_ingredients.join(" ")}`.toLowerCase();
+  if (diet === "vegan") {
+    return (
+      containsAny(hay, DIET_MARKERS.meat) ||
+      containsAny(hay, DIET_MARKERS.fish) ||
+      containsAny(hay, DIET_MARKERS.dairy) ||
+      containsAny(hay, DIET_MARKERS.egg)
+    );
+  }
+  if (diet === "vegetarian") {
+    return containsAny(hay, DIET_MARKERS.meat) || containsAny(hay, DIET_MARKERS.fish);
+  }
+  if (diet === "pescetarian") {
+    return containsAny(hay, DIET_MARKERS.meat);
+  }
+  return false;
+}
+
+export function violatesAllergy(
+  m: PoolMeal,
+  allergyTokens: string[] | undefined,
+): boolean {
+  if (!allergyTokens?.length) return false;
+  const tokens = allergyTokens
+    .map((t) => t.toLowerCase().trim())
+    .filter((t) => t.length >= 3);
+  if (!tokens.length) return false;
+  const hay = `${m.name} ${m.description ?? ""} ${m.no_go_ingredients.join(" ")}`.toLowerCase();
+  return tokens.some((t) => hay.includes(t));
+}
+
+export function mealPrepFitScore(m: PoolMeal, style: MealPrepStyle | null | undefined): number {
+  if (!style) return 0;
+  if (style === "meal_prep" || style === "2_3_week") {
+    return m.mealprep_ok ? 0 : 25;
+  }
+  return 0;
 }
 
 function clampScale(s: number): number {
