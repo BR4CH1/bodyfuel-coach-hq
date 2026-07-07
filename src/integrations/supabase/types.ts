@@ -740,6 +740,44 @@ export type Database = {
         }
         Relationships: []
       }
+      coach_athlete_notes: {
+        Row: {
+          athlete_user_id: string
+          author_user_id: string
+          body: string
+          created_at: string
+          id: string
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          athlete_user_id: string
+          author_user_id: string
+          body: string
+          created_at?: string
+          id?: string
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          athlete_user_id?: string
+          author_user_id?: string
+          body?: string
+          created_at?: string
+          id?: string
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_athlete_notes_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coach_exercise_library: {
         Row: {
           category: string

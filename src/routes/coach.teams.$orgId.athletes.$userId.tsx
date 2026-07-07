@@ -81,7 +81,7 @@ function AthleteProfile() {
     <div className="mx-auto max-w-3xl space-y-5 px-4 pb-24 pt-3">
       <BackLink orgId={orgId} />
       <AthleteDetailHeader data={data} />
-      <AthleteQuickActions />
+      <AthleteQuickActions orgId={orgId} userId={userId} athleteName={data.athlete.display_name} />
 
       <div className="-mx-4 overflow-x-auto px-4">
         <div className="flex min-w-max gap-1.5">
