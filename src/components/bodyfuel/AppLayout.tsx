@@ -247,12 +247,20 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </div>
         <nav className="flex-1 space-y-1 p-3">
           {nav.map((item) => {
-            const active = item.to === "/coach" ? pathname === "/coach" : pathname.startsWith(item.to);
+            const hash = (item as any).hash as string | undefined;
+            const currentHash = typeof window !== "undefined" ? window.location.hash.replace("#", "") : "";
+            const active =
+              item.to === "/coach"
+                ? pathname === "/coach"
+                : hash
+                ? pathname === item.to && currentHash === hash
+                : pathname.startsWith(item.to);
             const Icon = item.icon;
             return (
               <Link
-                key={item.to}
+                key={`${item.to}#${hash ?? ""}-${item.label}`}
                 to={item.to}
+                hash={hash}
                 className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                   active
                     ? "bg-accent text-gold"
