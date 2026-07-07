@@ -764,11 +764,13 @@ function StaffRow({
   row: any;
   teams: any[];
   onSave: (patch: { role?: string; permissions?: string[]; team_id?: string | null }) => Promise<void>;
-  onRemove: () => void;
+  onRemove: (deleteAccount: boolean) => void;
 }) {
   const [edit, setEdit] = useState(false);
   const [perms, setPerms] = useState<string[]>(row.permissions ?? []);
   const [teamId, setTeamId] = useState<string | null>(row.team_id ?? null);
+  const [removeOpen, setRemoveOpen] = useState(false);
+  const [deleteAccount, setDeleteAccount] = useState(false);
   const toggle = (p: string) =>
     setPerms((cur) => (cur.includes(p) ? cur.filter((x) => x !== p) : [...cur, p]));
 
@@ -795,13 +797,50 @@ function StaffRow({
             {edit ? "Schließen" : "Berechtigungen ansehen"}
           </button>
           <button
-            onClick={onRemove}
+            onClick={() => { setDeleteAccount(false); setRemoveOpen(true); }}
             className="text-[10px] uppercase tracking-wider text-red-500"
           >
             Entfernen
           </button>
         </div>
       </div>
+
+      {removeOpen && (
+        <div className="mt-3 rounded border border-red-500/40 bg-red-500/5 p-3 text-xs">
+          <div className="font-semibold text-red-500">
+            {row.name} entfernen?
+          </div>
+          <label className="mt-2 flex cursor-pointer items-start gap-2">
+            <input
+              type="checkbox"
+              checked={deleteAccount}
+              onChange={(e) => setDeleteAccount(e.target.checked)}
+              className="mt-0.5"
+            />
+            <span>
+              <span className="font-semibold">BODYFUEL-Konto komplett löschen</span>
+              <span className="block text-[10px] text-muted-foreground">
+                Auth-Zugang, Profil und alle Zugehörigkeiten werden endgültig entfernt.
+                Ohne Haken bleibt der Account bestehen und wird nur aus diesem Verein entfernt.
+              </span>
+            </span>
+          </label>
+          <div className="mt-3 flex gap-2">
+            <button
+              onClick={() => setRemoveOpen(false)}
+              className="rounded border border-border bg-background px-3 py-1 text-[10px] uppercase tracking-wider"
+            >
+              Abbrechen
+            </button>
+            <button
+              onClick={() => { setRemoveOpen(false); onRemove(deleteAccount); }}
+              className="rounded bg-red-500 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-white"
+            >
+              {deleteAccount ? "Endgültig löschen" : "Aus Verein entfernen"}
+            </button>
+          </div>
+        </div>
+      )}
 
       {!edit && row.permissions?.length ? (
         <div className="mt-2 flex flex-wrap gap-1">
