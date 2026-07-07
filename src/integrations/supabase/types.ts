@@ -4002,6 +4002,192 @@ export type Database = {
           },
         ]
       }
+      performance_nutrition_calculations: {
+        Row: {
+          age_at_calculation: number | null
+          calculated_at: string
+          calculation_date: string
+          calculation_flags: string[]
+          carb_floor_g: number | null
+          carbs_g: number | null
+          coach_review_required: boolean
+          day_type: string
+          effective_goal: string | null
+          energy_floor_applied: boolean
+          engine_version: number
+          fat_g: number | null
+          final_target_kcal: number | null
+          goal_adjusted_energy: number | null
+          goal_modifier: number | null
+          height_cm: number | null
+          id: string
+          initial_eer: number | null
+          organization_id: string
+          pal_category: string | null
+          performance_goal: string | null
+          personal_calibration_kcal: number
+          position_cluster: string | null
+          protein_g: number | null
+          session_intensity: string | null
+          user_id: string
+          weight_kg: number | null
+        }
+        Insert: {
+          age_at_calculation?: number | null
+          calculated_at?: string
+          calculation_date: string
+          calculation_flags?: string[]
+          carb_floor_g?: number | null
+          carbs_g?: number | null
+          coach_review_required?: boolean
+          day_type: string
+          effective_goal?: string | null
+          energy_floor_applied?: boolean
+          engine_version?: number
+          fat_g?: number | null
+          final_target_kcal?: number | null
+          goal_adjusted_energy?: number | null
+          goal_modifier?: number | null
+          height_cm?: number | null
+          id?: string
+          initial_eer?: number | null
+          organization_id: string
+          pal_category?: string | null
+          performance_goal?: string | null
+          personal_calibration_kcal?: number
+          position_cluster?: string | null
+          protein_g?: number | null
+          session_intensity?: string | null
+          user_id: string
+          weight_kg?: number | null
+        }
+        Update: {
+          age_at_calculation?: number | null
+          calculated_at?: string
+          calculation_date?: string
+          calculation_flags?: string[]
+          carb_floor_g?: number | null
+          carbs_g?: number | null
+          coach_review_required?: boolean
+          day_type?: string
+          effective_goal?: string | null
+          energy_floor_applied?: boolean
+          engine_version?: number
+          fat_g?: number | null
+          final_target_kcal?: number | null
+          goal_adjusted_energy?: number | null
+          goal_modifier?: number | null
+          height_cm?: number | null
+          id?: string
+          initial_eer?: number | null
+          organization_id?: string
+          pal_category?: string | null
+          performance_goal?: string | null
+          personal_calibration_kcal?: number
+          position_cluster?: string | null
+          protein_g?: number | null
+          session_intensity?: string | null
+          user_id?: string
+          weight_kg?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_nutrition_calculations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      performance_nutrition_calibrations: {
+        Row: {
+          calibration_mode: string
+          created_at: string
+          engine_version: number
+          id: string
+          last_calibration_at: string | null
+          organization_id: string
+          personal_calibration_kcal: number
+          updated_at: string
+          user_id: string
+          weight_trend_percent_per_week: number | null
+        }
+        Insert: {
+          calibration_mode?: string
+          created_at?: string
+          engine_version?: number
+          id?: string
+          last_calibration_at?: string | null
+          organization_id: string
+          personal_calibration_kcal?: number
+          updated_at?: string
+          user_id: string
+          weight_trend_percent_per_week?: number | null
+        }
+        Update: {
+          calibration_mode?: string
+          created_at?: string
+          engine_version?: number
+          id?: string
+          last_calibration_at?: string | null
+          organization_id?: string
+          personal_calibration_kcal?: number
+          updated_at?: string
+          user_id?: string
+          weight_trend_percent_per_week?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_nutrition_calibrations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      performance_nutrition_profiles: {
+        Row: {
+          baseline_daily_activity: string | null
+          created_at: string
+          id: string
+          organization_id: string
+          performance_goal: string | null
+          sex_for_energy_calculation: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          baseline_daily_activity?: string | null
+          created_at?: string
+          id?: string
+          organization_id: string
+          performance_goal?: string | null
+          sex_for_energy_calculation?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          baseline_daily_activity?: string | null
+          created_at?: string
+          id?: string
+          organization_id?: string
+          performance_goal?: string | null
+          sex_for_energy_calculation?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_nutrition_profiles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       performance_points: {
         Row: {
           approved: boolean
