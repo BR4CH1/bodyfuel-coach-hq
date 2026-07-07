@@ -102,97 +102,73 @@ export function AthletesTab({
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-lg border border-border">
-        <table className="w-full text-sm">
-          <thead className="bg-secondary text-left text-[10px] uppercase tracking-wider text-muted-foreground">
-            <tr>
-              <th className="px-3 py-2">Name</th>
-              <th className="px-3 py-2">Onboarding</th>
-              <th className="px-3 py-2">Fehlende Organization-Daten</th>
-              <th className="w-8 px-3 py-2" />
-              <th className="w-8 px-3 py-2" />
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((a) => (
-              <tr
-                key={a.user_id}
-                onClick={() =>
-                  navigate({
-                    to: "/coach/teams/$orgId/athletes/$userId",
-                    params: { orgId, userId: a.user_id },
-                  })
-                }
-                className="cursor-pointer border-t border-border hover:bg-muted/40"
-              >
-                <td className="px-3 py-2 font-semibold">
-                  <Link
-                    to="/coach/teams/$orgId/athletes/$userId"
-                    params={{ orgId, userId: a.user_id }}
-                    onClick={(e) => e.stopPropagation()}
-                    className="hover:underline"
-                  >
-                    {a.name}
-                  </Link>
-                </td>
-                <td className="px-3 py-2">
+      <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
+        {rows.map((a) => (
+          <li key={a.user_id} className="relative">
+            <Link
+              to="/coach/teams/$orgId/athletes/$userId"
+              params={{ orgId, userId: a.user_id }}
+              className="flex items-center gap-3 px-3 py-3 hover:bg-muted/40"
+            >
+              <div className="min-w-0 flex-1 pr-10">
+                <div className="truncate text-sm font-semibold">{a.name}</div>
+                <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]">
                   {a.derived_complete ? (
-                    <span className="text-green-500">ABGESCHLOSSEN</span>
+                    <span className="text-green-500">Onboarding ✓</span>
                   ) : (
-                    <span className="text-yellow-500">OFFEN</span>
+                    <span className="text-yellow-500">Onboarding offen</span>
                   )}
-                </td>
-                <td className="px-3 py-2 text-xs text-muted-foreground">
-                  {a.missing.length === 0 ? "—" : a.missing.join(", ")}
-                </td>
-                <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
-                  {canManage && a.team_id && (
-                    <RowActions
-                      orgId={orgId}
-                      userId={a.user_id}
-                      teamId={a.team_id}
-                      name={a.name}
-                      onDone={invalidate}
-                    />
+                  {a.missing.length > 0 && (
+                    <span className="truncate text-muted-foreground">
+                      · fehlt: {a.missing.join(", ")}
+                    </span>
                   )}
-                </td>
-                <td className="px-3 py-2 text-muted-foreground">
-                  <ChevronRight className="h-4 w-4" />
-                </td>
-              </tr>
-            ))}
-            {(pending as any[]).map((p) => (
-              <tr key={`pending-${p.id}`} className="border-t border-border bg-yellow-500/5">
-                <td className="px-3 py-2 font-semibold">
-                  {p.first_name} {p.last_name}
-                  <span className="ml-2 rounded bg-yellow-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-yellow-500">
-                    Einladung ausstehend
-                  </span>
-                </td>
-                <td className="px-3 py-2 text-yellow-500">MANUELL ANGELEGT</td>
-                <td className="px-3 py-2 text-xs text-muted-foreground">
-                  {[p.primary_position, p.jersey_number ? `#${p.jersey_number}` : null]
-                    .filter(Boolean)
-                    .join(" · ") || "—"}
-                </td>
-                <td className="px-3 py-2">
-                  {canManage && (
-                    <PendingActions id={p.id} onDone={invalidate} />
-                  )}
-                </td>
-                <td className="px-3 py-2" />
-              </tr>
-            ))}
-            {rows.length === 0 && (pending as any[]).length === 0 && (
-              <tr>
-                <td colSpan={5} className="px-3 py-6 text-center text-sm text-muted-foreground">
-                  {filterTeam ? "Keine Athleten in diesem Team." : "Noch keine Athleten."}
-                </td>
-              </tr>
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+            </Link>
+            {canManage && a.team_id && (
+              <div className="absolute right-9 top-1/2 -translate-y-1/2">
+                <RowActions
+                  orgId={orgId}
+                  userId={a.user_id}
+                  teamId={a.team_id}
+                  name={a.name}
+                  onDone={invalidate}
+                />
+              </div>
             )}
-          </tbody>
-        </table>
-      </div>
+          </li>
+        ))}
+        {(pending as any[]).map((p) => (
+          <li
+            key={`pending-${p.id}`}
+            className="flex items-center gap-3 bg-yellow-500/5 px-3 py-3"
+          >
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-semibold">
+                  {p.first_name} {p.last_name}
+                </span>
+                <span className="rounded bg-yellow-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-yellow-500">
+                  Einladung ausstehend
+                </span>
+              </div>
+              <div className="mt-0.5 text-[11px] text-muted-foreground">
+                {[p.primary_position, p.jersey_number ? `#${p.jersey_number}` : null]
+                  .filter(Boolean)
+                  .join(" · ") || "Manuell angelegt"}
+              </div>
+            </div>
+            {canManage && <PendingActions id={p.id} onDone={invalidate} />}
+          </li>
+        ))}
+        {rows.length === 0 && (pending as any[]).length === 0 && (
+          <li className="px-3 py-6 text-center text-sm text-muted-foreground">
+            {filterTeam ? "Keine Athleten in diesem Team." : "Noch keine Athleten."}
+          </li>
+        )}
+      </ul>
 
       {dialogOpen && (
         <AddAthleteDialog
