@@ -1,9 +1,27 @@
 import { useEffect, useState } from "react";
 import { Dumbbell, Moon } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
 import { getNutritionTargets } from "@/lib/nutrition.functions";
+import {
+  getBullsDailyNutritionTargets,
+  type BullsMacroDTO,
+} from "@/lib/performance-nutrition/bulls-nutrition.functions";
 
-export function MacroTargetsCard({ userId }: { userId: string | undefined }) {
+type Variant = "personal" | "bulls";
+
+export function MacroTargetsCard({
+  userId,
+  variant = "personal",
+}: {
+  userId: string | undefined;
+  variant?: Variant;
+}) {
+  if (variant === "bulls") return <BullsMacroTargetsCard />;
+  return <PersonalMacroTargetsCard userId={userId} />;
+}
+
+function PersonalMacroTargetsCard({ userId }: { userId: string | undefined }) {
   const getFn = useServerFn(getNutritionTargets);
   const [t, setT] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
@@ -28,30 +46,97 @@ export function MacroTargetsCard({ userId }: { userId: string | undefined }) {
 
   const hasRest = t.kcal_rest != null;
   return (
+    <Card
+      hasRest={hasRest}
+      subtitle={
+        hasRest
+          ? "Trainingstage und Restdays nutzen unterschiedliche Macros."
+          : "Aktuell ist kein Restday-Wert hinterlegt."
+      }
+      training={{
+        kcal: t.kcal,
+        protein_g: t.protein_g,
+        carbs_g: t.carbs_g,
+        fat_g: t.fat_g,
+      }}
+      rest={
+        hasRest
+          ? {
+              kcal: t.kcal_rest,
+              protein_g: t.protein_g_rest ?? t.protein_g,
+              carbs_g: t.carbs_g_rest ?? t.carbs_g,
+              fat_g: t.fat_g_rest ?? t.fat_g,
+            }
+          : null
+      }
+    />
+  );
+}
+
+function BullsMacroTargetsCard() {
+  const fn = useServerFn(getBullsDailyNutritionTargets);
+  const today = new Date().toISOString().slice(0, 10);
+  const { data, isLoading } = useQuery({
+    queryKey: ["bulls-nutrition-targets", today],
+    queryFn: () => fn({ data: { date: today } }),
+  });
+
+  if (isLoading || !data) return null;
+
+  if (data.needsProfile || !data.trainingTargets || !data.restTargets) {
+    return (
+      <div className="rounded-2xl border border-border bg-card p-5">
+        <h2 className="font-display text-lg font-bold">Tageswerte</h2>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Ergänze dein Performance-Profil (Größe, Gewicht, Geschlecht, Alltagsaktivität,
+          Ziel), damit deine Tageswerte berechnet werden können.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <Card
+      hasRest
+      subtitle="Trainingstage und Restdays nutzen unterschiedliche Macros — berechnet auf Basis deines Performance-Profils."
+      training={data.trainingTargets}
+      rest={data.restTargets}
+    />
+  );
+}
+
+function Card({
+  hasRest,
+  subtitle,
+  training,
+  rest,
+}: {
+  hasRest: boolean;
+  subtitle: string;
+  training: BullsMacroDTO;
+  rest: BullsMacroDTO | null;
+}) {
+  return (
     <div className="rounded-2xl border border-border bg-card p-5">
       <h2 className="font-display text-lg font-bold">Tageswerte</h2>
-      <p className="mt-1 text-xs text-muted-foreground">
-        {hasRest
-          ? "Trainingstage und Restdays nutzen unterschiedliche Macros."
-          : "Aktuell ist kein Restday-Wert hinterlegt."}
-      </p>
+      <p className="mt-1 text-xs text-muted-foreground">{subtitle}</p>
       <div className={`mt-4 grid gap-3 ${hasRest ? "sm:grid-cols-2" : ""}`}>
         <MacroBlock
           tone="training"
           title="Trainingstag"
-          kcal={t.kcal}
-          p={t.protein_g}
-          c={t.carbs_g}
-          f={t.fat_g}
+          kcal={training.kcal}
+          p={training.protein_g}
+          c={training.carbs_g}
+          f={training.fat_g}
         />
-        {hasRest && (
+        {hasRest && rest && (
           <MacroBlock
             tone="rest"
             title="Restday"
-            kcal={t.kcal_rest}
-            p={t.protein_g_rest ?? t.protein_g}
-            c={t.carbs_g_rest ?? t.carbs_g}
-            f={t.fat_g_rest ?? t.fat_g}
+            kcal={rest.kcal}
+            p={rest.protein_g}
+            c={rest.carbs_g}
+            f={rest.fat_g}
           />
         )}
       </div>
