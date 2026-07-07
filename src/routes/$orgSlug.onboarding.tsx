@@ -61,12 +61,6 @@ const PERFORMANCE_NUTRITION_GOAL_OPTIONS = [
   { v: "MUSCLE_GAIN", l: "Muskelaufbau" },
 ] as const;
 
-const PERFORMANCE_NUTRITION_GOAL_OPTIONS = [
-  { v: "FAT_LOSS", l: "Körperfett reduzieren" },
-  { v: "MAINTENANCE", l: "Gewicht halten" },
-  { v: "PERFORMANCE", l: "Leistung / Performance" },
-  { v: "MUSCLE_GAIN", l: "Muskelaufbau" },
-] as const;
 
 // --- Persönliche Ernährungspräferenzen (SNP-Chips wiederverwendet) ---
 const FAVORITE_FOODS_CHIPS = [
