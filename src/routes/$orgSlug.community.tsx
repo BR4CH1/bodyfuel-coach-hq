@@ -282,8 +282,9 @@ function FeedPane({ primary }: { primary: string }) {
                   />
                 )}
               </li>
-
+            );
           })}
+
         </ul>
       )}
     </main>
