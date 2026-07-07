@@ -92,6 +92,7 @@ export function CoachOrgDetail() {
     setTab(next);
     if (typeof window !== "undefined") window.location.hash = next;
   };
+  const [joinLinkTeam, setJoinLinkTeam] = useState<{ id: string; name: string } | null>(null);
 
 
   if (isLoading || !data || !data.org) {
