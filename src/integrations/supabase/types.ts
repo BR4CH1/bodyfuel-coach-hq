@@ -5466,6 +5466,63 @@ export type Database = {
         }
         Relationships: []
       }
+      team_join_links: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          max_uses: number | null
+          organization_id: string
+          team_id: string
+          token: string
+          updated_at: string
+          uses_count: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          organization_id: string
+          team_id: string
+          token: string
+          updated_at?: string
+          uses_count?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          organization_id?: string
+          team_id?: string
+          token?: string
+          updated_at?: string
+          uses_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_join_links_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_join_links_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "organization_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_memberships: {
         Row: {
           available_training_days: number[] | null
