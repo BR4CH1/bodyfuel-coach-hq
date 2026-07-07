@@ -767,3 +767,54 @@ function Section({
     </section>
   );
 }
+
+function DangerZone({
+  orgId,
+  userId,
+  displayName,
+}: {
+  orgId: string;
+  userId: string;
+  displayName: string;
+}) {
+  const navigate = useNavigate();
+  const del = useServerFn(deleteOrgAthlete);
+  const [busy, setBusy] = useState(false);
+  return (
+    <section className="mt-8 rounded-lg border border-destructive/40 bg-destructive/5 p-4">
+      <h2 className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.2em] text-destructive">
+        <Trash2 className="h-4 w-4" />
+        Gefahrenzone
+      </h2>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Löscht {displayName} vollständig aus der Plattform: Profil, Zugang, alle
+        Trainings-, Ernährungs- und Vereinsdaten. Diese Aktion kann nicht rückgängig
+        gemacht werden.
+      </p>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={async () => {
+          const input = window.prompt(
+            `Profil von ${displayName} unwiderruflich löschen?\n\nZum Bestätigen tippe LÖSCHEN ein:`,
+          );
+          if (input !== "LÖSCHEN") return;
+          setBusy(true);
+          try {
+            await del({ data: { org_id: orgId, user_id: userId } });
+            toast.success("Profil gelöscht.");
+            navigate({ to: "/coach/teams/$orgId", params: { orgId } });
+          } catch (e) {
+            toast.error((e as Error).message);
+          } finally {
+            setBusy(false);
+          }
+        }}
+        className="mt-3 inline-flex items-center gap-2 rounded-md border border-destructive bg-destructive px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-destructive-foreground hover:opacity-90 disabled:opacity-50"
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+        {busy ? "Lösche…" : "Profil vollständig löschen"}
+      </button>
+    </section>
+  );
+}
