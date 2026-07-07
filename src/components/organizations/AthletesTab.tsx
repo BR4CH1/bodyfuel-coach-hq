@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { UserPlus, Copy, X, MoreHorizontal } from "lucide-react";
+import { UserPlus, Copy, X, MoreHorizontal, Search } from "lucide-react";
 import { getOrgAthletesOnboardingAudit } from "@/lib/organizations/task-engine.functions";
 import {
   canManageRoster,
@@ -11,7 +11,10 @@ import {
   listPendingRosterAthletes,
   deletePendingRosterAthlete,
   removeAthleteFromTeam,
+  searchExistingAthletes,
+  addExistingUserToTeam,
 } from "@/lib/organizations/roster.functions";
+
 
 type Team = { id: string; name: string };
 
