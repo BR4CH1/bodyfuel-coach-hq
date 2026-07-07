@@ -390,6 +390,29 @@ export const completeOrganizationOnboardingV2 = createServerFn({ method: "POST" 
       .eq("organization_id", data.organization_id);
     if (error) throw new Error(error.message);
 
+    // Performance Nutrition Engine V1 — org-scoped Energie-/Zielparameter.
+    // Nur upserten wenn mindestens ein Feld geliefert wurde; strikt getrennt
+    // vom persönlichen BodyFuel-Smart-Kontext (`nutrition_targets`).
+    if (
+      data.sex_for_energy_calculation !== undefined ||
+      data.baseline_daily_activity !== undefined ||
+      data.performance_nutrition_goal !== undefined
+    ) {
+      const { error: pnpErr } = await supabase
+        .from("performance_nutrition_profiles")
+        .upsert(
+          {
+            user_id: userId,
+            organization_id: data.organization_id,
+            sex_for_energy_calculation: data.sex_for_energy_calculation ?? null,
+            baseline_daily_activity: data.baseline_daily_activity ?? null,
+            performance_goal: data.performance_nutrition_goal ?? null,
+          },
+          { onConflict: "user_id,organization_id" },
+        );
+      if (pnpErr) throw new Error(pnpErr.message);
+    }
+
     // Smart-Ernährungsplan-Generierung für Team-Athleten anstoßen:
     //  1) minimales smart_nutrition_profile setzen (completed_at + Trainingstage)
     //  2) Autopilot-Job mit mode='nutrition_only' in die Queue legen.
