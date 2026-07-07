@@ -338,22 +338,26 @@ export async function generateOrUpdatePerformanceNutritionWeekAdmin(
         date,
       });
       const resolution = resolvePerformanceDayTypeFromSignals(signals);
-      const newDayType = resolution.dayType;
+      const newDayType: PerformanceDayType = RESOLVER_TO_ENGINE[resolution.dayType];
 
       // 3b) Engine target.
-      const engine = calculatePerformanceNutritionTarget({
-        birthDate: profileRow!.birthdate,
-        sexForEnergyCalculation: pnpRow!.sex_for_energy_calculation as EnergySex,
-        heightCm: Number(profileRow!.height_cm),
-        weightKg: weightKg!,
-        position,
-        performanceGoal: pnpRow!.performance_goal as PerformanceGoal,
-        baselineDailyActivity: pnpRow!.baseline_daily_activity as BaselineDailyActivity,
-        dayType: newDayType,
-        sessionIntensity: null,
-        personalCalibrationKcal,
-        referenceDate: new Date(date + "T12:00:00Z"),
-      });
+      const engine = calculatePerformanceNutritionTarget(
+        {
+          birthDate: profileRow!.birthdate,
+          sexForEnergyCalculation: pnpRow!.sex_for_energy_calculation as EnergySex,
+          heightCm: Number(profileRow!.height_cm),
+          weightKg: weightKg!,
+          position,
+          performanceGoal: pnpRow!.performance_goal as PerformanceGoal,
+          baselineDailyActivity: pnpRow!.baseline_daily_activity as BaselineDailyActivity,
+        },
+        {
+          dayType: newDayType,
+          sessionIntensity: null,
+          referenceDate: new Date(date + "T12:00:00Z"),
+        },
+        { personalCalibrationKcal },
+      );
 
       if (
         engine.status === "MISSING_DATA" ||
