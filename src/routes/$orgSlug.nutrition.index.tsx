@@ -86,6 +86,26 @@ function OrgNutrition() {
       </header>
 
       <main className="mx-auto max-w-md space-y-5 px-4 py-5">
+        {supabaseUser?.id && <AutopilotStatusCard userId={supabaseUser.id} />}
+        {supabaseUser?.id && !jobRunning && (
+          <div className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4">
+            <div>
+              <div className="text-sm font-bold">Smart-Ernährungsplan</div>
+              <div className="text-xs text-muted-foreground">
+                Neu generieren, wenn sich Ziele, Gewicht oder Vorlieben geändert haben.
+              </div>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => regen.mutate()}
+              disabled={regen.isPending}
+            >
+              <RefreshCw className={`mr-2 h-4 w-4 ${regen.isPending ? "animate-spin" : ""}`} />
+              {regen.isPending ? "Starte…" : "Neu"}
+            </Button>
+          </div>
+        )}
         {needsOnboarding && (
           <Link
             to="/onboarding/smart-nutrition"
