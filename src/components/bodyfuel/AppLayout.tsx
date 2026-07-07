@@ -327,9 +327,16 @@ export function AppLayout({ children }: { children: ReactNode }) {
         .map((item: any) => {
           if (item.to === "/dashboard") return { ...item, to: "/bulls", label: "Home", icon: Home };
           if (item.to === "/nutrition") return { ...item, to: "/bulls/nutrition", icon: Apple };
-          if (item.to === "/training") return { ...item, to: "/bulls/training" };
+          if (item.to === "/training") return { ...item, to: "/bulls/training", icon: Dumbbell };
           if (item.to === "/profile") return { ...item, icon: User };
           return item;
+        })
+        // Bulls-Reihenfolge: Home · Training · Ernährung · Community · Profil
+        .sort((a: any, b: any) => {
+          const order = ["/bulls", "/bulls/training", "/bulls/nutrition", "/community", "/profile"];
+          const ia = order.indexOf(a.to);
+          const ib = order.indexOf(b.to);
+          return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
         })
     : navWithBulls;
   // Mobile bottom nav: Coach-Chat ist in die obere Leiste gewandert
@@ -350,7 +357,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const chatHref = isCoach ? "/coach" : "/messages";
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className={`min-h-screen bg-background text-foreground ${isBullsRoute ? "bulls-theme" : ""}`.trim()}>
       {/* Desktop sidebar */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-border bg-card/60 backdrop-blur lg:flex">
         <div className="border-b border-border px-5 py-5">
@@ -485,12 +492,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 to={item.to as any}
                 params={(item as any).params}
                 hash={hash}
-                className={`flex shrink-0 basis-[72px] flex-col items-center gap-1 py-2.5 text-[11px] font-medium ${
-                  active ? "text-gold" : "text-muted-foreground"
-                }`}
+                className={`flex shrink-0 basis-[72px] flex-col items-center gap-1 py-2.5 font-medium ${
+                  isBullsRoute ? "text-[10px] uppercase tracking-wider" : "text-[11px]"
+                } ${active ? "text-gold" : "text-muted-foreground"}`}
               >
-                <Icon className="h-5 w-5 shrink-0" />
-                <span className="truncate max-w-[68px]">{label}</span>
+                <Icon className="h-5 w-5 shrink-0" strokeWidth={active && isBullsRoute ? 2.4 : undefined} />
+                <span className={`truncate max-w-[68px] ${active && isBullsRoute ? "font-bold" : ""}`}>{label}</span>
               </Link>
             );
           })}
