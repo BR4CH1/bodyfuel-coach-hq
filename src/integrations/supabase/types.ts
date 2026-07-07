@@ -274,6 +274,110 @@ export type Database = {
         }
         Relationships: []
       }
+      athlete_nutrition_schedule: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          id: string
+          nutrition_plan_id: string | null
+          team_id: string | null
+          title: string
+          updated_at: string
+          user_id: string
+          weekday: number
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          nutrition_plan_id?: string | null
+          team_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id: string
+          weekday: number
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          nutrition_plan_id?: string | null
+          team_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "athlete_nutrition_schedule_nutrition_plan_id_fkey"
+            columns: ["nutrition_plan_id"]
+            isOneToOne: false
+            referencedRelation: "nutrition_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_nutrition_schedule_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "organization_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      athlete_training_schedule: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          end_time: string | null
+          id: string
+          start_time: string | null
+          team_id: string | null
+          title: string
+          updated_at: string
+          user_id: string
+          weekday: number
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          start_time?: string | null
+          team_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id: string
+          weekday: number
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          start_time?: string | null
+          team_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "athlete_training_schedule_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "organization_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       body_measurements: {
         Row: {
           biceps_left_cm: number | null
@@ -1871,6 +1975,161 @@ export type Database = {
         }
         Relationships: []
       }
+      org_group_nutrition_schedule: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          id: string
+          nutrition_plan_id: string | null
+          position_group: string
+          team_id: string
+          title: string
+          updated_at: string
+          weekday: number
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          nutrition_plan_id?: string | null
+          position_group: string
+          team_id: string
+          title?: string
+          updated_at?: string
+          weekday: number
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          nutrition_plan_id?: string | null
+          position_group?: string
+          team_id?: string
+          title?: string
+          updated_at?: string
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_group_nutrition_schedule_nutrition_plan_id_fkey"
+            columns: ["nutrition_plan_id"]
+            isOneToOne: false
+            referencedRelation: "nutrition_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_group_nutrition_schedule_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "organization_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_group_training_schedule: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          end_time: string | null
+          id: string
+          position_group: string
+          start_time: string | null
+          team_id: string
+          title: string
+          updated_at: string
+          weekday: number
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          position_group: string
+          start_time?: string | null
+          team_id: string
+          title?: string
+          updated_at?: string
+          weekday: number
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          position_group?: string
+          start_time?: string | null
+          team_id?: string
+          title?: string
+          updated_at?: string
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_group_training_schedule_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "organization_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_team_nutrition_schedule: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          id: string
+          nutrition_plan_id: string | null
+          team_id: string
+          title: string
+          updated_at: string
+          weekday: number
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          nutrition_plan_id?: string | null
+          team_id: string
+          title?: string
+          updated_at?: string
+          weekday: number
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          nutrition_plan_id?: string | null
+          team_id?: string
+          title?: string
+          updated_at?: string
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_team_nutrition_schedule_nutrition_plan_id_fkey"
+            columns: ["nutrition_plan_id"]
+            isOneToOne: false
+            referencedRelation: "nutrition_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_team_nutrition_schedule_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "organization_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_activity_log: {
         Row: {
           created_at: string
@@ -2675,6 +2934,8 @@ export type Database = {
       }
       organization_tasks: {
         Row: {
+          assign_scope: string
+          assignee_user_id: string | null
           created_at: string
           duration_min: number | null
           id: string
@@ -2682,6 +2943,7 @@ export type Database = {
           organization_id: string
           payload: Json
           points: number | null
+          position_group: string | null
           scheduled_date: string | null
           scheduled_for: string
           source_id: string | null
@@ -2695,6 +2957,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          assign_scope?: string
+          assignee_user_id?: string | null
           created_at?: string
           duration_min?: number | null
           id?: string
@@ -2702,6 +2966,7 @@ export type Database = {
           organization_id: string
           payload?: Json
           points?: number | null
+          position_group?: string | null
           scheduled_date?: string | null
           scheduled_for?: string
           source_id?: string | null
@@ -2715,6 +2980,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          assign_scope?: string
+          assignee_user_id?: string | null
           created_at?: string
           duration_min?: number | null
           id?: string
@@ -2722,6 +2989,7 @@ export type Database = {
           organization_id?: string
           payload?: Json
           points?: number | null
+          position_group?: string | null
           scheduled_date?: string | null
           scheduled_for?: string
           source_id?: string | null
@@ -5664,6 +5932,17 @@ export type Database = {
           user_id: string
           weekly_points: number
         }[]
+      }
+      get_team_position_groups: {
+        Args: { _team_id: string }
+        Returns: {
+          athlete_count: number
+          position_group: string
+        }[]
+      }
+      get_user_team_position: {
+        Args: { _team_id: string; _user_id: string }
+        Returns: string
       }
       has_active_subscription: {
         Args: { check_env?: string; user_uuid: string }

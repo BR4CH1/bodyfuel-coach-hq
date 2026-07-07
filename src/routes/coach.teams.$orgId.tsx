@@ -14,6 +14,20 @@ import {
   listOrgStaffWithProfiles,
 } from "@/lib/organizations/task-engine.functions";
 import {
+  listTeamPositionGroups,
+  listTeamAthletesForAssign,
+  getGroupTrainingSchedule,
+  upsertGroupTrainingSchedule,
+  getAthleteTrainingSchedule,
+  upsertAthleteTrainingSchedule,
+  getTeamNutritionSchedule,
+  upsertTeamNutritionSchedule,
+  getGroupNutritionSchedule,
+  upsertGroupNutritionSchedule,
+  getAthleteNutritionSchedule,
+  upsertAthleteNutritionSchedule,
+} from "@/lib/organizations/roster-schedule.functions";
+import {
   listOrgChallenges,
   createOrgChallenge,
   listChallengeRules,
@@ -516,26 +530,69 @@ function TasksTab({ orgId, teams }: { orgId: string; teams: any[] }) {
   });
 
   const [title, setTitle] = useState("");
-  const [scope, setScope] = useState<"org" | "team">("org");
-  const [teamForCreate, setTeamForCreate] = useState<string>("");
+  const [pick, setPick] = useState<PickerValue>({
+    scope: "team",
+    team_id: null,
+    position_group: null,
+    athlete_user_id: null,
+    athlete_name: null,
+  });
+  const [orgWide, setOrgWide] = useState(false);
+  const resolveAthletes = useServerFn(listTeamAthletesForAssign);
+
   const createTask = useMutation({
-    mutationFn: async () =>
-      createMut({
+    mutationFn: async () => {
+      // Ziel-User-Liste je nach Ebene auflösen
+      let user_ids: string[] | null = null;
+      let team_id: string | null = null;
+      if (orgWide) {
+        team_id = null;
+        user_ids = null; // -> alle Org-Mitglieder
+      } else if (pick.scope === "athlete") {
+        if (!pick.athlete_user_id) throw new Error("Bitte Spieler auswählen.");
+        team_id = pick.team_id;
+        user_ids = [pick.athlete_user_id];
+      } else if (pick.scope === "group") {
+        if (!pick.team_id || !pick.position_group)
+          throw new Error("Bitte Team und Positionsgruppe wählen.");
+        const athletes = await resolveAthletes({
+          data: {
+            organization_id: orgId,
+            team_id: pick.team_id,
+            position_group: pick.position_group,
+          },
+        });
+        if (!athletes.length) throw new Error("Keine Spieler in dieser Gruppe.");
+        team_id = pick.team_id;
+        user_ids = athletes.map((a: any) => a.user_id);
+      } else {
+        if (!pick.team_id) throw new Error("Bitte Team wählen.");
+        team_id = pick.team_id;
+        user_ids = null; // -> ganzes Team via team_id
+      }
+      return createMut({
         data: {
           organization_id: orgId,
-          team_id: scope === "team" ? teamForCreate || null : null,
+          team_id,
+          user_ids,
           task_type: "manual",
           title,
           scheduled_date: date,
         },
-      }),
+      });
+    },
     onSuccess: () => {
       setTitle("");
+      setPick((p) => ({ ...p, athlete_user_id: null, athlete_name: null }));
       qc.invalidateQueries({ queryKey: ["org-tasks", orgId] });
     },
   });
 
   const filtered = ((data as any[]) ?? []).filter((t) => !statusFilter || t.status === statusFilter);
+  const isBuilderTitle = /training|ernähr|nutrit/i.test(title);
+  const canOpenBuilder =
+    pick.scope === "athlete" && !!pick.athlete_user_id && isBuilderTitle;
+  const builderTarget = /ernähr|nutrit/i.test(title) ? "plan-builder" : "training-builder";
 
   return (
     <div className="space-y-4">
@@ -556,29 +613,64 @@ function TasksTab({ orgId, teams }: { orgId: string; teams: any[] }) {
       </div>
 
       <Card title="Manuelle Aufgabe">
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          <select value={scope} onChange={(e) => setScope(e.target.value as any)} className="rounded border border-border bg-background px-2 py-1">
-            <option value="org">Ganze Organization</option>
-            <option value="team">Bestimmtes Team</option>
-          </select>
-          {scope === "team" && (
-            <select value={teamForCreate} onChange={(e) => setTeamForCreate(e.target.value)} className="rounded border border-border bg-background px-2 py-1">
-              <option value="">Team wählen…</option>
-              {teams.map((t) => (
-                <option key={t.id} value={t.id}>{t.name}</option>
-              ))}
-            </select>
+        <div className="space-y-3">
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={orgWide}
+              onChange={(e) => setOrgWide(e.target.checked)}
+            />
+            An gesamte Organisation (Team/Gruppe/Spieler ignorieren)
+          </label>
+          {!orgWide && (
+            <TeamGroupAthletePicker
+              orgId={orgId}
+              teams={teams}
+              value={pick}
+              onChange={setPick}
+            />
           )}
-          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Titel z.B. Mobility Routine" className="flex-1 rounded border border-border bg-background px-2 py-1" />
-          <button
-            onClick={() => createTask.mutate()}
-            disabled={!title || createTask.isPending || (scope === "team" && !teamForCreate)}
-            className="rounded bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground disabled:opacity-50"
-          >
-            Anlegen
-          </button>
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Titel z.B. Mobility Routine"
+              className="flex-1 min-w-[200px] rounded border border-border bg-background px-2 py-1"
+            />
+            <button
+              onClick={() => createTask.mutate()}
+              disabled={!title || createTask.isPending}
+              className="rounded bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground disabled:opacity-50"
+            >
+              {createTask.isPending ? "Legt an…" : "Anlegen"}
+            </button>
+            {canOpenBuilder && pick.athlete_user_id && (
+              <Link
+                to={
+                  builderTarget === "plan-builder"
+                    ? "/coach/plan-builder/$userId"
+                    : "/coach/training-builder/$userId"
+                }
+                params={{ userId: pick.athlete_user_id }}
+                className="rounded border border-gold/40 bg-gold/10 px-3 py-1 text-xs font-semibold text-foreground hover:bg-gold/20"
+              >
+                Plan-Builder öffnen →
+              </Link>
+            )}
+          </div>
+          {createTask.error && (
+            <div className="text-xs text-destructive">
+              {(createTask.error as Error).message}
+            </div>
+          )}
+          {pick.scope === "athlete" && pick.athlete_name && (
+            <div className="text-[11px] text-muted-foreground">
+              Ziel: <strong>{pick.athlete_name}</strong>
+            </div>
+          )}
         </div>
       </Card>
+
 
       {isLoading ? (
         <div className="text-xs text-muted-foreground">Lädt…</div>
