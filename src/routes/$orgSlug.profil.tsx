@@ -18,6 +18,7 @@ export const Route = createFileRoute("/$orgSlug/profil")({
 function OrgProfil() {
   const { org } = OrgLayoutRoute.useLoaderData();
   const { supabaseUser, loading } = useSession();
+  const entitlements = useEntitlements();
   const navigate = useNavigate();
   const fetchHome = useServerFn(getOrgHomeData);
 
