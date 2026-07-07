@@ -75,3 +75,23 @@ Manuell durchspielen:
 Ich fange mit **Phase 0 (Audit-Doc)** an und liefere die Bestandsaufnahme + eine konkrete Datei-/Route-Änderungsliste. Erst danach folgen die Refactors (Phase 1–2) und die sichtbare Umschichtung im Bulls Hub (Phase 3+).
 
 **Bestätige bitte:** starte ich mit dem Audit-Doc, oder soll ich direkt in Phase 1 (ExperienceContext + Bulls-Theme-Tokens) einsteigen?
+
+---
+
+## Fortschritt (Turn 1)
+
+**Erledigt:**
+- Audit-Dokument: `.lovable/smart-engine-audit.md` (393 Zeilen, Sub-Agent).
+- `.bulls-theme` CSS-Override in `src/styles.css` – remappt `--gold` → `--bulls-red` inkl. Gradient-/Shadow-Utilities. Alle Smart-Komponenten innerhalb `bulls-theme`-Scope re-branden automatisch (kein Komponenten-Fork).
+- `src/routes/bulls.nutrition.tsx`: statische Mini-Prosa ersetzt durch **volle Smart-Nutrition-Experience** (`PlanContentView`, `MacroTargetsCard`, `WeekScheduleCard`, `PlateauWarning`, `DietPreferencesCard`, `MealWishesCard`, `CustomMealsCard`, Onboarding-CTAs, Tracker/Favoriten/Shopping-Links).
+- `src/routes/bulls.training.tsx`: statische Goal-Blöcke ersetzt durch **volle Smart-Training-Experience** (`PlanContentView planType=training`, `TrainingTracker`, `StrengthCheckStatus`, `StrengthSummaryCard`, `AthleteProfileBanner`).
+- `src/components/organizations/OrgAthleteLayout.tsx`: fügt automatisch `bulls-theme`-Klasse an, wenn Slug „bulls" enthält → auch die org-basierten Routen (`/$orgSlug/nutrition`, `/$orgSlug/training`) sind rebrandet.
+- `src/lib/nutrition-plan.functions.ts`: 4 Entitlement-Guards (`parseNutritionPlan`, `estimateMealMacros`, `getMealMacroDebug`, `generateMealRecipe`) weiten den Zugriff von „nur globaler Coach" auf „Selbst / globaler Coach / Org-Nutrition-Coach" (`assertMealAccess`).
+
+**Offen (nächste Turns):**
+- `ExperienceContext`-Provider + generische `.org-theme-<slug>`-Klassen (weitere Orgs neben Bulls).
+- Trainingsquellen-Union (TEAM / COACH / SMART Wochenansicht) mit Konfliktprüfung.
+- Bottom-Nav Umschichtung: Ranking + Challenges als Sub-Tabs unter TEAM (aktuell noch eigene Tabs).
+- Player-Home-Redesign (Wochenfokus/Offene Aufgaben ohne Ernährungs-Todos).
+- Explizite RLS-Verengung, falls Team-Coaches über bestehende Policies mehr sehen als sie sollten.
+- Deprecation der verbleibenden Vereins-Mini-Plan-UI (task-engine-Tiles in `$orgSlug.training.tsx`).
