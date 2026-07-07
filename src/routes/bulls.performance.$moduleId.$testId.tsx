@@ -382,3 +382,43 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </label>
   );
 }
+
+function extractYouTubeId(url: string): string | null {
+  try {
+    const u = new URL(url);
+    if (u.hostname === "youtu.be") return u.pathname.slice(1) || null;
+    if (u.hostname.includes("youtube.com")) {
+      if (u.pathname === "/watch") return u.searchParams.get("v");
+      const m = u.pathname.match(/^\/(embed|shorts)\/([^/]+)/);
+      if (m) return m[2];
+    }
+  } catch {}
+  return null;
+}
+
+function DemoVideo({ url }: { url: string }) {
+  const id = extractYouTubeId(url);
+  return (
+    <section className="space-y-2">
+      <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground">Demo-Video</div>
+      {id ? (
+        <div className="overflow-hidden rounded-2xl border border-border bg-black">
+          <div className="relative w-full" style={{ paddingTop: "56.25%" }}>
+            <iframe
+              className="absolute inset-0 h-full w-full"
+              src={`https://www.youtube-nocookie.com/embed/${id}`}
+              title="Test-Demo"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              loading="lazy"
+            />
+          </div>
+        </div>
+      ) : (
+        <a href={url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sm text-bulls-red hover:underline">
+          Demo auf YouTube ansehen
+        </a>
+      )}
+    </section>
+  );
+}
