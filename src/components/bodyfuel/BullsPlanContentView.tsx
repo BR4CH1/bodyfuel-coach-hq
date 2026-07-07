@@ -117,11 +117,14 @@ export function BullsPlanContentView() {
     let cancelled = false;
     (async () => {
       setLoadingMeals(true);
+      // Bulls/Performance-Kontext: ausschließlich performance_context=true.
+      // Der persönliche BodyFuel-Plan bleibt hier bewusst außen vor.
       const { data: planRow } = await supabase
         .from("nutrition_plans")
         .select("id")
         .eq("client_id", clientId)
         .eq("plan_type", "nutrition")
+        .eq("performance_context", true)
         .eq("is_active", true)
         .maybeSingle();
       if (!planRow) {
@@ -132,13 +135,13 @@ export function BullsPlanContentView() {
         setLoadingMeals(false);
         return;
       }
-      // Pick a day by weekday, else first
+      // Auto-Pipeline schreibt einen Tag pro Datum (day_date).
       const { data: dayRows } = await supabase
         .from("nutrition_plan_days")
-        .select("id, name, sort_order")
+        .select("id, name, sort_order, day_date")
         .eq("plan_id", planRow.id)
         .order("sort_order");
-      const days = (dayRows as { id: string; name: string; sort_order: number }[]) ?? [];
+      const days = (dayRows as { id: string; name: string; sort_order: number; day_date: string | null }[]) ?? [];
       if (!days.length) {
         if (!cancelled) {
           setMeals([]);
@@ -147,11 +150,13 @@ export function BullsPlanContentView() {
         setLoadingMeals(false);
         return;
       }
-      // Simple selection: sort_order matches weekday index (Mon=1)
+      // Bevorzugt exakter Datums-Match (Performance-Auto-Plan), sonst
+      // Wochentag-Fallback für Legacy-Pläne.
+      const byDate = days.find((d) => d.day_date === date);
       const wd = new Date(date + "T12:00:00Z").getUTCDay();
       const monBased = ((wd + 6) % 7) + 1; // 1..7
       const pick =
-        days.find((d) => d.sort_order === monBased) ?? days[0];
+        byDate ?? days.find((d) => d.sort_order === monBased) ?? days[0];
       const { data: mealRows } = await supabase
         .from("nutrition_plan_meals")
         .select(
@@ -169,7 +174,7 @@ export function BullsPlanContentView() {
         .select("id, source")
         .eq("user_id", clientId)
         .eq("entry_date", date)
-        .like("source", "plan:%");
+        .or("source.like.plan:%,source.like.perf_plan:%");
       if (cancelled) return;
       setMeals((mealRows as Meal[]) ?? []);
       setDayName(pick.name);
@@ -180,7 +185,9 @@ export function BullsPlanContentView() {
       setOverrides(ovMap);
       const trackedMap: Record<string, string> = {};
       ((entryRows as { id: string; source: string }[]) ?? []).forEach((r) => {
-        const id = r.source.slice("plan:".length);
+        const id = r.source.startsWith("perf_plan:")
+          ? r.source.slice("perf_plan:".length)
+          : r.source.slice("plan:".length);
         trackedMap[id] = r.id;
       });
       setTracked(trackedMap);
@@ -259,7 +266,7 @@ export function BullsPlanContentView() {
             protein_g: s.protein_g,
             carbs_g: s.carbs_g,
             fat_g: s.fat_g,
-            source: `plan:${m.id}`,
+            source: `perf_plan:${m.id}`,
           })
           .select("id")
           .single();
