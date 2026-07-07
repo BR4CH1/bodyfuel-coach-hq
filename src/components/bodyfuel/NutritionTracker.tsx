@@ -24,8 +24,13 @@ import {
 import {
   getBullsDailyNutritionTargets,
   setBullsDayType,
+  BULLS_DAY_TYPE_LABELS,
   type BullsDayType,
 } from "@/lib/performance-nutrition/bulls-nutrition.functions";
+
+function bullsDayTypeLabel(k: BullsDayType | string): string {
+  return (BULLS_DAY_TYPE_LABELS as Record<string, string>)[k] ?? String(k);
+}
 import { listCustomMeals, type CustomMeal } from "@/lib/custom-meals.functions";
 import { LOCAL_FOODS } from "@/lib/bodyfuel/localFoods";
 
