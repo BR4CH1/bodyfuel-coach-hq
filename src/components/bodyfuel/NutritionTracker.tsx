@@ -205,11 +205,16 @@ function Ring({
   );
 }
 
-export function NutritionTracker() {
+export function NutritionTracker({
+  variant = "personal",
+}: {
+  variant?: "personal" | "bulls";
+}) {
   const { supabaseUser, isCoach } = useSession();
   const userId = supabaseUser?.id;
   const [date, setDate] = useState<string>(() => today());
   const isToday = date === today();
+  const isBulls = variant === "bulls";
 
   const [baseTargets, setBaseTargets] = useState<Targets>(DEFAULT_TARGETS);
   const [restTargets, setRestTargets] = useState<Targets | null>(null);
