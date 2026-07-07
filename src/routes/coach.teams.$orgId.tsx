@@ -301,12 +301,17 @@ function CoachOrgDetail() {
         )}
 
         {tab === "training" && <TrainingTab orgId={orgId} />}
-        {tab === "tasks" && <TasksTab orgId={orgId} teams={data.teams as any[]} />}
-        {tab === "challenges" && <ChallengesTab orgId={orgId} teams={data.teams as any[]} />}
-        {tab === "ranking" && (
-          <Empty>Ranking spiegelt Punkte aus aktiven Org-Challenges (Ledger `organization_challenge_point_events`). Ohne aktive Challenge leer.</Empty>
+        {tab === "nutrition" && (
+          <NutritionScheduleCard orgId={orgId} teams={(data.teams as any[]) ?? []} />
         )}
-        {tab === "community" && <CommunityTab orgId={orgId} />}
+        {tab === "tasks" && <TasksTab orgId={orgId} teams={data.teams as any[]} />}
+        {(tab === "community" || tab === "challenges" || tab === "ranking") && (
+          <CommunityHub
+            orgId={orgId}
+            teams={data.teams as any[]}
+            initialSubTab={tab === "challenges" ? "challenges" : tab === "ranking" ? "ranking" : "feed"}
+          />
+        )}
         {tab === "staff" && <StaffTab orgId={orgId} teams={data.teams as any[]} />}
 
         {tab === "settings" && (
