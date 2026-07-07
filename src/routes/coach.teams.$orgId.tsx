@@ -57,6 +57,7 @@ import {
 } from "@/lib/organizations/staff-labels";
 import { CoachCockpit } from "@/components/coach/analytics/CoachCockpit";
 import { AthletesTab } from "@/components/organizations/AthletesTab";
+import { TeamJoinLinkDialog } from "@/components/organizations/TeamJoinLinkDialog";
 
 export const Route = createFileRoute("/coach/teams/$orgId")({
   head: () => ({ meta: [{ title: "Organisation — BODYFUEL Coach" }] }),
