@@ -2,7 +2,6 @@ import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-r
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { getOrgCoachDetail } from "@/lib/organizations/athlete.functions";
 import {
   runOrgTaskEngine,
