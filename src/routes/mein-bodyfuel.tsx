@@ -1,4 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { Sparkles, Dumbbell, Salad, LineChart, ArrowRight } from "lucide-react";
 import { useEntitlements } from "@/lib/bodyfuel/entitlements";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
