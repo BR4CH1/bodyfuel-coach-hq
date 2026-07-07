@@ -155,8 +155,18 @@ export function AppLayout({ children }: { children: ReactNode }) {
   // 1) Plattform-Coach → coachNav
   // 2) Team-only Nutzer → reduzierte Vereins-Nav (Zum Verein + Mein BodyFuel)
   // 3) Sonst → klassische Client-Nav (+ Bulls, wenn Gruppe vorhanden)
+  const staffRoleLabel =
+    entitlements.primaryStaffRole === "organization_admin" ? "Vereinsleitung" :
+    entitlements.primaryStaffRole === "head_coach" ? "Head Coach" :
+    entitlements.primaryStaffRole === "team_coach" ? "Teamcoach" :
+    entitlements.primaryStaffRole === "staff" ? "Staff" :
+    null;
+
   const teamOnlyNav = isTeamOnlyUser && entitlements.primaryOrgSlug
     ? [
+        ...(entitlements.primaryStaffRole && entitlements.primaryOrgId
+          ? [{ to: `/coach/teams/${entitlements.primaryOrgId}`, label: "Leitungs-Cockpit", icon: LayoutDashboard }]
+          : []),
         { to: `/${entitlements.primaryOrgSlug}`, label: "Zum Verein", icon: Users2 },
         { to: "/mein-bodyfuel", label: "Mein BodyFuel", icon: Sparkles },
       ]
@@ -169,7 +179,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const { level } = getLevel(points);
   const displayName = user?.name ?? profile?.display_name ?? supabaseUser?.email ?? "Coach";
   const avatar = user?.avatar ?? (displayName.slice(0, 2).toUpperCase());
-  const roleLabel = isTeamOnlyUser
+  const roleLabel = staffRoleLabel
+    ? staffRoleLabel
+    : isTeamOnlyUser
     ? "Vereinsmitglied"
     : user
     ? level.name
@@ -191,52 +203,24 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </div>
         </div>
         <nav className="flex-1 space-y-1 p-3">
-          {teamOnlyNav && entitlements.primaryOrgSlug ? (
-            <>
+          {nav.map((item) => {
+            const active = item.to === "/coach" ? pathname === "/coach" : pathname.startsWith(item.to);
+            const Icon = item.icon;
+            return (
               <Link
-                to="/$orgSlug"
-                params={{ orgSlug: entitlements.primaryOrgSlug }}
+                key={item.to}
+                to={item.to}
                 className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                  pathname.startsWith(`/${entitlements.primaryOrgSlug}`)
+                  active
                     ? "bg-accent text-gold"
                     : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                 }`}
               >
-                <Users2 className="h-4 w-4" />
-                Zum Verein
+                <Icon className="h-4 w-4" />
+                {item.label}
               </Link>
-              <Link
-                to="/mein-bodyfuel"
-                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                  pathname.startsWith("/mein-bodyfuel")
-                    ? "bg-accent text-gold"
-                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                }`}
-              >
-                <Sparkles className="h-4 w-4" />
-                Mein BodyFuel
-              </Link>
-            </>
-          ) : (
-            nav.map((item) => {
-              const active = item.to === "/coach" ? pathname === "/coach" : pathname.startsWith(item.to);
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                    active
-                      ? "bg-accent text-gold"
-                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                  }`}
-                >
-                  <Icon className="h-4 w-4" />
-                  {item.label}
-                </Link>
-              );
-            })
-          )}
+            );
+          })}
         </nav>
         <div className="border-t border-border p-3">
           <div className="flex items-center gap-3 rounded-lg bg-secondary/60 p-3">
@@ -311,50 +295,24 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
       {/* Mobile bottom nav */}
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 backdrop-blur lg:hidden">
-        {teamOnlyNav && entitlements.primaryOrgSlug ? (
-          <div className="grid grid-cols-2">
-            <Link
-              to="/$orgSlug"
-              params={{ orgSlug: entitlements.primaryOrgSlug }}
-              className={`flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium ${
-                pathname.startsWith(`/${entitlements.primaryOrgSlug}`)
-                  ? "text-gold"
-                  : "text-muted-foreground"
-              }`}
-            >
-              <Users2 className="h-5 w-5" />
-              Verein
-            </Link>
-            <Link
-              to="/mein-bodyfuel"
-              className={`flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium ${
-                pathname.startsWith("/mein-bodyfuel") ? "text-gold" : "text-muted-foreground"
-              }`}
-            >
-              <Sparkles className="h-5 w-5" />
-              Mein BodyFuel
-            </Link>
-          </div>
-        ) : (
-          <div className={`grid grid-cols-${Math.min(mobileNav.length, 7)}`} style={{ gridTemplateColumns: `repeat(${Math.min(mobileNav.length, 7)}, minmax(0, 1fr))` }}>
-            {mobileNav.slice(0, 7).map((item) => {
-              const active = item.to === "/coach" ? pathname === "/coach" : pathname.startsWith(item.to);
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  className={`flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium ${
-                    active ? "text-gold" : "text-muted-foreground"
-                  }`}
-                >
-                  <Icon className="h-5 w-5" />
-                  {item.label}
-                </Link>
-              );
-            })}
-          </div>
-        )}
+        <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(mobileNav.length, 7)}, minmax(0, 1fr))` }}>
+          {mobileNav.slice(0, 7).map((item) => {
+            const active = item.to === "/coach" ? pathname === "/coach" : pathname.startsWith(item.to);
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.to}
+                to={item.to}
+                className={`flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium ${
+                  active ? "text-gold" : "text-muted-foreground"
+                }`}
+              >
+                <Icon className="h-5 w-5" />
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
       </nav>
 
       <ReviewPrompt />
