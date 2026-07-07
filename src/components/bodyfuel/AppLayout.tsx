@@ -109,12 +109,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   // Wenn ein Vereinskontext aktiv ist (z. B. „COESFELD BULLS"), sollen
   // persönliche Athleten-Bereiche automatisch in den Vereins-Hub geleitet
-  // werden. Dort greift OrgAthleteLayout mit Vereins-Nav & -Theme.
+  // werden. Ein Bulls-Membership allein darf aber keinen Organisationskontext
+  // erzwingen: „Mein BODYFUEL" ist ein persönlicher Bereich, keine Org.
   useEffect(() => {
     if (loading || isCoach) return;
     const activeSlug = getActiveContext();
-    const orgTargetSlug = activeSlug ?? (hasGroup("bulls") ? "coesfeld-bulls" : null);
-    if (!orgTargetSlug) return;
+    if (!activeSlug) return;
     const personalToOrg: Record<string, string> = {
       "/dashboard": "home",
       "/nutrition": "nutrition",
@@ -126,13 +126,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
         const suffix = pathname === prefix ? "" : pathname.slice(prefix.length);
         navigate({
           to: `/$orgSlug/${target}${suffix}`,
-          params: { orgSlug: orgTargetSlug } as any,
+          params: { orgSlug: activeSlug } as any,
           replace: true,
         } as any);
         return;
       }
     }
-  }, [loading, isCoach, pathname, navigate, hasGroup]);
+  }, [loading, isCoach, pathname, navigate]);
 
   // Redirect für Vereins-Staff (Vereinsleitung / Head Coach / Team Coach / Staff):
   // Persönliche Athleten-Routen wie /measurements, /progress, /check-in gehören

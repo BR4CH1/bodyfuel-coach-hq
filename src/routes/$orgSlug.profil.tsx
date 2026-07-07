@@ -9,7 +9,7 @@ import { getOrgHomeData } from "@/lib/organizations/athlete.functions";
 import { OrgAthleteLayout } from "@/components/organizations/OrgAthleteLayout";
 import { Route as OrgLayoutRoute } from "./$orgSlug";
 import { Button } from "@/components/ui/button";
-import { setActiveContext } from "@/components/organizations/OrganizationContextSwitcher";
+import { activatePersonalBodyFuelContext } from "@/components/organizations/OrganizationContextSwitcher";
 
 export const Route = createFileRoute("/$orgSlug/profil")({
   component: OrgProfil,
@@ -63,9 +63,8 @@ function OrgProfil() {
               variant="secondary"
               className="w-full"
               onClick={() => {
-                setActiveContext(null);
-                // /app entscheidet je nach Entitlements, wohin (Dashboard/Bulls/Coach)
-                navigate({ to: "/app" });
+                activatePersonalBodyFuelContext();
+                navigate({ to: "/dashboard" });
               }}
             >
               Zu meinem BODYFUEL wechseln

@@ -32,10 +32,10 @@ export const Route = createFileRoute("/nutrition/shopping")({
 
 function NutritionShoppingPage() {
   const { isCoach, hasGroup } = useSession();
-  const bullsSlug = getActiveContext() ?? "coesfeld-bulls";
+  const activeOrgSlug = getActiveContext();
 
-  if (!isCoach && hasGroup("bulls")) {
-    return <Navigate to="/$orgSlug/nutrition/shopping" params={{ orgSlug: bullsSlug }} replace />;
+  if (!isCoach && hasGroup("bulls") && activeOrgSlug) {
+    return <Navigate to="/$orgSlug/nutrition/shopping" params={{ orgSlug: activeOrgSlug }} replace />;
   }
 
   return (
