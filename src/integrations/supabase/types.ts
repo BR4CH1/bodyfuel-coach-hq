@@ -6049,6 +6049,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_bulls_coach: { Args: { _user_id: string }; Returns: boolean }
       is_org_admin: { Args: { _org: string; _user: string }; Returns: boolean }
       is_org_member: { Args: { _org: string; _user: string }; Returns: boolean }
       is_org_staff: {
