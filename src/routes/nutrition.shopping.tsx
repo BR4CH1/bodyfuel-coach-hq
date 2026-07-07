@@ -27,7 +27,7 @@ export const Route = createFileRoute("/nutrition/shopping")({
   head: () => ({ meta: [{ title: "Einkaufsliste — BODYFUEL" }] }),
   component: () => (
     <AppLayout>
-      <ShoppingListPage />
+      <ShoppingListContent backTo="/nutrition" />
     </AppLayout>
   ),
 });
@@ -66,7 +66,7 @@ function shoppingItemKey(name: string) {
   return clean;
 }
 
-function ShoppingListPage() {
+export function ShoppingListContent({ backTo = "/nutrition" }: { backTo?: string }) {
   const qc = useQueryClient();
   const getFn = useServerFn(getMyShoppingLists);
   const genFn = useServerFn(generateShoppingList);
@@ -239,7 +239,7 @@ function ShoppingListPage() {
   return (
     <div className="space-y-5">
       <Link
-        to="/nutrition"
+        to={backTo as any}
         className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
       >
         <ChevronLeft className="h-4 w-4" /> Zurück

@@ -9,7 +9,11 @@ import { useSession } from "@/lib/bodyfuel/session";
 
 export const Route = createFileRoute("/nutrition/favorites")({
   head: () => ({ meta: [{ title: "Meine Favoriten — BODYFUEL" }] }),
-  component: FavoritesPage,
+  component: () => (
+    <AppLayout>
+      <NutritionFavoritesContent backTo="/nutrition" />
+    </AppLayout>
+  ),
 });
 
 type Item = {
@@ -46,7 +50,7 @@ const slotLabel: Record<Exclude<Slot, "all">, string> = {
   snack: "Snack",
 };
 
-function FavoritesPage() {
+export function NutritionFavoritesContent({ backTo = "/nutrition" }: { backTo?: string }) {
   const { isCoach } = useSession();
   const fetchFn = useServerFn(listMyFavorites);
   const [items, setItems] = useState<Item[]>([]);
@@ -94,11 +98,11 @@ function FavoritesPage() {
   }, [items, query, sort, slot]);
 
   return (
-    <AppLayout>
+    <>
       <div className="space-y-4">
         <div className="flex items-center gap-2">
           <Link
-            to="/nutrition"
+            to={backTo as any}
             className="grid h-9 w-9 place-items-center rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground"
             aria-label="Zurück"
           >
@@ -246,6 +250,6 @@ function FavoritesPage() {
           }}
         />
       )}
-    </AppLayout>
+    </>
   );
 }
