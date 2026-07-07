@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { getOrgCoachDetail } from "@/lib/organizations/athlete.functions";
 import {
@@ -75,7 +75,20 @@ function CoachOrgDetail() {
     queryKey: ["coach-org-detail", orgId],
     queryFn: () => fetch({ data: { orgId } }),
   });
-  const [tab, setTab] = useState("cockpit");
+  const [tab, setTab] = useState(() => {
+    if (typeof window === "undefined") return "cockpit";
+    const h = window.location.hash.replace("#", "");
+    return h || "cockpit";
+  });
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onHash = () => {
+      const h = window.location.hash.replace("#", "");
+      if (h) setTab(h);
+    };
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
   const [athleteTeamFilter, setAthleteTeamFilter] = useState<string | null>(null);
 
 

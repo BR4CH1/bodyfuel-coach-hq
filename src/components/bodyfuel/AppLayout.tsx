@@ -164,16 +164,58 @@ export function AppLayout({ children }: { children: ReactNode }) {
     entitlements.primaryStaffRole === "staff" ? "Staff" :
     null;
 
-  const teamOnlyNav = isTeamOnlyUser && entitlements.primaryOrgSlug
+  // Rollenabhängige Vereins-Navigation. Source of Truth ist
+  // `entitlements.primaryStaffRole` (siehe useEntitlements — spiegelt
+  // deriveOrgRole).
+  const orgId = entitlements.primaryOrgId;
+  const orgSlug = entitlements.primaryOrgSlug;
+  const staffRole = entitlements.primaryStaffRole;
+  const cockpitBase = orgId ? `/coach/teams/${orgId}` : null;
+
+  const buildStaffNav = () => {
+    if (!cockpitBase) return null;
+    if (staffRole === "organization_admin") {
+      return [
+        { to: cockpitBase, hash: "cockpit", label: "Leitungs-Cockpit", icon: LayoutDashboard },
+        { to: cockpitBase, hash: "teams", label: "Teams", icon: Users2 },
+        { to: cockpitBase, hash: "staff", label: "Staff", icon: Shield },
+        { to: cockpitBase, hash: "community", label: "Community", icon: Users },
+        { to: "/profile", label: "Profil", icon: UserCircle },
+      ];
+    }
+    if (staffRole === "head_coach" || staffRole === "team_coach") {
+      return [
+        { to: cockpitBase, hash: "cockpit", label: "Coach-Cockpit", icon: LayoutDashboard },
+        { to: cockpitBase, hash: "athletes", label: "Athleten", icon: Users },
+        { to: cockpitBase, hash: "training", label: "Training", icon: Dumbbell },
+        { to: cockpitBase, hash: "community", label: "Community", icon: Users2 },
+        { to: "/profile", label: "Profil", icon: UserCircle },
+      ];
+    }
+    if (staffRole === "staff") {
+      return [
+        { to: cockpitBase, hash: "cockpit", label: "Cockpit", icon: LayoutDashboard },
+        { to: cockpitBase, hash: "community", label: "Community", icon: Users2 },
+        { to: "/profile", label: "Profil", icon: UserCircle },
+      ];
+    }
+    return null;
+  };
+  const staffNav = buildStaffNav();
+  // Team-only Athleten fallen auf ihre eigene Vereinsroute via OrgAthleteLayout
+  // zurück (siehe Redirect oben). Hier bekommen sie eine minimale Sidebar.
+  const teamOnlyAthleteNav = isTeamOnlyUser && orgSlug && !staffNav
     ? [
-        ...(entitlements.primaryStaffRole && entitlements.primaryOrgId
-          ? [{ to: `/coach/teams/${entitlements.primaryOrgId}`, label: "Leitungs-Cockpit", icon: LayoutDashboard }]
-          : []),
-        { to: `/${entitlements.primaryOrgSlug}`, label: "Zum Verein", icon: Users2 },
+        { to: `/${orgSlug}/home`, label: "Home", icon: LayoutDashboard },
+        { to: "/profile", label: "Profil", icon: UserCircle },
       ]
     : null;
-  const baseNav = isCoach ? coachNav : (teamOnlyNav ?? clientNav);
-  const nav = !isCoach && !teamOnlyNav && hasGroup("bulls") ? [...baseNav, bullsNavItem] : baseNav;
+  const baseNav = isCoach
+    ? coachNav
+    : (staffNav ?? teamOnlyAthleteNav ?? clientNav);
+  const nav = !isCoach && !staffNav && !teamOnlyAthleteNav && hasGroup("bulls")
+    ? [...baseNav, bullsNavItem]
+    : baseNav;
   // Mobile bottom nav: Coach-Chat ist in die obere Leiste gewandert
   const mobileNav = nav.filter((item) => item.to !== "/messages");
   const points = user ? totalPoints(user) : 0;
@@ -205,12 +247,20 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </div>
         <nav className="flex-1 space-y-1 p-3">
           {nav.map((item) => {
-            const active = item.to === "/coach" ? pathname === "/coach" : pathname.startsWith(item.to);
+            const hash = (item as any).hash as string | undefined;
+            const currentHash = typeof window !== "undefined" ? window.location.hash.replace("#", "") : "";
+            const active =
+              item.to === "/coach"
+                ? pathname === "/coach"
+                : hash
+                ? pathname === item.to && (currentHash || "cockpit") === hash
+                : pathname.startsWith(item.to);
             const Icon = item.icon;
             return (
               <Link
-                key={item.to}
+                key={`${item.to}#${hash ?? ""}-${item.label}`}
                 to={item.to}
+                hash={hash}
                 className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                   active
                     ? "bg-accent text-gold"
@@ -298,12 +348,20 @@ export function AppLayout({ children }: { children: ReactNode }) {
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 backdrop-blur lg:hidden">
         <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(mobileNav.length, 7)}, minmax(0, 1fr))` }}>
           {mobileNav.slice(0, 7).map((item) => {
-            const active = item.to === "/coach" ? pathname === "/coach" : pathname.startsWith(item.to);
+            const hash = (item as any).hash as string | undefined;
+            const currentHash = typeof window !== "undefined" ? window.location.hash.replace("#", "") : "";
+            const active =
+              item.to === "/coach"
+                ? pathname === "/coach"
+                : hash
+                ? pathname === item.to && (currentHash || "cockpit") === hash
+                : pathname.startsWith(item.to);
             const Icon = item.icon;
             return (
               <Link
-                key={item.to}
+                key={`${item.to}#${hash ?? ""}-${item.label}`}
                 to={item.to}
+                hash={hash}
                 className={`flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium ${
                   active ? "text-gold" : "text-muted-foreground"
                 }`}
