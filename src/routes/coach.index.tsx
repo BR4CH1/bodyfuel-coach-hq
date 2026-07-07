@@ -16,6 +16,8 @@ import {
   CalendarClock,
   Zap,
   Moon,
+  Activity,
+
 } from "lucide-react";
 
 
