@@ -1,14 +1,14 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { Home, Dumbbell, Trophy, Users, User, type LucideIcon } from "lucide-react";
+import { Home, Dumbbell, Apple, Users, User, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
-type NavKey = "home" | "training" | "ranking" | "community" | "profil";
+type NavKey = "home" | "training" | "nutrition" | "community" | "profil";
 type NavItem = { key: NavKey; label: string; to: string; icon: LucideIcon; feature: string | null };
 
 const ALL_NAV: NavItem[] = [
   { key: "home", label: "Home", to: "/$orgSlug/home", icon: Home, feature: "home" },
   { key: "training", label: "Training", to: "/$orgSlug/training", icon: Dumbbell, feature: "athletic_training" },
-  { key: "ranking", label: "Ranking", to: "/$orgSlug/ranking", icon: Trophy, feature: "ranking" },
+  { key: "nutrition", label: "Ernährung", to: "/$orgSlug/nutrition", icon: Apple, feature: null },
   { key: "community", label: "Community", to: "/$orgSlug/community", icon: Users, feature: "community" },
   { key: "profil", label: "Profil", to: "/$orgSlug/profil", icon: User, feature: null },
 ];
