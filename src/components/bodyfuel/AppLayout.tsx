@@ -324,8 +324,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
         .filter((item: any) => item.to !== "/bulls")
         .map((item: any) => {
           if (item.to === "/dashboard") return { ...item, to: "/bulls", label: "Home", icon: Home };
-          if (item.to === "/nutrition") return { ...item, to: "/bulls/nutrition" };
+          if (item.to === "/nutrition") return { ...item, to: "/bulls/nutrition", icon: Apple };
           if (item.to === "/training") return { ...item, to: "/bulls/training" };
+          if (item.to === "/profile") return { ...item, icon: User };
           return item;
         })
     : navWithBulls;
