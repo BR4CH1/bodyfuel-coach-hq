@@ -61,6 +61,47 @@ const PERFORMANCE_NUTRITION_GOAL_OPTIONS = [
   { v: "MUSCLE_GAIN", l: "Muskelaufbau" },
 ] as const;
 
+const PERFORMANCE_NUTRITION_GOAL_OPTIONS = [
+  { v: "FAT_LOSS", l: "Körperfett reduzieren" },
+  { v: "MAINTENANCE", l: "Gewicht halten" },
+  { v: "PERFORMANCE", l: "Leistung / Performance" },
+  { v: "MUSCLE_GAIN", l: "Muskelaufbau" },
+] as const;
+
+// --- Persönliche Ernährungspräferenzen (SNP-Chips wiederverwendet) ---
+const FAVORITE_FOODS_CHIPS = [
+  "Hähnchen", "Rind", "Pute", "Eier", "Skyr", "Fisch", "Reis", "Nudeln",
+  "Kartoffeln", "Wraps", "Haferflocken", "Obst", "Gemüse", "Käse", "Nüsse", "Proteinpulver",
+];
+const ALLERGY_CHIPS = ["Laktose", "Gluten", "Nüsse", "Soja", "Ei", "Fisch", "Meeresfrüchte"];
+const INTOLERANCE_CHIPS = ["Fructose", "Histamin", "Sorbit", "FODMAP"];
+const DIET_STYLE_OPTIONS = [
+  { v: "omnivore", l: "Alles / Omnivor" },
+  { v: "flexitarian", l: "Flexitarisch (selten Fleisch)" },
+  { v: "pescetarian", l: "Pescetarisch (Fisch, kein Fleisch)" },
+  { v: "vegetarian", l: "Vegetarisch" },
+  { v: "vegan", l: "Vegan" },
+  { v: "other", l: "Andere / Sonstige" },
+] as const;
+const EATING_STYLE_OPTIONS = [
+  { v: "meal_prep", l: "Meal Prep (viel vorkochen)" },
+  { v: "fresh", l: "Frisch täglich zubereiten" },
+  { v: "mixed", l: "Gemischt" },
+] as const;
+const MEAL_PREP_STYLE_OPTIONS = [
+  { v: "daily", l: "Täglich frisch kochen" },
+  { v: "2_3_week", l: "2-3x pro Woche kochen" },
+  { v: "meal_prep", l: "Meal Prep für die ganze Woche" },
+  { v: "low_effort", l: "So wenig kochen wie möglich" },
+] as const;
+
+// Auto-Ableitung: profiles.gender → sex_for_energy_calculation.
+function deriveEnergySex(gender: string | null | undefined): "MALE" | "FEMALE" | "UNSPECIFIED" {
+  if (gender === "male") return "MALE";
+  if (gender === "female") return "FEMALE";
+  return "UNSPECIFIED";
+}
+
 // Sichtbare Funktions-Labels. Diese Auswahl ist rein kosmetisch — die
 // technische Rolle (`staff_assignments.role`) wird ausschließlich über die
 // Einladung/den Vereinsgründungspfad gesetzt und hier NICHT geändert.
