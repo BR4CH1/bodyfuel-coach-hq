@@ -290,7 +290,7 @@ function AddAthleteDialog({
   onClose: () => void;
   onDone: () => void;
 }) {
-  const [mode, setMode] = useState<"choose" | "invite" | "manual">("choose");
+  const [mode, setMode] = useState<"choose" | "invite" | "manual" | "existing">("choose");
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
@@ -300,6 +300,7 @@ function AddAthleteDialog({
             {mode === "choose" && "Athlet hinzufügen"}
             {mode === "invite" && "Athlet einladen"}
             {mode === "manual" && "Athlet manuell anlegen"}
+            {mode === "existing" && "Existierenden Nutzer hinzufügen"}
           </h3>
           <button onClick={onClose} className="rounded p-1 text-muted-foreground hover:bg-muted">
             <X className="h-4 w-4" />
@@ -310,12 +311,21 @@ function AddAthleteDialog({
           <div className="space-y-2">
             <p className="mb-3 text-xs text-muted-foreground">Wie möchtest du den Athleten hinzufügen?</p>
             <button
+              onClick={() => setMode("existing")}
+              className="block w-full rounded-lg border border-border p-3 text-left hover:bg-muted"
+            >
+              <div className="text-sm font-semibold">Existierenden BODYFUEL-Nutzer hinzufügen</div>
+              <div className="text-xs text-muted-foreground">
+                Nach E-Mail oder Name suchen und direkt zum Team hinzufügen.
+              </div>
+            </button>
+            <button
               onClick={() => setMode("invite")}
               className="block w-full rounded-lg border border-border p-3 text-left hover:bg-muted"
             >
               <div className="text-sm font-semibold">Athlet einladen</div>
               <div className="text-xs text-muted-foreground">
-                Einladungslink senden und Profil selbst vervollständigen lassen.
+                Einladungslink per E-Mail senden und Profil selbst vervollständigen lassen.
               </div>
             </button>
             <button
@@ -332,10 +342,182 @@ function AddAthleteDialog({
 
         {mode === "invite" && <InviteForm orgId={orgId} teams={teams} onDone={onDone} />}
         {mode === "manual" && <ManualForm orgId={orgId} teams={teams} onDone={onDone} />}
+        {mode === "existing" && <ExistingUserForm orgId={orgId} teams={teams} onDone={onDone} />}
       </div>
     </div>
   );
 }
+
+function ExistingUserForm({
+  orgId,
+  teams,
+  onDone,
+}: {
+  orgId: string;
+  teams: Team[];
+  onDone: () => void;
+}) {
+  const search = useServerFn(searchExistingAthletes);
+  const add = useServerFn(addExistingUserToTeam);
+  const [query, setQuery] = useState("");
+  const [teamId, setTeamId] = useState<string>(teams[0]?.id ?? "");
+  const [primary, setPrimary] = useState("");
+  const [secondary, setSecondary] = useState("");
+  const [jersey, setJersey] = useState("");
+  const [selected, setSelected] = useState<{ user_id: string; display_name: string | null; email: string | null } | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  const searchMut = useMutation({
+    mutationFn: () => search({ data: { organization_id: orgId, query: query.trim() } }),
+    onError: (e: any) => setErr(e.message ?? String(e)),
+  });
+
+  const addMut = useMutation({
+    mutationFn: async () => {
+      setErr(null);
+      if (!selected) throw new Error("Bitte einen Nutzer auswählen.");
+      if (!teamId) throw new Error("Bitte ein Team auswählen.");
+      return add({
+        data: {
+          organization_id: orgId,
+          team_id: teamId,
+          user_id: selected.user_id,
+          primary_position: primary || null,
+          secondary_position: secondary || null,
+          jersey_number: jersey ? parseInt(jersey, 10) : null,
+        },
+      });
+    },
+    onSuccess: onDone,
+    onError: (e: any) => setErr(e.message ?? String(e)),
+  });
+
+  return (
+    <div className="space-y-3">
+      {!selected ? (
+        <>
+          <Field label="Suche nach E-Mail oder Name *">
+            <div className="flex gap-2">
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && query.trim().length >= 2) searchMut.mutate();
+                }}
+                placeholder="z. B. max@... oder Max Muster"
+                className="flex-1 rounded border border-border bg-background px-2 py-1.5 text-sm"
+              />
+              <button
+                disabled={searchMut.isPending || query.trim().length < 2}
+                onClick={() => searchMut.mutate()}
+                className="inline-flex items-center gap-1 rounded border border-border px-3 py-1.5 text-xs font-semibold uppercase tracking-wider hover:bg-muted disabled:opacity-50"
+              >
+                <Search className="h-3 w-3" /> Suchen
+              </button>
+            </div>
+          </Field>
+
+          {searchMut.data && (
+            <div className="max-h-64 overflow-y-auto rounded border border-border">
+              {(searchMut.data as any[]).length === 0 ? (
+                <div className="p-3 text-center text-xs text-muted-foreground">
+                  Keine passenden Nutzer gefunden.
+                </div>
+              ) : (
+                (searchMut.data as any[]).map((u) => (
+                  <button
+                    key={u.user_id}
+                    disabled={u.already_in_org}
+                    onClick={() =>
+                      setSelected({
+                        user_id: u.user_id,
+                        display_name: u.display_name,
+                        email: u.email,
+                      })
+                    }
+                    className="flex w-full items-center justify-between border-b border-border p-2 text-left last:border-0 hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <div>
+                      <div className="text-sm font-semibold">{u.display_name ?? "(kein Name)"}</div>
+                      <div className="text-[11px] text-muted-foreground">{u.email ?? "—"}</div>
+                    </div>
+                    {u.already_in_org && (
+                      <span className="rounded bg-muted px-2 py-0.5 text-[9px] font-bold uppercase text-muted-foreground">
+                        bereits im Verein
+                      </span>
+                    )}
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          <div className="flex items-center justify-between rounded border border-border bg-muted/40 p-2">
+            <div>
+              <div className="text-sm font-semibold">{selected.display_name ?? "(kein Name)"}</div>
+              <div className="text-[11px] text-muted-foreground">{selected.email ?? "—"}</div>
+            </div>
+            <button
+              onClick={() => setSelected(null)}
+              className="text-[11px] uppercase tracking-wider text-muted-foreground hover:text-foreground"
+            >
+              Ändern
+            </button>
+          </div>
+          <Field label="Team *">
+            <select
+              value={teamId}
+              onChange={(e) => setTeamId(e.target.value)}
+              className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
+            >
+              {teams.length === 0 && <option value="">Kein Team vorhanden</option>}
+              {teams.map((t) => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+          </Field>
+          <div className="grid grid-cols-3 gap-3">
+            <Field label="Position">
+              <input
+                value={primary}
+                onChange={(e) => setPrimary(e.target.value)}
+                className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
+              />
+            </Field>
+            <Field label="Secondary">
+              <input
+                value={secondary}
+                onChange={(e) => setSecondary(e.target.value)}
+                className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
+              />
+            </Field>
+            <Field label="Nummer">
+              <input
+                type="number"
+                value={jersey}
+                onChange={(e) => setJersey(e.target.value)}
+                className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
+              />
+            </Field>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              disabled={addMut.isPending || !teamId}
+              onClick={() => addMut.mutate()}
+              className="rounded bg-primary px-4 py-2 text-xs font-semibold uppercase tracking-wider text-primary-foreground disabled:opacity-50"
+            >
+              {addMut.isPending ? "Füge hinzu…" : "Zum Team hinzufügen"}
+            </button>
+          </div>
+        </>
+      )}
+      {err && <p className="text-xs text-red-500">{err}</p>}
+    </div>
+  );
+}
+
 
 function InviteForm({
   orgId,
