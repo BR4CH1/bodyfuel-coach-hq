@@ -33,7 +33,18 @@ function AppEntryPage() {
       return;
     }
 
-    // Team-only Nutzer: direkt in den Verein leiten, KEIN persönliches Dashboard.
+    // Vereins-Staff (Vereinsleitung, Head Coach, Team Coach, Staff) landet
+    // direkt im Cockpit — NICHT auf der öffentlichen Vereinsseite.
+    if (ent.primaryStaffRole && ent.primaryOrgId) {
+      navigate({
+        to: "/coach/teams/$orgId",
+        params: { orgId: ent.primaryOrgId },
+        replace: true,
+      });
+      return;
+    }
+
+    // Team-only Athlet: direkt in den Verein leiten, KEIN persönliches Dashboard.
     if (ent.hasTeamAccess && !ent.hasAnyPersonalBodyfuel && ent.primaryOrgSlug) {
       navigate({
         to: "/$orgSlug",
