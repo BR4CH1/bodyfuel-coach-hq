@@ -199,8 +199,7 @@ export const estimateMealMacros = createServerFn({ method: "POST" })
       .eq("id", meal.day_id)
       .maybeSingle();
     const clientId = (dayRow as any)?.nutrition_plans?.client_id;
-    const { data: isCoach } = await supabase.rpc("has_role", { _user_id: userId, _role: "coach" });
-    if (clientId !== userId && !isCoach) throw new Error("Forbidden");
+    await assertMealAccess({ supabase, userId }, clientId ?? null);
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const {
@@ -268,8 +267,7 @@ export const getMealMacroDebug = createServerFn({ method: "POST" })
       .eq("id", meal.day_id)
       .maybeSingle();
     const clientId = (dayRow as any)?.nutrition_plans?.client_id;
-    const { data: isCoach } = await supabase.rpc("has_role", { _user_id: userId, _role: "coach" });
-    if (clientId !== userId && !isCoach) throw new Error("Forbidden");
+    await assertMealAccess({ supabase, userId }, clientId ?? null);
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const {
@@ -349,8 +347,7 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
       .eq("id", meal.day_id)
       .maybeSingle();
     const clientId = (dayRow as any)?.nutrition_plans?.client_id;
-    const { data: isCoach } = await supabase.rpc("has_role", { _user_id: userId, _role: "coach" });
-    if (clientId !== userId && !isCoach) throw new Error("Forbidden");
+    await assertMealAccess({ supabase, userId }, clientId ?? null);
 
     // Detect partner meal even if partner_meal_id is missing — look for the
     // shared-meal prefix we set in partner-nutrition-plan-ai.functions.ts.
