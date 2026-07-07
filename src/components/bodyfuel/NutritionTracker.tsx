@@ -373,6 +373,8 @@ export function NutritionTracker({
   const getTargetsFn = useServerFn(getNutritionTargets);
   const getDayTypeFn = useServerFn(getDayType);
   const setDayTypeFn = useServerFn(setDayType);
+  const getBullsTargetsFn = useServerFn(getBullsDailyNutritionTargets);
+  const setBullsDayTypeFn = useServerFn(setBullsDayType);
   const searchFn = useServerFn(searchFoods);
   const searchDbFn = useServerFn(searchFoodsDb);
   const lookupFn = useServerFn(lookupBarcode);
