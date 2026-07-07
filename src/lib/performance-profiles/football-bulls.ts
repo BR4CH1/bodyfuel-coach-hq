@@ -48,6 +48,7 @@ export const footballBullsProfile: PerformanceProfile = {
             "Vollständiger Sprint im Bild",
             "Ziellinie sichtbar",
           ],
+          demoVideoUrl: "https://www.youtube.com/watch?v=Q5nY7iBd8dU",
           inputs: { measurementMethod: true, surface: true, footwear: true },
           benchmarks: {
             SKILL:      [2.10, 1.55],
@@ -76,6 +77,7 @@ export const footballBullsProfile: PerformanceProfile = {
             "Vollständiger Sprint im Bild",
             "Ziellinie sichtbar",
           ],
+          demoVideoUrl: "https://www.youtube.com/watch?v=UYlaMxjw4CQ",
           inputs: { measurementMethod: true, surface: true, footwear: true },
           benchmarks: {
             SKILL:      [5.20, 4.35],
@@ -110,6 +112,7 @@ export const footballBullsProfile: PerformanceProfile = {
             "Kompletter Aufbau mit allen drei Linien sichtbar",
             "Vollständiger Testablauf im Bild",
           ],
+          demoVideoUrl: "https://www.youtube.com/watch?v=fVXVKuOfp5U",
           inputs: { measurementMethod: true, surface: true, footwear: true },
           benchmarks: {
             SKILL:      [5.20, 4.10],
@@ -144,6 +147,7 @@ export const footballBullsProfile: PerformanceProfile = {
             "Absprung vollständig im Bild",
             "Landung vollständig im Bild",
           ],
+          demoVideoUrl: "https://www.youtube.com/watch?v=hZ8gk28RTaI",
           inputs: { surface: true, footwear: true },
           benchmarks: {
             SKILL:      [220, 305],
@@ -177,6 +181,7 @@ export const footballBullsProfile: PerformanceProfile = {
             "Seitliche Perspektive",
             "Vollständiger Satz sichtbar",
           ],
+          demoVideoUrl: "https://www.youtube.com/watch?v=SW_C1A-rejs",
           inputs: { reps: true, rir: true, bodyweight: true },
           benchmarks: {
             SKILL:      [80, 190],
@@ -202,6 +207,7 @@ export const footballBullsProfile: PerformanceProfile = {
             "Seitliche Perspektive",
             "Vollständige Reps sichtbar",
           ],
+          demoVideoUrl: "https://www.youtube.com/watch?v=rT7DgCr-3pg",
           inputs: { reps: true, rir: true, bodyweight: true },
           benchmarks: {
             SKILL:      [60, 145],
@@ -231,6 +237,7 @@ export const footballBullsProfile: PerformanceProfile = {
             "Seitliche Perspektive",
             "Vollständige Reps sichtbar",
           ],
+          demoVideoUrl: "https://www.youtube.com/watch?v=op9kVnSso6Q",
           inputs: { reps: true, rir: true, bodyweight: true },
           benchmarks: {
             SKILL:      [100, 230],
@@ -260,6 +267,7 @@ export const footballBullsProfile: PerformanceProfile = {
             "Frontal- oder Seitenperspektive",
             "Alle Reps sichtbar",
           ],
+          demoVideoUrl: "https://www.youtube.com/watch?v=eGo4IYlbE5g",
           inputs: { reps: true, rir: true, bodyweight: true },
           benchmarks: {
             SKILL:      [0, 45],
@@ -285,6 +293,7 @@ export const footballBullsProfile: PerformanceProfile = {
             "Frontal- oder Seitenperspektive",
             "Vollständige Reps sichtbar",
           ],
+          demoVideoUrl: "https://www.youtube.com/watch?v=2yjwXTZQDDI",
           inputs: { reps: true, rir: true, bodyweight: true },
           benchmarks: {
             SKILL:      [40, 100],
@@ -314,6 +323,7 @@ export const footballBullsProfile: PerformanceProfile = {
             "Seitliche Perspektive",
             "Beide Seiten oder mindestens die getestete Seite vollständig",
           ],
+          demoVideoUrl: "https://www.youtube.com/watch?v=2C-uNgKwPLE",
           inputs: { reps: true, rir: true, bodyweight: true },
           benchmarks: {
             SKILL:      [30, 100],
