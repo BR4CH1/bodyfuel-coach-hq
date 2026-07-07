@@ -56,7 +56,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const { user, isCoach, isFreeUser, supabaseUser, profile, loading, logout, hasGroup } = useSession();
   const entitlements = useEntitlements();
   const navigate = useNavigate();
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { pathname, hash: routeHash } = useRouterState({
+    select: (s) => ({ pathname: s.location.pathname, hash: s.location.hash }),
+  });
+  const routeOrgId = pathname.match(/^\/coach\/teams\/([^/]+)/)?.[1] ?? null;
   const isBullsRoute = pathname.startsWith("/bulls");
   const freeBullsAccess = isFreeUser && isBullsRoute && hasGroup("bulls");
   const freeRankingAccess = isFreeUser && pathname.startsWith("/ranking");
@@ -71,9 +74,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
     entitlements.hasTeamAccess &&
     !entitlements.hasAnyPersonalBodyfuel;
 
-  const orgId = entitlements.primaryOrgId;
+  const orgId = routeOrgId ?? entitlements.primaryOrgId;
   const orgSlug = entitlements.primaryOrgSlug;
   const staffRole = entitlements.primaryStaffRole;
+  const isPlatformCoachOrgRoute = isCoach && !!routeOrgId;
   const cockpitBase = orgId ? `/coach/teams/${orgId}` : null;
 
   // Hooks müssen immer vor möglichen early returns stehen. Dieser Query wurde
@@ -81,7 +85,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   // mit einem Hook-Order-Fehler abbrechen.
   const { data: orgTeamCount = 0 } = useQuery({
     queryKey: ["sidebar-org-team-count", orgId],
-    enabled: !!orgId && (staffRole === "organization_admin" || staffRole === "head_coach"),
+    enabled: !!orgId && (isPlatformCoachOrgRoute || staffRole === "organization_admin" || staffRole === "head_coach"),
     staleTime: 5 * 60_000,
     queryFn: async () => {
       const { count } = await supabase
@@ -223,36 +227,45 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const showTeamsLink = orgTeamCount > 1;
 
   const buildStaffNav = () => {
-    if (!cockpitBase) return null;
-    if (staffRole === "organization_admin" || staffRole === "head_coach") {
-      const cockpitLabel = staffRole === "organization_admin" ? "Leitungs-Cockpit" : "Coach-Cockpit";
+    if (!cockpitBase || !orgId) return null;
+    const cockpitTarget = {
+      to: "/coach/teams/$orgId",
+      params: { orgId },
+      activePath: cockpitBase,
+    };
+    if (isPlatformCoachOrgRoute || staffRole === "organization_admin" || staffRole === "head_coach") {
+      const cockpitLabel = isPlatformCoachOrgRoute
+        ? "Vereins-Cockpit"
+        : staffRole === "organization_admin"
+        ? "Leitungs-Cockpit"
+        : "Coach-Cockpit";
       return [
-        { to: cockpitBase, hash: "cockpit", label: cockpitLabel, icon: LayoutDashboard },
-        { to: cockpitBase, hash: "athletes", label: "Athleten", icon: Users },
-        ...(showTeamsLink ? [{ to: cockpitBase, hash: "teams", label: "Teams", icon: Users2 }] : []),
-        { to: cockpitBase, hash: "training", label: "Training", icon: Dumbbell },
-        { to: cockpitBase, hash: "tasks", label: "Aufgaben", icon: ClipboardList },
-        { to: cockpitBase, hash: "challenges", label: "Challenges", icon: Target },
-        { to: cockpitBase, hash: "ranking", label: "Ranking", icon: Trophy },
-        { to: cockpitBase, hash: "community", label: "Community", icon: Users2 },
-        { to: cockpitBase, hash: "staff", label: "Staff", icon: Shield },
-        { to: cockpitBase, hash: "settings", label: "Einstellungen", icon: Settings },
+        { ...cockpitTarget, hash: "cockpit", label: cockpitLabel, icon: LayoutDashboard },
+        { ...cockpitTarget, hash: "athletes", label: "Athleten", icon: Users },
+        ...(showTeamsLink ? [{ ...cockpitTarget, hash: "teams", label: "Teams", icon: Users2 }] : []),
+        { ...cockpitTarget, hash: "training", label: "Training", icon: Dumbbell },
+        { ...cockpitTarget, hash: "tasks", label: "Aufgaben", icon: ClipboardList },
+        { ...cockpitTarget, hash: "challenges", label: "Challenges", icon: Target },
+        { ...cockpitTarget, hash: "ranking", label: "Ranking", icon: Trophy },
+        { ...cockpitTarget, hash: "community", label: "Community", icon: Users2 },
+        { ...cockpitTarget, hash: "staff", label: "Mitarbeiter", icon: Shield },
+        { ...cockpitTarget, hash: "settings", label: "Einstellungen", icon: Settings },
         { to: "/profile", label: "Profil", icon: UserCircle },
       ];
     }
     if (staffRole === "team_coach") {
       return [
-        { to: cockpitBase, hash: "cockpit", label: "Coach-Cockpit", icon: LayoutDashboard },
-        { to: cockpitBase, hash: "athletes", label: "Athleten", icon: Users },
-        { to: cockpitBase, hash: "training", label: "Training", icon: Dumbbell },
-        { to: cockpitBase, hash: "community", label: "Community", icon: Users2 },
+        { ...cockpitTarget, hash: "cockpit", label: "Coach-Cockpit", icon: LayoutDashboard },
+        { ...cockpitTarget, hash: "athletes", label: "Athleten", icon: Users },
+        { ...cockpitTarget, hash: "training", label: "Training", icon: Dumbbell },
+        { ...cockpitTarget, hash: "community", label: "Community", icon: Users2 },
         { to: "/profile", label: "Profil", icon: UserCircle },
       ];
     }
     if (staffRole === "staff") {
       return [
-        { to: cockpitBase, hash: "cockpit", label: "Cockpit", icon: LayoutDashboard },
-        { to: cockpitBase, hash: "community", label: "Community", icon: Users2 },
+        { ...cockpitTarget, hash: "cockpit", label: "Cockpit", icon: LayoutDashboard },
+        { ...cockpitTarget, hash: "community", label: "Community", icon: Users2 },
         { to: "/profile", label: "Profil", icon: UserCircle },
       ];
     }
@@ -267,7 +280,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
         { to: "/profile", label: "Profil", icon: UserCircle },
       ]
     : null;
-  const baseNav = isCoach
+  const baseNav = staffNav
+    ? staffNav
+    : isCoach
     ? coachNav
     : (staffNav ?? teamOnlyAthleteNav ?? clientNav);
   const nav = !isCoach && !staffNav && !teamOnlyAthleteNav && hasGroup("bulls")
@@ -305,18 +320,20 @@ export function AppLayout({ children }: { children: ReactNode }) {
         <nav className="flex-1 space-y-1 p-3">
           {nav.map((item) => {
             const hash = (item as any).hash as string | undefined;
-            const currentHash = typeof window !== "undefined" ? window.location.hash.replace("#", "") : "";
+            const currentHash = (routeHash ?? "").replace(/^#/, "");
+            const activePath = (item as any).activePath ?? item.to;
             const active =
               item.to === "/coach"
                 ? pathname === "/coach"
                 : hash
-                ? pathname === item.to && (currentHash || "cockpit") === hash
-                : pathname.startsWith(item.to);
+                ? pathname === activePath && (currentHash || "cockpit") === hash
+                : pathname.startsWith(activePath);
             const Icon = item.icon;
             return (
               <Link
                 key={`${item.to}#${hash ?? ""}-${item.label}`}
-                to={item.to}
+                to={item.to as any}
+                params={(item as any).params}
                 hash={hash}
                 className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                   active
@@ -406,18 +423,20 @@ export function AppLayout({ children }: { children: ReactNode }) {
         <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(mobileNav.length, 7)}, minmax(0, 1fr))` }}>
           {mobileNav.slice(0, 7).map((item) => {
             const hash = (item as any).hash as string | undefined;
-            const currentHash = typeof window !== "undefined" ? window.location.hash.replace("#", "") : "";
+            const currentHash = (routeHash ?? "").replace(/^#/, "");
+            const activePath = (item as any).activePath ?? item.to;
             const active =
               item.to === "/coach"
                 ? pathname === "/coach"
                 : hash
-                ? pathname === item.to && (currentHash || "cockpit") === hash
-                : pathname.startsWith(item.to);
+                ? pathname === activePath && (currentHash || "cockpit") === hash
+                : pathname.startsWith(activePath);
             const Icon = item.icon;
             return (
               <Link
                 key={`${item.to}#${hash ?? ""}-${item.label}`}
-                to={item.to}
+                to={item.to as any}
+                params={(item as any).params}
                 hash={hash}
                 className={`flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium ${
                   active ? "text-gold" : "text-muted-foreground"

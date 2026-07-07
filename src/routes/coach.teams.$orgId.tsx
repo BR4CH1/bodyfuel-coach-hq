@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -62,6 +62,7 @@ const WEEKDAYS = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Fr
 
 function CoachOrgDetail() {
   const { orgId } = Route.useParams();
+  const routeHash = useRouterState({ select: (s) => s.location.hash });
   const fetch = useServerFn(getOrgCoachDetail);
   const { data, isLoading } = useQuery({
     queryKey: ["coach-org-detail", orgId],
@@ -73,15 +74,13 @@ function CoachOrgDetail() {
     return h || "cockpit";
   });
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const onHash = () => {
-      const h = window.location.hash.replace("#", "");
-      if (h) setTab(h);
-    };
-    window.addEventListener("hashchange", onHash);
-    return () => window.removeEventListener("hashchange", onHash);
-  }, []);
+    setTab((routeHash ?? "").replace(/^#/, "") || "cockpit");
+  }, [routeHash]);
   const [athleteTeamFilter, setAthleteTeamFilter] = useState<string | null>(null);
+  const selectTab = (next: string) => {
+    setTab(next);
+    if (typeof window !== "undefined") window.location.hash = next;
+  };
 
 
   if (isLoading || !data || !data.org) {
@@ -253,7 +252,7 @@ function CoachOrgDetail() {
                       </div>
                     </div>
                     <button
-                      onClick={() => { setAthleteTeamFilter(t.id); setTab("athletes"); }}
+                      onClick={() => { setAthleteTeamFilter(t.id); selectTab("athletes"); }}
                       className="rounded border border-border px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
                     >
                       Athleten →
