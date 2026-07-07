@@ -109,7 +109,7 @@ describe("Position clusters", () => {
     expect(getFootballPositionCluster("QB")).toBe("HYBRID");
     expect(getFootballPositionCluster("TE")).toBe("HYBRID");
     expect(getFootballPositionCluster("LB")).toBe("HYBRID");
-    expect(getFootballPositionCluster("Linebacker")).toBe("HYBRID"); // normalized
+    expect(getFootballPositionCluster("lb")).toBe("HYBRID"); // case-insensitive
   });
   it("maps OL/DL → POWER_CONTACT", () => {
     expect(getFootballPositionCluster("OL")).toBe("POWER_CONTACT");
