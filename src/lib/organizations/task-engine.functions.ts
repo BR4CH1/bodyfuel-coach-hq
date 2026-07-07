@@ -168,7 +168,7 @@ export const upsertTeamTrainingSchedule = createServerFn({ method: "POST" })
     }) => d,
   )
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
     const rows = data.entries.map((e) => ({
       team_id: data.team_id,
       weekday: e.weekday,
@@ -181,6 +181,37 @@ export const upsertTeamTrainingSchedule = createServerFn({ method: "POST" })
       .from("organization_team_training_schedule")
       .upsert(rows, { onConflict: "team_id,weekday" });
     if (error) throw new Error(error.message);
+
+    // Auto-Plan-Trigger: sobald der Coach den Team-Trainingsplan speichert,
+    // enqueue einen Performance-Ernährungsplan-Job für die aktuelle Woche.
+    // Fehler beim Trigger dürfen die Team-Training-Speicherung NIE brechen.
+    try {
+      const { data: team } = await supabase
+        .from("organization_teams")
+        .select("organization_id")
+        .eq("id", data.team_id)
+        .maybeSingle();
+      const orgId = (team as { organization_id?: string } | null)?.organization_id;
+      if (orgId) {
+        const now = new Date();
+        const day = now.getUTCDay();
+        const mondayOffset = (day + 6) % 7;
+        const monday = new Date(now);
+        monday.setUTCDate(now.getUTCDate() - mondayOffset);
+        const weekStart = monday.toISOString().slice(0, 10);
+        await supabase.from("performance_plan_jobs").insert({
+          organization_id: orgId,
+          team_id: data.team_id,
+          week_start: weekStart,
+          trigger: "TEAM_SCHEDULE_CHANGED",
+          status: "pending",
+          created_by: userId,
+        });
+      }
+    } catch {
+      /* trigger best-effort; ignore duplicates & other errors */
+    }
+
     return { ok: true };
   });
 
