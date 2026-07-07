@@ -15,7 +15,6 @@ export const Route = createFileRoute("/bulls/performance/$moduleId")({
 
 function ModulePage() {
   const { moduleId } = Route.useParams();
-  const navigate = useNavigate();
   const { supabaseUser } = useSession();
   const profile = getProfile("football_bulls")!;
   const mod = profile.modules.find((m) => m.id === moduleId);
