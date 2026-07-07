@@ -21,6 +21,10 @@ import {
   type FoodResult,
   type DayType,
 } from "@/lib/nutrition.functions";
+import {
+  getBullsDailyNutritionTargets,
+  setBullsDayType,
+} from "@/lib/performance-nutrition/bulls-nutrition.functions";
 import { listCustomMeals, type CustomMeal } from "@/lib/custom-meals.functions";
 import { LOCAL_FOODS } from "@/lib/bodyfuel/localFoods";
 
