@@ -23,23 +23,11 @@ export const Route = createFileRoute("/strength-check")({
   head: () => ({ meta: [{ title: "BODYFUEL Strength Check" }] }),
   component: () => (
     <AppLayout>
-      <BullsRedirectOrStrengthCheck />
+      <StrengthCheckPage />
     </AppLayout>
   ),
 });
 
-function BullsRedirectOrStrengthCheck() {
-  const { hasGroup, loading } = useSession();
-  const navigate = useNavigate();
-  useEffect(() => {
-    if (loading) return;
-    if (hasGroup("bulls")) {
-      navigate({ to: "/bulls/performance", replace: true });
-    }
-  }, [loading, hasGroup, navigate]);
-  if (loading || hasGroup("bulls")) return null;
-  return <StrengthCheckPage />;
-}
 
 type WizardResult = {
   weight: string;
