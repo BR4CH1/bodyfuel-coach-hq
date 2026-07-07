@@ -11,13 +11,12 @@ import { useTrial } from "@/hooks/use-trial";
 import { trackHubEvent } from "@/lib/bulls.functions";
 import { getMySmartProfile } from "@/lib/smart-profile.functions";
 import { MacroTargetsCard } from "@/components/bodyfuel/MacroTargetsCard";
-import { PlanContentView } from "@/components/bodyfuel/PlanContentView";
+import { BullsPlanContentView } from "@/components/bodyfuel/BullsPlanContentView";
 import { WeekScheduleCard } from "@/components/bodyfuel/WeekScheduleCard";
 import { PlateauWarning } from "@/components/bodyfuel/PlateauWarning";
 import { DietPreferencesCard } from "@/components/bodyfuel/DietPreferencesCard";
 import { MealWishesCard } from "@/components/bodyfuel/MealWishesCard";
 import { CustomMealsCard } from "@/components/bodyfuel/CustomMealsCard";
-import { TrialNutritionPlan } from "@/components/bodyfuel/TrialPlanView";
 
 export const Route = createFileRoute("/bulls/nutrition/")({
   head: () => ({ meta: [{ title: "Ernährung — Bulls Hub" }] }),
