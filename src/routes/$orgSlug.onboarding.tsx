@@ -37,6 +37,28 @@ const GOAL_OPTIONS: { v: string; l: string }[] = [
   { v: "Overall Athletic Development", l: "Athletische Grundlagen (Allround)" },
 ];
 
+// Performance Nutrition Engine V1 — org-scoped Energie-/Zielparameter.
+// Wichtig: getrennt vom persönlichen BodyFuel-Smart-Kontext.
+const ENERGY_SEX_OPTIONS = [
+  { v: "MALE", l: "Männlich" },
+  { v: "FEMALE", l: "Weiblich" },
+  { v: "UNSPECIFIED", l: "Keine Angabe (Coach-Review nötig)" },
+] as const;
+
+const BASELINE_ACTIVITY_OPTIONS = [
+  { v: "MOSTLY_SEATED", l: "Überwiegend sitzend (Büro/Schule)" },
+  { v: "MIXED", l: "Gemischt (teils sitzend, teils aktiv)" },
+  { v: "PHYSICALLY_ACTIVE", l: "Körperlich aktiv (viel auf den Beinen)" },
+  { v: "VERY_PHYSICALLY_ACTIVE", l: "Sehr körperlich aktiv (Bau/Handwerk)" },
+] as const;
+
+const PERFORMANCE_NUTRITION_GOAL_OPTIONS = [
+  { v: "FAT_LOSS", l: "Körperfett reduzieren" },
+  { v: "MAINTENANCE", l: "Gewicht halten" },
+  { v: "PERFORMANCE", l: "Leistung / Performance" },
+  { v: "MUSCLE_GAIN", l: "Muskelaufbau" },
+] as const;
+
 // Sichtbare Funktions-Labels. Diese Auswahl ist rein kosmetisch — die
 // technische Rolle (`staff_assignments.role`) wird ausschließlich über die
 // Einladung/den Vereinsgründungspfad gesetzt und hier NICHT geändert.
@@ -154,6 +176,11 @@ function AthleteOnboarding({ ctx }: { ctx: NonNullable<Awaited<ReturnType<typeof
   const [limitations, setLimitations] = useState("");
   const [goal, setGoal] = useState("");
 
+  // Performance Nutrition Engine V1 — org-scoped
+  const [energySex, setEnergySex] = useState<string>("");
+  const [baselineActivity, setBaselineActivity] = useState<string>("");
+  const [nutritionGoal, setNutritionGoal] = useState<string>("");
+
   useEffect(() => {
     const tm: any = ctx.team_membership;
     if (tm?.team_id) setTeamId(tm.team_id);
@@ -175,6 +202,9 @@ function AthleteOnboarding({ ctx }: { ctx: NonNullable<Awaited<ReturnType<typeof
       if (!weightKg || Number(weightKg) < 30) throw new Error("Bitte aktuelles Gewicht in kg angeben.");
       if (!teamId) throw new Error("Bitte Team auswählen.");
       if (!primary) throw new Error("Bitte primäre Position angeben.");
+      if (!energySex) throw new Error("Bitte Angabe zum biologischen Geschlecht für die Energieberechnung.");
+      if (!baselineActivity) throw new Error("Bitte Alltagsaktivität angeben.");
+      if (!nutritionGoal) throw new Error("Bitte Ernährungsziel angeben.");
       return complete({
         data: {
           organization_id: ctx.organization.id,
@@ -190,6 +220,17 @@ function AthleteOnboarding({ ctx }: { ctx: NonNullable<Awaited<ReturnType<typeof
           birthdate: birthdate,
           height_cm: Number(heightCm),
           weight_kg: Number(weightKg),
+          sex_for_energy_calculation: energySex as "MALE" | "FEMALE" | "UNSPECIFIED",
+          baseline_daily_activity: baselineActivity as
+            | "MOSTLY_SEATED"
+            | "MIXED"
+            | "PHYSICALLY_ACTIVE"
+            | "VERY_PHYSICALLY_ACTIVE",
+          performance_nutrition_goal: nutritionGoal as
+            | "FAT_LOSS"
+            | "MAINTENANCE"
+            | "PERFORMANCE"
+            | "MUSCLE_GAIN",
         },
       });
     },
@@ -307,6 +348,49 @@ function AthleteOnboarding({ ctx }: { ctx: NonNullable<Awaited<ReturnType<typeof
             </Select>
           </Field>
         </div>
+
+        <SectionHeader className="mt-6">Ernährung & Aktivität</SectionHeader>
+        <p className="mb-3 text-[11px] text-muted-foreground">
+          Grundlage für dein persönliches Kalorien- und Makro-Ziel im {org.name}-Bereich.
+          Diese Angaben fließen ausschließlich in die vereinsinterne Performance-Berechnung ein.
+        </p>
+        <div className="grid gap-4">
+          <Field label="Biologisches Geschlecht (für Energieberechnung) *">
+            <Select value={energySex} onValueChange={setEnergySex}>
+              <SelectTrigger><SelectValue placeholder="Auswählen" /></SelectTrigger>
+              <SelectContent>
+                {ENERGY_SEX_OPTIONS.map((o) => (
+                  <SelectItem key={o.v} value={o.v}>{o.l}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="mt-1 text-[10px] text-muted-foreground">
+              Wird nur zur Berechnung des Energiebedarfs verwendet (DRI 2023).
+            </p>
+          </Field>
+          <Field label="Alltagsaktivität (ohne Football-/Athletik-Training) *">
+            <Select value={baselineActivity} onValueChange={setBaselineActivity}>
+              <SelectTrigger><SelectValue placeholder="Auswählen" /></SelectTrigger>
+              <SelectContent>
+                {BASELINE_ACTIVITY_OPTIONS.map((o) => (
+                  <SelectItem key={o.v} value={o.v}>{o.l}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label="Ernährungsziel *">
+            <Select value={nutritionGoal} onValueChange={setNutritionGoal}>
+              <SelectTrigger><SelectValue placeholder="Auswählen" /></SelectTrigger>
+              <SelectContent>
+                {PERFORMANCE_NUTRITION_GOAL_OPTIONS.map((o) => (
+                  <SelectItem key={o.v} value={o.v}>{o.l}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+        </div>
+
+
 
         <Button
           size="lg"
