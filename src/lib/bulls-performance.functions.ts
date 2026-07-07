@@ -245,3 +245,24 @@ export const decidePerformanceTest = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// -------------------- COACH: per-athlete list --------------------
+
+export const listAthletePerformanceTests = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((raw: unknown) =>
+    z.object({ userId: z.string().uuid() }).parse(raw),
+  )
+  .handler(async ({ data, context }) => {
+    if (!(await isCoachOrStaff(context.supabase, context.userId))) {
+      throw new Error("Nicht berechtigt");
+    }
+    const { data: rows, error } = await context.supabase
+      .from("bulls_performance_tests")
+      .select("*")
+      .eq("user_id", data.userId)
+      .order("performed_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
