@@ -76,7 +76,6 @@ export function AthletePerformanceTab({
         </p>
         <Link
           to="/coach/bulls-performance"
-          search={{ orgId }}
           className="mt-3 inline-flex rounded-lg border border-primary bg-primary px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-primary-foreground"
         >
           Zum Prüfbereich
