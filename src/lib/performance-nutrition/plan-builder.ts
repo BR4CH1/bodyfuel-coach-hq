@@ -43,6 +43,16 @@ export interface PoolMeal {
   mealprep_ok: boolean;
 }
 
+export type DietStyle =
+  | "omnivore"
+  | "flexitarian"
+  | "pescetarian"
+  | "vegetarian"
+  | "vegan"
+  | "other";
+
+export type MealPrepStyle = "daily" | "2_3_week" | "meal_prep" | "low_effort";
+
 export interface MacroTarget {
   kcal: number;
   protein_g: number;
@@ -53,6 +63,16 @@ export interface MacroTarget {
 export interface AthletePreferences {
   no_go_ingredients: string[];
   wants_snack: boolean;
+  /** Free-text no-gos, tokenisierte Kleinbuchstaben. */
+  extra_nogo_terms?: string[];
+  /**
+   * Zusammengeführte Allergie-/Unverträglichkeits-Tokens (aus `allergies` +
+   * tokenisiertem `extra_allergies` + `intolerances`). Der Allergie-Filter
+   * lehnt bei fehlenden Meal-Metadaten fail-safe ab.
+   */
+  allergy_tokens?: string[];
+  diet_style?: DietStyle | null;
+  meal_prep_style?: MealPrepStyle | null;
 }
 
 export interface PickedMeal {
@@ -125,11 +145,86 @@ function suitableForDayType(m: PoolMeal, dayType: PerformanceDayType): boolean {
 }
 
 function violatesNoGo(m: PoolMeal, athlete: AthletePreferences): boolean {
-  if (!athlete.no_go_ingredients?.length) return false;
-  const denylist = new Set(
-    athlete.no_go_ingredients.map((s) => s.toLowerCase().trim()),
-  );
-  return m.no_go_ingredients.some((n) => denylist.has(n.toLowerCase().trim()));
+  const denyList: string[] = [];
+  if (athlete.no_go_ingredients?.length) {
+    denyList.push(...athlete.no_go_ingredients.map((s) => s.toLowerCase().trim()));
+  }
+  if (athlete.extra_nogo_terms?.length) {
+    denyList.push(
+      ...athlete.extra_nogo_terms
+        .map((s) => s.toLowerCase().trim())
+        .filter((s) => s.length >= 3),
+    );
+  }
+  if (!denyList.length) return false;
+  const denySet = new Set(denyList);
+  if (m.no_go_ingredients.some((n) => denySet.has(n.toLowerCase().trim()))) return true;
+  const hay = `${m.name} ${m.description ?? ""}`.toLowerCase();
+  return denyList.some((term) => term.length >= 3 && hay.includes(term));
+}
+
+// --- Diet & Allergen Sicherheitsfilter -------------------------------------
+
+const DIET_MARKERS = {
+  meat: [
+    "hähnchen", "hahnchen", "huhn", "pute", "truthahn", "rind", "beef", "steak",
+    "schwein", "pork", "wurst", "salami", "schinken", "speck", "bacon", "hack",
+    "lamm", "wild",
+  ],
+  fish: [
+    "fisch", "lachs", "salmon", "thunfisch", "tuna", "kabeljau", "forelle",
+    "sardine", "hering", "makrele", "shrimp", "garnele", "meeresfrüchte",
+  ],
+  dairy: [
+    "milch", "milk", "käse", "kase", "cheese", "quark", "skyr", "joghurt",
+    "yogurt", "butter", "sahne", "cream", "mozzarella", "feta", "parmesan",
+  ],
+  egg: ["ei ", "eier", "eiweiß", "eigelb", "omelett", "rührei", "spiegelei"],
+} as const;
+
+function containsAny(hay: string, needles: readonly string[]): boolean {
+  return needles.some((n) => hay.includes(n));
+}
+
+export function violatesDiet(m: PoolMeal, diet: DietStyle | null | undefined): boolean {
+  if (!diet || diet === "omnivore" || diet === "other" || diet === "flexitarian") return false;
+  const hay = `${m.name} ${m.description ?? ""} ${m.no_go_ingredients.join(" ")}`.toLowerCase();
+  if (diet === "vegan") {
+    return (
+      containsAny(hay, DIET_MARKERS.meat) ||
+      containsAny(hay, DIET_MARKERS.fish) ||
+      containsAny(hay, DIET_MARKERS.dairy) ||
+      containsAny(hay, DIET_MARKERS.egg)
+    );
+  }
+  if (diet === "vegetarian") {
+    return containsAny(hay, DIET_MARKERS.meat) || containsAny(hay, DIET_MARKERS.fish);
+  }
+  if (diet === "pescetarian") {
+    return containsAny(hay, DIET_MARKERS.meat);
+  }
+  return false;
+}
+
+export function violatesAllergy(
+  m: PoolMeal,
+  allergyTokens: string[] | undefined,
+): boolean {
+  if (!allergyTokens?.length) return false;
+  const tokens = allergyTokens
+    .map((t) => t.toLowerCase().trim())
+    .filter((t) => t.length >= 3);
+  if (!tokens.length) return false;
+  const hay = `${m.name} ${m.description ?? ""} ${m.no_go_ingredients.join(" ")}`.toLowerCase();
+  return tokens.some((t) => hay.includes(t));
+}
+
+export function mealPrepFitScore(m: PoolMeal, style: MealPrepStyle | null | undefined): number {
+  if (!style) return 0;
+  if (style === "meal_prep" || style === "2_3_week") {
+    return m.mealprep_ok ? 0 : 25;
+  }
+  return 0;
 }
 
 function clampScale(s: number): number {
@@ -213,7 +308,11 @@ export function pickMealsForDay(input: {
   const sumShares = shares.reduce((a, b) => a + b, 0) || 1;
 
   const filtered = poolMeals.filter(
-    (m) => suitableForDayType(m, dayType) && !violatesNoGo(m, preferences),
+    (m) =>
+      suitableForDayType(m, dayType) &&
+      !violatesNoGo(m, preferences) &&
+      !violatesDiet(m, preferences.diet_style ?? null) &&
+      !violatesAllergy(m, preferences.allergy_tokens),
   );
 
   const usedIds = new Set<string>();
@@ -233,8 +332,6 @@ export function pickMealsForDay(input: {
       (m) => m.category === slot && !usedIds.has(m.id) && m.kcal > 0,
     );
     if (candidates.length === 0) {
-      // Fall back to any suitable meal of a compatible slot before failing
-      // — snacks can substitute for pre/post workout when the pool has none.
       const fallback =
         slot === "pre_workout" || slot === "post_workout"
           ? filtered.filter(
@@ -252,12 +349,14 @@ export function pickMealsForDay(input: {
       candidates.push(...fallback);
     }
 
-    // Rank candidates: score by best-fit scale within [SCALE_MIN..SCALE_MAX].
+    // Rank candidates: macro-fit score plus soft mealprep-preference malus.
     const ranked = candidates
       .map((m) => {
         const idealScale = m.kcal > 0 ? slotTarget.kcal / m.kcal : 1;
         const scale = clampScale(idealScale);
-        return { m, scale, score: scoreCandidate(m, scale, slotTarget, dayType) };
+        const baseScore = scoreCandidate(m, scale, slotTarget, dayType);
+        const prepMalus = mealPrepFitScore(m, preferences.meal_prep_style ?? null);
+        return { m, scale, score: baseScore + prepMalus };
       })
       .sort((a, b) => a.score - b.score);
 

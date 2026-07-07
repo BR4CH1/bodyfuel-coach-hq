@@ -2,6 +2,9 @@ import { describe, it, expect } from "vitest";
 import {
   pickMealsForDay,
   reoptimizeExistingDay,
+  violatesDiet,
+  violatesAllergy,
+  mealPrepFitScore,
   type PoolMeal,
   type AthletePreferences,
   type ExistingMeal,
@@ -262,5 +265,81 @@ describe("reoptimizeExistingDay", () => {
       const dinner = r.meals.find((m) => m.sort_order === 2);
       if (lunch && dinner) expect(lunch.scale).toBeCloseTo(dinner.scale, 5);
     }
+  });
+});
+
+describe("violatesDiet", () => {
+  const chicken = { id: "c", name: "Hähnchen Reis Bowl", category: "lunch" as const, kcal: 600, protein_g: 40, carbs_g: 70, fat_g: 15, suitable_training: true, suitable_rest: true, no_go_ingredients: [], mealprep_ok: true, description: null };
+  const salmon = { ...chicken, id: "s", name: "Lachs mit Süßkartoffel", description: null };
+  const cheeseOms = { ...chicken, id: "co", name: "Käse-Omelett", description: "mit Milch und Ei" };
+  const oats = { ...chicken, id: "o", name: "Haferflocken mit Wasser", description: "und Beeren" };
+
+  it("omnivore lässt alles zu", () => {
+    expect(violatesDiet(chicken, "omnivore")).toBe(false);
+    expect(violatesDiet(salmon, "omnivore")).toBe(false);
+  });
+  it("vegetarier rejects Fleisch und Fisch, erlaubt Käse/Ei", () => {
+    expect(violatesDiet(chicken, "vegetarian")).toBe(true);
+    expect(violatesDiet(salmon, "vegetarian")).toBe(true);
+    expect(violatesDiet(cheeseOms, "vegetarian")).toBe(false);
+  });
+  it("pescetarier erlaubt Fisch, rejects Fleisch", () => {
+    expect(violatesDiet(salmon, "pescetarian")).toBe(false);
+    expect(violatesDiet(chicken, "pescetarian")).toBe(true);
+  });
+  it("vegan rejects auch Käse/Milch/Ei", () => {
+    expect(violatesDiet(cheeseOms, "vegan")).toBe(true);
+    expect(violatesDiet(oats, "vegan")).toBe(false);
+    expect(violatesDiet(chicken, "vegan")).toBe(true);
+  });
+});
+
+describe("violatesAllergy", () => {
+  const nutBar = { id: "n", name: "Nuss-Riegel", description: "mit Cashewkernen", category: "snack" as const, kcal: 250, protein_g: 8, carbs_g: 20, fat_g: 14, suitable_training: true, suitable_rest: true, no_go_ingredients: ["Nüsse"], mealprep_ok: true };
+  it("fail-safe reject bei Allergen-Token-Match", () => {
+    expect(violatesAllergy(nutBar, ["Nüsse"])).toBe(true);
+    expect(violatesAllergy(nutBar, ["cashew"])).toBe(true);
+  });
+  it("passt bei leeren Tokens", () => {
+    expect(violatesAllergy(nutBar, [])).toBe(false);
+    expect(violatesAllergy(nutBar, undefined)).toBe(false);
+  });
+  it("ignoriert zu kurze Tokens (Substring-Fehlmatches)", () => {
+    expect(violatesAllergy(nutBar, ["ei"])).toBe(false);
+  });
+});
+
+describe("mealPrepFitScore", () => {
+  const prepOk = { id: "p", name: "x", category: "lunch" as const, kcal: 500, protein_g: 30, carbs_g: 55, fat_g: 15, suitable_training: true, suitable_rest: true, no_go_ingredients: [], mealprep_ok: true, description: null };
+  const fresh = { ...prepOk, id: "f", mealprep_ok: false };
+  it("bestraft frische Rezepte bei meal_prep-Stil", () => {
+    expect(mealPrepFitScore(fresh, "meal_prep")).toBeGreaterThan(0);
+    expect(mealPrepFitScore(prepOk, "meal_prep")).toBe(0);
+  });
+  it("neutral bei daily/low_effort", () => {
+    expect(mealPrepFitScore(fresh, "daily")).toBe(0);
+    expect(mealPrepFitScore(fresh, "low_effort")).toBe(0);
+  });
+});
+
+describe("pickMealsForDay — diet & allergy integration", () => {
+  it("filtert vegan-inkompatible Meals automatisch aus", () => {
+    const pool: PoolMeal[] = [
+      { id: "b1", name: "Rührei mit Toast", description: null, category: "breakfast", kcal: 500, protein_g: 30, carbs_g: 40, fat_g: 20, suitable_training: true, suitable_rest: true, no_go_ingredients: [], mealprep_ok: true },
+      { id: "b2", name: "Hafer mit Beeren", description: null, category: "breakfast", kcal: 480, protein_g: 20, carbs_g: 70, fat_g: 10, suitable_training: true, suitable_rest: true, no_go_ingredients: [], mealprep_ok: true },
+      { id: "l1", name: "Tofu Bowl", description: null, category: "lunch", kcal: 700, protein_g: 40, carbs_g: 80, fat_g: 20, suitable_training: true, suitable_rest: true, no_go_ingredients: [], mealprep_ok: true },
+      { id: "d1", name: "Linsencurry", description: null, category: "dinner", kcal: 650, protein_g: 35, carbs_g: 90, fat_g: 15, suitable_training: true, suitable_rest: true, no_go_ingredients: [], mealprep_ok: true },
+      { id: "s1", name: "Nussmix", description: null, category: "snack", kcal: 300, protein_g: 10, carbs_g: 15, fat_g: 25, suitable_training: true, suitable_rest: true, no_go_ingredients: [], mealprep_ok: true },
+    ];
+    const r = pickMealsForDay({
+      target: { kcal: 2400, protein_g: 140, carbs_g: 260, fat_g: 80 },
+      dayType: "REST",
+      preferences: { no_go_ingredients: [], wants_snack: true, diet_style: "vegan" },
+      poolMeals: pool,
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.meals.find((m) => m.library_meal_id === "b1")).toBeUndefined();
+    expect(r.meals.find((m) => m.library_meal_id === "b2")).toBeDefined();
   });
 });

@@ -224,7 +224,9 @@ export async function generateOrUpdatePerformanceNutritionWeekAdmin(
       .maybeSingle(),
     supabase
       .from("smart_nutrition_profile")
-      .select("nogo_foods")
+      .select(
+        "nogo_foods, extra_nogos, allergies, extra_allergies, intolerances, diet_style, eating_style, meal_prep_style, meal_prep_days",
+      )
       .eq("user_id", userId)
       .maybeSingle(),
   ]);
@@ -235,13 +237,36 @@ export async function generateOrUpdatePerformanceNutritionWeekAdmin(
     ? Number(calibRow.personal_calibration_kcal)
     : 0;
 
-  const profileMissing =
+  // Engine-Readiness: Biometrie + PNP-Pflichtfelder.
+  const engineMissing =
     !profileRow?.birthdate ||
     !profileRow?.height_cm ||
     weightKg == null ||
     !pnpRow?.sex_for_energy_calculation ||
     !pnpRow?.baseline_daily_activity ||
     !pnpRow?.performance_goal;
+
+  // Meal-Planning-Readiness: SNP-Pflichtfelder für sicheren Plan-Builder.
+  // `diet_style`, `meal_prep_style` gesetzt; `allergies`/`intolerances`
+  // müssen bewusst gepflegt (auch leer) sein — NULL = ungeprüft = nicht ready.
+  const snp = smartProfile as {
+    nogo_foods?: string[] | null;
+    extra_nogos?: string | null;
+    allergies?: string[] | null;
+    extra_allergies?: string | null;
+    intolerances?: string[] | null;
+    diet_style?: string | null;
+    eating_style?: string | null;
+    meal_prep_style?: string | null;
+    meal_prep_days?: number | null;
+  } | null;
+  const mealPlanningMissing =
+    !snp?.diet_style ||
+    !snp?.meal_prep_style ||
+    snp?.allergies == null ||
+    snp?.intolerances == null;
+
+  const profileMissing = engineMissing || mealPlanningMissing;
 
   // 2) Load recipe pool once (system + coach library, active only).
   const { data: poolRows } = await supabase
@@ -265,9 +290,30 @@ export async function generateOrUpdatePerformanceNutritionWeekAdmin(
     mealprep_ok: !!r.mealprep_ok,
   }));
 
+  // Merge Allergie-Tokens: allergies + tokenisierte extra_allergies + intolerances.
+  const allergyTokens: string[] = [
+    ...(snp?.allergies ?? []),
+    ...(snp?.intolerances ?? []),
+    ...((snp?.extra_allergies ?? "")
+      .split(/[,;\n]/)
+      .map((t) => t.trim())
+      .filter((t) => t.length >= 3)),
+  ];
+  const extraNogoTerms: string[] = (snp?.extra_nogos ?? "")
+    .split(/[,;\n]/)
+    .map((t) => t.trim())
+    .filter((t) => t.length >= 3);
+
+  // wants_snack: eating_style=fresh mit meal_prep_days<=2 → true; sonst true.
+  const wantsSnack = true;
+
   const preferences: AthletePreferences = {
-    no_go_ingredients: (smartProfile?.nogo_foods as string[] | null) ?? [],
-    wants_snack: true,
+    no_go_ingredients: (snp?.nogo_foods as string[] | null) ?? [],
+    extra_nogo_terms: extraNogoTerms,
+    allergy_tokens: allergyTokens,
+    diet_style: (snp?.diet_style as AthletePreferences["diet_style"]) ?? null,
+    meal_prep_style: (snp?.meal_prep_style as AthletePreferences["meal_prep_style"]) ?? null,
+    wants_snack: wantsSnack,
   };
 
   // 3) Ensure a Performance Plan container exists (nutrition_plans row).

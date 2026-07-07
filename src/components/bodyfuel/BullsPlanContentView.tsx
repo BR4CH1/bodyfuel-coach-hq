@@ -15,6 +15,7 @@
  *   Coach-/Planvorgabe, Mengenanpassung folgt dem Performance Target.
  */
 import { useEffect, useMemo, useState } from "react";
+import { Link, useParams } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -89,6 +90,8 @@ export function BullsPlanContentView() {
   const { supabaseUser } = useSession();
   const clientId = supabaseUser?.id;
   const getEngineFn = useServerFn(getBullsDailyNutritionTargets);
+  const params = useParams({ strict: false }) as { orgSlug?: string };
+  const orgSlug = params.orgSlug;
 
   const [date, setDate] = useState<string>(today());
 
@@ -306,13 +309,23 @@ export function BullsPlanContentView() {
           Vervollständige dein Bulls-Profil
         </h2>
         <p className="mt-1 text-xs text-muted-foreground">
-          Damit dein individuelles Tagesziel (kcal + Makros) berechnet werden
-          kann, brauchen wir Geburtsdatum, Größe, Gewicht, Geschlecht,
-          Alltagsaktivität und dein Performance-Ziel.
+          Damit dein individueller Ernährungsplan automatisch erstellt werden kann,
+          brauchen wir noch ein paar Angaben zu dir: Biometrie, Ziel, Lieblingsfoods,
+          No-Gos, Allergien und Meal-Prep-Vorlieben.
         </p>
+        {orgSlug ? (
+          <Link
+            to="/$orgSlug/onboarding"
+            params={{ orgSlug }}
+            className="mt-4 inline-flex items-center gap-2 rounded-lg bg-gold px-4 py-2 text-xs font-bold uppercase tracking-wider text-black hover:bg-gold/90"
+          >
+            Profil vervollständigen
+          </Link>
+        ) : null}
       </div>
     );
   }
+
 
   const target = engine.targets;
 

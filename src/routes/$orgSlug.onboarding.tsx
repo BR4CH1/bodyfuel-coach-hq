@@ -9,6 +9,8 @@ import {
   completeOrganizationOnboardingV2,
   completeStaffOrganizationOnboarding,
 } from "@/lib/organizations/athlete.functions";
+import { savePerformanceNutritionPreferences } from "@/lib/performance-nutrition/onboarding.functions";
+import { supabase } from "@/integrations/supabase/client";
 import { deriveOrgRole } from "@/lib/organizations/org-role";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,6 +60,41 @@ const PERFORMANCE_NUTRITION_GOAL_OPTIONS = [
   { v: "PERFORMANCE", l: "Leistung / Performance" },
   { v: "MUSCLE_GAIN", l: "Muskelaufbau" },
 ] as const;
+
+
+// --- Persönliche Ernährungspräferenzen (SNP-Chips wiederverwendet) ---
+const FAVORITE_FOODS_CHIPS = [
+  "Hähnchen", "Rind", "Pute", "Eier", "Skyr", "Fisch", "Reis", "Nudeln",
+  "Kartoffeln", "Wraps", "Haferflocken", "Obst", "Gemüse", "Käse", "Nüsse", "Proteinpulver",
+];
+const ALLERGY_CHIPS = ["Laktose", "Gluten", "Nüsse", "Soja", "Ei", "Fisch", "Meeresfrüchte"];
+const INTOLERANCE_CHIPS = ["Fructose", "Histamin", "Sorbit", "FODMAP"];
+const DIET_STYLE_OPTIONS = [
+  { v: "omnivore", l: "Alles / Omnivor" },
+  { v: "flexitarian", l: "Flexitarisch (selten Fleisch)" },
+  { v: "pescetarian", l: "Pescetarisch (Fisch, kein Fleisch)" },
+  { v: "vegetarian", l: "Vegetarisch" },
+  { v: "vegan", l: "Vegan" },
+  { v: "other", l: "Andere / Sonstige" },
+] as const;
+const EATING_STYLE_OPTIONS = [
+  { v: "meal_prep", l: "Meal Prep (viel vorkochen)" },
+  { v: "fresh", l: "Frisch täglich zubereiten" },
+  { v: "mixed", l: "Gemischt" },
+] as const;
+const MEAL_PREP_STYLE_OPTIONS = [
+  { v: "daily", l: "Täglich frisch kochen" },
+  { v: "2_3_week", l: "2-3x pro Woche kochen" },
+  { v: "meal_prep", l: "Meal Prep für die ganze Woche" },
+  { v: "low_effort", l: "So wenig kochen wie möglich" },
+] as const;
+
+// Auto-Ableitung: profiles.gender → sex_for_energy_calculation.
+function deriveEnergySex(gender: string | null | undefined): "MALE" | "FEMALE" | "UNSPECIFIED" {
+  if (gender === "male") return "MALE";
+  if (gender === "female") return "FEMALE";
+  return "UNSPECIFIED";
+}
 
 // Sichtbare Funktions-Labels. Diese Auswahl ist rein kosmetisch — die
 // technische Rolle (`staff_assignments.role`) wird ausschließlich über die
@@ -157,6 +194,7 @@ function OrgOnboardingDispatcher() {
 
 function AthleteOnboarding({ ctx }: { ctx: NonNullable<Awaited<ReturnType<typeof getOrganizationContext>>> }) {
   const { org } = OrgLayoutRoute.useLoaderData();
+  const { supabaseUser } = useSession();
   const navigate = useNavigate();
   const complete = useServerFn(completeOrganizationOnboardingV2);
 
@@ -181,6 +219,23 @@ function AthleteOnboarding({ ctx }: { ctx: NonNullable<Awaited<ReturnType<typeof
   const [baselineActivity, setBaselineActivity] = useState<string>("");
   const [nutritionGoal, setNutritionGoal] = useState<string>("");
 
+  // Persönliche Ernährungspräferenzen (source of truth: smart_nutrition_profile)
+  const [favFoods, setFavFoods] = useState<string[]>([]);
+  const [extraFavs, setExtraFavs] = useState<string>("");
+  const [nogoFoods, setNogoFoods] = useState<string[]>([]);
+  const [extraNogos, setExtraNogos] = useState<string>("");
+  const [allergies, setAllergies] = useState<string[]>([]);
+  const [extraAllergies, setExtraAllergies] = useState<string>("");
+  const [intolerances, setIntolerances] = useState<string[]>([]);
+  const [dietStyle, setDietStyle] = useState<string>("");
+  const [dietNotes, setDietNotes] = useState<string>("");
+  const [eatingStyle, setEatingStyle] = useState<string>("");
+  const [mealPrepStyle, setMealPrepStyle] = useState<string>("");
+  const [allergiesTouched, setAllergiesTouched] = useState(false);
+  const [intolerancesTouched, setIntolerancesTouched] = useState(false);
+
+  const savePrefs = useServerFn(savePerformanceNutritionPreferences);
+
   useEffect(() => {
     const tm: any = ctx.team_membership;
     if (tm?.team_id) setTeamId(tm.team_id);
@@ -192,7 +247,40 @@ function AthleteOnboarding({ ctx }: { ctx: NonNullable<Awaited<ReturnType<typeof
     if (Array.isArray(tm?.available_training_days)) setDays(tm.available_training_days);
     if (tm?.limitations) setLimitations(tm.limitations);
     if (tm?.personal_goal) setGoal(tm.personal_goal);
+    // Auto-Ableitung: Geschlecht aus profiles → Energieberechnung.
+    const g = (ctx.profile as { gender?: string | null } | null)?.gender ?? null;
+    if (g) setEnergySex(deriveEnergySex(g));
   }, [ctx]);
+
+  // Prefill der SNP-Präferenzen (falls Athlet bereits Smart-Onboarding hatte).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: snp } = await supabase
+        .from("smart_nutrition_profile")
+        .select(
+          "favorite_foods, extra_favorites, nogo_foods, extra_nogos, allergies, extra_allergies, intolerances, diet_style, diet_notes, eating_style, meal_prep_style",
+        )
+        .eq("user_id", supabaseUser?.id ?? "")
+        .maybeSingle();
+      if (cancelled || !snp) return;
+      const s = snp as Record<string, any>;
+      if (Array.isArray(s.favorite_foods)) setFavFoods(s.favorite_foods);
+      if (s.extra_favorites) setExtraFavs(s.extra_favorites);
+      if (Array.isArray(s.nogo_foods)) setNogoFoods(s.nogo_foods);
+      if (s.extra_nogos) setExtraNogos(s.extra_nogos);
+      if (Array.isArray(s.allergies)) { setAllergies(s.allergies); setAllergiesTouched(true); }
+      if (s.extra_allergies) setExtraAllergies(s.extra_allergies);
+      if (Array.isArray(s.intolerances)) { setIntolerances(s.intolerances); setIntolerancesTouched(true); }
+      if (s.diet_style) setDietStyle(s.diet_style);
+      if (s.diet_notes) setDietNotes(s.diet_notes);
+      if (s.eating_style) setEatingStyle(s.eating_style);
+      if (s.meal_prep_style) setMealPrepStyle(s.meal_prep_style);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [supabaseUser?.id]);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -205,7 +293,13 @@ function AthleteOnboarding({ ctx }: { ctx: NonNullable<Awaited<ReturnType<typeof
       if (!energySex) throw new Error("Bitte Angabe zum biologischen Geschlecht für die Energieberechnung.");
       if (!baselineActivity) throw new Error("Bitte Alltagsaktivität angeben.");
       if (!nutritionGoal) throw new Error("Bitte Ernährungsziel angeben.");
-      return complete({
+      if (!dietStyle) throw new Error("Bitte Ernährungsform angeben.");
+      if (!mealPrepStyle) throw new Error("Bitte angeben, wie du kochen willst.");
+      if (!allergiesTouched) throw new Error("Bitte bestätige, ob du Allergien hast (auch ohne Auswahl).");
+      if (!intolerancesTouched) throw new Error("Bitte bestätige, ob du Unverträglichkeiten hast (auch ohne Auswahl).");
+
+      // 1) Basisdaten + PNP-Engine-Felder + org membership.
+      await complete({
         data: {
           organization_id: ctx.organization.id,
           team_id: teamId,
@@ -233,6 +327,25 @@ function AthleteOnboarding({ ctx }: { ctx: NonNullable<Awaited<ReturnType<typeof
             | "MUSCLE_GAIN",
         },
       });
+
+      // 2) Persönliche Nutrition-Präferenzen (SNP) — sparse upsert.
+      await savePrefs({
+        data: {
+          organizationId: ctx.organization.id,
+          favorite_foods: favFoods,
+          extra_favorites: extraFavs || null,
+          nogo_foods: nogoFoods,
+          extra_nogos: extraNogos || null,
+          allergies: allergies,
+          extra_allergies: extraAllergies || null,
+          intolerances: intolerances,
+          diet_style: dietStyle,
+          diet_notes: dietNotes || null,
+          eating_style: eatingStyle || null,
+          meal_prep_style: mealPrepStyle,
+        },
+      });
+      return { ok: true };
     },
     onSuccess: () => {
       toast.success(`Willkommen bei ${org.name}!`);
@@ -389,6 +502,93 @@ function AthleteOnboarding({ ctx }: { ctx: NonNullable<Awaited<ReturnType<typeof
             </Select>
           </Field>
         </div>
+
+        <SectionHeader className="mt-6">Ernährungsform</SectionHeader>
+        <div className="grid gap-4">
+          <Field label="Wie ernährst du dich? *">
+            <Select value={dietStyle} onValueChange={setDietStyle}>
+              <SelectTrigger><SelectValue placeholder="Auswählen" /></SelectTrigger>
+              <SelectContent>
+                {DIET_STYLE_OPTIONS.map((o) => (
+                  <SelectItem key={o.v} value={o.v}>{o.l}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label="Anmerkungen zur Ernährung (optional)">
+            <Textarea value={dietNotes} onChange={(e) => setDietNotes(e.target.value)} rows={2} placeholder="z.B. wenig Rotes Fleisch, kein Schweinefleisch..." />
+          </Field>
+        </div>
+
+        <SectionHeader className="mt-6">Lieblingsfoods</SectionHeader>
+        <div className="grid gap-3">
+          <Field label="Was isst du besonders gerne?">
+            <ChipGrid items={FAVORITE_FOODS_CHIPS} selected={favFoods} onChange={setFavFoods} bg={bg} />
+          </Field>
+          <Field label="Weitere Lieblingsfoods (optional)">
+            <Textarea value={extraFavs} onChange={(e) => setExtraFavs(e.target.value)} rows={2} placeholder="Kommagetrennt: z.B. Süßkartoffel, Linsen, Tofu" />
+          </Field>
+        </div>
+
+        <SectionHeader className="mt-6">Was du NICHT essen willst</SectionHeader>
+        <div className="grid gap-3">
+          <Field label="No-Gos aus der Liste">
+            <ChipGrid items={FAVORITE_FOODS_CHIPS} selected={nogoFoods} onChange={setNogoFoods} bg={bg} />
+          </Field>
+          <Field label="Weitere No-Gos (optional)">
+            <Textarea value={extraNogos} onChange={(e) => setExtraNogos(e.target.value)} rows={2} placeholder="Kommagetrennt: z.B. Rosenkohl, Sellerie" />
+          </Field>
+        </div>
+
+        <SectionHeader className="mt-6">Allergien & Unverträglichkeiten</SectionHeader>
+        <p className="mb-3 text-[11px] text-muted-foreground">
+          Sicherheitsrelevant — dein Plan wird streng gefiltert. Wenn du keine hast, wähle einfach nichts aus und tippe auf „Keine Allergien / Unverträglichkeiten".
+        </p>
+        <div className="grid gap-3">
+          <Field label="Allergien">
+            <ChipGrid items={ALLERGY_CHIPS} selected={allergies} onChange={(v) => { setAllergies(v); setAllergiesTouched(true); }} bg={bg} />
+          </Field>
+          <Field label="Weitere Allergien (optional)">
+            <Input value={extraAllergies} onChange={(e) => setExtraAllergies(e.target.value)} placeholder="Kommagetrennt" />
+          </Field>
+          <Field label="Unverträglichkeiten">
+            <ChipGrid items={INTOLERANCE_CHIPS} selected={intolerances} onChange={(v) => { setIntolerances(v); setIntolerancesTouched(true); }} bg={bg} />
+          </Field>
+          {(!allergiesTouched || !intolerancesTouched) && (
+            <button
+              type="button"
+              onClick={() => { setAllergies([]); setAllergiesTouched(true); setIntolerances([]); setIntolerancesTouched(true); }}
+              className="mt-1 self-start rounded-md border border-border bg-card px-3 py-1.5 text-xs font-semibold"
+            >
+              Keine Allergien / Unverträglichkeiten
+            </button>
+          )}
+        </div>
+
+        <SectionHeader className="mt-6">Essalltag & Meal Prep</SectionHeader>
+        <div className="grid gap-4">
+          <Field label="Wie möchtest du deine Mahlzeiten vorbereiten? *">
+            <Select value={mealPrepStyle} onValueChange={setMealPrepStyle}>
+              <SelectTrigger><SelectValue placeholder="Auswählen" /></SelectTrigger>
+              <SelectContent>
+                {MEAL_PREP_STYLE_OPTIONS.map((o) => (
+                  <SelectItem key={o.v} value={o.v}>{o.l}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label="Grundsätzlicher Essalltag (optional)">
+            <Select value={eatingStyle} onValueChange={setEatingStyle}>
+              <SelectTrigger><SelectValue placeholder="Auswählen" /></SelectTrigger>
+              <SelectContent>
+                {EATING_STYLE_OPTIONS.map((o) => (
+                  <SelectItem key={o.v} value={o.v}>{o.l}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+        </div>
+
 
 
 
@@ -558,6 +758,41 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     <div>
       <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{label}</Label>
       <div className="mt-1.5">{children}</div>
+    </div>
+  );
+}
+
+function ChipGrid({
+  items,
+  selected,
+  onChange,
+  bg,
+}: {
+  items: string[];
+  selected: string[];
+  onChange: (next: string[]) => void;
+  bg: string;
+}) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {items.map((it) => {
+        const on = selected.includes(it);
+        return (
+          <button
+            key={it}
+            type="button"
+            onClick={() =>
+              onChange(on ? selected.filter((x) => x !== it) : [...selected, it])
+            }
+            className={`rounded-md border px-3 py-1.5 text-xs font-semibold ${
+              on ? "border-transparent text-white" : "border-border bg-card"
+            }`}
+            style={on ? { background: bg } : {}}
+          >
+            {it}
+          </button>
+        );
+      })}
     </div>
   );
 }
