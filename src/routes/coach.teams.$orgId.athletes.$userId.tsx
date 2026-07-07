@@ -1,7 +1,10 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
+import { deleteOrgAthlete } from "@/lib/organizations/athlete-admin.functions";
+import { Trash2 } from "lucide-react";
 import {
   ArrowLeft,
   ArrowDownRight,
