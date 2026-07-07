@@ -1,14 +1,16 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CheckCircle2, XCircle, Edit3, Loader2 } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
+import { useSession } from "@/lib/bodyfuel/session";
 import {
   listPendingPerformanceTests,
   listPerformanceCheckStats,
   decidePerformanceTest,
   getVideoSignedUrl,
+  getMyPerformanceAccess,
 } from "@/lib/bulls-performance.functions";
 import { getProfile } from "@/lib/performance-profiles";
 
@@ -22,10 +24,53 @@ export const Route = createFileRoute("/coach/bulls-performance")({
 });
 
 function CoachPage() {
+  const navigate = useNavigate();
+  const { supabaseUser, loading: sessionLoading } = useSession();
+  const accessFn = useServerFn(getMyPerformanceAccess);
+  const accessQ = useQuery({
+    queryKey: ["bulls-perf-access"],
+    queryFn: () => accessFn(),
+    retry: false,
+    staleTime: 60_000,
+    enabled: !!supabaseUser,
+  });
+  const canCoach = accessQ.data?.canCoach === true;
+
+  useEffect(() => {
+    if (sessionLoading) return;
+    if (!supabaseUser) {
+      navigate({ to: "/auth" });
+      return;
+    }
+    if (accessQ.isSuccess && !canCoach) {
+      navigate({ to: "/bulls" });
+    }
+    if (accessQ.isError) {
+      navigate({ to: "/bulls" });
+    }
+  }, [sessionLoading, supabaseUser, accessQ.isSuccess, accessQ.isError, canCoach, navigate]);
+
   const listFn = useServerFn(listPendingPerformanceTests);
   const statsFn = useServerFn(listPerformanceCheckStats);
-  const listQ = useQuery({ queryKey: ["bulls-perf-pending"], queryFn: () => listFn() });
-  const statsQ = useQuery({ queryKey: ["bulls-perf-stats"], queryFn: () => statsFn() });
+  const listQ = useQuery({
+    queryKey: ["bulls-perf-pending"],
+    queryFn: () => listFn(),
+    enabled: canCoach,
+  });
+  const statsQ = useQuery({
+    queryKey: ["bulls-perf-stats"],
+    queryFn: () => statsFn(),
+    enabled: canCoach,
+  });
+
+  if (!supabaseUser || accessQ.isPending || (accessQ.isSuccess && !canCoach)) {
+    return (
+      <div className="mx-auto max-w-4xl p-6 text-sm text-muted-foreground">
+        Zugriff wird geprüft…
+      </div>
+    );
+  }
+
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 p-4 sm:p-6">
