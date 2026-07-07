@@ -117,11 +117,14 @@ export function BullsPlanContentView() {
     let cancelled = false;
     (async () => {
       setLoadingMeals(true);
+      // Bulls/Performance-Kontext: ausschließlich performance_context=true.
+      // Der persönliche BodyFuel-Plan bleibt hier bewusst außen vor.
       const { data: planRow } = await supabase
         .from("nutrition_plans")
         .select("id")
         .eq("client_id", clientId)
         .eq("plan_type", "nutrition")
+        .eq("performance_context", true)
         .eq("is_active", true)
         .maybeSingle();
       if (!planRow) {
