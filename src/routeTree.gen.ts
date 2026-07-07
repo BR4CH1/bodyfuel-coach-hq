@@ -133,6 +133,7 @@ import { Route as ApiPublicHooksTrialRemindersRouteImport } from './routes/api/p
 import { Route as ApiPublicHooksSendFeatureNewsRouteImport } from './routes/api/public/hooks/send-feature-news'
 import { Route as ApiPublicHooksRegenTrainingPlansRouteImport } from './routes/api/public/hooks/regen-training-plans'
 import { Route as ApiPublicHooksRegenNutritionPlansRouteImport } from './routes/api/public/hooks/regen-nutrition-plans'
+import { Route as ApiPublicHooksProcessPerformancePlanJobsRouteImport } from './routes/api/public/hooks/process-performance-plan-jobs'
 import { Route as ApiPublicHooksProcessAutopilotJobsRouteImport } from './routes/api/public/hooks/process-autopilot-jobs'
 import { Route as ApiPublicHooksPlanRotationRouteImport } from './routes/api/public/hooks/plan-rotation'
 import { Route as ApiPublicHooksOrgTaskEngineRouteImport } from './routes/api/public/hooks/org-task-engine'
@@ -783,6 +784,12 @@ const ApiPublicHooksRegenNutritionPlansRoute =
     path: '/api/public/hooks/regen-nutrition-plans',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksProcessPerformancePlanJobsRoute =
+  ApiPublicHooksProcessPerformancePlanJobsRouteImport.update({
+    id: '/api/public/hooks/process-performance-plan-jobs',
+    path: '/api/public/hooks/process-performance-plan-jobs',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksProcessAutopilotJobsRoute =
   ApiPublicHooksProcessAutopilotJobsRouteImport.update({
     id: '/api/public/hooks/process-autopilot-jobs',
@@ -935,6 +942,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/org-task-engine': typeof ApiPublicHooksOrgTaskEngineRoute
   '/api/public/hooks/plan-rotation': typeof ApiPublicHooksPlanRotationRoute
   '/api/public/hooks/process-autopilot-jobs': typeof ApiPublicHooksProcessAutopilotJobsRoute
+  '/api/public/hooks/process-performance-plan-jobs': typeof ApiPublicHooksProcessPerformancePlanJobsRoute
   '/api/public/hooks/regen-nutrition-plans': typeof ApiPublicHooksRegenNutritionPlansRoute
   '/api/public/hooks/regen-training-plans': typeof ApiPublicHooksRegenTrainingPlansRoute
   '/api/public/hooks/send-feature-news': typeof ApiPublicHooksSendFeatureNewsRoute
@@ -1056,6 +1064,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/org-task-engine': typeof ApiPublicHooksOrgTaskEngineRoute
   '/api/public/hooks/plan-rotation': typeof ApiPublicHooksPlanRotationRoute
   '/api/public/hooks/process-autopilot-jobs': typeof ApiPublicHooksProcessAutopilotJobsRoute
+  '/api/public/hooks/process-performance-plan-jobs': typeof ApiPublicHooksProcessPerformancePlanJobsRoute
   '/api/public/hooks/regen-nutrition-plans': typeof ApiPublicHooksRegenNutritionPlansRoute
   '/api/public/hooks/regen-training-plans': typeof ApiPublicHooksRegenTrainingPlansRoute
   '/api/public/hooks/send-feature-news': typeof ApiPublicHooksSendFeatureNewsRoute
@@ -1189,6 +1198,7 @@ export interface FileRoutesById {
   '/api/public/hooks/org-task-engine': typeof ApiPublicHooksOrgTaskEngineRoute
   '/api/public/hooks/plan-rotation': typeof ApiPublicHooksPlanRotationRoute
   '/api/public/hooks/process-autopilot-jobs': typeof ApiPublicHooksProcessAutopilotJobsRoute
+  '/api/public/hooks/process-performance-plan-jobs': typeof ApiPublicHooksProcessPerformancePlanJobsRoute
   '/api/public/hooks/regen-nutrition-plans': typeof ApiPublicHooksRegenNutritionPlansRoute
   '/api/public/hooks/regen-training-plans': typeof ApiPublicHooksRegenTrainingPlansRoute
   '/api/public/hooks/send-feature-news': typeof ApiPublicHooksSendFeatureNewsRoute
@@ -1323,6 +1333,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/org-task-engine'
     | '/api/public/hooks/plan-rotation'
     | '/api/public/hooks/process-autopilot-jobs'
+    | '/api/public/hooks/process-performance-plan-jobs'
     | '/api/public/hooks/regen-nutrition-plans'
     | '/api/public/hooks/regen-training-plans'
     | '/api/public/hooks/send-feature-news'
@@ -1444,6 +1455,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/org-task-engine'
     | '/api/public/hooks/plan-rotation'
     | '/api/public/hooks/process-autopilot-jobs'
+    | '/api/public/hooks/process-performance-plan-jobs'
     | '/api/public/hooks/regen-nutrition-plans'
     | '/api/public/hooks/regen-training-plans'
     | '/api/public/hooks/send-feature-news'
@@ -1576,6 +1588,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/org-task-engine'
     | '/api/public/hooks/plan-rotation'
     | '/api/public/hooks/process-autopilot-jobs'
+    | '/api/public/hooks/process-performance-plan-jobs'
     | '/api/public/hooks/regen-nutrition-plans'
     | '/api/public/hooks/regen-training-plans'
     | '/api/public/hooks/send-feature-news'
@@ -1652,6 +1665,7 @@ export interface RootRouteChildren {
   ApiPublicHooksOrgTaskEngineRoute: typeof ApiPublicHooksOrgTaskEngineRoute
   ApiPublicHooksPlanRotationRoute: typeof ApiPublicHooksPlanRotationRoute
   ApiPublicHooksProcessAutopilotJobsRoute: typeof ApiPublicHooksProcessAutopilotJobsRoute
+  ApiPublicHooksProcessPerformancePlanJobsRoute: typeof ApiPublicHooksProcessPerformancePlanJobsRoute
   ApiPublicHooksRegenNutritionPlansRoute: typeof ApiPublicHooksRegenNutritionPlansRoute
   ApiPublicHooksRegenTrainingPlansRoute: typeof ApiPublicHooksRegenTrainingPlansRoute
   ApiPublicHooksSendFeatureNewsRoute: typeof ApiPublicHooksSendFeatureNewsRoute
@@ -2534,6 +2548,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksRegenNutritionPlansRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/process-performance-plan-jobs': {
+      id: '/api/public/hooks/process-performance-plan-jobs'
+      path: '/api/public/hooks/process-performance-plan-jobs'
+      fullPath: '/api/public/hooks/process-performance-plan-jobs'
+      preLoaderRoute: typeof ApiPublicHooksProcessPerformancePlanJobsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/process-autopilot-jobs': {
       id: '/api/public/hooks/process-autopilot-jobs'
       path: '/api/public/hooks/process-autopilot-jobs'
@@ -2883,6 +2904,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicHooksPlanRotationRoute: ApiPublicHooksPlanRotationRoute,
   ApiPublicHooksProcessAutopilotJobsRoute:
     ApiPublicHooksProcessAutopilotJobsRoute,
+  ApiPublicHooksProcessPerformancePlanJobsRoute:
+    ApiPublicHooksProcessPerformancePlanJobsRoute,
   ApiPublicHooksRegenNutritionPlansRoute:
     ApiPublicHooksRegenNutritionPlansRoute,
   ApiPublicHooksRegenTrainingPlansRoute: ApiPublicHooksRegenTrainingPlansRoute,
