@@ -754,14 +754,63 @@ export const updateOrgStaffPermissions = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/**
+ * Staff entfernen. Zwei Modi:
+ *  - Standard: nur staff_assignment löschen (Person bleibt BODYFUEL-User).
+ *  - `delete_account: true`: gesamten BODYFUEL-Account löschen (Auth + Profile
+ *    + alle Zugehörigkeiten). Nur für Plattform-Coach oder Organization Admin
+ *    des betroffenen Vereins.
+ */
 export const removeOrgStaff = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id: string }) => d)
+  .inputValidator((d: { id: string; delete_account?: boolean }) => d)
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
-    const { error } = await supabase.from("staff_assignments").delete().eq("id", data.id);
-    if (error) throw new Error(error.message);
-    return { ok: true };
+    const { supabase, userId } = context;
+
+    // Ziel-Assignment laden für Auth-Checks.
+    const { data: target, error: tErr } = await supabase
+      .from("staff_assignments")
+      .select("id, user_id, organization_id, role")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (tErr) throw new Error(tErr.message);
+    if (!target) throw new Error("Staff-Zuweisung nicht gefunden.");
+
+    if ((target as any).user_id === userId) {
+      throw new Error("Du kannst dich nicht selbst entfernen.");
+    }
+
+    const [{ data: isCoach }, { data: isAdmin }] = await Promise.all([
+      supabase.rpc("has_role", { _user_id: userId, _role: "coach" }),
+      supabase.rpc("is_org_admin", { _user: userId, _org: (target as any).organization_id }),
+    ]);
+    if (!isCoach && !isAdmin) {
+      throw new Error("Keine Berechtigung, Mitarbeiter zu entfernen.");
+    }
+
+    if (!data.delete_account) {
+      const { error } = await supabase.from("staff_assignments").delete().eq("id", data.id);
+      if (error) throw new Error(error.message);
+      return { ok: true, deleted_account: false };
+    }
+
+    // Vollständige Account-Löschung — nutzt Service Role, um Auth-User + alle
+    // Zugehörigkeiten zu bereinigen. Reihenfolge folgt dem Muster aus
+    // deleteOrgAthlete.
+    const targetUserId = (target as any).user_id as string;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    await supabaseAdmin.from("payment_history").delete().eq("user_id", targetUserId);
+    await supabaseAdmin.from("customer_packages").delete().eq("user_id", targetUserId);
+    await supabaseAdmin.from("staff_assignments").delete().eq("user_id", targetUserId);
+    await supabaseAdmin.from("organization_memberships").delete().eq("user_id", targetUserId);
+    await supabaseAdmin.from("team_memberships").delete().eq("user_id", targetUserId);
+    await supabaseAdmin.from("user_roles").delete().eq("user_id", targetUserId);
+    await supabaseAdmin.from("profiles").delete().eq("id", targetUserId);
+
+    const { error: delErr } = await supabaseAdmin.auth.admin.deleteUser(targetUserId);
+    if (delErr) throw new Error(delErr.message);
+    return { ok: true, deleted_account: true };
   });
 
 /** List pending staff invites for an org. */
