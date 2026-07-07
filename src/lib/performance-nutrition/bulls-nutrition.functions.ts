@@ -331,16 +331,29 @@ export const getBullsDailyNutritionTargets = createServerFn({ method: "POST" })
 
 /**
  * Set the Bulls day-type override for a date.
- * kind=null clears the override (falls back to auto = REST).
+ *
+ * Contract: only the five real Performance Day Types are accepted. Legacy
+ * "training" / "rest" values from personal writers are NOT allowed here —
+ * they cannot be disambiguated in the Performance context. `kind=null`
+ * clears the override (falls back to auto = REST).
  */
 export const setBullsDayType = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
     (d: {
       date: string;
-      kind: BullsDayType | BullsDayTypeSimple | null;
+      kind: BullsDayType | null;
       session_intensity?: SessionIntensity | null;
-    }) => d,
+    }) => {
+      if (d.kind != null && !ALL_BULLS_DAY_TYPES.includes(d.kind)) {
+        throw new Error(
+          `Ungültiger Day Type "${String(
+            d.kind,
+          )}" — nur rest/strength/football_training/game_day/double_session sind erlaubt.`,
+        );
+      }
+      return d;
+    },
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
