@@ -3,6 +3,7 @@ import type { CoachAthleteDetail } from "@/lib/organizations/coach-athlete-drill
 import { MacroTargetsCard } from "@/components/bodyfuel/MacroTargetsCard";
 import { NutritionTargetsEditor } from "@/components/bodyfuel/NutritionTargetsEditor";
 import { PlanManagementCard } from "@/components/bodyfuel/PlanManagementCard";
+import { AthletePerformanceNutritionSection } from "./AthletePerformanceNutritionSection";
 import { Section, TinyMetric, fmtPct } from "./athlete-tab-shared";
 
 export function AthleteNutritionTab({
