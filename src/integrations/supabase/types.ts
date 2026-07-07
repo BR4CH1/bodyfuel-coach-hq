@@ -6136,7 +6136,7 @@ export type Database = {
         | "lat_pulldown"
         | "cable_row"
         | "plank"
-      team_membership_status: "active" | "inactive" | "removed"
+      team_membership_status: "active" | "inactive" | "removed" | "pending"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -6327,7 +6327,7 @@ export const Constants = {
         "cable_row",
         "plank",
       ],
-      team_membership_status: ["active", "inactive", "removed"],
+      team_membership_status: ["active", "inactive", "removed", "pending"],
     },
   },
 } as const
