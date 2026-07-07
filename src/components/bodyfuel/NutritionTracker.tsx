@@ -24,6 +24,7 @@ import {
 import {
   getBullsDailyNutritionTargets,
   setBullsDayType,
+  type BullsDayType,
 } from "@/lib/performance-nutrition/bulls-nutrition.functions";
 import { listCustomMeals, type CustomMeal } from "@/lib/custom-meals.functions";
 import { LOCAL_FOODS } from "@/lib/bodyfuel/localFoods";
