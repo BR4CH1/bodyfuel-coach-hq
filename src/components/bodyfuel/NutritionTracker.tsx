@@ -223,7 +223,7 @@ export function NutritionTracker({
 
   const [baseTargets, setBaseTargets] = useState<Targets>(DEFAULT_TARGETS);
   const [restTargets, setRestTargets] = useState<Targets | null>(null);
-  const [dayType, setDayTypeState] = useState<DayType>("training");
+  const [dayType, setDayTypeState] = useState<DayType | BullsDayType>("training");
   const [dayTypeSource, setDayTypeSource] = useState<"manual" | "auto">("auto");
   const [savingDayType, setSavingDayType] = useState(false);
 
