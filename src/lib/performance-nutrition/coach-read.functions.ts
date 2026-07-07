@@ -15,6 +15,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { calculatePerformanceNutritionTarget } from "./engine";
+import { collectPerformanceDayTypeSignals } from "./day-type-resolver.functions";
+import { resolvePerformanceDayTypeFromSignals } from "./day-type-resolver";
 import type {
   BaselineDailyActivity,
   EnergySex,
@@ -205,29 +207,19 @@ export const getCoachAthletePerformanceNutrition = createServerFn({ method: "POS
       ? Number(calib.personal_calibration_kcal)
       : 0;
 
-    // 6) Day type on requested date (only real Performance Day Types are
-    //    honoured — legacy "training" is ambiguous and falls back to REST +
-    //    surfaces a flag for the coach).
-    let activeDayType: CoachDayTypeKey = "rest";
-    let legacyOverrideIgnored = false;
-    const { data: dto } = await supabase
-      .from("day_type_overrides")
-      .select("kind")
-      .eq("user_id", target)
-      .eq("entry_date", data.date)
-      .maybeSingle();
-    const kind = (dto as any)?.kind ?? null;
-    if (
-      kind === "rest" ||
-      kind === "strength" ||
-      kind === "football_training" ||
-      kind === "game_day" ||
-      kind === "double_session"
-    ) {
-      activeDayType = kind;
-    } else if (kind === "training") {
-      legacyOverrideIgnored = true; // ambiguous — keep REST fallback
-    }
+    // 6) Day type on requested date — via the central Performance Day Type
+    //    Resolver (manual override with real perf type wins, then structural
+    //    priority ladder). Legacy "training" is never mapped silently.
+    const dayTypeSignals = await collectPerformanceDayTypeSignals(supabase, {
+      organizationId: orgId,
+      userId: target,
+      date: data.date,
+    });
+    const dayTypeResolution = resolvePerformanceDayTypeFromSignals(dayTypeSignals);
+    const activeDayType: CoachDayTypeKey = dayTypeResolution.dayType;
+    const legacyOverrideIgnored = dayTypeResolution.flags.includes(
+      "LEGACY_TRAINING_OVERRIDE_IGNORED",
+    );
 
     // 7) Last stored calculation (for engine status "letzte Berechnung")
     const { data: lastCalcRow } = await supabase

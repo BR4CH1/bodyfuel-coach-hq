@@ -20,6 +20,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { calculatePerformanceNutritionTarget } from "./engine";
+import { collectPerformanceDayTypeSignals } from "./day-type-resolver.functions";
+import { resolvePerformanceDayTypeFromSignals } from "./day-type-resolver";
 import type {
   BaselineDailyActivity,
   EnergySex,
@@ -111,44 +113,9 @@ function toMacroDTO(r: PerformanceNutritionResult): BullsMacroDTO | null {
   };
 }
 
-/**
- * Normalize a `day_type_overrides.kind` value read from the shared table into
- * one of the five real Performance Day Types.
- *
- * Contract:
- *   - Only the five real Performance Day Types resolve to a concrete kind.
- *   - Legacy personal writers (`DayTypePrompt`, personal `WeekScheduleCard`,
- *     `TrialPlanView`) still write "training"/"rest". Those values are
- *     AMBIGUOUS in the Performance context (a personal "training" day may be
- *     strength, football, double-session or a game day). We MUST NOT silently
- *     map "training" to `football_training` — that would produce a false
- *     positive classification. Legacy values return `null` and force the
- *     Performance layer to fall back to REST + surface a flag so the coach
- *     sees that the day needs an explicit Performance day-type entry.
- */
-function normalizeOverrideKind(kind: string | null | undefined): {
-  dayType: BullsDayType | null;
-  legacy: boolean;
-} {
-  if (!kind) return { dayType: null, legacy: false };
-  if (
-    kind === "rest" ||
-    kind === "strength" ||
-    kind === "football_training" ||
-    kind === "game_day" ||
-    kind === "double_session"
-  ) {
-    // Note: legacy personal "rest" carries the same semantic as Performance
-    // "rest" — treating it as REST is safe. Legacy personal "training" is
-    // NOT safe and is handled below.
-    return { dayType: kind as BullsDayType, legacy: false };
-  }
-  if (kind === "training") {
-    // Ambiguous legacy value from personal BodyFuel writers.
-    return { dayType: null, legacy: true };
-  }
-  return { dayType: null, legacy: false };
-}
+// (Legacy `normalizeOverrideKind` removed — day-type resolution now goes
+// through the central resolver in `./day-type-resolver.ts` +
+// `./day-type-resolver.functions.ts`. See `resolvePerformanceDayType`.)
 
 export const getBullsDailyNutritionTargets = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -224,7 +191,8 @@ export const getBullsDailyNutritionTargets = createServerFn({ method: "POST" })
     const position: string | null =
       tmRows && tmRows.length ? (tmRows[0] as any).position ?? null : null;
 
-    // 5) Day-type + session intensity resolution
+    // 5) Day-type + session intensity resolution — ALWAYS via the central
+    //    Performance Day Type Resolver (structural + manual, priority ladder).
     let dayType: BullsDayType;
     let dayTypeSource: "manual" | "auto";
     let sessionIntensity: SessionIntensity | null =
@@ -235,26 +203,34 @@ export const getBullsDailyNutritionTargets = createServerFn({ method: "POST" })
       dayType = data.day_type;
       dayTypeSource = "manual";
     } else {
-      const { data: dto } = await supabase
-        .from("day_type_overrides")
-        .select("kind, session_intensity")
-        .eq("user_id", userId)
-        .eq("entry_date", data.date)
-        .maybeSingle();
-      const norm = normalizeOverrideKind((dto as any)?.kind ?? null);
-      if (norm.dayType) {
-        dayType = norm.dayType;
-        dayTypeSource = "manual";
-        if (sessionIntensity == null) {
-          const si = (dto as any)?.session_intensity ?? null;
-          if (si === "LIGHT" || si === "MODERATE" || si === "HARD") {
-            sessionIntensity = si;
-          }
+      const signals = await collectPerformanceDayTypeSignals(supabase, {
+        organizationId,
+        userId,
+        date: data.date,
+      });
+      const resolution = resolvePerformanceDayTypeFromSignals(signals);
+      dayType = resolution.dayType;
+      dayTypeSource =
+        resolution.source === "manual_override" ? "manual" : "auto";
+      if (resolution.flags.includes("LEGACY_TRAINING_OVERRIDE_IGNORED")) {
+        legacyOverrideIgnored = true;
+      }
+
+      // Session intensity from the same override row (only when the manual
+      // override was honoured — otherwise structural detection has no
+      // intensity signal).
+      if (sessionIntensity == null && resolution.source === "manual_override") {
+        const { data: dtoRow } = await supabase
+          .from("day_type_overrides")
+          .select("session_intensity")
+          .eq("user_id", userId)
+          .eq("entry_date", data.date)
+          .maybeSingle();
+        const si = (dtoRow as { session_intensity?: string | null } | null)
+          ?.session_intensity ?? null;
+        if (si === "LIGHT" || si === "MODERATE" || si === "HARD") {
+          sessionIntensity = si;
         }
-      } else {
-        dayType = "rest";
-        dayTypeSource = "auto";
-        if (norm.legacy) legacyOverrideIgnored = true;
       }
     }
 
