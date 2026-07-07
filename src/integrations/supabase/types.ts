@@ -5557,6 +5557,10 @@ export type Database = {
           plan_type: string
         }[]
       }
+      can_view_org_member_profile: {
+        Args: { _target: string; _viewer: string }
+        Returns: boolean
+      }
       compute_macro_targets: { Args: { _user_id: string }; Returns: undefined }
       delete_email: {
         Args: { message_id: number; queue_name: string }
