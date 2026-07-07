@@ -280,7 +280,7 @@ function AthleteOnboarding({ ctx }: { ctx: NonNullable<Awaited<ReturnType<typeof
     return () => {
       cancelled = true;
     };
-  }, [ctx.profile?.id]);
+  }, [supabaseUser?.id]);
 
   const save = useMutation({
     mutationFn: async () => {
