@@ -65,6 +65,34 @@ export const savePerformanceNutritionProfile = createServerFn({ method: "POST" }
       { onConflict: "user_id,organization_id" },
     );
     if (error) throw new Error(error.message);
+
+    // Auto-Plan-Trigger: sobald das Performance-Profil vollständig ist,
+    // wird für diesen Athleten ein Ernährungsplan-Job für die aktuelle
+    // Woche eingereiht. Fehler brechen den Save nie.
+    const complete =
+      !!data.sex_for_energy_calculation &&
+      !!data.baseline_daily_activity &&
+      !!data.performance_goal;
+    if (complete) {
+      try {
+        const now = new Date();
+        const day = now.getUTCDay();
+        const monday = new Date(now);
+        monday.setUTCDate(now.getUTCDate() - ((day + 6) % 7));
+        const weekStart = monday.toISOString().slice(0, 10);
+        await supabase.from("performance_plan_jobs").insert({
+          organization_id: data.organization_id,
+          athlete_user_id: userId,
+          week_start: weekStart,
+          trigger: "PERFORMANCE_PROFILE_COMPLETED",
+          status: "pending",
+          created_by: userId,
+        });
+      } catch {
+        /* dedupe / RLS errors: best-effort */
+      }
+    }
+
     return { ok: true };
   });
 
