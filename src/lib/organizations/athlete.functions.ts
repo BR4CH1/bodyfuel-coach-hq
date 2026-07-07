@@ -324,6 +324,20 @@ export const completeOrganizationOnboardingV2 = createServerFn({ method: "POST" 
       // Athletische Basisdaten
       height_cm?: number | null;
       weight_kg?: number | null;
+      // Performance Nutrition Engine V1 (org-scoped)
+      sex_for_energy_calculation?: "MALE" | "FEMALE" | "UNSPECIFIED" | null;
+      baseline_daily_activity?:
+        | "MOSTLY_SEATED"
+        | "MIXED"
+        | "PHYSICALLY_ACTIVE"
+        | "VERY_PHYSICALLY_ACTIVE"
+        | null;
+      performance_nutrition_goal?:
+        | "FAT_LOSS"
+        | "MAINTENANCE"
+        | "PERFORMANCE"
+        | "MUSCLE_GAIN"
+        | null;
     }) => d,
   )
   .handler(async ({ data, context }) => {
