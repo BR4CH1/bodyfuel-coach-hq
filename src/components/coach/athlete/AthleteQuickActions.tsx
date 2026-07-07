@@ -185,7 +185,7 @@ function TaskDialog({
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Titel (z.B. „3× Sprint-Training diese Woche")"
+          placeholder="Titel (z.B. 3x Sprint-Training diese Woche)"
           className="w-full rounded border border-border bg-background px-3 py-2 text-sm"
           autoFocus
         />
