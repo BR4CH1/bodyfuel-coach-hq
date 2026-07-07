@@ -7,17 +7,16 @@ import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { BullsGate } from "@/components/bodyfuel/BullsGate";
 import { BullsHero } from "@/components/bodyfuel/BullsHero";
 import { useSession } from "@/lib/bodyfuel/session";
-import { useTrial } from "@/hooks/use-trial";
+
 import { trackHubEvent } from "@/lib/bulls.functions";
 import { getMySmartProfile } from "@/lib/smart-profile.functions";
 import { MacroTargetsCard } from "@/components/bodyfuel/MacroTargetsCard";
-import { PlanContentView } from "@/components/bodyfuel/PlanContentView";
+import { BullsPlanContentView } from "@/components/bodyfuel/BullsPlanContentView";
 import { WeekScheduleCard } from "@/components/bodyfuel/WeekScheduleCard";
 import { PlateauWarning } from "@/components/bodyfuel/PlateauWarning";
 import { DietPreferencesCard } from "@/components/bodyfuel/DietPreferencesCard";
 import { MealWishesCard } from "@/components/bodyfuel/MealWishesCard";
 import { CustomMealsCard } from "@/components/bodyfuel/CustomMealsCard";
-import { TrialNutritionPlan } from "@/components/bodyfuel/TrialPlanView";
 
 export const Route = createFileRoute("/bulls/nutrition/")({
   head: () => ({ meta: [{ title: "Ernährung — Bulls Hub" }] }),
@@ -37,7 +36,7 @@ function NutritionPage() {
   }, [track]);
 
   const { supabaseUser } = useSession();
-  const { isTrial, isExpired } = useTrial();
+  
 
   const getProfile = useServerFn(getMySmartProfile);
   const { data: profile } = useQuery({
@@ -141,18 +140,16 @@ function NutritionPage() {
         </Link>
       </div>
 
-      {supabaseUser?.id && profile?.completed_at && <WeekScheduleCard userId={supabaseUser.id} />}
+      {supabaseUser?.id && <WeekScheduleCard userId={supabaseUser.id} variant="bulls" />}
       <MacroTargetsCard userId={supabaseUser?.id} variant="bulls" />
       {supabaseUser?.id && <PlateauWarning userId={supabaseUser.id} />}
       {supabaseUser?.id && profile?.completed_at && <DietPreferencesCard />}
       {supabaseUser?.id && <MealWishesCard userId={supabaseUser.id} mode="client" />}
       {supabaseUser?.id && <CustomMealsCard userId={supabaseUser.id} />}
 
-      {isTrial || isExpired ? (
-        <TrialNutritionPlan />
-      ) : (
-        supabaseUser?.id && <PlanContentView clientId={supabaseUser.id} planType="nutrition" />
-      )}
+      {/* Bulls Performance: Engine ist Source of Truth — kein Trial-Plan,
+          keine planbasierte Zielaggregation. */}
+      {supabaseUser?.id && <BullsPlanContentView />}
     </div>
   );
 }

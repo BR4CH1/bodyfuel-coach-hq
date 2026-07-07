@@ -1156,6 +1156,7 @@ export type Database = {
           created_at: string
           entry_date: string
           kind: string
+          session_intensity: string | null
           updated_at: string
           user_id: string
         }
@@ -1163,6 +1164,7 @@ export type Database = {
           created_at?: string
           entry_date: string
           kind: string
+          session_intensity?: string | null
           updated_at?: string
           user_id: string
         }
@@ -1170,6 +1172,7 @@ export type Database = {
           created_at?: string
           entry_date?: string
           kind?: string
+          session_intensity?: string | null
           updated_at?: string
           user_id?: string
         }

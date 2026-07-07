@@ -24,7 +24,13 @@ import {
 import {
   getBullsDailyNutritionTargets,
   setBullsDayType,
+  BULLS_DAY_TYPE_LABELS,
+  type BullsDayType,
 } from "@/lib/performance-nutrition/bulls-nutrition.functions";
+
+function bullsDayTypeLabel(k: BullsDayType | string): string {
+  return (BULLS_DAY_TYPE_LABELS as Record<string, string>)[k] ?? String(k);
+}
 import { listCustomMeals, type CustomMeal } from "@/lib/custom-meals.functions";
 import { LOCAL_FOODS } from "@/lib/bodyfuel/localFoods";
 
@@ -222,7 +228,7 @@ export function NutritionTracker({
 
   const [baseTargets, setBaseTargets] = useState<Targets>(DEFAULT_TARGETS);
   const [restTargets, setRestTargets] = useState<Targets | null>(null);
-  const [dayType, setDayTypeState] = useState<DayType>("training");
+  const [dayType, setDayTypeState] = useState<DayType | BullsDayType>("training");
   const [dayTypeSource, setDayTypeSource] = useState<"manual" | "auto">("auto");
   const [savingDayType, setSavingDayType] = useState(false);
 
@@ -426,28 +432,22 @@ export function NutritionTracker({
         try {
           const b = await getBullsTargetsFn({ data: { date } });
           if (cancelled) return;
-          if (b.trainingTargets) {
+          // Use the ACTIVE engine target for the resolved day type — supports
+          // all 5 Bulls day types (rest / strength / football_training /
+          // game_day / double_session). No hardcoded training/rest split.
+          if (b.targets) {
             setBaseTargets({
-              kcal: b.trainingTargets.kcal,
-              protein_g: b.trainingTargets.protein_g,
-              carbs_g: b.trainingTargets.carbs_g,
-              fat_g: b.trainingTargets.fat_g,
+              kcal: b.targets.kcal,
+              protein_g: b.targets.protein_g,
+              carbs_g: b.targets.carbs_g,
+              fat_g: b.targets.fat_g,
               water_glasses: DEFAULT_TARGETS.water_glasses,
             });
           } else {
             setBaseTargets(DEFAULT_TARGETS);
           }
-          if (b.restTargets) {
-            setRestTargets({
-              kcal: b.restTargets.kcal,
-              protein_g: b.restTargets.protein_g,
-              carbs_g: b.restTargets.carbs_g,
-              fat_g: b.restTargets.fat_g,
-              water_glasses: DEFAULT_TARGETS.water_glasses,
-            });
-          } else {
-            setRestTargets(null);
-          }
+          // restTargets kept null in Bulls — 5 day types, no binary fallback.
+          setRestTargets(null);
           setDayTypeState(b.dayType);
           setDayTypeSource(b.dayTypeSource);
         } catch (err) {
@@ -496,34 +496,30 @@ export function NutritionTracker({
 
   const toggleDayType = async () => {
     if (!userId) return;
-    const next: DayType = dayType === "training" ? "rest" : "training";
     setSavingDayType(true);
-    setDayTypeState(next);
     setDayTypeSource("manual");
     try {
       if (isBulls) {
+        // In Bulls the tracker keeps a simple rest ↔ football_training toggle
+        // (the full 5-way selection lives in BullsWeekScheduleCard /
+        // BullsPlanContentView). Any non-rest current type flips to rest.
+        const next: BullsDayType = dayType === "rest" ? "football_training" : "rest";
+        setDayTypeState(next);
         await setBullsDayTypeFn({ data: { date, kind: next } });
-        // Refresh engine result so targets follow the new day type
         const b = await getBullsTargetsFn({ data: { date } });
-        if (b.trainingTargets) {
+        if (b.targets) {
           setBaseTargets({
-            kcal: b.trainingTargets.kcal,
-            protein_g: b.trainingTargets.protein_g,
-            carbs_g: b.trainingTargets.carbs_g,
-            fat_g: b.trainingTargets.fat_g,
+            kcal: b.targets.kcal,
+            protein_g: b.targets.protein_g,
+            carbs_g: b.targets.carbs_g,
+            fat_g: b.targets.fat_g,
             water_glasses: DEFAULT_TARGETS.water_glasses,
           });
         }
-        if (b.restTargets) {
-          setRestTargets({
-            kcal: b.restTargets.kcal,
-            protein_g: b.restTargets.protein_g,
-            carbs_g: b.restTargets.carbs_g,
-            fat_g: b.restTargets.fat_g,
-            water_glasses: DEFAULT_TARGETS.water_glasses,
-          });
-        }
+        setDayTypeState(b.dayType);
       } else {
+        const next: DayType = dayType === "training" ? "rest" : "training";
+        setDayTypeState(next);
         await setDayTypeFn({ data: { user_id: userId, date, kind: next } });
       }
     } catch (err) {
@@ -902,14 +898,20 @@ export function NutritionTracker({
           </div>
           <div>
             <div className="text-sm font-bold">
-              {dayType === "training" ? "Trainingstag" : "Restday"}
+              {isBulls
+                ? bullsDayTypeLabel(dayType as BullsDayType)
+                : dayType === "training"
+                  ? "Trainingstag"
+                  : "Restday"}
             </div>
             <div className="text-[11px] text-muted-foreground">
-              {restTargets
-                ? dayType === "training"
-                  ? `Training: ${baseTargets.kcal} kcal · P ${baseTargets.protein_g} · K ${baseTargets.carbs_g} · F ${baseTargets.fat_g}`
-                  : `Restday: ${restTargets.kcal} kcal · P ${restTargets.protein_g} · K ${restTargets.carbs_g} · F ${restTargets.fat_g}`
-                : "Im Plan ist kein Restday-Wert hinterlegt"}
+              {isBulls
+                ? `${baseTargets.kcal} kcal · P ${baseTargets.protein_g} · K ${baseTargets.carbs_g} · F ${baseTargets.fat_g}`
+                : restTargets
+                  ? dayType === "training"
+                    ? `Training: ${baseTargets.kcal} kcal · P ${baseTargets.protein_g} · K ${baseTargets.carbs_g} · F ${baseTargets.fat_g}`
+                    : `Restday: ${restTargets.kcal} kcal · P ${restTargets.protein_g} · K ${restTargets.carbs_g} · F ${restTargets.fat_g}`
+                  : "Im Plan ist kein Restday-Wert hinterlegt"}
               {" · "}
               {dayTypeSource === "auto" ? "automatisch erkannt" : "manuell gesetzt"}
             </div>
@@ -922,7 +924,11 @@ export function NutritionTracker({
             </Button>
           )}
           <Button size="sm" variant="outline" onClick={toggleDayType} disabled={savingDayType}>
-            Auf {dayType === "training" ? "Restday" : "Trainingstag"} ändern
+            {isBulls
+              ? dayType === "rest"
+                ? "Auf Football Training ändern"
+                : "Auf Restday ändern"
+              : `Auf ${dayType === "training" ? "Restday" : "Trainingstag"} ändern`}
           </Button>
         </div>
       </div>
