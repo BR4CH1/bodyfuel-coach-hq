@@ -54,10 +54,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       // Silent events that should never cause a UI flicker or profile reload
-      // (Supabase fires TOKEN_REFRESHED ~hourly + on tab focus; INITIAL_SESSION
-      // every mount). Re-loading profile here used to unmount mid-form state
+      // (Supabase fires TOKEN_REFRESHED ~hourly + on tab focus). Re-loading profile here used to unmount mid-form state
       // — e.g. losing a half-entered training set right before saving.
-      if (event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION" || event === "USER_UPDATED") {
+      if (event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
         setSupabaseUser(session?.user ?? null);
         return;
       }
@@ -76,11 +75,25 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    supabase.auth.getSession().then(async ({ data }) => {
-      setSupabaseUser(data.session?.user ?? null);
-      if (data.session?.user) await loadProfile(data.session.user.id);
-      setLoading(false);
-    });
+    supabase.auth.getSession()
+      .then(async ({ data }) => {
+        const user = data.session?.user ?? null;
+        setSupabaseUser(user);
+        if (user) {
+          await loadProfile(user.id);
+        } else {
+          setProfile(null);
+          setRole(null);
+          setGroups([]);
+        }
+      })
+      .catch(() => {
+        setSupabaseUser(null);
+        setProfile(null);
+        setRole(null);
+        setGroups([]);
+      })
+      .finally(() => setLoading(false));
 
     return () => sub.subscription.unsubscribe();
   }, []);
