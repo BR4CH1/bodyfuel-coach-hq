@@ -39,6 +39,7 @@ import {
   type CoachTaskState,
 } from "@/lib/coach-tasks.functions";
 import { generateCheckinDraft } from "@/lib/checkin-ai.functions";
+import { listPerformanceCheckStats } from "@/lib/bulls-performance.functions";
 import { toast } from "sonner";
 import {
   Select,
