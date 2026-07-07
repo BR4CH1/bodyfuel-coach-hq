@@ -78,6 +78,8 @@ function TestDetailPage() {
         </div>
       </section>
 
+      {test.demoVideoUrl && <DemoVideo url={test.demoVideoUrl} />}
+
       <SubmitForm moduleId={moduleId} testId={testId} test={test} playerPosition={bpQ.data?.position ?? null} />
 
       <section className="space-y-2">
