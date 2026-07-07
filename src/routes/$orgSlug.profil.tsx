@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { ChevronLeft } from "lucide-react";
 import { useSession } from "@/lib/bodyfuel/session";
+import { useEntitlements } from "@/lib/bodyfuel/entitlements";
 import { getOrgHomeData } from "@/lib/organizations/athlete.functions";
 import { OrgAthleteLayout } from "@/components/organizations/OrgAthleteLayout";
 import { Route as OrgLayoutRoute } from "./$orgSlug";
@@ -17,6 +18,7 @@ export const Route = createFileRoute("/$orgSlug/profil")({
 function OrgProfil() {
   const { org } = OrgLayoutRoute.useLoaderData();
   const { supabaseUser, loading } = useSession();
+  const entitlements = useEntitlements();
   const navigate = useNavigate();
   const fetchHome = useServerFn(getOrgHomeData);
 
@@ -55,18 +57,21 @@ function OrgProfil() {
         {tm?.personal_goal && <Row label="Persönliches Ziel" value={tm.personal_goal} />}
         {tm?.gym_access && <Row label="Gym-Zugang" value={tm.gym_access} />}
 
-        <div className="pt-4">
-          <Button
-            variant="secondary"
-            className="w-full"
-            onClick={() => {
-              setActiveContext(null);
-              navigate({ to: "/dashboard" });
-            }}
-          >
-            Zu meinem BODYFUEL wechseln
-          </Button>
-        </div>
+        {entitlements.hasAnyPersonalBodyfuel && (
+          <div className="pt-4">
+            <Button
+              variant="secondary"
+              className="w-full"
+              onClick={() => {
+                setActiveContext(null);
+                // /app entscheidet je nach Entitlements, wohin (Dashboard/Bulls/Coach)
+                navigate({ to: "/app" });
+              }}
+            >
+              Zu meinem BODYFUEL wechseln
+            </Button>
+          </div>
+        )}
       </main>
     </OrgAthleteLayout>
   );
