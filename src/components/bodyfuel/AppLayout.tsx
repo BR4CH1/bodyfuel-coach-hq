@@ -253,7 +253,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               item.to === "/coach"
                 ? pathname === "/coach"
                 : hash
-                ? pathname === item.to && currentHash === hash
+                ? pathname === item.to && (currentHash || "cockpit") === hash
                 : pathname.startsWith(item.to);
             const Icon = item.icon;
             return (
@@ -354,7 +354,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               item.to === "/coach"
                 ? pathname === "/coach"
                 : hash
-                ? pathname === item.to && currentHash === hash
+                ? pathname === item.to && (currentHash || "cockpit") === hash
                 : pathname.startsWith(item.to);
             const Icon = item.icon;
             return (
