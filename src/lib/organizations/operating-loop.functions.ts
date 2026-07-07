@@ -56,7 +56,7 @@ export const listOrgCommunityPosts = createServerFn({ method: "GET" })
 
     const { data: posts } = await supabase
       .from("organization_community_posts")
-      .select("id, team_id, author_user_id, author_role_snapshot, post_type, content, created_at, status")
+      .select("id, team_id, author_user_id, author_role_snapshot, post_type, content, image_path, created_at, status")
       .eq("organization_id", orgId)
       .eq("status", "active")
       .order("created_at", { ascending: false })
@@ -67,6 +67,19 @@ export const listOrgCommunityPosts = createServerFn({ method: "GET" })
     if (userIds.length) {
       const { data: profs } = await supabase.from("profiles").select("id, display_name").in("id", userIds);
       for (const p of (profs ?? []) as any[]) nameMap.set(p.id, p.display_name || "Athlet");
+    }
+
+    // Sign photo URLs (1h)
+    const postsWithUrls: any[] = [];
+    for (const p of ((posts ?? []) as any[])) {
+      let image_url: string | null = null;
+      if (p.image_path) {
+        const { data: signed } = await supabase.storage
+          .from("community-photos")
+          .createSignedUrl(p.image_path, 60 * 60);
+        image_url = signed?.signedUrl ?? null;
+      }
+      postsWithUrls.push({ ...p, image_url, author_name: nameMap.get(p.author_user_id) ?? "Athlet" });
     }
 
     const allowAthletePosts = ((org as any).settings?.allow_athlete_posts ?? true) === true;
@@ -82,21 +95,29 @@ export const listOrgCommunityPosts = createServerFn({ method: "GET" })
       org,
       can_post: canPost,
       is_staff: !!staff,
-      posts: (posts ?? []).map((p: any) => ({ ...p, author_name: nameMap.get(p.author_user_id) ?? "Athlet" })),
+      posts: postsWithUrls,
     };
   });
 
+
 export const createOrgCommunityPost = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { organization_id: string; team_id?: string | null; post_type?: string; content: string }) => ({
+  .inputValidator((d: { organization_id: string; team_id?: string | null; post_type?: string; content: string; image_path?: string | null }) => ({
     organization_id: d.organization_id,
     team_id: d.team_id ?? null,
     post_type: d.post_type || "general",
     content: String(d.content || "").trim().slice(0, 5000),
+    image_path: d.image_path ? String(d.image_path).trim() : null,
   }))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    if (!data.content) throw new Error("Beitrag darf nicht leer sein.");
+    if (!data.content && !data.image_path) throw new Error("Beitrag darf nicht leer sein.");
+    if (data.image_path) {
+      const parts = data.image_path.split("/");
+      if (parts[0] !== data.organization_id || parts[1] !== userId) {
+        throw new Error("Ungültiger Foto-Pfad");
+      }
+    }
     // Determine author role snapshot
     const [staffRes, coachRes] = await Promise.all([
       supabase.from("staff_assignments").select("role").eq("user_id", userId).eq("organization_id", data.organization_id).maybeSingle(),
@@ -112,12 +133,14 @@ export const createOrgCommunityPost = createServerFn({ method: "POST" })
         author_role_snapshot: roleSnap,
         post_type: data.post_type,
         content: data.content,
-      })
+        image_path: data.image_path,
+      } as any)
       .select("id")
       .single();
     if (error) throw new Error(error.message);
     return { id: (inserted as any).id };
   });
+
 
 // ============================================================
 // CHALLENGES: rules + ledger + ranking

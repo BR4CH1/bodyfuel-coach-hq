@@ -2871,6 +2871,7 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          image_path: string | null
           metadata: Json
           organization_id: string
           post_type: string
@@ -2884,6 +2885,7 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          image_path?: string | null
           metadata?: Json
           organization_id: string
           post_type?: string
@@ -2897,6 +2899,7 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          image_path?: string | null
           metadata?: Json
           organization_id?: string
           post_type?: string
