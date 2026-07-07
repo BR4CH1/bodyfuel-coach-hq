@@ -52,19 +52,10 @@ export const Route = createFileRoute("/coach/teams/$orgId")({
   ),
 });
 
-const ALL_TABS = [
-  { key: "cockpit", label: "Cockpit", feature: null },
-  { key: "overview", label: "Übersicht", feature: null },
-  { key: "athletes", label: "Athleten", feature: null },
-  { key: "teams", label: "Teams", feature: null },
-  { key: "training", label: "Training", feature: "athletic_training" },
-  { key: "tasks", label: "Tasks", feature: null },
-  { key: "challenges", label: "Challenges", feature: "challenges" },
-  { key: "ranking", label: "Ranking", feature: "ranking" },
-  { key: "community", label: "Community", feature: "community" },
-  { key: "staff", label: "Trainer & Mitarbeiter", feature: null },
-  { key: "settings", label: "Einstellungen", feature: null },
-];
+// Tab-Keys werden per URL-Hash (#cockpit, #athletes, ...) angesprochen und
+// aus der Sidebar-Navigation in AppLayout gesteuert. Die frühere horizontale
+// Tab-Leiste ist entfernt.
+
 
 const WEEKDAYS = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
 
@@ -98,7 +89,8 @@ function CoachOrgDetail() {
   const org: any = data.org;
   const features = data.features as { feature: string; enabled: boolean }[];
   const featureOn = (k: string) => features.some((f) => f.feature === k && f.enabled);
-  const visibleTabs = ALL_TABS.filter((t) => t.feature === null || featureOn(t.feature));
+  void featureOn;
+
   const caller = (data as any).caller as { experience: string; is_bodyfuel_coach: boolean; team_id: string | null } | undefined;
   const teamKpis = ((data as any).team_kpis ?? []) as Array<{ team_id: string; athletes: number; weekly_compliance: number | null; pending_onboardings: number }>;
   const experienceLabel =
@@ -181,19 +173,6 @@ function CoachOrgDetail() {
       </section>
 
 
-      <div className="mt-6 flex flex-wrap gap-1 border-b border-border">
-        {visibleTabs.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`border-b-2 px-3 py-2 text-xs font-semibold uppercase tracking-wider ${
-              tab === t.key ? "border-primary text-foreground" : "border-transparent text-muted-foreground"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
 
       <div className="mt-5">
         {tab === "cockpit" && <CoachCockpit orgId={orgId} />}
