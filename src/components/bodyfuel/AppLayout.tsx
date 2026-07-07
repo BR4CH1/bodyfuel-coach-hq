@@ -79,9 +79,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
     }
   }, [user, supabaseUser, loading, navigate, isFreeUser, pathname, hasGroup]);
 
-  // Team-only Redirect: persönliche Client-Routen sind ohne Smart/Coaching gesperrt.
+  // Redirect für Vereins-Staff (Vereinsleitung / Head Coach / Team Coach / Staff):
+  // Persönliche Athleten-Routen wie /measurements, /progress, /check-in gehören
+  // nicht zur Coach-Erfahrung. Coaches landen stattdessen im Cockpit.
+  // Team-only Athleten (Vereinsmitglied ohne persönliches BodyFuel-Paket)
+  // gehen weiterhin auf ihr Vereins-Dashboard.
   useEffect(() => {
-    if (!isTeamOnlyUser) return;
+    if (entitlements.loading) return;
     const personalPrefixes = [
       "/dashboard",
       "/training",
@@ -101,9 +105,32 @@ export function AppLayout({ children }: { children: ReactNode }) {
       pathname === "/mein-bodyfuel" ||
       pathname.startsWith("/mein-bodyfuel/");
     if (!isPersonal) return;
-    const slug = entitlements.primaryOrgSlug;
-    if (slug) navigate({ to: "/$orgSlug", params: { orgSlug: slug }, replace: true });
-  }, [isTeamOnlyUser, pathname, entitlements.primaryOrgSlug, navigate]);
+
+    // Staff mit Vereinsfunktion → direkt ins passende Cockpit.
+    const staffRole = entitlements.primaryStaffRole;
+    const orgId = entitlements.primaryOrgId;
+    const isStaffUser = !isCoach && !!staffRole && !entitlements.hasAnyPersonalBodyfuel;
+    if (isStaffUser && orgId && pathname !== "/profile") {
+      navigate({ to: "/coach/teams/$orgId", params: { orgId }, replace: true });
+      return;
+    }
+
+    // Team-only Athlet ohne persönliches Paket → Vereins-Landing.
+    if (isTeamOnlyUser) {
+      const slug = entitlements.primaryOrgSlug;
+      if (slug) navigate({ to: "/$orgSlug", params: { orgSlug: slug }, replace: true });
+    }
+  }, [
+    entitlements.loading,
+    entitlements.primaryStaffRole,
+    entitlements.primaryOrgId,
+    entitlements.primaryOrgSlug,
+    entitlements.hasAnyPersonalBodyfuel,
+    isTeamOnlyUser,
+    isCoach,
+    pathname,
+    navigate,
+  ]);
 
   // Hard-Gate: BodyFuel Smart Nutzer müssen Onboarding abschließen, bevor sie in die App kommen.
   const [smartGateChecked, setSmartGateChecked] = useState(false);
