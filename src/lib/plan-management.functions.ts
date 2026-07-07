@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { daysUntilNextShopping } from "./shopping-cycle";
+import { assertCoachOrOrgStaffForAthlete } from "@/lib/organizations/org-coach-access";
 
 export type PlanStatus = "draft" | "approved" | "published" | "active" | "archived";
 
@@ -101,9 +102,13 @@ export const getCustomerPlanOverview = createServerFn({ method: "GET" })
   .inputValidator((d: { user_id: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    if (data.user_id !== userId) await requireCoach(supabase, userId);
+    let db = supabase;
+    if (data.user_id !== userId) {
+      await assertCoachOrOrgStaffForAthlete(context, data.user_id, "nutrition");
+      db = (await import("@/integrations/supabase/client.server")).supabaseAdmin;
+    }
 
-    const { data: rows } = await supabase
+    const { data: rows } = await db
       .from("nutrition_plans")
       .select(
         "id, title, status, source, scheduled_start_date, scheduled_end_date, activated_at, archived_at, kcal, protein_g, carbs_g, fat_g, created_at",
@@ -119,12 +124,12 @@ export const getCustomerPlanOverview = createServerFn({ method: "GET" })
     const archive = all.filter((p) => p.status === "archived").slice(0, 25);
 
     const [activeFull, nextFull] = await Promise.all([
-      active ? loadPlan(supabase, active.id) : Promise.resolve(null),
-      next ? loadPlan(supabase, next.id) : Promise.resolve(null),
+      active ? loadPlan(db, active.id) : Promise.resolve(null),
+      next ? loadPlan(db, next.id) : Promise.resolve(null),
     ]);
 
     // also include shopping days for "next shopping" hint
-    const { data: prof } = await supabase
+    const { data: prof } = await db
       .from("smart_nutrition_profile")
       .select("shopping_days, auto_publish")
       .eq("user_id", data.user_id)
@@ -139,7 +144,7 @@ export const getCustomerPlanOverview = createServerFn({ method: "GET" })
           days_count: 0,
           meals_count: 0,
           compliance: await computeCompliance(
-            supabase,
+            db,
             data.user_id,
             p.activated_at,
             p.archived_at,
@@ -156,9 +161,10 @@ export const transitionPlanStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { plan_id: string; to: PlanStatus }) => d)
   .handler(async ({ data, context }) => {
-    const { supabase: userSupabase, userId } = context;
+    const { userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const { data: plan } = await userSupabase
+    const { data: plan } = await supabaseAdmin
       .from("nutrition_plans")
       .select("id, client_id, plan_type, status, source, kcal, protein_g, carbs_g, fat_g")
       .eq("id", data.plan_id)
@@ -169,14 +175,12 @@ export const transitionPlanStatus = createServerFn({ method: "POST" })
     // überführen (insb. Smart-Kunden, die ihren Entwurf selbst aktivieren).
     const isSelf = (plan as any).client_id === userId;
     if (!isSelf) {
-      await requireCoach(userSupabase, userId);
+      await assertCoachOrOrgStaffForAthlete(context, (plan as any).client_id, "nutrition");
     }
     // Schreibzugriff: RLS lässt UPDATE nur für Coaches zu. Für Self-Service
     // nutzen wir den Admin-Client (Identität ist via Auth-Middleware verifiziert,
     // und wir schreiben ausschließlich auf den geprüften plan_id/client_id).
-    const supabase = isSelf
-      ? (await import("@/integrations/supabase/client.server")).supabaseAdmin
-      : userSupabase;
+    const supabase = supabaseAdmin;
 
     // If transitioning to active, archive the currently active plan first
     if (data.to === "active") {
@@ -297,17 +301,17 @@ export const deletePlanDraft = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { plan_id: string }) => d)
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
-    await requireCoach(supabase, userId);
-    const { data: plan } = await supabase
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: plan } = await supabaseAdmin
       .from("nutrition_plans")
-      .select("status")
+      .select("client_id, status")
       .eq("id", data.plan_id)
       .maybeSingle();
     if (!plan) throw new Error("Plan nicht gefunden");
+    await assertCoachOrOrgStaffForAthlete(context, (plan as any).client_id, "nutrition");
     if ((plan as any).status === "active")
       throw new Error("Aktiver Plan kann nicht gelöscht werden — erst archivieren.");
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from("nutrition_plans")
       .delete()
       .eq("id", data.plan_id);
@@ -326,15 +330,21 @@ export const updatePlanScheduling = createServerFn({ method: "POST" })
     }) => d,
   )
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
-    await requireCoach(supabase, userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: plan } = await supabaseAdmin
+      .from("nutrition_plans")
+      .select("client_id")
+      .eq("id", data.plan_id)
+      .maybeSingle();
+    if (!plan) throw new Error("Plan nicht gefunden");
+    await assertCoachOrOrgStaffForAthlete(context, (plan as any).client_id, "nutrition");
     const patch: any = {};
     if (data.scheduled_start_date !== undefined)
       patch.scheduled_start_date = data.scheduled_start_date;
     if (data.scheduled_end_date !== undefined)
       patch.scheduled_end_date = data.scheduled_end_date;
     if (data.title !== undefined) patch.title = data.title;
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from("nutrition_plans")
       .update(patch)
       .eq("id", data.plan_id);
@@ -347,8 +357,11 @@ export const setAutoPublish = createServerFn({ method: "POST" })
   .inputValidator((d: { user_id: string; auto_publish: boolean }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    if (data.user_id !== userId) await requireCoach(supabase, userId);
-    const { error } = await supabase
+    const db = data.user_id === userId
+      ? supabase
+      : (await import("@/integrations/supabase/client.server")).supabaseAdmin;
+    if (data.user_id !== userId) await assertCoachOrOrgStaffForAthlete(context, data.user_id, "nutrition");
+    const { error } = await db
       .from("smart_nutrition_profile")
       .upsert(
         { user_id: data.user_id, auto_publish: data.auto_publish },

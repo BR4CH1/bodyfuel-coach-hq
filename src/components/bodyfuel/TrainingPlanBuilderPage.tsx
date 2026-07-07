@@ -56,7 +56,15 @@ function weightFromBaseline(lib: LibraryExercise, b: StrengthBaseline): string |
 }
 
 
-export function TrainingPlanBuilderPage({ userId, planId }: { userId: string; planId?: string }) {
+export function TrainingPlanBuilderPage({
+  userId,
+  planId,
+  returnOrgId,
+}: {
+  userId: string;
+  planId?: string;
+  returnOrgId?: string;
+}) {
   const navigate = useNavigate();
 
   const ctxFn = useServerFn(getCustomerTrainingContext);
@@ -289,7 +297,12 @@ export function TrainingPlanBuilderPage({ userId, planId }: { userId: string; pl
     onSuccess: (res: any) => {
       toast.success(publish ? "Plan aktiviert" : "Entwurf gespeichert");
       const pid = res.plan_id ?? res.client_plan_id;
-      if (pid) navigate({ to: "/coach/plan-preview/$planId", params: { planId: pid } });
+      if (returnOrgId) {
+        navigate({
+          to: "/coach/teams/$orgId/athletes/$userId",
+          params: { orgId: returnOrgId, userId },
+        });
+      } else if (pid) navigate({ to: "/coach/plan-preview/$planId", params: { planId: pid } });
     },
     onError: (e: any) => toast.error(e?.message ?? "Fehler beim Speichern"),
   });
@@ -300,9 +313,19 @@ export function TrainingPlanBuilderPage({ userId, planId }: { userId: string; pl
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <Link to="/coach/customers/$userId" params={{ userId }} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary">
+        {returnOrgId ? (
+          <Link
+            to="/coach/teams/$orgId/athletes/$userId"
+            params={{ orgId: returnOrgId, userId }}
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary"
+          >
+            <ArrowLeft className="h-3 w-3" /> Zurück
+          </Link>
+        ) : (
+          <Link to="/coach/customers/$userId" params={{ userId }} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary">
           <ArrowLeft className="h-3 w-3" /> Zurück
-        </Link>
+          </Link>
+        )}
       </div>
 
       <div>

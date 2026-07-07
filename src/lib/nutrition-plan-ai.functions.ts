@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { daysUntilNextShopping } from "./shopping-cycle";
+import { assertCoachOrOrgStaffForAthlete } from "@/lib/organizations/org-coach-access";
 
 type AiIngredient = { name: string; amount?: number; unit?: string; grams?: number };
 type GeneratedMeal = {
@@ -49,15 +50,11 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
     }) => d,
   )
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+    const { userId } = context;
     const target = data.user_id;
 
     // Authorize: self or coach
-    const { data: isCoach } = await supabase.rpc("has_role", {
-      _user_id: userId,
-      _role: "coach",
-    });
-    if (target !== userId && !isCoach) throw new Error("Forbidden");
+    if (target !== userId) await assertCoachOrOrgStaffForAthlete(context, target, "nutrition");
 
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY fehlt");

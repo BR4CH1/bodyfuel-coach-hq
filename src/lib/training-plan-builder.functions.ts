@@ -1,13 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-
-async function assertCoach(ctx: { supabase: any; userId: string }) {
-  const { data: isCoach } = await ctx.supabase.rpc("has_role", {
-    _user_id: ctx.userId,
-    _role: "coach",
-  });
-  if (!isCoach) throw new Error("Nur für Coaches.");
-}
+import {
+  assertCoachOrOrgStaffForAthlete,
+  assertGlobalCoachOrAnyOrgCoach,
+} from "@/lib/organizations/org-coach-access";
 
 // 0=Sun..6=Sat
 const WEEKDAY_MAP: Record<string, number> = {
@@ -73,8 +69,9 @@ export type CustomerTrainingContext = {
 export const listExerciseLibrary = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<LibraryExercise[]> => {
-    await assertCoach(context);
-    const { data, error } = await context.supabase
+    await assertGlobalCoachOrAnyOrgCoach(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin
       .from("coach_exercise_library" as any)
       .select("*")
       .eq("is_active", true)
@@ -88,15 +85,16 @@ export const getCustomerTrainingContext = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { customerId: string }) => d)
   .handler(async ({ data, context }): Promise<CustomerTrainingContext> => {
-    await assertCoach(context);
+    await assertCoachOrOrgStaffForAthlete(context, data.customerId, "training");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const cid = data.customerId;
     const [{ data: prof }, { data: snp }, { data: bm }, { data: check }, { data: partnerRows }] =
       await Promise.all([
-        context.supabase.from("profiles").select("display_name, training_goal").eq("id", cid).maybeSingle(),
-        context.supabase.from("smart_nutrition_profile").select("training_weekdays").eq("user_id", cid).maybeSingle(),
-        context.supabase.from("body_measurements").select("weight_kg, measured_at").eq("user_id", cid).not("weight_kg", "is", null).order("measured_at", { ascending: false }).limit(1),
-        context.supabase.from("strength_checks").select("id, exercise_calcs, scoring_bodyweight_kg").eq("user_id", cid).eq("status", "completed").order("performed_at", { ascending: false }).limit(1).maybeSingle(),
-        context.supabase.from("nutrition_partners").select("user_a, user_b").or(`user_a.eq.${cid},user_b.eq.${cid}`).limit(1),
+        supabaseAdmin.from("profiles").select("display_name, training_goal").eq("id", cid).maybeSingle(),
+        supabaseAdmin.from("smart_nutrition_profile").select("training_weekdays").eq("user_id", cid).maybeSingle(),
+        supabaseAdmin.from("body_measurements").select("weight_kg, measured_at").eq("user_id", cid).not("weight_kg", "is", null).order("measured_at", { ascending: false }).limit(1),
+        supabaseAdmin.from("strength_checks").select("id, exercise_calcs, scoring_bodyweight_kg").eq("user_id", cid).eq("status", "completed").order("performed_at", { ascending: false }).limit(1).maybeSingle(),
+        supabaseAdmin.from("nutrition_partners").select("user_a, user_b").or(`user_a.eq.${cid},user_b.eq.${cid}`).limit(1),
       ]);
 
     let partnerId: string | null = null;
@@ -106,7 +104,7 @@ export const getCustomerTrainingContext = createServerFn({ method: "POST" })
     }
     let partnerName: string | null = null;
     if (partnerId) {
-      const { data: pp } = await context.supabase.from("profiles").select("display_name").eq("id", partnerId).maybeSingle();
+      const { data: pp } = await supabaseAdmin.from("profiles").select("display_name").eq("id", partnerId).maybeSingle();
       partnerName = pp?.display_name ?? null;
     }
 
@@ -303,7 +301,7 @@ export const saveBuilderTrainingPlan = createServerFn({ method: "POST" })
     }) => d,
   )
   .handler(async ({ data, context }) => {
-    await assertCoach(context);
+    await assertCoachOrOrgStaffForAthlete(context, data.customerId, "training");
     const res = await persistTrainingPlan({ ...data, uploadedBy: context.userId });
     return { ok: true, plan_id: res.plan_id };
   });
@@ -323,7 +321,8 @@ export const saveBuilderPartnerTrainingPlan = createServerFn({ method: "POST" })
     }) => d,
   )
   .handler(async ({ data, context }) => {
-    await assertCoach(context);
+    await assertCoachOrOrgStaffForAthlete(context, data.customerId, "training");
+    await assertCoachOrOrgStaffForAthlete(context, data.partnerId, "training");
     const A = await persistTrainingPlan({
       customerId: data.customerId, uploadedBy: context.userId, title: data.title,
       startDate: data.startDate, weeksCount: data.weeksCount, days: data.clientDays, publish: data.publish,
@@ -383,16 +382,17 @@ export const loadTrainingPlanForBuilder = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { planId: string }) => d)
   .handler(async ({ data, context }): Promise<LoadedTrainingPlan> => {
-    await assertCoach(context);
-    const { data: plan, error: pErr } = await context.supabase
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: plan, error: pErr } = await supabaseAdmin
       .from("nutrition_plans")
-      .select("id, title, scheduled_start_date, scheduled_end_date, weeks_count, plan_type")
+      .select("id, client_id, title, scheduled_start_date, scheduled_end_date, weeks_count, plan_type")
       .eq("id", data.planId)
       .maybeSingle();
     if (pErr || !plan) throw new Error(pErr?.message ?? "Plan nicht gefunden");
     if ((plan as any).plan_type !== "training") throw new Error("Kein Trainingsplan");
+    await assertCoachOrOrgStaffForAthlete(context, (plan as any).client_id, "training");
 
-    const { data: dayRows } = await context.supabase
+    const { data: dayRows } = await supabaseAdmin
       .from("training_days")
       .select("id, sort_order, name, week_number, day_date")
       .eq("plan_id", data.planId)
@@ -400,7 +400,7 @@ export const loadTrainingPlanForBuilder = createServerFn({ method: "POST" })
 
     const dayIds = ((dayRows ?? []) as any[]).map((r) => r.id);
     const exRes = dayIds.length
-      ? await context.supabase
+      ? await supabaseAdmin
           .from("training_exercises")
           .select("id, day_id, sort_order, name, category, target_sets, target_reps, target_weights, target_rir, rest_seconds, notes, is_locked, linked_partner_group, library_exercise_id")
           .in("day_id", dayIds)

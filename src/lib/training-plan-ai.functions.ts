@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { assertCoachOrOrgStaffForAthlete } from "@/lib/organizations/org-coach-access";
 
 /**
  * 4-Wochen-Smart-Trainingsplan (User-Endpoint).
@@ -19,10 +20,9 @@ export const generateAiTrainingPlanDraft = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const target = data.user_id;
 
-    const { data: isCoach } = await supabase.rpc("has_role", {
-      _user_id: userId, _role: "coach",
-    });
-    if (target !== userId && !isCoach && !data.auto) throw new Error("Forbidden");
+    if (target !== userId && !data.auto) {
+      await assertCoachOrOrgStaffForAthlete(context, target, "training");
+    }
 
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY fehlt");

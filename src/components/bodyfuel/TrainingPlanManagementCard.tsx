@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
@@ -49,7 +50,7 @@ function fmtDate(s: string | null) {
   });
 }
 
-export function TrainingPlanManagementCard({ userId }: { userId: string }) {
+export function TrainingPlanManagementCard({ userId, returnOrgId }: { userId: string; returnOrgId?: string }) {
   const qc = useQueryClient();
   const getFn = useServerFn(getCustomerTrainingPlanOverview);
   const genFn = useServerFn(generateAiTrainingPlanDraft);
@@ -139,15 +140,21 @@ export function TrainingPlanManagementCard({ userId }: { userId: string }) {
             <Sparkles className="h-4 w-4" />
             {gen.isPending ? "Erstelle…" : "Plan ab nächster Woche"}
           </button>
-          <a
-            href={`/coach/training-builder/${userId}`}
+          <Link
+            to="/coach/training-builder/$userId"
+            params={{ userId }}
+            search={returnOrgId ? { orgId: returnOrgId } : {}}
             className="inline-flex items-center gap-2 rounded-lg border border-gold/40 bg-background px-3 py-2 text-sm font-semibold hover:bg-accent"
           >
             <Pencil className="h-4 w-4" />
             Manuell erstellen
-          </a>
+          </Link>
           <a
-            href={`/coach/import-plan?type=training&client=${userId}`}
+            href={
+              returnOrgId
+                ? `/coach/import-plan?type=training&client=${userId}&orgId=${returnOrgId}`
+                : `/coach/import-plan?type=training&client=${userId}`
+            }
             className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm font-semibold hover:bg-accent"
           >
             <Pencil className="h-4 w-4" />
