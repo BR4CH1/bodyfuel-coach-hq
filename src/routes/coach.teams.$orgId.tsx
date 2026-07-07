@@ -57,6 +57,7 @@ import {
 } from "@/lib/organizations/staff-labels";
 import { CoachCockpit } from "@/components/coach/analytics/CoachCockpit";
 import { AthletesTab } from "@/components/organizations/AthletesTab";
+import { TeamJoinLinkDialog } from "@/components/organizations/TeamJoinLinkDialog";
 
 export const Route = createFileRoute("/coach/teams/$orgId")({
   head: () => ({ meta: [{ title: "Organisation — BODYFUEL Coach" }] }),
@@ -91,6 +92,7 @@ export function CoachOrgDetail() {
     setTab(next);
     if (typeof window !== "undefined") window.location.hash = next;
   };
+  const [joinLinkTeam, setJoinLinkTeam] = useState<{ id: string; name: string } | null>(null);
 
 
   if (isLoading || !data || !data.org) {
@@ -262,12 +264,20 @@ export function CoachOrgDetail() {
                         {t.sport ?? "—"} {t.age_group ? `· ${t.age_group}` : ""}
                       </div>
                     </div>
-                    <button
-                      onClick={() => { setAthleteTeamFilter(t.id); selectTab("athletes"); }}
-                      className="rounded border border-border px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
-                    >
-                      Athleten →
-                    </button>
+                    <div className="flex flex-col items-end gap-1">
+                      <button
+                        onClick={() => { setAthleteTeamFilter(t.id); selectTab("athletes"); }}
+                        className="rounded border border-border px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                      >
+                        Athleten →
+                      </button>
+                      <button
+                        onClick={() => setJoinLinkTeam({ id: t.id, name: t.name })}
+                        className="rounded border border-border px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-primary hover:bg-primary/10"
+                      >
+                        Beitrittslink
+                      </button>
+                    </div>
                   </div>
                   <div className="mt-3 grid grid-cols-3 gap-2 text-center">
                     <div className="rounded bg-muted/40 p-2">
@@ -285,6 +295,7 @@ export function CoachOrgDetail() {
                       <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Offen</div>
                     </div>
                   </div>
+
                 </li>
               );
             })}
@@ -330,9 +341,19 @@ export function CoachOrgDetail() {
           </ul>
         )}
       </div>
+      {joinLinkTeam && (
+        <TeamJoinLinkDialog
+          orgId={orgId}
+          teamId={joinLinkTeam.id}
+          teamName={joinLinkTeam.name}
+          open={!!joinLinkTeam}
+          onClose={() => setJoinLinkTeam(null)}
+        />
+      )}
     </div>
   );
 }
+
 
 // Inline AthletesTab wurde nach src/components/organizations/AthletesTab.tsx
 // verschoben (inkl. „Athlet hinzufügen"-Flow und Pending-Kaderplätzen).
