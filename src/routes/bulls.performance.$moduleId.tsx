@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { CheckCircle2, Clock, XCircle, ChevronRight, PlayCircle } from "lucide-react";
@@ -16,6 +16,7 @@ export const Route = createFileRoute("/bulls/performance/$moduleId")({
 function ModulePage() {
   const { moduleId } = Route.useParams();
   const { supabaseUser } = useSession();
+  const navigate = useNavigate();
   const profile = getProfile("football_bulls")!;
   const mod = profile.modules.find((m) => m.id === moduleId);
 
@@ -64,6 +65,13 @@ function ModulePage() {
               key={t.id}
               to="/bulls/performance/$moduleId/$testId"
               params={{ moduleId: mod.id, testId: t.id }}
+              onClick={(event) => {
+                event.preventDefault();
+                navigate({
+                  to: "/bulls/performance/$moduleId/$testId",
+                  params: { moduleId: mod.id, testId: t.id },
+                });
+              }}
               className="flex w-full items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4 text-left transition hover:border-bulls-red/60"
             >
               <div className="min-w-0">

@@ -11,10 +11,10 @@ export const Route = createFileRoute("/nutrition/tracking")({
 
 function NutritionTrackingPage() {
   const { isCoach, hasGroup } = useSession();
-  const bullsSlug = getActiveContext() ?? "coesfeld-bulls";
+  const activeOrgSlug = getActiveContext();
 
-  if (!isCoach && hasGroup("bulls")) {
-    return <Navigate to="/$orgSlug/nutrition/tracking" params={{ orgSlug: bullsSlug }} replace />;
+  if (!isCoach && hasGroup("bulls") && activeOrgSlug) {
+    return <Navigate to="/$orgSlug/nutrition/tracking" params={{ orgSlug: activeOrgSlug }} replace />;
   }
 
   return (
