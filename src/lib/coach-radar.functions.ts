@@ -66,6 +66,7 @@ export const getCoachRadar = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<CoachRadarData> => {
     const { supabase, userId } = context;
     await assertCoach(supabase, userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const { data: roles } = await supabase
       .from("user_roles")
@@ -196,7 +197,7 @@ export const getCoachRadar = createServerFn({ method: "GET" })
         .select("user_id, product_id, status, created_at")
         .in("user_id", ids)
         .order("created_at", { ascending: false }),
-      supabase
+      supabaseAdmin
         .from("affiliate_referrals")
         .select("referred_user_id, source_slug, partner_id, signup_at, affiliate_partners(name, slug)")
         .in("referred_user_id", ids),
