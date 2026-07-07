@@ -60,9 +60,10 @@ function ModulePage() {
           const score = best ? scoreTestValue(t, effectiveValue(best), group) : null;
           const status = latest?.verification_status;
           return (
-            <button
+            <Link
               key={t.id}
-              onClick={() => navigate({ to: "/bulls/performance/$moduleId/$testId", params: { moduleId: mod.id, testId: t.id } })}
+              to="/bulls/performance/$moduleId/$testId"
+              params={{ moduleId: mod.id, testId: t.id }}
               className="flex w-full items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4 text-left transition hover:border-bulls-red/60"
             >
               <div className="min-w-0">
@@ -91,10 +92,15 @@ function ModulePage() {
                   ) : (
                     <span className="text-muted-foreground">Noch nicht getestet</span>
                   )}
+                  {t.demoVideoUrl && (
+                    <span className="inline-flex items-center gap-1 rounded-md bg-bulls-red/10 px-2 py-0.5 text-bulls-red">
+                      <PlayCircle className="h-3 w-3" /> Demo
+                    </span>
+                  )}
                 </div>
               </div>
-              <ChevronRight className="h-5 w-5 text-muted-foreground" />
-            </button>
+              <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" />
+            </Link>
           );
         })}
       </div>
