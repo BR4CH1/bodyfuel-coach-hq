@@ -893,14 +893,20 @@ export function NutritionTracker({
           </div>
           <div>
             <div className="text-sm font-bold">
-              {dayType === "training" ? "Trainingstag" : "Restday"}
+              {isBulls
+                ? bullsDayTypeLabel(dayType as BullsDayType)
+                : dayType === "training"
+                  ? "Trainingstag"
+                  : "Restday"}
             </div>
             <div className="text-[11px] text-muted-foreground">
-              {restTargets
-                ? dayType === "training"
-                  ? `Training: ${baseTargets.kcal} kcal · P ${baseTargets.protein_g} · K ${baseTargets.carbs_g} · F ${baseTargets.fat_g}`
-                  : `Restday: ${restTargets.kcal} kcal · P ${restTargets.protein_g} · K ${restTargets.carbs_g} · F ${restTargets.fat_g}`
-                : "Im Plan ist kein Restday-Wert hinterlegt"}
+              {isBulls
+                ? `${baseTargets.kcal} kcal · P ${baseTargets.protein_g} · K ${baseTargets.carbs_g} · F ${baseTargets.fat_g}`
+                : restTargets
+                  ? dayType === "training"
+                    ? `Training: ${baseTargets.kcal} kcal · P ${baseTargets.protein_g} · K ${baseTargets.carbs_g} · F ${baseTargets.fat_g}`
+                    : `Restday: ${restTargets.kcal} kcal · P ${restTargets.protein_g} · K ${restTargets.carbs_g} · F ${restTargets.fat_g}`
+                  : "Im Plan ist kein Restday-Wert hinterlegt"}
               {" · "}
               {dayTypeSource === "auto" ? "automatisch erkannt" : "manuell gesetzt"}
             </div>
@@ -913,7 +919,11 @@ export function NutritionTracker({
             </Button>
           )}
           <Button size="sm" variant="outline" onClick={toggleDayType} disabled={savingDayType}>
-            Auf {dayType === "training" ? "Restday" : "Trainingstag"} ändern
+            {isBulls
+              ? dayType === "rest"
+                ? "Auf Football Training ändern"
+                : "Auf Restday ändern"
+              : `Auf ${dayType === "training" ? "Restday" : "Trainingstag"} ändern`}
           </Button>
         </div>
       </div>
