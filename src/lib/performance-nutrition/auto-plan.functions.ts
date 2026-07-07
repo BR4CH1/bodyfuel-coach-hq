@@ -33,7 +33,10 @@ import {
   type SlotKind,
 } from "./plan-builder";
 import { collectPerformanceDayTypeSignals } from "./day-type-resolver.functions";
-import { resolvePerformanceDayTypeFromSignals } from "./day-type-resolver";
+import {
+  resolvePerformanceDayTypeFromSignals,
+  type PerformanceDayTypeKey,
+} from "./day-type-resolver";
 import { calculatePerformanceNutritionTarget } from "./engine";
 import type {
   PerformanceDayType,
@@ -42,6 +45,14 @@ import type {
   PerformanceGoal,
 } from "./constants";
 import { PERFORMANCE_NUTRITION_ENGINE_VERSION } from "./constants";
+
+const RESOLVER_TO_ENGINE: Record<PerformanceDayTypeKey, PerformanceDayType> = {
+  rest: "REST",
+  strength: "STRENGTH",
+  football_training: "FOOTBALL_TRAINING",
+  game_day: "GAME_DAY",
+  double_session: "DOUBLE_SESSION",
+};
 
 // ---------------------------------------------------------------------------
 // Types
