@@ -307,6 +307,9 @@ export const getBullsDailyNutritionTargets = createServerFn({ method: "POST" })
     }
 
     const active = results[dayType];
+    const flags = legacyOverrideIgnored
+      ? [...active.flags, "LEGACY_TRAINING_OVERRIDE_IGNORED"]
+      : active.flags;
 
     return {
       organizationId,
@@ -321,7 +324,7 @@ export const getBullsDailyNutritionTargets = createServerFn({ method: "POST" })
       perDayTypeTargets,
       trainingTargets: perDayTypeTargets.football_training,
       restTargets: perDayTypeTargets.rest,
-      flags: active.flags,
+      flags,
       engineVersion: active.engineVersion,
     };
   });
