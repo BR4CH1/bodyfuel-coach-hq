@@ -180,11 +180,12 @@ export function AthletesTab({
                     <PendingActions id={p.id} onDone={invalidate} />
                   )}
                 </td>
+                <td className="px-3 py-2" />
               </tr>
             ))}
             {rows.length === 0 && (pending as any[]).length === 0 && (
               <tr>
-                <td colSpan={4} className="px-3 py-6 text-center text-sm text-muted-foreground">
+                <td colSpan={5} className="px-3 py-6 text-center text-sm text-muted-foreground">
                   {filterTeam ? "Keine Athleten in diesem Team." : "Noch keine Athleten."}
                 </td>
               </tr>
