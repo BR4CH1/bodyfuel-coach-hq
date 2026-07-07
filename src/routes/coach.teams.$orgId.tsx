@@ -181,19 +181,6 @@ function CoachOrgDetail() {
       </section>
 
 
-      <div className="mt-6 flex flex-wrap gap-1 border-b border-border">
-        {visibleTabs.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`border-b-2 px-3 py-2 text-xs font-semibold uppercase tracking-wider ${
-              tab === t.key ? "border-primary text-foreground" : "border-transparent text-muted-foreground"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
 
       <div className="mt-5">
         {tab === "cockpit" && <CoachCockpit orgId={orgId} />}
