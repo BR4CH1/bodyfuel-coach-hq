@@ -73,6 +73,7 @@ import { Route as BullsRecoveryRouteImport } from './routes/bulls.recovery'
 import { Route as BullsPhotosRouteImport } from './routes/bulls.photos'
 import { Route as BullsPerformanceRouteImport } from './routes/bulls.performance'
 import { Route as BullsNutritionRouteImport } from './routes/bulls.nutrition'
+import { Route as BullsCheckinRouteImport } from './routes/bulls.checkin'
 import { Route as BullsBenchmarksRouteImport } from './routes/bulls.benchmarks'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
@@ -458,6 +459,11 @@ const BullsNutritionRoute = BullsNutritionRouteImport.update({
   path: '/bulls/nutrition',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BullsCheckinRoute = BullsCheckinRouteImport.update({
+  id: '/bulls/checkin',
+  path: '/bulls/checkin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BullsBenchmarksRoute = BullsBenchmarksRouteImport.update({
   id: '/bulls/benchmarks',
   path: '/bulls/benchmarks',
@@ -837,6 +843,7 @@ export interface FileRoutesByFullPath {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
+  '/bulls/checkin': typeof BullsCheckinRoute
   '/bulls/nutrition': typeof BullsNutritionRouteWithChildren
   '/bulls/performance': typeof BullsPerformanceRouteWithChildren
   '/bulls/photos': typeof BullsPhotosRoute
@@ -960,6 +967,7 @@ export interface FileRoutesByTo {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
+  '/bulls/checkin': typeof BullsCheckinRoute
   '/bulls/photos': typeof BullsPhotosRoute
   '/bulls/recovery': typeof BullsRecoveryRoute
   '/bulls/training': typeof BullsTrainingRoute
@@ -1085,6 +1093,7 @@ export interface FileRoutesById {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
+  '/bulls/checkin': typeof BullsCheckinRoute
   '/bulls/nutrition': typeof BullsNutritionRouteWithChildren
   '/bulls/performance': typeof BullsPerformanceRouteWithChildren
   '/bulls/photos': typeof BullsPhotosRoute
@@ -1215,6 +1224,7 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/bulls/benchmarks'
+    | '/bulls/checkin'
     | '/bulls/nutrition'
     | '/bulls/performance'
     | '/bulls/photos'
@@ -1338,6 +1348,7 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/bulls/benchmarks'
+    | '/bulls/checkin'
     | '/bulls/photos'
     | '/bulls/recovery'
     | '/bulls/training'
@@ -1462,6 +1473,7 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/bulls/benchmarks'
+    | '/bulls/checkin'
     | '/bulls/nutrition'
     | '/bulls/performance'
     | '/bulls/photos'
@@ -1583,6 +1595,7 @@ export interface RootRouteChildren {
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   BullsBenchmarksRoute: typeof BullsBenchmarksRoute
+  BullsCheckinRoute: typeof BullsCheckinRoute
   BullsNutritionRoute: typeof BullsNutritionRouteWithChildren
   BullsPerformanceRoute: typeof BullsPerformanceRouteWithChildren
   BullsPhotosRoute: typeof BullsPhotosRoute
@@ -2065,6 +2078,13 @@ declare module '@tanstack/react-router' {
       path: '/bulls/nutrition'
       fullPath: '/bulls/nutrition'
       preLoaderRoute: typeof BullsNutritionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bulls/checkin': {
+      id: '/bulls/checkin'
+      path: '/bulls/checkin'
+      fullPath: '/bulls/checkin'
+      preLoaderRoute: typeof BullsCheckinRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/bulls/benchmarks': {
@@ -2779,6 +2799,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   BullsBenchmarksRoute: BullsBenchmarksRoute,
+  BullsCheckinRoute: BullsCheckinRoute,
   BullsNutritionRoute: BullsNutritionRouteWithChildren,
   BullsPerformanceRoute: BullsPerformanceRouteWithChildren,
   BullsPhotosRoute: BullsPhotosRoute,
