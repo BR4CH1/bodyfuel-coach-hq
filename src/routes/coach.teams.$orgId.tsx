@@ -341,46 +341,132 @@ function CoachOrgDetail() {
 function TrainingTab({ orgId }: { orgId: string }) {
   const qc = useQueryClient();
   const fetchSched = useServerFn(getTeamTrainingSchedule);
-  const upsert = useServerFn(upsertTeamTrainingSchedule);
+  const upsertTeam = useServerFn(upsertTeamTrainingSchedule);
+  const fetchGroup = useServerFn(getGroupTrainingSchedule);
+  const upsertGroup = useServerFn(upsertGroupTrainingSchedule);
+  const fetchAthlete = useServerFn(getAthleteTrainingSchedule);
+  const upsertAthlete = useServerFn(upsertAthleteTrainingSchedule);
   const engine = useServerFn(runOrgTaskEngine);
-  const { data, isLoading } = useQuery({
+
+  const [msg, setMsg] = useState<string | null>(null);
+  const [pick, setPick] = useState<PickerValue>({
+    scope: "team",
+    team_id: null,
+    position_group: null,
+    athlete_user_id: null,
+    athlete_name: null,
+  });
+
+  const teamsQ = useQuery({
     queryKey: ["org-team-schedule", orgId],
     queryFn: () => fetchSched({ data: { organization_id: orgId } }),
   });
+  useEffect(() => {
+    if (!pick.team_id && teamsQ.data) {
+      const firstTeamId = (teamsQ.data.teams as any[])[0]?.id;
+      if (firstTeamId) setPick((p) => ({ ...p, team_id: firstTeamId }));
+    }
+  }, [teamsQ.data, pick.team_id]);
 
-  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
-  const [msg, setMsg] = useState<string | null>(null);
+  // Schedule-Zeilen je nach Ebene
+  const scheduleQ = useQuery({
+    queryKey: [
+      "training-schedule",
+      pick.scope,
+      pick.team_id,
+      pick.position_group,
+      pick.athlete_user_id,
+    ],
+    queryFn: async () => {
+      if (pick.scope === "group") {
+        if (!pick.team_id || !pick.position_group) return [];
+        return fetchGroup({
+          data: {
+            organization_id: orgId,
+            team_id: pick.team_id,
+            position_group: pick.position_group,
+          },
+        });
+      }
+      if (pick.scope === "athlete") {
+        if (!pick.athlete_user_id) return [];
+        return fetchAthlete({
+          data: { organization_id: orgId, user_id: pick.athlete_user_id },
+        });
+      }
+      if (!pick.team_id) return [];
+      return ((teamsQ.data?.schedules as any[]) || []).filter(
+        (s) => s.team_id === pick.team_id,
+      );
+    },
+    enabled: !!teamsQ.data,
+  });
 
   const saveMut = useMutation({
-    mutationFn: async (entries: any[]) =>
-      upsert({ data: { team_id: selectedTeamId!, entries } }),
+    mutationFn: async (entries: any[]) => {
+      if (pick.scope === "team") {
+        if (!pick.team_id) throw new Error("Team wählen.");
+        return upsertTeam({ data: { team_id: pick.team_id, entries } });
+      }
+      if (pick.scope === "group") {
+        if (!pick.team_id || !pick.position_group)
+          throw new Error("Team und Gruppe wählen.");
+        return upsertGroup({
+          data: {
+            organization_id: orgId,
+            team_id: pick.team_id,
+            position_group: pick.position_group,
+            entries,
+          },
+        });
+      }
+      if (!pick.athlete_user_id) throw new Error("Spieler wählen.");
+      return upsertAthlete({
+        data: {
+          organization_id: orgId,
+          user_id: pick.athlete_user_id,
+          team_id: pick.team_id,
+          entries,
+        },
+      });
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["org-team-schedule", orgId] });
+      qc.invalidateQueries({ queryKey: ["training-schedule"] });
       setMsg("Gespeichert.");
     },
+    onError: (e: any) => setMsg(e?.message ?? "Fehler beim Speichern."),
   });
   const regenMut = useMutation({
     mutationFn: () => engine({ data: { organization_id: orgId, horizon_days: 14 } }),
     onSuccess: (r) => setMsg(`Task Engine: ${r.inserted}/${r.considered} neue Tasks erstellt.`),
   });
 
-  if (isLoading || !data) return <div className="text-xs text-muted-foreground">Lädt…</div>;
-  const teamId = selectedTeamId ?? (data.teams as any[])[0]?.id ?? null;
-  const teamSchedules = ((data.schedules as any[]) || []).filter((s) => s.team_id === teamId);
+  if (teamsQ.isLoading || !teamsQ.data)
+    return <div className="text-xs text-muted-foreground">Lädt…</div>;
+
+  const entries = (scheduleQ.data as any[]) ?? [];
+  const canEdit =
+    (pick.scope === "team" && !!pick.team_id) ||
+    (pick.scope === "group" && !!pick.team_id && !!pick.position_group) ||
+    (pick.scope === "athlete" && !!pick.athlete_user_id);
+
+  const cardTitle =
+    pick.scope === "team"
+      ? "Team Training Schedule (Wochenplan)"
+      : pick.scope === "group"
+      ? `Gruppen-Wochenplan · ${pick.position_group ?? ""}`
+      : `Spieler-Wochenplan · ${pick.athlete_name ?? "Spieler wählen"}`;
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <label className="text-xs uppercase tracking-wider text-muted-foreground">Team:</label>
-        <select
-          value={teamId ?? ""}
-          onChange={(e) => setSelectedTeamId(e.target.value)}
-          className="rounded border border-border bg-background px-2 py-1 text-sm"
-        >
-          {(data.teams as any[]).map((t) => (
-            <option key={t.id} value={t.id}>{t.name}</option>
-          ))}
-        </select>
+      <div className="flex flex-wrap items-end gap-3">
+        <TeamGroupAthletePicker
+          orgId={orgId}
+          teams={(teamsQ.data.teams as any[]) ?? []}
+          value={pick}
+          onChange={setPick}
+        />
         <button
           onClick={() => regenMut.mutate()}
           disabled={regenMut.isPending}
@@ -389,28 +475,197 @@ function TrainingTab({ orgId }: { orgId: string }) {
         >
           {regenMut.isPending ? "Läuft…" : "Tasks jetzt synchronisieren"}
         </button>
-
       </div>
       {msg && <div className="text-xs text-green-500">{msg}</div>}
-      <Card title="Team Training Schedule (Wochenplan)">
-        <ScheduleEditor
-          teamId={teamId}
-          entries={teamSchedules}
-          onSave={(entries) => saveMut.mutate(entries)}
-          saving={saveMut.isPending}
-        />
-        <div className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
-          Änderungen synchronisieren sich beim nächsten Task-Engine-Lauf: <strong>zukünftige offene</strong>{" "}
-          Team-Training-Tasks werden angepasst oder gelöscht. <strong>Abgeschlossene historische</strong>{" "}
-          Tasks bleiben unverändert.
-        </div>
+
+      <Card title={cardTitle}>
+        {!canEdit ? (
+          <Empty>
+            {pick.scope === "group"
+              ? "Positionsgruppe wählen, um den Wochenplan zu bearbeiten."
+              : pick.scope === "athlete"
+              ? "Spieler suchen und wählen, um einen individuellen Wochenplan anzulegen."
+              : "Team wählen."}
+          </Empty>
+        ) : (
+          <>
+            <ScheduleEditor
+              teamId={pick.team_id}
+              entries={entries}
+              onSave={(rows) => saveMut.mutate(rows)}
+              saving={saveMut.isPending}
+            />
+            {pick.scope === "athlete" && pick.athlete_user_id && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Link
+                  to="/coach/training-builder/$userId"
+                  params={{ userId: pick.athlete_user_id }}
+                  className="inline-flex items-center gap-1 rounded-md border border-gold/40 bg-gold/10 px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-gold/20"
+                >
+                  Trainingsplan-Builder öffnen →
+                </Link>
+              </div>
+            )}
+            <div className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
+              Änderungen synchronisieren sich beim nächsten Task-Engine-Lauf:{" "}
+              <strong>zukünftige offene</strong> Tasks werden angepasst oder gelöscht.{" "}
+              <strong>Abgeschlossene historische</strong> Tasks bleiben unverändert.
+            </div>
+          </>
+        )}
       </Card>
+
+      <NutritionScheduleCard orgId={orgId} teams={(teamsQ.data.teams as any[]) ?? []} />
+
       <Card title="Athletic Plans">
         <Empty>Athletic-Plan-Composer folgt. Plan-Sessions werden nach Anlage automatisch als Tasks erzeugt.</Empty>
       </Card>
     </div>
   );
 }
+
+function NutritionScheduleCard({ orgId, teams }: { orgId: string; teams: any[] }) {
+  const qc = useQueryClient();
+  const fetchTeam = useServerFn(getTeamNutritionSchedule);
+  const upsertTeam = useServerFn(upsertTeamNutritionSchedule);
+  const fetchGroup = useServerFn(getGroupNutritionSchedule);
+  const upsertGroup = useServerFn(upsertGroupNutritionSchedule);
+  const fetchAthlete = useServerFn(getAthleteNutritionSchedule);
+  const upsertAthlete = useServerFn(upsertAthleteNutritionSchedule);
+
+  const [pick, setPick] = useState<PickerValue>({
+    scope: "team",
+    team_id: teams[0]?.id ?? null,
+    position_group: null,
+    athlete_user_id: null,
+    athlete_name: null,
+  });
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const schedQ = useQuery({
+    queryKey: [
+      "nutrition-schedule",
+      pick.scope,
+      pick.team_id,
+      pick.position_group,
+      pick.athlete_user_id,
+    ],
+    queryFn: async () => {
+      if (pick.scope === "team") {
+        if (!pick.team_id) return [];
+        return fetchTeam({ data: { organization_id: orgId, team_id: pick.team_id } });
+      }
+      if (pick.scope === "group") {
+        if (!pick.team_id || !pick.position_group) return [];
+        return fetchGroup({
+          data: {
+            organization_id: orgId,
+            team_id: pick.team_id,
+            position_group: pick.position_group,
+          },
+        });
+      }
+      if (!pick.athlete_user_id) return [];
+      return fetchAthlete({ data: { organization_id: orgId, user_id: pick.athlete_user_id } });
+    },
+  });
+
+  const saveMut = useMutation({
+    mutationFn: async (entries: any[]) => {
+      const mapped = entries.map((e) => ({
+        weekday: e.weekday,
+        title: e.title,
+        description: e.description ?? null,
+        active: e.active,
+      }));
+      if (pick.scope === "team") {
+        if (!pick.team_id) throw new Error("Team wählen.");
+        return upsertTeam({ data: { organization_id: orgId, team_id: pick.team_id, entries: mapped } });
+      }
+      if (pick.scope === "group") {
+        if (!pick.team_id || !pick.position_group)
+          throw new Error("Team und Gruppe wählen.");
+        return upsertGroup({
+          data: {
+            organization_id: orgId,
+            team_id: pick.team_id,
+            position_group: pick.position_group,
+            entries: mapped,
+          },
+        });
+      }
+      if (!pick.athlete_user_id) throw new Error("Spieler wählen.");
+      return upsertAthlete({
+        data: {
+          organization_id: orgId,
+          user_id: pick.athlete_user_id,
+          team_id: pick.team_id,
+          entries: mapped,
+        },
+      });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["nutrition-schedule"] });
+      setMsg("Gespeichert.");
+    },
+    onError: (e: any) => setMsg(e?.message ?? "Fehler beim Speichern."),
+  });
+
+  const canEdit =
+    (pick.scope === "team" && !!pick.team_id) ||
+    (pick.scope === "group" && !!pick.team_id && !!pick.position_group) ||
+    (pick.scope === "athlete" && !!pick.athlete_user_id);
+
+  const cardTitle =
+    pick.scope === "team"
+      ? "Ernährungsplan (Wochenplan)"
+      : pick.scope === "group"
+      ? `Gruppen-Ernährung · ${pick.position_group ?? ""}`
+      : `Spieler-Ernährung · ${pick.athlete_name ?? "Spieler wählen"}`;
+
+  return (
+    <Card title={cardTitle}>
+      <div className="mb-3">
+        <TeamGroupAthletePicker orgId={orgId} teams={teams} value={pick} onChange={setPick} />
+      </div>
+      {msg && <div className="mb-2 text-xs text-green-500">{msg}</div>}
+      {!canEdit ? (
+        <Empty>
+          {pick.scope === "group"
+            ? "Positionsgruppe wählen."
+            : pick.scope === "athlete"
+            ? "Spieler suchen und wählen."
+            : "Team wählen."}
+        </Empty>
+      ) : (
+        <>
+          <ScheduleEditor
+            teamId={pick.team_id}
+            entries={(schedQ.data as any[]) ?? []}
+            onSave={(rows) => saveMut.mutate(rows)}
+            saving={saveMut.isPending}
+          />
+          {pick.scope === "athlete" && pick.athlete_user_id && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Link
+                to="/coach/plan-builder/$userId"
+                params={{ userId: pick.athlete_user_id }}
+                className="inline-flex items-center gap-1 rounded-md border border-gold/40 bg-gold/10 px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-gold/20"
+              >
+                Ernährungsplan-Builder öffnen →
+              </Link>
+            </div>
+          )}
+          <div className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
+            Der Plan-Builder greift auf die vollständige Lebensmitteldatenbank zu.
+            Änderungen wirken sich auf zukünftige Tasks aus.
+          </div>
+        </>
+      )}
+    </Card>
+  );
+}
+
 
 function ScheduleEditor({
   teamId,
