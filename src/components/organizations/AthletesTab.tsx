@@ -32,7 +32,7 @@ export function AthletesTab({
   onClearFilter: () => void;
 }) {
   const qc = useQueryClient();
-  const navigate = useNavigate();
+  const fetchAudit = useServerFn(getOrgAthletesOnboardingAudit);
   const fetchAudit = useServerFn(getOrgAthletesOnboardingAudit);
   const fetchPerm = useServerFn(canManageRoster);
   const fetchPending = useServerFn(listPendingRosterAthletes);
