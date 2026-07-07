@@ -357,7 +357,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const chatHref = isCoach ? "/coach" : "/messages";
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className={`min-h-screen bg-background text-foreground ${isBullsRoute ? "bulls-theme" : ""}`.trim()}>
       {/* Desktop sidebar */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-border bg-card/60 backdrop-blur lg:flex">
         <div className="border-b border-border px-5 py-5">
