@@ -16,6 +16,8 @@ import {
   CalendarClock,
   Zap,
   Moon,
+  Activity,
+
 } from "lucide-react";
 
 
@@ -37,6 +39,7 @@ import {
   type CoachTaskState,
 } from "@/lib/coach-tasks.functions";
 import { generateCheckinDraft } from "@/lib/checkin-ai.functions";
+import { listPerformanceCheckStats } from "@/lib/bulls-performance.functions";
 import { toast } from "sonner";
 import {
   Select,
@@ -107,6 +110,16 @@ function CoachDashboard() {
   const extendPlanFn = useServerFn(extendClientPlan);
   const genDraftFn = useServerFn(generateCheckinDraft);
   const radarFn = useServerFn(getCoachRadar);
+  const perfStatsFn = useServerFn(listPerformanceCheckStats);
+
+  const perfStatsQuery = useQuery({
+    queryKey: ["bulls-perf-stats-coach-nav"],
+    queryFn: () => perfStatsFn(),
+    retry: false,
+    staleTime: 60_000,
+  });
+  const perfPending = perfStatsQuery.data?.pending ?? 0;
+  const showPerfNav = !!perfStatsQuery.data;
 
   const radarQuery = useQuery({
     queryKey: ["coach-radar"],
@@ -613,6 +626,20 @@ function CoachDashboard() {
             <span className="text-gold">🥗</span>
             <span className="font-display text-sm font-bold">Lebensmittel-DB</span>
           </Link>
+          {showPerfNav && (
+            <Link
+              to="/coach/bulls-performance"
+              className="relative flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm hover:border-bulls-red/60"
+            >
+              <Activity className="h-4 w-4 text-bulls-red" />
+              <span className="font-display text-sm font-bold">Performance Tests</span>
+              {perfPending > 0 && (
+                <span className="ml-1 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-bulls-red px-1.5 py-0.5 text-[10px] font-bold text-white">
+                  {perfPending}
+                </span>
+              )}
+            </Link>
+          )}
         </div>
 
       </div>
@@ -631,6 +658,38 @@ function CoachDashboard() {
           {/* Direkt unter der Übersicht: Radar + Aufgaben-Inbox */}
           <CoachRadarCard data={radarQuery.data} />
           <CoachTaskInboxCard data={radarQuery.data} />
+
+          {showPerfNav && (
+            <div className="rounded-2xl border border-border bg-card p-4 sm:p-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-bulls-red/15 text-bulls-red">
+                    <Activity className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                      Bulls
+                    </div>
+                    <div className="font-display text-lg font-bold">
+                      Offene Performance Tests
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {perfPending > 0
+                        ? `${perfPending} ${perfPending === 1 ? "Test wartet" : "Tests warten"} auf Prüfung`
+                        : "Keine offenen Prüfungen"}
+                    </div>
+                  </div>
+                </div>
+                <Link
+                  to="/coach/bulls-performance"
+                  className="inline-flex items-center gap-1 rounded-lg bg-bulls-red px-3 py-2 text-sm font-semibold text-white hover:bg-bulls-red/90"
+                >
+                  Tests prüfen
+                  <ChevronRight className="h-4 w-4" />
+                </Link>
+              </div>
+            </div>
+          )}
 
           <TierMetricsCard />
           <CoachMessagesCard />
