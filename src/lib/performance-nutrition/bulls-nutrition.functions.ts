@@ -113,44 +113,9 @@ function toMacroDTO(r: PerformanceNutritionResult): BullsMacroDTO | null {
   };
 }
 
-/**
- * Normalize a `day_type_overrides.kind` value read from the shared table into
- * one of the five real Performance Day Types.
- *
- * Contract:
- *   - Only the five real Performance Day Types resolve to a concrete kind.
- *   - Legacy personal writers (`DayTypePrompt`, personal `WeekScheduleCard`,
- *     `TrialPlanView`) still write "training"/"rest". Those values are
- *     AMBIGUOUS in the Performance context (a personal "training" day may be
- *     strength, football, double-session or a game day). We MUST NOT silently
- *     map "training" to `football_training` — that would produce a false
- *     positive classification. Legacy values return `null` and force the
- *     Performance layer to fall back to REST + surface a flag so the coach
- *     sees that the day needs an explicit Performance day-type entry.
- */
-function normalizeOverrideKind(kind: string | null | undefined): {
-  dayType: BullsDayType | null;
-  legacy: boolean;
-} {
-  if (!kind) return { dayType: null, legacy: false };
-  if (
-    kind === "rest" ||
-    kind === "strength" ||
-    kind === "football_training" ||
-    kind === "game_day" ||
-    kind === "double_session"
-  ) {
-    // Note: legacy personal "rest" carries the same semantic as Performance
-    // "rest" — treating it as REST is safe. Legacy personal "training" is
-    // NOT safe and is handled below.
-    return { dayType: kind as BullsDayType, legacy: false };
-  }
-  if (kind === "training") {
-    // Ambiguous legacy value from personal BodyFuel writers.
-    return { dayType: null, legacy: true };
-  }
-  return { dayType: null, legacy: false };
-}
+// (Legacy `normalizeOverrideKind` removed — day-type resolution now goes
+// through the central resolver in `./day-type-resolver.ts` +
+// `./day-type-resolver.functions.ts`. See `resolvePerformanceDayType`.)
 
 export const getBullsDailyNutritionTargets = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
