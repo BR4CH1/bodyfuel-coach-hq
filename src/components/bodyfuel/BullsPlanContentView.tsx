@@ -90,6 +90,8 @@ export function BullsPlanContentView() {
   const { supabaseUser } = useSession();
   const clientId = supabaseUser?.id;
   const getEngineFn = useServerFn(getBullsDailyNutritionTargets);
+  const params = useParams({ strict: false }) as { orgSlug?: string };
+  const orgSlug = params.orgSlug;
 
   const [date, setDate] = useState<string>(today());
 
