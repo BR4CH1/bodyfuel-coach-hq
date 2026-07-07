@@ -52,19 +52,10 @@ export const Route = createFileRoute("/coach/teams/$orgId")({
   ),
 });
 
-const ALL_TABS = [
-  { key: "cockpit", label: "Cockpit", feature: null },
-  { key: "overview", label: "Übersicht", feature: null },
-  { key: "athletes", label: "Athleten", feature: null },
-  { key: "teams", label: "Teams", feature: null },
-  { key: "training", label: "Training", feature: "athletic_training" },
-  { key: "tasks", label: "Tasks", feature: null },
-  { key: "challenges", label: "Challenges", feature: "challenges" },
-  { key: "ranking", label: "Ranking", feature: "ranking" },
-  { key: "community", label: "Community", feature: "community" },
-  { key: "staff", label: "Trainer & Mitarbeiter", feature: null },
-  { key: "settings", label: "Einstellungen", feature: null },
-];
+// Tab-Keys werden per URL-Hash (#cockpit, #athletes, ...) angesprochen und
+// aus der Sidebar-Navigation in AppLayout gesteuert. Die frühere horizontale
+// Tab-Leiste ist entfernt.
+
 
 const WEEKDAYS = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
 
