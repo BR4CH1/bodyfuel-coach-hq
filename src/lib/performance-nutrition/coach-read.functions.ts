@@ -277,6 +277,7 @@ export const getCoachAthletePerformanceNutrition = createServerFn({ method: "POS
     }
 
     const baselineStatus = activeResult?.status ?? "MISSING_DATA";
+    if (legacyOverrideIgnored) flagSet.add("LEGACY_TRAINING_OVERRIDE_IGNORED");
     const aggregatedFlags = Array.from(flagSet);
     const missing = flagsToMissing(aggregatedFlags);
 
