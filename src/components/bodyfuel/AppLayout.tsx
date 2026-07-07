@@ -175,18 +175,41 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const staffRole = entitlements.primaryStaffRole;
   const cockpitBase = orgId ? `/coach/teams/${orgId}` : null;
 
+  // Teams-Link nur einblenden, wenn der Verein mehrere Teams hat. Bei genau
+  // einem Team wird der Team-Kontext ohnehin direkt verwendet.
+  const { data: orgTeamCount = 0 } = useQuery({
+    queryKey: ["sidebar-org-team-count", orgId],
+    enabled: !!orgId && (staffRole === "organization_admin" || staffRole === "head_coach"),
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("organization_teams")
+        .select("id", { head: true, count: "exact" })
+        .eq("organization_id", orgId!);
+      return count ?? 0;
+    },
+  });
+  const showTeamsLink = orgTeamCount > 1;
+
   const buildStaffNav = () => {
     if (!cockpitBase) return null;
-    if (staffRole === "organization_admin") {
+    if (staffRole === "organization_admin" || staffRole === "head_coach") {
+      const cockpitLabel = staffRole === "organization_admin" ? "Leitungs-Cockpit" : "Coach-Cockpit";
       return [
-        { to: cockpitBase, hash: "cockpit", label: "Leitungs-Cockpit", icon: LayoutDashboard },
-        { to: cockpitBase, hash: "teams", label: "Teams", icon: Users2 },
+        { to: cockpitBase, hash: "cockpit", label: cockpitLabel, icon: LayoutDashboard },
+        { to: cockpitBase, hash: "athletes", label: "Athleten", icon: Users },
+        ...(showTeamsLink ? [{ to: cockpitBase, hash: "teams", label: "Teams", icon: Users2 }] : []),
+        { to: cockpitBase, hash: "training", label: "Training", icon: Dumbbell },
+        { to: cockpitBase, hash: "tasks", label: "Aufgaben", icon: ClipboardList },
+        { to: cockpitBase, hash: "challenges", label: "Challenges", icon: Target },
+        { to: cockpitBase, hash: "ranking", label: "Ranking", icon: Trophy },
+        { to: cockpitBase, hash: "community", label: "Community", icon: Users2 },
         { to: cockpitBase, hash: "staff", label: "Staff", icon: Shield },
-        { to: cockpitBase, hash: "community", label: "Community", icon: Users },
+        { to: cockpitBase, hash: "settings", label: "Einstellungen", icon: Settings },
         { to: "/profile", label: "Profil", icon: UserCircle },
       ];
     }
-    if (staffRole === "head_coach" || staffRole === "team_coach") {
+    if (staffRole === "team_coach") {
       return [
         { to: cockpitBase, hash: "cockpit", label: "Coach-Cockpit", icon: LayoutDashboard },
         { to: cockpitBase, hash: "athletes", label: "Athleten", icon: Users },
