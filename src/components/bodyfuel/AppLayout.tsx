@@ -318,11 +318,14 @@ export function AppLayout({ children }: { children: ReactNode }) {
   // die Bulls-Varianten zeigen, damit das Vereins-Design (rot/schwarz) und
   // die Bulls-spezifische Erfahrung erhalten bleiben.
   const nav = isBullsRoute
-    ? navWithBulls.map((item: any) => {
-        if (item.to === "/nutrition") return { ...item, to: "/bulls/nutrition" };
-        if (item.to === "/training") return { ...item, to: "/bulls/training" };
-        return item;
-      })
+    ? navWithBulls
+        .filter((item: any) => item.to !== "/bulls")
+        .map((item: any) => {
+          if (item.to === "/dashboard") return { ...item, to: "/bulls", label: "Home", icon: Home };
+          if (item.to === "/nutrition") return { ...item, to: "/bulls/nutrition" };
+          if (item.to === "/training") return { ...item, to: "/bulls/training" };
+          return item;
+        })
     : navWithBulls;
   // Mobile bottom nav: Coach-Chat ist in die obere Leiste gewandert
   const mobileNav = nav.filter((item) => item.to !== "/messages");
