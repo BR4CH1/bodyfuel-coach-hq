@@ -36,7 +36,7 @@ function NutritionPage() {
   }, [track]);
 
   const { supabaseUser } = useSession();
-  const { isTrial, isExpired } = useTrial();
+  
 
   const getProfile = useServerFn(getMySmartProfile);
   const { data: profile } = useQuery({
