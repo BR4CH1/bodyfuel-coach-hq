@@ -43,6 +43,16 @@ export interface PoolMeal {
   mealprep_ok: boolean;
 }
 
+export type DietStyle =
+  | "omnivore"
+  | "flexitarian"
+  | "pescetarian"
+  | "vegetarian"
+  | "vegan"
+  | "other";
+
+export type MealPrepStyle = "daily" | "2_3_week" | "meal_prep" | "low_effort";
+
 export interface MacroTarget {
   kcal: number;
   protein_g: number;
@@ -53,6 +63,16 @@ export interface MacroTarget {
 export interface AthletePreferences {
   no_go_ingredients: string[];
   wants_snack: boolean;
+  /** Free-text no-gos, tokenisierte Kleinbuchstaben. */
+  extra_nogo_terms?: string[];
+  /**
+   * Zusammengeführte Allergie-/Unverträglichkeits-Tokens (aus `allergies` +
+   * tokenisiertem `extra_allergies` + `intolerances`). Der Allergie-Filter
+   * lehnt bei fehlenden Meal-Metadaten fail-safe ab.
+   */
+  allergy_tokens?: string[];
+  diet_style?: DietStyle | null;
+  meal_prep_style?: MealPrepStyle | null;
 }
 
 export interface PickedMeal {
