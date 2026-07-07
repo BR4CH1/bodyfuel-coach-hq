@@ -140,18 +140,16 @@ function NutritionPage() {
         </Link>
       </div>
 
-      {supabaseUser?.id && profile?.completed_at && <WeekScheduleCard userId={supabaseUser.id} />}
+      {supabaseUser?.id && <WeekScheduleCard userId={supabaseUser.id} variant="bulls" />}
       <MacroTargetsCard userId={supabaseUser?.id} variant="bulls" />
       {supabaseUser?.id && <PlateauWarning userId={supabaseUser.id} />}
       {supabaseUser?.id && profile?.completed_at && <DietPreferencesCard />}
       {supabaseUser?.id && <MealWishesCard userId={supabaseUser.id} mode="client" />}
       {supabaseUser?.id && <CustomMealsCard userId={supabaseUser.id} />}
 
-      {isTrial || isExpired ? (
-        <TrialNutritionPlan />
-      ) : (
-        supabaseUser?.id && <PlanContentView clientId={supabaseUser.id} planType="nutrition" />
-      )}
+      {/* Bulls Performance: Engine ist Source of Truth — kein Trial-Plan,
+          keine planbasierte Zielaggregation. */}
+      {supabaseUser?.id && <BullsPlanContentView />}
     </div>
   );
 }
