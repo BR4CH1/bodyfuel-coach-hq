@@ -1,17 +1,21 @@
 /**
- * BodyFuel Performance Nutrition Engine V1 — Bulls Hub Wrapper (Phase 2a)
+ * BodyFuel Performance Nutrition Engine V1 — Bulls Hub Wrapper (Phase 2a+)
  *
  * Central Source of Truth for ALL Bulls-Smart nutrition surfaces
- * (MacroTargetsCard, NutritionTracker, …). Never touches the personal
- * `nutrition_targets` table — resolves the Bulls organisation internally and
- * calls the pure engine strictly org-scoped.
+ * (MacroTargetsCard, NutritionTracker, WeekScheduleCard, BullsPlanContentView).
+ * Never touches the personal `nutrition_targets` table — resolves the Bulls
+ * organisation internally and calls the pure engine strictly org-scoped.
  *
- * UI DAY-TYPE MAPPING
- *   day_type_overrides.kind is stored as "training" / "rest" (personal UX).
- *   For the Bulls Performance engine we map:
- *     "rest"     → REST
- *     "training" → FOOTBALL_TRAINING (default intensity MODERATE)
- *   No further heuristics — smart auto-scheduling lands in a later step.
+ * FIVE UI DAY TYPES → engine day types:
+ *   "rest"              → REST
+ *   "strength"          → STRENGTH
+ *   "football_training" → FOOTBALL_TRAINING
+ *   "game_day"          → GAME_DAY
+ *   "double_session"    → DOUBLE_SESSION
+ *
+ * Backwards compat: legacy override kind "training" is interpreted as
+ * "football_training" (the personal DayTypePrompt/WeekScheduleCard still
+ * writes training/rest to the shared day_type_overrides table).
  */
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -19,12 +23,45 @@ import { calculatePerformanceNutritionTarget } from "./engine";
 import type {
   BaselineDailyActivity,
   EnergySex,
+  PerformanceDayType,
   PerformanceGoal,
   SessionIntensity,
 } from "./constants";
 import type { PerformanceNutritionResult } from "./types";
 
+export type BullsDayType =
+  | "rest"
+  | "strength"
+  | "football_training"
+  | "game_day"
+  | "double_session";
+
+/** Legacy: personal flow writes "training"/"rest". */
 export type BullsDayTypeSimple = "training" | "rest";
+
+export const BULLS_DAY_TYPE_LABELS: Record<BullsDayType, string> = {
+  rest: "Restday",
+  strength: "Strength",
+  football_training: "Football Training",
+  game_day: "Game Day",
+  double_session: "Double Session",
+};
+
+const UI_TO_ENGINE: Record<BullsDayType, PerformanceDayType> = {
+  rest: "REST",
+  strength: "STRENGTH",
+  football_training: "FOOTBALL_TRAINING",
+  game_day: "GAME_DAY",
+  double_session: "DOUBLE_SESSION",
+};
+
+export const ALL_BULLS_DAY_TYPES: BullsDayType[] = [
+  "rest",
+  "strength",
+  "football_training",
+  "game_day",
+  "double_session",
+];
 
 export interface BullsMacroDTO {
   kcal: number;
@@ -33,19 +70,24 @@ export interface BullsMacroDTO {
   fat_g: number;
 }
 
+export type BullsPerDayTypeTargets = Record<BullsDayType, BullsMacroDTO | null>;
+
 export interface BullsDailyNutritionTargets {
   organizationId: string;
   date: string;
   status: "CALCULATED" | "REVIEW_REQUIRED" | "MISSING_DATA";
   needsProfile: boolean;
   coachReviewRequired: boolean;
-  dayType: BullsDayTypeSimple;
+  /** UI day type resolved for this date. */
+  dayType: BullsDayType;
   dayTypeSource: "manual" | "auto";
-  /** Macros for the ACTIVE day type (null when MISSING_DATA). */
+  sessionIntensity: SessionIntensity | null;
+  /** Macros for the ACTIVE day type. */
   targets: BullsMacroDTO | null;
-  /** Macros for FOOTBALL_TRAINING (MODERATE) — preview block. */
+  /** Preview blocks per Day Type. */
+  perDayTypeTargets: BullsPerDayTypeTargets;
+  /** Legacy compat for existing MacroTargetsCard/NutritionTracker consumers. */
   trainingTargets: BullsMacroDTO | null;
-  /** Macros for REST — preview block. */
   restTargets: BullsMacroDTO | null;
   flags: string[];
   engineVersion: number;
@@ -69,6 +111,21 @@ function toMacroDTO(r: PerformanceNutritionResult): BullsMacroDTO | null {
   };
 }
 
+function normalizeOverrideKind(kind: string | null | undefined): BullsDayType | null {
+  if (!kind) return null;
+  if (kind === "training") return "football_training"; // legacy compat
+  if (
+    kind === "rest" ||
+    kind === "strength" ||
+    kind === "football_training" ||
+    kind === "game_day" ||
+    kind === "double_session"
+  ) {
+    return kind;
+  }
+  return null;
+}
+
 export const getBullsDailyNutritionTargets = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
@@ -76,15 +133,15 @@ export const getBullsDailyNutritionTargets = createServerFn({ method: "POST" })
       /** YYYY-MM-DD */
       date: string;
       /** Optional explicit day-type override (skips DB read). */
-      day_type?: BullsDayTypeSimple;
-      /** Optional session intensity for the training-day calc. Defaults to MODERATE. */
+      day_type?: BullsDayType;
+      /** Optional session intensity for the active calc. */
       session_intensity?: SessionIntensity | null;
     }) => d,
   )
   .handler(async ({ data, context }): Promise<BullsDailyNutritionTargets> => {
     const { supabase, userId } = context;
 
-    // 0) Resolve Bulls organisation (slug = "bulls", active)
+    // 0) Resolve Bulls organisation
     const { data: org, error: orgErr } = await supabase
       .from("organizations")
       .select("id")
@@ -95,7 +152,7 @@ export const getBullsDailyNutritionTargets = createServerFn({ method: "POST" })
     if (!org?.id) throw new Error("Bulls-Organisation nicht gefunden");
     const organizationId: string = org.id;
 
-    // 1) Athlete basics (personal profile)
+    // 1) Athlete basics
     const { data: profile, error: pErr } = await supabase
       .from("profiles")
       .select("birthdate, height_cm")
@@ -123,7 +180,7 @@ export const getBullsDailyNutritionTargets = createServerFn({ method: "POST" })
       if (bwRows && bwRows.length) weightKg = Number(bwRows[0].weight_kg);
     }
 
-    // 3) Org-scoped performance nutrition profile
+    // 3) Org-scoped profile
     const { data: pnp, error: pnpErr } = await supabase
       .from("performance_nutrition_profiles")
       .select("sex_for_energy_calculation, baseline_daily_activity, performance_goal")
@@ -132,7 +189,7 @@ export const getBullsDailyNutritionTargets = createServerFn({ method: "POST" })
       .maybeSingle();
     if (pnpErr) throw new Error(pnpErr.message);
 
-    // 4) Position (org-scoped team)
+    // 4) Position
     const { data: tmRows } = await supabase
       .from("team_memberships")
       .select("position, organization_teams!inner(organization_id)")
@@ -143,29 +200,39 @@ export const getBullsDailyNutritionTargets = createServerFn({ method: "POST" })
     const position: string | null =
       tmRows && tmRows.length ? (tmRows[0] as any).position ?? null : null;
 
-    // 5) Day-type: explicit → override → REST (auto default)
-    let dayTypeSimple: BullsDayTypeSimple;
+    // 5) Day-type + session intensity resolution
+    let dayType: BullsDayType;
     let dayTypeSource: "manual" | "auto";
+    let sessionIntensity: SessionIntensity | null =
+      data.session_intensity ?? null;
+
     if (data.day_type) {
-      dayTypeSimple = data.day_type;
+      dayType = data.day_type;
       dayTypeSource = "manual";
     } else {
       const { data: dto } = await supabase
         .from("day_type_overrides")
-        .select("kind")
+        .select("kind, session_intensity")
         .eq("user_id", userId)
         .eq("entry_date", data.date)
         .maybeSingle();
-      if (dto?.kind === "rest" || dto?.kind === "training") {
-        dayTypeSimple = dto.kind;
+      const normalized = normalizeOverrideKind((dto as any)?.kind ?? null);
+      if (normalized) {
+        dayType = normalized;
         dayTypeSource = "manual";
+        if (sessionIntensity == null) {
+          const si = (dto as any)?.session_intensity ?? null;
+          if (si === "LIGHT" || si === "MODERATE" || si === "HARD") {
+            sessionIntensity = si;
+          }
+        }
       } else {
-        dayTypeSimple = "rest";
+        dayType = "rest";
         dayTypeSource = "auto";
       }
     }
 
-    // 6) Calibration (org-scoped)
+    // 6) Calibration
     const { data: calib } = await supabase
       .from("performance_nutrition_calibrations")
       .select("personal_calibration_kcal")
@@ -189,24 +256,31 @@ export const getBullsDailyNutritionTargets = createServerFn({ method: "POST" })
         (pnp?.baseline_daily_activity as BaselineDailyActivity | null) ?? null,
     };
 
-    // Compute both variants so the UI never needs to derive a rest/training
-    // preview locally — engine is the single source of truth.
-    const restResult = calculatePerformanceNutritionTarget(
-      baseInput,
-      { dayType: "REST", referenceDate },
-      { personalCalibrationKcal },
-    );
-    const trainingResult = calculatePerformanceNutritionTarget(
-      baseInput,
-      {
-        dayType: "FOOTBALL_TRAINING",
-        sessionIntensity: data.session_intensity ?? "MODERATE",
-        referenceDate,
-      },
-      { personalCalibrationKcal },
-    );
+    // Compute all 5 day-type variants — engine is the single source of truth.
+    const results = {} as Record<BullsDayType, PerformanceNutritionResult>;
+    const perDayTypeTargets = {} as BullsPerDayTypeTargets;
+    for (const k of ALL_BULLS_DAY_TYPES) {
+      const engineDayType = UI_TO_ENGINE[k];
+      // Session intensity applies mostly to football_training; forward for
+      // active day type. For preview blocks we use MODERATE where meaningful.
+      const intensityForPreview: SessionIntensity | null =
+        k === "football_training" || k === "double_session"
+          ? (k === dayType && sessionIntensity ? sessionIntensity : "MODERATE")
+          : null;
+      const r = calculatePerformanceNutritionTarget(
+        baseInput,
+        {
+          dayType: engineDayType,
+          sessionIntensity: intensityForPreview,
+          referenceDate,
+        },
+        { personalCalibrationKcal },
+      );
+      results[k] = r;
+      perDayTypeTargets[k] = toMacroDTO(r);
+    }
 
-    const active = dayTypeSimple === "training" ? trainingResult : restResult;
+    const active = results[dayType];
 
     return {
       organizationId,
@@ -214,25 +288,30 @@ export const getBullsDailyNutritionTargets = createServerFn({ method: "POST" })
       status: active.status,
       needsProfile: active.status === "MISSING_DATA",
       coachReviewRequired: active.coachReviewRequired,
-      dayType: dayTypeSimple,
+      dayType,
       dayTypeSource,
+      sessionIntensity,
       targets: toMacroDTO(active),
-      trainingTargets: toMacroDTO(trainingResult),
-      restTargets: toMacroDTO(restResult),
+      perDayTypeTargets,
+      trainingTargets: perDayTypeTargets.football_training,
+      restTargets: perDayTypeTargets.rest,
       flags: active.flags,
       engineVersion: active.engineVersion,
     };
   });
 
 /**
- * Set the Bulls day-type override for a date. Mirrors the personal
- * setDayType API but keeps the concept in the Bulls surface.
- * kind=null clears the override (falls back to auto = REST for now).
+ * Set the Bulls day-type override for a date.
+ * kind=null clears the override (falls back to auto = REST).
  */
 export const setBullsDayType = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
-    (d: { date: string; kind: BullsDayTypeSimple | null }) => d,
+    (d: {
+      date: string;
+      kind: BullsDayType | BullsDayTypeSimple | null;
+      session_intensity?: SessionIntensity | null;
+    }) => d,
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
@@ -250,6 +329,7 @@ export const setBullsDayType = createServerFn({ method: "POST" })
         user_id: userId,
         entry_date: data.date,
         kind: data.kind,
+        session_intensity: data.session_intensity ?? null,
       },
       { onConflict: "user_id,entry_date" },
     );
