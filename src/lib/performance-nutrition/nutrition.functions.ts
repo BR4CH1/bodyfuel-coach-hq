@@ -148,30 +148,27 @@ export const getNutritionTargetForDate = createServerFn({ method: "POST" })
     const position: string | null =
       tmRows && tmRows.length ? (tmRows[0] as any).position ?? null : null;
 
-    // 5) Day type: explicit → override → REST
-    //    Legacy personal writers still upsert kind="training"/"rest" into the
-    //    shared day_type_overrides table. "training" is ambiguous in the
-    //    Performance context (could be strength/football/game/double session),
-    //    so it is NOT silently mapped — it falls back to REST.
-    const REAL_DAY_TYPES: readonly PerformanceDayType[] = [
-      "REST",
-      "STRENGTH",
-      "FOOTBALL_TRAINING",
-      "GAME_DAY",
-      "DOUBLE_SESSION",
-    ];
+    // 5) Day type: explicit → central Performance Day Type Resolver → REST.
+    //    The resolver considers manual (real perf) overrides plus structural
+    //    signals (team football, strength assignments, game events, individual
+    //    training) and enforces the priority ladder. Legacy "training" is
+    //    never silently mapped.
+    const UI_TO_ENGINE_DT: Record<string, PerformanceDayType> = {
+      rest: "REST",
+      strength: "STRENGTH",
+      football_training: "FOOTBALL_TRAINING",
+      game_day: "GAME_DAY",
+      double_session: "DOUBLE_SESSION",
+    };
     let dayType: PerformanceDayType = data.day_type ?? "REST";
     if (!data.day_type) {
-      const { data: dto } = await supabase
-        .from("day_type_overrides")
-        .select("kind")
-        .eq("user_id", userId)
-        .eq("entry_date", data.date)
-        .maybeSingle();
-      const raw = (dto as any)?.kind ?? null;
-      if (raw && REAL_DAY_TYPES.includes(raw as PerformanceDayType)) {
-        dayType = raw as PerformanceDayType;
-      }
+      const signals = await collectPerformanceDayTypeSignals(supabase, {
+        organizationId: data.organization_id,
+        userId,
+        date: data.date,
+      });
+      const resolution = resolvePerformanceDayTypeFromSignals(signals);
+      dayType = UI_TO_ENGINE_DT[resolution.dayType] ?? "REST";
     }
 
     // 6) Calibration — org-scoped, adults only (engine enforces youth=0)
