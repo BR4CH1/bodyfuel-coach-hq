@@ -57,6 +57,7 @@ import { PhotoAssessmentCard } from "@/components/bodyfuel/PhotoAssessmentCard";
 import { SectionErrorBoundary } from "@/components/bodyfuel/SectionErrorBoundary";
 
 import { PartnerLinkCard } from "@/components/bodyfuel/PartnerLinkCard";
+import { UserAccessDebugCard } from "@/components/admin/UserAccessDebugCard";
 import { CoachTrainingGoalCard } from "@/components/bodyfuel/CoachTrainingGoalCard";
 import { StepGoalEditor } from "@/components/bodyfuel/StepGoalEditor";
 import { AthleteProfileEditor } from "@/components/bodyfuel/AthleteProfileEditor";
@@ -778,6 +779,7 @@ function CustomerDetail() {
           </AccordionTrigger>
           <AccordionContent className="space-y-6 pt-2">
             <PartnerLinkCard userId={userId} />
+            <UserAccessDebugCard userId={userId} />
           </AccordionContent>
         </AccordionItem>
       </Accordion>
