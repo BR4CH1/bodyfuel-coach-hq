@@ -311,3 +311,32 @@ function SectionTitle({ children, icon }: { children: React.ReactNode; icon?: Re
     </h2>
   );
 }
+
+function AthleteRowLink({
+  orgId,
+  userId,
+  className,
+  children,
+}: {
+  orgId: string;
+  userId: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const navigate = useNavigate();
+  return (
+    <Link
+      to="/coach/teams/$orgId/athletes/$userId"
+      params={{ orgId, userId }}
+      preload="intent"
+      onClick={(event) => {
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        event.preventDefault();
+        navigate({ to: "/coach/teams/$orgId/athletes/$userId", params: { orgId, userId } });
+      }}
+      className={className}
+    >
+      {children}
+    </Link>
+  );
+}
