@@ -2,7 +2,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { ChevronLeft, Users, MessageSquarePlus, Megaphone, Trophy, Dumbbell, Star } from "lucide-react";
+import { ChevronLeft, Users, MessageSquarePlus, Megaphone, Trophy, Dumbbell, Star, ImagePlus, X } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+
 import { useSession } from "@/lib/bodyfuel/session";
 import { getOrgHomeData } from "@/lib/organizations/athlete.functions";
 import {
