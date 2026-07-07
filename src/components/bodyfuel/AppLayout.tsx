@@ -29,7 +29,7 @@ import { getLevel } from "@/lib/bodyfuel/data";
 import { totalPoints } from "@/lib/bodyfuel/data";
 import { ReviewPrompt } from "./ReviewPrompt";
 import { SmartPlanReadyPopup } from "./SmartPlanReadyPopup";
-import { OrganizationContextSwitcher } from "@/components/organizations/OrganizationContextSwitcher";
+import { OrganizationContextSwitcher, getActiveContext } from "@/components/organizations/OrganizationContextSwitcher";
 
 const clientNav = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -103,6 +103,31 @@ export function AppLayout({ children }: { children: ReactNode }) {
       navigate({ to: "/tracker/app" });
     }
   }, [user, supabaseUser, loading, navigate, isFreeUser, pathname, hasGroup]);
+
+  // Wenn ein Vereinskontext aktiv ist (z. B. „COESFELD BULLS"), sollen
+  // persönliche Athleten-Bereiche automatisch in den Vereins-Hub geleitet
+  // werden. Dort greift OrgAthleteLayout mit Vereins-Nav & -Theme.
+  useEffect(() => {
+    if (loading || isCoach || isFreeUser) return;
+    const activeSlug = getActiveContext();
+    if (!activeSlug) return;
+    const personalToOrg: Record<string, string> = {
+      "/dashboard": "home",
+      "/nutrition": "nutrition",
+      "/training": "training",
+      "/community": "community",
+    };
+    for (const [prefix, target] of Object.entries(personalToOrg)) {
+      if (pathname === prefix || pathname.startsWith(prefix + "/")) {
+        navigate({
+          to: `/$orgSlug/${target}`,
+          params: { orgSlug: activeSlug } as any,
+          replace: true,
+        } as any);
+        return;
+      }
+    }
+  }, [loading, isCoach, isFreeUser, pathname, navigate]);
 
   // Redirect für Vereins-Staff (Vereinsleitung / Head Coach / Team Coach / Staff):
   // Persönliche Athleten-Routen wie /measurements, /progress, /check-in gehören
