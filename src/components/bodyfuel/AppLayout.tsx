@@ -17,6 +17,9 @@ import {
   Bell,
   Users2,
   Sparkles,
+  ClipboardList,
+  Target,
+  Settings,
 } from "lucide-react";
 import { getMyUnreadCount, getCoachInbox } from "@/lib/coach-messages.functions";
 import { useSession } from "@/lib/bodyfuel/session";
