@@ -128,10 +128,13 @@ function AuthPage() {
           </div>
         </div>
 
-        <h2 className="font-display text-2xl font-bold">Willkommen zurück</h2>
+        <h2 className="font-display text-2xl font-bold">
+          {mode === "signup" ? "Account erstellen" : "Willkommen zurück"}
+        </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Melde dich mit deinen Zugangsdaten an. Neue Kunden erhalten ihren
-          Login per E-Mail nach dem Erstgespräch.
+          {mode === "signup"
+            ? "Erstelle deinen kostenlosen BODYFUEL-Account, um deinem Team beizutreten."
+            : "Melde dich mit deinen Zugangsdaten an."}
         </p>
 
         <form onSubmit={submit} className="mt-6 space-y-4">
@@ -168,7 +171,7 @@ function AuthPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 className="pl-9"
                 required
-                autoComplete="current-password"
+                autoComplete={mode === "signup" ? "new-password" : "current-password"}
               />
 
             </div>
@@ -179,23 +182,29 @@ function AuthPage() {
             disabled={busy}
             className="w-full bg-gradient-gold text-primary-foreground hover:opacity-90"
           >
-            {busy ? "..." : "Einloggen"}
+            {busy ? "..." : mode === "signup" ? "Registrieren" : "Einloggen"}
           </Button>
         </form>
 
         <div className="mt-6 space-y-2 text-center text-xs text-muted-foreground">
           <div>
-            Noch kein Kunde?{" "}
-            <Link to="/" className="text-gold hover:underline">
-              Kostenloses Erstgespräch anfragen
-            </Link>
+            {mode === "signup" ? "Schon einen Account?" : "Noch keinen Account?"}{" "}
+            <button
+              type="button"
+              onClick={() => setMode(mode === "signup" ? "signin" : "signup")}
+              className="text-gold hover:underline"
+            >
+              {mode === "signup" ? "Einloggen" : "Jetzt registrieren"}
+            </button>
           </div>
-          <div>
-            oder{" "}
-            <Link to="/login" className="text-gold hover:underline">
-              Demo-Login ohne Account
-            </Link>
-          </div>
+          {mode === "signin" && (
+            <div>
+              oder{" "}
+              <Link to="/login" className="text-gold hover:underline">
+                Demo-Login ohne Account
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </div>
