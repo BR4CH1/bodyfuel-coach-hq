@@ -28,9 +28,15 @@ export function OrgAthleteLayout({
   const visible = ALL_NAV.filter((n) => n.feature === null || enabledSet.has(n.feature));
   const loc = useLocation();
 
+  // Slug-basiertes Theme: Bulls-Vereine rebrandeten Smart-Komponenten via
+  // `.bulls-theme` (remappt --gold → --bulls-red). Weitere Orgs später
+  // analog über eigene Theme-Klassen einhängen.
+  const themeClass = /bulls/i.test(slug) ? "bulls-theme" : "";
+
   return (
-    <div className="min-h-screen bg-background pb-20 text-foreground">
+    <div className={`min-h-screen bg-background pb-20 text-foreground ${themeClass}`.trim()}>
       {children}
+
       <nav
         className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 backdrop-blur"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
