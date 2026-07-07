@@ -7,7 +7,7 @@ import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { BullsGate } from "@/components/bodyfuel/BullsGate";
 import { BullsHero } from "@/components/bodyfuel/BullsHero";
 import { useSession } from "@/lib/bodyfuel/session";
-import { useTrial } from "@/hooks/use-trial";
+
 import { trackHubEvent } from "@/lib/bulls.functions";
 import { getMySmartProfile } from "@/lib/smart-profile.functions";
 import { MacroTargetsCard } from "@/components/bodyfuel/MacroTargetsCard";
