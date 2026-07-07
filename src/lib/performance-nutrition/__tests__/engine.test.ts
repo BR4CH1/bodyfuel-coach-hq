@@ -298,21 +298,20 @@ describe("Macros — protein stays stable between REST and FOOTBALL_TRAINING", (
 });
 
 describe("Carb floor can raise final target kcal", () => {
-  it("FAT_LOSS + POWER_CONTACT on GAME_DAY triggers carb floor", () => {
+  it("FAT_LOSS athlete on DOUBLE_SESSION triggers carb floor", () => {
     const p = profile({
-      birthDate: "1998-01-01",
+      birthDate: "1996-01-01",
       performanceGoal: "FAT_LOSS",
-      position: "OL",
-      weightKg: 110,
-      heightCm: 190,
+      position: "WR",
+      weightKg: 90,
+      heightCm: 180,
     });
     const r = calculatePerformanceNutritionTarget(p, {
-      dayType: "GAME_DAY",
+      dayType: "DOUBLE_SESSION",
       referenceDate: REF_2026,
     });
     expect(r.energyFloorApplied).toBe(true);
     expect(r.flags).toContain("CARBOHYDRATE_PERFORMANCE_FLOOR_APPLIED");
-    // final kcal must exceed goal-adjusted energy when floor is applied
     expect((r.targetKcal ?? 0)).toBeGreaterThan((r.goalAdjustedEnergy ?? 0));
   });
 });
