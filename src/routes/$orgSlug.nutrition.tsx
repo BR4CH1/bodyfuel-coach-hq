@@ -104,7 +104,8 @@ function OrgNutrition() {
         )}
 
         <Link
-          to="/nutrition/tracking"
+          to="/$orgSlug/nutrition/tracking"
+          params={{ orgSlug: org.slug }}
           className="flex items-center justify-between gap-3 rounded-2xl border border-gold/50 bg-gradient-to-br from-accent/40 to-card p-4 transition hover:border-gold"
         >
           <div className="flex items-center gap-3">
@@ -122,7 +123,8 @@ function OrgNutrition() {
         </Link>
 
         <Link
-          to="/nutrition/favorites"
+          to="/$orgSlug/nutrition/favorites"
+          params={{ orgSlug: org.slug }}
           className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4 transition hover:border-rose-500/50"
         >
           <div className="flex items-center gap-3">
@@ -138,7 +140,8 @@ function OrgNutrition() {
         </Link>
 
         <Link
-          to="/nutrition/shopping"
+          to="/$orgSlug/nutrition/shopping"
+          params={{ orgSlug: org.slug }}
           className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4 transition hover:border-gold/50"
         >
           <div className="flex items-center gap-3">
