@@ -274,6 +274,65 @@ export type Database = {
         }
         Relationships: []
       }
+      athlete_checkins: {
+        Row: {
+          checkin_date: string
+          created_at: string
+          energy: number | null
+          id: string
+          notes: string | null
+          organization_id: string | null
+          pain_level: number | null
+          pain_note: string | null
+          sleep: number | null
+          stress: number | null
+          training_feel: number | null
+          updated_at: string
+          user_id: string
+          weight_kg: number | null
+        }
+        Insert: {
+          checkin_date?: string
+          created_at?: string
+          energy?: number | null
+          id?: string
+          notes?: string | null
+          organization_id?: string | null
+          pain_level?: number | null
+          pain_note?: string | null
+          sleep?: number | null
+          stress?: number | null
+          training_feel?: number | null
+          updated_at?: string
+          user_id: string
+          weight_kg?: number | null
+        }
+        Update: {
+          checkin_date?: string
+          created_at?: string
+          energy?: number | null
+          id?: string
+          notes?: string | null
+          organization_id?: string | null
+          pain_level?: number | null
+          pain_note?: string | null
+          sleep?: number | null
+          stress?: number | null
+          training_feel?: number | null
+          updated_at?: string
+          user_id?: string
+          weight_kg?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "athlete_checkins_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       athlete_nutrition_schedule: {
         Row: {
           active: boolean
