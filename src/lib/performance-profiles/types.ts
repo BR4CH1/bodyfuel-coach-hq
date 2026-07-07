@@ -14,6 +14,8 @@ export interface PerformanceTest {
   instructions: string[];
   equipment: string[];
   videoRequirements: string[];
+  /** Optionale Demo-URL (YouTube), analog zu normalen Trainingsübungen. */
+  demoVideoUrl?: string;
   inputs: {
     measurementMethod?: boolean;
     surface?: boolean;
