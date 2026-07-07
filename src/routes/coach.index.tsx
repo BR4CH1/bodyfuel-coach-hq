@@ -626,6 +626,20 @@ function CoachDashboard() {
             <span className="text-gold">🥗</span>
             <span className="font-display text-sm font-bold">Lebensmittel-DB</span>
           </Link>
+          {showPerfNav && (
+            <Link
+              to="/coach/bulls-performance"
+              className="relative flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm hover:border-bulls-red/60"
+            >
+              <Activity className="h-4 w-4 text-bulls-red" />
+              <span className="font-display text-sm font-bold">Performance Tests</span>
+              {perfPending > 0 && (
+                <span className="ml-1 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-bulls-red px-1.5 py-0.5 text-[10px] font-bold text-white">
+                  {perfPending}
+                </span>
+              )}
+            </Link>
+          )}
         </div>
 
       </div>
