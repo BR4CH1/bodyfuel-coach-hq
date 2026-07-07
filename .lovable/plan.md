@@ -1,70 +1,97 @@
-# Plan: Spieler-Ebene Aufgaben, Ernährung, Community-Umbau
 
-## Rollen (gilt für Bild 1 + 2)
-- Berechtigt zum Zuweisen/Plan-Bauen: `has_role('coach')` **oder** `org_admin`/`head_coach` der jeweiligen Organisation.
-- Wird zentral als Helper `canManageOrgAthletes(orgId)` im Server-Fn geprüft.
+# Smart-Engine in Bulls Hub integrieren
 
-## 1) Bild 1 — „Manuelle Aufgabe" (Cockpit-Tab)
-Kaskadierender Zielbereich mit Stopp-Option auf jeder Ebene:
+Ziel: Die bestehende BodyFuel-Smart-Funktionalität (Training + Ernährung) wird zur wiederverwendbaren **Engine**. Der Bulls Hub rendert diese Engine mit Bulls-Branding und Vereins-Kontext – **kein Fork, keine Duplikat-Daten**.
 
-```
-Zielbereich: [ ganzes Team ▾ ]
-  ├─ Team:   [ Seniors ▾ ]
-  ├─ Gruppe: [ (optional) Linebacker ▾ ]        → wenn gesetzt, Aufgabe nur an Gruppe
-  └─ Spieler:[ (optional) Suche + Auswahl ]     → wenn gesetzt, Aufgabe nur an Spieler
-```
+---
 
-- Neuer Select "Zielebene": *Ganzes Team* / *Positionsgruppe* / *Einzelner Spieler*.
-- Bei "Einzelner Spieler": Kombobox (Command/Popover, shadcn) mit Live-Suche über Vor-/Nachname, gefiltert nach Team und optional Gruppe.
-- Backend: `organization_tasks` bekommt zusätzliche Nullable-Spalten `assignee_user_id uuid` und `position_group text`. Bestehende `team_id`-Aufgaben bleiben unverändert. Sichtbarkeit: Athlet sieht Task, wenn `assignee_user_id = auth.uid()` ODER (`position_group` = seine Gruppe UND Team-Mitglied) ODER `team_id` allein gesetzt.
-- Plan-Builder-Integration: Wenn Titel/Typ = *Trainingsplan* oder *Ernährungsplan*, öffnet ein Button „Plan-Builder öffnen" den passenden Builder mit Vorbelegung (`client_id = assignee_user_id`) — nur bei Einzelspieler-Ebene aktiv. Für BODYFUEL-Coach → `/coach/plan-builder/$userId` bzw. `/coach/training-builder/$userId`. Für Head-Coach der Org: gleiche Builder-Seiten, nur wenn Zielspieler in Org ist.
+## Phase 0 – Bestandsaufnahme (zuerst, kein Code)
 
-## 2) Bild 2 — „Team Training Schedule" erweitern
-Direkt unter Team-Dropdown zusätzliche Zeile:
+Bevor irgendetwas umgebaut wird, dokumentiere ich in `.lovable/smart-engine-audit.md`:
 
-```
-Gruppe: [ alle ▾ ]        Spieler: [ (Suche) ▾ ]
-```
+1. **Smart-Nutrition-Stack:** welche Routen (`nutrition.*`, `mein-bodyfuel`, `tracker.app.nutrition`), welche Server Functions (`nutrition.functions.ts`, `plan-builder.functions.ts`, `nutrition-plan-ai.functions.ts`, `smart-profile.functions.ts`), welche Tabellen (`nutrition_plans`, `nutrition_plan_meals`, `food_entries`, `nutrition_targets`, `smart_nutrition_profile`, `meal_skips`, `meal_ratings`, `shopping_lists`).
+2. **Smart-Training-Stack:** Routen (`training.tsx`, `tracker.app.training`), Server Functions (`training-plan-builder.functions.ts`, `training-plan-ai.functions.ts`), Tabellen (`training_sessions`, `training_exercises`, `training_set_logs`, `training_days`, `athlete_training_schedule`).
+3. **Tracker & One-Click:** wo `food_entries` geschrieben werden, wo Tagesziele/Fortschritt berechnet werden – **eine** Source of Truth pro Domäne.
+4. **Entitlement-Guards:** welche Komponenten/Fns aktuell hart auf „Smart-Kunde / mein-bodyfuel“ prüfen und **context-aware** werden müssen (`hasSmartAccess(user) OR isOrgMember(org, features.nutrition)`).
+5. **Vereins-Mini-Pläne heute:** `athlete_nutrition_schedule`, `org_group_nutrition_schedule`, `org_team_nutrition_schedule`, `athlete_training_schedule`, `org_group_training_schedule`, `organization_team_training_schedule`, `organization_athletic_plan_*` – Was ersetzen wir, was bleibt als **Team-/Coach-Layer**?
+6. **Coach-Athletikpläne:** `organization_athletic_plan_assignments` + `_sessions` + `_exercises` + `_completions` bleiben – sie werden zur „COACH“-Trainingsquelle in der Wochenansicht.
+7. **Team-Termine:** wo Teamtraining/Team-Events herkommen (`organization_teams`, `bulls_hub_events`).
+8. **Branding-Layer:** `AppLayout.tsx`, `BullsHero.tsx`, aktuelle Farbnutzung; wo Design-Tokens verankert sind.
 
-- Wenn nur Team gesetzt → editiert weiterhin `organization_team_training_schedule` (Team-Wochenplan, existiert bereits).
-- Wenn Gruppe gesetzt → neuer Layer `org_group_training_schedule` (team_id, position_group, weekday, title, description).
-- Wenn Spieler gesetzt → individueller Wochenplan `athlete_training_schedule` (user_id, weekday, title, description). Zusätzlich Button „Plan-Builder für diesen Spieler öffnen" → `/coach/training-builder/$userId`.
-- Auflösungs-Reihenfolge im Spieler-Cockpit: Spieler-Override → Gruppen-Override → Team-Default.
+Ergebnis: eine Liste **wiederverwendbar / muss context-aware werden / wird ersetzt / bleibt team-spezifisch**.
 
-## 3) NEU — Ernährungs-Wochenplan-Sektion (analog Bild 2)
-Neuer Bereich im Coach-Cockpit unter Training:
+## Phase 1 – Architektur-Grundlage (keine sichtbaren Änderungen)
 
-```
-ERNÄHRUNGSPLAN (WOCHENPLAN)
-Team [▾]   Gruppe [▾]   Spieler [Suche ▾]
-Wochentage → „Ernährungsplan öffnen" / „Plan-Builder"
-```
+1. **ExperienceContext einführen** (`src/lib/experience/context.tsx`):
+   `{ kind: 'personal' | 'organization', orgId?, orgSlug?, theme, features }`. Provider einmal pro Hub-Layout.
+2. **Theme-Layer:** CSS-Variablen als semantische Tokens (`--primary`, `--accent`, `--surface`…). Zwei Themes: `theme-bodyfuel` (grün) und `theme-bulls` (rot/schwarz/weiß). Alle Smart-Komponenten migrieren wo nötig weg von hartkodierten Farben zu Tokens (dort wo bereits gemacht: lassen).
+3. **Entitlement-Helper** `canUseSmartNutrition(ctx)` / `canUseSmartTraining(ctx)` – akzeptiert personal-Smart **oder** Org-Feature-Flag. Guards in Server Fns umstellen (auth bleibt: `requireSupabaseAuth` + Membership-Check über `has_role`/`org_coach_access`).
+4. **Trainingsquellen-Union** `src/lib/training/week-sources.functions.ts`: liefert pro User + Woche ein zusammengeführtes Array `{ source: 'TEAM'|'COACH'|'SMART', ... }`. Nutzt bestehende Tabellen – **keine** neue.
 
-- Backend-Tabellen analog: `organization_team_nutrition_schedule`, `org_group_nutrition_schedule`, `athlete_nutrition_schedule`.
-- Plan-Builder-Integration: `/coach/plan-builder/$userId` (bestehend) wird angebunden. Zugriff auf **komplette** `nutrition_foods`-Datenbank ist bereits Teil des Builders — hier nur der Einstiegspunkt.
-- Nur Coach/Head-Coach dürfen bauen; Vereinsleitung ohne Coach-Rolle sieht read-only.
+## Phase 2 – Smart-Module extrahieren (Refactor, verhaltensgleich)
 
-## 4) Bild 3 — Spieler-App-Layout
-- Bottom-Nav Reihenfolge: **HOME · TRAINING · ERNÄHRUNG · COMMUNITY · PROFIL** (Ranking-Tab entfernt).
-- **Community**: bekommt oben `Tabs`: *Feed* (bestehend) / *Ranking* (bestehender Ranking-View eingebettet). URL `?tab=ranking` deep-linkbar.
-- **Ernährung (neu)**: Route `$orgSlug.nutrition.tsx`. Voller BODYFUEL-Nutrition-Stack:
-  - Aktueller Coach-Plan (`PlansView` / `PlanContentView`)
-  - Tracker (`NutritionTracker`)
-  - Rezepte (`nutrition.favorites`, `nutrition.recipe-from-ingredients`)
-  - Einkaufsliste (`nutrition.shopping`)
-  - Mahlzeiten-Tausch (`MealSwapDialog`)
-  Wiederverwendung der bestehenden Komponenten, nur Layout innerhalb des Bulls-Shells.
+Bestehende Views bleiben – aber die inneren Bausteine werden als wiederverwendbare Komponenten exportiert:
 
-## Reihenfolge der Umsetzung
-1. **DB-Migration**: neue Spalten in `organization_tasks`, neue Tabellen für Gruppen-/Spieler-Wochenpläne (Training + Ernährung) + GRANT + RLS.
-2. **Server-Fns**: `assignOrgTask` erweitern, neue Schedule-CRUD-Fns, Berechtigungs-Helper `canManageOrgAthletes`.
-3. **Cockpit-UI (Bild 1)**: Kaskaden-Selector + Spielersuche in `coach.teams.$orgId.tsx` bzw. entsprechender Task-Card.
-4. **Wochenplan-UI (Bild 2 + Ernährung)**: gleiche Kaskade in Training-Schedule-Card + neue Ernährungs-Schedule-Card.
-5. **Plan-Builder-Buttons** verlinken zu vorhandenen Routen.
-6. **Spieler-App**: Bottom-Nav-Umbau, Community-Tabs, neue Ernährungs-Route.
-7. **Auflösungslogik** im Spieler-Cockpit (Spieler > Gruppe > Team) für Wochenpläne & Aufgaben-Liste.
+- `SmartNutritionDayView`, `SmartMealCard`, `NutritionTracker`, `SmartShoppingList`, `MealSwapDialog`, `OneClickTrackButton`.
+- `SmartTrainingWeekView`, `SmartSessionView`, `SmartExerciseLog`, `SmartTrainingHistory`.
 
-## Offen (bestätige kurz)
-- **Positionsgruppe pro Spieler**: nutzen wir die bestehende Spalte auf `team_memberships` bzw. `bulls_profiles` (Feld `position`) als Gruppen-Schlüssel, oder soll das ein separates Feld sein?
-- **Ernährungsplan-Wochenplan**: reicht 1 Ernährungsplan pro Wochentag (wie beim Training), oder soll pro Tag mehrere Mahlzeiten-Slots (Frühstück/Mittag/Abend/Snack) editierbar sein? Der Plan-Builder deckt die Mahlzeiten-Ebene sowieso ab — die Wochen-Schedule-Ansicht wäre also nur „welcher Plan gilt an welchem Tag / in welcher Woche".
-- **Community**: Ranking-Tab-Inhalt = bestehende `$orgSlug.ranking.tsx` 1:1 eingebettet — okay?
+Alle lesen/schreiben weiterhin auf die zentralen Tabellen. Keine Copy-Paste-Variante für Bulls.
+
+## Phase 3 – Bulls Hub verdrahten
+
+1. **Neue Player-Navigation** (Bottom-Nav): `HOME · TRAINING · ERNÄHRUNG · TEAM · PROFIL`.
+2. **Routen umschichten:**
+   - `$orgSlug.training.tsx` – rendert `SmartTrainingWeekView` mit **Trainingsquellen-Union** (TEAM/COACH/SMART Badges). Coach-/Team-Einheiten sind fixe Blocker für die Smart-Planung.
+   - `$orgSlug.nutrition.tsx` – rendert die vollständige Smart-Ernährungs-Experience (Tagesansicht, Plan, Tracker, One-Click, Shopping) im Bulls-Theme.
+   - `$orgSlug.community.tsx` bleibt, wird zu **TEAM**-Tab und bündelt Community + Ranking + Challenges (Sub-Tabs).
+   - `$orgSlug.ranking.tsx` → Redirect auf `team?tab=ranking`.
+   - `$orgSlug.home.tsx` – schlankes Dashboard (Wochenfokus, offene Aufgaben aus Team/Coach/Training/Check-in, Trainingswoche-Vorschau, Stand). Ernährungs-Mahlzeiten NICHT als Home-Todos.
+3. **Mini-Plan-Deprecation:** Die Vereins-Mini-Plan-Cards im Spielerbereich werden ausgeblendet (Routen bleiben zunächst intakt für Coach-Zuweisungslogik, sofern noch verwendet). Keine Daten löschen – nur UI-Ersetzung.
+4. **Onboarding Ernährung** für Bulls-Spieler: nutzt `onboarding.smart-nutrition` in Org-Kontext (writes: `smart_nutrition_profile`).
+
+## Phase 4 – Datenschutz-Guards
+
+- Coach-Views (Athletenprofil in `coach.teams.$orgId.athletes.$userId.tsx`) dürfen **nur** teamrelevante Aggregate zeigen: abgeschlossene Coach-/Team-Sessions, Compliance, Strength-Score.
+- Explizit ausschließen: `food_entries`, tägliche kcal/Makros, Meal-Historie, Shopping-Listen, private Smart-Trainingssessions.
+- RLS-Policies prüfen: Coach-Rolle darf über `has_role`/`staff_assignments` **keine** SELECTs auf private Smart-Tabellen erhalten. Wenn Policy zu weit ist → verengen.
+
+## Phase 5 – Case-Tests
+
+Manuell durchspielen:
+- **Fall A** Bulls-only: kein „Mein BodyFuel“ in HubSelector, Bulls Hub voll funktionsfähig.
+- **Fall B** Bulls + Smart-Kunde: beide Hubs, Tracker-Daten identisch (One-Click im Bulls → in `Mein BodyFuel` sichtbar).
+- **Fall C** Bulls + Coaching: Coaching-Inhalte nur unter Mein BodyFuel, Coach sieht keine Ernährung.
+
+---
+
+## Nicht in diesem Turn
+
+- Kein Neubau einer „Sportwissenschafts-Engine“.
+- Kein Löschen bestehender Mini-Plan-Tabellen.
+- Kein Redesign der Smart-Komponenten – nur Theming über Tokens.
+
+## Vorgehen
+
+Ich fange mit **Phase 0 (Audit-Doc)** an und liefere die Bestandsaufnahme + eine konkrete Datei-/Route-Änderungsliste. Erst danach folgen die Refactors (Phase 1–2) und die sichtbare Umschichtung im Bulls Hub (Phase 3+).
+
+**Bestätige bitte:** starte ich mit dem Audit-Doc, oder soll ich direkt in Phase 1 (ExperienceContext + Bulls-Theme-Tokens) einsteigen?
+
+---
+
+## Fortschritt (Turn 1)
+
+**Erledigt:**
+- Audit-Dokument: `.lovable/smart-engine-audit.md` (393 Zeilen, Sub-Agent).
+- `.bulls-theme` CSS-Override in `src/styles.css` – remappt `--gold` → `--bulls-red` inkl. Gradient-/Shadow-Utilities. Alle Smart-Komponenten innerhalb `bulls-theme`-Scope re-branden automatisch (kein Komponenten-Fork).
+- `src/routes/bulls.nutrition.tsx`: statische Mini-Prosa ersetzt durch **volle Smart-Nutrition-Experience** (`PlanContentView`, `MacroTargetsCard`, `WeekScheduleCard`, `PlateauWarning`, `DietPreferencesCard`, `MealWishesCard`, `CustomMealsCard`, Onboarding-CTAs, Tracker/Favoriten/Shopping-Links).
+- `src/routes/bulls.training.tsx`: statische Goal-Blöcke ersetzt durch **volle Smart-Training-Experience** (`PlanContentView planType=training`, `TrainingTracker`, `StrengthCheckStatus`, `StrengthSummaryCard`, `AthleteProfileBanner`).
+- `src/components/organizations/OrgAthleteLayout.tsx`: fügt automatisch `bulls-theme`-Klasse an, wenn Slug „bulls" enthält → auch die org-basierten Routen (`/$orgSlug/nutrition`, `/$orgSlug/training`) sind rebrandet.
+- `src/lib/nutrition-plan.functions.ts`: 4 Entitlement-Guards (`parseNutritionPlan`, `estimateMealMacros`, `getMealMacroDebug`, `generateMealRecipe`) weiten den Zugriff von „nur globaler Coach" auf „Selbst / globaler Coach / Org-Nutrition-Coach" (`assertMealAccess`).
+
+**Offen (nächste Turns):**
+- `ExperienceContext`-Provider + generische `.org-theme-<slug>`-Klassen (weitere Orgs neben Bulls).
+- Trainingsquellen-Union (TEAM / COACH / SMART Wochenansicht) mit Konfliktprüfung.
+- Bottom-Nav Umschichtung: Ranking + Challenges als Sub-Tabs unter TEAM (aktuell noch eigene Tabs).
+- Player-Home-Redesign (Wochenfokus/Offene Aufgaben ohne Ernährungs-Todos).
+- Explizite RLS-Verengung, falls Team-Coaches über bestehende Policies mehr sehen als sie sollten.
+- Deprecation der verbleibenden Vereins-Mini-Plan-UI (task-engine-Tiles in `$orgSlug.training.tsx`).

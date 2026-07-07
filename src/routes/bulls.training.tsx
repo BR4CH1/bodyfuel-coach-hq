@@ -2,14 +2,23 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Activity, BarChart3, Sparkles } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { BullsGate } from "@/components/bodyfuel/BullsGate";
 import { BullsHero } from "@/components/bodyfuel/BullsHero";
-import { getBullsProfile, trackHubEvent, type BullsGoal } from "@/lib/bulls.functions";
+import { PlanContentView } from "@/components/bodyfuel/PlanContentView";
+import { TrainingTracker } from "@/components/bodyfuel/TrainingTracker";
+import { StrengthCheckStatus } from "@/components/bodyfuel/StrengthCheckStatus";
+import { StrengthSummaryCard } from "@/components/bodyfuel/StrengthSummaryCard";
+import { AthleteProfileBanner } from "@/components/bodyfuel/AthleteProfileBanner";
+import { useSession } from "@/lib/bodyfuel/session";
+import { useTrial } from "@/hooks/use-trial";
+import { TrialTrainingPlan } from "@/components/bodyfuel/TrialPlanView";
+import { getMyStrengthStatus } from "@/lib/strength-check.functions";
+import { trackHubEvent } from "@/lib/bulls.functions";
 
 export const Route = createFileRoute("/bulls/training")({
-  head: () => ({ meta: [{ title: "Mini-Trainingsplan — Bulls Hub" }] }),
+  head: () => ({ meta: [{ title: "Training — Bulls Hub" }] }),
   component: () => (
     <AppLayout>
       <BullsGate>
@@ -19,128 +28,102 @@ export const Route = createFileRoute("/bulls/training")({
   ),
 });
 
-const GOAL_LABEL: Record<BullsGoal, string> = {
-  fat_loss: "Körperfett reduzieren",
-  muscle_gain: "Muskelmasse aufbauen",
-  performance: "Football Performance",
-  general_fitness: "Allgemein fitter werden",
-};
-
 function TrainingPage() {
-  const fn = useServerFn(trackHubEvent);
-  const profileQ = useQuery({ queryKey: ["bulls-profile"], queryFn: useServerFn(getBullsProfile) });
-  useEffect(() => { fn({ data: { kind: "training_plan_opened" } }).catch(() => {}); }, [fn]);
+  const track = useServerFn(trackHubEvent);
+  useEffect(() => {
+    track({ data: { kind: "training_plan_opened" } }).catch(() => {});
+  }, [track]);
 
-  const goal = (profileQ.data as any)?.main_goal as BullsGoal | undefined;
+  const { supabaseUser } = useSession();
+  const { isTrial, isExpired } = useTrial();
+
+  const statusFn = useServerFn(getMyStrengthStatus);
+  const { data: strengthStatus } = useQuery({
+    queryKey: ["my-strength-status"],
+    queryFn: () => statusFn(),
+    enabled: !!supabaseUser,
+  });
+  const last = strengthStatus?.last;
+  const hasCompleted = !!last && !!last.score_total;
 
   return (
     <div className="space-y-6">
-      <Link to="/bulls" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-bulls-red">
+      <Link
+        to="/bulls"
+        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-bulls-red"
+      >
         <ArrowLeft className="h-3 w-3" /> Zurück zum Hub
       </Link>
+
       <BullsHero
-        eyebrow="Mini-Trainingsplan"
-        title="Dein kostenloser Mini-Trainingsplan"
-        subtitle={goal ? `Plan passend zu deinem Ziel: ${GOAL_LABEL[goal]}.` : "Ein einfacher Starter-Plan."}
+        eyebrow="Training"
+        title="Deine Trainingswoche"
+        subtitle="Vollständiger Trainingsplan, Sätze tracken, Progression — im Bulls-Look."
       />
 
-      {!goal ? (
-        <p className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground">Lade…</p>
+      <section className="grid gap-3 sm:grid-cols-3">
+        <QuickLink to="/strength-check" icon={<Activity className="h-5 w-5" />} title="Strength Check" desc="Scores & Historie" />
+        <QuickLink to="/progress" icon={<BarChart3 className="h-5 w-5" />} title="Trainingsanalyse" desc="Verbesserungen & Trends" />
+        <QuickLink to="/achievements" icon={<Sparkles className="h-5 w-5" />} title="Erfolge" desc="Adhärenz & Volumen" />
+      </section>
+
+      <StrengthCheckStatus variant="block" />
+      {supabaseUser && <AthleteProfileBanner />}
+
+      {hasCompleted && (
+        <StrengthSummaryCard
+          total={last.score_total}
+          performedAt={last.performed_at}
+          bodyweightKg={last.bodyweight_kg}
+          groups={[
+            { key: "score_lower", label: "Unterkörper", val: last.score_lower },
+            { key: "score_push", label: "Push", val: last.score_push },
+            { key: "score_pull", label: "Pull", val: last.score_pull },
+            { key: "score_core", label: "Core", val: last.score_core },
+          ]}
+        />
+      )}
+
+      {isTrial || isExpired ? (
+        <TrialTrainingPlan />
       ) : (
-        <Plan goal={goal} />
+        supabaseUser && <PlanContentView clientId={supabaseUser.id} planType="training" />
+      )}
+
+      {supabaseUser && !isExpired && (
+        <section className="space-y-4">
+          <TrainingTracker clientId={supabaseUser.id} />
+        </section>
       )}
     </div>
   );
 }
 
-function Plan({ goal }: { goal: BullsGoal }) {
-  if (goal === "fat_loss") return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <Block title="Einheit A">
-        <li>Kniebeugen oder Beinpresse 3×8–10</li>
-        <li>Rudern 3×10</li>
-        <li>Liegestütze oder Bankdrücken 3×8–10</li>
-        <li>Plank 3×30–45 Sek.</li>
-      </Block>
-      <Block title="Einheit B">
-        <li>Kreuzheben leicht oder Hip Thrust 3×8</li>
-        <li>Latzug 3×10</li>
-        <li>Schulterdrücken 3×8–10</li>
-        <li>Farmers Walk 3 Runden</li>
-      </Block>
-      <Note>Zusätzlich: 8.000 Schritte täglich · 2 Cardioeinheiten pro Woche à 20–30 Min.</Note>
-    </div>
-  );
-  if (goal === "muscle_gain") return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <Block title="Einheit A">
-        <li>Kniebeugen oder Beinpresse 4×8</li>
-        <li>Bankdrücken 4×8</li>
-        <li>Rudern 4×10</li>
-        <li>Bauchübung 3 Sätze</li>
-      </Block>
-      <Block title="Einheit B">
-        <li>Kreuzheben oder Hip Thrust 4×6–8</li>
-        <li>Schulterdrücken 4×8</li>
-        <li>Latzug oder Klimmzüge 4×8–10</li>
-        <li>Seitheben 3×12–15</li>
-      </Block>
-      <Note>Progression tracken — jede Woche versuchen stärker zu werden.</Note>
-    </div>
-  );
-  if (goal === "performance") return (
-    <div className="grid gap-4 lg:grid-cols-3">
-      <Block title="A — Kraft">
-        <li>Kniebeugen oder Beinpresse 3×5</li>
-        <li>Bankdrücken 3×5</li>
-        <li>Rudern 3×8</li>
-        <li>Core 3 Sätze</li>
-      </Block>
-      <Block title="B — Explosivität">
-        <li>Box Jumps 3×5</li>
-        <li>Sprints 6×10–20 m</li>
-        <li>Farmers Walk 3 Runden</li>
-        <li>Mobility 10 Min.</li>
-      </Block>
-      <Block title="C — Stabilität & Recovery">
-        <li>Ausfallschritte 3×8 je Seite</li>
-        <li>Schulter-Stabi 3×12</li>
-        <li>Dead Bug 3×10 je Seite</li>
-        <li>Mobility 10 Min.</li>
-      </Block>
-    </div>
-  );
+function QuickLink({
+  to,
+  icon,
+  title,
+  desc,
+}: {
+  to: string;
+  icon: React.ReactNode;
+  title: string;
+  desc: string;
+}) {
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <Block title="Einheit A">
-        <li>Beinpresse 3×10</li>
-        <li>Brustpresse 3×10</li>
-        <li>Rudern 3×10</li>
-        <li>Plank 3×30 Sek.</li>
-      </Block>
-      <Block title="Einheit B">
-        <li>Ausfallschritte 3×8 je Seite</li>
-        <li>Latzug 3×10</li>
-        <li>Schulterdrücken 3×10</li>
-        <li>Dead Bug 3×10 je Seite</li>
-      </Block>
-      <Note>Zusätzlich: 8.000 Schritte täglich · 2 Cardioeinheiten pro Woche.</Note>
-    </div>
-  );
-}
-
-function Block({ title, children }: any) {
-  return (
-    <div className="rounded-2xl border border-border bg-card p-5">
-      <h3 className="font-display text-lg font-bold text-white">{title}</h3>
-      <ul className="mt-2 list-disc pl-5 text-sm text-foreground/90 space-y-1">{children}</ul>
-    </div>
-  );
-}
-function Note({ children }: any) {
-  return (
-    <div className="rounded-2xl border border-bulls-red/40 bg-bulls-red/5 p-4 text-sm text-foreground/90 lg:col-span-3">
-      {children}
-    </div>
+    <Link
+      to={to}
+      className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4 transition hover:border-bulls-red/60"
+    >
+      <div className="flex items-center gap-3">
+        <div className="grid h-10 w-10 place-items-center rounded-xl bg-bulls-red/15 text-bulls-red">
+          {icon}
+        </div>
+        <div className="min-w-0">
+          <div className="text-sm font-bold">{title}</div>
+          <div className="truncate text-xs text-muted-foreground">{desc}</div>
+        </div>
+      </div>
+    </Link>
   );
 }

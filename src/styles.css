@@ -136,6 +136,34 @@
   box-shadow: 0 10px 30px -10px var(--bulls-red);
 }
 
+/* -----------------------------------------------------------------
+ * Bulls theme — remaps BodyFuel "gold" tokens to Bulls red inside
+ * `.bulls-theme` scope. Any Smart component using text-gold /
+ * bg-gold / border-gold / ring-gold / var(--gold) automatically
+ * re-brands. Applied by BullsGate and OrgAthleteLayout (slug=bulls).
+ * ----------------------------------------------------------------- */
+.bulls-theme {
+  --gold: var(--bulls-red);
+  --gold-soft: var(--bulls-red-bright);
+  --primary: var(--bulls-red);
+  --ring: var(--bulls-red);
+  --accent: oklch(0.30 0.08 25);
+}
+.bulls-theme .bg-gradient-gold,
+.bulls-theme [class~="bg-gradient-gold"] {
+  background: linear-gradient(135deg, var(--bulls-red-bright) 0%, var(--bulls-red) 100%) !important;
+}
+.bulls-theme .text-gradient-gold,
+.bulls-theme [class~="text-gradient-gold"] {
+  background: linear-gradient(135deg, var(--bulls-red-bright) 0%, var(--bulls-red) 100%) !important;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.bulls-theme .shadow-gold,
+.bulls-theme [class~="shadow-gold"] {
+  box-shadow: 0 10px 30px -10px var(--bulls-red) !important;
+}
 
 
 @utility no-scrollbar {
