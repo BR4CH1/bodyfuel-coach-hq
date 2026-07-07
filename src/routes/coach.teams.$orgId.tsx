@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useRouterState } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -61,11 +61,7 @@ import { AthletesTab } from "@/components/organizations/AthletesTab";
 
 export const Route = createFileRoute("/coach/teams/$orgId")({
   head: () => ({ meta: [{ title: "Organisation — BODYFUEL Coach" }] }),
-  component: () => (
-    <AppLayout>
-      <CoachOrgDetail />
-    </AppLayout>
-  ),
+  component: () => <Outlet />,
 });
 
 // Tab-Keys werden per URL-Hash (#cockpit, #athletes, ...) angesprochen und
@@ -75,7 +71,7 @@ export const Route = createFileRoute("/coach/teams/$orgId")({
 
 const WEEKDAYS = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
 
-function CoachOrgDetail() {
+export function CoachOrgDetail() {
   const { orgId } = Route.useParams();
   const routeHash = useRouterState({ select: (s) => s.location.hash });
   const fetch = useServerFn(getOrgCoachDetail);
