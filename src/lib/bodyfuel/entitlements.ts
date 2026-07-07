@@ -11,6 +11,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
 
+export type StaffRoleKey = "organization_admin" | "head_coach" | "team_coach" | "staff";
+
 export type Entitlements = {
   hasBodyfuelFree: boolean;
   hasBodyfuelSmart: boolean;
@@ -23,6 +25,10 @@ export type Entitlements = {
   isPlatformCoach: boolean;
   /** Slug des primären Vereins des Nutzers, für Redirects. Nur gesetzt bei hasTeamAccess. */
   primaryOrgSlug: string | null;
+  /** ID des primären Vereins (für /coach/teams/$orgId Cockpit-Link). */
+  primaryOrgId: string | null;
+  /** Höchste Staff-Rolle im primären Verein (falls vorhanden). */
+  primaryStaffRole: StaffRoleKey | null;
   loading: boolean;
 };
 
@@ -34,6 +40,8 @@ const EMPTY: Entitlements = {
   hasTeamAccess: false,
   isPlatformCoach: false,
   primaryOrgSlug: null,
+  primaryOrgId: null,
+  primaryStaffRole: null,
   loading: false,
 };
 
