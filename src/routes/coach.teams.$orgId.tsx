@@ -264,12 +264,20 @@ export function CoachOrgDetail() {
                         {t.sport ?? "—"} {t.age_group ? `· ${t.age_group}` : ""}
                       </div>
                     </div>
-                    <button
-                      onClick={() => { setAthleteTeamFilter(t.id); selectTab("athletes"); }}
-                      className="rounded border border-border px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
-                    >
-                      Athleten →
-                    </button>
+                    <div className="flex flex-col items-end gap-1">
+                      <button
+                        onClick={() => { setAthleteTeamFilter(t.id); selectTab("athletes"); }}
+                        className="rounded border border-border px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                      >
+                        Athleten →
+                      </button>
+                      <button
+                        onClick={() => setJoinLinkTeam({ id: t.id, name: t.name })}
+                        className="rounded border border-border px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-primary hover:bg-primary/10"
+                      >
+                        Beitrittslink
+                      </button>
+                    </div>
                   </div>
                   <div className="mt-3 grid grid-cols-3 gap-2 text-center">
                     <div className="rounded bg-muted/40 p-2">
@@ -287,6 +295,7 @@ export function CoachOrgDetail() {
                       <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Offen</div>
                     </div>
                   </div>
+
                 </li>
               );
             })}
