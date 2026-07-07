@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { assertCoachOrOrgStaffForAthlete } from "@/lib/organizations/org-coach-access";
+import { assertCoachOrOrgStaffForAthlete } from "@/lib/organizations/org-coach-access.server";
 
 export type FoodSource =
   | "bls_4_0"

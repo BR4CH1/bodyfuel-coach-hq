@@ -4,6 +4,7 @@ import {
   assertCoachOrOrgStaffForAthlete,
   assertGlobalCoachOrAnyOrgCoach,
 } from "@/lib/organizations/org-coach-access";
+} from "@/lib/organizations/org-coach-access.server";
 
 // 0=Sun..6=Sat, matches JS Date.getUTCDay()
 const WEEKDAY_MAP: Record<string, number> = {

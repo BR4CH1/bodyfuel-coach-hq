@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { daysUntilNextShopping } from "./shopping-cycle";
-import { assertCoachOrOrgStaffForAthlete } from "@/lib/organizations/org-coach-access";
+import { assertCoachOrOrgStaffForAthlete } from "@/lib/organizations/org-coach-access.server";
 
 type AiIngredient = { name: string; amount?: number; unit?: string; grams?: number };
 type GeneratedMeal = {
