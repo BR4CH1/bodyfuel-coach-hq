@@ -118,6 +118,7 @@ import { Route as OrgSlugNutritionShoppingRouteImport } from './routes/$orgSlug.
 import { Route as OrgSlugNutritionFavoritesRouteImport } from './routes/$orgSlug.nutrition.favorites'
 import { Route as OrgSlugInviteTokenRouteImport } from './routes/$orgSlug.invite.$token'
 import { Route as OrgSlugAthleticSessionIdRouteImport } from './routes/$orgSlug.athletic.$sessionId'
+import { Route as BullsPerformanceModuleIdIndexRouteImport } from './routes/bulls.performance.$moduleId.index'
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
@@ -694,6 +695,12 @@ const OrgSlugAthleticSessionIdRoute =
     path: '/athletic/$sessionId',
     getParentRoute: () => OrgSlugRoute,
   } as any)
+const BullsPerformanceModuleIdIndexRoute =
+  BullsPerformanceModuleIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => BullsPerformanceModuleIdRoute,
+  } as any)
 const LovableEmailTransactionalSendRoute =
   LovableEmailTransactionalSendRouteImport.update({
     id: '/lovable/email/transactional/send',
@@ -927,6 +934,7 @@ export interface FileRoutesByFullPath {
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
+  '/bulls/performance/$moduleId/': typeof BullsPerformanceModuleIdIndexRoute
   '/coach/teams/$orgId/athletes/$userId': typeof CoachTeamsOrgIdAthletesUserIdRoute
   '/coach/teams/$orgId/performance/session/$sessionId': typeof CoachTeamsOrgIdPerformanceSessionSessionIdRoute
 }
@@ -1009,7 +1017,6 @@ export interface FileRoutesByTo {
   '/bulls/nutrition/favorites': typeof BullsNutritionFavoritesRoute
   '/bulls/nutrition/shopping': typeof BullsNutritionShoppingRoute
   '/bulls/nutrition/tracking': typeof BullsNutritionTrackingRoute
-  '/bulls/performance/$moduleId': typeof BullsPerformanceModuleIdRouteWithChildren
   '/coach/customers/$userId': typeof CoachCustomersUserIdRoute
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/coach/plan-builder/$userId': typeof CoachPlanBuilderUserIdRoute
@@ -1047,6 +1054,7 @@ export interface FileRoutesByTo {
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
+  '/bulls/performance/$moduleId': typeof BullsPerformanceModuleIdIndexRoute
   '/coach/teams/$orgId/athletes/$userId': typeof CoachTeamsOrgIdAthletesUserIdRoute
   '/coach/teams/$orgId/performance/session/$sessionId': typeof CoachTeamsOrgIdPerformanceSessionSessionIdRoute
 }
@@ -1177,6 +1185,7 @@ export interface FileRoutesById {
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
+  '/bulls/performance/$moduleId/': typeof BullsPerformanceModuleIdIndexRoute
   '/coach/teams/$orgId/athletes/$userId': typeof CoachTeamsOrgIdAthletesUserIdRoute
   '/coach/teams/$orgId/performance/session/$sessionId': typeof CoachTeamsOrgIdPerformanceSessionSessionIdRoute
 }
@@ -1308,6 +1317,7 @@ export interface FileRouteTypes {
     | '/lovable/email/queue/process'
     | '/lovable/email/transactional/preview'
     | '/lovable/email/transactional/send'
+    | '/bulls/performance/$moduleId/'
     | '/coach/teams/$orgId/athletes/$userId'
     | '/coach/teams/$orgId/performance/session/$sessionId'
   fileRoutesByTo: FileRoutesByTo
@@ -1390,7 +1400,6 @@ export interface FileRouteTypes {
     | '/bulls/nutrition/favorites'
     | '/bulls/nutrition/shopping'
     | '/bulls/nutrition/tracking'
-    | '/bulls/performance/$moduleId'
     | '/coach/customers/$userId'
     | '/coach/customers/new'
     | '/coach/plan-builder/$userId'
@@ -1428,6 +1437,7 @@ export interface FileRouteTypes {
     | '/lovable/email/queue/process'
     | '/lovable/email/transactional/preview'
     | '/lovable/email/transactional/send'
+    | '/bulls/performance/$moduleId'
     | '/coach/teams/$orgId/athletes/$userId'
     | '/coach/teams/$orgId/performance/session/$sessionId'
   id:
@@ -1557,6 +1567,7 @@ export interface FileRouteTypes {
     | '/lovable/email/queue/process'
     | '/lovable/email/transactional/preview'
     | '/lovable/email/transactional/send'
+    | '/bulls/performance/$moduleId/'
     | '/coach/teams/$orgId/athletes/$userId'
     | '/coach/teams/$orgId/performance/session/$sessionId'
   fileRoutesById: FileRoutesById
@@ -2395,6 +2406,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrgSlugAthleticSessionIdRouteImport
       parentRoute: typeof OrgSlugRoute
     }
+    '/bulls/performance/$moduleId/': {
+      id: '/bulls/performance/$moduleId/'
+      path: '/'
+      fullPath: '/bulls/performance/$moduleId/'
+      preLoaderRoute: typeof BullsPerformanceModuleIdIndexRouteImport
+      parentRoute: typeof BullsPerformanceModuleIdRoute
+    }
     '/lovable/email/transactional/send': {
       id: '/lovable/email/transactional/send'
       path: '/lovable/email/transactional/send'
@@ -2713,11 +2731,13 @@ const BullsNutritionRouteWithChildren = BullsNutritionRoute._addFileChildren(
 
 interface BullsPerformanceModuleIdRouteChildren {
   BullsPerformanceModuleIdTestIdRoute: typeof BullsPerformanceModuleIdTestIdRoute
+  BullsPerformanceModuleIdIndexRoute: typeof BullsPerformanceModuleIdIndexRoute
 }
 
 const BullsPerformanceModuleIdRouteChildren: BullsPerformanceModuleIdRouteChildren =
   {
     BullsPerformanceModuleIdTestIdRoute: BullsPerformanceModuleIdTestIdRoute,
+    BullsPerformanceModuleIdIndexRoute: BullsPerformanceModuleIdIndexRoute,
   }
 
 const BullsPerformanceModuleIdRouteWithChildren =
