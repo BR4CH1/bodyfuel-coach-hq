@@ -110,15 +110,26 @@ export function AthletesTab({
               <th className="px-3 py-2">Onboarding</th>
               <th className="px-3 py-2">Fehlende Organization-Daten</th>
               <th className="w-8 px-3 py-2" />
+              <th className="w-8 px-3 py-2" />
             </tr>
           </thead>
           <tbody>
             {rows.map((a) => (
-              <tr key={a.user_id} className="border-t border-border hover:bg-muted/40">
+              <tr
+                key={a.user_id}
+                onClick={() =>
+                  navigate({
+                    to: "/coach/teams/$orgId/athletes/$userId",
+                    params: { orgId, userId: a.user_id },
+                  })
+                }
+                className="cursor-pointer border-t border-border hover:bg-muted/40"
+              >
                 <td className="px-3 py-2 font-semibold">
                   <Link
                     to="/coach/teams/$orgId/athletes/$userId"
                     params={{ orgId, userId: a.user_id }}
+                    onClick={(e) => e.stopPropagation()}
                     className="hover:underline"
                   >
                     {a.name}
@@ -134,7 +145,7 @@ export function AthletesTab({
                 <td className="px-3 py-2 text-xs text-muted-foreground">
                   {a.missing.length === 0 ? "—" : a.missing.join(", ")}
                 </td>
-                <td className="px-3 py-2">
+                <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
                   {canManage && a.team_id && (
                     <RowActions
                       orgId={orgId}
@@ -144,6 +155,9 @@ export function AthletesTab({
                       onDone={invalidate}
                     />
                   )}
+                </td>
+                <td className="px-3 py-2 text-muted-foreground">
+                  <ChevronRight className="h-4 w-4" />
                 </td>
               </tr>
             ))}
