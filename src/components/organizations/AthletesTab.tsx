@@ -24,12 +24,14 @@ export function AthletesTab({
   teams,
   allowedUserIds,
   onClearFilter,
+  onTeamFilterChange,
 }: {
   orgId: string;
   teamFilter: string | null;
   teams: Team[];
   allowedUserIds: Set<string> | null;
   onClearFilter: () => void;
+  onTeamFilterChange?: (teamId: string | null) => void;
 }) {
   const navigate = useNavigate();
   const qc = useQueryClient();
