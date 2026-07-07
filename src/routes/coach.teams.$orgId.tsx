@@ -341,9 +341,19 @@ export function CoachOrgDetail() {
           </ul>
         )}
       </div>
+      {joinLinkTeam && (
+        <TeamJoinLinkDialog
+          orgId={orgId}
+          teamId={joinLinkTeam.id}
+          teamName={joinLinkTeam.name}
+          open={!!joinLinkTeam}
+          onClose={() => setJoinLinkTeam(null)}
+        />
+      )}
     </div>
   );
 }
+
 
 // Inline AthletesTab wurde nach src/components/organizations/AthletesTab.tsx
 // verschoben (inkl. „Athlet hinzufügen"-Flow und Pending-Kaderplätzen).
