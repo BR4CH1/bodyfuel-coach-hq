@@ -170,7 +170,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
           ? [{ to: `/coach/teams/${entitlements.primaryOrgId}`, label: "Leitungs-Cockpit", icon: LayoutDashboard }]
           : []),
         { to: `/${entitlements.primaryOrgSlug}`, label: "Zum Verein", icon: Users2 },
-        { to: "/mein-bodyfuel", label: "Mein BodyFuel", icon: Sparkles },
       ]
     : null;
   const baseNav = isCoach ? coachNav : (teamOnlyNav ?? clientNav);
