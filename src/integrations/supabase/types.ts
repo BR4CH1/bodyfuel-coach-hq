@@ -5019,6 +5019,7 @@ export type Database = {
           error: string | null
           finished_at: string | null
           id: string
+          mode: string
           nutrition_plan_id: string | null
           started_at: string | null
           status: string
@@ -5033,6 +5034,7 @@ export type Database = {
           error?: string | null
           finished_at?: string | null
           id?: string
+          mode?: string
           nutrition_plan_id?: string | null
           started_at?: string | null
           status?: string
@@ -5047,6 +5049,7 @@ export type Database = {
           error?: string | null
           finished_at?: string | null
           id?: string
+          mode?: string
           nutrition_plan_id?: string | null
           started_at?: string | null
           status?: string
