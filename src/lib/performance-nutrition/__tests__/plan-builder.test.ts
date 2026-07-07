@@ -11,10 +11,8 @@ function meal(
   overrides: Partial<PoolMeal> & { id: string; category: PoolMeal["category"] },
 ): PoolMeal {
   return {
-    id: overrides.id,
     name: `Meal ${overrides.id}`,
     description: null,
-    category: overrides.category,
     kcal: 500,
     protein_g: 30,
     carbs_g: 55,
