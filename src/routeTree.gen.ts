@@ -79,6 +79,7 @@ import { Route as OrgSlugRankingRouteImport } from './routes/$orgSlug.ranking'
 import { Route as OrgSlugProfilRouteImport } from './routes/$orgSlug.profil'
 import { Route as OrgSlugPerformanceRouteImport } from './routes/$orgSlug.performance'
 import { Route as OrgSlugOnboardingRouteImport } from './routes/$orgSlug.onboarding'
+import { Route as OrgSlugNutritionRouteImport } from './routes/$orgSlug.nutrition'
 import { Route as OrgSlugHomeRouteImport } from './routes/$orgSlug.home'
 import { Route as OrgSlugCommunityRouteImport } from './routes/$orgSlug.community'
 import { Route as TrackerAppIndexRouteImport } from './routes/tracker.app.index'
@@ -476,6 +477,11 @@ const OrgSlugOnboardingRoute = OrgSlugOnboardingRouteImport.update({
   path: '/onboarding',
   getParentRoute: () => OrgSlugRoute,
 } as any)
+const OrgSlugNutritionRoute = OrgSlugNutritionRouteImport.update({
+  id: '/nutrition',
+  path: '/nutrition',
+  getParentRoute: () => OrgSlugRoute,
+} as any)
 const OrgSlugHomeRoute = OrgSlugHomeRouteImport.update({
   id: '/home',
   path: '/home',
@@ -739,6 +745,7 @@ export interface FileRoutesByFullPath {
   '/welcome': typeof WelcomeRoute
   '/$orgSlug/community': typeof OrgSlugCommunityRoute
   '/$orgSlug/home': typeof OrgSlugHomeRoute
+  '/$orgSlug/nutrition': typeof OrgSlugNutritionRoute
   '/$orgSlug/onboarding': typeof OrgSlugOnboardingRoute
   '/$orgSlug/performance': typeof OrgSlugPerformanceRoute
   '/$orgSlug/profil': typeof OrgSlugProfilRoute
@@ -849,6 +856,7 @@ export interface FileRoutesByTo {
   '/welcome': typeof WelcomeRoute
   '/$orgSlug/community': typeof OrgSlugCommunityRoute
   '/$orgSlug/home': typeof OrgSlugHomeRoute
+  '/$orgSlug/nutrition': typeof OrgSlugNutritionRoute
   '/$orgSlug/onboarding': typeof OrgSlugOnboardingRoute
   '/$orgSlug/performance': typeof OrgSlugPerformanceRoute
   '/$orgSlug/profil': typeof OrgSlugProfilRoute
@@ -962,6 +970,7 @@ export interface FileRoutesById {
   '/welcome': typeof WelcomeRoute
   '/$orgSlug/community': typeof OrgSlugCommunityRoute
   '/$orgSlug/home': typeof OrgSlugHomeRoute
+  '/$orgSlug/nutrition': typeof OrgSlugNutritionRoute
   '/$orgSlug/onboarding': typeof OrgSlugOnboardingRoute
   '/$orgSlug/performance': typeof OrgSlugPerformanceRoute
   '/$orgSlug/profil': typeof OrgSlugProfilRoute
@@ -1078,6 +1087,7 @@ export interface FileRouteTypes {
     | '/welcome'
     | '/$orgSlug/community'
     | '/$orgSlug/home'
+    | '/$orgSlug/nutrition'
     | '/$orgSlug/onboarding'
     | '/$orgSlug/performance'
     | '/$orgSlug/profil'
@@ -1188,6 +1198,7 @@ export interface FileRouteTypes {
     | '/welcome'
     | '/$orgSlug/community'
     | '/$orgSlug/home'
+    | '/$orgSlug/nutrition'
     | '/$orgSlug/onboarding'
     | '/$orgSlug/performance'
     | '/$orgSlug/profil'
@@ -1300,6 +1311,7 @@ export interface FileRouteTypes {
     | '/welcome'
     | '/$orgSlug/community'
     | '/$orgSlug/home'
+    | '/$orgSlug/nutrition'
     | '/$orgSlug/onboarding'
     | '/$orgSlug/performance'
     | '/$orgSlug/profil'
@@ -1941,6 +1953,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrgSlugOnboardingRouteImport
       parentRoute: typeof OrgSlugRoute
     }
+    '/$orgSlug/nutrition': {
+      id: '/$orgSlug/nutrition'
+      path: '/nutrition'
+      fullPath: '/$orgSlug/nutrition'
+      preLoaderRoute: typeof OrgSlugNutritionRouteImport
+      parentRoute: typeof OrgSlugRoute
+    }
     '/$orgSlug/home': {
       id: '/$orgSlug/home'
       path: '/home'
@@ -2241,6 +2260,7 @@ declare module '@tanstack/react-router' {
 interface OrgSlugRouteChildren {
   OrgSlugCommunityRoute: typeof OrgSlugCommunityRoute
   OrgSlugHomeRoute: typeof OrgSlugHomeRoute
+  OrgSlugNutritionRoute: typeof OrgSlugNutritionRoute
   OrgSlugOnboardingRoute: typeof OrgSlugOnboardingRoute
   OrgSlugPerformanceRoute: typeof OrgSlugPerformanceRoute
   OrgSlugProfilRoute: typeof OrgSlugProfilRoute
@@ -2254,6 +2274,7 @@ interface OrgSlugRouteChildren {
 const OrgSlugRouteChildren: OrgSlugRouteChildren = {
   OrgSlugCommunityRoute: OrgSlugCommunityRoute,
   OrgSlugHomeRoute: OrgSlugHomeRoute,
+  OrgSlugNutritionRoute: OrgSlugNutritionRoute,
   OrgSlugOnboardingRoute: OrgSlugOnboardingRoute,
   OrgSlugPerformanceRoute: OrgSlugPerformanceRoute,
   OrgSlugProfilRoute: OrgSlugProfilRoute,
