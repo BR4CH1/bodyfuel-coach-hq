@@ -202,6 +202,9 @@ function AthleteOnboarding({ ctx }: { ctx: NonNullable<Awaited<ReturnType<typeof
       if (!weightKg || Number(weightKg) < 30) throw new Error("Bitte aktuelles Gewicht in kg angeben.");
       if (!teamId) throw new Error("Bitte Team auswählen.");
       if (!primary) throw new Error("Bitte primäre Position angeben.");
+      if (!energySex) throw new Error("Bitte Angabe zum biologischen Geschlecht für die Energieberechnung.");
+      if (!baselineActivity) throw new Error("Bitte Alltagsaktivität angeben.");
+      if (!nutritionGoal) throw new Error("Bitte Ernährungsziel angeben.");
       return complete({
         data: {
           organization_id: ctx.organization.id,
@@ -217,6 +220,17 @@ function AthleteOnboarding({ ctx }: { ctx: NonNullable<Awaited<ReturnType<typeof
           birthdate: birthdate,
           height_cm: Number(heightCm),
           weight_kg: Number(weightKg),
+          sex_for_energy_calculation: energySex as "MALE" | "FEMALE" | "UNSPECIFIED",
+          baseline_daily_activity: baselineActivity as
+            | "MOSTLY_SEATED"
+            | "MIXED"
+            | "PHYSICALLY_ACTIVE"
+            | "VERY_PHYSICALLY_ACTIVE",
+          performance_nutrition_goal: nutritionGoal as
+            | "FAT_LOSS"
+            | "MAINTENANCE"
+            | "PERFORMANCE"
+            | "MUSCLE_GAIN",
         },
       });
     },
