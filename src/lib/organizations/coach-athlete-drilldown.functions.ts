@@ -447,10 +447,9 @@ export const getCoachAthleteDetail = createServerFn({ method: "GET" })
       summaryLines.push("Noch nicht genügend Daten für eine vollständige Analyse.");
     }
 
-    // ---- Training-Timeline (letzte 10 Einheiten, athletic + team_training)
+    // ---- Aufgaben-Timeline (letzte 20, alle Task-Typen inkl. custom/manuelle Aufgaben)
     const timeline = tasks
-      .filter((t) => ["athletic_training", "team_training"].includes(t.task_type))
-      .slice(0, 10)
+      .slice(0, 20)
       .map((t) => ({
         id: t.id,
         date: t.scheduled_for,
