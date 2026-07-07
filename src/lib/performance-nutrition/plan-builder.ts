@@ -308,7 +308,11 @@ export function pickMealsForDay(input: {
   const sumShares = shares.reduce((a, b) => a + b, 0) || 1;
 
   const filtered = poolMeals.filter(
-    (m) => suitableForDayType(m, dayType) && !violatesNoGo(m, preferences),
+    (m) =>
+      suitableForDayType(m, dayType) &&
+      !violatesNoGo(m, preferences) &&
+      !violatesDiet(m, preferences.diet_style ?? null) &&
+      !violatesAllergy(m, preferences.allergy_tokens),
   );
 
   const usedIds = new Set<string>();
@@ -328,8 +332,6 @@ export function pickMealsForDay(input: {
       (m) => m.category === slot && !usedIds.has(m.id) && m.kcal > 0,
     );
     if (candidates.length === 0) {
-      // Fall back to any suitable meal of a compatible slot before failing
-      // — snacks can substitute for pre/post workout when the pool has none.
       const fallback =
         slot === "pre_workout" || slot === "post_workout"
           ? filtered.filter(
@@ -347,12 +349,14 @@ export function pickMealsForDay(input: {
       candidates.push(...fallback);
     }
 
-    // Rank candidates: score by best-fit scale within [SCALE_MIN..SCALE_MAX].
+    // Rank candidates: macro-fit score plus soft mealprep-preference malus.
     const ranked = candidates
       .map((m) => {
         const idealScale = m.kcal > 0 ? slotTarget.kcal / m.kcal : 1;
         const scale = clampScale(idealScale);
-        return { m, scale, score: scoreCandidate(m, scale, slotTarget, dayType) };
+        const baseScore = scoreCandidate(m, scale, slotTarget, dayType);
+        const prepMalus = mealPrepFitScore(m, preferences.meal_prep_style ?? null);
+        return { m, scale, score: baseScore + prepMalus };
       })
       .sort((a, b) => a.score - b.score);
 
