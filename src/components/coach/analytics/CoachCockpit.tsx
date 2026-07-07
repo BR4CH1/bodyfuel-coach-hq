@@ -252,10 +252,10 @@ function AttentionList({ data, orgId }: { data: CoachAnalytics; orgId: string })
         <ul className="divide-y divide-border rounded-lg border border-border bg-card">
           {items.slice(0, 25).map((a) => (
             <li key={a.user_id}>
-              <Link
-                to="/coach/teams/$orgId/athletes/$userId"
-                params={{ orgId, userId: a.user_id }}
-                className="flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-muted/40"
+              <AthleteRowLink
+                orgId={orgId}
+                userId={a.user_id}
+                className="flex touch-manipulation items-center justify-between gap-3 px-3 py-2.5 hover:bg-muted/40 active:bg-muted/60"
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
@@ -284,7 +284,7 @@ function AttentionList({ data, orgId }: { data: CoachAnalytics; orgId: string })
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                   {STATUS_LABEL[a.status]}
                 </span>
-              </Link>
+              </AthleteRowLink>
             </li>
           ))}
         </ul>
