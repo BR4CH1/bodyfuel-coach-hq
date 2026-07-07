@@ -285,9 +285,19 @@ export function AppLayout({ children }: { children: ReactNode }) {
     : isCoach
     ? coachNav
     : (staffNav ?? teamOnlyAthleteNav ?? clientNav);
-  const nav = !isCoach && !staffNav && !teamOnlyAthleteNav && hasGroup("bulls")
+  const navWithBulls = !isCoach && !staffNav && !teamOnlyAthleteNav && hasGroup("bulls")
     ? [...baseNav, bullsNavItem]
     : baseNav;
+  // Wenn der Nutzer aktuell im Bulls-Hub ist, sollen Ernährung/Training auf
+  // die Bulls-Varianten zeigen, damit das Vereins-Design (rot/schwarz) und
+  // die Bulls-spezifische Erfahrung erhalten bleiben.
+  const nav = isBullsRoute
+    ? navWithBulls.map((item: any) => {
+        if (item.to === "/nutrition") return { ...item, to: "/bulls/nutrition" };
+        if (item.to === "/training") return { ...item, to: "/bulls/training" };
+        return item;
+      })
+    : navWithBulls;
   // Mobile bottom nav: Coach-Chat ist in die obere Leiste gewandert
   const mobileNav = nav.filter((item) => item.to !== "/messages");
   const points = user ? totalPoints(user) : 0;
