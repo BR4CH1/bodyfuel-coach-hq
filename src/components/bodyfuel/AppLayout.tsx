@@ -111,9 +111,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
   // persönliche Athleten-Bereiche automatisch in den Vereins-Hub geleitet
   // werden. Dort greift OrgAthleteLayout mit Vereins-Nav & -Theme.
   useEffect(() => {
-    if (loading || isCoach || isFreeUser) return;
+    if (loading || isCoach) return;
     const activeSlug = getActiveContext();
-    if (!activeSlug) return;
+    const orgTargetSlug = activeSlug ?? (hasGroup("bulls") ? "coesfeld-bulls" : null);
+    if (!orgTargetSlug) return;
     const personalToOrg: Record<string, string> = {
       "/dashboard": "home",
       "/nutrition": "nutrition",
@@ -125,13 +126,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
         const suffix = pathname === prefix ? "" : pathname.slice(prefix.length);
         navigate({
           to: `/$orgSlug/${target}${suffix}`,
-          params: { orgSlug: activeSlug } as any,
+          params: { orgSlug: orgTargetSlug } as any,
           replace: true,
         } as any);
         return;
       }
     }
-  }, [loading, isCoach, isFreeUser, pathname, navigate]);
+  }, [loading, isCoach, pathname, navigate, hasGroup]);
 
   // Redirect für Vereins-Staff (Vereinsleitung / Head Coach / Team Coach / Staff):
   // Persönliche Athleten-Routen wie /measurements, /progress, /check-in gehören

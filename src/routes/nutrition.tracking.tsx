@@ -1,10 +1,23 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { NutritionTracker } from "@/components/bodyfuel/NutritionTracker";
+import { useSession } from "@/lib/bodyfuel/session";
+import { getActiveContext } from "@/components/organizations/OrganizationContextSwitcher";
 
 export const Route = createFileRoute("/nutrition/tracking")({
   head: () => ({ meta: [{ title: "Essen tracken — BODYFUEL" }] }),
-  component: () => (
+  component: NutritionTrackingPage,
+});
+
+function NutritionTrackingPage() {
+  const { isCoach, hasGroup } = useSession();
+  const bullsSlug = getActiveContext() ?? "coesfeld-bulls";
+
+  if (!isCoach && hasGroup("bulls")) {
+    return <Navigate to="/$orgSlug/nutrition/tracking" params={{ orgSlug: bullsSlug }} replace />;
+  }
+
+  return (
     <AppLayout>
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-3">
@@ -19,5 +32,5 @@ export const Route = createFileRoute("/nutrition/tracking")({
         <NutritionTracker />
       </div>
     </AppLayout>
-  ),
-});
+  );
+}
