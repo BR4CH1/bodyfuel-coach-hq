@@ -24,12 +24,14 @@ export function AthletesTab({
   teams,
   allowedUserIds,
   onClearFilter,
+  onTeamFilterChange,
 }: {
   orgId: string;
   teamFilter: string | null;
   teams: Team[];
   allowedUserIds: Set<string> | null;
   onClearFilter: () => void;
+  onTeamFilterChange?: (teamId: string | null) => void;
 }) {
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -108,17 +110,28 @@ export function AthletesTab({
         )}
       </header>
 
+      {teams.length > 0 && (
+        <div className="-mx-4 overflow-x-auto px-4">
+          <div className="flex min-w-max gap-1.5">
+            <TeamChip
+              label="Alle"
+              active={!teamFilter}
+              onClick={() => (onTeamFilterChange ? onTeamFilterChange(null) : onClearFilter())}
+            />
+            {teams.map((t) => (
+              <TeamChip
+                key={t.id}
+                label={t.name}
+                active={teamFilter === t.id}
+                onClick={() => onTeamFilterChange?.(t.id)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
       {filterTeam && (
-        <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs">
-          <span>
-            Gefiltert nach Team: <strong>{filterTeam.name}</strong> ({rows.length})
-          </span>
-          <button
-            onClick={onClearFilter}
-            className="rounded border border-border px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
-          >
-            Filter entfernen
-          </button>
+        <div className="text-[11px] text-muted-foreground">
+          {rows.length} Athlet{rows.length === 1 ? "" : "en"} im Team <strong>{filterTeam.name}</strong>.
         </div>
       )}
 
@@ -225,6 +238,30 @@ export function AthletesTab({
         />
       )}
     </div>
+  );
+}
+
+function TeamChip({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider ${
+        active
+          ? "border-primary bg-primary text-primary-foreground"
+          : "border-border bg-card text-muted-foreground hover:text-foreground"
+      }`}
+    >
+      {label}
+    </button>
   );
 }
 

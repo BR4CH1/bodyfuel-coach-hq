@@ -250,6 +250,7 @@ function CoachOrgDetail() {
                 : null
             }
             onClearFilter={() => setAthleteTeamFilter(null)}
+            onTeamFilterChange={(id) => setAthleteTeamFilter(id)}
           />
         )}
 
