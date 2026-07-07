@@ -42,6 +42,7 @@ import {
   type PresetKey,
 } from "@/lib/organizations/staff-labels";
 import { CoachCockpit } from "@/components/coach/analytics/CoachCockpit";
+import { AthletesTab } from "@/components/organizations/AthletesTab";
 
 export const Route = createFileRoute("/coach/teams/$orgId")({
   head: () => ({ meta: [{ title: "Organisation — BODYFUEL Coach" }] }),
