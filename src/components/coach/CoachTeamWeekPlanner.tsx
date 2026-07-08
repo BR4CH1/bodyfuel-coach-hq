@@ -15,6 +15,8 @@ import {
   Pencil,
   Copy,
   X,
+  CalendarPlus,
+  CalendarClock,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -29,6 +31,12 @@ import {
   duplicateTrainingTemplate,
   deleteTrainingTemplate,
 } from "@/lib/organizations/training-templates.functions";
+import {
+  listWeekTemplates,
+  createWeekTemplate,
+  deleteWeekTemplate,
+  type WeekTemplateSession,
+} from "@/lib/organizations/training-week-templates.functions";
 import {
   detectTrainingFocus,
   FOCUS_LABEL,
@@ -122,6 +130,9 @@ export function CoachTeamWeekPlanner({
   const publish = useServerFn(publishTeamTrainingWeek);
   const listTpls = useServerFn(listTrainingTemplates);
   const createTpl = useServerFn(createTrainingTemplate);
+  const listWeekTpls = useServerFn(listWeekTemplates);
+  const createWeekTpl = useServerFn(createWeekTemplate);
+  const deleteWeekTpl = useServerFn(deleteWeekTemplate);
 
   const q = useQuery({
     queryKey: ["team-training-week", orgId, teamId, weekStart],
@@ -133,6 +144,17 @@ export function CoachTeamWeekPlanner({
     queryFn: () => listTpls({ data: { organization_id: orgId } }),
   });
   const templates = (templatesQ.data ?? []) as Template[];
+
+  const weekTemplatesQ = useQuery({
+    queryKey: ["training-week-templates", orgId],
+    queryFn: () => listWeekTpls({ data: { organization_id: orgId } }),
+  });
+  const weekTemplates = (weekTemplatesQ.data ?? []) as Array<{
+    id: string;
+    name: string;
+    description: string | null;
+    sessions: WeekTemplateSession[];
+  }>;
 
   const initialSessions = useMemo<EditorSession[]>(() => {
     const map = new Map<string, EditorSession>();
@@ -312,6 +334,71 @@ export function CoachTeamWeekPlanner({
   const [templateName, setTemplateName] = useState("");
   const [previewSession, setPreviewSession] = useState<EditorSession | null>(null);
   const [manageOpen, setManageOpen] = useState(false);
+  const [weekTemplatePickerOpen, setWeekTemplatePickerOpen] = useState(false);
+  const [saveWeekOpen, setSaveWeekOpen] = useState(false);
+  const [weekTemplateName, setWeekTemplateName] = useState("");
+
+  const saveWeekTemplateMut = useMutation({
+    mutationFn: async (name: string) => {
+      const active = enrichedSessions.filter((s) => s.active);
+      if (!active.length) throw new Error("Kein Training in dieser Woche.");
+      const payload: WeekTemplateSession[] = active.map((s) => {
+        const d = new Date(s.session_date + "T12:00:00Z");
+        const weekday = (d.getUTCDay() + 6) % 7;
+        return {
+          weekday,
+          title: s.title || "Team Training",
+          description: s.description || null,
+          start_time: s.start_time || null,
+          end_time: s.end_time || null,
+          focus: s.focus,
+          focus_source: s.focus_source,
+        };
+      });
+      return createWeekTpl({
+        data: { organization_id: orgId, name, sessions: payload },
+      });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["training-week-templates", orgId] });
+      toast.success("Wochenvorlage gespeichert.");
+      setSaveWeekOpen(false);
+      setWeekTemplateName("");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Fehler beim Speichern der Wochenvorlage."),
+  });
+
+  const deleteWeekTemplateMut = useMutation({
+    mutationFn: async (id: string) => deleteWeekTpl({ data: { id } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["training-week-templates", orgId] });
+      toast.success("Wochenvorlage gelöscht.");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Fehler beim Löschen."),
+  });
+
+  const applyWeekTemplate = (tpl: { name: string; sessions: WeekTemplateSession[] }) => {
+    setSessions((prev) =>
+      prev.map((row, idx) => {
+        const match = tpl.sessions.find((x) => x.weekday === idx);
+        if (!match) {
+          return { ...row, active: false };
+        }
+        return {
+          ...row,
+          active: true,
+          title: match.title || "Team Training",
+          description: match.description ?? "",
+          start_time: (match.start_time ?? "").slice(0, 5),
+          end_time: (match.end_time ?? "").slice(0, 5),
+          focus: match.focus,
+          focus_source: match.focus_source ?? (match.focus === "none" ? "none" : "manual"),
+        };
+      }),
+    );
+    setWeekTemplatePickerOpen(false);
+    toast.success(`Wochenvorlage „${tpl.name}" übernommen.`);
+  };
 
   const status = q.data?.status ?? "draft";
   const wasPublished = status === "published";
@@ -381,7 +468,31 @@ export function CoachTeamWeekPlanner({
           >
             Nächste Woche <ChevronRight className="h-3.5 w-3.5" />
           </button>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setWeekTemplatePickerOpen(true)}
+              disabled={!weekTemplates.length}
+              className="flex items-center gap-1 rounded-lg border border-[#252525] bg-[#111] px-3 py-1.5 text-xs font-semibold text-neutral-300 hover:border-bulls-red/60 hover:text-white disabled:opacity-40"
+              title="Wochenvorlage laden"
+            >
+              <CalendarClock className="h-3.5 w-3.5" /> Wochenvorlage laden ({weekTemplates.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!anyActive) {
+                  toast.error("Kein Training in dieser Woche.");
+                  return;
+                }
+                setWeekTemplateName("");
+                setSaveWeekOpen(true);
+              }}
+              className="flex items-center gap-1 rounded-lg border border-[#252525] bg-[#111] px-3 py-1.5 text-xs font-semibold text-neutral-300 hover:border-bulls-red/60 hover:text-white"
+              title="Woche als Vorlage speichern"
+            >
+              <CalendarPlus className="h-3.5 w-3.5" /> Woche als Vorlage
+            </button>
             <button
               type="button"
               onClick={() => setManageOpen(true)}
@@ -595,6 +706,83 @@ export function CoachTeamWeekPlanner({
           templates={templates}
           onClose={() => setManageOpen(false)}
         />
+      )}
+
+      {/* Week Template Picker Modal */}
+      {weekTemplatePickerOpen && (
+        <Modal onClose={() => setWeekTemplatePickerOpen(false)} title="Wochenvorlage laden">
+          {weekTemplates.length === 0 ? (
+            <p className="text-sm text-neutral-400">Noch keine Wochenvorlagen gespeichert.</p>
+          ) : (
+            <div className="space-y-1">
+              <p className="mb-2 text-[11px] text-neutral-500">
+                Ersetzt alle Trainings dieser Woche mit den Einheiten aus der Vorlage. Die Datumsangaben werden auf {formatDateShort(weekStart)}–{formatDateShort(weekEnd)} angepasst.
+              </p>
+              {weekTemplates.map((t) => (
+                <div
+                  key={t.id}
+                  className="flex items-center justify-between gap-2 rounded-lg border border-[#252525] bg-[#0a0a0a] px-3 py-2"
+                >
+                  <button
+                    type="button"
+                    onClick={() => applyWeekTemplate(t)}
+                    className="flex-1 text-left"
+                  >
+                    <div className="font-semibold text-white">{t.name}</div>
+                    <div className="text-[11px] uppercase tracking-wider text-neutral-500">
+                      {t.sessions.length} Training{t.sessions.length === 1 ? "" : "s"}
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (confirm(`Wochenvorlage „${t.name}" löschen?`)) {
+                        deleteWeekTemplateMut.mutate(t.id);
+                      }
+                    }}
+                    className="rounded-md p-1.5 text-neutral-400 hover:bg-red-500/20 hover:text-red-400"
+                    title="Löschen"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </Modal>
+      )}
+
+      {/* Save Week Template Modal */}
+      {saveWeekOpen && (
+        <Modal onClose={() => setSaveWeekOpen(false)} title="Woche als Vorlage speichern">
+          <p className="mb-3 text-[11px] text-neutral-500">
+            Speichert die {enrichedSessions.filter((s) => s.active).length} aktiven Trainings dieser Woche als wiederverwendbare Wochenvorlage.
+          </p>
+          <input
+            autoFocus
+            value={weekTemplateName}
+            onChange={(e) => setWeekTemplateName(e.target.value)}
+            placeholder="Name (z. B. Standard Seniors-Woche)"
+            className="w-full rounded-md border border-[#252525] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+          />
+          <div className="mt-3 flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setSaveWeekOpen(false)}
+              className="rounded-md border border-[#252525] bg-[#111] px-3 py-1.5 text-xs font-semibold text-neutral-300"
+            >
+              Abbrechen
+            </button>
+            <button
+              type="button"
+              disabled={!weekTemplateName.trim() || saveWeekTemplateMut.isPending}
+              onClick={() => saveWeekTemplateMut.mutate(weekTemplateName.trim())}
+              className="rounded-md bg-bulls-red px-3 py-1.5 text-xs font-bold uppercase text-white disabled:opacity-50"
+            >
+              {saveWeekTemplateMut.isPending ? <Loader2 className="inline h-3 w-3 animate-spin" /> : null} Speichern
+            </button>
+          </div>
+        </Modal>
       )}
     </div>
   );
