@@ -1,104 +1,154 @@
+# Trainingsplaner-Erweiterung im Bulls Coach Hub
+
 ## Ziel
+Coach plant WAS trainiert wird (Team-Fokus pro Tag). BodyFuel Performance generiert daraus WIE
+der einzelne Athlet je nach Position/Belastung trainiert. Vorlagen beschleunigen den Wochen-Workflow.
 
-Team Training Schedule ist bisher ein **globaler wiederkehrender Wochenplan** (`org_team_training_schedule` mit `weekday 0-6`). Jedes Speichern/Synchronisieren schreibt alle Wochen der Zukunft neu und kann laufende Athleten-Pläne überschreiben.
-
-Wir stellen um auf **konkrete Kalenderwochen (Montag–Sonntag)** mit eigenem Datenblock pro `(organization, team, week_start)`. Vorhandene Athletendaten außerhalb des Zielzeitraums werden nie mehr angefasst.
+## Scope (was sich ändert)
+1. Bestehender Platzhalter „Athletic Plans" in `coach.teams.$orgId.tsx` (Zeile 666-668) wird entfernt.
+   Kein separater Athletic-Plan-Composer mehr.
+2. `CoachTeamWeekPlanner` wird um Fokus-Feld, Vorlagen-Menü und Live-Fokus-Erkennung erweitert.
+3. Neuer Athleten-Session-Generator, der beim Publish aus jeder aktiven Session mit erkanntem
+   Athletikfokus (nicht `football`, nicht `none`) einen individuellen Trainingsplan für jeden
+   Team-Athleten erzeugt — positions- und belastungsabhängig.
+4. Spieler-UI: Bulls Training-Route zeigt für erkannten Fokus die generierte Session (Übungen,
+   Sätze/Dauer, Häkchen-Tracking, Session-Complete).
 
 ## Datenmodell (Migration)
 
-Neue Tabelle:
+### `org_training_session_template`
+Coach-/organisationsgebundene Vorlagen.
+- `id uuid PK`, `organization_id uuid NOT NULL`, `created_by uuid NOT NULL` (auth.users)
+- `name text NOT NULL`, `title text NOT NULL`, `focus text NOT NULL`
+  (enum-Text: `football|strength|speed|agility|conditioning|mobility|recovery|none`)
+- `duration_min int NULL`, `start_time time NULL`, `end_time time NULL`
+- `description text NULL`, `notes text NULL`
+- `created_at`, `updated_at`
+- RLS: SELECT/INSERT/UPDATE/DELETE für org-Coaches/Staff mit Team-Scope-Berechtigung.
+  Löschen einer Vorlage berührt keine `org_team_training_week_session` — die sind eigenständige
+  Kopien.
 
-```sql
-public.org_team_training_week (
-  id uuid pk,
-  organization_id uuid,
-  team_id uuid,
-  week_start date,          -- immer Montag
-  week_end   date generated, -- week_start + 6
-  status text default 'draft',   -- draft | published
-  published_at timestamptz,
-  published_by uuid,
-  created_at, updated_at,
-  unique(team_id, week_start)
-)
+### `org_team_training_week_session` (Erweiterung der bestehenden Tabelle)
+- neue Spalte `focus text NULL DEFAULT NULL` — vom Coach gesetzt oder vom Erkenner vorbelegt
+- neue Spalte `focus_source text NULL` (`auto` | `manual` | `none`)
+- neue Spalte `description text NULL` (bisher nur `title`)
 
-public.org_team_training_week_session (
-  id uuid pk,
-  week_id uuid fk cascade,
-  session_date date,        -- konkreter Kalendertag im Zeitraum
-  title text default 'Team Training',
-  start_time time,
-  end_time time,
-  active bool default true,
-  unique(week_id, session_date)
-)
-```
+### `athlete_training_session`
+Individueller, automatisch erzeugter Trainingsplan pro Athlet und Datum, abgeleitet aus einer
+Coach-Session.
+- `id uuid PK`
+- `user_id uuid NOT NULL`, `organization_id uuid NOT NULL`, `team_id uuid NOT NULL`
+- `session_date date NOT NULL`
+- `source_week_session_id uuid NOT NULL FK org_team_training_week_session ON DELETE CASCADE`
+- `focus text NOT NULL`, `title text NOT NULL`
+- `position_code text NULL` (Snapshot der Athletenposition zum Publish-Zeitpunkt)
+- `duration_min int NULL`
+- `exercises jsonb NOT NULL` — Array `[{ id, name, category, sets, reps, duration_sec, notes }]`
+- `status text NOT NULL DEFAULT 'scheduled'` (`scheduled|in_progress|completed|skipped`)
+- `progress jsonb NOT NULL DEFAULT '{}'::jsonb` — pro Übungs-ID `{ done: bool, done_at: ts }`
+- `completed_at ts NULL`
+- `created_at`, `updated_at`
+- UNIQUE `(user_id, session_date, source_week_session_id)`
+- RLS:
+  - Athlet: SELECT/UPDATE eigener Zeilen (`user_id = auth.uid()`), Update nur `status`/`progress`/`completed_at`
+    per Trigger-Guard.
+  - Coach/Staff: SELECT alle Zeilen im eigenen `resolveCoachTeamScope`.
+  - Service-Role: ALL (für den Publish-Sync).
 
-- GRANTs + RLS (SELECT für Team-Mitglieder & Coaches; INSERT/UPDATE/DELETE nur für Coach/Org-Admin via `resolveCoachTeamScope`).
-- Bestehende `org_team_training_schedule` bleibt vorerst unangetastet (Legacy-Fallback), wird aber nicht mehr von der UI beschrieben.
+GRANTs: `authenticated` erhält SELECT/INSERT/UPDATE/DELETE auf beide neuen Tabellen,
+`service_role` ALL. Die Insert/Delete-Rechte der Athleten werden ausschließlich per RLS-Policy
+verweigert (keine Insert-Policy für Athleten auf `athlete_training_session`).
 
-## Server-Funktionen (`src/lib/organizations/team-training-week.functions.ts`, neu)
+## Server-Funktionen (`src/lib/organizations/training-templates.functions.ts`)
+- `listTrainingTemplates({ organization_id })` — mit Team-Scope-Check
+- `createTrainingTemplate({ organization_id, name, title, focus, duration_min?, description? })`
+- `updateTrainingTemplate({ id, patch })` (Umbenennen/Bearbeiten)
+- `duplicateTrainingTemplate({ id })`
+- `deleteTrainingTemplate({ id })` — beeinflusst keine bereits veröffentlichten Sessions
+- Alle mit `requireSupabaseAuth` und Rechteprüfung (Org-Coach/Staff, `resolveCoachTeamScope`).
 
-- `listTeamTrainingWeeks({ orgId, teamId, from, to })` — Liste inkl. Status.
-- `getTeamTrainingWeek({ orgId, teamId, week_start })` — mit Sessions.
-- `upsertTeamTrainingWeek({ orgId, teamId, week_start, sessions })` — Upsert im Zielzeitraum, `status=draft`.
-- `publishTeamTrainingWeek({ orgId, teamId, week_start })` — setzt `status=published`, triggert Athletendatens-Sync **ausschließlich für Datumsbereich `week_start..week_end`**.
-- Alle nutzen `resolveCoachTeamScope` und lehnen ab, wenn Coach kein Team-Recht hat.
+## Fokus-Erkennung (`src/lib/training-focus-detection.ts`)
+Reine Client-/Server-safe Utility.
+- `detectTrainingFocus(title: string, description?: string): { focus, confidence, matched }`
+- Wörterbuch pro Fokus (deutsch + englisch, Synonyme, Substring-basiert, case-insensitiv):
+  - mobility: mobility, mobilität, beweglichkeit, mobilisier*, stretch*, hüfte mobil*
+  - strength: kraft, strength, gym, gewichte, lift, squat, deadlift, bankdrücken, hantel
+  - speed: speed, schnelligkeit, sprint, acceleration, beschleunigung
+  - agility: agility, cod, change of direction, richtungswechsel, footwork
+  - conditioning: conditioning, ausdauer, cardio, intervall, hiit, gassers, tempos
+  - recovery: recovery, regeneration, active recovery, deload, walk, sauna, foam roll
+  - football: football, team training, practice, position drill, playbook, offense, defense, special teams
+- Priorisierung: exakter Match > Substring > null (`none`).
+- Live-Ergebnis wird im Planner unter dem Titelfeld angezeigt („Erkannter Fokus: MOBILITY").
+- Coach kann per Dropdown übersteuern → setzt `focus_source = 'manual'`.
 
-## Task-/Player-Sync (wochenbezogen)
+## Athleten-Session-Generator (`src/lib/organizations/athlete-training-session-generator.server.ts`)
+Wird beim `publishTeamTrainingWeek` in der bestehenden `task-engine.server.ts` aufgerufen.
+Für jede aktive Session der Woche:
+- Wenn `focus IN ('football','none', NULL)` → nur bestehende Team-Training-Task (unverändert). Keine Athleten-Session.
+- Sonst: für jeden Athleten im Team
+  1. Position aus `profiles` / `bulls_profiles` lesen → `positionGroup()` mapping wiederverwenden.
+  2. Wochenbelastung ermitteln: Summe der geplanten Sessions Mo–So aus `org_team_training_week_session`
+     + bestehende Athletentasks → Kontext für Volumen (leichter/normal/schwer).
+  3. Über die vorhandene BodyFuel-Smart-Trainingslogik eine `exercises`-Liste generieren:
+     - Wiederverwendung von `coach_exercise_library` als Übungspool, gefiltert nach:
+       - Kategorie ~ Fokus (Mapping-Tabelle: mobility → hip/thoracic/ankle; strength → position-spezifisch, usw.)
+       - Positionsgruppe (OL: Hüfte/Sprunggelenk/Adduktoren-Bias, WR: Hamstrings/Hüfte/Sprunggelenk,
+         QB: Schulter/T-Spine/Hüfte, DL/DB/LB analog aus Bulls-Profile)
+     - Dauer entspricht Coach-Session (`end - start` oder 45min Default).
+     - Deterministischer Seed pro `(user_id, session_date, focus)` damit Re-Publish stabil bleibt.
+  4. Upsert auf `athlete_training_session` per `source_week_session_id`. Bereits `completed`
+     Sessions werden nicht überschrieben (Guard im Server: nur `status='scheduled'` überschreiben).
 
-Bestehende `task-engine` wird auf einen zusätzlichen `publishWeeklyTrainingTasks(week_id)`-Pfad umgestellt:
+## Coach-UI (`CoachTeamWeekPlanner.tsx`)
+- Session-Editor bekommt:
+  - Titel + optional Beschreibung
+  - Zeitfelder wie bisher
+  - Fokus-Anzeige (auto-detected) + Dropdown zum Übersteuern (inkl. „Kein automatischer Athletikplan")
+  - Buttons: „+ Neue Einheit" / „Aus Vorlage" (öffnet Dropdown mit Vorlagen der Org)
+  - „Als Vorlage speichern" pro aktiver Session
+- Neuer Bereich unter Wochenplaner: „Meine Vorlagen" mit Liste, Rename/Duplicate/Delete.
+- Erkennungshinweis-Panel: „BodyFuel Performance erstellt für die Spieler positions- und
+  belastungsabhängige Sessions." + Button „Spieler-Vorschau" (öffnet Modal mit 3 Beispiel-Positionen).
+- Publish-Button-Text bleibt; nach Publish Toast: „Wochenplan veröffentlicht — X Athleten mit
+  automatischen Athletik-Sessions."
 
-- **Upsert** von Player-Trainingstasks strikt für Datumsbereich der Woche (`gte week_start AND lte week_end`).
-- **Kein DELETE** außerhalb dieses Zeitraums.
-- Deduplizierung per `(user_id, session_date, source='team_training_week', week_id)`-Key.
-- Bestehende Datums-basierte Athleten-Tasks vor `week_start` und nach `week_end` bleiben unberührt.
-- Absolvierte Einheiten (`completed_at not null`) werden nie neu geschrieben.
+## Spieler-UI
+- Route: `bulls.training.tsx` bekommt einen neuen Abschnitt „Athletik heute" oberhalb bestehender
+  Inhalte, wenn für heute eine `athlete_training_session` existiert.
+- Komponente `BullsAthleteAthleticSession`: Kopfzeile (Fokus, Dauer, Position-Hinweis), Übungsliste
+  mit Sätze/Dauer, Häkchen pro Übung (Update `progress`), Button „Session abschließen"
+  (`status='completed'`, `completed_at=now()`).
+- Historischer Zugriff (frühere Tage) über kompakte Datums-Chips.
 
-## Day-Type / Smart-Kopplung
-
-`day-type-resolver.functions.ts`:
-
-- Neuer Auflösungspfad: für ein Datum wird zuerst geprüft, ob es in einer **veröffentlichten** `org_team_training_week` eine aktive Session mit `session_date = <Datum>` gibt → `football_training`.
-- Fallback bleibt bestehender Weekday-Plan (bis Migration alter Daten abgeschlossen ist).
-- Damit hat KW 30 andere Trainingstage als KW 29, ohne KW 29 zu verändern.
-
-## Coach-UI (`src/routes/coach.teams.$orgId.tsx` / neue Komponente `CoachTeamWeekPlanner.tsx`)
-
-Ersetzt den heutigen „Team Training Schedule (Wochenplan)"-Block:
-
-- **Wochenwähler-Header**: `← Vorherige Woche | KW 29 · 13.–19. Jul 2026 | Nächste Woche →`, plus Chips „Aktuelle Woche", „Nächste Woche".
-- **Status-Badge**: `Entwurf` / `Veröffentlicht` / `Aktuelle Woche` / `Vergangen`.
-- **Kompakte Tageszeilen**: aktive Tage zeigen Titel + Start/Ende, inaktive Tage zeigen nur `+ Training hinzufügen`.
-- **CTA in Bulls-Rot**: `Plan für 13.–19. Jul veröffentlichen` (bzw. `Änderungen veröffentlichen`).
-- Team-Auswahl respektiert `resolveCoachTeamScope` (nur zugängliche Teams sichtbar).
-- Toast nach Publish: „Wochenplan veröffentlicht — jetzt für N Athleten verfügbar".
-
-## Athleten-UI
-
-- Neuer Toggle `Aktuelle Woche` / `Kommende Woche` in `WeekScheduleCard` (Bulls-Variante) und im Bulls Home / Trainingsplan-Bereich, sobald eine veröffentlichte kommende Woche existiert.
-- **Standardansicht**: aktuelle Woche bis inkl. Sonntag; ab Montag der Folgewoche wird diese automatisch die aktive Standard-Woche.
-- Kommende Woche ist read-only-Preview (kein Tracking-Umschalten).
-
-## Tests / Verifikation
-
-Nach Umsetzung manuell + über SQL:
-
-- Test A: Woche 06.–12.07 existiert, neue 13.–19.07 publish → alte unverändert (SQL check auf `athlete_tasks` Datumsbereich).
-- Test B: KW 29 erneut editieren + publish → gleiche `week_id` upserted, keine doppelten Sessions/Tasks (`unique(week_id, session_date)` + Task-Dedupe-Key greifen).
-- Test C: Coach mit Team-Bindung Seniors → `listTeamTrainingWeeks` liefert für U19 leer, Publish für U19 wirft 403.
+## Aufräumen
+- Import- und Referenzen zu `listOrgAthleticPlans`, `createOrgAthleticPlan`,
+  `updateOrgAthleticPlanStatus` in `coach.teams.$orgId.tsx` entfernen (Modul bleibt bestehen, wird
+  nur nicht mehr aus der Team-Übersicht angesteuert — kein Datenbank-Cleanup, um Bestandsdaten
+  nicht zu gefährden).
+- Kein Löschen von `organization_athletic_plans*`-Tabellen (Legacy bleibt liegen).
 
 ## Nicht im Scope
+- Athletic-Plan-Composer (Legacy) wird nicht ersetzt oder neu gebaut, nur der Platzhalter entfernt.
+- Keine Änderung an Ernährungsplänen.
+- Kein neuer Coach-Rollentyp; Rechte laufen weiter über `resolveCoachTeamScope`.
+- Keine Migration alter `org_team_training_schedule`-Daten.
 
-- Keine Migration alter `org_team_training_schedule`-Daten in die neue Struktur (Fallback im Resolver reicht; Coach legt neue Wochen selbst an).
-- Keine Änderung an Ernährungs-Schedules — bleibt weekday-basiert, kann später gleich umgestellt werden.
-- Kein Rebuild der Coach-Rollen-Logik oder Positionsgruppen.
+## Tests / Verifikation
+1. Coach erstellt Session „Team Mobility 18:00–18:45" → Fokus wird als MOBILITY erkannt →
+   Publish → für jeden Athleten wird eine positionsspezifische Mobility-Session mit passenden
+   Übungen (QB: Schulter/T-Spine/Hüfte, OL: Hüfte/Sprunggelenk/Adduktoren, WR:
+   Hamstrings/Hüfte/Sprunggelenk) angelegt.
+2. Coach speichert Session als Vorlage „Gameday Recovery" → Vorlage erscheint in Liste →
+   in andere Woche laden → Werte übernommen, Vorlage unverändert.
+3. Coach löscht Vorlage → bereits veröffentlichte Athletensessions bleiben unberührt.
+4. Coach übersteuert Fokus manuell auf „Kein automatischer Athletikplan" → beim Publish
+   werden nur die Team-Training-Task-Einträge erstellt, keine `athlete_training_session`.
+5. Coach re-publisht Woche → laufende / abgeschlossene Athletensessions werden nicht
+   überschrieben, nur `scheduled`-Zeilen aktualisiert.
 
-## Abschluss-Reporting (nach Umsetzung)
-
-- Speicherort des Zeitraums: `org_team_training_week.week_start/week_end` + Sessions in `org_team_training_week_session.session_date`.
-- Duplikatschutz: `unique(team_id, week_start)` und `unique(week_id, session_date)`.
-- Schutz laufender Pläne: Publish-Sync filtert `athlete_tasks` strikt auf `[week_start, week_end]`, kein globales DELETE.
-- Athleten-Umschaltung: `WeekScheduleCard`-Toggle „Aktuelle / Kommende Woche".
-
-Bitte bestätige den Plan, dann setze ich in einem Zug Migration, Server-Funktionen, Coach-UI, Athleten-Toggle und Day-Type-Resolver um.
+## Rückfrage vor Umsetzung
+- Übungspool: Ist `coach_exercise_library` als primärer Pool ok, oder soll ein separater
+  „Bulls Smart Exercise Catalog" mit positions-gemappten Übungen aufgebaut werden? Falls ja,
+  brauche ich einen Seed (JSON) — sonst starte ich mit `coach_exercise_library` +
+  Bulls-Position-Bias aus `football-bulls.ts`.

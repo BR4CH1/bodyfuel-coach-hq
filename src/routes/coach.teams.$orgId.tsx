@@ -49,9 +49,6 @@ import {
   awardChallengeBonus,
   listOrgCommunityPosts,
   createOrgCommunityPost,
-  listOrgAthleticPlans,
-  createOrgAthleticPlan,
-  updateOrgAthleticPlanStatus,
   addOrgStaff,
   removeOrgStaff,
   updateOrgStaffPermissions,
@@ -663,9 +660,6 @@ function TrainingTab({ orgId }: { orgId: string }) {
         </Card>
       )}
 
-      <Card title="Athletic Plans">
-        <Empty>Athletic-Plan-Composer folgt. Plan-Sessions werden nach Anlage automatisch als Tasks erzeugt.</Empty>
-      </Card>
     </div>
   );
 
