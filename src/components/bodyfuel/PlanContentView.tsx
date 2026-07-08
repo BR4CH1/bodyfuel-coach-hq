@@ -297,9 +297,21 @@ export function PlanContentView({ clientId, planType }: Props) {
 
   // Virtuelle Tage: splittet einen echten "Day" anhand der Item-Namen
   // (z.B. "Trainingstag A Mahlzeit 1") in mehrere Dropdown-Einträge auf.
+  // Für Trainingspläne: Wochentag & Datum werden IMMER aus day_date abgeleitet.
   const { virtualDays, itemToVirtual, itemDisplayName } = useMemo(() => {
     const items: ItemLike[] = planType === "nutrition" ? meals : exercises;
-    return buildVirtualDays(days, items);
+    if (planType !== "training") return buildVirtualDays(days, items);
+    // Namen für Trainingstage neu bauen: "Dienstag, 14.07.2026 — Push"
+    const renamed: Day[] = days.map((d) => {
+      const wd = weekdayLabelFromISO(d.day_date ?? null);
+      // Existierende Wochentag-Präfixe wie "Mo — X" oder "Mo · X" abstreifen.
+      const baseName = (d.name ?? "").replace(/^(mo|di|mi|do|fr|sa|so|montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag)\s*[—\-–:|·]\s*/i, "").trim() || "Trainingstag";
+      if (!wd) return { ...d, name: baseName };
+      const dateLabel = formatDateDE(d.day_date ?? null);
+      const prefix = dateLabel ? `${wd.long}, ${dateLabel}` : wd.long;
+      return { ...d, name: /ruhetag|rest|pause|frei/i.test(baseName) ? `${prefix} — Ruhetag` : `${prefix} — ${baseName}` };
+    });
+    return buildVirtualDays(renamed, items);
   }, [days, meals, exercises, planType]);
 
   const reload = async () => {
