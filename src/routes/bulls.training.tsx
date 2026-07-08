@@ -57,6 +57,9 @@ function TrainingPage() {
 
       {supabaseUser && <AthleteProfileBanner />}
 
+      {supabaseUser && <BullsAthleteAthleticSession />}
+
+
       {isTrial || isExpired ? (
         <TrialTrainingPlan />
       ) : (
