@@ -10,6 +10,18 @@ import {
   toMondayIso,
 } from "@/lib/organizations/team-training-week.functions";
 
+// Client-side Montag-Auflösung (dupliziert aus dem Server-Modul, damit der
+// Client-Bundle keine Server-Utility referenziert).
+function toMondayIso(dateIso: string): string {
+  const d = new Date(dateIso + "T12:00:00Z");
+  const dow = d.getUTCDay();
+  const offset = (dow + 6) % 7;
+  d.setUTCDate(d.getUTCDate() - offset);
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(
+    d.getUTCDate(),
+  ).padStart(2, "0")}`;
+}
+
 const WEEKDAYS_DE = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"];
 
 function isoDate(d: Date): string {
