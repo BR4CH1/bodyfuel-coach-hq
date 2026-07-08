@@ -575,6 +575,14 @@ export function TrainingPlanBuilderPage({
           {saveMut.isPending ? "Speichere…" : publish ? "Für Kunden aktivieren" : "Als Entwurf speichern"}
         </button>
       </div>
+
+      <SaveAsTemplateDialog
+        open={saveTplOpen}
+        onOpenChange={setSaveTplOpen}
+        defaultName={title}
+        saving={saveTplM.isPending}
+        onConfirm={(v) => saveTplM.mutate(v)}
+      />
     </div>
   );
 }
