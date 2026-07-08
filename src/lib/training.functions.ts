@@ -451,6 +451,57 @@ export const completeTrainingSession = createServerFn({ method: "POST" })
         reason: decision.reason,
       } as any);
 
+      // --- Update athlete_exercise_state (living plan brain) ---
+      const exerciseName = String(ex.name ?? "");
+      const key = normalizeExerciseKey(exerciseName);
+      if (key) {
+        const mapped = stateFromDecision({
+          exerciseName,
+          repRange: String(ex.target_reps ?? "8-12"),
+          decision,
+        });
+        const isSuccess = decision.action === "increase_load" || decision.action === "increase_reps_target";
+        const isFailure = decision.action === "reduce_load" || decision.action === "reduce_volume";
+        const currentLoad = decision.action === "increase_load"
+          ? decision.next_load
+          : decision.previous_load ?? decision.next_load;
+
+        const { data: prev } = await supabase
+          .from("athlete_exercise_state")
+          .select("id, successful_sessions, failed_sessions")
+          .eq("user_id", userId)
+          .eq("exercise_key", key)
+          .maybeSingle();
+
+        const prevRow = prev as any;
+        const successful = Number(prevRow?.successful_sessions ?? 0) + (isSuccess ? 1 : 0);
+        const failed = Number(prevRow?.failed_sessions ?? 0) + (isFailure ? 1 : 0);
+
+        await supabase
+          .from("athlete_exercise_state")
+          .upsert(
+            {
+              user_id: userId,
+              exercise_key: key,
+              exercise_name: exerciseName,
+              current_working_load: currentLoad,
+              recommended_next_load: mapped.recommended_next_load,
+              target_rep_min: mapped.target_rep_min,
+              target_rep_max: mapped.target_rep_max,
+              progression_status: mapped.progression_status,
+              confidence: mapped.confidence,
+              trend: mapped.trend,
+              successful_sessions: successful,
+              failed_sessions: failed,
+              last_completed_at: new Date().toISOString(),
+              last_decision: mapped.last_decision,
+              last_reason: mapped.last_reason,
+            } as any,
+            { onConflict: "user_id,exercise_key" },
+          );
+      }
+
+
       decisions.push({
         exercise_id: ex.id,
         exercise_name: String(ex.name ?? ""),
