@@ -20,6 +20,11 @@ import {
   type PlannedDay,
 } from "./training-engine/week-structure";
 import type { Experience, MovementSlot } from "./training-engine/movement-framework";
+import {
+  buildHistoryIndex,
+  resolveStartWeight,
+  type HistoryEntry,
+} from "./training-engine/start-weight-resolver";
 
 type ExerciseCategory =
   | "barbell" | "dumbbell" | "machine" | "cardio"
