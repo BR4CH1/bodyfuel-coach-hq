@@ -707,6 +707,83 @@ export function CoachTeamWeekPlanner({
           onClose={() => setManageOpen(false)}
         />
       )}
+
+      {/* Week Template Picker Modal */}
+      {weekTemplatePickerOpen && (
+        <Modal onClose={() => setWeekTemplatePickerOpen(false)} title="Wochenvorlage laden">
+          {weekTemplates.length === 0 ? (
+            <p className="text-sm text-neutral-400">Noch keine Wochenvorlagen gespeichert.</p>
+          ) : (
+            <div className="space-y-1">
+              <p className="mb-2 text-[11px] text-neutral-500">
+                Ersetzt alle Trainings dieser Woche mit den Einheiten aus der Vorlage. Die Datumsangaben werden auf {formatDateShort(weekStart)}–{formatDateShort(weekEnd)} angepasst.
+              </p>
+              {weekTemplates.map((t) => (
+                <div
+                  key={t.id}
+                  className="flex items-center justify-between gap-2 rounded-lg border border-[#252525] bg-[#0a0a0a] px-3 py-2"
+                >
+                  <button
+                    type="button"
+                    onClick={() => applyWeekTemplate(t)}
+                    className="flex-1 text-left"
+                  >
+                    <div className="font-semibold text-white">{t.name}</div>
+                    <div className="text-[11px] uppercase tracking-wider text-neutral-500">
+                      {t.sessions.length} Training{t.sessions.length === 1 ? "" : "s"}
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (confirm(`Wochenvorlage „${t.name}" löschen?`)) {
+                        deleteWeekTemplateMut.mutate(t.id);
+                      }
+                    }}
+                    className="rounded-md p-1.5 text-neutral-400 hover:bg-red-500/20 hover:text-red-400"
+                    title="Löschen"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </Modal>
+      )}
+
+      {/* Save Week Template Modal */}
+      {saveWeekOpen && (
+        <Modal onClose={() => setSaveWeekOpen(false)} title="Woche als Vorlage speichern">
+          <p className="mb-3 text-[11px] text-neutral-500">
+            Speichert die {enrichedSessions.filter((s) => s.active).length} aktiven Trainings dieser Woche als wiederverwendbare Wochenvorlage.
+          </p>
+          <input
+            autoFocus
+            value={weekTemplateName}
+            onChange={(e) => setWeekTemplateName(e.target.value)}
+            placeholder="Name (z. B. Standard Seniors-Woche)"
+            className="w-full rounded-md border border-[#252525] bg-[#0a0a0a] px-3 py-2 text-sm text-white"
+          />
+          <div className="mt-3 flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setSaveWeekOpen(false)}
+              className="rounded-md border border-[#252525] bg-[#111] px-3 py-1.5 text-xs font-semibold text-neutral-300"
+            >
+              Abbrechen
+            </button>
+            <button
+              type="button"
+              disabled={!weekTemplateName.trim() || saveWeekTemplateMut.isPending}
+              onClick={() => saveWeekTemplateMut.mutate(weekTemplateName.trim())}
+              className="rounded-md bg-bulls-red px-3 py-1.5 text-xs font-bold uppercase text-white disabled:opacity-50"
+            >
+              {saveWeekTemplateMut.isPending ? <Loader2 className="inline h-3 w-3 animate-spin" /> : null} Speichern
+            </button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
