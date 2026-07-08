@@ -57,6 +57,7 @@ import { getMyAthleteProfile } from "@/lib/athlete-profile.functions";
 import { AthleteProfileEditor } from "@/components/bodyfuel/AthleteProfileEditor";
 import { MyCheckinsHistorySection } from "@/components/bodyfuel/MyCheckinsHistorySection";
 import { MinorProtectionSection } from "@/components/bodyfuel/MinorProtectionSection";
+import { ProfilePhotoUpload } from "@/components/bodyfuel/ProfilePhotoUpload";
 import {
   Select,
   SelectContent,
@@ -84,6 +85,7 @@ type ProfileRow = {
   checkin_reminder: boolean;
   notifications_enabled: boolean;
   next_checkin_date: string | null;
+  avatar_url: string | null;
 };
 
 type Points = {
@@ -123,7 +125,7 @@ function ProfileContent() {
         supabase
           .from("profiles")
           .select(
-            "display_name, created_at, coaching_goal, checkin_reminder, notifications_enabled, next_checkin_date",
+            "display_name, created_at, coaching_goal, checkin_reminder, notifications_enabled, next_checkin_date, avatar_url",
           )
           .eq("id", uid)
           .maybeSingle(),
@@ -208,6 +210,15 @@ function ProfileContent() {
           Deine Daten, dein Fortschritt und dein Account – alles an einem Ort.
         </p>
       </header>
+
+      {uid && (
+        <ProfilePhotoUpload
+          userId={uid}
+          currentPath={profile?.avatar_url ?? null}
+          displayName={profile?.display_name ?? supabaseUser?.email ?? null}
+          onChange={(path) => setProfile((prev) => (prev ? { ...prev, avatar_url: path } : prev))}
+        />
+      )}
 
       {/* Quick-Navigation zu Fortschritts-Bereichen */}
       <section className="grid gap-3 sm:grid-cols-2">
