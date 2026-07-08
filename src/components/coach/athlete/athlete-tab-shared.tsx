@@ -119,7 +119,7 @@ export function TinyStat({
     tone === "green"
       ? "text-green-500"
       : tone === "yellow"
-      ? "text-yellow-600"
+      ? "text-orange-400"
       : tone === "red"
       ? "text-red-500"
       : "";
