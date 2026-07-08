@@ -413,8 +413,75 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
                     }}
                   />
                 ))}
+                {!isCoach && dayEx.length > 0 && (() => {
+                  const todayStr = new Date().toISOString().slice(0, 10);
+                  const isCompleted = completedDayIds.has(d.id);
+                  const hasTodayLog = logs.some(
+                    (l) =>
+                      dayEx.some((e) => e.id === l.exercise_id) &&
+                      l.performed_at.slice(0, 10) === todayStr,
+                  );
+                  const isBusy = completingDayId === d.id;
+                  return (
+                    <div className="pt-2">
+                      <button
+                        type="button"
+                        disabled={isBusy || isCompleted || !hasTodayLog}
+                        onClick={async () => {
+                          if (isCompleted || isBusy) return;
+                          setCompletingDayId(d.id);
+                          try {
+                            const res = await completeSessionFn({
+                              data: { day_id: d.id, session_date: todayStr },
+                            });
+                            const decisions = (res as any)?.decisions ?? [];
+                            const changed = decisions.filter((x: any) =>
+                              ["increase_load", "reduce_load", "increase_reps_target"].includes(x.action),
+                            ).length;
+                            toast.success(
+                              `Einheit abgeschlossen · ${decisions.length} Übungen ausgewertet${changed ? ` · ${changed} Anpassung${changed === 1 ? "" : "en"}` : ""}.`,
+                            );
+                            setCompletedDayIds((cur) => new Set(cur).add(d.id));
+                          } catch (e: unknown) {
+                            toast.error(e instanceof Error ? e.message : "Abschluss fehlgeschlagen");
+                          } finally {
+                            setCompletingDayId(null);
+                          }
+                        }}
+                        className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition ${
+                          isCompleted
+                            ? "border border-gold/40 bg-gold/10 text-gold"
+                            : hasTodayLog
+                            ? "bg-gradient-gold text-primary-foreground hover:opacity-90"
+                            : "border border-border bg-muted text-muted-foreground"
+                        } disabled:opacity-60`}
+                      >
+                        {isBusy ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" /> Werte Session aus…
+                          </>
+                        ) : isCompleted ? (
+                          <>
+                            <Check className="h-4 w-4" /> Einheit abgeschlossen
+                          </>
+                        ) : (
+                          <>
+                            <Check className="h-4 w-4" />
+                            {hasTodayLog ? "Einheit abschließen" : "Erst Sätze loggen"}
+                          </>
+                        )}
+                      </button>
+                      {!hasTodayLog && !isCompleted && (
+                        <p className="mt-1 text-center text-[10px] text-muted-foreground">
+                          Nach dem Loggen deiner Sätze wertet die Smart-Progression alle Übungen auf einmal aus.
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             )}
+
           </div>
         );
       })}
