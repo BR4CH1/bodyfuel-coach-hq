@@ -4,6 +4,10 @@ import {
   progressExerciseAfterSession,
   type LoggedSet,
 } from "./training-engine/progression";
+import {
+  normalizeExerciseKey,
+  stateFromDecision,
+} from "./training-engine/athlete-exercise-state";
 
 type ParsedExercise = {
   name: string;
