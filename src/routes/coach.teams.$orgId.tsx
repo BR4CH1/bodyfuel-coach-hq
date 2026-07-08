@@ -152,11 +152,9 @@ export function CoachOrgDetail() {
     { key: "athletes", label: "Athleten", icon: UsersIcon },
     { key: "teams", label: "Teams", icon: Users2Icon },
     { key: "training", label: "Training", icon: DumbbellIcon },
-    { key: "nutrition", label: "Ernährung", icon: AppleIcon },
     { key: "tasks", label: "Aufgaben", icon: ClipboardListIcon },
     { key: "community", label: "Community", icon: MessagesSquare },
     { key: "staff", label: "Staff", icon: UserCog },
-    { key: "settings", label: "Settings", icon: SettingsIcon },
   ];
 
   return (
