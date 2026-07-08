@@ -20,6 +20,11 @@ import {
   type PlannedDay,
 } from "./training-engine/week-structure";
 import type { Experience, MovementSlot } from "./training-engine/movement-framework";
+import {
+  buildHistoryIndex,
+  resolveStartWeight,
+  type HistoryEntry,
+} from "./training-engine/start-weight-resolver";
 
 type ExerciseCategory =
   | "barbell" | "dumbbell" | "machine" | "cardio"
@@ -402,6 +407,11 @@ REGELN:
   // ============================================================
   //   Tage & Übungen einfügen — WEEKPLAN ist Source of Truth
   // ============================================================
+  const history: HistoryEntry[] = buildHistoryIndex(
+    ((recentSets as any[]) ?? []) as any,
+    exNameById,
+  );
+
   let totalEx = 0;
   let totalDays = 0;
 
@@ -425,7 +435,15 @@ REGELN:
       if (dayErr || !dayRow) continue;
       totalDays++;
 
-      const rows = buildExerciseRowsForDay(day, session, wp.week_number, startWeights, dayRow.id);
+      const rows = buildExerciseRowsForDay(
+        day,
+        session,
+        wp.week_number,
+        wp.is_deload,
+        startWeights,
+        history,
+        dayRow.id,
+      );
       totalEx += rows.length;
       if (rows.length) {
         await supabase.from("training_exercises").insert(rows as any);
@@ -470,7 +488,9 @@ function buildExerciseRowsForDay(
   day: PlannedDay,
   session: LlmSession | undefined,
   weekNumber: number,
+  isDeload: boolean,
   startWeights: StartWeights,
+  history: HistoryEntry[],
   dayId: string,
 ): ExerciseRow[] {
   const rows: ExerciseRow[] = [];
@@ -561,23 +581,37 @@ function buildExerciseRowsForDay(
   for (const slot of day.slots) {
     const chosen: LlmSlotEx | undefined = llmSlots[slot.slot_id];
     const name = chosen?.name?.trim() || fallbackNameForSlot(slot);
-    const clampedWeights = clampWeightsForExercise(
-      name,
-      chosen?.target_weights ?? null,
-      weekNumber,
+
+    // Datenbasierter Startgewichts-Resolver (Historie → e1RM → LLM → Notiz)
+    const resolved = resolveStartWeight({
+      slot,
+      chosenName: name,
+      history,
       startWeights,
-    );
+      weekNumber,
+      isDeload,
+      llmWeights: chosen?.target_weights ?? null,
+    });
+    // Sicherheits-Cap gegen e1RM (falls Historie wild ausschlägt)
+    const finalWeights = resolved.weights
+      ? clampWeightsForExercise(name, resolved.weights, weekNumber, startWeights)
+      : null;
+
+    const baseNote = chosen?.notes ? stripAkzessoires(String(chosen.notes)) : slot.hint;
+    const noteWithHint = resolved.note ? `${baseNote} — ${resolved.note}` : baseNote;
+
     push({
       name: stripAkzessoires(name).slice(0, 200),
       category: validCategory(chosen?.category) ?? guessCategoryFromName(name),
       set_type: "working",
       target_sets: slot.sets,
       target_reps: slot.rep_range,
-      target_weights: clampedWeights,
+      target_weights: finalWeights,
       rest_seconds: slot.rest_seconds,
-      notes: chosen?.notes ? stripAkzessoires(String(chosen.notes)).slice(0, 500) : slot.hint,
+      notes: noteWithHint.slice(0, 500),
     });
   }
+
 
   // Cool-down
   const cds = session?.cooldown ?? [];
