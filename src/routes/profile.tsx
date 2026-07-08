@@ -85,6 +85,7 @@ type ProfileRow = {
   checkin_reminder: boolean;
   notifications_enabled: boolean;
   next_checkin_date: string | null;
+  avatar_url: string | null;
 };
 
 type Points = {
