@@ -437,6 +437,85 @@ export type Database = {
           },
         ]
       }
+      athlete_training_session: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          duration_min: number | null
+          exercises: Json
+          focus: string
+          id: string
+          organization_id: string
+          position_code: string | null
+          progress: Json
+          session_date: string
+          source_week_session_id: string
+          status: string
+          team_id: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          duration_min?: number | null
+          exercises?: Json
+          focus: string
+          id?: string
+          organization_id: string
+          position_code?: string | null
+          progress?: Json
+          session_date: string
+          source_week_session_id: string
+          status?: string
+          team_id: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          duration_min?: number | null
+          exercises?: Json
+          focus?: string
+          id?: string
+          organization_id?: string
+          position_code?: string | null
+          progress?: Json
+          session_date?: string
+          source_week_session_id?: string
+          status?: string
+          team_id?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "athlete_training_session_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_training_session_source_week_session_id_fkey"
+            columns: ["source_week_session_id"]
+            isOneToOne: false
+            referencedRelation: "org_team_training_week_session"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athlete_training_session_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "organization_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       body_measurements: {
         Row: {
           biceps_left_cm: number | null
@@ -2393,6 +2472,8 @@ export type Database = {
           created_at: string
           description: string | null
           end_time: string | null
+          focus: string | null
+          focus_source: string | null
           id: string
           session_date: string
           start_time: string | null
@@ -2405,6 +2486,8 @@ export type Database = {
           created_at?: string
           description?: string | null
           end_time?: string | null
+          focus?: string | null
+          focus_source?: string | null
           id?: string
           session_date: string
           start_time?: string | null
@@ -2417,6 +2500,8 @@ export type Database = {
           created_at?: string
           description?: string | null
           end_time?: string | null
+          focus?: string | null
+          focus_source?: string | null
           id?: string
           session_date?: string
           start_time?: string | null
@@ -2430,6 +2515,62 @@ export type Database = {
             columns: ["week_id"]
             isOneToOne: false
             referencedRelation: "org_team_training_week"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_training_session_template: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          duration_min: number | null
+          end_time: string | null
+          focus: string
+          id: string
+          name: string
+          notes: string | null
+          organization_id: string
+          start_time: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          duration_min?: number | null
+          end_time?: string | null
+          focus?: string
+          id?: string
+          name: string
+          notes?: string | null
+          organization_id: string
+          start_time?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          duration_min?: number | null
+          end_time?: string | null
+          focus?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          organization_id?: string
+          start_time?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_training_session_template_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]

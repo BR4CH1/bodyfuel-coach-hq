@@ -107,7 +107,7 @@ export const getTeamTrainingWeek = createServerFn({ method: "GET" })
     }
     const { data: sessions } = await context.supabase
       .from("org_team_training_week_session")
-      .select("id, session_date, title, description, start_time, end_time, active")
+      .select("id, session_date, title, description, start_time, end_time, active, focus, focus_source")
       .eq("week_id", (week as any).id)
       .order("session_date", { ascending: true });
     return {
@@ -141,6 +141,8 @@ export const upsertTeamTrainingWeek = createServerFn({ method: "POST" })
         start_time?: string | null;
         end_time?: string | null;
         active?: boolean;
+        focus?: string | null;
+        focus_source?: "auto" | "manual" | "none" | null;
       }>;
     }) => d,
   )
@@ -150,14 +152,12 @@ export const upsertTeamTrainingWeek = createServerFn({ method: "POST" })
     const monday = toMondayIso(data.week_start);
     const weekEnd = addDaysIso(monday, 6);
 
-    // Validate all session dates within the week
     for (const s of data.sessions) {
       if (s.session_date < monday || s.session_date > weekEnd) {
         throw new Error(`session_date ${s.session_date} liegt außerhalb der Woche.`);
       }
     }
 
-    // Upsert week header (keep status if already exists)
     const existing = await supabase
       .from("org_team_training_week")
       .select("id, status")
@@ -185,7 +185,6 @@ export const upsertTeamTrainingWeek = createServerFn({ method: "POST" })
       weekId = (ins.data as any).id;
     }
 
-    // Replace sessions strictly within [monday, weekEnd]
     const del = await supabase
       .from("org_team_training_week_session")
       .delete()
@@ -203,6 +202,8 @@ export const upsertTeamTrainingWeek = createServerFn({ method: "POST" })
         start_time: s.start_time || null,
         end_time: s.end_time || null,
         active: s.active ?? true,
+        focus: s.focus ?? null,
+        focus_source: s.focus_source ?? null,
       }));
       const ins = await supabase.from("org_team_training_week_session").insert(rows);
       if (ins.error) throw new Error(ins.error.message);
@@ -299,6 +300,25 @@ export const publishTeamTrainingWeek = createServerFn({ method: "POST" })
       inserted = up.count ?? rows.length;
     }
 
+    // Athletik-Sessions generieren (positions- und belastungsabhängig)
+    let athleticStats = { inserted: 0, updated: 0, kept: 0 };
+    try {
+      const { generateAthleteTrainingSessionsForWeek } = await import(
+        "./athlete-training-session-generator.server"
+      );
+      athleticStats = await generateAthleteTrainingSessionsForWeek({
+        weekId,
+        organizationId: data.organization_id,
+        teamId: data.team_id,
+        memberIds,
+        weekStart: monday,
+        weekEnd,
+      });
+    } catch (e) {
+      // Athletensessions dürfen den Publish-Flow nicht blockieren
+      console.error("[publishTeamTrainingWeek] athlete session sync failed", e);
+    }
+
     return {
       ok: true,
       week_id: weekId,
@@ -306,6 +326,7 @@ export const publishTeamTrainingWeek = createServerFn({ method: "POST" })
       week_end: weekEnd,
       published_for_athletes: memberIds.length,
       inserted_tasks: inserted,
+      athletic_sessions: athleticStats,
     };
   });
 
