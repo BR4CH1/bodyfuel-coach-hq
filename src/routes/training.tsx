@@ -12,6 +12,7 @@ import { StrengthCheckStatus } from "@/components/bodyfuel/StrengthCheckStatus";
 import { StrengthSummaryCard } from "@/components/bodyfuel/StrengthSummaryCard";
 import { getMyStrengthStatus } from "@/lib/strength-check.functions";
 import { AthleteProfileBanner } from "@/components/bodyfuel/AthleteProfileBanner";
+import { LivePlanBanner } from "@/components/bodyfuel/LivePlanBanner";
 import { useScrollRestore } from "@/hooks/use-scroll-restore";
 
 import { useTrial } from "@/hooks/use-trial";
@@ -92,6 +93,7 @@ function TrainingPage() {
       )}
       {!isCoach && <StrengthCheckStatus variant="block" />}
       {!isCoach && supabaseUser && <AthleteProfileBanner />}
+      {!isCoach && supabaseUser && !isTrial && !isExpired && <LivePlanBanner userId={supabaseUser.id} />}
       {hasCompleted && (
         <StrengthSummaryCard
           total={last.score_total}
