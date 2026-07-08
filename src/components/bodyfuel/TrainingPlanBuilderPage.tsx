@@ -105,6 +105,42 @@ export function TrainingPlanBuilderPage({
   const [clientDays, setClientDays] = useState<BuilderTrainingDay[] | null>(null);
   const [partnerDays, setPartnerDays] = useState<BuilderTrainingDay[] | null>(null);
   const [loadedPlanApplied, setLoadedPlanApplied] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const [saveTplOpen, setSaveTplOpen] = useState(false);
+  const [templateId, setTemplateId] = useState<string | null>(null);
+
+  const saveTplFn = useServerFn(saveAsTrainingTemplate);
+  const saveTplM = useMutation({
+    mutationFn: (v: { name: string; description: string | null; tags: string[]; note: string | null }) => {
+      if (!clientDays) throw new Error("Keine Tage");
+      return saveTplFn({
+        data: {
+          templateId: templateId ?? undefined,
+          name: v.name,
+          description: v.description,
+          tags: v.tags,
+          weeksCount,
+          days: clientDays,
+          note: v.note,
+        },
+      });
+    },
+    onSuccess: (res: any) => {
+      setTemplateId(res.template_id);
+      setSaveTplOpen(false);
+      toast.success(`Vorlage gespeichert (v${res.version})`);
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Speichern fehlgeschlagen"),
+  });
+
+  function applyTemplate(tpl: TrainingTemplateDetail) {
+    setTitle(tpl.name);
+    setWeeksCount(tpl.weeks_count);
+    setClientDays(tpl.days);
+    setTemplateId(tpl.id);
+    setActiveWeek(1);
+    toast.success(`Vorlage "${tpl.name}" geladen`);
+  }
 
   const ctx = ctxQ.data;
   const partnerCtx = partnerCtxQ.data;
