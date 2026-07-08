@@ -240,32 +240,19 @@ export const getOrgAthletesOnboardingAudit = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const orgId = data.organization_id;
-    const { data: isCoach } = await supabase.rpc("has_role", { _user_id: userId, _role: "coach" });
-    if (!isCoach) {
-      const { data: staff } = await supabase
-        .from("staff_assignments")
-        .select("id")
-        .eq("user_id", userId)
-        .eq("organization_id", orgId)
-        .maybeSingle();
-      if (!staff) throw new Error("Kein Zugriff.");
-    }
 
-    const [members, teams, profiles] = await Promise.all([
+    const { resolveCoachTeamScope } = await import("./coach-team-scope");
+    const scope = await resolveCoachTeamScope(supabase, userId, orgId);
+    const teamFilterIds = scope.allTeams ? null : scope.allowedTeamIds;
+
+    const [members, teams] = await Promise.all([
       supabase
         .from("organization_memberships")
         .select("user_id, role, onboarding_completed, status")
         .eq("organization_id", orgId),
-      supabase.from("organization_teams").select("id, name").eq("organization_id", orgId),
-      supabase
-        .from("organization_memberships")
-        .select("user_id")
-        .eq("organization_id", orgId)
-        .then(async (r) => {
-          const ids = ((r.data ?? []) as any[]).map((m) => m.user_id);
-          if (!ids.length) return { data: [] as any[] };
-          return supabase.from("profiles").select("id, display_name").in("id", ids);
-        }),
+      teamFilterIds
+        ? supabase.from("organization_teams").select("id, name").eq("organization_id", orgId).in("id", teamFilterIds)
+        : supabase.from("organization_teams").select("id, name").eq("organization_id", orgId),
     ]);
 
     const teamIds = ((teams.data ?? []) as any[]).map((t) => t.id);
@@ -276,13 +263,28 @@ export const getOrgAthletesOnboardingAudit = createServerFn({ method: "GET" })
           .in("team_id", teamIds)
       : { data: [] as any[] };
 
+    // Zugelassene Athleten-IDs = alle mit Team-Membership in erlaubtem Team.
+    // Bei org-weitem Zugriff dürfen zusätzlich Athleten ohne Team-Zuordnung
+    // gezeigt werden (Onboarding offen — sonst wären sie unsichtbar).
+    const allowedAthleteIds = new Set(((tm ?? []) as any[]).map((r) => r.user_id));
+    const showTeamless = scope.allTeams;
+
+    const memberIds = ((members.data ?? []) as any[])
+      .filter((m) => m.role === "athlete")
+      .filter((m) => allowedAthleteIds.has(m.user_id) || (showTeamless && !((tm ?? []) as any[]).some((x: any) => x.user_id === m.user_id)))
+      .map((m) => m.user_id);
+
+    const { data: profs } = memberIds.length
+      ? await supabase.from("profiles").select("id, display_name").in("id", memberIds)
+      : { data: [] as any[] };
+
     const nameMap = new Map<string, string>();
-    for (const p of ((profiles as any).data ?? []) as any[]) nameMap.set(p.id, p.display_name || "Athlet");
+    for (const p of (profs ?? []) as any[]) nameMap.set(p.id, p.display_name || "Athlet");
     const teamNameMap = new Map<string, string>();
     for (const t of ((teams.data ?? []) as any[])) teamNameMap.set(t.id, t.name);
 
     const athletes = ((members.data ?? []) as any[])
-      .filter((m) => m.role === "athlete")
+      .filter((m) => m.role === "athlete" && memberIds.includes(m.user_id))
       .map((m) => {
         const t = (tm ?? []).find((x: any) => x.user_id === m.user_id);
         const missing: string[] = [];
@@ -320,6 +322,7 @@ export const getOrgAthletesOnboardingAudit = createServerFn({ method: "GET" })
 
     return { athletes };
   });
+
 
 /** Staff list joined with profile names (no email). */
 export const listOrgStaffWithProfiles = createServerFn({ method: "GET" })
