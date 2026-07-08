@@ -289,27 +289,21 @@ export function AthletesTab({
   );
 }
 
-// ---------- Position Groups ----------
+// ---------- Position Groups (zentrale Mapping-Funktion) ----------
 
-const OFFENSE_POS = new Set(["QB", "RB", "FB", "WR", "TE", "OL", "C", "G", "T", "OT", "OG"]);
-const DEFENSE_POS = new Set(["DL", "DE", "DT", "NT", "LB", "ILB", "OLB", "MLB", "DB", "CB", "S", "FS", "SS", "NB"]);
-const SPECIAL_POS = new Set(["K", "P", "LS", "KR", "PR"]);
+import { positionGroup as _positionGroup, POSITION_GROUP_LABEL } from "@/lib/football-positions";
 
 const GROUP_LABEL: Record<string, string> = {
-  offense: "Offense",
-  defense: "Defense",
-  special: "Special Teams",
-  other: "Weitere",
+  offense: POSITION_GROUP_LABEL.offense,
+  defense: POSITION_GROUP_LABEL.defense,
+  special: POSITION_GROUP_LABEL.special,
+  other: POSITION_GROUP_LABEL.other,
 };
 
 function positionGroup(pos: string | null | undefined): "offense" | "defense" | "special" | "other" {
-  if (!pos) return "other";
-  const p = pos.trim().toUpperCase();
-  if (OFFENSE_POS.has(p)) return "offense";
-  if (DEFENSE_POS.has(p)) return "defense";
-  if (SPECIAL_POS.has(p)) return "special";
-  return "other";
+  return _positionGroup(pos);
 }
+
 
 function initials(name: string) {
   return (
