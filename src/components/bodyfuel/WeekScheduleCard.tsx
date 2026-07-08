@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Dumbbell, Moon, Loader2 } from "lucide-react";
+import { Dumbbell, Moon, Loader2, CalendarDays } from "lucide-react";
 import { toast } from "sonner";
 import { getMySmartProfile } from "@/lib/smart-profile.functions";
 import { getDayType, setDayType, type DayType } from "@/lib/nutrition.functions";
@@ -12,6 +12,8 @@ import {
   BULLS_DAY_TYPE_LABELS,
   type BullsDayType,
 } from "@/lib/performance-nutrition/bulls-nutrition.functions";
+import { getMyTeamTrainingWeeks } from "@/lib/organizations/team-training-week.functions";
+import { useSession } from "@/lib/bodyfuel/session";
 
 const KEYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
 const LABELS_DE = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
@@ -197,55 +199,156 @@ function BullsWeekScheduleCard() {
   };
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="text-xs uppercase tracking-[0.2em] text-gold">Heute</div>
-          <h2 className="font-display text-lg font-bold">Day Type</h2>
-        </div>
-        <div className="text-right">
-          <div className="text-xs text-muted-foreground">Aktuell</div>
-          <div className="text-sm font-bold text-gold">
-            {BULLS_DAY_TYPE_LABELS[activeType]}
+    <div className="space-y-4">
+      <BullsMyTeamTrainingWeek />
+      <div className="rounded-2xl border border-border bg-card p-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-xs uppercase tracking-[0.2em] text-gold">Heute</div>
+            <h2 className="font-display text-lg font-bold">Day Type</h2>
           </div>
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            {data.dayTypeSource === "manual" ? "manuell" : "automatisch"}
+          <div className="text-right">
+            <div className="text-xs text-muted-foreground">Aktuell</div>
+            <div className="text-sm font-bold text-gold">
+              {BULLS_DAY_TYPE_LABELS[activeType]}
+            </div>
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              {data.dayTypeSource === "manual" ? "manuell" : "automatisch"}
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-        {ALL_BULLS_DAY_TYPES.map((k) => {
-          const active = k === activeType;
-          const kcal = data.perDayTypeTargets[k]?.kcal;
-          return (
-            <button
-              key={k}
-              onClick={() => flip(k)}
-              disabled={busy !== null || active}
-              className={`flex flex-col items-start gap-0.5 rounded-xl border px-3 py-2 text-left text-xs transition ${
-                active
-                  ? "border-gold bg-gradient-to-br from-gold/20 to-transparent text-foreground"
-                  : "border-border bg-background/40 hover:border-gold/60"
-              } disabled:opacity-70`}
-            >
-              <span className="font-semibold">
-                {busy === k ? (
-                  <Loader2 className="inline h-3 w-3 animate-spin" />
-                ) : null}{" "}
-                {BULLS_DAY_TYPE_LABELS[k]}
-              </span>
-              <span className="text-[10px] text-muted-foreground">
-                {kcal != null ? `${kcal} kcal` : "—"}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {ALL_BULLS_DAY_TYPES.map((k) => {
+            const active = k === activeType;
+            const kcal = data.perDayTypeTargets[k]?.kcal;
+            return (
+              <button
+                key={k}
+                onClick={() => flip(k)}
+                disabled={busy !== null || active}
+                className={`flex flex-col items-start gap-0.5 rounded-xl border px-3 py-2 text-left text-xs transition ${
+                  active
+                    ? "border-gold bg-gradient-to-br from-gold/20 to-transparent text-foreground"
+                    : "border-border bg-background/40 hover:border-gold/60"
+                } disabled:opacity-70`}
+              >
+                <span className="font-semibold">
+                  {busy === k ? (
+                    <Loader2 className="inline h-3 w-3 animate-spin" />
+                  ) : null}{" "}
+                  {BULLS_DAY_TYPE_LABELS[k]}
+                </span>
+                <span className="text-[10px] text-muted-foreground">
+                  {kcal != null ? `${kcal} kcal` : "—"}
+                </span>
+              </button>
+            );
+          })}
+        </div>
 
-      <p className="mt-3 text-[11px] text-muted-foreground">
-        Kcal & Makros pro Day Type stammen aus deiner Performance Nutrition Engine.
-      </p>
+        <p className="mt-3 text-[11px] text-muted-foreground">
+          Kcal & Makros pro Day Type stammen aus deiner Performance Nutrition Engine.
+        </p>
+      </div>
     </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Bulls — Team-Trainingswoche (aktuelle vs. kommende Woche, wenn veröffentlicht)
+// ---------------------------------------------------------------------------
+const WK_LABELS = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"];
+
+function fmtShort(iso: string) {
+  return new Date(iso + "T12:00:00Z").toLocaleDateString("de-DE", { day: "2-digit", month: "short" });
+}
+
+function BullsMyTeamTrainingWeek() {
+  const { supabaseUser } = useSession();
+  const getWeeks = useServerFn(getMyTeamTrainingWeeks);
+  const { data } = useQuery({
+    queryKey: ["my-team-training-weeks", supabaseUser?.id ?? "anon"],
+    queryFn: () => getWeeks({ data: {} }),
+    enabled: !!supabaseUser,
+  });
+  const [view, setView] = useState<"current" | "upcoming">("current");
+
+  const cur = data?.current ?? null;
+  const up = data?.upcoming ?? null;
+  const active = view === "upcoming" ? up : cur;
+
+  // Nichts anzeigen wenn keine veröffentlichte Woche existiert.
+  if (!cur && !up) return null;
+
+  const sessions = active?.sessions ?? [];
+  const weekStart = active?.week_start;
+  const weekEnd = active?.week_end;
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.28em] text-bulls-red">
+            <CalendarDays className="h-3.5 w-3.5" /> Team Training
+          </div>
+          <h3 className="mt-1 font-display text-lg font-bold">
+            {weekStart && weekEnd ? `${fmtShort(weekStart)} – ${fmtShort(weekEnd)}` : "Wochenplan"}
+          </h3>
+        </div>
+        <div className="flex gap-1 rounded-lg border border-border bg-background/40 p-1">
+          <button
+            type="button"
+            onClick={() => setView("current")}
+            disabled={!cur}
+            className={`rounded-md px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${
+              view === "current" ? "bg-bulls-red text-white" : "text-muted-foreground hover:text-foreground"
+            } disabled:opacity-40`}
+          >
+            Aktuelle
+          </button>
+          <button
+            type="button"
+            onClick={() => setView("upcoming")}
+            disabled={!up}
+            className={`rounded-md px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${
+              view === "upcoming" ? "bg-bulls-red text-white" : "text-muted-foreground hover:text-foreground"
+            } disabled:opacity-40`}
+          >
+            Kommende
+          </button>
+        </div>
+      </div>
+
+      {sessions.length === 0 ? (
+        <p className="mt-3 text-xs text-muted-foreground">
+          Kein Team Training in dieser Woche.
+        </p>
+      ) : (
+        <ul className="mt-3 space-y-1.5">
+          {sessions.map((s: any) => {
+            const idx = (new Date(s.session_date + "T12:00:00Z").getUTCDay() + 6) % 7;
+            return (
+              <li
+                key={s.session_date}
+                className="flex items-center justify-between rounded-xl border border-border bg-background/40 px-3 py-2 text-sm"
+              >
+                <div>
+                  <div className="font-semibold">{WK_LABELS[idx]}</div>
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    {s.title || "Team Training"}
+                  </div>
+                </div>
+                <div className="text-right text-xs font-semibold text-gold">
+                  {(s.start_time ?? "").slice(0, 5)}
+                  {s.end_time ? ` – ${(s.end_time ?? "").slice(0, 5)}` : ""}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
