@@ -1,8 +1,17 @@
 import { Activity, AlertTriangle, ClipboardList, ListChecks } from "lucide-react";
 import type { CoachAthleteDetail } from "@/lib/organizations/coach-athlete-drilldown.functions";
 import { PulseCell, Section } from "./athlete-tab-shared";
+import { RemoveFromTeamSection } from "./RemoveFromTeamSection";
 
-export function AthleteOverviewTab({ data }: { data: CoachAthleteDetail }) {
+export function AthleteOverviewTab({
+  data,
+  orgId,
+  userId,
+}: {
+  data: CoachAthleteDetail;
+  orgId: string;
+  userId: string;
+}) {
   const p = data.pulse;
   const recent = data.training.timeline.slice(0, 5);
   return (
