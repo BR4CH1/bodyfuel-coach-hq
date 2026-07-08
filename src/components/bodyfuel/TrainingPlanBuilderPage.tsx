@@ -3,7 +3,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Lock, LockOpen, Sparkles, Trash2, Users, Pencil } from "lucide-react";
+import { ArrowLeft, Plus, Lock, LockOpen, Sparkles, Trash2, Users, Pencil, BookOpen, Save } from "lucide-react";
 import {
   listExerciseLibrary,
   getCustomerTrainingContext,
@@ -15,7 +15,12 @@ import {
   type LibraryExercise,
   type StrengthBaseline,
 } from "@/lib/training-plan-builder.functions";
+import { saveAsTrainingTemplate, type TrainingTemplateDetail } from "@/lib/training-templates.functions";
 import { autoFillTrainingPlan, emptyPlan } from "@/lib/training-autofill";
+import {
+  TrainingTemplateLibraryDialog,
+  SaveAsTemplateDialog,
+} from "@/components/bodyfuel/TrainingTemplateDialogs";
 
 
 const WD_LABEL = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
@@ -100,6 +105,42 @@ export function TrainingPlanBuilderPage({
   const [clientDays, setClientDays] = useState<BuilderTrainingDay[] | null>(null);
   const [partnerDays, setPartnerDays] = useState<BuilderTrainingDay[] | null>(null);
   const [loadedPlanApplied, setLoadedPlanApplied] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const [saveTplOpen, setSaveTplOpen] = useState(false);
+  const [templateId, setTemplateId] = useState<string | null>(null);
+
+  const saveTplFn = useServerFn(saveAsTrainingTemplate);
+  const saveTplM = useMutation({
+    mutationFn: (v: { name: string; description: string | null; tags: string[]; note: string | null }) => {
+      if (!clientDays) throw new Error("Keine Tage");
+      return saveTplFn({
+        data: {
+          templateId: templateId ?? undefined,
+          name: v.name,
+          description: v.description,
+          tags: v.tags,
+          weeksCount,
+          days: clientDays,
+          note: v.note,
+        },
+      });
+    },
+    onSuccess: (res: any) => {
+      setTemplateId(res.template_id);
+      setSaveTplOpen(false);
+      toast.success(`Vorlage gespeichert (v${res.version})`);
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Speichern fehlgeschlagen"),
+  });
+
+  function applyTemplate(tpl: TrainingTemplateDetail) {
+    setTitle(tpl.name);
+    setWeeksCount(tpl.weeks_count);
+    setClientDays(tpl.days);
+    setTemplateId(tpl.id);
+    setActiveWeek(1);
+    toast.success(`Vorlage "${tpl.name}" geladen`);
+  }
 
   const ctx = ctxQ.data;
   const partnerCtx = partnerCtxQ.data;
@@ -339,6 +380,35 @@ export function TrainingPlanBuilderPage({
         </p>
       </div>
 
+      {/* Template actions */}
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() => setLibraryOpen(true)}
+          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold hover:border-primary hover:text-primary"
+        >
+          <BookOpen className="h-3.5 w-3.5" /> Aus Vorlage laden
+        </button>
+        <button
+          onClick={() => setSaveTplOpen(true)}
+          disabled={!clientDays}
+          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold hover:border-primary hover:text-primary disabled:opacity-50"
+        >
+          <Save className="h-3.5 w-3.5" />
+          {templateId ? "Neue Version speichern" : "Als Vorlage speichern"}
+        </button>
+        {templateId && (
+          <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1.5 text-[10px] font-semibold text-primary">
+            Basiert auf Vorlage
+          </span>
+        )}
+      </div>
+
+      <TrainingTemplateLibraryDialog
+        open={libraryOpen}
+        onOpenChange={setLibraryOpen}
+        onSelect={applyTemplate}
+      />
+
       {/* Header controls */}
       <div className="grid gap-3 rounded-2xl border border-border bg-card p-4 sm:grid-cols-2 lg:grid-cols-4">
         <div>
@@ -505,6 +575,14 @@ export function TrainingPlanBuilderPage({
           {saveMut.isPending ? "Speichere…" : publish ? "Für Kunden aktivieren" : "Als Entwurf speichern"}
         </button>
       </div>
+
+      <SaveAsTemplateDialog
+        open={saveTplOpen}
+        onOpenChange={setSaveTplOpen}
+        defaultName={title}
+        saving={saveTplM.isPending}
+        onConfirm={(v) => saveTplM.mutate(v)}
+      />
     </div>
   );
 }

@@ -174,7 +174,7 @@ export type BuilderTrainingDay = {
 
 const WD_SHORT = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
 
-async function persistTrainingPlan(
+export async function persistTrainingPlan(
   data: {
     customerId: string;
     uploadedBy: string;
@@ -183,6 +183,8 @@ async function persistTrainingPlan(
     weeksCount: number;
     days: BuilderTrainingDay[];
     publish?: boolean;
+    sourceTemplateId?: string | null;
+    sourceTemplateVersionId?: string | null;
   },
 ): Promise<{ plan_id: string; day_ids: Record<string, string>; exercise_ids: Record<string, string> }> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -216,6 +218,8 @@ async function persistTrainingPlan(
       scheduled_start_date: isoDate(start),
       scheduled_end_date: isoDate(end),
       weeks_count: data.weeksCount,
+      source_template_id: data.sourceTemplateId ?? null,
+      source_template_version_id: data.sourceTemplateVersionId ?? null,
     } as any)
     .select("id")
     .single();

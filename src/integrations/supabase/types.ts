@@ -2127,6 +2127,8 @@ export type Database = {
           scheduled_end_date: string | null
           scheduled_start_date: string | null
           source: string
+          source_template_id: string | null
+          source_template_version_id: string | null
           status: string
           title: string
           uploaded_by: string | null
@@ -2157,6 +2159,8 @@ export type Database = {
           scheduled_end_date?: string | null
           scheduled_start_date?: string | null
           source?: string
+          source_template_id?: string | null
+          source_template_version_id?: string | null
           status?: string
           title: string
           uploaded_by?: string | null
@@ -2187,6 +2191,8 @@ export type Database = {
           scheduled_end_date?: string | null
           scheduled_start_date?: string | null
           source?: string
+          source_template_id?: string | null
+          source_template_version_id?: string | null
           status?: string
           title?: string
           uploaded_by?: string | null
@@ -2205,6 +2211,20 @@ export type Database = {
             columns: ["partner_plan_id"]
             isOneToOne: false
             referencedRelation: "nutrition_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nutrition_plans_source_template_id_fkey"
+            columns: ["source_template_id"]
+            isOneToOne: false
+            referencedRelation: "training_plan_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nutrition_plans_source_template_version_id_fkey"
+            columns: ["source_template_version_id"]
+            isOneToOne: false
+            referencedRelation: "training_template_versions"
             referencedColumns: ["id"]
           },
         ]
@@ -6455,6 +6475,56 @@ export type Database = {
           },
         ]
       }
+      training_plan_templates: {
+        Row: {
+          created_at: string
+          current_version: number
+          description: string | null
+          id: string
+          is_archived: boolean
+          name: string
+          organization_id: string | null
+          owner_user_id: string
+          tags: string[]
+          updated_at: string
+          weeks_count: number
+        }
+        Insert: {
+          created_at?: string
+          current_version?: number
+          description?: string | null
+          id?: string
+          is_archived?: boolean
+          name: string
+          organization_id?: string | null
+          owner_user_id: string
+          tags?: string[]
+          updated_at?: string
+          weeks_count?: number
+        }
+        Update: {
+          created_at?: string
+          current_version?: number
+          description?: string | null
+          id?: string
+          is_archived?: boolean
+          name?: string
+          organization_id?: string | null
+          owner_user_id?: string
+          tags?: string[]
+          updated_at?: string
+          weeks_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_plan_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       training_progression_events: {
         Row: {
           applied_to_exercise_id: string | null
@@ -6600,6 +6670,44 @@ export type Database = {
             columns: ["exercise_id"]
             isOneToOne: false
             referencedRelation: "training_exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_template_versions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          note: string | null
+          structure: Json
+          template_id: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          structure: Json
+          template_id: string
+          version: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          structure?: Json
+          template_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_template_versions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "training_plan_templates"
             referencedColumns: ["id"]
           },
         ]
