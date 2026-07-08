@@ -468,7 +468,31 @@ export function CoachTeamWeekPlanner({
           >
             Nächste Woche <ChevronRight className="h-3.5 w-3.5" />
           </button>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setWeekTemplatePickerOpen(true)}
+              disabled={!weekTemplates.length}
+              className="flex items-center gap-1 rounded-lg border border-[#252525] bg-[#111] px-3 py-1.5 text-xs font-semibold text-neutral-300 hover:border-bulls-red/60 hover:text-white disabled:opacity-40"
+              title="Wochenvorlage laden"
+            >
+              <CalendarClock className="h-3.5 w-3.5" /> Wochenvorlage laden ({weekTemplates.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!anyActive) {
+                  toast.error("Kein Training in dieser Woche.");
+                  return;
+                }
+                setWeekTemplateName("");
+                setSaveWeekOpen(true);
+              }}
+              className="flex items-center gap-1 rounded-lg border border-[#252525] bg-[#111] px-3 py-1.5 text-xs font-semibold text-neutral-300 hover:border-bulls-red/60 hover:text-white"
+              title="Woche als Vorlage speichern"
+            >
+              <CalendarPlus className="h-3.5 w-3.5" /> Woche als Vorlage
+            </button>
             <button
               type="button"
               onClick={() => setManageOpen(true)}
