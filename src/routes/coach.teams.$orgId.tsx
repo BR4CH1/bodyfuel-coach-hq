@@ -1,4 +1,17 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
+import {
+  Users as UsersIcon,
+  Users2 as Users2Icon,
+  Gauge,
+  Apple as AppleIcon,
+  Dumbbell as DumbbellIcon,
+  MessagesSquare,
+  ClipboardList as ClipboardListIcon,
+  UserCog,
+  Settings as SettingsIcon,
+  Activity as ActivityIcon,
+} from "lucide-react";
+import bullsLogo from "@/assets/bodyfuel-bulls-logo.png.asset.json";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
