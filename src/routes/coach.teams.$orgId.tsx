@@ -136,66 +136,185 @@ export function CoachOrgDetail() {
       : "BODYFUEL-Coach Analytics-Zugang.";
 
 
+  const isBulls = (org.slug ?? "").toLowerCase() === "bulls";
+  const teamsList = (data.teams as any[]) ?? [];
+  const totalAthletes = data.athletes.length;
+  const compliancePct = data.weekly_compliance;
+  const pendingOnboardings = data.pending_onboardings ?? 0;
+
+  const activeTeamId = athleteTeamFilter;
+  const filteredKpi = activeTeamId ? teamKpis.find((k) => k.team_id === activeTeamId) : null;
+  const displayAthletes = filteredKpi ? filteredKpi.athletes : totalAthletes;
+  const displayCompliance = filteredKpi ? filteredKpi.weekly_compliance : compliancePct;
+  const displayPending = filteredKpi ? filteredKpi.pending_onboardings : pendingOnboardings;
+
+  const quickAccess: Array<{ key: string; label: string; icon: React.ComponentType<{ className?: string }> }> = [
+    { key: "athletes", label: "Athleten", icon: UsersIcon },
+    { key: "teams", label: "Teams", icon: Users2Icon },
+    { key: "training", label: "Training", icon: DumbbellIcon },
+    { key: "nutrition", label: "Ernährung", icon: AppleIcon },
+    { key: "tasks", label: "Aufgaben", icon: ClipboardListIcon },
+    { key: "community", label: "Community", icon: MessagesSquare },
+    { key: "staff", label: "Staff", icon: UserCog },
+    { key: "settings", label: "Settings", icon: SettingsIcon },
+  ];
+
   return (
-    <div>
-      <div className="mb-4">
-        <Link to="/coach/teams" className="text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground">
+    <div className={isBulls ? "bulls-theme -mx-4 -my-4 min-h-screen bg-[#050505] px-4 py-4 sm:-mx-6 sm:-my-6 sm:px-6 sm:py-6" : ""}>
+      <div className="mb-3">
+        <Link to="/coach/teams" className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground">
           ← Teams
         </Link>
       </div>
 
-      <div className="flex items-center gap-4">
-        {org.logo_url ? (
-          <img src={org.logo_url} alt={org.name} className="h-14 w-14 rounded-full object-cover" />
-        ) : (
-          <div
-            className="grid h-14 w-14 place-items-center rounded-full text-white text-sm font-bold"
-            style={{ background: org.primary_color ?? "#333" }}
-          >
-            {org.name.slice(0, 2).toUpperCase()}
+      {/* Compact Performance Header */}
+      <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border border-[#252525] bg-[#0f0f0f] p-4 sm:p-5">
+        <div className="min-w-0">
+          <div className="text-[10px] font-bold uppercase tracking-[0.28em] text-bulls-red">
+            {isBulls ? "Bulls Hub" : org.name}
           </div>
-        )}
-        <div>
-          <h1 className="font-display text-2xl font-bold">{org.name}</h1>
-          <div className="flex gap-2 text-[10px] uppercase tracking-wider text-muted-foreground">
-            <span>{org.organization_type}</span>
-            <span>·</span>
-            <span className="text-green-500">{org.status}</span>
-          </div>
-        </div>
-      </div>
-
-      {caller && (
-        <div className="mt-4 rounded-lg border border-border bg-card/50 p-3">
-          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider">
-            <span
-              className={
-                caller.experience === "org_admin"
-                  ? "rounded bg-amber-500/20 px-2 py-0.5 text-amber-500"
-                  : caller.experience === "head_coach"
-                  ? "rounded bg-blue-500/20 px-2 py-0.5 text-blue-500"
-                  : "rounded bg-muted px-2 py-0.5 text-muted-foreground"
-              }
-            >
-              {experienceLabel}
-            </span>
-            {caller.is_bodyfuel_coach && (
-              <span className="rounded bg-primary/20 px-2 py-0.5 text-primary">BODYFUEL Coach</span>
+          <h1 className="mt-0.5 truncate font-display text-2xl font-bold text-white sm:text-3xl">
+            Coach Dashboard
+          </h1>
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
+            <span>{experienceLabel}</span>
+            {caller?.is_bodyfuel_coach && (
+              <>
+                <span>·</span>
+                <span className="text-bulls-red">BODYFUEL Coach</span>
+              </>
+            )}
+            {org.status && (
+              <>
+                <span>·</span>
+                <span className="text-emerald-500">{org.status}</span>
+              </>
             )}
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">{experienceHint}</p>
+        </div>
+        <div className="shrink-0">
+          {isBulls ? (
+            <img src={bullsLogo.url} alt="Coesfeld Bulls" className="h-12 w-12 rounded-lg object-contain sm:h-14 sm:w-14" />
+          ) : org.logo_url ? (
+            <img src={org.logo_url} alt={org.name} className="h-12 w-12 rounded-lg object-cover sm:h-14 sm:w-14" />
+          ) : (
+            <div
+              className="grid h-12 w-12 place-items-center rounded-lg text-sm font-bold text-white sm:h-14 sm:w-14"
+              style={{ background: org.primary_color ?? "#333" }}
+            >
+              {org.name.slice(0, 2).toUpperCase()}
+            </div>
+          )}
+        </div>
+      </header>
+
+      {/* Team Switcher — nur wenn > 1 Team */}
+      {teamsList.length > 1 && (
+        <div className="mt-3 flex gap-1.5 overflow-x-auto rounded-xl border border-[#252525] bg-[#0f0f0f] p-1 no-scrollbar">
+          <button
+            onClick={() => setAthleteTeamFilter(null)}
+            className={`shrink-0 rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-wider transition ${
+              !activeTeamId
+                ? "bg-bulls-red text-white"
+                : "text-neutral-400 hover:text-white"
+            }`}
+          >
+            Alle
+          </button>
+          {teamsList.map((t: any) => (
+            <button
+              key={t.id}
+              onClick={() => setAthleteTeamFilter(t.id)}
+              className={`shrink-0 rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-wider transition ${
+                activeTeamId === t.id
+                  ? "bg-bulls-red text-white"
+                  : "text-neutral-400 hover:text-white"
+              }`}
+            >
+              {t.name}
+            </button>
+          ))}
         </div>
       )}
 
-      <section className="mt-6 grid gap-3 sm:grid-cols-2 md:grid-cols-4">
-        <Stat label="Athleten" value={data.athletes.length} />
-        <Stat label="Staff" value={data.staff.length} />
-        <Stat label="Teams" value={data.teams.length} />
-        <Stat
-          label="Weekly Compliance"
-          value={data.weekly_compliance != null ? `${data.weekly_compliance}%` : "—"}
+      {/* KPI Row */}
+      <section className="mt-3 grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
+        <PerfKpi
+          icon={<UsersIcon className="h-3.5 w-3.5" />}
+          label="Athleten"
+          value={displayAthletes}
+          sub="Gesamt"
+        />
+        <PerfKpi
+          icon={<Gauge className="h-3.5 w-3.5" />}
+          label="Compliance"
+          value={displayCompliance != null ? `${displayCompliance}%` : "—"}
+          sub={displayCompliance != null ? "letzte 7 Tage" : "Noch keine Daten"}
+          tone={
+            displayCompliance == null
+              ? "muted"
+              : displayCompliance >= 80
+                ? "positive"
+                : displayCompliance >= 60
+                  ? "warn"
+                  : "critical"
+          }
+        />
+        <PerfKpi
+          icon={<ClipboardListIcon className="h-3.5 w-3.5" />}
+          label="Onboarding offen"
+          value={displayPending}
+          sub={displayPending > 0 ? "Athleten unvollständig" : "Alle vollständig"}
+          tone={displayPending > 0 ? "warn" : "positive"}
+        />
+        <PerfKpi
+          icon={<Users2Icon className="h-3.5 w-3.5" />}
+          label="Teams"
+          value={teamsList.length}
+          sub={data.staff.length > 0 ? `${data.staff.length} Staff` : "—"}
         />
       </section>
+
+      {/* Schnellzugriff */}
+      <section className="mt-4">
+        <div className="mb-2 flex items-center justify-between px-1">
+          <h2 className="text-[10px] font-bold uppercase tracking-[0.28em] text-neutral-400">Schnellzugriff</h2>
+        </div>
+        <div className="grid grid-cols-4 gap-2 sm:grid-cols-4 lg:grid-cols-8">
+          {quickAccess.map((q) => {
+            const Icon = q.icon;
+            const active = tab === q.key;
+            return (
+              <button
+                key={q.key}
+                onClick={() => selectTab(q.key)}
+                className={`group flex flex-col items-center gap-1.5 rounded-xl border p-3 transition ${
+                  active
+                    ? "border-bulls-red bg-bulls-red/10"
+                    : "border-[#252525] bg-[#111111] hover:border-[#3a3a3a] hover:bg-[#151515]"
+                }`}
+              >
+                <Icon className={`h-5 w-5 ${active ? "text-bulls-red" : "text-bulls-red/80 group-hover:text-bulls-red"}`} />
+                <span className={`text-[10px] font-semibold uppercase tracking-wider ${active ? "text-white" : "text-neutral-300"}`}>
+                  {q.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* Analytics-Hinweis für Coach */}
+      {caller && !isBulls && (
+        <div className="mt-3 rounded-lg border border-border bg-card/50 p-3">
+          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider">
+            <ActivityIcon className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-muted-foreground">{experienceHint}</span>
+          </div>
+        </div>
+      )}
+
+
 
 
 
