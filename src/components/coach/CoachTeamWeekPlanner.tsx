@@ -145,6 +145,17 @@ export function CoachTeamWeekPlanner({
   });
   const templates = (templatesQ.data ?? []) as Template[];
 
+  const weekTemplatesQ = useQuery({
+    queryKey: ["training-week-templates", orgId],
+    queryFn: () => listWeekTpls({ data: { organization_id: orgId } }),
+  });
+  const weekTemplates = (weekTemplatesQ.data ?? []) as Array<{
+    id: string;
+    name: string;
+    description: string | null;
+    sessions: WeekTemplateSession[];
+  }>;
+
   const initialSessions = useMemo<EditorSession[]>(() => {
     const map = new Map<string, EditorSession>();
     for (const s of (q.data?.sessions ?? []) as any[]) {
