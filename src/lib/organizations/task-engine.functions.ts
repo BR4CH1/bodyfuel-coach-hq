@@ -278,6 +278,8 @@ export const getOrgAthletesOnboardingAudit = createServerFn({ method: "GET" })
 
     const nameMap = new Map<string, string>();
     for (const p of ((profiles as any).data ?? []) as any[]) nameMap.set(p.id, p.display_name || "Athlet");
+    const teamNameMap = new Map<string, string>();
+    for (const t of ((teams.data ?? []) as any[])) teamNameMap.set(t.id, t.name);
 
     const athletes = ((members.data ?? []) as any[])
       .filter((m) => m.role === "athlete")
@@ -298,6 +300,10 @@ export const getOrgAthletesOnboardingAudit = createServerFn({ method: "GET" })
           derived_complete: complete,
           missing,
           team_id: t?.team_id ?? null,
+          team_name: t?.team_id ? teamNameMap.get(t.team_id) ?? null : null,
+          position: t?.position ?? null,
+          jersey_number: t?.jersey_number ?? null,
+          status: m.status ?? null,
         };
       });
 
