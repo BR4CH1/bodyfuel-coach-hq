@@ -138,6 +138,13 @@ export function AthleteOverviewTab({
           </ul>
         )}
       </Section>
+
+      <RemoveFromTeamSection
+        orgId={orgId}
+        userId={userId}
+        displayName={data.athlete.display_name}
+      />
     </div>
   );
 }
+
