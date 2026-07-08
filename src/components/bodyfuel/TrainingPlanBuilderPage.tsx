@@ -213,6 +213,7 @@ export function TrainingPlanBuilderPage({
           rest_seconds: lib.default_rest_seconds,
           notes: lib.notes,
           is_locked: false,
+          smart_lock: "none",
         }
       : {
           library_exercise_id: null,
@@ -225,6 +226,7 @@ export function TrainingPlanBuilderPage({
           rest_seconds: 90,
           notes: null,
           is_locked: false,
+          smart_lock: "none",
         };
     mutateDays((prev) =>
       prev.map((d) =>
@@ -720,6 +722,22 @@ function ExerciseRow({
         <TextField label="kg" value={ex.target_weights} onChange={(v) => onChange({ target_weights: v })} />
         <NumField label="RIR" value={ex.target_rir} onChange={(v) => onChange({ target_rir: v })} />
         <NumField label="Pause" value={ex.rest_seconds} onChange={(v) => onChange({ rest_seconds: v })} />
+      </div>
+      <div className="mt-1 flex items-center gap-2">
+        <label className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground">
+          <span>Smart-Lock</span>
+          <select
+            value={(ex.smart_lock ?? "none") as string}
+            onChange={(e) => onChange({ smart_lock: e.target.value as any })}
+            className="rounded-md border border-border bg-background px-1.5 py-0.5 text-[11px] text-foreground"
+          >
+            <option value="none">Frei</option>
+            <option value="locked">Komplett gesperrt</option>
+            <option value="weight_only">Nur Gewicht</option>
+            <option value="reps_only">Nur Wiederholungen</option>
+            <option value="volume_only">Nur Volumen</option>
+          </select>
+        </label>
       </div>
       <input
         value={ex.notes ?? ""}

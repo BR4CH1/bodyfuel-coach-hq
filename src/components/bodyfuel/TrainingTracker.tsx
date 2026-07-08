@@ -436,11 +436,23 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
                             });
                             const decisions = (res as any)?.decisions ?? [];
                             const changed = decisions.filter((x: any) =>
-                              ["increase_load", "reduce_load", "increase_reps_target"].includes(x.action),
-                            ).length;
-                            toast.success(
-                              `Einheit abgeschlossen · ${decisions.length} Übungen ausgewertet${changed ? ` · ${changed} Anpassung${changed === 1 ? "" : "en"}` : ""}.`,
+                              ["increase_load", "reduce_load", "increase_reps_target", "reduce_volume"].includes(x.action),
                             );
+                            toast.success(
+                              `Einheit abgeschlossen · ${decisions.length} Übungen ausgewertet${changed.length ? ` · ${changed.length} Anpassung${changed.length === 1 ? "" : "en"}` : ""}.`,
+                            );
+                            // "PLAN UPDATE" — pro geänderter Übung eine nachvollziehbare Toast-Nachricht
+                            for (const c of changed.slice(0, 4)) {
+                              const arrow =
+                                c.action === "increase_load" ? "⬆︎ Gewicht"
+                                : c.action === "reduce_load" ? "⬇︎ Gewicht"
+                                : c.action === "increase_reps_target" ? "⬆︎ Wiederholungen"
+                                : "⬇︎ Volumen";
+                              toast(`PLAN UPDATE · ${c.exercise_name}`, {
+                                description: `${arrow} — ${c.reason}`,
+                                duration: 7000,
+                              });
+                            }
                             setCompletedDayIds((cur) => new Set(cur).add(d.id));
                           } catch (e: unknown) {
                             toast.error(e instanceof Error ? e.message : "Abschluss fehlgeschlagen");
