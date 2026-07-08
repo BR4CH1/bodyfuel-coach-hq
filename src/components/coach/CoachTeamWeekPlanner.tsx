@@ -7,7 +7,6 @@ import {
   getTeamTrainingWeek,
   upsertTeamTrainingWeek,
   publishTeamTrainingWeek,
-  toMondayIso,
 } from "@/lib/organizations/team-training-week.functions";
 
 // Client-side Montag-Auflösung (dupliziert aus dem Server-Modul, damit der
