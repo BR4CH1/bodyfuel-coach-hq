@@ -64,11 +64,14 @@ export const Route = createFileRoute("/api/public/hooks/plan-rotation")({
           }
 
           // 2. Find candidate plans for clients without active coverage.
-          //    Pull all non-archived plans of this type, group by client.
+          //    Pull all non-archived plans of this type, group by
+          //    (client_id, performance_context). Personal (BodyFuel) and
+          //    performance (Bulls) plans share plan_type='nutrition' but are
+          //    independent tracks and MUST NOT archive each other.
           const { data: candidates } = await admin
             .from("nutrition_plans")
             .select(
-              "id, client_id, status, scheduled_start_date, scheduled_end_date, created_at",
+              "id, client_id, status, scheduled_start_date, scheduled_end_date, created_at, performance_context",
             )
             .eq("plan_type", planType)
             .in("status", ["active", "approved", "published", "draft"])
@@ -76,10 +79,13 @@ export const Route = createFileRoute("/api/public/hooks/plan-rotation")({
 
           const byClient = new Map<string, any[]>();
           for (const row of (candidates ?? []) as any[]) {
-            const arr = byClient.get(row.client_id) ?? [];
+            const perfKey = row.performance_context ? "perf" : "personal";
+            const key = `${row.client_id}::${perfKey}`;
+            const arr = byClient.get(key) ?? [];
             arr.push(row);
-            byClient.set(row.client_id, arr);
+            byClient.set(key, arr);
           }
+
 
           const CHUNK = 5;
           const clientIds = Array.from(byClient.keys());
