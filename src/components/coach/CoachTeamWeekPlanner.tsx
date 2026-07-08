@@ -30,6 +30,12 @@ import {
   deleteTrainingTemplate,
 } from "@/lib/organizations/training-templates.functions";
 import {
+  listWeekTemplates,
+  createWeekTemplate,
+  deleteWeekTemplate,
+  type WeekTemplateSession,
+} from "@/lib/organizations/training-week-templates.functions";
+import {
   detectTrainingFocus,
   FOCUS_LABEL,
   FOCUS_CHOICES,
