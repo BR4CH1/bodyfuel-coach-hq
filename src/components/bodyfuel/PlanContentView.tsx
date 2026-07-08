@@ -57,6 +57,7 @@ type Exercise = {
   target_weights: string | null;
   notes: string | null;
   sort_order: number;
+  set_type?: "warmup" | "working" | "cooldown" | "backoff" | "dropset" | "amrap" | null;
 };
 
 type Props = {
