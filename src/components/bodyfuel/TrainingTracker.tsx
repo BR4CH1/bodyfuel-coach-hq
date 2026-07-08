@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Sparkles, ChevronDown, ChevronRight, Trash2, Loader2, BarChart3, Check, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
-import { parseTrainingPlan, logSet, deleteSetLog } from "@/lib/training.functions";
+import { parseTrainingPlan, logSet, deleteSetLog, completeTrainingSession } from "@/lib/training.functions";
 import { ExerciseAnalytics } from "./ExerciseAnalytics";
 import { normalizeExerciseName } from "@/lib/exercise-name-match";
 import { AddTrainingSessionButton } from "./AddTrainingSessionDialog";
@@ -38,6 +38,9 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
   const parseFn = useServerFn(parseTrainingPlan);
   const logFn = useServerFn(logSet);
   const deleteLogFn = useServerFn(deleteSetLog);
+  const completeSessionFn = useServerFn(completeTrainingSession);
+  const [completingDayId, setCompletingDayId] = useState<string | null>(null);
+  const [completedDayIds, setCompletedDayIds] = useState<Set<string>>(new Set());
 
   const [plan, setPlan] = useState<Plan | null>(null);
   const [days, setDays] = useState<Day[]>([]);
@@ -180,6 +183,24 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
     reload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
+
+  // Heute bereits abgeschlossene Trainingstage nachladen (für UI-State des Buttons)
+  useEffect(() => {
+    if (!clientId || !days.length) return;
+    let alive = true;
+    (async () => {
+      const today = new Date().toISOString().slice(0, 10);
+      const { data } = await supabase
+        .from("training_day_completions")
+        .select("day_id")
+        .eq("client_id", clientId)
+        .eq("completion_date", today)
+        .in("day_id", days.map((d) => d.id));
+      if (!alive) return;
+      setCompletedDayIds(new Set(((data as any[]) ?? []).map((r) => String(r.day_id))));
+    })();
+    return () => { alive = false; };
+  }, [clientId, days]);
 
   // Sync open day with PlanContentView selection (top of /training page).
   // PlanContentView writes the active virtual-day NAME to localStorage and
@@ -392,8 +413,75 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
                     }}
                   />
                 ))}
+                {!isCoach && dayEx.length > 0 && (() => {
+                  const todayStr = new Date().toISOString().slice(0, 10);
+                  const isCompleted = completedDayIds.has(d.id);
+                  const hasTodayLog = logs.some(
+                    (l) =>
+                      dayEx.some((e) => e.id === l.exercise_id) &&
+                      l.performed_at.slice(0, 10) === todayStr,
+                  );
+                  const isBusy = completingDayId === d.id;
+                  return (
+                    <div className="pt-2">
+                      <button
+                        type="button"
+                        disabled={isBusy || isCompleted || !hasTodayLog}
+                        onClick={async () => {
+                          if (isCompleted || isBusy) return;
+                          setCompletingDayId(d.id);
+                          try {
+                            const res = await completeSessionFn({
+                              data: { day_id: d.id, session_date: todayStr },
+                            });
+                            const decisions = (res as any)?.decisions ?? [];
+                            const changed = decisions.filter((x: any) =>
+                              ["increase_load", "reduce_load", "increase_reps_target"].includes(x.action),
+                            ).length;
+                            toast.success(
+                              `Einheit abgeschlossen · ${decisions.length} Übungen ausgewertet${changed ? ` · ${changed} Anpassung${changed === 1 ? "" : "en"}` : ""}.`,
+                            );
+                            setCompletedDayIds((cur) => new Set(cur).add(d.id));
+                          } catch (e: unknown) {
+                            toast.error(e instanceof Error ? e.message : "Abschluss fehlgeschlagen");
+                          } finally {
+                            setCompletingDayId(null);
+                          }
+                        }}
+                        className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition ${
+                          isCompleted
+                            ? "border border-gold/40 bg-gold/10 text-gold"
+                            : hasTodayLog
+                            ? "bg-gradient-gold text-primary-foreground hover:opacity-90"
+                            : "border border-border bg-muted text-muted-foreground"
+                        } disabled:opacity-60`}
+                      >
+                        {isBusy ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" /> Werte Session aus…
+                          </>
+                        ) : isCompleted ? (
+                          <>
+                            <Check className="h-4 w-4" /> Einheit abgeschlossen
+                          </>
+                        ) : (
+                          <>
+                            <Check className="h-4 w-4" />
+                            {hasTodayLog ? "Einheit abschließen" : "Erst Sätze loggen"}
+                          </>
+                        )}
+                      </button>
+                      {!hasTodayLog && !isCompleted && (
+                        <p className="mt-1 text-center text-[10px] text-muted-foreground">
+                          Nach dem Loggen deiner Sätze wertet die Smart-Progression alle Übungen auf einmal aus.
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             )}
+
           </div>
         );
       })}

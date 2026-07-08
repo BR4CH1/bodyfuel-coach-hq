@@ -183,13 +183,14 @@ export const deleteSetLog = createServerFn({ method: "POST" })
   });
 
 /**
- * Progression-Trigger. Nach der letzten abgeschlossenen Übung im Training
- * aufrufen — z. B. vom „Übung fertig"-Button oder automatisch, sobald die
- * Anzahl geloggter Sätze target_sets erreicht.
+ * Smart-Progression pro Übung. Wird beim Abschluss der Trainingseinheit für
+ * JEDE Übung aufgerufen, die tatsächlich Working-Sets geloggt hat.
  *
- * Wertet die Set-Logs aus, wendet Double Progression an und schreibt das
- * empfohlene Gewicht in die NÄCHSTE Instanz derselben Übung im selben Plan
- * (nächster Tag, der diese Übung enthält).
+ * Wertet ALLE Working-Sets gemeinsam aus (Gewicht, Wdh., RPE, Satzabfall,
+ * Ziel-Reprange, Historie), speichert die Entscheidung in
+ * `training_progression_events` und schreibt — nur bei tatsächlicher
+ * Veränderung — die neuen Vorgaben in die NÄCHSTE geplante Ausführung
+ * derselben Übung. Die bereits absolvierte Session bleibt unverändert.
  */
 export const progressAfterExercise = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -199,16 +200,18 @@ export const progressAfterExercise = createServerFn({ method: "POST" })
 
     const { data: ex, error: exErr } = await supabase
       .from("training_exercises")
-      .select("id, name, day_id, target_sets, target_reps, set_type, training_days(plan_id, day_date, sort_order)")
+      .select(
+        "id, name, day_id, target_sets, target_reps, target_weights, set_type, target_rir, training_days(plan_id, day_date, sort_order)",
+      )
       .eq("id", data.exercise_id)
       .maybeSingle();
     if (exErr || !ex) throw new Error(exErr?.message ?? "Übung nicht gefunden");
     if ((ex as any).set_type && (ex as any).set_type !== "working") {
-      return { ok: true, skipped: "not_working_set" };
+      return { ok: true as const, skipped: "not_working_set" as const };
     }
 
     const day = (ex as any).training_days;
-    if (!day?.plan_id) return { ok: true, skipped: "no_plan" };
+    if (!day?.plan_id) return { ok: true as const, skipped: "no_plan" as const };
 
     const date = data.session_date ?? day.day_date ?? new Date().toISOString().slice(0, 10);
     const dayStart = new Date(date + "T00:00:00Z").toISOString();
@@ -216,7 +219,7 @@ export const progressAfterExercise = createServerFn({ method: "POST" })
 
     const { data: logs, error: logErr } = await supabase
       .from("training_set_logs")
-      .select("set_number, weight_kg, reps")
+      .select("set_number, weight_kg, reps, rpe")
       .eq("exercise_id", data.exercise_id)
       .eq("client_id", userId)
       .gte("performed_at", dayStart)
@@ -228,24 +231,30 @@ export const progressAfterExercise = createServerFn({ method: "POST" })
       set_number: Number(r.set_number ?? 0),
       weight_kg: r.weight_kg == null ? null : Number(r.weight_kg),
       reps: r.reps == null ? null : Number(r.reps),
+      rpe: r.rpe == null ? null : Number(r.rpe),
     }));
+
+    if (sets.length === 0) {
+      return { ok: true as const, skipped: "no_working_sets" as const };
+    }
 
     const decision = progressExerciseAfterSession({
       exerciseName: String((ex as any).name ?? ""),
       sets,
       repRange: String((ex as any).target_reps ?? "8-12"),
       targetSets: Number((ex as any).target_sets ?? sets.length ?? 3),
+      targetRir: (ex as any).target_rir ?? null,
     });
 
-    // Nächste Instanz derselben Übung im selben Plan finden
+    // Nächste Instanz derselben Übung im selben Plan finden (nachfolgende Tage)
     const currentSort = Number(day.sort_order ?? 0);
     const { data: nextDayRows } = await supabase
       .from("training_days")
-      .select("id, sort_order, training_exercises(id, name, set_type)")
+      .select("id, sort_order, training_exercises(id, name, set_type, target_weights, target_reps)")
       .eq("plan_id", day.plan_id)
       .gt("sort_order", currentSort)
       .order("sort_order", { ascending: true })
-      .limit(30);
+      .limit(60);
 
     let nextExerciseId: string | null = null;
     const currentName = String((ex as any).name ?? "").toLowerCase().trim();
@@ -260,20 +269,207 @@ export const progressAfterExercise = createServerFn({ method: "POST" })
       if (nextExerciseId) break;
     }
 
-    if (nextExerciseId && decision.next_target_weights) {
-      await supabase
-        .from("training_exercises")
-        .update({
-          target_weights: decision.next_target_weights,
-          notes: decision.reason,
-        } as any)
-        .eq("id", nextExerciseId);
+    const changesLoad =
+      decision.action === "increase_load" ||
+      decision.action === "reduce_load" ||
+      decision.action === "keep_load";
+    const changesReps = decision.action === "increase_reps_target";
+
+    if (
+      nextExerciseId &&
+      (
+        (changesLoad && decision.next_target_weights) ||
+        (changesReps && decision.next_target_reps)
+      )
+    ) {
+      const patch: Record<string, unknown> = { notes: decision.reason };
+      if (decision.next_target_weights) patch.target_weights = decision.next_target_weights;
+      if (decision.next_target_reps) patch.target_reps = decision.next_target_reps;
+      await supabase.from("training_exercises").update(patch as any).eq("id", nextExerciseId);
     }
 
+    await supabase.from("training_progression_events").insert({
+      client_id: userId,
+      source_exercise_id: data.exercise_id,
+      source_day_id: (ex as any).day_id ?? null,
+      source_session_date: date,
+      applied_to_exercise_id: nextExerciseId,
+      decision: decision.action,
+      previous_load: decision.previous_load,
+      next_load: decision.next_load,
+      previous_target_weights: (ex as any).target_weights ?? null,
+      next_target_weights: decision.next_target_weights,
+      previous_target_reps: (ex as any).target_reps ?? null,
+      next_target_reps: decision.next_target_reps,
+      reason: decision.reason,
+    } as any);
+
     return {
-      ok: true,
+      ok: true as const,
       decision,
       applied_to_exercise_id: nextExerciseId,
     };
   });
+
+/**
+ * Session-Complete-Trigger. Beim Klick auf „Einheit abschließen":
+ *  1. Alle Working-Übungen des Trainingstags laden
+ *  2. Nur solche mit mind. einem geloggten Working-Set am Session-Datum
+ *  3. Für jede Übung Smart-Progression auswerten
+ *  4. Erst dann `training_day_completions` markieren
+ * Kein zweiter Progressions-Trigger, keine Nachbearbeitung der Session.
+ */
+export const completeTrainingSession = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { day_id: string; session_date?: string }) => data)
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+
+    const date = data.session_date ?? new Date().toISOString().slice(0, 10);
+    const dayStart = new Date(date + "T00:00:00Z").toISOString();
+    const dayEnd = new Date(new Date(date + "T00:00:00Z").getTime() + 86400000).toISOString();
+
+    const { data: dayEx, error: dayErr } = await supabase
+      .from("training_exercises")
+      .select("id, name, set_type, target_sets, target_reps, target_weights, target_rir, day_id, training_days!inner(plan_id, sort_order, day_date)")
+      .eq("day_id", data.day_id)
+      .order("sort_order", { ascending: true });
+    if (dayErr) throw new Error(dayErr.message);
+
+    const workingEx = ((dayEx as any[]) ?? []).filter(
+      (e) => (e.set_type ?? "working") === "working",
+    );
+    if (workingEx.length === 0) {
+      return { ok: true as const, evaluated: 0, decisions: [] as any[], skipped: "no_exercises" };
+    }
+
+    const exerciseIds = workingEx.map((e) => e.id as string);
+    const { data: logs, error: logErr } = await supabase
+      .from("training_set_logs")
+      .select("exercise_id, set_number, weight_kg, reps, rpe")
+      .in("exercise_id", exerciseIds)
+      .eq("client_id", userId)
+      .gte("performed_at", dayStart)
+      .lt("performed_at", dayEnd);
+    if (logErr) throw new Error(logErr.message);
+
+    const setsByExercise = new Map<string, LoggedSet[]>();
+    for (const r of ((logs as any[]) ?? [])) {
+      const id = String(r.exercise_id);
+      const arr = setsByExercise.get(id) ?? [];
+      arr.push({
+        set_number: Number(r.set_number ?? 0),
+        weight_kg: r.weight_kg == null ? null : Number(r.weight_kg),
+        reps: r.reps == null ? null : Number(r.reps),
+        rpe: r.rpe == null ? null : Number(r.rpe),
+      });
+      setsByExercise.set(id, arr);
+    }
+
+    const decisions: Array<{
+      exercise_id: string;
+      exercise_name: string;
+      action: string;
+      previous_load: number | null;
+      next_load: number | null;
+      reason: string;
+      applied_to_exercise_id: string | null;
+    }> = [];
+
+    for (const ex of workingEx) {
+      const sets = (setsByExercise.get(ex.id) ?? []).sort((a, b) => a.set_number - b.set_number);
+      if (sets.length === 0) continue;
+
+      const decision = progressExerciseAfterSession({
+        exerciseName: String(ex.name ?? ""),
+        sets,
+        repRange: String(ex.target_reps ?? "8-12"),
+        targetSets: Number(ex.target_sets ?? sets.length ?? 3),
+        targetRir: ex.target_rir ?? null,
+      });
+
+      const planId = ex.training_days?.plan_id;
+      const currentSort = Number(ex.training_days?.sort_order ?? 0);
+      let nextExerciseId: string | null = null;
+      if (planId) {
+        const { data: nextDayRows } = await supabase
+          .from("training_days")
+          .select("id, sort_order, training_exercises(id, name, set_type)")
+          .eq("plan_id", planId)
+          .gt("sort_order", currentSort)
+          .order("sort_order", { ascending: true })
+          .limit(60);
+        const currentName = String(ex.name ?? "").toLowerCase().trim();
+        for (const d of ((nextDayRows as any[]) ?? [])) {
+          for (const e of d.training_exercises ?? []) {
+            if ((e.set_type ?? "working") !== "working") continue;
+            if (String(e.name ?? "").toLowerCase().trim() === currentName) {
+              nextExerciseId = e.id;
+              break;
+            }
+          }
+          if (nextExerciseId) break;
+        }
+      }
+
+      const changesLoad =
+        decision.action === "increase_load" ||
+        decision.action === "reduce_load" ||
+        decision.action === "keep_load";
+      const changesReps = decision.action === "increase_reps_target";
+
+      if (
+        nextExerciseId &&
+        (
+          (changesLoad && decision.next_target_weights) ||
+          (changesReps && decision.next_target_reps)
+        )
+      ) {
+        const patch: Record<string, unknown> = { notes: decision.reason };
+        if (decision.next_target_weights) patch.target_weights = decision.next_target_weights;
+        if (decision.next_target_reps) patch.target_reps = decision.next_target_reps;
+        await supabase.from("training_exercises").update(patch as any).eq("id", nextExerciseId);
+      }
+
+      await supabase.from("training_progression_events").insert({
+        client_id: userId,
+        source_exercise_id: ex.id,
+        source_day_id: ex.day_id ?? null,
+        source_session_date: date,
+        applied_to_exercise_id: nextExerciseId,
+        decision: decision.action,
+        previous_load: decision.previous_load,
+        next_load: decision.next_load,
+        previous_target_weights: ex.target_weights ?? null,
+        next_target_weights: decision.next_target_weights,
+        previous_target_reps: ex.target_reps ?? null,
+        next_target_reps: decision.next_target_reps,
+        reason: decision.reason,
+      } as any);
+
+      decisions.push({
+        exercise_id: ex.id,
+        exercise_name: String(ex.name ?? ""),
+        action: decision.action,
+        previous_load: decision.previous_load,
+        next_load: decision.next_load,
+        reason: decision.reason,
+        applied_to_exercise_id: nextExerciseId,
+      });
+    }
+
+    await supabase.from("training_day_completions").upsert(
+      {
+        client_id: userId,
+        day_id: data.day_id,
+        completion_date: date,
+        exercises_evaluated: decisions.length,
+        completed_at: new Date().toISOString(),
+      } as any,
+      { onConflict: "client_id,day_id,completion_date" },
+    );
+
+    return { ok: true as const, evaluated: decisions.length, decisions };
+  });
+
 

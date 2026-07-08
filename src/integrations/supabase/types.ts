@@ -6274,6 +6274,36 @@ export type Database = {
           },
         ]
       }
+      training_day_completions: {
+        Row: {
+          client_id: string
+          completed_at: string
+          completion_date: string
+          created_at: string
+          day_id: string
+          exercises_evaluated: number
+          id: string
+        }
+        Insert: {
+          client_id: string
+          completed_at?: string
+          completion_date: string
+          created_at?: string
+          day_id: string
+          exercises_evaluated?: number
+          id?: string
+        }
+        Update: {
+          client_id?: string
+          completed_at?: string
+          completion_date?: string
+          created_at?: string
+          day_id?: string
+          exercises_evaluated?: number
+          id?: string
+        }
+        Relationships: []
+      }
       training_days: {
         Row: {
           created_at: string
@@ -6425,6 +6455,63 @@ export type Database = {
           },
         ]
       }
+      training_progression_events: {
+        Row: {
+          applied_to_exercise_id: string | null
+          client_id: string
+          created_at: string
+          decision: string
+          evaluated_at: string
+          id: string
+          next_load: number | null
+          next_target_reps: string | null
+          next_target_weights: string | null
+          previous_load: number | null
+          previous_target_reps: string | null
+          previous_target_weights: string | null
+          reason: string
+          source_day_id: string | null
+          source_exercise_id: string
+          source_session_date: string
+        }
+        Insert: {
+          applied_to_exercise_id?: string | null
+          client_id: string
+          created_at?: string
+          decision: string
+          evaluated_at?: string
+          id?: string
+          next_load?: number | null
+          next_target_reps?: string | null
+          next_target_weights?: string | null
+          previous_load?: number | null
+          previous_target_reps?: string | null
+          previous_target_weights?: string | null
+          reason: string
+          source_day_id?: string | null
+          source_exercise_id: string
+          source_session_date: string
+        }
+        Update: {
+          applied_to_exercise_id?: string | null
+          client_id?: string
+          created_at?: string
+          decision?: string
+          evaluated_at?: string
+          id?: string
+          next_load?: number | null
+          next_target_reps?: string | null
+          next_target_weights?: string | null
+          previous_load?: number | null
+          previous_target_reps?: string | null
+          previous_target_weights?: string | null
+          reason?: string
+          source_day_id?: string | null
+          source_exercise_id?: string
+          source_session_date?: string
+        }
+        Relationships: []
+      }
       training_sessions: {
         Row: {
           client_id: string
@@ -6481,6 +6568,7 @@ export type Database = {
           id: string
           performed_at: string
           reps: number | null
+          rpe: number | null
           set_number: number
           weight_kg: number | null
         }
@@ -6491,6 +6579,7 @@ export type Database = {
           id?: string
           performed_at?: string
           reps?: number | null
+          rpe?: number | null
           set_number: number
           weight_kg?: number | null
         }
@@ -6501,6 +6590,7 @@ export type Database = {
           id?: string
           performed_at?: string
           reps?: number | null
+          rpe?: number | null
           set_number?: number
           weight_kg?: number | null
         }
