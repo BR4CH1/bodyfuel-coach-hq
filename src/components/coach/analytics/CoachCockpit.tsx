@@ -195,7 +195,39 @@ function PositionGroupsAnalysis({ data }: { data: CoachAnalytics }) {
   return (
     <section>
       <SectionTitle icon={<Users className="h-4 w-4" />}>Positionsgruppen</SectionTitle>
-      <div className="overflow-hidden rounded-lg border border-border bg-card">
+
+      {/* Mobile: compact cards */}
+      <div className="grid gap-2 sm:hidden">
+        {data.position_groups.map((g) => {
+          const diff =
+            g.weekly_compliance != null && teamAvg != null
+              ? g.weekly_compliance - teamAvg
+              : null;
+          return (
+            <div key={g.position} className="rounded-lg border border-border bg-card p-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="font-semibold">{g.position}</div>
+                <div className="text-sm font-bold">
+                  {g.weekly_compliance != null ? `${g.weekly_compliance}%` : "—"}
+                  {diff != null && (
+                    <span className={`ml-1.5 text-xs font-semibold ${diff >= 0 ? "text-green-500" : "text-red-500"}`}>
+                      {diff > 0 ? "+" : ""}{diff}%
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="mt-1.5 flex items-center gap-3 text-[11px] text-muted-foreground">
+                <span>{g.athletes} Athleten</span>
+                <span>·</span>
+                <span>{g.active} aktiv</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Desktop: table */}
+      <div className="hidden overflow-hidden rounded-lg border border-border bg-card sm:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/30 text-left text-[10px] uppercase tracking-wider text-muted-foreground">
