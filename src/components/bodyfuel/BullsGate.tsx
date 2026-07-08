@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useSession } from "@/lib/bodyfuel/session";
+import { BullsPerformanceOnboardingPopup } from "./BullsPerformanceOnboardingPopup";
 
 export function BullsGate({ children }: { children: ReactNode }) {
   const { hasGroup, loading, supabaseUser, isFreeUser } = useSession();
@@ -19,6 +20,11 @@ export function BullsGate({ children }: { children: ReactNode }) {
 
   if (loading) return null;
   if (!supabaseUser || !hasGroup("bulls")) return null;
-  return <div className="bulls-theme">{children}</div>;
+  return (
+    <div className="bulls-theme">
+      {children}
+      <BullsPerformanceOnboardingPopup />
+    </div>
+  );
 }
 
