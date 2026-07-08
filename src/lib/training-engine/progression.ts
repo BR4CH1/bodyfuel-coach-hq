@@ -1,27 +1,34 @@
 /**
- * Double-Progression-Logik für Working Sets.
+ * Smart-Progression: Auswertung einer abgeschlossenen Übung.
  *
- * Entscheidet nach einer abgeschlossenen Übung, welches Gewicht in der
- * NÄCHSTEN Session dieser Übung angesetzt werden soll.
- *
- *   • Alle Working-Sets an ODER über der oberen Rep-Grenze  → +Increment
- *   • Alle Working-Sets im Zielbereich (untere ≤ x < obere) → Gewicht halten
- *   • Mindestens ein Set UNTER der unteren Rep-Grenze       → −5 % (kurzer Deload)
- *
- * Reine Funktion — keine DB-Zugriffe.
+ * Wird pro Übung EINMAL beim Session-Abschluss aufgerufen. Bewertet ALLE
+ * Working-Sets gemeinsam (Gewicht, Reps, RPE, Satzabfall, Ziel-Reprange) und
+ * gibt eine nachvollziehbare Progressionsentscheidung zurück. Keine DB-Zugriffe.
  */
 
 export type LoggedSet = {
   set_number: number;
   weight_kg: number | null;
   reps: number | null;
+  rpe: number | null;
 };
 
+export type ProgressionAction =
+  | "increase_load"
+  | "keep_load"
+  | "reduce_load"
+  | "increase_reps_target"
+  | "reduce_volume"
+  | "hold_for_more_data";
+
 export type ProgressionDecision = {
-  action: "progress" | "hold" | "deload";
-  next_weight_kg: number | null;
+  action: ProgressionAction;
+  previous_load: number | null;
+  next_load: number | null;
   /** Ein Wert pro Working-Set, kommasepariert für target_weights. */
   next_target_weights: string | null;
+  /** Optional angepasstes Ziel-Rep-Schema (z. B. "10-12" → "12"). */
+  next_target_reps: string | null;
   reason: string;
 };
 
@@ -31,6 +38,8 @@ export type ProgressionInput = {
   /** z. B. "6-8", "8-12", "12-15". */
   repRange: string;
   targetSets: number;
+  /** Optional: Ziel-RIR aus Plan (z. B. 2 → RPE ~8). */
+  targetRir?: number | null;
 };
 
 /** Rep-Range "8-12" → {min:8, max:12}. Toleriert "8–12", "8" (single). */
@@ -49,15 +58,11 @@ export function parseRepRange(range: string): { min: number; max: number } {
 /** Passenden Gewichts-Sprung wählen basierend auf Übungstyp. */
 export function incrementFor(exerciseName: string, currentWeightKg: number): number {
   const n = exerciseName.toLowerCase();
-  // Kurzhantel-Paar: +1 kg pro Seite → +2 kg gesamt
   if (/kurzhantel|dumbbell|\bkh\b|\bdb\b/.test(n)) return 2;
-  // Kleine Isolationen: +2,5 kg
   if (/(seitheb|reverse ?fly|face ?pull|curl|trizeps|triceps|bizeps|biceps|wadenheb|calf)/.test(n)) return 2.5;
-  // Große Compounds mit LH/Maschine: +5 kg bei ≥60 kg, sonst +2,5
   if (/(kniebeuge|squat|kreuzheb|deadlift|beinpresse|leg[- ]?press|hip ?thrust)/.test(n)) {
     return currentWeightKg >= 60 ? 5 : 2.5;
   }
-  // Alles andere: +2,5 kg
   return 2.5;
 }
 
@@ -65,78 +70,156 @@ function roundStep(v: number, step: number): number {
   return Math.round(v / step) * step;
 }
 
+function fmtNum(v: number): string {
+  return Number.isInteger(v) ? String(v) : v.toFixed(1);
+}
+
+function avg(nums: number[]): number | null {
+  const clean = nums.filter((n) => Number.isFinite(n));
+  if (!clean.length) return null;
+  return clean.reduce((a, b) => a + b, 0) / clean.length;
+}
+
 export function progressExerciseAfterSession(input: ProgressionInput): ProgressionDecision {
   const { min, max } = parseRepRange(input.repRange);
+  const targetSets = Math.max(1, input.targetSets || input.sets.length || 3);
 
-  const workingSets = input.sets
+  const working = input.sets
     .filter((s) => Number.isFinite(s.reps ?? NaN))
-    .slice(0, input.targetSets);
+    .slice(0, targetSets);
 
-  if (workingSets.length === 0) {
+  // 1) Zu wenig Daten
+  if (working.length < Math.min(2, targetSets)) {
     return {
-      action: "hold",
-      next_weight_kg: null,
+      action: "hold_for_more_data",
+      previous_load: null,
+      next_load: null,
       next_target_weights: null,
-      reason: "Keine Sets geloggt — Vorschlag unverändert.",
+      next_target_reps: null,
+      reason: `Nur ${working.length} von ${targetSets} Working-Sets geloggt — keine Entscheidung.`,
     };
   }
 
-  // Referenzgewicht: höchstes tatsächlich verwendetes Gewicht des Top-Sets.
-  const weights = workingSets
-    .map((s) => Number(s.weight_kg))
-    .filter((n) => Number.isFinite(n) && n > 0);
+  const weights = working.map((s) => Number(s.weight_kg)).filter((n) => Number.isFinite(n) && n > 0);
   const topWeight = weights.length ? Math.max(...weights) : null;
+  const repsArr = working.map((s) => Number(s.reps) || 0);
+  const firstReps = repsArr[0] ?? 0;
+  const lastReps = repsArr[repsArr.length - 1] ?? 0;
+  const avgReps = avg(repsArr) ?? 0;
 
-  const allAtOrAboveMax = workingSets.every((s) => (s.reps ?? 0) >= max);
-  const anyBelowMin = workingSets.some((s) => (s.reps ?? 0) < min);
+  const rpeArr = working.map((s) => Number(s.rpe)).filter((n) => Number.isFinite(n) && n > 0);
+  const avgRpe = avg(rpeArr);
+  const maxRpe = rpeArr.length ? Math.max(...rpeArr) : null;
 
-  const step = topWeight != null && topWeight > 0 ? (incrementFor(input.exerciseName, topWeight) >= 5 ? 2.5 : 2.5) : 2.5;
+  const allAtOrAboveMax = working.every((s) => (s.reps ?? 0) >= max);
+  const anyBelowMin = working.some((s) => (s.reps ?? 0) < min);
+  const dropRatio = firstReps > 0 ? lastReps / firstReps : 1;
+  const bigDropoff = firstReps >= min && dropRatio <= 0.6; // z. B. 12 → 6
 
+  const rpeSuffix = avgRpe != null ? ` Durchschnitt-RPE ${avgRpe.toFixed(1)}.` : "";
+  const dropSuffix =
+    firstReps > 0 && lastReps > 0 ? ` Satzabfall ${firstReps}→${lastReps} Wdh.` : "";
+
+  const step = 2.5;
   const buildLine = (kg: number | null): string | null => {
     if (kg == null) return null;
-    const val = Number.isInteger(kg) ? String(kg) : kg.toFixed(1);
-    return Array(Math.max(1, input.targetSets)).fill(val).join(",");
+    return Array(targetSets).fill(fmtNum(kg)).join(",");
   };
 
-  // Bodyweight / weight not tracked → nur Rep-Progression sinnvoll
+  // 2) Bodyweight / kein Gewicht → nur Rep-Progression
   if (topWeight == null) {
+    if (allAtOrAboveMax) {
+      return {
+        action: "increase_reps_target",
+        previous_load: null,
+        next_load: null,
+        next_target_weights: null,
+        next_target_reps: String(max + 1),
+        reason: `Alle Sätze ≥ ${max} Wdh ohne Zusatzgewicht — Ziel-Reprange auf ${max + 1} anheben.${rpeSuffix}`,
+      };
+    }
+    if (anyBelowMin) {
+      return {
+        action: "reduce_volume",
+        previous_load: null,
+        next_load: null,
+        next_target_weights: null,
+        next_target_reps: null,
+        reason: `Sätze unter ${min} Wdh — Volumen reduzieren, Ausführung prüfen.${dropSuffix}${rpeSuffix}`,
+      };
+    }
     return {
-      action: allAtOrAboveMax ? "progress" : anyBelowMin ? "deload" : "hold",
-      next_weight_kg: null,
+      action: "keep_load",
+      previous_load: null,
+      next_load: null,
       next_target_weights: null,
-      reason: allAtOrAboveMax
-        ? "Reps erreicht — nächste Session +1–2 Wdh oder schwerere Variante."
-        : anyBelowMin
-        ? "Reps unter Ziel — Ausführung/Regeneration prüfen."
-        : "Im Zielbereich — Volumen halten.",
+      next_target_reps: null,
+      reason: `Im Zielbereich ${min}–${max} Wdh (Ø ${avgReps.toFixed(1)}) — Vorgabe halten.${rpeSuffix}`,
     };
   }
 
-  if (allAtOrAboveMax) {
+  // 3) Starker Satzabfall + hohes RPE → Belastung reduzieren
+  if (bigDropoff && (maxRpe == null || maxRpe >= 9)) {
+    const next = roundStep(topWeight * 0.9, step);
+    return {
+      action: "reduce_load",
+      previous_load: topWeight,
+      next_load: next,
+      next_target_weights: buildLine(next),
+      next_target_reps: null,
+      reason: `Starker Wiederholungsabfall${dropSuffix}${
+        maxRpe != null ? ` bei Max-RPE ${maxRpe.toFixed(1)}` : ""
+      }. Gewicht auf ${fmtNum(next)} kg reduzieren.`,
+    };
+  }
+
+  // 4) Alle Sätze ≥ Rep-Max UND RPE nicht überkritisch → Gewicht rauf
+  if (allAtOrAboveMax && (avgRpe == null || avgRpe <= 9)) {
     const inc = incrementFor(input.exerciseName, topWeight);
     const next = roundStep(topWeight + inc, step);
     return {
-      action: "progress",
-      next_weight_kg: next,
+      action: "increase_load",
+      previous_load: topWeight,
+      next_load: next,
       next_target_weights: buildLine(next),
-      reason: `Alle Sätze ≥ ${max} Wdh → +${inc} kg (${topWeight} → ${next} kg).`,
+      next_target_reps: null,
+      reason: `Alle ${working.length} Working-Sets erreichten ≥ ${max} Wdh${
+        avgRpe != null ? ` bei Ø-RPE ${avgRpe.toFixed(1)}` : ""
+      }. Gewicht wird erhöht: ${fmtNum(topWeight)} → ${fmtNum(next)} kg (+${inc}).`,
     };
   }
 
-  if (anyBelowMin) {
-    const next = roundStep(topWeight * 0.95, step);
+  // 5) Reps erreicht, aber RPE zu hoch → halten
+  if (allAtOrAboveMax && avgRpe != null && avgRpe > 9) {
     return {
-      action: "deload",
-      next_weight_kg: next,
-      next_target_weights: buildLine(next),
-      reason: `Ein Satz < ${min} Wdh → kurzer Deload auf ${next} kg (−5 %).`,
+      action: "keep_load",
+      previous_load: topWeight,
+      next_load: topWeight,
+      next_target_weights: buildLine(topWeight),
+      next_target_reps: null,
+      reason: `Reps erreicht, aber Ø-RPE ${avgRpe.toFixed(1)} zu hoch — Gewicht ${fmtNum(topWeight)} kg halten und Technik/Regeneration festigen.`,
     };
   }
 
+  // 6) Sätze unter Rep-Min ohne extreme Dropoff → Volumen reduzieren
+  if (anyBelowMin) {
+    return {
+      action: "reduce_volume",
+      previous_load: topWeight,
+      next_load: topWeight,
+      next_target_weights: buildLine(topWeight),
+      next_target_reps: null,
+      reason: `Mindestens ein Satz unter ${min} Wdh${dropSuffix}${rpeSuffix} — Gewicht halten, Volumen/Pausen prüfen.`,
+    };
+  }
+
+  // 7) Alles im Zielbereich → halten
   return {
-    action: "hold",
-    next_weight_kg: topWeight,
+    action: "keep_load",
+    previous_load: topWeight,
+    next_load: topWeight,
     next_target_weights: buildLine(topWeight),
-    reason: `Im Zielbereich ${min}–${max} — Gewicht ${topWeight} kg halten, nächste Woche +1 Wdh anpeilen.`,
+    next_target_reps: null,
+    reason: `Im Zielbereich ${min}–${max} Wdh (Ø ${avgReps.toFixed(1)})${rpeSuffix} — Gewicht ${fmtNum(topWeight)} kg halten.`,
   };
 }
