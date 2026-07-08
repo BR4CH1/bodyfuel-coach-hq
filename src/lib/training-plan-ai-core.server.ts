@@ -407,6 +407,11 @@ REGELN:
   // ============================================================
   //   Tage & Übungen einfügen — WEEKPLAN ist Source of Truth
   // ============================================================
+  const history: HistoryEntry[] = buildHistoryIndex(
+    ((recentSets as any[]) ?? []) as any,
+    exNameById,
+  );
+
   let totalEx = 0;
   let totalDays = 0;
 
@@ -430,7 +435,15 @@ REGELN:
       if (dayErr || !dayRow) continue;
       totalDays++;
 
-      const rows = buildExerciseRowsForDay(day, session, wp.week_number, startWeights, dayRow.id);
+      const rows = buildExerciseRowsForDay(
+        day,
+        session,
+        wp.week_number,
+        wp.is_deload,
+        startWeights,
+        history,
+        dayRow.id,
+      );
       totalEx += rows.length;
       if (rows.length) {
         await supabase.from("training_exercises").insert(rows as any);
