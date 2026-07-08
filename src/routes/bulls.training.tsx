@@ -8,6 +8,7 @@ import { BullsHero } from "@/components/bodyfuel/BullsHero";
 import { PlanContentView } from "@/components/bodyfuel/PlanContentView";
 import { TrainingTracker } from "@/components/bodyfuel/TrainingTracker";
 import { AthleteProfileBanner } from "@/components/bodyfuel/AthleteProfileBanner";
+import { LivePlanBanner } from "@/components/bodyfuel/LivePlanBanner";
 import { BullsAthleteAthleticSession } from "@/components/bodyfuel/BullsAthleteAthleticSession";
 import { useSession } from "@/lib/bodyfuel/session";
 import { useTrial } from "@/hooks/use-trial";
@@ -56,6 +57,7 @@ function TrainingPage() {
       </section>
 
       {supabaseUser && <AthleteProfileBanner />}
+      {supabaseUser && !isTrial && !isExpired && <LivePlanBanner userId={supabaseUser.id} />}
 
       {supabaseUser && <BullsAthleteAthleticSession />}
 

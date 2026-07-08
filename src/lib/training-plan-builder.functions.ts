@@ -150,6 +150,8 @@ export const getCustomerTrainingContext = createServerFn({ method: "POST" })
 
 // -------- Save --------
 
+export type BuilderSmartLock = "none" | "locked" | "weight_only" | "reps_only" | "volume_only";
+
 export type BuilderTrainingExercise = {
   library_exercise_id?: string | null;
   name: string;
@@ -161,6 +163,7 @@ export type BuilderTrainingExercise = {
   rest_seconds: number | null;
   notes: string | null;
   is_locked?: boolean;
+  smart_lock?: BuilderSmartLock;
   linked_partner_group?: string | null;
 };
 
@@ -278,6 +281,7 @@ export async function persistTrainingPlan(
             rest_seconds: ex.rest_seconds ?? null,
             notes: ex.notes ?? null,
             is_locked: !!ex.is_locked,
+            smart_lock: (ex.smart_lock ?? "none") as any,
             linked_partner_group: ex.linked_partner_group ?? null,
             library_exercise_id: ex.library_exercise_id ?? null,
             sort_order: i,
@@ -406,7 +410,7 @@ export const loadTrainingPlanForBuilder = createServerFn({ method: "POST" })
     const exRes = dayIds.length
       ? await supabaseAdmin
           .from("training_exercises")
-          .select("id, day_id, sort_order, name, category, target_sets, target_reps, target_weights, target_rir, rest_seconds, notes, is_locked, linked_partner_group, library_exercise_id")
+          .select("id, day_id, sort_order, name, category, target_sets, target_reps, target_weights, target_rir, rest_seconds, notes, is_locked, smart_lock, linked_partner_group, library_exercise_id")
           .in("day_id", dayIds)
           .order("sort_order")
       : ({ data: [] as any[] } as any);
@@ -442,6 +446,7 @@ export const loadTrainingPlanForBuilder = createServerFn({ method: "POST" })
         rest_seconds: ex.rest_seconds ?? null,
         notes: ex.notes ?? null,
         is_locked: !!ex.is_locked,
+        smart_lock: (ex.smart_lock ?? "none") as BuilderSmartLock,
         linked_partner_group: ex.linked_partner_group ?? null,
       }));
       const isRest = /ruhetag|rest/i.test(d.name ?? "") || exs.length === 0;

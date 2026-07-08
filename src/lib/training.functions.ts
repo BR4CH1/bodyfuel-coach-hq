@@ -335,7 +335,7 @@ export const completeTrainingSession = createServerFn({ method: "POST" })
 
     const { data: dayEx, error: dayErr } = await supabase
       .from("training_exercises")
-      .select("id, name, set_type, target_sets, target_reps, target_weights, target_rir, day_id, training_days!inner(plan_id, sort_order, day_date)")
+      .select("id, name, set_type, target_sets, target_reps, target_weights, target_rir, smart_lock, day_id, training_days!inner(plan_id, sort_order, day_date)")
       .eq("day_id", data.day_id)
       .order("sort_order", { ascending: true });
     if (dayErr) throw new Error(dayErr.message);
@@ -384,13 +384,15 @@ export const completeTrainingSession = createServerFn({ method: "POST" })
       const sets = (setsByExercise.get(ex.id) ?? []).sort((a, b) => a.set_number - b.set_number);
       if (sets.length === 0) continue;
 
-      const decision = progressExerciseAfterSession({
+      const rawDecision = progressExerciseAfterSession({
         exerciseName: String(ex.name ?? ""),
         sets,
         repRange: String(ex.target_reps ?? "8-12"),
         targetSets: Number(ex.target_sets ?? sets.length ?? 3),
         targetRir: ex.target_rir ?? null,
       });
+      const { applySmartLock } = await import("./training-engine/lock");
+      const decision = applySmartLock(rawDecision, (ex as any).smart_lock ?? "none");
 
       const planId = ex.training_days?.plan_id;
       const currentSort = Number(ex.training_days?.sort_order ?? 0);
