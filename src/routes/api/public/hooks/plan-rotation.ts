@@ -92,8 +92,10 @@ export const Route = createFileRoute("/api/public/hooks/plan-rotation")({
           for (let i = 0; i < clientIds.length; i += CHUNK) {
             const slice = clientIds.slice(i, i + CHUNK);
             await Promise.all(
-              slice.map(async (clientId) => {
-                const plans = byClient.get(clientId)!;
+              slice.map(async (compositeKey) => {
+                const plans = byClient.get(compositeKey)!;
+                const clientId = plans[0]?.client_id ?? compositeKey;
+
 
                 // Is there already an active plan that covers today? Done.
                 const coveringActive = plans.find(
