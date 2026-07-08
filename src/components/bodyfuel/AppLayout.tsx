@@ -64,6 +64,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   });
   const routeOrgId = pathname.match(/^\/coach\/teams\/([^/]+)/)?.[1] ?? null;
   const isBullsRoute = pathname.startsWith("/bulls");
+  const isCoachTeamsRoute = /^\/coach\/teams(\/|$)/.test(pathname);
   const freeBullsAccess = isFreeUser && isBullsRoute && hasGroup("bulls");
   const freeRankingAccess = isFreeUser && pathname.startsWith("/ranking");
 
@@ -503,11 +504,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
       </header>
 
       {/* Main */}
-      <main className="pb-24 lg:ml-64 lg:pb-10">
+      <main className={`lg:ml-64 lg:pb-10 ${isCoachTeamsRoute ? "pb-10" : "pb-24"}`}>
         <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-10 lg:py-10">{children}</div>
       </main>
 
-      {/* Mobile bottom nav */}
+      {/* Mobile bottom nav — hidden on coach org detail pages */}
+      {!isCoachTeamsRoute && (
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 backdrop-blur lg:hidden pb-[env(safe-area-inset-bottom)]">
         <div className="flex overflow-x-auto no-scrollbar">
           {mobileNav.map((item) => {
@@ -541,6 +543,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           })}
         </div>
       </nav>
+      )}
 
       <ReviewPrompt />
       {!isCoach && !isFreeUser && !isTeamOnlyUser && supabaseUser?.id && (
