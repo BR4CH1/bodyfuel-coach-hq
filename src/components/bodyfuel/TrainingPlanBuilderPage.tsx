@@ -380,6 +380,35 @@ export function TrainingPlanBuilderPage({
         </p>
       </div>
 
+      {/* Template actions */}
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() => setLibraryOpen(true)}
+          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold hover:border-primary hover:text-primary"
+        >
+          <BookOpen className="h-3.5 w-3.5" /> Aus Vorlage laden
+        </button>
+        <button
+          onClick={() => setSaveTplOpen(true)}
+          disabled={!clientDays}
+          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold hover:border-primary hover:text-primary disabled:opacity-50"
+        >
+          <Save className="h-3.5 w-3.5" />
+          {templateId ? "Neue Version speichern" : "Als Vorlage speichern"}
+        </button>
+        {templateId && (
+          <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1.5 text-[10px] font-semibold text-primary">
+            Basiert auf Vorlage
+          </span>
+        )}
+      </div>
+
+      <TrainingTemplateLibraryDialog
+        open={libraryOpen}
+        onOpenChange={setLibraryOpen}
+        onSelect={applyTemplate}
+      />
+
       {/* Header controls */}
       <div className="grid gap-3 rounded-2xl border border-border bg-card p-4 sm:grid-cols-2 lg:grid-cols-4">
         <div>
