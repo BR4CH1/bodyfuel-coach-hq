@@ -38,6 +38,9 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
   const parseFn = useServerFn(parseTrainingPlan);
   const logFn = useServerFn(logSet);
   const deleteLogFn = useServerFn(deleteSetLog);
+  const completeSessionFn = useServerFn(completeTrainingSession);
+  const [completingDayId, setCompletingDayId] = useState<string | null>(null);
+  const [completedDayIds, setCompletedDayIds] = useState<Set<string>>(new Set());
 
   const [plan, setPlan] = useState<Plan | null>(null);
   const [days, setDays] = useState<Day[]>([]);
