@@ -8,6 +8,7 @@ import { BullsHero } from "@/components/bodyfuel/BullsHero";
 import { PlanContentView } from "@/components/bodyfuel/PlanContentView";
 import { TrainingTracker } from "@/components/bodyfuel/TrainingTracker";
 import { AthleteProfileBanner } from "@/components/bodyfuel/AthleteProfileBanner";
+import { BullsAthleteAthleticSession } from "@/components/bodyfuel/BullsAthleteAthleticSession";
 import { useSession } from "@/lib/bodyfuel/session";
 import { useTrial } from "@/hooks/use-trial";
 import { TrialTrainingPlan } from "@/components/bodyfuel/TrialPlanView";
