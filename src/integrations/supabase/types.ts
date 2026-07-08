@@ -6363,6 +6363,7 @@ export type Database = {
           notes: string | null
           partner_exercise_id: string | null
           rest_seconds: number | null
+          set_type: string
           sort_order: number
           target_reps: string | null
           target_rir: number | null
@@ -6381,6 +6382,7 @@ export type Database = {
           notes?: string | null
           partner_exercise_id?: string | null
           rest_seconds?: number | null
+          set_type?: string
           sort_order?: number
           target_reps?: string | null
           target_rir?: number | null
@@ -6399,6 +6401,7 @@ export type Database = {
           notes?: string | null
           partner_exercise_id?: string | null
           rest_seconds?: number | null
+          set_type?: string
           sort_order?: number
           target_reps?: string | null
           target_rir?: number | null

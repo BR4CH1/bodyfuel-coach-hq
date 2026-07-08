@@ -509,44 +509,59 @@ GENAU 4 Wochen. Jede Woche GENAU 7 Tage (Mo, Di, Mi, Do, Fr, Sa, So in dieser Re
     .select("id").single();
   if (planErr || !planRow) throw new Error(planErr?.message ?? "Plan konnte nicht angelegt werden");
 
-  // Ordnung Mo..So — passt zur weekday-Erkennung im Client (PlanContentView).
+  // Ordnung Mo..So — Wochentag wird IMMER aus day_date abgeleitet (Single Source of Truth).
   const WEEKDAY_ORDER = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"];
-  const WEEKDAY_SHORT: Record<string, string> = {
-    monday: "Mo", tuesday: "Di", wednesday: "Mi", thursday: "Do",
-    friday: "Fr", saturday: "Sa", sunday: "So",
-  };
   const trainDaySet = new Set(trainingDayKeys);
+
+  const isoDay = (base: Date, offsetDays: number) => {
+    const d = new Date(base);
+    d.setDate(d.getDate() + offsetDays);
+    return d.toISOString().slice(0, 10);
+  };
+
+  // Detect set_type from name so Warm-up/Cool-down werden nicht als Working Sets gewertet.
+  const detectSetType = (name: string): "warmup" | "working" | "cooldown" => {
+    const n = name.toLowerCase().trim();
+    if (n.startsWith("warm-up") || n.startsWith("warmup") || n.startsWith("warm up") || n.startsWith("aufwärm")) return "warmup";
+    if (n.startsWith("cool-down") || n.startsWith("cooldown") || n.startsWith("cool down") || n.startsWith("abwärm")) return "cooldown";
+    return "working";
+  };
 
   let totalEx = 0;
   let totalDays = 0;
   for (const w of weeks) {
-    // Generierte Tage der Reihe nach an die gewünschten Wochentage verteilen.
     let genIdx = 0;
     for (let i = 0; i < WEEKDAY_ORDER.length; i++) {
       const wd = WEEKDAY_ORDER[i];
-      const wdShort = WEEKDAY_SHORT[wd];
       const isTrainingDay = trainDaySet.has(wd);
       let dayName: string;
       let dayExercises: GenEx[] = [];
 
       if (isTrainingDay && genIdx < w.days.length) {
         const d = w.days[genIdx++];
-        const baseName = stripAkzessoires((d.name && String(d.name).trim()) || `Trainingstag ${genIdx}`);
+        // Wochentag-Präfix aus LLM-Antwort entfernen — Wochentag kommt aus day_date.
+        const rawName = (d.name && String(d.name).trim()) || `Trainingstag ${genIdx}`;
+        const cleanedName = rawName.replace(/^(mo|di|mi|do|fr|sa|so|montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag)\s*[—\-–:|·]\s*/i, "").trim();
+        const baseName = stripAkzessoires(cleanedName || `Trainingstag ${genIdx}`);
         const focus = d.focus ? stripAkzessoires(String(d.focus)) : "";
-        dayName = `${wdShort} — ${focus ? `${baseName} — ${focus}` : baseName}`;
+        dayName = focus && !baseName.toLowerCase().includes(focus.toLowerCase())
+          ? `${baseName} — ${focus}`
+          : baseName;
         dayExercises = d.exercises ?? [];
       } else {
-        // Ruhetag (kein Training an diesem Wochentag)
-        dayName = `${wdShort} — Ruhetag`;
+        dayName = "Ruhetag";
       }
+
+      const dayDate = isoDay(start, (w.week_number - 1) * 7 + i);
 
       const { data: dayRow, error: dayErr } = await supabase
         .from("training_days")
         .insert({
           plan_id: planRow.id,
           name: String(dayName).slice(0, 120),
-          sort_order: i,
+          sort_order: (w.week_number - 1) * 7 + i,
           week_number: w.week_number,
+          day_date: dayDate,
         } as any)
         .select("id").single();
       if (dayErr || !dayRow) continue;
@@ -557,16 +572,15 @@ GENAU 4 Wochen. Jede Woche GENAU 7 Tage (Mo, Di, Mi, Do, Fr, Sa, So in dieser Re
       const rows = dayExercises
         .map((e, idx) => {
           const cleanName = stripAkzessoires(String(e.name ?? "").trim()).slice(0, 200);
-          const clampedWeights = clampWeightsForExercise(
-            cleanName,
-            e.target_weights,
-            w.week_number,
-            startWeights,
-          );
+          const setType = detectSetType(cleanName);
+          const clampedWeights = setType === "working"
+            ? clampWeightsForExercise(cleanName, e.target_weights, w.week_number, startWeights)
+            : null;
           return {
             day_id: dayRow.id,
             name: cleanName,
             category: validCategory(e.category),
+            set_type: setType,
             target_sets:
               typeof e.target_sets === "number" && Number.isFinite(e.target_sets)
                 ? Math.max(1, Math.min(20, Math.round(e.target_sets)))

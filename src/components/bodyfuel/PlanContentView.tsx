@@ -15,7 +15,7 @@ import { MealSwapDialog } from "./MealSwapDialog";
 import { SkipReasonDialog } from "./SkipReasonDialog";
 
 type Plan = { id: string; client_id: string; title: string; weeks_count?: number | null; scheduled_start_date?: string | null; scheduled_end_date?: string | null };
-type Day = { id: string; name: string; sort_order: number; week_number?: number | null };
+type Day = { id: string; name: string; sort_order: number; week_number?: number | null; day_date?: string | null };
 type Meal = {
   id: string;
   day_id: string;
@@ -57,6 +57,7 @@ type Exercise = {
   target_weights: string | null;
   notes: string | null;
   sort_order: number;
+  set_type?: "warmup" | "working" | "cooldown" | "backoff" | "dropset" | "amrap" | null;
 };
 
 type Props = {
@@ -100,6 +101,60 @@ function weekdayFromName(name: string): number | null {
   if (key in WEEKDAY_MAP) return WEEKDAY_MAP[key];
   // try first 2-3 chars
   return WEEKDAY_MAP[key.slice(0, 2)] ?? WEEKDAY_MAP[key.slice(0, 3)] ?? null;
+}
+
+// Derive the German weekday label from an ISO date (YYYY-MM-DD).
+// This is the SINGLE SOURCE OF TRUTH — never derive weekday from the day name.
+const WEEKDAY_LONG_DE = ["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"];
+function weekdayLabelFromISO(iso: string | null | undefined): { long: string; short: string; wd: number } | null {
+  if (!iso) return null;
+  const d = new Date(iso + "T00:00:00");
+  if (isNaN(d.getTime())) return null;
+  const wd = d.getDay();
+  const long = WEEKDAY_LONG_DE[wd];
+  return { long, short: long.slice(0, 2), wd };
+}
+function formatDateDE(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso + "T00:00:00");
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+// German number format for weights, e.g. 37.5 → "37,5".
+const nfKg = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 2 });
+function fmtKg(raw: string): string {
+  const n = Number(raw.replace(",", "."));
+  if (!Number.isFinite(n)) return raw;
+  return `${nfKg.format(n)} kg`;
+}
+// Collapse an array like ["37.5","37.5","37.5"] → "37,5 kg"; mixed → satz-liste.
+function renderTargetWeights(raw: string | null): { compact: string | null; perSet: string[] | null } {
+  if (!raw) return { compact: null, perSet: null };
+  const parts = raw.split(",").map((s) => s.trim()).filter(Boolean);
+  if (!parts.length) return { compact: null, perSet: null };
+  const nums = parts.map((p) => (/^-?\d+([.,]\d+)?$/.test(p) ? p : null));
+  const allNumeric = nums.every((n) => n !== null);
+  if (allNumeric) {
+    const uniq = Array.from(new Set(nums as string[]));
+    if (uniq.length === 1) return { compact: fmtKg(uniq[0]), perSet: null };
+    return { compact: null, perSet: (nums as string[]).map(fmtKg) };
+  }
+  // non-numeric hint like "leicht" → passthrough
+  return { compact: parts.join(" · "), perSet: null };
+}
+// Collapse reps "8,8,8,10" → "8" or "8–10"; else passthrough.
+function renderTargetReps(raw: string | null, targetSets: number | null): string {
+  if (!raw) return "—";
+  const parts = raw.split(",").map((s) => s.trim()).filter(Boolean);
+  if (!parts.length) return "—";
+  const nums = parts.map((p) => Number(p)).filter((n) => Number.isFinite(n));
+  if (nums.length === parts.length && nums.length > 0) {
+    const lo = Math.min(...nums), hi = Math.max(...nums);
+    const setsPrefix = targetSets ? `${targetSets} × ` : "";
+    return `${setsPrefix}${lo === hi ? `${lo}` : `${lo}–${hi}`}`;
+  }
+  return `${targetSets ? `${targetSets} × ` : ""}${parts.join(", ")}`;
 }
 
 const INSTRUCTION_SIGNALS = [
@@ -242,9 +297,21 @@ export function PlanContentView({ clientId, planType }: Props) {
 
   // Virtuelle Tage: splittet einen echten "Day" anhand der Item-Namen
   // (z.B. "Trainingstag A Mahlzeit 1") in mehrere Dropdown-Einträge auf.
+  // Für Trainingspläne: Wochentag & Datum werden IMMER aus day_date abgeleitet.
   const { virtualDays, itemToVirtual, itemDisplayName } = useMemo(() => {
     const items: ItemLike[] = planType === "nutrition" ? meals : exercises;
-    return buildVirtualDays(days, items);
+    if (planType !== "training") return buildVirtualDays(days, items);
+    // Namen für Trainingstage neu bauen: "Dienstag, 14.07.2026 — Push"
+    const renamed: Day[] = days.map((d) => {
+      const wd = weekdayLabelFromISO(d.day_date ?? null);
+      // Existierende Wochentag-Präfixe wie "Mo — X" oder "Mo · X" abstreifen.
+      const baseName = (d.name ?? "").replace(/^(mo|di|mi|do|fr|sa|so|montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag)\s*[—\-–:|·]\s*/i, "").trim() || "Trainingstag";
+      if (!wd) return { ...d, name: baseName };
+      const dateLabel = formatDateDE(d.day_date ?? null);
+      const prefix = dateLabel ? `${wd.long}, ${dateLabel}` : wd.long;
+      return { ...d, name: /ruhetag|rest|pause|frei/i.test(baseName) ? `${prefix} — Ruhetag` : `${prefix} — ${baseName}` };
+    });
+    return buildVirtualDays(renamed, items);
   }, [days, meals, exercises, planType]);
 
   const reload = async () => {
@@ -840,39 +907,71 @@ export function PlanContentView({ clientId, planType }: Props) {
                     </div>
                   );
                 })
-              : exercises.filter((e) => itemToVirtual[e.id] === activeDay).map((e) => {
-                  const reps = (e.target_reps ?? "").split(",").map((s) => s.trim()).filter(Boolean);
-                  const weights = (e.target_weights ?? "").split(",").map((s) => s.trim()).filter(Boolean);
-                  const exName = itemDisplayName[e.id] ?? e.name;
-                  const isNonExercise = /rest|ruh|pause|frei|mobility|foam|dehn|stretch|recovery|spiel|game|training bei|mannschaft/i.test(exName);
-                  const demoUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(exName + " Übung Ausführung")}`;
-                  return (
-                    <div key={e.id} className="rounded-2xl border border-border bg-background/40 p-4">
-                      <div className="flex items-baseline justify-between gap-3">
-                        <div className="text-sm font-semibold">{exName}</div>
-                        <div className="text-xs text-muted-foreground text-right">
-                          {e.target_sets ?? "—"}×{reps.length ? reps.join(", ") : "—"}
+              : (() => {
+                  const dayExercises = exercises.filter((e) => itemToVirtual[e.id] === activeDay);
+                  const groupOf = (e: Exercise): "warmup" | "working" | "cooldown" => {
+                    const t = e.set_type;
+                    if (t === "warmup" || t === "cooldown") return t;
+                    if (t === "working" || t === "backoff" || t === "dropset" || t === "amrap") return "working";
+                    // Legacy-Fallback via Namens-Präfix.
+                    const n = (e.name ?? "").toLowerCase();
+                    if (/^(warm-?up|warmup|aufwärm)/.test(n)) return "warmup";
+                    if (/^(cool-?down|cooldown|abwärm)/.test(n)) return "cooldown";
+                    return "working";
+                  };
+                  const groups: Record<"warmup" | "working" | "cooldown", Exercise[]> = { warmup: [], working: [], cooldown: [] };
+                  for (const e of dayExercises) groups[groupOf(e)].push(e);
+                  const renderCard = (e: Exercise) => {
+                    const exName = itemDisplayName[e.id] ?? e.name;
+                    const isNonExercise = /rest|ruh|pause|frei|mobility|foam|dehn|stretch|recovery|spiel|game|training bei|mannschaft|warm-?up|cool-?down|aufwärm|abwärm/i.test(exName);
+                    const demoUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(exName + " Übung Ausführung")}`;
+                    const repsLabel = renderTargetReps(e.target_reps, e.target_sets ?? null);
+                    const { compact, perSet } = renderTargetWeights(e.target_weights);
+                    return (
+                      <div key={e.id} className="rounded-2xl border border-border bg-background/40 p-4">
+                        <div className="flex items-baseline justify-between gap-3">
+                          <div className="text-sm font-semibold">{exName}</div>
+                          <div className="text-xs text-muted-foreground text-right">{repsLabel}</div>
                         </div>
+                        {compact && (
+                          <div className="mt-1 text-xs text-gold/90">{compact}</div>
+                        )}
+                        {perSet && (
+                          <ul className="mt-1 space-y-0.5 text-xs text-gold/90">
+                            {perSet.map((w, i) => (
+                              <li key={i}>Satz {i + 1} · {w}</li>
+                            ))}
+                          </ul>
+                        )}
+                        {e.notes && <p className="mt-1 text-xs text-muted-foreground">{e.notes}</p>}
+                        {!isNonExercise && (
+                          <a
+                            href={demoUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-2 inline-flex items-center gap-1 rounded-md border border-border bg-background/60 px-2 py-1 text-[10px] font-semibold text-muted-foreground hover:border-gold/50 hover:text-gold"
+                          >
+                            <PlayCircle className="h-3 w-3" /> Demo ansehen
+                          </a>
+                        )}
                       </div>
-                      {weights.length > 0 && (
-                        <div className="mt-1 text-xs text-gold/90">
-                          {weights.map((w, i) => /^\d/.test(w) ? `${w} kg` : w).join(" · ")}
-                        </div>
-                      )}
-                      {e.notes && <p className="mt-1 text-xs text-muted-foreground">{e.notes}</p>}
-                      {!isNonExercise && (
-                        <a
-                          href={demoUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="mt-2 inline-flex items-center gap-1 rounded-md border border-border bg-background/60 px-2 py-1 text-[10px] font-semibold text-muted-foreground hover:border-gold/50 hover:text-gold"
-                        >
-                          <PlayCircle className="h-3 w-3" /> Demo ansehen
-                        </a>
-                      )}
-                    </div>
+                    );
+                  };
+                  const Section = ({ label, list }: { label: string; list: Exercise[] }) =>
+                    list.length ? (
+                      <div className="space-y-2">
+                        <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</div>
+                        {list.map(renderCard)}
+                      </div>
+                    ) : null;
+                  return (
+                    <>
+                      <Section label="Warm-up" list={groups.warmup} />
+                      <Section label="Arbeitssätze" list={groups.working} />
+                      <Section label="Cool-down" list={groups.cooldown} />
+                    </>
                   );
-                })}
+                })()}
             {((planType === "nutrition" ? meals : exercises).filter(
               (x: any) => itemToVirtual[x.id] === activeDay,
             ).length === 0) && (
