@@ -75,37 +75,47 @@ function AthleteProfile() {
     });
 
   return (
-    <div className="mx-auto max-w-3xl space-y-5 px-4 pb-24 pt-3">
-      <BackLink orgId={orgId} />
-      <AthleteDetailHeader data={data} />
-      <AthleteQuickActions orgId={orgId} userId={userId} athleteName={data.athlete.display_name} />
+    <div className="bulls-theme bg-[#050505] -mx-4 -my-3 min-h-full">
+      <div className="mx-auto max-w-3xl space-y-5 px-4 pb-24 pt-4">
+        <BackLink orgId={orgId} />
+        <AthleteDetailHeader data={data} />
+        <AthleteQuickActions
+          orgId={orgId}
+          userId={userId}
+          athleteName={data.athlete.display_name}
+        />
 
-      <div className="-mx-4 overflow-x-auto px-4">
-        <div className="flex min-w-max gap-1.5">
-          {TABS.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition ${
-                tab === t.key
-                  ? "border-bulls-red bg-bulls-red text-white"
-                  : "border-[#252525] bg-[#0b0b0b] text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
+        <div className="-mx-4 overflow-x-auto px-4">
+          <div className="flex min-w-max gap-1.5">
+            {TABS.map((t) => (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className={`rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition ${
+                  tab === t.key
+                    ? "border-bulls-red bg-bulls-red text-white shadow-bulls"
+                    : "border-[#252525] bg-[#0b0b0b] text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
 
-      {tab === "overview" && (
-        <AthleteOverviewTab data={data} orgId={orgId} userId={userId} />
-      )}
-      {tab === "tasks" && <AthleteTasksTab data={data} orgId={orgId} userId={userId} />}
-      {tab === "checkins" && <AthleteCheckinsTab data={data} orgId={orgId} userId={userId} />}
-      {tab === "performance" && <AthletePerformanceTab data={data} orgId={orgId} userId={userId} />}
-      {tab === "training" && <AthleteTrainingTab data={data} orgId={orgId} userId={userId} />}
-      {tab === "nutrition" && <AthleteNutritionTab data={data} orgId={orgId} userId={userId} />}
+        {tab === "overview" && (
+          <AthleteOverviewTab data={data} orgId={orgId} userId={userId} />
+        )}
+        {tab === "tasks" && <AthleteTasksTab data={data} orgId={orgId} userId={userId} />}
+        {tab === "checkins" && <AthleteCheckinsTab data={data} orgId={orgId} userId={userId} />}
+        {tab === "performance" && (
+          <AthletePerformanceTab data={data} orgId={orgId} userId={userId} />
+        )}
+        {tab === "training" && <AthleteTrainingTab data={data} orgId={orgId} userId={userId} />}
+        {tab === "nutrition" && (
+          <AthleteNutritionTab data={data} orgId={orgId} userId={userId} />
+        )}
+      </div>
     </div>
   );
 }

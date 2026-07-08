@@ -120,7 +120,7 @@ export function AthleteOverviewTab({
                   ? "text-green-500"
                   : item.status === "missed"
                   ? "text-red-500"
-                  : "text-yellow-600";
+                  : "text-orange-400";
               return (
                 <li key={item.id} className="flex items-center justify-between gap-3 px-3 py-2.5">
                   <div className="min-w-0">

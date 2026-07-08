@@ -72,7 +72,7 @@ export function AthleteCheckinsTab({
               />
             </div>
             {latest.pain_note && (
-              <div className="mt-3 rounded-md border border-orange-500/30 bg-orange-500/5 px-2 py-1.5 text-[12px] text-orange-700">
+              <div className="mt-3 rounded-md border border-orange-500/30 bg-orange-500/10 px-2 py-1.5 text-[12px] text-orange-400">
                 Beschwerden: {latest.pain_note}
               </div>
             )}
