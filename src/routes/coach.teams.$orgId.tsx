@@ -170,33 +170,26 @@ export function CoachOrgDetail() {
       {/* Compact Performance Header */}
       <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border border-[#252525] bg-[#0f0f0f] p-4 sm:p-5">
         <div className="min-w-0">
-          <div className="text-[10px] font-bold uppercase tracking-[0.28em] text-bulls-red">
-            {isBulls ? "Bulls Hub" : org.name}
+          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.28em] text-bulls-red">
+            <span className="truncate">{org.name}</span>
+            <span>·</span>
+            <span className="text-neutral-400">{experienceLabel}</span>
+            {org.status === "active" && (
+              <span
+                title="Active"
+                className="ml-1 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.7)]"
+              />
+            )}
           </div>
-          <h1 className="mt-0.5 truncate font-display text-2xl font-bold text-white sm:text-3xl">
+          <h1 className="mt-1 truncate font-display text-2xl font-bold text-white sm:text-3xl">
             Coach Dashboard
           </h1>
-          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
-            <span>{experienceLabel}</span>
-            {caller?.is_bodyfuel_coach && (
-              <>
-                <span>·</span>
-                <span className="text-bulls-red">BODYFUEL Coach</span>
-              </>
-            )}
-            {org.status && (
-              <>
-                <span>·</span>
-                <span className="text-emerald-500">{org.status}</span>
-              </>
-            )}
-          </div>
         </div>
         <div className="shrink-0">
-          {isBulls ? (
-            <img src={bullsLogo.url} alt="Coesfeld Bulls" className="h-12 w-12 rounded-lg object-contain sm:h-14 sm:w-14" />
-          ) : org.logo_url ? (
+          {org.logo_url ? (
             <img src={org.logo_url} alt={org.name} className="h-12 w-12 rounded-lg object-cover sm:h-14 sm:w-14" />
+          ) : isBulls ? (
+            <img src={bullsLogo.url} alt={org.name} className="h-12 w-12 rounded-lg object-contain sm:h-14 sm:w-14" />
           ) : (
             <div
               className="grid h-12 w-12 place-items-center rounded-lg text-sm font-bold text-white sm:h-14 sm:w-14"
@@ -280,7 +273,7 @@ export function CoachOrgDetail() {
         <div className="mb-2 flex items-center justify-between px-1">
           <h2 className="text-[10px] font-bold uppercase tracking-[0.28em] text-neutral-400">Schnellzugriff</h2>
         </div>
-        <div className="grid grid-cols-4 gap-2 sm:grid-cols-4 lg:grid-cols-8">
+        <div className="grid grid-cols-4 gap-2 sm:gap-2.5 lg:grid-cols-8">
           {quickAccess.map((q) => {
             const Icon = q.icon;
             const active = tab === q.key;
@@ -288,14 +281,14 @@ export function CoachOrgDetail() {
               <button
                 key={q.key}
                 onClick={() => selectTab(q.key)}
-                className={`group flex flex-col items-center gap-1.5 rounded-xl border p-3 transition ${
+                className={`group flex flex-col items-center justify-center gap-2 rounded-xl border p-4 transition-all duration-150 active:scale-[0.97] ${
                   active
-                    ? "border-bulls-red bg-bulls-red/10"
-                    : "border-[#252525] bg-[#111111] hover:border-[#3a3a3a] hover:bg-[#151515]"
+                    ? "border-bulls-red bg-bulls-red/10 shadow-[0_0_0_1px_rgba(220,38,38,0.35)]"
+                    : "border-[#252525] bg-[#111111] hover:-translate-y-0.5 hover:border-bulls-red/50 hover:bg-[#161616]"
                 }`}
               >
-                <Icon className={`h-5 w-5 ${active ? "text-bulls-red" : "text-bulls-red/80 group-hover:text-bulls-red"}`} />
-                <span className={`text-[10px] font-semibold uppercase tracking-wider ${active ? "text-white" : "text-neutral-300"}`}>
+                <Icon className={`h-6 w-6 transition-colors ${active ? "text-bulls-red" : "text-bulls-red/80 group-hover:text-bulls-red"}`} />
+                <span className={`text-[10px] font-semibold uppercase tracking-wider ${active ? "text-white" : "text-neutral-300 group-hover:text-white"}`}>
                   {q.label}
                 </span>
               </button>
