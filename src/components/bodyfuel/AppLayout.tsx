@@ -64,6 +64,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   });
   const routeOrgId = pathname.match(/^\/coach\/teams\/([^/]+)/)?.[1] ?? null;
   const isBullsRoute = pathname.startsWith("/bulls");
+  const isCoachTeamsRoute = /^\/coach\/teams(\/|$)/.test(pathname);
   const freeBullsAccess = isFreeUser && isBullsRoute && hasGroup("bulls");
   const freeRankingAccess = isFreeUser && pathname.startsWith("/ranking");
 
