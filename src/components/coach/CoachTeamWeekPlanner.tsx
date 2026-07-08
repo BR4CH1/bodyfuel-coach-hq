@@ -130,6 +130,9 @@ export function CoachTeamWeekPlanner({
   const publish = useServerFn(publishTeamTrainingWeek);
   const listTpls = useServerFn(listTrainingTemplates);
   const createTpl = useServerFn(createTrainingTemplate);
+  const listWeekTpls = useServerFn(listWeekTemplates);
+  const createWeekTpl = useServerFn(createWeekTemplate);
+  const deleteWeekTpl = useServerFn(deleteWeekTemplate);
 
   const q = useQuery({
     queryKey: ["team-training-week", orgId, teamId, weekStart],
