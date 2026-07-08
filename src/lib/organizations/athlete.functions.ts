@@ -1,5 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { resolveCoachTeamScope } from "./coach-team-scope";
+
 
 /** Home data: today's tasks + status cards + active challenge. Membership-scoped. */
 export const getOrgHomeData = createServerFn({ method: "GET" })
@@ -526,18 +528,17 @@ export const getOrgCoachDetail = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
-    // Authorization: coach role OR org admin/staff on this org
-    const { data: isCoach } = await supabase.rpc("has_role", { _user_id: userId, _role: "coach" });
+    // Team-Scope zentral ermitteln (wirft "Kein Zugriff." bei fehlender Zuordnung)
+    const scope = await resolveCoachTeamScope(supabase, userId, data.orgId);
     const { data: callerStaff } = await supabase
       .from("staff_assignments")
       .select("id, role, permissions, team_id")
       .eq("user_id", userId)
       .eq("organization_id", data.orgId)
       .maybeSingle();
-    if (!isCoach && !callerStaff) {
-      throw new Error("Kein Zugriff.");
-    }
 
+    const allowedTeamIdSet = new Set(scope.allowedTeamIds);
+    const teamFilterIds = scope.allTeams ? null : scope.allowedTeamIds;
 
     const [orgRes, teamsRes, membersRes, staffRes, featuresRes, challengesRes, activityRes] =
       await Promise.all([
@@ -546,7 +547,16 @@ export const getOrgCoachDetail = createServerFn({ method: "GET" })
           .select("id, name, slug, organization_type, status, primary_color, logo_url")
           .eq("id", data.orgId)
           .maybeSingle(),
-        supabase.from("organization_teams").select("id, name, slug, sport, age_group").eq("organization_id", data.orgId),
+        (teamFilterIds
+          ? supabase
+              .from("organization_teams")
+              .select("id, name, slug, sport, age_group")
+              .eq("organization_id", data.orgId)
+              .in("id", teamFilterIds)
+          : supabase
+              .from("organization_teams")
+              .select("id, name, slug, sport, age_group")
+              .eq("organization_id", data.orgId)),
         supabase
           .from("organization_memberships")
           .select("user_id, role, status, onboarding_completed, joined_at")
@@ -567,7 +577,30 @@ export const getOrgCoachDetail = createServerFn({ method: "GET" })
           .limit(10),
       ]);
 
+    const visibleTeams = (teamsRes.data ?? []) as any[];
+    const visibleTeamIds = visibleTeams.map((t) => t.id);
+
+    // Team-Memberships für alle Athleten der sichtbaren Teams laden
     const memberIds = ((membersRes.data ?? []) as any[]).map((m) => m.user_id);
+    let teamMemberships: any[] = [];
+    if (visibleTeamIds.length && memberIds.length) {
+      const { data } = await supabase
+        .from("team_memberships")
+        .select("user_id, team_id, position")
+        .in("team_id", visibleTeamIds);
+      teamMemberships = data ?? [];
+    }
+
+    // Nur Athleten, die zu einem erlaubten Team gehören
+    const allowedAthleteIds = new Set(
+      teamMemberships
+        .filter((tm) => !teamFilterIds || allowedTeamIdSet.has(tm.team_id))
+        .map((tm) => tm.user_id),
+    );
+
+    // Head Coach / Org Admin dürfen zusätzlich Athleten OHNE Team-Zuordnung sehen
+    const showTeamlessAthletes = scope.allTeams;
+
     let profiles: any[] = [];
     if (memberIds.length) {
       const { data } = await supabase
@@ -584,34 +617,36 @@ export const getOrgCoachDetail = createServerFn({ method: "GET" })
       });
     }
 
-    // Weekly compliance across all athletes
+    // Compliance nur für sichtbare Athleten
+    const scopedMemberIds = new Set<string>();
+    for (const m of (membersRes.data ?? []) as any[]) {
+      if (m.role !== "athlete") continue;
+      const hasTeam = teamMemberships.some((tm) => tm.user_id === m.user_id);
+      if (allowedAthleteIds.has(m.user_id) || (showTeamlessAthletes && !hasTeam)) {
+        scopedMemberIds.add(m.user_id);
+      }
+    }
+
     const weekStart = new Date();
     weekStart.setDate(weekStart.getDate() - 7);
-    const { data: weekTasks } = await supabase
-      .from("organization_tasks")
-      .select("status, user_id")
-      .eq("organization_id", data.orgId)
-      .gte("scheduled_for", weekStart.toISOString());
+    const scopedIds = Array.from(scopedMemberIds);
+    const { data: weekTasks } = scopedIds.length
+      ? await supabase
+          .from("organization_tasks")
+          .select("status, user_id")
+          .eq("organization_id", data.orgId)
+          .in("user_id", scopedIds)
+          .gte("scheduled_for", weekStart.toISOString())
+      : { data: [] as any[] };
     const totalTasks = (weekTasks ?? []).length;
     const doneTasks = (weekTasks ?? []).filter((t: any) => t.status === "done").length;
     const weeklyCompliance = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : null;
 
-    // Team memberships for positions
-    const teamIds = ((teamsRes.data ?? []) as any[]).map((t) => t.id);
-    let teamMemberships: any[] = [];
-    if (teamIds.length && memberIds.length) {
-      const { data } = await supabase
-        .from("team_memberships")
-        .select("user_id, team_id, position")
-        .in("team_id", teamIds);
-      teamMemberships = data ?? [];
-    }
-
     const athletes = ((membersRes.data ?? []) as any[])
-      .filter((m) => m.role === "athlete")
+      .filter((m) => m.role === "athlete" && scopedMemberIds.has(m.user_id))
       .map((m) => {
         const tm = teamMemberships.find((t) => t.user_id === m.user_id);
-        const team = (teamsRes.data ?? []).find((t: any) => t.id === tm?.team_id);
+        const team = visibleTeams.find((t) => t.id === tm?.team_id);
         const profile = nameMap.get(m.user_id);
         return {
           user_id: m.user_id,
@@ -624,14 +659,14 @@ export const getOrgCoachDetail = createServerFn({ method: "GET" })
         };
       });
 
-    // Per-team KPI aggregation for leadership drilldown
+    // Per-team KPI aggregation (nur sichtbare Teams)
     const tasksByUser = new Map<string, { total: number; done: number }>();
     for (const t of (weekTasks ?? []) as any[]) {
       const b = tasksByUser.get(t.user_id) ?? { total: 0, done: 0 };
       b.total++; if (t.status === "done") b.done++;
       tasksByUser.set(t.user_id, b);
     }
-    const teamKpis = ((teamsRes.data ?? []) as any[]).map((t) => {
+    const teamKpis = visibleTeams.map((t) => {
       const teamAthletes = athletes.filter((a) => {
         const tm = teamMemberships.find((x) => x.user_id === a.user_id);
         return tm?.team_id === t.id;
@@ -649,8 +684,7 @@ export const getOrgCoachDetail = createServerFn({ method: "GET" })
       };
     });
 
-    // Derive caller experience label
-    const callerIsCoach = !!isCoach;
+    // Caller-Experience Ableitung
     const staffRole = callerStaff?.role ?? null;
     const perms = new Set((callerStaff?.permissions ?? []) as string[]);
     const callerExperience: "org_admin" | "head_coach" | "team_coach" | "staff" | "coach" =
@@ -666,7 +700,7 @@ export const getOrgCoachDetail = createServerFn({ method: "GET" })
 
     return {
       org: orgRes.data,
-      teams: teamsRes.data ?? [],
+      teams: visibleTeams,
       team_kpis: teamKpis,
       athletes,
       staff: staffRes.data ?? [],
@@ -677,9 +711,13 @@ export const getOrgCoachDetail = createServerFn({ method: "GET" })
       weekly_compliance: weeklyCompliance,
       caller: {
         experience: callerExperience,
-        is_bodyfuel_coach: callerIsCoach,
+        is_bodyfuel_coach: scope.isGlobalCoach,
         team_id: callerStaff?.team_id ?? null,
+        all_teams: scope.allTeams,
+        allowed_team_ids: scope.allTeams ? null : scope.allowedTeamIds,
       },
     };
   });
+
+
 

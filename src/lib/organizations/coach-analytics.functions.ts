@@ -5,6 +5,9 @@ import {
   classifyAthlete,
   type AthleteSignal,
 } from "./coach-analytics.rules";
+import { resolveCoachTeamScope } from "./coach-team-scope";
+import { positionGroup, POSITION_GROUP_LABEL } from "@/lib/football-positions";
+
 
 export type CoachAnalytics = {
   org: { id: string; name: string; slug: string; primary_color: string | null };
@@ -61,17 +64,9 @@ export const getOrgCoachAnalytics = createServerFn({ method: "GET" })
   .handler(async ({ data, context }): Promise<CoachAnalytics | null> => {
     const { supabase, userId } = context;
 
-    // Authorization: same rule as getOrgCoachDetail (coach role OR any staff on this org).
-    const { data: isCoach } = await supabase.rpc("has_role", { _user_id: userId, _role: "coach" });
-    if (!isCoach) {
-      const { data: staff } = await supabase
-        .from("staff_assignments")
-        .select("id")
-        .eq("user_id", userId)
-        .eq("organization_id", data.orgId)
-        .maybeSingle();
-      if (!staff) throw new Error("Kein Zugriff.");
-    }
+    // Zentrale Team-Scope-Prüfung
+    const scope = await resolveCoachTeamScope(supabase, userId, data.orgId);
+    const teamFilterIds = scope.allTeams ? null : scope.allowedTeamIds;
 
     const { data: org } = await supabase
       .from("organizations")
@@ -85,47 +80,80 @@ export const getOrgCoachAnalytics = createServerFn({ method: "GET" })
     const prevStart = new Date(start); prevStart.setDate(prevStart.getDate() - 7);
     const prevEnd = new Date(start);
 
-    // Load core sets in parallel.
-    const [membersRes, teamsRes, tasksWeekRes, tasksPrevRes, activityRes, sessionsRes] =
-      await Promise.all([
-        supabase
+    // Teams zuerst laden (auf erlaubte Teams beschränkt)
+    const { data: teamRows } = teamFilterIds
+      ? await supabase
+          .from("organization_teams")
+          .select("id, name")
+          .eq("organization_id", data.orgId)
+          .in("id", teamFilterIds)
+      : await supabase
+          .from("organization_teams")
+          .select("id, name")
+          .eq("organization_id", data.orgId);
+    const teams = (teamRows ?? []) as any[];
+    const teamIds = teams.map((t) => t.id);
+
+    // Athleten-IDs anhand Team-Membership beschneiden (bei team_coach)
+    let scopedAthleteIds: string[] | null = null;
+    if (!scope.allTeams) {
+      const { data: tms } = teamIds.length
+        ? await supabase
+            .from("team_memberships")
+            .select("user_id")
+            .in("team_id", teamIds)
+        : { data: [] as any[] };
+      scopedAthleteIds = Array.from(new Set(((tms ?? []) as any[]).map((r) => r.user_id)));
+    }
+
+    // Core-Sets in Parallel
+    const membersQ = scopedAthleteIds
+      ? supabase
           .from("organization_memberships")
           .select("user_id, role, status, onboarding_completed")
           .eq("organization_id", data.orgId)
-          .eq("role", "athlete"),
-        supabase
-          .from("organization_teams")
-          .select("id, name")
-          .eq("organization_id", data.orgId),
-        supabase
-          .from("organization_tasks")
-          .select("user_id, status, scheduled_for, task_type")
+          .eq("role", "athlete")
+          .in("user_id", scopedAthleteIds.length ? scopedAthleteIds : ["00000000-0000-0000-0000-000000000000"])
+      : supabase
+          .from("organization_memberships")
+          .select("user_id, role, status, onboarding_completed")
           .eq("organization_id", data.orgId)
-          .gte("scheduled_for", start.toISOString())
-          .lt("scheduled_for", now.toISOString()),
-        supabase
-          .from("organization_tasks")
-          .select("user_id, status, scheduled_for, task_type")
-          .eq("organization_id", data.orgId)
-          .gte("scheduled_for", prevStart.toISOString())
-          .lt("scheduled_for", prevEnd.toISOString()),
-        supabase
-          .from("organization_activity_log")
-          .select("user_id, created_at")
-          .eq("organization_id", data.orgId)
-          .gte("created_at", prevStart.toISOString())
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("organization_athletic_session_completions")
-          .select("user_id, completed_at")
-          .eq("organization_id", data.orgId)
-          .gte("completed_at", prevStart.toISOString()),
+          .eq("role", "athlete");
+
+    const tasksBase = supabase
+      .from("organization_tasks")
+      .select("user_id, status, scheduled_for, task_type")
+      .eq("organization_id", data.orgId);
+
+    const [membersRes, tasksWeekRes, tasksPrevRes, activityRes, sessionsRes] =
+      await Promise.all([
+        membersQ,
+        (scopedAthleteIds
+          ? tasksBase.in("user_id", scopedAthleteIds.length ? scopedAthleteIds : ["00000000-0000-0000-0000-000000000000"])
+          : tasksBase
+        ).gte("scheduled_for", start.toISOString()).lt("scheduled_for", now.toISOString()),
+        (scopedAthleteIds
+          ? supabase.from("organization_tasks").select("user_id, status, scheduled_for, task_type").eq("organization_id", data.orgId)
+              .in("user_id", scopedAthleteIds.length ? scopedAthleteIds : ["00000000-0000-0000-0000-000000000000"])
+          : supabase.from("organization_tasks").select("user_id, status, scheduled_for, task_type").eq("organization_id", data.orgId)
+        ).gte("scheduled_for", prevStart.toISOString()).lt("scheduled_for", prevEnd.toISOString()),
+        (scopedAthleteIds
+          ? supabase.from("organization_activity_log").select("user_id, created_at").eq("organization_id", data.orgId)
+              .in("user_id", scopedAthleteIds.length ? scopedAthleteIds : ["00000000-0000-0000-0000-000000000000"])
+          : supabase.from("organization_activity_log").select("user_id, created_at").eq("organization_id", data.orgId)
+        ).gte("created_at", prevStart.toISOString()).order("created_at", { ascending: false }),
+        (scopedAthleteIds
+          ? supabase.from("organization_athletic_session_completions").select("user_id, completed_at").eq("organization_id", data.orgId)
+              .in("user_id", scopedAthleteIds.length ? scopedAthleteIds : ["00000000-0000-0000-0000-000000000000"])
+          : supabase.from("organization_athletic_session_completions").select("user_id, completed_at").eq("organization_id", data.orgId)
+        ).gte("completed_at", prevStart.toISOString()),
       ]);
 
     const athletes = (membersRes.data ?? []) as any[];
     const athleteIds = athletes.map((a) => a.user_id);
-    const teams = (teamsRes.data ?? []) as any[];
-    const teamIds = teams.map((t) => t.id);
+
+    // teams + teamIds bereits oben ermittelt (scoped)
+
 
     // Profile + team-membership lookups
     let profiles: Record<string, { name: string }> = {};
@@ -246,25 +274,30 @@ export const getOrgCoachAnalytics = createServerFn({ method: "GET" })
       }
     }
 
-    // Position groups
-    const groupMap = new Map<string, { athletes: number; compl: number[]; active: number }>();
+    // Position groups — aggregiert auf Offense / Defense / Special Teams
+    const groupMap = new Map<"offense" | "defense" | "special" | "other", { athletes: number; compl: number[]; active: number }>();
     for (const s of signals) {
-      const key = s.position ?? "—";
+      const key = positionGroup(s.position);
       const g = groupMap.get(key) ?? { athletes: 0, compl: [], active: 0 };
       g.athletes++;
       if (s.compliance != null) g.compl.push(s.compliance);
       if (s.days_inactive != null && s.days_inactive < 7) g.active++;
       groupMap.set(key, g);
     }
-    const positionGroups: PositionGroupStat[] = Array.from(groupMap.entries())
-      .map(([position, g]) => ({
-        position,
-        athletes: g.athletes,
-        weekly_compliance:
-          g.compl.length > 0 ? Math.round(g.compl.reduce((a, b) => a + b, 0) / g.compl.length) : null,
-        active: g.active,
-      }))
-      .sort((a, b) => b.athletes - a.athletes);
+    const GROUP_ORDER: Array<"offense" | "defense" | "special" | "other"> = ["offense", "defense", "special", "other"];
+    const positionGroups: PositionGroupStat[] = GROUP_ORDER
+      .filter((k) => (groupMap.get(k)?.athletes ?? 0) > 0)
+      .map((k) => {
+        const g = groupMap.get(k)!;
+        return {
+          position: POSITION_GROUP_LABEL[k],
+          athletes: g.athletes,
+          weekly_compliance:
+            g.compl.length > 0 ? Math.round(g.compl.reduce((a, b) => a + b, 0) / g.compl.length) : null,
+          active: g.active,
+        };
+      });
+
 
     // Attention list (classified)
     const attentionList: AttentionEntry[] = buildAttentionList(signals).map((s) => ({

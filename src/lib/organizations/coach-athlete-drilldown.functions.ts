@@ -102,20 +102,9 @@ export const getCoachAthleteDetail = createServerFn({ method: "GET" })
   .handler(async ({ data, context }): Promise<CoachAthleteDetail | null> => {
     const { supabase, userId } = context;
 
-    // ---- Authorisierung (identisch zu Cockpit): coach role oder Staff der Org.
-    const { data: isCoach } = await supabase.rpc("has_role", {
-      _user_id: userId,
-      _role: "coach",
-    });
-    if (!isCoach) {
-      const { data: staff } = await supabase
-        .from("staff_assignments")
-        .select("id")
-        .eq("user_id", userId)
-        .eq("organization_id", data.orgId)
-        .maybeSingle();
-      if (!staff) throw new Error("Kein Zugriff.");
-    }
+    // ---- Team-Scope zentral prüfen (wirft "Kein Zugriff." bei fehlender Zuordnung)
+    const { resolveCoachTeamScope } = await import("./coach-team-scope");
+    const scope = await resolveCoachTeamScope(supabase, userId, data.orgId);
 
     // ---- Athlete muss in der Org existieren
     const { data: membership } = await supabase
@@ -125,6 +114,19 @@ export const getCoachAthleteDetail = createServerFn({ method: "GET" })
       .eq("user_id", data.userId)
       .maybeSingle();
     if (!membership) return null;
+
+    // ---- Bei Team-gebundenem Coach: prüfen, dass Athlet einem erlaubten Team angehört
+    if (!scope.allTeams) {
+      const { data: athleteTeams } = await supabase
+        .from("team_memberships")
+        .select("team_id")
+        .eq("user_id", data.userId)
+        .in("team_id", scope.allowedTeamIds);
+      if (!athleteTeams || athleteTeams.length === 0) {
+        throw new Error("Kein Zugriff auf diesen Spieler.");
+      }
+    }
+
 
     const { data: org } = await supabase
       .from("organizations")
