@@ -1,27 +1,49 @@
 /**
  * Shared core for AI Smart-Trainingsplan generation.
- * Used by both the user-facing server function (with the user's
- * supabase client) and the cron route (with supabaseAdmin).
+ *
+ * Phase-3-Refactor: Wochenstruktur, Fokus-Rotation, Movement-Slots und
+ * Volumen (Sätze/Reps/Pause) werden DETERMINISTISCH in TypeScript berechnet
+ * (siehe `training-engine/week-structure.ts` + `movement-framework.ts`).
+ * Das LLM darf nur noch pro Slot EINE konkrete Übungs-VARIANTE (Gerätewahl +
+ * Name) sowie Warm-up-/Cool-down-Vorschläge liefern.
+ *
  * File ends in `.server.ts` so it is stripped from client bundles.
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  buildWeekPlan,
+  renderWeekPlanForPrompt,
+  WEEKDAY_ORDER,
+  type WeekdayKey,
+  type WeekPlan,
+  type PlannedDay,
+} from "./training-engine/week-structure";
+import type { Experience, MovementSlot } from "./training-engine/movement-framework";
 
 type ExerciseCategory =
   | "barbell" | "dumbbell" | "machine" | "cardio"
   | "core" | "bodyweight" | "cable";
 
-type GenEx = {
+type LlmEx = {
   name: string;
   category?: ExerciseCategory;
-  target_sets?: number;
-  target_reps?: string;
   target_weights?: string | null;
-  rest_seconds?: number | null;
   notes?: string | null;
 };
-type GenDay = { name: string; focus?: string; exercises: GenEx[] };
-type GenWeek = { week_number: number; focus?: string; days: GenDay[] };
+
+type LlmSlotEx = LlmEx & { target_sets?: number; target_reps?: string; rest_seconds?: number };
+
+type LlmSession = {
+  week: number;
+  weekday: WeekdayKey;
+  role?: string;
+  warmup?: LlmEx[];
+  slots?: Record<string, LlmSlotEx>;
+  cooldown?: LlmEx[];
+  sport?: LlmEx;
+  mobility?: LlmEx[];
+};
 
 export type GenerateOpts = {
   target: string;
@@ -29,7 +51,6 @@ export type GenerateOpts = {
   title?: string;
   startMode?: "today" | "next_week";
   apiKey: string;
-  /** Anzahl Wochen für den Plan. Default 4. Smart-Onboarding/Renewal nutzt 6. */
   weeks?: number;
 };
 
@@ -118,7 +139,7 @@ export async function generateTrainingPlanCore(
   const bfPct = (latestWeight as any)?.body_fat_pct ?? null;
 
   const w8 = (v: number | null) => (v ? Math.round((v * 0.75) / 2.5) * 2.5 : null);
-  const startWeights = {
+  const startWeights: StartWeights = {
     bench_press_kg: w8(e1rm.chest_press),
     shoulder_press_kg: w8(e1rm.shoulder_press),
     squat_kg: e1rm.leg_press ? Math.round((e1rm.leg_press * 0.35) / 2.5) * 2.5 : null,
@@ -129,11 +150,10 @@ export async function generateTrainingPlanCore(
     leg_curl_kg: w8(e1rm.leg_curl),
   };
 
-  const trainingDayKeys: string[] =
-    (smartProfile as any)?.training_weekdays?.length
+  const trainingDayKeys: WeekdayKey[] =
+    ((smartProfile as any)?.training_weekdays?.length
       ? (smartProfile as any).training_weekdays
-      : ["monday", "wednesday", "friday"];
-  const numDays = Math.max(2, Math.min(6, trainingDayKeys.length));
+      : ["monday", "wednesday", "friday"]) as WeekdayKey[];
 
   const start = (() => {
     const d = new Date();
@@ -158,9 +178,6 @@ export async function generateTrainingPlanCore(
   }
   const priorList = Array.from(priorNames).slice(0, 120);
 
-  // Equipment usage stats from recent sets (last 60 days) → tells the AI
-  // which variant (Maschine / Multipresse / Kurzhantel / Langhantel / Kabel)
-  // the client actually uses, so it picks matching variants for new plans.
   const exNameById = new Map<string, string>();
   for (const p of (priorPlans as any[]) ?? []) {
     for (const d of p?.training_days ?? []) {
@@ -182,18 +199,6 @@ export async function generateTrainingPlanCore(
     else if (/kabel|seilzug|cable/.test(nm)) equipCounts.kabel++;
     else equipCounts.bodyweight++;
   }
-  const equipBlock = `\n🛠️ GERÄTE-PRÄFERENZ (aus den letzten 60 Tagen)
-- Maschine: ${equipCounts.maschine} · Multipresse: ${equipCounts.multipresse} · Kurzhantel: ${equipCounts.kurzhantel} · Langhantel: ${equipCounts.langhantel} · Kabel: ${equipCounts.kabel}
-→ Wähle die Geräte-VARIANTE jeder Übung entsprechend dieser Daten:
-   • Schulterdrücken: Maschine / Multipresse / Kurzhantel
-   • Bankdrücken: Langhantel / Kurzhantel / Maschine
-   • Rudern: Langhantel / Kurzhantel / Kabel / Maschine
-   • Curls: Langhantel / Kurzhantel / Kabel
-   • Seitheben: Kurzhantel / Kabel / Maschine
-   • Beinpresse / Beinbeuger / Beinstrecker: Maschine
-- Falls der Kunde diese Übung schon gemacht hat, BEHALTE die gleiche Variante (für PR-Kontinuität).
-- Anfänger ohne Daten → bevorzugt Maschine / Multipresse (sicherer). Fortgeschrittene → Lang-/Kurzhantel.
-- Bei Verletzungen Schulter/Rücken → keine schweren Lang­hantel-Varianten über Kopf bzw. ohne Stütze.`;
 
   const sessionDates = new Set<string>();
   for (const s of (recentSets as any[]) ?? []) {
@@ -220,7 +225,25 @@ export async function generateTrainingPlanCore(
     : null;
   const sessionMinutes = (smartProfile as any)?.training_session_minutes ?? 60;
   const trainingGoal: string = cp.training_goal ?? "performance";
-  const experience: string = cp.training_experience ?? (sessionsLast30 >= 8 ? "intermediate" : "beginner");
+  const experienceRaw: string = cp.training_experience ?? (sessionsLast30 >= 8 ? "intermediate" : "beginner");
+  const experience: Experience =
+    experienceRaw === "advanced" ? "advanced"
+    : experienceRaw === "beginner" ? "beginner"
+    : "intermediate";
+
+  const sportWeekdays: WeekdayKey[] = (Array.isArray(cp.sport_weekdays) ? cp.sport_weekdays : []) as WeekdayKey[];
+
+  // ============================================================
+  //   DETERMINISTISCHE WOCHENSTRUKTUR — Single Source of Truth
+  // ============================================================
+  const weekPlans: WeekPlan[] = buildWeekPlan({
+    startDate: start,
+    weeks: totalWeeks,
+    trainingWeekdays: trainingDayKeys,
+    sportWeekdays,
+    experience,
+  });
+  const weekPlanBlock = renderWeekPlanForPrompt(weekPlans);
 
   const goalLabel: Record<string, string> = {
     muscle_gain: "Muskelaufbau", lean_bulk: "lean bulk / Muskelaufbau",
@@ -232,205 +255,81 @@ export async function generateTrainingPlanCore(
     health: "Gesundheit & Beweglichkeit",
   };
 
-  const splitHint = (() => {
-    if (experience === "beginner")
-      return numDays <= 2 ? "Ganzkörper A / B"
-        : numDays === 3 ? "Ganzkörper A / B / C"
-        : "Oberkörper / Unterkörper-Splits (Anfängergerecht)";
-    if (experience === "advanced")
-      return numDays === 3 ? "Push / Pull / Beine (klassisch)"
-        : numDays === 4 ? "Oberkörper / Unterkörper / Push / Pull"
-        : numDays === 5 ? "Push / Pull / Beine / Oberkörper-Schwächen / Unterkörper-Schwächen"
-        : numDays === 6 ? "Push A / Pull A / Beine A / Push B / Pull B / Beine B"
-        : "Ganzkörper x2";
-    return numDays === 3 ? "Push / Pull / Beine"
-      : numDays === 4 ? "Oberkörper / Unterkörper x 2"
-      : numDays === 5 ? "Push / Pull / Beine / Oberkörper / Unterkörper"
-      : numDays >= 6 ? "PPL x 2"
-      : "Oberkörper / Unterkörper";
-  })();
+  const equipBlock = `\n🛠️ GERÄTE-PRÄFERENZ (aus den letzten 60 Tagen)
+- Maschine: ${equipCounts.maschine} · Multipresse: ${equipCounts.multipresse} · Kurzhantel: ${equipCounts.kurzhantel} · Langhantel: ${equipCounts.langhantel} · Kabel: ${equipCounts.kabel}
+→ Wähle die Geräte-VARIANTE jedes Slots entsprechend dieser Daten. Bereits genutzte Varianten für PR-Kontinuität bevorzugen.`;
 
-  const sportLevelLabel: Record<string, string> = {
-    recreational: "Hobby", amateur: "Amateur", semi_pro: "Semi-Pro",
-    pro: "Profi", coach: "Trainer/Kursleiter",
-  };
-  const seasonLabel: Record<string, string> = {
-    off_season: "Off-Season", pre_season: "Vorbereitung",
-    in_season: "Saison (Wettkampfphase)", post_season: "Nachsaison",
-  };
-  const mobLabel: Record<string, string> = {
-    none: "keine", "1_2x": "1–2× Woche", "3_4x": "3–4× Woche", daily: "täglich",
-  };
-  const weekdayLabel: Record<string, string> = {
-    monday: "Mo", tuesday: "Di", wednesday: "Mi", thursday: "Do",
-    friday: "Fr", saturday: "Sa", sunday: "So",
-  };
-  const sportDaysList: string[] = Array.isArray(cp.sport_weekdays) ? cp.sport_weekdays : [];
-  const sportDaysHuman = sportDaysList.map((d) => weekdayLabel[d] ?? d).join(", ");
-  const trainDaysHuman = trainingDayKeys.map((d) => weekdayLabel[d] ?? d).join(", ");
-  const overlapDays = sportDaysList.filter((d) => trainingDayKeys.includes(d))
-    .map((d) => weekdayLabel[d] ?? d);
-
-  const allWeekdayOrder = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"];
-  const dayMap = trainingDayKeys
-    .map((k, i) => `Tag ${i + 1} = ${weekdayLabel[k] ?? k}`)
-    .join(", ");
-  const weekPlanMap = allWeekdayOrder.map((k) => {
-    const isGym = trainingDayKeys.includes(k);
-    const isSport = sportDaysList.includes(k);
-    let kind = "Rest";
-    if (isGym && isSport) kind = "Gym + Sport (Überlappung)";
-    else if (isGym) kind = "Gym";
-    else if (isSport) kind = "Sport/Mannschaftstraining/Spieltag";
-    return `${weekdayLabel[k]}: ${kind}`;
-  }).join(" | ");
-  // Sportart-spezifische Beispiele NUR einfügen, wenn die Person diesen Sport tatsächlich macht.
-  // Verhindert z.B. American-Football-Übungen für Kunden ohne Football-Profil.
-  const sportLower = (cp.sport ?? "").toLowerCase();
-  const positionLower = (cp.sport_position ?? "").toLowerCase();
-  const sportExamples: string[] = [];
-  if (/football|nfl|american/.test(sportLower)) {
-    if (/qb|quarterback/.test(positionLower)) {
-      sportExamples.push(`• American Football Quarterback (QB): "QB Cuban Press Kurzhantel — Wurfschulter" (3×12, Notiz: "KH neben Körper, Ellbogen 90°, außen rotieren, dann über Kopf drücken"), "QB Rotations-Wurf Medizinball gegen Wand" (3×8/Seite), "Pallof Press Kabel — Anti-Rotation" (3×10/Seite), "Landmine Press einarmig" (3×8/Seite).`);
-    } else if (/lineman|line|ol|dl/.test(positionLower)) {
-      sportExamples.push(`• Football Lineman: "Prowler/Schlitten schieben" (5×15 m), "Zercher Squat" (4×6, Notiz: "LH in Armbeuge, aufrecht hocken").`);
-    } else if (/wr|rb|receiver|running/.test(positionLower)) {
-      sportExamples.push(`• Football WR/RB: "Single-Leg RDL Kurzhantel" (3×8/Seite), "Box Jumps" (4×4).`);
-    } else {
-      sportExamples.push(`• American Football allgemein: Explosivität, Sprintkraft & Wurfschulter — z.B. "Box Jumps" (4×4), "Landmine Press einarmig" (3×8/Seite), "Pallof Press" (3×10/Seite).`);
-    }
-  }
-  if (/fußball|fussball|soccer/.test(sportLower)) {
-    sportExamples.push(`• Fußball: "Bulgarian Split Squat KH" (3×8/Seite), "Nordic Hamstring Curl" (3×6), "Copenhagen Plank — Adduktoren" (3×30s/Seite).`);
-  }
-  if (/basket|volley/.test(sportLower)) {
-    sportExamples.push(`• Basketball/Volleyball: "Depth Jump 30-cm-Kasten + Sprung" (4×4), "Wadenheben einbeinig" (3×12/Seite).`);
-  }
-  if (/kampf|bjj|mma|box|judo|karate|ringen|wrestling/.test(sportLower)) {
-    sportExamples.push(`• Kampfsport/BJJ: "Turkish Get-Up KH" (3×3/Seite), "Farmer's Walk KH" (3×30 m).`);
-  }
-  if (/lauf|run|marathon|triath/.test(sportLower)) {
-    sportExamples.push(`• Laufsport: "Single-Leg RDL" (3×8/Seite), "Wadenheben" (3×15), "Hip Thrust" (3×10).`);
-  }
-  if (/rad|cycl|bike/.test(sportLower)) {
-    sportExamples.push(`• Radsport: "Bulgarian Split Squat" (3×8/Seite), "Glute Bridge" (3×12), "Plank-Varianten" (3×45s).`);
-  }
-  const sportSpecificBlock = sportExamples.length
-    ? `\n- POSITIONS-/SPORTART-SPEZIFISCHE PFLICHTÜBUNGEN — füge an MIND. 2 Gym-Tagen pro Woche eine als sportartspezifisch erkennbare Übung ein. Benenne sie eindeutig und schreibe im notes-Feld eine 1-Satz-Ausführungsanleitung. Erlaubte Beispiele NUR aus der Sportart "${cp.sport}":\n   ${sportExamples.join("\n   ")}`
-    : `\n- ⛔ KEIN AUSGEÜBTER SPORT/KEINE PASSENDE SPORTART-VORLAGE: Verwende AUSSCHLIESSLICH allgemeine Hypertrophie-/Kraft-/Mobility-Übungen. KEINE sportartspezifischen Übungen einbauen — insbesondere KEINE Football-/QB-/Lineman-/Wurfschulter-/Pallof-Wurf-Übungen, KEINE Fußball-/Soccer-spezifischen Übungen, KEINE Kampfsport-spezifischen Übungen. Im Übungsnamen darf keine Sportart auftauchen.`;
-
-  const sportBlock = cp.sport || cp.class_types?.length || cp.team_sport
-    ? `\n🏈 SPORT-/ATHLETEN-PROFIL${cp.sport ? `\n- Sportart: ${cp.sport}${cp.sport_position ? ` (Position: ${cp.sport_position})` : ""}` : ""}${cp.sport_level ? `\n- Niveau: ${sportLevelLabel[cp.sport_level] ?? cp.sport_level}` : ""}${cp.team_sport ? `\n- Mannschaftssport: ja${cp.match_days_per_week != null ? ` · ${cp.match_days_per_week} Spieltag(e)/Wo` : ""}${cp.practice_days_per_week != null ? ` · ${cp.practice_days_per_week} Mannschafts-Training(s)/Wo` : ""}` : ""}${cp.season_phase ? `\n- Saisonphase: ${seasonLabel[cp.season_phase] ?? cp.season_phase}` : ""}${cp.class_types?.length ? `\n- Kurse: ${cp.class_types.join(", ")}${cp.class_days_per_week != null ? ` (${cp.class_days_per_week}× Wo)` : ""}` : ""}${cp.cardio_outside_gym ? `\n- Cardio außerhalb des Studios: ${cp.cardio_outside_gym}` : ""}
-${sportDaysHuman ? `- Sport-/Kurs-/Spieltage: ${sportDaysHuman}` : ""}
-- Gym-Trainingstage: ${trainDaysHuman} (${dayMap})
-- WOCHENÜBERSICHT (Pflicht — JEDER der 7 Wochentage MUSS als eigener day-Eintrag erscheinen, in dieser Reihenfolge Mo→So, mit Wochentag VORN in day.name, z. B. "Mo — Push" oder "Di — Mannschaftstraining" oder "So — Rest/Recovery"): ${weekPlanMap}
-- SPORT-/MANNSCHAFTSTRAININGS-/SPIELTAGE: KEINE Kraftübungen einfügen! Stattdessen 1 Eintrag "Mannschaftstraining" bzw. "Spieltag" (category "cardio", target_sets 1, target_reps "60–90 Min", Notiz zur erwarteten Belastung) + 2–3 kurze Mobility-/Aktivierungsübungen (vor) oder Cool-down-Mobility (nach, 5–10 Min). Keine Kniebeugen, kein Bankdrücken, kein Kreuzheben an diesen Tagen.
-- RESTDAYS NACH einem Sport-/Spieltag: REGENERATIONSTAG — Foam Rolling Beine/Rücken, lockeres Gehen 20–30 Min, statisches Dehnen Hüfte/Beine/Brust, Atemübung. KEINE schweren Lasten. (3–5 leichte Mobility-/Recovery-Einträge, category "bodyweight"/"core"/"cardio".)
-- REINE RESTDAYS (kein Sport am Vortag): optionaler leichter Mobility-Flow 10–15 Min (2–3 Übungen) ODER 1 Eintrag "Rest — frei" (category "bodyweight", target_sets 1, target_reps "—", Notiz "Vollständige Erholung — Schlaf & Ernährung priorisieren").
-- ÜBERLAPPUNG Gym+Sport am selben Tag: max. 45 Min Gym, RPE 6–7, KEINE schweren Kniebeugen/Kreuzheben, Fokus Oberkörper-Zusatzübungen oder Mobility. Übertraining vermeiden.
-- Tag VOR Spiel-/Sporttag: KEIN schweres Beintraining/CNS-Stress. Stattdessen Oberkörper-Zusatzübungen oder Mobility.
-- Mannschaftssport: in-season Volumen reduzieren, Fokus auf Erhalt, Schnellkraft & Verletzungsprophylaxe; off-/pre-season Volumen hoch.${sportSpecificBlock}
-- ⛔ VERBOTENES WORT: Schreibe NIEMALS "Akzessoires" oder "Accessoires" in day.name, day.focus oder exercise.name/notes. Nutze stattdessen "Zusatzübungen", "Ergänzung" oder "Feinschliff".`
-    : `\n🚫 KEIN SPORT ANGEGEBEN: Der/die Kund:in betreibt KEINEN spezifischen Sport. Erstelle einen reinen Hypertrophie-/Kraft-/Mobility-Plan ohne sportartspezifische Übungen. KEINE Football-/QB-/Lineman-/Wurfschulter-Übungen, KEINE Soccer-/Fußball-spezifischen Übungen, KEINE Kampfsport-/BJJ-Übungen. Im Übungsnamen darf KEINE Sportart auftauchen.`;
-  const mobilityBlock = cp.mobility_frequency || cp.mobility_focus
-    ? `\n🧘 MOBILITY / STRETCHING (PFLICHT in den Plan einbauen!)
-${cp.mobility_frequency ? `- Frequenz vom Kunden gewünscht: ${mobLabel[cp.mobility_frequency] ?? cp.mobility_frequency}` : ""}
-${cp.mobility_focus ? `- Schwerpunkt: ${cp.mobility_focus}` : ""}
-- WICHTIG: Füge an JEDEM Trainingstag mindestens 1 dedizierte Mobility-/Stretch-Übung als EIGENE Übung ein (category: "core" oder "bodyweight"), die genau diese Schwerpunkt-Bereiche adressiert. Beispiele für Hüfte: "90/90 Hüftrotation" (3×8/Seite), "Couch Stretch" (2×45s/Seite), "World's Greatest Stretch" (2×6/Seite), "Hüftbeuger-Dehnung kniend" (2×60s/Seite). Für Schultern: "Wand-Slides" (3×10), "Banded Pull-Apart" (3×15), "Thoracic Extensions auf der Foam Roll" (2×8). Für BWS: "Cat-Cow" (2×10), "Open Book" (2×8/Seite).
-- Dies ist KEIN bloßer Warm-up-Hinweis — die Mobility-Übung MUSS in der exercises-Liste erscheinen mit Sätzen, Wdh/Sekunden und Pause.
-- Bei "3-4x" oder "daily" Frequenz: zusätzlich 1 reiner Mobility-Tag pro Woche als optionales Add-on im Notizfeld erwähnen.`
-    : "";
   const injuryBlock = cp.injuries
-    ? `\n⚠️ VERLETZUNGEN/EINSCHRÄNKUNGEN: ${cp.injuries}\n- VERMEIDE belastende Übungen für diese Bereiche, biete alternative Varianten an.`
+    ? `\n⚠️ VERLETZUNGEN: ${cp.injuries} — passe die gewählte Variante an (keine Überkopf-LH bei Schulterproblemen, keine schwere Kniebeuge bei Knieproblemen usw.).`
     : "";
+
   const targetsBlock = targets
-    ? `\n🍽️ ERNÄHRUNGSZIELE
-- Trainingstag: ${(targets as any).kcal} kcal · P ${(targets as any).protein_g}g · KH ${(targets as any).carbs_g}g · F ${(targets as any).fat_g}g
-- Restday: ${(targets as any).kcal_rest} kcal · P ${(targets as any).protein_g_rest}g · KH ${(targets as any).carbs_g_rest}g · F ${(targets as any).fat_g_rest}g
-→ Trainingsintensität an Trainingstagen höher (mehr Volumen, schwerere Hauptsätze). Restdays für Regeneration nutzen.`
+    ? `\n🍽️ ERNÄHRUNGSZIELE — Trainingstag ${(targets as any).kcal} kcal / P${(targets as any).protein_g}g · Restday ${(targets as any).kcal_rest} kcal.`
     : "";
-  const adherenceBlock = `\n📊 ADHÄRENZ (letzte 30 Tage)
-- Trainingseinheiten: ${sessionsLast30}
-- Daily-Checks: ${checksLast30}/30 · perfekte Tage: ${perfectDays30}
-${weightTrendKg !== null ? `- Gewichtstrend: ${weightTrendKg > 0 ? "+" : ""}${weightTrendKg} kg` : ""}
-${sessionsLast30 < 4 ? "→ Kunde trainiert selten — Plan etwas konservativer starten, Einstiegshürden niedrig halten." : ""}
-${sessionsLast30 >= 12 ? "→ Hohe Trainingsfrequenz — Volumen darf höher liegen, mehr Akzessoires." : ""}`;
-  const startWeightsBlock = `\n💪 STARTGEWICHTE — VERBINDLICH (Woche 1, RPE 7, runden auf 2,5 kg)
-Diese Werte stammen aus dem letzten Strength-Check (e1RM × 0,75) und sind eine HARTE OBERGRENZE für Woche 1. Niemals höher ansetzen — auch nicht für ähnliche Varianten derselben Übung (z. B. Brustpresse Maschine ≈ Bankdrücken). Progression: W2 +2,5–5 kg, W3 +2,5–5 kg (RPE 8–9), W4 Deload ≈ 85 % von W3.
-- Bankdrücken / Brustpresse (Maschine/LH/KH): MAX ${startWeights.bench_press_kg ?? "?"} kg (e1RM ${e1rm.chest_press ?? "?"} kg)
-- Schulterdrücken / Schulterpresse (alle Varianten): MAX ${startWeights.shoulder_press_kg ?? "?"} kg (e1RM ${e1rm.shoulder_press ?? "?"} kg)
-- Kniebeuge (LH): MAX ${startWeights.squat_kg ?? "?"} kg
-- Kreuzheben (LH): MAX ${startWeights.deadlift_kg ?? "?"} kg
-- Latzug (alle Griffe): MAX ${startWeights.lat_pulldown_kg ?? "?"} kg (e1RM ${e1rm.lat_pulldown ?? "?"} kg)
-- Rudern (Kabel/Maschine/LH/KH): MAX ${startWeights.row_kg ?? "?"} kg (e1RM ${e1rm.cable_row ?? "?"} kg)
-- Beinpresse: MAX ${startWeights.leg_press_kg ?? "?"} kg (e1RM ${e1rm.leg_press ?? "?"} kg)
-- Beinbeuger (liegend/sitzend): MAX ${startWeights.leg_curl_kg ?? "?"} kg (e1RM ${e1rm.leg_curl ?? "?"} kg)
-- Plank-Niveau: ${plankSeconds ? plankSeconds + "s" : "unbekannt"}
 
-Für Isolationen ohne Test-Daten (Bizeps-Curl, Trizeps, Seitheben, Reverse Fly, Wadenheben usw.): konservativ starten und am SCHWÄCHSTEN e1RM oben orientieren. Werte über den oben genannten MAX-Grenzen werden automatisch nach unten gekappt.
-Kurzhantel-Übungen: Gewicht PRO SEITE angeben. Langhantel/Maschinen: GESAMTGEWICHT.`;
+  const adherenceBlock = `\n📊 ADHÄRENZ letzte 30 Tage — Trainings: ${sessionsLast30} · Daily-Checks: ${checksLast30} · perfekte Tage: ${perfectDays30}${weightTrendKg !== null ? ` · Gewichtstrend: ${weightTrendKg > 0 ? "+" : ""}${weightTrendKg} kg` : ""}`;
 
-  const prompt = `Erstelle einen INDIVIDUELLEN 4-WOCHEN-TRAININGSPLAN für ein Standard-Fitnessstudio.
-NIEMALS Standardplan — nutze ALLE folgenden Daten.
+  const startWeightsBlock = `\n💪 STARTGEWICHTE (Woche 1, RPE 7, e1RM×0,75) — HARTE OBERGRENZE, wird automatisch gekappt:
+- Bankdrücken/Brustpresse: MAX ${startWeights.bench_press_kg ?? "?"} kg
+- Schulterdrücken: MAX ${startWeights.shoulder_press_kg ?? "?"} kg
+- Kniebeuge: MAX ${startWeights.squat_kg ?? "?"} kg · Kreuzheben: MAX ${startWeights.deadlift_kg ?? "?"} kg
+- Latzug: MAX ${startWeights.lat_pulldown_kg ?? "?"} kg · Rudern: MAX ${startWeights.row_kg ?? "?"} kg
+- Beinpresse: MAX ${startWeights.leg_press_kg ?? "?"} kg · Beinbeuger: MAX ${startWeights.leg_curl_kg ?? "?"} kg
+- Plank: ${plankSeconds ? plankSeconds + "s" : "unbekannt"}
+Kurzhantel-Übungen: Gewicht PRO SEITE. Langhantel/Maschine: GESAMTGEWICHT. Isolationen konservativ.`;
+
+  const prompt = `Du bekommst eine FERTIGE, deterministische Wochenstruktur mit Slots.
+Deine EINZIGE Aufgabe: pro Slot EINE konkrete Übungs-VARIANTE (Name + Kategorie + Startgewichte + 1-Satz-Ausführungshinweis) wählen. Sätze/Reps/Pausen sind FEST und dürfen NICHT geändert werden.
 
 👤 KUNDE
-- Ziel: ${goalLabel[trainingGoal] ?? trainingGoal}
-${cp.coaching_goal ? `- Eigenangabe: "${cp.coaching_goal}"` : ""}
-${bw ? `- Körpergewicht: ${bw} kg` : ""}${bfPct ? ` · KFA: ${bfPct}%` : ""}
-${cp.height_cm ? `- Größe: ${cp.height_cm} cm` : ""}${ageYears ? ` · Alter: ${ageYears} J.` : ""}${cp.gender ? ` · ${cp.gender}` : ""}
-- Trainings-Erfahrung: ${experience}
-- Sessionlänge: ca. ${sessionMinutes} Min · ${numDays} Trainingstage/Woche
-${sportBlock}${mobilityBlock}${injuryBlock}
+- Ziel: ${goalLabel[trainingGoal] ?? trainingGoal}${cp.coaching_goal ? ` · Eigenangabe: "${cp.coaching_goal}"` : ""}
+${bw ? `- Körpergewicht: ${bw} kg` : ""}${bfPct ? ` · KFA: ${bfPct}%` : ""}${cp.height_cm ? ` · Größe: ${cp.height_cm} cm` : ""}${ageYears ? ` · Alter: ${ageYears} J.` : ""}${cp.gender ? ` · ${cp.gender}` : ""}
+- Erfahrung: ${experience} · Sessionlänge: ${sessionMinutes} Min
+${cp.sport ? `- Sportart: ${cp.sport}${cp.sport_position ? ` (${cp.sport_position})` : ""}` : "- Kein Sport angegeben — keine sportartspezifischen Übungen."}
+${injuryBlock}${targetsBlock}${adherenceBlock}${equipBlock}${startWeightsBlock}
 
-🏋️ LETZTER STRENGTH CHECK
-${lastCheck ? `Gesamt: ${lastCheck.score_total}/100 · Unter ${lastCheck.score_lower} · Push ${lastCheck.score_push} · Pull ${lastCheck.score_pull} · Core ${lastCheck.score_core}
-→ Priorisiere schwächste Muskelgruppe(n) mit mehr Sätzen.` : "- Kein Check vorhanden → konservativ starten."}
-${startWeightsBlock}
-${targetsBlock}
-${adherenceBlock}
-${equipBlock}
+📐 WOCHENSTRUKTUR (VERBINDLICH)
+${weekPlanBlock}
 
-📐 STRUKTUR
-- Split: ${splitHint}
-- 4 Wochen mit PROGRESSION:
-  • Woche 1: Anpassungsphase, RPE 7, Startgewichte
-  • Woche 2: +2,5–5 kg auf Hauptübungen oder +1 Wdh
-  • Woche 3: Belastungsspitze, RPE 8–9, ggf. +1 Satz auf Hauptübung
-  • Woche 4: Deload — Gewicht ~85%, Sätze -1, Fokus Technik & Regeneration
+📤 ANTWORT — NUR JSON, keine Erklärung:
+{
+  "sessions": [
+    {
+      "week": 1,
+      "weekday": "monday",
+      "warmup": [
+        { "name": "Warm-up: Rudergerät locker", "category": "cardio", "notes": "5 Min lockeres Rudern, Puls auf ~120" },
+        { "name": "Warm-up: Band Pull-Apart", "category": "bodyweight", "notes": "Theraband auf Brusthöhe, Schulterblätter zusammen" }
+      ],
+      "slots": {
+        "push_main": { "name": "Bankdrücken Langhantel", "category": "barbell", "target_weights": "60,60,60,60", "notes": "Schulterblätter zusammen, Stange zur Brustmitte, Tempo 3-1-1" },
+        "push_vertical": { "name": "...", "category": "...", "target_weights": "...", "notes": "..." }
+      },
+      "cooldown": [
+        { "name": "Cool-down: Brustdehnung Türrahmen", "category": "bodyweight", "notes": "Arm 90° an Türrahmen, Oberkörper nach vorn drehen, 30s/Seite" }
+      ]
+    },
+    { "week": 1, "weekday": "tuesday", "role": "sport",
+      "sport": { "name": "Mannschaftstraining", "category": "cardio", "notes": "60–90 Min, RPE 6–8" } },
+    { "week": 1, "weekday": "wednesday", "role": "recovery",
+      "mobility": [
+        { "name": "Foam Roll Beine/Rücken", "category": "bodyweight", "notes": "je Bereich 60s, langsam" },
+        { "name": "90/90 Hüftrotation", "category": "core", "notes": "8/Seite, kontrolliert" },
+        { "name": "Cat-Cow", "category": "core", "notes": "10 Wdh, ruhig atmen" }
+      ] },
+    { "week": 1, "weekday": "thursday", "role": "rest" }
+  ]
+}
 
-🔥 WARM-UP & COOL-DOWN (PFLICHT an JEDEM Gym-Tag)
-- JEDER Gym-Tag beginnt mit einem WARM-UP-BLOCK (2–3 Einträge, 5–10 Min gesamt):
-  1) Allgemeines Warm-up (category "cardio", target_sets 1, target_reps "5 Min", Notiz z. B. "Rudergerät / Crosstrainer / Laufband locker, Puls hochfahren").
-  2) Mobility-/Aktivierung passend zum Tagesfokus (category "core" oder "bodyweight"), z. B. Push-Tag → "Wand-Slides" 2×10 + "Band Pull-Apart" 2×15; Bein-Tag → "90/90 Hüftrotation" 2×8/Seite + "Body­weight Squat" 2×10; Pull-Tag → "Scapula Pull-Ups / Dead-Hang" 2×20s + "Cat-Cow" 2×10.
-  3) OPTIONAL: 1–2 Aufwärmsätze der ersten Hauptübung als eigene Übung NUR wenn pädagogisch sinnvoll — sonst im notes-Feld der Hauptübung erwähnen.
-- JEDER Gym-Tag endet mit einem COOL-DOWN-BLOCK (1–2 Einträge, 3–5 Min): statisches Dehnen der trainierten Muskelgruppen ODER Foam-Rolling ODER 5 Min lockeres Cardio zur Pulsabsenkung. Beispiele: "Brustdehnung Türrahmen" 2×30s/Seite, "Lat-Dehnung hängend" 2×30s/Seite, "Quadriceps-Dehnung stehend" 2×30s/Seite, "Foam Roll BWS" 1×60s.
-- An Sport-/Spieltagen: kurzes dynamisches Warm-up (2–3 Einträge) VOR dem Sport-Eintrag, Cool-down-Mobility NACH dem Sport-Eintrag.
-
-🧭 CHRONOLOGISCHE REIHENFOLGE pro Tag (sort_order entspricht Trainingsabfolge!)
-Die exercises-Liste MUSS in dieser Reihenfolge sein:
-  1. Warm-up Cardio
-  2. Mobility/Aktivierung
-  3. Hauptübung(en) (compound, schwer) — schwerste zuerst, große Muskelgruppen vor kleinen, mehrgelenkig vor eingelenkig
-  4. Nebenübungen (Hypertrophie, mittlere Last)
-  5. Isolation / Maschine / Kabel
-  6. Core
-  7. Optional Finisher / Conditioning-Cardio
-  8. Cool-down (Stretching / Foam Roll)
-Niemals Isolation vor Compound, niemals Core vor Kniebeugen/Kreuzheben, niemals Stretching am Anfang statt Mobility.
-
-- Pro Tag (Gym): Warm-up + 1–2 Hauptübungen (compound), 2–3 Nebenübungen, 1 Kabel-/Maschine, 1 Core, optional Cardio (5–15 Min), Cool-down
-- Übungsnamen wie im deutschen Studio: "Bankdrücken Langhantel", "Latzug eng", "Beinpresse", "Kurzhantel-Schulterdrücken", "Cable Row", "Beinbeuger liegend", "Plank"
-${priorList.length ? `- BEVORZUGE bereits genutzte Übungsnamen für saubere PR-Historie:\n${priorList.map((n) => `  • ${n}`).join("\n")}` : ""}
-- Pro Übung: Sätze, Wiederholungen (z.B. "8" oder "8,8,10,12"), Startgewichte je Satz in kg (komma-getrennt, nur Zahlen), Pause in Sek.
-- Warm-up/Cool-down-Übungen: target_weights = null oder "—", rest_seconds 30–60.
-- NOTES-FELD: Schreibe IMMER eine 1-Satz-Ausführungsanleitung in einfachem Deutsch (Setup + Bewegung), sodass die Übung OHNE YouTube sofort verständlich ist. Beispiel: "Couch Stretch — kniend, Fuß an Wand, Hüfte nach vorn schieben, 60s halten". Keine Fachjargon-Abkürzungen ohne Erklärung.
-- Kategorie: barbell | dumbbell | machine | cable | cardio | core | bodyweight
-- NAMENS-PRÄFIX zur klaren Kennzeichnung: Warm-up-Einträge mit "Warm-up: …" beginnen, Cool-down-Einträge mit "Cool-down: …" beginnen.
-
-📤 ANTWORT
-NUR gültiges JSON, KEINE Erklärung außerhalb:
-{"weeks":[{"week_number":1,"focus":"Anpassung","days":[{"name":"Push","focus":"Brust/Schulter/Trizeps","exercises":[{"name":"Warm-up: Rudergerät locker","category":"cardio","target_sets":1,"target_reps":"5 Min","target_weights":null,"rest_seconds":30,"notes":"Lockeres Rudern, Puls auf ~120 bringen"},{"name":"Warm-up: Band Pull-Apart","category":"bodyweight","target_sets":2,"target_reps":"15","target_weights":null,"rest_seconds":30,"notes":"Theraband auf Brusthöhe auseinanderziehen, Schulterblätter zusammen"},{"name":"Bankdrücken Langhantel","category":"barbell","target_sets":4,"target_reps":"8,8,8,10","target_weights":"60,60,60,50","rest_seconds":120,"notes":"Schulterblätter zusammen, Stange Richtung Brustmitte, Tempo 3-1-1"},{"name":"Cool-down: Brustdehnung Türrahmen","category":"bodyweight","target_sets":2,"target_reps":"30s/Seite","target_weights":null,"rest_seconds":30,"notes":"Arm 90° an Türrahmen, Oberkörper langsam nach vorne drehen"}]}]}]}
-GENAU 4 Wochen. Jede Woche GENAU 7 Tage (Mo, Di, Mi, Do, Fr, Sa, So in dieser Reihenfolge) — Gym-Tage als Krafttraining MIT Warm-up am Anfang und Cool-down am Ende, Sport-/Spieltage mit kurzem Warm-up + Sport-Eintrag + Cool-down (KEINE Kraftübungen), Restdays als Recovery/Mobility oder "Rest — frei". An Gym-Tagen mind. 7 Übungen (inkl. Warm-up + Cool-down), an Sport-/Restdays 1–5 Einträge. Übungen-Array IMMER in chronologischer Trainingsreihenfolge. NIEMALS das Wort "Akzessoires" verwenden.`;
+REGELN:
+- Genau EIN Eintrag pro slot_id aus der Wochenstruktur oben. slot_id als Objekt-Key nutzen.
+- target_weights: kommaseparierte Zahlen (nur working sets), passend zur Satzzahl des Slots. Bei Bodyweight/Isolation ohne Startwert: null.
+- Kategorie ∈ ["barbell","dumbbell","machine","cable","cardio","core","bodyweight"].
+- Namens-Präfix "Warm-up: …" / "Cool-down: …" verpflichtend.
+- Sport-Tage: NUR das "sport"-Feld. Recovery-Tage: 3 Mobility-Einträge. Rest-Tage: leer lassen (kein Eintrag).
+- Notes: IMMER 1 Satz Ausführung in einfachem Deutsch, keine Fachjargon-Abkürzungen.
+- Sportartspezifische Übungen NUR wenn Sportart oben genannt — sonst niemals.
+- NIEMALS das Wort "Akzessoires" verwenden.`;
 
   const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
@@ -450,31 +349,22 @@ GENAU 4 Wochen. Jede Woche GENAU 7 Tage (Mo, Di, Mi, Do, Fr, Sa, So in dieser Re
   }
   const aiJson = await aiRes.json();
   const raw = aiJson?.choices?.[0]?.message?.content ?? "{}";
-  let parsed: { weeks?: GenWeek[]; days?: GenDay[] } = {};
+  let parsed: { sessions?: LlmSession[] } = {};
   try { parsed = typeof raw === "string" ? JSON.parse(raw) : raw; }
   catch { throw new Error("Antwort konnte nicht gelesen werden."); }
 
-  let weeks: GenWeek[] = parsed.weeks ?? [];
-  if (!weeks.length && parsed.days?.length) {
-    weeks = Array.from({ length: totalWeeks }, (_, i) => ({
-      week_number: i + 1,
-      focus: i === 3 ? "Deload" : `Woche ${i + 1}`,
-      days: parsed.days as GenDay[],
-    }));
-  }
-  weeks = weeks.slice(0, totalWeeks);
-  if (!weeks.length) throw new Error("Keine Trainingswochen generiert.");
-
-  for (const w of weeks) {
-    w.days = (w.days ?? []).slice(0, 7).map((d) => ({
-      ...d,
-      exercises: (d.exercises ?? []).map((e) => ({
-        ...e,
-        name: alignExerciseName(e.name, priorList),
-      })),
-    }));
+  const sessions = Array.isArray(parsed.sessions) ? parsed.sessions : [];
+  const sessionKey = (w: number, wd: WeekdayKey) => `${w}::${wd}`;
+  const sessionMap = new Map<string, LlmSession>();
+  for (const s of sessions) {
+    if (typeof s?.week === "number" && s?.weekday) {
+      sessionMap.set(sessionKey(s.week, s.weekday as WeekdayKey), s);
+    }
   }
 
+  // ============================================================
+  //   Plan anlegen
+  // ============================================================
   await supabase
     .from("nutrition_plans")
     .update({ status: "archived" } as any)
@@ -509,93 +399,33 @@ GENAU 4 Wochen. Jede Woche GENAU 7 Tage (Mo, Di, Mi, Do, Fr, Sa, So in dieser Re
     .select("id").single();
   if (planErr || !planRow) throw new Error(planErr?.message ?? "Plan konnte nicht angelegt werden");
 
-  // Ordnung Mo..So — Wochentag wird IMMER aus day_date abgeleitet (Single Source of Truth).
-  const WEEKDAY_ORDER = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"];
-  const trainDaySet = new Set(trainingDayKeys);
-
-  const isoDay = (base: Date, offsetDays: number) => {
-    const d = new Date(base);
-    d.setDate(d.getDate() + offsetDays);
-    return d.toISOString().slice(0, 10);
-  };
-
-  // Detect set_type from name so Warm-up/Cool-down werden nicht als Working Sets gewertet.
-  const detectSetType = (name: string): "warmup" | "working" | "cooldown" => {
-    const n = name.toLowerCase().trim();
-    if (n.startsWith("warm-up") || n.startsWith("warmup") || n.startsWith("warm up") || n.startsWith("aufwärm")) return "warmup";
-    if (n.startsWith("cool-down") || n.startsWith("cooldown") || n.startsWith("cool down") || n.startsWith("abwärm")) return "cooldown";
-    return "working";
-  };
-
+  // ============================================================
+  //   Tage & Übungen einfügen — WEEKPLAN ist Source of Truth
+  // ============================================================
   let totalEx = 0;
   let totalDays = 0;
-  for (const w of weeks) {
-    let genIdx = 0;
-    for (let i = 0; i < WEEKDAY_ORDER.length; i++) {
-      const wd = WEEKDAY_ORDER[i];
-      const isTrainingDay = trainDaySet.has(wd);
-      let dayName: string;
-      let dayExercises: GenEx[] = [];
 
-      if (isTrainingDay && genIdx < w.days.length) {
-        const d = w.days[genIdx++];
-        // Wochentag-Präfix aus LLM-Antwort entfernen — Wochentag kommt aus day_date.
-        const rawName = (d.name && String(d.name).trim()) || `Trainingstag ${genIdx}`;
-        const cleanedName = rawName.replace(/^(mo|di|mi|do|fr|sa|so|montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag)\s*[—\-–:|·]\s*/i, "").trim();
-        const baseName = stripAkzessoires(cleanedName || `Trainingstag ${genIdx}`);
-        const focus = d.focus ? stripAkzessoires(String(d.focus)) : "";
-        dayName = focus && !baseName.toLowerCase().includes(focus.toLowerCase())
-          ? `${baseName} — ${focus}`
-          : baseName;
-        dayExercises = d.exercises ?? [];
-      } else {
-        dayName = "Ruhetag";
-      }
+  for (const wp of weekPlans) {
+    for (let i = 0; i < wp.days.length; i++) {
+      const day: PlannedDay = wp.days[i];
+      const session = sessionMap.get(sessionKey(wp.week_number, day.weekday));
 
-      const dayDate = isoDay(start, (w.week_number - 1) * 7 + i);
+      const dayName = day.focus_label.slice(0, 120);
 
       const { data: dayRow, error: dayErr } = await supabase
         .from("training_days")
         .insert({
           plan_id: planRow.id,
-          name: String(dayName).slice(0, 120),
-          sort_order: (w.week_number - 1) * 7 + i,
-          week_number: w.week_number,
-          day_date: dayDate,
+          name: dayName,
+          sort_order: (wp.week_number - 1) * 7 + i,
+          week_number: wp.week_number,
+          day_date: day.day_date,
         } as any)
         .select("id").single();
       if (dayErr || !dayRow) continue;
       totalDays++;
 
-      if (!dayExercises.length) continue;
-
-      const rows = dayExercises
-        .map((e, idx) => {
-          const cleanName = stripAkzessoires(String(e.name ?? "").trim()).slice(0, 200);
-          const setType = detectSetType(cleanName);
-          const clampedWeights = setType === "working"
-            ? clampWeightsForExercise(cleanName, e.target_weights, w.week_number, startWeights)
-            : null;
-          return {
-            day_id: dayRow.id,
-            name: cleanName,
-            category: validCategory(e.category),
-            set_type: setType,
-            target_sets:
-              typeof e.target_sets === "number" && Number.isFinite(e.target_sets)
-                ? Math.max(1, Math.min(20, Math.round(e.target_sets)))
-                : null,
-            target_reps: e.target_reps ? String(e.target_reps).slice(0, 80) : null,
-            target_weights: clampedWeights,
-            rest_seconds:
-              typeof e.rest_seconds === "number" && Number.isFinite(e.rest_seconds)
-                ? Math.max(15, Math.min(600, Math.round(e.rest_seconds)))
-                : null,
-            notes: e.notes ? stripAkzessoires(String(e.notes)).slice(0, 500) : null,
-            sort_order: idx,
-          };
-        })
-        .filter((r) => r.name);
+      const rows = buildExerciseRowsForDay(day, session, wp.week_number, startWeights, dayRow.id);
       totalEx += rows.length;
       if (rows.length) {
         await supabase.from("training_exercises").insert(rows as any);
@@ -612,7 +442,7 @@ GENAU 4 Wochen. Jede Woche GENAU 7 Tage (Mo, Di, Mi, Do, Fr, Sa, So in dieser Re
     ok: true,
     plan_id: planRow.id,
     status: "draft",
-    weeks: weeks.length,
+    weeks: weekPlans.length,
     days: totalDays,
     exercises: totalEx,
     scheduled_start_date: isoDate(start),
@@ -620,6 +450,180 @@ GENAU 4 Wochen. Jede Woche GENAU 7 Tage (Mo, Di, Mi, Do, Fr, Sa, So in dieser Re
   };
 }
 
+// ============================================================
+//   Zeilen für einen Tag aus WeekPlan + LLM-Session bauen
+// ============================================================
+type ExerciseRow = {
+  day_id: string;
+  name: string;
+  category: string | null;
+  set_type: "warmup" | "working" | "cooldown";
+  target_sets: number | null;
+  target_reps: string | null;
+  target_weights: string | null;
+  rest_seconds: number | null;
+  notes: string | null;
+  sort_order: number;
+};
+
+function buildExerciseRowsForDay(
+  day: PlannedDay,
+  session: LlmSession | undefined,
+  weekNumber: number,
+  startWeights: StartWeights,
+  dayId: string,
+): ExerciseRow[] {
+  const rows: ExerciseRow[] = [];
+  let order = 0;
+
+  const push = (r: Omit<ExerciseRow, "day_id" | "sort_order">) => {
+    if (!r.name) return;
+    rows.push({ ...r, day_id: dayId, sort_order: order++ });
+  };
+
+  // ---- Sport-Tag ----
+  if (day.role === "sport") {
+    const s = session?.sport;
+    push({
+      name: (s?.name ? stripAkzessoires(s.name) : "Mannschaftstraining").slice(0, 200),
+      category: validCategory(s?.category) ?? "cardio",
+      set_type: "working",
+      target_sets: 1,
+      target_reps: "60–90 Min",
+      target_weights: null,
+      rest_seconds: null,
+      notes: s?.notes ? stripAkzessoires(s.notes).slice(0, 500) : "Team-/Spielbelastung, RPE 6–8.",
+    });
+    return rows;
+  }
+
+  // ---- Recovery-Tag ----
+  if (day.role === "recovery") {
+    const mob = session?.mobility ?? [];
+    const fallback: LlmEx[] = [
+      { name: "Foam Roll Beine & Rücken", category: "bodyweight", notes: "Je Bereich 60s langsam rollen." },
+      { name: "90/90 Hüftrotation", category: "core", notes: "Sitzend, kontrolliert rotieren, 8/Seite." },
+      { name: "Cat-Cow", category: "core", notes: "Mit Atmung koppeln, 10 Wdh." },
+    ];
+    const items = mob.length ? mob : fallback;
+    for (const m of items.slice(0, 5)) {
+      push({
+        name: stripAkzessoires(String(m.name ?? "")).slice(0, 200),
+        category: validCategory(m.category) ?? "bodyweight",
+        set_type: "warmup",
+        target_sets: 2,
+        target_reps: "8–10",
+        target_weights: null,
+        rest_seconds: 30,
+        notes: m.notes ? stripAkzessoires(String(m.notes)).slice(0, 500) : null,
+      });
+    }
+    return rows;
+  }
+
+  // ---- Rest-Tag ----
+  if (day.role === "rest") {
+    push({
+      name: "Rest — frei",
+      category: "bodyweight",
+      set_type: "warmup",
+      target_sets: 1,
+      target_reps: "—",
+      target_weights: null,
+      rest_seconds: null,
+      notes: "Vollständige Erholung — Schlaf & Ernährung priorisieren.",
+    });
+    return rows;
+  }
+
+  // ---- Gym / Gym-Light ----
+  // Warm-up
+  const wus = session?.warmup ?? [];
+  const wuFallback: LlmEx[] = [
+    { name: "Warm-up: Rudergerät locker", category: "cardio", notes: "5 Min locker, Puls auf ~120." },
+    { name: "Warm-up: Dynamische Aktivierung", category: "bodyweight", notes: "Passend zum Tagesfokus." },
+  ];
+  for (const w of (wus.length ? wus : wuFallback).slice(0, 3)) {
+    push({
+      name: ensurePrefix(w.name, "Warm-up: ").slice(0, 200),
+      category: validCategory(w.category) ?? "bodyweight",
+      set_type: "warmup",
+      target_sets: 1,
+      target_reps: "5 Min",
+      target_weights: null,
+      rest_seconds: 30,
+      notes: w.notes ? stripAkzessoires(String(w.notes)).slice(0, 500) : null,
+    });
+  }
+
+  // Working Slots — deterministisch aus day.slots
+  const llmSlots = session?.slots ?? {};
+  for (const slot of day.slots) {
+    const chosen: LlmSlotEx | undefined = llmSlots[slot.slot_id];
+    const name = chosen?.name?.trim() || fallbackNameForSlot(slot);
+    const clampedWeights = clampWeightsForExercise(
+      name,
+      chosen?.target_weights ?? null,
+      weekNumber,
+      startWeights,
+    );
+    push({
+      name: stripAkzessoires(name).slice(0, 200),
+      category: validCategory(chosen?.category) ?? guessCategoryFromName(name),
+      set_type: "working",
+      target_sets: slot.sets,
+      target_reps: slot.rep_range,
+      target_weights: clampedWeights,
+      rest_seconds: slot.rest_seconds,
+      notes: chosen?.notes ? stripAkzessoires(String(chosen.notes)).slice(0, 500) : slot.hint,
+    });
+  }
+
+  // Cool-down
+  const cds = session?.cooldown ?? [];
+  const cdFallback: LlmEx[] = [
+    { name: "Cool-down: Statisches Dehnen", category: "bodyweight", notes: "Trainierte Muskelgruppen je 30s dehnen." },
+  ];
+  for (const c of (cds.length ? cds : cdFallback).slice(0, 2)) {
+    push({
+      name: ensurePrefix(c.name, "Cool-down: ").slice(0, 200),
+      category: validCategory(c.category) ?? "bodyweight",
+      set_type: "cooldown",
+      target_sets: 2,
+      target_reps: "30s",
+      target_weights: null,
+      rest_seconds: 30,
+      notes: c.notes ? stripAkzessoires(String(c.notes)).slice(0, 500) : null,
+    });
+  }
+
+  return rows;
+}
+
+function fallbackNameForSlot(slot: MovementSlot): string {
+  return slot.hint.split("/")[0].trim() || slot.pattern;
+}
+
+function ensurePrefix(name: string | undefined, prefix: string): string {
+  const n = String(name ?? "").trim();
+  if (!n) return prefix.replace(/[: ]+$/, "");
+  return n.toLowerCase().startsWith(prefix.trim().toLowerCase()) ? n : `${prefix}${n}`;
+}
+
+function guessCategoryFromName(name: string): string {
+  const n = name.toLowerCase();
+  if (/(langhantel|barbell|\blh\b)/.test(n)) return "barbell";
+  if (/(kurzhantel|dumbbell|\bkh\b|\bdb\b)/.test(n)) return "dumbbell";
+  if (/(kabel|seilzug|cable)/.test(n)) return "cable";
+  if (/(maschine|machine|presse)/.test(n)) return "machine";
+  if (/(plank|crunch|leg raise|core|dead bug|pallof)/.test(n)) return "core";
+  if (/(cardio|rudergerät|crosstrainer|laufband|bike)/.test(n)) return "cardio";
+  return "bodyweight";
+}
+
+// ============================================================
+//   Helpers (unchanged)
+// ============================================================
 function stripAkzessoires(s: string): string {
   return s
     .replace(/akzessoires?/gi, "Zusatzübungen")
@@ -657,7 +661,6 @@ function detectStartKey(name: string): keyof StartWeights | null {
   return null;
 }
 
-// Progression-Caps relativ zur Woche-1-Empfehlung (e1RM × 0.75).
 function weekCapFactor(weekNumber: number): number {
   switch (weekNumber) {
     case 1: return 1.0;
@@ -690,42 +693,4 @@ function clampWeightsForExercise(
   }
   const clamped = nums.map((n) => (n > cap ? cap : n));
   return clamped.map((n) => (Number.isInteger(n) ? String(n) : n.toFixed(1))).join(",");
-}
-
-function alignExerciseName(name: string, priorList: string[]): string {
-  const raw = String(name ?? "").trim();
-  if (!raw) return raw;
-  const n = normalize(raw);
-  let best: { name: string; score: number } | null = null;
-  for (const p of priorList) {
-    const np = normalize(p);
-    let score = 0;
-    if (np === n) score = 100;
-    else if (np.includes(n) || n.includes(np)) score = 80;
-    else {
-      const tokensA = new Set(n.split(/\s+/));
-      const tokensB = new Set(np.split(/\s+/));
-      let inter = 0;
-      tokensA.forEach((t) => { if (t.length > 2 && tokensB.has(t)) inter++; });
-      score = (inter / Math.max(tokensA.size, tokensB.size)) * 70;
-    }
-    if (!best || score > best.score) best = { name: p, score };
-  }
-  return best && best.score >= 55 ? best.name : raw;
-}
-function normalize(s: string): string {
-  const SYN: Record<string, string> = {
-    kh: "kurzhantel", db: "kurzhantel", dumbbell: "kurzhantel",
-    lh: "langhantel", barbell: "langhantel",
-    masch: "maschine", machine: "maschine",
-    multi: "multipresse", smith: "multipresse", multipress: "multipresse",
-    seilzug: "kabel", cable: "kabel",
-    pulldown: "latzug", row: "rudern", press: "drucken",
-  };
-  let v = s.toLowerCase()
-    .replace(/[äöü]/g, (c) => ({ ä: "a", ö: "o", ü: "u" })[c] as string)
-    .replace(/ß/g, "ss").replace(/[^a-z0-9 ]+/g, " ")
-    .replace(/\s+/g, " ").trim();
-  v = v.split(" ").map((t) => SYN[t] ?? t).join(" ");
-  return v;
 }
