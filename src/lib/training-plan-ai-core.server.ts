@@ -488,7 +488,9 @@ function buildExerciseRowsForDay(
   day: PlannedDay,
   session: LlmSession | undefined,
   weekNumber: number,
+  isDeload: boolean,
   startWeights: StartWeights,
+  history: HistoryEntry[],
   dayId: string,
 ): ExerciseRow[] {
   const rows: ExerciseRow[] = [];
