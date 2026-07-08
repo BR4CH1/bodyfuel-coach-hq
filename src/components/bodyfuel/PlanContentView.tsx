@@ -103,6 +103,60 @@ function weekdayFromName(name: string): number | null {
   return WEEKDAY_MAP[key.slice(0, 2)] ?? WEEKDAY_MAP[key.slice(0, 3)] ?? null;
 }
 
+// Derive the German weekday label from an ISO date (YYYY-MM-DD).
+// This is the SINGLE SOURCE OF TRUTH — never derive weekday from the day name.
+const WEEKDAY_LONG_DE = ["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"];
+function weekdayLabelFromISO(iso: string | null | undefined): { long: string; short: string; wd: number } | null {
+  if (!iso) return null;
+  const d = new Date(iso + "T00:00:00");
+  if (isNaN(d.getTime())) return null;
+  const wd = d.getDay();
+  const long = WEEKDAY_LONG_DE[wd];
+  return { long, short: long.slice(0, 2), wd };
+}
+function formatDateDE(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso + "T00:00:00");
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+// German number format for weights, e.g. 37.5 → "37,5".
+const nfKg = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 2 });
+function fmtKg(raw: string): string {
+  const n = Number(raw.replace(",", "."));
+  if (!Number.isFinite(n)) return raw;
+  return `${nfKg.format(n)} kg`;
+}
+// Collapse an array like ["37.5","37.5","37.5"] → "37,5 kg"; mixed → satz-liste.
+function renderTargetWeights(raw: string | null): { compact: string | null; perSet: string[] | null } {
+  if (!raw) return { compact: null, perSet: null };
+  const parts = raw.split(",").map((s) => s.trim()).filter(Boolean);
+  if (!parts.length) return { compact: null, perSet: null };
+  const nums = parts.map((p) => (/^-?\d+([.,]\d+)?$/.test(p) ? p : null));
+  const allNumeric = nums.every((n) => n !== null);
+  if (allNumeric) {
+    const uniq = Array.from(new Set(nums as string[]));
+    if (uniq.length === 1) return { compact: fmtKg(uniq[0]), perSet: null };
+    return { compact: null, perSet: (nums as string[]).map(fmtKg) };
+  }
+  // non-numeric hint like "leicht" → passthrough
+  return { compact: parts.join(" · "), perSet: null };
+}
+// Collapse reps "8,8,8,10" → "8" or "8–10"; else passthrough.
+function renderTargetReps(raw: string | null, targetSets: number | null): string {
+  if (!raw) return "—";
+  const parts = raw.split(",").map((s) => s.trim()).filter(Boolean);
+  if (!parts.length) return "—";
+  const nums = parts.map((p) => Number(p)).filter((n) => Number.isFinite(n));
+  if (nums.length === parts.length && nums.length > 0) {
+    const lo = Math.min(...nums), hi = Math.max(...nums);
+    const setsPrefix = targetSets ? `${targetSets} × ` : "";
+    return `${setsPrefix}${lo === hi ? `${lo}` : `${lo}–${hi}`}`;
+  }
+  return `${targetSets ? `${targetSets} × ` : ""}${parts.join(", ")}`;
+}
+
 const INSTRUCTION_SIGNALS = [
   "Alles", "Zubereitung", "Zubereiten", "Anleitung", "Zusammen", "Mischen",
   "Kochen", "Backen", "Braten", "Garen", "Dünsten", "Dämpfen", "Grillen",
