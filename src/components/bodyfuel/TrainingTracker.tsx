@@ -184,6 +184,24 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
 
+  // Heute bereits abgeschlossene Trainingstage nachladen (für UI-State des Buttons)
+  useEffect(() => {
+    if (!clientId || !days.length) return;
+    let alive = true;
+    (async () => {
+      const today = new Date().toISOString().slice(0, 10);
+      const { data } = await supabase
+        .from("training_day_completions")
+        .select("day_id")
+        .eq("client_id", clientId)
+        .eq("completion_date", today)
+        .in("day_id", days.map((d) => d.id));
+      if (!alive) return;
+      setCompletedDayIds(new Set(((data as any[]) ?? []).map((r) => String(r.day_id))));
+    })();
+    return () => { alive = false; };
+  }, [clientId, days]);
+
   // Sync open day with PlanContentView selection (top of /training page).
   // PlanContentView writes the active virtual-day NAME to localStorage and
   // dispatches "bf:training-active-day" when the user picks a day.
