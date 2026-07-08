@@ -40,6 +40,7 @@ import {
   upsertAthleteNutritionSchedule,
 } from "@/lib/organizations/roster-schedule.functions";
 import { TeamGroupAthletePicker, type PickerValue } from "@/components/organizations/TeamGroupAthletePicker";
+import { CoachTeamWeekPlanner } from "@/components/coach/CoachTeamWeekPlanner";
 import {
   listOrgChallenges,
   createOrgChallenge,
@@ -603,6 +604,9 @@ function TrainingTab({ orgId }: { orgId: string }) {
       ? `Gruppen-Wochenplan · ${pick.position_group ?? ""}`
       : `Spieler-Wochenplan · ${pick.athlete_name ?? "Spieler wählen"}`;
 
+  const activeTeamName =
+    ((teamsQ.data.teams as any[]) ?? []).find((t) => t.id === pick.team_id)?.name ?? "Team";
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end gap-3">
@@ -612,61 +616,59 @@ function TrainingTab({ orgId }: { orgId: string }) {
           value={pick}
           onChange={setPick}
         />
-        <button
-          onClick={() => regenMut.mutate()}
-          disabled={regenMut.isPending}
-          className="ml-auto rounded bg-primary px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary-foreground disabled:opacity-50"
-          title="Manueller Fallback. Die tägliche Synchronisierung läuft automatisch via pg_cron um 03:00 UTC."
-        >
-          {regenMut.isPending ? "Läuft…" : "Tasks jetzt synchronisieren"}
-        </button>
       </div>
       {msg && <div className="text-xs text-green-500">{msg}</div>}
 
-      <Card title={cardTitle}>
-        {!canEdit ? (
-          <Empty>
-            {pick.scope === "group"
-              ? "Positionsgruppe wählen, um den Wochenplan zu bearbeiten."
-              : pick.scope === "athlete"
-              ? "Spieler suchen und wählen, um einen individuellen Wochenplan anzulegen."
-              : "Team wählen."}
-          </Empty>
+      {pick.scope === "team" ? (
+        pick.team_id ? (
+          <CoachTeamWeekPlanner orgId={orgId} teamId={pick.team_id} teamName={activeTeamName} />
         ) : (
-          <>
-            <ScheduleEditor
-              teamId={pick.team_id}
-              entries={entries}
-              onSave={(rows) => saveMut.mutate(rows)}
-              saving={saveMut.isPending}
-            />
-            {pick.scope === "athlete" && pick.athlete_user_id && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Link
-                  to="/coach/training-builder/$userId"
-                  params={{ userId: pick.athlete_user_id }}
-                  className="inline-flex items-center gap-1 rounded-md border border-gold/40 bg-gold/10 px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-gold/20"
-                >
-                  Trainingsplan-Builder öffnen →
-                </Link>
+          <Card title="Team Training Schedule">
+            <Empty>Team wählen, um den Wochenplan zu bearbeiten.</Empty>
+          </Card>
+        )
+      ) : (
+        <Card title={cardTitle}>
+          {!canEdit ? (
+            <Empty>
+              {pick.scope === "group"
+                ? "Positionsgruppe wählen, um den Wochenplan zu bearbeiten."
+                : "Spieler suchen und wählen, um einen individuellen Wochenplan anzulegen."}
+            </Empty>
+          ) : (
+            <>
+              <ScheduleEditor
+                teamId={pick.team_id}
+                entries={entries}
+                onSave={(rows) => saveMut.mutate(rows)}
+                saving={saveMut.isPending}
+              />
+              {pick.scope === "athlete" && pick.athlete_user_id && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Link
+                    to="/coach/training-builder/$userId"
+                    params={{ userId: pick.athlete_user_id }}
+                    className="inline-flex items-center gap-1 rounded-md border border-gold/40 bg-gold/10 px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-gold/20"
+                  >
+                    Trainingsplan-Builder öffnen →
+                  </Link>
+                </div>
+              )}
+              <div className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
+                Änderungen wirken auf zukünftige offene Tasks. Abgeschlossene historische
+                Tasks bleiben unverändert.
               </div>
-            )}
-            <div className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
-              Änderungen synchronisieren sich beim nächsten Task-Engine-Lauf:{" "}
-              <strong>zukünftige offene</strong> Tasks werden angepasst oder gelöscht.{" "}
-              <strong>Abgeschlossene historische</strong> Tasks bleiben unverändert.
-            </div>
-          </>
-        )}
-      </Card>
-
-      
+            </>
+          )}
+        </Card>
+      )}
 
       <Card title="Athletic Plans">
         <Empty>Athletic-Plan-Composer folgt. Plan-Sessions werden nach Anlage automatisch als Tasks erzeugt.</Empty>
       </Card>
     </div>
   );
+
 }
 
 function NutritionScheduleCard({ orgId, teams }: { orgId: string; teams: any[] }) {

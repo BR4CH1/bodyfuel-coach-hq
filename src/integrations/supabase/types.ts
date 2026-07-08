@@ -2333,6 +2333,107 @@ export type Database = {
           },
         ]
       }
+      org_team_training_week: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          organization_id: string
+          published_at: string | null
+          published_by: string | null
+          status: string
+          team_id: string
+          updated_at: string
+          week_start: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          organization_id: string
+          published_at?: string | null
+          published_by?: string | null
+          status?: string
+          team_id: string
+          updated_at?: string
+          week_start: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          organization_id?: string
+          published_at?: string | null
+          published_by?: string | null
+          status?: string
+          team_id?: string
+          updated_at?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_team_training_week_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_team_training_week_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "organization_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_team_training_week_session: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          end_time: string | null
+          id: string
+          session_date: string
+          start_time: string | null
+          title: string
+          updated_at: string
+          week_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          session_date: string
+          start_time?: string | null
+          title?: string
+          updated_at?: string
+          week_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          session_date?: string
+          start_time?: string | null
+          title?: string
+          updated_at?: string
+          week_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_team_training_week_session_week_id_fkey"
+            columns: ["week_id"]
+            isOneToOne: false
+            referencedRelation: "org_team_training_week"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_activity_log: {
         Row: {
           created_at: string

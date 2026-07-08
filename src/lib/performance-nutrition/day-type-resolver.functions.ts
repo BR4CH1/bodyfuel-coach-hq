@@ -120,15 +120,41 @@ export async function collectPerformanceDayTypeSignals(
 
   let hasFootballTrainingSession = false;
   if (teamIds.length > 0) {
-    const { data: footballRows } = await supabase
-      .from("organization_team_training_schedule")
-      .select("id")
+    // 1) Neue wochenbezogene Team-Trainingspläne (published) für dieses konkrete Datum.
+    const { data: weekRows } = await supabase
+      .from("org_team_training_week")
+      .select("id, team_id, status, week_start")
       .in("team_id", teamIds)
-      .eq("weekday", weekday)
-      .eq("active", true)
-      .limit(1);
-    hasFootballTrainingSession =
-      !!footballRows && footballRows.length > 0;
+      .eq("status", "published")
+      .lte("week_start", date);
+    const weekIds = ((weekRows ?? []) as any[])
+      .filter((w) => {
+        const end = new Date(w.week_start + "T00:00:00Z");
+        end.setUTCDate(end.getUTCDate() + 6);
+        return end.toISOString().slice(0, 10) >= date;
+      })
+      .map((w) => w.id as string);
+    if (weekIds.length) {
+      const { data: sess } = await supabase
+        .from("org_team_training_week_session")
+        .select("id")
+        .in("week_id", weekIds)
+        .eq("session_date", date)
+        .eq("active", true)
+        .limit(1);
+      if (sess && sess.length > 0) hasFootballTrainingSession = true;
+    }
+    // 2) Fallback auf Legacy Weekday-Plan, wenn (noch) keine Wochenveröffentlichung existiert.
+    if (!hasFootballTrainingSession) {
+      const { data: footballRows } = await supabase
+        .from("organization_team_training_schedule")
+        .select("id")
+        .in("team_id", teamIds)
+        .eq("weekday", weekday)
+        .eq("active", true)
+        .limit(1);
+      hasFootballTrainingSession = !!footballRows && footballRows.length > 0;
+    }
   }
 
   const hasIndividualTrainingSession =

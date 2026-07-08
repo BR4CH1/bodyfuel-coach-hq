@@ -51,7 +51,7 @@ export async function runOrgTaskEngineWithClient(
   try {
     const orgSlugRes = await supabase.from("organizations").select("slug").eq("id", orgId).maybeSingle();
     const orgSlug = ((orgSlugRes.data as any)?.slug ?? orgId) as string;
-    const [teamsRes, membershipsRes, teamMembershipsRes, featuresRes, schedulesRes, plansRes, plansSessionsRes, assignmentsRes, challengesRes] =
+    const [teamsRes, membershipsRes, teamMembershipsRes, featuresRes, schedulesRes, plansRes, plansSessionsRes, assignmentsRes, challengesRes, weekWeeksRes, weekSessionsRes] =
       await Promise.all([
 
         supabase.from("organization_teams").select("id").eq("organization_id", orgId),
@@ -81,6 +81,15 @@ export async function runOrgTaskEngineWithClient(
           .select("id, name, config, starts_at, ends_at, status, team_id")
           .eq("organization_id", orgId)
           .eq("status", "active"),
+        supabase
+          .from("org_team_training_week")
+          .select("id, team_id, week_start, status")
+          .eq("organization_id", orgId)
+          .eq("status", "published"),
+        supabase
+          .from("org_team_training_week_session")
+          .select("id, week_id, session_date, title, start_time, active")
+          .eq("active", true),
       ]);
 
     const teamIds = new Set<string>(((teamsRes.data ?? []) as any[]).map((t) => t.id));
@@ -128,6 +137,37 @@ export async function runOrgTaskEngineWithClient(
       return Array.from(targets.values());
     }
 
+    // Wochenbezogene published Team-Trainingspläne indexen: welche (team, date)
+    // sind durch eine veröffentlichte Woche abgedeckt (Legacy-Weekday wird dann
+    // für dieses Team+Datum unterdrückt).
+    const publishedWeeks = ((weekWeeksRes.data ?? []) as any[]).filter((w) => teamIds.has(w.team_id));
+    const weekIdToTeam = new Map<string, string>();
+    const weekIdToStart = new Map<string, string>();
+    for (const w of publishedWeeks) {
+      weekIdToTeam.set(w.id, w.team_id);
+      weekIdToStart.set(w.id, w.week_start as string);
+    }
+    const coveredTeamDate = new Set<string>();
+    const weeklySessionsByDate = new Map<string, any[]>();
+    for (const s of ((weekSessionsRes.data ?? []) as any[])) {
+      const teamId = weekIdToTeam.get(s.week_id);
+      if (!teamId) continue;
+      const start = weekIdToStart.get(s.week_id)!;
+      const endDate = new Date(start + "T00:00:00Z");
+      endDate.setUTCDate(endDate.getUTCDate() + 6);
+      const endIso = dateOnlyIso(endDate);
+      // Alle Daten der Woche gelten als "covered" (auch inaktive Tage → keine Legacy-Doppelung).
+      let cur = new Date(start + "T00:00:00Z");
+      const stop = new Date(endIso + "T00:00:00Z");
+      while (cur <= stop) {
+        coveredTeamDate.add(`${teamId}::${dateOnlyIso(cur)}`);
+        cur.setUTCDate(cur.getUTCDate() + 1);
+      }
+      const key = `${teamId}::${s.session_date}`;
+      if (!weeklySessionsByDate.has(key)) weeklySessionsByDate.set(key, []);
+      weeklySessionsByDate.get(key)!.push(s);
+    }
+
     // Build rows
     const rows: any[] = [];
     const today = new Date();
@@ -139,11 +179,37 @@ export async function runOrgTaskEngineWithClient(
       const dateIso = dateOnlyIso(date);
       const weekday = date.getDay();
 
-      // Team training schedule
+      // 1) Wochenbezogene Team-Trainings (published) — pro (team, session_date)
+      for (const [key, sess] of weeklySessionsByDate) {
+        const [teamId, sessDate] = key.split("::");
+        if (sessDate !== dateIso) continue;
+        const usersInTeam = teamMemberships.filter((tm) => tm.team_id === teamId);
+        for (const s of sess) {
+          for (const tm of usersInTeam) {
+            rows.push({
+              organization_id: orgId,
+              team_id: teamId,
+              user_id: tm.user_id,
+              task_type: "team_training",
+              title: s.title || "Team Training",
+              scheduled_for: combineDateTime(dateIso, s.start_time),
+              scheduled_date: dateIso,
+              status: "open",
+              source_type: "team_training_week",
+              source_id: s.week_id,
+              payload: { session_id: s.id },
+            });
+          }
+        }
+      }
+
+      // 2) Legacy Weekday-Team Training schedule — nur wenn (team, date) NICHT
+      //    durch eine veröffentlichte Woche abgedeckt ist.
       const schedules = ((schedulesRes.data ?? []) as any[]).filter(
         (s) => teamIds.has(s.team_id) && s.active && s.weekday === weekday,
       );
       for (const s of schedules) {
+        if (coveredTeamDate.has(`${s.team_id}::${dateIso}`)) continue;
         const usersInTeam = teamMemberships.filter((tm) => tm.team_id === s.team_id);
         for (const tm of usersInTeam) {
           rows.push({
@@ -161,6 +227,8 @@ export async function runOrgTaskEngineWithClient(
           });
         }
       }
+
+
 
       // Daily check-in
       const checkins = featureMap.get("checkins");
@@ -288,7 +356,7 @@ export async function runOrgTaskEngineWithClient(
     const validSourceIds = new Set(rows.map((r) => `${r.task_type}::${r.source_type}::${r.source_id}::${r.scheduled_date}`));
     const stale = ((futureAuto ?? []) as any[]).filter(
       (t) =>
-        (t.source_type === "team_training_schedule" || t.source_type === "athletic_plan_session") &&
+        (t.source_type === "team_training_schedule" || t.source_type === "athletic_plan_session" || t.source_type === "team_training_week") &&
         !validSourceIds.has(`${t.task_type}::${t.source_type}::${t.source_id}::${t.scheduled_date}`),
     );
     if (stale.length) {
