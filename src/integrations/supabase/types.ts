@@ -333,6 +333,72 @@ export type Database = {
           },
         ]
       }
+      athlete_exercise_state: {
+        Row: {
+          confidence: string
+          created_at: string
+          current_working_load: number | null
+          exercise_key: string
+          exercise_name: string
+          failed_sessions: number
+          id: string
+          last_completed_at: string | null
+          last_decision: string | null
+          last_reason: string | null
+          pain_flag: boolean
+          progression_status: string
+          recommended_next_load: number | null
+          successful_sessions: number
+          target_rep_max: number | null
+          target_rep_min: number | null
+          trend: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          confidence?: string
+          created_at?: string
+          current_working_load?: number | null
+          exercise_key: string
+          exercise_name: string
+          failed_sessions?: number
+          id?: string
+          last_completed_at?: string | null
+          last_decision?: string | null
+          last_reason?: string | null
+          pain_flag?: boolean
+          progression_status?: string
+          recommended_next_load?: number | null
+          successful_sessions?: number
+          target_rep_max?: number | null
+          target_rep_min?: number | null
+          trend?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          confidence?: string
+          created_at?: string
+          current_working_load?: number | null
+          exercise_key?: string
+          exercise_name?: string
+          failed_sessions?: number
+          id?: string
+          last_completed_at?: string | null
+          last_decision?: string | null
+          last_reason?: string | null
+          pain_flag?: boolean
+          progression_status?: string
+          recommended_next_load?: number | null
+          successful_sessions?: number
+          target_rep_max?: number | null
+          target_rep_min?: number | null
+          trend?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       athlete_nutrition_schedule: {
         Row: {
           active: boolean
