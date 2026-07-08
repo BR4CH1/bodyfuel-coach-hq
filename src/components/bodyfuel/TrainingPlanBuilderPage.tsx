@@ -3,7 +3,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Lock, LockOpen, Sparkles, Trash2, Users, Pencil } from "lucide-react";
+import { ArrowLeft, Plus, Lock, LockOpen, Sparkles, Trash2, Users, Pencil, BookOpen, Save } from "lucide-react";
 import {
   listExerciseLibrary,
   getCustomerTrainingContext,
@@ -15,7 +15,12 @@ import {
   type LibraryExercise,
   type StrengthBaseline,
 } from "@/lib/training-plan-builder.functions";
+import { saveAsTrainingTemplate, type TrainingTemplateDetail } from "@/lib/training-templates.functions";
 import { autoFillTrainingPlan, emptyPlan } from "@/lib/training-autofill";
+import {
+  TrainingTemplateLibraryDialog,
+  SaveAsTemplateDialog,
+} from "@/components/bodyfuel/TrainingTemplateDialogs";
 
 
 const WD_LABEL = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
