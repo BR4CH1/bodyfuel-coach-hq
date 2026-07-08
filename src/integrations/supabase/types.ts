@@ -5453,6 +5453,7 @@ export type Database = {
           account_status: string
           activity_level: string | null
           athlete_profile_updated_at: string | null
+          avatar_url: string | null
           birthdate: string | null
           cardio_outside_gym: string | null
           checkin_reminder: boolean
@@ -5503,6 +5504,7 @@ export type Database = {
           account_status?: string
           activity_level?: string | null
           athlete_profile_updated_at?: string | null
+          avatar_url?: string | null
           birthdate?: string | null
           cardio_outside_gym?: string | null
           checkin_reminder?: boolean
@@ -5553,6 +5555,7 @@ export type Database = {
           account_status?: string
           activity_level?: string | null
           athlete_profile_updated_at?: string | null
+          avatar_url?: string | null
           birthdate?: string | null
           cardio_outside_gym?: string | null
           checkin_reminder?: boolean
@@ -6653,51 +6656,114 @@ export type Database = {
       }
       training_sessions: {
         Row: {
+          actual_duration_minutes: number | null
           client_id: string
           created_at: string
+          created_by: string | null
+          description: string | null
           duration_minutes: number | null
           id: string
           intensity: number | null
+          intensity_target: number | null
+          load_category: string | null
+          location: string | null
+          mandatory: boolean
           name: string
           notes: string | null
+          organization_id: string | null
+          pain_reported: boolean | null
           reps: string | null
           session_date: string
+          session_rpe: number | null
           session_type: string
           sets: number | null
+          start_time: string | null
+          status: string
+          team_id: string | null
+          template_id: string | null
+          training_source: string
+          training_type: string | null
           updated_at: string
           weight_kg: number | null
         }
         Insert: {
+          actual_duration_minutes?: number | null
           client_id: string
           created_at?: string
+          created_by?: string | null
+          description?: string | null
           duration_minutes?: number | null
           id?: string
           intensity?: number | null
+          intensity_target?: number | null
+          load_category?: string | null
+          location?: string | null
+          mandatory?: boolean
           name: string
           notes?: string | null
+          organization_id?: string | null
+          pain_reported?: boolean | null
           reps?: string | null
           session_date?: string
+          session_rpe?: number | null
           session_type: string
           sets?: number | null
+          start_time?: string | null
+          status?: string
+          team_id?: string | null
+          template_id?: string | null
+          training_source?: string
+          training_type?: string | null
           updated_at?: string
           weight_kg?: number | null
         }
         Update: {
+          actual_duration_minutes?: number | null
           client_id?: string
           created_at?: string
+          created_by?: string | null
+          description?: string | null
           duration_minutes?: number | null
           id?: string
           intensity?: number | null
+          intensity_target?: number | null
+          load_category?: string | null
+          location?: string | null
+          mandatory?: boolean
           name?: string
           notes?: string | null
+          organization_id?: string | null
+          pain_reported?: boolean | null
           reps?: string | null
           session_date?: string
+          session_rpe?: number | null
           session_type?: string
           sets?: number | null
+          start_time?: string | null
+          status?: string
+          team_id?: string | null
+          template_id?: string | null
+          training_source?: string
+          training_type?: string | null
           updated_at?: string
           weight_kg?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "training_sessions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_sessions_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "organization_teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       training_set_logs: {
         Row: {
