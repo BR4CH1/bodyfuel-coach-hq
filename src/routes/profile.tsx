@@ -125,7 +125,7 @@ function ProfileContent() {
         supabase
           .from("profiles")
           .select(
-            "display_name, created_at, coaching_goal, checkin_reminder, notifications_enabled, next_checkin_date",
+            "display_name, created_at, coaching_goal, checkin_reminder, notifications_enabled, next_checkin_date, avatar_url",
           )
           .eq("id", uid)
           .maybeSingle(),
