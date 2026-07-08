@@ -313,7 +313,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
         { ...cockpitTarget, hash: "athletes", label: "Athleten", icon: Users },
         ...(showTeamsLink ? [{ ...cockpitTarget, hash: "teams", label: "Teams", icon: Users2 }] : []),
         { ...cockpitTarget, hash: "training", label: "Training", icon: Dumbbell },
-        { ...cockpitTarget, hash: "nutrition", label: "Ernährung", icon: FileText },
         { ...cockpitTarget, hash: "tasks", label: "Aufgaben", icon: ClipboardList },
         { ...cockpitTarget, hash: "community", label: "Community", icon: Users2 },
         { ...cockpitTarget, hash: "staff", label: "Mitarbeiter", icon: Shield },
@@ -326,7 +325,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         { ...cockpitTarget, hash: "cockpit", label: "Coach-Cockpit", icon: LayoutDashboard },
         { ...cockpitTarget, hash: "athletes", label: "Athleten", icon: Users },
         { ...cockpitTarget, hash: "training", label: "Training", icon: Dumbbell },
-        { ...cockpitTarget, hash: "nutrition", label: "Ernährung", icon: FileText },
+        
         { ...cockpitTarget, hash: "community", label: "Community", icon: Users2 },
         { to: "/profile", label: "Profil", icon: UserCircle },
       ];
