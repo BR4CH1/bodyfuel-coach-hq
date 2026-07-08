@@ -246,7 +246,40 @@ export const assignTemplateToAthlete = createServerFn({ method: "POST" })
 
     const t = tpl as any;
     const v = ver as any;
-    const days = (v.structure?.days ?? []) as BuilderTrainingDay[];
+    const rawDays = (v.structure?.days ?? []) as BuilderTrainingDay[];
+
+    // --- Personalize with athlete_exercise_state ---
+    const { normalizeExerciseKey } = await import("@/lib/training-engine/athlete-exercise-state");
+    const { data: stateRows } = await supabaseAdmin
+      .from("athlete_exercise_state" as any)
+      .select("exercise_key, current_working_load, recommended_next_load, target_rep_min, target_rep_max")
+      .eq("user_id", data.customerId);
+    const stateMap = new Map<string, any>();
+    for (const r of ((stateRows as any[]) ?? [])) stateMap.set(r.exercise_key, r);
+
+    const days: BuilderTrainingDay[] = rawDays.map((d) => ({
+      ...d,
+      exercises: (d.exercises ?? []).map((ex) => {
+        const key = normalizeExerciseKey(ex.name ?? "");
+        const s = key ? stateMap.get(key) : null;
+        if (!s) return ex;
+        // Pick the recommended load first, fall back to current working load.
+        const load = Number(s.recommended_next_load ?? s.current_working_load ?? 0);
+        if (!load || !Number.isFinite(load) || load <= 0) return ex;
+        const sets = Number(ex.target_sets ?? 3) || 3;
+        const nextWeights = Array.from({ length: sets }, () => String(load)).join(",");
+        // Reps from state if template didn't specify a range
+        const repRange = s.target_rep_min && s.target_rep_max
+          ? `${s.target_rep_min}-${s.target_rep_max}`
+          : ex.target_reps ?? null;
+        return {
+          ...ex,
+          target_weights: nextWeights,
+          target_reps: ex.target_reps ?? repRange,
+        };
+      }),
+    }));
+
     const res = await persistTrainingPlan({
       customerId: data.customerId,
       uploadedBy: context.userId,
