@@ -146,13 +146,4 @@ function diffMinutes(startTime: string, endTime: string): number {
   return diff > 0 ? diff : 45;
 }
 
-export { POSITION_BIAS };
-
-/** Baut eine Beispiel-Session für Coach-Vorschau (keine DB-Änderung). */
-export function previewAthleteSession(
-  focus: Exclude<TrainingFocus, "football" | "none">,
-  positionCode: string,
-  durationMin: number = 45,
-): Exercise[] {
-  return scaleToDuration(poolFor(focus, normalizePosition(positionCode)), durationMin);
-}
+export { previewAthleteSession } from "./athlete-training-session-pool";
