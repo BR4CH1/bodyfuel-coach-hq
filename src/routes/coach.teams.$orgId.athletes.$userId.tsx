@@ -1,13 +1,10 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
-import { toast } from "sonner";
 import { fallback, zodValidator } from "@tanstack/zod-adapter";
 import { z } from "zod";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
-import { deleteOrgAthlete } from "@/lib/organizations/athlete-admin.functions";
 import { getCoachAthleteDetail } from "@/lib/organizations/coach-athlete-drilldown.functions";
 import { AthleteDetailHeader } from "@/components/coach/athlete/AthleteDetailHeader";
 import { AthleteQuickActions } from "@/components/coach/athlete/AthleteQuickActions";

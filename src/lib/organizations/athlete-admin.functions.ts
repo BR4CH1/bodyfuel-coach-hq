@@ -51,3 +51,41 @@ export const deleteOrgAthlete = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+/**
+ * Remove an athlete from a specific organization (team membership only).
+ * Does NOT delete the user's profile, auth account, or global data.
+ * Removes: organization_memberships (this org), staff_assignments (this org).
+ */
+export const removeAthleteFromOrg = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { org_id: string; user_id: string }) => data)
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    if (data.user_id === userId) {
+      throw new Error("Du kannst dich nicht selbst aus dem Team entfernen.");
+    }
+
+    const [{ data: isCoach }, { data: isAdmin }] = await Promise.all([
+      supabase.rpc("has_role", { _user_id: userId, _role: "coach" }),
+      supabase.rpc("is_org_admin", { _user: userId, _org: data.org_id }),
+    ]);
+    if (!isCoach && !isAdmin) {
+      throw new Error("Keine Berechtigung, Spieler aus diesem Team zu entfernen.");
+    }
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    await supabaseAdmin
+      .from("staff_assignments")
+      .delete()
+      .eq("organization_id", data.org_id)
+      .eq("user_id", data.user_id);
+    const { error } = await supabaseAdmin
+      .from("organization_memberships")
+      .delete()
+      .eq("organization_id", data.org_id)
+      .eq("user_id", data.user_id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
