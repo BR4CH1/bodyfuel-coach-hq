@@ -6480,6 +6480,7 @@ export type Database = {
           partner_exercise_id: string | null
           rest_seconds: number | null
           set_type: string
+          smart_lock: Database["public"]["Enums"]["training_smart_lock"]
           sort_order: number
           target_reps: string | null
           target_rir: number | null
@@ -6499,6 +6500,7 @@ export type Database = {
           partner_exercise_id?: string | null
           rest_seconds?: number | null
           set_type?: string
+          smart_lock?: Database["public"]["Enums"]["training_smart_lock"]
           sort_order?: number
           target_reps?: string | null
           target_rir?: number | null
@@ -6518,6 +6520,7 @@ export type Database = {
           partner_exercise_id?: string | null
           rest_seconds?: number | null
           set_type?: string
+          smart_lock?: Database["public"]["Enums"]["training_smart_lock"]
           sort_order?: number
           target_reps?: string | null
           target_rir?: number | null
@@ -7215,6 +7218,12 @@ export type Database = {
         | "cable_row"
         | "plank"
       team_membership_status: "active" | "inactive" | "removed" | "pending"
+      training_smart_lock:
+        | "none"
+        | "locked"
+        | "weight_only"
+        | "reps_only"
+        | "volume_only"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -7406,6 +7415,13 @@ export const Constants = {
         "plank",
       ],
       team_membership_status: ["active", "inactive", "removed", "pending"],
+      training_smart_lock: [
+        "none",
+        "locked",
+        "weight_only",
+        "reps_only",
+        "volume_only",
+      ],
     },
   },
 } as const
