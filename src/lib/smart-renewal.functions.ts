@@ -218,6 +218,7 @@ async function activateLatest(
     .select("id")
     .eq("client_id", userId)
     .eq("plan_type", planType)
+    .eq("performance_context", false)
     .in("status", ["draft", "approved", "published"])
     .order("created_at", { ascending: false })
     .limit(1)
@@ -228,9 +229,11 @@ async function activateLatest(
     .update({ status: "archived" })
     .eq("client_id", userId)
     .eq("plan_type", planType)
+    .eq("performance_context", false)
     .eq("status", "active");
   await supabase
     .from("nutrition_plans")
     .update({ status: "active" })
     .eq("id", draft.id);
+
 }
