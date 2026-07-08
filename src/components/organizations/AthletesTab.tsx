@@ -73,16 +73,26 @@ export function AthletesTab({
   const rows = allowedUserIds
     ? (audit.athletes as any[]).filter((a) => allowedUserIds.has(a.user_id))
     : (audit.athletes as any[]);
+  const [posGroup, setPosGroup] = useState<"all" | "offense" | "defense" | "special">("all");
+
   const normalizedSearch = searchTerm.trim().toLowerCase();
-  const visibleRows = normalizedSearch
-    ? rows.filter((a) =>
-        [a.name, ...(a.missing ?? [])]
+
+  const withGroup = useMemo(
+    () => rows.map((a) => ({ ...a, __group: positionGroup(a.position) })),
+    [rows],
+  );
+
+  const bySearch = normalizedSearch
+    ? withGroup.filter((a) =>
+        [a.name, a.position, a.team_name, ...(a.missing ?? [])]
           .filter(Boolean)
           .join(" ")
           .toLowerCase()
           .includes(normalizedSearch),
       )
-    : rows;
+    : withGroup;
+  const visibleRows = posGroup === "all" ? bySearch : bySearch.filter((a) => a.__group === posGroup);
+
   const visiblePending = normalizedSearch
     ? (pending as any[]).filter((p) =>
         [p.first_name, p.last_name, p.primary_position, p.jersey_number ? `#${p.jersey_number}` : null]
@@ -92,8 +102,14 @@ export function AthletesTab({
           .includes(normalizedSearch),
       )
     : (pending as any[]);
+
   const filterTeam = teamFilter ? teams.find((t) => t.id === teamFilter) : null;
   const canManage = !!perm?.ok;
+
+  const totalCount = rows.length;
+  const activeCount = rows.filter((a) => a.derived_complete && a.status !== "inactive").length;
+  const openOnboarding = rows.filter((a) => !a.derived_complete).length;
+  const teamsCount = teams.length;
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["org-onboarding-audit", orgId] });
@@ -101,19 +117,35 @@ export function AthletesTab({
     qc.invalidateQueries({ queryKey: ["coach-org-detail", orgId] });
   };
 
+  const grouped = useMemo(() => {
+    const g: Record<"offense" | "defense" | "special" | "other", typeof visibleRows> = {
+      offense: [],
+      defense: [],
+      special: [],
+      other: [],
+    };
+    for (const a of visibleRows) g[a.__group as keyof typeof g].push(a);
+    return g;
+  }, [visibleRows]);
+
+  const showGrouped = posGroup === "all" && !normalizedSearch;
+
   return (
-    <div className="space-y-3">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="font-display text-xl font-bold">Athleten</h2>
-          <p className="text-xs text-muted-foreground">
-            Kader, Aktivität und Entwicklung im Überblick.
+    <div className="space-y-4">
+      {/* Header */}
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="font-display text-2xl font-bold uppercase tracking-tight text-foreground">
+            Athleten
+          </h2>
+          <p className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.24em] text-muted-foreground">
+            Kader · Aktivität · Entwicklung
           </p>
         </div>
         {canManage && (
           <button
             onClick={() => setDialogOpen(true)}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-semibold uppercase tracking-wider text-primary-foreground hover:opacity-90"
+            className="inline-flex items-center gap-2 rounded-lg bg-bulls-red px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-white shadow-bulls transition hover:brightness-110"
           >
             <UserPlus className="h-4 w-4" />
             Athlet hinzufügen
@@ -121,7 +153,28 @@ export function AthletesTab({
         )}
       </header>
 
-      {teams.length > 0 && (
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <SummaryCard icon={<Users className="h-4 w-4" />} label="Athleten" value={String(totalCount)} sub="Gesamt" />
+        <SummaryCard
+          icon={<Activity className="h-4 w-4 text-green-500" />}
+          label="Aktiv"
+          value={String(activeCount)}
+          sub={totalCount > 0 ? `${Math.round((activeCount / totalCount) * 100)} %` : "—"}
+          accent="green"
+        />
+        <SummaryCard
+          icon={<ClipboardList className="h-4 w-4 text-orange-400" />}
+          label="Onboarding offen"
+          value={String(openOnboarding)}
+          sub={totalCount > 0 ? `${Math.round((openOnboarding / totalCount) * 100)} %` : "—"}
+          accent="orange"
+        />
+        <SummaryCard icon={<ShieldCheck className="h-4 w-4" />} label="Teams" value={String(teamsCount)} sub="Teams" />
+      </div>
+
+      {/* Team Chips */}
+      {teams.length > 1 && (
         <div className="-mx-4 overflow-x-auto px-4">
           <div className="flex min-w-max gap-1.5">
             <TeamChip
@@ -140,102 +193,86 @@ export function AthletesTab({
           </div>
         </div>
       )}
+
+      {/* Search + Position group */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <label className="relative block flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Athlet suchen…"
+            className="w-full rounded-lg border border-[#252525] bg-[#0b0b0b] py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-bulls-red"
+          />
+        </label>
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+          <div className="flex min-w-max gap-1.5">
+            {(
+              [
+                ["all", "Alle"],
+                ["offense", "Offense"],
+                ["defense", "Defense"],
+                ["special", "Special"],
+              ] as const
+            ).map(([k, l]) => (
+              <TeamChip key={k} label={l} active={posGroup === k} onClick={() => setPosGroup(k)} />
+            ))}
+          </div>
+        </div>
+      </div>
+
       {filterTeam && (
         <div className="text-[11px] text-muted-foreground">
-          {rows.length} Athlet{rows.length === 1 ? "" : "en"} im Team <strong>{filterTeam.name}</strong>.
+          {rows.length} Athlet{rows.length === 1 ? "" : "en"} im Team{" "}
+          <strong className="text-foreground">{filterTeam.name}</strong>.
         </div>
       )}
 
-      <label className="relative block">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <input
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Spieler nach Namen suchen…"
-          className="w-full rounded-lg border border-border bg-card py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-primary"
-        />
-      </label>
-
-      <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
-        {visibleRows.map((a) => (
-          <li key={a.user_id} className="relative">
-            <Link
-              to="/coach/teams/$orgId/athletes/$userId"
-              params={{ orgId, userId: a.user_id }}
-              preload="intent"
-              onClick={(event) => {
-                if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-                event.preventDefault();
-                navigate({
-                  to: "/coach/teams/$orgId/athletes/$userId",
-                  params: { orgId, userId: a.user_id },
-                });
-              }}
-              className="flex touch-manipulation items-center gap-3 px-3 py-3 hover:bg-muted/40 active:bg-muted/60"
-            >
-              <div className="min-w-0 flex-1 pr-10">
-                <div className="truncate text-sm font-semibold">{a.name}</div>
-                <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]">
-                  {a.derived_complete ? (
-                    <span className="text-green-500">Onboarding ✓</span>
-                  ) : (
-                    <span className="text-yellow-500">Onboarding offen</span>
-                  )}
-                  {a.missing.length > 0 && (
-                    <span className="truncate text-muted-foreground">
-                      · fehlt: {a.missing.join(", ")}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-            </Link>
-            {canManage && a.team_id && (
-              <div className="absolute right-9 top-1/2 -translate-y-1/2">
-                <RowActions
-                  orgId={orgId}
-                  userId={a.user_id}
-                  teamId={a.team_id}
-                  name={a.name}
-                  onDone={invalidate}
-                />
-              </div>
-            )}
-          </li>
-        ))}
-        {visiblePending.map((p) => (
-          <li
-            key={`pending-${p.id}`}
-            className="flex items-center gap-3 bg-yellow-500/5 px-3 py-3"
-          >
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-semibold">
-                  {p.first_name} {p.last_name}
-                </span>
-                <span className="rounded bg-yellow-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-yellow-500">
-                  Einladung ausstehend
-                </span>
-              </div>
-              <div className="mt-0.5 text-[11px] text-muted-foreground">
-                {[p.primary_position, p.jersey_number ? `#${p.jersey_number}` : null]
-                  .filter(Boolean)
-                  .join(" · ") || "Manuell angelegt"}
-              </div>
-            </div>
-            {canManage && <PendingActions id={p.id} onDone={invalidate} />}
-          </li>
-        ))}
-        {visibleRows.length === 0 && visiblePending.length === 0 && (
-          <li className="px-3 py-6 text-center text-sm text-muted-foreground">
-            {normalizedSearch
-              ? "Kein Spieler zu dieser Suche gefunden."
-              : filterTeam
-              ? "Keine Athleten in diesem Team."
-              : "Noch keine Athleten."}
-          </li>
-        )}
-      </ul>
+      {/* List */}
+      {visibleRows.length === 0 && visiblePending.length === 0 ? (
+        <div className="rounded-xl border border-[#252525] bg-[#0b0b0b] p-8 text-center text-sm text-muted-foreground">
+          {normalizedSearch
+            ? `Keine Ergebnisse für „${searchTerm}“.`
+            : posGroup !== "all"
+            ? "Keine Athleten in dieser Positionsgruppe."
+            : filterTeam
+            ? "Keine Athleten in diesem Team."
+            : "Noch keine Athleten."}
+        </div>
+      ) : showGrouped ? (
+        <div className="space-y-4">
+          {(["offense", "defense", "special", "other"] as const).map((g) =>
+            grouped[g].length > 0 ? (
+              <PositionGroupSection
+                key={g}
+                title={GROUP_LABEL[g]}
+                count={grouped[g].length}
+                rows={grouped[g]}
+                orgId={orgId}
+                canManage={canManage}
+                onInvalidate={invalidate}
+                navigate={navigate}
+              />
+            ) : null,
+          )}
+          {visiblePending.length > 0 && (
+            <PendingList pending={visiblePending} canManage={canManage} onInvalidate={invalidate} />
+          )}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <AthleteRowList
+            rows={visibleRows}
+            orgId={orgId}
+            canManage={canManage}
+            onInvalidate={invalidate}
+            navigate={navigate}
+          />
+          {visiblePending.length > 0 && (
+            <PendingList pending={visiblePending} canManage={canManage} onInvalidate={invalidate} />
+          )}
+        </div>
+      )}
 
       {dialogOpen && (
         <AddAthleteDialog
@@ -252,6 +289,234 @@ export function AthletesTab({
   );
 }
 
+// ---------- Position Groups ----------
+
+const OFFENSE_POS = new Set(["QB", "RB", "FB", "WR", "TE", "OL", "C", "G", "T", "OT", "OG"]);
+const DEFENSE_POS = new Set(["DL", "DE", "DT", "NT", "LB", "ILB", "OLB", "MLB", "DB", "CB", "S", "FS", "SS", "NB"]);
+const SPECIAL_POS = new Set(["K", "P", "LS", "KR", "PR"]);
+
+const GROUP_LABEL: Record<string, string> = {
+  offense: "Offense",
+  defense: "Defense",
+  special: "Special Teams",
+  other: "Weitere",
+};
+
+function positionGroup(pos: string | null | undefined): "offense" | "defense" | "special" | "other" {
+  if (!pos) return "other";
+  const p = pos.trim().toUpperCase();
+  if (OFFENSE_POS.has(p)) return "offense";
+  if (DEFENSE_POS.has(p)) return "defense";
+  if (SPECIAL_POS.has(p)) return "special";
+  return "other";
+}
+
+function initials(name: string) {
+  return (
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((s) => s[0]?.toUpperCase())
+      .join("") || "?"
+  );
+}
+
+function SummaryCard({
+  icon,
+  label,
+  value,
+  sub,
+  accent,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  sub: string;
+  accent?: "green" | "orange";
+}) {
+  const valueCls =
+    accent === "green" ? "text-green-500" : accent === "orange" ? "text-orange-400" : "text-foreground";
+  return (
+    <div className="rounded-xl border border-[#252525] bg-[#0b0b0b] p-3">
+      <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+        {icon}
+        <span className="truncate">{label}</span>
+      </div>
+      <div className={`mt-1 font-display text-2xl font-bold leading-none ${valueCls}`}>{value}</div>
+      <div className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{sub}</div>
+    </div>
+  );
+}
+
+function PositionGroupSection({
+  title,
+  count,
+  rows,
+  orgId,
+  canManage,
+  onInvalidate,
+  navigate,
+}: {
+  title: string;
+  count: number;
+  rows: any[];
+  orgId: string;
+  canManage: boolean;
+  onInvalidate: () => void;
+  navigate: ReturnType<typeof useNavigate>;
+}) {
+  return (
+    <section>
+      <h3 className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.2em] text-bulls-red">
+        <span className="inline-block h-1.5 w-1.5 rounded-full bg-bulls-red" />
+        {title}
+        <span className="text-muted-foreground">({count})</span>
+      </h3>
+      <AthleteRowList
+        rows={rows}
+        orgId={orgId}
+        canManage={canManage}
+        onInvalidate={onInvalidate}
+        navigate={navigate}
+      />
+    </section>
+  );
+}
+
+function AthleteRowList({
+  rows,
+  orgId,
+  canManage,
+  onInvalidate,
+  navigate,
+}: {
+  rows: any[];
+  orgId: string;
+  canManage: boolean;
+  onInvalidate: () => void;
+  navigate: ReturnType<typeof useNavigate>;
+}) {
+  return (
+    <ul className="divide-y divide-[#1a1a1a] overflow-hidden rounded-xl border border-[#252525] bg-[#0b0b0b]">
+      {rows.map((a) => (
+        <li key={a.user_id} className="relative">
+          <Link
+            to="/coach/teams/$orgId/athletes/$userId"
+            params={{ orgId, userId: a.user_id }}
+            preload="intent"
+            onClick={(event) => {
+              if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+              event.preventDefault();
+              navigate({
+                to: "/coach/teams/$orgId/athletes/$userId",
+                params: { orgId, userId: a.user_id },
+              });
+            }}
+            className="flex touch-manipulation items-center gap-3 px-3 py-3 transition hover:bg-[#111111] active:bg-[#141414]"
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-bulls-red/15 font-display text-sm font-bold text-bulls-red">
+              {initials(a.name)}
+            </div>
+            <div className="min-w-0 flex-1 pr-8">
+              <div className="flex items-center gap-2">
+                <span className="truncate text-sm font-semibold text-foreground">{a.name}</span>
+                {a.jersey_number != null && (
+                  <span className="text-[10px] font-bold text-muted-foreground">#{a.jersey_number}</span>
+                )}
+              </div>
+              <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[10px]">
+                {a.position && (
+                  <span className="rounded border border-bulls-red/40 bg-bulls-red/10 px-1.5 py-0.5 font-bold uppercase tracking-wider text-bulls-red">
+                    {a.position}
+                  </span>
+                )}
+                {a.team_name && (
+                  <span className="font-semibold uppercase tracking-wider text-muted-foreground">
+                    {a.team_name}
+                  </span>
+                )}
+                {a.derived_complete ? (
+                  <span className="rounded border border-green-500/30 bg-green-500/10 px-1.5 py-0.5 font-bold uppercase tracking-wider text-green-500">
+                    Aktiv
+                  </span>
+                ) : (
+                  <span className="rounded border border-orange-500/30 bg-orange-500/10 px-1.5 py-0.5 font-bold uppercase tracking-wider text-orange-400">
+                    Onboarding offen
+                  </span>
+                )}
+                {!a.derived_complete && a.missing?.length > 0 && (
+                  <span className="truncate text-muted-foreground">· fehlt: {a.missing.slice(0, 2).join(", ")}</span>
+                )}
+              </div>
+            </div>
+            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+          </Link>
+          {canManage && a.team_id && (
+            <div className="absolute right-9 top-1/2 -translate-y-1/2">
+              <RowActions
+                orgId={orgId}
+                userId={a.user_id}
+                teamId={a.team_id}
+                name={a.name}
+                onDone={onInvalidate}
+              />
+            </div>
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function PendingList({
+  pending,
+  canManage,
+  onInvalidate,
+}: {
+  pending: any[];
+  canManage: boolean;
+  onInvalidate: () => void;
+}) {
+  return (
+    <section>
+      <h3 className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.2em] text-orange-400">
+        <span className="inline-block h-1.5 w-1.5 rounded-full bg-orange-400" />
+        Einladungen ausstehend
+        <span className="text-muted-foreground">({pending.length})</span>
+      </h3>
+      <ul className="divide-y divide-[#1a1a1a] overflow-hidden rounded-xl border border-[#252525] bg-[#0b0b0b]">
+        {pending.map((p) => (
+          <li key={`pending-${p.id}`} className="flex items-center gap-3 px-3 py-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-orange-500/15 font-display text-sm font-bold text-orange-400">
+              {initials(`${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() || "?")}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-semibold">
+                {p.first_name} {p.last_name}
+              </div>
+              <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[10px]">
+                {p.primary_position && (
+                  <span className="rounded border border-bulls-red/40 bg-bulls-red/10 px-1.5 py-0.5 font-bold uppercase tracking-wider text-bulls-red">
+                    {p.primary_position}
+                  </span>
+                )}
+                {p.jersey_number && (
+                  <span className="font-bold text-muted-foreground">#{p.jersey_number}</span>
+                )}
+                <span className="rounded border border-orange-500/30 bg-orange-500/10 px-1.5 py-0.5 font-bold uppercase tracking-wider text-orange-400">
+                  Einladung ausstehend
+                </span>
+              </div>
+            </div>
+            {canManage && <PendingActions id={p.id} onDone={onInvalidate} />}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function TeamChip({
   label,
   active,
@@ -265,10 +530,10 @@ function TeamChip({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider ${
+      className={`rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition ${
         active
-          ? "border-primary bg-primary text-primary-foreground"
-          : "border-border bg-card text-muted-foreground hover:text-foreground"
+          ? "border-bulls-red bg-bulls-red text-white shadow-bulls"
+          : "border-[#252525] bg-[#0b0b0b] text-muted-foreground hover:border-bulls-red/40 hover:text-foreground"
       }`}
     >
       {label}
