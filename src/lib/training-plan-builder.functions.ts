@@ -218,6 +218,8 @@ export async function persistTrainingPlan(
       scheduled_start_date: isoDate(start),
       scheduled_end_date: isoDate(end),
       weeks_count: data.weeksCount,
+      source_template_id: data.sourceTemplateId ?? null,
+      source_template_version_id: data.sourceTemplateVersionId ?? null,
     } as any)
     .select("id")
     .single();
