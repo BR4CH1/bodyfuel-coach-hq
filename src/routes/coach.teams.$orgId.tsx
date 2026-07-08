@@ -1647,6 +1647,48 @@ function Stat({ label, value }: { label: string; value: React.ReactNode }) {
     </div>
   );
 }
+
+function PerfKpi({
+  icon,
+  label,
+  value,
+  sub,
+  tone = "default",
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: React.ReactNode;
+  sub?: string;
+  tone?: "default" | "positive" | "warn" | "critical" | "muted";
+}) {
+  const toneCls =
+    tone === "positive"
+      ? "text-emerald-500"
+      : tone === "warn"
+        ? "text-amber-500"
+        : tone === "critical"
+          ? "text-bulls-red"
+          : tone === "muted"
+            ? "text-neutral-500"
+            : "text-white";
+  return (
+    <div className="rounded-2xl border border-[#252525] bg-[#111111] p-3.5 sm:p-4">
+      <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-400">
+        <span className="text-bulls-red">{icon}</span>
+        <span className="truncate">{label}</span>
+      </div>
+      <div className={`mt-1.5 font-display text-3xl font-bold leading-none tabular-nums sm:text-4xl ${toneCls}`}>
+        {value}
+      </div>
+      {sub && (
+        <div className="mt-1.5 text-[10px] font-medium uppercase tracking-wider text-neutral-500">
+          {sub}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="rounded-lg border border-border bg-card p-4">
