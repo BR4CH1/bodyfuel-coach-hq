@@ -36,7 +36,7 @@ import {
   focusTriggersAthleteSession,
   type TrainingFocus,
 } from "@/lib/training-focus-detection";
-import { previewAthleteSession } from "@/lib/organizations/athlete-training-session-generator.server";
+import { previewAthleteSession } from "@/lib/organizations/athlete-training-session-pool";
 
 function toMondayIso(dateIso: string): string {
   const d = new Date(dateIso + "T12:00:00Z");
