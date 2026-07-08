@@ -37,7 +37,7 @@ const STATUS_LABEL: Record<TestRow["verification_status"], string> = {
 
 const STATUS_TONE: Record<TestRow["verification_status"], string> = {
   draft: "bg-muted text-muted-foreground",
-  submitted: "bg-yellow-500/15 text-yellow-600",
+  submitted: "bg-yellow-500/15 text-orange-400",
   verified: "bg-green-500/15 text-green-600",
   corrected: "bg-blue-500/15 text-blue-600",
   rejected: "bg-red-500/15 text-red-600",

@@ -4,7 +4,7 @@ import type { CoachAthleteDetail } from "@/lib/organizations/coach-athlete-drill
 export const STATUS_TONE: Record<CoachAthleteDetail["status"]["key"], string> = {
   critical: "bg-red-500/15 text-red-500 border-red-500/30",
   attention: "bg-orange-500/15 text-orange-500 border-orange-500/30",
-  watch: "bg-yellow-500/15 text-yellow-600 border-yellow-500/30",
+  watch: "bg-yellow-500/15 text-orange-400 border-yellow-500/30",
   stable: "bg-muted text-muted-foreground border-border",
   positive: "bg-green-500/15 text-green-500 border-green-500/30",
 };
