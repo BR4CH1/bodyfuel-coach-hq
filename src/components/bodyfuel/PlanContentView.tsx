@@ -907,39 +907,71 @@ export function PlanContentView({ clientId, planType }: Props) {
                     </div>
                   );
                 })
-              : exercises.filter((e) => itemToVirtual[e.id] === activeDay).map((e) => {
-                  const reps = (e.target_reps ?? "").split(",").map((s) => s.trim()).filter(Boolean);
-                  const weights = (e.target_weights ?? "").split(",").map((s) => s.trim()).filter(Boolean);
-                  const exName = itemDisplayName[e.id] ?? e.name;
-                  const isNonExercise = /rest|ruh|pause|frei|mobility|foam|dehn|stretch|recovery|spiel|game|training bei|mannschaft/i.test(exName);
-                  const demoUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(exName + " Übung Ausführung")}`;
-                  return (
-                    <div key={e.id} className="rounded-2xl border border-border bg-background/40 p-4">
-                      <div className="flex items-baseline justify-between gap-3">
-                        <div className="text-sm font-semibold">{exName}</div>
-                        <div className="text-xs text-muted-foreground text-right">
-                          {e.target_sets ?? "—"}×{reps.length ? reps.join(", ") : "—"}
+              : (() => {
+                  const dayExercises = exercises.filter((e) => itemToVirtual[e.id] === activeDay);
+                  const groupOf = (e: Exercise): "warmup" | "working" | "cooldown" => {
+                    const t = e.set_type;
+                    if (t === "warmup" || t === "cooldown") return t;
+                    if (t === "working" || t === "backoff" || t === "dropset" || t === "amrap") return "working";
+                    // Legacy-Fallback via Namens-Präfix.
+                    const n = (e.name ?? "").toLowerCase();
+                    if (/^(warm-?up|warmup|aufwärm)/.test(n)) return "warmup";
+                    if (/^(cool-?down|cooldown|abwärm)/.test(n)) return "cooldown";
+                    return "working";
+                  };
+                  const groups: Record<"warmup" | "working" | "cooldown", Exercise[]> = { warmup: [], working: [], cooldown: [] };
+                  for (const e of dayExercises) groups[groupOf(e)].push(e);
+                  const renderCard = (e: Exercise) => {
+                    const exName = itemDisplayName[e.id] ?? e.name;
+                    const isNonExercise = /rest|ruh|pause|frei|mobility|foam|dehn|stretch|recovery|spiel|game|training bei|mannschaft|warm-?up|cool-?down|aufwärm|abwärm/i.test(exName);
+                    const demoUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(exName + " Übung Ausführung")}`;
+                    const repsLabel = renderTargetReps(e.target_reps, e.target_sets ?? null);
+                    const { compact, perSet } = renderTargetWeights(e.target_weights);
+                    return (
+                      <div key={e.id} className="rounded-2xl border border-border bg-background/40 p-4">
+                        <div className="flex items-baseline justify-between gap-3">
+                          <div className="text-sm font-semibold">{exName}</div>
+                          <div className="text-xs text-muted-foreground text-right">{repsLabel}</div>
                         </div>
+                        {compact && (
+                          <div className="mt-1 text-xs text-gold/90">{compact}</div>
+                        )}
+                        {perSet && (
+                          <ul className="mt-1 space-y-0.5 text-xs text-gold/90">
+                            {perSet.map((w, i) => (
+                              <li key={i}>Satz {i + 1} · {w}</li>
+                            ))}
+                          </ul>
+                        )}
+                        {e.notes && <p className="mt-1 text-xs text-muted-foreground">{e.notes}</p>}
+                        {!isNonExercise && (
+                          <a
+                            href={demoUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-2 inline-flex items-center gap-1 rounded-md border border-border bg-background/60 px-2 py-1 text-[10px] font-semibold text-muted-foreground hover:border-gold/50 hover:text-gold"
+                          >
+                            <PlayCircle className="h-3 w-3" /> Demo ansehen
+                          </a>
+                        )}
                       </div>
-                      {weights.length > 0 && (
-                        <div className="mt-1 text-xs text-gold/90">
-                          {weights.map((w, i) => /^\d/.test(w) ? `${w} kg` : w).join(" · ")}
-                        </div>
-                      )}
-                      {e.notes && <p className="mt-1 text-xs text-muted-foreground">{e.notes}</p>}
-                      {!isNonExercise && (
-                        <a
-                          href={demoUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="mt-2 inline-flex items-center gap-1 rounded-md border border-border bg-background/60 px-2 py-1 text-[10px] font-semibold text-muted-foreground hover:border-gold/50 hover:text-gold"
-                        >
-                          <PlayCircle className="h-3 w-3" /> Demo ansehen
-                        </a>
-                      )}
-                    </div>
+                    );
+                  };
+                  const Section = ({ label, list }: { label: string; list: Exercise[] }) =>
+                    list.length ? (
+                      <div className="space-y-2">
+                        <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</div>
+                        {list.map(renderCard)}
+                      </div>
+                    ) : null;
+                  return (
+                    <>
+                      <Section label="Warm-up" list={groups.warmup} />
+                      <Section label="Arbeitssätze" list={groups.working} />
+                      <Section label="Cool-down" list={groups.cooldown} />
+                    </>
                   );
-                })}
+                })()}
             {((planType === "nutrition" ? meals : exercises).filter(
               (x: any) => itemToVirtual[x.id] === activeDay,
             ).length === 0) && (
