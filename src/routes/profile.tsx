@@ -211,6 +211,15 @@ function ProfileContent() {
         </p>
       </header>
 
+      {uid && (
+        <ProfilePhotoUpload
+          userId={uid}
+          currentPath={profile?.avatar_url ?? null}
+          displayName={profile?.display_name ?? supabaseUser?.email ?? null}
+          onChange={(path) => setProfile((prev) => (prev ? { ...prev, avatar_url: path } : prev))}
+        />
+      )}
+
       {/* Quick-Navigation zu Fortschritts-Bereichen */}
       <section className="grid gap-3 sm:grid-cols-2">
         <ProfileQuickLink to="/progress" icon={<TrendingUp className="h-5 w-5" />} title="Fortschritt" desc="Gewicht & Entwicklung" />
