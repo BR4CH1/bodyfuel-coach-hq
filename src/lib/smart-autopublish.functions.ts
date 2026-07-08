@@ -33,6 +33,7 @@ export const activateLatestSmartPlan = createServerFn({ method: "POST" })
       .select("id, status, created_at")
       .eq("client_id", target)
       .eq("plan_type", data.plan_type)
+      .eq("performance_context", false)
       .in("status", ["draft", "approved", "published"])
       .order("created_at", { ascending: false })
       .limit(1)
@@ -40,13 +41,16 @@ export const activateLatestSmartPlan = createServerFn({ method: "POST" })
 
     if (!candidate) return { ok: false, reason: "no_draft" };
 
-    // Archive currently active
+    // Archive currently active (personal track only — never touches
+    // performance_context=true plans, which live on the Bulls track).
     await supabase
       .from("nutrition_plans")
       .update({ status: "archived" })
       .eq("client_id", target)
       .eq("plan_type", data.plan_type)
+      .eq("performance_context", false)
       .eq("status", "active");
+
 
     const { error } = await supabase
       .from("nutrition_plans")
