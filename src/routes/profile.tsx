@@ -57,6 +57,7 @@ import { getMyAthleteProfile } from "@/lib/athlete-profile.functions";
 import { AthleteProfileEditor } from "@/components/bodyfuel/AthleteProfileEditor";
 import { MyCheckinsHistorySection } from "@/components/bodyfuel/MyCheckinsHistorySection";
 import { MinorProtectionSection } from "@/components/bodyfuel/MinorProtectionSection";
+import { ProfilePhotoUpload } from "@/components/bodyfuel/ProfilePhotoUpload";
 import {
   Select,
   SelectContent,
