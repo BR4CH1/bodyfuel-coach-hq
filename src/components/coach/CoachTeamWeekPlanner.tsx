@@ -334,6 +334,71 @@ export function CoachTeamWeekPlanner({
   const [templateName, setTemplateName] = useState("");
   const [previewSession, setPreviewSession] = useState<EditorSession | null>(null);
   const [manageOpen, setManageOpen] = useState(false);
+  const [weekTemplatePickerOpen, setWeekTemplatePickerOpen] = useState(false);
+  const [saveWeekOpen, setSaveWeekOpen] = useState(false);
+  const [weekTemplateName, setWeekTemplateName] = useState("");
+
+  const saveWeekTemplateMut = useMutation({
+    mutationFn: async (name: string) => {
+      const active = enrichedSessions.filter((s) => s.active);
+      if (!active.length) throw new Error("Kein Training in dieser Woche.");
+      const payload: WeekTemplateSession[] = active.map((s) => {
+        const d = new Date(s.session_date + "T12:00:00Z");
+        const weekday = (d.getUTCDay() + 6) % 7;
+        return {
+          weekday,
+          title: s.title || "Team Training",
+          description: s.description || null,
+          start_time: s.start_time || null,
+          end_time: s.end_time || null,
+          focus: s.focus,
+          focus_source: s.focus_source,
+        };
+      });
+      return createWeekTpl({
+        data: { organization_id: orgId, name, sessions: payload },
+      });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["training-week-templates", orgId] });
+      toast.success("Wochenvorlage gespeichert.");
+      setSaveWeekOpen(false);
+      setWeekTemplateName("");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Fehler beim Speichern der Wochenvorlage."),
+  });
+
+  const deleteWeekTemplateMut = useMutation({
+    mutationFn: async (id: string) => deleteWeekTpl({ data: { id } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["training-week-templates", orgId] });
+      toast.success("Wochenvorlage gelöscht.");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Fehler beim Löschen."),
+  });
+
+  const applyWeekTemplate = (tpl: { name: string; sessions: WeekTemplateSession[] }) => {
+    setSessions((prev) =>
+      prev.map((row, idx) => {
+        const match = tpl.sessions.find((x) => x.weekday === idx);
+        if (!match) {
+          return { ...row, active: false };
+        }
+        return {
+          ...row,
+          active: true,
+          title: match.title || "Team Training",
+          description: match.description ?? "",
+          start_time: (match.start_time ?? "").slice(0, 5),
+          end_time: (match.end_time ?? "").slice(0, 5),
+          focus: match.focus,
+          focus_source: match.focus_source ?? (match.focus === "none" ? "none" : "manual"),
+        };
+      }),
+    );
+    setWeekTemplatePickerOpen(false);
+    toast.success(`Wochenvorlage „${tpl.name}" übernommen.`);
+  };
 
   const status = q.data?.status ?? "draft";
   const wasPublished = status === "published";
