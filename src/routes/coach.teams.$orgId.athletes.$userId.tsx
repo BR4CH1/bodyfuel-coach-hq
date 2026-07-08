@@ -1,13 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
-import { toast } from "sonner";
 import { fallback, zodValidator } from "@tanstack/zod-adapter";
 import { z } from "zod";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
-import { deleteOrgAthlete } from "@/lib/organizations/athlete-admin.functions";
 import { getCoachAthleteDetail } from "@/lib/organizations/coach-athlete-drilldown.functions";
 import { AthleteDetailHeader } from "@/components/coach/athlete/AthleteDetailHeader";
 import { AthleteQuickActions } from "@/components/coach/athlete/AthleteQuickActions";
@@ -34,7 +31,7 @@ const searchSchema = z.object({
 });
 
 export const Route = createFileRoute("/coach/teams/$orgId/athletes/$userId")({
-  head: () => ({ meta: [{ title: "Athletenprofil — BODYFUEL Coach" }] }),
+  head: () => ({ meta: [{ title: "Spielerprofil — Bulls Hub" }] }),
   validateSearch: zodValidator(searchSchema),
   component: () => (
     <AppLayout>
@@ -56,14 +53,14 @@ function AthleteProfile() {
   });
 
   if (isLoading) {
-    return <div className="p-4 text-sm text-muted-foreground">Athletenprofil wird geladen…</div>;
+    return <div className="p-4 text-sm text-muted-foreground">Spielerprofil wird geladen…</div>;
   }
   if (!data) {
     return (
       <div className="p-4">
         <BackLink orgId={orgId} />
-        <div className="mt-4 rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
-          Athlet nicht gefunden oder kein Zugriff.
+        <div className="mt-4 rounded-lg border border-[#252525] bg-[#0b0b0b] p-4 text-sm text-muted-foreground">
+          Spieler nicht gefunden oder kein Zugriff.
         </div>
       </div>
     );
@@ -89,10 +86,10 @@ function AthleteProfile() {
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider ${
+              className={`rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition ${
                 tab === t.key
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-card text-muted-foreground hover:text-foreground"
+                  ? "border-bulls-red bg-bulls-red text-white"
+                  : "border-[#252525] bg-[#0b0b0b] text-muted-foreground hover:text-foreground"
               }`}
             >
               {t.label}
@@ -101,14 +98,14 @@ function AthleteProfile() {
         </div>
       </div>
 
-      {tab === "overview" && <AthleteOverviewTab data={data} />}
+      {tab === "overview" && (
+        <AthleteOverviewTab data={data} orgId={orgId} userId={userId} />
+      )}
       {tab === "tasks" && <AthleteTasksTab data={data} orgId={orgId} userId={userId} />}
       {tab === "checkins" && <AthleteCheckinsTab data={data} orgId={orgId} userId={userId} />}
       {tab === "performance" && <AthletePerformanceTab data={data} orgId={orgId} userId={userId} />}
       {tab === "training" && <AthleteTrainingTab data={data} orgId={orgId} userId={userId} />}
       {tab === "nutrition" && <AthleteNutritionTab data={data} orgId={orgId} userId={userId} />}
-
-      <DangerZone orgId={orgId} userId={userId} displayName={data.athlete.display_name} />
     </div>
   );
 }
@@ -123,55 +120,5 @@ function BackLink({ orgId }: { orgId: string }) {
       <ArrowLeft className="h-3.5 w-3.5" />
       Zurück zum Team
     </Link>
-  );
-}
-
-function DangerZone({
-  orgId,
-  userId,
-  displayName,
-}: {
-  orgId: string;
-  userId: string;
-  displayName: string;
-}) {
-  const navigate = useNavigate();
-  const del = useServerFn(deleteOrgAthlete);
-  const [busy, setBusy] = useState(false);
-  return (
-    <section className="mt-8 rounded-lg border border-destructive/40 bg-destructive/5 p-4">
-      <h2 className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.2em] text-destructive">
-        <Trash2 className="h-4 w-4" />
-        Gefahrenzone
-      </h2>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Löscht {displayName} vollständig aus der Plattform: Profil, Zugang, alle Trainings-,
-        Ernährungs- und Vereinsdaten. Diese Aktion kann nicht rückgängig gemacht werden.
-      </p>
-      <button
-        type="button"
-        disabled={busy}
-        onClick={async () => {
-          const input = window.prompt(
-            `Profil von ${displayName} unwiderruflich löschen?\n\nZum Bestätigen tippe LÖSCHEN ein:`,
-          );
-          if (input !== "LÖSCHEN") return;
-          setBusy(true);
-          try {
-            await del({ data: { org_id: orgId, user_id: userId } });
-            toast.success("Profil gelöscht.");
-            navigate({ to: "/coach/teams/$orgId", params: { orgId } });
-          } catch (e) {
-            toast.error((e as Error).message);
-          } finally {
-            setBusy(false);
-          }
-        }}
-        className="mt-3 inline-flex items-center gap-2 rounded-md border border-destructive bg-destructive px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-destructive-foreground hover:opacity-90 disabled:opacity-50"
-      >
-        <Trash2 className="h-3.5 w-3.5" />
-        {busy ? "Lösche…" : "Profil vollständig löschen"}
-      </button>
-    </section>
   );
 }
