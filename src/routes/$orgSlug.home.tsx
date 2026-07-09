@@ -20,13 +20,21 @@ export const Route = createFileRoute("/$orgSlug/home")({
 });
 
 const TASK_TYPE_LABEL: Record<string, string> = {
-  team_training: "TEAMTRAINING",
-  athletic_training: "ATHLETIK",
   daily_checkin: "DAILY CHECK-IN",
   recovery: "RECOVERY",
   challenge: "CHALLENGE",
   hydration: "HYDRATION",
+  training_feedback: "TRAININGSFEEDBACK",
+  custom: "AUFGABE",
+  manual: "AUFGABE",
 };
+
+const TRAINING_SOURCE_LABEL: Record<string, string> = {
+  coach: "COACH TRAINING",
+  smart: "SMART TRAINING",
+  athlete: "EIGENES TRAINING",
+};
+
 
 function greet() {
   const h = new Date().getHours();
@@ -142,9 +150,21 @@ function OrgHome() {
       </header>
 
       <main className="mx-auto max-w-md px-4 py-5 space-y-6">
-        {/* HEUTE */}
+        {/* HEUTE — TRAINING */}
+        {((data as any).today_sessions?.length ?? 0) > 0 && (
+          <section>
+            <SectionTitle>Heute — Training</SectionTitle>
+            <ul className="space-y-2">
+              {((data as any).today_sessions as any[]).map((s) => (
+                <SessionCard key={s.id} session={s} primary={primary} orgSlug={org.slug} />
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {/* HEUTE — AUFGABEN */}
         <section>
-          <SectionTitle>Heute</SectionTitle>
+          <SectionTitle>Heute — Aufgaben</SectionTitle>
           {data.today_tasks.length === 0 ? (
             <EmptyCard>Heute sind keine Aufgaben geplant.</EmptyCard>
           ) : (
@@ -161,6 +181,7 @@ function OrgHome() {
             </ul>
           )}
         </section>
+
 
         {/* DEIN STATUS */}
         <section>
@@ -279,6 +300,59 @@ function TaskCard({ task, onToggle }: { task: any; onToggle: () => void }) {
           {task.duration_min} Min
         </div>
       )}
+    </li>
+  );
+}
+
+function SessionCard({
+  session,
+  primary,
+  orgSlug,
+}: {
+  session: any;
+  primary: string;
+  orgSlug: string;
+}) {
+  const label = TRAINING_SOURCE_LABEL[session.training_source] ?? "TRAINING";
+  const done = session.status === "completed";
+  return (
+    <li className="rounded-lg border border-border bg-card p-3">
+      <div className="flex items-center gap-3">
+        <div
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-white"
+          style={{ background: primary }}
+          aria-hidden
+        >
+          <Activity className="h-4 w-4" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: primary }}>
+            {label}
+          </div>
+          <div className={`text-sm font-semibold truncate ${done ? "line-through opacity-60" : ""}`}>
+            {session.name ?? "Training"}
+          </div>
+          {session.focus && (
+            <div className="text-xs text-muted-foreground truncate">{session.focus}</div>
+          )}
+        </div>
+        {session.duration_minutes && (
+          <div className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground">
+            <Clock className="h-3 w-3" />
+            {session.duration_minutes} Min
+          </div>
+        )}
+      </div>
+      <div className="mt-2 flex justify-end">
+        <Link
+          to="/$orgSlug/athletic/$sessionId"
+          params={{ orgSlug, sessionId: session.id }}
+          className="text-[10px] font-bold uppercase tracking-wider underline"
+          style={{ color: primary }}
+        >
+          Öffnen
+        </Link>
+      </div>
     </li>
   );
 }

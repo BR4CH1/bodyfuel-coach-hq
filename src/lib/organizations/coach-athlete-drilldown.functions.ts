@@ -143,6 +143,9 @@ export const getCoachAthleteDetail = createServerFn({ method: "GET" })
     const start90 = new Date(now); start90.setDate(start90.getDate() - 90); start90.setHours(0, 0, 0, 0);
 
     // ---- Kern-Queries parallel
+    const start30Iso = start30.toISOString().slice(0, 10);
+    const start7Iso = start7.toISOString().slice(0, 10);
+    const prevStartIso = prevStart.toISOString().slice(0, 10);
     const [
       profileRes,
       teamsRes,
@@ -152,7 +155,9 @@ export const getCoachAthleteDetail = createServerFn({ method: "GET" })
       sessionCompRes,
       weightsRes,
       strengthRes,
+      trainingSessionsRes,
     ] = await Promise.all([
+
       supabase
         .from("profiles")
         .select("id, display_name, height_cm, birthdate")
@@ -167,16 +172,20 @@ export const getCoachAthleteDetail = createServerFn({ method: "GET" })
         .select("id, user_id, status, scheduled_for, task_type, title, link_target")
         .eq("organization_id", data.orgId)
         .eq("user_id", data.userId)
+        .not("task_type", "in", "(team_training,athletic_training)")
         .gte("scheduled_for", start30.toISOString())
         .lt("scheduled_for", now.toISOString())
         .order("scheduled_for", { ascending: false }),
+
       // Team-Compliance-Vergleich: Aggregat aller Athleten der Org, aktuelle Woche
       supabase
         .from("organization_tasks")
         .select("user_id, status")
         .eq("organization_id", data.orgId)
+        .not("task_type", "in", "(team_training,athletic_training)")
         .gte("scheduled_for", start7.toISOString())
         .lt("scheduled_for", now.toISOString()),
+
       supabase
         .from("organization_activity_log")
         .select("created_at")
@@ -207,7 +216,15 @@ export const getCoachAthleteDetail = createServerFn({ method: "GET" })
         .eq("status", "completed")
         .order("performed_at", { ascending: false })
         .limit(6),
+      supabase
+        .from("training_sessions")
+        .select("id, name, status, session_date, training_source, training_type, focus")
+        .eq("organization_id", data.orgId)
+        .eq("client_id", data.userId)
+        .gte("session_date", start30Iso)
+        .order("session_date", { ascending: false }),
     ]);
+
 
     // ---- Team-Zugehörigkeit
     const teamIds = (teamsRes.data ?? []).map((t: any) => t.id);
@@ -287,17 +304,29 @@ export const getCoachAthleteDetail = createServerFn({ method: "GET" })
         ? Math.round(validWeeks.reduce((a, b) => a + b, 0) / validWeeks.length)
         : null;
 
-    // Trainingsaktivität: Anteil abgeschlossener athletic_/team_training-Tasks im 7d Fenster
-    const trainingActivity = (list: typeof tasks) => {
-      const training = list.filter((t) =>
-        ["athletic_training", "team_training"].includes(t.task_type)
-      );
-      if (training.length === 0) return null;
-      const done = training.filter((t) => t.status === "done").length;
-      return Math.round((done / training.length) * 100);
+    // Trainingsaktivität: Anteil abgeschlossener training_sessions im 7d-Fenster (SoT)
+    const trainingSessions = (trainingSessionsRes.data ?? []) as Array<{
+      id: string;
+      name: string | null;
+      status: string;
+      session_date: string;
+      training_source: string | null;
+      training_type: string | null;
+      focus: string | null;
+    }>;
+    const sessionsInRange = (from: Date, to: Date) => {
+      const fromIso = from.toISOString().slice(0, 10);
+      const toIso = to.toISOString().slice(0, 10);
+      return trainingSessions.filter((s) => s.session_date >= fromIso && s.session_date < toIso);
     };
-    const trainingCur = trainingActivity(inRange(start7, now));
-    const trainingPrev = trainingActivity(inRange(prevStart, start7));
+    const trainingActivityFromSessions = (list: typeof trainingSessions) => {
+      if (list.length === 0) return null;
+      const done = list.filter((s) => s.status === "completed").length;
+      return Math.round((done / list.length) * 100);
+    };
+    const trainingCur = trainingActivityFromSessions(sessionsInRange(start7, now));
+    const trainingPrev = trainingActivityFromSessions(sessionsInRange(prevStart, start7));
+
 
     // Team-Durchschnitt (aktuelle Woche)
     const teamTasksWeek = (teamTasksWeekRes.data ?? []) as Array<{ status: string }>;
@@ -402,22 +431,24 @@ export const getCoachAthleteDetail = createServerFn({ method: "GET" })
     const radarTriggers: Array<{ kind: string; label: string; detail: string }> = [
       ...explainAthlete(signal),
     ];
-    // Trainings-Streak: 2+ Athletik-Einheiten in Folge nicht abgeschlossen
-    const athleticSessions = tasks
-      .filter((t) => t.task_type === "athletic_training")
+    // Trainings-Streak: 2+ Trainings-Sessions in Folge nicht abgeschlossen (SoT)
+    const recentSessions = trainingSessions
+      .slice()
+      .sort((a, b) => (a.session_date < b.session_date ? 1 : -1))
       .slice(0, 3);
     const missedStreak =
-      athleticSessions.length >= 2 &&
-      athleticSessions.every(
-        (t) => t.status === "missed" || t.status === "skipped" || t.status === "open"
+      recentSessions.length >= 2 &&
+      recentSessions.every(
+        (s) => s.status === "missed" || s.status === "skipped" || s.status === "planned",
       );
     if (missedStreak) {
       radarTriggers.push({
         kind: "training",
         label: "Training",
-        detail: `${athleticSessions.length} Athletik-Einheiten in Folge nicht abgeschlossen`,
+        detail: `${recentSessions.length} Trainingseinheiten in Folge nicht abgeschlossen`,
       });
     }
+
 
     // ---- Coach Summary (regelbasiert)
     const summaryLines: string[] = [];
@@ -470,11 +501,14 @@ export const getCoachAthleteDetail = createServerFn({ method: "GET" })
 
     // ---- Offene Punkte
     const openItems: Array<{ label: string; count: number; kind: string }> = [];
-    const openAthletic = tasks.filter(
-      (t) => t.task_type === "athletic_training" && t.status !== "done" && t.status !== "missed" && t.status !== "skipped"
+    const openAthletic = trainingSessions.filter(
+      (s) =>
+        s.session_date < now.toISOString().slice(0, 10) &&
+        (s.status === "planned" || s.status === "in_progress"),
     ).length;
     if (openAthletic > 0)
-      openItems.push({ label: "Offene Athletik-Einheiten", count: openAthletic, kind: "training" });
+      openItems.push({ label: "Offene Trainingseinheiten", count: openAthletic, kind: "training" });
+
     const openCheckins = tasks.filter(
       (t) => t.task_type === "checkin" && t.status !== "done"
     ).length;

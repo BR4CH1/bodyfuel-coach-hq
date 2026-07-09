@@ -4,13 +4,16 @@
  *   - runOrgTaskEngine (server fn, auth-scoped client)
  *   - /api/public/hooks/org-task-engine (cron route, service-role client)
  *
+ * BodyFuel Performance — Phase 1b.2:
+ * Training ist KEIN Task mehr. team_training und athletic_training werden
+ * NICHT mehr als organization_tasks erzeugt. Trainings leben ausschließlich
+ * in `training_sessions` (SoT). Die Task-Engine erzeugt hier nur noch
+ * echte Aufgaben (daily_checkin, challenge, …) und räumt zusätzlich
+ * eventuell noch vorhandene zukünftige Trainings-Tasks defensiv weg.
+ *
  * Idempotent: relies on the partial UNIQUE index
  *   (org, user, task_type, source_type, source_id, scheduled_date)
  * with ignoreDuplicates upsert.
- *
- * Also cleans up FUTURE pending team_training / athletic_training tasks
- * whose source (schedule row / session) no longer applies — so schedule
- * changes propagate without touching completed history.
  */
 
 type Client = any;
@@ -179,54 +182,11 @@ export async function runOrgTaskEngineWithClient(
       const dateIso = dateOnlyIso(date);
       const weekday = date.getDay();
 
-      // 1) Wochenbezogene Team-Trainings (published) — pro (team, session_date)
-      for (const [key, sess] of weeklySessionsByDate) {
-        const [teamId, sessDate] = key.split("::");
-        if (sessDate !== dateIso) continue;
-        const usersInTeam = teamMemberships.filter((tm) => tm.team_id === teamId);
-        for (const s of sess) {
-          for (const tm of usersInTeam) {
-            rows.push({
-              organization_id: orgId,
-              team_id: teamId,
-              user_id: tm.user_id,
-              task_type: "team_training",
-              title: s.title || "Team Training",
-              scheduled_for: combineDateTime(dateIso, s.start_time),
-              scheduled_date: dateIso,
-              status: "open",
-              source_type: "team_training_week",
-              source_id: s.week_id,
-              payload: { session_id: s.id },
-            });
-          }
-        }
-      }
+      // 1) TRAINING → nicht mehr in organization_tasks. Trainings kommen aus
+      //    training_sessions (SoT, Phase 1b.1). Weder Team-Training noch
+      //    Athletic-Plan-Sessions werden hier gepusht.
 
-      // 2) Legacy Weekday-Team Training schedule — nur wenn (team, date) NICHT
-      //    durch eine veröffentlichte Woche abgedeckt ist.
-      const schedules = ((schedulesRes.data ?? []) as any[]).filter(
-        (s) => teamIds.has(s.team_id) && s.active && s.weekday === weekday,
-      );
-      for (const s of schedules) {
-        if (coveredTeamDate.has(`${s.team_id}::${dateIso}`)) continue;
-        const usersInTeam = teamMemberships.filter((tm) => tm.team_id === s.team_id);
-        for (const tm of usersInTeam) {
-          rows.push({
-            organization_id: orgId,
-            team_id: s.team_id,
-            user_id: tm.user_id,
-            task_type: "team_training",
-            title: s.title || "Team Training",
-            scheduled_for: combineDateTime(dateIso, s.start_time),
-            scheduled_date: dateIso,
-            status: "open",
-            source_type: "team_training_schedule",
-            source_id: s.id,
-            payload: {},
-          });
-        }
-      }
+
 
 
 
@@ -280,91 +240,36 @@ export async function runOrgTaskEngineWithClient(
         }
       }
 
-      // Athletic plan sessions (new structured system)
-      for (const sess of planSessions) {
-        const plan = plans.find((p) => p.id === sess.plan_id);
-        if (!plan) continue;
-        if (plan.start_date && new Date(`${plan.start_date}T00:00:00`) > date) continue;
-        if (plan.end_date && new Date(`${plan.end_date}T00:00:00`) < date) continue;
-        const weekdays: number[] = Array.isArray(sess.scheduled_weekdays) ? sess.scheduled_weekdays : [];
-        if (!weekdays.includes(weekday)) continue;
-        const targets = resolvePlanTargets(plan.id);
-        for (const t of targets) {
-          rows.push({
-            organization_id: orgId,
-            team_id: t.team_id,
-            user_id: t.user_id,
-            task_type: "athletic_training",
-            title: sess.session_name || plan.name || "Athletic Training",
-            subtitle: (sess.focus_areas as string[] | null)?.join(", ") ?? null,
-            scheduled_for: combineDateTime(dateIso, "17:00"),
-            scheduled_date: dateIso,
-            duration_min: sess.estimated_duration_minutes ?? null,
-            status: "open",
-            source_type: "athletic_plan_session",
-            source_id: sess.id,
-            link_target: `/${orgSlug}/athletic/${sess.id}`,
-            payload: { plan_id: plan.id, session_id: sess.id },
-          });
-        }
-      }
-
-      // Legacy athletic plan payload sessions (backwards compat: plans with payload.sessions[])
-      for (const plan of plans) {
-        const sessions: any[] = Array.isArray(plan.payload?.sessions) ? plan.payload.sessions : [];
-        for (const sess of sessions) {
-          if (!sess?.scheduled_date) continue;
-          if (sess.scheduled_date !== dateIso) continue;
-          const legacyTargets = plan.user_id
-            ? [{ user_id: plan.user_id as string, team_id: plan.team_id ?? null }]
-            : plan.team_id
-              ? teamMemberships.filter((tm) => tm.team_id === plan.team_id).map((tm) => ({ user_id: tm.user_id, team_id: plan.team_id }))
-              : [];
-          for (const t of legacyTargets) {
-            rows.push({
-              organization_id: orgId,
-              team_id: t.team_id ?? null,
-              user_id: t.user_id,
-              task_type: "athletic_training",
-              title: sess.title || plan.name || "Athletic Training",
-              subtitle: sess.subtitle ?? null,
-              scheduled_for: combineDateTime(sess.scheduled_date, sess.time ?? "17:00"),
-              scheduled_date: sess.scheduled_date,
-              duration_min: sess.duration_min ?? null,
-              status: "open",
-              source_type: "athletic_plan",
-              source_id: plan.id,
-              payload: { session: sess },
-            });
-          }
-        }
-      }
+      // Athletic-Plan-Sessions & Legacy-Payload-Sessions: KEINE Task-Erzeugung mehr.
+      // Diese Trainings materialisieren sich über athlete-training-session-generator
+      // in `athlete_training_session` und synchron in `training_sessions` (SoT).
     }
 
     considered = rows.length;
 
-    // Delete FUTURE pending team_training / athletic_training tasks whose
-    // source no longer applies (schedule row inactive/removed or session removed).
+    // Defensiver Cleanup: falls durch Alt-Code oder Race noch offene
+    // Trainings-Tasks (team_training / athletic_training) ab heute existieren,
+    // werden sie hier bei jedem Engine-Lauf entfernt. Historische done/missed
+    // bleiben unberührt (Reporting).
     const todayIso = dateOnlyIso(today);
-    const { data: futureAuto } = await supabase
+    const { data: futureTraining, error: futureErr } = await supabase
       .from("organization_tasks")
-      .select("id, task_type, source_type, source_id, scheduled_date, status")
+      .select("id")
       .eq("organization_id", orgId)
       .in("task_type", ["team_training", "athletic_training"])
-      .eq("status", "open")
+      .in("status", ["open", "pending"])
       .gte("scheduled_date", todayIso);
-    const validSourceIds = new Set(rows.map((r) => `${r.task_type}::${r.source_type}::${r.source_id}::${r.scheduled_date}`));
-    const stale = ((futureAuto ?? []) as any[]).filter(
-      (t) =>
-        (t.source_type === "team_training_schedule" || t.source_type === "athletic_plan_session" || t.source_type === "team_training_week") &&
-        !validSourceIds.has(`${t.task_type}::${t.source_type}::${t.source_id}::${t.scheduled_date}`),
-    );
-    if (stale.length) {
-      const ids = stale.map((s) => s.id);
-      const { error: delErr } = await supabase.from("organization_tasks").delete().in("id", ids).eq("status", "open");
-      if (delErr) errors.push(`stale cleanup: ${delErr.message}`);
-      else removed = ids.length;
+    if (futureErr) errors.push(`training-task cleanup select: ${futureErr.message}`);
+    const staleIds = ((futureTraining ?? []) as any[]).map((r) => r.id);
+    if (staleIds.length) {
+      const { error: delErr } = await supabase
+        .from("organization_tasks")
+        .delete()
+        .in("id", staleIds);
+      if (delErr) errors.push(`training-task cleanup: ${delErr.message}`);
+      else removed = staleIds.length;
     }
+
 
     if (rows.length) {
       const { error, count } = await supabase.from("organization_tasks").upsert(rows, {
