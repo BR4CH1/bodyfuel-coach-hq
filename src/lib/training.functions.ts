@@ -6,6 +6,7 @@ import {
 } from "./training-engine/progression";
 import {
   normalizeExerciseKey,
+  readinessCooldownActive,
   stateFromDecision,
 } from "./training-engine/athlete-exercise-state";
 import {
@@ -29,6 +30,30 @@ async function loadRecentCheckins(
     .order("checkin_date", { ascending: false });
   return ((data as ReadinessCheckin[]) ?? []);
 }
+
+/**
+ * Phase 6 — Gate-Cooldown: liefert die Session-Daten der letzten 7 Tage,
+ * an denen der Athlet ein hartes Readiness-Gate (`reduce`) getriggert hat.
+ * Wird genutzt, um die Confidence auch NACH dem akuten Gate-Zeitraum
+ * gedeckelt zu halten, bis 7 Tage ohne harte Bremse vergangen sind.
+ */
+async function loadRecentHardGateDates(
+  supabase: any,
+  userId: string,
+): Promise<string[]> {
+  const since = new Date();
+  since.setDate(since.getDate() - 7);
+  const { data } = await supabase
+    .from("training_progression_events")
+    .select("source_session_date")
+    .eq("client_id", userId)
+    .eq("readiness_gate", "reduce")
+    .gte("source_session_date", since.toISOString().slice(0, 10));
+  return ((data as any[]) ?? [])
+    .map((r) => String(r.source_session_date))
+    .filter(Boolean);
+}
+
 
 
 type ParsedExercise = {
@@ -411,9 +436,14 @@ export const completeTrainingSession = createServerFn({ method: "POST" })
     }> = [];
 
     // Readiness einmal pro Session-Complete laden — dient als zentrale Bremse
-    // für alle Übungs-Progressionen dieses Tags.
+    // für alle Übungs-Progressionen dieses Tags. Phase 6: zusätzlich die
+    // harten Gate-Daten der letzten 7 Tage laden, um Confidence auch nach
+    // dem akuten Gate im Cooldown gedeckelt zu halten.
     const checkins = await loadRecentCheckins(supabase, userId);
     const gate = evaluateReadinessGate(checkins);
+    const hardGateDates = await loadRecentHardGateDates(supabase, userId);
+    const cooldownActive = readinessCooldownActive(hardGateDates);
+
 
     for (const ex of workingEx) {
       const sets = (setsByExercise.get(ex.id) ?? []).sort((a, b) => a.set_number - b.set_number);
@@ -496,16 +526,21 @@ export const completeTrainingSession = createServerFn({ method: "POST" })
       const exerciseName = String(ex.name ?? "");
       const key = normalizeExerciseKey(exerciseName);
       if (key) {
+        const gateActive = gated.applied !== null;
         const mapped = stateFromDecision({
           exerciseName,
           repRange: String(ex.target_reps ?? "8-12"),
           decision,
+          readiness: {
+            gateActive,
+            cooldownActive,
+            gateSeverity: gated.applied,
+          },
         });
         // Verzahnung mit Readiness-Gate: bei aktivem Gate zählt die Session
         // NICHT als Progressions-Erfolg — der lebendige Plan-Wert
         // (Confidence/Trend/Streak) soll durch bewusst gehaltene Sessions
         // nicht künstlich verbessert werden.
-        const gateActive = gated.applied !== null;
         const isSuccess = !gateActive && (
           decision.action === "increase_load" || decision.action === "increase_reps_target"
         );
@@ -514,12 +549,13 @@ export const completeTrainingSession = createServerFn({ method: "POST" })
           ? decision.next_load
           : decision.previous_load ?? decision.next_load;
 
-        // Bei aktivem Gate Confidence deckeln (nie "high") und Reason kennzeichnen
-        if (gateActive && mapped.confidence === "high") mapped.confidence = "medium";
         if (gateActive) {
           mapped.progression_status = "holding";
           mapped.last_reason = `🛡️ Readiness-Gate (${gated.applied}): ${gated.reason ?? mapped.last_reason}`;
+        } else if (cooldownActive) {
+          mapped.last_reason = `⏳ Gate-Cooldown aktiv (7d Nachwirkung) — ${mapped.last_reason}`;
         }
+
 
         const { data: prev } = await supabase
           .from("athlete_exercise_state")

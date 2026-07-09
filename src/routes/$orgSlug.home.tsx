@@ -317,17 +317,33 @@ function ReadinessGateHint({ userId, orgSlug }: { userId: string | undefined; or
   if (list.length === 0) return null;
   const hard = list.filter((e) => e.readiness_gate === "reduce").length;
   const soft = list.filter((e) => e.readiness_gate === "hold").length;
+  // Spiegelt die Coach-Alert-Severity (siehe coach-alerts.functions.ts):
+  //   ≥3 harte Bremsen in 7 Tagen  → rot (Coach sieht "Wiederholte harte Bremsen")
+  //   2  harte Bremsen             → orange (Coach sieht "Mehrfache Bremse durch Readiness")
+  //   sonst                        → neutral-orange
+  const severity: "red" | "orange" | "soft" = hard >= 3 ? "red" : hard === 2 ? "orange" : "soft";
+  const toneClass =
+    severity === "red"
+      ? "border-red-500/40 bg-red-500/10 text-red-100"
+      : "border-orange-400/40 bg-orange-400/10 text-orange-100";
+  const headline =
+    severity === "red"
+      ? "Dein Körper braucht eine Pause"
+      : severity === "orange"
+        ? "Dein Plan hört auf dich"
+        : "Dein Plan hört auf dich";
+  const body =
+    severity === "red"
+      ? `Dein Plan hat in 7 Tagen ${hard}× hart abgebremst. Dein Coach sieht das ebenfalls und meldet sich bei Bedarf — bleib bei den Check-ins, damit wir sehen, wann es wieder rauf gehen kann.`
+      : `In den letzten 7 Tagen hat dein Plan ${list.length}× Steigerungen bewusst pausiert${
+          hard > 0 ? ` (${hard}× hart)` : ""
+        }${soft > 0 ? ` (${soft}× weich)` : ""}. Bleib bei den täglichen Check-ins — sobald sich deine Werte erholen, geht es automatisch weiter.`;
   return (
-    <section className="rounded-2xl border border-orange-400/40 bg-orange-400/10 p-4 text-orange-100">
+    <section className={`rounded-2xl border p-4 ${toneClass}`}>
       <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em]">
-        <ShieldAlert className="h-3.5 w-3.5" /> Dein Plan hört auf dich
+        <ShieldAlert className="h-3.5 w-3.5" /> {headline}
       </div>
-      <p className="mt-1 text-sm leading-snug">
-        In den letzten 7 Tagen hat dein Plan{" "}
-        <b>{list.length}</b> mal Steigerungen bewusst pausiert
-        {hard > 0 && <> ({hard}× hart)</>}
-        {soft > 0 && <> ({soft}× weich)</>}. Bleib bei den täglichen Check-ins — sobald sich deine Werte erholen, geht es automatisch weiter.
-      </p>
+      <p className="mt-1 text-sm leading-snug">{body}</p>
       <Link
         to="/$orgSlug/checkin"
         params={{ orgSlug }}

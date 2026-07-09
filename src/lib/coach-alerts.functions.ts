@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { recoveryAfterGate, type ReadinessCheckin } from "@/lib/readiness";
 
 async function assertCoach(supabase: any, userId: string) {
   const { data: isCoach } = await supabase.rpc("has_role", {
@@ -134,12 +135,16 @@ export const getCoachActionAlerts = createServerFn({ method: "GET" })
     );
 
     const hardBrakeCountByUser = new Map<string, number>();
-    ((gateEvents as any).data ?? []).forEach((e: any) =>
+    const gateDatesByUser = new Map<string, string[]>();
+    ((gateEvents as any).data ?? []).forEach((e: any) => {
       hardBrakeCountByUser.set(
         e.client_id,
         (hardBrakeCountByUser.get(e.client_id) ?? 0) + 1,
-      ),
-    );
+      );
+      const arr = gateDatesByUser.get(e.client_id) ?? [];
+      arr.push(String(e.evaluated_at).slice(0, 10));
+      gateDatesByUser.set(e.client_id, arr);
+    });
 
     // Deep-Link: für Athleten mit Readiness-Bremsen die primäre Org auflösen,
     // um direkt in den Checkins-Tab des Athleten-Drilldowns zu springen.
@@ -147,17 +152,79 @@ export const getCoachActionAlerts = createServerFn({ method: "GET" })
       (id) => (hardBrakeCountByUser.get(id) ?? 0) >= 2,
     );
     const orgIdByUser = new Map<string, string>();
+    const checkinsByUser = new Map<string, ReadinessCheckin[]>();
     if (readinessUserIds.length) {
-      const { data: memberships } = await supabase
-        .from("organization_memberships")
-        .select("user_id, organization_id, role, status")
-        .in("user_id", readinessUserIds)
-        .eq("role", "athlete")
-        .eq("status", "active");
-      ((memberships as any[]) ?? []).forEach((m) => {
+      const since30DateStr = new Date(today - 30 * 86400000)
+        .toISOString()
+        .slice(0, 10);
+      const [membershipsRes, checkinsRes] = await Promise.all([
+        supabase
+          .from("organization_memberships")
+          .select("user_id, organization_id, role, status")
+          .in("user_id", readinessUserIds)
+          .eq("role", "athlete")
+          .eq("status", "active"),
+        supabase
+          .from("athlete_checkins")
+          .select("user_id, checkin_date, sleep, energy, stress, training_feel, pain_level, pain_note")
+          .in("user_id", readinessUserIds)
+          .gte("checkin_date", since30DateStr),
+      ]);
+      (((membershipsRes as any).data as any[]) ?? []).forEach((m) => {
         if (!orgIdByUser.has(m.user_id)) orgIdByUser.set(m.user_id, m.organization_id);
       });
+      (((checkinsRes as any).data as any[]) ?? []).forEach((c) => {
+        const arr = checkinsByUser.get(c.user_id) ?? [];
+        arr.push(c as ReadinessCheckin);
+        checkinsByUser.set(c.user_id, arr);
+      });
     }
+
+    // Auto-Resolution: wenn recoveryAfterGate.delta >= +5 (Bremse wirkt),
+    // wird der Readiness-Alert persistent als "done" markiert, damit der
+    // Coach ihn nicht manuell wegklicken muss. Läuft nur für Kandidaten
+    // (>=2 harte Bremsen in 7 Tagen).
+    const autoResolvedKeys = new Set<string>();
+    const autoResolutionRows: any[] = [];
+    for (const uid of readinessUserIds) {
+      const gateDates = gateDatesByUser.get(uid) ?? [];
+      const rows = checkinsByUser.get(uid) ?? [];
+      if (gateDates.length === 0 || rows.length === 0) continue;
+      const rec = recoveryAfterGate(gateDates, rows);
+      if (!rec || rec.delta < 5) continue;
+      const hardBrakes = hardBrakeCountByUser.get(uid) ?? 0;
+      const title =
+        hardBrakes >= 3
+          ? "Wiederholte harte Bremsen"
+          : "Mehrfache Bremse durch Readiness";
+      const detail =
+        hardBrakes >= 3
+          ? `${hardBrakes}× Readiness-Gate reduziert in 7 Tagen — Rücksprache/Regen prüfen`
+          : `${hardBrakes}× reduziert in 7 Tagen — Verlauf im Blick behalten`;
+      const key = `${uid}:readiness:${title}`;
+      autoResolvedKeys.add(key);
+      autoResolutionRows.push({
+        coach_user_id: userId,
+        alert_key: key,
+        alert_user_id: uid,
+        alert_kind: "readiness",
+        alert_severity: hardBrakes >= 3 ? "red" : "orange",
+        alert_title: title,
+        alert_detail: detail,
+        alert_range: "7 T",
+        client_name:
+          ((profiles as any).data ?? []).find((p: any) => p.id === uid)?.display_name ??
+          "Ohne Namen",
+        action: "done",
+        resolved_at: new Date().toISOString(),
+      });
+    }
+    if (autoResolutionRows.length) {
+      await supabase
+        .from("coach_alert_resolutions")
+        .upsert(autoResolutionRows, { onConflict: "coach_user_id,alert_key" });
+    }
+
 
     type PlanState = {
       activeNutrition: boolean;
