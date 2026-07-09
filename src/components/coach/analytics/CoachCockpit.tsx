@@ -8,10 +8,10 @@ import {
   Minus,
   AlertTriangle,
   Eye,
-  TrendingUp,
   Users,
-  Dumbbell,
+  HeartPulse,
 } from "lucide-react";
+
 import { getOrgCoachAnalytics, type CoachAnalytics } from "@/lib/organizations/coach-analytics.functions";
 import { STATUS_LABEL } from "@/lib/organizations/coach-analytics.rules";
 
