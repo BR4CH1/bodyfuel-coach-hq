@@ -31,6 +31,30 @@ async function loadRecentCheckins(
   return ((data as ReadinessCheckin[]) ?? []);
 }
 
+/**
+ * Phase 6 — Gate-Cooldown: liefert die Session-Daten der letzten 7 Tage,
+ * an denen der Athlet ein hartes Readiness-Gate (`reduce`) getriggert hat.
+ * Wird genutzt, um die Confidence auch NACH dem akuten Gate-Zeitraum
+ * gedeckelt zu halten, bis 7 Tage ohne harte Bremse vergangen sind.
+ */
+async function loadRecentHardGateDates(
+  supabase: any,
+  userId: string,
+): Promise<string[]> {
+  const since = new Date();
+  since.setDate(since.getDate() - 7);
+  const { data } = await supabase
+    .from("training_progression_events")
+    .select("source_session_date")
+    .eq("client_id", userId)
+    .eq("readiness_gate", "reduce")
+    .gte("source_session_date", since.toISOString().slice(0, 10));
+  return ((data as any[]) ?? [])
+    .map((r) => String(r.source_session_date))
+    .filter(Boolean);
+}
+
+
 
 type ParsedExercise = {
   name: string;
