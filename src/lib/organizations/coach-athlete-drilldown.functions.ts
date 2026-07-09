@@ -177,8 +177,10 @@ export const getCoachAthleteDetail = createServerFn({ method: "GET" })
         .from("organization_tasks")
         .select("user_id, status")
         .eq("organization_id", data.orgId)
+        .not("task_type", "in", "(team_training,athletic_training)")
         .gte("scheduled_for", start7.toISOString())
         .lt("scheduled_for", now.toISOString()),
+
       supabase
         .from("organization_activity_log")
         .select("created_at")
