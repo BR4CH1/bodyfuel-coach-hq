@@ -245,32 +245,31 @@ export async function runOrgTaskEngineWithClient(
       // in `athlete_training_session` und synchron in `training_sessions` (SoT).
     }
 
-    }
-
     considered = rows.length;
 
-    // Delete FUTURE pending team_training / athletic_training tasks whose
-    // source no longer applies (schedule row inactive/removed or session removed).
+    // Defensiver Cleanup: falls durch Alt-Code oder Race noch offene
+    // Trainings-Tasks (team_training / athletic_training) ab heute existieren,
+    // werden sie hier bei jedem Engine-Lauf entfernt. Historische done/missed
+    // bleiben unberührt (Reporting).
     const todayIso = dateOnlyIso(today);
-    const { data: futureAuto } = await supabase
+    const { data: futureTraining, error: futureErr } = await supabase
       .from("organization_tasks")
-      .select("id, task_type, source_type, source_id, scheduled_date, status")
+      .select("id")
       .eq("organization_id", orgId)
       .in("task_type", ["team_training", "athletic_training"])
-      .eq("status", "open")
+      .in("status", ["open", "pending"])
       .gte("scheduled_date", todayIso);
-    const validSourceIds = new Set(rows.map((r) => `${r.task_type}::${r.source_type}::${r.source_id}::${r.scheduled_date}`));
-    const stale = ((futureAuto ?? []) as any[]).filter(
-      (t) =>
-        (t.source_type === "team_training_schedule" || t.source_type === "athletic_plan_session" || t.source_type === "team_training_week") &&
-        !validSourceIds.has(`${t.task_type}::${t.source_type}::${t.source_id}::${t.scheduled_date}`),
-    );
-    if (stale.length) {
-      const ids = stale.map((s) => s.id);
-      const { error: delErr } = await supabase.from("organization_tasks").delete().in("id", ids).eq("status", "open");
-      if (delErr) errors.push(`stale cleanup: ${delErr.message}`);
-      else removed = ids.length;
+    if (futureErr) errors.push(`training-task cleanup select: ${futureErr.message}`);
+    const staleIds = ((futureTraining ?? []) as any[]).map((r) => r.id);
+    if (staleIds.length) {
+      const { error: delErr } = await supabase
+        .from("organization_tasks")
+        .delete()
+        .in("id", staleIds);
+      if (delErr) errors.push(`training-task cleanup: ${delErr.message}`);
+      else removed = staleIds.length;
     }
+
 
     if (rows.length) {
       const { error, count } = await supabase.from("organization_tasks").upsert(rows, {
