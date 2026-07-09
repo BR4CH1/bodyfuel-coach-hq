@@ -13,7 +13,7 @@ import {
 } from "@/lib/readiness-gate-events.functions";
 import { MiniLine, Section, TinyMetric } from "./athlete-tab-shared";
 import { ReadinessInsight } from "@/components/readiness/ReadinessInsight";
-import { scoreOfCheckin } from "@/lib/readiness";
+import { recoveryAfterGate } from "@/lib/readiness";
 
 const SCALE_LABEL = ["—", "sehr niedrig", "niedrig", "mittel", "hoch", "sehr hoch"];
 
@@ -309,32 +309,12 @@ function RecoveryAfterGate({
   events: ReadinessGateEvent[];
   checkins: AthleteCheckin[];
 }) {
-  // Vergleich Readiness Ø 7d VOR dem ersten Gate-Event vs. 7d NACH.
-  if (events.length === 0 || checkins.length === 0) return null;
-  const sorted = [...events].sort(
-    (a, b) => new Date(a.source_session_date).getTime() - new Date(b.source_session_date).getTime(),
+  const rec = recoveryAfterGate(
+    events.map((e) => e.source_session_date),
+    checkins,
   );
-  const start = new Date(sorted[0].source_session_date);
-  start.setHours(0, 0, 0, 0);
-
-  const score = (r: AthleteCheckin): number | null => scoreOfCheckin(r);
-
-  const before: number[] = [];
-  const after: number[] = [];
-  for (const c of checkins) {
-    const t = new Date(c.checkin_date);
-    t.setHours(0, 0, 0, 0);
-    const diff = (t.getTime() - start.getTime()) / (24 * 60 * 60 * 1000);
-    const s = score(c);
-    if (s == null) continue;
-    if (diff >= -7 && diff < 0) before.push(s);
-    else if (diff >= 0 && diff <= 7) after.push(s);
-  }
-  if (before.length === 0 || after.length === 0) return null;
-  const avg = (arr: number[]) => Math.round(arr.reduce((a, b) => a + b, 0) / arr.length);
-  const b = avg(before);
-  const a = avg(after);
-  const delta = a - b;
+  if (!rec) return null;
+  const { before: b, after: a, delta } = rec;
   const positive = delta > 3;
   return (
     <div className="mt-3 rounded-md border border-orange-500/20 bg-background/40 p-2 text-[12px]">

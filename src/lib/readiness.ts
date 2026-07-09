@@ -49,6 +49,36 @@ export function avgOf(nums: number[]): number | null {
   return Math.round(nums.reduce((a, b) => a + b, 0) / nums.length);
 }
 
+/**
+ * Vergleicht Readiness-Ø 7d vor dem ersten Gate-Event vs. 7d danach.
+ * Gibt null zurück, wenn eine Seite keine Daten hat. Identische Logik
+ * wird für Coach-Drilldown und Athleten-Banner genutzt.
+ */
+export function recoveryAfterGate(
+  gateDates: string[],
+  rows: ReadinessCheckin[],
+): { before: number; after: number; delta: number } | null {
+  if (gateDates.length === 0 || rows.length === 0) return null;
+  const sorted = [...gateDates].sort();
+  const start = new Date(sorted[0]);
+  start.setHours(0, 0, 0, 0);
+  const before: number[] = [];
+  const after: number[] = [];
+  for (const r of rows) {
+    const t = new Date(r.checkin_date);
+    t.setHours(0, 0, 0, 0);
+    const diffDays = (t.getTime() - start.getTime()) / (24 * 60 * 60 * 1000);
+    const s = scoreOfCheckin(r);
+    if (s == null) continue;
+    if (diffDays >= -7 && diffDays < 0) before.push(s);
+    else if (diffDays >= 0 && diffDays <= 7) after.push(s);
+  }
+  if (before.length === 0 || after.length === 0) return null;
+  const b = Math.round(before.reduce((a, x) => a + x, 0) / before.length);
+  const a = Math.round(after.reduce((a, x) => a + x, 0) / after.length);
+  return { before: b, after: a, delta: a - b };
+}
+
 function daysAgoTs(days: number): number {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
