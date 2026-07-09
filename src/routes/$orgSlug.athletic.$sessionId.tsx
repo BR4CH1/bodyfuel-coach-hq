@@ -148,3 +148,31 @@ function OrgAthleticSession() {
     </OrgAthleteLayout>
   );
 }
+
+function ReadinessBanner({ rows }: { rows: ReadinessCheckin[] }) {
+  if (!rows || rows.length === 0) return null;
+  const s = summarize(rows);
+  const avg7 = s.avg7 ?? null;
+  const painCount = rows.slice(0, 7).filter((r) => (r as any).has_pain).length;
+  const severe = (avg7 != null && avg7 < 30) || painCount >= 3;
+  const soft = !severe && ((avg7 != null && avg7 < 45) || painCount >= 2);
+  if (!severe && !soft) return null;
+  const tone = severe
+    ? "border-red-500/40 bg-red-500/10 text-red-100"
+    : "border-orange-400/40 bg-orange-400/10 text-orange-100";
+  const title = severe
+    ? "Heute halten wir dich bewusst zurück"
+    : "Heute vorsichtig — kein Push";
+  return (
+    <div className={`rounded-2xl border p-3 text-xs ${tone}`}>
+      <div className="flex items-center gap-2 font-semibold">
+        <ShieldAlert className="h-4 w-4" /> {title}
+      </div>
+      <p className="mt-1 opacity-90">
+        Readiness Ø 7d: <b>{avg7 ?? "—"}</b>
+        {painCount > 0 && <> · Schmerzmeldungen (7d): <b>{painCount}</b></>}
+        . Der Plan pausiert Steigerungen automatisch, damit dein Körper aufholen kann.
+      </p>
+    </div>
+  );
+}
