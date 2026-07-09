@@ -410,9 +410,8 @@ function AthleteRowList({
             }}
             className="flex touch-manipulation items-center gap-3 px-3 py-3 transition hover:bg-[#111111] active:bg-[#141414]"
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-bulls-red/15 font-display text-sm font-bold text-bulls-red">
-              {initials(a.name)}
-            </div>
+            <UserAvatar path={a.avatar_url} name={a.name} size={40} className="ring-1 ring-bulls-red/25" />
+
             <div className="min-w-0 flex-1 pr-8">
               <div className="flex items-center gap-2">
                 <span className="truncate text-sm font-semibold text-foreground">{a.name}</span>
