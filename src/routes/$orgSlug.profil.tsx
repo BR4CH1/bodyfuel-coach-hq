@@ -50,11 +50,30 @@ function OrgProfil() {
         <Link to="/$orgSlug/home" params={{ orgSlug: org.slug }} className="mb-2 inline-flex items-center gap-1 text-[10px] uppercase tracking-wider opacity-80">
           <ChevronLeft className="h-3 w-3" /> Home
         </Link>
-        <div className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-80">{org.name}</div>
-        <h1 className="font-display text-2xl font-bold">Mein Profil</h1>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-80">{org.name}</div>
+            <h1 className="font-display text-2xl font-bold">Mein Profil</h1>
+          </div>
+          <UserAvatar
+            path={(data.profile as any)?.avatar_url ?? null}
+            name={name || "Athlet"}
+            size={72}
+            className="ring-2 ring-white/40 shrink-0"
+          />
+        </div>
       </header>
       <main className="mx-auto max-w-md px-4 py-5 space-y-4">
+        {supabaseUser && (
+          <ProfilePhotoUpload
+            userId={supabaseUser.id}
+            currentPath={(data.profile as any)?.avatar_url ?? null}
+            displayName={name || null}
+            onChange={() => qc.invalidateQueries({ queryKey: ["org-home", org.slug] })}
+          />
+        )}
         <Row label="Name" value={name || "—"} />
+
         {(data.team as any) && <Row label="Team" value={(data.team as any).name} />}
         {tm?.position && <Row label="Primäre Position" value={tm.position} />}
         {tm?.secondary_position && <Row label="Zweitposition" value={tm.secondary_position} />}
