@@ -12,6 +12,7 @@ import {
   listMyCheckins,
   type AthleteCheckin,
 } from "@/lib/athlete-checkins.functions";
+import { ReadinessInsight } from "@/components/readiness/ReadinessInsight";
 
 export const Route = createFileRoute("/$orgSlug/checkin")({
   head: ({ params }) => ({
@@ -187,6 +188,15 @@ function OrgCheckinPage() {
         >
           {mut.isPending ? "Speichert…" : today ? "Check-in aktualisieren" : "Check-in speichern"}
         </button>
+
+        {history.length > 0 && (
+          <section className="pt-2">
+            <h2 className="mb-2 text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+              Dein Verlauf
+            </h2>
+            <ReadinessInsight rows={history} tone="athlete" />
+          </section>
+        )}
 
         {history.length > 0 && (
           <section className="pt-4">

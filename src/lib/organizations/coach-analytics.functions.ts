@@ -7,6 +7,7 @@ import {
 } from "./coach-analytics.rules";
 import { resolveCoachTeamScope } from "./coach-team-scope";
 import { positionGroup, POSITION_GROUP_LABEL } from "@/lib/football-positions";
+import { scoreOfCheckin } from "@/lib/readiness";
 
 
 export type CoachAnalytics = {
@@ -359,17 +360,6 @@ export const getOrgCoachAnalytics = createServerFn({ method: "GET" })
           .eq("checkin_date", todayStr)
           .in("user_id", athleteIds)
       : { data: [] as any[] };
-    const scoreOf = (r: any): number | null => {
-      const parts: number[] = [];
-      if (r.sleep != null) parts.push((r.sleep / 5) * 25);
-      if (r.energy != null) parts.push((r.energy / 5) * 25);
-      if (r.stress != null) parts.push(((5 - r.stress) / 5) * 25);
-      if (r.training_feel != null) parts.push((r.training_feel / 5) * 25);
-      if (!parts.length) return null;
-      let score = parts.reduce((a, b) => a + b, 0) * (4 / parts.length);
-      if (r.pain_level != null) score -= r.pain_level * 5;
-      return Math.max(0, Math.min(100, Math.round(score)));
-    };
     const checkinByUser = new Map<string, any>();
     for (const r of (checkinRows ?? []) as any[]) checkinByUser.set(r.user_id, r);
     let green = 0, yellow = 0, red = 0;
@@ -378,7 +368,7 @@ export const getOrgCoachAnalytics = createServerFn({ method: "GET" })
     for (const s of signals) {
       const r = checkinByUser.get(s.user_id);
       if (!r) continue;
-      const sc = scoreOf(r);
+      const sc = scoreOfCheckin(r);
       if (sc != null) {
         scores.push(sc);
         if (sc >= 70) green++;

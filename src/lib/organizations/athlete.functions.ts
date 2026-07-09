@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { resolveCoachTeamScope } from "./coach-team-scope";
+import { scoreOfCheckin } from "@/lib/readiness";
 
 
 /** Home data: today's tasks + status cards + active challenge. Membership-scoped. */
@@ -177,15 +178,8 @@ export const getOrgHomeData = createServerFn({ method: "GET" })
       .eq("checkin_date", todayIso)
       .maybeSingle();
 
-    const readinessScore = ((): number | null => {
-      const c = todayCheckin as any;
-      if (!c) return null;
-      const s = c.sleep, e = c.energy, st = c.stress, tf = c.training_feel;
-      if (s == null || e == null || st == null || tf == null) return null;
-      const base = (s + e + (6 - st) + tf) * 5; // 0..100
-      const painPenalty = (c.pain_level ?? 0) * 4; // 0..20
-      return Math.max(0, Math.min(100, Math.round(base - painPenalty)));
-    })();
+    const readinessScore = todayCheckin ? scoreOfCheckin(todayCheckin as any) : null;
+
 
     return {
       org,
