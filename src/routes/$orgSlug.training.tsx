@@ -6,7 +6,9 @@ import { Dumbbell, Target, Calendar, ChevronLeft } from "lucide-react";
 import { useSession } from "@/lib/bodyfuel/session";
 import { getOrgAthleticTraining, getOrgHomeData } from "@/lib/organizations/athlete.functions";
 import { OrgAthleteLayout } from "@/components/organizations/OrgAthleteLayout";
+import { PlanStatusChip } from "@/components/organizations/PlanStatusChip";
 import { Route as OrgLayoutRoute } from "./$orgSlug";
+
 
 export const Route = createFileRoute("/$orgSlug/training")({
   component: OrgTraining,
