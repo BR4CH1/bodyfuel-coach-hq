@@ -28,6 +28,7 @@ type TabKey = (typeof TABS)[number]["key"];
 
 const searchSchema = z.object({
   tab: fallback(z.string(), "overview").default("overview"),
+  focus: fallback(z.string().optional(), undefined).optional(),
 });
 
 export const Route = createFileRoute("/coach/teams/$orgId/athletes/$userId")({
