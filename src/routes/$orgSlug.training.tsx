@@ -7,7 +7,9 @@ import { useSession } from "@/lib/bodyfuel/session";
 import { getOrgAthleticTraining, getOrgHomeData } from "@/lib/organizations/athlete.functions";
 import { OrgAthleteLayout } from "@/components/organizations/OrgAthleteLayout";
 import { PlanStatusChip } from "@/components/organizations/PlanStatusChip";
+import { BullsAthleteAthleticSession } from "@/components/bodyfuel/BullsAthleteAthleticSession";
 import { Route as OrgLayoutRoute } from "./$orgSlug";
+
 
 
 export const Route = createFileRoute("/$orgSlug/training")({
