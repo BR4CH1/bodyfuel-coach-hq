@@ -155,7 +155,7 @@ export const getOrgHomeData = createServerFn({ method: "GET" })
       };
     }
 
-    // Weekly compliance: done tasks / total tasks this week
+    // Weekly compliance: done tasks / total tasks this week (Training exkludiert)
     const weekStart = new Date();
     weekStart.setDate(weekStart.getDate() - 7);
     const { data: weekTasks } = await supabase
@@ -163,6 +163,7 @@ export const getOrgHomeData = createServerFn({ method: "GET" })
       .select("status")
       .eq("organization_id", orgId)
       .eq("user_id", userId)
+      .not("task_type", "in", "(team_training,athletic_training)")
       .gte("scheduled_for", weekStart.toISOString());
     const total = (weekTasks ?? []).length;
     const done = (weekTasks ?? []).filter((t: any) => t.status === "done").length;
@@ -178,12 +179,14 @@ export const getOrgHomeData = createServerFn({ method: "GET" })
       team_membership: teamMembership,
       features,
       today_tasks: todayTasks ?? [],
+      today_sessions: todaySessions ?? [],
       next_tasks: nextTasks ?? [],
       active_challenge: activeChallenge,
       challenge_progress: challengeProgress,
       weekly_compliance: weeklyCompliance,
     };
   });
+
 
 /** Mark a task done/skipped. */
 export const updateOrgTaskStatus = createServerFn({ method: "POST" })
