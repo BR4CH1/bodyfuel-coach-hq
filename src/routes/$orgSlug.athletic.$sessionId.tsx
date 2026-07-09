@@ -2,11 +2,13 @@ import { createFileRoute, useNavigate, Link, useParams } from "@tanstack/react-r
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
-import { ChevronLeft, Dumbbell, Clock, Target, Check } from "lucide-react";
+import { ChevronLeft, Dumbbell, Clock, Target, Check, ShieldAlert } from "lucide-react";
 import { useSession } from "@/lib/bodyfuel/session";
 import { getOrgHomeData } from "@/lib/organizations/athlete.functions";
 import { getOrgAthleticSession, completeOrgAthleticSession } from "@/lib/organizations/operating-loop.functions";
 import { OrgAthleteLayout } from "@/components/organizations/OrgAthleteLayout";
+import { listMyCheckins } from "@/lib/athlete-checkins.functions";
+import { summarize, type ReadinessCheckin } from "@/lib/readiness";
 import { Route as OrgLayoutRoute } from "./$orgSlug";
 
 export const Route = createFileRoute("/$orgSlug/athletic/$sessionId")({
@@ -33,6 +35,12 @@ function OrgAthleticSession() {
     queryKey: ["org-athletic-session", sessionId],
     enabled: !!supabaseUser,
     queryFn: () => fetch({ data: { session_id: sessionId } }),
+  });
+  const fetchCheckins = useServerFn(listMyCheckins);
+  const { data: checkins } = useQuery({
+    queryKey: ["my-checkins", supabaseUser?.id ?? "anon"],
+    enabled: !!supabaseUser,
+    queryFn: () => fetchCheckins({}),
   });
 
   const doneMut = useMutation({
@@ -67,6 +75,7 @@ function OrgAthleticSession() {
       </header>
 
       <main className="mx-auto max-w-md space-y-3 px-4 py-5">
+        <ReadinessBanner rows={(checkins ?? []) as ReadinessCheckin[]} />
         {sess?.description && (
           <div className="rounded-lg border border-border bg-card p-3 text-sm text-muted-foreground">{sess.description}</div>
         )}
@@ -137,5 +146,33 @@ function OrgAthleticSession() {
         </div>
       </main>
     </OrgAthleteLayout>
+  );
+}
+
+function ReadinessBanner({ rows }: { rows: ReadinessCheckin[] }) {
+  if (!rows || rows.length === 0) return null;
+  const s = summarize(rows);
+  const avg7 = s.avg7 ?? null;
+  const painCount = s.pain_events_7;
+  const severe = (avg7 != null && avg7 < 30) || painCount >= 3;
+  const soft = !severe && ((avg7 != null && avg7 < 45) || painCount >= 2);
+  if (!severe && !soft) return null;
+  const tone = severe
+    ? "border-red-500/40 bg-red-500/10 text-red-100"
+    : "border-orange-400/40 bg-orange-400/10 text-orange-100";
+  const title = severe
+    ? "Heute halten wir dich bewusst zurück"
+    : "Heute vorsichtig — kein Push";
+  return (
+    <div className={`rounded-2xl border p-3 text-xs ${tone}`}>
+      <div className="flex items-center gap-2 font-semibold">
+        <ShieldAlert className="h-4 w-4" /> {title}
+      </div>
+      <p className="mt-1 opacity-90">
+        Readiness Ø 7d: <b>{avg7 ?? "—"}</b>
+        {painCount > 0 && <> · Schmerzmeldungen (7d): <b>{painCount}</b></>}
+        . Der Plan pausiert Steigerungen automatisch, damit dein Körper aufholen kann.
+      </p>
+    </div>
   );
 }
