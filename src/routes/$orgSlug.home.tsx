@@ -150,6 +150,7 @@ function OrgHome() {
       </header>
 
       <main className="mx-auto max-w-md px-4 py-5 space-y-6">
+        <ReadinessGateHint userId={supabaseUser?.id} orgSlug={org.slug} />
         {/* HEUTE — TRAINING */}
         {((data as any).today_sessions?.length ?? 0) > 0 && (
           <section>
