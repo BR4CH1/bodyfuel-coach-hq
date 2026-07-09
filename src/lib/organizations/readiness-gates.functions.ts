@@ -93,14 +93,10 @@ export const getOrgReadinessGateSummary = createServerFn({ method: "GET" })
     if (topIds.length > 0) {
       const { data: profs } = await supabase
         .from("profiles")
-        .select("user_id, first_name, last_name, display_name")
-        .in("user_id", topIds);
+        .select("id, display_name")
+        .in("id", topIds);
       for (const p of ((profs as any[]) ?? [])) {
-        const name =
-          p.display_name ||
-          [p.first_name, p.last_name].filter(Boolean).join(" ") ||
-          null;
-        nameMap.set(p.user_id, name ?? "");
+        if (p.display_name) nameMap.set(p.id, p.display_name);
       }
     }
 
