@@ -137,6 +137,7 @@ function RootComponent() {
             <PaymentTestModeBanner />
             <ReferralAttacher />
             <Outlet />
+            <NameCompletionGate />
             <CookieConsent />
             <OfflineStatus />
             <Toaster theme="dark" />
