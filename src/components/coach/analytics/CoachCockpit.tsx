@@ -8,10 +8,10 @@ import {
   Minus,
   AlertTriangle,
   Eye,
-  TrendingUp,
   Users,
-  Dumbbell,
+  HeartPulse,
 } from "lucide-react";
+
 import { getOrgCoachAnalytics, type CoachAnalytics } from "@/lib/organizations/coach-analytics.functions";
 import { STATUS_LABEL } from "@/lib/organizations/coach-analytics.rules";
 
@@ -29,6 +29,7 @@ export function CoachCockpit({ orgId }: { orgId: string }) {
   return (
     <div className="space-y-8">
       <TeamPulse data={data} />
+      <TeamReadinessSection data={data} orgId={orgId} />
       <CoachRadar data={data} orgId={orgId} />
       <PositionGroupsAnalysis data={data} />
       <AttentionList data={data} orgId={orgId} />
@@ -41,6 +42,79 @@ export function CoachCockpit({ orgId }: { orgId: string }) {
     </div>
   );
 }
+
+// -------------------------- Team Readiness --------------------------
+
+function TeamReadinessSection({ data, orgId }: { data: CoachAnalytics; orgId: string }) {
+  const r = data.readiness;
+  const rate = r.total > 0 ? Math.round((r.submitted / r.total) * 100) : 0;
+  return (
+    <section>
+      <SectionTitle icon={<HeartPulse className="h-4 w-4" />}>Team Readiness · heute</SectionTitle>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-lg border border-border bg-card p-4">
+          <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Check-in Quote</div>
+          <div className="mt-2 font-display text-2xl font-bold">{r.submitted}/{r.total}</div>
+          <div className="text-[11px] text-muted-foreground">{rate}% eingereicht</div>
+        </div>
+        <div className="rounded-lg border border-border bg-card p-4">
+          <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Ø Readiness</div>
+          <div className="mt-2 font-display text-2xl font-bold">{r.avg_score != null ? `${r.avg_score}` : "—"}</div>
+          <div className="text-[11px] text-muted-foreground">0–100</div>
+        </div>
+        <div className="rounded-lg border border-border bg-card p-4">
+          <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Verteilung</div>
+          <div className="mt-2 flex items-center gap-2 text-sm font-semibold">
+            <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-green-500" />{r.green}</span>
+            <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-yellow-500" />{r.yellow}</span>
+            <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-500" />{r.red}</span>
+          </div>
+          <div className="text-[11px] text-muted-foreground">grün ≥70 · gelb ≥45 · rot &lt;45</div>
+        </div>
+        <div className="rounded-lg border border-border bg-card p-4">
+          <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Schmerz-Signale</div>
+          <div className="mt-2 font-display text-2xl font-bold">{r.pain_flags.length}</div>
+          <div className="text-[11px] text-muted-foreground">Athleten mit Schmerz ≥3</div>
+        </div>
+      </div>
+      {(r.pain_flags.length > 0 || r.missing.length > 0) && (
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
+          {r.pain_flags.length > 0 && (
+            <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-3">
+              <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-red-500">Schmerz-Meldungen</div>
+              <ul className="space-y-1.5">
+                {r.pain_flags.slice(0, 6).map((f) => (
+                  <li key={f.user_id} className="text-sm">
+                    <AthleteRowLink orgId={orgId} userId={f.user_id} className="block rounded hover:underline">
+                      <span className="font-semibold">{f.name}</span>
+                      <span className="ml-2 text-[11px] text-muted-foreground">Level {f.pain_level}/5{f.pain_note ? ` · ${f.pain_note}` : ""}</span>
+                    </AthleteRowLink>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {r.missing.length > 0 && (
+            <div className="rounded-lg border border-border bg-muted/20 p-3">
+              <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                Kein Check-in heute ({r.missing.length})
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {r.missing.slice(0, 12).map((m) => (
+                  <span key={m.user_id} className="rounded-full bg-muted px-2 py-0.5 text-[11px]">{m.name}</span>
+                ))}
+                {r.missing.length > 12 && (
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">+{r.missing.length - 12}</span>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
 
 // -------------------------- Team Pulse --------------------------
 
