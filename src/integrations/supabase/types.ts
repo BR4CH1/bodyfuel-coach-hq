@@ -6658,10 +6658,13 @@ export type Database = {
         Row: {
           actual_duration_minutes: number | null
           client_id: string
+          completed_at: string | null
           created_at: string
           created_by: string | null
           description: string | null
           duration_minutes: number | null
+          exercises: Json | null
+          focus: string | null
           id: string
           intensity: number | null
           intensity_target: number | null
@@ -6672,11 +6675,14 @@ export type Database = {
           notes: string | null
           organization_id: string | null
           pain_reported: boolean | null
+          progress: Json | null
           reps: string | null
           session_date: string
           session_rpe: number | null
           session_type: string
           sets: number | null
+          source_ats_id: string | null
+          source_week_session_id: string | null
           start_time: string | null
           status: string
           team_id: string | null
@@ -6689,10 +6695,13 @@ export type Database = {
         Insert: {
           actual_duration_minutes?: number | null
           client_id: string
+          completed_at?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
           duration_minutes?: number | null
+          exercises?: Json | null
+          focus?: string | null
           id?: string
           intensity?: number | null
           intensity_target?: number | null
@@ -6703,11 +6712,14 @@ export type Database = {
           notes?: string | null
           organization_id?: string | null
           pain_reported?: boolean | null
+          progress?: Json | null
           reps?: string | null
           session_date?: string
           session_rpe?: number | null
           session_type: string
           sets?: number | null
+          source_ats_id?: string | null
+          source_week_session_id?: string | null
           start_time?: string | null
           status?: string
           team_id?: string | null
@@ -6720,10 +6732,13 @@ export type Database = {
         Update: {
           actual_duration_minutes?: number | null
           client_id?: string
+          completed_at?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
           duration_minutes?: number | null
+          exercises?: Json | null
+          focus?: string | null
           id?: string
           intensity?: number | null
           intensity_target?: number | null
@@ -6734,11 +6749,14 @@ export type Database = {
           notes?: string | null
           organization_id?: string | null
           pain_reported?: boolean | null
+          progress?: Json | null
           reps?: string | null
           session_date?: string
           session_rpe?: number | null
           session_type?: string
           sets?: number | null
+          source_ats_id?: string | null
+          source_week_session_id?: string | null
           start_time?: string | null
           status?: string
           team_id?: string | null
@@ -6754,6 +6772,20 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_sessions_source_ats_fk"
+            columns: ["source_ats_id"]
+            isOneToOne: false
+            referencedRelation: "athlete_training_session"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_sessions_source_week_session_fk"
+            columns: ["source_week_session_id"]
+            isOneToOne: false
+            referencedRelation: "org_team_training_week_session"
             referencedColumns: ["id"]
           },
           {
@@ -7203,6 +7235,7 @@ export type Database = {
         Args: { _org: string; _permission?: string; _user: string }
         Returns: boolean
       }
+      map_ats_status_to_ts: { Args: { _s: string }; Returns: string }
       move_to_dlq: {
         Args: {
           dlq_name: string
