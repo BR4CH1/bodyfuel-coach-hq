@@ -439,6 +439,11 @@ function AthleteRowList({
                     Onboarding offen
                   </span>
                 )}
+                <ReadinessChip
+                  score={a.readiness_score}
+                  bucket={a.readiness_bucket}
+                  days7={a.readiness_days_7}
+                />
                 {!a.derived_complete && a.missing?.length > 0 && (
                   <span className="truncate text-muted-foreground">· fehlt: {a.missing.slice(0, 2).join(", ")}</span>
                 )}
