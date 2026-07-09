@@ -29,6 +29,16 @@ export function stateFromDecision(args: {
   exerciseName: string;
   repRange: string | null | undefined;
   decision: ProgressionDecision;
+  /**
+   * Optional Readiness-Kontext. `gateActive` = das aktuelle Gate hat die
+   * Entscheidung tatsächlich verändert. `cooldownActive` = innerhalb der
+   * 7-Tage-Nachwehen nach dem letzten harten Gate (auch ohne akutes Gate).
+   */
+  readiness?: {
+    gateActive: boolean;
+    cooldownActive: boolean;
+    gateSeverity?: "hold" | "reduce" | null;
+  };
 }): {
   progression_status: "progressing" | "holding" | "deloading" | "stalled";
   confidence: "low" | "medium" | "high";
@@ -67,6 +77,29 @@ export function stateFromDecision(args: {
   let confidence: "low" | "medium" | "high" = "medium";
   if (d.action === "hold_for_more_data") confidence = "low";
   else if (d.action === "increase_load" || d.action === "reduce_load") confidence = "high";
+
+  // Phase 6 — Confidence-Cap + Cooldown:
+  //  · Aktives hartes Gate (reduce)       → cap "low"
+  //  · Aktives weiches Gate (hold)        → cap "medium"
+  //  · Cooldown (7d nach letztem harten Gate, kein akutes Gate)
+  //                                       → cap "medium"
+  let reasonSuffix = "";
+  if (args.readiness?.gateActive) {
+    if (args.readiness.gateSeverity === "reduce" && confidence !== "low") {
+      confidence = "low";
+      reasonSuffix = " · Confidence gedeckelt (aktive harte Bremse).";
+    } else if (
+      args.readiness.gateSeverity === "hold" &&
+      confidence === "high"
+    ) {
+      confidence = "medium";
+      reasonSuffix = " · Confidence gedeckelt (aktive weiche Bremse).";
+    }
+  } else if (args.readiness?.cooldownActive && confidence === "high") {
+    confidence = "medium";
+    reasonSuffix = " · Confidence gedeckelt (Gate-Cooldown, 7 Tage Nachwirkung).";
+  }
+
   return {
     progression_status: status,
     confidence,
@@ -75,6 +108,26 @@ export function stateFromDecision(args: {
     target_rep_min: rr.min,
     target_rep_max: rr.max,
     last_decision: d.action,
-    last_reason: d.reason,
+    last_reason: d.reason + reasonSuffix,
   };
+}
+
+/**
+ * Cooldown-Erkennung: gab es innerhalb der letzten 7 Tage ein hartes Gate
+ * (readiness_gate = "reduce") für diesen Athleten?
+ * `gateDates` ist eine Liste von ISO-Datums-Strings (source_session_date)
+ * jener Events, die zuletzt zum Athleten gehören.
+ */
+export function readinessCooldownActive(
+  hardGateSessionDates: string[],
+  now: Date = new Date(),
+): boolean {
+  if (!hardGateSessionDates.length) return false;
+  const cutoff = now.getTime() - 7 * 86400000;
+  for (const d of hardGateSessionDates) {
+    const t = new Date(d + "T00:00:00Z").getTime();
+    if (!Number.isFinite(t)) continue;
+    if (t >= cutoff) return true;
+  }
+  return false;
 }
