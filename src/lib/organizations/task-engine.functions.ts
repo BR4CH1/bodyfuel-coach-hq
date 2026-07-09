@@ -278,6 +278,40 @@ export const getOrgAthletesOnboardingAudit = createServerFn({ method: "GET" })
       ? await supabase.from("profiles").select("id, display_name, avatar_url").in("id", memberIds)
       : { data: [] as any[] };
 
+    // Readiness pro Athlet: letzte 30 Tage Check-ins → summarize().
+    // Score/Bucket werden nur zurückgegeben, wenn Datenreife erreicht ist.
+    const { summarize, bucketOf } = await import("@/lib/readiness");
+    const since = new Date();
+    since.setHours(0, 0, 0, 0);
+    since.setDate(since.getDate() - 29);
+    const sinceIso = since.toISOString().slice(0, 10);
+    const { data: checkinRows } = memberIds.length
+      ? await supabase
+          .from("athlete_checkins")
+          .select("user_id, checkin_date, sleep, energy, stress, training_feel, pain_level")
+          .in("user_id", memberIds)
+          .gte("checkin_date", sinceIso)
+      : { data: [] as any[] };
+    const checkinByUser = new Map<string, any[]>();
+    for (const r of (checkinRows ?? []) as any[]) {
+      if (!checkinByUser.has(r.user_id)) checkinByUser.set(r.user_id, []);
+      checkinByUser.get(r.user_id)!.push(r);
+    }
+    const readinessByUser = new Map<
+      string,
+      { score: number | null; bucket: "green" | "yellow" | "red" | null; days_7: number; days_30: number }
+    >();
+    for (const uid of memberIds) {
+      const rows = checkinByUser.get(uid) ?? [];
+      const s = summarize(rows as any);
+      readinessByUser.set(uid, {
+        score: s.current,
+        bucket: s.current != null ? bucketOf(s.current) : null,
+        days_7: s.days_recorded_7,
+        days_30: s.days_recorded_30,
+      });
+    }
+
     const nameMap = new Map<string, string>();
     const avatarMap = new Map<string, string | null>();
     for (const p of (profs ?? []) as any[]) {
@@ -299,6 +333,12 @@ export const getOrgAthletesOnboardingAudit = createServerFn({ method: "GET" })
         if (!t?.available_training_days || (t.available_training_days as any[]).length === 0)
           missing.push("Verfügbare Trainingstage");
         const complete = missing.length === 0;
+        const readiness = readinessByUser.get(m.user_id) ?? {
+          score: null,
+          bucket: null,
+          days_7: 0,
+          days_30: 0,
+        };
         return {
           user_id: m.user_id,
           name: nameMap.get(m.user_id) ?? "Athlet",
@@ -311,6 +351,10 @@ export const getOrgAthletesOnboardingAudit = createServerFn({ method: "GET" })
           position: t?.position ?? null,
           jersey_number: t?.jersey_number ?? null,
           status: m.status ?? null,
+          readiness_score: readiness.score,
+          readiness_bucket: readiness.bucket,
+          readiness_days_7: readiness.days_7,
+          readiness_days_30: readiness.days_30,
         };
       });
 
