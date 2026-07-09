@@ -152,8 +152,8 @@ function OrgHome() {
           </div>
           <OrganizationContextSwitcher compact />
         </div>
-        {(data.team || data.team_membership?.position) && (
-          <div className="flex gap-2 text-[11px] uppercase tracking-wider">
+        <div className="mt-3 flex items-end justify-between gap-3">
+          <div className="flex flex-wrap gap-2 text-[11px] uppercase tracking-wider">
             {data.team && (
               <span className="rounded-full bg-white/15 px-3 py-1 font-semibold">{data.team.name}</span>
             )}
@@ -163,7 +163,21 @@ function OrgHome() {
               </span>
             )}
           </div>
-        )}
+          <Link
+            to="/$orgSlug/profil"
+            params={{ orgSlug: org.slug }}
+            className="shrink-0"
+            aria-label="Zum Profil"
+          >
+            <UserAvatar
+              path={(data.profile as any)?.avatar_url ?? null}
+              name={first}
+              size={64}
+              className="ring-2 ring-white/40"
+            />
+          </Link>
+        </div>
+
       </header>
 
       <main className="mx-auto max-w-md px-4 py-5 space-y-6">
