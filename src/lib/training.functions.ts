@@ -526,16 +526,21 @@ export const completeTrainingSession = createServerFn({ method: "POST" })
       const exerciseName = String(ex.name ?? "");
       const key = normalizeExerciseKey(exerciseName);
       if (key) {
+        const gateActive = gated.applied !== null;
         const mapped = stateFromDecision({
           exerciseName,
           repRange: String(ex.target_reps ?? "8-12"),
           decision,
+          readiness: {
+            gateActive,
+            cooldownActive,
+            gateSeverity: gated.applied,
+          },
         });
         // Verzahnung mit Readiness-Gate: bei aktivem Gate zählt die Session
         // NICHT als Progressions-Erfolg — der lebendige Plan-Wert
         // (Confidence/Trend/Streak) soll durch bewusst gehaltene Sessions
         // nicht künstlich verbessert werden.
-        const gateActive = gated.applied !== null;
         const isSuccess = !gateActive && (
           decision.action === "increase_load" || decision.action === "increase_reps_target"
         );
@@ -544,12 +549,13 @@ export const completeTrainingSession = createServerFn({ method: "POST" })
           ? decision.next_load
           : decision.previous_load ?? decision.next_load;
 
-        // Bei aktivem Gate Confidence deckeln (nie "high") und Reason kennzeichnen
-        if (gateActive && mapped.confidence === "high") mapped.confidence = "medium";
         if (gateActive) {
           mapped.progression_status = "holding";
           mapped.last_reason = `🛡️ Readiness-Gate (${gated.applied}): ${gated.reason ?? mapped.last_reason}`;
+        } else if (cooldownActive) {
+          mapped.last_reason = `⏳ Gate-Cooldown aktiv (7d Nachwirkung) — ${mapped.last_reason}`;
         }
+
 
         const { data: prev } = await supabase
           .from("athlete_exercise_state")
