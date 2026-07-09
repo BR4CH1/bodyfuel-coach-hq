@@ -10,9 +10,14 @@ import {
   Eye,
   Users,
   HeartPulse,
+  ShieldAlert,
 } from "lucide-react";
 
 import { getOrgCoachAnalytics, type CoachAnalytics } from "@/lib/organizations/coach-analytics.functions";
+import {
+  getOrgReadinessGateSummary,
+  type OrgReadinessGateSummary,
+} from "@/lib/organizations/readiness-gates.functions";
 import { STATUS_LABEL } from "@/lib/organizations/coach-analytics.rules";
 
 export function CoachCockpit({ orgId }: { orgId: string }) {
@@ -111,7 +116,46 @@ function TeamReadinessSection({ data, orgId }: { data: CoachAnalytics; orgId: st
           )}
         </div>
       )}
+      <ReadinessGateTile orgId={orgId} />
     </section>
+  );
+}
+
+function ReadinessGateTile({ orgId }: { orgId: string }) {
+  const fetchFn = useServerFn(getOrgReadinessGateSummary);
+  const { data } = useQuery({
+    queryKey: ["org-readiness-gates", orgId],
+    queryFn: () =>
+      fetchFn({ data: { orgId, days: 14 } }) as Promise<OrgReadinessGateSummary>,
+  });
+  if (!data || data.events_total === 0) return null;
+  return (
+    <div className="mt-3 rounded-lg border border-orange-500/30 bg-orange-500/5 p-3">
+      <div className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-orange-400">
+        <ShieldAlert className="h-3.5 w-3.5" /> Readiness bremst Progression · 14 Tage
+      </div>
+      <div className="text-[12px] text-muted-foreground">
+        {data.athletes_flagged}{" "}
+        {data.athletes_flagged === 1 ? "Athlet" : "Athleten"} · {data.events_total} Events
+        (Hart {data.hard} · Weich {data.soft}). Der Plan wurde konservativ gehalten, keine
+        parallele Reduktion.
+      </div>
+      {data.top.length > 0 && (
+        <ul className="mt-2 space-y-1">
+          {data.top.map((t) => (
+            <li key={t.user_id} className="text-sm">
+              <AthleteRowLink orgId={orgId} userId={t.user_id} className="block rounded hover:underline">
+                <span className="font-semibold">{t.name ?? "Unbekannt"}</span>
+                <span className="ml-2 text-[11px] text-muted-foreground">
+                  {t.events} Events{t.hard > 0 ? ` · Hart ${t.hard}` : ""}
+                  {t.last_reason ? ` · ${t.last_reason}` : ""}
+                </span>
+              </AthleteRowLink>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
