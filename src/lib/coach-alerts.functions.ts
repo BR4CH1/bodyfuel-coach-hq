@@ -132,6 +132,14 @@ export const getCoachActionAlerts = createServerFn({ method: "GET" })
       swapCountByUser.set(s.user_id, (swapCountByUser.get(s.user_id) ?? 0) + 1),
     );
 
+    const hardBrakeCountByUser = new Map<string, number>();
+    ((gateEvents as any).data ?? []).forEach((e: any) =>
+      hardBrakeCountByUser.set(
+        e.client_id,
+        (hardBrakeCountByUser.get(e.client_id) ?? 0) + 1,
+      ),
+    );
+
     type PlanState = {
       activeNutrition: boolean;
       activeTraining: boolean;
