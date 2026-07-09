@@ -478,6 +478,30 @@ export const getCoachActionAlerts = createServerFn({ method: "GET" })
           range: "30 T",
         });
       }
+
+      // ----- READINESS-GATE -----
+      const hardBrakes = hardBrakeCountByUser.get(p.id) ?? 0;
+      if (hardBrakes >= 3) {
+        push({
+          user_id: p.id,
+          name,
+          severity: "red",
+          kind: "readiness",
+          title: "Wiederholte harte Bremsen",
+          detail: `${hardBrakes}× Readiness-Gate reduziert in 7 Tagen — Rücksprache/Regen prüfen`,
+          range: "7 T",
+        });
+      } else if (hardBrakes === 2) {
+        push({
+          user_id: p.id,
+          name,
+          severity: "orange",
+          kind: "readiness",
+          title: "Mehrfache Bremse durch Readiness",
+          detail: `${hardBrakes}× reduziert in 7 Tagen — Verlauf im Blick behalten`,
+          range: "7 T",
+        });
+      }
     }
 
     const order = { red: 0, orange: 1 } as const;
