@@ -167,9 +167,11 @@ export const getCoachAthleteDetail = createServerFn({ method: "GET" })
         .select("id, user_id, status, scheduled_for, task_type, title, link_target")
         .eq("organization_id", data.orgId)
         .eq("user_id", data.userId)
+        .not("task_type", "in", "(team_training,athletic_training)")
         .gte("scheduled_for", start30.toISOString())
         .lt("scheduled_for", now.toISOString())
         .order("scheduled_for", { ascending: false }),
+
       // Team-Compliance-Vergleich: Aggregat aller Athleten der Org, aktuelle Woche
       supabase
         .from("organization_tasks")
