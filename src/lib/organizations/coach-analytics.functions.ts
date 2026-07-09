@@ -28,8 +28,21 @@ export type CoachAnalytics = {
   };
   position_groups: PositionGroupStat[];
   attention_list: AttentionEntry[];
+  readiness: TeamReadiness;
   data_sparse: boolean;
 };
+
+export type TeamReadiness = {
+  submitted: number;
+  total: number;
+  avg_score: number | null;
+  green: number;
+  yellow: number;
+  red: number;
+  pain_flags: Array<{ user_id: string; name: string; pain_level: number; pain_note: string | null }>;
+  missing: Array<{ user_id: string; name: string }>;
+};
+
 
 export type RadarItem = {
   user_id: string;
