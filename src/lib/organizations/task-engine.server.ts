@@ -182,54 +182,11 @@ export async function runOrgTaskEngineWithClient(
       const dateIso = dateOnlyIso(date);
       const weekday = date.getDay();
 
-      // 1) Wochenbezogene Team-Trainings (published) — pro (team, session_date)
-      for (const [key, sess] of weeklySessionsByDate) {
-        const [teamId, sessDate] = key.split("::");
-        if (sessDate !== dateIso) continue;
-        const usersInTeam = teamMemberships.filter((tm) => tm.team_id === teamId);
-        for (const s of sess) {
-          for (const tm of usersInTeam) {
-            rows.push({
-              organization_id: orgId,
-              team_id: teamId,
-              user_id: tm.user_id,
-              task_type: "team_training",
-              title: s.title || "Team Training",
-              scheduled_for: combineDateTime(dateIso, s.start_time),
-              scheduled_date: dateIso,
-              status: "open",
-              source_type: "team_training_week",
-              source_id: s.week_id,
-              payload: { session_id: s.id },
-            });
-          }
-        }
-      }
+      // 1) TRAINING → nicht mehr in organization_tasks. Trainings kommen aus
+      //    training_sessions (SoT, Phase 1b.1). Weder Team-Training noch
+      //    Athletic-Plan-Sessions werden hier gepusht.
 
-      // 2) Legacy Weekday-Team Training schedule — nur wenn (team, date) NICHT
-      //    durch eine veröffentlichte Woche abgedeckt ist.
-      const schedules = ((schedulesRes.data ?? []) as any[]).filter(
-        (s) => teamIds.has(s.team_id) && s.active && s.weekday === weekday,
-      );
-      for (const s of schedules) {
-        if (coveredTeamDate.has(`${s.team_id}::${dateIso}`)) continue;
-        const usersInTeam = teamMemberships.filter((tm) => tm.team_id === s.team_id);
-        for (const tm of usersInTeam) {
-          rows.push({
-            organization_id: orgId,
-            team_id: s.team_id,
-            user_id: tm.user_id,
-            task_type: "team_training",
-            title: s.title || "Team Training",
-            scheduled_for: combineDateTime(dateIso, s.start_time),
-            scheduled_date: dateIso,
-            status: "open",
-            source_type: "team_training_schedule",
-            source_id: s.id,
-            payload: {},
-          });
-        }
-      }
+
 
 
 
