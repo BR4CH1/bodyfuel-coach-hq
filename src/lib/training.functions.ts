@@ -426,9 +426,9 @@ export const completeTrainingSession = createServerFn({ method: "POST" })
         targetSets: Number(ex.target_sets ?? sets.length ?? 3),
         targetRir: ex.target_rir ?? null,
       });
-      const gatedDecision = applyReadinessGate(rawDecision, gate);
+      const gated = applyReadinessGateWithMeta(rawDecision, gate);
       const { applySmartLock } = await import("./training-engine/lock");
-      const decision = applySmartLock(gatedDecision, (ex as any).smart_lock ?? "none");
+      const decision = applySmartLock(gated.decision, (ex as any).smart_lock ?? "none");
 
 
       const planId = ex.training_days?.plan_id;
