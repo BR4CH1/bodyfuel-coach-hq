@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { resolveCoachTeamScope } from "./coach-team-scope";
-import { scoreOfCheckin } from "@/lib/readiness";
+import { scoreOfCheckin, summarize, READINESS_SUFFICIENCY } from "@/lib/readiness";
 
 
 /** Home data: today's tasks + status cards + active challenge. Membership-scoped. */
