@@ -368,3 +368,38 @@ function ScaleField({
     </div>
   );
 }
+
+function AthleteRecoveryHint({
+  events,
+  checkins,
+}: {
+  events: ReadinessGateEvent[];
+  checkins: AthleteCheckin[];
+}) {
+  const rec = recoveryAfterGate(events.map((e) => e.source_session_date), checkins);
+  if (!rec) return null;
+  const { before, after, delta } = rec;
+  const positive = delta > 3;
+  const tone = positive
+    ? "border-green-500/30 bg-green-500/10 text-green-200"
+    : delta < -3
+      ? "border-red-500/30 bg-red-500/10 text-red-200"
+      : "border-orange-500/20 bg-background/40 text-muted-foreground";
+  const msg = positive
+    ? "Deine Werte erholen sich — Steigerungen kommen bald zurück."
+    : delta < -3
+      ? "Deine Readiness fällt trotz Pause weiter — sprich mit deinem Coach."
+      : "Stabil — die Pause hält deine Werte oben.";
+  return (
+    <div className={`mt-2 rounded-md border p-2 text-[12px] ${tone}`}>
+      <div className="text-[10px] font-bold uppercase tracking-wider opacity-80">
+        Erholung nach Bremse
+      </div>
+      <div className="mt-0.5">
+        7 T vorher: <b>{before}</b> → 7 T nachher: <b>{after}</b>{" "}
+        <span className="opacity-80">({delta > 0 ? "+" : ""}{delta})</span>
+      </div>
+      <div className="mt-0.5 opacity-90">{msg}</div>
+    </div>
+  );
+}
