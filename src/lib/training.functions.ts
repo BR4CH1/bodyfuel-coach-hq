@@ -10,7 +10,7 @@ import {
 } from "./training-engine/athlete-exercise-state";
 import {
   evaluateReadinessGate,
-  applyReadinessGate,
+  applyReadinessGateWithMeta,
 } from "./training-engine/readiness-gate";
 import type { ReadinessCheckin } from "@/lib/readiness";
 
@@ -273,7 +273,9 @@ export const progressAfterExercise = createServerFn({ method: "POST" })
     });
     const checkins = await loadRecentCheckins(supabase, userId);
     const gate = evaluateReadinessGate(checkins);
-    const decision = applyReadinessGate(rawDecision, gate);
+    const gated = applyReadinessGateWithMeta(rawDecision, gate);
+    const decision = gated.decision;
+
 
 
     // Nächste Instanz derselben Übung im selben Plan finden (nachfolgende Tage)
