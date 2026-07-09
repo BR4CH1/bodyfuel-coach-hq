@@ -350,6 +350,57 @@ export const getOrgCoachAnalytics = createServerFn({ method: "GET" })
       last_active_days: s.days_inactive,
     }));
 
+    // Team Readiness (heute) — Source of Truth: athlete_checkins
+    const todayStr = now.toISOString().slice(0, 10);
+    const { data: checkinRows } = athleteIds.length
+      ? await supabase
+          .from("athlete_checkins")
+          .select("user_id, sleep, energy, stress, training_feel, pain_level, pain_note")
+          .eq("checkin_date", todayStr)
+          .in("user_id", athleteIds)
+      : { data: [] as any[] };
+    const scoreOf = (r: any): number | null => {
+      const parts: number[] = [];
+      if (r.sleep != null) parts.push((r.sleep / 5) * 25);
+      if (r.energy != null) parts.push((r.energy / 5) * 25);
+      if (r.stress != null) parts.push(((5 - r.stress) / 5) * 25);
+      if (r.training_feel != null) parts.push((r.training_feel / 5) * 25);
+      if (!parts.length) return null;
+      let score = parts.reduce((a, b) => a + b, 0) * (4 / parts.length);
+      if (r.pain_level != null) score -= r.pain_level * 5;
+      return Math.max(0, Math.min(100, Math.round(score)));
+    };
+    const checkinByUser = new Map<string, any>();
+    for (const r of (checkinRows ?? []) as any[]) checkinByUser.set(r.user_id, r);
+    let green = 0, yellow = 0, red = 0;
+    const painFlags: TeamReadiness["pain_flags"] = [];
+    const scores: number[] = [];
+    for (const s of signals) {
+      const r = checkinByUser.get(s.user_id);
+      if (!r) continue;
+      const sc = scoreOf(r);
+      if (sc != null) {
+        scores.push(sc);
+        if (sc >= 70) green++;
+        else if (sc >= 45) yellow++;
+        else red++;
+      }
+      if (r.pain_level != null && r.pain_level >= 3) {
+        painFlags.push({ user_id: s.user_id, name: s.name, pain_level: r.pain_level, pain_note: r.pain_note ?? null });
+      }
+    }
+    const missing: TeamReadiness["missing"] = signals
+      .filter((s) => !checkinByUser.has(s.user_id))
+      .map((s) => ({ user_id: s.user_id, name: s.name }));
+    const readiness: TeamReadiness = {
+      submitted: checkinByUser.size,
+      total: signals.length,
+      avg_score: scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null,
+      green, yellow, red,
+      pain_flags: painFlags,
+      missing,
+    };
+
     const totalActivityRows =
       (activityRes.data?.length ?? 0) +
       (sessionsRes.data?.length ?? 0) +
@@ -376,6 +427,8 @@ export const getOrgCoachAnalytics = createServerFn({ method: "GET" })
       radar: { critical, watch, positive },
       position_groups: positionGroups,
       attention_list: attentionList,
+      readiness,
       data_sparse: totalActivityRows < 5,
     };
   });
+
