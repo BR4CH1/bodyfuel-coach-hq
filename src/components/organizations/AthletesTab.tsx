@@ -179,8 +179,23 @@ export function AthletesTab({
           sub={totalCount > 0 ? `${Math.round((openOnboarding / totalCount) * 100)} %` : "—"}
           accent="orange"
         />
-        <SummaryCard icon={<ShieldCheck className="h-4 w-4" />} label="Teams" value={String(teamsCount)} sub="Teams" />
-      </div>
+        <button
+          type="button"
+          onClick={() =>
+            setReadinessFilter((f) => (f === "alerts" ? "all" : "alerts"))
+          }
+          className="text-left focus:outline-none"
+          aria-pressed={readinessFilter === "alerts"}
+          title="Athleten mit gelber oder roter Readiness"
+        >
+          <SummaryCard
+            icon={<Activity className="h-4 w-4 text-red-400" />}
+            label="Readiness-Alert"
+            value={String(readinessAlertCount)}
+            sub={readinessFilter === "alerts" ? "Filter aktiv · tippen zum Lösen" : "Gelb + Rot heute"}
+            accent="orange"
+          />
+        </button>
 
       {/* Team Chips */}
       {teams.length > 1 && (
