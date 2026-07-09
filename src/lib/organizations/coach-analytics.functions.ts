@@ -264,8 +264,9 @@ export const getOrgCoachAnalytics = createServerFn({ method: "GET" })
     const prevWeeklyCompliance = totalTasksPrev > 0 ? Math.round((doneTasksPrev / totalTasksPrev) * 100) : null;
     const activeCur = new Set(((tasksWeekRes.data ?? []) as any[]).filter((t) => t.status === "done").map((t) => t.user_id)).size;
     const activePrev = new Set(((tasksPrevRes.data ?? []) as any[]).filter((t) => t.status === "done").map((t) => t.user_id)).size;
-    const trainingCur = ((tasksWeekRes.data ?? []) as any[]).filter((t) => t.status === "done" && ["athletic_training", "team_training"].includes(t.task_type)).length;
-    const trainingPrev = ((tasksPrevRes.data ?? []) as any[]).filter((t) => t.status === "done" && ["athletic_training", "team_training"].includes(t.task_type)).length;
+    const trainingCur = ((trainingCurRes.data ?? []) as any[]).filter((s) => s.status === "completed").length;
+    const trainingPrev = ((trainingPrevRes.data ?? []) as any[]).filter((s) => s.status === "completed").length;
+
 
     // Radar (rule-driven)
     const critical: RadarItem[] = [];
