@@ -108,7 +108,7 @@ function AthleteProfile() {
           <AthleteOverviewTab data={data} orgId={orgId} userId={userId} />
         )}
         {tab === "tasks" && <AthleteTasksTab data={data} orgId={orgId} userId={userId} />}
-        {tab === "checkins" && <AthleteCheckinsTab data={data} orgId={orgId} userId={userId} />}
+        {tab === "checkins" && <AthleteCheckinsTab data={data} orgId={orgId} userId={userId} focus={search.focus} />}
         {tab === "performance" && (
           <AthletePerformanceTab data={data} orgId={orgId} userId={userId} />
         )}
