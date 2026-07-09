@@ -13,6 +13,7 @@ export type CoachAthleteDetail = {
   athlete: {
     user_id: string;
     display_name: string;
+    avatar_url: string | null;
     position: string | null;
     secondary_position: string | null;
     jersey_number: number | null;
@@ -160,7 +161,7 @@ export const getCoachAthleteDetail = createServerFn({ method: "GET" })
 
       supabase
         .from("profiles")
-        .select("id, display_name, height_cm, birthdate")
+        .select("id, display_name, avatar_url, height_cm, birthdate")
         .eq("id", data.userId)
         .maybeSingle(),
       supabase
@@ -525,6 +526,7 @@ export const getCoachAthleteDetail = createServerFn({ method: "GET" })
       athlete: {
         user_id: data.userId,
         display_name: displayName,
+        avatar_url: profile?.avatar_url ?? null,
         position: teamMembership?.position ?? null,
         secondary_position: teamMembership?.secondary_position ?? null,
         jersey_number: teamMembership?.jersey_number ?? null,

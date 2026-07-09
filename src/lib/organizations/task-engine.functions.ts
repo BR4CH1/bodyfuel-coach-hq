@@ -275,11 +275,15 @@ export const getOrgAthletesOnboardingAudit = createServerFn({ method: "GET" })
       .map((m) => m.user_id);
 
     const { data: profs } = memberIds.length
-      ? await supabase.from("profiles").select("id, display_name").in("id", memberIds)
+      ? await supabase.from("profiles").select("id, display_name, avatar_url").in("id", memberIds)
       : { data: [] as any[] };
 
     const nameMap = new Map<string, string>();
-    for (const p of (profs ?? []) as any[]) nameMap.set(p.id, p.display_name || "Athlet");
+    const avatarMap = new Map<string, string | null>();
+    for (const p of (profs ?? []) as any[]) {
+      nameMap.set(p.id, p.display_name || "Athlet");
+      avatarMap.set(p.id, p.avatar_url ?? null);
+    }
     const teamNameMap = new Map<string, string>();
     for (const t of ((teams.data ?? []) as any[])) teamNameMap.set(t.id, t.name);
 
@@ -298,6 +302,7 @@ export const getOrgAthletesOnboardingAudit = createServerFn({ method: "GET" })
         return {
           user_id: m.user_id,
           name: nameMap.get(m.user_id) ?? "Athlet",
+          avatar_url: avatarMap.get(m.user_id) ?? null,
           onboarding_completed: !!m.onboarding_completed,
           derived_complete: complete,
           missing,

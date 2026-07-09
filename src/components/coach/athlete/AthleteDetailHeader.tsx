@@ -1,5 +1,6 @@
 import type { CoachAthleteDetail } from "@/lib/organizations/coach-athlete-drilldown.functions";
-import { Initials, STATUS_TONE } from "./athlete-tab-shared";
+import { STATUS_TONE } from "./athlete-tab-shared";
+import { UserAvatar } from "@/components/bodyfuel/UserAvatar";
 
 export function AthleteDetailHeader({ data }: { data: CoachAthleteDetail }) {
   const a = data.athlete;
@@ -12,7 +13,12 @@ export function AthleteDetailHeader({ data }: { data: CoachAthleteDetail }) {
   return (
     <section>
       <div className="flex items-start gap-3">
-        <Initials name={a.display_name} />
+        <UserAvatar
+          path={a.avatar_url}
+          name={a.display_name}
+          size={56}
+          className="ring-1 ring-primary/20"
+        />
         <div className="min-w-0 flex-1">
           <h1 className="font-display text-2xl font-bold uppercase leading-tight tracking-tight">
             {a.display_name}
