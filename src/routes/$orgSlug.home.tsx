@@ -20,13 +20,21 @@ export const Route = createFileRoute("/$orgSlug/home")({
 });
 
 const TASK_TYPE_LABEL: Record<string, string> = {
-  team_training: "TEAMTRAINING",
-  athletic_training: "ATHLETIK",
   daily_checkin: "DAILY CHECK-IN",
   recovery: "RECOVERY",
   challenge: "CHALLENGE",
   hydration: "HYDRATION",
+  training_feedback: "TRAININGSFEEDBACK",
+  custom: "AUFGABE",
+  manual: "AUFGABE",
 };
+
+const TRAINING_SOURCE_LABEL: Record<string, string> = {
+  coach: "COACH TRAINING",
+  smart: "SMART TRAINING",
+  athlete: "EIGENES TRAINING",
+};
+
 
 function greet() {
   const h = new Date().getHours();
