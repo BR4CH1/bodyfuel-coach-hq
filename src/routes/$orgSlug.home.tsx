@@ -221,9 +221,11 @@ function OrgHome() {
               label="Readiness"
               value={(data as any).readiness_score != null ? `${(data as any).readiness_score}` : "—"}
               hint={
-                (data as any).today_checkin
+                (data as any).readiness_score != null
                   ? "heute"
-                  : "Check-in offen"
+                  : (data as any).today_checkin
+                    ? `Lernphase · ${(data as any).readiness_days_recorded_7 ?? 0}/7`
+                    : "Check-in offen"
               }
               primary={primary}
             />
