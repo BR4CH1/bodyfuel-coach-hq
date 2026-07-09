@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { resolveCoachTeamScope } from "./coach-team-scope";
-import { scoreOfCheckin } from "@/lib/readiness";
+import { scoreOfCheckin, summarize } from "@/lib/readiness";
 
 
 /** Home data: today's tasks + status cards + active challenge. Membership-scoped. */
@@ -170,7 +170,21 @@ export const getOrgHomeData = createServerFn({ method: "GET" })
     const done = (weekTasks ?? []).filter((t: any) => t.status === "done").length;
     const weeklyCompliance = total > 0 ? Math.round((done / total) * 100) : null;
 
-    // Readiness: SoT athlete_checkins (heute). Zentrale Formel für alle Orgs.
+    // Readiness: SoT athlete_checkins. Wir laden die letzten 30 Tage und
+    // nutzen `summarize`, damit die Data-Sufficiency-Logik zentral greift.
+    // Der Home-Status-Kachel zeigt „—", wenn zu wenig Historie vorliegt —
+    // ein einzelner Check-in darf NICHT wie ein belastbarer Readiness-Score
+    // wirken (siehe READINESS_SUFFICIENCY).
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
+    const thirtyIso = thirtyDaysAgo.toISOString().slice(0, 10);
+    const { data: recentCheckins } = await supabase
+      .from("athlete_checkins")
+      .select("checkin_date, sleep, energy, stress, training_feel, pain_level, pain_note")
+      .eq("user_id", userId)
+      .gte("checkin_date", thirtyIso)
+      .order("checkin_date", { ascending: true });
+
     const { data: todayCheckin } = await supabase
       .from("athlete_checkins")
       .select("id, checkin_date, sleep, energy, stress, training_feel, pain_level, pain_note, notes, weight_kg")
@@ -178,7 +192,12 @@ export const getOrgHomeData = createServerFn({ method: "GET" })
       .eq("checkin_date", todayIso)
       .maybeSingle();
 
-    const readinessScore = todayCheckin ? scoreOfCheckin(todayCheckin as any) : null;
+    const readinessSummary = summarize((recentCheckins ?? []) as any[]);
+    // Nur echten Score anzeigen wenn Baseline (>= CURRENT_MIN_HISTORY) erfüllt ist.
+    // Ansonsten null → UI zeigt "—" statt eines künstlichen Wertes.
+    const readinessScore = readinessSummary.sufficiency.current
+      ? (todayCheckin ? scoreOfCheckin(todayCheckin as any) : null)
+      : null;
 
 
     return {
@@ -198,6 +217,8 @@ export const getOrgHomeData = createServerFn({ method: "GET" })
       weekly_compliance: weeklyCompliance,
       today_checkin: todayCheckin ?? null,
       readiness_score: readinessScore,
+      readiness_sufficiency: readinessSummary.sufficiency,
+      readiness_days_recorded_7: readinessSummary.days_recorded_7,
     };
   });
 

@@ -1,7 +1,15 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { CheckCircle2, Circle, Clock, Trophy, Activity, TrendingUp, Users, ShieldAlert } from "lucide-react";
 import { useSession } from "@/lib/bodyfuel/session";
@@ -113,6 +121,12 @@ function OrgHome() {
 
   return (
     <OrgAthleteLayout slug={org.slug} features={featuresList} primaryColor={primary}>
+      <DailyCheckinPopup
+        orgSlug={org.slug}
+        userId={supabaseUser?.id}
+        hasTodayCheckin={!!(data as any).today_checkin}
+        primary={primary}
+      />
       <header
         className="px-5 py-6 text-white"
         style={{ background: `linear-gradient(135deg, ${bg} 0%, #000 100%)` }}
@@ -221,9 +235,11 @@ function OrgHome() {
               label="Readiness"
               value={(data as any).readiness_score != null ? `${(data as any).readiness_score}` : "—"}
               hint={
-                (data as any).today_checkin
+                (data as any).readiness_score != null
                   ? "heute"
-                  : "Check-in offen"
+                  : (data as any).today_checkin
+                    ? `Lernphase · ${(data as any).readiness_days_recorded_7 ?? 0}/7`
+                    : "Check-in offen"
               }
               primary={primary}
             />
@@ -304,6 +320,68 @@ function OrgHome() {
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return <h2 className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">{children}</h2>;
+}
+
+/**
+ * Zeigt beim ersten Login des Tages ein Popup, das an den Daily Check-in
+ * erinnert. Wird pro User + Tag maximal einmal angezeigt (localStorage-Key).
+ * Sobald der Check-in vorliegt (`hasTodayCheckin`), wird das Popup NICHT
+ * mehr geöffnet — der Haken passiert dann auf natürlichem Weg.
+ */
+function DailyCheckinPopup({
+  orgSlug,
+  userId,
+  hasTodayCheckin,
+  primary,
+}: {
+  orgSlug: string;
+  userId: string | undefined;
+  hasTodayCheckin: boolean;
+  primary: string;
+}) {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!userId || hasTodayCheckin) return;
+    const today = new Date().toISOString().slice(0, 10);
+    const key = `bf:checkin-prompt:${userId}:${today}`;
+    if (typeof window === "undefined") return;
+    if (window.localStorage.getItem(key) === "1") return;
+    window.localStorage.setItem(key, "1");
+    // kleine Verzögerung, damit Home fertig gerendert wirkt
+    const t = setTimeout(() => setOpen(true), 400);
+    return () => clearTimeout(t);
+  }, [userId, hasTodayCheckin]);
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Wie fühlst du dich heute?</DialogTitle>
+          <DialogDescription>
+            Dein Daily Check-in dauert unter einer Minute — er hält Training, Plan und Coach ehrlich auf deinem tatsächlichen Zustand.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="gap-2 sm:justify-between">
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium hover:bg-muted"
+          >
+            Später
+          </button>
+          <Link
+            to="/$orgSlug/checkin"
+            params={{ orgSlug }}
+            onClick={() => setOpen(false)}
+            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-white"
+            style={{ background: primary }}
+          >
+            Jetzt Check-in starten →
+          </Link>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 function ReadinessGateHint({ userId, orgSlug }: { userId: string | undefined; orgSlug: string }) {

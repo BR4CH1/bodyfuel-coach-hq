@@ -86,6 +86,32 @@ function daysAgoTs(days: number): number {
   return d.getTime();
 }
 
+// ---------------------------------------------------------------------------
+// Data-Sufficiency Thresholds (zentral definiert — NICHT in Komponenten
+// hardcoden). Ein technischer Fallback-/Neutralwert von 50 darf NIEMALS als
+// echter Messwert dargestellt oder für Progression/Gate-Entscheidungen
+// verwendet werden. Wenn die Datenmenge unter dem Schwellwert liegt, gibt
+// `summarize` `null` zurück — dadurch fallen Gate, Coach-Alerts und UI
+// automatisch auf den ehrlichen "—"-Zustand zurück.
+// ---------------------------------------------------------------------------
+export const READINESS_SUFFICIENCY = {
+  /** Mindestanzahl valider Check-ins in den letzten 30 Tagen, damit „heute"
+   *  als belastbarer Wert angezeigt wird. Ein einzelner Check-in reicht
+   *  nicht — sonst wirken einmalige Ausschläge wie eine Baseline. */
+  CURRENT_MIN_HISTORY: 3,
+  AVG7_MIN: 3,
+  AVG30_MIN: 6,
+  LOAD_TREND_MIN: 4,
+} as const;
+
+export type ReadinessSufficiency = {
+  current: boolean;
+  avg7: boolean;
+  avg30: boolean;
+  delta7v30: boolean;
+  load_trend: boolean;
+};
+
 export type ReadinessSummary = {
   current: number | null;
   avg7: number | null;
@@ -93,21 +119,41 @@ export type ReadinessSummary = {
   delta7v30: number | null;
   pain_events_7: number;
   pain_events_30: number;
-  load_trend: "rising" | "falling" | "stable" | null; // aus training_feel-Trend
+  load_trend: "rising" | "falling" | "stable" | null;
+  days_recorded_total: number;
+  days_recorded_7: number;
+  days_recorded_30: number;
+  sufficiency: ReadinessSufficiency;
   message: string;
 };
 
 export function summarize(rows: ReadinessCheckin[]): ReadinessSummary {
   const series = readinessSeries(rows);
-  const now = Date.now();
   const t7 = daysAgoTs(6);
   const t30 = daysAgoTs(29);
   const in7 = series.filter((p) => p.t >= t7);
   const in30 = series.filter((p) => p.t >= t30);
-  const current = series.length ? series[series.length - 1].v : null;
-  const avg7 = avgOf(in7.map((p) => p.v));
-  const avg30 = avgOf(in30.map((p) => p.v));
-  const delta7v30 = avg7 != null && avg30 != null ? avg7 - avg30 : null;
+
+  const feelRows = rows
+    .filter((r) => r.training_feel != null)
+    .map((r) => ({ t: new Date(r.checkin_date).getTime(), v: r.training_feel as number }))
+    .sort((a, b) => a.t - b.t);
+
+  const suff: ReadinessSufficiency = {
+    current: series.length >= READINESS_SUFFICIENCY.CURRENT_MIN_HISTORY,
+    avg7: in7.length >= READINESS_SUFFICIENCY.AVG7_MIN,
+    avg30: in30.length >= READINESS_SUFFICIENCY.AVG30_MIN,
+    delta7v30:
+      in7.length >= READINESS_SUFFICIENCY.AVG7_MIN &&
+      in30.length >= READINESS_SUFFICIENCY.AVG30_MIN,
+    load_trend: feelRows.length >= READINESS_SUFFICIENCY.LOAD_TREND_MIN,
+  };
+
+  const rawCurrent = series.length ? series[series.length - 1].v : null;
+  const current = suff.current ? rawCurrent : null;
+  const avg7 = suff.avg7 ? avgOf(in7.map((p) => p.v)) : null;
+  const avg30 = suff.avg30 ? avgOf(in30.map((p) => p.v)) : null;
+  const delta7v30 = suff.delta7v30 && avg7 != null && avg30 != null ? avg7 - avg30 : null;
 
   const pain7 = rows.filter(
     (r) => r.pain_level != null && r.pain_level >= 2 && new Date(r.checkin_date).getTime() >= t7,
@@ -116,22 +162,16 @@ export function summarize(rows: ReadinessCheckin[]): ReadinessSummary {
     (r) => r.pain_level != null && r.pain_level >= 2 && new Date(r.checkin_date).getTime() >= t30,
   ).length;
 
-  // Belastungstrend aus training_feel: fällt = Belastung wirkt stärker (Athlet fühlt sich "platter")
-  const feelRows = rows
-    .filter((r) => r.training_feel != null)
-    .map((r) => ({ t: new Date(r.checkin_date).getTime(), v: r.training_feel as number }))
-    .sort((a, b) => a.t - b.t);
   let load_trend: ReadinessSummary["load_trend"] = null;
-  if (feelRows.length >= 4) {
+  if (suff.load_trend) {
     const half = Math.floor(feelRows.length / 2);
     const oldAvg = feelRows.slice(0, half).reduce((a, b) => a + b.v, 0) / half;
     const newAvg = feelRows.slice(-half).reduce((a, b) => a + b.v, 0) / half;
     const diff = newAvg - oldAvg;
-    if (diff > 0.4) load_trend = "falling"; // Trainingsgefühl steigt → Belastung verträglich
-    else if (diff < -0.4) load_trend = "rising"; // Trainingsgefühl fällt → Belastung wirkt hoch
+    if (diff > 0.4) load_trend = "falling";
+    else if (diff < -0.4) load_trend = "rising";
     else load_trend = "stable";
   }
-  void now;
 
   return {
     current,
@@ -141,20 +181,36 @@ export function summarize(rows: ReadinessCheckin[]): ReadinessSummary {
     pain_events_7: pain7,
     pain_events_30: pain30,
     load_trend,
-    message: buildMessage({ current, avg7, avg30, delta7v30, pain7, load_trend }),
+    days_recorded_total: series.length,
+    days_recorded_7: in7.length,
+    days_recorded_30: in30.length,
+    sufficiency: suff,
+    message: buildMessage({
+      current,
+      avg7,
+      delta7v30,
+      pain7,
+      load_trend,
+      days_recorded_total: series.length,
+      days_recorded_7: in7.length,
+    }),
   };
 }
 
 function buildMessage(x: {
   current: number | null;
   avg7: number | null;
-  avg30: number | null;
   delta7v30: number | null;
   pain7: number;
   load_trend: ReadinessSummary["load_trend"];
+  days_recorded_total: number;
+  days_recorded_7: number;
 }): string {
-  if (x.current == null && x.avg7 == null) {
+  if (x.days_recorded_total === 0) {
     return "Noch keine Check-ins — leg einfach heute los.";
+  }
+  if (x.current == null && x.avg7 == null) {
+    return `Wir lernen aktuell deine persönliche Belastungs- und Erholungsbasis kennen. ${x.days_recorded_7} von 7 Tagen erfasst.`;
   }
   if (x.pain7 >= 2) {
     return "Du hast mehrfach Beschwerden gemeldet — dein Live Plan berücksichtigt das.";
@@ -165,6 +221,9 @@ function buildMessage(x: {
   if (x.delta7v30 != null) {
     if (x.delta7v30 >= 6) return "Deine Readiness ist zuletzt besser als dein 30-Tage-Schnitt. Stark.";
     if (x.delta7v30 <= -6) return "Deine Erholung liegt aktuell unter deinem persönlichen Durchschnitt.";
+  }
+  if (x.avg7 == null) {
+    return `Wir sammeln noch Daten für deinen 7-Tage-Trend (${x.days_recorded_7}/7 erfasst).`;
   }
   return "Deine Readiness ist in den letzten 7 Tagen stabil.";
 }
