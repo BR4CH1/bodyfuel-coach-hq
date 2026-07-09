@@ -13,7 +13,7 @@ import {
 } from "@/lib/readiness-gate-events.functions";
 import { MiniLine, Section, TinyMetric } from "./athlete-tab-shared";
 import { ReadinessInsight } from "@/components/readiness/ReadinessInsight";
-import { scoreOfCheckin } from "@/lib/readiness";
+import { scoreOfCheckin, recoveryAfterGate } from "@/lib/readiness";
 
 const SCALE_LABEL = ["—", "sehr niedrig", "niedrig", "mittel", "hoch", "sehr hoch"];
 
