@@ -4,13 +4,16 @@
  *   - runOrgTaskEngine (server fn, auth-scoped client)
  *   - /api/public/hooks/org-task-engine (cron route, service-role client)
  *
+ * BodyFuel Performance — Phase 1b.2:
+ * Training ist KEIN Task mehr. team_training und athletic_training werden
+ * NICHT mehr als organization_tasks erzeugt. Trainings leben ausschließlich
+ * in `training_sessions` (SoT). Die Task-Engine erzeugt hier nur noch
+ * echte Aufgaben (daily_checkin, challenge, …) und räumt zusätzlich
+ * eventuell noch vorhandene zukünftige Trainings-Tasks defensiv weg.
+ *
  * Idempotent: relies on the partial UNIQUE index
  *   (org, user, task_type, source_type, source_id, scheduled_date)
  * with ignoreDuplicates upsert.
- *
- * Also cleans up FUTURE pending team_training / athletic_training tasks
- * whose source (schedule row / session) no longer applies — so schedule
- * changes propagate without touching completed history.
  */
 
 type Client = any;
