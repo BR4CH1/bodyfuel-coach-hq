@@ -3,12 +3,13 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { toast } from "sonner";
-import { CheckCircle2, Circle, Clock, Trophy, Activity, TrendingUp, Users } from "lucide-react";
+import { CheckCircle2, Circle, Clock, Trophy, Activity, TrendingUp, Users, ShieldAlert } from "lucide-react";
 import { useSession } from "@/lib/bodyfuel/session";
 import {
   getOrgHomeData,
   updateOrgTaskStatus,
 } from "@/lib/organizations/athlete.functions";
+import { listRecentReadinessGateEvents, type ReadinessGateEvent } from "@/lib/readiness-gate-events.functions";
 
 import { OrgAthleteLayout } from "@/components/organizations/OrgAthleteLayout";
 import { OrganizationContextSwitcher, setActiveContext } from "@/components/organizations/OrganizationContextSwitcher";
