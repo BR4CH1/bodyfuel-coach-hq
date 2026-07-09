@@ -436,9 +436,14 @@ export const completeTrainingSession = createServerFn({ method: "POST" })
     }> = [];
 
     // Readiness einmal pro Session-Complete laden — dient als zentrale Bremse
-    // für alle Übungs-Progressionen dieses Tags.
+    // für alle Übungs-Progressionen dieses Tags. Phase 6: zusätzlich die
+    // harten Gate-Daten der letzten 7 Tage laden, um Confidence auch nach
+    // dem akuten Gate im Cooldown gedeckelt zu halten.
     const checkins = await loadRecentCheckins(supabase, userId);
     const gate = evaluateReadinessGate(checkins);
+    const hardGateDates = await loadRecentHardGateDates(supabase, userId);
+    const cooldownActive = readinessCooldownActive(hardGateDates);
+
 
     for (const ex of workingEx) {
       const sets = (setsByExercise.get(ex.id) ?? []).sort((a, b) => a.set_number - b.set_number);
