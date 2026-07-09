@@ -240,65 +240,11 @@ export async function runOrgTaskEngineWithClient(
         }
       }
 
-      // Athletic plan sessions (new structured system)
-      for (const sess of planSessions) {
-        const plan = plans.find((p) => p.id === sess.plan_id);
-        if (!plan) continue;
-        if (plan.start_date && new Date(`${plan.start_date}T00:00:00`) > date) continue;
-        if (plan.end_date && new Date(`${plan.end_date}T00:00:00`) < date) continue;
-        const weekdays: number[] = Array.isArray(sess.scheduled_weekdays) ? sess.scheduled_weekdays : [];
-        if (!weekdays.includes(weekday)) continue;
-        const targets = resolvePlanTargets(plan.id);
-        for (const t of targets) {
-          rows.push({
-            organization_id: orgId,
-            team_id: t.team_id,
-            user_id: t.user_id,
-            task_type: "athletic_training",
-            title: sess.session_name || plan.name || "Athletic Training",
-            subtitle: (sess.focus_areas as string[] | null)?.join(", ") ?? null,
-            scheduled_for: combineDateTime(dateIso, "17:00"),
-            scheduled_date: dateIso,
-            duration_min: sess.estimated_duration_minutes ?? null,
-            status: "open",
-            source_type: "athletic_plan_session",
-            source_id: sess.id,
-            link_target: `/${orgSlug}/athletic/${sess.id}`,
-            payload: { plan_id: plan.id, session_id: sess.id },
-          });
-        }
-      }
+      // Athletic-Plan-Sessions & Legacy-Payload-Sessions: KEINE Task-Erzeugung mehr.
+      // Diese Trainings materialisieren sich über athlete-training-session-generator
+      // in `athlete_training_session` und synchron in `training_sessions` (SoT).
+    }
 
-      // Legacy athletic plan payload sessions (backwards compat: plans with payload.sessions[])
-      for (const plan of plans) {
-        const sessions: any[] = Array.isArray(plan.payload?.sessions) ? plan.payload.sessions : [];
-        for (const sess of sessions) {
-          if (!sess?.scheduled_date) continue;
-          if (sess.scheduled_date !== dateIso) continue;
-          const legacyTargets = plan.user_id
-            ? [{ user_id: plan.user_id as string, team_id: plan.team_id ?? null }]
-            : plan.team_id
-              ? teamMemberships.filter((tm) => tm.team_id === plan.team_id).map((tm) => ({ user_id: tm.user_id, team_id: plan.team_id }))
-              : [];
-          for (const t of legacyTargets) {
-            rows.push({
-              organization_id: orgId,
-              team_id: t.team_id ?? null,
-              user_id: t.user_id,
-              task_type: "athletic_training",
-              title: sess.title || plan.name || "Athletic Training",
-              subtitle: sess.subtitle ?? null,
-              scheduled_for: combineDateTime(sess.scheduled_date, sess.time ?? "17:00"),
-              scheduled_date: sess.scheduled_date,
-              duration_min: sess.duration_min ?? null,
-              status: "open",
-              source_type: "athletic_plan",
-              source_id: plan.id,
-              payload: { session: sess },
-            });
-          }
-        }
-      }
     }
 
     considered = rows.length;
