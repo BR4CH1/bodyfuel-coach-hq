@@ -19,6 +19,12 @@ export const Route = createFileRoute("/auth")({
 
 const emailSchema = z.string().trim().email("Ungültige Email").max(255);
 const pwSchema = z.string().min(6, "Mindestens 6 Zeichen").max(100);
+const nameSchema = z
+  .string()
+  .trim()
+  .min(2, "Mindestens 2 Zeichen")
+  .max(60, "Maximal 60 Zeichen")
+  .regex(/^[\p{L}][\p{L}\s'\-]*$/u, "Nur Buchstaben, Bindestrich, Leerzeichen");
 
 function AuthPage() {
   const { supabaseUser, loading } = useSession();
