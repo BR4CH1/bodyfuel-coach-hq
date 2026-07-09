@@ -64,6 +64,17 @@ function AuthPage() {
     if (!ev.success) return toast.error(ev.error.issues[0].message);
     if (!pv.success) return toast.error(pv.error.issues[0].message);
 
+    let firstParsed = "";
+    let lastParsed = "";
+    if (mode === "signup") {
+      const fv = nameSchema.safeParse((fd.get("first_name") ?? firstName ?? "").toString());
+      const lv = nameSchema.safeParse((fd.get("last_name") ?? lastName ?? "").toString());
+      if (!fv.success) return toast.error(`Vorname: ${fv.error.issues[0].message}`);
+      if (!lv.success) return toast.error(`Nachname: ${lv.error.issues[0].message}`);
+      firstParsed = fv.data;
+      lastParsed = lv.data;
+    }
+
     setBusy(true);
     try {
       if (mode === "signup") {
@@ -71,12 +82,27 @@ function AuthPage() {
           typeof window !== "undefined"
             ? `${window.location.origin}${next ?? "/app"}`
             : undefined;
+        const displayName = `${firstParsed} ${lastParsed}`.replace(/\s+/g, " ").trim();
         const { data, error } = await supabase.auth.signUp({
           email: ev.data,
           password: pv.data,
-          options: { emailRedirectTo },
+          options: {
+            emailRedirectTo,
+            data: {
+              display_name: displayName,
+              first_name: firstParsed,
+              last_name: lastParsed,
+            },
+          },
         });
         if (error) throw error;
+        // Falls die Session direkt gesetzt wird, Profil-Namen sofort schreiben.
+        if (data.session && data.user) {
+          await supabase
+            .from("profiles")
+            .update({ display_name: displayName })
+            .eq("id", data.user.id);
+        }
         if (!data.session) {
           toast.success("Account erstellt. Bitte bestätige deine E-Mail, um fortzufahren.");
         } else {
