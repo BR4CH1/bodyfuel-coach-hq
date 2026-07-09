@@ -141,6 +141,24 @@ export const getCoachActionAlerts = createServerFn({ method: "GET" })
       ),
     );
 
+    // Deep-Link: für Athleten mit Readiness-Bremsen die primäre Org auflösen,
+    // um direkt in den Checkins-Tab des Athleten-Drilldowns zu springen.
+    const readinessUserIds = Array.from(hardBrakeCountByUser.keys()).filter(
+      (id) => (hardBrakeCountByUser.get(id) ?? 0) >= 2,
+    );
+    const orgIdByUser = new Map<string, string>();
+    if (readinessUserIds.length) {
+      const { data: memberships } = await supabase
+        .from("organization_memberships")
+        .select("user_id, organization_id, role, status")
+        .in("user_id", readinessUserIds)
+        .eq("role", "athlete")
+        .eq("status", "active");
+      ((memberships as any[]) ?? []).forEach((m) => {
+        if (!orgIdByUser.has(m.user_id)) orgIdByUser.set(m.user_id, m.organization_id);
+      });
+    }
+
     type PlanState = {
       activeNutrition: boolean;
       activeTraining: boolean;
