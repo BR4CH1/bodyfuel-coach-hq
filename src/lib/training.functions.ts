@@ -8,6 +8,28 @@ import {
   normalizeExerciseKey,
   stateFromDecision,
 } from "./training-engine/athlete-exercise-state";
+import {
+  evaluateReadinessGate,
+  applyReadinessGate,
+} from "./training-engine/readiness-gate";
+import type { ReadinessCheckin } from "@/lib/readiness";
+
+/** Zentrales Laden der letzten 30 Tage Check-ins für das Readiness-Gate. */
+async function loadRecentCheckins(
+  supabase: any,
+  userId: string,
+): Promise<ReadinessCheckin[]> {
+  const since = new Date();
+  since.setDate(since.getDate() - 30);
+  const { data } = await supabase
+    .from("athlete_checkins")
+    .select("checkin_date, sleep, energy, stress, training_feel, pain_level, pain_note")
+    .eq("user_id", userId)
+    .gte("checkin_date", since.toISOString().slice(0, 10))
+    .order("checkin_date", { ascending: false });
+  return ((data as ReadinessCheckin[]) ?? []);
+}
+
 
 type ParsedExercise = {
   name: string;
