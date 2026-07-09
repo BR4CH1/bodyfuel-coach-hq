@@ -264,13 +264,17 @@ export const progressAfterExercise = createServerFn({ method: "POST" })
       return { ok: true as const, skipped: "no_working_sets" as const };
     }
 
-    const decision = progressExerciseAfterSession({
+    const rawDecision = progressExerciseAfterSession({
       exerciseName: String((ex as any).name ?? ""),
       sets,
       repRange: String((ex as any).target_reps ?? "8-12"),
       targetSets: Number((ex as any).target_sets ?? sets.length ?? 3),
       targetRir: (ex as any).target_rir ?? null,
     });
+    const checkins = await loadRecentCheckins(supabase, userId);
+    const gate = evaluateReadinessGate(checkins);
+    const decision = applyReadinessGate(rawDecision, gate);
+
 
     // Nächste Instanz derselben Übung im selben Plan finden (nachfolgende Tage)
     const currentSort = Number(day.sort_order ?? 0);
