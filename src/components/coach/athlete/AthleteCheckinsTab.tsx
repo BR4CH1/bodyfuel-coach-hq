@@ -130,6 +130,7 @@ export function AthleteCheckinsTab({
             </ul>
           </div>
         </Section>
+        </div>
       )}
 
 
