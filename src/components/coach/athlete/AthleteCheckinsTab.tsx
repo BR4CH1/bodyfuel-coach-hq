@@ -67,6 +67,10 @@ export function AthleteCheckinsTab({
               durch die Readiness konservativer gesetzt. Keine parallele Plan-Änderung — nur
               Steigerungen wurden zurückgehalten.
             </div>
+
+            <GateSparkline events={gateEvents} days={14} />
+            <RecoveryAfterGate events={gateEvents} checkins={checkins} />
+
             <ul className="mt-2 divide-y divide-orange-500/20">
               {gateEvents.slice(0, 6).map((g) => (
                 <li key={g.id} className="py-1.5 text-[12px]">
@@ -103,6 +107,7 @@ export function AthleteCheckinsTab({
           </div>
         </Section>
       )}
+
 
       <Section title="Aktueller Check-in" icon={<Heart className="h-4 w-4" />}>
         {isLoading ? (
