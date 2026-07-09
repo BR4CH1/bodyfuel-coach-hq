@@ -53,11 +53,17 @@ export const getCoachActionAlerts = createServerFn({ method: "GET" })
       const since30Iso = new Date(today - 30 * 86400000).toISOString();
       const since7dIso = new Date(today - 7 * 86400000).toISOString();
 
-      const [profiles, measurements, foods, targets, skips, swaps, activePlans] = await Promise.all([
+      const [profiles, measurements, foods, targets, skips, swaps, activePlans, gateEvents] = await Promise.all([
       supabase
         .from("profiles")
         .select("id, display_name, training_goal, goal_weight_kg, goal_target_date")
         .in("id", ids),
+      supabase
+        .from("training_progression_events")
+        .select("client_id, readiness_gate, evaluated_at")
+        .in("client_id", ids)
+        .eq("readiness_gate", "reduce")
+        .gte("evaluated_at", since7dIso),
       supabase
         .from("body_measurements")
         .select("user_id, weight_kg, measured_at")
