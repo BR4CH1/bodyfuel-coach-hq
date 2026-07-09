@@ -75,6 +75,7 @@ export function AthletesTab({
     ? (audit.athletes as any[]).filter((a) => allowedUserIds.has(a.user_id))
     : (audit.athletes as any[]);
   const [posGroup, setPosGroup] = useState<"all" | "offense" | "defense" | "special">("all");
+  const [readinessFilter, setReadinessFilter] = useState<"all" | "alerts">("all");
 
   const normalizedSearch = searchTerm.trim().toLowerCase();
 
@@ -92,7 +93,11 @@ export function AthletesTab({
           .includes(normalizedSearch),
       )
     : withGroup;
-  const visibleRows = posGroup === "all" ? bySearch : bySearch.filter((a) => a.__group === posGroup);
+  const byPos = posGroup === "all" ? bySearch : bySearch.filter((a) => a.__group === posGroup);
+  const visibleRows =
+    readinessFilter === "alerts"
+      ? byPos.filter((a) => a.readiness_bucket === "red" || a.readiness_bucket === "yellow")
+      : byPos;
 
   const visiblePending = normalizedSearch
     ? (pending as any[]).filter((p) =>
@@ -110,6 +115,9 @@ export function AthletesTab({
   const totalCount = rows.length;
   const activeCount = rows.filter((a) => a.derived_complete && a.status !== "inactive").length;
   const openOnboarding = rows.filter((a) => !a.derived_complete).length;
+  const readinessAlertCount = rows.filter(
+    (a: any) => a.readiness_bucket === "red" || a.readiness_bucket === "yellow",
+  ).length;
   const teamsCount = teams.length;
 
   const invalidate = () => {
@@ -129,7 +137,7 @@ export function AthletesTab({
     return g;
   }, [visibleRows]);
 
-  const showGrouped = posGroup === "all" && !normalizedSearch;
+  const showGrouped = posGroup === "all" && readinessFilter === "all" && !normalizedSearch;
 
   return (
     <div className="space-y-4">
