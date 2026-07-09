@@ -534,14 +534,15 @@ function SessionCard({
       </div>
       <div className="mt-2 flex justify-end">
         <Link
-          to="/$orgSlug/athletic/$sessionId"
-          params={{ orgSlug, sessionId: session.id }}
+          to="/$orgSlug/training"
+          params={{ orgSlug }}
           className="text-[10px] font-bold uppercase tracking-wider underline"
           style={{ color: primary }}
         >
           Öffnen
         </Link>
       </div>
+
     </li>
   );
 }

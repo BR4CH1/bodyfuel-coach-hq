@@ -7,7 +7,9 @@ import { useSession } from "@/lib/bodyfuel/session";
 import { getOrgAthleticTraining, getOrgHomeData } from "@/lib/organizations/athlete.functions";
 import { OrgAthleteLayout } from "@/components/organizations/OrgAthleteLayout";
 import { PlanStatusChip } from "@/components/organizations/PlanStatusChip";
+import { BullsAthleteAthleticSession } from "@/components/bodyfuel/BullsAthleteAthleticSession";
 import { Route as OrgLayoutRoute } from "./$orgSlug";
+
 
 
 export const Route = createFileRoute("/$orgSlug/training")({
@@ -72,6 +74,11 @@ function OrgTraining() {
 
       <main className="mx-auto max-w-md px-4 py-5 space-y-6">
         <PlanStatusChip userId={supabaseUser?.id} />
+        <section>
+          <Title>Deine Sessions</Title>
+          <BullsAthleteAthleticSession />
+        </section>
+
         <section>
           <Title>Heute</Title>
 
