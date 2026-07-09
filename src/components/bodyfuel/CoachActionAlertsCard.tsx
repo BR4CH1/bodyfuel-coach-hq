@@ -185,30 +185,42 @@ function AlertRow({
       : "border-warning/40 bg-warning/10";
   const dot = alert.severity === "red" ? "bg-destructive" : "bg-warning";
 
+  const linkContent = (
+    <>
+      <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${dot}`} />
+      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+          <span className="text-sm font-semibold">{alert.name}</span>
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            {KIND_LABEL[alert.kind]} · {alert.range}
+          </span>
+        </div>
+        <div className="text-sm">{alert.title}</div>
+        <div className="text-xs text-muted-foreground">{alert.detail}</div>
+      </div>
+      <div className="hidden shrink-0 items-center gap-1 self-center text-xs font-semibold text-gold group-hover:underline sm:flex">
+        Details
+        <ChevronRight className="h-3.5 w-3.5" />
+      </div>
+    </>
+  );
+
   return (
     <div className={`rounded-xl border p-3 ${tone}`}>
-      <Link
-        to="/coach/customers/$userId"
-        params={{ userId: alert.user_id }}
-        className="group flex items-start gap-3"
-      >
-        <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${dot}`} />
-        <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-            <span className="text-sm font-semibold">{alert.name}</span>
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-              {KIND_LABEL[alert.kind]} · {alert.range}
-            </span>
-          </div>
-          <div className="text-sm">{alert.title}</div>
-          <div className="text-xs text-muted-foreground">{alert.detail}</div>
-        </div>
-        <div className="hidden shrink-0 items-center gap-1 self-center text-xs font-semibold text-gold group-hover:underline sm:flex">
-          Details
-          <ChevronRight className="h-3.5 w-3.5" />
-        </div>
-      </Link>
+      {alert.deep_link ? (
+        <Link to={alert.deep_link} className="group flex items-start gap-3">
+          {linkContent}
+        </Link>
+      ) : (
+        <Link
+          to="/coach/customers/$userId"
+          params={{ userId: alert.user_id }}
+          className="group flex items-start gap-3"
+        >
+          {linkContent}
+        </Link>
+      )}
       <div className="mt-2 flex items-center justify-end gap-2 pl-7">
         <button
           type="button"

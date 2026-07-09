@@ -21,6 +21,7 @@ export type CoachActionAlert = {
   title: string;
   detail: string;
   range: string;
+  deep_link?: string | null;
 };
 
 export type CoachResolvedAlert = CoachActionAlert & {
@@ -139,6 +140,24 @@ export const getCoachActionAlerts = createServerFn({ method: "GET" })
         (hardBrakeCountByUser.get(e.client_id) ?? 0) + 1,
       ),
     );
+
+    // Deep-Link: für Athleten mit Readiness-Bremsen die primäre Org auflösen,
+    // um direkt in den Checkins-Tab des Athleten-Drilldowns zu springen.
+    const readinessUserIds = Array.from(hardBrakeCountByUser.keys()).filter(
+      (id) => (hardBrakeCountByUser.get(id) ?? 0) >= 2,
+    );
+    const orgIdByUser = new Map<string, string>();
+    if (readinessUserIds.length) {
+      const { data: memberships } = await supabase
+        .from("organization_memberships")
+        .select("user_id, organization_id, role, status")
+        .in("user_id", readinessUserIds)
+        .eq("role", "athlete")
+        .eq("status", "active");
+      ((memberships as any[]) ?? []).forEach((m) => {
+        if (!orgIdByUser.has(m.user_id)) orgIdByUser.set(m.user_id, m.organization_id);
+      });
+    }
 
     type PlanState = {
       activeNutrition: boolean;
@@ -481,6 +500,10 @@ export const getCoachActionAlerts = createServerFn({ method: "GET" })
 
       // ----- READINESS-GATE -----
       const hardBrakes = hardBrakeCountByUser.get(p.id) ?? 0;
+      const readinessOrgId = orgIdByUser.get(p.id);
+      const readinessLink = readinessOrgId
+        ? `/coach/teams/${readinessOrgId}/athletes/${p.id}?tab=checkins`
+        : null;
       if (hardBrakes >= 3) {
         push({
           user_id: p.id,
@@ -490,6 +513,7 @@ export const getCoachActionAlerts = createServerFn({ method: "GET" })
           title: "Wiederholte harte Bremsen",
           detail: `${hardBrakes}× Readiness-Gate reduziert in 7 Tagen — Rücksprache/Regen prüfen`,
           range: "7 T",
+          deep_link: readinessLink,
         });
       } else if (hardBrakes === 2) {
         push({
@@ -500,6 +524,7 @@ export const getCoachActionAlerts = createServerFn({ method: "GET" })
           title: "Mehrfache Bremse durch Readiness",
           detail: `${hardBrakes}× reduziert in 7 Tagen — Verlauf im Blick behalten`,
           range: "7 T",
+          deep_link: readinessLink,
         });
       }
     }
