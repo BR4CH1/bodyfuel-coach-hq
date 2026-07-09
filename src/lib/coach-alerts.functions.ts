@@ -10,7 +10,7 @@ async function assertCoach(supabase: any, userId: string) {
 }
 
 export type CoachAlertSeverity = "red" | "orange";
-export type CoachAlertKind = "weight" | "nutrition" | "tracking" | "plan";
+export type CoachAlertKind = "weight" | "nutrition" | "tracking" | "plan" | "readiness";
 
 export type CoachActionAlert = {
   user_id: string;
