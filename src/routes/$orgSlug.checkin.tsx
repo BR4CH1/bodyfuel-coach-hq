@@ -75,6 +75,19 @@ function OrgCheckinPage() {
       }) as Promise<ReadinessGateEvent[]>,
   });
 
+  useEffect(() => {
+    if (focus !== "readiness") return;
+    if (gateEvents.length === 0) return;
+    const el = readinessRef.current;
+    if (!el) return;
+    const t = window.setTimeout(() => {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      setHighlight(true);
+      window.setTimeout(() => setHighlight(false), 2400);
+    }, 150);
+    return () => window.clearTimeout(t);
+  }, [focus, gateEvents.length]);
+
   const today = history.find((c) => c.checkin_date === TODAY());
 
   const [sleep, setSleep] = useState<number | null>(null);
