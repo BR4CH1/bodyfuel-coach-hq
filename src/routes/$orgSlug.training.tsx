@@ -71,8 +71,10 @@ function OrgTraining() {
       </header>
 
       <main className="mx-auto max-w-md px-4 py-5 space-y-6">
+        <PlanStatusChip userId={supabaseUser?.id} />
         <section>
           <Title>Heute</Title>
+
           {today.length === 0 ? (
             <Empty>Keine Athletik-Einheit für heute geplant.</Empty>
           ) : (
