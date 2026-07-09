@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { fallback, zodValidator } from "@tanstack/zod-adapter";
+import { z } from "zod";
 import { ArrowLeft, Heart } from "lucide-react";
 import { toast } from "sonner";
 import { useSession } from "@/lib/bodyfuel/session";
@@ -18,6 +20,10 @@ import {
   type ReadinessGateEvent,
 } from "@/lib/readiness-gate-events.functions";
 
+const searchSchema = z.object({
+  focus: fallback(z.string().optional(), undefined).optional(),
+});
+
 export const Route = createFileRoute("/$orgSlug/checkin")({
   head: ({ params }) => ({
     meta: [
@@ -28,6 +34,7 @@ export const Route = createFileRoute("/$orgSlug/checkin")({
       },
     ],
   }),
+  validateSearch: zodValidator(searchSchema),
   component: OrgCheckinPage,
 });
 
@@ -41,6 +48,10 @@ function OrgCheckinPage() {
   const submit = useServerFn(submitCheckin);
   const listFn = useServerFn(listMyCheckins);
   const primary = org.primary_color ?? "#e11d48";
+  const search = Route.useSearch();
+  const focus = search.focus;
+  const readinessRef = useRef<HTMLDivElement | null>(null);
+  const [highlight, setHighlight] = useState(false);
 
   useEffect(() => {
     if (!loading && !supabaseUser) {
@@ -63,6 +74,19 @@ function OrgCheckinPage() {
         data: { userId: supabaseUser!.id, days: 14 },
       }) as Promise<ReadinessGateEvent[]>,
   });
+
+  useEffect(() => {
+    if (focus !== "readiness") return;
+    if (gateEvents.length === 0) return;
+    const el = readinessRef.current;
+    if (!el) return;
+    const t = window.setTimeout(() => {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      setHighlight(true);
+      window.setTimeout(() => setHighlight(false), 2400);
+    }, 150);
+    return () => window.clearTimeout(t);
+  }, [focus, gateEvents.length]);
 
   const today = history.find((c) => c.checkin_date === TODAY());
 
@@ -213,7 +237,12 @@ function OrgCheckinPage() {
         )}
 
         {gateEvents.length > 0 && (
-          <section className="pt-2">
+          <section
+            ref={readinessRef}
+            className={`scroll-mt-24 pt-2 transition-shadow duration-500 ${
+              highlight ? "rounded-xl ring-2 ring-orange-400/70 ring-offset-2 ring-offset-background" : ""
+            }`}
+          >
             <h2 className="mb-2 text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
               Dein Plan hört auf dich
             </h2>
