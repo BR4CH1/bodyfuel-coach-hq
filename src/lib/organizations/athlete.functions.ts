@@ -200,6 +200,11 @@ export const getOrgAthleticTraining = createServerFn({ method: "GET" })
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekEnd.getDate() + 7);
 
+    const weekStartIso = weekStart.toISOString().slice(0, 10);
+    const weekEndIso = new Date(weekEnd.getTime() - 1).toISOString().slice(0, 10);
+    const todayIso = new Date().toISOString().slice(0, 10);
+
+    // Athleten-Kalender liest ausschließlich aus training_sessions (Phase 1b.1 SoT).
     const [planRes, weekRes, teams] = await Promise.all([
       supabase
         .from("organization_athletic_plans")
@@ -210,14 +215,14 @@ export const getOrgAthleticTraining = createServerFn({ method: "GET" })
         .order("created_at", { ascending: false })
         .limit(1),
       supabase
-        .from("organization_tasks")
-        .select("id, task_type, title, scheduled_for, status, duration_min")
+        .from("training_sessions")
+        .select("id, name, session_date, status, duration_minutes, focus, training_source, training_type")
+        .eq("client_id", userId)
         .eq("organization_id", orgId)
-        .eq("user_id", userId)
-        .in("task_type", ["athletic_training", "team_training"])
-        .gte("scheduled_for", weekStart.toISOString())
-        .lt("scheduled_for", weekEnd.toISOString())
-        .order("scheduled_for", { ascending: true }),
+        .eq("training_source", "coach")
+        .gte("session_date", weekStartIso)
+        .lte("session_date", weekEndIso)
+        .order("session_date", { ascending: true }),
       supabase
         .from("organization_teams")
         .select("id, name")
@@ -236,10 +241,24 @@ export const getOrgAthleticTraining = createServerFn({ method: "GET" })
       teamMembership = data;
     }
 
+    // Backwards-kompatibles Shape für die bestehende UI:
+    // - `week` als Coach-Session-Liste (Status planned/in_progress/completed/missed)
+    // - `today_sessions` als Coach-Sessions für heute (statt organization_tasks)
+    const weekRows = (weekRes.data ?? []).map((r: any) => ({
+      id: r.id,
+      task_type: r.training_type === "team_practice" ? "team_training" : "athletic_training",
+      title: r.name,
+      scheduled_for: r.session_date,
+      status: r.status === "completed" ? "done" : r.status,
+      duration_min: r.duration_minutes,
+      focus: r.focus,
+    }));
+
     return {
       org,
       plan: (planRes.data ?? [])[0] ?? null,
-      week: weekRes.data ?? [],
+      week: weekRows,
+      today_sessions: weekRows.filter((w: any) => w.scheduled_for === todayIso),
       team_membership: teamMembership,
     };
   });
