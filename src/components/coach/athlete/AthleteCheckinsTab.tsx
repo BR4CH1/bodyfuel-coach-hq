@@ -12,6 +12,7 @@ import {
 } from "@/lib/readiness-gate-events.functions";
 import { MiniLine, Section, TinyMetric } from "./athlete-tab-shared";
 import { ReadinessInsight } from "@/components/readiness/ReadinessInsight";
+import { scoreOfCheckin } from "@/lib/readiness";
 
 const SCALE_LABEL = ["—", "sehr niedrig", "niedrig", "mittel", "hoch", "sehr hoch"];
 
@@ -67,6 +68,10 @@ export function AthleteCheckinsTab({
               durch die Readiness konservativer gesetzt. Keine parallele Plan-Änderung — nur
               Steigerungen wurden zurückgehalten.
             </div>
+
+            <GateSparkline events={gateEvents} days={14} />
+            <RecoveryAfterGate events={gateEvents} checkins={checkins} />
+
             <ul className="mt-2 divide-y divide-orange-500/20">
               {gateEvents.slice(0, 6).map((g) => (
                 <li key={g.id} className="py-1.5 text-[12px]">
@@ -103,6 +108,7 @@ export function AthleteCheckinsTab({
           </div>
         </Section>
       )}
+
 
       <Section title="Aktueller Check-in" icon={<Heart className="h-4 w-4" />}>
         {isLoading ? (
@@ -216,5 +222,115 @@ function MiniField({ label, value }: { label: string; value: string }) {
   );
 }
 
-// re-export to satisfy potential unused import warning
-export { SCALE_LABEL as _SCALE_LABEL };
+function GateSparkline({ events, days }: { events: ReadinessGateEvent[]; days: number }) {
+  // Bucket events per day (last N days). Bar color: red = reduce, yellow = hold.
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const buckets: Array<{ date: Date; hard: number; soft: number }> = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    buckets.push({ date: d, hard: 0, soft: 0 });
+  }
+  for (const e of events) {
+    const t = new Date(e.source_session_date);
+    t.setHours(0, 0, 0, 0);
+    const b = buckets.find((x) => x.date.getTime() === t.getTime());
+    if (!b) continue;
+    if (e.readiness_gate === "reduce") b.hard += 1;
+    else b.soft += 1;
+  }
+  const max = Math.max(1, ...buckets.map((b) => b.hard + b.soft));
+  return (
+    <div className="mt-3">
+      <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+        Verlauf (14 Tage)
+      </div>
+      <div className="flex items-end gap-[3px]" style={{ height: 36 }}>
+        {buckets.map((b, i) => {
+          const total = b.hard + b.soft;
+          const h = (total / max) * 32;
+          return (
+            <div
+              key={i}
+              title={`${b.date.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })} · ${b.hard} hart, ${b.soft} weich`}
+              className="flex-1 rounded-sm bg-muted/30"
+              style={{ height: 32, display: "flex", flexDirection: "column-reverse" }}
+            >
+              {b.hard > 0 && (
+                <div
+                  className="bg-red-500/70"
+                  style={{ height: (b.hard / max) * 32 }}
+                />
+              )}
+              {b.soft > 0 && (
+                <div
+                  className="bg-yellow-500/70"
+                  style={{ height: (b.soft / max) * 32 }}
+                />
+              )}
+              {total === 0 && <div style={{ height: h }} />}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function RecoveryAfterGate({
+  events,
+  checkins,
+}: {
+  events: ReadinessGateEvent[];
+  checkins: AthleteCheckin[];
+}) {
+  // Vergleich Readiness Ø 7d VOR dem ersten Gate-Event vs. 7d NACH.
+  if (events.length === 0 || checkins.length === 0) return null;
+  const sorted = [...events].sort(
+    (a, b) => new Date(a.source_session_date).getTime() - new Date(b.source_session_date).getTime(),
+  );
+  const start = new Date(sorted[0].source_session_date);
+  start.setHours(0, 0, 0, 0);
+
+  const score = (r: AthleteCheckin): number | null => scoreOfCheckin(r);
+
+  const before: number[] = [];
+  const after: number[] = [];
+  for (const c of checkins) {
+    const t = new Date(c.checkin_date);
+    t.setHours(0, 0, 0, 0);
+    const diff = (t.getTime() - start.getTime()) / (24 * 60 * 60 * 1000);
+    const s = score(c);
+    if (s == null) continue;
+    if (diff >= -7 && diff < 0) before.push(s);
+    else if (diff >= 0 && diff <= 7) after.push(s);
+  }
+  if (before.length === 0 || after.length === 0) return null;
+  const avg = (arr: number[]) => Math.round(arr.reduce((a, b) => a + b, 0) / arr.length);
+  const b = avg(before);
+  const a = avg(after);
+  const delta = a - b;
+  const positive = delta > 3;
+  return (
+    <div className="mt-3 rounded-md border border-orange-500/20 bg-background/40 p-2 text-[12px]">
+      <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+        Recovery nach Gate
+      </div>
+      <div className="mt-1">
+        Ø 7d vor Bremse: <b>{b}</b> → 7d nach Bremse: <b>{a}</b>{" "}
+        <span className={positive ? "text-green-400" : delta < -3 ? "text-red-400" : "text-muted-foreground"}>
+          ({delta > 0 ? "+" : ""}
+          {delta})
+        </span>
+      </div>
+      <div className="mt-0.5 text-[11px] text-muted-foreground">
+        {positive
+          ? "Bremse wirkt: Readiness erholt sich."
+          : delta < -3
+            ? "Trotz Bremse fällt Readiness weiter — Rücksprache empfohlen."
+            : "Stabil — Bremse hält Verschlechterung auf."}
+      </div>
+    </div>
+  );
+}
