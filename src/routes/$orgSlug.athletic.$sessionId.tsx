@@ -2,11 +2,13 @@ import { createFileRoute, useNavigate, Link, useParams } from "@tanstack/react-r
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
-import { ChevronLeft, Dumbbell, Clock, Target, Check } from "lucide-react";
+import { ChevronLeft, Dumbbell, Clock, Target, Check, ShieldAlert } from "lucide-react";
 import { useSession } from "@/lib/bodyfuel/session";
 import { getOrgHomeData } from "@/lib/organizations/athlete.functions";
 import { getOrgAthleticSession, completeOrgAthleticSession } from "@/lib/organizations/operating-loop.functions";
 import { OrgAthleteLayout } from "@/components/organizations/OrgAthleteLayout";
+import { listMyCheckins } from "@/lib/athlete-checkins.functions";
+import { summarize, type ReadinessCheckin } from "@/lib/readiness";
 import { Route as OrgLayoutRoute } from "./$orgSlug";
 
 export const Route = createFileRoute("/$orgSlug/athletic/$sessionId")({
