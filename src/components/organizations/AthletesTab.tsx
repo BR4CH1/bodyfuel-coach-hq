@@ -196,6 +196,9 @@ export function AthletesTab({
             accent="orange"
           />
         </button>
+      </div>
+
+
 
       {/* Team Chips */}
       {teams.length > 1 && (
