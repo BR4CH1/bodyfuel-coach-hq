@@ -75,12 +75,6 @@ export function AthleteCheckinsTab({
       )}
 
       {gateEvents.length > 0 && (
-        <div
-          ref={readinessRef}
-          className={`scroll-mt-24 transition-shadow duration-500 ${
-            highlight ? "rounded-xl ring-2 ring-orange-400/70 ring-offset-2 ring-offset-[#050505]" : ""
-          }`}
-        >
         <Section
           title="Readiness bremst Progression"
           icon={<ShieldAlert className="h-4 w-4" />}
@@ -92,8 +86,17 @@ export function AthleteCheckinsTab({
               Steigerungen wurden zurückgehalten.
             </div>
 
-            <GateSparkline events={gateEvents} days={14} />
-            <RecoveryAfterGate events={gateEvents} checkins={checkins} />
+            <div
+              ref={readinessRef}
+              className={`scroll-mt-24 rounded-md transition-shadow duration-500 ${
+                highlight
+                  ? "ring-2 ring-orange-400/70 ring-offset-2 ring-offset-[#050505]"
+                  : ""
+              }`}
+            >
+              <GateSparkline events={gateEvents} days={14} />
+              <RecoveryAfterGate events={gateEvents} checkins={checkins} />
+            </div>
 
             <ul className="mt-2 divide-y divide-orange-500/20">
               {gateEvents.slice(0, 6).map((g) => (
@@ -130,7 +133,6 @@ export function AthleteCheckinsTab({
             </ul>
           </div>
         </Section>
-        </div>
       )}
 
 
