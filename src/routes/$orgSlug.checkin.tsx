@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { fallback, zodValidator } from "@tanstack/zod-adapter";
+import { z } from "zod";
 import { ArrowLeft, Heart } from "lucide-react";
 import { toast } from "sonner";
 import { useSession } from "@/lib/bodyfuel/session";
@@ -18,6 +20,10 @@ import {
   type ReadinessGateEvent,
 } from "@/lib/readiness-gate-events.functions";
 
+const searchSchema = z.object({
+  focus: fallback(z.string().optional(), undefined).optional(),
+});
+
 export const Route = createFileRoute("/$orgSlug/checkin")({
   head: ({ params }) => ({
     meta: [
@@ -28,6 +34,7 @@ export const Route = createFileRoute("/$orgSlug/checkin")({
       },
     ],
   }),
+  validateSearch: zodValidator(searchSchema),
   component: OrgCheckinPage,
 });
 
