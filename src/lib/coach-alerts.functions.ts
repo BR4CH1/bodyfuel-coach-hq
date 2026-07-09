@@ -21,6 +21,7 @@ export type CoachActionAlert = {
   title: string;
   detail: string;
   range: string;
+  deep_link?: string | null;
 };
 
 export type CoachResolvedAlert = CoachActionAlert & {
