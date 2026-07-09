@@ -7,6 +7,7 @@ import {
 } from "./coach-analytics.rules";
 import { resolveCoachTeamScope } from "./coach-team-scope";
 import { positionGroup, POSITION_GROUP_LABEL } from "@/lib/football-positions";
+import { scoreOfCheckin } from "@/lib/readiness";
 
 
 export type CoachAnalytics = {
