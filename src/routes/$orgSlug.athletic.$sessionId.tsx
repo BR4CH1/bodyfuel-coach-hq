@@ -153,7 +153,7 @@ function ReadinessBanner({ rows }: { rows: ReadinessCheckin[] }) {
   if (!rows || rows.length === 0) return null;
   const s = summarize(rows);
   const avg7 = s.avg7 ?? null;
-  const painCount = rows.slice(0, 7).filter((r) => (r as any).has_pain).length;
+  const painCount = s.pain_events_7;
   const severe = (avg7 != null && avg7 < 30) || painCount >= 3;
   const soft = !severe && ((avg7 != null && avg7 < 45) || painCount >= 2);
   if (!severe && !soft) return null;
