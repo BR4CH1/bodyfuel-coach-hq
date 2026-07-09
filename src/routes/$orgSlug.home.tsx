@@ -23,6 +23,8 @@ import { OrgAthleteLayout } from "@/components/organizations/OrgAthleteLayout";
 import { OrganizationContextSwitcher, setActiveContext } from "@/components/organizations/OrganizationContextSwitcher";
 import { Route as OrgLayoutRoute } from "./$orgSlug";
 import { Button } from "@/components/ui/button";
+import { UserAvatar } from "@/components/bodyfuel/UserAvatar";
+
 
 export const Route = createFileRoute("/$orgSlug/home")({
   component: OrgHome,
