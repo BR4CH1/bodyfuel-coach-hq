@@ -48,6 +48,10 @@ function OrgCheckinPage() {
   const submit = useServerFn(submitCheckin);
   const listFn = useServerFn(listMyCheckins);
   const primary = org.primary_color ?? "#e11d48";
+  const search = Route.useSearch();
+  const focus = search.focus;
+  const readinessRef = useRef<HTMLDivElement | null>(null);
+  const [highlight, setHighlight] = useState(false);
 
   useEffect(() => {
     if (!loading && !supabaseUser) {
