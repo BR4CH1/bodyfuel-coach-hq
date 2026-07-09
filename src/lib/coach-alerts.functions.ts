@@ -10,7 +10,7 @@ async function assertCoach(supabase: any, userId: string) {
 }
 
 export type CoachAlertSeverity = "red" | "orange";
-export type CoachAlertKind = "weight" | "nutrition" | "tracking" | "plan";
+export type CoachAlertKind = "weight" | "nutrition" | "tracking" | "plan" | "readiness";
 
 export type CoachActionAlert = {
   user_id: string;
@@ -53,11 +53,17 @@ export const getCoachActionAlerts = createServerFn({ method: "GET" })
       const since30Iso = new Date(today - 30 * 86400000).toISOString();
       const since7dIso = new Date(today - 7 * 86400000).toISOString();
 
-      const [profiles, measurements, foods, targets, skips, swaps, activePlans] = await Promise.all([
+      const [profiles, gateEvents, measurements, foods, targets, skips, swaps, activePlans] = await Promise.all([
       supabase
         .from("profiles")
         .select("id, display_name, training_goal, goal_weight_kg, goal_target_date")
         .in("id", ids),
+      supabase
+        .from("training_progression_events")
+        .select("client_id, readiness_gate, evaluated_at")
+        .in("client_id", ids)
+        .eq("readiness_gate", "reduce")
+        .gte("evaluated_at", since7dIso),
       supabase
         .from("body_measurements")
         .select("user_id, weight_kg, measured_at")
@@ -124,6 +130,14 @@ export const getCoachActionAlerts = createServerFn({ method: "GET" })
     const swapCountByUser = new Map<string, number>();
     ((swaps as any).data ?? []).forEach((s: any) =>
       swapCountByUser.set(s.user_id, (swapCountByUser.get(s.user_id) ?? 0) + 1),
+    );
+
+    const hardBrakeCountByUser = new Map<string, number>();
+    ((gateEvents as any).data ?? []).forEach((e: any) =>
+      hardBrakeCountByUser.set(
+        e.client_id,
+        (hardBrakeCountByUser.get(e.client_id) ?? 0) + 1,
+      ),
     );
 
     type PlanState = {
@@ -462,6 +476,30 @@ export const getCoachActionAlerts = createServerFn({ method: "GET" })
           title: "Viele Mahlzeiten getauscht",
           detail: `${swapCount} Tausche in 30 Tagen — Plan passt evtl. nicht`,
           range: "30 T",
+        });
+      }
+
+      // ----- READINESS-GATE -----
+      const hardBrakes = hardBrakeCountByUser.get(p.id) ?? 0;
+      if (hardBrakes >= 3) {
+        push({
+          user_id: p.id,
+          name,
+          severity: "red",
+          kind: "readiness",
+          title: "Wiederholte harte Bremsen",
+          detail: `${hardBrakes}× Readiness-Gate reduziert in 7 Tagen — Rücksprache/Regen prüfen`,
+          range: "7 T",
+        });
+      } else if (hardBrakes === 2) {
+        push({
+          user_id: p.id,
+          name,
+          severity: "orange",
+          kind: "readiness",
+          title: "Mehrfache Bremse durch Readiness",
+          detail: `${hardBrakes}× reduziert in 7 Tagen — Verlauf im Blick behalten`,
+          range: "7 T",
         });
       }
     }
