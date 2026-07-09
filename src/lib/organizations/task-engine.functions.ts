@@ -302,6 +302,7 @@ export const getOrgAthletesOnboardingAudit = createServerFn({ method: "GET" })
         return {
           user_id: m.user_id,
           name: nameMap.get(m.user_id) ?? "Athlet",
+          avatar_url: avatarMap.get(m.user_id) ?? null,
           onboarding_completed: !!m.onboarding_completed,
           derived_complete: complete,
           missing,
