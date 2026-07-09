@@ -24,6 +24,8 @@ import { OrganizationContextSwitcher, setActiveContext } from "@/components/orga
 import { Route as OrgLayoutRoute } from "./$orgSlug";
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/bodyfuel/UserAvatar";
+import { PlanStatusChip } from "@/components/organizations/PlanStatusChip";
+
 
 
 export const Route = createFileRoute("/$orgSlug/home")({
