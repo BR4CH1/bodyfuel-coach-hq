@@ -500,6 +500,10 @@ export const getCoachActionAlerts = createServerFn({ method: "GET" })
 
       // ----- READINESS-GATE -----
       const hardBrakes = hardBrakeCountByUser.get(p.id) ?? 0;
+      const readinessOrgId = orgIdByUser.get(p.id);
+      const readinessLink = readinessOrgId
+        ? `/coach/teams/${readinessOrgId}/athletes/${p.id}?tab=checkins`
+        : null;
       if (hardBrakes >= 3) {
         push({
           user_id: p.id,
@@ -509,6 +513,7 @@ export const getCoachActionAlerts = createServerFn({ method: "GET" })
           title: "Wiederholte harte Bremsen",
           detail: `${hardBrakes}× Readiness-Gate reduziert in 7 Tagen — Rücksprache/Regen prüfen`,
           range: "7 T",
+          deep_link: readinessLink,
         });
       } else if (hardBrakes === 2) {
         push({
@@ -519,6 +524,7 @@ export const getCoachActionAlerts = createServerFn({ method: "GET" })
           title: "Mehrfache Bremse durch Readiness",
           detail: `${hardBrakes}× reduziert in 7 Tagen — Verlauf im Blick behalten`,
           range: "7 T",
+          deep_link: readinessLink,
         });
       }
     }
