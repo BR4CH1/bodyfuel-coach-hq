@@ -24,6 +24,8 @@ import { OrganizationContextSwitcher, setActiveContext } from "@/components/orga
 import { Route as OrgLayoutRoute } from "./$orgSlug";
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/bodyfuel/UserAvatar";
+import { PlanStatusChip } from "@/components/organizations/PlanStatusChip";
+
 
 
 export const Route = createFileRoute("/$orgSlug/home")({
@@ -186,6 +188,9 @@ function OrgHome() {
         {((data as any).today_sessions?.length ?? 0) > 0 && (
           <section>
             <SectionTitle>Heute — Training</SectionTitle>
+            <div className="mb-2">
+              <PlanStatusChip userId={supabaseUser?.id} />
+            </div>
             <ul className="space-y-2">
               {((data as any).today_sessions as any[]).map((s) => (
                 <SessionCard key={s.id} session={s} primary={primary} orgSlug={org.slug} />
@@ -193,6 +198,7 @@ function OrgHome() {
             </ul>
           </section>
         )}
+
 
         {/* HEUTE — AUFGABEN */}
         <section>

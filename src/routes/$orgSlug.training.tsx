@@ -6,7 +6,9 @@ import { Dumbbell, Target, Calendar, ChevronLeft } from "lucide-react";
 import { useSession } from "@/lib/bodyfuel/session";
 import { getOrgAthleticTraining, getOrgHomeData } from "@/lib/organizations/athlete.functions";
 import { OrgAthleteLayout } from "@/components/organizations/OrgAthleteLayout";
+import { PlanStatusChip } from "@/components/organizations/PlanStatusChip";
 import { Route as OrgLayoutRoute } from "./$orgSlug";
+
 
 export const Route = createFileRoute("/$orgSlug/training")({
   component: OrgTraining,
@@ -69,8 +71,10 @@ function OrgTraining() {
       </header>
 
       <main className="mx-auto max-w-md px-4 py-5 space-y-6">
+        <PlanStatusChip userId={supabaseUser?.id} />
         <section>
           <Title>Heute</Title>
+
           {today.length === 0 ? (
             <Empty>Keine Athletik-Einheit für heute geplant.</Empty>
           ) : (
