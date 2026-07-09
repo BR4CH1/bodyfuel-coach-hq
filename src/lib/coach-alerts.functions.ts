@@ -53,7 +53,7 @@ export const getCoachActionAlerts = createServerFn({ method: "GET" })
       const since30Iso = new Date(today - 30 * 86400000).toISOString();
       const since7dIso = new Date(today - 7 * 86400000).toISOString();
 
-      const [profiles, measurements, foods, targets, skips, swaps, activePlans, gateEvents] = await Promise.all([
+      const [profiles, gateEvents, measurements, foods, targets, skips, swaps, activePlans] = await Promise.all([
       supabase
         .from("profiles")
         .select("id, display_name, training_goal, goal_weight_kg, goal_target_date")
