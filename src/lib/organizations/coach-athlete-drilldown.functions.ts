@@ -526,6 +526,7 @@ export const getCoachAthleteDetail = createServerFn({ method: "GET" })
       athlete: {
         user_id: data.userId,
         display_name: displayName,
+        avatar_url: profile?.avatar_url ?? null,
         position: teamMembership?.position ?? null,
         secondary_position: teamMembership?.secondary_position ?? null,
         jersey_number: teamMembership?.jersey_number ?? null,
