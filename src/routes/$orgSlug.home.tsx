@@ -150,9 +150,21 @@ function OrgHome() {
       </header>
 
       <main className="mx-auto max-w-md px-4 py-5 space-y-6">
-        {/* HEUTE */}
+        {/* HEUTE — TRAINING */}
+        {((data as any).today_sessions?.length ?? 0) > 0 && (
+          <section>
+            <SectionTitle>Heute — Training</SectionTitle>
+            <ul className="space-y-2">
+              {((data as any).today_sessions as any[]).map((s) => (
+                <SessionCard key={s.id} session={s} primary={primary} orgSlug={org.slug} />
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {/* HEUTE — AUFGABEN */}
         <section>
-          <SectionTitle>Heute</SectionTitle>
+          <SectionTitle>Heute — Aufgaben</SectionTitle>
           {data.today_tasks.length === 0 ? (
             <EmptyCard>Heute sind keine Aufgaben geplant.</EmptyCard>
           ) : (
@@ -169,6 +181,7 @@ function OrgHome() {
             </ul>
           )}
         </section>
+
 
         {/* DEIN STATUS */}
         <section>
