@@ -237,7 +237,12 @@ function OrgCheckinPage() {
         )}
 
         {gateEvents.length > 0 && (
-          <section className="pt-2">
+          <section
+            ref={readinessRef}
+            className={`scroll-mt-24 pt-2 transition-shadow duration-500 ${
+              highlight ? "rounded-xl ring-2 ring-orange-400/70 ring-offset-2 ring-offset-background" : ""
+            }`}
+          >
             <h2 className="mb-2 text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
               Dein Plan hört auf dich
             </h2>
