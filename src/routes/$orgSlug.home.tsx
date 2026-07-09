@@ -121,6 +121,12 @@ function OrgHome() {
 
   return (
     <OrgAthleteLayout slug={org.slug} features={featuresList} primaryColor={primary}>
+      <DailyCheckinPopup
+        orgSlug={org.slug}
+        userId={supabaseUser?.id}
+        hasTodayCheckin={!!(data as any).today_checkin}
+        primary={primary}
+      />
       <header
         className="px-5 py-6 text-white"
         style={{ background: `linear-gradient(135deg, ${bg} 0%, #000 100%)` }}
