@@ -292,16 +292,7 @@ function RecoveryAfterGate({
   const start = new Date(sorted[0].source_session_date);
   start.setHours(0, 0, 0, 0);
 
-  const score = (r: AthleteCheckin): number | null => {
-    // Verwende dieselbe SoT-Berechnung wie readiness.ts (inline light):
-    const parts: number[] = [];
-    if (r.sleep_quality != null) parts.push(r.sleep_quality * 20);
-    if (r.energy_level != null) parts.push(r.energy_level * 20);
-    if (r.stress_level != null) parts.push((6 - r.stress_level) * 20);
-    if (r.muscle_soreness != null) parts.push((6 - r.muscle_soreness) * 20);
-    if (parts.length === 0) return null;
-    return Math.round(parts.reduce((a, b) => a + b, 0) / parts.length);
-  };
+  const score = (r: AthleteCheckin): number | null => scoreOfCheckin(r);
 
   const before: number[] = [];
   const after: number[] = [];
