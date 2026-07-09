@@ -13,6 +13,7 @@ export type CoachAthleteDetail = {
   athlete: {
     user_id: string;
     display_name: string;
+    avatar_url: string | null;
     position: string | null;
     secondary_position: string | null;
     jersey_number: number | null;
