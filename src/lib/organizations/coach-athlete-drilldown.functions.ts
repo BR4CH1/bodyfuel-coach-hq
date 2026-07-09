@@ -143,6 +143,9 @@ export const getCoachAthleteDetail = createServerFn({ method: "GET" })
     const start90 = new Date(now); start90.setDate(start90.getDate() - 90); start90.setHours(0, 0, 0, 0);
 
     // ---- Kern-Queries parallel
+    const start30Iso = start30.toISOString().slice(0, 10);
+    const start7Iso = start7.toISOString().slice(0, 10);
+    const prevStartIso = prevStart.toISOString().slice(0, 10);
     const [
       profileRes,
       teamsRes,
@@ -152,7 +155,9 @@ export const getCoachAthleteDetail = createServerFn({ method: "GET" })
       sessionCompRes,
       weightsRes,
       strengthRes,
+      trainingSessionsRes,
     ] = await Promise.all([
+
       supabase
         .from("profiles")
         .select("id, display_name, height_cm, birthdate")
