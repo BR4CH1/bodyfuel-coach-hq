@@ -13,6 +13,10 @@ import {
   type AthleteCheckin,
 } from "@/lib/athlete-checkins.functions";
 import { ReadinessInsight } from "@/components/readiness/ReadinessInsight";
+import {
+  listRecentReadinessGateEvents,
+  type ReadinessGateEvent,
+} from "@/lib/readiness-gate-events.functions";
 
 export const Route = createFileRoute("/$orgSlug/checkin")({
   head: ({ params }) => ({
@@ -48,6 +52,16 @@ function OrgCheckinPage() {
     queryKey: ["my-checkins", org.slug, supabaseUser?.id ?? "anon"],
     enabled: !!supabaseUser,
     queryFn: () => listFn() as Promise<AthleteCheckin[]>,
+  });
+
+  const gatesFn = useServerFn(listRecentReadinessGateEvents);
+  const { data: gateEvents = [] } = useQuery({
+    queryKey: ["my-readiness-gates", supabaseUser?.id ?? "anon"],
+    enabled: !!supabaseUser,
+    queryFn: () =>
+      gatesFn({
+        data: { userId: supabaseUser!.id, days: 14 },
+      }) as Promise<ReadinessGateEvent[]>,
   });
 
   const today = history.find((c) => c.checkin_date === TODAY());
@@ -195,6 +209,42 @@ function OrgCheckinPage() {
               Dein Verlauf
             </h2>
             <ReadinessInsight rows={history} tone="athlete" />
+          </section>
+        )}
+
+        {gateEvents.length > 0 && (
+          <section className="pt-2">
+            <h2 className="mb-2 text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+              Dein Plan hört auf dich
+            </h2>
+            <div className="rounded-lg border border-orange-500/30 bg-orange-500/10 p-3 text-[12px]">
+              <div className="text-orange-300">
+                {gateEvents.length === 1
+                  ? "Dein Plan wurde 1× automatisch gehalten, weil deine Readiness das nahegelegt hat."
+                  : `Dein Plan wurde ${gateEvents.length}× automatisch gehalten — deine Readiness zeigt, dass Steigerungen aktuell zu viel wären.`}{" "}
+                Es wird nichts aktiv nach unten geschraubt.
+              </div>
+              <ul className="mt-2 divide-y divide-orange-500/20">
+                {gateEvents.slice(0, 4).map((g) => (
+                  <li key={g.id} className="py-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-semibold text-foreground">
+                        {g.exercise_name ?? "Übung"}
+                      </span>
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                        {new Date(g.source_session_date).toLocaleDateString("de-DE", {
+                          day: "2-digit",
+                          month: "2-digit",
+                        })}
+                      </span>
+                    </div>
+                    {g.readiness_gate_reason && (
+                      <div className="text-muted-foreground">{g.readiness_gate_reason}</div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
           </section>
         )}
 
