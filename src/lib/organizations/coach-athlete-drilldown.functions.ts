@@ -161,7 +161,7 @@ export const getCoachAthleteDetail = createServerFn({ method: "GET" })
 
       supabase
         .from("profiles")
-        .select("id, display_name, height_cm, birthdate")
+        .select("id, display_name, avatar_url, height_cm, birthdate")
         .eq("id", data.userId)
         .maybeSingle(),
       supabase
