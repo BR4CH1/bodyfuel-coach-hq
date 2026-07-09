@@ -200,13 +200,17 @@ export function summarize(rows: ReadinessCheckin[]): ReadinessSummary {
 function buildMessage(x: {
   current: number | null;
   avg7: number | null;
-  avg30: number | null;
   delta7v30: number | null;
   pain7: number;
   load_trend: ReadinessSummary["load_trend"];
+  days_recorded_total: number;
+  days_recorded_7: number;
 }): string {
-  if (x.current == null && x.avg7 == null) {
+  if (x.days_recorded_total === 0) {
     return "Noch keine Check-ins — leg einfach heute los.";
+  }
+  if (x.current == null && x.avg7 == null) {
+    return `Wir lernen aktuell deine persönliche Belastungs- und Erholungsbasis kennen. ${x.days_recorded_7} von 7 Tagen erfasst.`;
   }
   if (x.pain7 >= 2) {
     return "Du hast mehrfach Beschwerden gemeldet — dein Live Plan berücksichtigt das.";
@@ -217,6 +221,9 @@ function buildMessage(x: {
   if (x.delta7v30 != null) {
     if (x.delta7v30 >= 6) return "Deine Readiness ist zuletzt besser als dein 30-Tage-Schnitt. Stark.";
     if (x.delta7v30 <= -6) return "Deine Erholung liegt aktuell unter deinem persönlichen Durchschnitt.";
+  }
+  if (x.avg7 == null) {
+    return `Wir sammeln noch Daten für deinen 7-Tage-Trend (${x.days_recorded_7}/7 erfasst).`;
   }
   return "Deine Readiness ist in den letzten 7 Tagen stabil.";
 }
