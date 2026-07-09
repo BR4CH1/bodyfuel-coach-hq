@@ -24,6 +24,8 @@ function OrgProfil() {
   const entitlements = useEntitlements();
   const navigate = useNavigate();
   const fetchHome = useServerFn(getOrgHomeData);
+  const qc = useQueryClient();
+
 
   useEffect(() => {
     if (!loading && !supabaseUser)
