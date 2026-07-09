@@ -1,11 +1,15 @@
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { Heart, Scale, HeartPulse } from "lucide-react";
+import { Heart, Scale, HeartPulse, ShieldAlert } from "lucide-react";
 import type { CoachAthleteDetail } from "@/lib/organizations/coach-athlete-drilldown.functions";
 import {
   listAthleteCheckins,
   type AthleteCheckin,
 } from "@/lib/athlete-checkins.functions";
+import {
+  listRecentReadinessGateEvents,
+  type ReadinessGateEvent,
+} from "@/lib/readiness-gate-events.functions";
 import { MiniLine, Section, TinyMetric } from "./athlete-tab-shared";
 import { ReadinessInsight } from "@/components/readiness/ReadinessInsight";
 
@@ -29,6 +33,13 @@ export function AthleteCheckinsTab({
   const { data: checkins = [], isLoading } = useQuery({
     queryKey: ["athlete-checkins", userId],
     queryFn: () => listFn({ data: { userId } }) as Promise<AthleteCheckin[]>,
+  });
+
+  const gatesFn = useServerFn(listRecentReadinessGateEvents);
+  const { data: gateEvents = [] } = useQuery({
+    queryKey: ["athlete-readiness-gates", userId],
+    queryFn: () =>
+      gatesFn({ data: { userId, days: 14 } }) as Promise<ReadinessGateEvent[]>,
   });
 
   const points = data.weight_series.map((w) => ({
