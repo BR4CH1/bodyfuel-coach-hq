@@ -502,7 +502,7 @@ export const getCoachActionAlerts = createServerFn({ method: "GET" })
       const hardBrakes = hardBrakeCountByUser.get(p.id) ?? 0;
       const readinessOrgId = orgIdByUser.get(p.id);
       const readinessLink = readinessOrgId
-        ? `/coach/teams/${readinessOrgId}/athletes/${p.id}?tab=checkins`
+        ? `/coach/teams/${readinessOrgId}/athletes/${p.id}?tab=checkins&focus=readiness`
         : null;
       if (hardBrakes >= 3) {
         push({

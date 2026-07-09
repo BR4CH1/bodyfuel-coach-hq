@@ -28,6 +28,7 @@ type TabKey = (typeof TABS)[number]["key"];
 
 const searchSchema = z.object({
   tab: fallback(z.string(), "overview").default("overview"),
+  focus: fallback(z.string().optional(), undefined).optional(),
 });
 
 export const Route = createFileRoute("/coach/teams/$orgId/athletes/$userId")({
@@ -107,7 +108,7 @@ function AthleteProfile() {
           <AthleteOverviewTab data={data} orgId={orgId} userId={userId} />
         )}
         {tab === "tasks" && <AthleteTasksTab data={data} orgId={orgId} userId={userId} />}
-        {tab === "checkins" && <AthleteCheckinsTab data={data} orgId={orgId} userId={userId} />}
+        {tab === "checkins" && <AthleteCheckinsTab data={data} orgId={orgId} userId={userId} focus={search.focus} />}
         {tab === "performance" && (
           <AthletePerformanceTab data={data} orgId={orgId} userId={userId} />
         )}

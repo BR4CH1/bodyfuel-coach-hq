@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { Heart, Scale, HeartPulse, ShieldAlert } from "lucide-react";
@@ -24,12 +25,28 @@ function scale(v: number | null): string {
 export function AthleteCheckinsTab({
   data,
   userId,
+  focus,
 }: {
   data: CoachAthleteDetail;
   orgId: string;
   userId: string;
+  focus?: string;
 }) {
   const a = data.athlete;
+  const readinessRef = useRef<HTMLDivElement | null>(null);
+  const [highlight, setHighlight] = useState(false);
+
+  useEffect(() => {
+    if (focus !== "readiness") return;
+    const el = readinessRef.current;
+    if (!el) return;
+    const t = window.setTimeout(() => {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      setHighlight(true);
+      window.setTimeout(() => setHighlight(false), 2400);
+    }, 150);
+    return () => window.clearTimeout(t);
+  }, [focus]);
   const listFn = useServerFn(listAthleteCheckins);
   const { data: checkins = [], isLoading } = useQuery({
     queryKey: ["athlete-checkins", userId],
@@ -58,6 +75,12 @@ export function AthleteCheckinsTab({
       )}
 
       {gateEvents.length > 0 && (
+        <div
+          ref={readinessRef}
+          className={`scroll-mt-24 transition-shadow duration-500 ${
+            highlight ? "rounded-xl ring-2 ring-orange-400/70 ring-offset-2 ring-offset-[#050505]" : ""
+          }`}
+        >
         <Section
           title="Readiness bremst Progression"
           icon={<ShieldAlert className="h-4 w-4" />}
@@ -107,6 +130,7 @@ export function AthleteCheckinsTab({
             </ul>
           </div>
         </Section>
+        </div>
       )}
 
 
