@@ -40,11 +40,10 @@ function OrgTraining() {
   }
 
   const primary = org.primary_color ?? "#e11d48";
-  const today = (home.today_tasks as any[]).filter((t) =>
-    ["athletic_training", "team_training"].includes(t.task_type),
-  );
+  // Phase 1b.1: Athletenkalender liest ausschließlich aus training_sessions.
+  const today = ((data as any).today_sessions ?? []) as any[];
   const week = data.week as any[];
-  const done = week.filter((w) => w.status === "done").length;
+  const done = week.filter((w) => w.status === "done" || w.status === "completed").length;
   const plan = data.plan as any;
   const focusAreas: string[] = plan?.focus_areas ?? [];
   const position = data.team_membership?.position;
