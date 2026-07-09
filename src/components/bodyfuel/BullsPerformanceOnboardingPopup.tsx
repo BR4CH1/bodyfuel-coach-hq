@@ -6,7 +6,7 @@
  *
  * Mounted inside BullsGate so it shows on every /bulls/* page.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -15,11 +15,23 @@ import { getBullsDailyNutritionTargets } from "@/lib/performance-nutrition/bulls
 import { useSession } from "@/lib/bodyfuel/session";
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
+// Wird täglich einmal beim ersten Login gezeigt, solange Onboarding nicht komplett ist.
+const DISMISS_KEY = "bf:bulls-onboarding-popup:dismissed-date";
 
 export function BullsPerformanceOnboardingPopup() {
   const { supabaseUser } = useSession();
-  const [dismissed, setDismissed] = useState(false);
+  // Initial true, damit vor Hydration nichts blitzt; nach Mount neu bewerten.
+  const [dismissedToday, setDismissedToday] = useState(true);
   const getTargets = useServerFn(getBullsDailyNutritionTargets);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(DISMISS_KEY);
+      setDismissedToday(stored === todayIso());
+    } catch {
+      setDismissedToday(false);
+    }
+  }, []);
 
   const { data } = useQuery({
     queryKey: ["bulls-perf-onboarding-check", supabaseUser?.id],
@@ -29,7 +41,14 @@ export function BullsPerformanceOnboardingPopup() {
     retry: false,
   });
 
-  if (!data?.needsProfile || dismissed) return null;
+  const dismiss = () => {
+    try {
+      localStorage.setItem(DISMISS_KEY, todayIso());
+    } catch {}
+    setDismissedToday(true);
+  };
+
+  if (!data?.needsProfile || dismissedToday) return null;
 
   return (
     <div
