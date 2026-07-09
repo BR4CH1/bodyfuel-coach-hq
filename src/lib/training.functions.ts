@@ -406,6 +406,11 @@ export const completeTrainingSession = createServerFn({ method: "POST" })
       applied_to_exercise_id: string | null;
     }> = [];
 
+    // Readiness einmal pro Session-Complete laden — dient als zentrale Bremse
+    // für alle Übungs-Progressionen dieses Tags.
+    const checkins = await loadRecentCheckins(supabase, userId);
+    const gate = evaluateReadinessGate(checkins);
+
     for (const ex of workingEx) {
       const sets = (setsByExercise.get(ex.id) ?? []).sort((a, b) => a.set_number - b.set_number);
       if (sets.length === 0) continue;
@@ -417,8 +422,10 @@ export const completeTrainingSession = createServerFn({ method: "POST" })
         targetSets: Number(ex.target_sets ?? sets.length ?? 3),
         targetRir: ex.target_rir ?? null,
       });
+      const gatedDecision = applyReadinessGate(rawDecision, gate);
       const { applySmartLock } = await import("./training-engine/lock");
-      const decision = applySmartLock(rawDecision, (ex as any).smart_lock ?? "none");
+      const decision = applySmartLock(gatedDecision, (ex as any).smart_lock ?? "none");
+
 
       const planId = ex.training_days?.plan_id;
       const currentSort = Number(ex.training_days?.sort_order ?? 0);
