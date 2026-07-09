@@ -25,12 +25,28 @@ function scale(v: number | null): string {
 export function AthleteCheckinsTab({
   data,
   userId,
+  focus,
 }: {
   data: CoachAthleteDetail;
   orgId: string;
   userId: string;
+  focus?: string;
 }) {
   const a = data.athlete;
+  const readinessRef = useRef<HTMLDivElement | null>(null);
+  const [highlight, setHighlight] = useState(false);
+
+  useEffect(() => {
+    if (focus !== "readiness") return;
+    const el = readinessRef.current;
+    if (!el) return;
+    const t = window.setTimeout(() => {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      setHighlight(true);
+      window.setTimeout(() => setHighlight(false), 2400);
+    }, 150);
+    return () => window.clearTimeout(t);
+  }, [focus]);
   const listFn = useServerFn(listAthleteCheckins);
   const { data: checkins = [], isLoading } = useQuery({
     queryKey: ["athlete-checkins", userId],
