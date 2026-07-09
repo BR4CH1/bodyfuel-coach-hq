@@ -75,6 +75,11 @@ function OrgTraining() {
       <main className="mx-auto max-w-md px-4 py-5 space-y-6">
         <PlanStatusChip userId={supabaseUser?.id} />
         <section>
+          <Title>Deine Sessions</Title>
+          <BullsAthleteAthleticSession />
+        </section>
+
+        <section>
           <Title>Heute</Title>
 
           {today.length === 0 ? (
