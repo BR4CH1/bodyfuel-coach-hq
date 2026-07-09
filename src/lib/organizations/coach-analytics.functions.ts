@@ -120,12 +120,28 @@ export const getOrgCoachAnalytics = createServerFn({ method: "GET" })
           .eq("organization_id", data.orgId)
           .eq("role", "athlete");
 
+    // Tasks (Training exkludiert) — Compliance-Basis
     const tasksBase = supabase
       .from("organization_tasks")
       .select("user_id, status, scheduled_for, task_type")
-      .eq("organization_id", data.orgId);
+      .eq("organization_id", data.orgId)
+      .not("task_type", "in", "(team_training,athletic_training)");
 
-    const [membersRes, tasksWeekRes, tasksPrevRes, activityRes, sessionsRes] =
+    // Trainings-Sessions (SoT) — Trainings-Aktivität
+    const sessionsBaseCur = supabase
+      .from("training_sessions")
+      .select("client_id, status, session_date")
+      .eq("organization_id", data.orgId)
+      .gte("session_date", start.toISOString().slice(0, 10))
+      .lt("session_date", now.toISOString().slice(0, 10));
+    const sessionsBasePrev = supabase
+      .from("training_sessions")
+      .select("client_id, status, session_date")
+      .eq("organization_id", data.orgId)
+      .gte("session_date", prevStart.toISOString().slice(0, 10))
+      .lt("session_date", prevEnd.toISOString().slice(0, 10));
+
+    const [membersRes, tasksWeekRes, tasksPrevRes, activityRes, sessionsRes, trainingCurRes, trainingPrevRes] =
       await Promise.all([
         membersQ,
         (scopedAthleteIds
@@ -134,8 +150,10 @@ export const getOrgCoachAnalytics = createServerFn({ method: "GET" })
         ).gte("scheduled_for", start.toISOString()).lt("scheduled_for", now.toISOString()),
         (scopedAthleteIds
           ? supabase.from("organization_tasks").select("user_id, status, scheduled_for, task_type").eq("organization_id", data.orgId)
+              .not("task_type", "in", "(team_training,athletic_training)")
               .in("user_id", scopedAthleteIds.length ? scopedAthleteIds : ["00000000-0000-0000-0000-000000000000"])
           : supabase.from("organization_tasks").select("user_id, status, scheduled_for, task_type").eq("organization_id", data.orgId)
+              .not("task_type", "in", "(team_training,athletic_training)")
         ).gte("scheduled_for", prevStart.toISOString()).lt("scheduled_for", prevEnd.toISOString()),
         (scopedAthleteIds
           ? supabase.from("organization_activity_log").select("user_id, created_at").eq("organization_id", data.orgId)
@@ -147,7 +165,14 @@ export const getOrgCoachAnalytics = createServerFn({ method: "GET" })
               .in("user_id", scopedAthleteIds.length ? scopedAthleteIds : ["00000000-0000-0000-0000-000000000000"])
           : supabase.from("organization_athletic_session_completions").select("user_id, completed_at").eq("organization_id", data.orgId)
         ).gte("completed_at", prevStart.toISOString()),
+        scopedAthleteIds
+          ? sessionsBaseCur.in("client_id", scopedAthleteIds.length ? scopedAthleteIds : ["00000000-0000-0000-0000-000000000000"])
+          : sessionsBaseCur,
+        scopedAthleteIds
+          ? sessionsBasePrev.in("client_id", scopedAthleteIds.length ? scopedAthleteIds : ["00000000-0000-0000-0000-000000000000"])
+          : sessionsBasePrev,
       ]);
+
 
     const athletes = (membersRes.data ?? []) as any[];
     const athleteIds = athletes.map((a) => a.user_id);
