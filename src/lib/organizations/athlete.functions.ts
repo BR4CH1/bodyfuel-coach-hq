@@ -81,28 +81,47 @@ export const getOrgHomeData = createServerFn({ method: "GET" })
     const end = new Date(start);
     end.setDate(end.getDate() + 1);
 
-    const { data: todayTasks } = await supabase
-      .from("organization_tasks")
-      .select("id, task_type, title, subtitle, scheduled_for, duration_min, status, link_target")
-      .eq("organization_id", orgId)
-      .eq("user_id", userId)
-      .gte("scheduled_for", start.toISOString())
-      .lt("scheduled_for", end.toISOString())
-      .order("scheduled_for", { ascending: true });
+    // Training ≠ Task. Trainings-Task-Typen werden defensiv ausgefiltert.
+    const NON_TRAINING_FILTER = (q: any) =>
+      q.not("task_type", "in", "(team_training,athletic_training)");
 
-    // Next open tasks (next 7 days)
+    const { data: todayTasks } = await NON_TRAINING_FILTER(
+      supabase
+        .from("organization_tasks")
+        .select("id, task_type, title, subtitle, scheduled_for, duration_min, status, link_target")
+        .eq("organization_id", orgId)
+        .eq("user_id", userId)
+        .gte("scheduled_for", start.toISOString())
+        .lt("scheduled_for", end.toISOString())
+        .order("scheduled_for", { ascending: true }),
+    );
+
+    // Today's training sessions (SoT: training_sessions)
+    const todayIso = start.toISOString().slice(0, 10);
+    const { data: todaySessions } = await supabase
+      .from("training_sessions")
+      .select("id, name, session_date, status, duration_minutes, focus, training_source, training_type")
+      .eq("client_id", userId)
+      .eq("organization_id", orgId)
+      .eq("session_date", todayIso)
+      .order("created_at", { ascending: true });
+
+    // Next open tasks (next 7 days) — ohne Trainings
     const nextEnd = new Date(start);
     nextEnd.setDate(nextEnd.getDate() + 7);
-    const { data: nextTasks } = await supabase
-      .from("organization_tasks")
-      .select("id, task_type, title, subtitle, scheduled_for, status, link_target")
-      .eq("organization_id", orgId)
-      .eq("user_id", userId)
-      .eq("status", "open")
-      .gte("scheduled_for", start.toISOString())
-      .lt("scheduled_for", nextEnd.toISOString())
-      .order("scheduled_for", { ascending: true })
-      .limit(6);
+    const { data: nextTasks } = await NON_TRAINING_FILTER(
+      supabase
+        .from("organization_tasks")
+        .select("id, task_type, title, subtitle, scheduled_for, status, link_target")
+        .eq("organization_id", orgId)
+        .eq("user_id", userId)
+        .eq("status", "open")
+        .gte("scheduled_for", start.toISOString())
+        .lt("scheduled_for", nextEnd.toISOString())
+        .order("scheduled_for", { ascending: true })
+        .limit(6),
+    );
+
 
     // Active challenge for org
     const nowIso = new Date().toISOString();
