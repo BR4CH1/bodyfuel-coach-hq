@@ -60,7 +60,7 @@ export function BullsPerformanceOnboardingPopup() {
         <button
           type="button"
           aria-label="Später"
-          onClick={() => setDismissed(true)}
+          onClick={() => dismiss()}
           className="absolute right-3 top-3 rounded-full p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
         >
           <X className="h-4 w-4" />
@@ -99,7 +99,7 @@ export function BullsPerformanceOnboardingPopup() {
           </Link>
           <button
             type="button"
-            onClick={() => setDismissed(true)}
+            onClick={() => dismiss()}
             className="rounded-xl border border-border px-4 py-3 text-xs text-muted-foreground hover:text-foreground"
           >
             Später
