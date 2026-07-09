@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { ChevronLeft } from "lucide-react";
 import { useSession } from "@/lib/bodyfuel/session";
@@ -10,6 +10,9 @@ import { OrgAthleteLayout } from "@/components/organizations/OrgAthleteLayout";
 import { Route as OrgLayoutRoute } from "./$orgSlug";
 import { Button } from "@/components/ui/button";
 import { activatePersonalBodyFuelContext } from "@/components/organizations/OrganizationContextSwitcher";
+import { UserAvatar } from "@/components/bodyfuel/UserAvatar";
+import { ProfilePhotoUpload } from "@/components/bodyfuel/ProfilePhotoUpload";
+
 
 export const Route = createFileRoute("/$orgSlug/profil")({
   component: OrgProfil,
