@@ -304,17 +304,29 @@ export const getCoachAthleteDetail = createServerFn({ method: "GET" })
         ? Math.round(validWeeks.reduce((a, b) => a + b, 0) / validWeeks.length)
         : null;
 
-    // Trainingsaktivität: Anteil abgeschlossener athletic_/team_training-Tasks im 7d Fenster
-    const trainingActivity = (list: typeof tasks) => {
-      const training = list.filter((t) =>
-        ["athletic_training", "team_training"].includes(t.task_type)
-      );
-      if (training.length === 0) return null;
-      const done = training.filter((t) => t.status === "done").length;
-      return Math.round((done / training.length) * 100);
+    // Trainingsaktivität: Anteil abgeschlossener training_sessions im 7d-Fenster (SoT)
+    const trainingSessions = (trainingSessionsRes.data ?? []) as Array<{
+      id: string;
+      name: string | null;
+      status: string;
+      session_date: string;
+      training_source: string | null;
+      training_type: string | null;
+      focus: string | null;
+    }>;
+    const sessionsInRange = (from: Date, to: Date) => {
+      const fromIso = from.toISOString().slice(0, 10);
+      const toIso = to.toISOString().slice(0, 10);
+      return trainingSessions.filter((s) => s.session_date >= fromIso && s.session_date < toIso);
     };
-    const trainingCur = trainingActivity(inRange(start7, now));
-    const trainingPrev = trainingActivity(inRange(prevStart, start7));
+    const trainingActivityFromSessions = (list: typeof trainingSessions) => {
+      if (list.length === 0) return null;
+      const done = list.filter((s) => s.status === "completed").length;
+      return Math.round((done / list.length) * 100);
+    };
+    const trainingCur = trainingActivityFromSessions(sessionsInRange(start7, now));
+    const trainingPrev = trainingActivityFromSessions(sessionsInRange(prevStart, start7));
+
 
     // Team-Durchschnitt (aktuelle Woche)
     const teamTasksWeek = (teamTasksWeekRes.data ?? []) as Array<{ status: string }>;
