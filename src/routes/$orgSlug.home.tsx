@@ -305,6 +305,40 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   return <h2 className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">{children}</h2>;
 }
 
+function ReadinessGateHint({ userId, orgSlug }: { userId: string | undefined; orgSlug: string }) {
+  const fetchEvents = useServerFn(listRecentReadinessGateEvents);
+  const { data: events } = useQuery({
+    queryKey: ["my-gate-events", userId ?? "anon"],
+    enabled: !!userId,
+    queryFn: () => fetchEvents({ data: { userId: userId as string, days: 7 } }),
+  });
+  const list = (events ?? []) as ReadinessGateEvent[];
+  if (list.length === 0) return null;
+  const hard = list.filter((e) => e.readiness_gate === "reduce").length;
+  const soft = list.filter((e) => e.readiness_gate === "hold").length;
+  return (
+    <section className="rounded-2xl border border-orange-400/40 bg-orange-400/10 p-4 text-orange-100">
+      <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em]">
+        <ShieldAlert className="h-3.5 w-3.5" /> Dein Plan hört auf dich
+      </div>
+      <p className="mt-1 text-sm leading-snug">
+        In den letzten 7 Tagen hat dein Plan{" "}
+        <b>{list.length}</b> mal Steigerungen bewusst pausiert
+        {hard > 0 && <> ({hard}× hart)</>}
+        {soft > 0 && <> ({soft}× weich)</>}. Bleib bei den täglichen Check-ins — sobald sich deine Werte erholen, geht es automatisch weiter.
+      </p>
+      <Link
+        to="/$orgSlug/checkin"
+        params={{ orgSlug }}
+        className="mt-2 inline-block text-[11px] font-semibold uppercase tracking-wider underline"
+      >
+        Zum Check-in →
+      </Link>
+    </section>
+  );
+}
+
+
 function EmptyCard({ children }: { children: React.ReactNode }) {
   return (
     <div className="rounded-lg border border-dashed border-border p-5 text-center text-xs text-muted-foreground">
