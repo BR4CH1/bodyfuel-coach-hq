@@ -331,6 +331,7 @@ function ReadinessGateHint({ userId, orgSlug }: { userId: string | undefined; or
       <Link
         to="/$orgSlug/checkin"
         params={{ orgSlug }}
+        search={{ focus: "readiness" }}
         className="mt-2 inline-block text-[11px] font-semibold uppercase tracking-wider underline"
       >
         Zum Check-in →
