@@ -183,13 +183,48 @@ function OrgHome() {
         </section>
 
 
+        {/* CHECK-IN CTA */}
+        {!(data as any).today_checkin && (
+          <section>
+            <Link
+              to="/$orgSlug/checkin"
+              params={{ orgSlug: org.slug }}
+              className="flex items-center gap-3 rounded-lg border p-3 text-white"
+              style={{ background: primary, borderColor: primary }}
+            >
+              <div className="grid h-10 w-10 place-items-center rounded-full bg-white/20">
+                <Activity className="h-5 w-5" />
+              </div>
+              <div className="flex-1">
+                <div className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-90">
+                  Daily Check-in
+                </div>
+                <div className="text-sm font-semibold">
+                  Wie fühlst du dich heute?
+                </div>
+              </div>
+              <div className="text-[11px] font-bold uppercase tracking-wider opacity-90">
+                Start →
+              </div>
+            </Link>
+          </section>
+        )}
+
         {/* DEIN STATUS */}
         <section>
           <SectionTitle>Dein Status</SectionTitle>
           <div className="grid grid-cols-2 gap-2">
-            {featureEnabled("readiness") && (
-              <StatusCard icon={Activity} label="Readiness" value="—" hint="bald verfügbar" primary={primary} />
-            )}
+            <StatusCard
+              icon={Activity}
+              label="Readiness"
+              value={(data as any).readiness_score != null ? `${(data as any).readiness_score}` : "—"}
+              hint={
+                (data as any).today_checkin
+                  ? "heute"
+                  : "Check-in offen"
+              }
+              primary={primary}
+            />
             <StatusCard icon={TrendingUp} label="Performance" value="—" hint="Profile in Kürze" primary={primary} />
             <StatusCard
               icon={CheckCircle2}
@@ -205,6 +240,7 @@ function OrgHome() {
             />
           </div>
         </section>
+
 
         {/* NÄCHSTE AUFGABEN */}
         {data.next_tasks.length > 0 && (

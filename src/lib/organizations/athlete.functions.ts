@@ -169,6 +169,24 @@ export const getOrgHomeData = createServerFn({ method: "GET" })
     const done = (weekTasks ?? []).filter((t: any) => t.status === "done").length;
     const weeklyCompliance = total > 0 ? Math.round((done / total) * 100) : null;
 
+    // Readiness: SoT athlete_checkins (heute). Zentrale Formel für alle Orgs.
+    const { data: todayCheckin } = await supabase
+      .from("athlete_checkins")
+      .select("id, checkin_date, sleep, energy, stress, training_feel, pain_level, pain_note, notes, weight_kg")
+      .eq("user_id", userId)
+      .eq("checkin_date", todayIso)
+      .maybeSingle();
+
+    const readinessScore = ((): number | null => {
+      const c = todayCheckin as any;
+      if (!c) return null;
+      const s = c.sleep, e = c.energy, st = c.stress, tf = c.training_feel;
+      if (s == null || e == null || st == null || tf == null) return null;
+      const base = (s + e + (6 - st) + tf) * 5; // 0..100
+      const painPenalty = (c.pain_level ?? 0) * 4; // 0..20
+      return Math.max(0, Math.min(100, Math.round(base - painPenalty)));
+    })();
+
     return {
       org,
       membership,
@@ -184,6 +202,8 @@ export const getOrgHomeData = createServerFn({ method: "GET" })
       active_challenge: activeChallenge,
       challenge_progress: challengeProgress,
       weekly_compliance: weeklyCompliance,
+      today_checkin: todayCheckin ?? null,
+      readiness_score: readinessScore,
     };
   });
 

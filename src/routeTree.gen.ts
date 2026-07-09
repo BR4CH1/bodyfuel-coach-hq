@@ -86,6 +86,7 @@ import { Route as OrgSlugOnboardingRouteImport } from './routes/$orgSlug.onboard
 import { Route as OrgSlugNutritionRouteImport } from './routes/$orgSlug.nutrition'
 import { Route as OrgSlugHomeRouteImport } from './routes/$orgSlug.home'
 import { Route as OrgSlugCommunityRouteImport } from './routes/$orgSlug.community'
+import { Route as OrgSlugCheckinRouteImport } from './routes/$orgSlug.checkin'
 import { Route as TrackerAppIndexRouteImport } from './routes/tracker.app.index'
 import { Route as CoachTeamsIndexRouteImport } from './routes/coach.teams.index'
 import { Route as CoachCustomersIndexRouteImport } from './routes/coach.customers.index'
@@ -530,6 +531,11 @@ const OrgSlugCommunityRoute = OrgSlugCommunityRouteImport.update({
   path: '/community',
   getParentRoute: () => OrgSlugRoute,
 } as any)
+const OrgSlugCheckinRoute = OrgSlugCheckinRouteImport.update({
+  id: '/checkin',
+  path: '/checkin',
+  getParentRoute: () => OrgSlugRoute,
+} as any)
 const TrackerAppIndexRoute = TrackerAppIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -858,6 +864,7 @@ export interface FileRoutesByFullPath {
   '/trust': typeof TrustRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/welcome': typeof WelcomeRoute
+  '/$orgSlug/checkin': typeof OrgSlugCheckinRoute
   '/$orgSlug/community': typeof OrgSlugCommunityRoute
   '/$orgSlug/home': typeof OrgSlugHomeRoute
   '/$orgSlug/nutrition': typeof OrgSlugNutritionRouteWithChildren
@@ -987,6 +994,7 @@ export interface FileRoutesByTo {
   '/trust': typeof TrustRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/welcome': typeof WelcomeRoute
+  '/$orgSlug/checkin': typeof OrgSlugCheckinRoute
   '/$orgSlug/community': typeof OrgSlugCommunityRoute
   '/$orgSlug/home': typeof OrgSlugHomeRoute
   '/$orgSlug/onboarding': typeof OrgSlugOnboardingRoute
@@ -1114,6 +1122,7 @@ export interface FileRoutesById {
   '/trust': typeof TrustRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/welcome': typeof WelcomeRoute
+  '/$orgSlug/checkin': typeof OrgSlugCheckinRoute
   '/$orgSlug/community': typeof OrgSlugCommunityRoute
   '/$orgSlug/home': typeof OrgSlugHomeRoute
   '/$orgSlug/nutrition': typeof OrgSlugNutritionRouteWithChildren
@@ -1249,6 +1258,7 @@ export interface FileRouteTypes {
     | '/trust'
     | '/unsubscribe'
     | '/welcome'
+    | '/$orgSlug/checkin'
     | '/$orgSlug/community'
     | '/$orgSlug/home'
     | '/$orgSlug/nutrition'
@@ -1378,6 +1388,7 @@ export interface FileRouteTypes {
     | '/trust'
     | '/unsubscribe'
     | '/welcome'
+    | '/$orgSlug/checkin'
     | '/$orgSlug/community'
     | '/$orgSlug/home'
     | '/$orgSlug/onboarding'
@@ -1504,6 +1515,7 @@ export interface FileRouteTypes {
     | '/trust'
     | '/unsubscribe'
     | '/welcome'
+    | '/$orgSlug/checkin'
     | '/$orgSlug/community'
     | '/$orgSlug/home'
     | '/$orgSlug/nutrition'
@@ -2219,6 +2231,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrgSlugCommunityRouteImport
       parentRoute: typeof OrgSlugRoute
     }
+    '/$orgSlug/checkin': {
+      id: '/$orgSlug/checkin'
+      path: '/checkin'
+      fullPath: '/$orgSlug/checkin'
+      preLoaderRoute: typeof OrgSlugCheckinRouteImport
+      parentRoute: typeof OrgSlugRoute
+    }
     '/tracker/app/': {
       id: '/tracker/app/'
       path: '/'
@@ -2618,6 +2637,7 @@ const OrgSlugNutritionRouteWithChildren =
   OrgSlugNutritionRoute._addFileChildren(OrgSlugNutritionRouteChildren)
 
 interface OrgSlugRouteChildren {
+  OrgSlugCheckinRoute: typeof OrgSlugCheckinRoute
   OrgSlugCommunityRoute: typeof OrgSlugCommunityRoute
   OrgSlugHomeRoute: typeof OrgSlugHomeRoute
   OrgSlugNutritionRoute: typeof OrgSlugNutritionRouteWithChildren
@@ -2632,6 +2652,7 @@ interface OrgSlugRouteChildren {
 }
 
 const OrgSlugRouteChildren: OrgSlugRouteChildren = {
+  OrgSlugCheckinRoute: OrgSlugCheckinRoute,
   OrgSlugCommunityRoute: OrgSlugCommunityRoute,
   OrgSlugHomeRoute: OrgSlugHomeRoute,
   OrgSlugNutritionRoute: OrgSlugNutritionRouteWithChildren,
