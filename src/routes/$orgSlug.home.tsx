@@ -188,6 +188,9 @@ function OrgHome() {
         {((data as any).today_sessions?.length ?? 0) > 0 && (
           <section>
             <SectionTitle>Heute — Training</SectionTitle>
+            <div className="mb-2">
+              <PlanStatusChip userId={supabaseUser?.id} />
+            </div>
             <ul className="space-y-2">
               {((data as any).today_sessions as any[]).map((s) => (
                 <SessionCard key={s.id} session={s} primary={primary} orgSlug={org.slug} />
@@ -195,6 +198,7 @@ function OrgHome() {
             </ul>
           </section>
         )}
+
 
         {/* HEUTE — AUFGABEN */}
         <section>
