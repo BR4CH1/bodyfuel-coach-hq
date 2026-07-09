@@ -75,6 +75,12 @@ export function AthleteCheckinsTab({
       )}
 
       {gateEvents.length > 0 && (
+        <div
+          ref={readinessRef}
+          className={`scroll-mt-24 transition-shadow duration-500 ${
+            highlight ? "rounded-xl ring-2 ring-orange-400/70 ring-offset-2 ring-offset-[#050505]" : ""
+          }`}
+        >
         <Section
           title="Readiness bremst Progression"
           icon={<ShieldAlert className="h-4 w-4" />}
