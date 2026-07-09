@@ -75,6 +75,7 @@ function OrgAthleticSession() {
       </header>
 
       <main className="mx-auto max-w-md space-y-3 px-4 py-5">
+        <ReadinessBanner rows={(checkins ?? []) as ReadinessCheckin[]} />
         {sess?.description && (
           <div className="rounded-lg border border-border bg-card p-3 text-sm text-muted-foreground">{sess.description}</div>
         )}
