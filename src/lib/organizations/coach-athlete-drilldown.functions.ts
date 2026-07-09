@@ -501,11 +501,14 @@ export const getCoachAthleteDetail = createServerFn({ method: "GET" })
 
     // ---- Offene Punkte
     const openItems: Array<{ label: string; count: number; kind: string }> = [];
-    const openAthletic = tasks.filter(
-      (t) => t.task_type === "athletic_training" && t.status !== "done" && t.status !== "missed" && t.status !== "skipped"
+    const openAthletic = trainingSessions.filter(
+      (s) =>
+        s.session_date < now.toISOString().slice(0, 10) &&
+        (s.status === "planned" || s.status === "in_progress"),
     ).length;
     if (openAthletic > 0)
-      openItems.push({ label: "Offene Athletik-Einheiten", count: openAthletic, kind: "training" });
+      openItems.push({ label: "Offene Trainingseinheiten", count: openAthletic, kind: "training" });
+
     const openCheckins = tasks.filter(
       (t) => t.task_type === "checkin" && t.status !== "done"
     ).length;
