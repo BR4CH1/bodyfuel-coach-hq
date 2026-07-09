@@ -317,6 +317,41 @@ function initials(name: string) {
   );
 }
 
+function ReadinessChip({
+  score,
+  bucket,
+  days7,
+}: {
+  score: number | null;
+  bucket: "green" | "yellow" | "red" | null;
+  days7: number;
+}) {
+  if (score == null || bucket == null) {
+    return (
+      <span
+        className="rounded border border-[#2a2a2a] bg-[#141414] px-1.5 py-0.5 font-bold uppercase tracking-wider text-muted-foreground"
+        title={`Noch nicht genug Check-ins (${days7}/7 Tage).`}
+      >
+        Readiness —
+      </span>
+    );
+  }
+  const tone =
+    bucket === "green"
+      ? "border-green-500/30 bg-green-500/10 text-green-500"
+      : bucket === "yellow"
+        ? "border-amber-500/30 bg-amber-500/10 text-amber-400"
+        : "border-red-500/30 bg-red-500/10 text-red-400";
+  return (
+    <span
+      className={`rounded border px-1.5 py-0.5 font-bold uppercase tracking-wider ${tone}`}
+      title={`Readiness heute · ${days7}/7 Tage Check-ins`}
+    >
+      Rdy {score}
+    </span>
+  );
+}
+
 function SummaryCard({
   icon,
   label,
