@@ -1,12 +1,13 @@
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { Heart, Scale } from "lucide-react";
+import { Heart, Scale, HeartPulse } from "lucide-react";
 import type { CoachAthleteDetail } from "@/lib/organizations/coach-athlete-drilldown.functions";
 import {
   listAthleteCheckins,
   type AthleteCheckin,
 } from "@/lib/athlete-checkins.functions";
 import { MiniLine, Section, TinyMetric } from "./athlete-tab-shared";
+import { ReadinessInsight } from "@/components/readiness/ReadinessInsight";
 
 const SCALE_LABEL = ["—", "sehr niedrig", "niedrig", "mittel", "hoch", "sehr hoch"];
 
@@ -38,6 +39,12 @@ export function AthleteCheckinsTab({
 
   return (
     <div className="space-y-4">
+      {checkins.length > 0 && (
+        <Section title="Readiness" icon={<HeartPulse className="h-4 w-4" />}>
+          <ReadinessInsight rows={checkins} tone="coach" />
+        </Section>
+      )}
+
       <Section title="Aktueller Check-in" icon={<Heart className="h-4 w-4" />}>
         {isLoading ? (
           <div className="rounded-lg border border-border bg-card p-4 text-xs text-muted-foreground">
