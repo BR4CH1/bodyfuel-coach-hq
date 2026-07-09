@@ -216,7 +216,15 @@ export const getCoachAthleteDetail = createServerFn({ method: "GET" })
         .eq("status", "completed")
         .order("performed_at", { ascending: false })
         .limit(6),
+      supabase
+        .from("training_sessions")
+        .select("id, name, status, session_date, training_source, training_type, focus")
+        .eq("organization_id", data.orgId)
+        .eq("client_id", data.userId)
+        .gte("session_date", start30Iso)
+        .order("session_date", { ascending: false }),
     ]);
+
 
     // ---- Team-Zugehörigkeit
     const teamIds = (teamsRes.data ?? []).map((t: any) => t.id);
