@@ -8,6 +8,28 @@ import {
   normalizeExerciseKey,
   stateFromDecision,
 } from "./training-engine/athlete-exercise-state";
+import {
+  evaluateReadinessGate,
+  applyReadinessGate,
+} from "./training-engine/readiness-gate";
+import type { ReadinessCheckin } from "@/lib/readiness";
+
+/** Zentrales Laden der letzten 30 Tage Check-ins für das Readiness-Gate. */
+async function loadRecentCheckins(
+  supabase: any,
+  userId: string,
+): Promise<ReadinessCheckin[]> {
+  const since = new Date();
+  since.setDate(since.getDate() - 30);
+  const { data } = await supabase
+    .from("athlete_checkins")
+    .select("checkin_date, sleep, energy, stress, training_feel, pain_level, pain_note")
+    .eq("user_id", userId)
+    .gte("checkin_date", since.toISOString().slice(0, 10))
+    .order("checkin_date", { ascending: false });
+  return ((data as ReadinessCheckin[]) ?? []);
+}
+
 
 type ParsedExercise = {
   name: string;
@@ -242,13 +264,17 @@ export const progressAfterExercise = createServerFn({ method: "POST" })
       return { ok: true as const, skipped: "no_working_sets" as const };
     }
 
-    const decision = progressExerciseAfterSession({
+    const rawDecision = progressExerciseAfterSession({
       exerciseName: String((ex as any).name ?? ""),
       sets,
       repRange: String((ex as any).target_reps ?? "8-12"),
       targetSets: Number((ex as any).target_sets ?? sets.length ?? 3),
       targetRir: (ex as any).target_rir ?? null,
     });
+    const checkins = await loadRecentCheckins(supabase, userId);
+    const gate = evaluateReadinessGate(checkins);
+    const decision = applyReadinessGate(rawDecision, gate);
+
 
     // Nächste Instanz derselben Übung im selben Plan finden (nachfolgende Tage)
     const currentSort = Number(day.sort_order ?? 0);
@@ -380,6 +406,11 @@ export const completeTrainingSession = createServerFn({ method: "POST" })
       applied_to_exercise_id: string | null;
     }> = [];
 
+    // Readiness einmal pro Session-Complete laden — dient als zentrale Bremse
+    // für alle Übungs-Progressionen dieses Tags.
+    const checkins = await loadRecentCheckins(supabase, userId);
+    const gate = evaluateReadinessGate(checkins);
+
     for (const ex of workingEx) {
       const sets = (setsByExercise.get(ex.id) ?? []).sort((a, b) => a.set_number - b.set_number);
       if (sets.length === 0) continue;
@@ -391,8 +422,10 @@ export const completeTrainingSession = createServerFn({ method: "POST" })
         targetSets: Number(ex.target_sets ?? sets.length ?? 3),
         targetRir: ex.target_rir ?? null,
       });
+      const gatedDecision = applyReadinessGate(rawDecision, gate);
       const { applySmartLock } = await import("./training-engine/lock");
-      const decision = applySmartLock(rawDecision, (ex as any).smart_lock ?? "none");
+      const decision = applySmartLock(gatedDecision, (ex as any).smart_lock ?? "none");
+
 
       const planId = ex.training_days?.plan_id;
       const currentSort = Number(ex.training_days?.sort_order ?? 0);
