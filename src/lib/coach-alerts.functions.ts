@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { recoveryAfterGate, type ReadinessCheckin } from "@/lib/readiness";
 
 async function assertCoach(supabase: any, userId: string) {
   const { data: isCoach } = await supabase.rpc("has_role", {
