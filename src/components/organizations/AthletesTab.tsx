@@ -15,6 +15,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { getOrgAthletesOnboardingAudit } from "@/lib/organizations/task-engine.functions";
+import { UserAvatar } from "@/components/bodyfuel/UserAvatar";
 import {
   canManageRoster,
   createAthleteInvite,
