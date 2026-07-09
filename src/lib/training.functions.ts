@@ -334,6 +334,8 @@ export const progressAfterExercise = createServerFn({ method: "POST" })
       previous_target_reps: (ex as any).target_reps ?? null,
       next_target_reps: decision.next_target_reps,
       reason: decision.reason,
+      readiness_gate: gated.applied,
+      readiness_gate_reason: gated.reason,
     } as any);
 
     return {
