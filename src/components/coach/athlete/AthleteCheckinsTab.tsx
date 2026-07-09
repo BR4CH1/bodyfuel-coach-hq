@@ -1,11 +1,15 @@
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { Heart, Scale, HeartPulse } from "lucide-react";
+import { Heart, Scale, HeartPulse, ShieldAlert } from "lucide-react";
 import type { CoachAthleteDetail } from "@/lib/organizations/coach-athlete-drilldown.functions";
 import {
   listAthleteCheckins,
   type AthleteCheckin,
 } from "@/lib/athlete-checkins.functions";
+import {
+  listRecentReadinessGateEvents,
+  type ReadinessGateEvent,
+} from "@/lib/readiness-gate-events.functions";
 import { MiniLine, Section, TinyMetric } from "./athlete-tab-shared";
 import { ReadinessInsight } from "@/components/readiness/ReadinessInsight";
 
@@ -31,6 +35,13 @@ export function AthleteCheckinsTab({
     queryFn: () => listFn({ data: { userId } }) as Promise<AthleteCheckin[]>,
   });
 
+  const gatesFn = useServerFn(listRecentReadinessGateEvents);
+  const { data: gateEvents = [] } = useQuery({
+    queryKey: ["athlete-readiness-gates", userId],
+    queryFn: () =>
+      gatesFn({ data: { userId, days: 14 } }) as Promise<ReadinessGateEvent[]>,
+  });
+
   const points = data.weight_series.map((w) => ({
     t: new Date(w.measured_at).getTime(),
     v: w.weight_kg,
@@ -42,6 +53,54 @@ export function AthleteCheckinsTab({
       {checkins.length > 0 && (
         <Section title="Readiness" icon={<HeartPulse className="h-4 w-4" />}>
           <ReadinessInsight rows={checkins} tone="coach" />
+        </Section>
+      )}
+
+      {gateEvents.length > 0 && (
+        <Section
+          title="Readiness bremst Progression"
+          icon={<ShieldAlert className="h-4 w-4" />}
+        >
+          <div className="rounded-lg border border-orange-500/30 bg-orange-500/10 p-3">
+            <div className="text-[12px] text-orange-300">
+              In den letzten 14 Tagen wurden {gateEvents.length} Progressions-Entscheidungen
+              durch die Readiness konservativer gesetzt. Keine parallele Plan-Änderung — nur
+              Steigerungen wurden zurückgehalten.
+            </div>
+            <ul className="mt-2 divide-y divide-orange-500/20">
+              {gateEvents.slice(0, 6).map((g) => (
+                <li key={g.id} className="py-1.5 text-[12px]">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold text-foreground">
+                      {g.exercise_name ?? "Übung"}
+                    </span>
+                    <span
+                      className={
+                        "rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider " +
+                        (g.readiness_gate === "reduce"
+                          ? "bg-red-500/20 text-red-300"
+                          : "bg-yellow-500/20 text-yellow-300")
+                      }
+                    >
+                      {g.readiness_gate === "reduce" ? "Hart" : "Weich"}
+                    </span>
+                  </div>
+                  {g.readiness_gate_reason && (
+                    <div className="mt-0.5 text-muted-foreground">
+                      {g.readiness_gate_reason}
+                    </div>
+                  )}
+                  <div className="mt-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+                    {new Date(g.source_session_date).toLocaleDateString("de-DE", {
+                      day: "2-digit",
+                      month: "2-digit",
+                    })}{" "}
+                    · Entscheidung: {g.decision}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
         </Section>
       )}
 

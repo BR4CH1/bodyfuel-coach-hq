@@ -6611,6 +6611,8 @@ export type Database = {
           previous_load: number | null
           previous_target_reps: string | null
           previous_target_weights: string | null
+          readiness_gate: string | null
+          readiness_gate_reason: string | null
           reason: string
           source_day_id: string | null
           source_exercise_id: string
@@ -6629,6 +6631,8 @@ export type Database = {
           previous_load?: number | null
           previous_target_reps?: string | null
           previous_target_weights?: string | null
+          readiness_gate?: string | null
+          readiness_gate_reason?: string | null
           reason: string
           source_day_id?: string | null
           source_exercise_id: string
@@ -6647,6 +6651,8 @@ export type Database = {
           previous_load?: number | null
           previous_target_reps?: string | null
           previous_target_weights?: string | null
+          readiness_gate?: string | null
+          readiness_gate_reason?: string | null
           reason?: string
           source_day_id?: string | null
           source_exercise_id?: string

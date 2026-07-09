@@ -10,7 +10,7 @@ import {
 } from "./training-engine/athlete-exercise-state";
 import {
   evaluateReadinessGate,
-  applyReadinessGate,
+  applyReadinessGateWithMeta,
 } from "./training-engine/readiness-gate";
 import type { ReadinessCheckin } from "@/lib/readiness";
 
@@ -273,7 +273,9 @@ export const progressAfterExercise = createServerFn({ method: "POST" })
     });
     const checkins = await loadRecentCheckins(supabase, userId);
     const gate = evaluateReadinessGate(checkins);
-    const decision = applyReadinessGate(rawDecision, gate);
+    const gated = applyReadinessGateWithMeta(rawDecision, gate);
+    const decision = gated.decision;
+
 
 
     // Nächste Instanz derselben Übung im selben Plan finden (nachfolgende Tage)
@@ -332,6 +334,8 @@ export const progressAfterExercise = createServerFn({ method: "POST" })
       previous_target_reps: (ex as any).target_reps ?? null,
       next_target_reps: decision.next_target_reps,
       reason: decision.reason,
+      readiness_gate: gated.applied,
+      readiness_gate_reason: gated.reason,
     } as any);
 
     return {
@@ -422,9 +426,9 @@ export const completeTrainingSession = createServerFn({ method: "POST" })
         targetSets: Number(ex.target_sets ?? sets.length ?? 3),
         targetRir: ex.target_rir ?? null,
       });
-      const gatedDecision = applyReadinessGate(rawDecision, gate);
+      const gated = applyReadinessGateWithMeta(rawDecision, gate);
       const { applySmartLock } = await import("./training-engine/lock");
-      const decision = applySmartLock(gatedDecision, (ex as any).smart_lock ?? "none");
+      const decision = applySmartLock(gated.decision, (ex as any).smart_lock ?? "none");
 
 
       const planId = ex.training_days?.plan_id;
@@ -484,6 +488,8 @@ export const completeTrainingSession = createServerFn({ method: "POST" })
         previous_target_reps: ex.target_reps ?? null,
         next_target_reps: decision.next_target_reps,
         reason: decision.reason,
+        readiness_gate: gated.applied,
+        readiness_gate_reason: gated.reason,
       } as any);
 
       // --- Update athlete_exercise_state (living plan brain) ---

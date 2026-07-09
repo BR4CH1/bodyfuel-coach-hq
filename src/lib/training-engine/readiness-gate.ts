@@ -53,26 +53,76 @@ export function applyReadinessGate(
   decision: ProgressionDecision,
   gate: ReadinessGateContext | null,
 ): ProgressionDecision {
-  if (!gate) return decision;
+  return applyReadinessGateWithMeta(decision, gate).decision;
+}
 
-  // Bereits konservative Aktionen — nichts zu tun.
+/**
+ * Wie `applyReadinessGate`, gibt aber zusätzlich zurück, ob und wie das Gate
+ * die Entscheidung tatsächlich verändert hat. Wird für das Event-Log und
+ * die Coach-UI genutzt.
+ */
+export function applyReadinessGateWithMeta(
+  decision: ProgressionDecision,
+  gate: ReadinessGateContext | null,
+): { decision: ProgressionDecision; applied: null | "hold" | "reduce"; reason: string | null } {
+  if (!gate) return { decision, applied: null, reason: null };
+
   if (
     decision.action === "reduce_load" ||
     decision.action === "reduce_volume" ||
     decision.action === "hold_for_more_data"
   ) {
     return {
-      ...decision,
-      reason: `${decision.reason} · Readiness bestätigt Vorsicht (${gate.reason}).`,
+      decision: {
+        ...decision,
+        reason: `${decision.reason} · Readiness bestätigt Vorsicht (${gate.reason}).`,
+      },
+      applied: gate.severity,
+      reason: gate.reason,
     };
   }
 
-  // Harte Bremse: Load-Steigerung → auf halten. Reduce-Load bauen wir NICHT
-  // aktiv ein (kein doppeltes Engine-Verhalten).
   if (gate.severity === "reduce") {
     if (decision.action === "increase_load") {
       const prev = decision.previous_load;
       return {
+        decision: {
+          action: "keep_load",
+          previous_load: prev,
+          next_load: prev,
+          next_target_weights:
+            prev != null
+              ? Array(Math.max(1, (decision.next_target_weights?.split(",").length ?? 1)))
+                  .fill(Number.isInteger(prev) ? String(prev) : prev.toFixed(1))
+                  .join(",")
+              : decision.next_target_weights,
+          next_target_reps: null,
+          reason: `Progression pausiert wegen niedriger Readiness (${gate.reason}). Gewicht wird gehalten.`,
+        },
+        applied: "reduce",
+        reason: gate.reason,
+      };
+    }
+    if (decision.action === "increase_reps_target") {
+      return {
+        decision: {
+          action: "keep_load",
+          previous_load: decision.previous_load,
+          next_load: decision.next_load,
+          next_target_weights: decision.next_target_weights,
+          next_target_reps: null,
+          reason: `Rep-Progression pausiert wegen niedriger Readiness (${gate.reason}).`,
+        },
+        applied: "reduce",
+        reason: gate.reason,
+      };
+    }
+  }
+
+  if (gate.severity === "hold" && decision.action === "increase_load") {
+    const prev = decision.previous_load;
+    return {
+      decision: {
         action: "keep_load",
         previous_load: prev,
         next_load: prev,
@@ -83,47 +133,25 @@ export function applyReadinessGate(
                 .join(",")
             : decision.next_target_weights,
         next_target_reps: null,
-        reason: `Progression pausiert wegen niedriger Readiness (${gate.reason}). Gewicht wird gehalten.`,
-      };
-    }
-    if (decision.action === "increase_reps_target") {
-      return {
-        action: "keep_load",
-        previous_load: decision.previous_load,
-        next_load: decision.next_load,
-        next_target_weights: decision.next_target_weights,
-        next_target_reps: null,
-        reason: `Rep-Progression pausiert wegen niedriger Readiness (${gate.reason}).`,
-      };
-    }
-  }
-
-  // Weiche Bremse: Steigerung → halten. Sonst durchlassen.
-  if (gate.severity === "hold" && decision.action === "increase_load") {
-    const prev = decision.previous_load;
-    return {
-      action: "keep_load",
-      previous_load: prev,
-      next_load: prev,
-      next_target_weights:
-        prev != null
-          ? Array(Math.max(1, (decision.next_target_weights?.split(",").length ?? 1)))
-              .fill(Number.isInteger(prev) ? String(prev) : prev.toFixed(1))
-              .join(",")
-          : decision.next_target_weights,
-      next_target_reps: null,
-      reason: `Steigerung aufgeschoben — ${gate.reason}. Gewicht halten und Readiness beobachten.`,
+        reason: `Steigerung aufgeschoben — ${gate.reason}. Gewicht halten und Readiness beobachten.`,
+      },
+      applied: "hold",
+      reason: gate.reason,
     };
   }
 
   if (gate.severity === "hold" && decision.action === "increase_reps_target") {
     return {
-      ...decision,
-      action: "keep_load",
-      next_target_reps: null,
-      reason: `Rep-Steigerung aufgeschoben — ${gate.reason}.`,
+      decision: {
+        ...decision,
+        action: "keep_load",
+        next_target_reps: null,
+        reason: `Rep-Steigerung aufgeschoben — ${gate.reason}.`,
+      },
+      applied: "hold",
+      reason: gate.reason,
     };
   }
 
-  return decision;
+  return { decision, applied: null, reason: null };
 }
