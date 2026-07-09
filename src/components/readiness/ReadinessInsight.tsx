@@ -25,19 +25,38 @@ export function ReadinessInsight({
           ? "text-red-500"
           : "text-muted-foreground";
 
+  const learningPhase = !s.sufficiency.current;
+
   return (
     <div className="space-y-3">
       <div className="rounded-2xl border border-border bg-card p-4">
         <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
           <HeartPulse className="h-3.5 w-3.5" /> Readiness
         </div>
-        <div className="mt-1 flex items-baseline gap-3">
-          <span className={`font-display text-4xl font-bold ${bucketClass}`}>
-            {s.current ?? "—"}
-          </span>
-          <span className="text-xs text-muted-foreground">/ 100 · heute</span>
-        </div>
-        <p className="mt-2 text-sm leading-snug text-foreground">{s.message}</p>
+
+        {learningPhase ? (
+          <div className="mt-2">
+            <div className="font-display text-lg font-bold text-foreground">
+              Noch keine belastbare Readiness
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground leading-snug">
+              Wir lernen aktuell deine persönliche Belastungs- und Erholungsbasis kennen.
+            </p>
+            <p className="mt-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              {s.days_recorded_7} von 7 Tagen erfasst
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="mt-1 flex items-baseline gap-3">
+              <span className={`font-display text-4xl font-bold ${bucketClass}`}>
+                {s.current ?? "—"}
+              </span>
+              <span className="text-xs text-muted-foreground">/ 100 · heute</span>
+            </div>
+            <p className="mt-2 text-sm leading-snug text-foreground">{s.message}</p>
+          </>
+        )}
 
         {series.length >= 2 && <Sparkline points={series} />}
 
