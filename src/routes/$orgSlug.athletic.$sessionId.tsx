@@ -36,6 +36,12 @@ function OrgAthleticSession() {
     enabled: !!supabaseUser,
     queryFn: () => fetch({ data: { session_id: sessionId } }),
   });
+  const fetchCheckins = useServerFn(listMyCheckins);
+  const { data: checkins } = useQuery({
+    queryKey: ["my-checkins", supabaseUser?.id ?? "anon"],
+    enabled: !!supabaseUser,
+    queryFn: () => fetchCheckins({}),
+  });
 
   const doneMut = useMutation({
     mutationFn: () =>
