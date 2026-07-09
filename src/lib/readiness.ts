@@ -78,9 +78,6 @@ export function recoveryAfterGate(
   const a = Math.round(after.reduce((a, x) => a + x, 0) / after.length);
   return { before: b, after: a, delta: a - b };
 }
-  if (!nums.length) return null;
-  return Math.round(nums.reduce((a, b) => a + b, 0) / nums.length);
-}
 
 function daysAgoTs(days: number): number {
   const d = new Date();
