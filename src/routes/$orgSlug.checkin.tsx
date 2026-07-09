@@ -15,6 +15,7 @@ import {
   type AthleteCheckin,
 } from "@/lib/athlete-checkins.functions";
 import { ReadinessInsight } from "@/components/readiness/ReadinessInsight";
+import { recoveryAfterGate } from "@/lib/readiness";
 import {
   listRecentReadinessGateEvents,
   type ReadinessGateEvent,
