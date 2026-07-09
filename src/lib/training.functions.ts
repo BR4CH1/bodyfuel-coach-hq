@@ -488,6 +488,8 @@ export const completeTrainingSession = createServerFn({ method: "POST" })
         previous_target_reps: ex.target_reps ?? null,
         next_target_reps: decision.next_target_reps,
         reason: decision.reason,
+        readiness_gate: gated.applied,
+        readiness_gate_reason: gated.reason,
       } as any);
 
       // --- Update athlete_exercise_state (living plan brain) ---
