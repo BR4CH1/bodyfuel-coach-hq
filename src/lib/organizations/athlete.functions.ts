@@ -45,9 +45,10 @@ export const getOrgHomeData = createServerFn({ method: "GET" })
     // Profile (name)
     const { data: profile } = await supabase
       .from("profiles")
-      .select("display_name")
+      .select("display_name, avatar_url")
       .eq("id", userId)
       .maybeSingle();
+
 
     // Team membership for this org
     const { data: teams } = await supabase
