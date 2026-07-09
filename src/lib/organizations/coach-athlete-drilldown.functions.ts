@@ -431,22 +431,24 @@ export const getCoachAthleteDetail = createServerFn({ method: "GET" })
     const radarTriggers: Array<{ kind: string; label: string; detail: string }> = [
       ...explainAthlete(signal),
     ];
-    // Trainings-Streak: 2+ Athletik-Einheiten in Folge nicht abgeschlossen
-    const athleticSessions = tasks
-      .filter((t) => t.task_type === "athletic_training")
+    // Trainings-Streak: 2+ Trainings-Sessions in Folge nicht abgeschlossen (SoT)
+    const recentSessions = trainingSessions
+      .slice()
+      .sort((a, b) => (a.session_date < b.session_date ? 1 : -1))
       .slice(0, 3);
     const missedStreak =
-      athleticSessions.length >= 2 &&
-      athleticSessions.every(
-        (t) => t.status === "missed" || t.status === "skipped" || t.status === "open"
+      recentSessions.length >= 2 &&
+      recentSessions.every(
+        (s) => s.status === "missed" || s.status === "skipped" || s.status === "planned",
       );
     if (missedStreak) {
       radarTriggers.push({
         kind: "training",
         label: "Training",
-        detail: `${athleticSessions.length} Athletik-Einheiten in Folge nicht abgeschlossen`,
+        detail: `${recentSessions.length} Trainingseinheiten in Folge nicht abgeschlossen`,
       });
     }
+
 
     // ---- Coach Summary (regelbasiert)
     const summaryLines: string[] = [];
