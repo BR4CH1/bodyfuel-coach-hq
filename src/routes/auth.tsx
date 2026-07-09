@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Flame, Lock, Mail } from "lucide-react";
+import { Flame, Lock, Mail, User } from "lucide-react";
 import { z } from "zod";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,6 +19,12 @@ export const Route = createFileRoute("/auth")({
 
 const emailSchema = z.string().trim().email("Ungültige Email").max(255);
 const pwSchema = z.string().min(6, "Mindestens 6 Zeichen").max(100);
+const nameSchema = z
+  .string()
+  .trim()
+  .min(2, "Mindestens 2 Zeichen")
+  .max(60, "Maximal 60 Zeichen")
+  .regex(/^[\p{L}][\p{L}\s'\-]*$/u, "Nur Buchstaben, Bindestrich, Leerzeichen");
 
 function AuthPage() {
   const { supabaseUser, loading } = useSession();
@@ -26,6 +32,8 @@ function AuthPage() {
   const { next } = Route.useSearch();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [busy, setBusy] = useState(false);
   // Beitrittslinks (next=/join/...) starten direkt im Registrieren-Modus.
   const [mode, setMode] = useState<"signin" | "signup">(
@@ -56,6 +64,17 @@ function AuthPage() {
     if (!ev.success) return toast.error(ev.error.issues[0].message);
     if (!pv.success) return toast.error(pv.error.issues[0].message);
 
+    let firstParsed = "";
+    let lastParsed = "";
+    if (mode === "signup") {
+      const fv = nameSchema.safeParse((fd.get("first_name") ?? firstName ?? "").toString());
+      const lv = nameSchema.safeParse((fd.get("last_name") ?? lastName ?? "").toString());
+      if (!fv.success) return toast.error(`Vorname: ${fv.error.issues[0].message}`);
+      if (!lv.success) return toast.error(`Nachname: ${lv.error.issues[0].message}`);
+      firstParsed = fv.data;
+      lastParsed = lv.data;
+    }
+
     setBusy(true);
     try {
       if (mode === "signup") {
@@ -63,12 +82,27 @@ function AuthPage() {
           typeof window !== "undefined"
             ? `${window.location.origin}${next ?? "/app"}`
             : undefined;
+        const displayName = `${firstParsed} ${lastParsed}`.replace(/\s+/g, " ").trim();
         const { data, error } = await supabase.auth.signUp({
           email: ev.data,
           password: pv.data,
-          options: { emailRedirectTo },
+          options: {
+            emailRedirectTo,
+            data: {
+              display_name: displayName,
+              first_name: firstParsed,
+              last_name: lastParsed,
+            },
+          },
         });
         if (error) throw error;
+        // Falls die Session direkt gesetzt wird, Profil-Namen sofort schreiben.
+        if (data.session && data.user) {
+          await supabase
+            .from("profiles")
+            .update({ display_name: displayName })
+            .eq("id", data.user.id);
+        }
         if (!data.session) {
           toast.success("Account erstellt. Bitte bestätige deine E-Mail, um fortzufahren.");
         } else {
@@ -138,6 +172,36 @@ function AuthPage() {
         </p>
 
         <form onSubmit={submit} className="mt-6 space-y-4">
+          {mode === "signup" && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="first_name">Vorname</Label>
+                <div className="relative">
+                  <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="first_name"
+                    name="first_name"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    className="pl-9"
+                    required
+                    autoComplete="given-name"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="last_name">Nachname</Label>
+                <Input
+                  id="last_name"
+                  name="last_name"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  required
+                  autoComplete="family-name"
+                />
+              </div>
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="email">E-Mail</Label>
             <div className="relative">
