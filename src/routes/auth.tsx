@@ -32,6 +32,8 @@ function AuthPage() {
   const { next } = Route.useSearch();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [busy, setBusy] = useState(false);
   // Beitrittslinks (next=/join/...) starten direkt im Registrieren-Modus.
   const [mode, setMode] = useState<"signin" | "signup">(
