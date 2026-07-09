@@ -56,6 +56,54 @@ export function AthleteCheckinsTab({
         </Section>
       )}
 
+      {gateEvents.length > 0 && (
+        <Section
+          title="Readiness bremst Progression"
+          icon={<ShieldAlert className="h-4 w-4" />}
+        >
+          <div className="rounded-lg border border-orange-500/30 bg-orange-500/10 p-3">
+            <div className="text-[12px] text-orange-300">
+              In den letzten 14 Tagen wurden {gateEvents.length} Progressions-Entscheidungen
+              durch die Readiness konservativer gesetzt. Keine parallele Plan-Änderung — nur
+              Steigerungen wurden zurückgehalten.
+            </div>
+            <ul className="mt-2 divide-y divide-orange-500/20">
+              {gateEvents.slice(0, 6).map((g) => (
+                <li key={g.id} className="py-1.5 text-[12px]">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold text-foreground">
+                      {g.exercise_name ?? "Übung"}
+                    </span>
+                    <span
+                      className={
+                        "rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider " +
+                        (g.readiness_gate === "reduce"
+                          ? "bg-red-500/20 text-red-300"
+                          : "bg-yellow-500/20 text-yellow-300")
+                      }
+                    >
+                      {g.readiness_gate === "reduce" ? "Hart" : "Weich"}
+                    </span>
+                  </div>
+                  {g.readiness_gate_reason && (
+                    <div className="mt-0.5 text-muted-foreground">
+                      {g.readiness_gate_reason}
+                    </div>
+                  )}
+                  <div className="mt-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+                    {new Date(g.source_session_date).toLocaleDateString("de-DE", {
+                      day: "2-digit",
+                      month: "2-digit",
+                    })}{" "}
+                    · Entscheidung: {g.decision}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </Section>
+      )}
+
       <Section title="Aktueller Check-in" icon={<Heart className="h-4 w-4" />}>
         {isLoading ? (
           <div className="rounded-lg border border-border bg-card p-4 text-xs text-muted-foreground">
