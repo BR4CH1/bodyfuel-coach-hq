@@ -260,9 +260,214 @@ export function OrgLoadTab({
           })}
         </div>
       )}
+
+      {smartOpen && (
+        <SmartSuggestModal
+          weekStart={isoDate(weekStart)}
+          weekLabel={`${weekStart.toLocaleDateString("de-DE")} – ${weekEnd.toLocaleDateString("de-DE")}`}
+          days={days}
+          suggestion={suggestion}
+          suggesting={suggesting}
+          applying={applying}
+          onClose={() => {
+            setSmartOpen(false);
+            setSuggestion(null);
+          }}
+          onSuggest={async (matchDates, notes, mode) => {
+            setSuggesting(true);
+            try {
+              const res = await suggestFn({
+                data: {
+                  orgId,
+                  teamId,
+                  weekStart: isoDate(weekStart),
+                  matchDates,
+                  notes,
+                  mode,
+                },
+              });
+              setSuggestion(res as LoadSuggestion);
+            } finally {
+              setSuggesting(false);
+            }
+          }}
+          onApply={applySuggestion}
+        />
+      )}
     </div>
   );
 }
+
+function SmartSuggestModal({
+  weekLabel,
+  days,
+  suggestion,
+  suggesting,
+  applying,
+  onClose,
+  onSuggest,
+  onApply,
+}: {
+  weekStart: string;
+  weekLabel: string;
+  days: Date[];
+  suggestion: LoadSuggestion | null;
+  suggesting: boolean;
+  applying: boolean;
+  onClose: () => void;
+  onSuggest: (matchDates: string[], notes: string | null, mode: "auto" | "heuristic" | "ai") => Promise<void>;
+  onApply: (sugg: LoadSuggestion) => Promise<void>;
+}) {
+  const [matches, setMatches] = useState<Record<string, boolean>>({});
+  const [notes, setNotes] = useState("");
+  const [mode, setMode] = useState<"auto" | "heuristic" | "ai">("auto");
+
+  const toggleMatch = (iso: string) =>
+    setMatches((m) => ({ ...m, [iso]: !m[iso] }));
+
+  const selectedMatches = Object.entries(matches)
+    .filter(([, v]) => v)
+    .map(([k]) => k);
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4">
+      <div className="w-full max-w-2xl overflow-hidden rounded-2xl border border-border bg-card">
+        <div className="flex items-center justify-between border-b border-border p-4">
+          <div className="flex items-center gap-2 font-semibold">
+            <Sparkles className="h-4 w-4 text-bulls-red" />
+            Smart-Belastungsvorschlag
+          </div>
+          <button onClick={onClose} className="rounded-md p-1 hover:bg-muted" aria-label="Schließen">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="max-h-[70vh] space-y-4 overflow-y-auto p-4">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Woche
+            </div>
+            <div className="text-sm font-semibold">{weekLabel}</div>
+          </div>
+
+          <div>
+            <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Spieltage in der Woche
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {days.map((d, i) => {
+                const iso = (() => {
+                  const y = d.getFullYear();
+                  const m = String(d.getMonth() + 1).padStart(2, "0");
+                  const day = String(d.getDate()).padStart(2, "0");
+                  return `${y}-${m}-${day}`;
+                })();
+                const on = !!matches[iso];
+                return (
+                  <button
+                    key={iso}
+                    onClick={() => toggleMatch(iso)}
+                    className={`rounded-lg border px-2.5 py-1.5 text-xs font-semibold ${
+                      on
+                        ? "border-bulls-red bg-bulls-red/10 text-bulls-red"
+                        : "border-border bg-background"
+                    }`}
+                  >
+                    {DAY_LABELS[i]} {d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Wenn Spieltage gesetzt sind, wird ein MD-Zyklus gerechnet — sonst schlägt die KI eine sinnvolle Trainingswoche vor.
+            </p>
+          </div>
+
+          <div>
+            <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Kontext / Coach-Notiz (optional)
+            </div>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={2}
+              placeholder="z. B. „Testspiel am Donnerstag, Regenerationswoche"
+              className="w-full rounded-lg border border-border bg-background px-2 py-1.5 text-sm"
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-1.5">
+            {(["auto", "heuristic", "ai"] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => setMode(m)}
+                className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${
+                  mode === m
+                    ? "border-bulls-red bg-bulls-red/10 text-bulls-red"
+                    : "border-border bg-background"
+                }`}
+              >
+                {m === "auto" ? "Auto" : m === "heuristic" ? "Heuristik" : "KI"}
+              </button>
+            ))}
+            <button
+              onClick={() => onSuggest(selectedMatches, notes.trim() || null, mode)}
+              disabled={suggesting}
+              className="ml-auto rounded-lg bg-bulls-red px-4 py-1.5 text-xs font-semibold text-white hover:bg-bulls-red/90 disabled:opacity-60"
+            >
+              {suggesting ? "Berechne…" : "Vorschlag erzeugen"}
+            </button>
+          </div>
+
+          {suggestion && (
+            <div className="rounded-xl border border-border bg-background p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Vorschlag ({suggestion.source === "ai" ? "KI" : "Heuristik"})
+                </div>
+              </div>
+              <p className="mb-2 text-xs text-muted-foreground">{suggestion.reasoning}</p>
+              <div className="space-y-1.5">
+                {suggestion.days.map((d: LoadSuggestionDay, i: number) => (
+                  <div key={d.date} className="flex items-center gap-2 text-xs">
+                    <div className="w-8 font-bold text-muted-foreground">{DAY_LABELS[i]}</div>
+                    <div
+                      className="rounded-md px-2 py-0.5 font-bold text-white"
+                      style={{ background: LOAD_LEVELS[d.load_level].color }}
+                    >
+                      {LOAD_LEVELS[d.load_level].short}
+                    </div>
+                    <div className="flex-1">
+                      <span className="font-semibold">{d.session_type ?? "—"}</span>
+                      {d.notes && <span className="text-muted-foreground"> · {d.notes}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-end gap-2 border-t border-border p-3">
+          <button
+            onClick={onClose}
+            className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs"
+          >
+            Abbrechen
+          </button>
+          <button
+            onClick={() => suggestion && onApply(suggestion)}
+            disabled={!suggestion || applying}
+            className="rounded-lg bg-bulls-red px-4 py-1.5 text-xs font-semibold text-white hover:bg-bulls-red/90 disabled:opacity-60"
+          >
+            {applying ? "Übernehme…" : "Woche übernehmen"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 function DayCard({
   label,
