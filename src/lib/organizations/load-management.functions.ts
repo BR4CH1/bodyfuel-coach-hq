@@ -111,14 +111,37 @@ export const deleteLoadDay = createServerFn({ method: "POST" })
   });
 
 /**
- * Belastung eines Athleten für ein Datum. Wählt team-spezifischen Eintrag
- * bevorzugt, sonst orgweit. Beide, damit Ernährungs-Engine reagieren kann,
- * auch wenn Smart Training aus ist.
+ * Belastung eines Athleten für ein Datum. Priorität:
+ *   1) Athleten-Override (organization_load_day_athlete_overrides)
+ *   2) Team-spezifischer Coach-Eintrag
+ *   3) Orgweiter Coach-Eintrag
  */
 export const getLoadForAthlete = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: { orgId: string; teamId?: string | null; date: string }) => data)
   .handler(async ({ data, context }) => {
+    // 1) Athleten-Override
+    const { data: ov } = await context.supabase
+      .from("organization_load_day_athlete_overrides")
+      .select("id, organization_id, date, load_level, note, updated_at")
+      .eq("organization_id", data.orgId)
+      .eq("user_id", context.userId)
+      .eq("date", data.date)
+      .maybeSingle();
+    if (ov) {
+      return {
+        id: ov.id,
+        organization_id: ov.organization_id,
+        team_id: null,
+        date: ov.date,
+        load_level: ov.load_level,
+        session_type: null,
+        notes: ov.note,
+        updated_at: ov.updated_at,
+        source: "athlete_override" as const,
+      };
+    }
+
     const { data: rows, error } = await context.supabase
       .from("organization_load_days")
       .select("*")
@@ -128,10 +151,65 @@ export const getLoadForAthlete = createServerFn({ method: "GET" })
     const list = (rows ?? []) as LoadDay[];
     if (data.teamId) {
       const team = list.find((r) => r.team_id === data.teamId);
-      if (team) return team;
+      if (team) return { ...team, source: "team" as const };
     }
-    return list.find((r) => r.team_id === null) ?? null;
+    const org = list.find((r) => r.team_id === null);
+    return org ? { ...org, source: "org" as const } : null;
   });
+
+export const upsertAthleteLoadOverride = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (data: { orgId: string; date: string; load_level: number; note?: string | null }) => data,
+  )
+  .handler(async ({ data, context }) => {
+    const { data: existing } = await context.supabase
+      .from("organization_load_day_athlete_overrides")
+      .select("id")
+      .eq("organization_id", data.orgId)
+      .eq("user_id", context.userId)
+      .eq("date", data.date)
+      .maybeSingle();
+    if (existing?.id) {
+      const { error } = await context.supabase
+        .from("organization_load_day_athlete_overrides")
+        .update({
+          load_level: data.load_level,
+          note: data.note ?? null,
+        })
+        .eq("id", existing.id);
+      if (error) throw new Error(error.message);
+      return { id: existing.id };
+    }
+    const { data: inserted, error } = await context.supabase
+      .from("organization_load_day_athlete_overrides")
+      .insert({
+        organization_id: data.orgId,
+        user_id: context.userId,
+        date: data.date,
+        load_level: data.load_level,
+        note: data.note ?? null,
+      })
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+    return { id: inserted.id };
+  });
+
+export const clearAthleteLoadOverride = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { orgId: string; date: string }) => data)
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("organization_load_day_athlete_overrides")
+      .delete()
+      .eq("organization_id", data.orgId)
+      .eq("user_id", context.userId)
+      .eq("date", data.date);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 
 /** Farbcodes / Labels für die UI. */
 export const LOAD_LEVELS: { level: number; label: string; short: string; color: string }[] = [
