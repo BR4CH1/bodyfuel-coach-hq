@@ -329,43 +329,53 @@ export function AppLayout({ children }: { children: ReactNode }) {
       params: { orgId },
       activePath: cockpitBase,
     };
+    // Modul-Flags: Wenn keine Feature-Zeilen geladen wurden (noch), alle
+    // Module als aktiv behandeln — sonst würde ein Nav-Flackern entstehen.
+    const hasFeatureData = orgFeatures.length > 0;
+    const modOn = (k: string) => (hasFeatureData ? orgFeatureOn(k) : true);
+    const trainingOn = modOn("athletic_training") || modOn("training") || modOn("smart_training");
+    const communityOn = modOn("community");
+    const challengesOn = modOn("challenges");
+    void challengesOn;
+
     if (isPlatformCoachOrgRoute || staffRole === "organization_admin" || staffRole === "head_coach") {
       const cockpitLabel = isPlatformCoachOrgRoute
         ? "Vereins-Cockpit"
         : staffRole === "organization_admin"
         ? "Leitungs-Cockpit"
         : "Coach-Cockpit";
-      return [
+      const items: any[] = [
         { ...cockpitTarget, hash: "cockpit", label: cockpitLabel, icon: LayoutDashboard },
         { ...cockpitTarget, hash: "athletes", label: "Athleten", icon: Users },
         ...(showTeamsLink ? [{ ...cockpitTarget, hash: "teams", label: "Teams", icon: Users2 }] : []),
-        { ...cockpitTarget, hash: "training", label: "Training", icon: Dumbbell },
+        ...(trainingOn ? [{ ...cockpitTarget, hash: "training", label: "Training", icon: Dumbbell }] : []),
         { ...cockpitTarget, hash: "tasks", label: "Aufgaben", icon: ClipboardList },
-        { ...cockpitTarget, hash: "community", label: "Community", icon: Users2 },
+        ...(communityOn ? [{ ...cockpitTarget, hash: "community", label: "Community", icon: Users2 }] : []),
         { ...cockpitTarget, hash: "staff", label: "Mitarbeiter", icon: Shield },
-        { ...cockpitTarget, hash: "settings", label: "Einstellungen", icon: Settings },
+        { ...cockpitTarget, hash: "modules", label: "Module", icon: Settings },
         { to: "/profile", label: "Profil", icon: UserCircle },
       ];
+      return items;
     }
     if (staffRole === "team_coach") {
       return [
         { ...cockpitTarget, hash: "cockpit", label: "Coach-Cockpit", icon: LayoutDashboard },
         { ...cockpitTarget, hash: "athletes", label: "Athleten", icon: Users },
-        { ...cockpitTarget, hash: "training", label: "Training", icon: Dumbbell },
-        
-        { ...cockpitTarget, hash: "community", label: "Community", icon: Users2 },
+        ...(trainingOn ? [{ ...cockpitTarget, hash: "training", label: "Training", icon: Dumbbell }] : []),
+        ...(communityOn ? [{ ...cockpitTarget, hash: "community", label: "Community", icon: Users2 }] : []),
         { to: "/profile", label: "Profil", icon: UserCircle },
       ];
     }
     if (staffRole === "staff") {
       return [
         { ...cockpitTarget, hash: "cockpit", label: "Cockpit", icon: LayoutDashboard },
-        { ...cockpitTarget, hash: "community", label: "Community", icon: Users2 },
+        ...(communityOn ? [{ ...cockpitTarget, hash: "community", label: "Community", icon: Users2 }] : []),
         { to: "/profile", label: "Profil", icon: UserCircle },
       ];
     }
     return null;
   };
+
   const staffNav = buildStaffNav();
   // Team-only Athleten fallen auf ihre eigene Vereinsroute via OrgAthleteLayout
   // zurück (siehe Redirect oben). Hier bekommen sie eine minimale Sidebar.
