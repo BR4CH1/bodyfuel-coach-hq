@@ -30,10 +30,11 @@ export const listAutoOverridesForAthlete = createServerFn({ method: "GET" })
     // Optional: History-Reasons aus plan_adjustment_history (best-effort).
     const { data: hist } = await supabase
       .from("plan_adjustment_history")
-      .select("adjustment_date, reason")
-      .eq("user_id", userId)
-      .gte("adjustment_date", data.fromDate)
-      .lte("adjustment_date", data.toDate);
+      .select("kind, after_json, created_at")
+      .eq("client_id", userId)
+      .eq("area", "nutrition")
+      .gte("created_at", `${data.fromDate}T00:00:00`)
+      .lte("created_at", `${data.toDate}T23:59:59`);
 
     const byDate = new Map<string, AutoOverrideInfo>();
     for (const r of rows ?? []) {
@@ -43,10 +44,13 @@ export const listAutoOverridesForAthlete = createServerFn({ method: "GET" })
       byDate.set(key, info);
     }
     for (const h of hist ?? []) {
-      const key = (h as any).adjustment_date as string;
+      const after = (h as any).after_json as { date?: string } | null;
+      const key = after?.date;
+      if (!key) continue;
       const info = byDate.get(key);
       if (!info) continue;
-      const reason = (h as any).reason as string | null;
+      const kind = ((h as any).kind as string | null) ?? "";
+      const reason = kind.startsWith("load_change:") ? kind.slice("load_change:".length) : kind;
       if (reason && !info.reasons.includes(reason)) info.reasons.push(reason);
     }
     return Array.from(byDate.values()).sort((a, b) => a.date.localeCompare(b.date));
