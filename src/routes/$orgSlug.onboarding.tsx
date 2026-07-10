@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { useSession } from "@/lib/bodyfuel/session";
@@ -196,6 +196,7 @@ function AthleteOnboarding({ ctx }: { ctx: NonNullable<Awaited<ReturnType<typeof
   const { org } = OrgLayoutRoute.useLoaderData();
   const { supabaseUser } = useSession();
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const complete = useServerFn(completeOrganizationOnboardingV2);
 
   const [displayName, setDisplayName] = useState(ctx.profile?.display_name ?? "");
@@ -354,8 +355,9 @@ function AthleteOnboarding({ ctx }: { ctx: NonNullable<Awaited<ReturnType<typeof
       });
       return { ok: true };
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success(`Willkommen bei ${org.name}!`);
+      await qc.invalidateQueries({ queryKey: ["entitlements"] });
       navigate({ to: "/$orgSlug/home", params: { orgSlug: org.slug }, replace: true });
     },
     onError: (e: any) => toast.error(e?.message ?? "Fehler beim Speichern"),
@@ -645,6 +647,7 @@ function AthleteOnboarding({ ctx }: { ctx: NonNullable<Awaited<ReturnType<typeof
 function StaffOnboarding({ ctx }: { ctx: NonNullable<Awaited<ReturnType<typeof getOrganizationContext>>> }) {
   const { org } = OrgLayoutRoute.useLoaderData();
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const complete = useServerFn(completeStaffOrganizationOnboarding);
 
   const [displayName, setDisplayName] = useState(ctx.profile?.display_name ?? "");
@@ -677,8 +680,9 @@ function StaffOnboarding({ ctx }: { ctx: NonNullable<Awaited<ReturnType<typeof g
         },
       });
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success(`Willkommen bei ${org.name}!`);
+      await qc.invalidateQueries({ queryKey: ["entitlements"] });
       navigate({ to: "/coach/teams/$orgId", params: { orgId: ctx.organization.id }, replace: true });
     },
     onError: (e: any) => toast.error(e?.message ?? "Fehler beim Speichern"),

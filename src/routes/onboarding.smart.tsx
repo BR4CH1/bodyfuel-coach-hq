@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, Sparkles, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -120,6 +120,7 @@ const EMPTY: Form = {
 
 function SmartOnboardingPage() {
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const { supabaseUser, loading } = useSession();
   const statusFn = useServerFn(getOnboardingStatus);
   const completeFn = useServerFn(completeSmartOnboarding);
@@ -197,8 +198,9 @@ function SmartOnboardingPage() {
       // Pläne werden im Hintergrund (Queue + Cron) generiert, damit das
       // Onboarding sofort fertig ist statt 2-4 Minuten zu blocken.
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Autopilot gestartet! Deine Pläne entstehen im Hintergrund.");
+      await qc.invalidateQueries({ queryKey: ["entitlements"] });
       navigate({ to: "/dashboard" });
     },
     onError: (e: any) => toast.error(e.message),
