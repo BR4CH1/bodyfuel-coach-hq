@@ -25,6 +25,7 @@ import { Route as OrgLayoutRoute } from "./$orgSlug";
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/bodyfuel/UserAvatar";
 import { PlanStatusChip } from "@/components/organizations/PlanStatusChip";
+import { LoadWeekBanner } from "@/components/bodyfuel/LoadWeekBanner";
 
 
 
@@ -181,6 +182,13 @@ function OrgHome() {
         </div>
 
       </header>
+
+      {featureEnabled("load_management") && (
+        <LoadWeekBanner
+          orgId={(data.org as any).id}
+          teamId={(data.team_membership as any)?.team_id ?? null}
+        />
+      )}
 
       <main className="mx-auto max-w-md px-4 py-5 space-y-6">
         <ReadinessGateHint userId={supabaseUser?.id} orgSlug={org.slug} />

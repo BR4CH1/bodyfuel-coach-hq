@@ -3463,6 +3463,60 @@ export type Database = {
           },
         ]
       }
+      organization_load_days: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          date: string
+          id: string
+          load_level: number
+          notes: string | null
+          organization_id: string
+          session_type: string | null
+          team_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          date: string
+          id?: string
+          load_level: number
+          notes?: string | null
+          organization_id: string
+          session_type?: string | null
+          team_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          id?: string
+          load_level?: number
+          notes?: string | null
+          organization_id?: string
+          session_type?: string | null
+          team_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_load_days_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_load_days_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "organization_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_memberships: {
         Row: {
           created_at: string
