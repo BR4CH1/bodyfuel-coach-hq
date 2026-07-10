@@ -116,6 +116,35 @@ export function OrgLoadTab({
     setWeekStart(next);
   };
 
+  const [smartOpen, setSmartOpen] = useState(false);
+  const suggestFn = useServerFn(suggestLoadWeek);
+  const [suggestion, setSuggestion] = useState<LoadSuggestion | null>(null);
+  const [suggesting, setSuggesting] = useState(false);
+  const [applying, setApplying] = useState(false);
+
+  const applySuggestion = async (sugg: LoadSuggestion) => {
+    setApplying(true);
+    try {
+      for (const d of sugg.days) {
+        await upsertFn({
+          data: {
+            orgId,
+            teamId,
+            date: d.date,
+            load_level: d.load_level,
+            session_type: d.session_type,
+            notes: d.notes,
+          },
+        });
+      }
+      await qc.invalidateQueries({ queryKey });
+      setSmartOpen(false);
+      setSuggestion(null);
+    } finally {
+      setApplying(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-border bg-card p-4">
