@@ -736,4 +736,83 @@ export const deletePerformanceTeamOrganization = createServerFn({ method: "POST"
     return { ok: true as const, id: data.organization_id, name: (org as any).name as string };
   });
 
+function slugifyTeamName(input: string): string {
+  return String(input ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/ß/g, "ss")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 50);
+}
+
+/** Coach/Admin: legt ein Team unter einer Organisation an. RLS (is_org_admin)
+ *  regelt die Berechtigung, `platform_owner` ist als organization_admin
+ *  eingetragen und darf ebenfalls anlegen. */
+export const createOrgTeam = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (d: {
+      organization_id: string;
+      name: string;
+      sport?: string | null;
+      age_group?: string | null;
+    }) => {
+      const organization_id = String(d.organization_id ?? "").trim();
+      const name = String(d.name ?? "").trim();
+      if (!/^[0-9a-f-]{36}$/i.test(organization_id))
+        throw new Error("Ungültige Organisations-ID.");
+      if (name.length < 2) throw new Error("Teamname zu kurz.");
+      if (name.length > 80) throw new Error("Teamname zu lang.");
+      return {
+        organization_id,
+        name,
+        sport: d.sport?.trim() || null,
+        age_group: d.age_group?.trim() || null,
+      };
+    },
+  )
+  .handler(async ({ data, context }) => {
+    const base = slugifyTeamName(data.name) || "team";
+    // Konflikte in (organization_id, slug) vermeiden — Suffix bei Bedarf.
+    const { data: existing } = await context.supabase
+      .from("organization_teams")
+      .select("slug")
+      .eq("organization_id", data.organization_id);
+    const taken = new Set(((existing ?? []) as any[]).map((r) => String(r.slug)));
+    let slug = base;
+    let i = 2;
+    while (taken.has(slug)) {
+      slug = `${base}-${i++}`;
+      if (i > 999) throw new Error("Konnte keinen freien Team-Slug erzeugen.");
+    }
+
+    // Sport von der Organisation erben, wenn nicht angegeben.
+    let sport = data.sport;
+    if (!sport) {
+      const { data: org } = await context.supabase
+        .from("organizations")
+        .select("sport")
+        .eq("id", data.organization_id)
+        .maybeSingle();
+      sport = ((org as any)?.sport as string | null) ?? null;
+    }
+
+    const { data: inserted, error } = await context.supabase
+      .from("organization_teams")
+      .insert({
+        organization_id: data.organization_id,
+        name: data.name,
+        slug,
+        sport,
+        age_group: data.age_group,
+      } as any)
+      .select("id, name, slug, sport, age_group")
+      .single();
+    if (error) throw new Error(error.message);
+    return inserted as { id: string; name: string; slug: string; sport: string | null; age_group: string | null };
+  });
+
+
 

@@ -26,7 +26,7 @@ import {
   searchExistingAthletes,
   addExistingUserToTeam,
 } from "@/lib/organizations/roster.functions";
-import { isFitnessStudio, orgTerminology } from "@/lib/organizations/org-type";
+import { isFitnessStudio, isFootballOrg, orgTerminology } from "@/lib/organizations/org-type";
 
 
 type Team = { id: string; name: string };
@@ -34,6 +34,7 @@ type Team = { id: string; name: string };
 export function AthletesTab({
   orgId,
   orgType,
+  orgSport,
   teamFilter,
   teams,
   allowedUserIds,
@@ -42,6 +43,7 @@ export function AthletesTab({
 }: {
   orgId: string;
   orgType?: string | null;
+  orgSport?: string | null;
   teamFilter: string | null;
   teams: Team[];
   allowedUserIds: Set<string> | null;
@@ -49,6 +51,7 @@ export function AthletesTab({
   onTeamFilterChange?: (teamId: string | null) => void;
 }) {
   const isGym = isFitnessStudio(orgType);
+  const isFootball = isFootballOrg(orgSport);
   const term = orgTerminology(orgType);
   const navigate = useNavigate();
   const qc = useQueryClient();
