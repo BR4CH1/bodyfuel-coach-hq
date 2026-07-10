@@ -890,49 +890,51 @@ function ExistingUserForm({
               Ändern
             </button>
           </div>
-          <Field label="Team *">
+          <Field label={`${term.team} *`}>
             <select
               value={teamId}
               onChange={(e) => setTeamId(e.target.value)}
               className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
             >
-              {teams.length === 0 && <option value="">Kein Team vorhanden</option>}
+              {teams.length === 0 && <option value="">{`Keine ${term.team === "Gruppe" ? "Gruppe" : "Mannschaft"} vorhanden`}</option>}
               {teams.map((t) => (
                 <option key={t.id} value={t.id}>{t.name}</option>
               ))}
             </select>
           </Field>
-          <div className="grid grid-cols-3 gap-3">
-            <Field label="Position">
-              <input
-                value={primary}
-                onChange={(e) => setPrimary(e.target.value)}
-                className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
-              />
-            </Field>
-            <Field label="Secondary">
-              <input
-                value={secondary}
-                onChange={(e) => setSecondary(e.target.value)}
-                className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
-              />
-            </Field>
-            <Field label="Nummer">
-              <input
-                type="number"
-                value={jersey}
-                onChange={(e) => setJersey(e.target.value)}
-                className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
-              />
-            </Field>
-          </div>
+          {!isGym && (
+            <div className="grid grid-cols-3 gap-3">
+              <Field label="Position">
+                <input
+                  value={primary}
+                  onChange={(e) => setPrimary(e.target.value)}
+                  className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
+                />
+              </Field>
+              <Field label="Secondary">
+                <input
+                  value={secondary}
+                  onChange={(e) => setSecondary(e.target.value)}
+                  className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
+                />
+              </Field>
+              <Field label="Nummer">
+                <input
+                  type="number"
+                  value={jersey}
+                  onChange={(e) => setJersey(e.target.value)}
+                  className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
+                />
+              </Field>
+            </div>
+          )}
           <div className="flex justify-end gap-2 pt-2">
             <button
               disabled={addMut.isPending || !teamId}
               onClick={() => addMut.mutate()}
               className="rounded bg-primary px-4 py-2 text-xs font-semibold uppercase tracking-wider text-primary-foreground disabled:opacity-50"
             >
-              {addMut.isPending ? "Füge hinzu…" : "Zum Team hinzufügen"}
+              {addMut.isPending ? "Füge hinzu…" : `${isGym ? "Zur Gruppe" : "Zum Team"} hinzufügen`}
             </button>
           </div>
         </>
