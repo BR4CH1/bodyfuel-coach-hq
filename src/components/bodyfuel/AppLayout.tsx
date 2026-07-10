@@ -101,6 +101,14 @@ export function AppLayout({ children }: { children: ReactNode }) {
     },
   });
 
+  const isOwnerFn = useServerFn(getIsPlatformOwner);
+  const { data: isPlatformOwner = false } = useQuery({
+    queryKey: ["is-platform-owner"],
+    queryFn: () => isOwnerFn(),
+    enabled: !!isCoach,
+    staleTime: 10 * 60_000,
+  });
+
   useEffect(() => {
     if (loading) return;
     if (!user && !supabaseUser) navigate({ to: "/login" });
