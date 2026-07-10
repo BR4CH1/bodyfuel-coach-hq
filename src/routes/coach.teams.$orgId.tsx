@@ -379,59 +379,15 @@ export function CoachOrgDetail() {
         )}
 
         {tab === "teams" && (
-          <ul className="grid gap-2 sm:grid-cols-2">
-            {(data.teams as any[]).map((t) => {
-              const kpi = teamKpis.find((k) => k.team_id === t.id);
-              return (
-                <li key={t.id} className="rounded-lg border border-border bg-card p-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <div>
-                      <div className="font-semibold">{t.name}</div>
-                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                        {t.sport ?? "—"} {t.age_group ? `· ${t.age_group}` : ""}
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <button
-                        onClick={() => { setAthleteTeamFilter(t.id); selectTab("athletes"); }}
-                        className="rounded border border-border px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
-                      >
-                        Athleten →
-                      </button>
-                      <button
-                        onClick={() => setJoinLinkTeam({ id: t.id, name: t.name })}
-                        className="rounded border border-border px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-primary hover:bg-primary/10"
-                      >
-                        Beitrittslink
-                      </button>
-                    </div>
-                  </div>
-                  <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-                    <div className="rounded bg-muted/40 p-2">
-                      <div className="font-display text-lg font-bold">{kpi?.athletes ?? 0}</div>
-                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Athleten</div>
-                    </div>
-                    <div className="rounded bg-muted/40 p-2">
-                      <div className="font-display text-lg font-bold">
-                        {kpi?.weekly_compliance != null ? `${kpi.weekly_compliance}%` : "—"}
-                      </div>
-                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Compliance</div>
-                    </div>
-                    <div className="rounded bg-muted/40 p-2">
-                      <div className="font-display text-lg font-bold">{kpi?.pending_onboardings ?? 0}</div>
-                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Offen</div>
-                    </div>
-                  </div>
-
-                </li>
-              );
-            })}
-            {(data.teams as any[]).length === 0 && (
-              <li className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
-                Noch keine Teams angelegt.
-              </li>
-            )}
-          </ul>
+          <TeamsTabPanel
+            orgId={orgId}
+            orgSport={org.sport ?? null}
+            orgType={org.organization_type ?? null}
+            teams={data.teams as any[]}
+            teamKpis={teamKpis}
+            onJumpToAthletes={(id) => { setAthleteTeamFilter(id); selectTab("athletes"); }}
+            onJoinLink={(t) => setJoinLinkTeam(t)}
+          />
         )}
 
         {tab === "training" && <TrainingTab orgId={orgId} />}
