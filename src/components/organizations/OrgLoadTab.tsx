@@ -200,6 +200,30 @@ export function OrgLoadTab({
             Smart-Vorschlag
           </button>
         )}
+        {canManage && (
+          <button
+            onClick={async () => {
+              setBackfilling(true);
+              setBackfillMsg(null);
+              try {
+                const res = await backfillFn({ data: { orgId, horizonDays: 14 } });
+                setBackfillMsg(
+                  `Ernährung neu berechnet für ${res.users_touched} Athlet:innen · ${res.day_reports} Tage · ${res.overrides_written} Overrides`,
+                );
+                await qc.invalidateQueries({ queryKey });
+              } catch (e) {
+                setBackfillMsg(`Fehler: ${(e as Error).message}`);
+              } finally {
+                setBackfilling(false);
+              }
+            }}
+            disabled={backfilling}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold hover:border-bulls-red/60 disabled:opacity-60"
+            title="Ernährungspläne für die nächsten 14 Tage anhand der Belastung neu berechnen"
+          >
+            {backfilling ? "Berechne…" : "Ernährung neu rechnen"}
+          </button>
+        )}
 
         {teams.length > 0 && (
           <div className="ml-auto flex flex-wrap gap-1.5">
