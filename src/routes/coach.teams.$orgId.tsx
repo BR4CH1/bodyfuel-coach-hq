@@ -471,9 +471,17 @@ export function CoachOrgDetail() {
           onClose={() => setJoinLinkTeam(null)}
         />
       )}
+
+      {/* Gefahrenzone — nur für Plattform-Owner sichtbar, Bulls sind hart geblockt. */}
+      <OrgDangerZone
+        organizationId={org.id}
+        organizationName={org.name}
+        organizationSlug={org.slug ?? ""}
+      />
     </div>
   );
 }
+
 
 
 // Inline AthletesTab wurde nach src/components/organizations/AthletesTab.tsx
