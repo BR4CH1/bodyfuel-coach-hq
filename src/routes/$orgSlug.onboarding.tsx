@@ -647,6 +647,7 @@ function AthleteOnboarding({ ctx }: { ctx: NonNullable<Awaited<ReturnType<typeof
 function StaffOnboarding({ ctx }: { ctx: NonNullable<Awaited<ReturnType<typeof getOrganizationContext>>> }) {
   const { org } = OrgLayoutRoute.useLoaderData();
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const complete = useServerFn(completeStaffOrganizationOnboarding);
 
   const [displayName, setDisplayName] = useState(ctx.profile?.display_name ?? "");
