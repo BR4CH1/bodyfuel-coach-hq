@@ -139,21 +139,24 @@ async function classifyAndCollectMeals(
   params: { userId: string; date: string },
 ): Promise<{ category: DirtyDayCategory; protected_ids: string[]; open: MealBaseline[] }> {
   const { userId, date } = params;
+  // Alle aktiven Nutrition-Pläne des Users berücksichtigen und den Plan wählen,
+  // der einen Tag für `date` hat. Ein User kann historisch mehrere `status='active'`
+  // Pläne haben; der neueste hat nicht garantiert auch den Zieltag.
   const { data: plans } = await supabase
     .from("nutrition_plans")
     .select("id")
-    .eq("user_id", userId)
+    .eq("client_id", userId)
     .eq("status", "active")
-    .order("created_at", { ascending: false })
-    .limit(1);
-  const planId = ((plans ?? [])[0] as { id?: string } | undefined)?.id;
-  if (!planId) return { category: "no_plan", protected_ids: [], open: [] };
+    .order("created_at", { ascending: false });
+  const planIds = ((plans ?? []) as Array<{ id: string }>).map((p) => p.id);
+  if (planIds.length === 0) return { category: "no_plan", protected_ids: [], open: [] };
 
   const { data: dayRows } = await supabase
     .from("nutrition_plan_days")
-    .select("id, day_date")
-    .eq("plan_id", planId)
-    .eq("day_date", date);
+    .select("id, plan_id, day_date")
+    .in("plan_id", planIds)
+    .eq("day_date", date)
+    .limit(1);
   const dayId = ((dayRows ?? [])[0] as { id?: string } | undefined)?.id;
   if (!dayId) return { category: "no_plan", protected_ids: [], open: [] };
 
