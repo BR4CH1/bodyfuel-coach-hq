@@ -309,6 +309,7 @@ export function AthletesTab({
       {dialogOpen && (
         <AddAthleteDialog
           orgId={orgId}
+          orgType={orgType}
           teams={teams}
           onClose={() => setDialogOpen(false)}
           onDone={() => {
