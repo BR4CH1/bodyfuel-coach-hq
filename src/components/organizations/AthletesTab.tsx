@@ -1080,13 +1080,17 @@ function InviteForm({
 
 function ManualForm({
   orgId,
+  orgType,
   teams,
   onDone,
 }: {
   orgId: string;
+  orgType?: string | null;
   teams: Team[];
   onDone: () => void;
 }) {
+  const term = orgTerminology(orgType);
+  const isGym = term.isFitnessStudio;
   const create = useServerFn(createPendingRosterAthlete);
   const [teamId, setTeamId] = useState<string>(teams[0]?.id ?? "");
   const [firstName, setFirstName] = useState("");
