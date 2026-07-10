@@ -97,21 +97,47 @@ export const upsertOrgEvent = createServerFn({ method: "POST" })
       source: data.source ?? "manual",
       created_by: context.userId,
     };
+    let eventId: string;
     if (data.id) {
       const { error } = await context.supabase
         .from("organization_events")
         .update(row)
         .eq("id", data.id);
       if (error) throw new Error(error.message);
-      return { id: data.id };
+      eventId = data.id;
+    } else {
+      const { data: inserted, error } = await context.supabase
+        .from("organization_events")
+        .insert(row)
+        .select("id")
+        .single();
+      if (error) throw new Error(error.message);
+      eventId = (inserted as { id: string }).id;
     }
-    const { data: inserted, error } = await context.supabase
-      .from("organization_events")
-      .insert(row)
-      .select("id")
-      .single();
-    if (error) throw new Error(error.message);
-    return { id: (inserted as { id: string }).id };
+
+    // Fire-and-forget: bei Match-Events Recalc für MD-1, MD, MD+1.
+    if (data.event_type === "match") {
+      try {
+        const md = data.starts_at.slice(0, 10);
+        const mdDate = new Date(md + "T00:00:00Z");
+        const shift = (days: number) => {
+          const d = new Date(mdDate);
+          d.setUTCDate(d.getUTCDate() + days);
+          return d.toISOString().slice(0, 10);
+        };
+        const { runNutritionRecalc } = await import("./nutrition-plan-recalc-core.server");
+        await runNutritionRecalc(context.supabase, {
+          callerId: context.userId,
+          orgId: data.orgId,
+          teamId: data.teamId ?? null,
+          dates: [shift(-1), md, shift(1)],
+          reason: "matchday_context",
+        });
+      } catch (e) {
+        console.error("[upsertOrgEvent] recalc failed:", e);
+      }
+    }
+    return { id: eventId };
   });
 
 export const deleteOrgEvent = createServerFn({ method: "POST" })
