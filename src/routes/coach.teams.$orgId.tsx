@@ -155,10 +155,16 @@ export function CoachOrgDetail() {
   const quickAccess: Array<{ key: string; label: string; icon: React.ComponentType<{ className?: string }> }> = [
     { key: "athletes", label: "Athleten", icon: UsersIcon },
     { key: "teams", label: "Teams", icon: Users2Icon },
-    { key: "training", label: "Training", icon: DumbbellIcon },
+    ...(featureOn("athletic_training") || featureOn("training") || featureOn("smart_training")
+      ? [{ key: "training", label: "Training", icon: DumbbellIcon }]
+      : []),
+    ...(featureOn("load_management")
+      ? [{ key: "load", label: "Belastung", icon: Gauge }]
+      : []),
     { key: "tasks", label: "Aufgaben", icon: ClipboardListIcon },
-    { key: "community", label: "Community", icon: MessagesSquare },
+    ...(featureOn("community") ? [{ key: "community", label: "Community", icon: MessagesSquare }] : []),
     { key: "staff", label: "Staff", icon: UserCog },
+    { key: "modules", label: "Module", icon: Settings },
   ];
 
   return (
