@@ -144,11 +144,43 @@ export const deleteOrgEvent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: { id: string }) => data)
   .handler(async ({ data, context }) => {
+    // Event-Info vor dem Löschen laden, damit wir bei Matches den
+    // MD-1/MD/MD+1-Recalc gezielt fahren können.
+    const { data: existing } = await context.supabase
+      .from("organization_events")
+      .select("organization_id, team_id, event_type, starts_at")
+      .eq("id", data.id)
+      .maybeSingle();
     const { error } = await context.supabase
       .from("organization_events")
       .delete()
       .eq("id", data.id);
     if (error) throw new Error(error.message);
+
+    if (
+      existing &&
+      (existing as { event_type: string }).event_type === "match"
+    ) {
+      try {
+        const md = (existing as { starts_at: string }).starts_at.slice(0, 10);
+        const mdDate = new Date(md + "T00:00:00Z");
+        const shift = (days: number) => {
+          const d = new Date(mdDate);
+          d.setUTCDate(d.getUTCDate() + days);
+          return d.toISOString().slice(0, 10);
+        };
+        const { runNutritionRecalc } = await import("./nutrition-plan-recalc-core.server");
+        await runNutritionRecalc(context.supabase, {
+          callerId: context.userId,
+          orgId: (existing as { organization_id: string }).organization_id,
+          teamId: (existing as { team_id: string | null }).team_id,
+          dates: [shift(-1), md, shift(1)],
+          reason: "matchday_context",
+        });
+      } catch (e) {
+        console.error("[deleteOrgEvent] recalc failed:", e);
+      }
+    }
     return { ok: true };
   });
 
