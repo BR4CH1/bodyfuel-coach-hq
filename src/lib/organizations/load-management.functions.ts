@@ -247,6 +247,18 @@ export const clearAthleteLoadOverride = createServerFn({ method: "POST" })
       .eq("user_id", context.userId)
       .eq("date", data.date);
     if (error) throw new Error(error.message);
+    try {
+      const { runNutritionRecalc } = await import("./nutrition-plan-recalc-core.server");
+      await runNutritionRecalc(context.supabase, {
+        callerId: context.userId,
+        orgId: data.orgId,
+        userId: context.userId,
+        dates: [data.date],
+        reason: "manual_override",
+      });
+    } catch (e) {
+      console.error("[clearAthleteLoadOverride] recalc failed:", e);
+    }
     return { ok: true };
   });
 
