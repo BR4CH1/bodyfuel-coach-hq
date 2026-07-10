@@ -88,7 +88,20 @@ export type BuildWeekPlanOpts = {
 
 export function buildWeekPlan(opts: BuildWeekPlanOpts): WeekPlan[] {
   const training = new Set(opts.trainingWeekdays);
-  const sport = new Set(opts.sportWeekdays);
+  let sport = new Set(opts.sportWeekdays);
+  // Datenschutz gegen Onboarding-Fehler: wenn ALLE Gym-Tage zusätzlich als
+  // Sport-Tage markiert sind (training ⊆ sport), ist die Sport-Angabe
+  // vermutlich versehentlich mit derselben Auswahl gefüllt worden. Sonst würde
+  // die `isGym && isSport`-Regel unten die Rotation komplett aushebeln und
+  // jeden einzelnen Tag als „Oberkörper"-Add-on labeln (Bug: Marcel Guss).
+  // In diesem Fall Sport-Overlap an Gym-Tagen auflösen, damit Push/Pull/Legs/
+  // Upper/Lower wieder rotiert.
+  if (training.size > 0) {
+    const overlap = [...training].filter((d) => sport.has(d));
+    if (overlap.length === training.size) {
+      sport = new Set([...sport].filter((d) => !training.has(d)));
+    }
+  }
   const rotation = focusRotation(opts.trainingWeekdays.length, opts.experience);
 
   const plans: WeekPlan[] = [];
