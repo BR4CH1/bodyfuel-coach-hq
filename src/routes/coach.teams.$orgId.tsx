@@ -1706,12 +1706,14 @@ function ChallengesTab({ orgId, teams }: { orgId: string; teams: any[] }) {
           visibility_scope: "organization",
         },
       }),
-    onSuccess: () => {
+    onSuccess: (res: any) => {
       setShow(false);
       setName("");
       setDesc("");
       setEnd("");
       qc.invalidateQueries({ queryKey: ["org-challenges", orgId] });
+      // Direkt zum Punkte-Editor springen: ohne Regeln fließt nichts in die Rangliste.
+      if (res?.id) setSelected(res.id);
     },
   });
   const challenges = ((data as any)?.challenges ?? []) as any[];
