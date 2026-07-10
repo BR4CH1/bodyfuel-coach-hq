@@ -183,6 +183,18 @@ export function OrgLoadTab({
         >
           Heute
         </button>
+        {canManage && (
+          <button
+            onClick={() => {
+              setSuggestion(null);
+              setSmartOpen(true);
+            }}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-bulls-red/60 bg-bulls-red/10 px-3 py-1.5 text-xs font-semibold text-bulls-red hover:bg-bulls-red/20"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            Smart-Vorschlag
+          </button>
+        )}
 
         {teams.length > 0 && (
           <div className="ml-auto flex flex-wrap gap-1.5">
