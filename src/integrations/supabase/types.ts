@@ -663,6 +663,99 @@ export type Database = {
         }
         Relationships: []
       }
+      bulls_monthly_finalizations: {
+        Row: {
+          created_at: string
+          finalized_at: string
+          id: string
+          month: number
+          organization_id: string
+          participant_count: number
+          status: string
+          winner_points: number | null
+          winner_user_id: string | null
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          finalized_at?: string
+          id?: string
+          month: number
+          organization_id: string
+          participant_count?: number
+          status?: string
+          winner_points?: number | null
+          winner_user_id?: string | null
+          year: number
+        }
+        Update: {
+          created_at?: string
+          finalized_at?: string
+          id?: string
+          month?: number
+          organization_id?: string
+          participant_count?: number
+          status?: string
+          winner_points?: number | null
+          winner_user_id?: string | null
+          year?: number
+        }
+        Relationships: []
+      }
+      bulls_monthly_standings: {
+        Row: {
+          active_days: number
+          check_in_completion_rate: number
+          check_in_days: number
+          completed_trainings: number
+          created_at: string
+          final_points: number
+          id: string
+          metadata: Json
+          month: number
+          organization_id: string
+          plan_completion_rate: number
+          planned_trainings: number
+          rank: number
+          user_id: string
+          year: number
+        }
+        Insert: {
+          active_days?: number
+          check_in_completion_rate?: number
+          check_in_days?: number
+          completed_trainings?: number
+          created_at?: string
+          final_points?: number
+          id?: string
+          metadata?: Json
+          month: number
+          organization_id: string
+          plan_completion_rate?: number
+          planned_trainings?: number
+          rank: number
+          user_id: string
+          year: number
+        }
+        Update: {
+          active_days?: number
+          check_in_completion_rate?: number
+          check_in_days?: number
+          completed_trainings?: number
+          created_at?: string
+          final_points?: number
+          id?: string
+          metadata?: Json
+          month?: number
+          organization_id?: string
+          plan_completion_rate?: number
+          planned_trainings?: number
+          rank?: number
+          user_id?: string
+          year?: number
+        }
+        Relationships: []
+      }
       bulls_performance_tests: {
         Row: {
           bodyweight_kg: number | null
@@ -7474,7 +7567,41 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      finalize_bulls_month: {
+        Args: { _month: number; _organization_id: string; _year: number }
+        Returns: string
+      }
+      finalize_bulls_previous_month: { Args: never; Returns: undefined }
       find_user_id_by_email: { Args: { _email: string }; Returns: string }
+      get_bulls_month_ranking: {
+        Args: { _month: number; _organization_id: string; _year: number }
+        Returns: {
+          active_days: number
+          check_in_completion_rate: number
+          check_in_days: number
+          completed_trainings: number
+          display_name: string
+          nickname: string
+          plan_completion_rate: number
+          planned_trainings: number
+          rank: number
+          sport_position: string
+          team_id: string
+          total_points: number
+          user_id: string
+        }[]
+      }
+      get_bulls_monthly_winners: {
+        Args: { _limit?: number; _organization_id: string }
+        Returns: {
+          finalized_at: string
+          month: number
+          winner_display_name: string
+          winner_points: number
+          winner_user_id: string
+          year: number
+        }[]
+      }
       get_bulls_ranking: {
         Args: {
           _organization_id: string
@@ -7503,6 +7630,15 @@ export type Database = {
           category: Database["public"]["Enums"]["bulls_point_category"]
           event_count: number
           total_points: number
+        }[]
+      }
+      get_bulls_user_player_of_month_awards: {
+        Args: { _organization_id: string; _user_id: string }
+        Returns: {
+          finalized_at: string
+          month: number
+          points: number
+          year: number
         }[]
       }
       get_ranking: {
