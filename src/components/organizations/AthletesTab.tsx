@@ -1017,10 +1017,13 @@ function InviteForm({
       <Field label="Team *">
         <select
           value={teamId}
+      <Field label={`${term.team} *`}>
+        <select
+          value={teamId}
           onChange={(e) => setTeamId(e.target.value)}
           className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
         >
-          {teams.length === 0 && <option value="">Kein Team vorhanden</option>}
+          {teams.length === 0 && <option value="">{isGym ? "Keine Gruppe vorhanden" : "Kein Team vorhanden"}</option>}
           {teams.map((t) => (
             <option key={t.id} value={t.id}>{t.name}</option>
           ))}
@@ -1031,35 +1034,39 @@ function InviteForm({
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="spieler@example.com"
+          placeholder={isGym ? "mitglied@example.com" : "spieler@example.com"}
           className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
         />
       </Field>
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Primary Position">
-          <input
-            value={primary}
-            onChange={(e) => setPrimary(e.target.value)}
-            placeholder="z. B. QB, WR"
-            className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
-          />
-        </Field>
-        <Field label="Secondary">
-          <input
-            value={secondary}
-            onChange={(e) => setSecondary(e.target.value)}
-            className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
-          />
-        </Field>
-      </div>
-      <Field label="Trikotnummer">
-        <input
-          type="number"
-          value={jersey}
-          onChange={(e) => setJersey(e.target.value)}
-          className="w-32 rounded border border-border bg-background px-2 py-1.5 text-sm"
-        />
-      </Field>
+      {!isGym && (
+        <>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Primary Position">
+              <input
+                value={primary}
+                onChange={(e) => setPrimary(e.target.value)}
+                placeholder="z. B. QB, WR"
+                className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
+              />
+            </Field>
+            <Field label="Secondary">
+              <input
+                value={secondary}
+                onChange={(e) => setSecondary(e.target.value)}
+                className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
+              />
+            </Field>
+          </div>
+          <Field label="Trikotnummer">
+            <input
+              type="number"
+              value={jersey}
+              onChange={(e) => setJersey(e.target.value)}
+              className="w-32 rounded border border-border bg-background px-2 py-1.5 text-sm"
+            />
+          </Field>
+        </>
+      )}
       {err && <p className="text-xs text-red-500">{err}</p>}
       <div className="flex justify-end gap-2 pt-2">
         <button
