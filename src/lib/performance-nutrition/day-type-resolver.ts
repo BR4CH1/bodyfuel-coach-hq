@@ -144,6 +144,26 @@ export function resolvePerformanceDayTypeFromSignals(
     };
   }
 
+  // 1b) Belastungssteuerung: Coach hat für diesen Tag eine Belastungsstufe
+  //     gesetzt. Diese schlägt strukturelle Signale (Wochenplan, Weekday-
+  //     Schedule), weil die Stufe die tagesaktuelle Coach-Absicht abbildet.
+  //     Manuelle Per-User-Overrides bleiben höher priorisiert (siehe 1).
+  if (signals.loadLevel !== null && signals.loadLevel !== undefined) {
+    const lvl = Math.max(0, Math.min(5, Math.round(signals.loadLevel)));
+    let mapped: PerformanceDayTypeKey;
+    if (lvl >= 5) mapped = "game_day";
+    else if (lvl >= 3) mapped = "football_training";
+    else if (lvl >= 1) mapped = "strength";
+    else mapped = "rest";
+    return {
+      dayType: mapped,
+      source: "load_management",
+      flags,
+      signals,
+    };
+  }
+
+
   // Structural detection.
   const sessionCount =
     (signals.hasFootballTrainingSession ? 1 : 0) +
