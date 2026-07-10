@@ -256,6 +256,46 @@ export function LoadWeekBanner({
         </div>
       )}
 
+      {(() => {
+        const autoOv = autoOvQ.data ?? [];
+        if (autoOv.length === 0) return null;
+        const dayLabel = (iso: string) => {
+          const d = new Date(iso + "T00:00:00");
+          return d.toLocaleDateString("de-DE", { weekday: "long" });
+        };
+        const reasonLabels: Record<string, string> = {
+          matchday_context: "Spieltag-Kontext",
+          intensity_increase: "höhere Belastung",
+          intensity_decrease: "reduzierte Belastung",
+          recovery_context: "Regeneration",
+          manual_override: "eigene Anpassung",
+          md_minus_1_pre_fuel: "Pre-Fuel vor Spiel",
+        };
+        const days = autoOv.map((o) => dayLabel(o.date));
+        const uniqueDays = Array.from(new Set(days));
+        const reasons = Array.from(
+          new Set(autoOv.flatMap((o) => o.reasons.map((r) => reasonLabels[r] ?? r))),
+        );
+        return (
+          <div className="mb-3 flex items-start gap-2 rounded-xl border border-bulls-red/30 bg-bulls-red/5 p-3">
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-bulls-red" />
+            <div className="text-xs leading-relaxed text-foreground">
+              <div className="font-semibold">Ernährung an Belastung angepasst</div>
+              <div className="mt-0.5 text-muted-foreground">
+                {uniqueDays.length === 1
+                  ? `Deine Ernährung für ${uniqueDays[0]} wurde an die geänderte Belastungsplanung angepasst.`
+                  : `Deine Ernährung für ${uniqueDays.slice(0, -1).join(", ")} und ${uniqueDays.slice(-1)} wurde an die geänderte Belastungsplanung angepasst.`}
+                {reasons.length > 0 && (
+                  <span className="ml-1 text-muted-foreground/80">
+                    ({reasons.join(", ")})
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       <div className="grid grid-cols-7 gap-1">
         {days.map((d, i) => {
           const iso = isoDate(d);
