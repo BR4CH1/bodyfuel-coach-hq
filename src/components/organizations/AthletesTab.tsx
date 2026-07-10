@@ -947,13 +947,17 @@ function ExistingUserForm({
 
 function InviteForm({
   orgId,
+  orgType,
   teams,
   onDone,
 }: {
   orgId: string;
+  orgType?: string | null;
   teams: Team[];
   onDone: () => void;
 }) {
+  const term = orgTerminology(orgType);
+  const isGym = term.isFitnessStudio;
   const invite = useServerFn(createAthleteInvite);
   const [teamId, setTeamId] = useState<string>(teams[0]?.id ?? "");
   const [email, setEmail] = useState("");
