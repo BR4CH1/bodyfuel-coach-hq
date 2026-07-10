@@ -89,19 +89,39 @@ export async function collectPerformanceDayTypeSignals(
     .eq("organization_id", organizationId)
     .eq("active", true);
 
+  // 6) Belastungssteuerung: Coach-gesetzte Belastungsstufe für diesen Tag.
+  //     Nur aktiv, wenn Modul `load_management` in der Organisation aktiv ist.
+  //     Team-spezifischer Eintrag hat Vorrang vor orgweitem Eintrag.
+  const loadModulePromise = supabase
+    .from("organization_features")
+    .select("enabled")
+    .eq("organization_id", organizationId)
+    .eq("feature", "load_management")
+    .maybeSingle();
+  const loadDaysPromise = supabase
+    .from("organization_load_days")
+    .select("team_id, load_level")
+    .eq("organization_id", organizationId)
+    .eq("date", date);
+
   const [
     manualOverrideRes,
     gameEventRes,
     teamMembershipsRes,
     athleteTrainingRes,
     athleticAssignmentsRes,
+    loadModuleRes,
+    loadDaysRes,
   ] = await Promise.all([
     manualOverridePromise,
     gameEventPromise,
     teamMembershipsPromise,
     athleteTrainingPromise,
     athleticAssignmentsPromise,
+    loadModulePromise,
+    loadDaysPromise,
   ]);
+
 
   const manualOverrideKind: string | null =
     (manualOverrideRes.data as { kind?: string } | null)?.kind ?? null;
