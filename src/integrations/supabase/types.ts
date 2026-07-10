@@ -7332,7 +7332,13 @@ export type Database = {
         | "organization_admin"
       organization_status: "active" | "inactive" | "archived"
       organization_team_status: "active" | "inactive" | "archived"
-      organization_type: "sports_club" | "team" | "gym" | "company" | "other"
+      organization_type:
+        | "sports_club"
+        | "team"
+        | "gym"
+        | "company"
+        | "other"
+        | "fitness_studio"
       strength_check_status: "draft" | "completed"
       strength_reminder_kind: "upcoming" | "due"
       strength_test_key:
@@ -7528,7 +7534,14 @@ export const Constants = {
       ],
       organization_status: ["active", "inactive", "archived"],
       organization_team_status: ["active", "inactive", "archived"],
-      organization_type: ["sports_club", "team", "gym", "company", "other"],
+      organization_type: [
+        "sports_club",
+        "team",
+        "gym",
+        "company",
+        "other",
+        "fitness_studio",
+      ],
       strength_check_status: ["draft", "completed"],
       strength_reminder_kind: ["upcoming", "due"],
       strength_test_key: [
