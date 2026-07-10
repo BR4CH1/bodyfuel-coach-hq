@@ -130,6 +130,7 @@ export function LoadWeekBanner({
 
   const invalidateAll = () => {
     qc.invalidateQueries({ queryKey: ["athlete-load-today", orgId] });
+    qc.invalidateQueries({ queryKey: ["athlete-auto-overrides"] });
     // Auch Nutrition-Ableitungen bitte neu ziehen — best-effort.
     qc.invalidateQueries({ queryKey: ["bulls-daily-nutrition-targets"] });
     qc.invalidateQueries({ queryKey: ["performance-day-type"] });
