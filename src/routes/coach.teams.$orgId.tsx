@@ -1734,6 +1734,11 @@ function ChallengesTab({ orgId, teams }: { orgId: string; teams: any[] }) {
         </button>
       </div>
       {show && (
+        <div className="rounded-lg border border-primary/40 bg-primary/5 p-2 text-[11px] text-muted-foreground">
+          Nach dem Speichern öffnet sich der Punkte-Editor. <b>Ohne Punkte-Regeln</b> fließt die Challenge <b>nicht</b> in die Rangliste.
+        </div>
+      )}
+      {show && (
         <div className="rounded-lg border border-border bg-card p-3 text-sm">
           <div className="grid gap-2 sm:grid-cols-2">
             <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" className="rounded border border-border bg-background px-2 py-1" />
