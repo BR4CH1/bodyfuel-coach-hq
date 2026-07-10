@@ -164,7 +164,7 @@ export function CoachOrgDetail() {
     { key: "tasks", label: "Aufgaben", icon: ClipboardListIcon },
     ...(featureOn("community") ? [{ key: "community", label: "Community", icon: MessagesSquare }] : []),
     { key: "staff", label: "Staff", icon: UserCog },
-    { key: "modules", label: "Module", icon: Settings },
+    { key: "modules", label: "Module", icon: SettingsIcon },
   ];
 
   return (
