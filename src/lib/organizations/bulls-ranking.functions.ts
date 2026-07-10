@@ -86,11 +86,11 @@ export const getBullsRanking = createServerFn({ method: "GET" })
     const { since, until } = resolveTimeframe(data.timeframe);
     const { data: rows, error } = await supabase.rpc("get_bulls_ranking", {
       _organization_id: BULLS_ORG_ID,
-      _since: since,
-      _until: until,
-      _team_id: data.teamId,
-      _position: data.position,
-    });
+      _since: since ?? undefined,
+      _until: until ?? undefined,
+      _team_id: data.teamId ?? undefined,
+      _position: data.position ?? undefined,
+    } as any);
     if (error) throw new Error(error.message);
     return { rows: (rows ?? []) as any[], since, until };
   });
