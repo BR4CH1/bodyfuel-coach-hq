@@ -90,7 +90,7 @@ function RankingPage() {
   });
 
   const rows = ranking?.rows ?? [];
-  const myRankIndex = useMemo(() => rows.findIndex((r: any) => r.total_points && r.display_name && r._me), [rows]);
+  
 
   const totalAllTime = useMemo(() => {
     const arr = (myScore?.allTimeBreakdown ?? []) as { total_points: number }[];
