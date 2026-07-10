@@ -224,14 +224,38 @@ export async function collectPerformanceDayTypeSignals(
     }
   }
 
+  // Belastungssteuerung: nur berücksichtigen, wenn Modul aktiv ist.
+  let loadLevel: number | null = null;
+  const loadEnabled =
+    (loadModuleRes.data as { enabled?: boolean } | null)?.enabled === true;
+  if (loadEnabled) {
+    const loadRows = (loadDaysRes.data ?? []) as Array<{
+      team_id: string | null;
+      load_level: number | null;
+    }>;
+    if (loadRows.length > 0) {
+      const teamRow = loadRows.find(
+        (r) => r.team_id !== null && teamIds.includes(r.team_id as string),
+      );
+      const orgRow = loadRows.find((r) => r.team_id === null);
+      const picked = teamRow ?? orgRow ?? null;
+      loadLevel =
+        picked && typeof picked.load_level === "number"
+          ? picked.load_level
+          : null;
+    }
+  }
+
   return {
     manualOverrideKind,
     hasGameEvent,
     hasFootballTrainingSession,
     hasStrengthSession,
     hasIndividualTrainingSession,
+    loadLevel,
   };
 }
+
 
 /**
  * Resolve the final Performance Day Type for (organization_id, user_id, date).
