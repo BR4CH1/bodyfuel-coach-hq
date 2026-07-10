@@ -365,6 +365,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         { ...cockpitTarget, hash: "cockpit", label: "Coach-Cockpit", icon: LayoutDashboard },
         { ...cockpitTarget, hash: "athletes", label: "Athleten", icon: Users },
         ...(trainingOn ? [{ ...cockpitTarget, hash: "training", label: "Training", icon: Dumbbell }] : []),
+        ...(loadOn ? [{ ...cockpitTarget, hash: "load", label: "Belastung", icon: Gauge }] : []),
         ...(communityOn ? [{ ...cockpitTarget, hash: "community", label: "Community", icon: Users2 }] : []),
         { to: "/profile", label: "Profil", icon: UserCircle },
       ];
