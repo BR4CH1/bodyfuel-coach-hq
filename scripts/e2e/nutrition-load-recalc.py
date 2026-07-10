@@ -122,8 +122,9 @@ async def main():
         await page.screenshot(path=str(SHOTS / "3_athlete_nutrition.png"))
 
         page_text = await page.locator("body").inner_text()
-        ok_history = ("Automatische Anpassungen" in page_text) and (
-            "höhere Belastung" in page_text
+        page_text_l = page_text.lower()
+        ok_history = ("automatische anpassungen" in page_text_l) and (
+            "höhere belastung" in page_text_l
         )
         ok_banner_text = (
             "höhere Belastung" in page_text or "erhöht" in page_text.lower()
