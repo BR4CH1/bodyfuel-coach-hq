@@ -240,20 +240,22 @@ export function AthletesTab({
             className="w-full rounded-lg border border-[#252525] bg-[#0b0b0b] py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-bulls-red"
           />
         </label>
-        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-          <div className="flex min-w-max gap-1.5">
-            {(
-              [
-                ["all", "Alle"],
-                ["offense", "Offense"],
-                ["defense", "Defense"],
-                ["special", "Special"],
-              ] as const
-            ).map(([k, l]) => (
-              <TeamChip key={k} label={l} active={posGroup === k} onClick={() => setPosGroup(k)} />
-            ))}
+        {isFootball && (
+          <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+            <div className="flex min-w-max gap-1.5">
+              {(
+                [
+                  ["all", "Alle"],
+                  ["offense", "Offense"],
+                  ["defense", "Defense"],
+                  ["special", "Special"],
+                ] as const
+              ).map(([k, l]) => (
+                <TeamChip key={k} label={l} active={posGroup === k} onClick={() => setPosGroup(k)} />
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {filterTeam && (
