@@ -26,12 +26,14 @@ import {
   searchExistingAthletes,
   addExistingUserToTeam,
 } from "@/lib/organizations/roster.functions";
+import { isFitnessStudio, orgTerminology } from "@/lib/organizations/org-type";
 
 
 type Team = { id: string; name: string };
 
 export function AthletesTab({
   orgId,
+  orgType,
   teamFilter,
   teams,
   allowedUserIds,
@@ -39,12 +41,15 @@ export function AthletesTab({
   onTeamFilterChange,
 }: {
   orgId: string;
+  orgType?: string | null;
   teamFilter: string | null;
   teams: Team[];
   allowedUserIds: Set<string> | null;
   onClearFilter: () => void;
   onTeamFilterChange?: (teamId: string | null) => void;
 }) {
+  const isGym = isFitnessStudio(orgType);
+  const term = orgTerminology(orgType);
   const navigate = useNavigate();
   const qc = useQueryClient();
   const fetchAudit = useServerFn(getOrgAthletesOnboardingAudit);
@@ -145,10 +150,10 @@ export function AthletesTab({
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="font-display text-2xl font-bold uppercase tracking-tight text-foreground">
-            Athleten
+            {term.players}
           </h2>
           <p className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.24em] text-muted-foreground">
-            Kader · Aktivität · Entwicklung
+            {isGym ? "Mitglieder · Aktivität · Entwicklung" : "Kader · Aktivität · Entwicklung"}
           </p>
         </div>
         {canManage && (
@@ -157,7 +162,7 @@ export function AthletesTab({
             className="inline-flex items-center gap-2 rounded-lg bg-bulls-red px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-white shadow-bulls transition hover:brightness-110"
           >
             <UserPlus className="h-4 w-4" />
-            Athlet hinzufügen
+            {term.player} hinzufügen
           </button>
         )}
       </header>
@@ -304,6 +309,7 @@ export function AthletesTab({
       {dialogOpen && (
         <AddAthleteDialog
           orgId={orgId}
+          orgType={orgType}
           teams={teams}
           onClose={() => setDialogOpen(false)}
           onDone={() => {
@@ -689,25 +695,29 @@ function PendingActions({ id, onDone }: { id: string; onDone: () => void }) {
 
 function AddAthleteDialog({
   orgId,
+  orgType,
   teams,
   onClose,
   onDone,
 }: {
   orgId: string;
+  orgType?: string | null;
   teams: Team[];
   onClose: () => void;
   onDone: () => void;
 }) {
   const [mode, setMode] = useState<"choose" | "invite" | "manual" | "existing">("choose");
+  const term = orgTerminology(orgType);
+  const isGym = term.isFitnessStudio;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-lg rounded-xl border border-border bg-card p-5 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="font-display text-lg font-bold">
-            {mode === "choose" && "Athlet hinzufügen"}
-            {mode === "invite" && "Athlet einladen"}
-            {mode === "manual" && "Athlet manuell anlegen"}
+            {mode === "choose" && `${term.player} hinzufügen`}
+            {mode === "invite" && `${term.player} einladen`}
+            {mode === "manual" && `${term.player} manuell anlegen`}
             {mode === "existing" && "Existierenden Nutzer hinzufügen"}
           </h3>
           <button onClick={onClose} className="rounded p-1 text-muted-foreground hover:bg-muted">
@@ -717,21 +727,21 @@ function AddAthleteDialog({
 
         {mode === "choose" && (
           <div className="space-y-2">
-            <p className="mb-3 text-xs text-muted-foreground">Wie möchtest du den Athleten hinzufügen?</p>
+            <p className="mb-3 text-xs text-muted-foreground">Wie möchtest du {isGym ? "das Mitglied" : "den Athleten"} hinzufügen?</p>
             <button
               onClick={() => setMode("existing")}
               className="block w-full rounded-lg border border-border p-3 text-left hover:bg-muted"
             >
               <div className="text-sm font-semibold">Existierenden BODYFUEL-Nutzer hinzufügen</div>
               <div className="text-xs text-muted-foreground">
-                Nach E-Mail oder Name suchen und direkt zum Team hinzufügen.
+                Nach E-Mail oder Name suchen und direkt {isGym ? "zur Gruppe" : "zum Team"} hinzufügen.
               </div>
             </button>
             <button
               onClick={() => setMode("invite")}
               className="block w-full rounded-lg border border-border p-3 text-left hover:bg-muted"
             >
-              <div className="text-sm font-semibold">Athlet einladen</div>
+              <div className="text-sm font-semibold">{term.player} einladen</div>
               <div className="text-xs text-muted-foreground">
                 Einladungslink per E-Mail senden und Profil selbst vervollständigen lassen.
               </div>
@@ -740,17 +750,19 @@ function AddAthleteDialog({
               onClick={() => setMode("manual")}
               className="block w-full rounded-lg border border-border p-3 text-left hover:bg-muted"
             >
-              <div className="text-sm font-semibold">Athlet manuell anlegen</div>
+              <div className="text-sm font-semibold">{term.player} manuell anlegen</div>
               <div className="text-xs text-muted-foreground">
-                Spieler direkt zum Kader hinzufügen. Onboarding kann später per Einladung ergänzt werden.
+                {isGym
+                  ? "Mitglied direkt zur Liste hinzufügen. Onboarding kann später per Einladung ergänzt werden."
+                  : "Spieler direkt zum Kader hinzufügen. Onboarding kann später per Einladung ergänzt werden."}
               </div>
             </button>
           </div>
         )}
 
-        {mode === "invite" && <InviteForm orgId={orgId} teams={teams} onDone={onDone} />}
-        {mode === "manual" && <ManualForm orgId={orgId} teams={teams} onDone={onDone} />}
-        {mode === "existing" && <ExistingUserForm orgId={orgId} teams={teams} onDone={onDone} />}
+        {mode === "invite" && <InviteForm orgId={orgId} orgType={orgType} teams={teams} onDone={onDone} />}
+        {mode === "manual" && <ManualForm orgId={orgId} orgType={orgType} teams={teams} onDone={onDone} />}
+        {mode === "existing" && <ExistingUserForm orgId={orgId} orgType={orgType} teams={teams} onDone={onDone} />}
       </div>
     </div>
   );
@@ -758,13 +770,17 @@ function AddAthleteDialog({
 
 function ExistingUserForm({
   orgId,
+  orgType,
   teams,
   onDone,
 }: {
   orgId: string;
+  orgType?: string | null;
   teams: Team[];
   onDone: () => void;
 }) {
+  const term = orgTerminology(orgType);
+  const isGym = term.isFitnessStudio;
   const search = useServerFn(searchExistingAthletes);
   const add = useServerFn(addExistingUserToTeam);
   const [query, setQuery] = useState("");
@@ -874,49 +890,51 @@ function ExistingUserForm({
               Ändern
             </button>
           </div>
-          <Field label="Team *">
+          <Field label={`${term.team} *`}>
             <select
               value={teamId}
               onChange={(e) => setTeamId(e.target.value)}
               className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
             >
-              {teams.length === 0 && <option value="">Kein Team vorhanden</option>}
+              {teams.length === 0 && <option value="">{`Keine ${term.team === "Gruppe" ? "Gruppe" : "Mannschaft"} vorhanden`}</option>}
               {teams.map((t) => (
                 <option key={t.id} value={t.id}>{t.name}</option>
               ))}
             </select>
           </Field>
-          <div className="grid grid-cols-3 gap-3">
-            <Field label="Position">
-              <input
-                value={primary}
-                onChange={(e) => setPrimary(e.target.value)}
-                className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
-              />
-            </Field>
-            <Field label="Secondary">
-              <input
-                value={secondary}
-                onChange={(e) => setSecondary(e.target.value)}
-                className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
-              />
-            </Field>
-            <Field label="Nummer">
-              <input
-                type="number"
-                value={jersey}
-                onChange={(e) => setJersey(e.target.value)}
-                className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
-              />
-            </Field>
-          </div>
+          {!isGym && (
+            <div className="grid grid-cols-3 gap-3">
+              <Field label="Position">
+                <input
+                  value={primary}
+                  onChange={(e) => setPrimary(e.target.value)}
+                  className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
+                />
+              </Field>
+              <Field label="Secondary">
+                <input
+                  value={secondary}
+                  onChange={(e) => setSecondary(e.target.value)}
+                  className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
+                />
+              </Field>
+              <Field label="Nummer">
+                <input
+                  type="number"
+                  value={jersey}
+                  onChange={(e) => setJersey(e.target.value)}
+                  className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
+                />
+              </Field>
+            </div>
+          )}
           <div className="flex justify-end gap-2 pt-2">
             <button
               disabled={addMut.isPending || !teamId}
               onClick={() => addMut.mutate()}
               className="rounded bg-primary px-4 py-2 text-xs font-semibold uppercase tracking-wider text-primary-foreground disabled:opacity-50"
             >
-              {addMut.isPending ? "Füge hinzu…" : "Zum Team hinzufügen"}
+              {addMut.isPending ? "Füge hinzu…" : `${isGym ? "Zur Gruppe" : "Zum Team"} hinzufügen`}
             </button>
           </div>
         </>
@@ -929,13 +947,17 @@ function ExistingUserForm({
 
 function InviteForm({
   orgId,
+  orgType,
   teams,
   onDone,
 }: {
   orgId: string;
+  orgType?: string | null;
   teams: Team[];
   onDone: () => void;
 }) {
+  const term = orgTerminology(orgType);
+  const isGym = term.isFitnessStudio;
   const invite = useServerFn(createAthleteInvite);
   const [teamId, setTeamId] = useState<string>(teams[0]?.id ?? "");
   const [email, setEmail] = useState("");
@@ -992,13 +1014,13 @@ function InviteForm({
 
   return (
     <div className="space-y-3">
-      <Field label="Team *">
+      <Field label={`${term.team} *`}>
         <select
           value={teamId}
           onChange={(e) => setTeamId(e.target.value)}
           className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
         >
-          {teams.length === 0 && <option value="">Kein Team vorhanden</option>}
+          {teams.length === 0 && <option value="">{isGym ? "Keine Gruppe vorhanden" : "Kein Team vorhanden"}</option>}
           {teams.map((t) => (
             <option key={t.id} value={t.id}>{t.name}</option>
           ))}
@@ -1009,35 +1031,39 @@ function InviteForm({
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="spieler@example.com"
+          placeholder={isGym ? "mitglied@example.com" : "spieler@example.com"}
           className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
         />
       </Field>
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Primary Position">
-          <input
-            value={primary}
-            onChange={(e) => setPrimary(e.target.value)}
-            placeholder="z. B. QB, WR"
-            className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
-          />
-        </Field>
-        <Field label="Secondary">
-          <input
-            value={secondary}
-            onChange={(e) => setSecondary(e.target.value)}
-            className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
-          />
-        </Field>
-      </div>
-      <Field label="Trikotnummer">
-        <input
-          type="number"
-          value={jersey}
-          onChange={(e) => setJersey(e.target.value)}
-          className="w-32 rounded border border-border bg-background px-2 py-1.5 text-sm"
-        />
-      </Field>
+      {!isGym && (
+        <>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Primary Position">
+              <input
+                value={primary}
+                onChange={(e) => setPrimary(e.target.value)}
+                placeholder="z. B. QB, WR"
+                className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
+              />
+            </Field>
+            <Field label="Secondary">
+              <input
+                value={secondary}
+                onChange={(e) => setSecondary(e.target.value)}
+                className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
+              />
+            </Field>
+          </div>
+          <Field label="Trikotnummer">
+            <input
+              type="number"
+              value={jersey}
+              onChange={(e) => setJersey(e.target.value)}
+              className="w-32 rounded border border-border bg-background px-2 py-1.5 text-sm"
+            />
+          </Field>
+        </>
+      )}
       {err && <p className="text-xs text-red-500">{err}</p>}
       <div className="flex justify-end gap-2 pt-2">
         <button
@@ -1054,13 +1080,17 @@ function InviteForm({
 
 function ManualForm({
   orgId,
+  orgType,
   teams,
   onDone,
 }: {
   orgId: string;
+  orgType?: string | null;
   teams: Team[];
   onDone: () => void;
 }) {
+  const term = orgTerminology(orgType);
+  const isGym = term.isFitnessStudio;
   const create = useServerFn(createPendingRosterAthlete);
   const [teamId, setTeamId] = useState<string>(teams[0]?.id ?? "");
   const [firstName, setFirstName] = useState("");
@@ -1113,13 +1143,13 @@ function ManualForm({
           />
         </Field>
       </div>
-      <Field label="Team">
+      <Field label={term.team}>
         <select
           value={teamId}
           onChange={(e) => setTeamId(e.target.value)}
           className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
         >
-          <option value="">— Kein Team —</option>
+          <option value="">{isGym ? "— Keine Gruppe —" : "— Kein Team —"}</option>
           {teams.map((t) => (
             <option key={t.id} value={t.id}>{t.name}</option>
           ))}
@@ -1152,33 +1182,35 @@ function ManualForm({
           />
         </Field>
       </div>
-      <div className="grid grid-cols-3 gap-3">
-        <Field label="Position">
-          <input
-            value={primary}
-            onChange={(e) => setPrimary(e.target.value)}
-            className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
-          />
-        </Field>
-        <Field label="Secondary">
-          <input
-            value={secondary}
-            onChange={(e) => setSecondary(e.target.value)}
-            className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
-          />
-        </Field>
-        <Field label="Nummer">
-          <input
-            type="number"
-            value={jersey}
-            onChange={(e) => setJersey(e.target.value)}
-            className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
-          />
-        </Field>
-      </div>
+      {!isGym && (
+        <div className="grid grid-cols-3 gap-3">
+          <Field label="Position">
+            <input
+              value={primary}
+              onChange={(e) => setPrimary(e.target.value)}
+              className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
+            />
+          </Field>
+          <Field label="Secondary">
+            <input
+              value={secondary}
+              onChange={(e) => setSecondary(e.target.value)}
+              className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
+            />
+          </Field>
+          <Field label="Nummer">
+            <input
+              type="number"
+              value={jersey}
+              onChange={(e) => setJersey(e.target.value)}
+              className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm"
+            />
+          </Field>
+        </div>
+      )}
       <p className="rounded border border-border bg-muted/30 p-2 text-[11px] text-muted-foreground">
-        Der Athlet erscheint zunächst als „Einladung ausstehend". Sobald er über eine E-Mail-Einladung
-        seinen Account aktiviert, wird der Kaderplatz verknüpft.
+        {isGym ? "Das Mitglied" : "Der Athlet"} erscheint zunächst als „Einladung ausstehend". Sobald {isGym ? "es" : "er"} über eine E-Mail-Einladung
+        den Account aktiviert, wird der Platz verknüpft.
       </p>
       {err && <p className="text-xs text-red-500">{err}</p>}
       <div className="flex justify-end gap-2 pt-2">
@@ -1187,7 +1219,7 @@ function ManualForm({
           onClick={() => mut.mutate()}
           className="rounded bg-primary px-4 py-2 text-xs font-semibold uppercase tracking-wider text-primary-foreground disabled:opacity-50"
         >
-          {mut.isPending ? "Speichere…" : "Kaderplatz anlegen"}
+          {mut.isPending ? "Speichere…" : isGym ? "Mitglied anlegen" : "Kaderplatz anlegen"}
         </button>
       </div>
     </div>
