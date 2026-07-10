@@ -26,7 +26,7 @@ import {
   searchExistingAthletes,
   addExistingUserToTeam,
 } from "@/lib/organizations/roster.functions";
-import { isFitnessStudio, orgTerminology } from "@/lib/organizations/org-type";
+import { isFitnessStudio, isFootballOrg, orgTerminology } from "@/lib/organizations/org-type";
 
 
 type Team = { id: string; name: string };
@@ -34,6 +34,7 @@ type Team = { id: string; name: string };
 export function AthletesTab({
   orgId,
   orgType,
+  orgSport,
   teamFilter,
   teams,
   allowedUserIds,
@@ -42,6 +43,7 @@ export function AthletesTab({
 }: {
   orgId: string;
   orgType?: string | null;
+  orgSport?: string | null;
   teamFilter: string | null;
   teams: Team[];
   allowedUserIds: Set<string> | null;
@@ -49,6 +51,7 @@ export function AthletesTab({
   onTeamFilterChange?: (teamId: string | null) => void;
 }) {
   const isGym = isFitnessStudio(orgType);
+  const isFootball = isFootballOrg(orgSport);
   const term = orgTerminology(orgType);
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -142,7 +145,7 @@ export function AthletesTab({
     return g;
   }, [visibleRows]);
 
-  const showGrouped = posGroup === "all" && readinessFilter === "all" && !normalizedSearch;
+  const showGrouped = isFootball && posGroup === "all" && readinessFilter === "all" && !normalizedSearch;
 
   return (
     <div className="space-y-4">
@@ -237,20 +240,22 @@ export function AthletesTab({
             className="w-full rounded-lg border border-[#252525] bg-[#0b0b0b] py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-bulls-red"
           />
         </label>
-        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-          <div className="flex min-w-max gap-1.5">
-            {(
-              [
-                ["all", "Alle"],
-                ["offense", "Offense"],
-                ["defense", "Defense"],
-                ["special", "Special"],
-              ] as const
-            ).map(([k, l]) => (
-              <TeamChip key={k} label={l} active={posGroup === k} onClick={() => setPosGroup(k)} />
-            ))}
+        {isFootball && (
+          <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+            <div className="flex min-w-max gap-1.5">
+              {(
+                [
+                  ["all", "Alle"],
+                  ["offense", "Offense"],
+                  ["defense", "Defense"],
+                  ["special", "Special"],
+                ] as const
+              ).map(([k, l]) => (
+                <TeamChip key={k} label={l} active={posGroup === k} onClick={() => setPosGroup(k)} />
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {filterTeam && (

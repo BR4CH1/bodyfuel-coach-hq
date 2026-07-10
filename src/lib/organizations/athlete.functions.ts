@@ -627,7 +627,7 @@ export const getOrgCoachDetail = createServerFn({ method: "GET" })
       await Promise.all([
         supabase
           .from("organizations")
-          .select("id, name, slug, organization_type, status, primary_color, logo_url")
+          .select("id, name, slug, organization_type, sport, status, primary_color, logo_url")
           .eq("id", data.orgId)
           .maybeSingle(),
         (teamFilterIds

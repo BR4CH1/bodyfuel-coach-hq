@@ -14,6 +14,19 @@ export function isFitnessStudio(v: string | null | undefined): boolean {
   return normalizeOrgType(v) === "fitness_studio";
 }
 
+/** True nur für American Football — steuert Offense/Defense/Special-Teams-UI. */
+export function isFootballOrg(sport: string | null | undefined): boolean {
+  const s = String(sport ?? "").toLowerCase().trim();
+  if (!s) return false;
+  return (
+    s === "football" ||
+    s === "american football" ||
+    s === "american_football" ||
+    s === "am. football" ||
+    s.includes("american")
+  );
+}
+
 /** Sichtbare Begriffe abhängig vom Organisationstyp. */
 export function orgTerminology(orgType: string | null | undefined) {
   const isGym = isFitnessStudio(orgType);

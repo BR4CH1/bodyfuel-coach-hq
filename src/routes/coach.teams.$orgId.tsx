@@ -16,6 +16,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { getOrgCoachDetail } from "@/lib/organizations/athlete.functions";
+import { createOrgTeam } from "@/lib/organizations/organizations.functions";
+import { orgTerminology } from "@/lib/organizations/org-type";
 import {
   runOrgTaskEngine,
   listOrgTasksForDay,
@@ -356,6 +358,7 @@ export function CoachOrgDetail() {
           <AthletesTab
             orgId={orgId}
             orgType={org.organization_type}
+            orgSport={org.sport}
             teamFilter={athleteTeamFilter}
             teams={data.teams as any[]}
             allowedUserIds={
@@ -376,59 +379,15 @@ export function CoachOrgDetail() {
         )}
 
         {tab === "teams" && (
-          <ul className="grid gap-2 sm:grid-cols-2">
-            {(data.teams as any[]).map((t) => {
-              const kpi = teamKpis.find((k) => k.team_id === t.id);
-              return (
-                <li key={t.id} className="rounded-lg border border-border bg-card p-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <div>
-                      <div className="font-semibold">{t.name}</div>
-                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                        {t.sport ?? "—"} {t.age_group ? `· ${t.age_group}` : ""}
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <button
-                        onClick={() => { setAthleteTeamFilter(t.id); selectTab("athletes"); }}
-                        className="rounded border border-border px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
-                      >
-                        Athleten →
-                      </button>
-                      <button
-                        onClick={() => setJoinLinkTeam({ id: t.id, name: t.name })}
-                        className="rounded border border-border px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-primary hover:bg-primary/10"
-                      >
-                        Beitrittslink
-                      </button>
-                    </div>
-                  </div>
-                  <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-                    <div className="rounded bg-muted/40 p-2">
-                      <div className="font-display text-lg font-bold">{kpi?.athletes ?? 0}</div>
-                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Athleten</div>
-                    </div>
-                    <div className="rounded bg-muted/40 p-2">
-                      <div className="font-display text-lg font-bold">
-                        {kpi?.weekly_compliance != null ? `${kpi.weekly_compliance}%` : "—"}
-                      </div>
-                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Compliance</div>
-                    </div>
-                    <div className="rounded bg-muted/40 p-2">
-                      <div className="font-display text-lg font-bold">{kpi?.pending_onboardings ?? 0}</div>
-                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Offen</div>
-                    </div>
-                  </div>
-
-                </li>
-              );
-            })}
-            {(data.teams as any[]).length === 0 && (
-              <li className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
-                Noch keine Teams angelegt.
-              </li>
-            )}
-          </ul>
+          <TeamsTabPanel
+            orgId={orgId}
+            orgSport={org.sport ?? null}
+            orgType={org.organization_type ?? null}
+            teams={data.teams as any[]}
+            teamKpis={teamKpis}
+            onJumpToAthletes={(id) => { setAthleteTeamFilter(id); selectTab("athletes"); }}
+            onJoinLink={(t) => setJoinLinkTeam(t)}
+          />
         )}
 
         {tab === "training" && <TrainingTab orgId={orgId} />}
@@ -1997,6 +1956,152 @@ function CommunityHub({
       {sub === "ranking" && (
         <Empty>Ranking spiegelt Punkte aus aktiven Org-Challenges (Ledger `organization_challenge_point_events`). Ohne aktive Challenge leer.</Empty>
       )}
+    </div>
+  );
+}
+
+// -----------------------------------------------------------------------------
+// Teams-Tab-Panel: Team-Liste + „Team anlegen"-Formular. Terminologie folgt
+// dem Organisationstyp (Sportverein → "Team", Fitnessstudio → "Gruppe").
+// -----------------------------------------------------------------------------
+function TeamsTabPanel({
+  orgId,
+  orgSport,
+  orgType,
+  teams,
+  teamKpis,
+  onJumpToAthletes,
+  onJoinLink,
+}: {
+  orgId: string;
+  orgSport: string | null;
+  orgType: string | null;
+  teams: Array<{ id: string; name: string; sport: string | null; age_group: string | null }>;
+  teamKpis: Array<{ team_id: string; athletes: number; weekly_compliance: number | null; pending_onboardings: number }>;
+  onJumpToAthletes: (teamId: string) => void;
+  onJoinLink: (t: { id: string; name: string }) => void;
+}) {
+  const term = orgTerminology(orgType);
+  const qc = useQueryClient();
+  const createFn = useServerFn(createOrgTeam);
+  const [name, setName] = useState("");
+  const [ageGroup, setAgeGroup] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const create = useMutation({
+    mutationFn: async () =>
+      createFn({
+        data: {
+          organization_id: orgId,
+          name: name.trim(),
+          sport: orgSport,
+          age_group: ageGroup.trim() || null,
+        },
+      }),
+    onSuccess: () => {
+      setName("");
+      setAgeGroup("");
+      setError(null);
+      qc.invalidateQueries({ queryKey: ["coach-org-detail", orgId] });
+    },
+    onError: (e: unknown) => setError(e instanceof Error ? e.message : String(e)),
+  });
+
+  return (
+    <div className="space-y-4">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (name.trim().length < 2) {
+            setError(`${term.team}name zu kurz.`);
+            return;
+          }
+          create.mutate();
+        }}
+        className="rounded-lg border border-border bg-card p-3 sm:p-4"
+      >
+        <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+          Neues {term.team} anlegen
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder={`${term.team}name (z. B. ${term.isFitnessStudio ? "Mobility-Gruppe" : "U19"})`}
+            className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+            maxLength={80}
+            required
+          />
+          <input
+            value={ageGroup}
+            onChange={(e) => setAgeGroup(e.target.value)}
+            placeholder="Altersklasse (optional)"
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary sm:w-48"
+            maxLength={40}
+          />
+          <button
+            type="submit"
+            disabled={create.isPending || name.trim().length < 2}
+            className="rounded-md bg-primary px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-primary-foreground transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {create.isPending ? "Legt an…" : `${term.team} anlegen`}
+          </button>
+        </div>
+        {error && <div className="mt-2 text-xs text-red-500">{error}</div>}
+      </form>
+
+      <ul className="grid gap-2 sm:grid-cols-2">
+        {teams.map((t) => {
+          const kpi = teamKpis.find((k) => k.team_id === t.id);
+          return (
+            <li key={t.id} className="rounded-lg border border-border bg-card p-4">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <div className="font-semibold">{t.name}</div>
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    {t.sport ?? "—"} {t.age_group ? `· ${t.age_group}` : ""}
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  <button
+                    onClick={() => onJumpToAthletes(t.id)}
+                    className="rounded border border-border px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                  >
+                    {term.athletes} →
+                  </button>
+                  <button
+                    onClick={() => onJoinLink({ id: t.id, name: t.name })}
+                    className="rounded border border-border px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-primary hover:bg-primary/10"
+                  >
+                    Beitrittslink
+                  </button>
+                </div>
+              </div>
+              <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                <div className="rounded bg-muted/40 p-2">
+                  <div className="font-display text-lg font-bold">{kpi?.athletes ?? 0}</div>
+                  <div className="text-[9px] uppercase tracking-wider text-muted-foreground">{term.athletes}</div>
+                </div>
+                <div className="rounded bg-muted/40 p-2">
+                  <div className="font-display text-lg font-bold">
+                    {kpi?.weekly_compliance != null ? `${kpi.weekly_compliance}%` : "—"}
+                  </div>
+                  <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Compliance</div>
+                </div>
+                <div className="rounded bg-muted/40 p-2">
+                  <div className="font-display text-lg font-bold">{kpi?.pending_onboardings ?? 0}</div>
+                  <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Offen</div>
+                </div>
+              </div>
+            </li>
+          );
+        })}
+        {teams.length === 0 && (
+          <li className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground sm:col-span-2">
+            Noch keine {term.teams} angelegt.
+          </li>
+        )}
+      </ul>
     </div>
   );
 }
