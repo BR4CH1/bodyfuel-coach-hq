@@ -355,6 +355,7 @@ export function CoachOrgDetail() {
         {tab === "athletes" && (
           <AthletesTab
             orgId={orgId}
+            orgType={org.organization_type}
             teamFilter={athleteTeamFilter}
             teams={data.teams as any[]}
             allowedUserIds={
