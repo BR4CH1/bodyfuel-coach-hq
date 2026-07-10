@@ -108,18 +108,16 @@ export const getBullsMyScore = createServerFn({ method: "GET" })
     const { data: breakdown, error } = await supabase.rpc("get_bulls_score_breakdown", {
       _user_id: userId,
       _organization_id: BULLS_ORG_ID,
-      _since: since,
-      _until: until,
-    });
+      _since: since ?? undefined,
+      _until: until ?? undefined,
+    } as any);
     if (error) throw new Error(error.message);
 
     // Total across all time (for rank display)
     const { data: allTime } = await supabase.rpc("get_bulls_score_breakdown", {
       _user_id: userId,
       _organization_id: BULLS_ORG_ID,
-      _since: null,
-      _until: null,
-    });
+    } as any);
 
     // Streak: latest streak_* event
     const { data: streakRows } = await supabase
