@@ -103,6 +103,13 @@ export async function collectPerformanceDayTypeSignals(
     .select("team_id, load_level")
     .eq("organization_id", organizationId)
     .eq("date", date);
+  const loadOverridePromise = supabase
+    .from("organization_load_day_athlete_overrides")
+    .select("load_level")
+    .eq("organization_id", organizationId)
+    .eq("user_id", userId)
+    .eq("date", date)
+    .maybeSingle();
 
   const [
     manualOverrideRes,
@@ -112,6 +119,7 @@ export async function collectPerformanceDayTypeSignals(
     athleticAssignmentsRes,
     loadModuleRes,
     loadDaysRes,
+    loadOverrideRes,
   ] = await Promise.all([
     manualOverridePromise,
     gameEventPromise,
@@ -120,7 +128,9 @@ export async function collectPerformanceDayTypeSignals(
     athleticAssignmentsPromise,
     loadModulePromise,
     loadDaysPromise,
+    loadOverridePromise,
   ]);
+
 
 
   const manualOverrideKind: string | null =
@@ -229,22 +239,29 @@ export async function collectPerformanceDayTypeSignals(
   const loadEnabled =
     (loadModuleRes.data as { enabled?: boolean } | null)?.enabled === true;
   if (loadEnabled) {
-    const loadRows = (loadDaysRes.data ?? []) as Array<{
-      team_id: string | null;
-      load_level: number | null;
-    }>;
-    if (loadRows.length > 0) {
-      const teamRow = loadRows.find(
-        (r) => r.team_id !== null && teamIds.includes(r.team_id as string),
-      );
-      const orgRow = loadRows.find((r) => r.team_id === null);
-      const picked = teamRow ?? orgRow ?? null;
-      loadLevel =
-        picked && typeof picked.load_level === "number"
-          ? picked.load_level
-          : null;
+    // 1) Athleten-Override hat Vorrang.
+    const overrideLevel = (loadOverrideRes.data as { load_level?: number } | null)?.load_level;
+    if (typeof overrideLevel === "number") {
+      loadLevel = overrideLevel;
+    } else {
+      const loadRows = (loadDaysRes.data ?? []) as Array<{
+        team_id: string | null;
+        load_level: number | null;
+      }>;
+      if (loadRows.length > 0) {
+        const teamRow = loadRows.find(
+          (r) => r.team_id !== null && teamIds.includes(r.team_id as string),
+        );
+        const orgRow = loadRows.find((r) => r.team_id === null);
+        const picked = teamRow ?? orgRow ?? null;
+        loadLevel =
+          picked && typeof picked.load_level === "number"
+            ? picked.load_level
+            : null;
+      }
     }
   }
+
 
   return {
     manualOverrideKind,
