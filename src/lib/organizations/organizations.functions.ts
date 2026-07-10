@@ -504,3 +504,190 @@ export const listOrganizationsForStaff = createServerFn({ method: "GET" })
     }
     return out;
   });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Platform Owner — Performance-Teams-Verwaltung (nur Plattform-Owner)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type PerformanceTeamCard = OrganizationSummary & {
+  short_name: string | null;
+  sport: string | null;
+  status: string;
+  team_count: number;
+  athlete_count: number;
+  staff_count: number;
+};
+
+async function assertPlatformOwner(supabase: any, userId: string) {
+  const { data, error } = await supabase.rpc("has_role", {
+    _user_id: userId,
+    _role: "platform_owner",
+  });
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Kein Zugriff — nur für Plattform-Owner.");
+}
+
+/** Owner-only: prüft ob der aktuelle User Plattform-Owner ist. */
+export const getIsPlatformOwner = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<boolean> => {
+    const { data } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "platform_owner",
+    });
+    return !!data;
+  });
+
+/** Owner-only: alle Organisationen inkl. Zählungen für die Team-Karten. */
+export const listPerformanceTeams = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<PerformanceTeamCard[]> => {
+    await assertPlatformOwner(context.supabase, context.userId);
+    const { data: orgs, error } = await context.supabase
+      .from("organizations")
+      .select("id, name, slug, organization_type, logo_url, primary_color, secondary_color, short_name, sport, status")
+      .order("name");
+    if (error) throw new Error(error.message);
+    if (!orgs || orgs.length === 0) return [];
+
+    const orgIds = orgs.map((o: any) => o.id);
+    const [teamsRes, athletesRes, staffRes] = await Promise.all([
+      context.supabase
+        .from("organization_teams")
+        .select("organization_id")
+        .in("organization_id", orgIds),
+      context.supabase
+        .from("organization_memberships")
+        .select("organization_id")
+        .in("organization_id", orgIds)
+        .eq("status", "active")
+        .eq("role", "athlete"),
+      context.supabase
+        .from("staff_assignments")
+        .select("organization_id")
+        .in("organization_id", orgIds),
+    ]);
+
+    const count = (rows: any[] | null, orgId: string) =>
+      (rows ?? []).filter((r: any) => r.organization_id === orgId).length;
+
+    return (orgs as any[]).map((o) => ({
+      id: o.id,
+      name: o.name,
+      slug: o.slug,
+      organization_type: o.organization_type,
+      logo_url: o.logo_url,
+      primary_color: o.primary_color,
+      secondary_color: o.secondary_color,
+      short_name: o.short_name ?? null,
+      sport: o.sport ?? null,
+      status: o.status,
+      team_count: count(teamsRes.data as any[], o.id),
+      athlete_count: count(athletesRes.data as any[], o.id),
+      staff_count: count(staffRes.data as any[], o.id),
+    }));
+  });
+
+const SLUG_RESERVED = new Set([
+  "auth","login","logout","dashboard","nutrition","training","messages","community",
+  "profile","coach","admin","tracker","smart","ranking","achievements","checkout",
+  "impressum","datenschutz","trust","welcome","api","app","mcp","lovable","onboarding",
+  "measurements","progress","strength-check","check-in","training-import","daily-checklist",
+  "unsubscribe","guardian-consent","org","organizations","teams","staff","invite","invites",
+  "settings","account","notifications","support","help","about","pricing","contact","signup","signin","register",
+]);
+
+/** Owner-only: legt eine neue leere Performance-Team-Organisation an.
+ *  Erstellt NUR die Org-Hülle + Branding + den aufrufenden Owner als organization_admin.
+ *  Keine Mannschaften, Coaches, Athleten, Trainings-, Ernährungs- oder Testdaten
+ *  werden aus einer Vorlage kopiert — das neue Team startet komplett leer. */
+export const createPerformanceTeamOrganization = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (d: {
+      name: string;
+      slug: string;
+      short_name?: string | null;
+      sport?: string | null;
+      claim?: string | null;
+      logo_url?: string | null;
+      alt_logo_url?: string | null;
+      primary_color?: string | null;
+      secondary_color?: string | null;
+      accent_color?: string | null;
+      background_color?: string | null;
+      text_color?: string | null;
+      organization_type?: string | null;
+    }) => {
+      const name = String(d.name ?? "").trim();
+      const slug = String(d.slug ?? "").toLowerCase().trim();
+      if (name.length < 2) throw new Error("Teamname zu kurz.");
+      if (!/^[a-z0-9][a-z0-9-]{1,49}$/.test(slug)) {
+        throw new Error("Ungültiger URL-Slug (a-z, 0-9, -, 2–50 Zeichen).");
+      }
+      if (SLUG_RESERVED.has(slug)) throw new Error(`Slug "${slug}" ist reserviert.`);
+      return {
+        name,
+        slug,
+        short_name: d.short_name?.trim() || null,
+        sport: d.sport?.trim() || null,
+        claim: d.claim?.trim() || null,
+        logo_url: d.logo_url?.trim() || null,
+        alt_logo_url: d.alt_logo_url?.trim() || null,
+        primary_color: d.primary_color?.trim() || null,
+        secondary_color: d.secondary_color?.trim() || null,
+        accent_color: d.accent_color?.trim() || null,
+        background_color: d.background_color?.trim() || null,
+        text_color: d.text_color?.trim() || null,
+        organization_type: d.organization_type?.trim() || "sports_club",
+      };
+    },
+  )
+  .handler(async ({ data, context }) => {
+    await assertPlatformOwner(context.supabase, context.userId);
+
+    const { data: existing } = await context.supabase
+      .from("organizations")
+      .select("id")
+      .eq("slug", data.slug)
+      .maybeSingle();
+    if (existing) throw new Error(`Slug "${data.slug}" ist bereits vergeben.`);
+
+    const { data: inserted, error: insErr } = await context.supabase
+      .from("organizations")
+      .insert({
+        name: data.name,
+        slug: data.slug,
+        short_name: data.short_name,
+        sport: data.sport,
+        claim: data.claim,
+        logo_url: data.logo_url,
+        alt_logo_url: data.alt_logo_url,
+        primary_color: data.primary_color,
+        secondary_color: data.secondary_color,
+        accent_color: data.accent_color,
+        background_color: data.background_color,
+        text_color: data.text_color,
+        organization_type: data.organization_type,
+        status: "active",
+      } as any)
+      .select("id, slug")
+      .single();
+    if (insErr) throw new Error(insErr.message);
+
+    // Owner selbst als organization_admin eintragen, damit die bestehende
+    // Team-Verwaltung (RLS via is_org_admin) sofort greift.
+    const { error: staffErr } = await context.supabase
+      .from("staff_assignments")
+      .insert({
+        user_id: context.userId,
+        organization_id: (inserted as any).id,
+        role: "organization_admin",
+        permissions: [],
+        team_id: null,
+      } as any);
+    if (staffErr) throw new Error(staffErr.message);
+
+    return { id: (inserted as any).id as string, slug: (inserted as any).slug as string };
+  });
+
