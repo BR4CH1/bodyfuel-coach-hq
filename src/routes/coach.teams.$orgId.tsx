@@ -1777,20 +1777,35 @@ function ChallengeSection({ title, items, onSelect }: { title: string; items: an
         <Empty>Keine Einträge.</Empty>
       ) : (
         <ul className="space-y-2">
-          {items.map((c) => (
-            <li key={c.id} className="flex items-center justify-between rounded-lg border border-border bg-card p-3 text-sm">
-              <div>
-                <div className="font-semibold">{c.name}</div>
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                  {c.starts_at && new Date(c.starts_at).toLocaleDateString("de-DE")}
-                  {c.ends_at && ` – ${new Date(c.ends_at).toLocaleDateString("de-DE")}`}
+          {items.map((c) => {
+            const noRules = (c.rule_count ?? 0) === 0;
+            return (
+              <li key={c.id} className={`flex items-center justify-between rounded-lg border p-3 text-sm ${noRules ? "border-amber-500/60 bg-amber-500/5" : "border-border bg-card"}`}>
+                <div className="min-w-0">
+                  <div className="font-semibold">{c.name}</div>
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    {c.starts_at && new Date(c.starts_at).toLocaleDateString("de-DE")}
+                    {c.ends_at && ` – ${new Date(c.ends_at).toLocaleDateString("de-DE")}`}
+                  </div>
+                  {noRules ? (
+                    <div className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-amber-500">
+                      ⚠ Keine Punkte – fließt nicht in Rangliste
+                    </div>
+                  ) : (
+                    <div className="mt-1 text-[10px] uppercase tracking-wider text-muted-foreground">
+                      {c.rule_count} Regel{c.rule_count === 1 ? "" : "n"}
+                    </div>
+                  )}
                 </div>
-              </div>
-              <button onClick={() => onSelect(c.id)} className="rounded border border-border px-2 py-1 text-[10px] uppercase tracking-wider">
-                Rules
-              </button>
-            </li>
-          ))}
+                <button
+                  onClick={() => onSelect(c.id)}
+                  className={`shrink-0 rounded px-2 py-1 text-[10px] font-semibold uppercase tracking-wider ${noRules ? "bg-amber-500 text-black" : "border border-border"}`}
+                >
+                  Punkte
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
