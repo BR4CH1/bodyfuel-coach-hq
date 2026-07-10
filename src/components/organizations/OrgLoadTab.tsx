@@ -1,13 +1,18 @@
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Gauge } from "lucide-react";
+import { ChevronLeft, ChevronRight, Gauge, Sparkles, X } from "lucide-react";
 import {
   LOAD_LEVELS,
   listLoadWeek,
   upsertLoadDay,
   type LoadDay,
 } from "@/lib/organizations/load-management.functions";
+import {
+  suggestLoadWeek,
+  type LoadSuggestion,
+  type LoadSuggestionDay,
+} from "@/lib/organizations/load-analysis.functions";
 
 function isoDate(d: Date): string {
   const y = d.getFullYear();
