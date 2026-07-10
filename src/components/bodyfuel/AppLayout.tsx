@@ -358,10 +358,14 @@ export function AppLayout({ children }: { children: ReactNode }) {
         { to: "/profile", label: "Profil", icon: UserCircle },
       ]
     : null;
-  const baseNavRaw = staffNav
-    ? staffNav
-    : isCoach
-    ? coachNav
+  // Plattform-Coaches (inkl. platform_owner) sehen ihre normale Coach-Nav
+  // (Dashboard, Kunden, Teams, Anfragen …). Nur wenn sie tatsächlich in einem
+  // Vereins-Cockpit (/coach/teams/:orgId) unterwegs sind, wird die
+  // Cockpit-Sidebar eingeblendet. Ein Staff-Assignment (z. B. weil der Owner
+  // eine Performance-Team-Organisation angelegt hat) darf die Coach-Nav nicht
+  // dauerhaft überschreiben.
+  const baseNavRaw = isCoach
+    ? (isPlatformCoachOrgRoute && staffNav ? staffNav : coachNav)
     : (staffNav ?? teamOnlyAthleteNav ?? clientNav);
   const baseNav = isCoach && isPlatformOwner
     ? [
