@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Gauge, PencilLine, RotateCcw } from "lucide-react";
+import { Gauge, PencilLine, RotateCcw, Info } from "lucide-react";
 import {
   LOAD_LEVELS,
   listLoadWeek,
@@ -10,6 +10,7 @@ import {
   clearAthleteLoadOverride,
   type LoadDay,
 } from "@/lib/organizations/load-management.functions";
+import { listAutoOverridesForAthlete } from "@/lib/organizations/nutrition-plan-auto-overrides.functions";
 
 function isoDate(d: Date): string {
   const y = d.getFullYear();
@@ -87,6 +88,16 @@ export function LoadWeekBanner({
     queryFn: () => getForMeFn({ data: { orgId, teamId, date: todayIso } }),
   });
 
+  // Aktive Auto-Overrides (Belastungs-Recalc) in der aktuellen Woche.
+  const listAutoOvFn = useServerFn(listAutoOverridesForAthlete);
+  const autoOvQ = useQuery({
+    queryKey: ["athlete-auto-overrides", isoDate(weekStart), isoDate(weekEnd)],
+    queryFn: () =>
+      listAutoOvFn({
+        data: { fromDate: isoDate(weekStart), toDate: isoDate(weekEnd) },
+      }),
+  });
+
   const teamRows = (teamQ.data ?? []) as LoadDay[];
   const orgRows = (orgQ.data ?? []) as LoadDay[];
 
@@ -119,6 +130,7 @@ export function LoadWeekBanner({
 
   const invalidateAll = () => {
     qc.invalidateQueries({ queryKey: ["athlete-load-today", orgId] });
+    qc.invalidateQueries({ queryKey: ["athlete-auto-overrides"] });
     // Auch Nutrition-Ableitungen bitte neu ziehen — best-effort.
     qc.invalidateQueries({ queryKey: ["bulls-daily-nutrition-targets"] });
     qc.invalidateQueries({ queryKey: ["performance-day-type"] });
@@ -243,6 +255,46 @@ export function LoadWeekBanner({
           )}
         </div>
       )}
+
+      {(() => {
+        const autoOv = autoOvQ.data ?? [];
+        if (autoOv.length === 0) return null;
+        const dayLabel = (iso: string) => {
+          const d = new Date(iso + "T00:00:00");
+          return d.toLocaleDateString("de-DE", { weekday: "long" });
+        };
+        const reasonLabels: Record<string, string> = {
+          matchday_context: "Spieltag-Kontext",
+          intensity_increase: "höhere Belastung",
+          intensity_decrease: "reduzierte Belastung",
+          recovery_context: "Regeneration",
+          manual_override: "eigene Anpassung",
+          md_minus_1_pre_fuel: "Pre-Fuel vor Spiel",
+        };
+        const days = autoOv.map((o) => dayLabel(o.date));
+        const uniqueDays = Array.from(new Set(days));
+        const reasons = Array.from(
+          new Set(autoOv.flatMap((o) => o.reasons.map((r) => reasonLabels[r] ?? r))),
+        );
+        return (
+          <div className="mb-3 flex items-start gap-2 rounded-xl border border-bulls-red/30 bg-bulls-red/5 p-3">
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-bulls-red" />
+            <div className="text-xs leading-relaxed text-foreground">
+              <div className="font-semibold">Ernährung an Belastung angepasst</div>
+              <div className="mt-0.5 text-muted-foreground">
+                {uniqueDays.length === 1
+                  ? `Deine Ernährung für ${uniqueDays[0]} wurde an die geänderte Belastungsplanung angepasst.`
+                  : `Deine Ernährung für ${uniqueDays.slice(0, -1).join(", ")} und ${uniqueDays.slice(-1)} wurde an die geänderte Belastungsplanung angepasst.`}
+                {reasons.length > 0 && (
+                  <span className="ml-1 text-muted-foreground/80">
+                    ({reasons.join(", ")})
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="grid grid-cols-7 gap-1">
         {days.map((d, i) => {
