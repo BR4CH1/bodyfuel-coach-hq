@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Gauge, PencilLine, RotateCcw } from "lucide-react";
+import { Gauge, PencilLine, RotateCcw, Info } from "lucide-react";
 import {
   LOAD_LEVELS,
   listLoadWeek,
@@ -10,6 +10,7 @@ import {
   clearAthleteLoadOverride,
   type LoadDay,
 } from "@/lib/organizations/load-management.functions";
+import { listAutoOverridesForAthlete } from "@/lib/organizations/nutrition-plan-auto-overrides.functions";
 
 function isoDate(d: Date): string {
   const y = d.getFullYear();
