@@ -58,11 +58,13 @@ export const ALL_PERFORMANCE_DAY_TYPES: PerformanceDayTypeKey[] = [
 
 export type DayTypeSource =
   | "manual_override"
+  | "load_management"
   | "structural_double_session"
   | "structural_game_day"
   | "structural_football_training"
   | "structural_strength"
   | "default_rest";
+
 
 /** Raw signals collected from the DB — normalized and boolean where possible. */
 export interface DayTypeResolverSignals {
