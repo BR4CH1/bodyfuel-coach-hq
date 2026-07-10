@@ -680,8 +680,9 @@ function StaffOnboarding({ ctx }: { ctx: NonNullable<Awaited<ReturnType<typeof g
         },
       });
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success(`Willkommen bei ${org.name}!`);
+      await qc.invalidateQueries({ queryKey: ["entitlements"] });
       navigate({ to: "/coach/teams/$orgId", params: { orgId: ctx.organization.id }, replace: true });
     },
     onError: (e: any) => toast.error(e?.message ?? "Fehler beim Speichern"),
