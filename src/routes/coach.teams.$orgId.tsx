@@ -73,6 +73,7 @@ import { AthletesTab } from "@/components/organizations/AthletesTab";
 import { TeamJoinLinkDialog } from "@/components/organizations/TeamJoinLinkDialog";
 import { OrgDangerZone } from "@/components/organizations/OrgDangerZone";
 import { OrgModulesTab } from "@/components/organizations/OrgModulesTab";
+import { OrgLoadTab } from "@/components/organizations/OrgLoadTab";
 
 
 
@@ -118,7 +119,6 @@ export function CoachOrgDetail() {
   const org: any = data.org;
   const features = data.features as { feature: string; enabled: boolean }[];
   const featureOn = (k: string) => features.some((f) => f.feature === k && f.enabled);
-  void featureOn;
 
   const caller = (data as any).caller as { experience: string; is_bodyfuel_coach: boolean; team_id: string | null } | undefined;
   const teamKpis = ((data as any).team_kpis ?? []) as Array<{ team_id: string; athletes: number; weekly_compliance: number | null; pending_onboardings: number }>;
@@ -406,6 +406,19 @@ export function CoachOrgDetail() {
         )}
         {tab === "staff" && <StaffTab orgId={orgId} teams={data.teams as any[]} />}
 
+        {tab === "load" && featureOn("load_management") && (
+          <OrgLoadTab
+            orgId={orgId}
+            teams={(data.teams as any[]) ?? []}
+            canManage={
+              caller?.experience === "org_admin"
+              || caller?.experience === "head_coach"
+              || caller?.experience === "team_coach"
+              || caller?.is_bodyfuel_coach === true
+            }
+          />
+        )}
+
         {(tab === "modules" || tab === "settings") && (
           <OrgModulesTab
             orgId={orgId}
@@ -415,6 +428,7 @@ export function CoachOrgDetail() {
             }
           />
         )}
+
 
       </div>
       {joinLinkTeam && (

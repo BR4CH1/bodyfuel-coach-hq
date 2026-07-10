@@ -23,6 +23,7 @@ import {
   ClipboardList,
   Target,
   Settings,
+  Gauge,
 } from "lucide-react";
 import { getMyUnreadCount, getCoachInbox } from "@/lib/coach-messages.functions";
 import { getIsPlatformOwner } from "@/lib/organizations/organizations.functions";
@@ -335,6 +336,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
     const modOn = (k: string) => (hasFeatureData ? orgFeatureOn(k) : true);
     const trainingOn = modOn("athletic_training") || modOn("training") || modOn("smart_training");
     const communityOn = modOn("community");
+    const loadOn = modOn("load_management");
     const challengesOn = modOn("challenges");
     void challengesOn;
 
@@ -349,6 +351,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         { ...cockpitTarget, hash: "athletes", label: "Athleten", icon: Users },
         ...(showTeamsLink ? [{ ...cockpitTarget, hash: "teams", label: "Teams", icon: Users2 }] : []),
         ...(trainingOn ? [{ ...cockpitTarget, hash: "training", label: "Training", icon: Dumbbell }] : []),
+        ...(loadOn ? [{ ...cockpitTarget, hash: "load", label: "Belastung", icon: Gauge }] : []),
         { ...cockpitTarget, hash: "tasks", label: "Aufgaben", icon: ClipboardList },
         ...(communityOn ? [{ ...cockpitTarget, hash: "community", label: "Community", icon: Users2 }] : []),
         { ...cockpitTarget, hash: "staff", label: "Mitarbeiter", icon: Shield },
