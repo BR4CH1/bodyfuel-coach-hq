@@ -69,6 +69,8 @@ import {
 import { CoachCockpit } from "@/components/coach/analytics/CoachCockpit";
 import { AthletesTab } from "@/components/organizations/AthletesTab";
 import { TeamJoinLinkDialog } from "@/components/organizations/TeamJoinLinkDialog";
+import { OrgDangerZone } from "@/components/organizations/OrgDangerZone";
+
 
 export const Route = createFileRoute("/coach/teams/$orgId")({
   head: () => ({ meta: [{ title: "Organisation — BODYFUEL Coach" }] }),
@@ -471,9 +473,17 @@ export function CoachOrgDetail() {
           onClose={() => setJoinLinkTeam(null)}
         />
       )}
+
+      {/* Gefahrenzone — nur für Plattform-Owner sichtbar, Bulls sind hart geblockt. */}
+      <OrgDangerZone
+        organizationId={org.id}
+        organizationName={org.name}
+        organizationSlug={org.slug ?? ""}
+      />
     </div>
   );
 }
+
 
 
 // Inline AthletesTab wurde nach src/components/organizations/AthletesTab.tsx
