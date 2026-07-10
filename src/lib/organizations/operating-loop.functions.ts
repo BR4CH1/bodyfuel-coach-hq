@@ -260,10 +260,14 @@ export const listOrgChallenges = createServerFn({ method: "GET" })
     await assertOrgAccess(supabase, userId, data.organization_id);
     const { data: challenges } = await supabase
       .from("organization_challenges")
-      .select("id, name, status, starts_at, ends_at, visibility_scope, team_id")
+      .select("id, name, status, starts_at, ends_at, visibility_scope, team_id, rules:organization_challenge_rules(count)")
       .eq("organization_id", data.organization_id)
       .order("starts_at", { ascending: false });
-    return { challenges: challenges ?? [] };
+    const enriched = (challenges ?? []).map((c: any) => ({
+      ...c,
+      rule_count: Array.isArray(c.rules) ? (c.rules[0]?.count ?? 0) : 0,
+    }));
+    return { challenges: enriched };
   });
 
 export const listChallengeRules = createServerFn({ method: "GET" })

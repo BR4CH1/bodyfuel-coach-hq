@@ -1706,12 +1706,14 @@ function ChallengesTab({ orgId, teams }: { orgId: string; teams: any[] }) {
           visibility_scope: "organization",
         },
       }),
-    onSuccess: () => {
+    onSuccess: (res: any) => {
       setShow(false);
       setName("");
       setDesc("");
       setEnd("");
       qc.invalidateQueries({ queryKey: ["org-challenges", orgId] });
+      // Direkt zum Punkte-Editor springen: ohne Regeln fließt nichts in die Rangliste.
+      if (res?.id) setSelected(res.id);
     },
   });
   const challenges = ((data as any)?.challenges ?? []) as any[];
@@ -1731,6 +1733,11 @@ function ChallengesTab({ orgId, teams }: { orgId: string; teams: any[] }) {
           + Challenge erstellen
         </button>
       </div>
+      {show && (
+        <div className="rounded-lg border border-primary/40 bg-primary/5 p-2 text-[11px] text-muted-foreground">
+          Nach dem Speichern öffnet sich der Punkte-Editor. <b>Ohne Punkte-Regeln</b> fließt die Challenge <b>nicht</b> in die Rangliste.
+        </div>
+      )}
       {show && (
         <div className="rounded-lg border border-border bg-card p-3 text-sm">
           <div className="grid gap-2 sm:grid-cols-2">
@@ -1770,20 +1777,35 @@ function ChallengeSection({ title, items, onSelect }: { title: string; items: an
         <Empty>Keine Einträge.</Empty>
       ) : (
         <ul className="space-y-2">
-          {items.map((c) => (
-            <li key={c.id} className="flex items-center justify-between rounded-lg border border-border bg-card p-3 text-sm">
-              <div>
-                <div className="font-semibold">{c.name}</div>
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                  {c.starts_at && new Date(c.starts_at).toLocaleDateString("de-DE")}
-                  {c.ends_at && ` – ${new Date(c.ends_at).toLocaleDateString("de-DE")}`}
+          {items.map((c) => {
+            const noRules = (c.rule_count ?? 0) === 0;
+            return (
+              <li key={c.id} className={`flex items-center justify-between rounded-lg border p-3 text-sm ${noRules ? "border-amber-500/60 bg-amber-500/5" : "border-border bg-card"}`}>
+                <div className="min-w-0">
+                  <div className="font-semibold">{c.name}</div>
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    {c.starts_at && new Date(c.starts_at).toLocaleDateString("de-DE")}
+                    {c.ends_at && ` – ${new Date(c.ends_at).toLocaleDateString("de-DE")}`}
+                  </div>
+                  {noRules ? (
+                    <div className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-amber-500">
+                      ⚠ Keine Punkte – fließt nicht in Rangliste
+                    </div>
+                  ) : (
+                    <div className="mt-1 text-[10px] uppercase tracking-wider text-muted-foreground">
+                      {c.rule_count} Regel{c.rule_count === 1 ? "" : "n"}
+                    </div>
+                  )}
                 </div>
-              </div>
-              <button onClick={() => onSelect(c.id)} className="rounded border border-border px-2 py-1 text-[10px] uppercase tracking-wider">
-                Rules
-              </button>
-            </li>
-          ))}
+                <button
+                  onClick={() => onSelect(c.id)}
+                  className={`shrink-0 rounded px-2 py-1 text-[10px] font-semibold uppercase tracking-wider ${noRules ? "bg-amber-500 text-black" : "border border-border"}`}
+                >
+                  Punkte
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
