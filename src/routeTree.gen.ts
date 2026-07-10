@@ -135,6 +135,7 @@ import { Route as ApiPublicHooksTrialRemindersRouteImport } from './routes/api/p
 import { Route as ApiPublicHooksSendFeatureNewsRouteImport } from './routes/api/public/hooks/send-feature-news'
 import { Route as ApiPublicHooksRegenTrainingPlansRouteImport } from './routes/api/public/hooks/regen-training-plans'
 import { Route as ApiPublicHooksRegenNutritionPlansRouteImport } from './routes/api/public/hooks/regen-nutrition-plans'
+import { Route as ApiPublicHooksRecalcNutritionLoadRouteImport } from './routes/api/public/hooks/recalc-nutrition-load'
 import { Route as ApiPublicHooksProcessPerformancePlanJobsRouteImport } from './routes/api/public/hooks/process-performance-plan-jobs'
 import { Route as ApiPublicHooksProcessAutopilotJobsRouteImport } from './routes/api/public/hooks/process-autopilot-jobs'
 import { Route as ApiPublicHooksPlanRotationRouteImport } from './routes/api/public/hooks/plan-rotation'
@@ -796,6 +797,12 @@ const ApiPublicHooksRegenNutritionPlansRoute =
     path: '/api/public/hooks/regen-nutrition-plans',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicHooksRecalcNutritionLoadRoute =
+  ApiPublicHooksRecalcNutritionLoadRouteImport.update({
+    id: '/api/public/hooks/recalc-nutrition-load',
+    path: '/api/public/hooks/recalc-nutrition-load',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHooksProcessPerformancePlanJobsRoute =
   ApiPublicHooksProcessPerformancePlanJobsRouteImport.update({
     id: '/api/public/hooks/process-performance-plan-jobs',
@@ -957,6 +964,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/plan-rotation': typeof ApiPublicHooksPlanRotationRoute
   '/api/public/hooks/process-autopilot-jobs': typeof ApiPublicHooksProcessAutopilotJobsRoute
   '/api/public/hooks/process-performance-plan-jobs': typeof ApiPublicHooksProcessPerformancePlanJobsRoute
+  '/api/public/hooks/recalc-nutrition-load': typeof ApiPublicHooksRecalcNutritionLoadRoute
   '/api/public/hooks/regen-nutrition-plans': typeof ApiPublicHooksRegenNutritionPlansRoute
   '/api/public/hooks/regen-training-plans': typeof ApiPublicHooksRegenTrainingPlansRoute
   '/api/public/hooks/send-feature-news': typeof ApiPublicHooksSendFeatureNewsRoute
@@ -1081,6 +1089,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/plan-rotation': typeof ApiPublicHooksPlanRotationRoute
   '/api/public/hooks/process-autopilot-jobs': typeof ApiPublicHooksProcessAutopilotJobsRoute
   '/api/public/hooks/process-performance-plan-jobs': typeof ApiPublicHooksProcessPerformancePlanJobsRoute
+  '/api/public/hooks/recalc-nutrition-load': typeof ApiPublicHooksRecalcNutritionLoadRoute
   '/api/public/hooks/regen-nutrition-plans': typeof ApiPublicHooksRegenNutritionPlansRoute
   '/api/public/hooks/regen-training-plans': typeof ApiPublicHooksRegenTrainingPlansRoute
   '/api/public/hooks/send-feature-news': typeof ApiPublicHooksSendFeatureNewsRoute
@@ -1217,6 +1226,7 @@ export interface FileRoutesById {
   '/api/public/hooks/plan-rotation': typeof ApiPublicHooksPlanRotationRoute
   '/api/public/hooks/process-autopilot-jobs': typeof ApiPublicHooksProcessAutopilotJobsRoute
   '/api/public/hooks/process-performance-plan-jobs': typeof ApiPublicHooksProcessPerformancePlanJobsRoute
+  '/api/public/hooks/recalc-nutrition-load': typeof ApiPublicHooksRecalcNutritionLoadRoute
   '/api/public/hooks/regen-nutrition-plans': typeof ApiPublicHooksRegenNutritionPlansRoute
   '/api/public/hooks/regen-training-plans': typeof ApiPublicHooksRegenTrainingPlansRoute
   '/api/public/hooks/send-feature-news': typeof ApiPublicHooksSendFeatureNewsRoute
@@ -1354,6 +1364,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/plan-rotation'
     | '/api/public/hooks/process-autopilot-jobs'
     | '/api/public/hooks/process-performance-plan-jobs'
+    | '/api/public/hooks/recalc-nutrition-load'
     | '/api/public/hooks/regen-nutrition-plans'
     | '/api/public/hooks/regen-training-plans'
     | '/api/public/hooks/send-feature-news'
@@ -1478,6 +1489,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/plan-rotation'
     | '/api/public/hooks/process-autopilot-jobs'
     | '/api/public/hooks/process-performance-plan-jobs'
+    | '/api/public/hooks/recalc-nutrition-load'
     | '/api/public/hooks/regen-nutrition-plans'
     | '/api/public/hooks/regen-training-plans'
     | '/api/public/hooks/send-feature-news'
@@ -1613,6 +1625,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/plan-rotation'
     | '/api/public/hooks/process-autopilot-jobs'
     | '/api/public/hooks/process-performance-plan-jobs'
+    | '/api/public/hooks/recalc-nutrition-load'
     | '/api/public/hooks/regen-nutrition-plans'
     | '/api/public/hooks/regen-training-plans'
     | '/api/public/hooks/send-feature-news'
@@ -1690,6 +1703,7 @@ export interface RootRouteChildren {
   ApiPublicHooksPlanRotationRoute: typeof ApiPublicHooksPlanRotationRoute
   ApiPublicHooksProcessAutopilotJobsRoute: typeof ApiPublicHooksProcessAutopilotJobsRoute
   ApiPublicHooksProcessPerformancePlanJobsRoute: typeof ApiPublicHooksProcessPerformancePlanJobsRoute
+  ApiPublicHooksRecalcNutritionLoadRoute: typeof ApiPublicHooksRecalcNutritionLoadRoute
   ApiPublicHooksRegenNutritionPlansRoute: typeof ApiPublicHooksRegenNutritionPlansRoute
   ApiPublicHooksRegenTrainingPlansRoute: typeof ApiPublicHooksRegenTrainingPlansRoute
   ApiPublicHooksSendFeatureNewsRoute: typeof ApiPublicHooksSendFeatureNewsRoute
@@ -2586,6 +2600,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksRegenNutritionPlansRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/recalc-nutrition-load': {
+      id: '/api/public/hooks/recalc-nutrition-load'
+      path: '/api/public/hooks/recalc-nutrition-load'
+      fullPath: '/api/public/hooks/recalc-nutrition-load'
+      preLoaderRoute: typeof ApiPublicHooksRecalcNutritionLoadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/process-performance-plan-jobs': {
       id: '/api/public/hooks/process-performance-plan-jobs'
       path: '/api/public/hooks/process-performance-plan-jobs'
@@ -2948,6 +2969,8 @@ const rootRouteChildren: RootRouteChildren = {
     ApiPublicHooksProcessAutopilotJobsRoute,
   ApiPublicHooksProcessPerformancePlanJobsRoute:
     ApiPublicHooksProcessPerformancePlanJobsRoute,
+  ApiPublicHooksRecalcNutritionLoadRoute:
+    ApiPublicHooksRecalcNutritionLoadRoute,
   ApiPublicHooksRegenNutritionPlansRoute:
     ApiPublicHooksRegenNutritionPlansRoute,
   ApiPublicHooksRegenTrainingPlansRoute: ApiPublicHooksRegenTrainingPlansRoute,
