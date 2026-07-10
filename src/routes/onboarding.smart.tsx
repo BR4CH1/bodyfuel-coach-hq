@@ -120,6 +120,7 @@ const EMPTY: Form = {
 
 function SmartOnboardingPage() {
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const { supabaseUser, loading } = useSession();
   const statusFn = useServerFn(getOnboardingStatus);
   const completeFn = useServerFn(completeSmartOnboarding);
