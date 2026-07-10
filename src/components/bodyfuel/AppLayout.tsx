@@ -350,11 +350,18 @@ export function AppLayout({ children }: { children: ReactNode }) {
         { to: "/profile", label: "Profil", icon: UserCircle },
       ]
     : null;
-  const baseNav = staffNav
+  const baseNavRaw = staffNav
     ? staffNav
     : isCoach
     ? coachNav
     : (staffNav ?? teamOnlyAthleteNav ?? clientNav);
+  const baseNav = isCoach && isPlatformOwner
+    ? [
+        ...baseNavRaw.slice(0, 3),
+        { to: "/coach/performance-teams", label: "Performance Teams", icon: Shield },
+        ...baseNavRaw.slice(3),
+      ]
+    : baseNavRaw;
   const navWithBulls = !isCoach && !staffNav && !teamOnlyAthleteNav && hasGroup("bulls")
     ? [...baseNav, bullsNavItem]
     : baseNav;
