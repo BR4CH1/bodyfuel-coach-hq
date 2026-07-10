@@ -3684,6 +3684,10 @@ export type Database = {
       }
       organizations: {
         Row: {
+          accent_color: string | null
+          alt_logo_url: string | null
+          background_color: string | null
+          claim: string | null
           created_at: string
           id: string
           logo_url: string | null
@@ -3692,11 +3696,18 @@ export type Database = {
           primary_color: string | null
           secondary_color: string | null
           settings: Json
+          short_name: string | null
           slug: string
+          sport: string | null
           status: Database["public"]["Enums"]["organization_status"]
+          text_color: string | null
           updated_at: string
         }
         Insert: {
+          accent_color?: string | null
+          alt_logo_url?: string | null
+          background_color?: string | null
+          claim?: string | null
           created_at?: string
           id?: string
           logo_url?: string | null
@@ -3705,11 +3716,18 @@ export type Database = {
           primary_color?: string | null
           secondary_color?: string | null
           settings?: Json
+          short_name?: string | null
           slug: string
+          sport?: string | null
           status?: Database["public"]["Enums"]["organization_status"]
+          text_color?: string | null
           updated_at?: string
         }
         Update: {
+          accent_color?: string | null
+          alt_logo_url?: string | null
+          background_color?: string | null
+          claim?: string | null
           created_at?: string
           id?: string
           logo_url?: string | null
@@ -3718,8 +3736,11 @@ export type Database = {
           primary_color?: string | null
           secondary_color?: string | null
           settings?: Json
+          short_name?: string | null
           slug?: string
+          sport?: string | null
           status?: Database["public"]["Enums"]["organization_status"]
+          text_color?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -7266,7 +7287,7 @@ export type Database = {
     }
     Enums: {
       app_group: "bulls" | "running_team" | "sgz" | "premium"
-      app_role: "coach" | "client" | "free"
+      app_role: "coach" | "client" | "free" | "platform_owner"
       bulls_goal: "fat_loss" | "muscle_gain" | "performance" | "general_fitness"
       bulls_position:
         | "QB"
@@ -7457,7 +7478,7 @@ export const Constants = {
   public: {
     Enums: {
       app_group: ["bulls", "running_team", "sgz", "premium"],
-      app_role: ["coach", "client", "free"],
+      app_role: ["coach", "client", "free", "platform_owner"],
       bulls_goal: ["fat_loss", "muscle_gain", "performance", "general_fitness"],
       bulls_position: [
         "QB",

@@ -58,6 +58,7 @@ import { Route as NutritionFavoritesRouteImport } from './routes/nutrition.favor
 import { Route as JoinTokenRouteImport } from './routes/join.$token'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as CoachReviewsRouteImport } from './routes/coach.reviews'
+import { Route as CoachPerformanceTeamsRouteImport } from './routes/coach.performance-teams'
 import { Route as CoachPackageRequestsRouteImport } from './routes/coach.package-requests'
 import { Route as CoachLeadsRouteImport } from './routes/coach.leads'
 import { Route as CoachImportPlanRouteImport } from './routes/coach.import-plan'
@@ -387,6 +388,11 @@ const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
 const CoachReviewsRoute = CoachReviewsRouteImport.update({
   id: '/reviews',
   path: '/reviews',
+  getParentRoute: () => CoachRoute,
+} as any)
+const CoachPerformanceTeamsRoute = CoachPerformanceTeamsRouteImport.update({
+  id: '/performance-teams',
+  path: '/performance-teams',
   getParentRoute: () => CoachRoute,
 } as any)
 const CoachPackageRequestsRoute = CoachPackageRequestsRouteImport.update({
@@ -893,6 +899,7 @@ export interface FileRoutesByFullPath {
   '/coach/import-plan': typeof CoachImportPlanRoute
   '/coach/leads': typeof CoachLeadsRoute
   '/coach/package-requests': typeof CoachPackageRequestsRoute
+  '/coach/performance-teams': typeof CoachPerformanceTeamsRoute
   '/coach/reviews': typeof CoachReviewsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/join/$token': typeof JoinTokenRoute
@@ -1019,6 +1026,7 @@ export interface FileRoutesByTo {
   '/coach/import-plan': typeof CoachImportPlanRoute
   '/coach/leads': typeof CoachLeadsRoute
   '/coach/package-requests': typeof CoachPackageRequestsRoute
+  '/coach/performance-teams': typeof CoachPerformanceTeamsRoute
   '/coach/reviews': typeof CoachReviewsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/join/$token': typeof JoinTokenRoute
@@ -1151,6 +1159,7 @@ export interface FileRoutesById {
   '/coach/import-plan': typeof CoachImportPlanRoute
   '/coach/leads': typeof CoachLeadsRoute
   '/coach/package-requests': typeof CoachPackageRequestsRoute
+  '/coach/performance-teams': typeof CoachPerformanceTeamsRoute
   '/coach/reviews': typeof CoachReviewsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/join/$token': typeof JoinTokenRoute
@@ -1287,6 +1296,7 @@ export interface FileRouteTypes {
     | '/coach/import-plan'
     | '/coach/leads'
     | '/coach/package-requests'
+    | '/coach/performance-teams'
     | '/coach/reviews'
     | '/email/unsubscribe'
     | '/join/$token'
@@ -1413,6 +1423,7 @@ export interface FileRouteTypes {
     | '/coach/import-plan'
     | '/coach/leads'
     | '/coach/package-requests'
+    | '/coach/performance-teams'
     | '/coach/reviews'
     | '/email/unsubscribe'
     | '/join/$token'
@@ -1544,6 +1555,7 @@ export interface FileRouteTypes {
     | '/coach/import-plan'
     | '/coach/leads'
     | '/coach/package-requests'
+    | '/coach/performance-teams'
     | '/coach/reviews'
     | '/email/unsubscribe'
     | '/join/$token'
@@ -2033,6 +2045,13 @@ declare module '@tanstack/react-router' {
       path: '/reviews'
       fullPath: '/coach/reviews'
       preLoaderRoute: typeof CoachReviewsRouteImport
+      parentRoute: typeof CoachRoute
+    }
+    '/coach/performance-teams': {
+      id: '/coach/performance-teams'
+      path: '/performance-teams'
+      fullPath: '/coach/performance-teams'
+      preLoaderRoute: typeof CoachPerformanceTeamsRouteImport
       parentRoute: typeof CoachRoute
     }
     '/coach/package-requests': {
@@ -2726,6 +2745,7 @@ interface CoachRouteChildren {
   CoachImportPlanRoute: typeof CoachImportPlanRoute
   CoachLeadsRoute: typeof CoachLeadsRoute
   CoachPackageRequestsRoute: typeof CoachPackageRequestsRoute
+  CoachPerformanceTeamsRoute: typeof CoachPerformanceTeamsRoute
   CoachReviewsRoute: typeof CoachReviewsRoute
   CoachIndexRoute: typeof CoachIndexRoute
   CoachPlanBuilderUserIdRoute: typeof CoachPlanBuilderUserIdRoute
@@ -2745,6 +2765,7 @@ const CoachRouteChildren: CoachRouteChildren = {
   CoachImportPlanRoute: CoachImportPlanRoute,
   CoachLeadsRoute: CoachLeadsRoute,
   CoachPackageRequestsRoute: CoachPackageRequestsRoute,
+  CoachPerformanceTeamsRoute: CoachPerformanceTeamsRoute,
   CoachReviewsRoute: CoachReviewsRoute,
   CoachIndexRoute: CoachIndexRoute,
   CoachPlanBuilderUserIdRoute: CoachPlanBuilderUserIdRoute,

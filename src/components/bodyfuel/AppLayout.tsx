@@ -25,6 +25,7 @@ import {
   Settings,
 } from "lucide-react";
 import { getMyUnreadCount, getCoachInbox } from "@/lib/coach-messages.functions";
+import { getIsPlatformOwner } from "@/lib/organizations/organizations.functions";
 import { useSession } from "@/lib/bodyfuel/session";
 import { useEntitlements } from "@/lib/bodyfuel/entitlements";
 import { Logo } from "./Logo";
@@ -98,6 +99,14 @@ export function AppLayout({ children }: { children: ReactNode }) {
         .eq("organization_id", orgId!);
       return count ?? 0;
     },
+  });
+
+  const isOwnerFn = useServerFn(getIsPlatformOwner);
+  const { data: isPlatformOwner = false } = useQuery({
+    queryKey: ["is-platform-owner"],
+    queryFn: () => isOwnerFn(),
+    enabled: !!isCoach,
+    staleTime: 10 * 60_000,
   });
 
   useEffect(() => {
@@ -349,11 +358,18 @@ export function AppLayout({ children }: { children: ReactNode }) {
         { to: "/profile", label: "Profil", icon: UserCircle },
       ]
     : null;
-  const baseNav = staffNav
+  const baseNavRaw = staffNav
     ? staffNav
     : isCoach
     ? coachNav
     : (staffNav ?? teamOnlyAthleteNav ?? clientNav);
+  const baseNav = isCoach && isPlatformOwner
+    ? [
+        ...baseNavRaw.slice(0, 3),
+        { to: "/coach/performance-teams", label: "Performance Teams", icon: Shield },
+        ...baseNavRaw.slice(3),
+      ]
+    : baseNavRaw;
   const navWithBulls = !isCoach && !staffNav && !teamOnlyAthleteNav && hasGroup("bulls")
     ? [...baseNav, bullsNavItem]
     : baseNav;
