@@ -234,3 +234,129 @@ export const adjustBullsPointsManual = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { id: inserted.id };
   });
+
+// ================================================
+// MONTHLY RANKING (default = current month)
+// ================================================
+function currentBerlinYearMonth(): { year: number; month: number } {
+  // Server may be UTC; approximate Berlin by using UTC month (close enough for
+  // month boundaries — the finalize cron uses Berlin-aware logic).
+  const d = new Date();
+  return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1 };
+}
+
+export const getBullsMonthlyRanking = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { year?: number; month?: number }) => {
+    const fallback = currentBerlinYearMonth();
+    return {
+      year: Number.isFinite(d.year) ? Number(d.year) : fallback.year,
+      month: Number.isFinite(d.month) ? Number(d.month) : fallback.month,
+    };
+  })
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    await assertBullsAccess(supabase, userId);
+    const { data: rows, error } = await supabase.rpc("get_bulls_month_ranking", {
+      _organization_id: BULLS_ORG_ID,
+      _year: data.year,
+      _month: data.month,
+    } as any);
+    if (error) throw new Error(error.message);
+    const { data: fin } = await supabase
+      .from("bulls_monthly_finalizations")
+      .select("status, finalized_at, winner_user_id, winner_points, participant_count")
+      .eq("organization_id", BULLS_ORG_ID)
+      .eq("year", data.year)
+      .eq("month", data.month)
+      .maybeSingle();
+    return {
+      year: data.year,
+      month: data.month,
+      rows: (rows ?? []) as any[],
+      finalization: fin ?? null,
+      viewerUserId: userId,
+    };
+  });
+
+// ================================================
+// HALL OF FAME (past winners)
+// ================================================
+export const getBullsHallOfFame = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { limit?: number }) => ({ limit: Math.min(Math.max(d.limit ?? 24, 1), 60) }))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    await assertBullsAccess(supabase, userId);
+    const { data: rows, error } = await supabase.rpc("get_bulls_monthly_winners", {
+      _organization_id: BULLS_ORG_ID,
+      _limit: data.limit,
+    } as any);
+    if (error) throw new Error(error.message);
+    return { rows: (rows ?? []) as any[] };
+  });
+
+// ================================================
+// USER PLAYER-OF-THE-MONTH AWARDS
+// ================================================
+export const getBullsMyAwards = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    await assertBullsAccess(supabase, userId);
+    const { data, error } = await supabase.rpc("get_bulls_user_player_of_month_awards", {
+      _user_id: userId,
+      _organization_id: BULLS_ORG_ID,
+    } as any);
+    if (error) throw new Error(error.message);
+    return { rows: (data ?? []) as { year: number; month: number; points: number; finalized_at: string }[] };
+  });
+
+// ================================================
+// ARCHIVED MONTH TOP-N
+// ================================================
+export const getBullsArchivedMonth = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { year: number; month: number; limit?: number }) => ({
+    year: Number(d.year),
+    month: Number(d.month),
+    limit: Math.min(Math.max(d.limit ?? 10, 1), 50),
+  }))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    await assertBullsAccess(supabase, userId);
+    const { data: rows, error } = await supabase
+      .from("bulls_monthly_standings")
+      .select(
+        "rank, user_id, final_points, completed_trainings, plan_completion_rate, check_in_completion_rate, active_days, profiles:profiles!inner(display_name, nickname, is_minor)",
+      )
+      .eq("organization_id", BULLS_ORG_ID)
+      .eq("year", data.year)
+      .eq("month", data.month)
+      .order("rank", { ascending: true })
+      .limit(data.limit);
+    if (error) throw new Error(error.message);
+    return { rows: (rows ?? []) as any[] };
+  });
+
+// ================================================
+// ADMIN: force finalize a completed month
+// ================================================
+export const finalizeBullsMonthNow = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { year: number; month: number }) => ({
+    year: Number(d.year),
+    month: Number(d.month),
+  }))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const role = await assertBullsAccess(supabase, userId);
+    if (role !== "admin") throw new Error("Nur Bulls-Coach oder Org-Admin darf Monate finalisieren.");
+    const { data: id, error } = await supabase.rpc("finalize_bulls_month", {
+      _organization_id: BULLS_ORG_ID,
+      _year: data.year,
+      _month: data.month,
+    } as any);
+    if (error) throw new Error(error.message);
+    return { id };
+  });
