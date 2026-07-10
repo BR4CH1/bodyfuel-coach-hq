@@ -695,25 +695,29 @@ function PendingActions({ id, onDone }: { id: string; onDone: () => void }) {
 
 function AddAthleteDialog({
   orgId,
+  orgType,
   teams,
   onClose,
   onDone,
 }: {
   orgId: string;
+  orgType?: string | null;
   teams: Team[];
   onClose: () => void;
   onDone: () => void;
 }) {
   const [mode, setMode] = useState<"choose" | "invite" | "manual" | "existing">("choose");
+  const term = orgTerminology(orgType);
+  const isGym = term.isFitnessStudio;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-lg rounded-xl border border-border bg-card p-5 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="font-display text-lg font-bold">
-            {mode === "choose" && "Athlet hinzufügen"}
-            {mode === "invite" && "Athlet einladen"}
-            {mode === "manual" && "Athlet manuell anlegen"}
+            {mode === "choose" && `${term.player} hinzufügen`}
+            {mode === "invite" && `${term.player} einladen`}
+            {mode === "manual" && `${term.player} manuell anlegen`}
             {mode === "existing" && "Existierenden Nutzer hinzufügen"}
           </h3>
           <button onClick={onClose} className="rounded p-1 text-muted-foreground hover:bg-muted">
@@ -723,21 +727,21 @@ function AddAthleteDialog({
 
         {mode === "choose" && (
           <div className="space-y-2">
-            <p className="mb-3 text-xs text-muted-foreground">Wie möchtest du den Athleten hinzufügen?</p>
+            <p className="mb-3 text-xs text-muted-foreground">Wie möchtest du {isGym ? "das Mitglied" : "den Athleten"} hinzufügen?</p>
             <button
               onClick={() => setMode("existing")}
               className="block w-full rounded-lg border border-border p-3 text-left hover:bg-muted"
             >
               <div className="text-sm font-semibold">Existierenden BODYFUEL-Nutzer hinzufügen</div>
               <div className="text-xs text-muted-foreground">
-                Nach E-Mail oder Name suchen und direkt zum Team hinzufügen.
+                Nach E-Mail oder Name suchen und direkt {isGym ? "zur Gruppe" : "zum Team"} hinzufügen.
               </div>
             </button>
             <button
               onClick={() => setMode("invite")}
               className="block w-full rounded-lg border border-border p-3 text-left hover:bg-muted"
             >
-              <div className="text-sm font-semibold">Athlet einladen</div>
+              <div className="text-sm font-semibold">{term.player} einladen</div>
               <div className="text-xs text-muted-foreground">
                 Einladungslink per E-Mail senden und Profil selbst vervollständigen lassen.
               </div>
@@ -746,17 +750,19 @@ function AddAthleteDialog({
               onClick={() => setMode("manual")}
               className="block w-full rounded-lg border border-border p-3 text-left hover:bg-muted"
             >
-              <div className="text-sm font-semibold">Athlet manuell anlegen</div>
+              <div className="text-sm font-semibold">{term.player} manuell anlegen</div>
               <div className="text-xs text-muted-foreground">
-                Spieler direkt zum Kader hinzufügen. Onboarding kann später per Einladung ergänzt werden.
+                {isGym
+                  ? "Mitglied direkt zur Liste hinzufügen. Onboarding kann später per Einladung ergänzt werden."
+                  : "Spieler direkt zum Kader hinzufügen. Onboarding kann später per Einladung ergänzt werden."}
               </div>
             </button>
           </div>
         )}
 
-        {mode === "invite" && <InviteForm orgId={orgId} teams={teams} onDone={onDone} />}
-        {mode === "manual" && <ManualForm orgId={orgId} teams={teams} onDone={onDone} />}
-        {mode === "existing" && <ExistingUserForm orgId={orgId} teams={teams} onDone={onDone} />}
+        {mode === "invite" && <InviteForm orgId={orgId} orgType={orgType} teams={teams} onDone={onDone} />}
+        {mode === "manual" && <ManualForm orgId={orgId} orgType={orgType} teams={teams} onDone={onDone} />}
+        {mode === "existing" && <ExistingUserForm orgId={orgId} orgType={orgType} teams={teams} onDone={onDone} />}
       </div>
     </div>
   );
