@@ -239,22 +239,29 @@ export async function collectPerformanceDayTypeSignals(
   const loadEnabled =
     (loadModuleRes.data as { enabled?: boolean } | null)?.enabled === true;
   if (loadEnabled) {
-    const loadRows = (loadDaysRes.data ?? []) as Array<{
-      team_id: string | null;
-      load_level: number | null;
-    }>;
-    if (loadRows.length > 0) {
-      const teamRow = loadRows.find(
-        (r) => r.team_id !== null && teamIds.includes(r.team_id as string),
-      );
-      const orgRow = loadRows.find((r) => r.team_id === null);
-      const picked = teamRow ?? orgRow ?? null;
-      loadLevel =
-        picked && typeof picked.load_level === "number"
-          ? picked.load_level
-          : null;
+    // 1) Athleten-Override hat Vorrang.
+    const overrideLevel = (loadOverrideRes.data as { load_level?: number } | null)?.load_level;
+    if (typeof overrideLevel === "number") {
+      loadLevel = overrideLevel;
+    } else {
+      const loadRows = (loadDaysRes.data ?? []) as Array<{
+        team_id: string | null;
+        load_level: number | null;
+      }>;
+      if (loadRows.length > 0) {
+        const teamRow = loadRows.find(
+          (r) => r.team_id !== null && teamIds.includes(r.team_id as string),
+        );
+        const orgRow = loadRows.find((r) => r.team_id === null);
+        const picked = teamRow ?? orgRow ?? null;
+        loadLevel =
+          picked && typeof picked.load_level === "number"
+            ? picked.load_level
+            : null;
+      }
     }
   }
+
 
   return {
     manualOverrideKind,
