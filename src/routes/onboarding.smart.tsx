@@ -198,8 +198,9 @@ function SmartOnboardingPage() {
       // Pläne werden im Hintergrund (Queue + Cron) generiert, damit das
       // Onboarding sofort fertig ist statt 2-4 Minuten zu blocken.
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Autopilot gestartet! Deine Pläne entstehen im Hintergrund.");
+      await qc.invalidateQueries({ queryKey: ["entitlements"] });
       navigate({ to: "/dashboard" });
     },
     onError: (e: any) => toast.error(e.message),
