@@ -88,6 +88,16 @@ export function LoadWeekBanner({
     queryFn: () => getForMeFn({ data: { orgId, teamId, date: todayIso } }),
   });
 
+  // Aktive Auto-Overrides (Belastungs-Recalc) in der aktuellen Woche.
+  const listAutoOvFn = useServerFn(listAutoOverridesForAthlete);
+  const autoOvQ = useQuery({
+    queryKey: ["athlete-auto-overrides", isoDate(weekStart), isoDate(weekEnd)],
+    queryFn: () =>
+      listAutoOvFn({
+        data: { fromDate: isoDate(weekStart), toDate: isoDate(weekEnd) },
+      }),
+  });
+
   const teamRows = (teamQ.data ?? []) as LoadDay[];
   const orgRows = (orgQ.data ?? []) as LoadDay[];
 
