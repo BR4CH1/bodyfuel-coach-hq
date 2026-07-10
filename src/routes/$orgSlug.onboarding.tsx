@@ -196,6 +196,7 @@ function AthleteOnboarding({ ctx }: { ctx: NonNullable<Awaited<ReturnType<typeof
   const { org } = OrgLayoutRoute.useLoaderData();
   const { supabaseUser } = useSession();
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const complete = useServerFn(completeOrganizationOnboardingV2);
 
   const [displayName, setDisplayName] = useState(ctx.profile?.display_name ?? "");
