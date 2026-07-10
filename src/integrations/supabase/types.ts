@@ -816,6 +816,74 @@ export type Database = {
         }
         Relationships: []
       }
+      bulls_ranking_events: {
+        Row: {
+          awarded_by: string | null
+          category: Database["public"]["Enums"]["bulls_point_category"]
+          created_at: string
+          event_date: string
+          event_kind: string
+          id: string
+          metadata: Json
+          organization_id: string
+          points: number
+          reason: string | null
+          reversed_by_event_id: string | null
+          source_id: string | null
+          source_type: string | null
+          status: string
+          team_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          awarded_by?: string | null
+          category: Database["public"]["Enums"]["bulls_point_category"]
+          created_at?: string
+          event_date: string
+          event_kind: string
+          id?: string
+          metadata?: Json
+          organization_id: string
+          points: number
+          reason?: string | null
+          reversed_by_event_id?: string | null
+          source_id?: string | null
+          source_type?: string | null
+          status?: string
+          team_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          awarded_by?: string | null
+          category?: Database["public"]["Enums"]["bulls_point_category"]
+          created_at?: string
+          event_date?: string
+          event_kind?: string
+          id?: string
+          metadata?: Json
+          organization_id?: string
+          points?: number
+          reason?: string | null
+          reversed_by_event_id?: string | null
+          source_id?: string | null
+          source_type?: string | null
+          status?: string
+          team_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bulls_ranking_events_reversed_by_event_id_fkey"
+            columns: ["reversed_by_event_id"]
+            isOneToOne: false
+            referencedRelation: "bulls_ranking_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bulls_weight_logs: {
         Row: {
           created_at: string
@@ -7363,6 +7431,32 @@ export type Database = {
           plan_type: string
         }[]
       }
+      award_bulls_points: {
+        Args: {
+          _awarded_by?: string
+          _category: Database["public"]["Enums"]["bulls_point_category"]
+          _daily_cap?: number
+          _event_date: string
+          _event_kind: string
+          _metadata?: Json
+          _organization_id: string
+          _points: number
+          _reason?: string
+          _source_id?: string
+          _source_type?: string
+          _team_id?: string
+          _user_id: string
+        }
+        Returns: string
+      }
+      award_bulls_test_improvements: {
+        Args: {
+          _organization_id: string
+          _session_id: string
+          _user_id: string
+        }
+        Returns: number
+      }
       can_view_org_member_profile: {
         Args: { _target: string; _viewer: string }
         Returns: boolean
@@ -7378,6 +7472,36 @@ export type Database = {
         Returns: number
       }
       find_user_id_by_email: { Args: { _email: string }; Returns: string }
+      get_bulls_ranking: {
+        Args: {
+          _organization_id: string
+          _position?: string
+          _since?: string
+          _team_id?: string
+          _until?: string
+        }
+        Returns: {
+          display_name: string
+          nickname: string
+          sport_position: string
+          team_id: string
+          total_points: number
+          user_id: string
+        }[]
+      }
+      get_bulls_score_breakdown: {
+        Args: {
+          _organization_id: string
+          _since?: string
+          _until?: string
+          _user_id: string
+        }
+        Returns: {
+          category: Database["public"]["Enums"]["bulls_point_category"]
+          event_count: number
+          total_points: number
+        }[]
+      }
       get_ranking: {
         Args: never
         Returns: {
@@ -7445,7 +7569,21 @@ export type Database = {
           read_ct: number
         }[]
       }
+      recompute_bulls_streak: {
+        Args: { _organization_id: string; _user_id: string }
+        Returns: undefined
+      }
       recompute_user_points: { Args: { _user_id: string }; Returns: undefined }
+      reverse_bulls_points_by_source: {
+        Args: {
+          _event_kind?: string
+          _reason?: string
+          _source_id: string
+          _source_type: string
+          _user_id: string
+        }
+        Returns: number
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
     }
@@ -7453,6 +7591,17 @@ export type Database = {
       app_group: "bulls" | "running_team" | "sgz" | "premium"
       app_role: "coach" | "client" | "free" | "platform_owner"
       bulls_goal: "fat_loss" | "muscle_gain" | "performance" | "general_fitness"
+      bulls_point_category:
+        | "training"
+        | "team_training"
+        | "nutrition"
+        | "check_in"
+        | "tasks"
+        | "recovery"
+        | "rehab"
+        | "development"
+        | "challenge"
+        | "streak"
       bulls_position:
         | "QB"
         | "RB"
@@ -7650,6 +7799,18 @@ export const Constants = {
       app_group: ["bulls", "running_team", "sgz", "premium"],
       app_role: ["coach", "client", "free", "platform_owner"],
       bulls_goal: ["fat_loss", "muscle_gain", "performance", "general_fitness"],
+      bulls_point_category: [
+        "training",
+        "team_training",
+        "nutrition",
+        "check_in",
+        "tasks",
+        "recovery",
+        "rehab",
+        "development",
+        "challenge",
+        "streak",
+      ],
       bulls_position: [
         "QB",
         "RB",
