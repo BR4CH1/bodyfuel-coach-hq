@@ -129,9 +129,32 @@ export const suggestLoadWeek = createServerFn({ method: "POST" })
       mode?: "auto" | "heuristic" | "ai";
     }) => data,
   )
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const weekDates = weekDatesFrom(data.weekStart);
-    const matchDates = (data.matchDates ?? []).filter((d) => weekDates.includes(d));
+    const weekEnd = weekDates[weekDates.length - 1];
+
+    // Auto-Fill Spieltage aus organization_events (SoT). Vom Coach explizit
+    // gesetzte matchDates haben Vorrang; ansonsten ziehen wir sie aus der
+    // generischen Event-Tabelle (team-spezifisch bevorzugt, orgweit als
+    // Fallback).
+    let matchDates = (data.matchDates ?? []).filter((d) => weekDates.includes(d));
+    if (matchDates.length === 0) {
+      let q = context.supabase
+        .from("organization_events")
+        .select("starts_at, team_id")
+        .eq("organization_id", data.orgId)
+        .eq("event_type", "match")
+        .gte("starts_at", `${data.weekStart}T00:00:00Z`)
+        .lte("starts_at", `${weekEnd}T23:59:59Z`);
+      if (data.teamId) {
+        q = q.or(`team_id.eq.${data.teamId},team_id.is.null`);
+      }
+      const { data: eventRows } = await q;
+      const auto = ((eventRows ?? []) as Array<{ starts_at: string }>)
+        .map((r) => r.starts_at.slice(0, 10))
+        .filter((d) => weekDates.includes(d));
+      matchDates = Array.from(new Set(auto));
+    }
     const mode = data.mode ?? "auto";
 
     // Heuristik-Pfad: wenn Matches bekannt und Modus es zulässt.
