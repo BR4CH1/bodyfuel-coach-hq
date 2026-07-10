@@ -41,7 +41,7 @@ export function RemoveFromTeamSection({
           Team-Verwaltung
         </h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          Entfernt {displayName} aus dem Bulls Team. Das BodyFuel-Profil, Trainings- und
+          Entfernt {displayName} aus dem Team. Das BodyFuel-Profil, Trainings- und
           Ernährungsdaten bleiben erhalten – nur die Team-Zuordnung wird gelöst.
         </p>
         <button
@@ -50,7 +50,7 @@ export function RemoveFromTeamSection({
           className="mt-3 inline-flex items-center gap-2 rounded-md border border-bulls-red bg-bulls-red/90 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-white hover:bg-bulls-red"
         >
           <UserMinus className="h-3.5 w-3.5" />
-          Aus Bulls Team entfernen
+          Aus Team entfernen
         </button>
       </section>
 
@@ -78,7 +78,7 @@ export function RemoveFromTeamSection({
             </div>
             <p className="text-sm text-muted-foreground">
               Möchtest du <span className="font-semibold text-white">{displayName}</span>{" "}
-              wirklich aus dem Bulls Team entfernen? Das Profil im BodyFuel-System bleibt
+              wirklich aus dem Team entfernen? Das Profil im BodyFuel-System bleibt
               erhalten.
             </p>
             <div className="mt-5 flex justify-end gap-2">
