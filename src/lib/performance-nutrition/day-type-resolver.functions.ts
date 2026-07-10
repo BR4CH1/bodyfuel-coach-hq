@@ -103,6 +103,13 @@ export async function collectPerformanceDayTypeSignals(
     .select("team_id, load_level")
     .eq("organization_id", organizationId)
     .eq("date", date);
+  const loadOverridePromise = supabase
+    .from("organization_load_day_athlete_overrides")
+    .select("load_level")
+    .eq("organization_id", organizationId)
+    .eq("user_id", userId)
+    .eq("date", date)
+    .maybeSingle();
 
   const [
     manualOverrideRes,
@@ -112,6 +119,7 @@ export async function collectPerformanceDayTypeSignals(
     athleticAssignmentsRes,
     loadModuleRes,
     loadDaysRes,
+    loadOverrideRes,
   ] = await Promise.all([
     manualOverridePromise,
     gameEventPromise,
@@ -120,7 +128,9 @@ export async function collectPerformanceDayTypeSignals(
     athleticAssignmentsPromise,
     loadModulePromise,
     loadDaysPromise,
+    loadOverridePromise,
   ]);
+
 
 
   const manualOverrideKind: string | null =
