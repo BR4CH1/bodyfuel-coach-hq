@@ -145,7 +145,7 @@ export function AthletesTab({
     return g;
   }, [visibleRows]);
 
-  const showGrouped = posGroup === "all" && readinessFilter === "all" && !normalizedSearch;
+  const showGrouped = isFootball && posGroup === "all" && readinessFilter === "all" && !normalizedSearch;
 
   return (
     <div className="space-y-4">
