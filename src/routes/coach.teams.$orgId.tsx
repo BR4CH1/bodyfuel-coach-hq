@@ -72,6 +72,8 @@ import { CoachCockpit } from "@/components/coach/analytics/CoachCockpit";
 import { AthletesTab } from "@/components/organizations/AthletesTab";
 import { TeamJoinLinkDialog } from "@/components/organizations/TeamJoinLinkDialog";
 import { OrgDangerZone } from "@/components/organizations/OrgDangerZone";
+import { OrgModulesTab } from "@/components/organizations/OrgModulesTab";
+
 
 
 export const Route = createFileRoute("/coach/teams/$orgId")({
@@ -404,25 +406,16 @@ export function CoachOrgDetail() {
         )}
         {tab === "staff" && <StaffTab orgId={orgId} teams={data.teams as any[]} />}
 
-        {tab === "settings" && (
-          <ul className="grid gap-2 sm:grid-cols-2">
-            {features.map((f) => (
-              <li
-                key={f.feature}
-                className="flex items-center justify-between rounded-lg border border-border bg-card p-3 text-sm"
-              >
-                <span className="capitalize">{f.feature.replace(/_/g, " ")}</span>
-                <span
-                  className={`rounded px-2 py-0.5 text-[10px] uppercase tracking-wider ${
-                    f.enabled ? "bg-green-500/20 text-green-500" : "bg-muted text-muted-foreground"
-                  }`}
-                >
-                  {f.enabled ? "aktiv" : "aus"}
-                </span>
-              </li>
-            ))}
-          </ul>
+        {(tab === "modules" || tab === "settings") && (
+          <OrgModulesTab
+            orgId={orgId}
+            orgSlug={org.slug}
+            canManage={
+              caller?.experience === "org_admin" || caller?.is_bodyfuel_coach === true
+            }
+          />
         )}
+
       </div>
       {joinLinkTeam && (
         <TeamJoinLinkDialog
