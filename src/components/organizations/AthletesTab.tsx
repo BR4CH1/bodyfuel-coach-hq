@@ -770,13 +770,17 @@ function AddAthleteDialog({
 
 function ExistingUserForm({
   orgId,
+  orgType,
   teams,
   onDone,
 }: {
   orgId: string;
+  orgType?: string | null;
   teams: Team[];
   onDone: () => void;
 }) {
+  const term = orgTerminology(orgType);
+  const isGym = term.isFitnessStudio;
   const search = useServerFn(searchExistingAthletes);
   const add = useServerFn(addExistingUserToTeam);
   const [query, setQuery] = useState("");
