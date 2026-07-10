@@ -511,6 +511,7 @@ export type Database = {
           exercises: Json
           focus: string
           id: string
+          is_rehab: boolean
           organization_id: string
           position_code: string | null
           progress: Json
@@ -529,6 +530,7 @@ export type Database = {
           exercises?: Json
           focus: string
           id?: string
+          is_rehab?: boolean
           organization_id: string
           position_code?: string | null
           progress?: Json
@@ -547,6 +549,7 @@ export type Database = {
           exercises?: Json
           focus?: string
           id?: string
+          is_rehab?: boolean
           organization_id?: string
           position_code?: string | null
           progress?: Json
@@ -7568,6 +7571,10 @@ export type Database = {
           msg_id: number
           read_ct: number
         }[]
+      }
+      recompute_bulls_nutrition_day: {
+        Args: { _day: string; _organization_id: string; _user_id: string }
+        Returns: undefined
       }
       recompute_bulls_streak: {
         Args: { _organization_id: string; _user_id: string }

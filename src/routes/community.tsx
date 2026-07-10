@@ -72,6 +72,15 @@ function CommunityHub() {
             accent="rose"
           />
         )}
+        {hasGroup("bulls") && (
+          <HubLink
+            to="/bulls/ranking"
+            icon={<Trophy className="h-5 w-5" />}
+            title="Bulls Rangliste"
+            description="Konstanz, Planerfüllung & Entwicklung"
+            accent="rose"
+          />
+        )}
         <div className="flex items-center justify-between gap-3 rounded-2xl border border-dashed border-border bg-card/50 p-4">
           <div className="flex items-center gap-3">
             <div className="grid h-11 w-11 place-items-center rounded-xl bg-secondary text-muted-foreground">

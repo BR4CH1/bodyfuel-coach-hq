@@ -48,18 +48,42 @@ Punkten; Original wird `status='reversed'` gesetzt. Nichts wird hart gelöscht
 
 ## Phasen
 
-### Phase 1 — Schema + Engine-Kern (DIESER TURN)
+### Phase 1 — Schema + Engine-Kern ✅
 
-- Migration:
-  - Tabelle `bulls_ranking_events` inkl. Indizes + Idempotenz-Constraints
-  - Function `award_bulls_points(...)` (security definer, idempotent)
-  - Function `reverse_bulls_points_by_source(source_type, source_id)`
-  - Function `recompute_bulls_streak(user_id)` (Meilensteine 3/7/14/30)
-  - Function `award_bulls_test_improvements(session_id)` (Regel #10 mit 30-Pkt-Cap)
-  - Function `get_bulls_ranking(org_id, since, until, scope_team?, scope_position?)` RPC
-  - Function `get_bulls_score_breakdown(user_id, since, until)` RPC
-  - RLS + GRANTs
-  - `higher_is_better` Spalte an `performance_test_definitions` (falls fehlt)
+- Tabelle `bulls_ranking_events` + Indizes + Idempotenz-Constraints
+- Functions: `award_bulls_points`, `reverse_bulls_points_by_source`,
+  `recompute_bulls_streak`, `award_bulls_test_improvements`,
+  `get_bulls_ranking`, `get_bulls_score_breakdown`
+- RLS + GRANTs
+- Test-Improvement-Fix: nutzt `performance_test_sessions.test_date`
+
+### Phase 2 — Aktivitäts-Hooks + Server-Fns ✅
+
+- `is_rehab` Spalte an `athlete_training_session` ergänzt
+- Trigger:
+  - `athlete_checkins` INSERT → +2 check_in
+  - `athlete_training_session` UPDATE→completed → +12/10/8/4 nach Kategorie
+    (Uncompletion reversed automatisch)
+  - `organization_tasks` UPDATE→completed → +2 tasks (Cap 6/Tag)
+  - `performance_test_attempts` INSERT → +20 + PB-Bonus
+  - `organization_challenge_point_events` INSERT → 1:1 Mirror in Bulls-Ledger
+- `recompute_bulls_nutrition_day(user, org, day)`: +5 tracked / +3 Ziel
+  erreicht (idempotent, reversible). Aufruf-Pfad in Nutrition-UI wird beim
+  nächsten Food-Entry-Save hinzugefügt.
+- Server-Fns in `src/lib/organizations/bulls-ranking.functions.ts`:
+  `getBullsRanking`, `getBullsMyScore`, `getBullsMyHistory`,
+  `listBullsTeams`, `adjustBullsPointsManual` (Admin only)
+
+### Phase 3 — UI ✅
+
+- Route `src/routes/bulls.ranking.tsx`:
+  - Timeframe-Filter (Woche/letzte Woche/Monat/letzter Monat/Saison/Gesamt)
+  - Team-Dropdown + Positions-Freitext
+  - Mein Score inkl. Kategorien-Aufschlüsselung + Streak-Badge
+  - Team-Ranking (Top-Liste)
+  - Punkte-Historie (letzte 40)
+- Community-Hub bekommt zusätzliche „Bulls Rangliste"-Kachel für Bulls-User.
+
 
 ### Phase 2 — Aktivitäts-Hooks + Server-Fns
 
