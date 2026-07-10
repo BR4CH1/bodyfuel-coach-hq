@@ -58,11 +58,13 @@ export const ALL_PERFORMANCE_DAY_TYPES: PerformanceDayTypeKey[] = [
 
 export type DayTypeSource =
   | "manual_override"
+  | "load_management"
   | "structural_double_session"
   | "structural_game_day"
   | "structural_football_training"
   | "structural_strength"
   | "default_rest";
+
 
 /** Raw signals collected from the DB — normalized and boolean where possible. */
 export interface DayTypeResolverSignals {
@@ -76,6 +78,11 @@ export interface DayTypeResolverSignals {
   hasStrengthSession: boolean;
   /** True if an individual athlete training entry applies (counts as a session). */
   hasIndividualTrainingSession: boolean;
+  /**
+   * Coach-set Belastungsstufe (0..5) für diesen Tag aus `organization_load_days`.
+   * Nur gesetzt, wenn Modul `load_management` aktiv ist und ein Eintrag existiert.
+   */
+  loadLevel?: number | null;
 }
 
 export interface DayTypeResolution {
@@ -84,6 +91,7 @@ export interface DayTypeResolution {
   flags: string[];
   signals: DayTypeResolverSignals;
 }
+
 
 /**
  * Normalize a raw `day_type_overrides.kind` value.
@@ -135,6 +143,26 @@ export function resolvePerformanceDayTypeFromSignals(
       signals,
     };
   }
+
+  // 1b) Belastungssteuerung: Coach hat für diesen Tag eine Belastungsstufe
+  //     gesetzt. Diese schlägt strukturelle Signale (Wochenplan, Weekday-
+  //     Schedule), weil die Stufe die tagesaktuelle Coach-Absicht abbildet.
+  //     Manuelle Per-User-Overrides bleiben höher priorisiert (siehe 1).
+  if (signals.loadLevel !== null && signals.loadLevel !== undefined) {
+    const lvl = Math.max(0, Math.min(5, Math.round(signals.loadLevel)));
+    let mapped: PerformanceDayTypeKey;
+    if (lvl >= 5) mapped = "game_day";
+    else if (lvl >= 3) mapped = "football_training";
+    else if (lvl >= 1) mapped = "strength";
+    else mapped = "rest";
+    return {
+      dayType: mapped,
+      source: "load_management",
+      flags,
+      signals,
+    };
+  }
+
 
   // Structural detection.
   const sessionCount =

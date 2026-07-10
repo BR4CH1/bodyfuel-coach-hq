@@ -89,19 +89,39 @@ export async function collectPerformanceDayTypeSignals(
     .eq("organization_id", organizationId)
     .eq("active", true);
 
+  // 6) Belastungssteuerung: Coach-gesetzte Belastungsstufe für diesen Tag.
+  //     Nur aktiv, wenn Modul `load_management` in der Organisation aktiv ist.
+  //     Team-spezifischer Eintrag hat Vorrang vor orgweitem Eintrag.
+  const loadModulePromise = supabase
+    .from("organization_features")
+    .select("enabled")
+    .eq("organization_id", organizationId)
+    .eq("feature", "load_management")
+    .maybeSingle();
+  const loadDaysPromise = supabase
+    .from("organization_load_days")
+    .select("team_id, load_level")
+    .eq("organization_id", organizationId)
+    .eq("date", date);
+
   const [
     manualOverrideRes,
     gameEventRes,
     teamMembershipsRes,
     athleteTrainingRes,
     athleticAssignmentsRes,
+    loadModuleRes,
+    loadDaysRes,
   ] = await Promise.all([
     manualOverridePromise,
     gameEventPromise,
     teamMembershipsPromise,
     athleteTrainingPromise,
     athleticAssignmentsPromise,
+    loadModulePromise,
+    loadDaysPromise,
   ]);
+
 
   const manualOverrideKind: string | null =
     (manualOverrideRes.data as { kind?: string } | null)?.kind ?? null;
@@ -204,14 +224,38 @@ export async function collectPerformanceDayTypeSignals(
     }
   }
 
+  // Belastungssteuerung: nur berücksichtigen, wenn Modul aktiv ist.
+  let loadLevel: number | null = null;
+  const loadEnabled =
+    (loadModuleRes.data as { enabled?: boolean } | null)?.enabled === true;
+  if (loadEnabled) {
+    const loadRows = (loadDaysRes.data ?? []) as Array<{
+      team_id: string | null;
+      load_level: number | null;
+    }>;
+    if (loadRows.length > 0) {
+      const teamRow = loadRows.find(
+        (r) => r.team_id !== null && teamIds.includes(r.team_id as string),
+      );
+      const orgRow = loadRows.find((r) => r.team_id === null);
+      const picked = teamRow ?? orgRow ?? null;
+      loadLevel =
+        picked && typeof picked.load_level === "number"
+          ? picked.load_level
+          : null;
+    }
+  }
+
   return {
     manualOverrideKind,
     hasGameEvent,
     hasFootballTrainingSession,
     hasStrengthSession,
     hasIndividualTrainingSession,
+    loadLevel,
   };
 }
+
 
 /**
  * Resolve the final Performance Day Type for (organization_id, user_id, date).
