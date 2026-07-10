@@ -76,6 +76,7 @@ export const upsertLoadDay = createServerFn({ method: "POST" })
       : existingQ.is("team_id", null);
     const { data: existing } = await existingQ.maybeSingle();
 
+    let resultId: string;
     if (existing?.id) {
       const { error } = await context.supabase
         .from("organization_load_days")
@@ -86,7 +87,7 @@ export const upsertLoadDay = createServerFn({ method: "POST" })
         })
         .eq("id", existing.id);
       if (error) throw new Error(error.message);
-      return { ok: true, id: existing.id };
+      resultId = existing.id;
     } else {
       const { data: inserted, error } = await context.supabase
         .from("organization_load_days")
@@ -94,8 +95,30 @@ export const upsertLoadDay = createServerFn({ method: "POST" })
         .select("id")
         .single();
       if (error) throw new Error(error.message);
-      return { ok: true, id: (inserted as { id: string }).id };
+      resultId = (inserted as { id: string }).id;
     }
+
+    // Fire-and-forget: Ernährungsplan-Recalc für alle betroffenen Athleten.
+    try {
+      const { runNutritionRecalc } = await import("./nutrition-plan-recalc-core.server");
+      const reason =
+        data.load_level >= 4
+          ? "intensity_increase"
+          : data.load_level <= 1
+            ? "recovery_context"
+            : "intensity_decrease";
+      await runNutritionRecalc(context.supabase, {
+        callerId: context.userId,
+        orgId: data.orgId,
+        teamId: data.teamId ?? null,
+        dates: [data.date],
+        reason,
+      });
+    } catch (e) {
+      // Recalc-Fehler dürfen die Load-Änderung nicht blockieren.
+      console.error("[upsertLoadDay] recalc failed:", e);
+    }
+    return { ok: true, id: resultId };
   });
 
 export const deleteLoadDay = createServerFn({ method: "POST" })
