@@ -125,11 +125,32 @@ export const deleteLoadDay = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: { id: string }) => data)
   .handler(async ({ data, context }) => {
+    // Row-Info vor dem Löschen einlesen, damit wir gezielt recalcen können.
+    const { data: existing } = await context.supabase
+      .from("organization_load_days")
+      .select("organization_id, team_id, date")
+      .eq("id", data.id)
+      .maybeSingle();
     const { error } = await context.supabase
       .from("organization_load_days")
       .delete()
       .eq("id", data.id);
     if (error) throw new Error(error.message);
+
+    if (existing) {
+      try {
+        const { runNutritionRecalc } = await import("./nutrition-plan-recalc-core.server");
+        await runNutritionRecalc(context.supabase, {
+          callerId: context.userId,
+          orgId: (existing as { organization_id: string }).organization_id,
+          teamId: (existing as { team_id: string | null }).team_id,
+          dates: [(existing as { date: string }).date],
+          reason: "rest_context",
+        });
+      } catch (e) {
+        console.error("[deleteLoadDay] recalc failed:", e);
+      }
+    }
     return { ok: true };
   });
 
