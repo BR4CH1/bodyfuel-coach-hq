@@ -76,6 +76,11 @@ export interface DayTypeResolverSignals {
   hasStrengthSession: boolean;
   /** True if an individual athlete training entry applies (counts as a session). */
   hasIndividualTrainingSession: boolean;
+  /**
+   * Coach-set Belastungsstufe (0..5) für diesen Tag aus `organization_load_days`.
+   * Nur gesetzt, wenn Modul `load_management` aktiv ist und ein Eintrag existiert.
+   */
+  loadLevel?: number | null;
 }
 
 export interface DayTypeResolution {
@@ -84,6 +89,7 @@ export interface DayTypeResolution {
   flags: string[];
   signals: DayTypeResolverSignals;
 }
+
 
 /**
  * Normalize a raw `day_type_overrides.kind` value.
