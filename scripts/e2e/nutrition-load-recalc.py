@@ -114,11 +114,16 @@ async def main():
             except Exception:
                 pass
         await page.wait_for_timeout(1500)
+        try:
+            await page.get_by_text("Automatische Anpassungen").first.scroll_into_view_if_needed(timeout=8000)
+        except Exception:
+            pass
+        await page.wait_for_timeout(1500)
         await page.screenshot(path=str(SHOTS / "3_athlete_nutrition.png"))
 
         page_text = await page.locator("body").inner_text()
         ok_history = ("Automatische Anpassungen" in page_text) and (
-            "höhere Belastung" in page_text or "Load" in page_text
+            "höhere Belastung" in page_text
         )
         ok_banner_text = (
             "höhere Belastung" in page_text or "erhöht" in page_text.lower()
