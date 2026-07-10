@@ -815,4 +815,59 @@ export const createOrgTeam = createServerFn({ method: "POST" })
   });
 
 
+// =============================================================================
+// ORGANISATIONS-MODULE (Feature Flags)
+// =============================================================================
+//
+// Der Modul-Katalog lebt in `src/lib/organizations/modules.ts`. Diese Server-
+// funktionen sind der reine DB-Zugang. Autorisierung erfolgt über die
+// RLS-Policy `org features manage admin` (Platform-Owner ODER Vereins-Admin).
+
+/** Alle bekannten Feature-Zeilen der Organisation. */
+export const listOrganizationFeatures = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { orgId: string }) => data)
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase
+      .from("organization_features")
+      .select("feature, enabled")
+      .eq("organization_id", data.orgId);
+    if (error) throw new Error(error.message);
+    return (rows ?? []) as { feature: string; enabled: boolean }[];
+  });
+
+/** Setzt ein oder mehrere Feature-Flags gleichzeitig (Modul-Aliase). */
+export const setOrganizationFeature = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (data: { orgId: string; features: string[]; enabled: boolean }) => data,
+  )
+  .handler(async ({ data, context }) => {
+    if (!data.features?.length) return { ok: true };
+    // Bulls-Guard: Coesfeld Bulls dürfen funktional NICHT verändert werden.
+    const { data: org } = await context.supabase
+      .from("organizations")
+      .select("slug")
+      .eq("id", data.orgId)
+      .maybeSingle();
+    if ((org as any)?.slug?.toLowerCase() === "bulls") {
+      throw new Error(
+        "Coesfeld Bulls dürfen aktuell nicht über die Modulkonsole geändert werden.",
+      );
+    }
+
+    const rows = data.features.map((f) => ({
+      organization_id: data.orgId,
+      feature: f,
+      enabled: data.enabled,
+    }));
+    const { error } = await context.supabase
+      .from("organization_features")
+      .upsert(rows, { onConflict: "organization_id,feature" });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+
+
 
