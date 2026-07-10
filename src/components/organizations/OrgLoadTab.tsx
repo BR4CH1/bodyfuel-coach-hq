@@ -120,6 +120,9 @@ export function OrgLoadTab({
 
   const [smartOpen, setSmartOpen] = useState(false);
   const suggestFn = useServerFn(suggestLoadWeek);
+  const backfillFn = useServerFn(backfillNutritionRecalcAll);
+  const [backfilling, setBackfilling] = useState(false);
+  const [backfillMsg, setBackfillMsg] = useState<string | null>(null);
   const [suggestion, setSuggestion] = useState<LoadSuggestion | null>(null);
   const [suggesting, setSuggesting] = useState(false);
   const [applying, setApplying] = useState(false);
