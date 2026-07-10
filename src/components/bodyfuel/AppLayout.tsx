@@ -25,6 +25,7 @@ import {
   Settings,
 } from "lucide-react";
 import { getMyUnreadCount, getCoachInbox } from "@/lib/coach-messages.functions";
+import { getIsPlatformOwner } from "@/lib/organizations/organizations.functions";
 import { useSession } from "@/lib/bodyfuel/session";
 import { useEntitlements } from "@/lib/bodyfuel/entitlements";
 import { Logo } from "./Logo";
