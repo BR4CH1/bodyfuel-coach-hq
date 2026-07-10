@@ -78,7 +78,7 @@ export function RemoveFromTeamSection({
             </div>
             <p className="text-sm text-muted-foreground">
               Möchtest du <span className="font-semibold text-white">{displayName}</span>{" "}
-              wirklich aus dem Bulls Team entfernen? Das Profil im BodyFuel-System bleibt
+              wirklich aus dem Team entfernen? Das Profil im BodyFuel-System bleibt
               erhalten.
             </p>
             <div className="mt-5 flex justify-end gap-2">
