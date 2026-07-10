@@ -142,7 +142,7 @@ async function classifyAndCollectMeals(
   const { data: plans } = await supabase
     .from("nutrition_plans")
     .select("id")
-    .eq("user_id", userId)
+    .eq("client_id", userId)
     .eq("status", "active")
     .order("created_at", { ascending: false })
     .limit(1);
