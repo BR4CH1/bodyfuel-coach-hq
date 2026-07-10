@@ -220,7 +220,7 @@ export const adjustBullsPointsManual = createServerFn({ method: "POST" })
       .insert({
         user_id: data.userId,
         organization_id: BULLS_ORG_ID,
-        category: data.category,
+        category: data.category as any,
         event_kind: "manual_adjustment",
         points: data.points,
         event_date: data.eventDate,
