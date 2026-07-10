@@ -388,8 +388,8 @@ export const completeOrganizationOnboardingV2 = createServerFn({ method: "POST" 
   .inputValidator(
     (d: {
       organization_id: string;
-      team_id: string;
-      primary_position: string;
+      team_id?: string | null;
+      primary_position?: string | null;
       secondary_position?: string | null;
       jersey_number?: number | null;
       gym_access?: string | null;
@@ -419,6 +419,7 @@ export const completeOrganizationOnboardingV2 = createServerFn({ method: "POST" 
         | null;
     }) => d,
   )
+
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
@@ -446,22 +447,27 @@ export const completeOrganizationOnboardingV2 = createServerFn({ method: "POST" 
       if (bmErr) throw new Error(bmErr.message);
     }
 
-    const { error: tmErr } = await supabase.from("team_memberships").upsert(
-      {
-        user_id: userId,
-        team_id: data.team_id,
-        position: data.primary_position || null,
-        secondary_position: data.secondary_position || null,
-        jersey_number: data.jersey_number ?? null,
-        gym_access: data.gym_access || null,
-        available_training_days: data.available_training_days ?? null,
-        limitations: data.limitations || null,
-        personal_goal: data.personal_goal || null,
-        status: "active",
-      },
-      { onConflict: "user_id,team_id" },
-    );
-    if (tmErr) throw new Error(tmErr.message);
+    // Team-Membership + Position sind bei Fitnessstudios optional — wenn kein
+    // team_id übergeben wurde, überspringen wir den Upsert komplett.
+    if (data.team_id) {
+      const { error: tmErr } = await supabase.from("team_memberships").upsert(
+        {
+          user_id: userId,
+          team_id: data.team_id,
+          position: data.primary_position || null,
+          secondary_position: data.secondary_position || null,
+          jersey_number: data.jersey_number ?? null,
+          gym_access: data.gym_access || null,
+          available_training_days: data.available_training_days ?? null,
+          limitations: data.limitations || null,
+          personal_goal: data.personal_goal || null,
+          status: "active",
+        },
+        { onConflict: "user_id,team_id" },
+      );
+      if (tmErr) throw new Error(tmErr.message);
+    }
+
     const { error } = await supabase
       .from("organization_memberships")
       .update({ onboarding_completed: true })

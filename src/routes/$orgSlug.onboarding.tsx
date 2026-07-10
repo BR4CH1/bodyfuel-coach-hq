@@ -282,14 +282,20 @@ function AthleteOnboarding({ ctx }: { ctx: NonNullable<Awaited<ReturnType<typeof
     };
   }, [supabaseUser?.id]);
 
+  const isGym = (ctx.organization as { organization_type?: string }).organization_type === "fitness_studio";
+
   const save = useMutation({
     mutationFn: async () => {
       if (!displayName.trim()) throw new Error("Bitte Namen angeben.");
       if (!birthdate) throw new Error("Bitte Geburtsdatum angeben.");
       if (!heightCm || Number(heightCm) < 100) throw new Error("Bitte Größe in cm angeben.");
       if (!weightKg || Number(weightKg) < 30) throw new Error("Bitte aktuelles Gewicht in kg angeben.");
-      if (!teamId) throw new Error("Bitte Team auswählen.");
-      if (!primary) throw new Error("Bitte primäre Position angeben.");
+      // Team/Position sind nur bei Sportvereinen Pflicht. Fitnessstudios
+      // brauchen keine Mannschaft und keine Spielerposition.
+      if (!isGym) {
+        if (!teamId) throw new Error("Bitte Team auswählen.");
+        if (!primary) throw new Error("Bitte primäre Position angeben.");
+      }
       if (!energySex) throw new Error("Bitte Angabe zum biologischen Geschlecht für die Energieberechnung.");
       if (!baselineActivity) throw new Error("Bitte Alltagsaktivität angeben.");
       if (!nutritionGoal) throw new Error("Bitte Ernährungsziel angeben.");
@@ -302,14 +308,15 @@ function AthleteOnboarding({ ctx }: { ctx: NonNullable<Awaited<ReturnType<typeof
       await complete({
         data: {
           organization_id: ctx.organization.id,
-          team_id: teamId,
-          primary_position: primary,
-          secondary_position: secondary || null,
-          jersey_number: jersey ? Number(jersey) : null,
+          team_id: isGym ? (teamId || null) : teamId,
+          primary_position: isGym ? null : primary,
+          secondary_position: isGym ? null : (secondary || null),
+          jersey_number: isGym ? null : (jersey ? Number(jersey) : null),
           gym_access: gym || null,
           available_training_days: days.length ? days : null,
           limitations: limitations || null,
           personal_goal: goal || null,
+
           display_name: displayName.trim(),
           birthdate: birthdate,
           height_cm: Number(heightCm),
@@ -382,32 +389,57 @@ function AthleteOnboarding({ ctx }: { ctx: NonNullable<Awaited<ReturnType<typeof
           </div>
         </div>
 
-        <SectionHeader className="mt-6">Team & Position</SectionHeader>
-        <div className="grid gap-4">
-          {ctx.teams.length > 0 && (
-            <Field label="Team *">
-              <Select value={teamId} onValueChange={setTeamId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Team auswählen" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ctx.teams.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-          )}
-          <Field label="Primäre Position *">
-            <Input value={primary} onChange={(e) => setPrimary(e.target.value)} placeholder="z.B. Linebacker" />
-          </Field>
-          <Field label="Zweitposition (optional)">
-            <Input value={secondary} onChange={(e) => setSecondary(e.target.value)} />
-          </Field>
-          <Field label="Trikotnummer (optional)">
-            <Input type="number" value={jersey} onChange={(e) => setJersey(e.target.value)} />
-          </Field>
-        </div>
+        {isGym ? (
+          ctx.teams.length > 0 ? (
+            <>
+              <SectionHeader className="mt-6">Gruppe (optional)</SectionHeader>
+              <div className="grid gap-4">
+                <Field label="Gruppe">
+                  <Select value={teamId} onValueChange={setTeamId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Optional — Gruppe auswählen" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ctx.teams.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+              </div>
+            </>
+          ) : null
+        ) : (
+          <>
+            <SectionHeader className="mt-6">Team & Position</SectionHeader>
+            <div className="grid gap-4">
+              {ctx.teams.length > 0 && (
+                <Field label="Team *">
+                  <Select value={teamId} onValueChange={setTeamId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Team auswählen" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ctx.teams.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+              )}
+              <Field label="Primäre Position *">
+                <Input value={primary} onChange={(e) => setPrimary(e.target.value)} placeholder="z.B. Linebacker" />
+              </Field>
+              <Field label="Zweitposition (optional)">
+                <Input value={secondary} onChange={(e) => setSecondary(e.target.value)} />
+              </Field>
+              <Field label="Trikotnummer (optional)">
+                <Input type="number" value={jersey} onChange={(e) => setJersey(e.target.value)} />
+              </Field>
+            </div>
+          </>
+        )}
+
 
         <SectionHeader className="mt-6">Training</SectionHeader>
         <div className="grid gap-4">

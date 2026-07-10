@@ -9,6 +9,8 @@ import {
   createPerformanceTeamOrganization,
   type PerformanceTeamCard,
 } from "@/lib/organizations/organizations.functions";
+import { ORG_TYPE_OPTIONS, type OrgType } from "@/lib/organizations/org-type";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -217,6 +219,7 @@ function CreateTeamDialog({
     short_name: "",
     slug: "",
     slugTouched: false,
+    organization_type: "sports_club" as OrgType,
     sport: "Fußball",
     claim: "",
     logo_url: "",
@@ -227,6 +230,7 @@ function CreateTeamDialog({
     background_color: "#0f172a",
     text_color: "#ffffff",
   });
+
 
   const setField = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
@@ -248,6 +252,7 @@ function CreateTeamDialog({
         short_name: "",
         slug: "",
         slugTouched: false,
+        organization_type: "sports_club",
         sport: "Fußball",
         claim: "",
         logo_url: "",
@@ -258,6 +263,7 @@ function CreateTeamDialog({
         background_color: "#0f172a",
         text_color: "#ffffff",
       });
+
     },
     onError: (e: any) => toast.error(e?.message ?? "Erstellen fehlgeschlagen."),
   });
@@ -278,11 +284,35 @@ function CreateTeamDialog({
 
         {step === 1 && (
           <div className="grid gap-3">
-            <Field label="Teamname / Organisation">
+            <Field label="Organisationstyp *">
+              <div className="grid gap-2 sm:grid-cols-2">
+                {ORG_TYPE_OPTIONS.map((o) => {
+                  const active = form.organization_type === o.value;
+                  return (
+                    <button
+                      key={o.value}
+                      type="button"
+                      onClick={() => setField("organization_type", o.value)}
+                      className={`rounded-lg border p-3 text-left transition ${
+                        active
+                          ? "border-primary bg-primary/5"
+                          : "border-border bg-card hover:border-primary/50"
+                      }`}
+                    >
+                      <div className="text-sm font-semibold">{o.label}</div>
+                      <div className="mt-0.5 text-[11px] leading-tight text-muted-foreground">
+                        {o.description}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </Field>
+            <Field label="Organisationsname">
               <Input
                 value={form.name}
                 onChange={(e) => setField("name", e.target.value)}
-                placeholder="Rot-Weiss Essen"
+                placeholder={form.organization_type === "fitness_studio" ? "SGZ-Altenessen" : "Rot-Weiss Essen"}
               />
             </Field>
             <Field label="Kurzname (optional)">
@@ -318,6 +348,7 @@ function CreateTeamDialog({
           </div>
         )}
 
+
         {step === 2 && (
           <div className="grid gap-3">
             <Field label="Logo URL">
@@ -347,25 +378,38 @@ function CreateTeamDialog({
 
         {step === 3 && (
           <div className="grid gap-3">
-            <Field label="Sportart">
-              <Input
-                value={form.sport}
-                onChange={(e) => setField("sport", e.target.value)}
-                placeholder="Fußball, Basketball, Fitness …"
-              />
-            </Field>
+            {form.organization_type === "sports_club" ? (
+              <Field label="Sportart">
+                <Input
+                  value={form.sport}
+                  onChange={(e) => setField("sport", e.target.value)}
+                  placeholder="Fußball, Basketball, American Football …"
+                />
+              </Field>
+            ) : (
+              <div className="rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+                Fitnessstudio-Organisation: keine Sportart nötig. Positionen und
+                Mannschaftszuordnung entfallen automatisch für Mitglieder.
+              </div>
+            )}
             <div className="rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
               <div className="mb-1 font-semibold text-foreground">Zusammenfassung</div>
               {form.name} · <code>/{autoSlug}</code>
-              {form.sport ? ` · ${form.sport}` : ""}
+              {" · "}
+              {form.organization_type === "fitness_studio" ? "Fitnessstudio" : "Sportverein"}
+              {form.organization_type === "sports_club" && form.sport ? ` · ${form.sport}` : ""}
               <div className="mt-2">
                 Nach der Erstellung wirst du direkt in die Team-Verwaltung
-                weitergeleitet. Dort legst du Mannschaften, Coaches und
-                Athleten selbst an.
+                weitergeleitet. Dort legst du{" "}
+                {form.organization_type === "fitness_studio"
+                  ? "optionale Gruppen, Coaches und Mitglieder"
+                  : "Mannschaften, Coaches und Athleten"}{" "}
+                selbst an.
               </div>
             </div>
           </div>
         )}
+
 
         <DialogFooter className="flex justify-between gap-2 sm:justify-between">
           <div>
@@ -394,8 +438,12 @@ function CreateTeamDialog({
                     data: {
                       name: form.name.trim(),
                       slug: autoSlug,
+                      organization_type: form.organization_type,
                       short_name: form.short_name.trim() || null,
-                      sport: form.sport.trim() || null,
+                      sport:
+                        form.organization_type === "fitness_studio"
+                          ? null
+                          : form.sport.trim() || null,
                       claim: form.claim.trim() || null,
                       logo_url: form.logo_url.trim() || null,
                       alt_logo_url: form.alt_logo_url.trim() || null,
@@ -406,6 +454,7 @@ function CreateTeamDialog({
                       text_color: form.text_color || null,
                     },
                   })
+
                 }
               >
                 {create.isPending ? "Erstelle…" : "Team erstellen"}

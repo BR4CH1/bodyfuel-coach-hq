@@ -691,3 +691,49 @@ export const createPerformanceTeamOrganization = createServerFn({ method: "POST"
     return { id: (inserted as any).id as string, slug: (inserted as any).slug as string };
   });
 
+/** Owner-only: löscht eine Performance-Team-Organisation vollständig.
+ *  Bulls-Slug ist hart geblockt. Erfordert exakten Namen als Bestätigung.
+ *  FK-Cascade räumt organisationsbezogene Daten auf; globale profiles /
+ *  auth.users bleiben unangetastet (profiles.organization_id → SET NULL). */
+export const deletePerformanceTeamOrganization = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { organization_id: string; confirm_name: string }) => {
+    const id = String(d.organization_id ?? "").trim();
+    const name = String(d.confirm_name ?? "").trim();
+    if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error("Ungültige Organisations-ID.");
+    if (!name) throw new Error("Bitte den Organisationsnamen zur Bestätigung eingeben.");
+    return { organization_id: id, confirm_name: name };
+  })
+  .handler(async ({ data, context }) => {
+    await assertPlatformOwner(context.supabase, context.userId);
+
+    const { data: org, error: readErr } = await context.supabase
+      .from("organizations")
+      .select("id, name, slug")
+      .eq("id", data.organization_id)
+      .maybeSingle();
+    if (readErr) throw new Error(readErr.message);
+    if (!org) throw new Error("Organisation nicht gefunden.");
+
+    const slug = String((org as any).slug ?? "").toLowerCase();
+    if (slug === "bulls" || slug.includes("bulls")) {
+      throw new Error("Diese Organisation ist geschützt und kann nicht gelöscht werden.");
+    }
+    if (String((org as any).name).trim() !== data.confirm_name.trim()) {
+      throw new Error("Der eingegebene Name stimmt nicht mit dem Organisationsnamen überein.");
+    }
+
+    // Service-Role-Client — FK-Cascade räumt Teams, Memberships, Staff,
+    // Challenges, Posts, Tasks etc. auf. profiles.organization_id → SET NULL,
+    // globale BodyFuel-Accounts bleiben bestehen.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error: delErr } = await supabaseAdmin
+      .from("organizations")
+      .delete()
+      .eq("id", data.organization_id);
+    if (delErr) throw new Error(delErr.message);
+
+    return { ok: true as const, id: data.organization_id, name: (org as any).name as string };
+  });
+
+
