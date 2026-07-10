@@ -3463,6 +3463,47 @@ export type Database = {
           },
         ]
       }
+      organization_load_day_athlete_overrides: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          load_level: number
+          note: string | null
+          organization_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          load_level: number
+          note?: string | null
+          organization_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          load_level?: number
+          note?: string | null
+          organization_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_load_day_athlete_overrides_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_load_days: {
         Row: {
           created_at: string
