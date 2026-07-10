@@ -254,6 +254,14 @@ export function OrgLoadTab({
         )}
       </div>
 
+      {backfillMsg && (
+        <div className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs">
+          {backfillMsg}
+        </div>
+      )}
+
+
+
       {isLoading ? (
         <div className="text-sm text-muted-foreground">Lädt…</div>
       ) : (
