@@ -13,6 +13,7 @@ import {
   type LoadSuggestion,
   type LoadSuggestionDay,
 } from "@/lib/organizations/load-analysis.functions";
+import { OrgMatchdaysSection } from "./OrgMatchdaysSection";
 
 function isoDate(d: Date): string {
   const y = d.getFullYear();
@@ -260,6 +261,15 @@ export function OrgLoadTab({
           })}
         </div>
       )}
+
+      <OrgMatchdaysSection
+        orgId={orgId}
+        teams={teams}
+        canManage={canManage}
+        teamFilterId={teamId}
+      />
+
+
 
       {smartOpen && (
         <SmartSuggestModal

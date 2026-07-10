@@ -52,7 +52,12 @@ export async function collectPerformanceDayTypeSignals(
     .eq("entry_date", date)
     .maybeSingle();
 
-  // 2) Game event on that date (bulls_hub_events).
+  // 2) Game event on that date. Zwei Quellen:
+  //    a) NEUE, organisationsagnostische Source of Truth: `organization_events`
+  //       (event_type='match'). Team-spezifische oder orgweite Events zählen —
+  //       Team-Auflösung erfolgt weiter unten via `team_memberships`.
+  //    b) Legacy `bulls_hub_events` (per-user Onboarding-Kalender). Bleibt
+  //       aus Rückwärtskompatibilität aktiv, aber sekundär.
   const gameEventPromise = supabase
     .from("bulls_hub_events")
     .select("id, kind, occurred_at")
@@ -61,6 +66,14 @@ export async function collectPerformanceDayTypeSignals(
     .gte("occurred_at", `${date}T00:00:00Z`)
     .lte("occurred_at", `${date}T23:59:59Z`)
     .limit(1);
+
+  const orgEventsMatchPromise = supabase
+    .from("organization_events")
+    .select("id, team_id, starts_at")
+    .eq("organization_id", organizationId)
+    .eq("event_type", "match")
+    .gte("starts_at", `${date}T00:00:00Z`)
+    .lte("starts_at", `${date}T23:59:59Z`);
 
   // 3) Team football training session on that weekday (via active team
   //    membership inside this organisation).
@@ -114,6 +127,7 @@ export async function collectPerformanceDayTypeSignals(
   const [
     manualOverrideRes,
     gameEventRes,
+    orgEventsMatchRes,
     teamMembershipsRes,
     athleteTrainingRes,
     athleticAssignmentsRes,
@@ -123,6 +137,7 @@ export async function collectPerformanceDayTypeSignals(
   ] = await Promise.all([
     manualOverridePromise,
     gameEventPromise,
+    orgEventsMatchPromise,
     teamMembershipsPromise,
     athleteTrainingPromise,
     athleticAssignmentsPromise,
@@ -131,12 +146,10 @@ export async function collectPerformanceDayTypeSignals(
     loadOverridePromise,
   ]);
 
-
-
   const manualOverrideKind: string | null =
     (manualOverrideRes.data as { kind?: string } | null)?.kind ?? null;
 
-  const hasGameEvent =
+  const legacyGameEvent =
     !!gameEventRes.data && (gameEventRes.data as unknown[]).length > 0;
 
   // Football training: is there an active team_training_schedule row for
@@ -147,6 +160,16 @@ export async function collectPerformanceDayTypeSignals(
   const positions = (teamMembershipsRes.data ?? [])
     .map((r: { position: string | null }) => r.position)
     .filter((p): p is string => !!p);
+
+  // Match aus organization_events (SoT): entweder team-spezifisch (Team des
+  // Athleten) oder orgweit (team_id = null). U17 bekommt kein U19-Match.
+  const orgEventsMatchRows = (orgEventsMatchRes.data ?? []) as Array<{
+    team_id: string | null;
+  }>;
+  const hasOrgEventMatch = orgEventsMatchRows.some(
+    (m) => m.team_id === null || (m.team_id !== null && teamIds.includes(m.team_id)),
+  );
+  const hasGameEvent = legacyGameEvent || hasOrgEventMatch;
 
   let hasFootballTrainingSession = false;
   if (teamIds.length > 0) {

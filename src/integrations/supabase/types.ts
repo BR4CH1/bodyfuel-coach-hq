@@ -3350,6 +3350,75 @@ export type Database = {
           },
         ]
       }
+      organization_events: {
+        Row: {
+          competition: string | null
+          created_at: string
+          created_by: string | null
+          ends_at: string | null
+          event_type: string
+          id: string
+          location: string | null
+          metadata: Json
+          opponent: string | null
+          organization_id: string
+          source: string
+          starts_at: string
+          team_id: string | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          competition?: string | null
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string | null
+          event_type: string
+          id?: string
+          location?: string | null
+          metadata?: Json
+          opponent?: string | null
+          organization_id: string
+          source?: string
+          starts_at: string
+          team_id?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          competition?: string | null
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string | null
+          event_type?: string
+          id?: string
+          location?: string | null
+          metadata?: Json
+          opponent?: string | null
+          organization_id?: string
+          source?: string
+          starts_at?: string
+          team_id?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_events_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "organization_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_features: {
         Row: {
           config: Json
