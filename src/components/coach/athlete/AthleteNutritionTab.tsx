@@ -4,6 +4,7 @@ import { MacroTargetsCard } from "@/components/bodyfuel/MacroTargetsCard";
 import { NutritionTargetsEditor } from "@/components/bodyfuel/NutritionTargetsEditor";
 import { PlanManagementCard } from "@/components/bodyfuel/PlanManagementCard";
 import { AthletePerformanceNutritionSection } from "./AthletePerformanceNutritionSection";
+import { NutritionAutoAdjustmentsCard } from "./NutritionAutoAdjustmentsCard";
 import { Section, TinyMetric, fmtPct } from "./athlete-tab-shared";
 
 export function AthleteNutritionTab({
@@ -19,6 +20,7 @@ export function AthleteNutritionTab({
   return (
     <div className="space-y-4">
       <AthletePerformanceNutritionSection orgId={orgId} userId={userId} />
+      <NutritionAutoAdjustmentsCard userId={userId} />
       <Section title="Compliance" icon={<Users className="h-4 w-4" />}>
         <div className="grid grid-cols-2 gap-2">
           <TinyMetric label="Aktuelle Woche" value={fmtPct(c.current_week)} />
