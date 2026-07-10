@@ -101,6 +101,23 @@ export function AppLayout({ children }: { children: ReactNode }) {
     },
   });
 
+  // Modul-Flags dieser Organisation für die dynamische Nav.
+  const { data: orgFeatures = [] as { feature: string; enabled: boolean }[] } = useQuery({
+    queryKey: ["sidebar-org-features", orgId],
+    enabled: !!orgId && (isPlatformCoachOrgRoute || !!staffRole),
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("organization_features")
+        .select("feature, enabled")
+        .eq("organization_id", orgId!);
+      return (data ?? []) as { feature: string; enabled: boolean }[];
+    },
+  });
+  const orgFeatureOn = (k: string) =>
+    orgFeatures.some((f) => f.feature === k && f.enabled);
+
+
   const isOwnerFn = useServerFn(getIsPlatformOwner);
   const { data: isPlatformOwner = false } = useQuery({
     queryKey: ["is-platform-owner"],
