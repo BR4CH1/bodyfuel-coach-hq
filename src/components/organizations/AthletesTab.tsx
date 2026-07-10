@@ -1014,9 +1014,6 @@ function InviteForm({
 
   return (
     <div className="space-y-3">
-      <Field label="Team *">
-        <select
-          value={teamId}
       <Field label={`${term.team} *`}>
         <select
           value={teamId}
