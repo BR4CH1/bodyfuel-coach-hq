@@ -72,6 +72,7 @@ import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
 import { Route as BullsWeightRouteImport } from './routes/bulls.weight'
 import { Route as BullsTrainingRouteImport } from './routes/bulls.training'
 import { Route as BullsRecoveryRouteImport } from './routes/bulls.recovery'
+import { Route as BullsRankingRouteImport } from './routes/bulls.ranking'
 import { Route as BullsPhotosRouteImport } from './routes/bulls.photos'
 import { Route as BullsPerformanceRouteImport } from './routes/bulls.performance'
 import { Route as BullsNutritionRouteImport } from './routes/bulls.nutrition'
@@ -459,6 +460,11 @@ const BullsTrainingRoute = BullsTrainingRouteImport.update({
 const BullsRecoveryRoute = BullsRecoveryRouteImport.update({
   id: '/bulls/recovery',
   path: '/bulls/recovery',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BullsRankingRoute = BullsRankingRouteImport.update({
+  id: '/bulls/ranking',
+  path: '/bulls/ranking',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BullsPhotosRoute = BullsPhotosRouteImport.update({
@@ -893,6 +899,7 @@ export interface FileRoutesByFullPath {
   '/bulls/nutrition': typeof BullsNutritionRouteWithChildren
   '/bulls/performance': typeof BullsPerformanceRouteWithChildren
   '/bulls/photos': typeof BullsPhotosRoute
+  '/bulls/ranking': typeof BullsRankingRoute
   '/bulls/recovery': typeof BullsRecoveryRoute
   '/bulls/training': typeof BullsTrainingRoute
   '/bulls/weight': typeof BullsWeightRoute
@@ -1022,6 +1029,7 @@ export interface FileRoutesByTo {
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
   '/bulls/checkin': typeof BullsCheckinRoute
   '/bulls/photos': typeof BullsPhotosRoute
+  '/bulls/ranking': typeof BullsRankingRoute
   '/bulls/recovery': typeof BullsRecoveryRoute
   '/bulls/training': typeof BullsTrainingRoute
   '/bulls/weight': typeof BullsWeightRoute
@@ -1155,6 +1163,7 @@ export interface FileRoutesById {
   '/bulls/nutrition': typeof BullsNutritionRouteWithChildren
   '/bulls/performance': typeof BullsPerformanceRouteWithChildren
   '/bulls/photos': typeof BullsPhotosRoute
+  '/bulls/ranking': typeof BullsRankingRoute
   '/bulls/recovery': typeof BullsRecoveryRoute
   '/bulls/training': typeof BullsTrainingRoute
   '/bulls/weight': typeof BullsWeightRoute
@@ -1293,6 +1302,7 @@ export interface FileRouteTypes {
     | '/bulls/nutrition'
     | '/bulls/performance'
     | '/bulls/photos'
+    | '/bulls/ranking'
     | '/bulls/recovery'
     | '/bulls/training'
     | '/bulls/weight'
@@ -1422,6 +1432,7 @@ export interface FileRouteTypes {
     | '/bulls/benchmarks'
     | '/bulls/checkin'
     | '/bulls/photos'
+    | '/bulls/ranking'
     | '/bulls/recovery'
     | '/bulls/training'
     | '/bulls/weight'
@@ -1554,6 +1565,7 @@ export interface FileRouteTypes {
     | '/bulls/nutrition'
     | '/bulls/performance'
     | '/bulls/photos'
+    | '/bulls/ranking'
     | '/bulls/recovery'
     | '/bulls/training'
     | '/bulls/weight'
@@ -1682,6 +1694,7 @@ export interface RootRouteChildren {
   BullsNutritionRoute: typeof BullsNutritionRouteWithChildren
   BullsPerformanceRoute: typeof BullsPerformanceRouteWithChildren
   BullsPhotosRoute: typeof BullsPhotosRoute
+  BullsRankingRoute: typeof BullsRankingRoute
   BullsRecoveryRoute: typeof BullsRecoveryRoute
   BullsTrainingRoute: typeof BullsTrainingRoute
   BullsWeightRoute: typeof BullsWeightRoute
@@ -2157,6 +2170,13 @@ declare module '@tanstack/react-router' {
       path: '/bulls/recovery'
       fullPath: '/bulls/recovery'
       preLoaderRoute: typeof BullsRecoveryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bulls/ranking': {
+      id: '/bulls/ranking'
+      path: '/bulls/ranking'
+      fullPath: '/bulls/ranking'
+      preLoaderRoute: typeof BullsRankingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/bulls/photos': {
@@ -2946,6 +2966,7 @@ const rootRouteChildren: RootRouteChildren = {
   BullsNutritionRoute: BullsNutritionRouteWithChildren,
   BullsPerformanceRoute: BullsPerformanceRouteWithChildren,
   BullsPhotosRoute: BullsPhotosRoute,
+  BullsRankingRoute: BullsRankingRoute,
   BullsRecoveryRoute: BullsRecoveryRoute,
   BullsTrainingRoute: BullsTrainingRoute,
   BullsWeightRoute: BullsWeightRoute,
