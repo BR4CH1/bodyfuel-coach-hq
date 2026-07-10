@@ -355,8 +355,9 @@ function AthleteOnboarding({ ctx }: { ctx: NonNullable<Awaited<ReturnType<typeof
       });
       return { ok: true };
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success(`Willkommen bei ${org.name}!`);
+      await qc.invalidateQueries({ queryKey: ["entitlements"] });
       navigate({ to: "/$orgSlug/home", params: { orgSlug: org.slug }, replace: true });
     },
     onError: (e: any) => toast.error(e?.message ?? "Fehler beim Speichern"),
