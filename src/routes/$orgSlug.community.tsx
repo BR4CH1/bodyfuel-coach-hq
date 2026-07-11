@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { ChevronLeft, Users, MessageSquarePlus, Megaphone, Trophy, Dumbbell, Star, ImagePlus, X } from "lucide-react";
+import { ChevronLeft, Users, MessageSquarePlus, Megaphone, Trophy, Dumbbell, Star, ImagePlus, X, Flame, Crown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 import { useSession } from "@/lib/bodyfuel/session";
@@ -10,10 +10,32 @@ import { getOrgHomeData } from "@/lib/organizations/athlete.functions";
 import {
   listOrgCommunityPosts,
   createOrgCommunityPost,
-  getOrgChallengeRanking,
 } from "@/lib/organizations/operating-loop.functions";
+import {
+  getOrgMonthlyRanking,
+  getOrgMyScore,
+  getOrgHallOfFame,
+} from "@/lib/organizations/ranking.functions";
 import { OrgAthleteLayout } from "@/components/organizations/OrgAthleteLayout";
 import { Route as OrgLayoutRoute } from "./$orgSlug";
+
+const CATEGORY_LABEL: Record<string, string> = {
+  training: "Training",
+  team_training: "Teamtraining",
+  nutrition: "Ernährung",
+  check_in: "Check-in",
+  tasks: "Aufgaben",
+  recovery: "Recovery",
+  rehab: "Rehab",
+  development: "Entwicklung",
+  challenge: "Challenge",
+  streak: "Streak",
+};
+
+const MONTH_LABEL_DE = [
+  "Januar", "Februar", "März", "April", "Mai", "Juni",
+  "Juli", "August", "September", "Oktober", "November", "Dezember",
+];
 
 type TabKey = "feed" | "ranking";
 
