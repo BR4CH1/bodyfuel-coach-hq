@@ -206,6 +206,16 @@ export function CoachOrgDetail() {
           <h1 className="mt-1 truncate font-display text-2xl font-bold text-white sm:text-3xl">
             Coach Dashboard
           </h1>
+          <div className="mt-2">
+            <OrgLicenseChip
+              plan={org.license_plan}
+              status={org.license_status}
+              startedAt={org.license_started_at}
+              expiresAt={org.license_expires_at}
+              maxCustomers={org.max_customers}
+              maxCoaches={org.max_coaches}
+            />
+          </div>
         </div>
         <div className="shrink-0">
           {org.logo_url ? (
