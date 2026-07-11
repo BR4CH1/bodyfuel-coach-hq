@@ -459,6 +459,55 @@ export function CoachOrgDetail() {
           />
         )}
 
+        {tab === "naming" && (
+          <OrgTerminologyTab
+            orgId={orgId}
+            orgType={org.organization_type}
+            currentTerminology={(org.terminology as any) ?? null}
+            canManage={
+              caller?.experience === "org_admin" || caller?.is_bodyfuel_coach === true
+            }
+          />
+        )}
+
+        {tab === "brand" && (
+          <OrgBrandingTab
+            orgId={orgId}
+            org={{
+              primary_color: org.primary_color ?? null,
+              secondary_color: org.secondary_color ?? null,
+              accent_color: org.accent_color ?? null,
+              background_color: org.background_color ?? null,
+              text_color: org.text_color ?? null,
+              logo_url: org.logo_url ?? null,
+              alt_logo_url: org.alt_logo_url ?? null,
+              claim: org.claim ?? null,
+              short_name: org.short_name ?? null,
+              branding_mode: org.branding_mode ?? "bodyfuel",
+              branding_extra: (org.branding_extra as any) ?? {},
+            }}
+            canManage={
+              caller?.experience === "org_admin" || caller?.is_bodyfuel_coach === true
+            }
+          />
+        )}
+
+        {tab === "coaches" && showCoachAssignments && (
+          <CoachAssignmentsTab
+            orgId={orgId}
+            canManage={
+              caller?.experience === "org_admin" || caller?.is_bodyfuel_coach === true
+            }
+            terminology={{
+              coach: term.coach,
+              coaches: term.coaches,
+              player: term.player,
+              players: term.players,
+            }}
+          />
+        )}
+
+
 
       </div>
       {joinLinkTeam && (
