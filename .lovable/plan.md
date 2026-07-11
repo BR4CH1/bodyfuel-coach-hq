@@ -1,127 +1,142 @@
-# Bulls Ranglisten-Punkte-Engine — Phasenplan
+## Ziel
 
-**Scope**: NUR Coesfeld Bulls (`organization_id = b86f49ab-20b7-42ca-bba4-f65ca8757c4c`).
-Keine globale BodyFuel-Engine. Kein Umbau an `get_ranking()`, `performance_points`,
-`daily_checks`. `athlete_checkins` bleibt Legacy-Datenquelle für Load-Steuerung.
+BodyFuel Performance zu einer echten modularen Multi-Tenant-Plattform ausbauen — auf Basis der bereits vorhandenen `organizations` / `organization_features` / `staff_assignments` / `organization_memberships` Struktur. Keine Parallelsysteme. Bulls Hub bleibt unangetastet.
 
-## Regeln (Referenz)
+Weil die Anforderung sehr groß ist, schlage ich eine **schrittweise Umsetzung in 6 Phasen** vor. Jede Phase ist eigenständig deploybar. Wir starten mit dem Fundament (Phase 1+2). Weitere Phasen jeweils erst nach deinem OK.
 
-| # | Kategorie       | Ereignis                                    | Punkte | Limit                     |
-|---|-----------------|---------------------------------------------|--------|---------------------------|
-| 1 | check_in        | Daily Check-in vollständig                  | +2     | 1×/Tag                    |
-| 2 | team_training   | Bulls-Teameinheit abgeschlossen             | +12    | 1×/Session                |
-| 3 | training        | Individuelles Training abgeschlossen        | +10    | 1×/Session                |
-| 4 | recovery        | Geplante Mobility/Recovery abgeschlossen    | +4     | 1×/Tag                    |
-| 5 | rehab           | Rehab-Einheit abgeschlossen                 | +8     | 1×/Session                |
-| 6 | nutrition       | Ernährung vollständig getrackt              | +5     | 1×/Tag                    |
-| 7 | nutrition       | Ernährungsziel erreicht (±10% kcal, ≥90% P) | +3     | 1×/Tag                    |
-| 8 | tasks           | Coach-Aufgabe abgeschlossen                 | +2     | max 3 (=6 Pkt)/Tag        |
-| 9 | development     | Performance-Test vollständig abgeschlossen  | +20    | 1×/Test-Session           |
-|10 | development     | PB pro Test-Metrik verbessert               | +10    | max 30 Pkt/Test-Session   |
-|11 | streak          | Streak-Meilenstein 3/7/14/30 Tage           | +5/15/30/75 | 1×/Meilenstein/Streak |
-|12 | challenge       | Bulls Challenge abgeschlossen               | 25/50/75/100 | 1×/Challenge/Spieler  |
+---
 
-**Nicht-Ranglisten**: Readiness, Schlaf, Pain, Stress, Muskelkater, Coach-Bewertung,
-Spielstatistiken, Starter-Status. Bleiben für Load-Management sichtbar, geben aber
-NIEMALS Ranglisten-Punkte.
+## Aktueller Stand (Analyse)
 
-## Architektur
+Was bereits vorhanden ist und wiederverwendet wird:
 
-Ein zentrales Ledger `bulls_ranking_events`:
+- `organizations` (18 Spalten, inkl. `organization_type`, Branding-Felder, Slug)
+- `organization_features` — die zentrale Modul-Toggle-Tabelle (`feature`, `enabled`)
+- `ORG_MODULES` Katalog in `src/lib/organizations/modules.ts` — Single Source of Truth für Modul-Toggles
+- `orgTerminology()` in `src/lib/organizations/org-type.ts` — erste dynamische Begriffe (Sportverein vs. Fitnessstudio)
+- `staff_assignments` / `organization_memberships` / `user_roles` — bereits mandantenfähig, RLS via `has_role` und `coach_can_access_user`
+- `OrgAthleteLayout` mit Feature-Gating pro Nav-Item
+- Bulls-spezifisches Theme wird bereits über `.bulls-theme` Klasse gemappt (nicht hardcoded)
 
-```
-id, user_id, organization_id (=Bulls-ID), team_id?, category,
-event_kind, points, event_date (activity_date), source_type, source_id,
-status ('active'|'reversed'), reason, awarded_by, metadata jsonb,
-created_at, updated_at
-```
+Was fehlt für Coaches / Studios / Unternehmen:
 
-Idempotenz-Schlüssel: `UNIQUE (user_id, event_kind, source_type, source_id)`
-(bei `source_id IS NULL` → Tages-Idempotenz via zusätzlichem
-`UNIQUE (user_id, event_kind, event_date) WHERE source_id IS NULL`).
+- `organization_type` kennt nur `sports_club` und `fitness_studio` — keine `solo_coach`, `coaching_company`, `company`, `custom`
+- Modul-Katalog deckt nicht alle geforderten Module ab (Aufgaben, Coach-Chat, Körperdaten, Fortschrittsmessung, Dokumente, Onboarding, Profilbilder, Statistiken, Regeneration, Strength Tests, Rezepte, Einkaufsliste, Positionen, Spieltage, Trainingskalender als eigenständige Toggles)
+- Keine Standard-Preset-Logik pro Organisationstyp
+- Terminologie nur zwischen 2 Typen — nicht überschreibbar
+- Keine Lizenz-/Plan-Felder (Kundenzahl-Limit, Coach-Zahl-Limit, Status, Trial)
+- Kein Wizard „Neue Organisation erstellen“ mit Typ-Auswahl
+- Coach-Kunden-Zuweisung existiert nur über `customer_packages` (BodyFuel-Coaching-spezifisch), nicht generalisiert pro Org
 
-Storno = neuer Row mit gleichem Bezug UND `status='reversed'` UND negativen
-Punkten; Original wird `status='reversed'` gesetzt. Nichts wird hart gelöscht
-(Anforderung #21).
+---
 
-`awarded_by` NULL = System, sonst UUID der manuellen Anpassung (Anforderung #23).
+## Phase 1 — Fundament (dieser Schritt, wenn du zustimmst)
 
-## Phasen
+**Ziel:** Datenschicht + zentrale Konfiguration erweitern, ohne UI-Bruch.
 
-### Phase 1 — Schema + Engine-Kern ✅
+### 1.1 Migration `organizations`
 
-- Tabelle `bulls_ranking_events` + Indizes + Idempotenz-Constraints
-- Functions: `award_bulls_points`, `reverse_bulls_points_by_source`,
-  `recompute_bulls_streak`, `award_bulls_test_improvements`,
-  `get_bulls_ranking`, `get_bulls_score_breakdown`
-- RLS + GRANTs
-- Test-Improvement-Fix: nutzt `performance_test_sessions.test_date`
+Neue Spalten (alle nullable / mit Default, damit bestehende Bulls-Zeile unberührt bleibt):
 
-### Phase 2 — Aktivitäts-Hooks + Server-Fns ✅
+- `terminology jsonb` — überschreibbare Begriffe pro Org (`{ player: "Kunde", team: "Gruppe", ... }`)
+- `branding_mode text` — `bodyfuel` | `powered_by` | `white_label` (default `bodyfuel`)
+- `license_plan text` — `trial` | `starter` | `pro` | `unlimited` | `custom` (default `trial`)
+- `license_status text` — `trial` | `active` | `payment_due` | `suspended` | `cancelled` (default `trial`)
+- `license_started_at timestamptz`, `license_expires_at timestamptz`
+- `max_customers int`, `max_coaches int` (nullable = unbegrenzt)
 
-- `is_rehab` Spalte an `athlete_training_session` ergänzt
-- Trigger:
-  - `athlete_checkins` INSERT → +2 check_in
-  - `athlete_training_session` UPDATE→completed → +12/10/8/4 nach Kategorie
-    (Uncompletion reversed automatisch)
-  - `organization_tasks` UPDATE→completed → +2 tasks (Cap 6/Tag)
-  - `performance_test_attempts` INSERT → +20 + PB-Bonus
-  - `organization_challenge_point_events` INSERT → 1:1 Mirror in Bulls-Ledger
-- `recompute_bulls_nutrition_day(user, org, day)`: +5 tracked / +3 Ziel
-  erreicht (idempotent, reversible). Aufruf-Pfad in Nutrition-UI wird beim
-  nächsten Food-Entry-Save hinzugefügt.
-- Server-Fns in `src/lib/organizations/bulls-ranking.functions.ts`:
-  `getBullsRanking`, `getBullsMyScore`, `getBullsMyHistory`,
-  `listBullsTeams`, `adjustBullsPointsManual` (Admin only)
+`organization_type` bekommt zusätzlich diese erlaubten Werte (nur Textspalte, kein Enum — keine Migration nötig für den Typ selbst):
+`sports_club`, `solo_coach`, `coaching_company`, `fitness_studio`, `company`, `custom`.
 
-### Phase 3 — UI ✅
+### 1.2 Neue Zunftraum-Tabelle `organization_coach_assignments`
 
-- Route `src/routes/bulls.ranking.tsx`:
-  - Timeframe-Filter (Woche/letzte Woche/Monat/letzter Monat/Saison/Gesamt)
-  - Team-Dropdown + Positions-Freitext
-  - Mein Score inkl. Kategorien-Aufschlüsselung + Streak-Badge
-  - Team-Ranking (Top-Liste)
-  - Punkte-Historie (letzte 40)
-- Community-Hub bekommt zusätzliche „Bulls Rangliste"-Kachel für Bulls-User.
+Für Coach-Kunden-Mapping in Coach-Orgs (mandantenfähig, unabhängig von `customer_packages`):
 
+- `organization_id`, `coach_user_id`, `customer_user_id`
+- `role` — `primary_coach` | `secondary_coach` | `nutrition_coach` | `training_coach` | `substitute`
+- RLS: nur Coaches der Org sehen ihre Zuweisungen, `organization_owner`/`organization_admin` sieht alle der Org
 
-### Phase 2 — Aktivitäts-Hooks + Server-Fns
+### 1.3 Modul-Katalog erweitern (`src/lib/organizations/modules.ts`)
 
-- Trigger `athlete_checkins` INSERT (Bulls) → +2 check_in
-- Trigger `athlete_training_session` UPDATE status→completed (Bulls):
-  - training_type='team_practice' → team_training +12
-  - focus IN ('strength','speed','agility','conditioning') OR training_type='individual_training' → training +10
-  - focus IN ('mobility','recovery') AND is_rehab=false → recovery +4
-  - is_rehab=true → rehab +8
-  - anschließend `recompute_bulls_streak(user_id)`
-- Trigger `organization_tasks` UPDATE status→completed (Bulls) → +2 tasks (Cap in award-fn)
-- Trigger `performance_test_attempts` INSERT (Bulls, valid=true, Session komplett)
-  → +20 development + `award_bulls_test_improvements`
-- Trigger `food_entries` INSERT/UPDATE → server fn recompute Nutrition-Tag
-  (voll getrackt +5, Ziel erreicht +3)
-- Trigger `organization_challenge_point_events` INSERT (Bulls) für Challenge-Abschluss
-  → 25/50/75/100 anhand Regel-Punkten
-- Server-Fns:
-  - `getBullsRanking`, `getBullsMyScore`, `getBullsMyHistory`
-  - `adjustBullsPointsManual` (nur org-admin, mit audit)
+Neue Modul-Keys (Toggle-Only, kein Schema-Change nötig):
 
-### Phase 3 — UI
+`tasks`, `coach_chat`, `body_metrics`, `progress_tracking`, `documents`, `onboarding`, `profile_photos`, `analytics`, `regeneration`, `strength_tests`, `recipes`, `shopping_list`, `positions`, `matchdays`, `training_calendar`, `smart_nutrition`, `smart_training` (letzte zwei getrennt von den Basis-Modulen).
 
-- `src/routes/bulls.ranking.tsx`:
-  - Zeitraum-Filter (Woche/letzte Woche/Monat/letzter Monat/Saison/Gesamt)
-  - Scope-Filter (Gesamt / Team / Offense-Defense-ST / Position)
-  - Mein Score + Kategorien-Aufschlüsselung + Streak + Erfüllungsquoten
-  - Punkte-Historie (activity_date)
-- Nav-Eintrag in `AppLayout.tsx` unter `bulls`-Rolle
-- Coach-Cockpit: Manuelle Anpassung nur für `organization_admin`
+Bestehende Keys (`nutrition`, `athletic_training`, `checkins`, `challenges`, `community`, `performance`, `gamification`, `injury_management`, `load_management`) bleiben.
 
-## Offene Punkte / bewusste Vereinfachungen
+### 1.4 Presets pro Organisationstyp
 
-- **Rehab-Erkennung**: Wir fügen `is_rehab boolean DEFAULT false` an
-  `athlete_training_session` in Phase 2 hinzu (kein Schema-Schub nötig für Phase 1).
-- **Position-Buckets** (Offense/Defense/ST/QB/RB/…): Mapping erfolgt in einer
-  server-seitigen Helferfunktion in Phase 2, weil `profiles.sport_position`
-  Freitext ist. Für Phase 3 UI zunächst Team-Filter + Positions-Freitext.
-- **Challenge-Punkte-Bridge**: In Phase 2 hängen wir uns per Trigger an
-  `organization_challenge_point_events` — das bestehende Challenge-System
-  bleibt Single Source of Truth, wir spiegeln nur ins Bulls-Ledger.
+Neuer Helper `src/lib/organizations/org-presets.ts`:
+
+- `DEFAULT_MODULES_BY_ORG_TYPE` — welche Module standardmäßig `enabled` sind
+- `DEFAULT_TERMINOLOGY_BY_ORG_TYPE` — Basis-Begriffe für alle 6 Typen
+- Wird beim Erstellen einer neuen Org angewendet, danach frei überschreibbar
+
+### 1.5 `orgTerminology()` erweitern
+
+Statt hardcoded 2 Typen: liest zuerst aus `organizations.terminology`, fällt zurück auf `DEFAULT_TERMINOLOGY_BY_ORG_TYPE[type]`. Rückwärtskompatibel — alle bestehenden Aufrufer bekommen dieselben Begriffe.
+
+---
+
+## Phase 2 — „Neue Organisation erstellen“ Wizard
+
+Im Owner-Bereich (`/coach` bzw. Admin) ein 6-Schritt-Wizard:
+
+1. Typ auswählen (6 Karten)
+2. Grunddaten (Name, Ansprechpartner, E-Mail, Logo)
+3. Preset-Module anzeigen
+4. Module individuell togglen
+5. Ersten Organisationsinhaber anlegen (bestehender Nutzer per E-Mail oder Einladung)
+6. Bestätigen → leere Org anlegen, keine Bulls-Daten kopieren
+
+Server-Fn `createOrganizationWithPreset` (bereits vorhandene `createOrganization` Fn erweitern, keine Duplikate).
+
+---
+
+## Phase 3 — Dynamische Terminologie in der UI
+
+- Alle Stellen, die aktuell hart „Athlet“, „Spieler“, „Verein“, „Mannschaft“ verwenden, auf `orgTerminology(org)` umstellen — schrittweise pro Route.
+- Admin-UI zur Überschreibung: neue Karte „Bezeichnungen“ im Org-Cockpit neben „Module“.
+
+---
+
+## Phase 4 — Rollen & Kundenzuweisung generalisieren
+
+- Rolle `organization_owner` (bisher implizit über `staff_assignments.role='organization_admin'` + `manage_organization`) klar von `organization_admin` trennen; `coach` und `customer` als Org-lokale Rollen dokumentieren.
+- UI im Org-Cockpit: „Coaches“ und „Kunden“ Tabs (dynamisch benannt via Terminologie), Kundenzuweisung über `organization_coach_assignments`.
+- `coach_can_access_user` erweitern: Coach in Coach-Org sieht Kunden, die ihm über `organization_coach_assignments` zugewiesen sind — analog zur bestehenden Bulls-Logik.
+
+---
+
+## Phase 5 — Modul-Gating in Navigation vervollständigen
+
+- Für jedes neue Modul ein `feature`-Gate in `OrgAthleteLayout` + Coach-Cockpit einbauen.
+- Deaktivierte Module: kein Nav-Item, kein Dashboard-Widget, keine leeren Bereiche, kein CTA.
+
+---
+
+## Phase 6 — Branding-Erweiterung + Lizenz-UI (nur Vorbereitung)
+
+- Branding-Felder erweitern (Sekundärfarbe, Akzentfarbe, Hintergrund, Login-Bild, Dashboard-Bild, App-Name, Begrüßungstext) — in Migration Phase 1 bereits als jsonb `branding_extra` vorbereiten oder als eigene Spalten.
+- Lizenz-Statuschip im Admin (read-only) basierend auf `license_status`. Noch keine Stripe-Integration.
+
+---
+
+## Was NICHT in diesem Sprint passiert
+
+- Keine Datenmigration bestehender Bulls-/Manu-Coaching-Daten
+- Kein Stripe / echte Abrechnung
+- Keine echte White-Label-Domain-Logik
+- Bulls-spezifische Routen (`bulls.*`) bleiben unverändert — Bulls sind eine `sports_club`-Org mit voll gesetzten Modulen
+
+---
+
+## Vorschlag zum Vorgehen
+
+Ich schlage vor, wir **starten jetzt konkret mit Phase 1** (Migration + Modul-Katalog + Presets + Terminologie-Helper). Das ist reine Fundamentarbeit, verändert nichts an bestehenden UIs, und ist Voraussetzung für alles Weitere.
+
+**Bitte bestätige:**
+
+1. Phase 1 jetzt starten? (Migration + Katalog + Presets, ~1 Migration + ~3 neue TS-Dateien, keine UI-Änderung)
+2. Oder möchtest du zuerst Änderungen an der Phaseneinteilung?
+3. Sollen die neuen Modul-Keys (`tasks`, `coach_chat`, ...) für bestehende Orgs (Bulls, Manu-Coaching) automatisch mit ihrem aktuellen Zustand vorbelegt werden (z. B. `tasks: true` für Bulls, weil dort bereits Aufgaben existieren)?

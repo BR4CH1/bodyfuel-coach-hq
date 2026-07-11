@@ -3460,6 +3460,44 @@ export type Database = {
           },
         ]
       }
+      organization_coach_assignments: {
+        Row: {
+          coach_user_id: string
+          created_at: string
+          customer_user_id: string
+          id: string
+          organization_id: string
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          coach_user_id: string
+          created_at?: string
+          customer_user_id: string
+          id?: string
+          organization_id: string
+          role?: string
+          updated_at?: string
+        }
+        Update: {
+          coach_user_id?: string
+          created_at?: string
+          customer_user_id?: string
+          id?: string
+          organization_id?: string
+          role?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_coach_assignments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_community_posts: {
         Row: {
           author_role_snapshot: string
@@ -4021,10 +4059,18 @@ export type Database = {
           accent_color: string | null
           alt_logo_url: string | null
           background_color: string | null
+          branding_extra: Json
+          branding_mode: string
           claim: string | null
           created_at: string
           id: string
+          license_expires_at: string | null
+          license_plan: string
+          license_started_at: string | null
+          license_status: string
           logo_url: string | null
+          max_coaches: number | null
+          max_customers: number | null
           name: string
           organization_type: Database["public"]["Enums"]["organization_type"]
           primary_color: string | null
@@ -4034,6 +4080,7 @@ export type Database = {
           slug: string
           sport: string | null
           status: Database["public"]["Enums"]["organization_status"]
+          terminology: Json
           text_color: string | null
           updated_at: string
         }
@@ -4041,10 +4088,18 @@ export type Database = {
           accent_color?: string | null
           alt_logo_url?: string | null
           background_color?: string | null
+          branding_extra?: Json
+          branding_mode?: string
           claim?: string | null
           created_at?: string
           id?: string
+          license_expires_at?: string | null
+          license_plan?: string
+          license_started_at?: string | null
+          license_status?: string
           logo_url?: string | null
+          max_coaches?: number | null
+          max_customers?: number | null
           name: string
           organization_type?: Database["public"]["Enums"]["organization_type"]
           primary_color?: string | null
@@ -4054,6 +4109,7 @@ export type Database = {
           slug: string
           sport?: string | null
           status?: Database["public"]["Enums"]["organization_status"]
+          terminology?: Json
           text_color?: string | null
           updated_at?: string
         }
@@ -4061,10 +4117,18 @@ export type Database = {
           accent_color?: string | null
           alt_logo_url?: string | null
           background_color?: string | null
+          branding_extra?: Json
+          branding_mode?: string
           claim?: string | null
           created_at?: string
           id?: string
+          license_expires_at?: string | null
+          license_plan?: string
+          license_started_at?: string | null
+          license_status?: string
           logo_url?: string | null
+          max_coaches?: number | null
+          max_customers?: number | null
           name?: string
           organization_type?: Database["public"]["Enums"]["organization_type"]
           primary_color?: string | null
@@ -4074,6 +4138,7 @@ export type Database = {
           slug?: string
           sport?: string | null
           status?: Database["public"]["Enums"]["organization_status"]
+          terminology?: Json
           text_color?: string | null
           updated_at?: string
         }
