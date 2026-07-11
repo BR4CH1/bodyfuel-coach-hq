@@ -74,6 +74,13 @@ import { TeamJoinLinkDialog } from "@/components/organizations/TeamJoinLinkDialo
 import { OrgDangerZone } from "@/components/organizations/OrgDangerZone";
 import { OrgModulesTab } from "@/components/organizations/OrgModulesTab";
 import { OrgLoadTab } from "@/components/organizations/OrgLoadTab";
+import { OrgLicenseChip } from "@/components/organizations/OrgLicenseChip";
+import { OrgTerminologyTab } from "@/components/organizations/OrgTerminologyTab";
+import { OrgBrandingTab } from "@/components/organizations/OrgBrandingTab";
+import { CoachAssignmentsTab } from "@/components/organizations/CoachAssignmentsTab";
+import { isCoachOrg } from "@/lib/organizations/org-type";
+import { Palette, Type as TypeIcon, UsersRound } from "lucide-react";
+
 
 
 
