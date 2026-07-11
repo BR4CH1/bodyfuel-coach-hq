@@ -7874,6 +7874,9 @@ export type Database = {
         | "company"
         | "other"
         | "fitness_studio"
+        | "solo_coach"
+        | "coaching_company"
+        | "custom"
       strength_check_status: "draft" | "completed"
       strength_reminder_kind: "upcoming" | "due"
       strength_test_key:
@@ -8088,6 +8091,9 @@ export const Constants = {
         "company",
         "other",
         "fitness_studio",
+        "solo_coach",
+        "coaching_company",
+        "custom",
       ],
       strength_check_status: ["draft", "completed"],
       strength_reminder_kind: ["upcoming", "due"],
