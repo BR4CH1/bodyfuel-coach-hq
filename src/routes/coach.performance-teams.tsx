@@ -344,12 +344,12 @@ function CreateTeamDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-h-[92vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Neues Performance-Team</DialogTitle>
+          <DialogTitle>Neue Organisation erstellen</DialogTitle>
           <DialogDescription>
-            Schritt {step} von 3 — das Team startet komplett leer, keine Bulls-Daten
-            werden übernommen.
+            Schritt {step} von 4 — Typ &amp; Grunddaten, Branding, Module, Lizenz. Die
+            Organisation startet komplett leer, keine bestehenden Daten werden übernommen.
           </DialogDescription>
         </DialogHeader>
 
@@ -363,7 +363,7 @@ function CreateTeamDialog({
                     <button
                       key={o.value}
                       type="button"
-                      onClick={() => setField("organization_type", o.value)}
+                      onClick={() => onTypeChange(o.value as OrgType)}
                       className={`rounded-lg border p-3 text-left transition ${
                         active
                           ? "border-primary bg-primary/5"
@@ -383,7 +383,17 @@ function CreateTeamDialog({
               <Input
                 value={form.name}
                 onChange={(e) => setField("name", e.target.value)}
-                placeholder={form.organization_type === "fitness_studio" ? "SGZ-Altenessen" : "Rot-Weiss Essen"}
+                placeholder={
+                  form.organization_type === "fitness_studio"
+                    ? "SGZ-Altenessen"
+                    : form.organization_type === "solo_coach"
+                      ? "Andreas Coaching"
+                      : form.organization_type === "coaching_company"
+                        ? "BodyFuel Coaching GmbH"
+                        : form.organization_type === "company"
+                          ? "Musterfirma AG"
+                          : "Rot-Weiss Essen"
+                }
               />
             </Field>
             <Field label="Kurzname (optional)">
@@ -408,6 +418,15 @@ function CreateTeamDialog({
                 />
               </div>
             </Field>
+            {form.organization_type === "sports_club" && (
+              <Field label="Sportart">
+                <Input
+                  value={form.sport}
+                  onChange={(e) => setField("sport", e.target.value)}
+                  placeholder="Fußball, Basketball, American Football …"
+                />
+              </Field>
+            )}
             <Field label="Claim / Untertitel (optional)">
               <Textarea
                 rows={2}
@@ -418,7 +437,6 @@ function CreateTeamDialog({
             </Field>
           </div>
         )}
-
 
         {step === 2 && (
           <div className="grid gap-3">
@@ -448,44 +466,99 @@ function CreateTeamDialog({
         )}
 
         {step === 3 && (
+          <ModuleSelectionStep
+            suggestions={suggestions}
+            enabled={enabledModules}
+            onToggle={toggleModule}
+            onReset={resetModulesToPreset}
+            touched={modulesTouched}
+          />
+        )}
+
+        {step === 4 && (
           <div className="grid gap-3">
-            {form.organization_type === "sports_club" ? (
-              <Field label="Sportart">
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Lizenz-Plan">
+                <select
+                  value={license.license_plan}
+                  onChange={(e) => {
+                    setLicenseTouched(true);
+                    setLicense((l) => ({ ...l, license_plan: e.target.value }));
+                  }}
+                  className="h-9 rounded-md border border-border bg-background px-2 text-sm"
+                >
+                  <option value="trial">Trial</option>
+                  <option value="starter">Starter</option>
+                  <option value="pro">Pro</option>
+                  <option value="unlimited">Unlimited</option>
+                  <option value="custom">Custom</option>
+                </select>
+              </Field>
+              <Field label="Status">
+                <select
+                  value={license.license_status}
+                  onChange={(e) => {
+                    setLicenseTouched(true);
+                    setLicense((l) => ({ ...l, license_status: e.target.value }));
+                  }}
+                  className="h-9 rounded-md border border-border bg-background px-2 text-sm"
+                >
+                  <option value="trial">Trial</option>
+                  <option value="active">Aktiv</option>
+                  <option value="payment_due">Zahlung ausstehend</option>
+                  <option value="suspended">Pausiert</option>
+                  <option value="cancelled">Gekündigt</option>
+                </select>
+              </Field>
+              <Field label="Max. Kunden (leer = unbegrenzt)">
                 <Input
-                  value={form.sport}
-                  onChange={(e) => setField("sport", e.target.value)}
-                  placeholder="Fußball, Basketball, American Football …"
+                  type="number"
+                  min={0}
+                  value={license.max_customers ?? ""}
+                  onChange={(e) => {
+                    setLicenseTouched(true);
+                    const v = e.target.value.trim();
+                    setLicense((l) => ({ ...l, max_customers: v === "" ? null : Number(v) }));
+                  }}
                 />
               </Field>
-            ) : (
-              <div className="rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
-                Fitnessstudio-Organisation: keine Sportart nötig. Positionen und
-                Mannschaftszuordnung entfallen automatisch für Mitglieder.
-              </div>
-            )}
+              <Field label="Max. Coaches (leer = unbegrenzt)">
+                <Input
+                  type="number"
+                  min={0}
+                  value={license.max_coaches ?? ""}
+                  onChange={(e) => {
+                    setLicenseTouched(true);
+                    const v = e.target.value.trim();
+                    setLicense((l) => ({ ...l, max_coaches: v === "" ? null : Number(v) }));
+                  }}
+                />
+              </Field>
+            </div>
             <div className="rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
               <div className="mb-1 font-semibold text-foreground">Zusammenfassung</div>
-              {form.name} · <code>/{autoSlug}</code>
-              {" · "}
-              {form.organization_type === "fitness_studio" ? "Fitnessstudio" : "Sportverein"}
-              {form.organization_type === "sports_club" && form.sport ? ` · ${form.sport}` : ""}
+              <div>
+                {form.name} · <code>/{autoSlug}</code>{" · "}
+                {ORG_TYPE_OPTIONS.find((o) => o.value === form.organization_type)?.label}
+                {form.organization_type === "sports_club" && form.sport
+                  ? ` · ${form.sport}`
+                  : ""}
+              </div>
+              <div className="mt-1">
+                {enabledModules.size} Module aktiviert · Lizenz {license.license_plan} ({license.license_status})
+              </div>
               <div className="mt-2">
-                Nach der Erstellung wirst du direkt in die Team-Verwaltung
-                weitergeleitet. Dort legst du{" "}
-                {form.organization_type === "fitness_studio"
-                  ? "optionale Gruppen, Coaches und Mitglieder"
-                  : "Mannschaften, Coaches und Athleten"}{" "}
-                selbst an.
+                Nach der Erstellung wirst du direkt in die Verwaltung weitergeleitet.
+                Alle Module und Begriffe kannst du im Cockpit weiter anpassen.
               </div>
             </div>
           </div>
         )}
 
-
         <DialogFooter className="flex justify-between gap-2 sm:justify-between">
           <div>
             {step > 1 && (
-              <Button variant="outline" onClick={() => setStep((step - 1) as 1 | 2 | 3)}>
+              <Button variant="outline" onClick={() => setStep((step - 1) as Step)}>
                 Zurück
               </Button>
             )}
@@ -494,9 +567,9 @@ function CreateTeamDialog({
             <Button variant="ghost" onClick={() => onOpenChange(false)}>
               Abbrechen
             </Button>
-            {step < 3 ? (
+            {step < 4 ? (
               <Button
-                onClick={() => setStep((step + 1) as 1 | 2 | 3)}
+                onClick={() => setStep((step + 1) as Step)}
                 disabled={step === 1 && !canNext1}
               >
                 Weiter
@@ -512,9 +585,9 @@ function CreateTeamDialog({
                       organization_type: form.organization_type,
                       short_name: form.short_name.trim() || null,
                       sport:
-                        form.organization_type === "fitness_studio"
-                          ? null
-                          : form.sport.trim() || null,
+                        form.organization_type === "sports_club"
+                          ? form.sport.trim() || null
+                          : null,
                       claim: form.claim.trim() || null,
                       logo_url: form.logo_url.trim() || null,
                       alt_logo_url: form.alt_logo_url.trim() || null,
@@ -523,12 +596,16 @@ function CreateTeamDialog({
                       accent_color: form.accent_color || null,
                       background_color: form.background_color || null,
                       text_color: form.text_color || null,
+                      enabled_features: enabledFeatureKeys,
+                      license_plan: license.license_plan,
+                      license_status: license.license_status,
+                      max_customers: license.max_customers,
+                      max_coaches: license.max_coaches,
                     },
                   })
-
                 }
               >
-                {create.isPending ? "Erstelle…" : "Team erstellen"}
+                {create.isPending ? "Erstelle…" : "Organisation erstellen"}
               </Button>
             )}
           </div>
