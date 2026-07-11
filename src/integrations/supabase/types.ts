@@ -94,6 +94,8 @@ export type Database = {
           commission_pct: number
           created_at: string
           created_by: string
+          discount_code: string | null
+          discount_pct: number | null
           email: string | null
           id: string
           is_active: boolean
@@ -108,6 +110,8 @@ export type Database = {
           commission_pct?: number
           created_at?: string
           created_by: string
+          discount_code?: string | null
+          discount_pct?: number | null
           email?: string | null
           id?: string
           is_active?: boolean
@@ -122,6 +126,8 @@ export type Database = {
           commission_pct?: number
           created_at?: string
           created_by?: string
+          discount_code?: string | null
+          discount_pct?: number | null
           email?: string | null
           id?: string
           is_active?: boolean
@@ -7517,6 +7523,10 @@ export type Database = {
       }
       attach_referral: {
         Args: { _slug: string; _user_id: string }
+        Returns: undefined
+      }
+      attach_referral_by_code: {
+        Args: { _code: string; _user_id: string }
         Returns: undefined
       }
       auto_activate_due_plans: {

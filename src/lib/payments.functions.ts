@@ -52,9 +52,12 @@ export const createSmartCheckoutSession = createServerFn({ method: "POST" })
       priceId: string;
       returnUrl: string;
       environment: StripeEnv;
+      promoCode?: string;
     }) => {
       if (!/^[a-zA-Z0-9_-]+$/.test(data.priceId))
         throw new Error("Invalid priceId");
+      if (data.promoCode && !/^[A-Za-z0-9_-]{2,64}$/.test(data.promoCode))
+        throw new Error("Invalid promoCode");
       return data;
     },
   )
@@ -64,9 +67,6 @@ export const createSmartCheckoutSession = createServerFn({ method: "POST" })
         const { supabase, userId } = context;
 
         // ──────────── Minderjährigenschutz ────────────
-        // Minderjährige dürfen keine eigenständigen kostenpflichtigen Buchungen
-        // tätigen. Vertragspartner muss eine erziehungsberechtigte Person sein,
-        // die per Double-Opt-In bestätigt hat.
         const { data: prof } = await supabase
           .from("profiles")
           .select("is_minor, account_status, guardian_consent_at")
@@ -101,16 +101,60 @@ export const createSmartCheckoutSession = createServerFn({ method: "POST" })
           userId,
         });
 
+        // ──────────── Affiliate-Rabattcode ────────────
+        let discounts: { coupon: string }[] | undefined;
+        if (data.promoCode) {
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+          const { data: partner } = await supabaseAdmin
+            .from("affiliate_partners")
+            .select("id, slug, discount_pct, commission_pct, is_active, discount_code")
+            .ilike("discount_code", data.promoCode)
+            .eq("is_active", true)
+            .maybeSingle();
+          if (!partner) {
+            return { error: `Rabattcode „${data.promoCode}" ist ungültig oder abgelaufen.` };
+          }
+          const pct = Number(partner.discount_pct ?? partner.commission_pct ?? 0);
+          if (pct <= 0) {
+            return { error: "Rabattcode ist inaktiv." };
+          }
+          // Coupon (idempotent): erste Zahlung -pct% (duration: once)
+          const couponId = `aff_${partner.id}_${Math.round(pct * 100)}`;
+          try {
+            await stripe.coupons.retrieve(couponId);
+          } catch {
+            try {
+              await stripe.coupons.create({
+                id: couponId,
+                percent_off: pct,
+                duration: "once",
+                name: `Partner ${partner.slug} · ${pct}% Rabatt (1. Monat)`,
+              } as any);
+            } catch (e) {
+              console.error("[checkout] coupon create failed", e);
+              return { error: "Rabattcode konnte nicht angewendet werden." };
+            }
+          }
+          discounts = [{ coupon: couponId }];
+
+          // Partner an Kunde binden (Provisionszählung läuft über bestehenden Trigger)
+          await supabaseAdmin.rpc("attach_referral_by_code", {
+            _user_id: userId,
+            _code: data.promoCode,
+          });
+        }
+
         const session = await stripe.checkout.sessions.create({
           line_items: [{ price: stripePrice.id, quantity: 1 }],
           mode: isRecurring ? "subscription" : "payment",
           ui_mode: "embedded_page",
           return_url: data.returnUrl,
           customer: customerId,
-          metadata: { userId },
+          metadata: { userId, ...(data.promoCode ? { promoCode: data.promoCode } : {}) },
           ...(isRecurring && {
             subscription_data: { metadata: { userId } },
           }),
+          ...(discounts ? { discounts } : {}),
         } as any);
 
         return { clientSecret: session.client_secret ?? "" };

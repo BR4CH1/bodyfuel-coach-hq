@@ -1,9 +1,9 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Sparkles, Mail, Lock, User } from "lucide-react";
+import { Sparkles, Mail, Lock, User, Tag, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
 import { useStripeCheckout } from "@/hooks/useStripeCheckout";
@@ -14,9 +14,13 @@ import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/bodyfuel/Logo";
 import { AgeGate } from "@/components/bodyfuel/AgeGate";
 import { getMyGuardianStatus } from "@/lib/guardian.functions";
+import { resolveDiscountCode } from "@/lib/affiliates.functions";
 import { X } from "lucide-react";
 
 export const Route = createFileRoute("/smart/signup")({
+  validateSearch: (search: Record<string, unknown>): { promo?: string } => ({
+    promo: typeof search.promo === "string" ? search.promo.slice(0, 64) : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "BodyFuel Smart starten — 14,99 € / Monat" },
@@ -36,12 +40,71 @@ const schema = z.object({
 function SmartSignupPage() {
   const { supabaseUser, loading } = useSession();
   const navigate = useNavigate();
+  const search = Route.useSearch();
   const { openCheckout, closeCheckout, isOpen, checkoutElement } = useStripeCheckout();
   const [busy, setBusy] = useState(false);
   const fetchStatus = useServerFn(getMyGuardianStatus);
+  const resolveCode = useServerFn(resolveDiscountCode);
   const [gateState, setGateState] = useState<
     "loading" | "needs_gate" | "pending_consent" | "ready"
   >("loading");
+
+  // ────── Rabattcode ──────
+  const initialPromo = (search.promo ?? "").toUpperCase();
+  const [promoInput, setPromoInput] = useState(initialPromo);
+  const [promo, setPromo] = useState<
+    { code: string; discount_pct: number; partner_name: string } | null
+  >(null);
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [promoChecking, setPromoChecking] = useState(false);
+
+  const applyPromo = async (raw: string) => {
+    const code = raw.trim().toUpperCase();
+    if (!code) {
+      setPromo(null);
+      setPromoError(null);
+      return;
+    }
+    setPromoChecking(true);
+    setPromoError(null);
+    try {
+      const res: any = await resolveCode({ data: { code } });
+      if (res?.valid) {
+        setPromo({ code: res.code, discount_pct: res.discount_pct, partner_name: res.partner_name });
+      } else {
+        setPromo(null);
+        setPromoError("Code ungültig");
+      }
+    } catch {
+      setPromo(null);
+      setPromoError("Prüfung fehlgeschlagen");
+    } finally {
+      setPromoChecking(false);
+    }
+  };
+
+  // Beim ersten Laden URL-Code prüfen
+  useEffect(() => {
+    if (initialPromo) void applyPromo(initialPromo);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const priceMonthly = 14.99;
+  const discountedFirstMonth = useMemo(() => {
+    if (!promo) return null;
+    return Math.round(priceMonthly * (1 - promo.discount_pct / 100) * 100) / 100;
+  }, [promo]);
+
+  const startCheckout = () => {
+    if (!isPaymentsConfigured()) {
+      toast.error("Stripe ist noch nicht konfiguriert.");
+      return;
+    }
+    openCheckout({
+      priceId: "bodyfuel_smart_monthly",
+      ...(promo ? { promoCode: promo.code } : {}),
+    });
+  };
 
   const refreshStatus = async (autoOpen: boolean) => {
     try {
@@ -55,13 +118,7 @@ function SmartSignupPage() {
         return;
       }
       setGateState("ready");
-      if (autoOpen) {
-        if (!isPaymentsConfigured()) {
-          toast.error("Stripe ist noch nicht konfiguriert.");
-          return;
-        }
-        openCheckout({ priceId: "bodyfuel_smart_monthly" });
-      }
+      if (autoOpen) startCheckout();
     } catch {
       setGateState("needs_gate");
     }
@@ -106,7 +163,7 @@ function SmartSignupPage() {
         return;
       }
       toast.success("Account erstellt! Schließe jetzt deinen Kauf ab.");
-      openCheckout({ priceId: "bodyfuel_smart_monthly" });
+      startCheckout();
     } catch (err: any) {
       const msg = /already registered|user already/i.test(err?.message ?? "")
         ? "Diese E-Mail ist schon registriert. Bitte einloggen."
@@ -205,12 +262,60 @@ function SmartSignupPage() {
 
         {supabaseUser && gateState === "ready" && (
           <Button
-            onClick={() => openCheckout({ priceId: "bodyfuel_smart_monthly" })}
+            onClick={startCheckout}
             className="mt-6 w-full bg-gradient-gold text-primary-foreground hover:opacity-90"
           >
-            <Sparkles className="mr-2 h-4 w-4" /> Smart für 14,99 € starten
+            <Sparkles className="mr-2 h-4 w-4" />
+            {promo
+              ? `Smart für ${discountedFirstMonth?.toFixed(2).replace(".", ",")} € (1. Monat) starten`
+              : "Smart für 14,99 € starten"}
           </Button>
         )}
+
+        {/* ────── Rabattcode ────── */}
+        <div className="mt-6 rounded-2xl border border-border bg-secondary/30 p-4">
+          <Label htmlFor="promo" className="flex items-center gap-1.5 text-xs uppercase tracking-wider text-muted-foreground">
+            <Tag className="h-3 w-3" /> Rabattcode (optional)
+          </Label>
+          <div className="mt-2 flex gap-2">
+            <Input
+              id="promo"
+              value={promoInput}
+              onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+              onBlur={() => applyPromo(promoInput)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  applyPromo(promoInput);
+                }
+              }}
+              placeholder="z. B. MARCEL10"
+              className="uppercase tracking-wider"
+              maxLength={24}
+              autoCapitalize="characters"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => applyPromo(promoInput)}
+              disabled={promoChecking}
+            >
+              {promoChecking ? "…" : "Einlösen"}
+            </Button>
+          </div>
+          {promo && (
+            <div className="mt-2 flex items-center gap-1.5 text-xs text-emerald-500">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              <span>
+                Code <span className="font-bold">{promo.code}</span> aktiv · −{promo.discount_pct}% auf den 1. Monat (
+                {discountedFirstMonth?.toFixed(2).replace(".", ",")} € statt 14,99 €)
+              </span>
+            </div>
+          )}
+          {promoError && !promo && (
+            <p className="mt-2 text-xs text-destructive">{promoError}</p>
+          )}
+        </div>
 
         <div className="mt-6 space-y-2 text-center text-xs text-muted-foreground">
           {!supabaseUser ? (
