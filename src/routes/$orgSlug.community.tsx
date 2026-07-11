@@ -17,7 +17,9 @@ import {
   getOrgHallOfFame,
 } from "@/lib/organizations/ranking.functions";
 import { OrgAthleteLayout } from "@/components/organizations/OrgAthleteLayout";
+import { BullsRankingContent } from "@/components/bodyfuel/BullsRankingContent";
 import { Route as OrgLayoutRoute } from "./$orgSlug";
+
 
 const CATEGORY_LABEL: Record<string, string> = {
   training: "Training",
