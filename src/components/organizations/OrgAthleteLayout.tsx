@@ -5,13 +5,11 @@ import {
   Apple,
   Users,
   User,
-  ClipboardCheck,
-  Activity,
-  Crown,
   type LucideIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { orgTerminology } from "@/lib/organizations/org-type";
+
 
 type NavItem = {
   key: string;
