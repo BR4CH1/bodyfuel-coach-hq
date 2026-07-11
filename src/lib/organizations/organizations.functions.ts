@@ -618,6 +618,11 @@ export const createPerformanceTeamOrganization = createServerFn({ method: "POST"
       background_color?: string | null;
       text_color?: string | null;
       organization_type?: string | null;
+      enabled_features?: string[] | null;
+      license_plan?: string | null;
+      license_status?: string | null;
+      max_customers?: number | null;
+      max_coaches?: number | null;
     }) => {
       const name = String(d.name ?? "").trim();
       const slug = String(d.slug ?? "").toLowerCase().trim();
@@ -626,6 +631,9 @@ export const createPerformanceTeamOrganization = createServerFn({ method: "POST"
         throw new Error("Ungültiger URL-Slug (a-z, 0-9, -, 2–50 Zeichen).");
       }
       if (SLUG_RESERVED.has(slug)) throw new Error(`Slug "${slug}" ist reserviert.`);
+      const features = Array.isArray(d.enabled_features)
+        ? Array.from(new Set(d.enabled_features.map((f) => String(f).trim()).filter(Boolean)))
+        : null;
       return {
         name,
         slug,
@@ -640,6 +648,17 @@ export const createPerformanceTeamOrganization = createServerFn({ method: "POST"
         background_color: d.background_color?.trim() || null,
         text_color: d.text_color?.trim() || null,
         organization_type: d.organization_type?.trim() || "sports_club",
+        enabled_features: features,
+        license_plan: d.license_plan?.trim() || null,
+        license_status: d.license_status?.trim() || null,
+        max_customers:
+          typeof d.max_customers === "number" && Number.isFinite(d.max_customers)
+            ? Math.max(0, Math.floor(d.max_customers))
+            : null,
+        max_coaches:
+          typeof d.max_coaches === "number" && Number.isFinite(d.max_coaches)
+            ? Math.max(0, Math.floor(d.max_coaches))
+            : null,
       };
     },
   )
@@ -653,42 +672,67 @@ export const createPerformanceTeamOrganization = createServerFn({ method: "POST"
       .maybeSingle();
     if (existing) throw new Error(`Slug "${data.slug}" ist bereits vergeben.`);
 
+    const insertRow: Record<string, unknown> = {
+      name: data.name,
+      slug: data.slug,
+      short_name: data.short_name,
+      sport: data.sport,
+      claim: data.claim,
+      logo_url: data.logo_url,
+      alt_logo_url: data.alt_logo_url,
+      primary_color: data.primary_color,
+      secondary_color: data.secondary_color,
+      accent_color: data.accent_color,
+      background_color: data.background_color,
+      text_color: data.text_color,
+      organization_type: data.organization_type,
+      status: "active",
+    };
+    if (data.license_plan) insertRow.license_plan = data.license_plan;
+    if (data.license_status) {
+      insertRow.license_status = data.license_status;
+      if (data.license_status === "trial" || data.license_status === "active") {
+        insertRow.license_started_at = new Date().toISOString();
+      }
+    }
+    if (data.max_customers !== null) insertRow.max_customers = data.max_customers;
+    if (data.max_coaches !== null) insertRow.max_coaches = data.max_coaches;
+
     const { data: inserted, error: insErr } = await context.supabase
       .from("organizations")
-      .insert({
-        name: data.name,
-        slug: data.slug,
-        short_name: data.short_name,
-        sport: data.sport,
-        claim: data.claim,
-        logo_url: data.logo_url,
-        alt_logo_url: data.alt_logo_url,
-        primary_color: data.primary_color,
-        secondary_color: data.secondary_color,
-        accent_color: data.accent_color,
-        background_color: data.background_color,
-        text_color: data.text_color,
-        organization_type: data.organization_type,
-        status: "active",
-      } as any)
+      .insert(insertRow as any)
       .select("id, slug")
       .single();
     if (insErr) throw new Error(insErr.message);
 
-    // Owner selbst als organization_admin eintragen, damit die bestehende
-    // Team-Verwaltung (RLS via is_org_admin) sofort greift.
+    const orgId = (inserted as any).id as string;
+
+    // Owner als organization_admin eintragen, damit is_org_admin sofort greift.
     const { error: staffErr } = await context.supabase
       .from("staff_assignments")
       .insert({
         user_id: context.userId,
-        organization_id: (inserted as any).id,
+        organization_id: orgId,
         role: "organization_admin",
         permissions: [],
         team_id: null,
       } as any);
     if (staffErr) throw new Error(staffErr.message);
 
-    return { id: (inserted as any).id as string, slug: (inserted as any).slug as string };
+    // Modul-Presets als organization_features anlegen (enabled=true).
+    if (data.enabled_features && data.enabled_features.length > 0) {
+      const rows = data.enabled_features.map((feature) => ({
+        organization_id: orgId,
+        feature,
+        enabled: true,
+      }));
+      const { error: featErr } = await context.supabase
+        .from("organization_features")
+        .upsert(rows as any, { onConflict: "organization_id,feature" });
+      if (featErr) throw new Error(featErr.message);
+    }
+
+    return { id: orgId, slug: (inserted as any).slug as string };
   });
 
 /** Owner-only: löscht eine Performance-Team-Organisation vollständig.
