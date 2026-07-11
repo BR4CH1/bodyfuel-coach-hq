@@ -74,6 +74,13 @@ import { TeamJoinLinkDialog } from "@/components/organizations/TeamJoinLinkDialo
 import { OrgDangerZone } from "@/components/organizations/OrgDangerZone";
 import { OrgModulesTab } from "@/components/organizations/OrgModulesTab";
 import { OrgLoadTab } from "@/components/organizations/OrgLoadTab";
+import { OrgLicenseChip } from "@/components/organizations/OrgLicenseChip";
+import { OrgTerminologyTab } from "@/components/organizations/OrgTerminologyTab";
+import { OrgBrandingTab } from "@/components/organizations/OrgBrandingTab";
+import { CoachAssignmentsTab } from "@/components/organizations/CoachAssignmentsTab";
+import { isCoachOrg } from "@/lib/organizations/org-type";
+import { Palette, Type as TypeIcon, UsersRound } from "lucide-react";
+
 
 
 
@@ -152,9 +159,12 @@ export function CoachOrgDetail() {
   const displayCompliance = filteredKpi ? filteredKpi.weekly_compliance : compliancePct;
   const displayPending = filteredKpi ? filteredKpi.pending_onboardings : pendingOnboardings;
 
+  const term = orgTerminology(org.organization_type, (org.terminology as any) ?? null);
+  const showCoachAssignments = isCoachOrg(org.organization_type);
+
   const quickAccess: Array<{ key: string; label: string; icon: React.ComponentType<{ className?: string }> }> = [
-    { key: "athletes", label: "Athleten", icon: UsersIcon },
-    { key: "teams", label: "Teams", icon: Users2Icon },
+    { key: "athletes", label: term.athletes, icon: UsersIcon },
+    { key: "teams", label: term.teams, icon: Users2Icon },
     ...(featureOn("athletic_training") || featureOn("training") || featureOn("smart_training")
       ? [{ key: "training", label: "Training", icon: DumbbellIcon }]
       : []),
@@ -164,8 +174,12 @@ export function CoachOrgDetail() {
     { key: "tasks", label: "Aufgaben", icon: ClipboardListIcon },
     ...(featureOn("community") ? [{ key: "community", label: "Community", icon: MessagesSquare }] : []),
     { key: "staff", label: "Staff", icon: UserCog },
+    ...(showCoachAssignments ? [{ key: "coaches", label: `${term.coaches} & ${term.players}`, icon: UsersRound }] : []),
+    { key: "naming", label: "Bezeichnungen", icon: TypeIcon },
+    { key: "brand", label: "Branding", icon: Palette },
     { key: "modules", label: "Module", icon: SettingsIcon },
   ];
+
 
   return (
     <div className={isBulls ? "bulls-theme -mx-4 -my-4 min-h-screen bg-[#050505] px-4 py-4 sm:-mx-6 sm:-my-6 sm:px-6 sm:py-6" : ""}>
@@ -192,6 +206,16 @@ export function CoachOrgDetail() {
           <h1 className="mt-1 truncate font-display text-2xl font-bold text-white sm:text-3xl">
             Coach Dashboard
           </h1>
+          <div className="mt-2">
+            <OrgLicenseChip
+              plan={org.license_plan}
+              status={org.license_status}
+              startedAt={org.license_started_at}
+              expiresAt={org.license_expires_at}
+              maxCustomers={org.max_customers}
+              maxCoaches={org.max_coaches}
+            />
+          </div>
         </div>
         <div className="shrink-0">
           {org.logo_url ? (
@@ -434,6 +458,55 @@ export function CoachOrgDetail() {
             }
           />
         )}
+
+        {tab === "naming" && (
+          <OrgTerminologyTab
+            orgId={orgId}
+            orgType={org.organization_type}
+            currentTerminology={(org.terminology as any) ?? null}
+            canManage={
+              caller?.experience === "org_admin" || caller?.is_bodyfuel_coach === true
+            }
+          />
+        )}
+
+        {tab === "brand" && (
+          <OrgBrandingTab
+            orgId={orgId}
+            org={{
+              primary_color: org.primary_color ?? null,
+              secondary_color: org.secondary_color ?? null,
+              accent_color: org.accent_color ?? null,
+              background_color: org.background_color ?? null,
+              text_color: org.text_color ?? null,
+              logo_url: org.logo_url ?? null,
+              alt_logo_url: org.alt_logo_url ?? null,
+              claim: org.claim ?? null,
+              short_name: org.short_name ?? null,
+              branding_mode: org.branding_mode ?? "bodyfuel",
+              branding_extra: (org.branding_extra as any) ?? {},
+            }}
+            canManage={
+              caller?.experience === "org_admin" || caller?.is_bodyfuel_coach === true
+            }
+          />
+        )}
+
+        {tab === "coaches" && showCoachAssignments && (
+          <CoachAssignmentsTab
+            orgId={orgId}
+            canManage={
+              caller?.experience === "org_admin" || caller?.is_bodyfuel_coach === true
+            }
+            terminology={{
+              coach: term.coach,
+              coaches: term.coaches,
+              player: term.player,
+              players: term.players,
+            }}
+          />
+        )}
+
 
 
       </div>
