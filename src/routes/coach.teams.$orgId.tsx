@@ -159,9 +159,12 @@ export function CoachOrgDetail() {
   const displayCompliance = filteredKpi ? filteredKpi.weekly_compliance : compliancePct;
   const displayPending = filteredKpi ? filteredKpi.pending_onboardings : pendingOnboardings;
 
+  const term = orgTerminology(org.organization_type, (org.terminology as any) ?? null);
+  const showCoachAssignments = isCoachOrg(org.organization_type);
+
   const quickAccess: Array<{ key: string; label: string; icon: React.ComponentType<{ className?: string }> }> = [
-    { key: "athletes", label: "Athleten", icon: UsersIcon },
-    { key: "teams", label: "Teams", icon: Users2Icon },
+    { key: "athletes", label: term.athletes, icon: UsersIcon },
+    { key: "teams", label: term.teams, icon: Users2Icon },
     ...(featureOn("athletic_training") || featureOn("training") || featureOn("smart_training")
       ? [{ key: "training", label: "Training", icon: DumbbellIcon }]
       : []),
@@ -171,8 +174,12 @@ export function CoachOrgDetail() {
     { key: "tasks", label: "Aufgaben", icon: ClipboardListIcon },
     ...(featureOn("community") ? [{ key: "community", label: "Community", icon: MessagesSquare }] : []),
     { key: "staff", label: "Staff", icon: UserCog },
+    ...(showCoachAssignments ? [{ key: "coaches", label: `${term.coaches} & ${term.players}`, icon: UsersRound }] : []),
+    { key: "naming", label: "Bezeichnungen", icon: TypeIcon },
+    { key: "brand", label: "Branding", icon: Palette },
     { key: "modules", label: "Module", icon: SettingsIcon },
   ];
+
 
   return (
     <div className={isBulls ? "bulls-theme -mx-4 -my-4 min-h-screen bg-[#050505] px-4 py-4 sm:-mx-6 sm:-my-6 sm:px-6 sm:py-6" : ""}>
