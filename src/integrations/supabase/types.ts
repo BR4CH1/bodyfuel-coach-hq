@@ -2617,6 +2617,167 @@ export type Database = {
           },
         ]
       }
+      org_monthly_finalizations: {
+        Row: {
+          created_at: string
+          finalized_at: string
+          id: string
+          month: number
+          organization_id: string
+          participant_count: number
+          status: string
+          winner_points: number | null
+          winner_user_id: string | null
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          finalized_at?: string
+          id?: string
+          month: number
+          organization_id: string
+          participant_count?: number
+          status?: string
+          winner_points?: number | null
+          winner_user_id?: string | null
+          year: number
+        }
+        Update: {
+          created_at?: string
+          finalized_at?: string
+          id?: string
+          month?: number
+          organization_id?: string
+          participant_count?: number
+          status?: string
+          winner_points?: number | null
+          winner_user_id?: string | null
+          year?: number
+        }
+        Relationships: []
+      }
+      org_monthly_standings: {
+        Row: {
+          active_days: number
+          check_in_completion_rate: number
+          check_in_days: number
+          completed_trainings: number
+          created_at: string
+          final_points: number
+          id: string
+          metadata: Json
+          month: number
+          organization_id: string
+          plan_completion_rate: number
+          planned_trainings: number
+          rank: number
+          user_id: string
+          year: number
+        }
+        Insert: {
+          active_days?: number
+          check_in_completion_rate?: number
+          check_in_days?: number
+          completed_trainings?: number
+          created_at?: string
+          final_points?: number
+          id?: string
+          metadata?: Json
+          month: number
+          organization_id: string
+          plan_completion_rate?: number
+          planned_trainings?: number
+          rank: number
+          user_id: string
+          year: number
+        }
+        Update: {
+          active_days?: number
+          check_in_completion_rate?: number
+          check_in_days?: number
+          completed_trainings?: number
+          created_at?: string
+          final_points?: number
+          id?: string
+          metadata?: Json
+          month?: number
+          organization_id?: string
+          plan_completion_rate?: number
+          planned_trainings?: number
+          rank?: number
+          user_id?: string
+          year?: number
+        }
+        Relationships: []
+      }
+      org_ranking_events: {
+        Row: {
+          awarded_by: string | null
+          category: Database["public"]["Enums"]["org_point_category"]
+          created_at: string
+          event_date: string
+          event_kind: string
+          id: string
+          metadata: Json
+          organization_id: string
+          points: number
+          reason: string | null
+          reversed_by_event_id: string | null
+          source_id: string | null
+          source_type: string | null
+          status: string
+          team_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          awarded_by?: string | null
+          category: Database["public"]["Enums"]["org_point_category"]
+          created_at?: string
+          event_date: string
+          event_kind: string
+          id?: string
+          metadata?: Json
+          organization_id: string
+          points: number
+          reason?: string | null
+          reversed_by_event_id?: string | null
+          source_id?: string | null
+          source_type?: string | null
+          status?: string
+          team_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          awarded_by?: string | null
+          category?: Database["public"]["Enums"]["org_point_category"]
+          created_at?: string
+          event_date?: string
+          event_kind?: string
+          id?: string
+          metadata?: Json
+          organization_id?: string
+          points?: number
+          reason?: string | null
+          reversed_by_event_id?: string | null
+          source_id?: string | null
+          source_type?: string | null
+          status?: string
+          team_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_ranking_events_reversed_by_event_id_fkey"
+            columns: ["reversed_by_event_id"]
+            isOneToOne: false
+            referencedRelation: "org_ranking_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       org_team_nutrition_schedule: {
         Row: {
           active: boolean
@@ -7582,6 +7743,17 @@ export type Database = {
         Args: { _token: string; _user_id: string }
         Returns: Json
       }
+      adjust_org_points_manual: {
+        Args: {
+          _category?: Database["public"]["Enums"]["org_point_category"]
+          _event_date?: string
+          _organization_id: string
+          _points: number
+          _reason: string
+          _target_user_id: string
+        }
+        Returns: string
+      }
       are_nutrition_partners: {
         Args: { _a: string; _b: string }
         Returns: boolean
@@ -7628,6 +7800,32 @@ export type Database = {
         }
         Returns: number
       }
+      award_org_points: {
+        Args: {
+          _awarded_by?: string
+          _category: Database["public"]["Enums"]["org_point_category"]
+          _daily_cap?: number
+          _event_date: string
+          _event_kind: string
+          _metadata?: Json
+          _organization_id: string
+          _points: number
+          _reason?: string
+          _source_id?: string
+          _source_type?: string
+          _team_id?: string
+          _user_id: string
+        }
+        Returns: string
+      }
+      award_org_test_improvements: {
+        Args: {
+          _organization_id: string
+          _session_id: string
+          _user_id: string
+        }
+        Returns: number
+      }
       can_view_org_member_profile: {
         Args: { _target: string; _viewer: string }
         Returns: boolean
@@ -7646,11 +7844,16 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      finalize_all_orgs_previous_month: { Args: never; Returns: undefined }
       finalize_bulls_month: {
         Args: { _month: number; _organization_id: string; _year: number }
         Returns: string
       }
       finalize_bulls_previous_month: { Args: never; Returns: undefined }
+      finalize_org_month: {
+        Args: { _month: number; _organization_id: string; _year: number }
+        Returns: string
+      }
       find_user_id_by_email: { Args: { _email: string }; Returns: string }
       get_bulls_month_ranking: {
         Args: { _month: number; _organization_id: string; _year: number }
@@ -7720,6 +7923,74 @@ export type Database = {
           year: number
         }[]
       }
+      get_org_month_ranking: {
+        Args: { _month: number; _organization_id: string; _year: number }
+        Returns: {
+          active_days: number
+          check_in_completion_rate: number
+          check_in_days: number
+          completed_trainings: number
+          display_name: string
+          nickname: string
+          plan_completion_rate: number
+          planned_trainings: number
+          rank: number
+          sport_position: string
+          team_id: string
+          total_points: number
+          user_id: string
+        }[]
+      }
+      get_org_monthly_winners: {
+        Args: { _limit?: number; _organization_id: string }
+        Returns: {
+          finalized_at: string
+          month: number
+          winner_display_name: string
+          winner_points: number
+          winner_user_id: string
+          year: number
+        }[]
+      }
+      get_org_ranking: {
+        Args: {
+          _organization_id: string
+          _position?: string
+          _since?: string
+          _team_id?: string
+          _until?: string
+        }
+        Returns: {
+          display_name: string
+          nickname: string
+          sport_position: string
+          team_id: string
+          total_points: number
+          user_id: string
+        }[]
+      }
+      get_org_score_breakdown: {
+        Args: {
+          _organization_id: string
+          _since?: string
+          _until?: string
+          _user_id: string
+        }
+        Returns: {
+          category: Database["public"]["Enums"]["org_point_category"]
+          event_count: number
+          total_points: number
+        }[]
+      }
+      get_org_user_potm_awards: {
+        Args: { _organization_id: string; _user_id: string }
+        Returns: {
+          finalized_at: string
+          month: number
+          points: number
+          year: number
+        }[]
+      }
       get_ranking: {
         Args: never
         Returns: {
@@ -7762,6 +8033,7 @@ export type Database = {
         Returns: boolean
       }
       is_bulls_coach: { Args: { _user_id: string }; Returns: boolean }
+      is_bulls_org: { Args: { _org_id: string }; Returns: boolean }
       is_org_admin: { Args: { _org: string; _user: string }; Returns: boolean }
       is_org_member: { Args: { _org: string; _user: string }; Returns: boolean }
       is_org_staff: {
@@ -7795,10 +8067,29 @@ export type Database = {
         Args: { _organization_id: string; _user_id: string }
         Returns: undefined
       }
+      recompute_org_nutrition_day: {
+        Args: { _day: string; _organization_id: string; _user_id: string }
+        Returns: undefined
+      }
+      recompute_org_streak: {
+        Args: { _organization_id: string; _user_id: string }
+        Returns: undefined
+      }
       recompute_user_points: { Args: { _user_id: string }; Returns: undefined }
       reverse_bulls_points_by_source: {
         Args: {
           _event_kind?: string
+          _reason?: string
+          _source_id: string
+          _source_type: string
+          _user_id: string
+        }
+        Returns: number
+      }
+      reverse_org_points_by_source: {
+        Args: {
+          _event_kind?: string
+          _organization_id: string
           _reason?: string
           _source_id: string
           _source_type: string
@@ -7853,6 +8144,17 @@ export type Database = {
         | "manual"
       nutrition_food_state: "raw" | "cooked" | "n_a"
       nutrition_food_unit: "raw" | "cooked" | "ml" | "piece"
+      org_point_category:
+        | "training"
+        | "team_training"
+        | "nutrition"
+        | "check_in"
+        | "tasks"
+        | "recovery"
+        | "rehab"
+        | "development"
+        | "challenge"
+        | "streak"
       organization_invite_status: "pending" | "accepted" | "expired" | "revoked"
       organization_membership_status:
         | "active"
@@ -8068,6 +8370,18 @@ export const Constants = {
       ],
       nutrition_food_state: ["raw", "cooked", "n_a"],
       nutrition_food_unit: ["raw", "cooked", "ml", "piece"],
+      org_point_category: [
+        "training",
+        "team_training",
+        "nutrition",
+        "check_in",
+        "tasks",
+        "recovery",
+        "rehab",
+        "development",
+        "challenge",
+        "streak",
+      ],
       organization_invite_status: ["pending", "accepted", "expired", "revoked"],
       organization_membership_status: [
         "active",

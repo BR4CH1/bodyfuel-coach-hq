@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { ChevronLeft, Users, MessageSquarePlus, Megaphone, Trophy, Dumbbell, Star, ImagePlus, X } from "lucide-react";
+import { ChevronLeft, Users, MessageSquarePlus, Megaphone, Trophy, Dumbbell, Star, ImagePlus, X, Flame, Crown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 import { useSession } from "@/lib/bodyfuel/session";
@@ -10,10 +10,32 @@ import { getOrgHomeData } from "@/lib/organizations/athlete.functions";
 import {
   listOrgCommunityPosts,
   createOrgCommunityPost,
-  getOrgChallengeRanking,
 } from "@/lib/organizations/operating-loop.functions";
+import {
+  getOrgMonthlyRanking,
+  getOrgMyScore,
+  getOrgHallOfFame,
+} from "@/lib/organizations/ranking.functions";
 import { OrgAthleteLayout } from "@/components/organizations/OrgAthleteLayout";
 import { Route as OrgLayoutRoute } from "./$orgSlug";
+
+const CATEGORY_LABEL: Record<string, string> = {
+  training: "Training",
+  team_training: "Teamtraining",
+  nutrition: "Ernährung",
+  check_in: "Check-in",
+  tasks: "Aufgaben",
+  recovery: "Recovery",
+  rehab: "Rehab",
+  development: "Entwicklung",
+  challenge: "Challenge",
+  streak: "Streak",
+};
+
+const MONTH_LABEL_DE = [
+  "Januar", "Februar", "März", "April", "Mai", "Juni",
+  "Juli", "August", "September", "Oktober", "November", "Dezember",
+];
 
 type TabKey = "feed" | "ranking";
 
@@ -294,61 +316,151 @@ function FeedPane({ primary }: { primary: string }) {
 function RankingPane({ primary }: { primary: string }) {
   const { org } = OrgLayoutRoute.useLoaderData();
   const { supabaseUser } = useSession();
-  const fetchRanking = useServerFn(getOrgChallengeRanking);
-  const { data } = useQuery({
-    queryKey: ["org-ranking-ledger", org.slug, supabaseUser?.id ?? "anon"],
-    enabled: !!supabaseUser,
-    queryFn: () => fetchRanking({ data: { slug: org.slug } }),
+  const now = new Date();
+  const [ym, setYm] = useState<{ year: number; month: number }>({
+    year: now.getUTCFullYear(),
+    month: now.getUTCMonth() + 1,
   });
 
-  if (!data) return <div className="p-6 text-center text-sm text-muted-foreground">Laden…</div>;
+  const fetchRanking = useServerFn(getOrgMonthlyRanking);
+  const fetchMyScore = useServerFn(getOrgMyScore);
+  const fetchHall = useServerFn(getOrgHallOfFame);
 
-  const entries = (data.entries as any[]) ?? [];
-  const active = (data as any).active_challenge;
-  const past = ((data as any).past_challenges ?? []) as any[];
+  const { data: rankingData, isLoading } = useQuery({
+    queryKey: ["org-monthly-ranking", org.slug, ym.year, ym.month, supabaseUser?.id ?? "anon"],
+    enabled: !!supabaseUser,
+    queryFn: () => fetchRanking({ data: { slug: org.slug, year: ym.year, month: ym.month } }),
+  });
+  const { data: myScore } = useQuery({
+    queryKey: ["org-my-score", org.slug, ym.year, ym.month, supabaseUser?.id ?? "anon"],
+    enabled: !!supabaseUser,
+    queryFn: () => fetchMyScore({ data: { slug: org.slug, year: ym.year, month: ym.month } }),
+  });
+  const { data: hall } = useQuery({
+    queryKey: ["org-hall-of-fame", org.slug, supabaseUser?.id ?? "anon"],
+    enabled: !!supabaseUser,
+    queryFn: () => fetchHall({ data: { slug: org.slug, limit: 6 } }),
+  });
+
+  const rows = ((rankingData?.rows ?? []) as any[]).filter((r) => r.total_points > 0);
+  const fin = rankingData?.finalization;
+  const monthLabel = `${MONTH_LABEL_DE[ym.month - 1]} ${ym.year}`;
+
+  const goPrev = () => {
+    setYm((v) => {
+      const d = new Date(v.year, v.month - 2, 1);
+      return { year: d.getFullYear(), month: d.getMonth() + 1 };
+    });
+  };
+  const goNext = () => {
+    setYm((v) => {
+      const d = new Date(v.year, v.month, 1);
+      const nowU = new Date();
+      const cap = new Date(nowU.getUTCFullYear(), nowU.getUTCMonth(), 1);
+      const target = d > cap ? cap : d;
+      return { year: target.getFullYear(), month: target.getMonth() + 1 };
+    });
+  };
+  const isCurrent =
+    ym.year === now.getUTCFullYear() && ym.month === now.getUTCMonth() + 1;
+
+  const myBreakdown = (myScore?.breakdown ?? []) as { category: string; total_points: number }[];
+  const myTotal = myBreakdown.reduce((s, x) => s + x.total_points, 0);
+  const myAllTime = ((myScore?.allTimeBreakdown ?? []) as { total_points: number }[]).reduce(
+    (s, x) => s + x.total_points,
+    0,
+  );
+  const streak = myScore?.streak;
 
   return (
-    <main className="mx-auto max-w-md px-4 py-5">
-      {active && (
-        <div className="mb-3 rounded-lg border border-border bg-card px-3 py-2 text-xs">
-          <span className="text-muted-foreground">Aktive Challenge: </span>
-          <span className="font-semibold">{active.name}</span>
+    <main className="mx-auto max-w-md px-4 py-5 space-y-5">
+      {/* Month selector */}
+      <div className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2 text-sm">
+        <button onClick={goPrev} className="rounded px-2 py-1 hover:bg-muted" aria-label="Vorheriger Monat">‹</button>
+        <div className="text-center">
+          <div className="font-display font-bold uppercase tracking-wide">{monthLabel}</div>
+          {fin?.status === "finalized" && (
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+              Finalisiert
+            </div>
+          )}
+          {!fin && isCurrent && (
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Live</div>
+          )}
         </div>
-      )}
-      {!active ? (
-        <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-          <Trophy className="mx-auto mb-2 h-8 w-8 opacity-40" />
-          <p className="font-semibold">Aktuell läuft keine Team-Challenge.</p>
-          <p className="mt-2 text-xs">
-            Sobald deine Organisation eine neue Challenge startet, erscheint hier die Rangliste.
-          </p>
-          {past.length > 0 && (
-            <div className="mt-6 text-left">
-              <div className="mb-2 text-[10px] uppercase tracking-wider text-muted-foreground">
-                Abgeschlossene Challenges
-              </div>
-              <ul className="space-y-1 text-xs">
-                {past.map((p) => (
-                  <li key={p.id} className="rounded border border-border bg-card p-2">
-                    <div className="font-semibold">{p.name}</div>
-                    {p.ends_at && (
-                      <div className="text-muted-foreground">
-                        bis {new Date(p.ends_at).toLocaleDateString("de-DE")}
-                      </div>
-                    )}
-                  </li>
-                ))}
-              </ul>
+        <button
+          onClick={goNext}
+          disabled={isCurrent}
+          className="rounded px-2 py-1 hover:bg-muted disabled:opacity-30"
+          aria-label="Nächster Monat"
+        >
+          ›
+        </button>
+      </div>
+
+      {/* My score card */}
+      {supabaseUser && (
+        <div
+          className="rounded-lg border p-4 text-white"
+          style={{ background: `linear-gradient(135deg, ${primary} 0%, #000 100%)`, borderColor: primary }}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-[10px] uppercase tracking-widest opacity-80">Dein Score</div>
+              <div className="font-display text-3xl font-bold">{myTotal}</div>
+              <div className="text-[10px] opacity-70">Punkte im {MONTH_LABEL_DE[ym.month - 1]}</div>
+            </div>
+            <div className="text-right">
+              {streak?.days ? (
+                <div className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-1 text-xs">
+                  <Flame className="h-3 w-3" /> {streak.days} Tage
+                </div>
+              ) : null}
+              <div className="mt-2 text-[10px] opacity-70">All-Time: {myAllTime}</div>
+            </div>
+          </div>
+          {myBreakdown.length > 0 && (
+            <div className="mt-3 grid grid-cols-2 gap-1 text-[11px]">
+              {myBreakdown.slice(0, 6).map((b) => (
+                <div key={b.category} className="flex items-center justify-between rounded bg-white/10 px-2 py-1">
+                  <span className="opacity-80">{CATEGORY_LABEL[b.category] ?? b.category}</span>
+                  <span className="font-bold">{b.total_points}</span>
+                </div>
+              ))}
             </div>
           )}
         </div>
-      ) : entries.length === 0 ? (
+      )}
+
+      {/* Winner banner if finalized */}
+      {fin?.status === "finalized" && fin.winner_user_id && (
+        <div className="rounded-lg border border-yellow-400/40 bg-yellow-500/5 p-3 text-center text-sm">
+          <Crown className="mx-auto mb-1 h-5 w-5 text-yellow-500" />
+          <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+            BodyFuel Player of the Month
+          </div>
+          <div className="mt-1 font-display text-lg font-bold">
+            {rows.find((r) => r.user_id === fin.winner_user_id)?.display_name ?? "Sieger*in"}
+          </div>
+          <div className="text-xs text-muted-foreground">{fin.winner_points} Punkte</div>
+        </div>
+      )}
+
+      {/* Leaderboard */}
+      {isLoading ? (
+        <div className="p-6 text-center text-sm text-muted-foreground">Laden…</div>
+      ) : rows.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-          Noch keine Punkte in dieser Challenge. Sei die*der Erste!
+          <Trophy className="mx-auto mb-2 h-8 w-8 opacity-40" />
+          <p className="font-semibold">Noch keine Punkte in diesem Monat.</p>
+          <p className="mt-2 text-xs">
+            Punkte kommen automatisch für Check-ins, abgeschlossene Trainings, Aufgaben, Ernährungs-Tracking,
+            Performance-Tests und aktive Challenges.
+          </p>
         </div>
       ) : (
         <ul className="space-y-1">
-          {entries.map((e, i) => {
+          {rows.map((e) => {
             const isMe = e.user_id === supabaseUser?.id;
             return (
               <li
@@ -359,16 +471,50 @@ function RankingPane({ primary }: { primary: string }) {
               >
                 <div
                   className="grid h-8 w-8 place-items-center rounded-full font-display text-sm font-bold"
-                  style={{ background: i < 3 ? primary : "hsl(var(--muted))", color: i < 3 ? "#fff" : undefined }}
+                  style={{
+                    background: e.rank <= 3 ? primary : "hsl(var(--muted))",
+                    color: e.rank <= 3 ? "#fff" : undefined,
+                  }}
                 >
-                  {i + 1}
+                  {e.rank}
                 </div>
-                <div className="flex-1 text-sm font-semibold">{isMe ? "Du" : e.name}</div>
-                <div className="font-display text-sm font-bold">{e.points}</div>
+                <div className="flex-1">
+                  <div className="text-sm font-semibold">{isMe ? "Du" : e.display_name}</div>
+                  <div className="text-[10px] text-muted-foreground">
+                    {e.completed_trainings ?? 0} Trainings · {e.check_in_days ?? 0} Check-ins · {e.active_days ?? 0} aktive Tage
+                  </div>
+                </div>
+                <div className="font-display text-sm font-bold">{e.total_points}</div>
               </li>
             );
           })}
         </ul>
+      )}
+
+      {/* Hall of Fame */}
+      {hall?.rows && hall.rows.length > 0 && (
+        <div className="pt-2">
+          <div className="mb-2 text-[10px] uppercase tracking-widest text-muted-foreground">
+            Player of the Month — Archiv
+          </div>
+          <ul className="space-y-1">
+            {hall.rows.map((w: any) => (
+              <li
+                key={`${w.year}-${w.month}`}
+                className="flex items-center gap-3 rounded-lg border border-border bg-card p-2 text-sm"
+              >
+                <Crown className="h-4 w-4 text-yellow-500" />
+                <div className="flex-1">
+                  <div className="font-semibold">{w.winner_display_name}</div>
+                  <div className="text-[10px] text-muted-foreground">
+                    {MONTH_LABEL_DE[w.month - 1]} {w.year}
+                  </div>
+                </div>
+                <div className="font-display text-xs font-bold">{w.winner_points}</div>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </main>
   );
