@@ -221,8 +221,9 @@ function CreateTeamDialog({
 }) {
   const qc = useQueryClient();
   const createFn = useServerFn(createPerformanceTeamOrganization);
-  const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [form, setForm] = useState({
+  type Step = 1 | 2 | 3 | 4;
+  const [step, setStep] = useState<Step>(1);
+  const initialForm = {
     name: "",
     short_name: "",
     slug: "",
@@ -237,16 +238,86 @@ function CreateTeamDialog({
     accent_color: "#f59e0b",
     background_color: "#0f172a",
     text_color: "#ffffff",
+  };
+  const [form, setForm] = useState(initialForm);
+
+  // Modul-Auswahl: Set aktivierter Modul-Keys (aus dem Katalog). Wird beim
+  // Typ-Wechsel vom Preset neu gefüllt, solange der Nutzer sie nicht manuell
+  // angefasst hat.
+  const [modulesTouched, setModulesTouched] = useState(false);
+  const [enabledModules, setEnabledModules] = useState<Set<OrgModuleKey>>(() => {
+    const initial = new Set<OrgModuleKey>();
+    for (const s of moduleSuggestions("sports_club")) {
+      if (s.state === "on") initial.add(s.module.key);
+    }
+    return initial;
   });
 
+  // Lizenz-Defaults: reagieren ebenfalls auf Typ-Wechsel, bleiben aber
+  // editierbar.
+  const [licenseTouched, setLicenseTouched] = useState(false);
+  const [license, setLicense] = useState(() => defaultLicenseForType("sports_club"));
 
   const setField = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
+
+  // Beim Typwechsel Preset/License neu vorbelegen (nur wenn nicht bereits
+  // manuell angepasst).
+  const onTypeChange = (t: OrgType) => {
+    setField("organization_type", t);
+    if (!modulesTouched) {
+      const next = new Set<OrgModuleKey>();
+      for (const s of moduleSuggestions(t)) {
+        if (s.state === "on") next.add(s.module.key);
+      }
+      setEnabledModules(next);
+    }
+    if (!licenseTouched) {
+      setLicense(defaultLicenseForType(t));
+    }
+  };
+
+  const suggestions = useMemo(
+    () => moduleSuggestions(form.organization_type),
+    [form.organization_type],
+  );
 
   const autoSlug = useMemo(
     () => (form.slugTouched ? form.slug : slugify(form.short_name || form.name)),
     [form.name, form.short_name, form.slug, form.slugTouched],
   );
+
+  const toggleModule = (key: OrgModuleKey) => {
+    setModulesTouched(true);
+    setEnabledModules((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const resetModulesToPreset = () => {
+    setModulesTouched(false);
+    const next = new Set<OrgModuleKey>();
+    for (const s of moduleSuggestions(form.organization_type)) {
+      if (s.state === "on") next.add(s.module.key);
+    }
+    setEnabledModules(next);
+  };
+
+  // Alle DB-Feature-Keys (inkl. Aliase) aus der Auswahl.
+  const enabledFeatureKeys = useMemo(() => {
+    const keys = new Set<string>();
+    for (const key of enabledModules) {
+      const def = ORG_MODULE_BY_KEY[key];
+      if (!def) continue;
+      for (const f of moduleFeatureKeys(def)) keys.add(f);
+    }
+    // Home-Nav ist immer sinnvoll, damit die App überhaupt eine Startseite hat.
+    keys.add("home");
+    return Array.from(keys);
+  }, [enabledModules]);
 
   const create = useMutation({
     mutationFn: (payload: Parameters<typeof createFn>[0]) => createFn(payload),
@@ -255,23 +326,15 @@ function CreateTeamDialog({
       onCreated(res.slug, res.id);
       // reset
       setStep(1);
-      setForm({
-        name: "",
-        short_name: "",
-        slug: "",
-        slugTouched: false,
-        organization_type: "sports_club",
-        sport: "Fußball",
-        claim: "",
-        logo_url: "",
-        alt_logo_url: "",
-        primary_color: "#111111",
-        secondary_color: "#ffffff",
-        accent_color: "#f59e0b",
-        background_color: "#0f172a",
-        text_color: "#ffffff",
-      });
-
+      setForm(initialForm);
+      setModulesTouched(false);
+      setLicenseTouched(false);
+      setLicense(defaultLicenseForType("sports_club"));
+      const initial = new Set<OrgModuleKey>();
+      for (const s of moduleSuggestions("sports_club")) {
+        if (s.state === "on") initial.add(s.module.key);
+      }
+      setEnabledModules(initial);
     },
     onError: (e: any) => toast.error(e?.message ?? "Erstellen fehlgeschlagen."),
   });
