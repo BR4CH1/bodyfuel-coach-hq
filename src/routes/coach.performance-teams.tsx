@@ -12,11 +12,10 @@ import {
 import { ORG_TYPE_OPTIONS, type OrgType } from "@/lib/organizations/org-type";
 import {
   moduleSuggestions,
-  defaultEnabledFeatureKeys,
   defaultLicenseForType,
   type ModulePresetState,
 } from "@/lib/organizations/org-presets";
-import { ORG_MODULE_BY_KEY, moduleFeatureKeys, type OrgModuleKey } from "@/lib/organizations/modules";
+import { ORG_MODULE_BY_KEY, moduleFeatureKeys, type OrgModuleKey, type OrgModuleDef } from "@/lib/organizations/modules";
 import { Switch } from "@/components/ui/switch";
 
 import { Button } from "@/components/ui/button";
