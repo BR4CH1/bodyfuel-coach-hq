@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { runOrgTaskEngineWithClient } from "@/lib/organizations/task-engine.server";
+import { verifyCronAuth } from "@/lib/cron-auth.server";
 
 /**
  * Daily automatic task engine runner.
@@ -8,21 +9,16 @@ import { runOrgTaskEngineWithClient } from "@/lib/organizations/task-engine.serv
  * Iterates all active organizations and runs the engine per org.
  * Failures in one org do not abort the run for others.
  *
- * Auth: requires the Supabase anon key in the `apikey` header
- * (Lovable Cloud standard for /api/public/* cron endpoints).
+ * Auth: requires the private CRON_HOOK_SECRET (same pattern as every
+ * other /api/public/hooks/* endpoint). The public anon/publishable key
+ * is NOT accepted because it is shipped in the browser bundle.
  */
 export const Route = createFileRoute("/api/public/hooks/org-task-engine")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const apiKey = request.headers.get("apikey") ?? request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-        const expected = process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.SUPABASE_ANON_KEY ?? "";
-        if (!apiKey || !expected || apiKey !== expected) {
-          return new Response(JSON.stringify({ error: "unauthorized" }), {
-            status: 401,
-            headers: { "content-type": "application/json" },
-          });
-        }
+        const auth = verifyCronAuth(request);
+        if (!auth.ok) return auth.response;
 
         // Load body (optional { horizon_days, organization_id })
         let body: { horizon_days?: number; organization_id?: string } = {};
