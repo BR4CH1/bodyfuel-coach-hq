@@ -317,7 +317,12 @@ function FeedPane({ primary }: { primary: string }) {
 
 function RankingPane({ primary }: { primary: string }) {
   const { org } = OrgLayoutRoute.useLoaderData();
+  const isBulls = /bulls/i.test(org.slug);
+  if (isBulls) {
+    return <BullsRankingContent showBackLink={false} />;
+  }
   const { supabaseUser } = useSession();
+
   const now = new Date();
   const [ym, setYm] = useState<{ year: number; month: number }>({
     year: now.getUTCFullYear(),
