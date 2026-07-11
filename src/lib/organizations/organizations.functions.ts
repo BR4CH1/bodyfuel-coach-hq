@@ -915,3 +915,254 @@ export const setOrganizationFeature = createServerFn({ method: "POST" })
 
 
 
+
+// ────────────────────────────────────────────────────────────────────────────
+// Phase 3: Terminologie überschreiben
+// ────────────────────────────────────────────────────────────────────────────
+
+const BULLS_GUARD_SLUG = "bulls";
+
+async function assertNotBulls(supabase: any, orgId: string) {
+  const { data: org } = await supabase
+    .from("organizations")
+    .select("slug")
+    .eq("id", orgId)
+    .maybeSingle();
+  if ((org as any)?.slug?.toLowerCase() === BULLS_GUARD_SLUG) {
+    throw new Error("Coesfeld Bulls sind aktuell schreibgeschützt.");
+  }
+}
+
+async function assertCanManageOrg(supabase: any, userId: string, orgId: string) {
+  // Plattform-Owner darf alles.
+  const { data: role } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId)
+    .eq("role", "platform_owner")
+    .maybeSingle();
+  if (role) return;
+  const { data: staff } = await supabase
+    .from("staff_assignments")
+    .select("role")
+    .eq("user_id", userId)
+    .eq("organization_id", orgId)
+    .maybeSingle();
+  const r = (staff as any)?.role;
+  if (r !== "organization_admin") {
+    throw new Error("Keine Berechtigung.");
+  }
+}
+
+export const updateOrganizationTerminology = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { orgId: string; terminology: Record<string, unknown> }) => d)
+  .handler(async ({ data, context }) => {
+    await assertCanManageOrg(context.supabase, context.userId, data.orgId);
+    await assertNotBulls(context.supabase, data.orgId);
+    const { error } = await context.supabase
+      .from("organizations")
+      .update({ terminology: data.terminology as any })
+      .eq("id", data.orgId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// ────────────────────────────────────────────────────────────────────────────
+// Phase 6: Branding erweitern
+// ────────────────────────────────────────────────────────────────────────────
+
+export const updateOrganizationBranding = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (d: {
+      orgId: string;
+      primary_color?: string | null;
+      secondary_color?: string | null;
+      accent_color?: string | null;
+      background_color?: string | null;
+      text_color?: string | null;
+      logo_url?: string | null;
+      alt_logo_url?: string | null;
+      claim?: string | null;
+      short_name?: string | null;
+      branding_mode?: string | null;
+      branding_extra?: Record<string, unknown> | null;
+    }) => d,
+  )
+  .handler(async ({ data, context }) => {
+    await assertCanManageOrg(context.supabase, context.userId, data.orgId);
+    await assertNotBulls(context.supabase, data.orgId);
+    const patch: Record<string, unknown> = {};
+    for (const k of [
+      "primary_color",
+      "secondary_color",
+      "accent_color",
+      "background_color",
+      "text_color",
+      "logo_url",
+      "alt_logo_url",
+      "claim",
+      "short_name",
+      "branding_mode",
+      "branding_extra",
+    ] as const) {
+      if ((data as any)[k] !== undefined) patch[k] = (data as any)[k];
+    }
+    if (!Object.keys(patch).length) return { ok: true };
+    const { error } = await context.supabase
+      .from("organizations")
+      .update(patch as any)
+      .eq("id", data.orgId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// ────────────────────────────────────────────────────────────────────────────
+// Phase 4: Coach ↔ Kunden-Zuweisungen (organization_coach_assignments)
+// ────────────────────────────────────────────────────────────────────────────
+
+export type OrgCoachAssignmentRow = {
+  id: string;
+  organization_id: string;
+  coach_user_id: string;
+  customer_user_id: string;
+  role: string;
+  coach_name: string | null;
+  customer_name: string | null;
+  created_at: string;
+};
+
+export const listOrgCoachAssignments = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { orgId: string }) => d)
+  .handler(async ({ data, context }) => {
+    // Zugriff prüfen (Coach der Org oder Owner)
+    const { data: staff } = await context.supabase
+      .from("staff_assignments")
+      .select("role")
+      .eq("user_id", context.userId)
+      .eq("organization_id", data.orgId)
+      .maybeSingle();
+    const { data: plat } = await context.supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", context.userId)
+      .eq("role", "platform_owner")
+      .maybeSingle();
+    if (!staff && !plat) throw new Error("Keine Berechtigung.");
+
+    const { data: rows, error } = await context.supabase
+      .from("organization_coach_assignments")
+      .select("id, organization_id, coach_user_id, customer_user_id, role, created_at")
+      .eq("organization_id", data.orgId)
+      .order("created_at", { ascending: true });
+    if (error) throw new Error(error.message);
+
+    const ids = new Set<string>();
+    for (const r of rows ?? []) {
+      ids.add((r as any).coach_user_id);
+      ids.add((r as any).customer_user_id);
+    }
+    let nameMap = new Map<string, string>();
+    if (ids.size) {
+      const { data: profs } = await context.supabase
+        .from("profiles")
+        .select("id, display_name")
+        .in("id", Array.from(ids));
+      for (const p of profs ?? []) {
+        nameMap.set((p as any).id, (p as any).display_name ?? null);
+      }
+    }
+    return (rows ?? []).map((r: any) => ({
+      ...r,
+      coach_name: nameMap.get(r.coach_user_id) ?? null,
+      customer_name: nameMap.get(r.customer_user_id) ?? null,
+    })) as OrgCoachAssignmentRow[];
+  });
+
+export const upsertOrgCoachAssignment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (d: {
+      orgId: string;
+      coachUserId: string;
+      customerUserId: string;
+      role?: string;
+    }) => d,
+  )
+  .handler(async ({ data, context }) => {
+    await assertCanManageOrg(context.supabase, context.userId, data.orgId);
+    const { error } = await context.supabase
+      .from("organization_coach_assignments")
+      .upsert(
+        {
+          organization_id: data.orgId,
+          coach_user_id: data.coachUserId,
+          customer_user_id: data.customerUserId,
+          role: data.role ?? "primary_coach",
+        },
+        { onConflict: "organization_id,coach_user_id,customer_user_id" },
+      );
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const removeOrgCoachAssignment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { orgId: string; assignmentId: string }) => d)
+  .handler(async ({ data, context }) => {
+    await assertCanManageOrg(context.supabase, context.userId, data.orgId);
+    const { error } = await context.supabase
+      .from("organization_coach_assignments")
+      .delete()
+      .eq("id", data.assignmentId)
+      .eq("organization_id", data.orgId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/** Liefert Coaches (staff_assignments.role='coach' oder 'organization_admin') und Members der Org. */
+export const listOrgCoachesAndCustomers = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { orgId: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { data: staff } = await context.supabase
+      .from("staff_assignments")
+      .select("user_id, role")
+      .eq("organization_id", data.orgId)
+      .in("role", ["organization_admin", "coach"]);
+    const { data: mems } = await context.supabase
+      .from("organization_memberships")
+      .select("user_id, role, status")
+      .eq("organization_id", data.orgId);
+
+    const coachIds = new Set<string>((staff ?? []).map((s: any) => s.user_id));
+    const memberIds = new Set<string>(
+      (mems ?? [])
+        .filter((m: any) => !coachIds.has(m.user_id))
+        .map((m: any) => m.user_id),
+    );
+    const allIds = new Set<string>([...coachIds, ...memberIds]);
+    let profiles: any[] = [];
+    if (allIds.size) {
+      const { data: profs } = await context.supabase
+        .from("profiles")
+        .select("id, display_name, email")
+        .in("id", Array.from(allIds));
+      profiles = profs ?? [];
+    }
+    const byId = new Map(profiles.map((p) => [p.id, p]));
+    const coaches = Array.from(coachIds).map((id) => ({
+      user_id: id,
+      display_name: byId.get(id)?.display_name ?? null,
+      email: byId.get(id)?.email ?? null,
+      role: (staff ?? []).find((s: any) => s.user_id === id)?.role ?? "coach",
+    }));
+    const customers = Array.from(memberIds).map((id) => ({
+      user_id: id,
+      display_name: byId.get(id)?.display_name ?? null,
+      email: byId.get(id)?.email ?? null,
+    }));
+    return { coaches, customers };
+  });
