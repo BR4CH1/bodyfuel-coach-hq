@@ -5,13 +5,11 @@ import {
   Apple,
   Users,
   User,
-  ClipboardCheck,
-  Activity,
-  Crown,
   type LucideIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { orgTerminology } from "@/lib/organizations/org-type";
+
 
 type NavItem = {
   key: string;
@@ -44,24 +42,8 @@ function buildNav(terminologyLabels: { training: string; nutrition: string; comm
       feature: "nutrition",
       featureAliases: ["smart_nutrition"],
     },
-    { key: "checkin", label: "Check-in", to: "/$orgSlug/checkin", icon: ClipboardCheck, feature: "checkins" },
-    {
-      key: "performance",
-      label: "Performance",
-      to: "/$orgSlug/performance",
-      icon: Activity,
-      feature: "performance",
-      featureAliases: ["strength_tests"],
-    },
-    {
-      key: "ranking",
-      label: "Ranking",
-      to: "/$orgSlug/ranking",
-      icon: Crown,
-      feature: "ranking",
-      featureAliases: ["gamification"],
-    },
     { key: "community", label: terminologyLabels.community, to: "/$orgSlug/community", icon: Users, feature: "community" },
+
     { key: "profil", label: "Profil", to: "/$orgSlug/profil", icon: User, feature: null },
   ];
 }
