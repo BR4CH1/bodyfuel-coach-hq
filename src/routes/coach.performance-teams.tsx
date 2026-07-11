@@ -695,3 +695,94 @@ function BrandingPreview({
     </div>
   );
 }
+
+const CATEGORY_LABELS: Record<string, string> = {
+  nutrition: "Ernährung",
+  training: "Training",
+  coaching: "Betreuung & Kommunikation",
+  body: "Körper & Fortschritt",
+  community: "Community & Motivation",
+  sport: "Sport-spezifisch",
+  analytics: "Analytics",
+};
+
+function ModuleSelectionStep({
+  suggestions,
+  enabled,
+  onToggle,
+  onReset,
+  touched,
+}: {
+  suggestions: { module: OrgModuleDef; state: ModulePresetState }[];
+  enabled: Set<OrgModuleKey>;
+  onToggle: (key: OrgModuleKey) => void;
+  onReset: () => void;
+  touched: boolean;
+}) {
+  const grouped = useMemo(() => {
+    const map = new Map<string, { module: OrgModuleDef; state: ModulePresetState }[]>();
+    for (const s of suggestions) {
+      const cat = s.module.category;
+      if (!map.has(cat)) map.set(cat, []);
+      map.get(cat)!.push(s);
+    }
+    return Array.from(map.entries());
+  }, [suggestions]);
+
+  return (
+    <div className="grid gap-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="text-xs text-muted-foreground">
+          Vorgeschlagene Module basieren auf dem Organisationstyp. Du kannst
+          jedes Modul einzeln aktivieren oder deaktivieren — alle Toggle sind
+          später im Cockpit weiter änderbar.
+        </div>
+        {touched && (
+          <Button size="sm" variant="ghost" onClick={onReset}>
+            Preset wiederherstellen
+          </Button>
+        )}
+      </div>
+      <div className="grid gap-4">
+        {grouped.map(([cat, items]) => (
+          <div key={cat}>
+            <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              {CATEGORY_LABELS[cat] ?? cat}
+            </div>
+            <div className="grid gap-1.5">
+              {items.map(({ module: m, state }) => {
+                const isOn = enabled.has(m.key);
+                return (
+                  <label
+                    key={m.key}
+                    className="flex cursor-pointer items-start justify-between gap-3 rounded-lg border border-border bg-card p-2.5 text-left transition hover:border-primary/50"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold">{m.label}</span>
+                        {state === "optional" && (
+                          <span className="rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-amber-600">
+                            Optional
+                          </span>
+                        )}
+                        {state === "on" && (
+                          <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-emerald-600">
+                            Empfohlen
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-0.5 text-[11px] leading-tight text-muted-foreground">
+                        {m.description}
+                      </div>
+                    </div>
+                    <Switch checked={isOn} onCheckedChange={() => onToggle(m.key)} />
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
