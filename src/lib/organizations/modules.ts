@@ -11,15 +11,50 @@
 // Organisation den Toggle einschaltet oder eine Migration sie vorbelegt.
 
 export type OrgModuleKey =
+  // Ernährung
   | "smart_nutrition"
+  | "nutrition"
+  | "recipes"
+  | "shopping_list"
+  // Training
   | "smart_training"
+  | "training"
+  | "training_calendar"
   | "load_management"
+  // Betreuung & Kommunikation
+  | "checkins"
+  | "tasks"
+  | "coach_chat"
+  | "onboarding"
+  | "documents"
+  // Körper & Fortschritt
+  | "body_metrics"
+  | "progress_tracking"
+  | "profile_photos"
+  // Community / Motivation
+  | "community"
   | "gamification"
   | "challenges"
-  | "checkins"
+  | "ranking"
+  // Sport-spezifisch
   | "performance"
+  | "strength_tests"
   | "injury_management"
-  | "community";
+  | "regeneration"
+  | "teams"
+  | "positions"
+  | "matchdays"
+  // Analytics
+  | "analytics";
+
+export type OrgModuleCategory =
+  | "nutrition"
+  | "training"
+  | "coaching"
+  | "body"
+  | "community"
+  | "sport"
+  | "analytics";
 
 export type OrgModuleDef = {
   key: OrgModuleKey;
@@ -27,6 +62,7 @@ export type OrgModuleDef = {
   feature: string;
   label: string;
   description: string;
+  category: OrgModuleCategory;
   /**
    * Weitere DB-Feature-Keys, die dieses Modul in der Anzeige beeinflusst.
    * Beispiel: `smart_training` steuert auch das Legacy-Flag `athletic_training`
@@ -36,65 +72,225 @@ export type OrgModuleDef = {
 };
 
 export const ORG_MODULES: OrgModuleDef[] = [
+  // ── Ernährung ────────────────────────────────────────────────────────
+  {
+    key: "nutrition",
+    feature: "nutrition",
+    label: "Ernährung",
+    description: "Ernährungsplanung, Tracking und Empfehlungen der zentralen BodyFuel-Engine.",
+    category: "nutrition",
+  },
   {
     key: "smart_nutrition",
-    feature: "nutrition",
-    label: "Smart Nutrition",
-    description:
-      "Ernährungsplanung, Tracking und Empfehlungen der zentralen BodyFuel-Engine.",
+    feature: "smart_nutrition",
+    label: "Smart Ernährungsplanung",
+    description: "Automatische, KI-gestützte Ernährungspläne auf Basis von Zielen und Belastung.",
+    category: "nutrition",
+  },
+  {
+    key: "recipes",
+    feature: "recipes",
+    label: "Rezepte",
+    description: "Rezeptdatenbank, Favoriten und Coach-Rezepte.",
+    category: "nutrition",
+  },
+  {
+    key: "shopping_list",
+    feature: "shopping_list",
+    label: "Einkaufsliste",
+    description: "Automatisch generierte Einkaufsliste aus dem aktuellen Plan.",
+    category: "nutrition",
+  },
+
+  // ── Training ─────────────────────────────────────────────────────────
+  {
+    key: "training",
+    feature: "athletic_training",
+    aliases: ["training"],
+    label: "Training",
+    description: "Trainingspläne, Übungen und Workouts.",
+    category: "training",
   },
   {
     key: "smart_training",
-    feature: "athletic_training",
-    aliases: ["training"],
-    label: "Smart Training",
-    description:
-      "BodyFuel erstellt Trainingspläne, Übungen und Workouts. Für Vereine, die ausschließlich mit Coach-Vorgaben arbeiten, kann dieses Modul deaktiviert bleiben.",
+    feature: "smart_training",
+    label: "Smart Trainingsplanung",
+    description: "Automatische Trainingsplan-Erstellung basierend auf Zielen und Progression.",
+    category: "training",
+  },
+  {
+    key: "training_calendar",
+    feature: "training_calendar",
+    label: "Trainingskalender",
+    description: "Wochenkalender mit Sessions, Terminen und Belastungsverteilung.",
+    category: "training",
   },
   {
     key: "load_management",
     feature: "load_management",
     label: "Belastungssteuerung",
-    description:
-      "Coach gibt die sportliche Belastung pro Tag vor. BodyFuel nutzt sie zur Ernährungssteuerung, ohne selbst Training zu erstellen.",
+    description: "Coach gibt die sportliche Belastung pro Tag vor. BodyFuel nutzt sie zur Ernährungssteuerung.",
+    category: "training",
+  },
+
+  // ── Betreuung & Kommunikation ────────────────────────────────────────
+  {
+    key: "checkins",
+    feature: "checkins",
+    label: "Check-ins",
+    description: "Tagesformular für Schlaf, Belastungsgefühl und Recovery.",
+    category: "coaching",
+  },
+  {
+    key: "tasks",
+    feature: "tasks",
+    label: "Aufgaben",
+    description: "Coach-Aufgaben, To-dos und Kunden-Actions.",
+    category: "coaching",
+  },
+  {
+    key: "coach_chat",
+    feature: "coach_chat",
+    label: "Coach-Chat",
+    description: "Direktnachrichten zwischen Coach und Athlet.",
+    category: "coaching",
+  },
+  {
+    key: "onboarding",
+    feature: "onboarding",
+    label: "Onboarding",
+    description: "Geführtes Onboarding für neue Kunden oder Athleten.",
+    category: "coaching",
+  },
+  {
+    key: "documents",
+    feature: "documents",
+    label: "Dokumente",
+    description: "Dokumente, Verträge und Materialien pro Kunde.",
+    category: "coaching",
+  },
+
+  // ── Körper & Fortschritt ─────────────────────────────────────────────
+  {
+    key: "body_metrics",
+    feature: "body_metrics",
+    label: "Körperdaten",
+    description: "Gewicht, Umfänge und Körperkomposition.",
+    category: "body",
+  },
+  {
+    key: "progress_tracking",
+    feature: "progress_tracking",
+    label: "Fortschrittsmessung",
+    description: "Zeitverlauf, Vergleichsansichten und Meilensteine.",
+    category: "body",
+  },
+  {
+    key: "profile_photos",
+    feature: "profile_photos",
+    label: "Profilbilder",
+    description: "Profilbilder und Fortschritts-Fotos.",
+    category: "body",
+  },
+
+  // ── Community / Motivation ───────────────────────────────────────────
+  {
+    key: "community",
+    feature: "community",
+    label: "Community",
+    description: "Feed, Posts und interne Kommunikation.",
+    category: "community",
   },
   {
     key: "gamification",
     feature: "gamification",
     label: "Gamification",
-    description: "Punkte, Streaks und Level für Athleten.",
+    description: "Punkte, Streaks und Level.",
+    category: "community",
   },
   {
     key: "challenges",
     feature: "challenges",
     label: "Challenges",
     description: "Team-, Jahrgangs- und Nutrition-Challenges.",
+    category: "community",
   },
   {
-    key: "checkins",
-    feature: "checkins",
-    label: "Daily Check-in / Readiness",
-    description: "Tagesformular für Schlaf, Belastungsgefühl und Recovery.",
+    key: "ranking",
+    feature: "ranking",
+    label: "Rangliste",
+    description: "Leaderboards und Punkte-Rankings.",
+    category: "community",
   },
+
+  // ── Sport-spezifisch ─────────────────────────────────────────────────
   {
     key: "performance",
     feature: "performance",
     label: "Performance Tests",
     description: "Testbatterien, Benchmarks und Positionsprofile.",
+    category: "sport",
+  },
+  {
+    key: "strength_tests",
+    feature: "strength_tests",
+    label: "Strength Tests",
+    description: "Kraftdiagnostik und Strength-Check-Zyklen.",
+    category: "sport",
   },
   {
     key: "injury_management",
     feature: "injury_management",
-    label: "Injury Management",
+    label: "Verletzungsmanagement",
     description: "Verletzungsfälle, Return-to-Play und Restriktionen.",
+    category: "sport",
   },
   {
-    key: "community",
-    feature: "community",
-    label: "Community",
-    description: "Feed, Posts und interne Kommunikation.",
+    key: "regeneration",
+    feature: "regeneration",
+    label: "Regenerationsmanagement",
+    description: "Readiness, Recovery-Maßnahmen und Belastungsampel.",
+    category: "sport",
+  },
+  {
+    key: "teams",
+    feature: "teams",
+    label: "Teams",
+    description: "Mannschaften, Gruppen oder Abteilungen.",
+    category: "sport",
+  },
+  {
+    key: "positions",
+    feature: "positions",
+    label: "Positionen",
+    description: "Positionsprofile für Mannschaftssportarten.",
+    category: "sport",
+  },
+  {
+    key: "matchdays",
+    feature: "matchdays",
+    label: "Spieltage",
+    description: "Wettkampftage inklusive Load- und Ernährungsanpassung.",
+    category: "sport",
+  },
+
+  // ── Analytics ────────────────────────────────────────────────────────
+  {
+    key: "analytics",
+    feature: "analytics",
+    label: "Statistiken und Analysen",
+    description: "Organisations- und Athleten-Statistiken.",
+    category: "analytics",
   },
 ];
+
+export const ORG_MODULE_BY_KEY: Record<string, OrgModuleDef> = ORG_MODULES.reduce(
+  (acc, m) => {
+    acc[m.key] = m;
+    return acc;
+  },
+  {} as Record<string, OrgModuleDef>,
+);
 
 /** Alle DB-Feature-Keys, die aus dem Katalog gepflegt werden (inkl. Aliase). */
 export function moduleFeatureKeys(def: OrgModuleDef): string[] {
@@ -108,7 +304,7 @@ export function isModuleEnabled(
   features: OrgFeatureRow[] | null | undefined,
   moduleKey: OrgModuleKey,
 ): boolean {
-  const def = ORG_MODULES.find((m) => m.key === moduleKey);
+  const def = ORG_MODULE_BY_KEY[moduleKey];
   if (!def) return false;
   const keys = moduleFeatureKeys(def);
   return (features ?? []).some((f) => keys.includes(f.feature) && f.enabled);
