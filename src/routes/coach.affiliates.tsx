@@ -56,9 +56,16 @@ function AffiliatesPage() {
     qc.invalidateQueries({ queryKey: ["affiliate-referrals"] });
   };
 
-  const submitNew = async (form: { name: string; email: string; slug: string; commission_pct: number; notes: string }) => {
+  const submitNew = async (form: { name: string; email: string; slug: string; commission_pct: number; notes: string; discount_code: string }) => {
     try {
-      await createFn({ data: { ...form, email: form.email || undefined, notes: form.notes || undefined } });
+      await createFn({
+        data: {
+          ...form,
+          email: form.email || undefined,
+          notes: form.notes || undefined,
+          discount_code: form.discount_code || undefined,
+        },
+      });
       toast.success("Partner angelegt");
       setOpen(false);
       refresh();
@@ -269,17 +276,21 @@ function PartnerCard({
   onUpdate: (patch: any) => Promise<void>;
   onDelete: () => Promise<void>;
 }) {
-  const url = `${typeof window !== "undefined" ? window.location.origin : "https://bodyfuel-coaching.com"}/?ref=${p.slug}`;
-  const copy = async () => {
+  const origin = typeof window !== "undefined" ? window.location.origin : "https://bodyfuel-coaching.com";
+  const url = `${origin}/?ref=${p.slug}`;
+  const promoUrl = p.discount_code ? `${origin}/smart/signup?promo=${p.discount_code}` : null;
+  const copy = async (text: string, msg: string) => {
     try {
-      await navigator.clipboard.writeText(url);
-      toast.success("Link kopiert");
+      await navigator.clipboard.writeText(text);
+      toast.success(msg);
     } catch {
       toast.error("Kopieren fehlgeschlagen");
     }
   };
   const [editPct, setEditPct] = useState(false);
   const [pct, setPct] = useState<number>(Number(p.commission_pct));
+  const [editCode, setEditCode] = useState(false);
+  const [code, setCode] = useState<string>(p.discount_code ?? "");
 
   return (
     <div className="rounded-2xl border border-border bg-card p-4">
@@ -316,9 +327,68 @@ function PartnerCard({
           <Link2 className="h-3 w-3 shrink-0" />
           <span className="truncate">{url}</span>
         </div>
-        <Button size="sm" variant="outline" onClick={copy}>
+        <Button size="sm" variant="outline" onClick={() => copy(url, "Link kopiert")}>
           <Copy className="h-3 w-3" />
         </Button>
+      </div>
+
+      {/* Rabattcode */}
+      <div className="mt-2 rounded-lg border border-gold/30 bg-gold/5 p-2 text-xs">
+        {editCode ? (
+          <div className="flex items-center gap-2">
+            <Input
+              value={code}
+              onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, "").slice(0, 24))}
+              placeholder="MARCEL10"
+              className="h-7 uppercase tracking-wider"
+            />
+            <Button
+              size="sm"
+              onClick={async () => {
+                await onUpdate({ discount_code: code.trim() ? code.trim() : null });
+                setEditCode(false);
+              }}
+            >
+              Speichern
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => { setCode(p.discount_code ?? ""); setEditCode(false); }}>
+              Abbrechen
+            </Button>
+          </div>
+        ) : p.discount_code ? (
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <div className="text-[10px] uppercase tracking-wider text-gold">Rabattcode ({Number(p.discount_pct ?? p.commission_pct)}%)</div>
+              <div className="mt-0.5 flex items-center gap-2">
+                <span className="rounded bg-gold/15 px-1.5 py-0.5 font-mono font-bold text-gold">{p.discount_code}</span>
+                <button
+                  onClick={() => copy(p.discount_code, "Code kopiert")}
+                  className="text-muted-foreground hover:text-foreground"
+                  title="Code kopieren"
+                >
+                  <Copy className="h-3 w-3" />
+                </button>
+                {promoUrl && (
+                  <button
+                    onClick={() => copy(promoUrl, "Direktlink kopiert")}
+                    className="truncate text-muted-foreground hover:text-foreground"
+                    title="Direktlink kopieren"
+                  >
+                    <Link2 className="mr-0.5 inline h-3 w-3" />
+                    Direktlink
+                  </button>
+                )}
+              </div>
+            </div>
+            <Button size="sm" variant="ghost" onClick={() => setEditCode(true)} className="text-muted-foreground">
+              Ändern
+            </Button>
+          </div>
+        ) : (
+          <button onClick={() => setEditCode(true)} className="w-full text-left text-muted-foreground hover:text-foreground">
+            <Tag className="mr-1 inline h-3 w-3" /> Rabattcode hinzufügen
+          </button>
+        )}
       </div>
 
       <div className="mt-3 flex items-center justify-between gap-2 text-xs">
@@ -365,13 +435,14 @@ function NewPartnerDialog({
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  onSubmit: (v: { name: string; email: string; slug: string; commission_pct: number; notes: string }) => Promise<void>;
+  onSubmit: (v: { name: string; email: string; slug: string; commission_pct: number; notes: string; discount_code: string }) => Promise<void>;
 }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [slug, setSlug] = useState("");
   const [pct, setPct] = useState(10);
   const [notes, setNotes] = useState("");
+  const [discountCode, setDiscountCode] = useState("");
 
   const autoSlug = (v: string) =>
     v
@@ -385,6 +456,13 @@ function NewPartnerDialog({
       .replace(/^-+|-+$/g, "")
       .slice(0, 40);
 
+  const autoCode = (v: string) =>
+    v
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9_-]+/g, "")
+      .slice(0, 24);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -395,8 +473,15 @@ function NewPartnerDialog({
           onSubmit={async (e) => {
             e.preventDefault();
             if (!name.trim() || !slug.trim()) return toast.error("Name & Slug erforderlich");
-            await onSubmit({ name: name.trim(), email: email.trim(), slug: slug.trim(), commission_pct: pct, notes: notes.trim() });
-            setName(""); setEmail(""); setSlug(""); setPct(10); setNotes("");
+            await onSubmit({
+              name: name.trim(),
+              email: email.trim(),
+              slug: slug.trim(),
+              commission_pct: pct,
+              notes: notes.trim(),
+              discount_code: discountCode.trim(),
+            });
+            setName(""); setEmail(""); setSlug(""); setPct(10); setNotes(""); setDiscountCode("");
           }}
           className="space-y-3"
         >
@@ -407,6 +492,10 @@ function NewPartnerDialog({
               onChange={(e) => {
                 setName(e.target.value);
                 if (!slug) setSlug(autoSlug(e.target.value));
+                if (!discountCode) {
+                  const auto = autoCode(e.target.value.replace(/\s+/g, "") + String(pct));
+                  if (auto.length >= 3) setDiscountCode(auto);
+                }
               }}
               placeholder="Max Mustermann"
               required
@@ -422,8 +511,31 @@ function NewPartnerDialog({
             <p className="text-[10px] text-muted-foreground">Wird zu: /?ref={slug || "slug"}</p>
           </div>
           <div className="space-y-1.5">
-            <Label>Provision (%)</Label>
-            <Input type="number" value={pct} min={0} max={100} step={0.5} onChange={(e) => setPct(Number(e.target.value))} />
+            <Label>Provision & Rabatt (%)</Label>
+            <Input
+              type="number"
+              value={pct}
+              min={0}
+              max={100}
+              step={0.5}
+              onChange={(e) => setPct(Number(e.target.value))}
+            />
+            <p className="text-[10px] text-muted-foreground">
+              Partner erhält {pct}% Provision · Kunde spart {pct}% auf den 1. Smart-Monat.
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Rabattcode (optional)</Label>
+            <Input
+              value={discountCode}
+              onChange={(e) => setDiscountCode(autoCode(e.target.value))}
+              placeholder="z. B. MARCEL10"
+              className="uppercase tracking-wider"
+              maxLength={24}
+            />
+            <p className="text-[10px] text-muted-foreground">
+              Kunde tippt den Code im Checkout ein oder öffnet /smart/signup?promo={discountCode || "CODE"}
+            </p>
           </div>
           <div className="space-y-1.5">
             <Label>Notizen</Label>

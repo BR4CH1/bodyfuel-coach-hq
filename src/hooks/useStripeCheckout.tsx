@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { StripeEmbeddedCheckoutForm } from "@/components/StripeEmbeddedCheckout";
 
-type Options = { priceId: string; returnUrl?: string };
+type Options = { priceId: string; returnUrl?: string; promoCode?: string };
 
 export function useStripeCheckout() {
   const [isOpen, setIsOpen] = useState(false);
