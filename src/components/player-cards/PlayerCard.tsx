@@ -402,6 +402,9 @@ export function PlayerCard({ data }: { data: PlayerCardData }) {
           <clipPath id="pc-clip">
             <path d={framePath} />
           </clipPath>
+          <clipPath id="pc-feet-clip">
+            <rect x="20" y="940" width="780" height="340" />
+          </clipPath>
         </defs>
 
         {/* HINTERGRUND */}
@@ -441,25 +444,27 @@ export function PlayerCard({ data }: { data: PlayerCardData }) {
           <rect x="20" y="20" width="780" height="1260" filter="url(#pc-noise)" opacity="0.42" />
           <rect x="20" y="20" width="780" height="1260" filter="url(#pc-grain)" opacity="0.5" style={{ mixBlendMode: "overlay" }} />
 
-          {/* SPIELERBILD — deutlich größer, dominant */}
+          {/* SPIELERBILD — dominant, füllt fast die gesamte Kartenhöhe */}
           {avatarUrl && (
             <>
-              {/* starker roter Hinter-Glow */}
-              <ellipse cx="410" cy="460" rx="290" ry="360" fill={primary} opacity="0.55" filter="url(#pc-glow-strong)" />
-              <ellipse cx="410" cy="520" rx="220" ry="180" fill="#000" opacity="0.75" filter="url(#pc-glow-strong)" />
+              {/* Weicher radialer Glow direkt hinter dem Spieler (kein harter Kreis) */}
+              <ellipse cx="410" cy="470" rx="360" ry="470" fill="url(#pc-bg-glow)"
+                       style={{ mixBlendMode: "screen" }} opacity="0.95" />
+              <ellipse cx="410" cy="620" rx="240" ry="200" fill={primary}
+                       opacity="0.32" filter="url(#pc-glow-strong)" style={{ mixBlendMode: "screen" }} />
+              {/* Boden-Schatten */}
+              <ellipse cx="410" cy="1055" rx="270" ry="26" fill="#000" opacity="0.8" filter="url(#pc-glow-strong)" />
               <image
                 href={avatarUrl}
-                x="30"
-                y="10"
-                width="760"
-                height="1010"
+                x="-70"
+                y="-30"
+                width="960"
+                height="1180"
                 preserveAspectRatio="xMidYMax meet"
                 filter="url(#pc-cutout-feather)"
                 style={{ filter: "drop-shadow(0 50px 40px rgba(0,0,0,0.85))" }}
                 onError={() => { if (rawAvatar) AVATAR_CACHE.delete(rawAvatar); setAvatarUrl(null); }}
               />
-              {/* Boden-Schatten unter Füßen */}
-              <ellipse cx="410" cy="1000" rx="230" ry="22" fill="#000" opacity="0.7" filter="url(#pc-glow-strong)" />
             </>
           )}
 
@@ -467,33 +472,37 @@ export function PlayerCard({ data }: { data: PlayerCardData }) {
           <rect x="20" y="20" width="780" height="1260" fill="url(#pc-vignette)" pointerEvents="none" />
         </g>
 
-        {/* OVR LINKS — deutlich größer, dominanter */}
+        {/* OVR — dominant links oben */}
         <g>
-          {/* soft red backdrop halo */}
-          <circle cx="150" cy="200" r="130" fill={primary} opacity="0.28" filter="url(#pc-glow-strong)" />
-          <text x="60" y="260"
+          <circle cx="150" cy="205" r="150" fill={primary} opacity="0.32" filter="url(#pc-glow-strong)" />
+          <text x="50" y="270"
                 fontFamily="Anton, Bebas Neue, sans-serif"
                 fontWeight="900"
-                fontSize="280"
+                fontSize="300"
                 fill="url(#pc-name-metal)"
-                style={{ letterSpacing: "-10px", paintOrder: "stroke", stroke: "rgba(0,0,0,0.65)", strokeWidth: 3 } as any}
+                style={{ letterSpacing: "-12px", paintOrder: "stroke", stroke: "rgba(0,0,0,0.7)", strokeWidth: 3 } as any}
                 filter="url(#pc-glow-red)">
             {ovr ?? "—"}
           </text>
-          <text x="72" y="308" fontFamily="Oswald, sans-serif" fontWeight="900" fontSize="38" fill={primary}
-                letterSpacing="6" filter="url(#pc-glow-red)">OVR</text>
+          <text x="64" y="310" fontFamily="Oswald, sans-serif" fontWeight="900" fontSize="34" fill={primary}
+                letterSpacing="8" filter="url(#pc-glow-red)">OVR</text>
+        </g>
+
+        {/* LINKE INFO-SPALTE — bündig unter OVR */}
+        <g>
           {position && (
-            <>
-              <text x="70" y="410" fontFamily="Bebas Neue, Anton, sans-serif" fontSize="94" fill="#ffffff"
-                    style={{ letterSpacing: "-2px", paintOrder: "stroke", stroke: "rgba(0,0,0,0.6)", strokeWidth: 2 } as any}>
-                {position}
-              </text>
-              <line x1="74" y1="428" x2="180" y2="428" stroke={primary} strokeWidth="4" />
-              {jerseyNumber && (
-                <text x="74" y="466" fontFamily="Oswald, sans-serif" fontWeight="700" fontSize="30" fill="#fff"
-                      letterSpacing="2" opacity="0.85">#{jerseyNumber}</text>
-              )}
-            </>
+            <text x="62" y="392" fontFamily="Bebas Neue, Anton, sans-serif" fontSize="72" fill={primary}
+                  style={{ letterSpacing: "-1px", paintOrder: "stroke", stroke: "rgba(0,0,0,0.65)", strokeWidth: 2 } as any}
+                  filter="url(#pc-glow-red)">
+              {position}
+            </text>
+          )}
+          <line x1="64" y1="408" x2="200" y2="408" stroke={primary} strokeWidth="3" opacity="0.9" />
+          {jerseyNumber && (
+            <text x="64" y="452" fontFamily="Anton, Bebas Neue, sans-serif" fontSize="46" fill="#ffffff"
+                  style={{ paintOrder: "stroke", stroke: "rgba(0,0,0,0.7)", strokeWidth: 2 } as any}>
+              #{jerseyNumber}
+            </text>
           )}
         </g>
 
@@ -523,35 +532,35 @@ export function PlayerCard({ data }: { data: PlayerCardData }) {
                 fill="#ffffff" opacity="0.7" letterSpacing="4">{organization.short_name.toUpperCase()}</text>
         )}
 
-        {/* BODY-STATS LINKS */}
-        <g fontFamily="Oswald, sans-serif" fontWeight="600" fontSize="20" fill="#ffffff">
+        {/* BODY-STATS LINKS — bündig unter Nummer */}
+        <g fontFamily="Oswald, sans-serif" fontWeight="700" fontSize="22" fill="#ffffff">
           {age != null && (
-            <g transform="translate(70, 560)">
-              <rect x="0" y="-16" width="22" height="22" rx="3" fill="none" stroke={primary} strokeWidth="1.8" />
-              <line x1="0" y1="-8" x2="22" y2="-8" stroke={primary} strokeWidth="1.5" />
-              <text x="34" y="2" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}>{age} JAHRE</text>
+            <g transform="translate(64, 505)">
+              <rect x="0" y="-17" width="24" height="24" rx="3" fill="none" stroke={primary} strokeWidth="1.8" />
+              <line x1="0" y1="-9" x2="24" y2="-9" stroke={primary} strokeWidth="1.5" />
+              <text x="38" y="2" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.95)" }}>{age} JAHRE</text>
             </g>
           )}
           {height != null && (
-            <g transform="translate(70, 605)">
-              <rect x="0" y="-16" width="22" height="14" rx="2" fill="none" stroke={primary} strokeWidth="1.8" />
-              <line x1="5" y1="-16" x2="5" y2="-8" stroke={primary} strokeWidth="1" />
-              <line x1="11" y1="-16" x2="11" y2="-11" stroke={primary} strokeWidth="1" />
-              <line x1="17" y1="-16" x2="17" y2="-8" stroke={primary} strokeWidth="1" />
-              <text x="34" y="0">{height} CM</text>
+            <g transform="translate(64, 545)">
+              <rect x="0" y="-17" width="24" height="16" rx="2" fill="none" stroke={primary} strokeWidth="1.8" />
+              <line x1="6" y1="-17" x2="6" y2="-9" stroke={primary} strokeWidth="1" />
+              <line x1="12" y1="-17" x2="12" y2="-12" stroke={primary} strokeWidth="1" />
+              <line x1="18" y1="-17" x2="18" y2="-9" stroke={primary} strokeWidth="1" />
+              <text x="38" y="0" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.95)" }}>{height} CM</text>
             </g>
           )}
           {weight != null && (
-            <g transform="translate(70, 650)">
-              <circle cx="11" cy="-6" r="10" fill="none" stroke={primary} strokeWidth="1.8" />
-              <path d="M11 -12 L11 -6 L15 -3" stroke={primary} strokeWidth="1.8" fill="none" strokeLinecap="round" />
-              <text x="34" y="0">{weight} KG</text>
+            <g transform="translate(64, 585)">
+              <circle cx="12" cy="-7" r="11" fill="none" stroke={primary} strokeWidth="1.8" />
+              <path d="M12 -14 L12 -7 L17 -3" stroke={primary} strokeWidth="1.8" fill="none" strokeLinecap="round" />
+              <text x="38" y="0" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.95)" }}>{weight} KG</text>
             </g>
           )}
           {card.is_provisional && (
-            <g transform="translate(70, 700)">
-              <rect x="0" y="-16" width="130" height="24" rx="3" fill="#f59e0b" />
-              <text x="65" y="1" textAnchor="middle" fontSize="14" fontWeight="800" fill="#000" letterSpacing="2">VORLÄUFIG</text>
+            <g transform="translate(64, 625)">
+              <rect x="0" y="-16" width="140" height="24" rx="3" fill="#f59e0b" />
+              <text x="70" y="1" textAnchor="middle" fontSize="14" fontWeight="800" fill="#000" letterSpacing="2">VORLÄUFIG</text>
             </g>
           )}
         </g>
@@ -620,6 +629,24 @@ export function PlayerCard({ data }: { data: PlayerCardData }) {
             {[teamLabel, position, jerseyNumber ? `#${jerseyNumber}` : null].filter(Boolean).join("   •   ").toUpperCase()}
           </text>
         </g>
+
+        {/* SPIELER-FÜSSE VOR DEM NAMEN — erzeugt Tiefe / Überlappung */}
+        {avatarUrl && (
+          <g clipPath="url(#pc-clip)">
+            <g clipPath="url(#pc-feet-clip)">
+              <image
+                href={avatarUrl}
+                x="-70"
+                y="-30"
+                width="960"
+                height="1180"
+                preserveAspectRatio="xMidYMax meet"
+                filter="url(#pc-cutout-feather)"
+                style={{ filter: "drop-shadow(0 30px 24px rgba(0,0,0,0.85))" }}
+              />
+            </g>
+          </g>
+        )}
 
         {/* STAT-PANEL — ein Fläche mit dünnen Trennlinien */}
         <g transform="translate(50, 1055)">
