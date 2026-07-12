@@ -11,6 +11,7 @@ import {
   getVideoSignedUrl,
 } from "@/lib/bulls-performance.functions";
 import { Section, TrendChip } from "./athlete-tab-shared";
+import { CoachPlayerCardView } from "@/components/player-cards/CoachPlayerCardView";
 
 type TestRow = {
   id: string;
@@ -63,6 +64,8 @@ export function AthletePerformanceTab({
 
   return (
     <div className="space-y-4">
+      <CoachPlayerCardView userId={userId} />
+
       <Section title="Performance Score" icon={<Gauge className="h-4 w-4" />}>
         {!s ? (
           <div className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
