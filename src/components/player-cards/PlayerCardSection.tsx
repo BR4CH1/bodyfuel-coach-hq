@@ -32,6 +32,8 @@ export function PlayerCardSection({ jerseyNumber, teamLabel }: { jerseyNumber?: 
   const fetchFn = useServerFn(getMyPlayerCard);
   const recomputeFn = useServerFn(recomputePlayerCard);
   const markSeenFn = useServerFn(markBadgeUnlocksSeen);
+  const cutoutFn = useServerFn(ensurePlayerCardCutout);
+  const cutoutTriedRef = useRef<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
   const [upgrade, setUpgrade] = useState<UpgradePayload | null>(null);
   const previousUnlockedRef = useRef<Set<string> | null>(null);
