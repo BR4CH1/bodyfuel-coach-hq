@@ -535,7 +535,7 @@ export function PlayerCard({ data }: { data: PlayerCardData }) {
 
           {/* QR — als foreignObject damit qrcode.react rendert */}
           <foreignObject x="560" y="0" width="140" height="80">
-            <div xmlns="http://www.w3.org/1999/xhtml"
+            <div
                  style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
               <div style={{
                 padding: 4,
