@@ -633,6 +633,32 @@ export const getPlayerOfTheMonthCandidates = createServerFn({ method: "GET" })
     };
   });
 
+/** Team of the Month — durchschnittliches BFR-Delta pro Team im Monat. */
+export const getTeamOfTheMonthCandidates = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { organization_id: string; year?: number; month?: number }) => {
+    const fb = currentYearMonth();
+    return {
+      organization_id: String(d.organization_id),
+      year: Number.isFinite(d.year) ? Number(d.year) : fb.year,
+      month: Number.isFinite(d.month) ? Number(d.month) : fb.month,
+    };
+  })
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    await assertOrgAccess(supabase, userId, data.organization_id);
+    const monthStart = `${data.year}-${String(data.month).padStart(2, "0")}-01`;
+    const { data: rows, error } = await supabase.rpc(
+      "get_team_of_the_month_candidates" as any,
+      { _organization_id: data.organization_id, _month_start: monthStart },
+    );
+    if (error) throw new Error(error.message);
+    return {
+      year: data.year,
+      month: data.month,
+      candidates: (rows ?? []) as any[],
+    };
+
 /** Coach setzt Player of the Month für einen Monat (award_kind: top_bfr | top_delta). */
 export const finalizePlayerOfTheMonth = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
