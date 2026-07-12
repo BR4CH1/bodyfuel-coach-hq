@@ -55,7 +55,7 @@ import { Switch } from "@/components/ui/switch";
 import { useQuery } from "@tanstack/react-query";
 import { getMyAthleteProfile } from "@/lib/athlete-profile.functions";
 import { AthleteProfileEditor } from "@/components/bodyfuel/AthleteProfileEditor";
-import { MyCheckinsHistorySection } from "@/components/bodyfuel/MyCheckinsHistorySection";
+// MyCheckinsHistorySection wird jetzt in /check-in gerendert.
 import { MinorProtectionSection } from "@/components/bodyfuel/MinorProtectionSection";
 import { ProfilePhotoUpload } from "@/components/bodyfuel/ProfilePhotoUpload";
 import {
@@ -264,8 +264,8 @@ function ProfileContent() {
       {/* Mein Paket */}
       <MyPackageSection pkg={pkg} />
 
-      {/* Check-ins (mit Coach-Antwort & Archiv) */}
-      {uid && <MyCheckinsHistorySection userId={uid} />}
+      {/* Check-in-Ergebnisse werden jetzt direkt unter /check-in angezeigt. */}
+
 
       {/* Coaching-Infos */}
 

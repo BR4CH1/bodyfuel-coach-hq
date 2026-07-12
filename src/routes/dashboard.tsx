@@ -446,7 +446,27 @@ function RealUserDashboard() {
   const name = profile?.display_name?.split(" ")[0] ?? supabaseUser?.email?.split("@")[0] ?? "";
 
   const checkinInfo = (() => {
-    // Check-in dieser Woche abgegeben → wartet auf Coach-Prüfung, Maße optional
+    const today = new Date(todayStr);
+    const target = nextCheckin ? new Date(nextCheckin) : null;
+    const diffDays = target
+      ? Math.round((target.getTime() - today.getTime()) / 86400000)
+      : null;
+
+    // Coach hat einen NEUEN Termin (in der Zukunft) gesetzt → Countdown gewinnt.
+    if (target && diffDays !== null && diffDays > 0) {
+      if (diffDays <= 3) {
+        return {
+          tone: "soon" as const,
+          label: `Nächster Check-in: in ${diffDays} Tag${diffDays === 1 ? "" : "en"}`,
+        };
+      }
+      return {
+        tone: "future" as const,
+        label: `Nächster Check-in: am ${target.toLocaleDateString("de-DE")}`,
+      };
+    }
+
+    // Check-in dieser Woche abgegeben → wartet auf Coach-Prüfung.
     if (checkinSubmittedThisWeek) {
       return {
         tone: "review" as const,
@@ -454,24 +474,16 @@ function RealUserDashboard() {
       };
     }
 
-    if (!nextCheckin) return null;
-    const today = new Date(todayStr);
-    const target = new Date(nextCheckin);
-    const diffDays = Math.round((target.getTime() - today.getTime()) / 86400000);
+    if (!target || diffDays === null) return null;
     if (diffDays < 0) {
-      return { tone: "overdue" as const, label: `Check-In überfällig seit ${Math.abs(diffDays)} Tag${Math.abs(diffDays) === 1 ? "" : "en"}` };
+      return {
+        tone: "overdue" as const,
+        label: `Check-In überfällig seit ${Math.abs(diffDays)} Tag${Math.abs(diffDays) === 1 ? "" : "en"}`,
+      };
     }
-    if (diffDays === 0) {
-      return { tone: "today" as const, label: "Check-in heute fällig" };
-    }
-    if (diffDays <= 3) {
-      return { tone: "soon" as const, label: `Nächster Check-in: in ${diffDays} Tag${diffDays === 1 ? "" : "en"}` };
-    }
-    return {
-      tone: "future" as const,
-      label: `Nächster Check-in: am ${target.toLocaleDateString("de-DE")}`,
-    };
+    return { tone: "today" as const, label: "Check-in heute fällig" };
   })();
+
 
   return (
     <div className="space-y-6">

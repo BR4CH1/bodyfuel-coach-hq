@@ -3,7 +3,9 @@ import { useEffect, useState } from "react";
 import { CalendarCheck, Save, Smile } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
+import { MyCheckinsHistorySection } from "@/components/bodyfuel/MyCheckinsHistorySection";
 import { ProgressPhotosCard } from "@/components/bodyfuel/ProgressPhotosCard";
+
 import { useSession } from "@/lib/bodyfuel/session";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -207,6 +209,10 @@ function WeeklyCheckIn() {
           Trage deine Werte einmal pro Woche ein. Dein Coach sieht alles sofort.
         </p>
       </div>
+
+      {/* Aktueller Check-in inkl. Coach-Feedback & Archiv */}
+      <MyCheckinsHistorySection userId={uid} />
+
 
       {loading ? (
         <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground">
