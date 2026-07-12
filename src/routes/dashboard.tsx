@@ -395,6 +395,7 @@ function RealUserDashboard() {
         .eq("week_start", mondayStr)
         .maybeSingle();
       if (thisWeekCi) {
+        setCheckinSubmittedThisWeek(true);
         const measures = [
           thisWeekCi.waist_cm,
           thisWeekCi.chest_cm,
@@ -407,6 +408,7 @@ function RealUserDashboard() {
         const allMissing = measures.every((v) => v == null);
         setCheckinMissingMeasures(allMissing);
       } else {
+        setCheckinSubmittedThisWeek(false);
         setCheckinMissingMeasures(false);
       }
 
