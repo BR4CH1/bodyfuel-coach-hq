@@ -69,6 +69,13 @@ export function MyCheckinsHistorySection({ userId }: { userId: string }) {
     };
   }, [userId]);
 
+  const publishedFn = useServerFn(getPublishedCheckinForClient);
+  const { data: publishedData } = useQuery({
+    queryKey: ["published-checkin", userId],
+    queryFn: () => publishedFn(),
+  });
+  const published: ClientPublishedCheckin | null = publishedData?.item ?? null;
+
   const curr = rows[0] ?? null;
   const prev = rows[1] ?? null;
   const archive = rows.slice(1);
