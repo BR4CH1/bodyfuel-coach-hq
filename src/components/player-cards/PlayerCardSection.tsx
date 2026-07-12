@@ -165,6 +165,7 @@ export function PlayerCardSection({ jerseyNumber, teamLabel }: { jerseyNumber?: 
               <PlayerCardBack
                 data={{ ...cardData, verifiedTests: q.data?.verifiedTests } as any}
                 history={(q.data?.history as any[]) ?? []}
+                badges={badges}
               />
             }
           />
