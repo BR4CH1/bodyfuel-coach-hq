@@ -1124,8 +1124,16 @@ export function NutritionTracker({
                     onChange={(e) => setQuery(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && runSearch()}
                   />
-                  <Button variant="outline" onClick={() => setScannerOpen(true)}>
+                  <Button variant="outline" onClick={() => setScannerOpen(true)} title="Barcode">
                     <Barcode className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setPhotoOpen(true)}
+                    title="Gericht fotografieren"
+                    className="border-gold/50 text-gold hover:bg-gold/10"
+                  >
+                    <Camera className="h-4 w-4" />
                   </Button>
                 </div>
                 <div className="mt-3 min-h-0 flex-1 overflow-y-auto">
