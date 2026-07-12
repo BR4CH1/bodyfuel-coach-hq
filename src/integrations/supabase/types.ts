@@ -8396,6 +8396,17 @@ export type Database = {
           weekly_points: number
         }[]
       }
+      get_team_of_the_month_candidates: {
+        Args: { _month_start: string; _organization_id: string }
+        Returns: {
+          athlete_count: number
+          avg_bfr_end: number
+          avg_bfr_start: number
+          avg_delta: number
+          team_id: string
+          team_name: string
+        }[]
+      }
       get_team_position_groups: {
         Args: { _team_id: string }
         Returns: {

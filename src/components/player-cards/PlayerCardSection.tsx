@@ -10,6 +10,7 @@ import { PlayerCard, type PlayerCardData } from "./PlayerCard";
 import { PlayerCardBack } from "./PlayerCardBack";
 import { PlayerCardFlip } from "./PlayerCardFlip";
 import { PlayerCardShareDialog } from "./PlayerCardShareDialog";
+import { PlayerCardUpgradeOverlay, type UpgradePayload } from "./PlayerCardUpgradeOverlay";
 import { getMyPlayerCard, recomputePlayerCard, markBadgeUnlocksSeen } from "@/lib/player-cards.functions";
 import { toast } from "sonner";
 
@@ -32,6 +33,7 @@ export function PlayerCardSection({ jerseyNumber, teamLabel }: { jerseyNumber?: 
   const recomputeFn = useServerFn(recomputePlayerCard);
   const markSeenFn = useServerFn(markBadgeUnlocksSeen);
   const [shareOpen, setShareOpen] = useState(false);
+  const [upgrade, setUpgrade] = useState<UpgradePayload | null>(null);
   const previousUnlockedRef = useRef<Set<string> | null>(null);
 
   const q = useQuery({
@@ -41,9 +43,10 @@ export function PlayerCardSection({ jerseyNumber, teamLabel }: { jerseyNumber?: 
 
   const recompute = useMutation({
     mutationFn: () => recomputeFn({ data: {} }),
-    onSuccess: () => {
+    onSuccess: (res: any) => {
       toast.success("Player Card aktualisiert");
       qc.invalidateQueries({ queryKey: ["player-card", "me"] });
+      if (res?.upgrade) setUpgrade(res.upgrade as UpgradePayload);
     },
     onError: (e: any) => toast.error(e?.message ?? "Fehler beim Aktualisieren"),
   });
@@ -135,6 +138,9 @@ export function PlayerCardSection({ jerseyNumber, teamLabel }: { jerseyNumber?: 
       {cardData && (
         <PlayerCardShareDialog data={cardData} open={shareOpen} onClose={() => setShareOpen(false)} />
       )}
+
+      {upgrade && <PlayerCardUpgradeOverlay upgrade={upgrade} onClose={() => setUpgrade(null)} />}
+
 
       {q.isLoading ? (
         <div className="grid place-items-center rounded-2xl border border-border bg-card p-10">

@@ -199,6 +199,13 @@ async function doRecompute(supabase: any, targetUserId: string) {
   // 4) Upsert via Service-Role.
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
+  // Vorherige Karte laden (für Tier-Upgrade-Detection).
+  const { data: previousCard } = await supabaseAdmin
+    .from("player_cards")
+    .select("bfr, tier")
+    .eq("user_id", targetUserId)
+    .maybeSingle();
+
   const payload = {
     user_id: targetUserId,
     organization_id: organizationId,
@@ -276,7 +283,20 @@ async function doRecompute(supabase: any, targetUserId: string) {
       .upsert(rows, { onConflict: "user_id,badge_key", ignoreDuplicates: true });
   }
 
-  return upserted;
+  const TIER_ORDER = ["bronze", "silver", "gold", "elite", "legendary"] as const;
+  const prevIdx = previousCard?.tier ? TIER_ORDER.indexOf(previousCard.tier as any) : -1;
+  const newIdx = TIER_ORDER.indexOf(result.tier as any);
+  const upgrade =
+    previousCard && newIdx > prevIdx && prevIdx >= 0
+      ? {
+          previous_tier: previousCard.tier as string,
+          new_tier: result.tier,
+          previous_bfr: Number(previousCard.bfr ?? 0),
+          new_bfr: result.bfr,
+        }
+      : null;
+
+  return { card: upserted, upgrade, newly_unlocked_badges: unlockedKeys };
 }
 
 /** Karte für sich selbst oder — mit Coach-Rechten — für einen anderen Athleten neu berechnen. */
@@ -612,6 +632,35 @@ export const getPlayerOfTheMonthCandidates = createServerFn({ method: "GET" })
       awards: (existing ?? []) as any[],
     };
   });
+
+/** Team of the Month — durchschnittliches BFR-Delta pro Team im Monat. */
+export const getTeamOfTheMonthCandidates = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { organization_id: string; year?: number; month?: number }) => {
+    const fb = currentYearMonth();
+    return {
+      organization_id: String(d.organization_id),
+      year: Number.isFinite(d.year) ? Number(d.year) : fb.year,
+      month: Number.isFinite(d.month) ? Number(d.month) : fb.month,
+    };
+  })
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    await assertOrgAccess(supabase, userId, data.organization_id);
+    const monthStart = `${data.year}-${String(data.month).padStart(2, "0")}-01`;
+    const { data: rows, error } = await supabase.rpc(
+      "get_team_of_the_month_candidates" as any,
+      { _organization_id: data.organization_id, _month_start: monthStart },
+    );
+    if (error) throw new Error(error.message);
+    return {
+      year: data.year,
+      month: data.month,
+      candidates: (rows ?? []) as any[],
+    };
+  });
+
+
 
 /** Coach setzt Player of the Month für einen Monat (award_kind: top_bfr | top_delta). */
 export const finalizePlayerOfTheMonth = createServerFn({ method: "POST" })
