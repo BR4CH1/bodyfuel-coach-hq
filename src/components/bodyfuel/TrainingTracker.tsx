@@ -40,8 +40,15 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
   const logFn = useServerFn(logSet);
   const deleteLogFn = useServerFn(deleteSetLog);
   const completeSessionFn = useServerFn(completeTrainingSession);
+  const addOwnExFn = useServerFn(addOwnTrainingExercise);
+  const deleteOwnExFn = useServerFn(deleteOwnTrainingExercise);
   const [completingDayId, setCompletingDayId] = useState<string | null>(null);
   const [completedDayIds, setCompletedDayIds] = useState<Set<string>>(new Set());
+  const [addingDayId, setAddingDayId] = useState<string | null>(null);
+  const [newExName, setNewExName] = useState("");
+  const [newExSets, setNewExSets] = useState("3");
+  const [newExReps, setNewExReps] = useState("8");
+  const [savingOwnEx, setSavingOwnEx] = useState(false);
 
   const [plan, setPlan] = useState<Plan | null>(null);
   const [days, setDays] = useState<Day[]>([]);
