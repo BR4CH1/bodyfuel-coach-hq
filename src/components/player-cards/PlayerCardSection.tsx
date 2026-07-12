@@ -43,9 +43,10 @@ export function PlayerCardSection({ jerseyNumber, teamLabel }: { jerseyNumber?: 
 
   const recompute = useMutation({
     mutationFn: () => recomputeFn({ data: {} }),
-    onSuccess: () => {
+    onSuccess: (res: any) => {
       toast.success("Player Card aktualisiert");
       qc.invalidateQueries({ queryKey: ["player-card", "me"] });
+      if (res?.upgrade) setUpgrade(res.upgrade as UpgradePayload);
     },
     onError: (e: any) => toast.error(e?.message ?? "Fehler beim Aktualisieren"),
   });
