@@ -17,6 +17,7 @@ import {
   type MetricInput,
 } from "./player-cards/engine";
 import { assertCoachOrOrgStaffForAthlete, isGlobalCoach } from "@/lib/organizations/org-coach-access";
+import { evaluateAllBadges, type BadgeDefinition } from "./player-cards/badges";
 
 const FOOTBALL_POSITION_ALIASES: Record<string, string> = {
   qb: "QB",
@@ -242,6 +243,39 @@ async function doRecompute(supabase: any, targetUserId: string) {
     attributes_detail: result.attributes,
   });
 
+  // 5) Badge-Auswertung. Nur neue Unlocks werden angelegt (UNIQUE user_id+badge_key).
+  const [{ data: defsData }, { data: historyData }] = await Promise.all([
+    supabaseAdmin.from("player_card_badge_definitions").select("*").eq("sport", sport),
+    supabaseAdmin
+      .from("player_card_history")
+      .select("bfr, snapshot_at")
+      .eq("user_id", targetUserId),
+  ]);
+  const defs = ((defsData ?? []) as unknown) as BadgeDefinition[];
+  const history = (historyData ?? []) as Array<{ bfr: number | null; snapshot_at: string }>;
+  const cardForBadges = {
+    bfr: result.bfr,
+    spd: result.attributes.SPD.score,
+    acc: result.attributes.ACC.score,
+    agi: result.attributes.AGI.score,
+    pow: result.attributes.POW.score,
+    str: result.attributes.STR.score,
+    end_score: result.attributes.END.score,
+  };
+  const unlockedKeys = evaluateAllBadges(defs, cardForBadges, history);
+  if (unlockedKeys.length > 0) {
+    const rows = unlockedKeys.map((key) => ({
+      user_id: targetUserId,
+      badge_key: key,
+      organization_id: organizationId,
+      snapshot_bfr: result.bfr,
+    }));
+    // ON CONFLICT ignore — nur neue Unlocks landen.
+    await supabaseAdmin
+      .from("player_card_badge_unlocks")
+      .upsert(rows, { onConflict: "user_id,badge_key", ignoreDuplicates: true });
+  }
+
   return upserted;
 }
 
@@ -259,7 +293,7 @@ export const recomputePlayerCard = createServerFn({ method: "POST" })
   });
 
 async function loadCardBundle(supabase: any, targetUserId: string) {
-  const [cardRes, historyRes, profileRes, bullsRes, testsRes] = await Promise.all([
+  const [cardRes, historyRes, profileRes, bullsRes, testsRes, unlocksRes, defsRes] = await Promise.all([
     supabase.from("player_cards").select("*").eq("user_id", targetUserId).maybeSingle(),
     supabase
       .from("player_card_history")
@@ -283,6 +317,15 @@ async function loadCardBundle(supabase: any, targetUserId: string) {
       .eq("user_id", targetUserId)
       .eq("verification_status", "verified")
       .order("performed_at", { ascending: false }),
+    supabase
+      .from("player_card_badge_unlocks")
+      .select("badge_key, unlocked_at, seen_at, snapshot_bfr")
+      .eq("user_id", targetUserId)
+      .order("unlocked_at", { ascending: false }),
+    supabase
+      .from("player_card_badge_definitions")
+      .select("*")
+      .order("sort_order", { ascending: true }),
   ]);
 
   let organization = null as null | {
@@ -313,6 +356,10 @@ async function loadCardBundle(supabase: any, targetUserId: string) {
     bullsProfile: bullsRes.data ?? null,
     verifiedTests: testsRes.data ?? [],
     organization,
+    badges: {
+      definitions: (defsRes.data ?? []) as any[],
+      unlocks: (unlocksRes.data ?? []) as any[],
+    },
   };
 }
 
@@ -330,6 +377,23 @@ export const getPlayerCardForAthlete = createServerFn({ method: "GET" })
       await assertCoachOrOrgStaffForAthlete(context, data.user_id, "athlete");
     }
     return await loadCardBundle(context.supabase, data.user_id);
+  });
+
+/** Markiert Badge-Unlocks als gesehen — schaltet die "Neu"-Animation aus. */
+export const markBadgeUnlocksSeen = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(z.object({ badge_keys: z.array(z.string()).optional() }).parse)
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    let q = supabase
+      .from("player_card_badge_unlocks")
+      .update({ seen_at: new Date().toISOString() })
+      .eq("user_id", userId)
+      .is("seen_at", null);
+    if (data.badge_keys && data.badge_keys.length) q = q.in("badge_key", data.badge_keys);
+    const { error } = await q;
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
 
 /**

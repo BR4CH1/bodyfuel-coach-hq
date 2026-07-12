@@ -6035,6 +6035,83 @@ export type Database = {
         }
         Relationships: []
       }
+      player_card_badge_definitions: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          icon_key: string
+          key: string
+          label: string
+          rule: Json
+          sort_order: number
+          sport: string
+          tier: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description: string
+          icon_key: string
+          key: string
+          label: string
+          rule: Json
+          sort_order?: number
+          sport?: string
+          tier?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          icon_key?: string
+          key?: string
+          label?: string
+          rule?: Json
+          sort_order?: number
+          sport?: string
+          tier?: string
+        }
+        Relationships: []
+      }
+      player_card_badge_unlocks: {
+        Row: {
+          badge_key: string
+          id: string
+          organization_id: string | null
+          seen_at: string | null
+          snapshot_bfr: number | null
+          unlocked_at: string
+          user_id: string
+        }
+        Insert: {
+          badge_key: string
+          id?: string
+          organization_id?: string | null
+          seen_at?: string | null
+          snapshot_bfr?: number | null
+          unlocked_at?: string
+          user_id: string
+        }
+        Update: {
+          badge_key?: string
+          id?: string
+          organization_id?: string | null
+          seen_at?: string | null
+          snapshot_bfr?: number | null
+          unlocked_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_card_badge_unlocks_badge_key_fkey"
+            columns: ["badge_key"]
+            isOneToOne: false
+            referencedRelation: "player_card_badge_definitions"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
       player_card_benchmarks: {
         Row: {
           anchors: Json

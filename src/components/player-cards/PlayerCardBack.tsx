@@ -4,6 +4,7 @@
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import type { PlayerCardData } from "./PlayerCard";
 import type { AttributeKey } from "@/lib/player-cards/engine";
+import { PlayerCardBadgeWall, type BadgeDefinitionRow, type BadgeUnlockRow } from "./PlayerCardBadgeWall";
 
 export type PlayerCardHistoryPoint = {
   bfr: number | null;
@@ -69,9 +70,11 @@ function buildCoachSummary(current: PlayerCardData["card"], previous: PlayerCard
 export function PlayerCardBack({
   data,
   history,
+  badges,
 }: {
   data: PlayerCardData;
   history: PlayerCardHistoryPoint[];
+  badges?: { definitions: BadgeDefinitionRow[]; unlocks: BadgeUnlockRow[] };
 }) {
   const { card, organization, verifiedTests } = data as PlayerCardData & { verifiedTests?: any[] };
   const primary = organization?.primary_color ?? "#dc2626";
@@ -200,6 +203,27 @@ export function PlayerCardBack({
             {summary}
           </div>
         </div>
+
+        {/* Badges */}
+        {badges && badges.definitions.length > 0 && (
+          <div className="mt-3">
+            <div className="mb-1 flex items-center justify-between text-[9px] font-bold uppercase tracking-[0.25em] text-white/60">
+              <span>Badges</span>
+              <span className="text-white/40">
+                {badges.unlocks.length} / {badges.definitions.length}
+              </span>
+            </div>
+            <div className="rounded-lg border border-white/10 bg-black/40 p-2">
+              <PlayerCardBadgeWall
+                definitions={badges.definitions}
+                unlocks={badges.unlocks}
+                accent={accent}
+                compact
+              />
+            </div>
+          </div>
+        )}
+
 
         <div className="mt-3 text-center text-[8px] uppercase tracking-[0.3em] text-white/40">
           BodyFuel Performance • Tippen zum Umdrehen
