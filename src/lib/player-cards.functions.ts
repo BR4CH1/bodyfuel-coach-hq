@@ -1109,9 +1109,9 @@ export const savePlayerCardManualOverrides = createServerFn({ method: "POST" })
       .eq("user_id", data.user_id)
       .maybeSingle();
 
-    const mergedOverrides = {
+    const mergedOverrides: Record<string, number | null> = {
       ...((existing?.manual_overrides as Record<string, number | null>) ?? {}),
-      ...data.overrides,
+      ...(data.overrides as Record<string, number | null>),
     };
     // Null-Einträge entfernen, damit "leer" wirklich leer ist.
     for (const k of Object.keys(mergedOverrides)) {
@@ -1119,7 +1119,10 @@ export const savePlayerCardManualOverrides = createServerFn({ method: "POST" })
     }
 
     if (existing) {
-      const patch: Record<string, unknown> = { manual_overrides: mergedOverrides, updated_at: new Date().toISOString() };
+      const patch: { manual_overrides: Record<string, number | null>; updated_at: string; is_published?: boolean } = {
+        manual_overrides: mergedOverrides,
+        updated_at: new Date().toISOString(),
+      };
       if (typeof data.is_published === "boolean") patch.is_published = data.is_published;
       const { error } = await supabase.from("player_cards").update(patch).eq("user_id", data.user_id);
       if (error) throw new Error(error.message);
