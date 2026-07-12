@@ -70,9 +70,11 @@ function buildCoachSummary(current: PlayerCardData["card"], previous: PlayerCard
 export function PlayerCardBack({
   data,
   history,
+  badges,
 }: {
   data: PlayerCardData;
   history: PlayerCardHistoryPoint[];
+  badges?: { definitions: BadgeDefinitionRow[]; unlocks: BadgeUnlockRow[] };
 }) {
   const { card, organization, verifiedTests } = data as PlayerCardData & { verifiedTests?: any[] };
   const primary = organization?.primary_color ?? "#dc2626";
