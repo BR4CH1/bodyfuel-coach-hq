@@ -240,10 +240,7 @@ export const analyzeMealPhoto = createServerFn({ method: "POST" })
             protein_per_100g: Number(bestRow.protein_per_100g) || 0,
             carbs_per_100g: Number(bestRow.carbs_per_100g) || 0,
             fat_per_100g: Number(bestRow.fat_per_100g) || 0,
-            piece_g:
-              typeof bestRow.piece_g === "number" && bestRow.piece_g > 0
-                ? Number(bestRow.piece_g)
-                : null,
+            piece_g: null,
           };
         } else {
           ing.needs_confirmation = true;
