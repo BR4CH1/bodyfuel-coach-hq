@@ -6035,6 +6035,216 @@ export type Database = {
         }
         Relationships: []
       }
+      player_card_benchmarks: {
+        Row: {
+          anchors: Json
+          attribute_key: string
+          created_at: string
+          direction: string
+          id: string
+          metric_key: string
+          sport: string
+          updated_at: string
+          weight: number
+        }
+        Insert: {
+          anchors: Json
+          attribute_key: string
+          created_at?: string
+          direction: string
+          id?: string
+          metric_key: string
+          sport: string
+          updated_at?: string
+          weight?: number
+        }
+        Update: {
+          anchors?: Json
+          attribute_key?: string
+          created_at?: string
+          direction?: string
+          id?: string
+          metric_key?: string
+          sport?: string
+          updated_at?: string
+          weight?: number
+        }
+        Relationships: []
+      }
+      player_card_history: {
+        Row: {
+          acc: number | null
+          agi: number | null
+          attributes_detail: Json
+          bfr: number | null
+          created_at: string
+          end_score: number | null
+          id: string
+          is_provisional: boolean
+          organization_id: string | null
+          position_key: string | null
+          pow: number | null
+          snapshot_at: string
+          spd: number | null
+          sport: string
+          str: number | null
+          tier: string | null
+          user_id: string
+        }
+        Insert: {
+          acc?: number | null
+          agi?: number | null
+          attributes_detail?: Json
+          bfr?: number | null
+          created_at?: string
+          end_score?: number | null
+          id?: string
+          is_provisional?: boolean
+          organization_id?: string | null
+          position_key?: string | null
+          pow?: number | null
+          snapshot_at?: string
+          spd?: number | null
+          sport?: string
+          str?: number | null
+          tier?: string | null
+          user_id: string
+        }
+        Update: {
+          acc?: number | null
+          agi?: number | null
+          attributes_detail?: Json
+          bfr?: number | null
+          created_at?: string
+          end_score?: number | null
+          id?: string
+          is_provisional?: boolean
+          organization_id?: string | null
+          position_key?: string | null
+          pow?: number | null
+          snapshot_at?: string
+          spd?: number | null
+          sport?: string
+          str?: number | null
+          tier?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      player_card_position_weights: {
+        Row: {
+          created_at: string
+          id: string
+          label: string
+          position_key: string
+          sport: string
+          updated_at: string
+          w_acc: number
+          w_agi: number
+          w_end: number
+          w_pow: number
+          w_spd: number
+          w_str: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label: string
+          position_key: string
+          sport: string
+          updated_at?: string
+          w_acc: number
+          w_agi: number
+          w_end: number
+          w_pow: number
+          w_spd: number
+          w_str: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string
+          position_key?: string
+          sport?: string
+          updated_at?: string
+          w_acc?: number
+          w_agi?: number
+          w_end?: number
+          w_pow?: number
+          w_spd?: number
+          w_str?: number
+        }
+        Relationships: []
+      }
+      player_cards: {
+        Row: {
+          acc: number | null
+          agi: number | null
+          attributes_detail: Json
+          bfr: number | null
+          computed_at: string
+          created_at: string
+          end_score: number | null
+          id: string
+          is_provisional: boolean
+          missing_tests: Json
+          organization_id: string | null
+          position_key: string | null
+          pow: number | null
+          spd: number | null
+          sport: string
+          str: number | null
+          strongest_attribute: string | null
+          tier: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          acc?: number | null
+          agi?: number | null
+          attributes_detail?: Json
+          bfr?: number | null
+          computed_at?: string
+          created_at?: string
+          end_score?: number | null
+          id?: string
+          is_provisional?: boolean
+          missing_tests?: Json
+          organization_id?: string | null
+          position_key?: string | null
+          pow?: number | null
+          spd?: number | null
+          sport?: string
+          str?: number | null
+          strongest_attribute?: string | null
+          tier?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          acc?: number | null
+          agi?: number | null
+          attributes_detail?: Json
+          bfr?: number | null
+          computed_at?: string
+          created_at?: string
+          end_score?: number | null
+          id?: string
+          is_provisional?: boolean
+          missing_tests?: Json
+          organization_id?: string | null
+          position_key?: string | null
+          pow?: number | null
+          spd?: number | null
+          sport?: string
+          str?: number | null
+          strongest_attribute?: string | null
+          tier?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           account_status: string
