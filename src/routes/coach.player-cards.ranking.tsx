@@ -42,7 +42,7 @@ export const Route = createFileRoute("/coach/player-cards/ranking")({
   ),
 });
 
-type Tab = "ranking" | "potm" | "hof";
+type Tab = "ranking" | "potm" | "totm" | "hof";
 
 const MONTHS_DE = [
   "Januar","Februar","März","April","Mai","Juni",
