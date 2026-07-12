@@ -168,38 +168,8 @@ export function PlayerCard({ data }: { data: PlayerCardData }) {
           {claim}
         </div>
 
-        {/* Header row */}
-        <div className="relative flex items-start justify-between px-5 pt-5">
-          <div>
-            <div className="font-display text-6xl font-black leading-none tabular-nums text-white">
-              {card.bfr ?? "—"}
-            </div>
-            <div className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.3em]" style={{ color: accent }}>
-              BFR
-            </div>
-            {position && (
-              <div className="mt-3">
-                <div className="font-display text-2xl font-black leading-none" style={{ color: accent }}>
-                  {position}
-                </div>
-                <div className="mt-1 h-px w-8" style={{ background: accent }} />
-                {jerseyNumber && (
-                  <div className="mt-1 text-xs font-semibold tracking-widest text-white/80">#{jerseyNumber}</div>
-                )}
-              </div>
-            )}
-          </div>
-          {organization?.logo_url ? (
-            <img src={organization.logo_url} alt={organization.name} className="h-16 w-16 object-contain" />
-          ) : (
-            <div className="grid h-16 w-16 place-items-center rounded-full border-2 text-[10px] font-bold" style={{ borderColor: accent, color: accent }}>
-              {organization?.short_name ?? "BF"}
-            </div>
-          )}
-        </div>
-
-        {/* Player image — randlos, groß, integriert */}
-        <div className="pointer-events-none absolute inset-x-0 top-16 h-[55%] overflow-hidden">
+        {/* Player image — full body, dominant, behind everything */}
+        <div className="pointer-events-none absolute inset-x-0 top-2 bottom-[52%] overflow-visible">
           {avatarUrl ? (
             <img
               src={avatarUrl}
@@ -216,15 +186,40 @@ export function PlayerCard({ data }: { data: PlayerCardData }) {
               <Shield className="h-20 w-20" />
             </div>
           )}
-          {card.is_provisional && (
-            <div className="pointer-events-auto absolute right-3 top-3 rounded-md bg-amber-500/90 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-black">
-              Vorläufig
+        </div>
+
+        {/* Header row */}
+        <div className="relative flex items-start justify-between px-5 pt-5">
+          <div className="relative z-10">
+            <div className="font-display text-[68px] font-black leading-[0.85] tabular-nums text-white" style={{ textShadow: "0 2px 12px rgba(0,0,0,0.7)" }}>
+              {card.bfr ?? "—"}
+            </div>
+            <div className="mt-0.5 text-[11px] font-black uppercase tracking-[0.25em]" style={{ color: accent }}>
+              OVR
+            </div>
+            {position && (
+              <div className="mt-4">
+                <div className="font-display text-3xl font-black leading-none" style={{ color: accent, textShadow: "0 2px 8px rgba(0,0,0,0.6)" }}>
+                  {position}
+                </div>
+                <div className="mt-1 h-px w-8" style={{ background: accent }} />
+                {jerseyNumber && (
+                  <div className="mt-1 text-xs font-semibold tracking-widest text-white/90">#{jerseyNumber}</div>
+                )}
+              </div>
+            )}
+          </div>
+          {organization?.logo_url ? (
+            <img src={organization.logo_url} alt={organization.name} className="relative z-10 h-16 w-16 object-contain drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]" />
+          ) : (
+            <div className="relative z-10 grid h-16 w-16 place-items-center rounded-full border-2 text-[10px] font-bold" style={{ borderColor: accent, color: accent }}>
+              {organization?.short_name ?? "BF"}
             </div>
           )}
         </div>
 
         {/* Stats sidebar left */}
-        <div className="absolute left-2 top-[210px] flex flex-col gap-1.5 text-[10px] text-white/80">
+        <div className="absolute left-3 top-[220px] z-10 flex flex-col gap-1.5 text-[10px] text-white/90" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.8)" }}>
           {age != null && (
             <div className="flex items-center gap-1"><Calendar className="h-3 w-3" style={{ color: accent }} /> {age} J.</div>
           )}
@@ -234,24 +229,34 @@ export function PlayerCard({ data }: { data: PlayerCardData }) {
           {weight != null && (
             <div className="flex items-center gap-1"><Scale className="h-3 w-3" style={{ color: accent }} /> {weight} kg</div>
           )}
+          {card.is_provisional && (
+            <div className="pointer-events-auto mt-1 rounded-md bg-amber-500/90 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-black">
+              Vorläufig
+            </div>
+          )}
         </div>
 
-        {/* Name */}
-        <div className="px-4 pt-1 text-center">
+        {/* Name — huge metallic */}
+        <div className="relative z-10 px-4 pt-[46%] text-center">
           {first && (
-            <div className="text-[11px] font-bold uppercase tracking-[0.3em] italic" style={{ color: accent }}>
+            <div className="text-[12px] font-bold uppercase tracking-[0.3em] italic" style={{ color: accent, textShadow: "0 2px 6px rgba(0,0,0,0.7)" }}>
               {first}
             </div>
           )}
-          <div className="font-display text-4xl font-black uppercase leading-none tracking-tight text-white" style={{
-            textShadow: `0 2px 8px rgba(0,0,0,0.6)`,
-            background: "linear-gradient(180deg, #ffffff 0%, #c7ccd4 100%)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-          }}>
+          <div
+            className="font-display font-black uppercase leading-[0.85] tracking-tight"
+            style={{
+              fontSize: "clamp(36px, 12cqw, 56px)",
+              background: "linear-gradient(180deg, #ffffff 0%, #e5e7eb 45%, #6b7280 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.85))",
+              letterSpacing: "-0.02em",
+            }}
+          >
             {last || "—"}
           </div>
-          <div className="mt-1 flex items-center justify-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.25em] text-white/60">
+          <div className="mt-1 flex items-center justify-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.25em] text-white/70">
             {teamLabel && <><span>{teamLabel}</span><span style={{ color: accent }}>•</span></>}
             {position && <><span>{position}</span><span style={{ color: accent }}>•</span></>}
             {jerseyNumber && <span>#{jerseyNumber}</span>}
@@ -259,7 +264,7 @@ export function PlayerCard({ data }: { data: PlayerCardData }) {
         </div>
 
         {/* 6 attributes */}
-        <div className="mx-3 mt-3 grid grid-cols-6 gap-0.5 rounded-xl border border-white/10 bg-black/50 px-1 py-2 backdrop-blur">
+        <div className="relative z-10 mx-3 mt-3 grid grid-cols-6 gap-0.5 rounded-xl border border-white/10 bg-black/70 px-1 py-2 backdrop-blur-md">
           <AttrPill attr="SPD" value={card.spd} />
           <AttrPill attr="ACC" value={card.acc} />
           <AttrPill attr="AGI" value={card.agi} />
@@ -269,7 +274,7 @@ export function PlayerCard({ data }: { data: PlayerCardData }) {
         </div>
 
         {/* Footer row */}
-        <div className="mx-3 mt-2 mb-3 grid grid-cols-3 gap-1 rounded-xl border border-white/10 bg-black/50 px-2 py-2 text-[8px]">
+        <div className="relative z-10 mx-3 mt-2 grid grid-cols-3 gap-1 rounded-xl border border-white/10 bg-black/70 px-2 py-2 text-[8px] backdrop-blur-md">
           <div className="text-center">
             <div className="flex items-center justify-center gap-1 text-white/60">
               <Shield className="h-3 w-3" style={{ color: accent }} />
@@ -297,6 +302,12 @@ export function PlayerCard({ data }: { data: PlayerCardData }) {
               {strongestLabel}
             </div>
           </div>
+        </div>
+
+        {/* Brand footer */}
+        <div className="relative z-10 mt-2 mb-2 flex items-center justify-center gap-1.5 text-[8px] font-bold uppercase tracking-[0.35em] text-white/50">
+          <Shield className="h-2.5 w-2.5" style={{ color: accent }} />
+          BodyFuel Performance
         </div>
       </div>
     </div>
