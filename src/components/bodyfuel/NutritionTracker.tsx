@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { useFormDraft, clearFormDraft } from "@/hooks/use-form-draft";
 import { BarcodeScanner } from "./BarcodeScanner";
 import { MealBuilderDialog } from "./MealBuilderDialog";
+import { MealPhotoDialog } from "./MealPhotoDialog";
+import { Camera } from "lucide-react";
 import {
   searchFoods,
   searchFoodsDb,
