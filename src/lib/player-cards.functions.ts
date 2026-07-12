@@ -1070,3 +1070,68 @@ export const ensurePlayerCardCutout = createServerFn({ method: "POST" })
 
     return { status: "generated" as const, cutout_url: path };
   });
+
+/**
+ * savePlayerCardManualOverrides — Coach/Org-Staff darf die Werte einer
+ * Player Card manuell eintragen (BFR, SPD, ACC, AGI, POW, STR, END) und
+ * die Karte für den Athleten freigeben (is_published).
+ *
+ * Werte werden in `manual_overrides` gespeichert und in der Anzeige über
+ * die berechneten Werte gelegt (siehe PlayerCardSection / CoachPlayerCardView).
+ */
+const OverrideNumber = z.union([z.number().int().min(0).max(99), z.null()]).optional();
+export const savePlayerCardManualOverrides = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    z.object({
+      user_id: z.string().uuid(),
+      overrides: z.object({
+        BFR: OverrideNumber,
+        SPD: OverrideNumber,
+        ACC: OverrideNumber,
+        AGI: OverrideNumber,
+        POW: OverrideNumber,
+        STR: OverrideNumber,
+        END: OverrideNumber,
+      }).partial(),
+      is_published: z.boolean().optional(),
+    }).parse,
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    if (data.user_id !== userId) {
+      await assertCoachOrOrgStaffForAthlete(context, data.user_id, "athlete");
+    }
+    // Karte existiert?
+    const { data: existing } = await supabase
+      .from("player_cards")
+      .select("id, manual_overrides")
+      .eq("user_id", data.user_id)
+      .maybeSingle();
+
+    const mergedOverrides = {
+      ...((existing?.manual_overrides as Record<string, number | null>) ?? {}),
+      ...data.overrides,
+    };
+    // Null-Einträge entfernen, damit "leer" wirklich leer ist.
+    for (const k of Object.keys(mergedOverrides)) {
+      if (mergedOverrides[k] === null || mergedOverrides[k] === undefined) delete mergedOverrides[k];
+    }
+
+    if (existing) {
+      const patch: Record<string, unknown> = { manual_overrides: mergedOverrides, updated_at: new Date().toISOString() };
+      if (typeof data.is_published === "boolean") patch.is_published = data.is_published;
+      const { error } = await supabase.from("player_cards").update(patch).eq("user_id", data.user_id);
+      if (error) throw new Error(error.message);
+    } else {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { error } = await supabaseAdmin.from("player_cards").insert({
+        user_id: data.user_id,
+        manual_overrides: mergedOverrides,
+        is_published: data.is_published ?? false,
+        is_provisional: true,
+      });
+      if (error) throw new Error(error.message);
+    }
+    return { ok: true, overrides: mergedOverrides };
+  });
