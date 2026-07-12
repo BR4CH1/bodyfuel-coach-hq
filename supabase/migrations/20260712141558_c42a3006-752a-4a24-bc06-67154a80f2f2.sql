@@ -1,0 +1,2 @@
+alter table public.training_exercises add column if not exists added_by_user uuid null references auth.users(id) on delete set null;
+create index if not exists training_exercises_added_by_user_idx on public.training_exercises(added_by_user);

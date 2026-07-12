@@ -60,7 +60,7 @@ function ImportPage() {
     return <p className="text-sm text-muted-foreground">Bitte einloggen.</p>;
   }
 
-  const fileToDataUrl = (file: File) =>
+  const fileToDataUrl = (file: File | Blob) =>
     new Promise<string>((resolve, reject) => {
       const r = new FileReader();
       r.onload = () => resolve(String(r.result));
@@ -68,14 +68,41 @@ function ImportPage() {
       r.readAsDataURL(file);
     });
 
+  // Fotos vom Handy sind oft 3–8 MB. Wir skalieren sie clientseitig auf max.
+  // 2000 px lange Kante und re-encoden als JPEG, damit die Upload-Payload
+  // klein genug für die serverseitige KI-Verarbeitung bleibt.
+  const compressImage = async (file: File): Promise<Blob> => {
+    if (typeof window === "undefined" || !("createImageBitmap" in window)) return file;
+    try {
+      const bmp = await createImageBitmap(file);
+      const MAX = 2000;
+      const scale = Math.min(1, MAX / Math.max(bmp.width, bmp.height));
+      const w = Math.round(bmp.width * scale);
+      const h = Math.round(bmp.height * scale);
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return file;
+      ctx.drawImage(bmp, 0, 0, w, h);
+      const blob: Blob | null = await new Promise((res) =>
+        canvas.toBlob(res, "image/jpeg", 0.85),
+      );
+      return blob ?? file;
+    } catch {
+      return file;
+    }
+  };
+
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 15 * 1024 * 1024) return toast.error("Datei zu groß (max. 15 MB)");
+    if (file.size > 25 * 1024 * 1024) return toast.error("Datei zu groß (max. 25 MB)");
     setBusy(true);
     try {
-      const dataUrl = await fileToDataUrl(file);
       const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+      const source: File | Blob = isPdf ? file : await compressImage(file);
+      const dataUrl = await fileToDataUrl(source);
       const res = await parseFn({
         data: {
           mode: isPdf ? "pdf" : "image",
@@ -83,10 +110,20 @@ function ImportPage() {
           filename: file.name,
         },
       });
-      setPlan({ ...res, title: res.title || file.name.replace(/\.(pdf|png|jpe?g|webp)$/i, "") });
-      toast.success("Plan erkannt — bitte prüfen und speichern.");
+      if (!res.days?.length || !res.days.some((d) => d.exercises.some((x) => x.name?.trim()))) {
+        toast.error(
+          "Keine Übungen erkannt. Bitte prüfe die Datei oder nutze „Text einfügen“ / „Manuell“.",
+        );
+      } else {
+        setPlan({ ...res, title: res.title || file.name.replace(/\.(pdf|png|jpe?g|webp)$/i, "") });
+        toast.success("Plan erkannt — bitte prüfen und speichern.");
+      }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Konnte nicht lesen");
+      const msg = err instanceof Error ? err.message : "Konnte nicht lesen";
+      toast.error(msg, {
+        description:
+          "Tipp: PDF nutzen (klarer als Foto) oder den Plan als Text einfügen bzw. manuell anlegen.",
+      });
     } finally {
       setBusy(false);
       e.target.value = "";
