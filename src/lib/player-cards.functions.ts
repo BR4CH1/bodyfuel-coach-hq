@@ -283,7 +283,20 @@ async function doRecompute(supabase: any, targetUserId: string) {
       .upsert(rows, { onConflict: "user_id,badge_key", ignoreDuplicates: true });
   }
 
-  return upserted;
+  const TIER_ORDER = ["bronze", "silver", "gold", "elite", "legendary"] as const;
+  const prevIdx = previousCard?.tier ? TIER_ORDER.indexOf(previousCard.tier as any) : -1;
+  const newIdx = TIER_ORDER.indexOf(result.tier as any);
+  const upgrade =
+    previousCard && newIdx > prevIdx && prevIdx >= 0
+      ? {
+          previous_tier: previousCard.tier as string,
+          new_tier: result.tier,
+          previous_bfr: Number(previousCard.bfr ?? 0),
+          new_bfr: result.bfr,
+        }
+      : null;
+
+  return { card: upserted, upgrade, newly_unlocked_badges: unlockedKeys };
 }
 
 /** Karte für sich selbst oder — mit Coach-Rechten — für einen anderen Athleten neu berechnen. */
