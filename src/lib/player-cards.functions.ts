@@ -16,7 +16,7 @@ import {
   type PositionWeights,
   type MetricInput,
 } from "./player-cards/engine";
-import { assertCoachOrOrgStaffForAthlete } from "@/lib/organizations/org-coach-access";
+import { assertCoachOrOrgStaffForAthlete, isGlobalCoach } from "@/lib/organizations/org-coach-access";
 
 const FOOTBALL_POSITION_ALIASES: Record<string, string> = {
   qb: "QB",
