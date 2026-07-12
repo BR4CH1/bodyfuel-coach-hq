@@ -213,7 +213,7 @@ export const analyzeMealPhoto = createServerFn({ method: "POST" })
       const { data: rows } = await context.supabase
         .from("nutrition_foods")
         .select(
-          "id, name, source, verified_by_coach, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, aliases, piece_g, unit_type, default_state",
+          "id, name, source, verified_by_coach, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, aliases, unit_type, default_state",
         )
         .eq("needs_review", false)
         .limit(2000);
