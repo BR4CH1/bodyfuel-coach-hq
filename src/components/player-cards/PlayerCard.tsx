@@ -183,13 +183,15 @@ export function PlayerCard({ data }: { data: PlayerCardData }) {
     : "—";
   const qrValue = shareUrl || (typeof window !== "undefined" ? window.location.href : "https://bodyfuel-coaching.com");
 
+  const ov = card.manual_overrides ?? {};
+  const bfrDisplay = ov.BFR ?? card.bfr;
   const stats: Array<{ attr: AttributeKey; value: number | null }> = [
-    { attr: "SPD", value: card.spd },
-    { attr: "ACC", value: card.acc },
-    { attr: "AGI", value: card.agi },
-    { attr: "POW", value: card.pow },
-    { attr: "STR", value: card.str },
-    { attr: "END", value: card.end_score },
+    { attr: "SPD", value: ov.SPD ?? card.spd },
+    { attr: "ACC", value: ov.ACC ?? card.acc },
+    { attr: "AGI", value: ov.AGI ?? card.agi },
+    { attr: "POW", value: ov.POW ?? card.pow },
+    { attr: "STR", value: ov.STR ?? card.str },
+    { attr: "END", value: ov.END ?? card.end_score },
   ];
 
   // Frame path — abgeschrägte Ecken + Namen-Notch oben
