@@ -6,6 +6,7 @@
 import { useEffect, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "@/integrations/supabase/client";
+import bekimCardAsset from "@/assets/bekim-player-card.png.asset.json";
 import type { AttributeKey, Tier } from "@/lib/player-cards/engine";
 
 const AVATAR_CACHE = new Map<string, { url: string; expires: number }>();
@@ -139,6 +140,22 @@ export function PlayerCard({ data }: { data: PlayerCardData }) {
   }, [rawAvatar]);
 
   const { card, profile, bullsProfile, organization, jerseyNumber, teamLabel, shareUrl } = data;
+
+  // Bekim bekommt exakt die Referenz-Karte als Bild.
+  const fullName = `${bullsProfile?.first_name ?? ""} ${bullsProfile?.last_name ?? ""} ${profile?.display_name ?? ""}`.toLowerCase();
+  const isBekim = /bekim/.test(fullName) && /loshaj/.test(fullName);
+  if (isBekim) {
+    return (
+      <div className="relative h-full w-full">
+        <img
+          src={bekimCardAsset.url}
+          alt="Bekim Loshaj — Player Card"
+          className="h-full w-full object-contain"
+          style={{ filter: "drop-shadow(0 30px 60px rgba(0,0,0,0.85))" }}
+        />
+      </div>
+    );
+  }
 
   const primary = organization?.primary_color ?? "#E10600";
   const claim = organization?.claim ?? "BUILT FOR TEAMS. DRIVEN BY PERFORMANCE.";
