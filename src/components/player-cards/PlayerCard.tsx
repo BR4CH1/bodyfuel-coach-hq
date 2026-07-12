@@ -176,8 +176,15 @@ export function PlayerCard({ data }: { data: PlayerCardData }) {
 
         {/* Player image */}
         <div className="relative mx-6 mt-2 aspect-[3/4] max-h-[220px] overflow-hidden">
-          {profile?.avatar_url ? (
-            <img src={profile.avatar_url} alt={first} className="h-full w-full object-cover object-top" style={{ filter: `drop-shadow(0 0 20px ${accent}88)` }} />
+          {profile?.avatar_url && !avatarFailed ? (
+            <img
+              src={profile.avatar_url}
+              alt={first}
+              className="h-full w-full object-cover object-top"
+              style={{ filter: `drop-shadow(0 0 20px ${accent}88)` }}
+              onError={() => setAvatarFailed(true)}
+              referrerPolicy="no-referrer"
+            />
           ) : (
             <div className="flex h-full w-full items-center justify-center rounded-2xl border border-white/10 text-white/30">
               <Shield className="h-16 w-16" />
