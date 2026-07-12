@@ -37,6 +37,8 @@ export type PlayerCardData = {
     position_key: string | null;
     strongest_attribute: AttributeKey | null;
     computed_at: string;
+    manual_overrides?: Partial<Record<"BFR" | "SPD" | "ACC" | "AGI" | "POW" | "STR" | "END", number | null>>;
+    is_published?: boolean;
   };
   profile: {
     display_name: string | null;
