@@ -3,7 +3,24 @@
  * Übernimmt Vereinsfarben automatisch aus organization.primary_color etc.
  */
 import { Rocket, Zap, Activity, Flame, Dumbbell, HeartPulse, Shield, Calendar, Ruler, Scale } from "lucide-react";
+import { useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import type { AttributeKey, Tier } from "@/lib/player-cards/engine";
+
+const AVATAR_CACHE = new Map<string, { url: string; expires: number }>();
+const AVATAR_TTL_MS = 45 * 60 * 1000;
+
+async function resolvePlayerAvatar(raw: string | null | undefined): Promise<string | null> {
+  if (!raw) return null;
+  // Already a full URL (http/https/data)? Use as-is.
+  if (/^(https?:|data:|blob:)/i.test(raw)) return raw;
+  const cached = AVATAR_CACHE.get(raw);
+  if (cached && cached.expires > Date.now()) return cached.url;
+  const { data, error } = await supabase.storage.from("avatars").createSignedUrl(raw, 3600);
+  if (error || !data?.signedUrl) return null;
+  AVATAR_CACHE.set(raw, { url: data.signedUrl, expires: Date.now() + AVATAR_TTL_MS });
+  return data.signedUrl;
+}
 
 export type PlayerCardData = {
   card: {
