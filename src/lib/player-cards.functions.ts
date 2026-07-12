@@ -515,3 +515,189 @@ export const listCoachPlayerCards = createServerFn({ method: "GET" })
       organizations: Array.from(orgsById.values()),
     };
   });
+
+
+// ============================================================
+// Phase 4 — Ranking, Player of the Month, Hall of Fame
+// ============================================================
+
+async function assertOrgAccess(supabase: any, userId: string, orgId: string): Promise<"staff" | "member"> {
+  const { data: staff } = await supabase
+    .from("staff_assignments")
+    .select("role")
+    .eq("user_id", userId)
+    .eq("organization_id", orgId)
+    .maybeSingle();
+  if (staff) return "staff";
+  if (await isGlobalCoach(supabase, userId)) return "staff";
+  const { data: mem } = await supabase
+    .from("organization_memberships")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("organization_id", orgId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!mem) throw new Error("Kein Zugriff auf diese Organisation.");
+  return "member";
+}
+
+/** Rangliste einer Organisation, optional gefiltert nach Team. */
+export const getPlayerCardRanking = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { organization_id: string; team_id?: string | null; limit?: number }) => ({
+    organization_id: String(d.organization_id),
+    team_id: d.team_id ? String(d.team_id) : null,
+    limit: Math.min(Math.max(Number(d.limit ?? 100), 1), 500),
+  }))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    await assertOrgAccess(supabase, userId, data.organization_id);
+    const { data: rows, error } = await supabase.rpc("get_player_card_ranking" as any, {
+      _organization_id: data.organization_id,
+      _team_id: data.team_id,
+      _limit: data.limit,
+    });
+    if (error) throw new Error(error.message);
+
+    const { data: teams } = await supabase
+      .from("organization_teams")
+      .select("id, name")
+      .eq("organization_id", data.organization_id)
+      .order("name");
+
+    return {
+      rows: (rows ?? []) as any[],
+      teams: (teams ?? []) as any[],
+      viewerUserId: userId,
+    };
+  });
+
+function currentYearMonth(): { year: number; month: number } {
+  const d = new Date();
+  return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1 };
+}
+
+/** Kandidaten für "Player of the Month" — sortiert nach BFR-Delta im Monat. */
+export const getPlayerOfTheMonthCandidates = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { organization_id: string; year?: number; month?: number }) => {
+    const fb = currentYearMonth();
+    return {
+      organization_id: String(d.organization_id),
+      year: Number.isFinite(d.year) ? Number(d.year) : fb.year,
+      month: Number.isFinite(d.month) ? Number(d.month) : fb.month,
+    };
+  })
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    await assertOrgAccess(supabase, userId, data.organization_id);
+    const { data: rows, error } = await supabase.rpc("get_player_card_month_candidates" as any, {
+      _organization_id: data.organization_id,
+      _year: data.year,
+      _month: data.month,
+    });
+    if (error) throw new Error(error.message);
+
+    const { data: existing } = await supabase
+      .from("player_card_monthly_awards")
+      .select("id, user_id, award_kind, bfr_at_award, bfr_delta, team_id, finalized_by, created_at")
+      .eq("organization_id", data.organization_id)
+      .eq("year", data.year)
+      .eq("month", data.month);
+
+    return {
+      year: data.year,
+      month: data.month,
+      candidates: (rows ?? []) as any[],
+      awards: (existing ?? []) as any[],
+    };
+  });
+
+/** Coach setzt Player of the Month für einen Monat (award_kind: top_bfr | top_delta). */
+export const finalizePlayerOfTheMonth = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: {
+    organization_id: string;
+    year: number;
+    month: number;
+    user_id: string;
+    award_kind?: "top_bfr" | "top_delta";
+    team_id?: string | null;
+    bfr_at_award: number;
+    bfr_delta: number;
+  }) => ({
+    organization_id: String(d.organization_id),
+    year: Number(d.year),
+    month: Number(d.month),
+    user_id: String(d.user_id),
+    award_kind: (d.award_kind ?? "top_bfr") as "top_bfr" | "top_delta",
+    team_id: d.team_id ? String(d.team_id) : null,
+    bfr_at_award: Math.round(Number(d.bfr_at_award)),
+    bfr_delta: Math.round(Number(d.bfr_delta)),
+  }))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const role = await assertOrgAccess(supabase, userId, data.organization_id);
+    if (role !== "staff") throw new Error("Nur Coach oder Org-Admin darf Auszeichnungen setzen.");
+    const { error } = await supabase
+      .from("player_card_monthly_awards")
+      .upsert(
+        {
+          organization_id: data.organization_id,
+          team_id: data.team_id,
+          year: data.year,
+          month: data.month,
+          user_id: data.user_id,
+          award_kind: data.award_kind,
+          bfr_at_award: data.bfr_at_award,
+          bfr_delta: data.bfr_delta,
+          finalized_by: userId,
+        },
+        { onConflict: "organization_id,team_id,year,month,award_kind" },
+      );
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/** Hall of Fame — vergangene Auszeichnungen. */
+export const getPlayerCardHallOfFame = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { organization_id: string; limit?: number }) => ({
+    organization_id: String(d.organization_id),
+    limit: Math.min(Math.max(Number(d.limit ?? 24), 1), 120),
+  }))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    await assertOrgAccess(supabase, userId, data.organization_id);
+    const { data: rows, error } = await supabase
+      .from("player_card_monthly_awards")
+      .select("id, year, month, user_id, award_kind, bfr_at_award, bfr_delta, team_id, created_at")
+      .eq("organization_id", data.organization_id)
+      .order("year", { ascending: false })
+      .order("month", { ascending: false })
+      .limit(data.limit);
+    if (error) throw new Error(error.message);
+
+    const userIds = Array.from(new Set((rows ?? []).map((r: any) => r.user_id)));
+    const teamIds = Array.from(new Set((rows ?? []).map((r: any) => r.team_id).filter(Boolean)));
+    const [profilesRes, teamsRes] = await Promise.all([
+      userIds.length
+        ? supabase.from("profiles").select("id, display_name, nickname, avatar_url").in("id", userIds)
+        : Promise.resolve({ data: [] }),
+      teamIds.length
+        ? supabase.from("organization_teams").select("id, name").in("id", teamIds)
+        : Promise.resolve({ data: [] }),
+    ]);
+    const profilesById = new Map<string, any>();
+    for (const p of (profilesRes.data ?? []) as any[]) profilesById.set(p.id, p);
+    const teamsById = new Map<string, any>();
+    for (const t of (teamsRes.data ?? []) as any[]) teamsById.set(t.id, t);
+
+    return {
+      awards: (rows ?? []).map((r: any) => ({
+        ...r,
+        profile: profilesById.get(r.user_id) ?? null,
+        team: r.team_id ? teamsById.get(r.team_id) ?? null : null,
+      })),
+    };
+  });
