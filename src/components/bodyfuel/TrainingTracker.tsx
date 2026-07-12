@@ -22,6 +22,7 @@ type Exercise = {
   target_reps: string | null;
   notes: string | null;
   sort_order: number;
+  added_by_user?: string | null;
 };
 type SetLog = {
   id: string;
