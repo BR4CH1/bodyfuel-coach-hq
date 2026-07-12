@@ -265,79 +265,138 @@ export function PlayerCard({ data }: { data: PlayerCardData }) {
         preserveAspectRatio="xMidYMid meet"
         xmlns="http://www.w3.org/2000/svg"
         className="h-full w-full"
-        style={{ filter: "drop-shadow(0 30px 60px rgba(0,0,0,0.7))" }}
+        style={{ filter: "drop-shadow(0 40px 80px rgba(0,0,0,0.85))" }}
       >
         <defs>
+          {/* METAL RAHMEN — mehrschichtig für echten Metallic-Look */}
           <linearGradient id="pc-frame-metal" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#d0d3d8" />
-            <stop offset="25%" stopColor="#6a6d73" />
-            <stop offset="50%" stopColor="#2a2c30" />
-            <stop offset="75%" stopColor="#5a5d63" />
+            <stop offset="0%"  stopColor="#f4f6f9" />
+            <stop offset="12%" stopColor="#c9ccd2" />
+            <stop offset="30%" stopColor="#6a6d73" />
+            <stop offset="50%" stopColor="#1f2126" />
+            <stop offset="70%" stopColor="#5a5d63" />
+            <stop offset="88%" stopColor="#b8bcc2" />
             <stop offset="100%" stopColor="#0f1013" />
           </linearGradient>
+          <linearGradient id="pc-frame-shine" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%"  stopColor="#ffffff" stopOpacity="0" />
+            <stop offset="35%" stopColor="#ffffff" stopOpacity="0.55" />
+            <stop offset="55%" stopColor="#ffffff" stopOpacity="0.9" />
+            <stop offset="75%" stopColor="#ffffff" stopOpacity="0.35" />
+            <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+          </linearGradient>
           <linearGradient id="pc-frame-red" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor={primary} stopOpacity="0.9" />
-            <stop offset="50%" stopColor="#8b0000" stopOpacity="0.55" />
-            <stop offset="100%" stopColor={primary} stopOpacity="0.9" />
+            <stop offset="0%"  stopColor={primary} stopOpacity="0.95" />
+            <stop offset="50%" stopColor="#6a0000" stopOpacity="0.55" />
+            <stop offset="100%" stopColor={primary} stopOpacity="0.95" />
           </linearGradient>
 
-          <radialGradient id="pc-bg-glow" cx="50%" cy="38%" r="55%">
-            <stop offset="0%" stopColor={primary} stopOpacity="0.55" />
-            <stop offset="40%" stopColor="#4a0000" stopOpacity="0.35" />
+          {/* HINTERGRUND */}
+          <radialGradient id="pc-bg-glow" cx="50%" cy="34%" r="60%">
+            <stop offset="0%"  stopColor={primary} stopOpacity="0.7" />
+            <stop offset="35%" stopColor="#5a0000" stopOpacity="0.45" />
+            <stop offset="100%" stopColor="#000" stopOpacity="0" />
+          </radialGradient>
+          <radialGradient id="pc-bg-smoke" cx="50%" cy="60%" r="70%">
+            <stop offset="0%"  stopColor="#1a1a1a" stopOpacity="0.6" />
+            <stop offset="60%" stopColor="#0a0a0a" stopOpacity="0.2" />
             <stop offset="100%" stopColor="#000" stopOpacity="0" />
           </radialGradient>
           <linearGradient id="pc-bg-base" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#1a0a0a" />
-            <stop offset="45%" stopColor="#0a0a0a" />
+            <stop offset="0%"  stopColor="#26090a" />
+            <stop offset="30%" stopColor="#120404" />
+            <stop offset="70%" stopColor="#050505" />
             <stop offset="100%" stopColor="#000000" />
           </linearGradient>
 
-          <pattern id="pc-carbon" x="0" y="0" width="14" height="14" patternUnits="userSpaceOnUse">
-            <rect width="14" height="14" fill="#000" />
-            <path d="M0 7 L7 0 L14 7 L7 14 Z" fill="#141414" />
-            <circle cx="7" cy="7" r="0.5" fill="#1e1e1e" />
+          {/* CARBON */}
+          <pattern id="pc-carbon" x="0" y="0" width="12" height="12" patternUnits="userSpaceOnUse">
+            <rect width="12" height="12" fill="#050505" />
+            <path d="M0 6 L6 0 L12 6 L6 12 Z" fill="#131316" />
+            <path d="M0 6 L6 0 L6 6 Z" fill="#1c1c20" />
+            <circle cx="6" cy="6" r="0.4" fill="#242428" />
           </pattern>
 
-          <pattern id="pc-streaks" x="0" y="0" width="180" height="180" patternUnits="userSpaceOnUse" patternTransform="rotate(-20)">
-            <line x1="0" y1="30" x2="180" y2="30" stroke={primary} strokeWidth="1" strokeOpacity="0.08" />
-            <line x1="0" y1="70" x2="180" y2="70" stroke={primary} strokeWidth="0.5" strokeOpacity="0.05" />
-            <line x1="0" y1="120" x2="180" y2="120" stroke={primary} strokeWidth="1.5" strokeOpacity="0.06" />
-          </pattern>
+          {/* LICHTSTRAHLEN von oben */}
+          <linearGradient id="pc-rays" x1="0.5" y1="0" x2="0.5" y2="1">
+            <stop offset="0%"  stopColor="#ffffff" stopOpacity="0.35" />
+            <stop offset="60%" stopColor="#ffffff" stopOpacity="0.05" />
+            <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+          </linearGradient>
+          <linearGradient id="pc-rays-red" x1="0.5" y1="0" x2="0.5" y2="1">
+            <stop offset="0%"  stopColor={primary} stopOpacity="0.4" />
+            <stop offset="100%" stopColor={primary} stopOpacity="0" />
+          </linearGradient>
 
+          {/* NOISE + DISTRESS */}
           <filter id="pc-noise">
             <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="7" />
-            <feColorMatrix values="0 0 0 0 0.6  0 0 0 0 0.6  0 0 0 0 0.6  0 0 0 0.15 0" />
+            <feColorMatrix values="0 0 0 0 0.55  0 0 0 0 0.5  0 0 0 0 0.5  0 0 0 0.18 0" />
+          </filter>
+          <filter id="pc-grain">
+            <feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="1" seed="3" />
+            <feColorMatrix values="0 0 0 0 0.9  0 0 0 0 0.85  0 0 0 0 0.85  0 0 0 0.07 0" />
+          </filter>
+          <filter id="pc-distress" x="-5%" y="-8%" width="110%" height="116%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.014 0.045" numOctaves="2" seed="4" result="t" />
+            <feDisplacementMap in="SourceGraphic" in2="t" scale="6" />
           </filter>
 
-          <filter id="pc-distress" x="-5%" y="-5%" width="110%" height="110%">
-            <feTurbulence type="fractalNoise" baseFrequency="0.02 0.06" numOctaves="2" seed="3" result="t" />
-            <feDisplacementMap in="SourceGraphic" in2="t" scale="4" />
-          </filter>
-
-          <filter id="pc-glow-red" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="4" result="b" />
+          {/* GLOWS */}
+          <filter id="pc-glow-red" x="-60%" y="-60%" width="220%" height="220%">
+            <feGaussianBlur stdDeviation="5" result="b" />
             <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
           </filter>
-          <filter id="pc-glow-strong" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="14" />
+          <filter id="pc-glow-white" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="2.5" result="b" />
+            <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
+          <filter id="pc-glow-strong" x="-60%" y="-60%" width="220%" height="220%">
+            <feGaussianBlur stdDeviation="26" />
+          </filter>
+          <filter id="pc-glow-logo" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="6" result="b" />
+            <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
           </filter>
 
+          {/* KANTEN-WEICHZEICHNER für Freistellung */}
+          <filter id="pc-cutout-feather" x="-2%" y="-2%" width="104%" height="104%">
+            <feGaussianBlur stdDeviation="0.7" />
+          </filter>
+
+          {/* NAME METAL */}
           <linearGradient id="pc-name-metal" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#ffffff" />
-            <stop offset="35%" stopColor="#f4f5f7" />
-            <stop offset="55%" stopColor="#c8ccd2" />
-            <stop offset="80%" stopColor="#7a7e85" />
-            <stop offset="100%" stopColor="#4a4d52" />
+            <stop offset="0%"  stopColor="#ffffff" />
+            <stop offset="30%" stopColor="#f6f7f9" />
+            <stop offset="50%" stopColor="#cccfd4" />
+            <stop offset="72%" stopColor="#6d7076" />
+            <stop offset="92%" stopColor="#3a3c40" />
+            <stop offset="100%" stopColor="#1a1b1e" />
           </linearGradient>
 
+          {/* PANEL — mit innerem Tiefeneffekt */}
           <linearGradient id="pc-panel" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#181818" stopOpacity="0.95" />
-            <stop offset="100%" stopColor="#050505" stopOpacity="0.98" />
+            <stop offset="0%"  stopColor="#1c1c1f" stopOpacity="0.92" />
+            <stop offset="50%" stopColor="#0d0d10" stopOpacity="0.96" />
+            <stop offset="100%" stopColor="#040405" stopOpacity="0.98" />
           </linearGradient>
+          <linearGradient id="pc-panel-top" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"  stopColor="#ffffff" stopOpacity="0.14" />
+            <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+          </linearGradient>
+          <filter id="pc-inner-shadow" x="-10%" y="-10%" width="120%" height="120%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="4" />
+            <feOffset dx="0" dy="2" result="off" />
+            <feComposite in="off" in2="SourceAlpha" operator="arithmetic" k2="-1" k3="1" result="inner" />
+            <feColorMatrix in="inner" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.6 0" result="colored" />
+            <feMerge><feMergeNode in="SourceGraphic" /><feMergeNode in="colored" /></feMerge>
+          </filter>
 
-          <radialGradient id="pc-vignette" cx="50%" cy="50%" r="70%">
-            <stop offset="60%" stopColor="#000" stopOpacity="0" />
-            <stop offset="100%" stopColor="#000" stopOpacity="0.85" />
+          {/* VIGNETTE */}
+          <radialGradient id="pc-vignette" cx="50%" cy="55%" r="72%">
+            <stop offset="45%" stopColor="#000" stopOpacity="0" />
+            <stop offset="80%" stopColor="#000" stopOpacity="0.55" />
+            <stop offset="100%" stopColor="#000" stopOpacity="0.95" />
           </radialGradient>
 
           <clipPath id="pc-clip">
@@ -348,86 +407,134 @@ export function PlayerCard({ data }: { data: PlayerCardData }) {
         {/* HINTERGRUND */}
         <g clipPath="url(#pc-clip)">
           <rect x="20" y="20" width="780" height="1260" fill="url(#pc-bg-base)" />
-          <rect x="20" y="20" width="780" height="1260" fill="url(#pc-carbon)" opacity="0.6" />
-          <rect x="20" y="20" width="780" height="1260" fill="url(#pc-streaks)" />
-          <ellipse cx="410" cy="500" rx="360" ry="480" fill="url(#pc-bg-glow)" />
-          {Array.from({ length: 45 }).map((_, i) => {
-            const seed = (i * 9301 + 49297) % 233280;
-            const x = 40 + (seed % 740);
-            const y = 40 + ((seed * 3) % 1200);
-            const r = 0.5 + ((seed * 7) % 20) / 20;
-            return <circle key={i} cx={x} cy={y} r={r} fill={primary} opacity={0.15 + (r * 0.15)} />;
-          })}
-          <rect x="20" y="20" width="780" height="1260" filter="url(#pc-noise)" opacity="0.5" />
-          <rect x="20" y="20" width="780" height="1260" fill="url(#pc-vignette)" />
+          <rect x="20" y="20" width="780" height="1260" fill="url(#pc-carbon)" opacity="0.55" />
 
-          {/* SPIELERBILD */}
+          {/* Lichtstrahlen von oben */}
+          <g opacity="0.6" style={{ mixBlendMode: "screen" }}>
+            <polygon points="180,20 240,20 340,780 220,780" fill="url(#pc-rays)" opacity="0.55" />
+            <polygon points="380,20 440,20 480,900 360,900" fill="url(#pc-rays)" opacity="0.4" />
+            <polygon points="560,20 620,20 620,820 500,820" fill="url(#pc-rays-red)" opacity="0.55" />
+            <polygon points="80,20 130,20 260,700 160,700" fill="url(#pc-rays-red)" opacity="0.35" />
+          </g>
+
+          {/* Roter Hintergrund-Glow */}
+          <ellipse cx="410" cy="470" rx="380" ry="500" fill="url(#pc-bg-glow)" />
+
+          {/* Smoke / Rauch */}
+          <g style={{ mixBlendMode: "screen" }} opacity="0.7">
+            <ellipse cx="230" cy="720" rx="220" ry="130" fill="url(#pc-bg-smoke)" />
+            <ellipse cx="600" cy="640" rx="240" ry="160" fill="url(#pc-bg-smoke)" />
+            <ellipse cx="410" cy="880" rx="360" ry="120" fill="url(#pc-bg-smoke)" />
+          </g>
+
+          {/* Rote Partikel — mehr Dichte, variabel */}
+          {Array.from({ length: 90 }).map((_, i) => {
+            const seed = (i * 9301 + 49297) % 233280;
+            const x = 30 + (seed % 760);
+            const y = 30 + ((seed * 3) % 1220);
+            const r = 0.4 + ((seed * 7) % 30) / 12;
+            const o = 0.12 + ((seed * 11) % 40) / 100;
+            return <circle key={i} cx={x} cy={y} r={r} fill={primary} opacity={o} filter={r > 1.6 ? "url(#pc-glow-red)" : undefined} />;
+          })}
+
+          {/* Noise + Grain overlay */}
+          <rect x="20" y="20" width="780" height="1260" filter="url(#pc-noise)" opacity="0.42" />
+          <rect x="20" y="20" width="780" height="1260" filter="url(#pc-grain)" opacity="0.5" style={{ mixBlendMode: "overlay" }} />
+
+          {/* SPIELERBILD — deutlich größer, dominant */}
           {avatarUrl && (
             <>
-              <ellipse cx="440" cy="450" rx="240" ry="300" fill={primary} opacity="0.4" filter="url(#pc-glow-strong)" />
+              {/* starker roter Hinter-Glow */}
+              <ellipse cx="410" cy="460" rx="290" ry="360" fill={primary} opacity="0.55" filter="url(#pc-glow-strong)" />
+              <ellipse cx="410" cy="520" rx="220" ry="180" fill="#000" opacity="0.75" filter="url(#pc-glow-strong)" />
               <image
                 href={avatarUrl}
-                x="120"
-                y="70"
-                width="640"
-                height="800"
+                x="30"
+                y="10"
+                width="760"
+                height="1010"
                 preserveAspectRatio="xMidYMax meet"
-                style={{ filter: "drop-shadow(0 40px 30px rgba(0,0,0,0.7))" }}
+                filter="url(#pc-cutout-feather)"
+                style={{ filter: "drop-shadow(0 50px 40px rgba(0,0,0,0.85))" }}
                 onError={() => { if (rawAvatar) AVATAR_CACHE.delete(rawAvatar); setAvatarUrl(null); }}
               />
+              {/* Boden-Schatten unter Füßen */}
+              <ellipse cx="410" cy="1000" rx="230" ry="22" fill="#000" opacity="0.7" filter="url(#pc-glow-strong)" />
             </>
           )}
+
+          {/* Vignette on top of everything inside clip */}
+          <rect x="20" y="20" width="780" height="1260" fill="url(#pc-vignette)" pointerEvents="none" />
         </g>
 
-        {/* OVR LINKS */}
+        {/* OVR LINKS — deutlich größer, dominanter */}
         <g>
-          <text x="90" y="180" fontFamily="Bebas Neue, Anton, sans-serif" fontSize="160" fill="#ffffff"
-                style={{ letterSpacing: "-4px" }} filter="url(#pc-glow-red)">
+          {/* soft red backdrop halo */}
+          <circle cx="150" cy="200" r="130" fill={primary} opacity="0.28" filter="url(#pc-glow-strong)" />
+          <text x="60" y="260"
+                fontFamily="Anton, Bebas Neue, sans-serif"
+                fontWeight="900"
+                fontSize="280"
+                fill="url(#pc-name-metal)"
+                style={{ letterSpacing: "-10px", paintOrder: "stroke", stroke: "rgba(0,0,0,0.65)", strokeWidth: 3 } as any}
+                filter="url(#pc-glow-red)">
             {ovr ?? "—"}
           </text>
-          <text x="94" y="220" fontFamily="Oswald, sans-serif" fontWeight="800" fontSize="30" fill={primary}
-                letterSpacing="4">OVR</text>
+          <text x="72" y="308" fontFamily="Oswald, sans-serif" fontWeight="900" fontSize="38" fill={primary}
+                letterSpacing="6" filter="url(#pc-glow-red)">OVR</text>
           {position && (
             <>
-              <text x="90" y="320" fontFamily="Bebas Neue, Anton, sans-serif" fontSize="88" fill={primary}
-                    style={{ letterSpacing: "-2px" }}>{position}</text>
-              <line x1="94" y1="336" x2="170" y2="336" stroke={primary} strokeWidth="3" />
+              <text x="70" y="410" fontFamily="Bebas Neue, Anton, sans-serif" fontSize="94" fill="#ffffff"
+                    style={{ letterSpacing: "-2px", paintOrder: "stroke", stroke: "rgba(0,0,0,0.6)", strokeWidth: 2 } as any}>
+                {position}
+              </text>
+              <line x1="74" y1="428" x2="180" y2="428" stroke={primary} strokeWidth="4" />
               {jerseyNumber && (
-                <text x="94" y="376" fontFamily="Oswald, sans-serif" fontWeight="700" fontSize="28" fill="#fff"
-                      letterSpacing="2">#{jerseyNumber}</text>
+                <text x="74" y="466" fontFamily="Oswald, sans-serif" fontWeight="700" fontSize="30" fill="#fff"
+                      letterSpacing="2" opacity="0.85">#{jerseyNumber}</text>
               )}
             </>
           )}
         </g>
 
-        {/* VEREINSLOGO */}
+        {/* VEREINSLOGO — transparent, mit Glow, ohne Kasten */}
         {organization?.logo_url ? (
-          <image href={organization.logo_url} x="620" y="70" width="160" height="160" preserveAspectRatio="xMidYMid meet" />
+          <g filter="url(#pc-glow-logo)">
+            {/* subtle radial spotlight behind */}
+            <circle cx="700" cy="170" r="105" fill={primary} opacity="0.18" filter="url(#pc-glow-strong)" />
+            <image
+              href={organization.logo_url}
+              x="600" y="70"
+              width="200" height="200"
+              preserveAspectRatio="xMidYMid meet"
+              style={{ filter: "drop-shadow(0 4px 14px rgba(0,0,0,0.6))" }}
+            />
+          </g>
         ) : (
-          <g>
-            <circle cx="700" cy="150" r="70" fill="none" stroke={primary} strokeWidth="4" />
-            <text x="700" y="165" textAnchor="middle" fontFamily="Oswald, sans-serif" fontWeight="800" fontSize="30" fill={primary}>
+          <g filter="url(#pc-glow-red)">
+            <circle cx="700" cy="170" r="80" fill="none" stroke={primary} strokeWidth="4" />
+            <text x="700" y="188" textAnchor="middle" fontFamily="Oswald, sans-serif" fontWeight="800" fontSize="34" fill={primary}>
               {organization?.short_name ?? "BF"}
             </text>
           </g>
         )}
         {organization?.short_name && organization?.logo_url && (
-          <text x="700" y="255" textAnchor="middle" fontFamily="Oswald, sans-serif" fontWeight="800" fontSize="22"
-                fill={primary} letterSpacing="3">{organization.short_name.toUpperCase()}</text>
+          <text x="700" y="298" textAnchor="middle" fontFamily="Oswald, sans-serif" fontWeight="800" fontSize="22"
+                fill="#ffffff" opacity="0.7" letterSpacing="4">{organization.short_name.toUpperCase()}</text>
         )}
 
         {/* BODY-STATS LINKS */}
         <g fontFamily="Oswald, sans-serif" fontWeight="600" fontSize="20" fill="#ffffff">
           {age != null && (
-            <g transform="translate(90, 480)">
-              <rect x="0" y="-16" width="22" height="22" rx="3" fill="none" stroke={primary} strokeWidth="1.5" />
+            <g transform="translate(70, 560)">
+              <rect x="0" y="-16" width="22" height="22" rx="3" fill="none" stroke={primary} strokeWidth="1.8" />
               <line x1="0" y1="-8" x2="22" y2="-8" stroke={primary} strokeWidth="1.5" />
-              <text x="34" y="2">{age} JAHRE</text>
+              <text x="34" y="2" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}>{age} JAHRE</text>
             </g>
           )}
           {height != null && (
-            <g transform="translate(90, 520)">
-              <rect x="0" y="-16" width="22" height="14" rx="2" fill="none" stroke={primary} strokeWidth="1.5" />
+            <g transform="translate(70, 605)">
+              <rect x="0" y="-16" width="22" height="14" rx="2" fill="none" stroke={primary} strokeWidth="1.8" />
               <line x1="5" y1="-16" x2="5" y2="-8" stroke={primary} strokeWidth="1" />
               <line x1="11" y1="-16" x2="11" y2="-11" stroke={primary} strokeWidth="1" />
               <line x1="17" y1="-16" x2="17" y2="-8" stroke={primary} strokeWidth="1" />
@@ -435,143 +542,197 @@ export function PlayerCard({ data }: { data: PlayerCardData }) {
             </g>
           )}
           {weight != null && (
-            <g transform="translate(90, 560)">
-              <circle cx="11" cy="-6" r="10" fill="none" stroke={primary} strokeWidth="1.5" />
-              <path d="M11 -12 L11 -6 L15 -3" stroke={primary} strokeWidth="1.5" fill="none" strokeLinecap="round" />
+            <g transform="translate(70, 650)">
+              <circle cx="11" cy="-6" r="10" fill="none" stroke={primary} strokeWidth="1.8" />
+              <path d="M11 -12 L11 -6 L15 -3" stroke={primary} strokeWidth="1.8" fill="none" strokeLinecap="round" />
               <text x="34" y="0">{weight} KG</text>
             </g>
           )}
           {card.is_provisional && (
-            <g transform="translate(90, 610)">
+            <g transform="translate(70, 700)">
               <rect x="0" y="-16" width="130" height="24" rx="3" fill="#f59e0b" />
               <text x="65" y="1" textAnchor="middle" fontSize="14" fontWeight="800" fill="#000" letterSpacing="2">VORLÄUFIG</text>
             </g>
           )}
         </g>
 
-        {/* NAME */}
+        {/* NAME — Vorname deutlich sichtbar, Nachname massiv & tiefer */}
         <g textAnchor="middle">
           {first && (
-            <text x="410" y="780" fontFamily="Bebas Neue, Anton, sans-serif" fontSize="42" fill={primary}
-                  fontStyle="italic" letterSpacing="6" filter="url(#pc-glow-red)">{first}</text>
+            <>
+              {/* Underlay für Lesbarkeit */}
+              <text x="410" y="890"
+                    fontFamily="Bebas Neue, Anton, sans-serif"
+                    fontSize="58"
+                    fill="#000" opacity="0.55"
+                    fontStyle="italic" letterSpacing="8"
+                    style={{ paintOrder: "stroke", stroke: "rgba(0,0,0,0.8)", strokeWidth: 6 } as any}>
+                {first}
+              </text>
+              <text x="410" y="890"
+                    fontFamily="Bebas Neue, Anton, sans-serif"
+                    fontSize="58"
+                    fill={primary}
+                    fontStyle="italic" letterSpacing="8"
+                    filter="url(#pc-glow-red)"
+                    style={{ paintOrder: "stroke", stroke: "rgba(0,0,0,0.55)", strokeWidth: 2 } as any}>
+                {first}
+              </text>
+            </>
           )}
+          {/* Nachname Underlay (Distress-Schatten) */}
           <text
-            x="410" y="885"
+            x="410" y="1000"
             fontFamily="Anton, Bebas Neue, sans-serif"
-            fontSize={last.length > 9 ? 96 : last.length > 7 ? 118 : 140}
-            fill="url(#pc-name-metal)"
+            fontSize={last.length > 9 ? 128 : last.length > 7 ? 148 : 172}
+            fill="#000"
             letterSpacing="2"
-            filter="url(#pc-distress)"
-            style={{ paintOrder: "stroke", stroke: "rgba(0,0,0,0.6)", strokeWidth: 2 } as any}
+            opacity="0.7"
+            style={{ paintOrder: "stroke", stroke: "#000", strokeWidth: 10 } as any}
           >
             {last || "—"}
           </text>
-          <text x="410" y="925" fontFamily="Oswald, sans-serif" fontWeight="600" fontSize="17"
-                fill="#ffffff" opacity="0.75" letterSpacing="6">
+          <text
+            x="410" y="1000"
+            fontFamily="Anton, Bebas Neue, sans-serif"
+            fontSize={last.length > 9 ? 128 : last.length > 7 ? 148 : 172}
+            fill="url(#pc-name-metal)"
+            letterSpacing="2"
+            filter="url(#pc-distress)"
+            style={{ paintOrder: "stroke", stroke: "rgba(0,0,0,0.7)", strokeWidth: 2.5 } as any}
+          >
+            {last || "—"}
+          </text>
+          {/* Highlight-Sheen auf Namen */}
+          <text
+            x="410" y="1000"
+            fontFamily="Anton, Bebas Neue, sans-serif"
+            fontSize={last.length > 9 ? 128 : last.length > 7 ? 148 : 172}
+            fill="url(#pc-frame-shine)"
+            letterSpacing="2"
+            opacity="0.4"
+            pointerEvents="none"
+          >
+            {last || "—"}
+          </text>
+          <text x="410" y="1032" fontFamily="Oswald, sans-serif" fontWeight="700" fontSize="16"
+                fill="#ffffff" opacity="0.7" letterSpacing="8">
             {[teamLabel, position, jerseyNumber ? `#${jerseyNumber}` : null].filter(Boolean).join("   •   ").toUpperCase()}
           </text>
         </g>
 
-        {/* STAT-PANEL */}
-        <g transform="translate(50, 945)">
-          <rect x="0" y="0" width="720" height="185" rx="14" fill="url(#pc-panel)" stroke="#ffffff" strokeOpacity="0.12" />
+        {/* STAT-PANEL — ein Fläche mit dünnen Trennlinien */}
+        <g transform="translate(50, 1055)">
+          {/* Outer glow */}
+          <rect x="-2" y="-2" width="724" height="129" rx="14" fill={primary} opacity="0.12" filter="url(#pc-glow-strong)" />
+          {/* Base plate */}
+          <rect x="0" y="0" width="720" height="125" rx="12" fill="url(#pc-panel)" />
+          {/* Metal top highlight */}
+          <rect x="0" y="0" width="720" height="125" rx="12" fill="url(#pc-panel-top)" />
+          {/* Inner stroke */}
+          <rect x="0.75" y="0.75" width="718.5" height="123.5" rx="11.25" fill="none" stroke="#ffffff" strokeOpacity="0.16" strokeWidth="1.5" />
+          <rect x="3" y="3" width="714" height="119" rx="9" fill="none" stroke="#000" strokeOpacity="0.6" strokeWidth="1" />
+          {/* nur dünne Trennlinien */}
           {[0, 1, 2, 3, 4].map((i) => (
-            <line key={i} x1={120 + i * 120} y1="20" x2={120 + i * 120} y2="165" stroke="#ffffff" strokeOpacity="0.08" />
+            <line key={i} x1={120 + i * 120} y1="18" x2={120 + i * 120} y2="107" stroke="#ffffff" strokeOpacity="0.09" strokeWidth="1" />
           ))}
-          <StatCol cx={60}  attr="SPD" value={card.spd}       accent={primary} animated={spd} />
-          <StatCol cx={180} attr="ACC" value={card.acc}       accent={primary} animated={acc} />
-          <StatCol cx={300} attr="AGI" value={card.agi}       accent={primary} animated={agi} />
-          <StatCol cx={420} attr="POW" value={card.pow}       accent={primary} animated={pow} />
-          <StatCol cx={540} attr="STR" value={card.str}       accent={primary} animated={str} />
-          <StatCol cx={660} attr="END" value={card.end_score} accent={primary} animated={end} />
+          {/* Kompakte Stat-Reihe (nummer + label) */}
+          {([
+            { attr: "SPD" as const, value: card.spd,       animated: spd },
+            { attr: "ACC" as const, value: card.acc,       animated: acc },
+            { attr: "AGI" as const, value: card.agi,       animated: agi },
+            { attr: "POW" as const, value: card.pow,       animated: pow },
+            { attr: "STR" as const, value: card.str,       animated: str },
+            { attr: "END" as const, value: card.end_score, animated: end },
+          ]).map((s, i) => {
+            const cx = 60 + i * 120;
+            return (
+              <g key={s.attr}>
+                <text x={cx} y="62" textAnchor="middle" fontFamily="Anton, Bebas Neue, sans-serif" fontSize="50" fill="#ffffff"
+                      style={{ paintOrder: "stroke", stroke: "rgba(0,0,0,0.55)", strokeWidth: 2 } as any}>
+                  {s.animated ?? "—"}
+                </text>
+                <text x={cx} y="85" textAnchor="middle" fontFamily="Oswald, sans-serif" fontWeight="800" fontSize="14"
+                      fill={primary} letterSpacing="3">{ATTR_LABELS[s.attr]}</text>
+                {/* thin percentile bar */}
+                <rect x={cx - 30} y="97" width="60" height="3" rx="1.5" fill="#ffffff" opacity="0.1" />
+                <rect x={cx - 30} y="97" width={s.value == null ? 0 : Math.max(2, (s.value / 99) * 60)}
+                      height="3" rx="1.5" fill={primary} />
+              </g>
+            );
+          })}
         </g>
 
         {/* INFO-PANEL */}
-        <g transform="translate(50, 1145)">
-          <rect x="0" y="0" width="720" height="80" rx="12" fill="url(#pc-panel)" stroke="#ffffff" strokeOpacity="0.12" />
-          <line x1="240" y1="15" x2="240" y2="65" stroke="#ffffff" strokeOpacity="0.1" />
-          <line x1="480" y1="15" x2="480" y2="65" stroke="#ffffff" strokeOpacity="0.1" />
+        <g transform="translate(50, 1195)">
+          <rect x="-2" y="-2" width="724" height="72" rx="12" fill={primary} opacity="0.08" filter="url(#pc-glow-strong)" />
+          <rect x="0" y="0" width="720" height="68" rx="10" fill="url(#pc-panel)" />
+          <rect x="0" y="0" width="720" height="68" rx="10" fill="url(#pc-panel-top)" />
+          <rect x="0.75" y="0.75" width="718.5" height="66.5" rx="9.25" fill="none" stroke="#ffffff" strokeOpacity="0.14" strokeWidth="1.2" />
+          <line x1="240" y1="14" x2="240" y2="54" stroke="#ffffff" strokeOpacity="0.1" />
+          <line x1="480" y1="14" x2="480" y2="54" stroke="#ffffff" strokeOpacity="0.1" />
 
-          <g transform="translate(120, 26)">
-            <path d="M-8 -6 L0 -10 L8 -6 L8 4 Q0 12 -8 4 Z" fill="none" stroke={primary} strokeWidth="1.8" />
-            <text x="22" y="0" fontFamily="Oswald, sans-serif" fontWeight="700" fontSize="13" fill="#fff" opacity="0.65" letterSpacing="2">KARTENSTUFE</text>
-            <text x="0" y="34" textAnchor="middle" fontFamily="Anton, Bebas Neue, sans-serif" fontSize="26" fill={primary} letterSpacing="3">
+          <g transform="translate(120, 24)">
+            <text x="0" y="0" textAnchor="middle" fontFamily="Oswald, sans-serif" fontWeight="800" fontSize="11" fill="#fff" opacity="0.55" letterSpacing="3">KARTENSTUFE</text>
+            <text x="0" y="28" textAnchor="middle" fontFamily="Anton, Bebas Neue, sans-serif" fontSize="24" fill={primary} letterSpacing="4"
+                  filter="url(#pc-glow-red)">
               {card.tier ? TIER_LABELS[card.tier] : "—"}
             </text>
           </g>
-          <g transform="translate(360, 26)">
-            <rect x="-10" y="-10" width="20" height="16" rx="2" fill="none" stroke={primary} strokeWidth="1.8" />
-            <line x1="-10" y1="-4" x2="10" y2="-4" stroke={primary} strokeWidth="1.5" />
-            <text x="22" y="0" fontFamily="Oswald, sans-serif" fontWeight="700" fontSize="13" fill="#fff" opacity="0.65" letterSpacing="2">LETZTES UPDATE</text>
-            <text x="0" y="34" textAnchor="middle" fontFamily="Anton, Bebas Neue, sans-serif" fontSize="26" fill="#fff" letterSpacing="2">
+          <g transform="translate(360, 24)">
+            <text x="0" y="0" textAnchor="middle" fontFamily="Oswald, sans-serif" fontWeight="800" fontSize="11" fill="#fff" opacity="0.55" letterSpacing="3">LETZTES UPDATE</text>
+            <text x="0" y="28" textAnchor="middle" fontFamily="Anton, Bebas Neue, sans-serif" fontSize="24" fill="#fff" letterSpacing="2">
               {updateDate}
             </text>
           </g>
-          <g transform="translate(600, 26)">
-            <path d="M-4 -10 L-8 0 L-2 0 L-4 8 L6 -4 L0 -4 L4 -10 Z" fill={primary} />
-            <text x="22" y="0" fontFamily="Oswald, sans-serif" fontWeight="700" fontSize="13" fill="#fff" opacity="0.65" letterSpacing="2">GRÖSSTE STÄRKE</text>
-            <text x="0" y="34" textAnchor="middle" fontFamily="Anton, Bebas Neue, sans-serif" fontSize="26" fill={primary} letterSpacing="3">
+          <g transform="translate(600, 24)">
+            <text x="0" y="0" textAnchor="middle" fontFamily="Oswald, sans-serif" fontWeight="800" fontSize="11" fill="#fff" opacity="0.55" letterSpacing="3">GRÖSSTE STÄRKE</text>
+            <text x="0" y="28" textAnchor="middle" fontFamily="Anton, Bebas Neue, sans-serif" fontSize="24" fill={primary} letterSpacing="4"
+                  filter="url(#pc-glow-red)">
               {strongestLabel}
             </text>
           </g>
         </g>
 
-        {/* UNTERE ZEILE — Entwicklung / Trend / QR */}
-        <g transform="translate(50, 1235)">
-          {/* OVR Entwicklung */}
-          <g transform="translate(20, 0)">
-            <text x="80" y="18" textAnchor="middle" fontFamily="Oswald, sans-serif" fontWeight="700"
-                  fontSize="13" fill="#ffffffb0" letterSpacing="2">OVR ENTWICKLUNG</text>
-            <text x="80" y="52" textAnchor="middle" fontFamily="Anton, Bebas Neue, sans-serif"
-                  fontSize="42" fill={primary} filter="url(#pc-glow-red)">{deltaStr}</text>
-            <text x="80" y="70" textAnchor="middle" fontFamily="Oswald, sans-serif" fontWeight="600"
-                  fontSize="11" fill="#ffffff80" letterSpacing="1">SEIT LETZTEM TEST</text>
-          </g>
-
-          {/* Trend */}
-          <g transform="translate(210, 0)">
-            <TrendLine points={trendPoints} color={primary} width={300} height={78} />
-          </g>
-
-          {/* QR — als foreignObject damit qrcode.react rendert */}
-          <foreignObject x="560" y="0" width="140" height="80">
-            <div
-                 style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
-              <div style={{
-                padding: 4,
-                background: "#fff",
-                borderRadius: 3,
-                boxShadow: `0 0 0 2px ${primary}, 0 0 10px ${primary}90`,
-              }}>
-                <QRCodeSVG value={qrValue} size={54} level="M" bgColor="#ffffff" fgColor="#000000" />
-              </div>
-              <div style={{ fontFamily: "Oswald, sans-serif", fontWeight: 700, fontSize: 10, color: "#ffffff", letterSpacing: 2 }}>
-                #BUILTTOPERFORM
-              </div>
-            </div>
-          </foreignObject>
-        </g>
-
-        {/* Vertikaler Claim rechts */}
-        <g transform="translate(792, 650) rotate(-90)">
-          <text textAnchor="middle" fontFamily="Oswald, sans-serif" fontWeight="700" fontSize="14"
-                fill="#ffffff" opacity="0.35" letterSpacing="8">
+        {/* Vertikaler Claim rechts — heller, hochwertiger */}
+        <g transform="translate(796, 700) rotate(-90)">
+          <text textAnchor="middle" fontFamily="Oswald, sans-serif" fontWeight="700" fontSize="13"
+                fill="url(#pc-name-metal)" opacity="0.7" letterSpacing="10"
+                style={{ paintOrder: "stroke", stroke: "rgba(0,0,0,0.6)", strokeWidth: 0.6 } as any}>
             {claim}
           </text>
         </g>
 
-        {/* RAHMEN */}
-        <path d={framePath} fill="none" stroke="url(#pc-frame-metal)" strokeWidth="10" />
-        <path d={framePath} fill="none" stroke="url(#pc-frame-red)" strokeWidth="2" opacity="0.9" />
-        <path d={framePath} fill="none" stroke="#ffffff" strokeWidth="0.6" strokeOpacity="0.35" transform="translate(0,-1)" />
+        {/* RAHMEN — echter Metallic-Look */}
+        {/* Aussenschatten */}
+        <path d={framePath} fill="none" stroke="#000" strokeOpacity="0.9" strokeWidth="14" transform="translate(0,2)" style={{ filter: "blur(4px)" }} />
+        {/* Haupt-Metallschicht */}
+        <path d={framePath} fill="none" stroke="url(#pc-frame-metal)" strokeWidth="12" />
+        {/* Rote Akzentader */}
+        <path d={framePath} fill="none" stroke="url(#pc-frame-red)" strokeWidth="3" opacity="0.9" />
+        {/* Silber-Highlight oben */}
+        <path d={framePath} fill="none" stroke="#ffffff" strokeWidth="1.4" strokeOpacity="0.9" transform="translate(0,-1.5)" />
+        {/* Silber-Highlight seitlich (Lichtreflex) */}
+        <path d={framePath} fill="none" stroke="url(#pc-frame-shine)" strokeWidth="6" opacity="0.5" />
+        {/* Tiefer Innenrand */}
+        <path d={framePath} fill="none" stroke="#000" strokeWidth="1.5" strokeOpacity="0.85" transform="translate(0,2)" />
+        {/* Innenlinie */}
         <path
-          d="M 35 45 L 380 45 Q 410 45 410 62 Q 410 45 440 45 L 785 45 L 785 1265 L 35 1265 Z"
+          d="M 42 50 L 380 50 Q 410 50 410 66 Q 410 50 440 50 L 778 50 L 778 1258 L 42 1258 Z"
           fill="none"
           stroke={primary}
           strokeWidth="1"
-          strokeOpacity="0.45"
+          strokeOpacity="0.55"
+        />
+        <path
+          d="M 50 58 L 380 58 Q 410 58 410 72 Q 410 58 440 58 L 770 58 L 770 1250 L 50 1250 Z"
+          fill="none"
+          stroke="#ffffff"
+          strokeWidth="0.5"
+          strokeOpacity="0.15"
         />
       </svg>
     </div>
   );
 }
+
