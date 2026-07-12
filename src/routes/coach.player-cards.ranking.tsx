@@ -129,6 +129,8 @@ function RankingPage() {
         <RankingList orgId={orgId} />
       ) : tab === "potm" ? (
         <PlayerOfMonth orgId={orgId} />
+      ) : tab === "totm" ? (
+        <TeamOfMonth orgId={orgId} />
       ) : (
         <HallOfFame orgId={orgId} />
       )}
