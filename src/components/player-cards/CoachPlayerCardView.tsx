@@ -57,6 +57,25 @@ export function CoachPlayerCardView({
     };
   }, [q.data, jerseyNumber, teamLabel]);
 
+  // Auto-Freistellen des Profilbilds (idempotent).
+  const profileForCutout = (q.data as any)?.profile as
+    | { avatar_url?: string | null; avatar_cutout_url?: string | null; avatar_cutout_source?: string | null }
+    | undefined;
+  useEffect(() => {
+    if (!profileForCutout?.avatar_url) return;
+    if (
+      profileForCutout.avatar_cutout_url &&
+      profileForCutout.avatar_cutout_source === profileForCutout.avatar_url
+    ) return;
+    const key = `${userId}:${profileForCutout.avatar_url}`;
+    if (cutoutTriedRef.current === key) return;
+    cutoutTriedRef.current = key;
+    cutoutFn({ data: { user_id: userId } })
+      .then(() => qc.invalidateQueries({ queryKey: ["player-card", "athlete", userId] }))
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, profileForCutout?.avatar_url, profileForCutout?.avatar_cutout_source, profileForCutout?.avatar_cutout_url]);
+
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between">
