@@ -186,27 +186,27 @@ export const analyzeMealPhoto = createServerFn({ method: "POST" })
       if (m) parsed = JSON.parse(m[0]);
     }
 
-    const ingredients: MealPhotoIngredient[] = Array.isArray(parsed.ingredients)
-      ? parsed.ingredients
-          .map((i: any): MealPhotoIngredient | null => {
-            const name = String(i?.name ?? "").trim();
-            const amt = Number(i?.estimated_amount);
-            if (!name || !isFinite(amt) || amt <= 0) return null;
-            const unit =
-              i?.unit === "ml" ? "ml" : i?.unit === "piece" ? "piece" : "g";
-            const conf = Math.max(0, Math.min(1, Number(i?.confidence ?? 0.5)));
-            return {
-              name,
-              estimated_amount: amt,
-              unit,
-              confidence: conf,
-              needs_confirmation:
-                Boolean(i?.needs_confirmation) || conf < 0.7,
-              matched: null,
-            };
-          })
-          .filter((x): x is MealPhotoIngredient => !!x)
+    const rawIngredients: (MealPhotoIngredient | null)[] = Array.isArray(parsed.ingredients)
+      ? parsed.ingredients.map((i: any): MealPhotoIngredient | null => {
+          const name = String(i?.name ?? "").trim();
+          const amt = Number(i?.estimated_amount);
+          if (!name || !isFinite(amt) || amt <= 0) return null;
+          const unit: "g" | "ml" | "piece" =
+            i?.unit === "ml" ? "ml" : i?.unit === "piece" ? "piece" : "g";
+          const conf = Math.max(0, Math.min(1, Number(i?.confidence ?? 0.5)));
+          return {
+            name,
+            estimated_amount: amt,
+            unit,
+            confidence: conf,
+            needs_confirmation: Boolean(i?.needs_confirmation) || conf < 0.7,
+            matched: null,
+          };
+        })
       : [];
+    const ingredients: MealPhotoIngredient[] = rawIngredients.filter(
+      (x: MealPhotoIngredient | null): x is MealPhotoIngredient => x !== null,
+    );
 
     // DB-Matching für Makros — ein Fetch, dann in-Memory Score.
     if (ingredients.length > 0) {
