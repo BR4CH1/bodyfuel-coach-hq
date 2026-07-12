@@ -198,26 +198,26 @@ export function PlayerCard({ data }: { data: PlayerCardData }) {
           )}
         </div>
 
-        {/* Player image */}
-        <div className="relative mx-6 mt-2 aspect-[3/4] max-h-[220px] overflow-hidden">
+        {/* Player image — randlos, groß, integriert */}
+        <div className="pointer-events-none absolute inset-x-0 top-16 h-[55%] overflow-hidden">
           {avatarUrl ? (
             <img
               src={avatarUrl}
               alt={first}
-              className="h-full w-full object-cover object-top"
-              style={{ filter: `drop-shadow(0 0 20px ${accent}88)` }}
+              className="h-full w-full object-contain object-bottom"
+              style={{ filter: `drop-shadow(0 12px 24px ${accent}66)` }}
               onError={() => {
                 if (rawAvatar) AVATAR_CACHE.delete(rawAvatar);
                 setAvatarUrl(null);
               }}
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center rounded-2xl border border-white/10 text-white/30">
-              <Shield className="h-16 w-16" />
+            <div className="flex h-full w-full items-center justify-center text-white/20">
+              <Shield className="h-20 w-20" />
             </div>
           )}
           {card.is_provisional && (
-            <div className="absolute right-0 top-0 rounded-bl-md bg-amber-500/90 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-black">
+            <div className="pointer-events-auto absolute right-3 top-3 rounded-md bg-amber-500/90 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-black">
               Vorläufig
             </div>
           )}
