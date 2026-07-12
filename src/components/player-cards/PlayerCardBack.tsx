@@ -4,6 +4,7 @@
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import type { PlayerCardData } from "./PlayerCard";
 import type { AttributeKey } from "@/lib/player-cards/engine";
+import { PlayerCardBadgeWall, type BadgeDefinitionRow, type BadgeUnlockRow } from "./PlayerCardBadgeWall";
 
 export type PlayerCardHistoryPoint = {
   bfr: number | null;
