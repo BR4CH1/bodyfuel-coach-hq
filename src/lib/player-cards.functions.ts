@@ -17,6 +17,7 @@ import {
   type MetricInput,
 } from "./player-cards/engine";
 import { assertCoachOrOrgStaffForAthlete, isGlobalCoach } from "@/lib/organizations/org-coach-access";
+import { evaluateAllBadges, type BadgeDefinition } from "./player-cards/badges";
 
 const FOOTBALL_POSITION_ALIASES: Record<string, string> = {
   qb: "QB",
