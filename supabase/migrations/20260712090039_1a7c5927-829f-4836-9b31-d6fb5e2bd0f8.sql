@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "coach deletes payment" ON public.payment_history;
