@@ -649,6 +649,15 @@ function CoachDashboard() {
               )}
             </Link>
           )}
+          {showPerfNav && (
+            <Link
+              to="/coach/player-cards"
+              className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm hover:border-bulls-red/60"
+            >
+              <span className="text-bulls-red">🎴</span>
+              <span className="font-display text-sm font-bold">Player Cards</span>
+            </Link>
+          )}
         </div>
 
       </div>
