@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { useFormDraft, clearFormDraft } from "@/hooks/use-form-draft";
 import { BarcodeScanner } from "./BarcodeScanner";
 import { MealBuilderDialog } from "./MealBuilderDialog";
+import { MealPhotoDialog } from "./MealPhotoDialog";
+import { Camera } from "lucide-react";
 import {
   searchFoods,
   searchFoodsDb,
@@ -254,6 +256,7 @@ export function NutritionTracker({
   const [unit, setUnit] = useState<"g" | "piece">("g");
   const [amountStr, setAmountStr] = useState<string>("100");
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [photoOpen, setPhotoOpen] = useState(false);
   const [builderOpen, setBuilderOpen] = useState(false);
   const [recentFoods, setRecentFoods] = useState<RecentFood[]>([]);
   const [loadingRecent, setLoadingRecent] = useState(false);
@@ -1121,8 +1124,16 @@ export function NutritionTracker({
                     onChange={(e) => setQuery(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && runSearch()}
                   />
-                  <Button variant="outline" onClick={() => setScannerOpen(true)}>
+                  <Button variant="outline" onClick={() => setScannerOpen(true)} title="Barcode">
                     <Barcode className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setPhotoOpen(true)}
+                    title="Gericht fotografieren"
+                    className="border-gold/50 text-gold hover:bg-gold/10"
+                  >
+                    <Camera className="h-4 w-4" />
                   </Button>
                 </div>
                 <div className="mt-3 min-h-0 flex-1 overflow-y-auto">
@@ -1460,6 +1471,26 @@ export function NutritionTracker({
         userId={userId}
         open={builderOpen}
         onClose={() => setBuilderOpen(false)}
+      />
+
+      <MealPhotoDialog
+        open={photoOpen}
+        onClose={() => setPhotoOpen(false)}
+        defaultSlot={(openMeal as "breakfast" | "lunch" | "dinner" | "snack") ?? "snack"}
+        entryDate={date}
+        onTracked={() => {
+          // Re-fetch today's entries
+          if (userId) {
+            supabase
+              .from("food_entries")
+              .select("id, meal, name, brand, serving_g, kcal, protein_g, carbs_g, fat_g, source")
+              .eq("user_id", userId)
+              .eq("entry_date", date)
+              .then(({ data }) => {
+                if (data) setAllEntries(data as FoodEntry[]);
+              });
+          }
+        }}
       />
     </div>
   );
