@@ -402,6 +402,9 @@ export function PlayerCard({ data }: { data: PlayerCardData }) {
           <clipPath id="pc-clip">
             <path d={framePath} />
           </clipPath>
+          <clipPath id="pc-feet-clip">
+            <rect x="20" y="940" width="780" height="340" />
+          </clipPath>
         </defs>
 
         {/* HINTERGRUND */}
