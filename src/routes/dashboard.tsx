@@ -490,9 +490,11 @@ function RealUserDashboard() {
       
       <TrialWelcomeDialog />
       <RankingInvitePopup />
+      <CheckinResultNotifier />
       <TrialStatusBanner />
       <SportWeekdaysPrompt />
       {supabaseUser && <TrialChecklistGate userId={supabaseUser.id} />}
+
 
       {checkinInfo && (
         <Link
