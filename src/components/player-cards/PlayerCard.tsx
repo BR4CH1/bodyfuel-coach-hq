@@ -110,7 +110,7 @@ function AttrPill({ attr, value }: { attr: AttributeKey; value: number | null })
   );
 }
 
-import { useState } from "react";
+
 
 export function PlayerCard({ data }: { data: PlayerCardData }) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
