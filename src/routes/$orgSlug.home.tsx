@@ -26,7 +26,7 @@ import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/bodyfuel/UserAvatar";
 import { PlanStatusChip } from "@/components/organizations/PlanStatusChip";
 import { LoadWeekBanner } from "@/components/bodyfuel/LoadWeekBanner";
-import { PlayerCardSection } from "@/components/player-cards/PlayerCardSection";
+
 
 
 
@@ -194,10 +194,7 @@ function OrgHome() {
       <main className="mx-auto max-w-md px-4 py-5 space-y-6">
         <ReadinessGateHint userId={supabaseUser?.id} orgSlug={org.slug} />
 
-        {/* PLAYER CARD */}
-        {supabaseUser && (
-          <PlayerCardSection teamLabel={(data.team_membership as any)?.team_name ?? null} />
-        )}
+        {/* PLAYER CARD — vorerst nur im Coaching-Bereich sichtbar */}
         {/* HEUTE — TRAINING */}
         {((data as any).today_sessions?.length ?? 0) > 0 && (
           <section>
