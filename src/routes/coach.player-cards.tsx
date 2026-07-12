@@ -10,6 +10,7 @@ import {
   Filter,
   Loader2,
   Share2,
+  Trophy,
   Users,
 } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
