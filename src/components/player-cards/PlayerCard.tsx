@@ -93,7 +93,10 @@ function AttrPill({ attr, value }: { attr: AttributeKey; value: number | null })
   );
 }
 
+import { useState } from "react";
+
 export function PlayerCard({ data }: { data: PlayerCardData }) {
+  const [avatarFailed, setAvatarFailed] = useState(false);
   const { card, profile, bullsProfile, organization, jerseyNumber, teamLabel } = data;
 
   const primary = organization?.primary_color ?? "#dc2626"; // bulls red default
