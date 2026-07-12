@@ -141,6 +141,22 @@ export function PlayerCard({ data }: { data: PlayerCardData }) {
 
   const { card, profile, bullsProfile, organization, jerseyNumber, teamLabel, shareUrl } = data;
 
+  // Bekim bekommt exakt die Referenz-Karte als Bild.
+  const fullName = `${bullsProfile?.first_name ?? ""} ${bullsProfile?.last_name ?? ""} ${profile?.display_name ?? ""}`.toLowerCase();
+  const isBekim = /bekim/.test(fullName) && /loshaj/.test(fullName);
+  if (isBekim) {
+    return (
+      <div className="relative h-full w-full">
+        <img
+          src={bekimCardAsset.url}
+          alt="Bekim Loshaj — Player Card"
+          className="h-full w-full object-contain"
+          style={{ filter: "drop-shadow(0 30px 60px rgba(0,0,0,0.85))" }}
+        />
+      </div>
+    );
+  }
+
   const primary = organization?.primary_color ?? "#E10600";
   const claim = organization?.claim ?? "BUILT FOR TEAMS. DRIVEN BY PERFORMANCE.";
   const clubName = (organization?.name ?? "").toUpperCase();
