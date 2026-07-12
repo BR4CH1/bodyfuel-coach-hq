@@ -9,7 +9,7 @@ import { AutopilotStatusCard } from "@/components/bodyfuel/AutopilotStatusCard";
 import { TrainingDevelopmentCard } from "@/components/bodyfuel/TrainingTrends";
 import { DailyChecklist } from "@/components/bodyfuel/DailyChecklist";
 import { AchievementsCard } from "@/components/bodyfuel/AchievementsCard";
-import { PlayerCardSection } from "@/components/player-cards/PlayerCardSection";
+
 import { CheckinResultNotifier } from "@/components/bodyfuel/CheckinResultNotifier";
 
 
@@ -645,7 +645,7 @@ function RealUserDashboard() {
 
       {supabaseUser && <AchievementsCard userId={supabaseUser.id} />}
 
-      {supabaseUser && <PlayerCardSection />}
+      
 
       {supabaseUser && <TrainingDevelopmentCard clientId={supabaseUser.id} />}
 
