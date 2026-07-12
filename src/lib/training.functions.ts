@@ -619,3 +619,107 @@ export const completeTrainingSession = createServerFn({ method: "POST" })
   });
 
 
+/**
+ * Ergänzt eine EIGENE Übung des Kunden zu einem bestehenden Trainingstag.
+ * Der Coach-Plan bleibt unverändert – die Übung wird über `added_by_user`
+ * dem Kunden zugeordnet, damit sie später auch von ihm selbst gelöscht
+ * werden kann.
+ */
+export const addOwnTrainingExercise = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (data: {
+      day_id: string;
+      name: string;
+      target_sets?: number | null;
+      target_reps?: string | null;
+      target_weights?: string | null;
+      rest_seconds?: number | null;
+      notes?: string | null;
+    }) => data,
+  )
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+    const name = String(data.name ?? "").trim().slice(0, 200);
+    if (!name) throw new Error("Bitte gib einen Übungsnamen ein.");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Verify the day belongs to a plan owned by this user.
+    const { data: dayRow, error: dayErr } = await supabaseAdmin
+      .from("training_days")
+      .select("id, plan_id, nutrition_plans!inner(client_id)")
+      .eq("id", data.day_id)
+      .maybeSingle();
+    if (dayErr || !dayRow) throw new Error("Trainingstag nicht gefunden.");
+    const clientId = (dayRow as any).nutrition_plans?.client_id;
+    if (clientId !== userId) {
+      throw new Error("Du kannst nur zu deinem eigenen Plan Übungen ergänzen.");
+    }
+
+    // Next sort order at end of day.
+    const { data: sortRow } = await supabaseAdmin
+      .from("training_exercises")
+      .select("sort_order")
+      .eq("day_id", data.day_id)
+      .order("sort_order", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const nextSort = ((sortRow as any)?.sort_order ?? -1) + 1;
+
+    const sets =
+      Number.isFinite(Number(data.target_sets))
+        ? Math.max(1, Math.min(20, Math.round(Number(data.target_sets))))
+        : 3;
+    const rest =
+      Number.isFinite(Number(data.rest_seconds))
+        ? Math.max(15, Math.min(600, Math.round(Number(data.rest_seconds))))
+        : 90;
+
+    const { data: row, error } = await supabaseAdmin
+      .from("training_exercises")
+      .insert({
+        day_id: data.day_id,
+        name,
+        target_sets: sets,
+        target_reps: data.target_reps ? String(data.target_reps).slice(0, 80) : "8",
+        target_weights: data.target_weights ? String(data.target_weights).slice(0, 120) : null,
+        rest_seconds: rest,
+        notes: data.notes ? String(data.notes).slice(0, 500) : null,
+        sort_order: nextSort,
+        added_by_user: userId,
+      } as any)
+      .select("*")
+      .single();
+    if (error || !row) throw new Error(error?.message ?? "Konnte Übung nicht anlegen.");
+    return row;
+  });
+
+/**
+ * Löscht eine vom Kunden selbst hinzugefügte Übung. Coach-Übungen bleiben
+ * unantastbar – die serverseitige Prüfung stellt sicher, dass nur eigene
+ * Ergänzungen entfernt werden können.
+ */
+export const deleteOwnTrainingExercise = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { exercise_id: string }) => data)
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: ex, error } = await supabaseAdmin
+      .from("training_exercises")
+      .select("id, added_by_user")
+      .eq("id", data.exercise_id)
+      .maybeSingle();
+    if (error || !ex) throw new Error("Übung nicht gefunden.");
+    if ((ex as any).added_by_user !== userId) {
+      throw new Error("Nur eigene Übungen können gelöscht werden.");
+    }
+    const { error: delErr } = await supabaseAdmin
+      .from("training_exercises")
+      .delete()
+      .eq("id", data.exercise_id);
+    if (delErr) throw new Error(delErr.message);
+    return { ok: true };
+  });
+
