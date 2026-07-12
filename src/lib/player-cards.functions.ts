@@ -331,3 +331,123 @@ export const getPlayerCardForAthlete = createServerFn({ method: "GET" })
     }
     return await loadCardBundle(context.supabase, data.user_id);
   });
+
+/**
+ * listCoachPlayerCards — alle Player Cards, auf die der aufrufende
+ * Coach/Org-Staff Zugriff hat.
+ *
+ * Zugriffsregeln:
+ *  - Global-Coach (public.has_role('coach'))                    → alle Karten
+ *  - Sonst: alle Karten aus Orgs, in denen der Aufrufer
+ *      • Membership mit Rolle 'organization_admin' hat, ODER
+ *      • einen staff_assignments-Eintrag mit Rolle 'coach' oder
+ *        'organization_admin' hat.
+ * Ergebnis enthält für jede Karte den Athletennamen, Foto, Position,
+ * Teamzugehörigkeit sowie das Organisations-Branding — damit die Grid-
+ * Anzeige und der PNG-Export ohne weitere Roundtrips klappen.
+ */
+export const listCoachPlayerCards = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { userId, supabase } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const globalCoach = await isGlobalCoach(supabase, userId);
+
+    // Orgs bestimmen, die der Aufrufer sehen darf.
+    let allowedOrgIds: string[] | null = null; // null == alle
+    if (!globalCoach) {
+      const [{ data: memberships }, { data: staff }] = await Promise.all([
+        supabaseAdmin
+          .from("organization_memberships")
+          .select("organization_id, role, status")
+          .eq("user_id", userId)
+          .eq("status", "active")
+          .in("role", ["organization_admin"]),
+        supabaseAdmin
+          .from("staff_assignments")
+          .select("organization_id, role")
+          .eq("user_id", userId)
+          .in("role", ["coach", "organization_admin"]),
+      ]);
+      const orgIds = new Set<string>();
+      for (const m of (memberships ?? []) as any[]) if (m.organization_id) orgIds.add(m.organization_id);
+      for (const s of (staff ?? []) as any[]) if (s.organization_id) orgIds.add(s.organization_id);
+      if (orgIds.size === 0) {
+        return { cards: [], organizations: [] as any[] };
+      }
+      allowedOrgIds = Array.from(orgIds);
+    }
+
+    let cardsQuery = supabaseAdmin
+      .from("player_cards")
+      .select("*")
+      .order("bfr", { ascending: false, nullsFirst: false });
+    if (allowedOrgIds) cardsQuery = cardsQuery.in("organization_id", allowedOrgIds);
+
+    const { data: cards, error } = await cardsQuery;
+    if (error) throw new Error(error.message);
+    const cardRows = (cards ?? []) as any[];
+    if (cardRows.length === 0) return { cards: [], organizations: [] };
+
+    const userIds = Array.from(new Set(cardRows.map((c) => c.user_id).filter(Boolean)));
+    const orgIds = Array.from(new Set(cardRows.map((c) => c.organization_id).filter(Boolean)));
+
+    const [profilesRes, bullsRes, orgsRes, membershipRes, teamsRes] = await Promise.all([
+      supabaseAdmin
+        .from("profiles")
+        .select("id, display_name, nickname, avatar_url, birthdate, height_cm, sport_position")
+        .in("id", userIds),
+      supabaseAdmin
+        .from("bulls_profiles")
+        .select("user_id, first_name, last_name, weight_kg, height_cm, position")
+        .in("user_id", userIds),
+      orgIds.length
+        ? supabaseAdmin
+            .from("organizations")
+            .select("id, name, logo_url, primary_color, secondary_color, accent_color, background_color, text_color, claim, short_name, slug")
+            .in("id", orgIds)
+        : Promise.resolve({ data: [] as any[] }),
+      supabaseAdmin
+        .from("team_memberships")
+        .select("user_id, team_id, jersey_number")
+        .in("user_id", userIds),
+      supabaseAdmin
+        .from("organization_teams")
+        .select("id, name, organization_id")
+        .in("organization_id", orgIds.length ? orgIds : ["00000000-0000-0000-0000-000000000000"]),
+    ]);
+
+    const profilesById = new Map<string, any>();
+    for (const p of (profilesRes.data ?? []) as any[]) profilesById.set(p.id, p);
+    const bullsById = new Map<string, any>();
+    for (const b of (bullsRes.data ?? []) as any[]) bullsById.set(b.user_id, b);
+    const orgsById = new Map<string, any>();
+    for (const o of (orgsRes.data ?? []) as any[]) orgsById.set(o.id, o);
+    const teamsById = new Map<string, any>();
+    for (const t of (teamsRes.data ?? []) as any[]) teamsById.set(t.id, t);
+    const membershipByUser = new Map<string, any>();
+    for (const m of (membershipRes.data ?? []) as any[]) {
+      // Erste Membership pro User reicht für Team-Label/Trikot.
+      if (!membershipByUser.has(m.user_id)) membershipByUser.set(m.user_id, m);
+    }
+
+    const enriched = cardRows.map((card) => {
+      const member = membershipByUser.get(card.user_id);
+      const team = member?.team_id ? teamsById.get(member.team_id) : null;
+      return {
+        card,
+        profile: profilesById.get(card.user_id) ?? null,
+        bullsProfile: bullsById.get(card.user_id) ?? null,
+        organization: card.organization_id ? orgsById.get(card.organization_id) ?? null : null,
+        teamId: team?.id ?? null,
+        teamName: team?.name ?? null,
+        jerseyNumber: member?.jersey_number ?? null,
+      };
+    });
+
+    return {
+      cards: enriched,
+      organizations: Array.from(orgsById.values()),
+    };
+  });
