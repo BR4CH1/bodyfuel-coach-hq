@@ -1008,7 +1008,7 @@ export const ensurePlayerCardCutout = createServerFn({ method: "POST" })
               {
                 type: "text",
                 text:
-                  "Isolate the athlete/person in this photo. Remove the background completely and replace it with full transparency. Keep the subject sharp, full body if visible, no shadow, no ground, no floor, no artifacts. Output a PNG with alpha channel — background must be fully transparent (checker-pattern in preview). Do not add any new elements, text, borders, or effects. Preserve original pose, colors, and lighting on the subject.",
+                  "Cut out the athlete/person from this photo. Place the isolated subject on a completely solid pure white (#FFFFFF) background — no gradients, no shadow, no ground, no floor, no other elements. Keep the subject sharp with clean edges (hair, helmet, ball, equipment). Do not add text, borders, logos or effects. Preserve original pose, colors, and lighting on the subject.",
               },
               {
                 type: "image_url",
@@ -1029,8 +1029,32 @@ export const ensurePlayerCardCutout = createServerFn({ method: "POST" })
     const b64 = gwJson.data?.[0]?.b64_json;
     if (!b64) throw new Error("Kein Bild in der AI-Antwort");
 
-    // 3) In Storage speichern.
-    const outBuf = Buffer.from(b64, "base64");
+    // 3) Weißen Hintergrund in Alpha umwandeln (Chroma-Key).
+    const rawPng = Buffer.from(b64, "base64");
+    const UPNG = ((await import("upng-js")) as any).default ?? (await import("upng-js"));
+    const decoded = UPNG.decode(rawPng);
+    const rgba = new Uint8Array(UPNG.toRGBA8(decoded)[0]);
+    const w = decoded.width;
+    const h = decoded.height;
+
+    const HARD = 238;
+    const SOFT = 205;
+    for (let i = 0; i < rgba.length; i += 4) {
+      const r = rgba[i];
+      const g = rgba[i + 1];
+      const bl = rgba[i + 2];
+      const minC = Math.min(r, g, bl);
+      const maxC = Math.max(r, g, bl);
+      const isNeutral = maxC - minC < 18;
+      if (isNeutral && minC >= HARD) {
+        rgba[i + 3] = 0;
+      } else if (isNeutral && minC >= SOFT) {
+        const t = (minC - SOFT) / (HARD - SOFT);
+        rgba[i + 3] = Math.round((1 - t) * rgba[i + 3]);
+      }
+    }
+    const outPng = UPNG.encode([rgba.buffer], w, h, 0);
+    const outBuf = Buffer.from(new Uint8Array(outPng));
     const path = `${targetUserId}/cutouts/${Date.now()}.png`;
     const { error: upErr } = await supabaseAdmin.storage
       .from("avatars")
