@@ -644,6 +644,8 @@ function RealUserDashboard() {
 
       {supabaseUser && <AchievementsCard userId={supabaseUser.id} />}
 
+      {supabaseUser && <PlayerCardSection />}
+
       {supabaseUser && <TrainingDevelopmentCard clientId={supabaseUser.id} />}
 
 
