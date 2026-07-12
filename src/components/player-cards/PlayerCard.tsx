@@ -114,7 +114,7 @@ function AttrPill({ attr, value }: { attr: AttributeKey; value: number | null })
 
 export function PlayerCard({ data }: { data: PlayerCardData }) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const rawAvatar = data.profile?.avatar_url ?? null;
+  const rawAvatar = data.profile?.avatar_cutout_url ?? data.profile?.avatar_url ?? null;
   useEffect(() => {
     let alive = true;
     if (!rawAvatar) { setAvatarUrl(null); return; }
