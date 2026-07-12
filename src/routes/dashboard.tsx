@@ -9,6 +9,8 @@ import { AutopilotStatusCard } from "@/components/bodyfuel/AutopilotStatusCard";
 import { TrainingDevelopmentCard } from "@/components/bodyfuel/TrainingTrends";
 import { DailyChecklist } from "@/components/bodyfuel/DailyChecklist";
 import { AchievementsCard } from "@/components/bodyfuel/AchievementsCard";
+import { CheckinResultNotifier } from "@/components/bodyfuel/CheckinResultNotifier";
+
 
 
 import { SmartAnalysisCTA } from "@/components/bodyfuel/SmartAnalysisCTA";
