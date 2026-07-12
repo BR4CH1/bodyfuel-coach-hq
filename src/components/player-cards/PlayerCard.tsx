@@ -532,35 +532,35 @@ export function PlayerCard({ data }: { data: PlayerCardData }) {
                 fill="#ffffff" opacity="0.7" letterSpacing="4">{organization.short_name.toUpperCase()}</text>
         )}
 
-        {/* BODY-STATS LINKS */}
-        <g fontFamily="Oswald, sans-serif" fontWeight="600" fontSize="20" fill="#ffffff">
+        {/* BODY-STATS LINKS — bündig unter Nummer */}
+        <g fontFamily="Oswald, sans-serif" fontWeight="700" fontSize="22" fill="#ffffff">
           {age != null && (
-            <g transform="translate(70, 560)">
-              <rect x="0" y="-16" width="22" height="22" rx="3" fill="none" stroke={primary} strokeWidth="1.8" />
-              <line x1="0" y1="-8" x2="22" y2="-8" stroke={primary} strokeWidth="1.5" />
-              <text x="34" y="2" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}>{age} JAHRE</text>
+            <g transform="translate(64, 505)">
+              <rect x="0" y="-17" width="24" height="24" rx="3" fill="none" stroke={primary} strokeWidth="1.8" />
+              <line x1="0" y1="-9" x2="24" y2="-9" stroke={primary} strokeWidth="1.5" />
+              <text x="38" y="2" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.95)" }}>{age} JAHRE</text>
             </g>
           )}
           {height != null && (
-            <g transform="translate(70, 605)">
-              <rect x="0" y="-16" width="22" height="14" rx="2" fill="none" stroke={primary} strokeWidth="1.8" />
-              <line x1="5" y1="-16" x2="5" y2="-8" stroke={primary} strokeWidth="1" />
-              <line x1="11" y1="-16" x2="11" y2="-11" stroke={primary} strokeWidth="1" />
-              <line x1="17" y1="-16" x2="17" y2="-8" stroke={primary} strokeWidth="1" />
-              <text x="34" y="0">{height} CM</text>
+            <g transform="translate(64, 545)">
+              <rect x="0" y="-17" width="24" height="16" rx="2" fill="none" stroke={primary} strokeWidth="1.8" />
+              <line x1="6" y1="-17" x2="6" y2="-9" stroke={primary} strokeWidth="1" />
+              <line x1="12" y1="-17" x2="12" y2="-12" stroke={primary} strokeWidth="1" />
+              <line x1="18" y1="-17" x2="18" y2="-9" stroke={primary} strokeWidth="1" />
+              <text x="38" y="0" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.95)" }}>{height} CM</text>
             </g>
           )}
           {weight != null && (
-            <g transform="translate(70, 650)">
-              <circle cx="11" cy="-6" r="10" fill="none" stroke={primary} strokeWidth="1.8" />
-              <path d="M11 -12 L11 -6 L15 -3" stroke={primary} strokeWidth="1.8" fill="none" strokeLinecap="round" />
-              <text x="34" y="0">{weight} KG</text>
+            <g transform="translate(64, 585)">
+              <circle cx="12" cy="-7" r="11" fill="none" stroke={primary} strokeWidth="1.8" />
+              <path d="M12 -14 L12 -7 L17 -3" stroke={primary} strokeWidth="1.8" fill="none" strokeLinecap="round" />
+              <text x="38" y="0" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.95)" }}>{weight} KG</text>
             </g>
           )}
           {card.is_provisional && (
-            <g transform="translate(70, 700)">
-              <rect x="0" y="-16" width="130" height="24" rx="3" fill="#f59e0b" />
-              <text x="65" y="1" textAnchor="middle" fontSize="14" fontWeight="800" fill="#000" letterSpacing="2">VORLÄUFIG</text>
+            <g transform="translate(64, 625)">
+              <rect x="0" y="-16" width="140" height="24" rx="3" fill="#f59e0b" />
+              <text x="70" y="1" textAnchor="middle" fontSize="14" fontWeight="800" fill="#000" letterSpacing="2">VORLÄUFIG</text>
             </g>
           )}
         </g>
