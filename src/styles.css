@@ -220,3 +220,11 @@
 @utility pc-tier-glow-legendary {
   box-shadow: 0 0 0 2px rgba(213, 0, 249, 0.55), 0 20px 60px -20px rgba(213, 0, 249, 0.6);
 }
+
+@keyframes pc-badge-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.55), inset 0 0 12px rgba(250, 204, 21, 0.35); }
+  50%      { box-shadow: 0 0 0 6px rgba(250, 204, 21, 0), inset 0 0 18px rgba(250, 204, 21, 0.55); }
+}
+@utility pc-badge-new {
+  animation: pc-badge-pulse 1.6s ease-in-out infinite;
+}
