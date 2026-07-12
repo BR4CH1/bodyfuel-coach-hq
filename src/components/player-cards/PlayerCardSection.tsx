@@ -70,16 +70,32 @@ export function PlayerCardSection({ jerseyNumber, teamLabel }: { jerseyNumber?: 
             Deine BodyFuel-Rating-Karte — automatisch aus verifizierten Tests
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => recompute.mutate()}
-          disabled={recompute.isPending}
-          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:border-bulls-red/60 hover:text-white disabled:opacity-50"
-        >
-          {recompute.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-          Aktualisieren
-        </button>
+        <div className="flex items-center gap-1.5">
+          {cardData && (
+            <button
+              type="button"
+              onClick={() => setShareOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:border-bulls-red/60 hover:text-white"
+            >
+              <Share2 className="h-3.5 w-3.5" />
+              Teilen
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => recompute.mutate()}
+            disabled={recompute.isPending}
+            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:border-bulls-red/60 hover:text-white disabled:opacity-50"
+          >
+            {recompute.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+            Aktualisieren
+          </button>
+        </div>
       </div>
+
+      {cardData && (
+        <PlayerCardShareDialog data={cardData} open={shareOpen} onClose={() => setShareOpen(false)} />
+      )}
 
       {q.isLoading ? (
         <div className="grid place-items-center rounded-2xl border border-border bg-card p-10">
