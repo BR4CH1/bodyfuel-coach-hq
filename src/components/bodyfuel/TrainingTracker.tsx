@@ -286,7 +286,10 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
         </div>
       </div>
 
-      <TrainingSessionsList clientId={clientId} selfEdit={!isCoach} days={14} />
+      {isCoach && (
+        <TrainingSessionsList clientId={clientId} selfEdit={false} days={14} />
+      )}
+
 
       {weeksCount > 1 && days.length > 0 && (() => {
         const phase =
