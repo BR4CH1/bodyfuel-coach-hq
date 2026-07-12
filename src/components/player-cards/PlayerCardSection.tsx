@@ -118,6 +118,7 @@ export function PlayerCardSection({ jerseyNumber, teamLabel }: { jerseyNumber?: 
       organization: bundle.organization as any,
       jerseyNumber,
       teamLabel,
+      history: (bundle.history as any[]) ?? [],
     };
   }, [q.data, jerseyNumber, teamLabel]);
 

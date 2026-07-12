@@ -1,9 +1,9 @@
 /**
- * Player Card — Vorderseite.
- * Übernimmt Vereinsfarben automatisch aus organization.primary_color etc.
+ * Player Card — Ultimate-Team-Style, SVG-basiert.
+ * Feste 820×1300 Designfläche, skaliert proportional.
  */
-import { Rocket, Zap, Activity, Flame, Dumbbell, HeartPulse, Shield, Calendar, Ruler, Scale } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "@/integrations/supabase/client";
 import type { AttributeKey, Tier } from "@/lib/player-cards/engine";
 
@@ -12,7 +12,6 @@ const AVATAR_TTL_MS = 45 * 60 * 1000;
 
 async function resolvePlayerAvatar(raw: string | null | undefined): Promise<string | null> {
   if (!raw) return null;
-  // Already a full URL (http/https/data)? Use as-is.
   if (/^(https?:|data:|blob:)/i.test(raw)) return raw;
   const cached = AVATAR_CACHE.get(raw);
   if (cached && cached.expires > Date.now()) return cached.url;
@@ -37,8 +36,23 @@ export type PlayerCardData = {
     strongest_attribute: AttributeKey | null;
     computed_at: string;
   };
-  profile: { display_name: string | null; nickname: string | null; avatar_url: string | null; avatar_cutout_url?: string | null; avatar_cutout_source?: string | null; birthdate: string | null; height_cm: number | null; sport_position: string | null } | null;
-  bullsProfile: { first_name: string | null; last_name: string | null; weight_kg: number | null; height_cm: number | null; position: string | null } | null;
+  profile: {
+    display_name: string | null;
+    nickname: string | null;
+    avatar_url: string | null;
+    avatar_cutout_url?: string | null;
+    avatar_cutout_source?: string | null;
+    birthdate: string | null;
+    height_cm: number | null;
+    sport_position: string | null;
+  } | null;
+  bullsProfile: {
+    first_name: string | null;
+    last_name: string | null;
+    weight_kg: number | null;
+    height_cm: number | null;
+    position: string | null;
+  } | null;
   organization: {
     id: string;
     name: string;
@@ -53,6 +67,8 @@ export type PlayerCardData = {
   } | null;
   jerseyNumber?: string | null;
   teamLabel?: string | null;
+  history?: Array<{ bfr: number | null; computed_at: string }>;
+  shareUrl?: string | null;
 };
 
 const TIER_LABELS: Record<Tier, string> = {
@@ -63,13 +79,8 @@ const TIER_LABELS: Record<Tier, string> = {
   legendary: "LEGENDARY",
 };
 
-const ATTR_META: Record<AttributeKey, { label: string; Icon: typeof Rocket }> = {
-  SPD: { label: "SPD", Icon: Rocket },
-  ACC: { label: "ACC", Icon: Zap },
-  AGI: { label: "AGI", Icon: Activity },
-  POW: { label: "POW", Icon: Flame },
-  STR: { label: "STR", Icon: Dumbbell },
-  END: { label: "END", Icon: HeartPulse },
+const ATTR_LABELS: Record<AttributeKey, string> = {
+  SPD: "SPD", ACC: "ACC", AGI: "AGI", POW: "POW", STR: "STR", END: "END",
 };
 
 function computeAge(birthdate: string | null | undefined): number | null {
@@ -83,34 +94,105 @@ function computeAge(birthdate: string | null | undefined): number | null {
   return age;
 }
 
-function AttrPill({ attr, value }: { attr: AttributeKey; value: number | null }) {
-  const { label, Icon } = ATTR_META[attr];
-  const segs = 6;
-  const filled = value == null ? 0 : Math.round((value / 99) * segs);
+function useCountUp(target: number | null, duration = 900): number | null {
+  const [val, setVal] = useState<number | null>(target == null ? null : 0);
+  useEffect(() => {
+    if (target == null) { setVal(null); return; }
+    let raf = 0;
+    const start = performance.now();
+    const tick = (t: number) => {
+      const p = Math.min(1, (t - start) / duration);
+      const eased = 1 - Math.pow(1 - p, 3);
+      setVal(Math.round(target * eased));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration]);
+  return val;
+}
+
+const ICON_PATHS: Record<AttributeKey, string> = {
+  SPD: "M13 4a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM4 22l3-8 5-3 4 4 4 1M7 14l-2 3",
+  ACC: "M13 2 3 14h7l-1 8 10-12h-7l1-8z",
+  AGI: "M4 20 20 4M4 4l6 6M20 20l-6-6",
+  POW: "M12 2v4l3-2 1 4 4-1-2 3 4 1-4 2 2 3-4-1-1 4-3-2v4l-3-3-3 3v-4l-3 2-1-4-4 1 2-3-4-1 4-2-2-3 4 1 1-4 3 2V2z",
+  STR: "M6 8v8M4 6v12M18 6v12M20 8v8M6 12h12",
+  END: "M20 6c0-2-2-3-4-3s-3 1-4 2c-1-1-2-2-4-2S4 4 4 6c0 5 8 12 8 12s8-7 8-12zM4 12h3l2-3 2 5 2-3h6",
+};
+
+function AttrIcon({ attr, color, size = 34 }: { attr: AttributeKey; color: string; size?: number }) {
   return (
-    <div className="flex flex-col items-center gap-1">
-      <div className="text-[9px] font-semibold uppercase tracking-[0.2em] text-white/70">{label}</div>
-      <div className="font-display text-2xl font-black tabular-nums text-white leading-none">
-        {value ?? "—"}
-      </div>
-      <Icon className="h-3.5 w-3.5" style={{ color: "var(--pc-accent)" }} />
-      <div className="flex gap-0.5">
-        {Array.from({ length: segs }).map((_, i) => (
-          <span
-            key={i}
-            className="h-1 w-1.5 rounded-sm"
-            style={{
-              background: i < filled ? "var(--pc-accent)" : "rgba(255,255,255,0.15)",
-            }}
-          />
-        ))}
-      </div>
-      <div className="text-[8px] font-medium tracking-wide text-white/50">{value ?? "—"} PCTL</div>
-    </div>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d={ICON_PATHS[attr]} />
+    </svg>
   );
 }
 
+function StatCol({ cx, attr, value, accent, animated }: {
+  cx: number; attr: AttributeKey; value: number | null; accent: string; animated: number | null;
+}) {
+  const display = animated ?? "—";
+  const segs = 6;
+  const filled = value == null ? 0 : Math.round((value / 99) * segs);
+  return (
+    <g>
+      <text x={cx} y={30} textAnchor="middle" fontFamily="Oswald, sans-serif" fontWeight="700"
+            fontSize="20" fill="#ffffff" opacity="0.75" letterSpacing="2">{ATTR_LABELS[attr]}</text>
+      <text x={cx} y={82} textAnchor="middle" fontFamily="Bebas Neue, Oswald, sans-serif"
+            fontSize="60" fill="#ffffff">{display}</text>
+      <g transform={`translate(${cx - 17}, 96)`}>
+        <AttrIcon attr={attr} color={accent} size={34} />
+      </g>
+      <g transform={`translate(${cx - 42}, 148)`}>
+        {Array.from({ length: segs }).map((_, i) => (
+          <rect key={i} x={i * 15} y={0} width="12" height="5" rx="1.5"
+                fill={i < filled ? accent : "#ffffff"} opacity={i < filled ? 1 : 0.14} />
+        ))}
+      </g>
+      <text x={cx} y={175} textAnchor="middle" fontFamily="Oswald, sans-serif" fontWeight="600"
+            fontSize="14" fill="#ffffff" opacity="0.6" letterSpacing="1">
+        {value ?? "—"} PCTL
+      </text>
+    </g>
+  );
+}
 
+function TrendLine({ points, color, width, height }: { points: number[]; color: string; width: number; height: number }) {
+  if (points.length < 2) return null;
+  const min = Math.min(...points) - 2;
+  const max = Math.max(...points) + 2;
+  const range = Math.max(1, max - min);
+  const padX = 20;
+  const padTop = 20;
+  const padBottom = 16;
+  const step = (width - padX * 2) / (points.length - 1);
+  const coords = points.map((p, i) => {
+    const x = padX + i * step;
+    const y = padTop + (height - padTop - padBottom) * (1 - (p - min) / range);
+    return { x, y };
+  });
+  const path = coords.map((c, i) => (i === 0 ? `M${c.x},${c.y}` : `L${c.x},${c.y}`)).join(" ");
+  return (
+    <g>
+      {[0, 0.5, 1].map((t) => (
+        <line key={t} x1={padX} x2={width - padX}
+              y1={padTop + (height - padTop - padBottom) * t}
+              y2={padTop + (height - padTop - padBottom) * t}
+              stroke="#ffffff" strokeOpacity="0.06" strokeWidth="1" />
+      ))}
+      <path d={path} fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      {coords.map((c, i) => (
+        <g key={i}>
+          <circle cx={c.x} cy={c.y} r="4" fill="#0a0a0a" stroke={color} strokeWidth="2" />
+          <text x={c.x} y={c.y - 8} textAnchor="middle" fontSize="11" fontFamily="Oswald, sans-serif" fontWeight="700" fill="#fff">
+            {points[i]}
+          </text>
+        </g>
+      ))}
+    </g>
+  );
+}
 
 export function PlayerCard({ data }: { data: PlayerCardData }) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -121,195 +203,375 @@ export function PlayerCard({ data }: { data: PlayerCardData }) {
     resolvePlayerAvatar(rawAvatar).then((u) => { if (alive) setAvatarUrl(u); });
     return () => { alive = false; };
   }, [rawAvatar]);
-  const { card, profile, bullsProfile, organization, jerseyNumber, teamLabel } = data;
 
-  const primary = organization?.primary_color ?? "#dc2626"; // bulls red default
-  const bg = organization?.background_color ?? "#0a0a0a";
+  const { card, profile, bullsProfile, organization, jerseyNumber, teamLabel, history, shareUrl } = data;
+
+  const primary = organization?.primary_color ?? "#E10600";
   const accent = organization?.accent_color ?? primary;
-  const text = organization?.text_color ?? "#ffffff";
   const claim = organization?.claim ?? "BUILT FOR TEAMS. DRIVEN BY PERFORMANCE.";
 
-  const first = bullsProfile?.first_name || profile?.display_name?.split(" ")[0] || profile?.nickname || "";
-  const last =
+  const first = (bullsProfile?.first_name || profile?.display_name?.split(" ")[0] || profile?.nickname || "").toUpperCase();
+  const last = (
     bullsProfile?.last_name ||
     (profile?.display_name?.includes(" ") ? profile?.display_name?.split(" ").slice(1).join(" ") : "") ||
-    "";
+    ""
+  ).toUpperCase();
   const age = computeAge(profile?.birthdate);
   const height = bullsProfile?.height_cm ?? profile?.height_cm ?? null;
   const weight = bullsProfile?.weight_kg ?? null;
-  const position = card.position_key ?? bullsProfile?.position ?? profile?.sport_position ?? "";
+  const position = (card.position_key ?? bullsProfile?.position ?? profile?.sport_position ?? "").toUpperCase();
+  const strongestLabel = card.strongest_attribute ? ATTR_LABELS[card.strongest_attribute] : "—";
 
-  const tierClass = card.tier ? `pc-tier-glow-${card.tier}` : "";
-  const strongestLabel = card.strongest_attribute ? ATTR_META[card.strongest_attribute].label : "—";
+  const ovr = useCountUp(card.bfr);
+  const spd = useCountUp(card.spd);
+  const acc = useCountUp(card.acc);
+  const agi = useCountUp(card.agi);
+  const pow = useCountUp(card.pow);
+  const str = useCountUp(card.str);
+  const end = useCountUp(card.end_score);
+
+  const trendPoints = useMemo(() => {
+    const raw = (history ?? []).map((h) => h.bfr).filter((v): v is number => typeof v === "number");
+    const pts = raw.slice(-4);
+    if (card.bfr != null && (pts[pts.length - 1] !== card.bfr)) pts.push(card.bfr);
+    return pts.length >= 2 ? pts : (card.bfr != null ? [Math.max(0, card.bfr - 3), card.bfr] : []);
+  }, [history, card.bfr]);
+  const delta = trendPoints.length >= 2 ? trendPoints[trendPoints.length - 1] - trendPoints[0] : 0;
+  const deltaStr = delta > 0 ? `+${delta}` : `${delta}`;
+
+  const updateDate = new Date(card.computed_at).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const qrValue = shareUrl || (typeof window !== "undefined" ? window.location.href : "https://bodyfuel-coaching.com");
+
+  // Kartenform: Shield mit sanfter Top-Einbuchtung
+  const framePath = `
+    M 60 20
+    L 380 20
+    Q 410 20 410 40
+    Q 410 20 440 20
+    L 760 20
+    Q 800 20 800 60
+    L 800 1240
+    Q 800 1280 760 1280
+    L 60 1280
+    Q 20 1280 20 1240
+    L 20 60
+    Q 20 20 60 20 Z
+  `;
 
   return (
-    <div
-      className={`relative w-full h-full rounded-[28px] pc-metal-frame p-[3px] ${tierClass}`}
-      style={{
-        ["--pc-accent" as any]: accent,
-        ["--pc-primary" as any]: primary,
-      }}
-    >
-      <div
-        className="relative h-full w-full overflow-hidden rounded-[26px]"
-        style={{
-          background: `radial-gradient(120% 90% at 50% 0%, color-mix(in oklab, ${primary} 25%, ${bg}) 0%, ${bg} 55%, #000 100%)`,
-          color: text,
-        }}
+    <div className="relative h-full w-full pc-fadein">
+      <svg
+        viewBox="0 0 820 1300"
+        preserveAspectRatio="xMidYMid meet"
+        xmlns="http://www.w3.org/2000/svg"
+        className="h-full w-full"
+        style={{ filter: "drop-shadow(0 30px 60px rgba(0,0,0,0.7))" }}
       >
-        {/* Corner accents */}
-        <div className="pointer-events-none absolute inset-0" style={{
-          background: `linear-gradient(180deg, transparent 0%, transparent 85%, color-mix(in oklab, ${primary} 30%, transparent) 100%)`,
-        }} />
-        <div className="pointer-events-none absolute inset-x-6 top-3 h-px" style={{ background: `linear-gradient(90deg, transparent, ${accent}, transparent)` }} />
+        <defs>
+          <linearGradient id="pc-frame-metal" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#d0d3d8" />
+            <stop offset="25%" stopColor="#6a6d73" />
+            <stop offset="50%" stopColor="#2a2c30" />
+            <stop offset="75%" stopColor="#5a5d63" />
+            <stop offset="100%" stopColor="#0f1013" />
+          </linearGradient>
+          <linearGradient id="pc-frame-red" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor={primary} stopOpacity="0.9" />
+            <stop offset="50%" stopColor="#8b0000" stopOpacity="0.55" />
+            <stop offset="100%" stopColor={primary} stopOpacity="0.9" />
+          </linearGradient>
 
-        {/* Vertical claim on the right */}
-        <div className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 rotate-180 text-[7px] font-semibold uppercase tracking-[0.4em] text-white/40" style={{ writingMode: "vertical-rl" }}>
-          {claim}
-        </div>
+          <radialGradient id="pc-bg-glow" cx="50%" cy="38%" r="55%">
+            <stop offset="0%" stopColor={primary} stopOpacity="0.55" />
+            <stop offset="40%" stopColor="#4a0000" stopOpacity="0.35" />
+            <stop offset="100%" stopColor="#000" stopOpacity="0" />
+          </radialGradient>
+          <linearGradient id="pc-bg-base" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#1a0a0a" />
+            <stop offset="45%" stopColor="#0a0a0a" />
+            <stop offset="100%" stopColor="#000000" />
+          </linearGradient>
 
-        {/* Player image — full body, dominant, behind everything */}
-        <div className="pointer-events-none absolute inset-x-0 top-2 bottom-[52%] overflow-visible">
-          {avatarUrl ? (
-            <img
-              src={avatarUrl}
-              alt={first}
-              className="h-full w-full object-contain object-bottom"
-              style={{ filter: `drop-shadow(0 12px 24px ${accent}66)` }}
-              onError={() => {
-                if (rawAvatar) AVATAR_CACHE.delete(rawAvatar);
-                setAvatarUrl(null);
-              }}
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-white/20">
-              <Shield className="h-20 w-20" />
-            </div>
+          <pattern id="pc-carbon" x="0" y="0" width="14" height="14" patternUnits="userSpaceOnUse">
+            <rect width="14" height="14" fill="#000" />
+            <path d="M0 7 L7 0 L14 7 L7 14 Z" fill="#141414" />
+            <circle cx="7" cy="7" r="0.5" fill="#1e1e1e" />
+          </pattern>
+
+          <pattern id="pc-streaks" x="0" y="0" width="180" height="180" patternUnits="userSpaceOnUse" patternTransform="rotate(-20)">
+            <line x1="0" y1="30" x2="180" y2="30" stroke={primary} strokeWidth="1" strokeOpacity="0.08" />
+            <line x1="0" y1="70" x2="180" y2="70" stroke={primary} strokeWidth="0.5" strokeOpacity="0.05" />
+            <line x1="0" y1="120" x2="180" y2="120" stroke={primary} strokeWidth="1.5" strokeOpacity="0.06" />
+          </pattern>
+
+          <filter id="pc-noise">
+            <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="7" />
+            <feColorMatrix values="0 0 0 0 0.6  0 0 0 0 0.6  0 0 0 0 0.6  0 0 0 0.15 0" />
+          </filter>
+
+          <filter id="pc-distress" x="-5%" y="-5%" width="110%" height="110%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.02 0.06" numOctaves="2" seed="3" result="t" />
+            <feDisplacementMap in="SourceGraphic" in2="t" scale="4" />
+          </filter>
+
+          <filter id="pc-glow-red" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="4" result="b" />
+            <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
+          <filter id="pc-glow-strong" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="14" />
+          </filter>
+
+          <linearGradient id="pc-name-metal" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#ffffff" />
+            <stop offset="35%" stopColor="#f4f5f7" />
+            <stop offset="55%" stopColor="#c8ccd2" />
+            <stop offset="80%" stopColor="#7a7e85" />
+            <stop offset="100%" stopColor="#4a4d52" />
+          </linearGradient>
+
+          <linearGradient id="pc-panel" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#181818" stopOpacity="0.95" />
+            <stop offset="100%" stopColor="#050505" stopOpacity="0.98" />
+          </linearGradient>
+
+          <radialGradient id="pc-vignette" cx="50%" cy="50%" r="70%">
+            <stop offset="60%" stopColor="#000" stopOpacity="0" />
+            <stop offset="100%" stopColor="#000" stopOpacity="0.85" />
+          </radialGradient>
+
+          <clipPath id="pc-clip">
+            <path d={framePath} />
+          </clipPath>
+        </defs>
+
+        {/* HINTERGRUND */}
+        <g clipPath="url(#pc-clip)">
+          <rect x="20" y="20" width="780" height="1260" fill="url(#pc-bg-base)" />
+          <rect x="20" y="20" width="780" height="1260" fill="url(#pc-carbon)" opacity="0.6" />
+          <rect x="20" y="20" width="780" height="1260" fill="url(#pc-streaks)" />
+          <ellipse cx="410" cy="500" rx="360" ry="480" fill="url(#pc-bg-glow)" />
+          {Array.from({ length: 45 }).map((_, i) => {
+            const seed = (i * 9301 + 49297) % 233280;
+            const x = 40 + (seed % 740);
+            const y = 40 + ((seed * 3) % 1200);
+            const r = 0.5 + ((seed * 7) % 20) / 20;
+            return <circle key={i} cx={x} cy={y} r={r} fill={primary} opacity={0.15 + (r * 0.15)} />;
+          })}
+          <rect x="20" y="20" width="780" height="1260" filter="url(#pc-noise)" opacity="0.5" />
+          <rect x="20" y="20" width="780" height="1260" fill="url(#pc-vignette)" />
+
+          {/* SPIELERBILD */}
+          {avatarUrl && (
+            <>
+              <ellipse cx="440" cy="450" rx="240" ry="300" fill={primary} opacity="0.4" filter="url(#pc-glow-strong)" />
+              <image
+                href={avatarUrl}
+                x="120"
+                y="70"
+                width="640"
+                height="800"
+                preserveAspectRatio="xMidYMax meet"
+                style={{ filter: "drop-shadow(0 40px 30px rgba(0,0,0,0.7))" }}
+                onError={() => { if (rawAvatar) AVATAR_CACHE.delete(rawAvatar); setAvatarUrl(null); }}
+              />
+            </>
           )}
-        </div>
+        </g>
 
-        {/* Header row */}
-        <div className="relative flex items-start justify-between px-5 pt-5">
-          <div className="relative z-10">
-            <div className="font-display text-[68px] font-black leading-[0.85] tabular-nums text-white" style={{ textShadow: "0 2px 12px rgba(0,0,0,0.7)" }}>
-              {card.bfr ?? "—"}
-            </div>
-            <div className="mt-0.5 text-[11px] font-black uppercase tracking-[0.25em]" style={{ color: accent }}>
-              OVR
-            </div>
-            {position && (
-              <div className="mt-4">
-                <div className="font-display text-3xl font-black leading-none" style={{ color: accent, textShadow: "0 2px 8px rgba(0,0,0,0.6)" }}>
-                  {position}
-                </div>
-                <div className="mt-1 h-px w-8" style={{ background: accent }} />
-                {jerseyNumber && (
-                  <div className="mt-1 text-xs font-semibold tracking-widest text-white/90">#{jerseyNumber}</div>
-                )}
-              </div>
-            )}
-          </div>
-          {organization?.logo_url ? (
-            <img src={organization.logo_url} alt={organization.name} className="relative z-10 h-16 w-16 object-contain drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]" />
-          ) : (
-            <div className="relative z-10 grid h-16 w-16 place-items-center rounded-full border-2 text-[10px] font-bold" style={{ borderColor: accent, color: accent }}>
+        {/* OVR LINKS */}
+        <g>
+          <text x="90" y="180" fontFamily="Bebas Neue, Anton, sans-serif" fontSize="160" fill="#ffffff"
+                style={{ letterSpacing: "-4px" }} filter="url(#pc-glow-red)">
+            {ovr ?? "—"}
+          </text>
+          <text x="94" y="220" fontFamily="Oswald, sans-serif" fontWeight="800" fontSize="30" fill={primary}
+                letterSpacing="4">OVR</text>
+          {position && (
+            <>
+              <text x="90" y="320" fontFamily="Bebas Neue, Anton, sans-serif" fontSize="88" fill={primary}
+                    style={{ letterSpacing: "-2px" }}>{position}</text>
+              <line x1="94" y1="336" x2="170" y2="336" stroke={primary} strokeWidth="3" />
+              {jerseyNumber && (
+                <text x="94" y="376" fontFamily="Oswald, sans-serif" fontWeight="700" fontSize="28" fill="#fff"
+                      letterSpacing="2">#{jerseyNumber}</text>
+              )}
+            </>
+          )}
+        </g>
+
+        {/* VEREINSLOGO */}
+        {organization?.logo_url ? (
+          <image href={organization.logo_url} x="620" y="70" width="160" height="160" preserveAspectRatio="xMidYMid meet" />
+        ) : (
+          <g>
+            <circle cx="700" cy="150" r="70" fill="none" stroke={primary} strokeWidth="4" />
+            <text x="700" y="165" textAnchor="middle" fontFamily="Oswald, sans-serif" fontWeight="800" fontSize="30" fill={primary}>
               {organization?.short_name ?? "BF"}
-            </div>
-          )}
-        </div>
+            </text>
+          </g>
+        )}
+        {organization?.short_name && organization?.logo_url && (
+          <text x="700" y="255" textAnchor="middle" fontFamily="Oswald, sans-serif" fontWeight="800" fontSize="22"
+                fill={primary} letterSpacing="3">{organization.short_name.toUpperCase()}</text>
+        )}
 
-        {/* Stats sidebar left */}
-        <div className="absolute left-3 top-[220px] z-10 flex flex-col gap-1.5 text-[10px] text-white/90" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.8)" }}>
+        {/* BODY-STATS LINKS */}
+        <g fontFamily="Oswald, sans-serif" fontWeight="600" fontSize="20" fill="#ffffff">
           {age != null && (
-            <div className="flex items-center gap-1"><Calendar className="h-3 w-3" style={{ color: accent }} /> {age} J.</div>
+            <g transform="translate(90, 480)">
+              <rect x="0" y="-16" width="22" height="22" rx="3" fill="none" stroke={primary} strokeWidth="1.5" />
+              <line x1="0" y1="-8" x2="22" y2="-8" stroke={primary} strokeWidth="1.5" />
+              <text x="34" y="2">{age} JAHRE</text>
+            </g>
           )}
           {height != null && (
-            <div className="flex items-center gap-1"><Ruler className="h-3 w-3" style={{ color: accent }} /> {height} cm</div>
+            <g transform="translate(90, 520)">
+              <rect x="0" y="-16" width="22" height="14" rx="2" fill="none" stroke={primary} strokeWidth="1.5" />
+              <line x1="5" y1="-16" x2="5" y2="-8" stroke={primary} strokeWidth="1" />
+              <line x1="11" y1="-16" x2="11" y2="-11" stroke={primary} strokeWidth="1" />
+              <line x1="17" y1="-16" x2="17" y2="-8" stroke={primary} strokeWidth="1" />
+              <text x="34" y="0">{height} CM</text>
+            </g>
           )}
           {weight != null && (
-            <div className="flex items-center gap-1"><Scale className="h-3 w-3" style={{ color: accent }} /> {weight} kg</div>
+            <g transform="translate(90, 560)">
+              <circle cx="11" cy="-6" r="10" fill="none" stroke={primary} strokeWidth="1.5" />
+              <path d="M11 -12 L11 -6 L15 -3" stroke={primary} strokeWidth="1.5" fill="none" strokeLinecap="round" />
+              <text x="34" y="0">{weight} KG</text>
+            </g>
           )}
           {card.is_provisional && (
-            <div className="pointer-events-auto mt-1 rounded-md bg-amber-500/90 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-black">
-              Vorläufig
-            </div>
+            <g transform="translate(90, 610)">
+              <rect x="0" y="-16" width="130" height="24" rx="3" fill="#f59e0b" />
+              <text x="65" y="1" textAnchor="middle" fontSize="14" fontWeight="800" fill="#000" letterSpacing="2">VORLÄUFIG</text>
+            </g>
           )}
-        </div>
+        </g>
 
-        {/* Name — huge metallic */}
-        <div className="relative z-10 px-4 pt-[46%] text-center">
+        {/* NAME */}
+        <g textAnchor="middle">
           {first && (
-            <div className="text-[12px] font-bold uppercase tracking-[0.3em] italic" style={{ color: accent, textShadow: "0 2px 6px rgba(0,0,0,0.7)" }}>
-              {first}
-            </div>
+            <text x="410" y="780" fontFamily="Bebas Neue, Anton, sans-serif" fontSize="42" fill={primary}
+                  fontStyle="italic" letterSpacing="6" filter="url(#pc-glow-red)">{first}</text>
           )}
-          <div
-            className="font-display font-black uppercase leading-[0.85] tracking-tight"
-            style={{
-              fontSize: "clamp(36px, 12cqw, 56px)",
-              background: "linear-gradient(180deg, #ffffff 0%, #e5e7eb 45%, #6b7280 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.85))",
-              letterSpacing: "-0.02em",
-            }}
+          <text
+            x="410" y="885"
+            fontFamily="Anton, Bebas Neue, sans-serif"
+            fontSize={last.length > 9 ? 96 : last.length > 7 ? 118 : 140}
+            fill="url(#pc-name-metal)"
+            letterSpacing="2"
+            filter="url(#pc-distress)"
+            style={{ paintOrder: "stroke", stroke: "rgba(0,0,0,0.6)", strokeWidth: 2 } as any}
           >
             {last || "—"}
-          </div>
-          <div className="mt-1 flex items-center justify-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.25em] text-white/70">
-            {teamLabel && <><span>{teamLabel}</span><span style={{ color: accent }}>•</span></>}
-            {position && <><span>{position}</span><span style={{ color: accent }}>•</span></>}
-            {jerseyNumber && <span>#{jerseyNumber}</span>}
-          </div>
-        </div>
+          </text>
+          <text x="410" y="925" fontFamily="Oswald, sans-serif" fontWeight="600" fontSize="17"
+                fill="#ffffff" opacity="0.75" letterSpacing="6">
+            {[teamLabel, position, jerseyNumber ? `#${jerseyNumber}` : null].filter(Boolean).join("   •   ").toUpperCase()}
+          </text>
+        </g>
 
-        {/* 6 attributes */}
-        <div className="relative z-10 mx-3 mt-3 grid grid-cols-6 gap-0.5 rounded-xl border border-white/10 bg-black/70 px-1 py-2 backdrop-blur-md">
-          <AttrPill attr="SPD" value={card.spd} />
-          <AttrPill attr="ACC" value={card.acc} />
-          <AttrPill attr="AGI" value={card.agi} />
-          <AttrPill attr="POW" value={card.pow} />
-          <AttrPill attr="STR" value={card.str} />
-          <AttrPill attr="END" value={card.end_score} />
-        </div>
+        {/* STAT-PANEL */}
+        <g transform="translate(50, 945)">
+          <rect x="0" y="0" width="720" height="185" rx="14" fill="url(#pc-panel)" stroke="#ffffff" strokeOpacity="0.12" />
+          {[0, 1, 2, 3, 4].map((i) => (
+            <line key={i} x1={120 + i * 120} y1="20" x2={120 + i * 120} y2="165" stroke="#ffffff" strokeOpacity="0.08" />
+          ))}
+          <StatCol cx={60}  attr="SPD" value={card.spd}       accent={primary} animated={spd} />
+          <StatCol cx={180} attr="ACC" value={card.acc}       accent={primary} animated={acc} />
+          <StatCol cx={300} attr="AGI" value={card.agi}       accent={primary} animated={agi} />
+          <StatCol cx={420} attr="POW" value={card.pow}       accent={primary} animated={pow} />
+          <StatCol cx={540} attr="STR" value={card.str}       accent={primary} animated={str} />
+          <StatCol cx={660} attr="END" value={card.end_score} accent={primary} animated={end} />
+        </g>
 
-        {/* Footer row */}
-        <div className="relative z-10 mx-3 mt-2 grid grid-cols-3 gap-1 rounded-xl border border-white/10 bg-black/70 px-2 py-2 text-[8px] backdrop-blur-md">
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-1 text-white/60">
-              <Shield className="h-3 w-3" style={{ color: accent }} />
-              <span className="font-semibold uppercase tracking-widest">Kartenstufe</span>
-            </div>
-            <div className="mt-0.5 text-xs font-black uppercase tracking-wider" style={{ color: accent }}>
+        {/* INFO-PANEL */}
+        <g transform="translate(50, 1145)">
+          <rect x="0" y="0" width="720" height="80" rx="12" fill="url(#pc-panel)" stroke="#ffffff" strokeOpacity="0.12" />
+          <line x1="240" y1="15" x2="240" y2="65" stroke="#ffffff" strokeOpacity="0.1" />
+          <line x1="480" y1="15" x2="480" y2="65" stroke="#ffffff" strokeOpacity="0.1" />
+
+          <g transform="translate(120, 26)">
+            <path d="M-8 -6 L0 -10 L8 -6 L8 4 Q0 12 -8 4 Z" fill="none" stroke={primary} strokeWidth="1.8" />
+            <text x="22" y="0" fontFamily="Oswald, sans-serif" fontWeight="700" fontSize="13" fill="#fff" opacity="0.65" letterSpacing="2">KARTENSTUFE</text>
+            <text x="0" y="34" textAnchor="middle" fontFamily="Anton, Bebas Neue, sans-serif" fontSize="26" fill={primary} letterSpacing="3">
               {card.tier ? TIER_LABELS[card.tier] : "—"}
-            </div>
-          </div>
-          <div className="text-center border-x border-white/10">
-            <div className="flex items-center justify-center gap-1 text-white/60">
-              <Calendar className="h-3 w-3" style={{ color: accent }} />
-              <span className="font-semibold uppercase tracking-widest">Letztes Update</span>
-            </div>
-            <div className="mt-0.5 text-xs font-black tabular-nums text-white">
-              {new Date(card.computed_at).toLocaleDateString("de-DE")}
-            </div>
-          </div>
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-1 text-white/60">
-              <Zap className="h-3 w-3" style={{ color: accent }} />
-              <span className="font-semibold uppercase tracking-widest">Grösste Stärke</span>
-            </div>
-            <div className="mt-0.5 text-xs font-black uppercase tracking-wider" style={{ color: accent }}>
+            </text>
+          </g>
+          <g transform="translate(360, 26)">
+            <rect x="-10" y="-10" width="20" height="16" rx="2" fill="none" stroke={primary} strokeWidth="1.8" />
+            <line x1="-10" y1="-4" x2="10" y2="-4" stroke={primary} strokeWidth="1.5" />
+            <text x="22" y="0" fontFamily="Oswald, sans-serif" fontWeight="700" fontSize="13" fill="#fff" opacity="0.65" letterSpacing="2">LETZTES UPDATE</text>
+            <text x="0" y="34" textAnchor="middle" fontFamily="Anton, Bebas Neue, sans-serif" fontSize="26" fill="#fff" letterSpacing="2">
+              {updateDate}
+            </text>
+          </g>
+          <g transform="translate(600, 26)">
+            <path d="M-4 -10 L-8 0 L-2 0 L-4 8 L6 -4 L0 -4 L4 -10 Z" fill={primary} />
+            <text x="22" y="0" fontFamily="Oswald, sans-serif" fontWeight="700" fontSize="13" fill="#fff" opacity="0.65" letterSpacing="2">GRÖSSTE STÄRKE</text>
+            <text x="0" y="34" textAnchor="middle" fontFamily="Anton, Bebas Neue, sans-serif" fontSize="26" fill={primary} letterSpacing="3">
               {strongestLabel}
-            </div>
-          </div>
-        </div>
+            </text>
+          </g>
+        </g>
 
-        {/* Brand footer */}
-        <div className="relative z-10 mt-2 mb-2 flex items-center justify-center gap-1.5 text-[8px] font-bold uppercase tracking-[0.35em] text-white/50">
-          <Shield className="h-2.5 w-2.5" style={{ color: accent }} />
-          BodyFuel Performance
-        </div>
-      </div>
+        {/* UNTERE ZEILE — Entwicklung / Trend / QR */}
+        <g transform="translate(50, 1235)">
+          {/* OVR Entwicklung */}
+          <g transform="translate(20, 0)">
+            <text x="80" y="18" textAnchor="middle" fontFamily="Oswald, sans-serif" fontWeight="700"
+                  fontSize="13" fill="#ffffffb0" letterSpacing="2">OVR ENTWICKLUNG</text>
+            <text x="80" y="52" textAnchor="middle" fontFamily="Anton, Bebas Neue, sans-serif"
+                  fontSize="42" fill={primary} filter="url(#pc-glow-red)">{deltaStr}</text>
+            <text x="80" y="70" textAnchor="middle" fontFamily="Oswald, sans-serif" fontWeight="600"
+                  fontSize="11" fill="#ffffff80" letterSpacing="1">SEIT LETZTEM TEST</text>
+          </g>
+
+          {/* Trend */}
+          <g transform="translate(210, 0)">
+            <TrendLine points={trendPoints} color={primary} width={300} height={78} />
+          </g>
+
+          {/* QR — als foreignObject damit qrcode.react rendert */}
+          <foreignObject x="560" y="0" width="140" height="80">
+            <div
+                 style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+              <div style={{
+                padding: 4,
+                background: "#fff",
+                borderRadius: 3,
+                boxShadow: `0 0 0 2px ${primary}, 0 0 10px ${primary}90`,
+              }}>
+                <QRCodeSVG value={qrValue} size={54} level="M" bgColor="#ffffff" fgColor="#000000" />
+              </div>
+              <div style={{ fontFamily: "Oswald, sans-serif", fontWeight: 700, fontSize: 10, color: "#ffffff", letterSpacing: 2 }}>
+                #BUILTTOPERFORM
+              </div>
+            </div>
+          </foreignObject>
+        </g>
+
+        {/* Vertikaler Claim rechts */}
+        <g transform="translate(792, 650) rotate(-90)">
+          <text textAnchor="middle" fontFamily="Oswald, sans-serif" fontWeight="700" fontSize="14"
+                fill="#ffffff" opacity="0.35" letterSpacing="8">
+            {claim}
+          </text>
+        </g>
+
+        {/* RAHMEN */}
+        <path d={framePath} fill="none" stroke="url(#pc-frame-metal)" strokeWidth="10" />
+        <path d={framePath} fill="none" stroke="url(#pc-frame-red)" strokeWidth="2" opacity="0.9" />
+        <path d={framePath} fill="none" stroke="#ffffff" strokeWidth="0.6" strokeOpacity="0.35" transform="translate(0,-1)" />
+        <path
+          d="M 35 45 L 380 45 Q 410 45 410 62 Q 410 45 440 45 L 785 45 L 785 1265 L 35 1265 Z"
+          fill="none"
+          stroke={primary}
+          strokeWidth="1"
+          strokeOpacity="0.45"
+        />
+      </svg>
     </div>
   );
 }

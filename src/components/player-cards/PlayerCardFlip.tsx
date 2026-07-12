@@ -6,7 +6,7 @@ import { useState, type ReactNode } from "react";
 export function PlayerCardFlip({
   front,
   back,
-  aspectRatio = "2 / 3",
+  aspectRatio = "820 / 1300",
   maxWidth = 480,
 }: {
   front: ReactNode;
