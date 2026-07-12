@@ -264,8 +264,8 @@ function ProfileContent() {
       {/* Mein Paket */}
       <MyPackageSection pkg={pkg} />
 
-      {/* Check-ins (mit Coach-Antwort & Archiv) */}
-      {uid && <MyCheckinsHistorySection userId={uid} />}
+      {/* Check-in-Ergebnisse werden jetzt direkt unter /check-in angezeigt. */}
+
 
       {/* Coaching-Infos */}
 
