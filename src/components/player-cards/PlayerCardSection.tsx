@@ -89,6 +89,24 @@ export function PlayerCardSection({ jerseyNumber, teamLabel }: { jerseyNumber?: 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [badges?.unlocks]);
 
+  // Auto-Freistellen des Profilbilds für die Player Card (idempotent, einmal pro avatar_url).
+  const profileForCutout = (q.data as any)?.profile as
+    | { avatar_url?: string | null; avatar_cutout_url?: string | null; avatar_cutout_source?: string | null }
+    | undefined;
+  useEffect(() => {
+    if (!profileForCutout?.avatar_url) return;
+    if (
+      profileForCutout.avatar_cutout_url &&
+      profileForCutout.avatar_cutout_source === profileForCutout.avatar_url
+    ) return;
+    if (cutoutTriedRef.current === profileForCutout.avatar_url) return;
+    cutoutTriedRef.current = profileForCutout.avatar_url;
+    cutoutFn({ data: {} })
+      .then(() => qc.invalidateQueries({ queryKey: ["player-card", "me"] }))
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profileForCutout?.avatar_url, profileForCutout?.avatar_cutout_source, profileForCutout?.avatar_cutout_url]);
+
 
   const cardData = useMemo<PlayerCardData | null>(() => {
     const bundle = q.data;
