@@ -131,20 +131,22 @@ export const generateCheckinDraft = createServerFn({ method: "POST" })
     };
 
     const system =
-      "Du bist Senior-Coach-Assistent für BODYFUEL. Du analysierst Kundendaten und erstellst einen kompakten, fachlich fundierten Check-in-Entwurf auf Deutsch. Du gibst konkrete, umsetzbare Empfehlungen. Du bist nicht der Coach — der Coach entscheidet final.";
+      "Du bist Senior-Coach-Assistent für BODYFUEL. Du analysierst Kundendaten und erstellst einen kompakten, fachlich fundierten Check-in-Entwurf auf Deutsch. Du sprichst den Kunden IMMER direkt in der Du-Form an (nicht in dritter Person, keine unpersönlichen Formulierungen wie 'der Kunde' oder 'die Zufuhr muss'). Alle Texte — Status, Wins, Concerns, Aktionen und Nachricht — sind direkt an den Kunden gerichtet ('Du hast...', 'Deine Kalorien...', 'Erhöhe deine Zufuhr...'). Der Coach entscheidet final, welche Punkte veröffentlicht werden.";
 
-    const prompt = `Erstelle einen Check-in-Entwurf für diesen Kunden.
+    const prompt = `Erstelle einen Check-in-Entwurf für diesen Kunden. Sprich den Kunden durchgehend mit "Du" an.
 
 KUNDENDATEN (JSON):
 ${JSON.stringify(dataPackage, null, 2)}
 
 AUFGABE:
-1. Bewerte den aktuellen Status (green = auf Kurs, yellow = beobachten, red = Handlungsbedarf).
-2. Liste 2–4 Wins (was läuft gut, datenbasiert).
-3. Liste 1–3 Concerns (was läuft nicht gut, datenbasiert).
-4. Empfiehl 2–5 konkrete Aktionen (priorisiert).
+1. Bewerte den aktuellen Status (green = auf Kurs, yellow = beobachten, red = Handlungsbedarf). status_summary in Du-Form.
+2. Liste 2–4 Wins in Du-Form ("Du hast...", "Dein Schlaf...").
+3. Liste 1–3 Concerns in Du-Form ("Du liegst deutlich unter...", "Dein Proteinkonsum...").
+4. Empfiehl 2–5 konkrete Aktionen (priorisiert). title und detail als DIREKTE Anweisung an den Kunden in Du-Form ("Erhöhe deine Kalorienzufuhr sofort", "Nimm zu jeder Mahlzeit eine Proteinquelle...").
 5. Formuliere eine kurze, persönliche Nachricht an den Kunden (max. 4 Sätze, Du-Form, motivierend aber ehrlich).
-6. Wenn sinnvoll: konkreter Vorschlag für Ernährungs-/Trainingsanpassung (sonst null).
+6. Wenn sinnvoll: konkreter Vorschlag für Ernährungs-/Trainingsanpassung in Du-Form (sonst null).
+
+WICHTIG: KEIN Text darf in dritter Person ("der Athlet", "der Kunde", "die Zufuhr muss") verfasst sein. Immer direkte Ansprache.
 
 Antworte AUSSCHLIESSLICH mit gültigem JSON in genau dieser Form:
 {
@@ -227,6 +229,11 @@ Antworte AUSSCHLIESSLICH mit gültigem JSON in genau dieser Form:
     };
   });
 
+export type ActionDecision = {
+  index: number;
+  decision: "approved" | "rejected";
+};
+
 export type CheckinDraftRecord = {
   id: string;
   client_id: string;
@@ -236,6 +243,8 @@ export type CheckinDraftRecord = {
   message_final: string | null;
   generated_at: string;
   decided_at: string | null;
+  action_decisions: ActionDecision[];
+  published_at: string | null;
 };
 
 export const listCheckinDrafts = createServerFn({ method: "GET" })
@@ -246,7 +255,7 @@ export const listCheckinDrafts = createServerFn({ method: "GET" })
     await assertCoach(supabase, userId);
     const { data: rows, error } = await supabase
       .from("ai_checkin_drafts")
-      .select("id, client_id, coach_id, status, draft, message_final, generated_at, decided_at")
+      .select("id, client_id, coach_id, status, draft, message_final, generated_at, decided_at, action_decisions, published_at")
       .eq("client_id", data.user_id)
       .order("generated_at", { ascending: false })
       .limit(Math.min(50, data.limit ?? 10));
@@ -261,6 +270,7 @@ export const decideCheckinDraft = createServerFn({ method: "POST" })
       draft_id: string;
       decision: "approved" | "edited" | "rejected";
       message_final?: string;
+      publish?: boolean;
     }) => d,
   )
   .handler(async ({ data, context }) => {
@@ -270,6 +280,7 @@ export const decideCheckinDraft = createServerFn({ method: "POST" })
       status: "approved" | "edited" | "rejected";
       decided_at: string;
       message_final?: string;
+      published_at?: string | null;
     } = {
       status: data.decision,
       decided_at: new Date().toISOString(),
@@ -277,12 +288,50 @@ export const decideCheckinDraft = createServerFn({ method: "POST" })
     if (typeof data.message_final === "string") {
       patch.message_final = data.message_final;
     }
+    if (data.decision === "rejected") {
+      patch.published_at = null;
+    } else if (data.publish) {
+      patch.published_at = new Date().toISOString();
+    }
     const { error } = await supabase
       .from("ai_checkin_drafts")
       .update(patch)
       .eq("id", data.draft_id);
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+export const setCheckinDraftActionDecision = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (d: {
+      draft_id: string;
+      action_index: number;
+      decision: "approved" | "rejected" | null;
+    }) => d,
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    await assertCoach(supabase, userId);
+    const { data: row, error: readErr } = await supabase
+      .from("ai_checkin_drafts")
+      .select("action_decisions")
+      .eq("id", data.draft_id)
+      .maybeSingle();
+    if (readErr) throw new Error(readErr.message);
+    const current: ActionDecision[] = Array.isArray((row as any)?.action_decisions)
+      ? ((row as any).action_decisions as ActionDecision[])
+      : [];
+    const next = current.filter((a) => a.index !== data.action_index);
+    if (data.decision) {
+      next.push({ index: data.action_index, decision: data.decision });
+    }
+    const { error } = await supabase
+      .from("ai_checkin_drafts")
+      .update({ action_decisions: next })
+      .eq("id", data.draft_id);
+    if (error) throw new Error(error.message);
+    return { ok: true, action_decisions: next };
   });
 
 export const deleteCheckinDraft = createServerFn({ method: "POST" })
@@ -298,6 +347,56 @@ export const deleteCheckinDraft = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export type ClientPublishedCheckin = {
+  id: string;
+  published_at: string;
+  message_final: string | null;
+  status_summary: string;
+  status_level: "green" | "yellow" | "red";
+  approved_actions: DraftAction[];
+  nutrition_adjustment: string | null;
+  training_adjustment: string | null;
+};
+
+export const getPublishedCheckinForClient = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<{ item: ClientPublishedCheckin | null }> => {
+    const { supabase, userId } = context;
+    const { data: rows, error } = await supabase
+      .from("ai_checkin_drafts")
+      .select("id, draft, message_final, published_at, action_decisions, status")
+      .eq("client_id", userId)
+      .not("published_at", "is", null)
+      .order("published_at", { ascending: false })
+      .limit(1);
+    if (error) throw new Error(error.message);
+    const row = (rows ?? [])[0] as any;
+    if (!row) return { item: null };
+    const draft = row.draft as CheckinDraft;
+    const decisions = (row.action_decisions ?? []) as ActionDecision[];
+    const approved = new Set(
+      decisions.filter((d) => d.decision === "approved").map((d) => d.index),
+    );
+    // Wenn keine explizite Entscheidung: bei publish nehmen wir an, alle Aktionen sind mit-freigegeben.
+    const hasAnyDecision = decisions.length > 0;
+    const approvedActions = (draft.recommended_actions ?? []).filter(
+      (_, i) => (hasAnyDecision ? approved.has(i) : true),
+    );
+    return {
+      item: {
+        id: row.id,
+        published_at: row.published_at,
+        message_final: row.message_final,
+        status_summary: draft.status_summary,
+        status_level: draft.status_level,
+        approved_actions: approvedActions,
+        nutrition_adjustment: draft.nutrition_adjustment,
+        training_adjustment: draft.training_adjustment,
+      },
+    };
+  });
+
 
 export type PendingDraftRow = {
   id: string;

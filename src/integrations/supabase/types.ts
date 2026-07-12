@@ -204,6 +204,7 @@ export type Database = {
       }
       ai_checkin_drafts: {
         Row: {
+          action_decisions: Json
           client_id: string
           coach_id: string
           created_at: string
@@ -212,10 +213,12 @@ export type Database = {
           generated_at: string
           id: string
           message_final: string | null
+          published_at: string | null
           status: string
           updated_at: string
         }
         Insert: {
+          action_decisions?: Json
           client_id: string
           coach_id: string
           created_at?: string
@@ -224,10 +227,12 @@ export type Database = {
           generated_at?: string
           id?: string
           message_final?: string | null
+          published_at?: string | null
           status?: string
           updated_at?: string
         }
         Update: {
+          action_decisions?: Json
           client_id?: string
           coach_id?: string
           created_at?: string
@@ -236,6 +241,7 @@ export type Database = {
           generated_at?: string
           id?: string
           message_final?: string | null
+          published_at?: string | null
           status?: string
           updated_at?: string
         }

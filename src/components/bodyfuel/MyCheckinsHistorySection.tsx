@@ -1,7 +1,13 @@
 import { useEffect, useState } from "react";
-import { CalendarCheck, ChevronDown, ChevronUp, MessageSquare } from "lucide-react";
+import { CalendarCheck, ChevronDown, ChevronUp, MessageSquare, Sparkles } from "lucide-react";
 import { Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  getPublishedCheckinForClient,
+  type ClientPublishedCheckin,
+} from "@/lib/checkin-ai.functions";
 
 type Row = {
   id: string;
