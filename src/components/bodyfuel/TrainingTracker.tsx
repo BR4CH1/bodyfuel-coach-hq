@@ -346,13 +346,37 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
                 {dayEx.length === 0 && (
                   <div className="text-xs text-muted-foreground">Keine Übungen.</div>
                 )}
-                {dayEx.map((ex) => (
-                  <ExerciseCard
-                    key={ex.id}
-                    ex={ex}
-                    clientId={clientId}
-                    logs={logs.filter((l) => l.exercise_id === ex.id)}
-                    onLog={async (set_number, weight_kg, reps) => {
+                {dayEx.map((ex) => {
+                  const isOwn = !isCoach && !!supabaseUser && ex.added_by_user === supabaseUser.id;
+                  return (
+                    <div key={ex.id} className="relative">
+                      {isOwn && (
+                        <div className="mb-1 flex items-center justify-between rounded-md border border-gold/30 bg-gold/5 px-3 py-1.5 text-[11px] text-gold">
+                          <span className="uppercase tracking-[0.15em]">Von dir ergänzt</span>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (!confirm(`Übung „${ex.name}“ entfernen?`)) return;
+                              try {
+                                await deleteOwnExFn({ data: { exercise_id: ex.id } });
+                                setExercises((cur) => cur.filter((e) => e.id !== ex.id));
+                                toast.success("Übung entfernt");
+                              } catch (e: unknown) {
+                                toast.error(e instanceof Error ? e.message : "Fehler");
+                              }
+                            }}
+                            className="inline-flex items-center gap-1 rounded p-1 text-gold hover:bg-gold/10"
+                            aria-label="Eigene Übung löschen"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      )}
+                      <ExerciseCard
+                        ex={ex}
+                        clientId={clientId}
+                        logs={logs.filter((l) => l.exercise_id === ex.id)}
+                        onLog={async (set_number, weight_kg, reps) => {
                       const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
                       if (isOffline) {
                         try {
@@ -419,8 +443,88 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
                         toast.error(e instanceof Error ? e.message : "Fehler");
                       }
                     }}
-                  />
-                ))}
+                      />
+                    </div>
+                  );
+                })}
+                {!isCoach && (
+                  <div className="rounded-xl border border-dashed border-gold/40 bg-background/40 p-3">
+                    {addingDayId === d.id ? (
+                      <div className="space-y-2">
+                        <input
+                          value={newExName}
+                          onChange={(e) => setNewExName(e.target.value)}
+                          placeholder="Übungsname (z.B. Waden stehend)"
+                          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                          autoFocus
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            value={newExSets}
+                            onChange={(e) => setNewExSets(e.target.value)}
+                            inputMode="numeric"
+                            placeholder="Sätze"
+                            className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+                          />
+                          <input
+                            value={newExReps}
+                            onChange={(e) => setNewExReps(e.target.value)}
+                            placeholder="Wdh. (z.B. 8 oder 8-12)"
+                            className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+                          />
+                        </div>
+                        <div className="flex justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => { setAddingDayId(null); setNewExName(""); }}
+                            className="rounded-md border border-border px-3 py-1.5 text-xs"
+                          >
+                            Abbrechen
+                          </button>
+                          <button
+                            type="button"
+                            disabled={savingOwnEx || !newExName.trim()}
+                            onClick={async () => {
+                              setSavingOwnEx(true);
+                              try {
+                                const row = await addOwnExFn({
+                                  data: {
+                                    day_id: d.id,
+                                    name: newExName.trim(),
+                                    target_sets: Number(newExSets) || 3,
+                                    target_reps: newExReps.trim() || "8",
+                                  },
+                                });
+                                setExercises((cur) => [...cur, row as Exercise]);
+                                setAddingDayId(null);
+                                setNewExName("");
+                                setNewExSets("3");
+                                setNewExReps("8");
+                                toast.success("Übung ergänzt");
+                              } catch (e: unknown) {
+                                toast.error(e instanceof Error ? e.message : "Konnte Übung nicht speichern");
+                              } finally {
+                                setSavingOwnEx(false);
+                              }
+                            }}
+                            className="inline-flex items-center gap-1 rounded-md bg-gradient-gold px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-50"
+                          >
+                            {savingOwnEx ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                            Speichern
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setAddingDayId(d.id)}
+                        className="flex w-full items-center justify-center gap-2 text-xs font-semibold text-gold"
+                      >
+                        <Plus className="h-4 w-4" /> Eigene Übung hinzufügen
+                      </button>
+                    )}
+                  </div>
+                )}
                 {!isCoach && dayEx.length > 0 && (() => {
                   const todayStr = new Date().toISOString().slice(0, 10);
                   const isCompleted = completedDayIds.has(d.id);
