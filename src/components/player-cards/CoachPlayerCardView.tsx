@@ -164,6 +164,12 @@ export function CoachPlayerCardView({
               </div>
             </div>
           )}
+          <PlayerCardManualEditor
+            userId={userId}
+            initialOverrides={(cardData.card as any).manual_overrides ?? {}}
+            isPublished={!!(cardData.card as any).is_published}
+            invalidateKey={["player-card", "athlete", userId]}
+          />
         </>
       )}
     </section>
