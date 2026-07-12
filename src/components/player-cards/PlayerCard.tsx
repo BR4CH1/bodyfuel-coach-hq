@@ -444,25 +444,27 @@ export function PlayerCard({ data }: { data: PlayerCardData }) {
           <rect x="20" y="20" width="780" height="1260" filter="url(#pc-noise)" opacity="0.42" />
           <rect x="20" y="20" width="780" height="1260" filter="url(#pc-grain)" opacity="0.5" style={{ mixBlendMode: "overlay" }} />
 
-          {/* SPIELERBILD — deutlich größer, dominant */}
+          {/* SPIELERBILD — dominant, füllt fast die gesamte Kartenhöhe */}
           {avatarUrl && (
             <>
-              {/* starker roter Hinter-Glow */}
-              <ellipse cx="410" cy="460" rx="290" ry="360" fill={primary} opacity="0.55" filter="url(#pc-glow-strong)" />
-              <ellipse cx="410" cy="520" rx="220" ry="180" fill="#000" opacity="0.75" filter="url(#pc-glow-strong)" />
+              {/* Weicher radialer Glow direkt hinter dem Spieler (kein harter Kreis) */}
+              <ellipse cx="410" cy="470" rx="360" ry="470" fill="url(#pc-bg-glow)"
+                       style={{ mixBlendMode: "screen" }} opacity="0.95" />
+              <ellipse cx="410" cy="620" rx="240" ry="200" fill={primary}
+                       opacity="0.32" filter="url(#pc-glow-strong)" style={{ mixBlendMode: "screen" }} />
+              {/* Boden-Schatten */}
+              <ellipse cx="410" cy="1055" rx="270" ry="26" fill="#000" opacity="0.8" filter="url(#pc-glow-strong)" />
               <image
                 href={avatarUrl}
-                x="30"
-                y="10"
-                width="760"
-                height="1010"
+                x="-70"
+                y="-30"
+                width="960"
+                height="1180"
                 preserveAspectRatio="xMidYMax meet"
                 filter="url(#pc-cutout-feather)"
                 style={{ filter: "drop-shadow(0 50px 40px rgba(0,0,0,0.85))" }}
                 onError={() => { if (rawAvatar) AVATAR_CACHE.delete(rawAvatar); setAvatarUrl(null); }}
               />
-              {/* Boden-Schatten unter Füßen */}
-              <ellipse cx="410" cy="1000" rx="230" ry="22" fill="#000" opacity="0.7" filter="url(#pc-glow-strong)" />
             </>
           )}
 
