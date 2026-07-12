@@ -1462,6 +1462,26 @@ export function NutritionTracker({
         open={builderOpen}
         onClose={() => setBuilderOpen(false)}
       />
+
+      <MealPhotoDialog
+        open={photoOpen}
+        onClose={() => setPhotoOpen(false)}
+        defaultSlot={(openMeal as "breakfast" | "lunch" | "dinner" | "snack") ?? "snack"}
+        entryDate={date}
+        onTracked={() => {
+          // Re-fetch today's entries
+          if (userId) {
+            supabase
+              .from("food_entries")
+              .select("id, meal, name, brand, serving_g, kcal, protein_g, carbs_g, fat_g, source")
+              .eq("user_id", userId)
+              .eq("entry_date", date)
+              .then(({ data }) => {
+                if (data) setAllEntries(data as FoodEntry[]);
+              });
+          }
+        }}
+      />
     </div>
   );
 }
