@@ -487,3 +487,99 @@ function HallOfFame({ orgId }: { orgId: string }) {
     </div>
   );
 }
+
+// -------------------- Team of the Month --------------------
+
+function TeamOfMonth({ orgId }: { orgId: string }) {
+  const now = new Date();
+  const [year, setYear] = useState(now.getUTCFullYear());
+  const [month, setMonth] = useState(now.getUTCMonth() + 1);
+  const fn = useServerFn(getTeamOfTheMonthCandidates);
+
+  const q = useQuery({
+    queryKey: ["totm", orgId, year, month],
+    queryFn: () => fn({ data: { organization_id: orgId, year, month } }),
+  });
+
+  const candidates = (q.data?.candidates ?? []) as Array<{
+    team_id: string;
+    team_name: string;
+    athlete_count: number;
+    avg_bfr_start: number;
+    avg_bfr_end: number;
+    avg_delta: number;
+  }>;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-card p-3">
+        <select
+          value={month}
+          onChange={(e) => setMonth(Number(e.target.value))}
+          className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm"
+        >
+          {MONTHS_DE.map((m, i) => (
+            <option key={m} value={i + 1}>{m}</option>
+          ))}
+        </select>
+        <select
+          value={year}
+          onChange={(e) => setYear(Number(e.target.value))}
+          className="rounded-lg border border-border bg-background px-3 py-1.5 text-sm"
+        >
+          {[now.getUTCFullYear(), now.getUTCFullYear() - 1, now.getUTCFullYear() - 2].map((y) => (
+            <option key={y} value={y}>{y}</option>
+          ))}
+        </select>
+        <div className="text-xs text-muted-foreground">
+          Team mit dem stärksten Ø-BFR-Zuwachs im Monat.
+        </div>
+      </div>
+
+      {q.isLoading ? (
+        <div className="grid place-items-center py-10">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : candidates.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-border bg-card p-8 text-center text-sm text-muted-foreground">
+          Für diesen Monat gibt es noch keine Team-Auswertung.
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {candidates.map((t, i) => (
+            <div
+              key={t.team_id}
+              className={`flex items-center gap-3 rounded-2xl border p-3 ${
+                i === 0
+                  ? "border-yellow-500/40 bg-yellow-500/5"
+                  : "border-border bg-card"
+              }`}
+            >
+              <div className={`grid h-10 w-10 place-items-center rounded-full text-sm font-black ${
+                i === 0 ? "bg-yellow-500 text-black" : "bg-muted text-foreground"
+              }`}>
+                {i + 1}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 truncate text-sm font-bold">
+                  {i === 0 && <Crown className="h-4 w-4 text-yellow-400" />}
+                  {t.team_name}
+                </div>
+                <div className="text-[11px] text-muted-foreground">
+                  {t.athlete_count} Athlet:innen · Ø {t.avg_bfr_start} → {t.avg_bfr_end}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className={`text-lg font-black leading-none ${t.avg_delta > 0 ? "text-emerald-400" : t.avg_delta < 0 ? "text-red-400" : ""}`}>
+                  {t.avg_delta > 0 ? "+" : ""}{t.avg_delta}
+                </div>
+                <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Ø Delta</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
