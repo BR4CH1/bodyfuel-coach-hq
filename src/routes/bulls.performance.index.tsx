@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { CheckCircle2, Clock, XCircle, AlertCircle, ChevronRight, Activity, Zap, Rocket, Dumbbell } from "lucide-react";
 import { BullsHero } from "@/components/bodyfuel/BullsHero";
+import { PlayerCardSection } from "@/components/player-cards/PlayerCardSection";
 import { getProfile, computeOverallScore } from "@/lib/performance-profiles";
 import { getBullsProfile } from "@/lib/bulls.functions";
 import { listMyPerformanceTests } from "@/lib/bulls-performance.functions";
@@ -71,6 +72,9 @@ function PerformanceIndex() {
           </div>
         )}
       </section>
+
+      {/* Player Card */}
+      <PlayerCardSection teamLabel="Seniors" />
 
       {/* Modules */}
       <section className="grid gap-3 sm:grid-cols-2">

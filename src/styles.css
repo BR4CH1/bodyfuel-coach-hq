@@ -170,3 +170,53 @@
   scrollbar-width: none;
   &::-webkit-scrollbar { display: none; }
 }
+
+/* ────────────────────────────────────────────────────────────
+ * Player Cards
+ * ──────────────────────────────────────────────────────────── */
+:root {
+  --pc-frame-metal: linear-gradient(160deg, #4a4d55 0%, #cfd3dc 18%, #7a7e88 42%, #1e1f24 62%, #cfd3dc 82%, #4a4d55 100%);
+}
+
+@utility pc-flip-3d {
+  perspective: 1600px;
+}
+@utility pc-flip-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 700ms cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+@utility pc-flip-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+@utility pc-flip-back {
+  transform: rotateY(180deg);
+}
+@utility pc-flip-active {
+  transform: rotateY(180deg);
+}
+
+@utility pc-metal-frame {
+  background: var(--pc-frame-metal);
+}
+@utility pc-tier-glow-bronze {
+  box-shadow: 0 0 0 2px rgba(201, 138, 91, 0.4), 0 20px 60px -20px rgba(201, 138, 91, 0.5);
+}
+@utility pc-tier-glow-silver {
+  box-shadow: 0 0 0 2px rgba(207, 211, 220, 0.4), 0 20px 60px -20px rgba(207, 211, 220, 0.5);
+}
+@utility pc-tier-glow-gold {
+  box-shadow: 0 0 0 2px rgba(242, 201, 76, 0.4), 0 20px 60px -20px rgba(242, 201, 76, 0.55);
+}
+@utility pc-tier-glow-elite {
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.5), 0 20px 60px -20px rgba(220, 38, 38, 0.6);
+}
+@utility pc-tier-glow-legendary {
+  box-shadow: 0 0 0 2px rgba(213, 0, 249, 0.55), 0 20px 60px -20px rgba(213, 0, 249, 0.6);
+}
