@@ -379,6 +379,23 @@ export const getPlayerCardForAthlete = createServerFn({ method: "GET" })
     return await loadCardBundle(context.supabase, data.user_id);
   });
 
+/** Markiert Badge-Unlocks als gesehen — schaltet die "Neu"-Animation aus. */
+export const markBadgeUnlocksSeen = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(z.object({ badge_keys: z.array(z.string()).optional() }).parse)
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    let q = supabase
+      .from("player_card_badge_unlocks")
+      .update({ seen_at: new Date().toISOString() })
+      .eq("user_id", userId)
+      .is("seen_at", null);
+    if (data.badge_keys && data.badge_keys.length) q = q.in("badge_key", data.badge_keys);
+    const { error } = await q;
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 /**
  * listCoachPlayerCards — alle Player Cards, auf die der aufrufende
  * Coach/Org-Staff Zugriff hat.
