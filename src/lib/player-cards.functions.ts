@@ -293,7 +293,7 @@ export const recomputePlayerCard = createServerFn({ method: "POST" })
   });
 
 async function loadCardBundle(supabase: any, targetUserId: string) {
-  const [cardRes, historyRes, profileRes, bullsRes, testsRes] = await Promise.all([
+  const [cardRes, historyRes, profileRes, bullsRes, testsRes, unlocksRes, defsRes] = await Promise.all([
     supabase.from("player_cards").select("*").eq("user_id", targetUserId).maybeSingle(),
     supabase
       .from("player_card_history")
@@ -317,6 +317,15 @@ async function loadCardBundle(supabase: any, targetUserId: string) {
       .eq("user_id", targetUserId)
       .eq("verification_status", "verified")
       .order("performed_at", { ascending: false }),
+    supabase
+      .from("player_card_badge_unlocks")
+      .select("badge_key, unlocked_at, seen_at, snapshot_bfr")
+      .eq("user_id", targetUserId)
+      .order("unlocked_at", { ascending: false }),
+    supabase
+      .from("player_card_badge_definitions")
+      .select("*")
+      .order("sort_order", { ascending: true }),
   ]);
 
   let organization = null as null | {
@@ -347,6 +356,10 @@ async function loadCardBundle(supabase: any, targetUserId: string) {
     bullsProfile: bullsRes.data ?? null,
     verifiedTests: testsRes.data ?? [],
     organization,
+    badges: {
+      definitions: (defsRes.data ?? []) as any[],
+      unlocks: (unlocksRes.data ?? []) as any[],
+    },
   };
 }
 
