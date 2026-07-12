@@ -10,6 +10,7 @@ import {
   Filter,
   Loader2,
   Share2,
+  Trophy,
   Users,
 } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
@@ -185,14 +186,23 @@ function CoachPlayerCardsPage() {
         ← Coach-Cockpit
       </Link>
 
-      <header className="flex flex-col gap-1">
-        <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-bulls-red">
-          Coach
+      <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-1">
+          <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-bulls-red">
+            Coach
+          </div>
+          <h1 className="font-display text-3xl font-bold">Player Cards</h1>
+          <p className="text-xs text-muted-foreground">
+            Alle Karten aus deinen Vereinen. Filtern, sortieren, einzeln teilen oder mehrere als ZIP herunterladen.
+          </p>
         </div>
-        <h1 className="font-display text-3xl font-bold">Player Cards</h1>
-        <p className="text-xs text-muted-foreground">
-          Alle Karten aus deinen Vereinen. Filtern, sortieren, einzeln teilen oder mehrere als ZIP herunterladen.
-        </p>
+        <Link
+          to="/coach/player-cards/ranking"
+          className="inline-flex items-center gap-1.5 self-start rounded-full bg-bulls-red px-4 py-2 text-xs font-bold uppercase tracking-wider text-white transition hover:opacity-90 sm:self-end"
+        >
+          <Trophy className="h-3.5 w-3.5" />
+          Rangliste & Player of the Month
+        </Link>
       </header>
 
       {/* Filters + Sort */}

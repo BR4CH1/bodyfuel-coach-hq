@@ -6208,6 +6208,69 @@ export type Database = {
         }
         Relationships: []
       }
+      player_card_monthly_awards: {
+        Row: {
+          award_kind: string
+          bfr_at_award: number
+          bfr_delta: number
+          created_at: string
+          finalized_by: string | null
+          id: string
+          metadata: Json
+          month: number
+          organization_id: string
+          team_id: string | null
+          updated_at: string
+          user_id: string
+          year: number
+        }
+        Insert: {
+          award_kind?: string
+          bfr_at_award: number
+          bfr_delta?: number
+          created_at?: string
+          finalized_by?: string | null
+          id?: string
+          metadata?: Json
+          month: number
+          organization_id: string
+          team_id?: string | null
+          updated_at?: string
+          user_id: string
+          year: number
+        }
+        Update: {
+          award_kind?: string
+          bfr_at_award?: number
+          bfr_delta?: number
+          created_at?: string
+          finalized_by?: string | null
+          id?: string
+          metadata?: Json
+          month?: number
+          organization_id?: string
+          team_id?: string | null
+          updated_at?: string
+          user_id?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_card_monthly_awards_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_card_monthly_awards_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "organization_teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_card_position_weights: {
         Row: {
           created_at: string
@@ -8285,6 +8348,40 @@ export type Database = {
           month: number
           points: number
           year: number
+        }[]
+      }
+      get_player_card_month_candidates: {
+        Args: { _month: number; _organization_id: string; _year: number }
+        Returns: {
+          avatar_url: string
+          bfr_delta: number
+          bfr_end: number
+          bfr_start: number
+          display_name: string
+          position_key: string
+          user_id: string
+        }[]
+      }
+      get_player_card_ranking: {
+        Args: { _limit?: number; _organization_id: string; _team_id?: string }
+        Returns: {
+          acc: number
+          agi: number
+          avatar_url: string
+          bfr: number
+          computed_at: string
+          display_name: string
+          end_score: number
+          is_provisional: boolean
+          position_key: string
+          pow: number
+          rank_num: number
+          spd: number
+          str: number
+          team_id: string
+          team_name: string
+          tier: string
+          user_id: string
         }[]
       }
       get_ranking: {
