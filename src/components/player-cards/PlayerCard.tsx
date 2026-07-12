@@ -3,7 +3,7 @@
  * Übernimmt Vereinsfarben automatisch aus organization.primary_color etc.
  */
 import { Rocket, Zap, Activity, Flame, Dumbbell, HeartPulse, Shield, Calendar, Ruler, Scale } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { AttributeKey, Tier } from "@/lib/player-cards/engine";
 
