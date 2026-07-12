@@ -30,7 +30,9 @@ export function PlayerCardSection({ jerseyNumber, teamLabel }: { jerseyNumber?: 
   const qc = useQueryClient();
   const fetchFn = useServerFn(getMyPlayerCard);
   const recomputeFn = useServerFn(recomputePlayerCard);
+  const markSeenFn = useServerFn(markBadgeUnlocksSeen);
   const [shareOpen, setShareOpen] = useState(false);
+  const previousUnlockedRef = useRef<Set<string> | null>(null);
 
   const q = useQuery({
     queryKey: ["player-card", "me"],
@@ -45,6 +47,43 @@ export function PlayerCardSection({ jerseyNumber, teamLabel }: { jerseyNumber?: 
     },
     onError: (e: any) => toast.error(e?.message ?? "Fehler beim Aktualisieren"),
   });
+
+  // Neue Badges als Toast anzeigen + nach kurzer Zeit als gesehen markieren.
+  const badges = (q.data as any)?.badges as
+    | { definitions: any[]; unlocks: any[] }
+    | undefined;
+  useEffect(() => {
+    if (!badges) return;
+    const currentKeys = new Set<string>(badges.unlocks.map((u: any) => u.badge_key));
+    const previous = previousUnlockedRef.current;
+    previousUnlockedRef.current = currentKeys;
+    if (!previous) return; // erster Load — kein Toast
+    const newlyUnlocked = badges.unlocks.filter(
+      (u: any) => !previous.has(u.badge_key) && !u.seen_at,
+    );
+    if (newlyUnlocked.length === 0) return;
+    const defsByKey = new Map<string, any>(
+      badges.definitions.map((d: any) => [d.key, d]),
+    );
+    for (const u of newlyUnlocked) {
+      const def = defsByKey.get(u.badge_key);
+      if (!def) continue;
+      toast.success(`Neues Badge: ${def.label}`, {
+        description: def.description,
+        icon: <Award className="h-4 w-4" />,
+      });
+    }
+    // Nach 6 s als gesehen markieren, damit die Pulse-Animation stoppt.
+    const keys = newlyUnlocked.map((u: any) => u.badge_key);
+    const timer = setTimeout(() => {
+      markSeenFn({ data: { badge_keys: keys } })
+        .then(() => qc.invalidateQueries({ queryKey: ["player-card", "me"] }))
+        .catch(() => {});
+    }, 6000);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [badges?.unlocks]);
+
 
   const cardData = useMemo<PlayerCardData | null>(() => {
     const bundle = q.data;
