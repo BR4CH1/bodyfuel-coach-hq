@@ -228,3 +228,42 @@
 @utility pc-badge-new {
   animation: pc-badge-pulse 1.6s ease-in-out infinite;
 }
+
+/* ── Upgrade-Overlay ────────────────────────────────────────── */
+@keyframes pc-upgrade-confetti-fall {
+  0% { transform: translateY(-40px) rotate(0deg); opacity: 0; }
+  10% { opacity: 1; }
+  100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+}
+@utility pc-upgrade-confetti {
+  animation-name: pc-upgrade-confetti-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+@keyframes pc-upgrade-pop-in {
+  0%   { transform: scale(0.7) translateY(20px); opacity: 0; }
+  60%  { transform: scale(1.04) translateY(-4px); opacity: 1; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+@utility pc-upgrade-pop {
+  animation: pc-upgrade-pop-in 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes pc-upgrade-tier-shine {
+  0%, 100% { filter: brightness(1) drop-shadow(0 0 8px rgba(255,255,255,0.2)); }
+  50%      { filter: brightness(1.3) drop-shadow(0 0 22px rgba(255,255,255,0.55)); }
+}
+@utility pc-upgrade-tier {
+  animation: pc-upgrade-tier-shine 2.2s ease-in-out infinite;
+}
+
+@keyframes pc-upgrade-sparkle-rot {
+  0%   { transform: rotate(0deg) scale(1); }
+  50%  { transform: rotate(180deg) scale(1.2); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+@utility pc-upgrade-sparkle {
+  animation: pc-upgrade-sparkle-rot 2s ease-in-out infinite;
+}
+
