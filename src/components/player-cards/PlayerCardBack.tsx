@@ -204,6 +204,27 @@ export function PlayerCardBack({
           </div>
         </div>
 
+        {/* Badges */}
+        {badges && badges.definitions.length > 0 && (
+          <div className="mt-3">
+            <div className="mb-1 flex items-center justify-between text-[9px] font-bold uppercase tracking-[0.25em] text-white/60">
+              <span>Badges</span>
+              <span className="text-white/40">
+                {badges.unlocks.length} / {badges.definitions.length}
+              </span>
+            </div>
+            <div className="rounded-lg border border-white/10 bg-black/40 p-2">
+              <PlayerCardBadgeWall
+                definitions={badges.definitions}
+                unlocks={badges.unlocks}
+                accent={accent}
+                compact
+              />
+            </div>
+          </div>
+        )}
+
+
         <div className="mt-3 text-center text-[8px] uppercase tracking-[0.3em] text-white/40">
           BodyFuel Performance • Tippen zum Umdrehen
         </div>
