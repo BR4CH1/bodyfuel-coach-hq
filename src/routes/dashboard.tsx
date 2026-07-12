@@ -447,6 +447,13 @@ function RealUserDashboard() {
         label: "Maße für Check-in ergänzen",
       };
     }
+    // Check-in dieser Woche bereits abgegeben → wartet auf Coach-Prüfung, Fälligkeit ausblenden
+    if (checkinSubmittedThisWeek) {
+      return {
+        tone: "review" as const,
+        label: "Check-in wird geprüft",
+      };
+    }
     if (!nextCheckin) return null;
     const today = new Date(todayStr);
     const target = new Date(nextCheckin);
