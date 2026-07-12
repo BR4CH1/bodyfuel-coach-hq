@@ -251,7 +251,7 @@ async function doRecompute(supabase: any, targetUserId: string) {
       .select("bfr, snapshot_at")
       .eq("user_id", targetUserId),
   ]);
-  const defs = (defsData ?? []) as BadgeDefinition[];
+  const defs = ((defsData ?? []) as unknown) as BadgeDefinition[];
   const history = (historyData ?? []) as Array<{ bfr: number | null; snapshot_at: string }>;
   const cardForBadges = {
     bfr: result.bfr,
