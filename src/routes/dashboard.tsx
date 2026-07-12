@@ -321,6 +321,7 @@ function RealUserDashboard() {
   const [todayDbPoints, setTodayDbPoints] = useState(0);
   const [nextCheckin, setNextCheckin] = useState<string | null>(null);
   const [checkinMissingMeasures, setCheckinMissingMeasures] = useState(false);
+  const [checkinSubmittedThisWeek, setCheckinSubmittedThisWeek] = useState(false);
   const [trainedToday, setTrainedToday] = useState(false);
   const [measuredToday, setMeasuredToday] = useState(false);
   const [userPts, setUserPts] = useState<{
@@ -394,6 +395,7 @@ function RealUserDashboard() {
         .eq("week_start", mondayStr)
         .maybeSingle();
       if (thisWeekCi) {
+        setCheckinSubmittedThisWeek(true);
         const measures = [
           thisWeekCi.waist_cm,
           thisWeekCi.chest_cm,
@@ -406,6 +408,7 @@ function RealUserDashboard() {
         const allMissing = measures.every((v) => v == null);
         setCheckinMissingMeasures(allMissing);
       } else {
+        setCheckinSubmittedThisWeek(false);
         setCheckinMissingMeasures(false);
       }
 
@@ -442,6 +445,13 @@ function RealUserDashboard() {
       return {
         tone: "soon" as const,
         label: "Maße für Check-in ergänzen",
+      };
+    }
+    // Check-in dieser Woche bereits abgegeben → wartet auf Coach-Prüfung, Fälligkeit ausblenden
+    if (checkinSubmittedThisWeek) {
+      return {
+        tone: "review" as const,
+        label: "Check-in wird geprüft",
       };
     }
     if (!nextCheckin) return null;
