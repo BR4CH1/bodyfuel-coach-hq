@@ -335,7 +335,7 @@ export function PlayerCard({ data }: { data: PlayerCardData }) {
           <text x="130" y="180" textAnchor="middle"
                 fontFamily="Anton, Bebas Neue, sans-serif" fontWeight="900" fontSize="130"
                 fill="#ffffff" style={{ paintOrder: "stroke", stroke: "rgba(0,0,0,0.6)", strokeWidth: 2 } as any}>
-            {card.bfr ?? "—"}
+            {bfrDisplay ?? "—"}
           </text>
           <text x="130" y="220" textAnchor="middle"
                 fontFamily="Oswald, sans-serif" fontWeight="800" fontSize="28"
