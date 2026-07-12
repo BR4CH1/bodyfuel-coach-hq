@@ -37,7 +37,7 @@ export type PlayerCardData = {
     strongest_attribute: AttributeKey | null;
     computed_at: string;
   };
-  profile: { display_name: string | null; nickname: string | null; avatar_url: string | null; birthdate: string | null; height_cm: number | null; sport_position: string | null } | null;
+  profile: { display_name: string | null; nickname: string | null; avatar_url: string | null; avatar_cutout_url?: string | null; avatar_cutout_source?: string | null; birthdate: string | null; height_cm: number | null; sport_position: string | null } | null;
   bullsProfile: { first_name: string | null; last_name: string | null; weight_kg: number | null; height_cm: number | null; position: string | null } | null;
   organization: {
     id: string;
