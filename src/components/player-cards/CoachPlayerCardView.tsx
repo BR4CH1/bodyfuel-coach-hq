@@ -3,7 +3,7 @@
  * abrufbar durch Coaches / Org-Staff. Nutzt getPlayerCardForAthlete
  * und zeigt die Flip-Card inklusive Recompute + Share.
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Loader2, RefreshCw, Share2, Sparkles, AlertCircle } from "lucide-react";
@@ -12,7 +12,7 @@ import { PlayerCard, type PlayerCardData } from "./PlayerCard";
 import { PlayerCardBack } from "./PlayerCardBack";
 import { PlayerCardFlip } from "./PlayerCardFlip";
 import { PlayerCardShareDialog } from "./PlayerCardShareDialog";
-import { getPlayerCardForAthlete, recomputePlayerCard } from "@/lib/player-cards.functions";
+import { getPlayerCardForAthlete, recomputePlayerCard, ensurePlayerCardCutout } from "@/lib/player-cards.functions";
 
 export function CoachPlayerCardView({
   userId,
