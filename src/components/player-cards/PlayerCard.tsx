@@ -630,6 +630,24 @@ export function PlayerCard({ data }: { data: PlayerCardData }) {
           </text>
         </g>
 
+        {/* SPIELER-FÜSSE VOR DEM NAMEN — erzeugt Tiefe / Überlappung */}
+        {avatarUrl && (
+          <g clipPath="url(#pc-clip)">
+            <g clipPath="url(#pc-feet-clip)">
+              <image
+                href={avatarUrl}
+                x="-70"
+                y="-30"
+                width="960"
+                height="1180"
+                preserveAspectRatio="xMidYMax meet"
+                filter="url(#pc-cutout-feather)"
+                style={{ filter: "drop-shadow(0 30px 24px rgba(0,0,0,0.85))" }}
+              />
+            </g>
+          </g>
+        )}
+
         {/* STAT-PANEL — ein Fläche mit dünnen Trennlinien */}
         <g transform="translate(50, 1055)">
           {/* Outer glow */}
