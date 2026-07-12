@@ -12,6 +12,7 @@ import { PlayerCard, type PlayerCardData } from "./PlayerCard";
 import { PlayerCardBack } from "./PlayerCardBack";
 import { PlayerCardFlip } from "./PlayerCardFlip";
 import { PlayerCardShareDialog } from "./PlayerCardShareDialog";
+import { PlayerCardManualEditor } from "./PlayerCardManualEditor";
 import { getPlayerCardForAthlete, recomputePlayerCard, ensurePlayerCardCutout } from "@/lib/player-cards.functions";
 
 export function CoachPlayerCardView({
