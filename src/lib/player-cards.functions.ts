@@ -243,6 +243,39 @@ async function doRecompute(supabase: any, targetUserId: string) {
     attributes_detail: result.attributes,
   });
 
+  // 5) Badge-Auswertung. Nur neue Unlocks werden angelegt (UNIQUE user_id+badge_key).
+  const [{ data: defsData }, { data: historyData }] = await Promise.all([
+    supabaseAdmin.from("player_card_badge_definitions").select("*").eq("sport", sport),
+    supabaseAdmin
+      .from("player_card_history")
+      .select("bfr, snapshot_at")
+      .eq("user_id", targetUserId),
+  ]);
+  const defs = (defsData ?? []) as BadgeDefinition[];
+  const history = (historyData ?? []) as Array<{ bfr: number | null; snapshot_at: string }>;
+  const cardForBadges = {
+    bfr: result.bfr,
+    spd: result.attributes.SPD.score,
+    acc: result.attributes.ACC.score,
+    agi: result.attributes.AGI.score,
+    pow: result.attributes.POW.score,
+    str: result.attributes.STR.score,
+    end_score: result.attributes.END.score,
+  };
+  const unlockedKeys = evaluateAllBadges(defs, cardForBadges, history);
+  if (unlockedKeys.length > 0) {
+    const rows = unlockedKeys.map((key) => ({
+      user_id: targetUserId,
+      badge_key: key,
+      organization_id: organizationId,
+      snapshot_bfr: result.bfr,
+    }));
+    // ON CONFLICT ignore — nur neue Unlocks landen.
+    await supabaseAdmin
+      .from("player_card_badge_unlocks")
+      .upsert(rows, { onConflict: "user_id,badge_key", ignoreDuplicates: true });
+  }
+
   return upserted;
 }
 
