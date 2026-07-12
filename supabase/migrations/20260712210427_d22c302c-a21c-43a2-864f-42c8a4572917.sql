@@ -1,0 +1,1 @@
+update public.profiles set avatar_cutout_url = null, avatar_cutout_source = null where avatar_cutout_url is not null;
