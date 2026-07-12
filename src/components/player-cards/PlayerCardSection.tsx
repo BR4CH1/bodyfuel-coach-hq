@@ -2,15 +2,15 @@
  * PlayerCardSection — komplette Karte inkl. Datenladung, Recompute-Button.
  * Kann direkt in Athletenprofile eingebunden werden.
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, RefreshCw, Sparkles, AlertCircle, Share2 } from "lucide-react";
+import { Loader2, RefreshCw, Sparkles, AlertCircle, Share2, Award } from "lucide-react";
 import { PlayerCard, type PlayerCardData } from "./PlayerCard";
 import { PlayerCardBack } from "./PlayerCardBack";
 import { PlayerCardFlip } from "./PlayerCardFlip";
 import { PlayerCardShareDialog } from "./PlayerCardShareDialog";
-import { getMyPlayerCard, recomputePlayerCard } from "@/lib/player-cards.functions";
+import { getMyPlayerCard, recomputePlayerCard, markBadgeUnlocksSeen } from "@/lib/player-cards.functions";
 import { toast } from "sonner";
 
 const TEST_LABELS: Record<string, string> = {
