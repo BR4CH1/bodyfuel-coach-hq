@@ -167,22 +167,13 @@ export function PlayerCardSection({ jerseyNumber, teamLabel }: { jerseyNumber?: 
         <div className="grid place-items-center rounded-2xl border border-border bg-card p-10">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
-      ) : !cardData ? (
+      ) : !cardData || !(cardData.card as any).is_published ? (
         <div className="rounded-2xl border border-dashed border-border bg-card p-6 text-center">
           <Sparkles className="mx-auto h-8 w-8 text-bulls-red" />
-          <div className="mt-2 text-sm font-semibold">Noch keine Karte erstellt</div>
+          <div className="mt-2 text-sm font-semibold">Deine Karte wird gerade vom Coach vorbereitet</div>
           <div className="mx-auto mt-1 max-w-sm text-xs text-muted-foreground">
-            Sobald du Performance-Tests verifiziert hast, generieren wir deine erste Player Card mit deinem BodyFuel Rating.
+            Sobald dein Coach die Werte eingetragen und die Karte freigegeben hat, erscheint sie hier.
           </div>
-          <button
-            type="button"
-            onClick={() => recompute.mutate()}
-            disabled={recompute.isPending}
-            className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-bulls-red px-4 py-2 text-xs font-bold uppercase tracking-wider text-white transition hover:opacity-90 disabled:opacity-50"
-          >
-            {recompute.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-            Karte generieren
-          </button>
         </div>
       ) : (
         <>
