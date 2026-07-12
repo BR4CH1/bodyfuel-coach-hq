@@ -6327,6 +6327,8 @@ export type Database = {
           end_score: number | null
           id: string
           is_provisional: boolean
+          is_published: boolean
+          manual_overrides: Json
           missing_tests: Json
           organization_id: string | null
           position_key: string | null
@@ -6349,6 +6351,8 @@ export type Database = {
           end_score?: number | null
           id?: string
           is_provisional?: boolean
+          is_published?: boolean
+          manual_overrides?: Json
           missing_tests?: Json
           organization_id?: string | null
           position_key?: string | null
@@ -6371,6 +6375,8 @@ export type Database = {
           end_score?: number | null
           id?: string
           is_provisional?: boolean
+          is_published?: boolean
+          manual_overrides?: Json
           missing_tests?: Json
           organization_id?: string | null
           position_key?: string | null
