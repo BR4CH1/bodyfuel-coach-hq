@@ -929,3 +929,120 @@ export const deletePlayerCardBenchmark = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+/**
+ * ensurePlayerCardCutout — stellt sicher, dass für die Player Card ein
+ * transparent freigestelltes PNG-Foto existiert. Wird idempotent bei jedem
+ * Kartenaufruf ausgelöst (siehe PlayerCardSection).
+ *
+ * Ablauf:
+ *  1. Profil laden. Wenn `avatar_cutout_url` bereits zu `avatar_url` passt → nichts tun.
+ *  2. Original-Foto aus Storage laden (private avatars-Bucket).
+ *  3. Über Lovable AI Gateway (Gemini 2.5 Flash Image) freistellen — Prompt: nur der Spieler, transparenter Hintergrund.
+ *  4. Ergebnis als PNG in `avatars/{userId}/cutouts/{ts}.png` speichern.
+ *  5. `profiles.avatar_cutout_url` + `avatar_cutout_source` aktualisieren.
+ */
+export const ensurePlayerCardCutout = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(z.object({ user_id: z.string().uuid().optional(), force: z.boolean().optional() }).parse)
+  .handler(async ({ data, context }) => {
+    const targetUserId = data.user_id ?? context.userId;
+    if (targetUserId !== context.userId) {
+      await assertCoachOrOrgStaffForAthlete(context, targetUserId, "athlete");
+    }
+    const force = !!data.force;
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("avatar_url, avatar_cutout_url, avatar_cutout_source")
+      .eq("id", targetUserId)
+      .maybeSingle();
+    const rawAvatar = (profile as any)?.avatar_url as string | null | undefined;
+    if (!rawAvatar) return { status: "no-source" as const };
+
+    if (
+      !force &&
+      (profile as any)?.avatar_cutout_url &&
+      (profile as any)?.avatar_cutout_source === rawAvatar
+    ) {
+      return { status: "cached" as const, cutout_url: (profile as any).avatar_cutout_url as string };
+    }
+
+    // 1) Original-Bytes laden.
+    let inputBase64: string | null = null;
+    let inputMime = "image/jpeg";
+    if (/^(https?:|data:)/i.test(rawAvatar)) {
+      const res = await fetch(rawAvatar);
+      if (!res.ok) throw new Error(`Original-Foto nicht abrufbar (${res.status})`);
+      inputMime = res.headers.get("content-type")?.split(";")[0] ?? "image/jpeg";
+      const buf = new Uint8Array(await res.arrayBuffer());
+      inputBase64 = Buffer.from(buf).toString("base64");
+    } else {
+      const { data: dl, error: dlErr } = await supabaseAdmin.storage
+        .from("avatars")
+        .download(rawAvatar);
+      if (dlErr || !dl) throw new Error(dlErr?.message ?? "Original-Foto nicht in Storage gefunden");
+      inputMime = dl.type || "image/jpeg";
+      const buf = new Uint8Array(await dl.arrayBuffer());
+      inputBase64 = Buffer.from(buf).toString("base64");
+    }
+
+    // 2) Gemini Image Gen — Freistellen mit transparentem Hintergrund.
+    const apiKey = process.env.LOVABLE_API_KEY;
+    if (!apiKey) throw new Error("LOVABLE_API_KEY fehlt");
+
+    const gwRes = await fetch("https://ai.gateway.lovable.dev/v1/images/generations", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-image",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text:
+                  "Isolate the athlete/person in this photo. Remove the background completely and replace it with full transparency. Keep the subject sharp, full body if visible, no shadow, no ground, no floor, no artifacts. Output a PNG with alpha channel — background must be fully transparent (checker-pattern in preview). Do not add any new elements, text, borders, or effects. Preserve original pose, colors, and lighting on the subject.",
+              },
+              {
+                type: "image_url",
+                image_url: { url: `data:${inputMime};base64,${inputBase64}` },
+              },
+            ],
+          },
+        ],
+        modalities: ["image", "text"],
+      }),
+    });
+
+    if (!gwRes.ok) {
+      const errBody = await gwRes.text().catch(() => "");
+      throw new Error(`Bildfreistellung fehlgeschlagen [${gwRes.status}]: ${errBody}`);
+    }
+    const gwJson = (await gwRes.json()) as { data?: Array<{ b64_json?: string }> };
+    const b64 = gwJson.data?.[0]?.b64_json;
+    if (!b64) throw new Error("Kein Bild in der AI-Antwort");
+
+    // 3) In Storage speichern.
+    const outBuf = Buffer.from(b64, "base64");
+    const path = `${targetUserId}/cutouts/${Date.now()}.png`;
+    const { error: upErr } = await supabaseAdmin.storage
+      .from("avatars")
+      .upload(path, outBuf, { contentType: "image/png", upsert: true });
+    if (upErr) throw new Error(`Upload fehlgeschlagen: ${upErr.message}`);
+
+    // 4) Profil aktualisieren.
+    const { error: profErr } = await supabaseAdmin
+      .from("profiles")
+      .update({ avatar_cutout_url: path, avatar_cutout_source: rawAvatar })
+      .eq("id", targetUserId);
+    if (profErr) throw new Error(profErr.message);
+
+    return { status: "generated" as const, cutout_url: path };
+  });
