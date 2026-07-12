@@ -11,7 +11,7 @@ import { PlayerCardBack } from "./PlayerCardBack";
 import { PlayerCardFlip } from "./PlayerCardFlip";
 import { PlayerCardShareDialog } from "./PlayerCardShareDialog";
 import { PlayerCardUpgradeOverlay, type UpgradePayload } from "./PlayerCardUpgradeOverlay";
-import { getMyPlayerCard, recomputePlayerCard, markBadgeUnlocksSeen } from "@/lib/player-cards.functions";
+import { getMyPlayerCard, recomputePlayerCard, markBadgeUnlocksSeen, ensurePlayerCardCutout } from "@/lib/player-cards.functions";
 import { toast } from "sonner";
 
 const TEST_LABELS: Record<string, string> = {
