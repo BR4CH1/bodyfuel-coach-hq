@@ -658,6 +658,9 @@ export const getTeamOfTheMonthCandidates = createServerFn({ method: "GET" })
       month: data.month,
       candidates: (rows ?? []) as any[],
     };
+  });
+
+
 
 /** Coach setzt Player of the Month für einen Monat (award_kind: top_bfr | top_delta). */
 export const finalizePlayerOfTheMonth = createServerFn({ method: "POST" })
