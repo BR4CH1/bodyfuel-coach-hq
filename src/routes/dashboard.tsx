@@ -381,18 +381,23 @@ function RealUserDashboard() {
         .maybeSingle();
       setNextCheckin((prof as any)?.next_checkin_date ?? null);
 
-      // Detect: did the user submit this week's check-in but leave the Maße empty?
-      const mondayStr = (() => {
+      // Detect: did the user submit this week's check-in?
+      // Robust gegenüber Zeitzonen-Drift: statt exakt `week_start = Montag`
+      // fragen wir irgendeinen Check-in ab, dessen `week_start` in den
+      // letzten 6 Tagen (inkl. heute) liegt.
+      const sixDaysAgo = (() => {
         const d = new Date(todayStr + "T00:00:00");
-        const day = (d.getDay() + 6) % 7;
-        d.setDate(d.getDate() - day);
+        d.setDate(d.getDate() - 6);
         return d.toISOString().slice(0, 10);
       })();
       const { data: thisWeekCi } = await supabase
         .from("weekly_checkins")
-        .select("waist_cm, chest_cm, hip_cm, thigh_left_cm, thigh_right_cm, biceps_left_cm, biceps_right_cm")
+        .select("waist_cm, chest_cm, hip_cm, thigh_left_cm, thigh_right_cm, biceps_left_cm, biceps_right_cm, week_start")
         .eq("user_id", supabaseUser.id)
-        .eq("week_start", mondayStr)
+        .gte("week_start", sixDaysAgo)
+        .lte("week_start", todayStr)
+        .order("week_start", { ascending: false })
+        .limit(1)
         .maybeSingle();
       if (thisWeekCi) {
         setCheckinSubmittedThisWeek(true);
@@ -411,6 +416,7 @@ function RealUserDashboard() {
         setCheckinSubmittedThisWeek(false);
         setCheckinMissingMeasures(false);
       }
+
 
       const { count: tCount } = await supabase
         .from("training_set_logs")
