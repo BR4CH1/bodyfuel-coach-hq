@@ -701,3 +701,182 @@ export const getPlayerCardHallOfFame = createServerFn({ method: "GET" })
       })),
     };
   });
+
+
+// ============================================================
+// Phase 5 — Admin editor (position weights & benchmarks)
+// ============================================================
+
+async function assertPlatformOwner(supabase: any, userId: string): Promise<void> {
+  const { data, error } = await supabase.rpc("has_role", {
+    _user_id: userId,
+    _role: "platform_owner",
+  });
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Nur Plattform-Administratoren dürfen Player-Card-Regeln bearbeiten.");
+}
+
+/** Alle Positionsgewichtungen (öffentlich lesbar für alle authenticated). */
+export const listPlayerCardPositionWeights = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { sport?: string }) => ({ sport: d?.sport ?? null }))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    let q = supabase.from("player_card_position_weights").select("*").order("sport").order("position_key");
+    if (data.sport) q = q.eq("sport", data.sport);
+    const { data: rows, error } = await q;
+    if (error) throw new Error(error.message);
+    return { rows: (rows ?? []) as any[] };
+  });
+
+/** Alle Benchmark-Definitionen. */
+export const listPlayerCardBenchmarks = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { sport?: string }) => ({ sport: d?.sport ?? null }))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    let q = supabase.from("player_card_benchmarks").select("*").order("sport").order("attribute_key").order("metric_key");
+    if (data.sport) q = q.eq("sport", data.sport);
+    const { data: rows, error } = await q;
+    if (error) throw new Error(error.message);
+    return { rows: (rows ?? []) as any[] };
+  });
+
+/** Position anlegen oder aktualisieren. Gewichtungen werden auf Summe 1 normalisiert. */
+export const upsertPlayerCardPositionWeight = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: {
+    id?: string | null;
+    sport: string;
+    position_key: string;
+    label: string;
+    w_spd: number; w_acc: number; w_agi: number; w_pow: number; w_str: number; w_end: number;
+  }) => ({
+    id: d.id ?? null,
+    sport: String(d.sport).trim(),
+    position_key: String(d.position_key).trim().toUpperCase(),
+    label: String(d.label).trim(),
+    w_spd: Number(d.w_spd),
+    w_acc: Number(d.w_acc),
+    w_agi: Number(d.w_agi),
+    w_pow: Number(d.w_pow),
+    w_str: Number(d.w_str),
+    w_end: Number(d.w_end),
+  }))
+  .handler(async ({ data, context }) => {
+    await assertPlatformOwner(context.supabase, context.userId);
+    if (!data.sport || !data.position_key || !data.label) throw new Error("Sport, Position und Label sind erforderlich.");
+    const sum = data.w_spd + data.w_acc + data.w_agi + data.w_pow + data.w_str + data.w_end;
+    if (!(sum > 0)) throw new Error("Mindestens eine Gewichtung > 0 setzen.");
+    const norm = (v: number) => Number((v / sum).toFixed(4));
+    const payload = {
+      sport: data.sport,
+      position_key: data.position_key,
+      label: data.label,
+      w_spd: norm(data.w_spd),
+      w_acc: norm(data.w_acc),
+      w_agi: norm(data.w_agi),
+      w_pow: norm(data.w_pow),
+      w_str: norm(data.w_str),
+      w_end: norm(data.w_end),
+    };
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    if (data.id) {
+      const { error } = await supabaseAdmin
+        .from("player_card_position_weights")
+        .update(payload as any)
+        .eq("id", data.id);
+      if (error) throw new Error(error.message);
+      return { id: data.id };
+    }
+    const { data: ins, error } = await supabaseAdmin
+      .from("player_card_position_weights")
+      .insert(payload as any)
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+    return { id: (ins as any).id };
+  });
+
+export const deletePlayerCardPositionWeight = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { id: string }) => ({ id: String(d.id) }))
+  .handler(async ({ data, context }) => {
+    await assertPlatformOwner(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("player_card_position_weights")
+      .delete()
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/** Benchmark-Kurve upserten. Ankerpunkte werden nach `value` sortiert. */
+export const upsertPlayerCardBenchmark = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: {
+    id?: string | null;
+    sport: string;
+    attribute_key: string;
+    metric_key: string;
+    direction: "higher_is_better" | "lower_is_better";
+    weight: number;
+    anchors: Array<{ value: number; score: number }>;
+  }) => ({
+    id: d.id ?? null,
+    sport: String(d.sport).trim(),
+    attribute_key: String(d.attribute_key).trim().toUpperCase(),
+    metric_key: String(d.metric_key).trim(),
+    direction: d.direction === "lower_is_better" ? "lower_is_better" : "higher_is_better",
+    weight: Number(d.weight),
+    anchors: Array.isArray(d.anchors) ? d.anchors.map((a) => ({ value: Number(a.value), score: Number(a.score) })) : [],
+  }))
+  .handler(async ({ data, context }) => {
+    await assertPlatformOwner(context.supabase, context.userId);
+    if (!data.sport || !data.metric_key || !data.attribute_key) throw new Error("Sport, Attribut und Metrik sind erforderlich.");
+    if (data.anchors.length < 2) throw new Error("Mindestens zwei Ankerpunkte erforderlich.");
+    const anchors = [...data.anchors].sort((a, b) => a.value - b.value);
+    for (const a of anchors) {
+      if (!Number.isFinite(a.value) || !Number.isFinite(a.score)) throw new Error("Alle Ankerpunkte müssen numerisch sein.");
+      if (a.score < 0 || a.score > 99) throw new Error("Score muss zwischen 0 und 99 liegen.");
+    }
+    const payload = {
+      sport: data.sport,
+      attribute_key: data.attribute_key,
+      metric_key: data.metric_key,
+      direction: data.direction,
+      weight: data.weight,
+      anchors,
+    };
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    if (data.id) {
+      const { error } = await supabaseAdmin
+        .from("player_card_benchmarks")
+        .update(payload as any)
+        .eq("id", data.id);
+      if (error) throw new Error(error.message);
+      return { id: data.id };
+    }
+    const { data: ins, error } = await supabaseAdmin
+      .from("player_card_benchmarks")
+      .insert(payload as any)
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+    return { id: (ins as any).id };
+  });
+
+export const deletePlayerCardBenchmark = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { id: string }) => ({ id: String(d.id) }))
+  .handler(async ({ data, context }) => {
+    await assertPlatformOwner(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("player_card_benchmarks")
+      .delete()
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
