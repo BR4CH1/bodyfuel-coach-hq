@@ -10,6 +10,7 @@ import { PlayerCard, type PlayerCardData } from "./PlayerCard";
 import { PlayerCardBack } from "./PlayerCardBack";
 import { PlayerCardFlip } from "./PlayerCardFlip";
 import { PlayerCardShareDialog } from "./PlayerCardShareDialog";
+import { PlayerCardUpgradeOverlay, type UpgradePayload } from "./PlayerCardUpgradeOverlay";
 import { getMyPlayerCard, recomputePlayerCard, markBadgeUnlocksSeen } from "@/lib/player-cards.functions";
 import { toast } from "sonner";
 
