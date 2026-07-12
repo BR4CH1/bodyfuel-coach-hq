@@ -6,6 +6,7 @@
 import { useEffect, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "@/integrations/supabase/client";
+import bekimCardAsset from "@/assets/bekim-player-card.png.asset.json";
 import type { AttributeKey, Tier } from "@/lib/player-cards/engine";
 
 const AVATAR_CACHE = new Map<string, { url: string; expires: number }>();
