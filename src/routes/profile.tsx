@@ -55,7 +55,7 @@ import { Switch } from "@/components/ui/switch";
 import { useQuery } from "@tanstack/react-query";
 import { getMyAthleteProfile } from "@/lib/athlete-profile.functions";
 import { AthleteProfileEditor } from "@/components/bodyfuel/AthleteProfileEditor";
-import { MyCheckinsHistorySection } from "@/components/bodyfuel/MyCheckinsHistorySection";
+// MyCheckinsHistorySection wird jetzt in /check-in gerendert.
 import { MinorProtectionSection } from "@/components/bodyfuel/MinorProtectionSection";
 import { ProfilePhotoUpload } from "@/components/bodyfuel/ProfilePhotoUpload";
 import {
