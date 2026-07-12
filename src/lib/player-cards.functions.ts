@@ -199,6 +199,13 @@ async function doRecompute(supabase: any, targetUserId: string) {
   // 4) Upsert via Service-Role.
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
+  // Vorherige Karte laden (für Tier-Upgrade-Detection).
+  const { data: previousCard } = await supabaseAdmin
+    .from("player_cards")
+    .select("bfr, tier")
+    .eq("user_id", targetUserId)
+    .maybeSingle();
+
   const payload = {
     user_id: targetUserId,
     organization_id: organizationId,
