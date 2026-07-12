@@ -472,33 +472,37 @@ export function PlayerCard({ data }: { data: PlayerCardData }) {
           <rect x="20" y="20" width="780" height="1260" fill="url(#pc-vignette)" pointerEvents="none" />
         </g>
 
-        {/* OVR LINKS — deutlich größer, dominanter */}
+        {/* OVR — dominant links oben */}
         <g>
-          {/* soft red backdrop halo */}
-          <circle cx="150" cy="200" r="130" fill={primary} opacity="0.28" filter="url(#pc-glow-strong)" />
-          <text x="60" y="260"
+          <circle cx="150" cy="205" r="150" fill={primary} opacity="0.32" filter="url(#pc-glow-strong)" />
+          <text x="50" y="270"
                 fontFamily="Anton, Bebas Neue, sans-serif"
                 fontWeight="900"
-                fontSize="280"
+                fontSize="300"
                 fill="url(#pc-name-metal)"
-                style={{ letterSpacing: "-10px", paintOrder: "stroke", stroke: "rgba(0,0,0,0.65)", strokeWidth: 3 } as any}
+                style={{ letterSpacing: "-12px", paintOrder: "stroke", stroke: "rgba(0,0,0,0.7)", strokeWidth: 3 } as any}
                 filter="url(#pc-glow-red)">
             {ovr ?? "—"}
           </text>
-          <text x="72" y="308" fontFamily="Oswald, sans-serif" fontWeight="900" fontSize="38" fill={primary}
-                letterSpacing="6" filter="url(#pc-glow-red)">OVR</text>
+          <text x="64" y="310" fontFamily="Oswald, sans-serif" fontWeight="900" fontSize="34" fill={primary}
+                letterSpacing="8" filter="url(#pc-glow-red)">OVR</text>
+        </g>
+
+        {/* LINKE INFO-SPALTE — bündig unter OVR */}
+        <g>
           {position && (
-            <>
-              <text x="70" y="410" fontFamily="Bebas Neue, Anton, sans-serif" fontSize="94" fill="#ffffff"
-                    style={{ letterSpacing: "-2px", paintOrder: "stroke", stroke: "rgba(0,0,0,0.6)", strokeWidth: 2 } as any}>
-                {position}
-              </text>
-              <line x1="74" y1="428" x2="180" y2="428" stroke={primary} strokeWidth="4" />
-              {jerseyNumber && (
-                <text x="74" y="466" fontFamily="Oswald, sans-serif" fontWeight="700" fontSize="30" fill="#fff"
-                      letterSpacing="2" opacity="0.85">#{jerseyNumber}</text>
-              )}
-            </>
+            <text x="62" y="392" fontFamily="Bebas Neue, Anton, sans-serif" fontSize="72" fill={primary}
+                  style={{ letterSpacing: "-1px", paintOrder: "stroke", stroke: "rgba(0,0,0,0.65)", strokeWidth: 2 } as any}
+                  filter="url(#pc-glow-red)">
+              {position}
+            </text>
+          )}
+          <line x1="64" y1="408" x2="200" y2="408" stroke={primary} strokeWidth="3" opacity="0.9" />
+          {jerseyNumber && (
+            <text x="64" y="452" fontFamily="Anton, Bebas Neue, sans-serif" fontSize="46" fill="#ffffff"
+                  style={{ paintOrder: "stroke", stroke: "rgba(0,0,0,0.7)", strokeWidth: 2 } as any}>
+              #{jerseyNumber}
+            </text>
           )}
         </g>
 
