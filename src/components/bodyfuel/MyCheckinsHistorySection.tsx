@@ -112,6 +112,9 @@ export function MyCheckinsHistorySection({ userId }: { userId: string }) {
 
           <ComparisonGrid curr={curr} prev={prev} />
 
+          {published && <PublishedCoachBlock published={published} />}
+
+
           {curr.coach_notes ? (
             <div className="mt-4 rounded-xl border border-gold/40 bg-gold/5 p-4">
               <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-gold">
