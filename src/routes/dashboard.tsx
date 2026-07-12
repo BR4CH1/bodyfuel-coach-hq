@@ -446,20 +446,14 @@ function RealUserDashboard() {
   const name = profile?.display_name?.split(" ")[0] ?? supabaseUser?.email?.split("@")[0] ?? "";
 
   const checkinInfo = (() => {
-    // Check-in dieser Woche bereits eingetragen, aber Maße fehlen → freundlicher Hinweis
-    if (checkinMissingMeasures) {
-      return {
-        tone: "soon" as const,
-        label: "Maße für Check-in ergänzen",
-      };
-    }
-    // Check-in dieser Woche bereits abgegeben → wartet auf Coach-Prüfung, Fälligkeit ausblenden
+    // Check-in dieser Woche abgegeben → wartet auf Coach-Prüfung, Maße optional
     if (checkinSubmittedThisWeek) {
       return {
         tone: "review" as const,
-        label: "Check-in wird geprüft",
+        label: "Check-in wird überprüft",
       };
     }
+
     if (!nextCheckin) return null;
     const today = new Date(todayStr);
     const target = new Date(nextCheckin);
