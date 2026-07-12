@@ -26,6 +26,8 @@ export function CoachPlayerCardView({
   const qc = useQueryClient();
   const fetchFn = useServerFn(getPlayerCardForAthlete);
   const recomputeFn = useServerFn(recomputePlayerCard);
+  const cutoutFn = useServerFn(ensurePlayerCardCutout);
+  const cutoutTriedRef = useRef<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
 
   const q = useQuery({
