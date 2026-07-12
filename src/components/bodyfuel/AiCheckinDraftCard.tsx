@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Sparkles, Loader2, CheckCircle2, XCircle, Pencil, Copy, History, Trash2 } from "lucide-react";
+import { Sparkles, Loader2, CheckCircle2, XCircle, Pencil, Copy, History, Trash2, Send, ThumbsUp, ThumbsDown } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -11,8 +11,10 @@ import {
   listCheckinDrafts,
   decideCheckinDraft,
   deleteCheckinDraft,
+  setCheckinDraftActionDecision,
   type CheckinDraft,
   type CheckinDraftRecord,
+  type ActionDecision,
 } from "@/lib/checkin-ai.functions";
 
 const levelStyles: Record<CheckinDraft["status_level"], string> = {
@@ -53,6 +55,7 @@ export function AiCheckinDraftCard({ userId }: { userId: string }) {
   const listFn = useServerFn(listCheckinDrafts);
   const decideFn = useServerFn(decideCheckinDraft);
   const deleteFn = useServerFn(deleteCheckinDraft);
+  const actionFn = useServerFn(setCheckinDraftActionDecision);
   const qc = useQueryClient();
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -111,12 +114,14 @@ export function AiCheckinDraftCard({ userId }: { userId: string }) {
     mutationFn: (p: {
       decision: "approved" | "edited" | "rejected";
       message?: string;
+      publish?: boolean;
     }) =>
       decideFn({
         data: {
           draft_id: active!.id,
           decision: p.decision,
           message_final: p.message,
+          publish: p.publish,
         },
       }),
     onSuccess: async (_r, vars) => {
@@ -124,13 +129,24 @@ export function AiCheckinDraftCard({ userId }: { userId: string }) {
       setEditing(false);
       clearFormDraft(editorDraftKey);
       toast.success(
-        vars.decision === "approved"
-          ? "Entwurf freigegeben"
-          : vars.decision === "edited"
-            ? "Bearbeitete Version übernommen"
-            : "Entwurf abgelehnt",
+        vars.decision === "rejected"
+          ? "Entwurf abgelehnt"
+          : vars.publish
+            ? "Für Kunde freigegeben"
+            : vars.decision === "edited"
+              ? "Bearbeitete Version übernommen"
+              : "Entwurf freigegeben",
       );
     },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const actionMutation = useMutation({
+    mutationFn: (p: { action_index: number; decision: "approved" | "rejected" | null }) =>
+      actionFn({
+        data: { draft_id: active!.id, action_index: p.action_index, decision: p.decision },
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey }),
     onError: (err: Error) => toast.error(err.message),
   });
 
@@ -163,6 +179,9 @@ export function AiCheckinDraftCard({ userId }: { userId: string }) {
 
   const draft = active?.draft;
   const decided = active && active.status !== "pending";
+  const actionDecisions: ActionDecision[] = (active?.action_decisions ?? []) as ActionDecision[];
+  const decisionMap = new Map(actionDecisions.map((a) => [a.index, a.decision]));
+  const published = !!active?.published_at;
 
   return (
     <div className="rounded-2xl border border-border bg-card p-6">
@@ -314,24 +333,80 @@ export function AiCheckinDraftCard({ userId }: { userId: string }) {
                 Empfohlene Aktionen
               </h3>
               <div className="mt-2 space-y-2">
-                {draft.recommended_actions.map((a, i) => (
-                  <div key={i} className="rounded-lg border border-border bg-background/40 p-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span
-                        className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase ${
-                          priorityStyles[a.priority] ?? priorityStyles.medium
-                        }`}
-                      >
-                        {a.priority}
-                      </span>
-                      <span className="rounded-full border border-border bg-muted/40 px-2 py-0.5 text-[10px] font-semibold uppercase text-muted-foreground">
-                        {areaLabel[a.area] ?? a.area}
-                      </span>
-                      <span className="text-sm font-semibold">{a.title}</span>
+                {draft.recommended_actions.map((a, i) => {
+                  const d = decisionMap.get(i);
+                  const border =
+                    d === "approved"
+                      ? "border-emerald-500/50 bg-emerald-500/5"
+                      : d === "rejected"
+                        ? "border-red-500/40 bg-red-500/5 opacity-60"
+                        : "border-border bg-background/40";
+                  return (
+                    <div key={i} className={`rounded-lg border p-3 ${border}`}>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase ${
+                            priorityStyles[a.priority] ?? priorityStyles.medium
+                          }`}
+                        >
+                          {a.priority}
+                        </span>
+                        <span className="rounded-full border border-border bg-muted/40 px-2 py-0.5 text-[10px] font-semibold uppercase text-muted-foreground">
+                          {areaLabel[a.area] ?? a.area}
+                        </span>
+                        <span className="text-sm font-semibold">{a.title}</span>
+                        {d && (
+                          <span
+                            className={`ml-auto rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase ${
+                              d === "approved"
+                                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+                                : "border-red-500/40 bg-red-500/10 text-red-400"
+                            }`}
+                          >
+                            {d === "approved" ? "Angenommen" : "Abgelehnt"}
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-1.5 text-sm text-muted-foreground">{a.detail}</p>
+                      <div className="mt-2 flex gap-2">
+                        <button
+                          type="button"
+                          disabled={actionMutation.isPending || published}
+                          onClick={() =>
+                            actionMutation.mutate({
+                              action_index: i,
+                              decision: d === "approved" ? null : "approved",
+                            })
+                          }
+                          className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-semibold transition disabled:opacity-40 ${
+                            d === "approved"
+                              ? "border-emerald-500/60 bg-emerald-500/20 text-emerald-300"
+                              : "border-border text-muted-foreground hover:border-emerald-500/40 hover:text-emerald-400"
+                          }`}
+                        >
+                          <ThumbsUp className="h-3 w-3" /> Annehmen
+                        </button>
+                        <button
+                          type="button"
+                          disabled={actionMutation.isPending || published}
+                          onClick={() =>
+                            actionMutation.mutate({
+                              action_index: i,
+                              decision: d === "rejected" ? null : "rejected",
+                            })
+                          }
+                          className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-semibold transition disabled:opacity-40 ${
+                            d === "rejected"
+                              ? "border-red-500/60 bg-red-500/20 text-red-300"
+                              : "border-border text-muted-foreground hover:border-red-500/40 hover:text-red-400"
+                          }`}
+                        >
+                          <ThumbsDown className="h-3 w-3" /> Ablehnen
+                        </button>
+                      </div>
                     </div>
-                    <p className="mt-1.5 text-sm text-muted-foreground">{a.detail}</p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -395,18 +470,33 @@ export function AiCheckinDraftCard({ userId }: { userId: string }) {
                 decideMutation.mutate({
                   decision: editing ? "edited" : "approved",
                   message: messageDraft,
+                  publish: true,
+                })
+              }
+              disabled={decideMutation.isPending || published}
+            >
+              <Send className="mr-1.5 h-4 w-4" />
+              {published ? "Für Kunde freigegeben" : "Für Kunde freigeben"}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                decideMutation.mutate({
+                  decision: editing ? "edited" : "approved",
+                  message: messageDraft,
                 })
               }
               disabled={decideMutation.isPending || decided}
             >
               <CheckCircle2 className="mr-1.5 h-4 w-4" />
-              {editing ? "Bearbeitung übernehmen" : "Freigeben"}
+              {editing ? "Bearbeitung übernehmen" : "Intern übernehmen"}
             </Button>
             <Button
               size="sm"
               variant="outline"
               onClick={() => setEditing((v) => !v)}
-              disabled={decideMutation.isPending || decided}
+              disabled={decideMutation.isPending}
             >
               <Pencil className="mr-1.5 h-4 w-4" />
               {editing ? "Abbrechen" : "Bearbeiten"}
@@ -417,7 +507,7 @@ export function AiCheckinDraftCard({ userId }: { userId: string }) {
               onClick={() =>
                 decideMutation.mutate({ decision: "rejected", message: messageDraft })
               }
-              disabled={decideMutation.isPending || decided}
+              disabled={decideMutation.isPending}
               className="text-red-400 hover:text-red-300"
             >
               <XCircle className="mr-1.5 h-4 w-4" />
@@ -427,6 +517,9 @@ export function AiCheckinDraftCard({ userId }: { userId: string }) {
               Erstellt: {new Date(active.generated_at).toLocaleString("de-DE")}
               {active.decided_at && (
                 <> · Entschieden: {new Date(active.decided_at).toLocaleString("de-DE")}</>
+              )}
+              {published && (
+                <> · An Kunde: {new Date(active.published_at!).toLocaleString("de-DE")}</>
               )}
             </span>
           </div>

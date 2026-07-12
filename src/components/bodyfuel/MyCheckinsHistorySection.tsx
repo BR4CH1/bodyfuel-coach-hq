@@ -1,7 +1,13 @@
 import { useEffect, useState } from "react";
-import { CalendarCheck, ChevronDown, ChevronUp, MessageSquare } from "lucide-react";
+import { CalendarCheck, ChevronDown, ChevronUp, MessageSquare, Sparkles } from "lucide-react";
 import { Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  getPublishedCheckinForClient,
+  type ClientPublishedCheckin,
+} from "@/lib/checkin-ai.functions";
 
 type Row = {
   id: string;
@@ -63,6 +69,13 @@ export function MyCheckinsHistorySection({ userId }: { userId: string }) {
     };
   }, [userId]);
 
+  const publishedFn = useServerFn(getPublishedCheckinForClient);
+  const { data: publishedData } = useQuery({
+    queryKey: ["published-checkin", userId],
+    queryFn: () => publishedFn(),
+  });
+  const published: ClientPublishedCheckin | null = publishedData?.item ?? null;
+
   const curr = rows[0] ?? null;
   const prev = rows[1] ?? null;
   const archive = rows.slice(1);
@@ -98,6 +111,9 @@ export function MyCheckinsHistorySection({ userId }: { userId: string }) {
           </p>
 
           <ComparisonGrid curr={curr} prev={prev} />
+
+          {published && <PublishedCoachBlock published={published} />}
+
 
           {curr.coach_notes ? (
             <div className="mt-4 rounded-xl border border-gold/40 bg-gold/5 p-4">
@@ -184,6 +200,82 @@ export function MyCheckinsHistorySection({ userId }: { userId: string }) {
         </>
       )}
     </section>
+  );
+}
+
+const priorityDot: Record<string, string> = {
+  high: "bg-red-500",
+  medium: "bg-amber-400",
+  low: "bg-emerald-500",
+};
+const areaLabelClient: Record<string, string> = {
+  nutrition: "Ernährung",
+  training: "Training",
+  lifestyle: "Lifestyle",
+  communication: "Kommunikation",
+};
+const levelBorder: Record<ClientPublishedCheckin["status_level"], string> = {
+  green: "border-emerald-500/40 bg-emerald-500/5",
+  yellow: "border-amber-500/40 bg-amber-500/5",
+  red: "border-red-500/40 bg-red-500/5",
+};
+
+function PublishedCoachBlock({ published }: { published: ClientPublishedCheckin }) {
+  return (
+    <div className="mt-4 space-y-3">
+      <div className={`rounded-xl border p-4 ${levelBorder[published.status_level]}`}>
+        <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-gold">
+          <Sparkles className="h-4 w-4" /> Dein Coach-Feedback
+        </div>
+        {published.status_summary && (
+          <p className="mt-2 text-sm">{published.status_summary}</p>
+        )}
+        {published.message_final && (
+          <p className="mt-3 whitespace-pre-wrap rounded-lg border border-border bg-background/40 p-3 text-sm">
+            {published.message_final}
+          </p>
+        )}
+      </div>
+
+      {published.approved_actions.length > 0 && (
+        <div className="rounded-xl border border-border bg-background/40 p-4">
+          <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            Deine nächsten Schritte
+          </div>
+          <ul className="mt-2 space-y-2">
+            {published.approved_actions.map((a, i) => (
+              <li key={i} className="rounded-lg border border-border bg-card/50 p-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className={`h-2 w-2 rounded-full ${priorityDot[a.priority] ?? priorityDot.medium}`} />
+                  <span className="rounded-full border border-border bg-muted/40 px-2 py-0.5 text-[10px] font-semibold uppercase text-muted-foreground">
+                    {areaLabelClient[a.area] ?? a.area}
+                  </span>
+                  <span className="text-sm font-semibold">{a.title}</span>
+                </div>
+                <p className="mt-1.5 text-sm text-muted-foreground">{a.detail}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {(published.nutrition_adjustment || published.training_adjustment) && (
+        <div className="grid gap-2 sm:grid-cols-2">
+          {published.nutrition_adjustment && (
+            <div className="rounded-xl border border-gold/30 bg-gold/5 p-3">
+              <div className="text-[10px] uppercase tracking-wider text-gold">Ernährungs-Anpassung</div>
+              <p className="mt-1 text-sm">{published.nutrition_adjustment}</p>
+            </div>
+          )}
+          {published.training_adjustment && (
+            <div className="rounded-xl border border-gold/30 bg-gold/5 p-3">
+              <div className="text-[10px] uppercase tracking-wider text-gold">Trainings-Anpassung</div>
+              <p className="mt-1 text-sm">{published.training_adjustment}</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
