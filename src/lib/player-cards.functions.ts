@@ -323,7 +323,7 @@ async function loadCardBundle(supabase: any, targetUserId: string) {
       .limit(20),
     supabase
       .from("profiles")
-      .select("display_name, nickname, avatar_url, birthdate, height_cm, sport_position")
+      .select("display_name, nickname, avatar_url, avatar_cutout_url, avatar_cutout_source, birthdate, height_cm, sport_position")
       .eq("id", targetUserId)
       .maybeSingle(),
     supabase
