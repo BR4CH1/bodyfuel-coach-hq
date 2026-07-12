@@ -139,6 +139,9 @@ export function PlayerCardSection({ jerseyNumber, teamLabel }: { jerseyNumber?: 
         <PlayerCardShareDialog data={cardData} open={shareOpen} onClose={() => setShareOpen(false)} />
       )}
 
+      {upgrade && <PlayerCardUpgradeOverlay upgrade={upgrade} onClose={() => setUpgrade(null)} />}
+
+
       {q.isLoading ? (
         <div className="grid place-items-center rounded-2xl border border-border bg-card p-10">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
