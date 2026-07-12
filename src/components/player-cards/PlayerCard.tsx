@@ -113,7 +113,14 @@ function AttrPill({ attr, value }: { attr: AttributeKey; value: number | null })
 import { useState } from "react";
 
 export function PlayerCard({ data }: { data: PlayerCardData }) {
-  const [avatarFailed, setAvatarFailed] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const rawAvatar = data.profile?.avatar_url ?? null;
+  useEffect(() => {
+    let alive = true;
+    if (!rawAvatar) { setAvatarUrl(null); return; }
+    resolvePlayerAvatar(rawAvatar).then((u) => { if (alive) setAvatarUrl(u); });
+    return () => { alive = false; };
+  }, [rawAvatar]);
   const { card, profile, bullsProfile, organization, jerseyNumber, teamLabel } = data;
 
   const primary = organization?.primary_color ?? "#dc2626"; // bulls red default
