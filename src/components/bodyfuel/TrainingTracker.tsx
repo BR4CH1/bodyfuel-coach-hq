@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Sparkles, ChevronDown, ChevronRight, Trash2, Loader2, BarChart3, Check, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
-import { parseTrainingPlan, logSet, deleteSetLog, completeTrainingSession } from "@/lib/training.functions";
+import { parseTrainingPlan, logSet, deleteSetLog, completeTrainingSession, addOwnTrainingExercise, deleteOwnTrainingExercise } from "@/lib/training.functions";
 import { ExerciseAnalytics } from "./ExerciseAnalytics";
 import { normalizeExerciseName } from "@/lib/exercise-name-match";
 import { AddTrainingSessionButton } from "./AddTrainingSessionDialog";
