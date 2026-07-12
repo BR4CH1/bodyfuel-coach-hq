@@ -11,7 +11,6 @@ import {
   Loader2,
   Share2,
   Users,
-  X,
 } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { useSession } from "@/lib/bodyfuel/session";
