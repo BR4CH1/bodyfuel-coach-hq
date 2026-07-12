@@ -30,6 +30,7 @@ export function PlayerCardSection({ jerseyNumber, teamLabel }: { jerseyNumber?: 
   const qc = useQueryClient();
   const fetchFn = useServerFn(getMyPlayerCard);
   const recomputeFn = useServerFn(recomputePlayerCard);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const q = useQuery({
     queryKey: ["player-card", "me"],
