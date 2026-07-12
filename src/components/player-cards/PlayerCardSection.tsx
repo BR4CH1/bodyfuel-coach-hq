@@ -11,7 +11,7 @@ import { PlayerCardBack } from "./PlayerCardBack";
 import { PlayerCardFlip } from "./PlayerCardFlip";
 import { PlayerCardShareDialog } from "./PlayerCardShareDialog";
 import { PlayerCardUpgradeOverlay, type UpgradePayload } from "./PlayerCardUpgradeOverlay";
-import { getMyPlayerCard, recomputePlayerCard, markBadgeUnlocksSeen } from "@/lib/player-cards.functions";
+import { getMyPlayerCard, recomputePlayerCard, markBadgeUnlocksSeen, ensurePlayerCardCutout } from "@/lib/player-cards.functions";
 import { toast } from "sonner";
 
 const TEST_LABELS: Record<string, string> = {
@@ -32,6 +32,8 @@ export function PlayerCardSection({ jerseyNumber, teamLabel }: { jerseyNumber?: 
   const fetchFn = useServerFn(getMyPlayerCard);
   const recomputeFn = useServerFn(recomputePlayerCard);
   const markSeenFn = useServerFn(markBadgeUnlocksSeen);
+  const cutoutFn = useServerFn(ensurePlayerCardCutout);
+  const cutoutTriedRef = useRef<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
   const [upgrade, setUpgrade] = useState<UpgradePayload | null>(null);
   const previousUnlockedRef = useRef<Set<string> | null>(null);
@@ -86,6 +88,24 @@ export function PlayerCardSection({ jerseyNumber, teamLabel }: { jerseyNumber?: 
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [badges?.unlocks]);
+
+  // Auto-Freistellen des Profilbilds für die Player Card (idempotent, einmal pro avatar_url).
+  const profileForCutout = (q.data as any)?.profile as
+    | { avatar_url?: string | null; avatar_cutout_url?: string | null; avatar_cutout_source?: string | null }
+    | undefined;
+  useEffect(() => {
+    if (!profileForCutout?.avatar_url) return;
+    if (
+      profileForCutout.avatar_cutout_url &&
+      profileForCutout.avatar_cutout_source === profileForCutout.avatar_url
+    ) return;
+    if (cutoutTriedRef.current === profileForCutout.avatar_url) return;
+    cutoutTriedRef.current = profileForCutout.avatar_url;
+    cutoutFn({ data: {} })
+      .then(() => qc.invalidateQueries({ queryKey: ["player-card", "me"] }))
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profileForCutout?.avatar_url, profileForCutout?.avatar_cutout_source, profileForCutout?.avatar_cutout_url]);
 
 
   const cardData = useMemo<PlayerCardData | null>(() => {

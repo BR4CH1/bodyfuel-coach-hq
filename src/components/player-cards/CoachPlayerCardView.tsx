@@ -3,7 +3,7 @@
  * abrufbar durch Coaches / Org-Staff. Nutzt getPlayerCardForAthlete
  * und zeigt die Flip-Card inklusive Recompute + Share.
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Loader2, RefreshCw, Share2, Sparkles, AlertCircle } from "lucide-react";
@@ -12,7 +12,7 @@ import { PlayerCard, type PlayerCardData } from "./PlayerCard";
 import { PlayerCardBack } from "./PlayerCardBack";
 import { PlayerCardFlip } from "./PlayerCardFlip";
 import { PlayerCardShareDialog } from "./PlayerCardShareDialog";
-import { getPlayerCardForAthlete, recomputePlayerCard } from "@/lib/player-cards.functions";
+import { getPlayerCardForAthlete, recomputePlayerCard, ensurePlayerCardCutout } from "@/lib/player-cards.functions";
 
 export function CoachPlayerCardView({
   userId,
@@ -26,6 +26,8 @@ export function CoachPlayerCardView({
   const qc = useQueryClient();
   const fetchFn = useServerFn(getPlayerCardForAthlete);
   const recomputeFn = useServerFn(recomputePlayerCard);
+  const cutoutFn = useServerFn(ensurePlayerCardCutout);
+  const cutoutTriedRef = useRef<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
 
   const q = useQuery({
@@ -54,6 +56,25 @@ export function CoachPlayerCardView({
       teamLabel,
     };
   }, [q.data, jerseyNumber, teamLabel]);
+
+  // Auto-Freistellen des Profilbilds (idempotent).
+  const profileForCutout = (q.data as any)?.profile as
+    | { avatar_url?: string | null; avatar_cutout_url?: string | null; avatar_cutout_source?: string | null }
+    | undefined;
+  useEffect(() => {
+    if (!profileForCutout?.avatar_url) return;
+    if (
+      profileForCutout.avatar_cutout_url &&
+      profileForCutout.avatar_cutout_source === profileForCutout.avatar_url
+    ) return;
+    const key = `${userId}:${profileForCutout.avatar_url}`;
+    if (cutoutTriedRef.current === key) return;
+    cutoutTriedRef.current = key;
+    cutoutFn({ data: { user_id: userId } })
+      .then(() => qc.invalidateQueries({ queryKey: ["player-card", "athlete", userId] }))
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, profileForCutout?.avatar_url, profileForCutout?.avatar_cutout_source, profileForCutout?.avatar_cutout_url]);
 
   return (
     <section className="space-y-3">

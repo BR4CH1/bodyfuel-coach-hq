@@ -6390,6 +6390,8 @@ export type Database = {
           account_status: string
           activity_level: string | null
           athlete_profile_updated_at: string | null
+          avatar_cutout_source: string | null
+          avatar_cutout_url: string | null
           avatar_url: string | null
           birthdate: string | null
           cardio_outside_gym: string | null
@@ -6441,6 +6443,8 @@ export type Database = {
           account_status?: string
           activity_level?: string | null
           athlete_profile_updated_at?: string | null
+          avatar_cutout_source?: string | null
+          avatar_cutout_url?: string | null
           avatar_url?: string | null
           birthdate?: string | null
           cardio_outside_gym?: string | null
@@ -6492,6 +6496,8 @@ export type Database = {
           account_status?: string
           activity_level?: string | null
           athlete_profile_updated_at?: string | null
+          avatar_cutout_source?: string | null
+          avatar_cutout_url?: string | null
           avatar_url?: string | null
           birthdate?: string | null
           cardio_outside_gym?: string | null
