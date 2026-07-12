@@ -115,6 +115,7 @@ function RankingPage() {
           <div className="flex flex-wrap gap-1.5">
             <TabBtn active={tab === "ranking"} onClick={() => setTab("ranking")} icon={<Trophy className="h-3.5 w-3.5" />} label="BFR-Rangliste" />
             <TabBtn active={tab === "potm"} onClick={() => setTab("potm")} icon={<Crown className="h-3.5 w-3.5" />} label="Player of the Month" />
+            <TabBtn active={tab === "totm"} onClick={() => setTab("totm")} icon={<Shield className="h-3.5 w-3.5" />} label="Team of the Month" />
             <TabBtn active={tab === "hof"} onClick={() => setTab("hof")} icon={<Award className="h-3.5 w-3.5" />} label="Hall of Fame" />
           </div>
         </div>
