@@ -3,7 +3,24 @@
  * Übernimmt Vereinsfarben automatisch aus organization.primary_color etc.
  */
 import { Rocket, Zap, Activity, Flame, Dumbbell, HeartPulse, Shield, Calendar, Ruler, Scale } from "lucide-react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import type { AttributeKey, Tier } from "@/lib/player-cards/engine";
+
+const AVATAR_CACHE = new Map<string, { url: string; expires: number }>();
+const AVATAR_TTL_MS = 45 * 60 * 1000;
+
+async function resolvePlayerAvatar(raw: string | null | undefined): Promise<string | null> {
+  if (!raw) return null;
+  // Already a full URL (http/https/data)? Use as-is.
+  if (/^(https?:|data:|blob:)/i.test(raw)) return raw;
+  const cached = AVATAR_CACHE.get(raw);
+  if (cached && cached.expires > Date.now()) return cached.url;
+  const { data, error } = await supabase.storage.from("avatars").createSignedUrl(raw, 3600);
+  if (error || !data?.signedUrl) return null;
+  AVATAR_CACHE.set(raw, { url: data.signedUrl, expires: Date.now() + AVATAR_TTL_MS });
+  return data.signedUrl;
+}
 
 export type PlayerCardData = {
   card: {
@@ -93,10 +110,17 @@ function AttrPill({ attr, value }: { attr: AttributeKey; value: number | null })
   );
 }
 
-import { useState } from "react";
+
 
 export function PlayerCard({ data }: { data: PlayerCardData }) {
-  const [avatarFailed, setAvatarFailed] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const rawAvatar = data.profile?.avatar_url ?? null;
+  useEffect(() => {
+    let alive = true;
+    if (!rawAvatar) { setAvatarUrl(null); return; }
+    resolvePlayerAvatar(rawAvatar).then((u) => { if (alive) setAvatarUrl(u); });
+    return () => { alive = false; };
+  }, [rawAvatar]);
   const { card, profile, bullsProfile, organization, jerseyNumber, teamLabel } = data;
 
   const primary = organization?.primary_color ?? "#dc2626"; // bulls red default
@@ -176,14 +200,16 @@ export function PlayerCard({ data }: { data: PlayerCardData }) {
 
         {/* Player image */}
         <div className="relative mx-6 mt-2 aspect-[3/4] max-h-[220px] overflow-hidden">
-          {profile?.avatar_url && !avatarFailed ? (
+          {avatarUrl ? (
             <img
-              src={profile.avatar_url}
+              src={avatarUrl}
               alt={first}
               className="h-full w-full object-cover object-top"
               style={{ filter: `drop-shadow(0 0 20px ${accent}88)` }}
-              onError={() => setAvatarFailed(true)}
-              referrerPolicy="no-referrer"
+              onError={() => {
+                if (rawAvatar) AVATAR_CACHE.delete(rawAvatar);
+                setAvatarUrl(null);
+              }}
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center rounded-2xl border border-white/10 text-white/30">
