@@ -7058,6 +7058,7 @@ export type Database = {
       }
       training_exercises: {
         Row: {
+          added_by_user: string | null
           category: string | null
           created_at: string
           day_id: string
@@ -7078,6 +7079,7 @@ export type Database = {
           target_weights: string | null
         }
         Insert: {
+          added_by_user?: string | null
           category?: string | null
           created_at?: string
           day_id: string
@@ -7098,6 +7100,7 @@ export type Database = {
           target_weights?: string | null
         }
         Update: {
+          added_by_user?: string | null
           category?: string | null
           created_at?: string
           day_id?: string
