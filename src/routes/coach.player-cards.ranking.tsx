@@ -12,6 +12,7 @@ import {
   Award,
   Crown,
   Loader2,
+  Shield,
   TrendingUp,
   Trophy,
   Users,
@@ -24,6 +25,7 @@ import {
   getPlayerOfTheMonthCandidates,
   finalizePlayerOfTheMonth,
   getPlayerCardHallOfFame,
+  getTeamOfTheMonthCandidates,
 } from "@/lib/player-cards.functions";
 
 export const Route = createFileRoute("/coach/player-cards/ranking")({
