@@ -410,6 +410,15 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const navWithBulls = !isCoach && !staffNav && !teamOnlyAthleteNav && hasGroup("bulls")
     ? [...baseNav, bullsNavItem]
     : baseNav;
+  // Kursleiter-Zusatzmodul: identische Client-Erfahrung + zusätzlicher Menüpunkt.
+  const isCourseInstructor = !!(profile as any)?.is_course_instructor;
+  const navWithCourseTools = isCourseInstructor && !isCoach && !staffNav && !teamOnlyAthleteNav
+    ? [
+        ...navWithBulls.slice(0, Math.max(1, navWithBulls.length - 1)),
+        { to: "/coach-tools", label: "Coach Tools", icon: Rocket } as any,
+        ...navWithBulls.slice(Math.max(1, navWithBulls.length - 1)),
+      ]
+    : navWithBulls;
   // Wenn der Nutzer aktuell im Bulls-Hub ist, sollen Ernährung/Training auf
   // die Bulls-Varianten zeigen, damit das Vereins-Design (rot/schwarz) und
   // die Bulls-spezifische Erfahrung erhalten bleiben.
