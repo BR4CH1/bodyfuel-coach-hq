@@ -35,29 +35,22 @@ function CoachToolsHub() {
   const navigate = useNavigate();
   const uid = supabaseUser?.id;
   const { data: allowed, isLoading: gateLoading } = useQuery({
-    queryKey: ["coach-tools-any-org-enabled", uid],
+    queryKey: ["coach-tools-instructor-enabled", uid],
     enabled: !!uid,
     staleTime: 60_000,
     queryFn: async () => {
-      const [memRes, staffRes] = await Promise.all([
-        supabase.from("organization_memberships").select("organization_id").eq("user_id", uid!),
-        supabase.from("staff_assignments").select("organization_id").eq("user_id", uid!),
-      ]);
-      const orgIds = Array.from(new Set([
-        ...((memRes.data ?? []).map((r: any) => r.organization_id).filter(Boolean) as string[]),
-        ...((staffRes.data ?? []).map((r: any) => r.organization_id).filter(Boolean) as string[]),
-      ]));
-      if (orgIds.length === 0) return false;
-      const { data } = await supabase
-        .from("organization_features")
+      const { data, error } = await supabase
+        .from("organization_memberships")
         .select("organization_id")
-        .in("organization_id", orgIds)
-        .eq("feature", "coach_tools")
-        .eq("enabled", true)
+        .eq("user_id", uid!)
+        .eq("status", "active")
+        .eq("is_course_instructor", true)
         .limit(1);
+      if (error) return false;
       return (data ?? []).length > 0;
     },
   });
+
 
   useEffect(() => {
     if (!loading && !gateLoading && profile && allowed === false) {

@@ -1,7 +1,15 @@
-import { Activity, AlertTriangle, ClipboardList, ListChecks } from "lucide-react";
+import { Activity, AlertTriangle, ClipboardList, ListChecks, Rocket } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import type { CoachAthleteDetail } from "@/lib/organizations/coach-athlete-drilldown.functions";
 import { PulseCell, Section } from "./athlete-tab-shared";
 import { RemoveFromTeamSection } from "./RemoveFromTeamSection";
+import {
+  getMemberCourseInstructor,
+  setMemberCourseInstructor,
+} from "@/lib/course-instructor.functions";
+
 
 export function AthleteOverviewTab({
   data,

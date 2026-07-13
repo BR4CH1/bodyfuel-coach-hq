@@ -4203,6 +4203,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          is_course_instructor: boolean
           joined_at: string
           onboarding_completed: boolean
           organization_id: string
@@ -4214,6 +4215,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          is_course_instructor?: boolean
           joined_at?: string
           onboarding_completed?: boolean
           organization_id: string
@@ -4225,6 +4227,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          is_course_instructor?: boolean
           joined_at?: string
           onboarding_completed?: boolean
           organization_id?: string
