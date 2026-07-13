@@ -7,6 +7,7 @@ export type Profile = {
   id: string;
   display_name: string | null;
   demo_client_key: string | null;
+  is_course_instructor?: boolean | null;
 };
 
 export type AppTier = "coach" | "client" | "free" | null;
