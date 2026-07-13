@@ -95,13 +95,17 @@ export const listMyCourseInstructorOrgs = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data } = await supabaseAdmin
       .from("organization_memberships")
-      .select("organization_id")
+      .select("organization_id, organization:organizations!inner(slug, status)")
       .eq("user_id", context.userId)
       .eq("status", "active")
       .eq("is_course_instructor", true);
+    const rows = ((data ?? []) as any[]).filter((r) => r.organization?.status === "active");
     return {
-      orgIds: ((data ?? []) as any[])
+      orgIds: rows
         .map((r) => r.organization_id as string)
+        .filter(Boolean),
+      orgSlugs: rows
+        .map((r) => r.organization?.slug as string | undefined)
         .filter(Boolean),
     };
   });

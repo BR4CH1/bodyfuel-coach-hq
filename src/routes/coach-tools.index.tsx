@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "@/lib/bodyfuel/session";
 import { listMyCourseInstructorOrgs } from "@/lib/course-instructor.functions";
+import { getActiveContext } from "@/components/organizations/OrganizationContextSwitcher";
 import {
   Timer,
   BookOpen,
@@ -35,14 +36,16 @@ function CoachToolsHub() {
   const { supabaseUser, profile, loading } = useSession();
   const navigate = useNavigate();
   const uid = supabaseUser?.id;
+  const activeOrgContext = getActiveContext();
   const listCourseInstructorOrgsFn = useServerFn(listMyCourseInstructorOrgs);
   const { data: allowed, isLoading: gateLoading } = useQuery({
-    queryKey: ["coach-tools-instructor-enabled", uid],
+    queryKey: ["coach-tools-instructor-enabled", uid, activeOrgContext],
     enabled: !!uid,
     staleTime: 60_000,
     queryFn: async () => {
+      if (!activeOrgContext) return false;
       const result = await listCourseInstructorOrgsFn();
-      return result.orgIds.length > 0;
+      return (result.orgSlugs ?? []).includes(activeOrgContext);
     },
   });
 
