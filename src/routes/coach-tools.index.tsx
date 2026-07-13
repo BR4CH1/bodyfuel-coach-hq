@@ -1,8 +1,9 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
+import { listMyCourseInstructorOrgs } from "@/lib/course-instructor.functions";
 import {
   Timer,
   BookOpen,
@@ -34,20 +35,14 @@ function CoachToolsHub() {
   const { supabaseUser, profile, loading } = useSession();
   const navigate = useNavigate();
   const uid = supabaseUser?.id;
+  const listCourseInstructorOrgsFn = useServerFn(listMyCourseInstructorOrgs);
   const { data: allowed, isLoading: gateLoading } = useQuery({
     queryKey: ["coach-tools-instructor-enabled", uid],
     enabled: !!uid,
     staleTime: 60_000,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("organization_memberships")
-        .select("organization_id")
-        .eq("user_id", uid!)
-        .eq("status", "active")
-        .eq("is_course_instructor", true)
-        .limit(1);
-      if (error) return false;
-      return (data ?? []).length > 0;
+      const result = await listCourseInstructorOrgsFn();
+      return result.orgIds.length > 0;
     },
   });
 
