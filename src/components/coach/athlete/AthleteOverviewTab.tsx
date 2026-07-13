@@ -1,7 +1,15 @@
-import { Activity, AlertTriangle, ClipboardList, ListChecks } from "lucide-react";
+import { Activity, AlertTriangle, ClipboardList, ListChecks, Rocket } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import type { CoachAthleteDetail } from "@/lib/organizations/coach-athlete-drilldown.functions";
 import { PulseCell, Section } from "./athlete-tab-shared";
 import { RemoveFromTeamSection } from "./RemoveFromTeamSection";
+import {
+  getMemberCourseInstructor,
+  setMemberCourseInstructor,
+} from "@/lib/course-instructor.functions";
+
 
 export function AthleteOverviewTab({
   data,
@@ -14,8 +22,33 @@ export function AthleteOverviewTab({
 }) {
   const p = data.pulse;
   const recent = data.training.timeline.slice(0, 5);
+  const qc = useQueryClient();
+  const fetchInstructor = useServerFn(getMemberCourseInstructor);
+  const saveInstructor = useServerFn(setMemberCourseInstructor);
+  const { data: instructor, isLoading: instructorLoading } = useQuery({
+    queryKey: ["member-course-instructor", orgId, userId],
+    queryFn: () => fetchInstructor({ data: { orgId, userId } }),
+    staleTime: 30_000,
+  });
+  const toggleInstructor = useMutation({
+    mutationFn: (enabled: boolean) =>
+      saveInstructor({ data: { orgId, userId, enabled } }),
+    onSuccess: (res) => {
+      qc.setQueryData(["member-course-instructor", orgId, userId], {
+        enabled: res.enabled,
+      });
+      toast.success(
+        res.enabled
+          ? "Als Kursleiter freigeschaltet"
+          : "Kursleiter-Status entfernt",
+      );
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Konnte nicht speichern"),
+  });
+  const isInstructor = !!instructor?.enabled;
   return (
     <div className="space-y-5">
+
       <Section title="Aktueller Status" icon={<Activity className="h-4 w-4" />}>
 
         <div className="grid grid-cols-2 gap-2.5">
@@ -140,11 +173,44 @@ export function AthleteOverviewTab({
         )}
       </Section>
 
+      <Section title="Kursleiter" icon={<Rocket className="h-4 w-4" />}>
+        <div className="flex items-start justify-between gap-4 rounded-lg border border-border bg-card p-4">
+          <div className="min-w-0">
+            <div className="text-sm font-semibold">
+              Coach Tools freischalten
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Aktiviert den Kursleiter-Bereich (Timer, Übungen, Kursvorlagen,
+              Live-Modus, Musik, Teilnehmer) für dieses Mitglied — nur in dieser
+              Organisation. Es entsteht dadurch KEINE Coach-Ansicht; dafür muss
+              das Mitglied separat zum Staff hinzugefügt werden.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={isInstructor}
+            disabled={instructorLoading || toggleInstructor.isPending}
+            onClick={() => toggleInstructor.mutate(!isInstructor)}
+            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition ${
+              isInstructor ? "bg-gold" : "bg-muted"
+            } disabled:opacity-50`}
+          >
+            <span
+              className={`inline-block h-5 w-5 transform rounded-full bg-background transition ${
+                isInstructor ? "translate-x-5" : "translate-x-0.5"
+              }`}
+            />
+          </button>
+        </div>
+      </Section>
+
       <RemoveFromTeamSection
         orgId={orgId}
         userId={userId}
         displayName={data.athlete.display_name}
       />
     </div>
+
   );
 }
