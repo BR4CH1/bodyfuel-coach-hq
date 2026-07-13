@@ -37,6 +37,7 @@ import { totalPoints } from "@/lib/bodyfuel/data";
 import { ReviewPrompt } from "./ReviewPrompt";
 import { SmartPlanReadyPopup } from "./SmartPlanReadyPopup";
 import { OrganizationContextSwitcher, getActiveContext } from "@/components/organizations/OrganizationContextSwitcher";
+import { listMyCourseInstructorOrgs } from "@/lib/course-instructor.functions";
 
 const clientNav = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -307,20 +308,14 @@ export function AppLayout({ children }: { children: ReactNode }) {
   // organisationsweit). Der Hook muss vor allen Early Returns stehen, sonst
   // crasht React nach dem Login mit Hook-Order-Fehlern.
   const uid = supabaseUser?.id;
+  const listCourseInstructorOrgsFn = useServerFn(listMyCourseInstructorOrgs);
   const { data: coachToolsOrgEnabled = false } = useQuery({
     queryKey: ["coach-tools-instructor-enabled", uid],
     enabled: !!uid && !isCoach,
     staleTime: 60_000,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("organization_memberships")
-        .select("organization_id")
-        .eq("user_id", uid!)
-        .eq("status", "active")
-        .eq("is_course_instructor", true)
-        .limit(1);
-      if (error) return false;
-      return (data ?? []).length > 0;
+      const result = await listCourseInstructorOrgsFn();
+      return result.orgIds.length > 0;
     },
   });
 
