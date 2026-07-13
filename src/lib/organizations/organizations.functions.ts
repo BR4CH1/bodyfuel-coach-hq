@@ -888,17 +888,8 @@ export const setOrganizationFeature = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     if (!data.features?.length) return { ok: true };
-    // Bulls-Guard: Coesfeld Bulls dürfen funktional NICHT verändert werden.
-    const { data: org } = await context.supabase
-      .from("organizations")
-      .select("slug")
-      .eq("id", data.orgId)
-      .maybeSingle();
-    if ((org as any)?.slug?.toLowerCase() === "bulls") {
-      throw new Error(
-        "Coesfeld Bulls dürfen aktuell nicht über die Modulkonsole geändert werden.",
-      );
-    }
+
+
 
     const rows = data.features.map((f) => ({
       organization_id: data.orgId,
