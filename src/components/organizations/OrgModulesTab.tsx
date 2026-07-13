@@ -31,8 +31,8 @@ export function OrgModulesTab({
   const setFn = useServerFn(setOrganizationFeature);
   const qc = useQueryClient();
 
-  const isBulls = (orgSlug ?? "").toLowerCase() === "bulls";
-  const canToggle = canManage && !isBulls;
+  const canToggle = canManage;
+
 
   const { data: features = [], isLoading } = useQuery({
     queryKey: ["org-features", orgId],
