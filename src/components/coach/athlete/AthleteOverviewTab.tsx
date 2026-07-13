@@ -22,8 +22,33 @@ export function AthleteOverviewTab({
 }) {
   const p = data.pulse;
   const recent = data.training.timeline.slice(0, 5);
+  const qc = useQueryClient();
+  const fetchInstructor = useServerFn(getMemberCourseInstructor);
+  const saveInstructor = useServerFn(setMemberCourseInstructor);
+  const { data: instructor, isLoading: instructorLoading } = useQuery({
+    queryKey: ["member-course-instructor", orgId, userId],
+    queryFn: () => fetchInstructor({ data: { orgId, userId } }),
+    staleTime: 30_000,
+  });
+  const toggleInstructor = useMutation({
+    mutationFn: (enabled: boolean) =>
+      saveInstructor({ data: { orgId, userId, enabled } }),
+    onSuccess: (res) => {
+      qc.setQueryData(["member-course-instructor", orgId, userId], {
+        enabled: res.enabled,
+      });
+      toast.success(
+        res.enabled
+          ? "Als Kursleiter freigeschaltet"
+          : "Kursleiter-Status entfernt",
+      );
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Konnte nicht speichern"),
+  });
+  const isInstructor = !!instructor?.enabled;
   return (
     <div className="space-y-5">
+
       <Section title="Aktueller Status" icon={<Activity className="h-4 w-4" />}>
 
         <div className="grid grid-cols-2 gap-2.5">
