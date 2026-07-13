@@ -149,7 +149,7 @@ export function CoachPlayerCardView({
       ) : (
         <>
           <PlayerCardFlip
-            front={<PlayerCard data={cardData} />}
+            front={<PlayerCard data={cardData} layout={design.layout} templateUrl={design.templateUrl} />}
             back={
               <PlayerCardBack
                 data={{ ...cardData, verifiedTests: q.data?.verifiedTests } as any}
