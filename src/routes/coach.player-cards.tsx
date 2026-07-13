@@ -347,7 +347,7 @@ function CoachPlayerCardsPage() {
       >
         {bulkQueue[0] && (
           <div ref={bulkExportRef} style={{ width: 600, height: 900 }}>
-            <PlayerCard data={bulkQueue[0]} />
+            <PlayerCard data={bulkQueue[0]} layout={savedLayout} />
           </div>
         )}
       </div>
