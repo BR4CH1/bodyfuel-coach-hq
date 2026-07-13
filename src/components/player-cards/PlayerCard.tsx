@@ -1,14 +1,12 @@
 /**
- * Player Card — Fixes Template (100% Referenz-Bild).
+ * Player Card — Fixes Template (100% Referenz-Bild) mit konfigurierbarem Layout.
  *
- * Das Kartenbild (Rahmen, Hintergrund, Logo, Icons, Labels) ist fixiert.
- * Wir overlayen ausschließlich dynamische Werte per SVG. Fehlt ein Wert,
- * bleibt der Platz leer — das Layout verändert sich nie.
- *
- * Spielerbild bleibt vorerst raus (wird später ergänzt).
+ * Positionen aller Overlay-Elemente kommen aus `PlayerCardLayout`
+ * (siehe `src/lib/player-cards/layout.ts`). Bearbeitung im Layout-Editor.
  */
 import cardTemplate from "@/assets/player-card-template.png.asset.json";
 import type { AttributeKey, Tier } from "@/lib/player-cards/engine";
+import { DEFAULT_LAYOUT, VB_H, VB_W, type PlayerCardLayout } from "@/lib/player-cards/layout";
 
 export type PlayerCardData = {
   card: {
@@ -63,17 +61,9 @@ export type PlayerCardData = {
 };
 
 const POS_ABBR: Record<string, string> = {
-  QUARTERBACK: "QB",
-  "RUNNING BACK": "RB",
-  "WIDE RECEIVER": "WR",
-  "TIGHT END": "TE",
-  "OFFENSIVE LINE": "OL",
-  "DEFENSIVE LINE": "DL",
-  LINEBACKER: "LB",
-  CORNERBACK: "CB",
-  SAFETY: "S",
-  KICKER: "K",
-  PUNTER: "P",
+  QUARTERBACK: "QB", "RUNNING BACK": "RB", "WIDE RECEIVER": "WR", "TIGHT END": "TE",
+  "OFFENSIVE LINE": "OL", "DEFENSIVE LINE": "DL", LINEBACKER: "LB", CORNERBACK: "CB",
+  SAFETY: "S", KICKER: "K", PUNTER: "P",
 };
 
 function computeAge(birthdate: string | null | undefined): number | null {
@@ -87,12 +77,16 @@ function computeAge(birthdate: string | null | undefined): number | null {
   return age;
 }
 
-// ViewBox entspricht der Originalauflösung des Kartenbilds (1023 × 1537).
-const VB_W = 1023;
-const VB_H = 1537;
 const RED = "#E10600";
+const FONT = "Anton, Bebas Neue, sans-serif";
 
-export function PlayerCard({ data }: { data: PlayerCardData }) {
+export function PlayerCard({
+  data,
+  layout = DEFAULT_LAYOUT,
+}: {
+  data: PlayerCardData;
+  layout?: PlayerCardLayout;
+}) {
   const { card, profile, bullsProfile, jerseyNumber } = data;
   const ov = card.manual_overrides ?? {};
 
@@ -103,13 +97,13 @@ export function PlayerCard({ data }: { data: PlayerCardData }) {
   const heightCm = bullsProfile?.height_cm ?? profile?.height_cm ?? null;
   const weightKg = bullsProfile?.weight_kg ?? null;
 
-  const stats: Array<{ attr: AttributeKey; value: number | null; cx: number }> = [
-    { attr: "SPD", value: ov.SPD ?? card.spd, cx: 160 },
-    { attr: "ACC", value: ov.ACC ?? card.acc, cx: 305 },
-    { attr: "AGI", value: ov.AGI ?? card.agi, cx: 450 },
-    { attr: "POW", value: ov.POW ?? card.pow, cx: 595 },
-    { attr: "STR", value: ov.STR ?? card.str, cx: 740 },
-    { attr: "END", value: ov.END ?? card.end_score, cx: 885 },
+  const attrs: Array<{ key: keyof PlayerCardLayout; value: number | null }> = [
+    { key: "spd", value: ov.SPD ?? card.spd },
+    { key: "acc", value: ov.ACC ?? card.acc },
+    { key: "agi", value: ov.AGI ?? card.agi },
+    { key: "pow", value: ov.POW ?? card.pow },
+    { key: "str", value: ov.STR ?? card.str },
+    { key: "end", value: ov.END ?? card.end_score },
   ];
 
   const updateDate =
@@ -117,6 +111,8 @@ export function PlayerCard({ data }: { data: PlayerCardData }) {
       ? new Date(card.computed_at).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" })
       : "";
   const strongest = card.strongest_attribute ?? "";
+
+  const photoUrl = layout.photo.url ?? profile?.avatar_cutout_url ?? profile?.avatar_url ?? null;
 
   return (
     <div className="relative h-full w-full">
@@ -127,102 +123,68 @@ export function PlayerCard({ data }: { data: PlayerCardData }) {
         className="h-full w-full"
         style={{ filter: "drop-shadow(0 30px 60px rgba(0,0,0,0.85))" }}
       >
-        {/* Fixes Template-Bild (Rahmen, Hintergrund, Logo, Icons, Labels) */}
+        {/* Spielerbild (unter der Template-Vorlage) */}
+        {photoUrl && (
+          <image
+            href={photoUrl}
+            x={layout.photo.x}
+            y={layout.photo.y}
+            width={layout.photo.w}
+            height={layout.photo.h}
+            preserveAspectRatio="xMidYMid meet"
+          />
+        )}
+
+        {/* Fixes Template-Bild */}
         <image href={cardTemplate.url} x="0" y="0" width={VB_W} height={VB_H} preserveAspectRatio="xMidYMid meet" />
 
-        {/* ============ OBEN LINKS: OVR / POSITION / # ============ */}
         {bfrDisplay != null && (
-          <text
-            x="175" y="255"
-            textAnchor="middle"
-            fontFamily="Anton, Bebas Neue, sans-serif"
-            fontSize="150"
-            fill={RED}
-          >
+          <text x={layout.ovr.x} y={layout.ovr.y} textAnchor="middle" fontFamily={FONT} fontSize={layout.ovr.fontSize} fill={RED}>
             {bfrDisplay}
           </text>
         )}
         {positionAbbr && (
-          <text
-            x="175" y="440"
-            textAnchor="middle"
-            fontFamily="Anton, Bebas Neue, sans-serif"
-            fontSize="96"
-            fill={RED}
-            letterSpacing="2"
-          >
+          <text x={layout.pos.x} y={layout.pos.y} textAnchor="middle" fontFamily={FONT} fontSize={layout.pos.fontSize} fill={RED} letterSpacing="2">
             {positionAbbr}
           </text>
         )}
         {jerseyNumber && (
-          <text
-            x="175" y="580"
-            textAnchor="middle"
-            fontFamily="Anton, Bebas Neue, sans-serif"
-            fontSize="56"
-            fill="#ffffff"
-          >
+          <text x={layout.jersey.x} y={layout.jersey.y} textAnchor="middle" fontFamily={FONT} fontSize={layout.jersey.fontSize} fill="#ffffff">
             #{jerseyNumber}
           </text>
         )}
 
-        {/* ============ INFO-BLOCK: Alter / Größe / Gewicht ============ */}
         {ageVal != null && (
-          <text x="255" y="775" fontFamily="Anton, Bebas Neue, sans-serif" fontSize="32" fill="#ffffff" letterSpacing="1">
-            {ageVal}
-          </text>
+          <text x={layout.age.x} y={layout.age.y} fontFamily={FONT} fontSize={layout.age.fontSize} fill="#ffffff" letterSpacing="1">{ageVal}</text>
         )}
         {heightCm != null && (
-          <text x="255" y="850" fontFamily="Anton, Bebas Neue, sans-serif" fontSize="32" fill="#ffffff" letterSpacing="1">
-            {heightCm} cm
-          </text>
+          <text x={layout.height.x} y={layout.height.y} fontFamily={FONT} fontSize={layout.height.fontSize} fill="#ffffff" letterSpacing="1">{heightCm} cm</text>
         )}
         {weightKg != null && (
-          <text x="255" y="925" fontFamily="Anton, Bebas Neue, sans-serif" fontSize="32" fill="#ffffff" letterSpacing="1">
-            {weightKg} kg
-          </text>
+          <text x={layout.weight.x} y={layout.weight.y} fontFamily={FONT} fontSize={layout.weight.fontSize} fill="#ffffff" letterSpacing="1">{weightKg} kg</text>
         )}
 
-        {/* ============ ATTRIBUTE (überlagern die Icons, wenn Wert vorhanden) ============ */}
-        {stats.map((s) =>
-          s.value != null ? (
-            <g key={s.attr}>
-              {/* dunkler Hintergrund, um Icon zu verdecken */}
-              <rect x={s.cx - 55} y={1200} width={110} height={100} fill="#000000" opacity="0.85" rx="8" />
-              <text
-                x={s.cx}
-                y={1275}
-                textAnchor="middle"
-                fontFamily="Anton, Bebas Neue, sans-serif"
-                fontSize="72"
-                fill="#ffffff"
-              >
-                {s.value}
+        {attrs.map((a) => {
+          const it = layout[a.key] as { x: number; y: number; fontSize?: number };
+          if (a.value == null) return null;
+          const fs = it.fontSize ?? 72;
+          return (
+            <g key={a.key}>
+              <rect x={it.x - 55} y={it.y - fs} width={110} height={fs + 25} fill="#000000" opacity="0.85" rx="8" />
+              <text x={it.x} y={it.y} textAnchor="middle" fontFamily={FONT} fontSize={fs} fill="#ffffff">
+                {a.value}
               </text>
             </g>
-          ) : null,
-        )}
+          );
+        })}
 
-        {/* ============ INFO-ROW: Update / Stärke (Kartenstufe im Template) ============ */}
         {updateDate && (
-          <text
-            x="490" y="1420"
-            fontFamily="Anton, Bebas Neue, sans-serif"
-            fontSize="26"
-            fill="#ffffff"
-            letterSpacing="1"
-          >
+          <text x={layout.updateDate.x} y={layout.updateDate.y} fontFamily={FONT} fontSize={layout.updateDate.fontSize} fill="#ffffff" letterSpacing="1">
             {updateDate}
           </text>
         )}
         {strongest && (
-          <text
-            x="820" y="1420"
-            fontFamily="Anton, Bebas Neue, sans-serif"
-            fontSize="26"
-            fill={RED}
-            letterSpacing="2"
-          >
+          <text x={layout.strongest.x} y={layout.strongest.y} fontFamily={FONT} fontSize={layout.strongest.fontSize} fill={RED} letterSpacing="2">
             {strongest}
           </text>
         )}
