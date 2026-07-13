@@ -31,6 +31,7 @@ export function CoachPlayerCardView({
   const cutoutFn = useServerFn(ensurePlayerCardCutout);
   const cutoutTriedRef = useRef<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
+  const design = usePlayerCardDesign();
 
   const q = useQuery({
     queryKey: ["player-card", "athlete", userId],
