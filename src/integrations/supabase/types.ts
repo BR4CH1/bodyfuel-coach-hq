@@ -1783,6 +1783,38 @@ export type Database = {
         }
         Relationships: []
       }
+      food_alias_learning: {
+        Row: {
+          created_at: string
+          food_id: string
+          id: string
+          normalized_term: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          food_id: string
+          id?: string
+          normalized_term: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          food_id?: string
+          id?: string
+          normalized_term?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "food_alias_learning_food_id_fkey"
+            columns: ["food_id"]
+            isOneToOne: false
+            referencedRelation: "nutrition_foods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       food_entries: {
         Row: {
           barcode: string | null
