@@ -11,7 +11,6 @@ import {
   getVideoSignedUrl,
 } from "@/lib/bulls-performance.functions";
 import { Section, TrendChip } from "./athlete-tab-shared";
-import { CoachPlayerCardView } from "@/components/player-cards/CoachPlayerCardView";
 
 type TestRow = {
   id: string;
