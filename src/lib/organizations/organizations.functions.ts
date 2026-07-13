@@ -911,18 +911,6 @@ export const setOrganizationFeature = createServerFn({ method: "POST" })
 // Phase 3: Terminologie überschreiben
 // ────────────────────────────────────────────────────────────────────────────
 
-const BULLS_GUARD_SLUG = "bulls";
-
-async function assertNotBulls(supabase: any, orgId: string) {
-  const { data: org } = await supabase
-    .from("organizations")
-    .select("slug")
-    .eq("id", orgId)
-    .maybeSingle();
-  if ((org as any)?.slug?.toLowerCase() === BULLS_GUARD_SLUG) {
-    throw new Error("Coesfeld Bulls sind aktuell schreibgeschützt.");
-  }
-}
 
 async function assertCanManageOrg(supabase: any, userId: string, orgId: string) {
   // Plattform-Owner darf alles.
