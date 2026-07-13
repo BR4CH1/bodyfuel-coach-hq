@@ -63,7 +63,7 @@ export function AthletePerformanceTab({
 
   return (
     <div className="space-y-4">
-      <CoachPlayerCardView userId={userId} />
+
 
       <Section title="Performance Score" icon={<Gauge className="h-4 w-4" />}>
         {!s ? (
