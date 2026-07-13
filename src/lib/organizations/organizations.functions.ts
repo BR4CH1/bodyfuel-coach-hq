@@ -759,11 +759,8 @@ export const deletePerformanceTeamOrganization = createServerFn({ method: "POST"
     if (readErr) throw new Error(readErr.message);
     if (!org) throw new Error("Organisation nicht gefunden.");
 
-    const slug = String((org as any).slug ?? "").toLowerCase();
-    if (slug === "bulls" || slug.includes("bulls")) {
-      throw new Error("Diese Organisation ist geschützt und kann nicht gelöscht werden.");
-    }
     if (String((org as any).name).trim() !== data.confirm_name.trim()) {
+
       throw new Error("Der eingegebene Name stimmt nicht mit dem Organisationsnamen überein.");
     }
 
@@ -888,17 +885,8 @@ export const setOrganizationFeature = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     if (!data.features?.length) return { ok: true };
-    // Bulls-Guard: Coesfeld Bulls dürfen funktional NICHT verändert werden.
-    const { data: org } = await context.supabase
-      .from("organizations")
-      .select("slug")
-      .eq("id", data.orgId)
-      .maybeSingle();
-    if ((org as any)?.slug?.toLowerCase() === "bulls") {
-      throw new Error(
-        "Coesfeld Bulls dürfen aktuell nicht über die Modulkonsole geändert werden.",
-      );
-    }
+
+
 
     const rows = data.features.map((f) => ({
       organization_id: data.orgId,
@@ -920,18 +908,6 @@ export const setOrganizationFeature = createServerFn({ method: "POST" })
 // Phase 3: Terminologie überschreiben
 // ────────────────────────────────────────────────────────────────────────────
 
-const BULLS_GUARD_SLUG = "bulls";
-
-async function assertNotBulls(supabase: any, orgId: string) {
-  const { data: org } = await supabase
-    .from("organizations")
-    .select("slug")
-    .eq("id", orgId)
-    .maybeSingle();
-  if ((org as any)?.slug?.toLowerCase() === BULLS_GUARD_SLUG) {
-    throw new Error("Coesfeld Bulls sind aktuell schreibgeschützt.");
-  }
-}
 
 async function assertCanManageOrg(supabase: any, userId: string, orgId: string) {
   // Plattform-Owner darf alles.
@@ -959,7 +935,6 @@ export const updateOrganizationTerminology = createServerFn({ method: "POST" })
   .inputValidator((d: { orgId: string; terminology: Record<string, unknown> }) => d)
   .handler(async ({ data, context }) => {
     await assertCanManageOrg(context.supabase, context.userId, data.orgId);
-    await assertNotBulls(context.supabase, data.orgId);
     const { error } = await context.supabase
       .from("organizations")
       .update({ terminology: data.terminology as any })
@@ -992,7 +967,7 @@ export const updateOrganizationBranding = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertCanManageOrg(context.supabase, context.userId, data.orgId);
-    await assertNotBulls(context.supabase, data.orgId);
+    
     const patch: Record<string, unknown> = {};
     for (const k of [
       "primary_color",

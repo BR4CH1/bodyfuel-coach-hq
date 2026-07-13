@@ -31,8 +31,8 @@ export function OrgModulesTab({
   const setFn = useServerFn(setOrganizationFeature);
   const qc = useQueryClient();
 
-  const isBulls = (orgSlug ?? "").toLowerCase() === "bulls";
-  const canToggle = canManage && !isBulls;
+  const canToggle = canManage;
+
 
   const { data: features = [], isLoading } = useQuery({
     queryKey: ["org-features", orgId],
@@ -72,17 +72,12 @@ export function OrgModulesTab({
           ausgeblendet. Die zentrale BodyFuel-Engine bleibt erhalten — es wird
           lediglich diese Organisation eingeschränkt.
         </p>
-        {isBulls && (
-          <p className="mt-3 rounded-lg border border-bulls-red/30 bg-bulls-red/10 p-2 text-[11px] text-bulls-red">
-            Coesfeld Bulls sind aktuell schreibgeschützt. Änderungen an Modulen
-            werden nicht übernommen.
-          </p>
-        )}
-        {!canManage && !isBulls && (
+        {!canManage && (
           <p className="mt-3 rounded-lg border border-border bg-muted/30 p-2 text-[11px] text-muted-foreground">
             Nur Vereinsleitung und Plattform-Owner können Module aktivieren.
           </p>
         )}
+
         <div className="mt-4 grid gap-2">
           {ORG_MODULES.map((m) => {
             const on = moduleEnabled(featuresList, m);

@@ -48,8 +48,6 @@ export function OrgDangerZone({
   const [typedName, setTypedName] = useState("");
   const [ack, setAck] = useState(false);
 
-  const isBulls = /bulls/i.test(organizationSlug);
-
   const del = useMutation({
     mutationFn: () =>
       deleteFn({ data: { organization_id: organizationId, confirm_name: typedName } }),
@@ -60,7 +58,8 @@ export function OrgDangerZone({
     onError: (e: any) => toast.error(e?.message ?? "Löschen fehlgeschlagen."),
   });
 
-  if (!isOwner || isBulls) return null;
+  if (!isOwner) return null;
+
 
   const reset = () => {
     setStep(0);
