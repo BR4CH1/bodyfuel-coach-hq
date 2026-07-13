@@ -782,7 +782,7 @@ function IngredientRow({
               <Input
                 value={searchTerm}
                 onChange={(e) => onSearchTerm(e.target.value)}
-                placeholder="Lebensmittel suchen (z.B. „Süßkirschen")"
+                placeholder="Lebensmittel suchen (z.B. Süßkirschen)"
                 className="h-8 text-xs"
               />
               <Button size="sm" variant="outline" onClick={onSearch}>
