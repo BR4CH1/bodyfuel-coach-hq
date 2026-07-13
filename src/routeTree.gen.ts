@@ -109,6 +109,7 @@ import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/em
 import { Route as CoachTrainingBuilderUserIdRouteImport } from './routes/coach.training-builder.$userId'
 import { Route as CoachTeamsOrgIdRouteImport } from './routes/coach.teams.$orgId'
 import { Route as CoachPlayerCardsRankingRouteImport } from './routes/coach.player-cards.ranking'
+import { Route as CoachPlayerCardsLayoutRouteImport } from './routes/coach.player-cards.layout'
 import { Route as CoachPlanPreviewPlanIdRouteImport } from './routes/coach.plan-preview.$planId'
 import { Route as CoachPlanBuilderUserIdRouteImport } from './routes/coach.plan-builder.$userId'
 import { Route as CoachCustomersNewRouteImport } from './routes/coach.customers.new'
@@ -653,6 +654,11 @@ const CoachPlayerCardsRankingRoute = CoachPlayerCardsRankingRouteImport.update({
   path: '/ranking',
   getParentRoute: () => CoachPlayerCardsRoute,
 } as any)
+const CoachPlayerCardsLayoutRoute = CoachPlayerCardsLayoutRouteImport.update({
+  id: '/layout',
+  path: '/layout',
+  getParentRoute: () => CoachPlayerCardsRoute,
+} as any)
 const CoachPlanPreviewPlanIdRoute = CoachPlanPreviewPlanIdRouteImport.update({
   id: '/plan-preview/$planId',
   path: '/plan-preview/$planId',
@@ -969,6 +975,7 @@ export interface FileRoutesByFullPath {
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/coach/plan-builder/$userId': typeof CoachPlanBuilderUserIdRoute
   '/coach/plan-preview/$planId': typeof CoachPlanPreviewPlanIdRoute
+  '/coach/player-cards/layout': typeof CoachPlayerCardsLayoutRoute
   '/coach/player-cards/ranking': typeof CoachPlayerCardsRankingRoute
   '/coach/teams/$orgId': typeof CoachTeamsOrgIdRouteWithChildren
   '/coach/training-builder/$userId': typeof CoachTrainingBuilderUserIdRoute
@@ -1099,6 +1106,7 @@ export interface FileRoutesByTo {
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/coach/plan-builder/$userId': typeof CoachPlanBuilderUserIdRoute
   '/coach/plan-preview/$planId': typeof CoachPlanPreviewPlanIdRoute
+  '/coach/player-cards/layout': typeof CoachPlayerCardsLayoutRoute
   '/coach/player-cards/ranking': typeof CoachPlayerCardsRankingRoute
   '/coach/training-builder/$userId': typeof CoachTrainingBuilderUserIdRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
@@ -1239,6 +1247,7 @@ export interface FileRoutesById {
   '/coach/customers/new': typeof CoachCustomersNewRoute
   '/coach/plan-builder/$userId': typeof CoachPlanBuilderUserIdRoute
   '/coach/plan-preview/$planId': typeof CoachPlanPreviewPlanIdRoute
+  '/coach/player-cards/layout': typeof CoachPlayerCardsLayoutRoute
   '/coach/player-cards/ranking': typeof CoachPlayerCardsRankingRoute
   '/coach/teams/$orgId': typeof CoachTeamsOrgIdRouteWithChildren
   '/coach/training-builder/$userId': typeof CoachTrainingBuilderUserIdRoute
@@ -1381,6 +1390,7 @@ export interface FileRouteTypes {
     | '/coach/customers/new'
     | '/coach/plan-builder/$userId'
     | '/coach/plan-preview/$planId'
+    | '/coach/player-cards/layout'
     | '/coach/player-cards/ranking'
     | '/coach/teams/$orgId'
     | '/coach/training-builder/$userId'
@@ -1511,6 +1521,7 @@ export interface FileRouteTypes {
     | '/coach/customers/new'
     | '/coach/plan-builder/$userId'
     | '/coach/plan-preview/$planId'
+    | '/coach/player-cards/layout'
     | '/coach/player-cards/ranking'
     | '/coach/training-builder/$userId'
     | '/lovable/email/suppression'
@@ -1650,6 +1661,7 @@ export interface FileRouteTypes {
     | '/coach/customers/new'
     | '/coach/plan-builder/$userId'
     | '/coach/plan-preview/$planId'
+    | '/coach/player-cards/layout'
     | '/coach/player-cards/ranking'
     | '/coach/teams/$orgId'
     | '/coach/training-builder/$userId'
@@ -2468,6 +2480,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CoachPlayerCardsRankingRouteImport
       parentRoute: typeof CoachPlayerCardsRoute
     }
+    '/coach/player-cards/layout': {
+      id: '/coach/player-cards/layout'
+      path: '/layout'
+      fullPath: '/coach/player-cards/layout'
+      preLoaderRoute: typeof CoachPlayerCardsLayoutRouteImport
+      parentRoute: typeof CoachPlayerCardsRoute
+    }
     '/coach/plan-preview/$planId': {
       id: '/coach/plan-preview/$planId'
       path: '/plan-preview/$planId'
@@ -2804,10 +2823,12 @@ const CoachCustomersRouteWithChildren = CoachCustomersRoute._addFileChildren(
 )
 
 interface CoachPlayerCardsRouteChildren {
+  CoachPlayerCardsLayoutRoute: typeof CoachPlayerCardsLayoutRoute
   CoachPlayerCardsRankingRoute: typeof CoachPlayerCardsRankingRoute
 }
 
 const CoachPlayerCardsRouteChildren: CoachPlayerCardsRouteChildren = {
+  CoachPlayerCardsLayoutRoute: CoachPlayerCardsLayoutRoute,
   CoachPlayerCardsRankingRoute: CoachPlayerCardsRankingRoute,
 }
 
