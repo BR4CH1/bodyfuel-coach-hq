@@ -51,19 +51,19 @@ const LABELS: Record<ElementKey, string> = {
   photo: "Spielerfoto-Position",
 };
 
-// Demo-Daten für die Vorschau — echte Werte werden bei jedem Athleten
-// aus den Performance-Tests gezogen (siehe recomputePlayerCard).
+// Leere Vorschau — es gibt nur EINE Vorlage für ALLE Spieler.
+// Werte werden pro Athlet automatisch aus den Performance-Tests gezogen.
 const DEMO_DATA: any = {
   card: {
-    bfr: 83, spd: 72, acc: 75, agi: 80, pow: 85, str: 80, end_score: 70,
-    tier: "GOLD", is_provisional: false, position_key: "QUARTERBACK",
-    strongest_attribute: "POW", computed_at: new Date().toISOString(),
+    bfr: null, spd: null, acc: null, agi: null, pow: null, str: null, end_score: null,
+    tier: null, is_provisional: false, position_key: null,
+    strongest_attribute: null, computed_at: new Date().toISOString(),
     manual_overrides: {}, is_published: true,
   },
-  profile: { display_name: "Demo Spieler", nickname: null, avatar_url: null, birthdate: "2000-01-01", height_cm: 193, sport_position: "QUARTERBACK" },
-  bullsProfile: { first_name: "Demo", last_name: "Spieler", weight_kg: 95, height_cm: 193, position: "QUARTERBACK" },
+  profile: { display_name: null, nickname: null, avatar_url: null, birthdate: null, height_cm: null, sport_position: null },
+  bullsProfile: { first_name: null, last_name: null, weight_kg: null, height_cm: null, position: null },
   organization: null,
-  jerseyNumber: "12",
+  jerseyNumber: null,
 };
 
 function LayoutEditorPage() {
