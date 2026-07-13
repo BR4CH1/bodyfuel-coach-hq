@@ -66,6 +66,8 @@ function CoachPlayerCardsPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [shareData, setShareData] = useState<PlayerCardData | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [savedLayout, setSavedLayout] = useState<PlayerCardLayout>(DEFAULT_LAYOUT);
+  useEffect(() => { setSavedLayout(loadLayout()); }, []);
 
   const cards = q.data?.cards ?? [];
 
