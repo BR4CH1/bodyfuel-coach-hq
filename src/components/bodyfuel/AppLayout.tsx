@@ -302,6 +302,35 @@ export function AppLayout({ children }: { children: ReactNode }) {
     },
   });
 
+  // Kursleiter-Zusatzmodul: nur sichtbar, wenn mindestens eine Organisation
+  // des Nutzers das Modul "coach_tools" aktiviert hat. Der Hook muss vor allen
+  // early returns stehen, sonst crasht React nach dem Login mit Hook-Order-Fehlern.
+  const uid = supabaseUser?.id;
+  const { data: coachToolsOrgEnabled = false } = useQuery({
+    queryKey: ["coach-tools-any-org-enabled", uid],
+    enabled: !!uid && !isCoach,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const [memRes, staffRes] = await Promise.all([
+        supabase.from("organization_memberships").select("organization_id").eq("user_id", uid!),
+        supabase.from("staff_assignments").select("organization_id").eq("user_id", uid!),
+      ]);
+      const orgIds = Array.from(new Set([
+        ...((memRes.data ?? []).map((r: any) => r.organization_id).filter(Boolean) as string[]),
+        ...((staffRes.data ?? []).map((r: any) => r.organization_id).filter(Boolean) as string[]),
+      ]));
+      if (orgIds.length === 0) return false;
+      const { data } = await supabase
+        .from("organization_features")
+        .select("organization_id, feature, enabled")
+        .in("organization_id", orgIds)
+        .eq("feature", "coach_tools")
+        .eq("enabled", true)
+        .limit(1);
+      return (data ?? []).length > 0;
+    },
+  });
+
   if (loading) return null;
   if (!user && !supabaseUser) return null;
   if (isFreeUser && !freeBullsAccess && !freeRankingAccess) return null;
@@ -410,34 +439,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const navWithBulls = !isCoach && !staffNav && !teamOnlyAthleteNav && hasGroup("bulls")
     ? [...baseNav, bullsNavItem]
     : baseNav;
-  // Kursleiter-Zusatzmodul: nur sichtbar, wenn mindestens eine Organisation
-  // des Nutzers das Modul "coach_tools" aktiviert hat. Aktivierung erfolgt
-  // pro Organisation im Organisations-Cockpit → "Module".
-  const uid = supabaseUser?.id;
-  const { data: coachToolsOrgEnabled = false } = useQuery({
-    queryKey: ["coach-tools-any-org-enabled", uid],
-    enabled: !!uid && !isCoach,
-    staleTime: 60_000,
-    queryFn: async () => {
-      const [memRes, staffRes] = await Promise.all([
-        supabase.from("organization_memberships").select("organization_id").eq("user_id", uid!),
-        supabase.from("staff_assignments").select("organization_id").eq("user_id", uid!),
-      ]);
-      const orgIds = Array.from(new Set([
-        ...((memRes.data ?? []).map((r: any) => r.organization_id).filter(Boolean) as string[]),
-        ...((staffRes.data ?? []).map((r: any) => r.organization_id).filter(Boolean) as string[]),
-      ]));
-      if (orgIds.length === 0) return false;
-      const { data } = await supabase
-        .from("organization_features")
-        .select("organization_id, feature, enabled")
-        .in("organization_id", orgIds)
-        .eq("feature", "coach_tools")
-        .eq("enabled", true)
-        .limit(1);
-      return (data ?? []).length > 0;
-    },
-  });
   const navWithCourseTools = coachToolsOrgEnabled && !isCoach
     ? [
         ...navWithBulls.slice(0, Math.max(1, navWithBulls.length - 1)),
