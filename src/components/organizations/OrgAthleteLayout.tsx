@@ -1,14 +1,21 @@
 import { Link, useLocation } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 import {
   Home,
   Dumbbell,
   Apple,
   Users,
   User,
+  Rocket,
   type LucideIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { orgTerminology } from "@/lib/organizations/org-type";
+import { useSession } from "@/lib/bodyfuel/session";
+import { listMyCourseInstructorOrgs } from "@/lib/course-instructor.functions";
+import { setActiveContext } from "@/components/organizations/OrganizationContextSwitcher";
 
 
 type NavItem = {
@@ -65,7 +72,27 @@ export function OrgAthleteLayout({
 }) {
   const enabledSet = new Set(features.filter((f) => f.enabled).map((f) => f.feature));
   const term = orgTerminology(organizationType ?? "sports_club", (terminologyOverrides as any) ?? undefined);
-  const nav = buildNav({ training: "Training", nutrition: "Ernährung", community: term.isCompany ? "Feed" : "Community" });
+  const { supabaseUser } = useSession();
+  const listCourseInstructorOrgsFn = useServerFn(listMyCourseInstructorOrgs);
+  const { data: courseInstructorOrgSlugs = [] } = useQuery({
+    queryKey: ["coach-tools-instructor-org-slugs", supabaseUser?.id ?? "anon"],
+    enabled: !!supabaseUser?.id,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const result = await listCourseInstructorOrgsFn();
+      return result.orgSlugs ?? [];
+    },
+  });
+  useEffect(() => {
+    setActiveContext(slug);
+  }, [slug]);
+  const hasCourseToolsInThisOrg = courseInstructorOrgSlugs.includes(slug);
+  const nav = [
+    ...buildNav({ training: "Training", nutrition: "Ernährung", community: term.isCompany ? "Feed" : "Community" }),
+    ...(hasCourseToolsInThisOrg
+      ? [{ key: "coach-tools", label: "Coach Tools", to: "/coach-tools", icon: Rocket, feature: null }]
+      : []),
+  ];
   const isFeatureOn = (item: NavItem) => {
     if (item.feature === null) return true;
     if (enabledSet.has(item.feature)) return true;
