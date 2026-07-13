@@ -308,7 +308,7 @@ function CoachPlayerCardsPage() {
             return (
               <div key={c.card.id} className="group relative">
                 <div style={{ aspectRatio: "2 / 3" }}>
-                  <PlayerCard data={data} />
+                  <PlayerCard data={data} layout={savedLayout} />
                 </div>
                 {/* Overlay actions */}
                 <div className="absolute inset-x-1 top-1 flex items-center justify-between">
