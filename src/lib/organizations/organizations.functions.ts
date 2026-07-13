@@ -938,7 +938,6 @@ export const updateOrganizationTerminology = createServerFn({ method: "POST" })
   .inputValidator((d: { orgId: string; terminology: Record<string, unknown> }) => d)
   .handler(async ({ data, context }) => {
     await assertCanManageOrg(context.supabase, context.userId, data.orgId);
-    await assertNotBulls(context.supabase, data.orgId);
     const { error } = await context.supabase
       .from("organizations")
       .update({ terminology: data.terminology as any })
@@ -971,7 +970,7 @@ export const updateOrganizationBranding = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertCanManageOrg(context.supabase, context.userId, data.orgId);
-    await assertNotBulls(context.supabase, data.orgId);
+    
     const patch: Record<string, unknown> = {};
     for (const k of [
       "primary_color",
