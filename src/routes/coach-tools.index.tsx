@@ -1,5 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
 import {
   Timer,
@@ -29,15 +31,41 @@ const tiles = [
 ];
 
 function CoachToolsHub() {
-  const { profile, loading } = useSession();
+  const { supabaseUser, profile, loading } = useSession();
   const navigate = useNavigate();
-  const allowed = !!(profile as any)?.is_course_instructor;
+  const uid = supabaseUser?.id;
+  const { data: allowed, isLoading: gateLoading } = useQuery({
+    queryKey: ["coach-tools-any-org-enabled", uid],
+    enabled: !!uid,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const [memRes, staffRes] = await Promise.all([
+        supabase.from("organization_memberships").select("organization_id").eq("user_id", uid!),
+        supabase.from("staff_assignments").select("organization_id").eq("user_id", uid!),
+      ]);
+      const orgIds = Array.from(new Set([
+        ...((memRes.data ?? []).map((r: any) => r.organization_id).filter(Boolean) as string[]),
+        ...((staffRes.data ?? []).map((r: any) => r.organization_id).filter(Boolean) as string[]),
+      ]));
+      if (orgIds.length === 0) return false;
+      const { data } = await supabase
+        .from("organization_features")
+        .select("organization_id")
+        .in("organization_id", orgIds)
+        .eq("feature", "coach_tools")
+        .eq("enabled", true)
+        .limit(1);
+      return (data ?? []).length > 0;
+    },
+  });
 
   useEffect(() => {
-    if (!loading && profile && !allowed) navigate({ to: "/dashboard", replace: true });
-  }, [loading, profile, allowed, navigate]);
+    if (!loading && !gateLoading && profile && allowed === false) {
+      navigate({ to: "/dashboard", replace: true });
+    }
+  }, [loading, gateLoading, profile, allowed, navigate]);
 
-  if (loading || !profile) return null;
+  if (loading || gateLoading || !profile) return null;
   if (!allowed) return null;
 
   return (

@@ -1,14 +1,7 @@
-import { Activity, AlertTriangle, ClipboardList, ListChecks, GraduationCap } from "lucide-react";
-import { useServerFn } from "@tanstack/react-start";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { Activity, AlertTriangle, ClipboardList, ListChecks } from "lucide-react";
 import type { CoachAthleteDetail } from "@/lib/organizations/coach-athlete-drilldown.functions";
 import { PulseCell, Section } from "./athlete-tab-shared";
 import { RemoveFromTeamSection } from "./RemoveFromTeamSection";
-import {
-  getAthleteCourseInstructor,
-  setAthleteCourseInstructor,
-} from "@/lib/course-instructor.functions";
 
 export function AthleteOverviewTab({
   data,
@@ -23,7 +16,6 @@ export function AthleteOverviewTab({
   const recent = data.training.timeline.slice(0, 5);
   return (
     <div className="space-y-5">
-      <CourseInstructorToggle userId={userId} />
       <Section title="Aktueller Status" icon={<Activity className="h-4 w-4" />}>
 
         <div className="grid grid-cols-2 gap-2.5">
@@ -153,57 +145,6 @@ export function AthleteOverviewTab({
         userId={userId}
         displayName={data.athlete.display_name}
       />
-    </div>
-  );
-}
-
-
-function CourseInstructorToggle({ userId }: { userId: string }) {
-  const qc = useQueryClient();
-  const getFn = useServerFn(getAthleteCourseInstructor);
-  const setFn = useServerFn(setAthleteCourseInstructor);
-  const { data, isLoading } = useQuery({
-    queryKey: ["athlete-course-instructor", userId],
-    queryFn: () => getFn({ data: { userId } }),
-  });
-  const enabled = !!data?.enabled;
-  const mut = useMutation({
-    mutationFn: (next: boolean) => setFn({ data: { userId, enabled: next } }),
-    onSuccess: (res: any) => {
-      qc.setQueryData(["athlete-course-instructor", userId], { enabled: !!res?.enabled });
-      toast.success(res?.enabled ? "Kursleiter-Modul aktiviert." : "Kursleiter-Modul deaktiviert.");
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  return (
-    <div className="flex items-start justify-between gap-3 rounded-lg border border-border bg-card p-4">
-      <div className="min-w-0">
-        <div className="flex items-center gap-2">
-          <GraduationCap className="h-4 w-4 text-gold" />
-          <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
-            Kursleiter Modul
-          </div>
-        </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Schaltet die „Coach Tools" (Timer, Übungen, Live-Kurs, Musik …) für diesen Nutzer frei.
-        </p>
-      </div>
-      <button
-        type="button"
-        disabled={isLoading || mut.isPending}
-        onClick={() => mut.mutate(!enabled)}
-        aria-pressed={enabled}
-        className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition ${
-          enabled ? "bg-gold" : "bg-muted"
-        } disabled:opacity-50`}
-      >
-        <span
-          className={`inline-block h-6 w-6 transform rounded-full bg-background shadow transition ${
-            enabled ? "translate-x-5" : "translate-x-0.5"
-          }`}
-        />
-      </button>
     </div>
   );
 }

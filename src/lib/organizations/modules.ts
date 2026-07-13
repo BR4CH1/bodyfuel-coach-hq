@@ -45,7 +45,9 @@ export type OrgModuleKey =
   | "positions"
   | "matchdays"
   // Analytics
-  | "analytics";
+  | "analytics"
+  // Coach Tools (Kursleiter-Zusatzmodul)
+  | "coach_tools";
 
 export type OrgModuleCategory =
   | "nutrition"
@@ -281,6 +283,15 @@ export const ORG_MODULES: OrgModuleDef[] = [
     label: "Statistiken und Analysen",
     description: "Organisations- und Athleten-Statistiken.",
     category: "analytics",
+  },
+
+  // ── Coach Tools (Kursleiter) ─────────────────────────────────────────
+  {
+    key: "coach_tools",
+    feature: "coach_tools",
+    label: "Coach Tools (Kursleiter)",
+    description: "Kursleiter-Arbeitsoberfläche: Timer, Übungen, Kursvorlagen, Live-Modus, Musik, Teilnehmer.",
+    category: "coaching",
   },
 ];
 
