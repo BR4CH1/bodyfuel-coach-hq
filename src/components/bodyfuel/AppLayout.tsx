@@ -439,7 +439,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           const ib = order.indexOf(b.to);
           return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
         })
-    : navWithBulls;
+    : navWithCourseTools;
   // Mobile bottom nav: Coach-Chat ist in die obere Leiste gewandert
   const mobileNav = nav.filter((item) => item.to !== "/messages");
   const points = user ? totalPoints(user) : 0;
