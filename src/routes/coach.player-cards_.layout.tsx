@@ -21,7 +21,7 @@ import {
 import { RotateCcw, Save, Upload } from "lucide-react";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/coach/player-cards/layout")({
+export const Route = createFileRoute("/coach/player-cards_/layout")({
   head: () => ({ meta: [{ title: "Player Card Layout Editor" }] }),
   component: () => (
     <AppLayout>
