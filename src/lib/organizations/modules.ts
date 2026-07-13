@@ -45,7 +45,9 @@ export type OrgModuleKey =
   | "positions"
   | "matchdays"
   // Analytics
-  | "analytics";
+  | "analytics"
+  // Coach Tools (Kursleiter-Zusatzmodul)
+  | "coach_tools";
 
 export type OrgModuleCategory =
   | "nutrition"
