@@ -19,6 +19,7 @@ import { listCoachPlayerCards } from "@/lib/player-cards.functions";
 import { PlayerCard, type PlayerCardData } from "@/components/player-cards/PlayerCard";
 import { PlayerCardShareDialog } from "@/components/player-cards/PlayerCardShareDialog";
 import { cardToPngBlob, slugify } from "@/lib/player-cards/export";
+import { loadLayout, DEFAULT_LAYOUT, type PlayerCardLayout } from "@/lib/player-cards/layout";
 
 export const Route = createFileRoute("/coach/player-cards")({
   head: () => ({ meta: [{ title: "Player Cards — Coach" }] }),
