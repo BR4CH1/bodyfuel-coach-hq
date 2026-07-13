@@ -1,12 +1,32 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Camera, ImageIcon, Loader2, Sparkles, X, Plus, Trash2, AlertTriangle, RotateCcw, Save } from "lucide-react";
+import {
+  Camera,
+  ImageIcon,
+  Loader2,
+  Sparkles,
+  X,
+  Trash2,
+  AlertTriangle,
+  RotateCcw,
+  Save,
+  Check,
+  Search,
+} from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { analyzeMealPhoto, type MealPhotoIngredient, type MealPhotoResult } from "@/lib/meal-photo.functions";
+import {
+  analyzeMealPhoto,
+  matchIngredientName,
+  learnFoodAlias,
+  type FoodMatch,
+  type MealPhotoIngredient,
+  type MealPhotoResult,
+  type MatchStatus,
+} from "@/lib/meal-photo.functions";
 import { saveCustomMeal } from "@/lib/custom-meals.functions";
 
 type MealSlot = "breakfast" | "lunch" | "dinner" | "snack";
@@ -20,7 +40,8 @@ const SLOTS: { key: MealSlot; label: string }[] = [
 
 type EditableIngredient = MealPhotoIngredient & {
   clientId: string;
-  answer?: string;
+  originalName: string; // Ursprünglicher AI-Name für Alias-Lernen
+  user_confirmed?: boolean; // Nutzer hat aktiv bestätigt (Auswahl / Bearbeitung)
 };
 
 function uid() {
@@ -30,11 +51,8 @@ function uid() {
 function macrosFor(ing: EditableIngredient) {
   const m = ing.matched;
   if (!m) return { kcal: 0, protein: 0, carbs: 0, fat: 0, grams: 0 };
-  // ml → g via 1.0 (Standard-Dichte fürs UI; Detail-Tuning bleibt beim Datenbestand)
   const grams =
-    ing.unit === "piece"
-      ? ing.estimated_amount * (m.piece_g ?? 100)
-      : ing.estimated_amount;
+    ing.unit === "piece" ? ing.estimated_amount * (m.piece_g ?? 100) : ing.estimated_amount;
   const f = grams / 100;
   return {
     grams,
@@ -46,7 +64,6 @@ function macrosFor(ing: EditableIngredient) {
 }
 
 async function fileToDataUrl(file: File, maxDim = 1400): Promise<string> {
-  // Downscale + jpeg encode für die AI (kleinere Payload, schneller).
   const bmp = await createImageBitmap(file).catch(() => null);
   if (!bmp) {
     return new Promise((res, rej) => {
@@ -91,8 +108,11 @@ export function MealPhotoDialog({
   const [portionScale, setPortionScale] = useState(1);
   const [saving, setSaving] = useState(false);
   const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [searchTermByItem, setSearchTermByItem] = useState<Record<string, string>>({});
 
   const analyzeFn = useServerFn(analyzeMealPhoto);
+  const matchFn = useServerFn(matchIngredientName);
+  const learnFn = useServerFn(learnFoodAlias);
   const saveMealFn = useServerFn(saveCustomMeal);
 
   const analyze = useMutation({
@@ -102,7 +122,11 @@ export function MealPhotoDialog({
       setResult(r);
       setDishName(r.dish_name);
       setItems(
-        r.ingredients.map((i) => ({ ...i, clientId: uid() })),
+        r.ingredients.map((i) => ({
+          ...i,
+          clientId: uid(),
+          originalName: i.name,
+        })),
       );
     },
     onError: (e: any) => toast.error(e?.message ?? "AI-Analyse fehlgeschlagen"),
@@ -110,7 +134,6 @@ export function MealPhotoDialog({
 
   useEffect(() => {
     if (!open) {
-      // reset on close
       setImageDataUrl(null);
       setNote("");
       setResult(null);
@@ -118,6 +141,7 @@ export function MealPhotoDialog({
       setItems([]);
       setPortionScale(1);
       setAnswers({});
+      setSearchTermByItem({});
     }
   }, [open]);
 
@@ -142,7 +166,8 @@ export function MealPhotoDialog({
     };
   }, [items, portionScale]);
 
-  const anyUnmatched = items.some((i) => !i.matched);
+  const unresolvedCount = items.filter((i) => !i.matched).length;
+  const matchedCount = items.filter((i) => !!i.matched).length;
 
   const pickFile = async (file: File | undefined | null) => {
     if (!file) return;
@@ -161,7 +186,9 @@ export function MealPhotoDialog({
     const combinedNote = [
       note.trim(),
       ...Object.entries(answers)
-        .map(([i, v]) => (result?.questions[Number(i)] ? `${result.questions[Number(i)]} → ${v}` : ""))
+        .map(([i, v]) =>
+          result?.questions[Number(i)] ? `${result.questions[Number(i)]} → ${v}` : "",
+        )
         .filter(Boolean),
     ]
       .filter(Boolean)
@@ -180,14 +207,76 @@ export function MealPhotoDialog({
       ...prev,
       {
         clientId: uid(),
+        originalName: "",
         name: "",
         estimated_amount: 100,
         unit: "g",
         confidence: 1,
         needs_confirmation: true,
+        match_status: "not_found",
         matched: null,
+        candidates: [],
       },
     ]);
+
+  /** Wählt einen Kandidaten aus und lernt Alias. */
+  const pickCandidate = async (item: EditableIngredient, cand: FoodMatch) => {
+    updateItem(item.clientId, {
+      matched: cand,
+      match_status: "auto_matched",
+      needs_confirmation: false,
+      user_confirmed: true,
+    });
+    // Alias lernen: nur wenn AI etwas anderes vorgeschlagen hat als der Match-Name
+    if (item.originalName && item.originalName.trim()) {
+      try {
+        await learnFn({ data: { term: item.originalName, food_id: cand.id } });
+      } catch {
+        /* Lernen ist Best-Effort */
+      }
+    }
+  };
+
+  /** Nach Namen-Änderung: neu matchen. */
+  const rematchByName = async (item: EditableIngredient, newName: string) => {
+    const trimmed = newName.trim();
+    if (!trimmed) {
+      updateItem(item.clientId, {
+        name: newName,
+        matched: null,
+        candidates: [],
+        match_status: "not_found",
+      });
+      return;
+    }
+    try {
+      const r = await matchFn({ data: { name: trimmed } });
+      updateItem(item.clientId, {
+        name: newName,
+        matched:
+          r.match_status === "auto_matched" || r.match_status === "auto_matched_editable"
+            ? r.best
+            : null,
+        candidates: r.candidates,
+        match_status: r.match_status,
+        needs_confirmation:
+          r.match_status === "needs_choice" || r.match_status === "not_found",
+      });
+    } catch {
+      /* still allow local edit */
+    }
+  };
+
+  const runSearch = async (item: EditableIngredient, term: string) => {
+    if (!term.trim()) return;
+    try {
+      const r = await matchFn({ data: { name: term } });
+      updateItem(item.clientId, {
+        candidates: r.candidates,
+        match_status: r.candidates.length ? "needs_choice" : "not_found",
+      });
+    } catch {}
+  };
 
   const trackToSlot = async (slot: MealSlot) => {
     const {
@@ -221,7 +310,9 @@ export function MealPhotoDialog({
       });
       const { error } = await supabase.from("food_entries").insert(rows);
       if (error) throw error;
-      toast.success(`${valid.length} Zutat(en) zu ${SLOTS.find((s) => s.key === slot)?.label} gebucht`);
+      toast.success(
+        `${valid.length} Zutat(en) zu ${SLOTS.find((s) => s.key === slot)?.label} gebucht`,
+      );
       onTracked?.();
       onClose();
     } catch (e: any) {
@@ -269,7 +360,11 @@ export function MealPhotoDialog({
             <Sparkles className="h-4 w-4 text-gold" />
             Gericht fotografieren
           </div>
-          <button onClick={onClose} className="rounded-md p-2 hover:bg-secondary" aria-label="Schließen">
+          <button
+            onClick={onClose}
+            className="rounded-md p-2 hover:bg-secondary"
+            aria-label="Schließen"
+          >
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -294,8 +389,8 @@ export function MealPhotoDialog({
                   <Sparkles className="mx-auto mb-2 h-6 w-6 text-gold" />
                   <div className="text-sm font-semibold">Deine Mahlzeit fotografieren</div>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Fotografiere die gesamte Mahlzeit möglichst von oben. Für bessere Ergebnisse Teller,
-                    Beilagen und Getränke vollständig aufnehmen.
+                    Fotografiere die gesamte Mahlzeit möglichst von oben. Für bessere Ergebnisse
+                    Teller, Beilagen und Getränke vollständig aufnehmen.
                   </p>
                 </div>
               )}
@@ -366,12 +461,12 @@ export function MealPhotoDialog({
           {/* Schritt 2: Bestätigung */}
           {result && (
             <div className="space-y-4">
-              {/* AI-Schätzung Hinweis */}
+              {/* Info */}
               <div className="flex items-start gap-2 rounded-lg border border-gold/40 bg-gold/10 px-3 py-2 text-xs text-foreground">
-                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gold" />
+                <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gold" />
                 <span>
-                  AI-Schätzung – bitte Mengen und Zutaten kurz prüfen. Kalorien & Makros
-                  stammen aus der BodyFuel-Lebensmitteldatenbank.
+                  Kalorien &amp; Makros stammen aus der BodyFuel-Lebensmitteldatenbank. Zutaten
+                  &amp; Mengen kurz prüfen und bei Rückfragen bestätigen.
                 </span>
               </div>
 
@@ -405,7 +500,7 @@ export function MealPhotoDialog({
                 </div>
               </div>
 
-              {/* Rückfragen */}
+              {/* AI-Rückfragen */}
               {result.questions.length > 0 && (
                 <div className="space-y-2 rounded-lg border border-border bg-background/40 p-3">
                   <div className="text-xs font-semibold uppercase tracking-wider text-gold">
@@ -416,7 +511,9 @@ export function MealPhotoDialog({
                       <div className="mb-1 text-xs">{q}</div>
                       <Input
                         value={answers[i] ?? ""}
-                        onChange={(e) => setAnswers((a) => ({ ...a, [i]: e.target.value }))}
+                        onChange={(e) =>
+                          setAnswers((a) => ({ ...a, [i]: e.target.value }))
+                        }
                         placeholder="Antwort (optional)"
                       />
                     </div>
@@ -432,7 +529,7 @@ export function MealPhotoDialog({
                 </div>
               )}
 
-              {/* Ingredients */}
+              {/* Zutatenliste */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -442,85 +539,44 @@ export function MealPhotoDialog({
                     + Zutat
                   </button>
                 </div>
+
                 {items.length === 0 && (
                   <div className="rounded-lg border border-dashed border-border bg-background/40 p-3 text-xs text-muted-foreground">
                     Keine Zutaten erkannt. Füge sie manuell hinzu oder mach ein neues Foto.
                   </div>
                 )}
-                {items.map((i) => {
-                  const m = macrosFor(i);
-                  const unsure = !i.matched || i.needs_confirmation;
-                  return (
-                    <div
-                      key={i.clientId}
-                      className={`rounded-lg border p-3 ${
-                        unsure ? "border-warning/60 bg-warning/5" : "border-border bg-background/40"
-                      }`}
-                    >
-                      <div className="mb-2 flex items-start gap-2">
-                        <Input
-                          value={i.name}
-                          onChange={(e) => updateItem(i.clientId, { name: e.target.value })}
-                          className="text-sm font-medium"
-                        />
-                        <button
-                          onClick={() => removeItem(i.clientId)}
-                          className="shrink-0 rounded-md border border-border p-1.5 text-muted-foreground hover:text-warning"
-                          aria-label="Zutat entfernen"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                      <div className="grid grid-cols-[1fr_100px] gap-2">
-                        <Input
-                          type="number"
-                          inputMode="decimal"
-                          value={i.estimated_amount}
-                          onChange={(e) =>
-                            updateItem(i.clientId, {
-                              estimated_amount: Math.max(0, Number(e.target.value) || 0),
-                            })
-                          }
-                        />
-                        <select
-                          value={i.unit}
-                          onChange={(e) =>
-                            updateItem(i.clientId, {
-                              unit: e.target.value as "g" | "ml" | "piece",
-                            })
-                          }
-                          className="rounded-md border border-border bg-background px-2 text-sm"
-                        >
-                          <option value="g">g</option>
-                          <option value="ml">ml</option>
-                          <option value="piece">Stück</option>
-                        </select>
-                      </div>
-                      <div className="mt-1.5 text-[11px] text-muted-foreground">
-                        {i.matched ? (
-                          <>
-                            {Math.round(m.kcal)} kcal · P {m.protein.toFixed(1)} · K {m.carbs.toFixed(1)} · F {m.fat.toFixed(1)}
-                            {i.matched.verified_by_coach ? " · ✓ verifiziert" : ""}
-                          </>
-                        ) : (
-                          <span className="text-warning">
-                            <AlertTriangle className="mr-1 inline h-3 w-3" />
-                            Kein Datenbank-Match — bitte Name anpassen (z.B. „Reis, gekocht")
-                          </span>
-                        )}
-                        {i.confidence < 0.7 && i.matched && (
-                          <span className="ml-2 text-warning">Unsichere Erkennung</span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+
+                {items.map((i) => (
+                  <IngredientRow
+                    key={i.clientId}
+                    item={i}
+                    onChangeName={(name) => updateItem(i.clientId, { name })}
+                    onNameCommit={(name) => rematchByName(i, name)}
+                    onChangeAmount={(v) =>
+                      updateItem(i.clientId, { estimated_amount: Math.max(0, v) })
+                    }
+                    onChangeUnit={(unit) => updateItem(i.clientId, { unit })}
+                    onRemove={() => removeItem(i.clientId)}
+                    onPickCandidate={(c) => pickCandidate(i, c)}
+                    onClear={() =>
+                      updateItem(i.clientId, {
+                        matched: null,
+                        match_status: i.candidates.length ? "needs_choice" : "not_found",
+                      })
+                    }
+                    searchTerm={searchTermByItem[i.clientId] ?? ""}
+                    onSearchTerm={(t) =>
+                      setSearchTermByItem((prev) => ({ ...prev, [i.clientId]: t }))
+                    }
+                    onSearch={() => runSearch(i, searchTermByItem[i.clientId] ?? i.name)}
+                  />
+                ))}
               </div>
 
               {/* Totals */}
               <div className="rounded-xl border border-border bg-background/60 p-3">
                 <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Summe (nach Portion)
+                  {unresolvedCount > 0 ? "Bisher berechnet" : "Summe (nach Portion)"}
                 </div>
                 <div className="mt-1 flex items-baseline justify-between">
                   <div className="font-display text-2xl font-bold">{totals.kcal} kcal</div>
@@ -528,15 +584,14 @@ export function MealPhotoDialog({
                     P {totals.protein} · K {totals.carbs} · F {totals.fat}
                   </div>
                 </div>
+                {unresolvedCount > 0 && matchedCount > 0 && (
+                  <div className="mt-1 text-[11px] text-muted-foreground">
+                    {unresolvedCount === 1
+                      ? "Eine Zutat muss noch kurz bestätigt werden."
+                      : `${unresolvedCount} Zutaten müssen noch kurz bestätigt werden.`}
+                  </div>
+                )}
               </div>
-
-              {anyUnmatched && (
-                <div className="rounded-lg border border-warning/60 bg-warning/10 px-3 py-2 text-xs text-foreground">
-                  <AlertTriangle className="mr-1 inline h-3 w-3 text-warning" />
-                  Zutaten ohne Datenbank-Match werden beim Tracken übersprungen. Bitte Namen prüfen
-                  oder Zutat entfernen.
-                </div>
-              )}
 
               {/* Actions */}
               <div className="space-y-2">
@@ -548,14 +603,19 @@ export function MealPhotoDialog({
                     <Button
                       key={s.key}
                       variant={s.key === defaultSlot ? "default" : "outline"}
-                      disabled={saving}
+                      disabled={saving || matchedCount === 0}
                       onClick={() => trackToSlot(s.key)}
                     >
                       {s.label}
                     </Button>
                   ))}
                 </div>
-                <Button variant="outline" className="w-full" onClick={saveAsCustomMeal} disabled={saving}>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={saveAsCustomMeal}
+                  disabled={saving}
+                >
                   <Save className="h-4 w-4" /> Als eigenes Gericht speichern
                 </Button>
                 <Button
@@ -574,6 +634,164 @@ export function MealPhotoDialog({
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Zutaten-Zeile mit Inline-Kandidatenauswahl
+// ────────────────────────────────────────────────────────────────────────────
+
+function statusLabel(status: MatchStatus): { text: string; tone: "ok" | "info" | "warn" | "danger" } | null {
+  switch (status) {
+    case "auto_matched":
+      return { text: "Automatisch zugeordnet", tone: "ok" };
+    case "auto_matched_editable":
+      return { text: "Automatisch – bitte kurz prüfen", tone: "info" };
+    case "needs_choice":
+      return { text: "Bitte kurz auswählen", tone: "warn" };
+    case "not_found":
+      return { text: "Lebensmittel nicht gefunden", tone: "danger" };
+  }
+}
+
+function IngredientRow({
+  item,
+  onChangeName,
+  onNameCommit,
+  onChangeAmount,
+  onChangeUnit,
+  onRemove,
+  onPickCandidate,
+  onClear,
+  searchTerm,
+  onSearchTerm,
+  onSearch,
+}: {
+  item: EditableIngredient;
+  onChangeName: (n: string) => void;
+  onNameCommit: (n: string) => void;
+  onChangeAmount: (v: number) => void;
+  onChangeUnit: (u: "g" | "ml" | "piece") => void;
+  onRemove: () => void;
+  onPickCandidate: (c: FoodMatch) => void;
+  onClear: () => void;
+  searchTerm: string;
+  onSearchTerm: (t: string) => void;
+  onSearch: () => void;
+}) {
+  const m = macrosFor(item);
+  const status = statusLabel(item.match_status);
+  const needsChoice = item.match_status === "needs_choice" || item.match_status === "not_found";
+  const bg =
+    needsChoice
+      ? "border-border bg-background/40"
+      : item.match_status === "auto_matched_editable"
+      ? "border-gold/40 bg-gold/5"
+      : "border-border bg-background/40";
+
+  return (
+    <div className={`rounded-lg border p-3 ${bg}`}>
+      {/* Name + Trash */}
+      <div className="mb-2 flex items-start gap-2">
+        <Input
+          value={item.name}
+          onChange={(e) => onChangeName(e.target.value)}
+          onBlur={(e) => onNameCommit(e.target.value)}
+          className="text-sm font-medium"
+        />
+        <button
+          onClick={onRemove}
+          className="shrink-0 rounded-md border border-border p-1.5 text-muted-foreground hover:text-warning"
+          aria-label="Zutat entfernen"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      {/* Menge + Einheit */}
+      <div className="grid grid-cols-[1fr_100px] gap-2">
+        <Input
+          type="number"
+          inputMode="decimal"
+          value={item.estimated_amount}
+          onChange={(e) => onChangeAmount(Number(e.target.value) || 0)}
+        />
+        <select
+          value={item.unit}
+          onChange={(e) => onChangeUnit(e.target.value as "g" | "ml" | "piece")}
+          className="rounded-md border border-border bg-background px-2 text-sm"
+        >
+          <option value="g">g</option>
+          <option value="ml">ml</option>
+          <option value="piece">Stück</option>
+        </select>
+      </div>
+
+      {/* Match-Zeile: entweder Match anzeigen oder Auswahl */}
+      {item.matched ? (
+        <div className="mt-2 flex items-start justify-between gap-2 rounded-md bg-secondary/40 px-2 py-1.5 text-[11px]">
+          <div>
+            <div className="text-foreground">
+              <Check className="mr-1 inline h-3 w-3 text-emerald-500" />
+              {item.matched.name}
+              {item.matched.verified_by_coach && (
+                <span className="ml-1 text-emerald-500">✓</span>
+              )}
+            </div>
+            <div className="text-muted-foreground">
+              {Math.round(m.kcal)} kcal · P {m.protein.toFixed(1)} · K {m.carbs.toFixed(1)} · F {m.fat.toFixed(1)}
+              {status && status.tone !== "ok" && (
+                <span className="ml-2 text-gold">· {status.text}</span>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={onClear}
+            className="text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground"
+          >
+            Ändern
+          </button>
+        </div>
+      ) : (
+        <div className="mt-2 space-y-1.5">
+          <div className="flex items-center gap-1.5 text-[11px] text-gold">
+            <AlertTriangle className="h-3 w-3" />
+            {status?.text ?? "Bitte kurz auswählen"}
+          </div>
+          {item.candidates.length > 0 ? (
+            <div className="grid gap-1">
+              {item.candidates.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => onPickCandidate(c)}
+                  className="flex items-center justify-between rounded-md border border-border bg-background/60 px-2 py-1.5 text-left text-xs hover:border-gold/60"
+                >
+                  <div>
+                    <div className="font-medium">{c.name}</div>
+                    <div className="text-[10px] text-muted-foreground">
+                      {Math.round(c.kcal_per_100g)} kcal/100 · Score {(c.score * 100).toFixed(0)}%
+                    </div>
+                  </div>
+                  <Check className="h-3.5 w-3.5 text-muted-foreground" />
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5">
+              <Input
+                value={searchTerm}
+                onChange={(e) => onSearchTerm(e.target.value)}
+                placeholder="Lebensmittel suchen (z.B. „Süßkirschen")"
+                className="h-8 text-xs"
+              />
+              <Button size="sm" variant="outline" onClick={onSearch}>
+                <Search className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
