@@ -759,11 +759,8 @@ export const deletePerformanceTeamOrganization = createServerFn({ method: "POST"
     if (readErr) throw new Error(readErr.message);
     if (!org) throw new Error("Organisation nicht gefunden.");
 
-    const slug = String((org as any).slug ?? "").toLowerCase();
-    if (slug === "bulls" || slug.includes("bulls")) {
-      throw new Error("Diese Organisation ist geschützt und kann nicht gelöscht werden.");
-    }
     if (String((org as any).name).trim() !== data.confirm_name.trim()) {
+
       throw new Error("Der eingegebene Name stimmt nicht mit dem Organisationsnamen überein.");
     }
 
