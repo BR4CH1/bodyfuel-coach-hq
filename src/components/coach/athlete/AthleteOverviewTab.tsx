@@ -173,11 +173,44 @@ export function AthleteOverviewTab({
         )}
       </Section>
 
+      <Section title="Kursleiter" icon={<Rocket className="h-4 w-4" />}>
+        <div className="flex items-start justify-between gap-4 rounded-lg border border-border bg-card p-4">
+          <div className="min-w-0">
+            <div className="text-sm font-semibold">
+              Coach Tools freischalten
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Aktiviert den Kursleiter-Bereich (Timer, Übungen, Kursvorlagen,
+              Live-Modus, Musik, Teilnehmer) für dieses Mitglied — nur in dieser
+              Organisation. Es entsteht dadurch KEINE Coach-Ansicht; dafür muss
+              das Mitglied separat zum Staff hinzugefügt werden.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={isInstructor}
+            disabled={instructorLoading || toggleInstructor.isPending}
+            onClick={() => toggleInstructor.mutate(!isInstructor)}
+            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition ${
+              isInstructor ? "bg-gold" : "bg-muted"
+            } disabled:opacity-50`}
+          >
+            <span
+              className={`inline-block h-5 w-5 transform rounded-full bg-background transition ${
+                isInstructor ? "translate-x-5" : "translate-x-0.5"
+              }`}
+            />
+          </button>
+        </div>
+      </Section>
+
       <RemoveFromTeamSection
         orgId={orgId}
         userId={userId}
         displayName={data.athlete.display_name}
       />
     </div>
+
   );
 }
