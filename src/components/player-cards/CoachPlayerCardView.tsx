@@ -14,6 +14,7 @@ import { PlayerCardFlip } from "./PlayerCardFlip";
 import { PlayerCardShareDialog } from "./PlayerCardShareDialog";
 import { PlayerCardManualEditor } from "./PlayerCardManualEditor";
 import { getPlayerCardForAthlete, recomputePlayerCard, ensurePlayerCardCutout } from "@/lib/player-cards.functions";
+import { usePlayerCardDesign } from "@/lib/player-cards/useDesign";
 
 export function CoachPlayerCardView({
   userId,
@@ -30,6 +31,7 @@ export function CoachPlayerCardView({
   const cutoutFn = useServerFn(ensurePlayerCardCutout);
   const cutoutTriedRef = useRef<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
+  const design = usePlayerCardDesign();
 
   const q = useQuery({
     queryKey: ["player-card", "athlete", userId],
@@ -147,7 +149,7 @@ export function CoachPlayerCardView({
       ) : (
         <>
           <PlayerCardFlip
-            front={<PlayerCard data={cardData} />}
+            front={<PlayerCard data={cardData} layout={design.layout} templateUrl={design.templateUrl} />}
             back={
               <PlayerCardBack
                 data={{ ...cardData, verifiedTests: q.data?.verifiedTests } as any}

@@ -12,6 +12,7 @@ import { PlayerCardFlip } from "./PlayerCardFlip";
 import { PlayerCardShareDialog } from "./PlayerCardShareDialog";
 import { PlayerCardUpgradeOverlay, type UpgradePayload } from "./PlayerCardUpgradeOverlay";
 import { getMyPlayerCard, recomputePlayerCard, markBadgeUnlocksSeen, ensurePlayerCardCutout } from "@/lib/player-cards.functions";
+import { usePlayerCardDesign } from "@/lib/player-cards/useDesign";
 import { toast } from "sonner";
 
 const TEST_LABELS: Record<string, string> = {
@@ -28,6 +29,7 @@ const TEST_LABELS: Record<string, string> = {
 };
 
 export function PlayerCardSection({ jerseyNumber, teamLabel }: { jerseyNumber?: string | null; teamLabel?: string | null }) {
+  const design = usePlayerCardDesign({ publishedOnly: true });
   const qc = useQueryClient();
   const fetchFn = useServerFn(getMyPlayerCard);
   const recomputeFn = useServerFn(recomputePlayerCard);
@@ -178,7 +180,7 @@ export function PlayerCardSection({ jerseyNumber, teamLabel }: { jerseyNumber?: 
       ) : (
         <>
           <PlayerCardFlip
-            front={<PlayerCard data={cardData} />}
+            front={<PlayerCard data={cardData} layout={design.layout} templateUrl={design.templateUrl} />}
             back={
               <PlayerCardBack
                 data={{ ...cardData, verifiedTests: q.data?.verifiedTests } as any}

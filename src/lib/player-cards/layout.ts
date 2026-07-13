@@ -68,5 +68,16 @@ export function resetLayout() {
   window.localStorage.removeItem(KEY);
 }
 
+export function mergeLayout(partial: unknown): PlayerCardLayout {
+  if (!partial || typeof partial !== "object") return DEFAULT_LAYOUT;
+  const p = partial as Partial<PlayerCardLayout>;
+  return {
+    ...DEFAULT_LAYOUT,
+    ...p,
+    photo: { ...DEFAULT_LAYOUT.photo, ...(p.photo ?? {}) },
+  };
+}
+
+
 export const VB_W = 1023;
 export const VB_H = 1537;

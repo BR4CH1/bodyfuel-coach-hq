@@ -6148,6 +6148,45 @@ export type Database = {
         }
         Relationships: []
       }
+      player_card_design: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_published: boolean
+          layout_json: Json
+          published_at: string | null
+          scope: string
+          template_uploaded_at: string | null
+          template_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_published?: boolean
+          layout_json?: Json
+          published_at?: string | null
+          scope?: string
+          template_uploaded_at?: string | null
+          template_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_published?: boolean
+          layout_json?: Json
+          published_at?: string | null
+          scope?: string
+          template_uploaded_at?: string | null
+          template_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       player_card_history: {
         Row: {
           acc: number | null

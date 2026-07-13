@@ -83,9 +83,11 @@ const FONT = "Anton, Bebas Neue, sans-serif";
 export function PlayerCard({
   data,
   layout = DEFAULT_LAYOUT,
+  templateUrl,
 }: {
   data: PlayerCardData;
   layout?: PlayerCardLayout;
+  templateUrl?: string | null;
 }) {
   const { card, profile, bullsProfile, jerseyNumber } = data;
   const ov = card.manual_overrides ?? {};
@@ -135,8 +137,8 @@ export function PlayerCard({
           />
         )}
 
-        {/* Fixes Template-Bild */}
-        <image href={cardTemplate.url} x="0" y="0" width={VB_W} height={VB_H} preserveAspectRatio="xMidYMid meet" />
+        {/* Template-Bild (aus DB oder Fallback) */}
+        <image href={templateUrl ?? cardTemplate.url} x="0" y="0" width={VB_W} height={VB_H} preserveAspectRatio="xMidYMid meet" />
 
         {bfrDisplay != null && (
           <text x={layout.ovr.x} y={layout.ovr.y} textAnchor="middle" fontFamily={FONT} fontSize={layout.ovr.fontSize} fill={RED}>
