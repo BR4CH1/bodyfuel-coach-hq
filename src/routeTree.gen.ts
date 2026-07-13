@@ -32,6 +32,7 @@ import { Route as DatenschutzRouteImport } from './routes/datenschutz'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as DailyChecklistRouteImport } from './routes/daily-checklist'
 import { Route as CommunityRouteImport } from './routes/community'
+import { Route as CoachToolsRouteImport } from './routes/coach-tools'
 import { Route as CoachRouteImport } from './routes/coach'
 import { Route as CheckInRouteImport } from './routes/check-in'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -43,6 +44,7 @@ import { Route as TrackerIndexRouteImport } from './routes/tracker.index'
 import { Route as SmartIndexRouteImport } from './routes/smart.index'
 import { Route as NutritionIndexRouteImport } from './routes/nutrition.index'
 import { Route as CoachIndexRouteImport } from './routes/coach.index'
+import { Route as CoachToolsIndexRouteImport } from './routes/coach-tools.index'
 import { Route as OrgSlugIndexRouteImport } from './routes/$orgSlug.index'
 import { Route as TrackerSignupRouteImport } from './routes/tracker.signup'
 import { Route as TrackerLoginRouteImport } from './routes/tracker.login'
@@ -69,6 +71,14 @@ import { Route as CoachCustomersRouteImport } from './routes/coach.customers'
 import { Route as CoachBullsPerformanceRouteImport } from './routes/coach.bulls-performance'
 import { Route as CoachAffiliatesRouteImport } from './routes/coach.affiliates'
 import { Route as CoachClientIdRouteImport } from './routes/coach.$clientId'
+import { Route as CoachToolsTimerRouteImport } from './routes/coach-tools.timer'
+import { Route as CoachToolsTemplatesRouteImport } from './routes/coach-tools.templates'
+import { Route as CoachToolsSummerRouteImport } from './routes/coach-tools.summer'
+import { Route as CoachToolsParticipantsRouteImport } from './routes/coach-tools.participants'
+import { Route as CoachToolsMusicRouteImport } from './routes/coach-tools.music'
+import { Route as CoachToolsLiveRouteImport } from './routes/coach-tools.live'
+import { Route as CoachToolsExercisesRouteImport } from './routes/coach-tools.exercises'
+import { Route as CoachToolsAiRouteImport } from './routes/coach-tools.ai'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
 import { Route as BullsWeightRouteImport } from './routes/bulls.weight'
 import { Route as BullsTrainingRouteImport } from './routes/bulls.training'
@@ -264,6 +274,11 @@ const CommunityRoute = CommunityRouteImport.update({
   path: '/community',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CoachToolsRoute = CoachToolsRouteImport.update({
+  id: '/coach-tools',
+  path: '/coach-tools',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CoachRoute = CoachRouteImport.update({
   id: '/coach',
   path: '/coach',
@@ -318,6 +333,11 @@ const CoachIndexRoute = CoachIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => CoachRoute,
+} as any)
+const CoachToolsIndexRoute = CoachToolsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => CoachToolsRoute,
 } as any)
 const OrgSlugIndexRoute = OrgSlugIndexRouteImport.update({
   id: '/',
@@ -450,6 +470,46 @@ const CoachClientIdRoute = CoachClientIdRouteImport.update({
   id: '/$clientId',
   path: '/$clientId',
   getParentRoute: () => CoachRoute,
+} as any)
+const CoachToolsTimerRoute = CoachToolsTimerRouteImport.update({
+  id: '/timer',
+  path: '/timer',
+  getParentRoute: () => CoachToolsRoute,
+} as any)
+const CoachToolsTemplatesRoute = CoachToolsTemplatesRouteImport.update({
+  id: '/templates',
+  path: '/templates',
+  getParentRoute: () => CoachToolsRoute,
+} as any)
+const CoachToolsSummerRoute = CoachToolsSummerRouteImport.update({
+  id: '/summer',
+  path: '/summer',
+  getParentRoute: () => CoachToolsRoute,
+} as any)
+const CoachToolsParticipantsRoute = CoachToolsParticipantsRouteImport.update({
+  id: '/participants',
+  path: '/participants',
+  getParentRoute: () => CoachToolsRoute,
+} as any)
+const CoachToolsMusicRoute = CoachToolsMusicRouteImport.update({
+  id: '/music',
+  path: '/music',
+  getParentRoute: () => CoachToolsRoute,
+} as any)
+const CoachToolsLiveRoute = CoachToolsLiveRouteImport.update({
+  id: '/live',
+  path: '/live',
+  getParentRoute: () => CoachToolsRoute,
+} as any)
+const CoachToolsExercisesRoute = CoachToolsExercisesRouteImport.update({
+  id: '/exercises',
+  path: '/exercises',
+  getParentRoute: () => CoachToolsRoute,
+} as any)
+const CoachToolsAiRoute = CoachToolsAiRouteImport.update({
+  id: '/ai',
+  path: '/ai',
+  getParentRoute: () => CoachToolsRoute,
 } as any)
 const CheckoutReturnRoute = CheckoutReturnRouteImport.update({
   id: '/checkout/return',
@@ -884,6 +944,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/check-in': typeof CheckInRoute
   '/coach': typeof CoachRouteWithChildren
+  '/coach-tools': typeof CoachToolsRouteWithChildren
   '/community': typeof CommunityRoute
   '/daily-checklist': typeof DailyChecklistRoute
   '/dashboard': typeof DashboardRoute
@@ -929,6 +990,14 @@ export interface FileRoutesByFullPath {
   '/bulls/training': typeof BullsTrainingRoute
   '/bulls/weight': typeof BullsWeightRoute
   '/checkout/return': typeof CheckoutReturnRoute
+  '/coach-tools/ai': typeof CoachToolsAiRoute
+  '/coach-tools/exercises': typeof CoachToolsExercisesRoute
+  '/coach-tools/live': typeof CoachToolsLiveRoute
+  '/coach-tools/music': typeof CoachToolsMusicRoute
+  '/coach-tools/participants': typeof CoachToolsParticipantsRoute
+  '/coach-tools/summer': typeof CoachToolsSummerRoute
+  '/coach-tools/templates': typeof CoachToolsTemplatesRoute
+  '/coach-tools/timer': typeof CoachToolsTimerRoute
   '/coach/$clientId': typeof CoachClientIdRoute
   '/coach/affiliates': typeof CoachAffiliatesRoute
   '/coach/bulls-performance': typeof CoachBullsPerformanceRoute
@@ -955,6 +1024,7 @@ export interface FileRoutesByFullPath {
   '/tracker/login': typeof TrackerLoginRoute
   '/tracker/signup': typeof TrackerSignupRoute
   '/$orgSlug/': typeof OrgSlugIndexRoute
+  '/coach-tools/': typeof CoachToolsIndexRoute
   '/coach/': typeof CoachIndexRoute
   '/nutrition/': typeof NutritionIndexRoute
   '/smart/': typeof SmartIndexRoute
@@ -1063,6 +1133,14 @@ export interface FileRoutesByTo {
   '/bulls/training': typeof BullsTrainingRoute
   '/bulls/weight': typeof BullsWeightRoute
   '/checkout/return': typeof CheckoutReturnRoute
+  '/coach-tools/ai': typeof CoachToolsAiRoute
+  '/coach-tools/exercises': typeof CoachToolsExercisesRoute
+  '/coach-tools/live': typeof CoachToolsLiveRoute
+  '/coach-tools/music': typeof CoachToolsMusicRoute
+  '/coach-tools/participants': typeof CoachToolsParticipantsRoute
+  '/coach-tools/summer': typeof CoachToolsSummerRoute
+  '/coach-tools/templates': typeof CoachToolsTemplatesRoute
+  '/coach-tools/timer': typeof CoachToolsTimerRoute
   '/coach/$clientId': typeof CoachClientIdRoute
   '/coach/affiliates': typeof CoachAffiliatesRoute
   '/coach/bulls-performance': typeof CoachBullsPerformanceRoute
@@ -1087,6 +1165,7 @@ export interface FileRoutesByTo {
   '/tracker/login': typeof TrackerLoginRoute
   '/tracker/signup': typeof TrackerSignupRoute
   '/$orgSlug': typeof OrgSlugIndexRoute
+  '/coach-tools': typeof CoachToolsIndexRoute
   '/coach': typeof CoachIndexRoute
   '/nutrition': typeof NutritionIndexRoute
   '/smart': typeof SmartIndexRoute
@@ -1156,6 +1235,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/check-in': typeof CheckInRoute
   '/coach': typeof CoachRouteWithChildren
+  '/coach-tools': typeof CoachToolsRouteWithChildren
   '/community': typeof CommunityRoute
   '/daily-checklist': typeof DailyChecklistRoute
   '/dashboard': typeof DashboardRoute
@@ -1201,6 +1281,14 @@ export interface FileRoutesById {
   '/bulls/training': typeof BullsTrainingRoute
   '/bulls/weight': typeof BullsWeightRoute
   '/checkout/return': typeof CheckoutReturnRoute
+  '/coach-tools/ai': typeof CoachToolsAiRoute
+  '/coach-tools/exercises': typeof CoachToolsExercisesRoute
+  '/coach-tools/live': typeof CoachToolsLiveRoute
+  '/coach-tools/music': typeof CoachToolsMusicRoute
+  '/coach-tools/participants': typeof CoachToolsParticipantsRoute
+  '/coach-tools/summer': typeof CoachToolsSummerRoute
+  '/coach-tools/templates': typeof CoachToolsTemplatesRoute
+  '/coach-tools/timer': typeof CoachToolsTimerRoute
   '/coach/$clientId': typeof CoachClientIdRoute
   '/coach/affiliates': typeof CoachAffiliatesRoute
   '/coach/bulls-performance': typeof CoachBullsPerformanceRoute
@@ -1227,6 +1315,7 @@ export interface FileRoutesById {
   '/tracker/login': typeof TrackerLoginRoute
   '/tracker/signup': typeof TrackerSignupRoute
   '/$orgSlug/': typeof OrgSlugIndexRoute
+  '/coach-tools/': typeof CoachToolsIndexRoute
   '/coach/': typeof CoachIndexRoute
   '/nutrition/': typeof NutritionIndexRoute
   '/smart/': typeof SmartIndexRoute
@@ -1299,6 +1388,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/check-in'
     | '/coach'
+    | '/coach-tools'
     | '/community'
     | '/daily-checklist'
     | '/dashboard'
@@ -1344,6 +1434,14 @@ export interface FileRouteTypes {
     | '/bulls/training'
     | '/bulls/weight'
     | '/checkout/return'
+    | '/coach-tools/ai'
+    | '/coach-tools/exercises'
+    | '/coach-tools/live'
+    | '/coach-tools/music'
+    | '/coach-tools/participants'
+    | '/coach-tools/summer'
+    | '/coach-tools/templates'
+    | '/coach-tools/timer'
     | '/coach/$clientId'
     | '/coach/affiliates'
     | '/coach/bulls-performance'
@@ -1370,6 +1468,7 @@ export interface FileRouteTypes {
     | '/tracker/login'
     | '/tracker/signup'
     | '/$orgSlug/'
+    | '/coach-tools/'
     | '/coach/'
     | '/nutrition/'
     | '/smart/'
@@ -1478,6 +1577,14 @@ export interface FileRouteTypes {
     | '/bulls/training'
     | '/bulls/weight'
     | '/checkout/return'
+    | '/coach-tools/ai'
+    | '/coach-tools/exercises'
+    | '/coach-tools/live'
+    | '/coach-tools/music'
+    | '/coach-tools/participants'
+    | '/coach-tools/summer'
+    | '/coach-tools/templates'
+    | '/coach-tools/timer'
     | '/coach/$clientId'
     | '/coach/affiliates'
     | '/coach/bulls-performance'
@@ -1502,6 +1609,7 @@ export interface FileRouteTypes {
     | '/tracker/login'
     | '/tracker/signup'
     | '/$orgSlug'
+    | '/coach-tools'
     | '/coach'
     | '/nutrition'
     | '/smart'
@@ -1570,6 +1678,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/check-in'
     | '/coach'
+    | '/coach-tools'
     | '/community'
     | '/daily-checklist'
     | '/dashboard'
@@ -1615,6 +1724,14 @@ export interface FileRouteTypes {
     | '/bulls/training'
     | '/bulls/weight'
     | '/checkout/return'
+    | '/coach-tools/ai'
+    | '/coach-tools/exercises'
+    | '/coach-tools/live'
+    | '/coach-tools/music'
+    | '/coach-tools/participants'
+    | '/coach-tools/summer'
+    | '/coach-tools/templates'
+    | '/coach-tools/timer'
     | '/coach/$clientId'
     | '/coach/affiliates'
     | '/coach/bulls-performance'
@@ -1641,6 +1758,7 @@ export interface FileRouteTypes {
     | '/tracker/login'
     | '/tracker/signup'
     | '/$orgSlug/'
+    | '/coach-tools/'
     | '/coach/'
     | '/nutrition/'
     | '/smart/'
@@ -1712,6 +1830,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   CheckInRoute: typeof CheckInRoute
   CoachRoute: typeof CoachRouteWithChildren
+  CoachToolsRoute: typeof CoachToolsRouteWithChildren
   CommunityRoute: typeof CommunityRoute
   DailyChecklistRoute: typeof DailyChecklistRoute
   DashboardRoute: typeof DashboardRoute
@@ -1941,6 +2060,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CommunityRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/coach-tools': {
+      id: '/coach-tools'
+      path: '/coach-tools'
+      fullPath: '/coach-tools'
+      preLoaderRoute: typeof CoachToolsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/coach': {
       id: '/coach'
       path: '/coach'
@@ -2017,6 +2143,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/coach/'
       preLoaderRoute: typeof CoachIndexRouteImport
       parentRoute: typeof CoachRoute
+    }
+    '/coach-tools/': {
+      id: '/coach-tools/'
+      path: '/'
+      fullPath: '/coach-tools/'
+      preLoaderRoute: typeof CoachToolsIndexRouteImport
+      parentRoute: typeof CoachToolsRoute
     }
     '/$orgSlug/': {
       id: '/$orgSlug/'
@@ -2199,6 +2332,62 @@ declare module '@tanstack/react-router' {
       fullPath: '/coach/$clientId'
       preLoaderRoute: typeof CoachClientIdRouteImport
       parentRoute: typeof CoachRoute
+    }
+    '/coach-tools/timer': {
+      id: '/coach-tools/timer'
+      path: '/timer'
+      fullPath: '/coach-tools/timer'
+      preLoaderRoute: typeof CoachToolsTimerRouteImport
+      parentRoute: typeof CoachToolsRoute
+    }
+    '/coach-tools/templates': {
+      id: '/coach-tools/templates'
+      path: '/templates'
+      fullPath: '/coach-tools/templates'
+      preLoaderRoute: typeof CoachToolsTemplatesRouteImport
+      parentRoute: typeof CoachToolsRoute
+    }
+    '/coach-tools/summer': {
+      id: '/coach-tools/summer'
+      path: '/summer'
+      fullPath: '/coach-tools/summer'
+      preLoaderRoute: typeof CoachToolsSummerRouteImport
+      parentRoute: typeof CoachToolsRoute
+    }
+    '/coach-tools/participants': {
+      id: '/coach-tools/participants'
+      path: '/participants'
+      fullPath: '/coach-tools/participants'
+      preLoaderRoute: typeof CoachToolsParticipantsRouteImport
+      parentRoute: typeof CoachToolsRoute
+    }
+    '/coach-tools/music': {
+      id: '/coach-tools/music'
+      path: '/music'
+      fullPath: '/coach-tools/music'
+      preLoaderRoute: typeof CoachToolsMusicRouteImport
+      parentRoute: typeof CoachToolsRoute
+    }
+    '/coach-tools/live': {
+      id: '/coach-tools/live'
+      path: '/live'
+      fullPath: '/coach-tools/live'
+      preLoaderRoute: typeof CoachToolsLiveRouteImport
+      parentRoute: typeof CoachToolsRoute
+    }
+    '/coach-tools/exercises': {
+      id: '/coach-tools/exercises'
+      path: '/exercises'
+      fullPath: '/coach-tools/exercises'
+      preLoaderRoute: typeof CoachToolsExercisesRouteImport
+      parentRoute: typeof CoachToolsRoute
+    }
+    '/coach-tools/ai': {
+      id: '/coach-tools/ai'
+      path: '/ai'
+      fullPath: '/coach-tools/ai'
+      preLoaderRoute: typeof CoachToolsAiRouteImport
+      parentRoute: typeof CoachToolsRoute
     }
     '/checkout/return': {
       id: '/checkout/return'
@@ -2910,6 +3099,34 @@ const CoachRouteChildren: CoachRouteChildren = {
 
 const CoachRouteWithChildren = CoachRoute._addFileChildren(CoachRouteChildren)
 
+interface CoachToolsRouteChildren {
+  CoachToolsAiRoute: typeof CoachToolsAiRoute
+  CoachToolsExercisesRoute: typeof CoachToolsExercisesRoute
+  CoachToolsLiveRoute: typeof CoachToolsLiveRoute
+  CoachToolsMusicRoute: typeof CoachToolsMusicRoute
+  CoachToolsParticipantsRoute: typeof CoachToolsParticipantsRoute
+  CoachToolsSummerRoute: typeof CoachToolsSummerRoute
+  CoachToolsTemplatesRoute: typeof CoachToolsTemplatesRoute
+  CoachToolsTimerRoute: typeof CoachToolsTimerRoute
+  CoachToolsIndexRoute: typeof CoachToolsIndexRoute
+}
+
+const CoachToolsRouteChildren: CoachToolsRouteChildren = {
+  CoachToolsAiRoute: CoachToolsAiRoute,
+  CoachToolsExercisesRoute: CoachToolsExercisesRoute,
+  CoachToolsLiveRoute: CoachToolsLiveRoute,
+  CoachToolsMusicRoute: CoachToolsMusicRoute,
+  CoachToolsParticipantsRoute: CoachToolsParticipantsRoute,
+  CoachToolsSummerRoute: CoachToolsSummerRoute,
+  CoachToolsTemplatesRoute: CoachToolsTemplatesRoute,
+  CoachToolsTimerRoute: CoachToolsTimerRoute,
+  CoachToolsIndexRoute: CoachToolsIndexRoute,
+}
+
+const CoachToolsRouteWithChildren = CoachToolsRoute._addFileChildren(
+  CoachToolsRouteChildren,
+)
+
 interface NutritionRouteChildren {
   NutritionFavoritesRoute: typeof NutritionFavoritesRoute
   NutritionRecipeFromIngredientsRoute: typeof NutritionRecipeFromIngredientsRoute
@@ -3027,6 +3244,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   CheckInRoute: CheckInRoute,
   CoachRoute: CoachRouteWithChildren,
+  CoachToolsRoute: CoachToolsRouteWithChildren,
   CommunityRoute: CommunityRoute,
   DailyChecklistRoute: DailyChecklistRoute,
   DashboardRoute: DashboardRoute,
