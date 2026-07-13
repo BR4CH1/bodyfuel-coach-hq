@@ -1,14 +1,7 @@
-import { Activity, AlertTriangle, ClipboardList, ListChecks, GraduationCap } from "lucide-react";
-import { useServerFn } from "@tanstack/react-start";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { Activity, AlertTriangle, ClipboardList, ListChecks } from "lucide-react";
 import type { CoachAthleteDetail } from "@/lib/organizations/coach-athlete-drilldown.functions";
 import { PulseCell, Section } from "./athlete-tab-shared";
 import { RemoveFromTeamSection } from "./RemoveFromTeamSection";
-import {
-  getAthleteCourseInstructor,
-  setAthleteCourseInstructor,
-} from "@/lib/course-instructor.functions";
 
 export function AthleteOverviewTab({
   data,
@@ -23,7 +16,6 @@ export function AthleteOverviewTab({
   const recent = data.training.timeline.slice(0, 5);
   return (
     <div className="space-y-5">
-      <CourseInstructorToggle userId={userId} />
       <Section title="Aktueller Status" icon={<Activity className="h-4 w-4" />}>
 
         <div className="grid grid-cols-2 gap-2.5">
