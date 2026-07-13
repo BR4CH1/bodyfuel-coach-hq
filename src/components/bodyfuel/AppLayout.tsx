@@ -412,7 +412,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
     : baseNav;
   // Kursleiter-Zusatzmodul: identische Client-Erfahrung + zusätzlicher Menüpunkt.
   const isCourseInstructor = !!(profile as any)?.is_course_instructor;
-  const navWithCourseTools = isCourseInstructor && !isCoach && !staffNav && !teamOnlyAthleteNav
+  const navWithCourseTools = isCourseInstructor && !isCoach
     ? [
         ...navWithBulls.slice(0, Math.max(1, navWithBulls.length - 1)),
         { to: "/coach-tools", label: "Coach Tools", icon: Rocket } as any,
