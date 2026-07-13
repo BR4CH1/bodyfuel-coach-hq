@@ -7,6 +7,7 @@ export type Profile = {
   id: string;
   display_name: string | null;
   demo_client_key: string | null;
+  is_course_instructor?: boolean | null;
 };
 
 export type AppTier = "coach" | "client" | "free" | null;
@@ -100,7 +101,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const loadProfile = async (uid: string) => {
     const [p, r, g] = await Promise.all([
-      supabase.from("profiles").select("id, display_name, demo_client_key, nickname").eq("id", uid).maybeSingle(),
+      supabase.from("profiles").select("id, display_name, demo_client_key, nickname, is_course_instructor").eq("id", uid).maybeSingle(),
       supabase.from("user_roles").select("role").eq("user_id", uid),
       supabase.from("user_groups").select("group_name").eq("user_id", uid),
     ]);

@@ -1315,6 +1315,203 @@ export type Database = {
         }
         Relationships: []
       }
+      course_attendance: {
+        Row: {
+          created_at: string
+          id: string
+          note: string | null
+          owner_id: string
+          participant_id: string
+          present: boolean
+          session_date: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          owner_id: string
+          participant_id: string
+          present?: boolean
+          session_date?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          owner_id?: string
+          participant_id?: string
+          present?: boolean
+          session_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_attendance_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "course_participants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      course_exercises: {
+        Row: {
+          coaching_cues: string | null
+          created_at: string
+          description: string | null
+          difficulty: string
+          equipment: string[]
+          id: string
+          is_favorite: boolean
+          is_public: boolean
+          media_url: string | null
+          muscle_groups: string[]
+          name: string
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          coaching_cues?: string | null
+          created_at?: string
+          description?: string | null
+          difficulty?: string
+          equipment?: string[]
+          id?: string
+          is_favorite?: boolean
+          is_public?: boolean
+          media_url?: string | null
+          muscle_groups?: string[]
+          name: string
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          coaching_cues?: string | null
+          created_at?: string
+          description?: string | null
+          difficulty?: string
+          equipment?: string[]
+          id?: string
+          is_favorite?: boolean
+          is_public?: boolean
+          media_url?: string | null
+          muscle_groups?: string[]
+          name?: string
+          owner_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      course_music_links: {
+        Row: {
+          bpm: number | null
+          created_at: string
+          id: string
+          is_favorite: boolean
+          owner_id: string
+          provider: string
+          tags: string[]
+          title: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          bpm?: number | null
+          created_at?: string
+          id?: string
+          is_favorite?: boolean
+          owner_id: string
+          provider?: string
+          tags?: string[]
+          title: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          bpm?: number | null
+          created_at?: string
+          id?: string
+          is_favorite?: boolean
+          owner_id?: string
+          provider?: string
+          tags?: string[]
+          title?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
+      course_participants: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          owner_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      course_templates: {
+        Row: {
+          blocks: Json
+          created_at: string
+          description: string | null
+          duration_minutes: number | null
+          equipment: string[]
+          id: string
+          is_favorite: boolean
+          name: string
+          owner_id: string
+          target_group: string | null
+          updated_at: string
+        }
+        Insert: {
+          blocks?: Json
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number | null
+          equipment?: string[]
+          id?: string
+          is_favorite?: boolean
+          name: string
+          owner_id: string
+          target_group?: string | null
+          updated_at?: string
+        }
+        Update: {
+          blocks?: Json
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number | null
+          equipment?: string[]
+          id?: string
+          is_favorite?: boolean
+          name?: string
+          owner_id?: string
+          target_group?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       custom_meals: {
         Row: {
           carbs_g: number | null
@@ -6459,6 +6656,7 @@ export type Database = {
           height_cm: number | null
           id: string
           injuries: string | null
+          is_course_instructor: boolean
           is_minor: boolean
           match_days_per_week: number | null
           mobility_focus: string | null
@@ -6512,6 +6710,7 @@ export type Database = {
           height_cm?: number | null
           id: string
           injuries?: string | null
+          is_course_instructor?: boolean
           is_minor?: boolean
           match_days_per_week?: number | null
           mobility_focus?: string | null
@@ -6565,6 +6764,7 @@ export type Database = {
           height_cm?: number | null
           id?: string
           injuries?: string | null
+          is_course_instructor?: boolean
           is_minor?: boolean
           match_days_per_week?: number | null
           mobility_focus?: string | null

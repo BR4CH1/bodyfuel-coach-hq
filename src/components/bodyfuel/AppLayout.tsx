@@ -24,6 +24,8 @@ import {
   Target,
   Settings,
   Gauge,
+  Rocket,
+
 } from "lucide-react";
 import { getMyUnreadCount, getCoachInbox } from "@/lib/coach-messages.functions";
 import { getIsPlatformOwner } from "@/lib/organizations/organizations.functions";
@@ -408,11 +410,20 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const navWithBulls = !isCoach && !staffNav && !teamOnlyAthleteNav && hasGroup("bulls")
     ? [...baseNav, bullsNavItem]
     : baseNav;
+  // Kursleiter-Zusatzmodul: identische Client-Erfahrung + zusätzlicher Menüpunkt.
+  const isCourseInstructor = !!(profile as any)?.is_course_instructor;
+  const navWithCourseTools = isCourseInstructor && !isCoach && !staffNav && !teamOnlyAthleteNav
+    ? [
+        ...navWithBulls.slice(0, Math.max(1, navWithBulls.length - 1)),
+        { to: "/coach-tools", label: "Coach Tools", icon: Rocket } as any,
+        ...navWithBulls.slice(Math.max(1, navWithBulls.length - 1)),
+      ]
+    : navWithBulls;
   // Wenn der Nutzer aktuell im Bulls-Hub ist, sollen Ernährung/Training auf
   // die Bulls-Varianten zeigen, damit das Vereins-Design (rot/schwarz) und
   // die Bulls-spezifische Erfahrung erhalten bleiben.
   const nav = isBullsRoute
-    ? navWithBulls
+    ? navWithCourseTools
         .filter((item: any) => item.to !== "/bulls")
         .map((item: any) => {
           if (item.to === "/dashboard") return { ...item, to: "/bulls", label: "Home", icon: Home };
@@ -428,7 +439,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           const ib = order.indexOf(b.to);
           return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
         })
-    : navWithBulls;
+    : navWithCourseTools;
   // Mobile bottom nav: Coach-Chat ist in die obere Leiste gewandert
   const mobileNav = nav.filter((item) => item.to !== "/messages");
   const points = user ? totalPoints(user) : 0;
