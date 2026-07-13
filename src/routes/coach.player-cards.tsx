@@ -199,13 +199,21 @@ function CoachPlayerCardsPage() {
             Alle Karten aus deinen Vereinen. Filtern, sortieren, einzeln teilen oder mehrere als ZIP herunterladen.
           </p>
         </div>
-        <Link
-          to="/coach/player-cards/ranking"
-          className="inline-flex items-center gap-1.5 self-start rounded-full bg-bulls-red px-4 py-2 text-xs font-bold uppercase tracking-wider text-white transition hover:opacity-90 sm:self-end"
-        >
-          <Trophy className="h-3.5 w-3.5" />
-          Rangliste & Player of the Month
-        </Link>
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-end">
+          <Link
+            to="/coach/player-cards/layout"
+            className="inline-flex items-center gap-1.5 rounded-full border border-border px-4 py-2 text-xs font-bold uppercase tracking-wider hover:border-bulls-red"
+          >
+            Layout bearbeiten
+          </Link>
+          <Link
+            to="/coach/player-cards/ranking"
+            className="inline-flex items-center gap-1.5 rounded-full bg-bulls-red px-4 py-2 text-xs font-bold uppercase tracking-wider text-white transition hover:opacity-90"
+          >
+            <Trophy className="h-3.5 w-3.5" />
+            Rangliste & Player of the Month
+          </Link>
+        </div>
       </header>
 
       {/* Filters + Sort */}
