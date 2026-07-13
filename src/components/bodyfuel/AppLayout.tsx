@@ -24,6 +24,8 @@ import {
   Target,
   Settings,
   Gauge,
+  Rocket,
+
 } from "lucide-react";
 import { getMyUnreadCount, getCoachInbox } from "@/lib/coach-messages.functions";
 import { getIsPlatformOwner } from "@/lib/organizations/organizations.functions";
