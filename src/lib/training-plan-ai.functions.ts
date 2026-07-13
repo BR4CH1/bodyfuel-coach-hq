@@ -13,16 +13,16 @@ export const generateAiTrainingPlanDraft = createServerFn({ method: "POST" })
       user_id: string;
       title?: string;
       start_mode?: "today" | "next_week";
-      auto?: boolean;
     }) => d,
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const target = data.user_id;
 
-    if (target !== userId && !data.auto) {
+    if (target !== userId) {
       await assertCoachOrOrgStaffForAthlete(context, target, "training");
     }
+
 
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY fehlt");
