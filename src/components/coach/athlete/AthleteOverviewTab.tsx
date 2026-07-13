@@ -23,7 +23,9 @@ export function AthleteOverviewTab({
   const recent = data.training.timeline.slice(0, 5);
   return (
     <div className="space-y-5">
+      <CourseInstructorToggle userId={userId} />
       <Section title="Aktueller Status" icon={<Activity className="h-4 w-4" />}>
+
         <div className="grid grid-cols-2 gap-2.5">
           <PulseCell
             label="Compliance"
