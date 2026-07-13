@@ -309,13 +309,24 @@ export function AppLayout({ children }: { children: ReactNode }) {
   // crasht React nach dem Login mit Hook-Order-Fehlern.
   const uid = supabaseUser?.id;
   const listCourseInstructorOrgsFn = useServerFn(listMyCourseInstructorOrgs);
+  const [activeOrgContext, setActiveOrgContext] = useState<string | null>(() => getActiveContext());
+  useEffect(() => {
+    const handler = () => setActiveOrgContext(getActiveContext());
+    window.addEventListener("storage", handler);
+    window.addEventListener("bodyfuel:active-context-change", handler);
+    return () => {
+      window.removeEventListener("storage", handler);
+      window.removeEventListener("bodyfuel:active-context-change", handler);
+    };
+  }, []);
   const { data: coachToolsOrgEnabled = false } = useQuery({
-    queryKey: ["coach-tools-instructor-enabled", uid],
+    queryKey: ["coach-tools-instructor-enabled", uid, activeOrgContext],
     enabled: !!uid && !isCoach,
     staleTime: 60_000,
     queryFn: async () => {
+      if (!activeOrgContext) return false;
       const result = await listCourseInstructorOrgsFn();
-      return result.orgIds.length > 0;
+      return (result.orgSlugs ?? []).includes(activeOrgContext);
     },
   });
 
