@@ -423,7 +423,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   // die Bulls-Varianten zeigen, damit das Vereins-Design (rot/schwarz) und
   // die Bulls-spezifische Erfahrung erhalten bleiben.
   const nav = isBullsRoute
-    ? navWithBulls
+    ? navWithCourseTools
         .filter((item: any) => item.to !== "/bulls")
         .map((item: any) => {
           if (item.to === "/dashboard") return { ...item, to: "/bulls", label: "Home", icon: Home };
