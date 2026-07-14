@@ -191,162 +191,87 @@ function OrgHome() {
         />
       )}
 
-      <main className="mx-auto max-w-md px-4 py-5 space-y-6">
+      <main className="mx-auto max-w-md px-4 py-5 space-y-5">
         <ReadinessGateHint userId={supabaseUser?.id} orgSlug={org.slug} />
 
-        {/* PLAYER CARD — vorerst nur im Coaching-Bereich sichtbar */}
-        {/* HEUTE — TRAINING */}
-        {((data as any).today_sessions?.length ?? 0) > 0 && (
-          <section>
-            <SectionTitle>Heute — Training</SectionTitle>
-            <div className="mb-2">
-              <PlanStatusChip userId={supabaseUser?.id} />
-            </div>
-            <ul className="space-y-2">
-              {((data as any).today_sessions as any[]).map((s) => (
-                <SessionCard key={s.id} session={s} primary={primary} orgSlug={org.slug} />
-              ))}
-            </ul>
-          </section>
-        )}
+        <DayStatusBanner
+          sessions={(data as any).today_sessions ?? []}
+          tasks={data.today_tasks ?? []}
+          primary={primary}
+        />
 
-
-        {/* HEUTE — AUFGABEN */}
+        {/* HEUTE — persönlicher Assistent */}
         <section>
-          <SectionTitle>Heute — Aufgaben</SectionTitle>
-          {data.today_tasks.length === 0 ? (
-            <EmptyCard>Heute sind keine Aufgaben geplant.</EmptyCard>
-          ) : (
-            <ul className="space-y-2">
-              {data.today_tasks.map((t: any) => (
-                <TaskCard
-                  key={t.id}
-                  task={t}
-                  onToggle={() =>
-                    toggle.mutate({ taskId: t.id, status: t.status === "done" ? "open" : "done" })
-                  }
-                />
-              ))}
-            </ul>
-          )}
+          <SectionTitle>Heute</SectionTitle>
+          <TodayAssistant
+            orgSlug={org.slug}
+            primary={primary}
+            hasCheckin={!!(data as any).today_checkin}
+            sessions={(data as any).today_sessions ?? []}
+            tasks={data.today_tasks ?? []}
+            onToggleTask={(taskId, status) => toggle.mutate({ taskId, status })}
+          />
         </section>
 
-
-        {/* CHECK-IN CTA */}
-        {!(data as any).today_checkin && (
-          <section>
-            <Link
-              to="/$orgSlug/checkin"
-              params={{ orgSlug: org.slug }}
-              className="flex items-center gap-3 rounded-lg border p-3 text-white"
-              style={{ background: primary, borderColor: primary }}
-            >
-              <div className="grid h-10 w-10 place-items-center rounded-full bg-white/20">
-                <Activity className="h-5 w-5" />
-              </div>
-              <div className="flex-1">
-                <div className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-90">
-                  Daily Check-in
-                </div>
-                <div className="text-sm font-semibold">
-                  Wie fühlst du dich heute?
-                </div>
-              </div>
-              <div className="text-[11px] font-bold uppercase tracking-wider opacity-90">
-                Start →
-              </div>
-            </Link>
-          </section>
-        )}
-
-        {/* DEIN STATUS */}
+        {/* TAGESFORTSCHRITT */}
         <section>
-          <SectionTitle>Dein Status</SectionTitle>
-          <div className="grid grid-cols-2 gap-2">
-            <StatusCard
-              icon={Activity}
-              label="Readiness"
-              value={(data as any).readiness_score != null ? `${(data as any).readiness_score}` : "—"}
-              hint={
-                (data as any).readiness_score != null
-                  ? "heute"
-                  : (data as any).today_checkin
-                    ? `Lernphase · ${(data as any).readiness_days_recorded_7 ?? 0}/7`
-                    : "Check-in offen"
-              }
-              primary={primary}
-            />
-            <StatusCard icon={TrendingUp} label="Performance" value="—" hint="Profile in Kürze" primary={primary} />
-            <StatusCard
-              icon={CheckCircle2}
-              label="Weekly Compliance"
-              value={data.weekly_compliance != null ? `${data.weekly_compliance}%` : "—"}
-              primary={primary}
-            />
-            <StatusCard
-              icon={Trophy}
-              label="Team Rank"
-              value={data.challenge_progress?.rank ? `#${data.challenge_progress.rank}` : "—"}
-              primary={primary}
-            />
-          </div>
+          <ProgressRingCard
+            hasCheckin={!!(data as any).today_checkin}
+            sessions={(data as any).today_sessions ?? []}
+            tasks={data.today_tasks ?? []}
+            primary={primary}
+          />
         </section>
 
+        {/* TRAINING HEUTE */}
+        <section>
+          <SectionTitle>Training heute</SectionTitle>
+          <TrainingTodayCard
+            sessions={(data as any).today_sessions ?? []}
+            orgSlug={org.slug}
+            primary={primary}
+          />
+        </section>
 
-        {/* NÄCHSTE AUFGABEN */}
+        {/* NÄCHSTER TERMIN */}
         {data.next_tasks.length > 0 && (
           <section>
-            <SectionTitle>Nächste Aufgaben</SectionTitle>
-            <ul className="space-y-2">
-              {data.next_tasks.slice(0, 4).map((t: any) => (
-                <li key={t.id} className="rounded-lg border border-border bg-card p-3 text-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold">{t.title}</span>
-                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                      {new Date(t.scheduled_for).toLocaleDateString("de-DE", { weekday: "short" })}
-                    </span>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <SectionTitle>Nächster Termin</SectionTitle>
+            <NextAppointmentCard task={data.next_tasks[0] as any} primary={primary} />
           </section>
         )}
 
-        {/* AKTIVE CHALLENGE */}
-        {featureEnabled("challenges") && data.active_challenge && (
+        {/* COMMUNITY */}
+        {featureEnabled("challenges") && (
           <section>
-            <SectionTitle>Aktive Challenge</SectionTitle>
-            <div
-              className="rounded-lg border border-border p-4 text-white"
-              style={{ background: primary }}
-            >
-              <div className="text-[10px] uppercase tracking-[0.2em] opacity-80">Challenge</div>
-              <div className="mt-1 font-display text-lg font-bold uppercase">
-                {(data.active_challenge as any).name}
-              </div>
-              <div className="mt-3 flex items-end justify-between">
-                <div>
-                  <div className="text-[10px] uppercase tracking-wider opacity-80">Punkte</div>
-                  <div className="font-display text-2xl font-bold">
-                    {data.challenge_progress?.points ?? 0}
-                  </div>
-                </div>
-                {(data.active_challenge as any).ends_at && (
-                  <div className="text-right">
-                    <div className="text-[10px] uppercase tracking-wider opacity-80">Bis</div>
-                    <div className="text-sm font-semibold">
-                      {new Date((data.active_challenge as any).ends_at).toLocaleDateString("de-DE", {
-                        day: "2-digit",
-                        month: "2-digit",
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+            <SectionTitle>Community</SectionTitle>
+            <CommunityCard
+              orgSlug={org.slug}
+              primary={primary}
+              rank={data.challenge_progress?.rank ?? null}
+              points={data.challenge_progress?.points ?? 0}
+              challenge={data.active_challenge as any}
+            />
           </section>
         )}
+
+        {/* NEWS */}
+        <section>
+          <SectionTitle>News</SectionTitle>
+          <NewsCard orgSlug={org.slug} primary={primary} />
+        </section>
+
+        {/* STATISTIKEN — jetzt einklappbar unten */}
+        <StatsCollapsible
+          readinessScore={(data as any).readiness_score}
+          readinessDays7={(data as any).readiness_days_recorded_7}
+          hasCheckin={!!(data as any).today_checkin}
+          weeklyCompliance={data.weekly_compliance}
+          rank={data.challenge_progress?.rank ?? null}
+          primary={primary}
+        />
       </main>
+
     </OrgAthleteLayout>
   );
 }
