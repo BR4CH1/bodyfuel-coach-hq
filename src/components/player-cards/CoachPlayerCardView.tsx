@@ -31,12 +31,14 @@ export function CoachPlayerCardView({
   const cutoutFn = useServerFn(ensurePlayerCardCutout);
   const cutoutTriedRef = useRef<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
-  const design = usePlayerCardDesign();
 
   const q = useQuery({
     queryKey: ["player-card", "athlete", userId],
     queryFn: () => fetchFn({ data: { user_id: userId } }),
   });
+  const orgSlug = (q.data as any)?.organization?.slug ?? null;
+  const design = usePlayerCardDesign(orgSlug);
+
 
   const recompute = useMutation({
     mutationFn: () => recomputeFn({ data: { user_id: userId } }),

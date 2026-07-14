@@ -1,9 +1,8 @@
 /**
- * Player Card — Interaktiver Layout-Editor.
+ * Player Card — Interaktiver Layout-Editor pro Verein.
  *
- * Lädt das aktuelle globale Design (Template-Bild + Layout) aus der DB,
- * erlaubt Drag & Drop der Overlay-Elemente, Upload eines neuen Templates
- * und veröffentlicht das Design für alle Athleten.
+ * Der Verein wird über den Route-Parameter `$orgSlug` gewählt. Damit können
+ * mehrere Vereine unabhängige Vorlagen pflegen (Coesfeld Bulls, künftig weitere).
  */
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useRef, useState, useEffect } from "react";
@@ -22,7 +21,11 @@ import { getPlayerCardDesign, savePlayerCardDesign } from "@/lib/player-cards/de
 import { CheckCircle2, Loader2, RotateCcw, Save, Upload } from "lucide-react";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/coach/player-cards_/layout")({
+const CLUB_LABELS: Record<string, string> = {
+  bulls: "Coesfeld Bulls",
+};
+
+export const Route = createFileRoute("/coach/player-cards_/layout/$orgSlug")({
   head: () => ({ meta: [{ title: "Player Card Layout Editor" }] }),
   component: () => (
     <AppLayout>
@@ -51,8 +54,6 @@ const LABELS: Record<ElementKey, string> = {
   photo: "Spielerfoto-Position",
 };
 
-// Leere Vorschau — es gibt nur EINE Vorlage für ALLE Spieler.
-// Werte werden pro Athlet automatisch aus den Performance-Tests gezogen.
 const DEMO_DATA: any = {
   card: {
     bfr: null, spd: null, acc: null, agi: null, pow: null, str: null, end_score: null,
@@ -67,30 +68,39 @@ const DEMO_DATA: any = {
 };
 
 function LayoutEditorPage() {
+  const { orgSlug } = Route.useParams();
+  const clubLabel = CLUB_LABELS[orgSlug] ?? orgSlug;
   const qc = useQueryClient();
   const fetchFn = useServerFn(getPlayerCardDesign);
   const saveFn = useServerFn(savePlayerCardDesign);
 
   const design = useQuery({
-    queryKey: ["player-card-design"],
-    queryFn: () => fetchFn(),
+    queryKey: ["player-card-design", orgSlug],
+    queryFn: () => fetchFn({ data: { orgSlug } }),
   });
 
   const [layout, setLayout] = useState<PlayerCardLayout>(DEFAULT_LAYOUT);
   const [templateUrl, setTemplateUrl] = useState<string | null>(null);
   const [templateDirty, setTemplateDirty] = useState(false);
+  const [name, setName] = useState<string>("");
   const [selected, setSelected] = useState<ElementKey>("ovr");
   const svgRef = useRef<SVGSVGElement>(null);
   const dragRef = useRef<{ key: ElementKey; mode: "move" | "resize"; startX: number; startY: number; initial: any } | null>(null);
 
-  // Beim Laden: DB-Werte übernehmen.
   useEffect(() => {
     if (design.data) {
       setLayout(mergeLayout(design.data.layout_json));
       setTemplateUrl(design.data.template_url ?? null);
       setTemplateDirty(false);
+      setName(design.data.name ?? "");
+    } else if (design.isFetched && !design.data) {
+      // Neue Vorlage für diesen Verein.
+      setLayout(DEFAULT_LAYOUT);
+      setTemplateUrl(null);
+      setTemplateDirty(false);
+      setName("Elite");
     }
-  }, [design.data]);
+  }, [design.data, design.isFetched]);
 
   const clientToSvg = (clientX: number, clientY: number) => {
     const svg = svgRef.current;
@@ -153,10 +163,11 @@ function LayoutEditorPage() {
 
   const save = useMutation({
     mutationFn: async (publish: boolean | undefined) => {
-      // Photo-URL nicht speichern — pro Athlet dynamisch aus Profilbild.
       const layoutForSave: PlayerCardLayout = { ...layout, photo: { ...layout.photo, url: null } };
       return await saveFn({
         data: {
+          orgSlug,
+          name: name.trim() || "Elite",
           layout_json: layoutForSave as any,
           template_data_url: templateDirty ? templateUrl : undefined,
           publish,
@@ -187,11 +198,22 @@ function LayoutEditorPage() {
 
       <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-bulls-red">Coach</div>
+          <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-bulls-red">
+            {clubLabel} · Vorlage
+          </div>
           <h1 className="font-display text-3xl font-bold">Karten-Design</h1>
           <p className="text-xs text-muted-foreground">
-            Lade dein Template-Bild hoch und positioniere die Werte per Drag & Drop. Werte werden pro Spieler automatisch aus den Performance-Tests befüllt.
+            Lade dein Template-Bild hoch und positioniere die Werte per Drag &amp; Drop. Werte werden pro Spieler automatisch aus den Performance-Tests befüllt.
           </p>
+          <div className="mt-3 flex flex-col gap-1">
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Name der Vorlage</label>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-64 rounded-md border border-border bg-background px-3 py-1.5 text-sm focus:border-bulls-red focus:outline-none"
+              placeholder="z.B. Elite"
+            />
+          </div>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
             {isPublished ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 font-semibold text-emerald-300">
@@ -218,7 +240,6 @@ function LayoutEditorPage() {
       </header>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">
-        {/* Editor Canvas */}
         <div className="relative mx-auto w-full max-w-[520px]">
           <div style={{ aspectRatio: `${VB_W} / ${VB_H}` }} className="relative">
             <div className="absolute inset-0">
@@ -281,7 +302,6 @@ function LayoutEditorPage() {
           </div>
         </div>
 
-        {/* Sidebar */}
         <div className="space-y-3">
           <div className="rounded-2xl border border-border bg-card p-4">
             <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Template-Design</div>
@@ -296,7 +316,7 @@ function LayoutEditorPage() {
               />
             </label>
             <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">
-              Empfohlen: 1023×1537 PNG, max. 5 MB. Wird als Hintergrund für alle Spielerkarten verwendet.
+              Empfohlen: 1023×1537 PNG, max. 5 MB. Wird als Hintergrund für alle Spielerkarten dieses Vereins verwendet.
             </p>
           </div>
 
@@ -314,7 +334,7 @@ function LayoutEditorPage() {
           </div>
 
           <div className="space-y-2 rounded-2xl border border-border bg-card p-4">
-            <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Position & Größe</div>
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Position &amp; Größe</div>
             <NumField label="X" value={Math.round(sel.x)} onChange={(v) => updateField(selected, "x", v)} />
             <NumField label="Y" value={Math.round(sel.y)} onChange={(v) => updateField(selected, "y", v)} />
             {isPhoto ? (

@@ -29,7 +29,6 @@ const TEST_LABELS: Record<string, string> = {
 };
 
 export function PlayerCardSection({ jerseyNumber, teamLabel }: { jerseyNumber?: string | null; teamLabel?: string | null }) {
-  const design = usePlayerCardDesign({ publishedOnly: true });
   const qc = useQueryClient();
   const fetchFn = useServerFn(getMyPlayerCard);
   const recomputeFn = useServerFn(recomputePlayerCard);
@@ -44,6 +43,9 @@ export function PlayerCardSection({ jerseyNumber, teamLabel }: { jerseyNumber?: 
     queryKey: ["player-card", "me"],
     queryFn: () => fetchFn(),
   });
+  const orgSlug = (q.data as any)?.organization?.slug ?? null;
+  const design = usePlayerCardDesign(orgSlug, { publishedOnly: true });
+
 
   const recompute = useMutation({
     mutationFn: () => recomputeFn({ data: {} }),
