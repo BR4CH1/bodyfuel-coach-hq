@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { CheckCircle2, Circle, Clock, Trophy, Activity, TrendingUp, Users, ShieldAlert } from "lucide-react";
+import { CheckCircle2, Circle, Clock, Trophy, Activity, TrendingUp, Users, ShieldAlert, Sparkles, Dumbbell, Apple, Droplet, Moon, Calendar, Megaphone, Flame, ChevronRight, ChevronDown } from "lucide-react";
 import { useSession } from "@/lib/bodyfuel/session";
 import {
   getOrgHomeData,
@@ -191,162 +191,87 @@ function OrgHome() {
         />
       )}
 
-      <main className="mx-auto max-w-md px-4 py-5 space-y-6">
+      <main className="mx-auto max-w-md px-4 py-5 space-y-5">
         <ReadinessGateHint userId={supabaseUser?.id} orgSlug={org.slug} />
 
-        {/* PLAYER CARD — vorerst nur im Coaching-Bereich sichtbar */}
-        {/* HEUTE — TRAINING */}
-        {((data as any).today_sessions?.length ?? 0) > 0 && (
-          <section>
-            <SectionTitle>Heute — Training</SectionTitle>
-            <div className="mb-2">
-              <PlanStatusChip userId={supabaseUser?.id} />
-            </div>
-            <ul className="space-y-2">
-              {((data as any).today_sessions as any[]).map((s) => (
-                <SessionCard key={s.id} session={s} primary={primary} orgSlug={org.slug} />
-              ))}
-            </ul>
-          </section>
-        )}
+        <DayStatusBanner
+          sessions={(data as any).today_sessions ?? []}
+          tasks={data.today_tasks ?? []}
+          primary={primary}
+        />
 
-
-        {/* HEUTE — AUFGABEN */}
+        {/* HEUTE — persönlicher Assistent */}
         <section>
-          <SectionTitle>Heute — Aufgaben</SectionTitle>
-          {data.today_tasks.length === 0 ? (
-            <EmptyCard>Heute sind keine Aufgaben geplant.</EmptyCard>
-          ) : (
-            <ul className="space-y-2">
-              {data.today_tasks.map((t: any) => (
-                <TaskCard
-                  key={t.id}
-                  task={t}
-                  onToggle={() =>
-                    toggle.mutate({ taskId: t.id, status: t.status === "done" ? "open" : "done" })
-                  }
-                />
-              ))}
-            </ul>
-          )}
+          <SectionTitle>Heute</SectionTitle>
+          <TodayAssistant
+            orgSlug={org.slug}
+            primary={primary}
+            hasCheckin={!!(data as any).today_checkin}
+            sessions={(data as any).today_sessions ?? []}
+            tasks={data.today_tasks ?? []}
+            onToggleTask={(taskId, status) => toggle.mutate({ taskId, status })}
+          />
         </section>
 
-
-        {/* CHECK-IN CTA */}
-        {!(data as any).today_checkin && (
-          <section>
-            <Link
-              to="/$orgSlug/checkin"
-              params={{ orgSlug: org.slug }}
-              className="flex items-center gap-3 rounded-lg border p-3 text-white"
-              style={{ background: primary, borderColor: primary }}
-            >
-              <div className="grid h-10 w-10 place-items-center rounded-full bg-white/20">
-                <Activity className="h-5 w-5" />
-              </div>
-              <div className="flex-1">
-                <div className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-90">
-                  Daily Check-in
-                </div>
-                <div className="text-sm font-semibold">
-                  Wie fühlst du dich heute?
-                </div>
-              </div>
-              <div className="text-[11px] font-bold uppercase tracking-wider opacity-90">
-                Start →
-              </div>
-            </Link>
-          </section>
-        )}
-
-        {/* DEIN STATUS */}
+        {/* TAGESFORTSCHRITT */}
         <section>
-          <SectionTitle>Dein Status</SectionTitle>
-          <div className="grid grid-cols-2 gap-2">
-            <StatusCard
-              icon={Activity}
-              label="Readiness"
-              value={(data as any).readiness_score != null ? `${(data as any).readiness_score}` : "—"}
-              hint={
-                (data as any).readiness_score != null
-                  ? "heute"
-                  : (data as any).today_checkin
-                    ? `Lernphase · ${(data as any).readiness_days_recorded_7 ?? 0}/7`
-                    : "Check-in offen"
-              }
-              primary={primary}
-            />
-            <StatusCard icon={TrendingUp} label="Performance" value="—" hint="Profile in Kürze" primary={primary} />
-            <StatusCard
-              icon={CheckCircle2}
-              label="Weekly Compliance"
-              value={data.weekly_compliance != null ? `${data.weekly_compliance}%` : "—"}
-              primary={primary}
-            />
-            <StatusCard
-              icon={Trophy}
-              label="Team Rank"
-              value={data.challenge_progress?.rank ? `#${data.challenge_progress.rank}` : "—"}
-              primary={primary}
-            />
-          </div>
+          <ProgressRingCard
+            hasCheckin={!!(data as any).today_checkin}
+            sessions={(data as any).today_sessions ?? []}
+            tasks={data.today_tasks ?? []}
+            primary={primary}
+          />
         </section>
 
+        {/* TRAINING HEUTE */}
+        <section>
+          <SectionTitle>Training heute</SectionTitle>
+          <TrainingTodayCard
+            sessions={(data as any).today_sessions ?? []}
+            orgSlug={org.slug}
+            primary={primary}
+          />
+        </section>
 
-        {/* NÄCHSTE AUFGABEN */}
+        {/* NÄCHSTER TERMIN */}
         {data.next_tasks.length > 0 && (
           <section>
-            <SectionTitle>Nächste Aufgaben</SectionTitle>
-            <ul className="space-y-2">
-              {data.next_tasks.slice(0, 4).map((t: any) => (
-                <li key={t.id} className="rounded-lg border border-border bg-card p-3 text-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold">{t.title}</span>
-                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                      {new Date(t.scheduled_for).toLocaleDateString("de-DE", { weekday: "short" })}
-                    </span>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <SectionTitle>Nächster Termin</SectionTitle>
+            <NextAppointmentCard task={data.next_tasks[0] as any} primary={primary} />
           </section>
         )}
 
-        {/* AKTIVE CHALLENGE */}
-        {featureEnabled("challenges") && data.active_challenge && (
+        {/* COMMUNITY */}
+        {featureEnabled("challenges") && (
           <section>
-            <SectionTitle>Aktive Challenge</SectionTitle>
-            <div
-              className="rounded-lg border border-border p-4 text-white"
-              style={{ background: primary }}
-            >
-              <div className="text-[10px] uppercase tracking-[0.2em] opacity-80">Challenge</div>
-              <div className="mt-1 font-display text-lg font-bold uppercase">
-                {(data.active_challenge as any).name}
-              </div>
-              <div className="mt-3 flex items-end justify-between">
-                <div>
-                  <div className="text-[10px] uppercase tracking-wider opacity-80">Punkte</div>
-                  <div className="font-display text-2xl font-bold">
-                    {data.challenge_progress?.points ?? 0}
-                  </div>
-                </div>
-                {(data.active_challenge as any).ends_at && (
-                  <div className="text-right">
-                    <div className="text-[10px] uppercase tracking-wider opacity-80">Bis</div>
-                    <div className="text-sm font-semibold">
-                      {new Date((data.active_challenge as any).ends_at).toLocaleDateString("de-DE", {
-                        day: "2-digit",
-                        month: "2-digit",
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+            <SectionTitle>Community</SectionTitle>
+            <CommunityCard
+              orgSlug={org.slug}
+              primary={primary}
+              rank={data.challenge_progress?.rank ?? null}
+              points={data.challenge_progress?.points ?? 0}
+              challenge={data.active_challenge as any}
+            />
           </section>
         )}
+
+        {/* NEWS */}
+        <section>
+          <SectionTitle>News</SectionTitle>
+          <NewsCard orgSlug={org.slug} primary={primary} />
+        </section>
+
+        {/* STATISTIKEN — jetzt einklappbar unten */}
+        <StatsCollapsible
+          readinessScore={(data as any).readiness_score}
+          readinessDays7={(data as any).readiness_days_recorded_7}
+          hasCheckin={!!(data as any).today_checkin}
+          weeklyCompliance={data.weekly_compliance}
+          rank={data.challenge_progress?.rank ?? null}
+          primary={primary}
+        />
       </main>
+
     </OrgAthleteLayout>
   );
 }
@@ -582,3 +507,486 @@ function StatusCard({
     </div>
   );
 }
+
+/* =====================================================================
+ * NEUE HOME-KOMPONENTEN — persönlicher Tagesassistent
+ * ===================================================================*/
+
+function classifyDay(sessions: any[], tasks: any[]): { status: string; summary: string } {
+  const hasSession = sessions.length > 0;
+  const isMatch = sessions.some((s) => /match|spiel|game/i.test(s.name ?? "") || /match|spiel|game/i.test(s.focus ?? ""));
+  const isRecovery =
+    tasks.some((t) => t.task_type === "recovery") ||
+    sessions.some((s) => /regen|recovery|mobility/i.test(s.name ?? "") || /regen|recovery|mobility/i.test(s.focus ?? ""));
+
+  if (isMatch) {
+    return {
+      status: "Heute steht ein Match an.",
+      summary: "Fokus auf Warm-up, Flüssigkeit und mentale Vorbereitung.",
+    };
+  }
+  if (hasSession) {
+    const focus = sessions[0]?.focus ?? sessions[0]?.name ?? "Training";
+    return {
+      status: "Heute ist Trainingstag.",
+      summary: `Fokus auf ${focus}, Mobility und ausreichend Proteinzufuhr.`,
+    };
+  }
+  if (isRecovery) {
+    return {
+      status: "Heute ist Regenerationstag.",
+      summary: "Fokus auf Schlaf, Flüssigkeit und leichte Mobility.",
+    };
+  }
+  return {
+    status: "Heute hast du keine festen Einheiten geplant.",
+    summary: "Nutze den Tag für Mobility, Ernährung und deine Tagesziele.",
+  };
+}
+
+function DayStatusBanner({
+  sessions,
+  tasks,
+  primary,
+}: {
+  sessions: any[];
+  tasks: any[];
+  primary: string;
+}) {
+  const { status, summary } = classifyDay(sessions, tasks);
+  return (
+    <div className="rounded-2xl border border-border bg-card p-4">
+      <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: primary }}>
+        <Sparkles className="h-3.5 w-3.5" /> Dein Tag
+      </div>
+      <div className="mt-1 font-display text-lg font-bold leading-tight">{status}</div>
+      <p className="mt-1 text-sm text-muted-foreground">{summary}</p>
+    </div>
+  );
+}
+
+type AssistItem = {
+  key: string;
+  icon: any;
+  label: string;
+  hint?: string;
+  done: boolean;
+  onToggle?: () => void;
+  href?: { to: any; params?: any };
+};
+
+function TodayAssistant({
+  orgSlug,
+  primary,
+  hasCheckin,
+  sessions,
+  tasks,
+  onToggleTask,
+}: {
+  orgSlug: string;
+  primary: string;
+  hasCheckin: boolean;
+  sessions: any[];
+  tasks: any[];
+  onToggleTask: (taskId: string, status: "open" | "done") => void;
+}) {
+  const trainingDone = sessions.length > 0 && sessions.every((s) => s.status === "completed");
+  const trainingItem: AssistItem | null =
+    sessions.length > 0
+      ? {
+          key: "training",
+          icon: Dumbbell,
+          label: sessions[0].name ?? "Training absolvieren",
+          hint: sessions[0].focus ?? undefined,
+          done: trainingDone,
+          href: { to: "/$orgSlug/training", params: { orgSlug } },
+        }
+      : null;
+
+  const items: AssistItem[] = [
+    {
+      key: "checkin",
+      icon: Activity,
+      label: "Daily Check-in ausfüllen",
+      hint: hasCheckin ? "Erledigt" : "Wie fühlst du dich heute?",
+      done: hasCheckin,
+      href: { to: "/$orgSlug/checkin", params: { orgSlug } },
+    },
+    ...(trainingItem ? [trainingItem] : []),
+    ...tasks.map((t: any) => ({
+      key: `task-${t.id}`,
+      icon: iconForTask(t.task_type),
+      label: t.title,
+      hint: t.subtitle ?? undefined,
+      done: t.status === "done",
+      onToggle: () => onToggleTask(t.id, t.status === "done" ? "open" : "done"),
+    })),
+  ];
+
+  if (items.length === 0) {
+    return <EmptyCard>Heute sind keine Aufgaben geplant.</EmptyCard>;
+  }
+
+  return (
+    <ul className="space-y-2">
+      {items.map((it) => (
+        <AssistRow key={it.key} item={it} primary={primary} />
+      ))}
+    </ul>
+  );
+}
+
+function iconForTask(type: string): any {
+  switch (type) {
+    case "hydration":
+      return Droplet;
+    case "recovery":
+      return Moon;
+    case "daily_checkin":
+      return Activity;
+    case "challenge":
+      return Trophy;
+    case "training_feedback":
+      return Dumbbell;
+    default:
+      return CheckCircle2;
+  }
+}
+
+function AssistRow({ item, primary }: { item: AssistItem; primary: string }) {
+  const Icon = item.icon;
+  const inner = (
+    <div
+      className={`flex items-center gap-3 rounded-2xl border p-3 transition ${
+        item.done ? "border-green-500/40 bg-green-500/10" : "border-border bg-card"
+      }`}
+    >
+      <button
+        type="button"
+        onClick={(e) => {
+          if (!item.onToggle) return;
+          e.preventDefault();
+          e.stopPropagation();
+          item.onToggle();
+        }}
+        className="shrink-0"
+        aria-label={item.done ? "Als offen markieren" : "Als erledigt markieren"}
+      >
+        {item.done ? (
+          <CheckCircle2 className="h-6 w-6 text-green-500" />
+        ) : (
+          <Circle className="h-6 w-6 text-muted-foreground" />
+        )}
+      </button>
+      <div
+        className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-white"
+        style={{ background: item.done ? "#22c55e" : primary }}
+        aria-hidden
+      >
+        <Icon className="h-4 w-4" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className={`text-sm font-semibold ${item.done ? "line-through opacity-60" : ""}`}>
+          {item.label}
+        </div>
+        {item.hint && <div className="truncate text-xs text-muted-foreground">{item.hint}</div>}
+      </div>
+      {item.href && <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />}
+    </div>
+  );
+
+  if (item.href) {
+    return (
+      <li>
+        <Link to={item.href.to} params={item.href.params}>
+          {inner}
+        </Link>
+      </li>
+    );
+  }
+  return <li>{inner}</li>;
+}
+
+function ProgressRingCard({
+  hasCheckin,
+  sessions,
+  tasks,
+  primary,
+}: {
+  hasCheckin: boolean;
+  sessions: any[];
+  tasks: any[];
+  primary: string;
+}) {
+  const items: { label: string; done: boolean }[] = [
+    { label: "Check-in", done: hasCheckin },
+  ];
+  if (sessions.length > 0) {
+    items.push({ label: "Training", done: sessions.every((s) => s.status === "completed") });
+  }
+  for (const t of tasks) {
+    items.push({ label: t.title, done: t.status === "done" });
+  }
+  const total = items.length || 1;
+  const done = items.filter((i) => i.done).length;
+  const pct = Math.round((done / total) * 100);
+  const R = 42;
+  const C = 2 * Math.PI * R;
+  const dash = (pct / 100) * C;
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5">
+      <div className="flex items-center gap-5">
+        <div className="relative h-28 w-28 shrink-0">
+          <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
+            <circle cx="50" cy="50" r={R} fill="none" stroke="currentColor" strokeWidth="8" className="text-muted/30" />
+            <circle
+              cx="50"
+              cy="50"
+              r={R}
+              fill="none"
+              stroke={primary}
+              strokeWidth="8"
+              strokeLinecap="round"
+              strokeDasharray={`${dash} ${C - dash}`}
+            />
+          </svg>
+          <div className="absolute inset-0 grid place-items-center">
+            <div className="text-center">
+              <div className="font-display text-2xl font-bold leading-none">{pct}%</div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">erledigt</div>
+            </div>
+          </div>
+        </div>
+        <ul className="min-w-0 flex-1 space-y-1.5">
+          {items.slice(0, 5).map((i, idx) => (
+            <li key={idx} className="flex items-center gap-2 text-sm">
+              {i.done ? (
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-green-500" />
+              ) : (
+                <Circle className="h-4 w-4 shrink-0 text-muted-foreground" />
+              )}
+              <span className={`truncate ${i.done ? "text-muted-foreground line-through" : ""}`}>{i.label}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+function TrainingTodayCard({
+  sessions,
+  orgSlug,
+  primary,
+}: {
+  sessions: any[];
+  orgSlug: string;
+  primary: string;
+}) {
+  if (sessions.length === 0) {
+    return (
+      <div className="rounded-2xl border border-dashed border-border p-5 text-center">
+        <Dumbbell className="mx-auto h-6 w-6 text-muted-foreground" />
+        <div className="mt-2 text-sm text-muted-foreground">Heute ist kein Training geplant.</div>
+      </div>
+    );
+  }
+  const s = sessions[0];
+  return (
+    <div className="rounded-2xl border border-border bg-card p-4">
+      <div className="flex items-start gap-3">
+        <div
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl text-white"
+          style={{ background: primary }}
+        >
+          <Dumbbell className="h-5 w-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            {TRAINING_SOURCE_LABEL[s.training_source] ?? "Training"}
+          </div>
+          <div className="font-display text-lg font-bold leading-tight">{s.name ?? "Training"}</div>
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+            {s.duration_minutes && (
+              <span className="inline-flex items-center gap-1">
+                <Clock className="h-3 w-3" /> {s.duration_minutes} Min
+              </span>
+            )}
+            {s.focus && <span>{s.focus}</span>}
+          </div>
+        </div>
+      </div>
+      <Link
+        to="/$orgSlug/training"
+        params={{ orgSlug }}
+        className="mt-4 flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white"
+        style={{ background: primary }}
+      >
+        {s.status === "completed" ? "Training öffnen" : "Training starten"}
+        <ChevronRight className="h-4 w-4" />
+      </Link>
+    </div>
+  );
+}
+
+function NextAppointmentCard({ task, primary }: { task: any; primary: string }) {
+  const d = new Date(task.scheduled_for);
+  const weekday = d.toLocaleDateString("de-DE", { weekday: "long" });
+  const dateStr = d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
+  const time = task.scheduled_time ?? null;
+  return (
+    <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4">
+      <div
+        className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl text-white"
+        style={{ background: primary }}
+      >
+        <Calendar className="h-5 w-5" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+          {weekday} · {dateStr}
+          {time ? ` · ${time}` : ""}
+        </div>
+        <div className="truncate font-display text-base font-bold">{task.title}</div>
+        {task.subtitle && <div className="truncate text-xs text-muted-foreground">{task.subtitle}</div>}
+      </div>
+    </div>
+  );
+}
+
+function CommunityCard({
+  orgSlug,
+  primary,
+  rank,
+  points,
+  challenge,
+}: {
+  orgSlug: string;
+  primary: string;
+  rank: number | null;
+  points: number;
+  challenge: any;
+}) {
+  return (
+    <Link
+      to="/$orgSlug/community"
+      params={{ orgSlug }}
+      className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4"
+    >
+      <div
+        className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl text-white"
+        style={{ background: primary }}
+      >
+        <Users className="h-5 w-5" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-3 text-sm">
+          <span className="inline-flex items-center gap-1 font-semibold">
+            <Trophy className="h-3.5 w-3.5" style={{ color: primary }} />
+            {rank ? `Platz ${rank}` : "Ranking"}
+          </span>
+          <span className="inline-flex items-center gap-1 text-muted-foreground">
+            <Flame className="h-3.5 w-3.5" /> {points} Pkt
+          </span>
+        </div>
+        {challenge?.name && (
+          <div className="mt-0.5 truncate text-xs text-muted-foreground">
+            Challenge: {challenge.name}
+          </div>
+        )}
+      </div>
+      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+    </Link>
+  );
+}
+
+function NewsCard({ orgSlug, primary }: { orgSlug: string; primary: string }) {
+  return (
+    <Link
+      to="/$orgSlug/community"
+      params={{ orgSlug }}
+      className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4"
+    >
+      <div
+        className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl text-white"
+        style={{ background: primary }}
+      >
+        <Megaphone className="h-5 w-5" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="text-sm font-semibold">Neuigkeiten aus dem Club</div>
+        <div className="truncate text-xs text-muted-foreground">
+          Ankündigungen, Kurse & Events deiner Organisation
+        </div>
+      </div>
+      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+    </Link>
+  );
+}
+
+function StatsCollapsible({
+  readinessScore,
+  readinessDays7,
+  hasCheckin,
+  weeklyCompliance,
+  rank,
+  primary,
+}: {
+  readinessScore: number | null;
+  readinessDays7: number | null;
+  hasCheckin: boolean;
+  weeklyCompliance: number | null;
+  rank: number | null;
+  primary: string;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <section>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between rounded-2xl border border-border bg-card px-4 py-3 text-left"
+      >
+        <div>
+          <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+            Statistiken
+          </div>
+          <div className="text-sm font-semibold">Readiness, Performance & Compliance</div>
+        </div>
+        <ChevronDown className={`h-4 w-4 text-muted-foreground transition ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <StatusCard
+            icon={Activity}
+            label="Readiness"
+            value={readinessScore != null ? `${readinessScore}` : "—"}
+            hint={
+              readinessScore != null
+                ? "heute"
+                : hasCheckin
+                  ? `Lernphase · ${readinessDays7 ?? 0}/7`
+                  : "Check-in offen"
+            }
+            primary={primary}
+          />
+          <StatusCard icon={TrendingUp} label="Performance" value="—" hint="Profile in Kürze" primary={primary} />
+          <StatusCard
+            icon={CheckCircle2}
+            label="Weekly Compliance"
+            value={weeklyCompliance != null ? `${weeklyCompliance}%` : "—"}
+            primary={primary}
+          />
+          <StatusCard
+            icon={Trophy}
+            label="Team Rank"
+            value={rank ? `#${rank}` : "—"}
+            primary={primary}
+          />
+        </div>
+      )}
+    </section>
+  );
+}
+
