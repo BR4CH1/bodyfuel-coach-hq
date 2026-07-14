@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
@@ -27,6 +27,7 @@ type Tpl = {
 
 function TemplatesPage() {
   const { supabaseUser } = useSession();
+  const navigate = useNavigate();
   const [items, setItems] = useState<Tpl[]>([]);
   const [showForm, setShowForm] = useState(false);
 
@@ -47,8 +48,12 @@ function TemplatesPage() {
   };
 
   const startLive = (t: Tpl) => {
+    // Client-seitige Navigation (kein window.location.href): sonst geht bei
+    // hartem Reload der aktive Org-Kontext (localStorage) auf dem SSR-Rendering
+    // durch die Query-Gate-Logik verloren und die Coach-Tools-Layout leitet
+    // fälschlich in den Default-Org-Kontext um.
     sessionStorage.setItem("coach-tools:live-template", JSON.stringify(t));
-    window.location.href = "/coach-tools/live";
+    navigate({ to: "/coach-tools/live" });
   };
 
   return (
