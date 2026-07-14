@@ -41,7 +41,7 @@ export const DEFAULT_LAYOUT: PlayerCardLayout = {
   end: { x: 885, y: 1275, fontSize: 72 },
   updateDate: { x: 490, y: 1420, fontSize: 26 },
   strongest: { x: 820, y: 1420, fontSize: 26 },
-  photo: { x: 320, y: 260, w: 500, h: 620, url: null },
+  photo: { x: 236, y: 300, w: 550, h: 700, url: null },
 };
 
 const KEY = "bfr:player-card-layout:v1";
