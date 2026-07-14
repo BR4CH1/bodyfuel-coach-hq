@@ -1110,6 +1110,19 @@ function expandGeneratedDays(
   });
 }
 
+function extractJsonObject(raw: string): string | null {
+  const text = String(raw ?? "").trim();
+  if (!text) return null;
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1]?.trim();
+  const candidate = fenced || text;
+  const start = candidate.indexOf("{");
+  const end = candidate.lastIndexOf("}");
+  if (start < 0 || end <= start) return null;
+  return candidate.slice(start, end + 1)
+    .replace(/[\u0000-\u001F\u007F]/g, (char) => (char === "\n" || char === "\r" || char === "\t" ? char : ""))
+    .replace(/,\s*([}\]])/g, "$1");
+}
+
 /** Auf 50-kcal-Schritte runden (z. B. 2237 → 2250). */
 function roundKcal50(value: number): number {
   return Math.max(0, Math.round(value / 50) * 50);
