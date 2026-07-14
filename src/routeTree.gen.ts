@@ -143,6 +143,7 @@ import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/e
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as CoachTeamsOrgIdPerformanceRouteImport } from './routes/coach.teams.$orgId.performance'
+import { Route as CoachPlayerCardsLayoutOrgSlugRouteImport } from './routes/coach.player-cards_.layout.$orgSlug'
 import { Route as BullsPerformanceModuleIdTestIdRouteImport } from './routes/bulls.performance.$moduleId.$testId'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicHooksTrialRemindersRouteImport } from './routes/api/public/hooks/trial-reminders'
@@ -845,6 +846,12 @@ const CoachTeamsOrgIdPerformanceRoute =
     path: '/performance',
     getParentRoute: () => CoachTeamsOrgIdRoute,
   } as any)
+const CoachPlayerCardsLayoutOrgSlugRoute =
+  CoachPlayerCardsLayoutOrgSlugRouteImport.update({
+    id: '/player-cards_/layout/$orgSlug',
+    path: '/player-cards/layout/$orgSlug',
+    getParentRoute: () => CoachRoute,
+  } as any)
 const BullsPerformanceModuleIdTestIdRoute =
   BullsPerformanceModuleIdTestIdRouteImport.update({
     id: '/$testId',
@@ -1069,6 +1076,7 @@ export interface FileRoutesByFullPath {
   '/api/public/hooks/trial-reminders': typeof ApiPublicHooksTrialRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/bulls/performance/$moduleId/$testId': typeof BullsPerformanceModuleIdTestIdRoute
+  '/coach/player-cards/layout/$orgSlug': typeof CoachPlayerCardsLayoutOrgSlugRoute
   '/coach/teams/$orgId/performance': typeof CoachTeamsOrgIdPerformanceRouteWithChildren
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -1207,6 +1215,7 @@ export interface FileRoutesByTo {
   '/api/public/hooks/trial-reminders': typeof ApiPublicHooksTrialRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/bulls/performance/$moduleId/$testId': typeof BullsPerformanceModuleIdTestIdRoute
+  '/coach/player-cards/layout/$orgSlug': typeof CoachPlayerCardsLayoutOrgSlugRoute
   '/coach/teams/$orgId/performance': typeof CoachTeamsOrgIdPerformanceRouteWithChildren
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -1358,6 +1367,7 @@ export interface FileRoutesById {
   '/api/public/hooks/trial-reminders': typeof ApiPublicHooksTrialRemindersRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/bulls/performance/$moduleId/$testId': typeof BullsPerformanceModuleIdTestIdRoute
+  '/coach/player-cards_/layout/$orgSlug': typeof CoachPlayerCardsLayoutOrgSlugRoute
   '/coach/teams/$orgId/performance': typeof CoachTeamsOrgIdPerformanceRouteWithChildren
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -1510,6 +1520,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/trial-reminders'
     | '/api/public/payments/webhook'
     | '/bulls/performance/$moduleId/$testId'
+    | '/coach/player-cards/layout/$orgSlug'
     | '/coach/teams/$orgId/performance'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -1648,6 +1659,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/trial-reminders'
     | '/api/public/payments/webhook'
     | '/bulls/performance/$moduleId/$testId'
+    | '/coach/player-cards/layout/$orgSlug'
     | '/coach/teams/$orgId/performance'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -1798,6 +1810,7 @@ export interface FileRouteTypes {
     | '/api/public/hooks/trial-reminders'
     | '/api/public/payments/webhook'
     | '/bulls/performance/$moduleId/$testId'
+    | '/coach/player-cards_/layout/$orgSlug'
     | '/coach/teams/$orgId/performance'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -2825,6 +2838,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CoachTeamsOrgIdPerformanceRouteImport
       parentRoute: typeof CoachTeamsOrgIdRoute
     }
+    '/coach/player-cards_/layout/$orgSlug': {
+      id: '/coach/player-cards_/layout/$orgSlug'
+      path: '/player-cards/layout/$orgSlug'
+      fullPath: '/coach/player-cards/layout/$orgSlug'
+      preLoaderRoute: typeof CoachPlayerCardsLayoutOrgSlugRouteImport
+      parentRoute: typeof CoachRoute
+    }
     '/bulls/performance/$moduleId/$testId': {
       id: '/bulls/performance/$moduleId/$testId'
       path: '/$testId'
@@ -3053,6 +3073,7 @@ interface CoachRouteChildren {
   CoachTeamsOrgIdRoute: typeof CoachTeamsOrgIdRouteWithChildren
   CoachTrainingBuilderUserIdRoute: typeof CoachTrainingBuilderUserIdRoute
   CoachTeamsIndexRoute: typeof CoachTeamsIndexRoute
+  CoachPlayerCardsLayoutOrgSlugRoute: typeof CoachPlayerCardsLayoutOrgSlugRoute
 }
 
 const CoachRouteChildren: CoachRouteChildren = {
@@ -3074,6 +3095,7 @@ const CoachRouteChildren: CoachRouteChildren = {
   CoachTeamsOrgIdRoute: CoachTeamsOrgIdRouteWithChildren,
   CoachTrainingBuilderUserIdRoute: CoachTrainingBuilderUserIdRoute,
   CoachTeamsIndexRoute: CoachTeamsIndexRoute,
+  CoachPlayerCardsLayoutOrgSlugRoute: CoachPlayerCardsLayoutOrgSlugRoute,
 }
 
 const CoachRouteWithChildren = CoachRoute._addFileChildren(CoachRouteChildren)
