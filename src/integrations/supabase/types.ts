@@ -6394,6 +6394,8 @@ export type Database = {
           id: string
           is_published: boolean
           layout_json: Json
+          name: string | null
+          organization_slug: string | null
           published_at: string | null
           scope: string
           template_uploaded_at: string | null
@@ -6406,6 +6408,8 @@ export type Database = {
           id?: string
           is_published?: boolean
           layout_json?: Json
+          name?: string | null
+          organization_slug?: string | null
           published_at?: string | null
           scope?: string
           template_uploaded_at?: string | null
@@ -6418,6 +6422,8 @@ export type Database = {
           id?: string
           is_published?: boolean
           layout_json?: Json
+          name?: string | null
+          organization_slug?: string | null
           published_at?: string | null
           scope?: string
           template_uploaded_at?: string | null
