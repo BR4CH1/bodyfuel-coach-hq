@@ -643,13 +643,20 @@ WICHTIG zu name/description:
       .map((s) => s.toLowerCase().trim())
       .filter(Boolean);
 
-    async function runAiAttempt(correctionNote: string): Promise<GeneratedDay[]> {
-      const finalPrompt = correctionNote ? `${prompt}\n\n${correctionNote}` : prompt;
+    // Gemini 2.5-flash liefert bei langen Prompts (großer Food-Katalog) gelegentlich
+    // eine reine Whitespace-Antwort ohne JSON. In dem Fall auf ein anderes Modell fallbacken.
+    const MODEL_CANDIDATES = [
+      "google/gemini-2.5-flash",
+      "openai/gpt-5.5-mini",
+      "google/gemini-2.5-pro",
+    ] as const;
+
+    async function callModel(model: string, finalPrompt: string): Promise<string> {
       const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
+          model,
           response_format: { type: "json_object" },
           messages: [{ role: "user", content: finalPrompt }],
         }),
@@ -662,17 +669,41 @@ WICHTIG zu name/description:
       }
       const aiJson = await aiRes.json();
       const raw = aiJson?.choices?.[0]?.message?.content ?? "{}";
-      let parsed: { days?: GeneratedDay[] } = {};
-      try {
-        parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
-      } catch {
-        throw new Error("Antwort konnte nicht gelesen werden.");
+      return typeof raw === "string" ? raw : JSON.stringify(raw);
+    }
+
+    async function runAiAttempt(correctionNote: string): Promise<GeneratedDay[]> {
+      const finalPrompt = correctionNote ? `${prompt}\n\n${correctionNote}` : prompt;
+      let lastError: Error | null = null;
+      for (const model of MODEL_CANDIDATES) {
+        try {
+          const raw = await callModel(model, finalPrompt);
+          if (!raw.trim() || !raw.includes("{")) {
+            lastError = new Error(`Leere Antwort von ${model}`);
+            continue;
+          }
+          let parsed: { days?: GeneratedDay[] } = {};
+          try {
+            parsed = JSON.parse(raw);
+          } catch {
+            lastError = new Error(`Antwort von ${model} konnte nicht gelesen werden.`);
+            continue;
+          }
+          const generatedDays = (parsed.days ?? [])
+            .slice(0, aiPlanDays)
+            .map((d: GeneratedDay, i: number): GeneratedDay => ({ ...d, type: aiSchedule[i]?.type ?? d.type }));
+          if (!generatedDays.length) {
+            lastError = new Error(`Keine Tage von ${model}.`);
+            continue;
+          }
+          return generatedDays;
+        } catch (e) {
+          const msg = (e as Error).message ?? "";
+          if (msg.startsWith("Rate-Limit") || msg.startsWith("Guthaben")) throw e;
+          lastError = e as Error;
+        }
       }
-      const generatedDays = (parsed.days ?? [])
-        .slice(0, aiPlanDays)
-        .map((d: GeneratedDay, i: number): GeneratedDay => ({ ...d, type: aiSchedule[i]?.type ?? d.type }));
-      if (!generatedDays.length) throw new Error("Keine Tage generiert.");
-      return generatedDays;
+      throw lastError ?? new Error("Keine Tage generiert.");
     }
 
     // Auto-Repair-Schleife: bis zu 2 Retries, falls die KI food_ids liefert,
