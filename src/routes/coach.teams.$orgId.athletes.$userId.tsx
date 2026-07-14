@@ -118,6 +118,13 @@ function AthleteProfile() {
         {tab === "nutrition" && (
           <AthleteNutritionTab data={data} orgId={orgId} userId={userId} />
         )}
+        {tab === "player-card" && (
+          <CoachPlayerCardView
+            userId={userId}
+            jerseyNumber={data.athlete.jersey_number != null ? String(data.athlete.jersey_number) : null}
+            teamLabel={data.athlete.team_name ?? null}
+          />
+        )}
       </div>
     </div>
   );
