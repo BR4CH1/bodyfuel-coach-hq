@@ -644,20 +644,25 @@ WICHTIG zu name/description:
       .filter(Boolean);
 
     // Gemini 2.5-flash liefert bei langen Prompts (großer Food-Katalog) gelegentlich
-    // eine reine Whitespace-Antwort ohne JSON. In dem Fall auf ein anderes Modell fallbacken.
+    // eine reine Whitespace-Antwort ohne JSON. Daher zuerst ein OpenAI-Modell nutzen
+    // und nur bei echten Fehlern auf Gemini zurückfallen.
     const MODEL_CANDIDATES = [
+      "openai/gpt-5-mini",
       "google/gemini-2.5-flash",
-      "openai/gpt-5.5-mini",
       "google/gemini-2.5-pro",
     ] as const;
 
     async function callModel(model: string, finalPrompt: string): Promise<string> {
+      const tokenLimit = model.startsWith("openai/")
+        ? { max_completion_tokens: 16000 }
+        : { max_tokens: 16000 };
       const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
         body: JSON.stringify({
           model,
           response_format: { type: "json_object" },
+          ...tokenLimit,
           messages: [{ role: "user", content: finalPrompt }],
         }),
       });

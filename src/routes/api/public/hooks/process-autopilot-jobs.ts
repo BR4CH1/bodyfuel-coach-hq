@@ -28,10 +28,21 @@ export const Route = createFileRoute("/api/public/hooks/process-autopilot-jobs")
         // Genau 1 offener Job-Schritt pro Aufruf: 31-Tage-Pläne sind bewusst
         // gekürzt/chunked, aber mehrere LLM-/Engine-Schritte in einem Request
         // können trotzdem Cloudflare-524 auslösen.
+        const staleRunningBefore = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+        await supabaseAdmin
+          .from("smart_autopilot_jobs")
+          .update({
+            status: "pending",
+            attempts: 0,
+            error: "Plan-Erstellung wurde unterbrochen und wird automatisch neu gestartet.",
+          })
+          .eq("status", "running")
+          .lt("started_at", staleRunningBefore);
+
         const { data: jobs, error } = await supabaseAdmin
           .from("smart_autopilot_jobs")
           .select("*")
-          .in("status", ["pending", "running"])
+          .eq("status", "pending")
           .neq("step", "done")
           .order("created_at", { ascending: true })
           .limit(1);
@@ -44,15 +55,20 @@ export const Route = createFileRoute("/api/public/hooks/process-autopilot-jobs")
 
         for (const job of jobs ?? []) {
           try {
+            const currentAttempts = Number(job.attempts ?? 0);
             await supabaseAdmin
               .from("smart_autopilot_jobs")
               .update({
                 status: "running",
-                started_at: job.started_at ?? new Date().toISOString(),
-                attempts: (job.attempts ?? 0) + 1,
+                started_at: new Date().toISOString(),
+                attempts: currentAttempts + 1,
                 error: null,
               })
               .eq("id", job.id);
+
+            if (currentAttempts >= 5) {
+              throw new Error("Plan-Erstellung mehrfach unterbrochen — bitte später erneut starten.");
+            }
 
             if (job.step === "nutrition") {
               const { generateAiNutritionPlanCore } = await import("@/lib/nutrition-plan-ai.functions");
