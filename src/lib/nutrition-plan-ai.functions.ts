@@ -654,8 +654,8 @@ WICHTIG zu name/description:
 
     async function callModel(model: string, finalPrompt: string): Promise<string> {
       const tokenLimit = model.startsWith("openai/")
-        ? { max_completion_tokens: 16000 }
-        : { max_tokens: 16000 };
+        ? { max_completion_tokens: 32000 }
+        : { max_tokens: 32000 };
       const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
