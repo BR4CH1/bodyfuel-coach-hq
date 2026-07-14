@@ -34,11 +34,16 @@ function OrgIndex() {
     });
   }, [ctx]);
 
+  // Fallback: jede aktive Verbindung (Membership ODER Staff-Assignment) gilt
+  // als gültiger Vereinszugang — auch wenn `deriveOrgRole` keine spezifische
+  // Staff-Rolle mappt (neuer Enum-Wert, unerwartete Permission-Kombination).
+  const hasAnyOrgRelation = !!(ctx && (ctx.membership || ctx.staff));
+
   useEffect(() => {
     if (!supabaseUser || !ctx || !flags) return;
 
-    // Kein Zugriff überhaupt → Landing bleibt, wird unten gerendert.
-    if (flags.role === "none" && !flags.isSuperAdmin) return;
+    // Nur echte "keine Verbindung"-Fälle blockieren.
+    if (flags.role === "none" && !flags.isSuperAdmin && !hasAnyOrgRelation) return;
 
     setActiveContext(org.slug);
 
@@ -51,9 +56,6 @@ function OrgIndex() {
         navigate({ to: "/$orgSlug/onboarding", params: { orgSlug: org.slug }, replace: true });
         return;
       }
-      // Rollenbasiertes Ziel: Vereinsleitung → Leitungs-Dashboard (Phase B),
-      // Coach/Staff → Coach-Cockpit. Bis Leitungs-Dashboard existiert, landen
-      // Org-Admins ebenfalls auf dem Coach-Cockpit ihres Vereins.
       navigate({ to: "/coach/teams/$orgId", params: { orgId: ctx.organization.id }, replace: true });
     };
 
@@ -78,6 +80,18 @@ function OrgIndex() {
       return;
     }
 
+    // Fallback: Staff-Assignment vorhanden, aber Rolle nicht sauber gemappt.
+    if (ctx.staff) {
+      goStaff();
+      return;
+    }
+
+    // Fallback: Reine Nicht-Athlet-Mitgliedschaft ('member') → Vereins-Home.
+    if (ctx.membership) {
+      goAthlete();
+      return;
+    }
+
     // Dual (Player + Staff) → Kontext-Wahl beim ersten Mal.
     const stored = getOrgMode(org.slug);
     if (!stored) {
@@ -86,7 +100,7 @@ function OrgIndex() {
     }
     if (stored === "staff") goStaff();
     else goAthlete();
-  }, [supabaseUser, ctx, flags, navigate, org.slug]);
+  }, [supabaseUser, ctx, flags, navigate, org.slug, hasAnyOrgRelation]);
 
   const chooseMode = (mode: "athlete" | "staff") => {
     setOrgMode(org.slug, mode);
