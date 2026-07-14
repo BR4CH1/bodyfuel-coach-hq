@@ -351,6 +351,7 @@ async function loadCardBundle(supabase: any, targetUserId: string) {
   let organization = null as null | {
     id: string;
     name: string;
+    slug: string | null;
     logo_url: string | null;
     primary_color: string | null;
     secondary_color: string | null;
@@ -363,11 +364,12 @@ async function loadCardBundle(supabase: any, targetUserId: string) {
   if (cardRes.data?.organization_id) {
     const { data: org } = await supabase
       .from("organizations")
-      .select("id, name, logo_url, primary_color, secondary_color, accent_color, background_color, text_color, claim, short_name")
+      .select("id, name, slug, logo_url, primary_color, secondary_color, accent_color, background_color, text_color, claim, short_name")
       .eq("id", cardRes.data.organization_id)
       .maybeSingle();
     organization = (org ?? null) as any;
   }
+
 
   return {
     card: cardRes.data ?? null,
