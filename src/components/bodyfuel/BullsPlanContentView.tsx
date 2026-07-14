@@ -19,15 +19,7 @@ import { Link, useParams } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Utensils,
-  Check,
-  Loader2,
-  BookOpen,
-  Sparkles,
-} from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
 import {
@@ -35,6 +27,7 @@ import {
   BULLS_DAY_TYPE_LABELS,
 } from "@/lib/performance-nutrition/bulls-nutrition.functions";
 import { RecipeDialog } from "./RecipeDialog";
+import { DayPlanView, type DayPlanMeal } from "./DayPlanView";
 
 type Meal = {
   id: string;
