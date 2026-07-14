@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { CheckCircle2, Circle, Clock, Trophy, Activity, TrendingUp, Users, ShieldAlert } from "lucide-react";
+import { CheckCircle2, Circle, Clock, Trophy, Activity, TrendingUp, Users, ShieldAlert, Sparkles, Dumbbell, Apple, Droplet, Moon, Calendar, Megaphone, Flame, ChevronRight, ChevronDown } from "lucide-react";
 import { useSession } from "@/lib/bodyfuel/session";
 import {
   getOrgHomeData,
