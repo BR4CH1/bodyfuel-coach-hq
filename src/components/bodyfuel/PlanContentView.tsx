@@ -13,6 +13,7 @@ import { formatDateRange } from "@/lib/format-date-range";
 import { RecipeDialog } from "./RecipeDialog";
 import { MealSwapDialog } from "./MealSwapDialog";
 import { SkipReasonDialog } from "./SkipReasonDialog";
+import { DayPlanView, type DayPlanMeal } from "./DayPlanView";
 
 type Plan = { id: string; client_id: string; title: string; weeks_count?: number | null; scheduled_start_date?: string | null; scheduled_end_date?: string | null };
 type Day = { id: string; name: string; sort_order: number; week_number?: number | null; day_date?: string | null };
@@ -717,267 +718,195 @@ export function PlanContentView({ clientId, planType }: Props) {
             </p>
           )}
 
-          <div className="mt-3 space-y-3">
-            {planType === "nutrition"
-              ? (() => {
-                  const SLOT_ORDER: Record<string, number> = { breakfast: 0, snack: 1, lunch: 2, dinner: 3 };
-                  return meals
-                    .filter((m) => itemToVirtual[m.id] === activeDay)
-                    .slice()
-                    .sort((a, b) => {
-                      const sa = slotFromName(itemDisplayName[a.id] ?? a.name) ?? slotFromName(a.name);
-                      const sb = slotFromName(itemDisplayName[b.id] ?? b.name) ?? slotFromName(b.name);
-                      const oa = sa ? SLOT_ORDER[sa] : 99;
-                      const ob = sb ? SLOT_ORDER[sb] : 99;
-                      if (oa !== ob) return oa - ob;
-                      return a.sort_order - b.sort_order;
-                    });
-                })().map((m) => {
-                  const override = overrides[m.id];
-                  const effName = override?.name ?? (itemDisplayName[m.id] ?? m.name);
-                  const effDescription = override ? override.description : m.description;
-                  const effKcal = override ? override.kcal : m.kcal;
-                  const effProtein = override ? override.protein_g : m.protein_g;
-                  const effCarbs = override ? override.carbs_g : m.carbs_g;
-                  const effFat = override ? override.fat_g : m.fat_g;
-                  const isTracked = !!tracked[m.id];
-                  const busy = togglingId === m.id;
-                  // Wenn der Name "Frühstück: …" enthält → Slot als Eyebrow, Rest als Titel
-                  const colonIdx = effName.indexOf(":");
-                  const slotLabel = colonIdx > 0 ? effName.slice(0, colonIdx).trim() : null;
-                  const titleText = colonIdx > 0 ? effName.slice(colonIdx + 1).trim() : effName;
-                  const originalTitle = itemDisplayName[m.id] ?? m.name;
-                  const inner = (
-                    <>
-                      {slotLabel && (
-                        <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
-                          {slotLabel}
-                        </div>
-                      )}
-                      <div className="flex flex-wrap items-center gap-2">
-                        <div className="text-sm font-bold text-gold">{titleText}</div>
-                        {override && (
-                          <span className="inline-flex items-center rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-semibold text-gold" title="Du hast diese Mahlzeit heute durch ein eigenes Rezept ersetzt.">
-                            Eigenes Rezept
-                          </span>
-                        )}
-                        {canTrack && isTracked && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
-                            <Check className="h-3 w-3" /> getrackt
-                          </span>
-                        )}
-                        {!override && isCoach && m.data_source === "db_verified" && (
-                          <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400" title="Alle Zutaten aus geprüfter BodyFuel-Datenbank (BLS 4.0).">
-                            BLS-geprüft
-                          </span>
-                        )}
-                        {!override && isCoach && m.data_source === "coach_verified" && (
-                          <span className="inline-flex items-center rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-400" title="Vom Coach manuell freigegeben.">
-                            Coach ✓
-                          </span>
-                        )}
-                        {!override && isCoach && m.data_source === "db_mixed" && (
-                          <span className="inline-flex items-center rounded-full bg-sky-500/10 px-2 py-0.5 text-[10px] font-semibold text-sky-400" title={`Teilweise aus BodyFuel-DB (${Math.round((m.verified_ratio ?? 0) * 100)}% der Zutaten).`}>
-                            teils geprüft
-                          </span>
-                        )}
-                        {!override && isCoach && m.data_source === "ai_estimate" && (
-                          <span className="inline-flex items-center rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold text-amber-400" title="Werte von der KI geschätzt — vor dem Verlassen prüfen.">
-                            ⚠ KI-Schätzung
-                          </span>
-                        )}
-                      </div>
+          {planType === "nutrition" ? (
+            (() => {
+              const dayMealsRaw = meals.filter((m) => itemToVirtual[m.id] === activeDay);
+              const dayMeals: DayPlanMeal[] = dayMealsRaw.map((m) => {
+                const ov = overrides[m.id];
+                const effName = ov?.name ?? (itemDisplayName[m.id] ?? m.name);
+                const effDescription = ov ? ov.description : m.description;
+                const effKcal = ov ? ov.kcal : m.kcal;
+                const effProtein = ov ? ov.protein_g : m.protein_g;
+                const effCarbs = ov ? ov.carbs_g : m.carbs_g;
+                const effFat = ov ? ov.fat_g : m.fat_g;
+                // Wenn Name "Frühstück: Rührei mit …" → Slot als Kategorie, Rest als Titel
+                const colonIdx = effName.indexOf(":");
+                const slotName = colonIdx > 0 ? effName.slice(0, colonIdx).trim() : effName;
+                const title =
+                  colonIdx > 0 ? effName.slice(colonIdx + 1).trim() : effName;
+                return {
+                  id: m.id,
+                  slotName,
+                  title: title || effName,
+                  description: effDescription,
+                  kcal: effKcal,
+                  protein_g: effProtein,
+                  carbs_g: effCarbs,
+                  fat_g: effFat,
+                  isTracked: !!tracked[m.id],
+                  busy: togglingId === m.id,
+                  hasRecipe: !!effDescription,
+                  canSwap:
+                    canTrack &&
+                    !ov &&
+                    !!m.kcal &&
+                    !!m.protein_g &&
+                    !!m.carbs_g &&
+                    !!m.fat_g,
+                  hasOverride: !!ov,
+                };
+              });
 
-                      {(() => {
-                        const text = cleanDescription(effDescription);
-                        if (!text) return null;
-                        return <p className="mt-1 text-sm text-foreground/90">{text}</p>;
-                      })()}
-                      {(effProtein != null || effCarbs != null || effFat != null || effKcal != null) && (
-                        <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-                          {effKcal != null && <span>{effKcal} kcal</span>}
-                          {effProtein != null && <span>P {effProtein}g</span>}
-                          {effCarbs != null && <span>· KH {effCarbs}g</span>}
-                          {effFat != null && <span>· F {effFat}g</span>}
-                        </div>
-                      )}
-                      {isCoach && Array.isArray(m.compute_warnings) && m.compute_warnings.length > 0 && (
-                        <div className="mt-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1.5 text-[11px] text-amber-200">
-                          {m.compute_warnings.slice(0, 2).join(" | ")}
-                        </div>
-                      )}
-                      {isCoach && mealDebug[m.id] && (
-                        <div className="mt-3 overflow-hidden rounded-md border border-border/70 bg-background/60 text-[11px]">
-                          <div className="border-b border-border/60 px-2 py-1.5 font-semibold text-foreground/90">
-                            Debug: {mealDebug[m.id].totals.kcal} kcal · P {mealDebug[m.id].totals.protein_g}g · KH {mealDebug[m.id].totals.carbs_g}g · F {mealDebug[m.id].totals.fat_g}g
-                          </div>
-                          <div className="divide-y divide-border/50">
-                            {mealDebug[m.id].ingredients.map((d, i) => (
-                              <div key={`${m.id}-debug-${i}`} className="grid gap-1 px-2 py-1.5 sm:grid-cols-[1.4fr_0.9fr_0.9fr] sm:items-center">
-                                <div>
-                                  <div className="font-medium text-foreground/90">{d.display}</div>
-                                  <div className="text-muted-foreground">→ {d.parsed_name} · {d.grams}g</div>
-                                </div>
-                                <div className="text-muted-foreground">DB: {d.matched_food ?? "nicht gefunden"}</div>
-                                <div className="text-muted-foreground sm:text-right">
-                                  {d.kcal} kcal · P {d.protein_g} · KH {d.carbs_g} · F {d.fat_g}
-                                </div>
-                                {d.warning && <div className="text-amber-200 sm:col-span-3">{d.warning}</div>}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {override && (
-                        <div className="mt-2 rounded-md border border-border/60 bg-background/40 px-2 py-1.5 text-[11px] text-muted-foreground">
-                          <span className="opacity-70">Ursprünglich geplant:</span>{" "}
-                          <span className="text-foreground/80">{originalTitle}</span>
-                          {canTrack && (
-                            <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); revertOverride(m); }}
-                              disabled={revertingId === m.id}
-                              className="ml-2 inline-flex items-center gap-1 rounded border border-border bg-background/60 px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground hover:border-gold/50 hover:text-gold disabled:opacity-60"
-                            >
-                              {revertingId === m.id ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-                              Original wiederherstellen
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </>
-                  );
-                  const base = "rounded-2xl border p-4 transition";
-                  const isSkipped = !!skipped[m.id];
-                  const style = isTracked
-                    ? "border-emerald-500/40 bg-emerald-500/5"
-                    : isSkipped
-                      ? "border-amber-500/40 bg-amber-500/5 opacity-80"
-                      : override
-                        ? "border-gold/30 bg-gold/5"
-                        : "border-border bg-background/40";
+              const eaten = dayMealsRaw.reduce(
+                (acc, m) => {
+                  if (!tracked[m.id]) return acc;
+                  const ov = overrides[m.id];
+                  acc.kcal += Number(ov?.kcal ?? m.kcal ?? 0);
+                  acc.protein_g += Number(ov?.protein_g ?? m.protein_g ?? 0);
+                  acc.carbs_g += Number(ov?.carbs_g ?? m.carbs_g ?? 0);
+                  acc.fat_g += Number(ov?.fat_g ?? m.fat_g ?? 0);
+                  return acc;
+                },
+                { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0 },
+              );
+
+              const planned = dayMealsRaw.reduce(
+                (acc, m) => {
+                  const ov = overrides[m.id];
+                  acc.kcal += Number(ov?.kcal ?? m.kcal ?? 0);
+                  acc.protein_g += Number(ov?.protein_g ?? m.protein_g ?? 0);
+                  acc.carbs_g += Number(ov?.carbs_g ?? m.carbs_g ?? 0);
+                  acc.fat_g += Number(ov?.fat_g ?? m.fat_g ?? 0);
+                  return acc;
+                },
+                { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0 },
+              );
+
+              const vd = virtualDays.find((d) => d.id === activeDay);
+              const dateLabel = vd?.name ?? "";
+              const dKind: "training" | "rest" | null =
+                dayKind ??
+                (vd && isRestDay(vd.name) ? "rest" : vd ? "training" : null);
+
+              const idx = virtualDays.findIndex((d) => d.id === activeDay);
+              const goPrev = idx > 0
+                ? () => {
+                    const target = virtualDays[idx - 1];
+                    setActiveDay(target.id);
+                    try {
+                      localStorage.setItem(pickStorageKey, target.id);
+                    } catch {}
+                  }
+                : undefined;
+              const goNext = idx >= 0 && idx < virtualDays.length - 1
+                ? () => {
+                    const target = virtualDays[idx + 1];
+                    setActiveDay(target.id);
+                    try {
+                      localStorage.setItem(pickStorageKey, target.id);
+                    } catch {}
+                  }
+                : undefined;
+
+              return (
+                <div className="mt-3">
+                  <DayPlanView
+                    dateLabel={dateLabel}
+                    dayKind={dKind}
+                    targets={{
+                      kcal: planned.kcal || null,
+                      protein_g: planned.protein_g || null,
+                      carbs_g: planned.carbs_g || null,
+                      fat_g: planned.fat_g || null,
+                    }}
+                    eaten={eaten}
+                    onPrevDay={goPrev}
+                    onNextDay={goNext}
+                    meals={dayMeals}
+                    canTrack={canTrack}
+                    onToggle={(id) => {
+                      const m = dayMealsRaw.find((x) => x.id === id);
+                      if (m) toggleMeal(m);
+                    }}
+                    onSwap={(id) => {
+                      const m = dayMealsRaw.find((x) => x.id === id);
+                      if (m) setSwapMeal(m);
+                    }}
+                    onRecipe={(id) => {
+                      const m = dayMealsRaw.find((x) => x.id === id);
+                      if (m) setRecipeMeal(m);
+                    }}
+                  />
+                </div>
+              );
+            })()
+          ) : (
+            <div className="mt-3 space-y-3">
+              {(() => {
+                const dayExercises = exercises.filter((e) => itemToVirtual[e.id] === activeDay);
+                const groupOf = (e: Exercise): "warmup" | "working" | "cooldown" => {
+                  const t = e.set_type;
+                  if (t === "warmup" || t === "cooldown") return t;
+                  if (t === "working" || t === "backoff" || t === "dropset" || t === "amrap") return "working";
+                  const n = (e.name ?? "").toLowerCase();
+                  if (/^(warm-?up|warmup|aufwärm)/.test(n)) return "warmup";
+                  if (/^(cool-?down|cooldown|abwärm)/.test(n)) return "cooldown";
+                  return "working";
+                };
+                const groups: Record<"warmup" | "working" | "cooldown", Exercise[]> = { warmup: [], working: [], cooldown: [] };
+                for (const e of dayExercises) groups[groupOf(e)].push(e);
+                const renderCard = (e: Exercise) => {
+                  const exName = itemDisplayName[e.id] ?? e.name;
+                  const isNonExercise = /rest|ruh|pause|frei|mobility|foam|dehn|stretch|recovery|spiel|game|training bei|mannschaft|warm-?up|cool-?down|aufwärm|abwärm/i.test(exName);
+                  const demoUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(exName + " Übung Ausführung")}`;
+                  const repsLabel = renderTargetReps(e.target_reps, e.target_sets ?? null);
+                  const { compact, perSet } = renderTargetWeights(e.target_weights);
                   return (
-                    <div key={m.id} className={`${base} ${style} relative`}>
-                      <div className="absolute right-2 top-2 flex items-center gap-1">
-                        {canTrack && !override && m.kcal && m.protein_g && m.carbs_g && m.fat_g && (
-                          <button
-                            type="button"
-                            onClick={() => setSwapMeal(m)}
-                            className="inline-flex items-center gap-1 rounded-md border border-border bg-background/60 px-2 py-1 text-[10px] font-semibold text-muted-foreground hover:border-gold/50 hover:text-gold"
-                            aria-label="Mahlzeit tauschen"
-                            title="Smart-Vorschläge (±5 % Makros)"
-                          >
-                            <Repeat className="h-3 w-3" /> Tausch
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => setRecipeMeal(m)}
-                          className="inline-flex items-center gap-1 rounded-md border border-border bg-background/60 px-2 py-1 text-[10px] font-semibold text-muted-foreground hover:border-gold/50 hover:text-gold"
-                          aria-label="Rezept anzeigen"
-                        >
-                          <BookOpen className="h-3 w-3" /> Rezept
-                        </button>
-                        {isCoach && planType === "nutrition" && (
-                          <button
-                            type="button"
-                            onClick={() => runMacroDebug(m)}
-                            disabled={loadingDebugId === m.id}
-                            className="inline-flex items-center gap-1 rounded-md border border-border bg-background/60 px-2 py-1 text-[10px] font-semibold text-muted-foreground hover:border-gold/50 hover:text-gold disabled:opacity-60"
-                            aria-label="Nährwert-Debug anzeigen"
-                            title="Zutaten einzeln nachrechnen"
-                          >
-                            {loadingDebugId === m.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <AlertTriangle className="h-3 w-3" />}
-                            Debug
-                          </button>
-                        )}
+                    <div key={e.id} className="rounded-2xl border border-border bg-background/40 p-4">
+                      <div className="flex items-baseline justify-between gap-3">
+                        <div className="text-sm font-semibold">{exName}</div>
+                        <div className="text-xs text-muted-foreground text-right">{repsLabel}</div>
                       </div>
-                      {canTrack ? (
-                        <button
-                          type="button"
-                          onClick={() => toggleMeal(m)}
-                          disabled={busy}
-                          className="block w-full pr-32 text-left hover:opacity-90 disabled:opacity-60"
+                      {compact && (<div className="mt-1 text-xs text-gold/90">{compact}</div>)}
+                      {perSet && (
+                        <ul className="mt-1 space-y-0.5 text-xs text-gold/90">
+                          {perSet.map((w, i) => (<li key={i}>Satz {i + 1} · {w}</li>))}
+                        </ul>
+                      )}
+                      {e.notes && <p className="mt-1 text-xs text-muted-foreground">{e.notes}</p>}
+                      {!isNonExercise && (
+                        <a
+                          href={demoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-2 inline-flex items-center gap-1 rounded-md border border-border bg-background/60 px-2 py-1 text-[10px] font-semibold text-muted-foreground hover:border-gold/50 hover:text-gold"
                         >
-                          {inner}
-                        </button>
-                      ) : (
-                        <div className="pr-32">{inner}</div>
+                          <PlayCircle className="h-3 w-3" /> Demo ansehen
+                        </a>
                       )}
                     </div>
                   );
-                })
-              : (() => {
-                  const dayExercises = exercises.filter((e) => itemToVirtual[e.id] === activeDay);
-                  const groupOf = (e: Exercise): "warmup" | "working" | "cooldown" => {
-                    const t = e.set_type;
-                    if (t === "warmup" || t === "cooldown") return t;
-                    if (t === "working" || t === "backoff" || t === "dropset" || t === "amrap") return "working";
-                    // Legacy-Fallback via Namens-Präfix.
-                    const n = (e.name ?? "").toLowerCase();
-                    if (/^(warm-?up|warmup|aufwärm)/.test(n)) return "warmup";
-                    if (/^(cool-?down|cooldown|abwärm)/.test(n)) return "cooldown";
-                    return "working";
-                  };
-                  const groups: Record<"warmup" | "working" | "cooldown", Exercise[]> = { warmup: [], working: [], cooldown: [] };
-                  for (const e of dayExercises) groups[groupOf(e)].push(e);
-                  const renderCard = (e: Exercise) => {
-                    const exName = itemDisplayName[e.id] ?? e.name;
-                    const isNonExercise = /rest|ruh|pause|frei|mobility|foam|dehn|stretch|recovery|spiel|game|training bei|mannschaft|warm-?up|cool-?down|aufwärm|abwärm/i.test(exName);
-                    const demoUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(exName + " Übung Ausführung")}`;
-                    const repsLabel = renderTargetReps(e.target_reps, e.target_sets ?? null);
-                    const { compact, perSet } = renderTargetWeights(e.target_weights);
-                    return (
-                      <div key={e.id} className="rounded-2xl border border-border bg-background/40 p-4">
-                        <div className="flex items-baseline justify-between gap-3">
-                          <div className="text-sm font-semibold">{exName}</div>
-                          <div className="text-xs text-muted-foreground text-right">{repsLabel}</div>
-                        </div>
-                        {compact && (
-                          <div className="mt-1 text-xs text-gold/90">{compact}</div>
-                        )}
-                        {perSet && (
-                          <ul className="mt-1 space-y-0.5 text-xs text-gold/90">
-                            {perSet.map((w, i) => (
-                              <li key={i}>Satz {i + 1} · {w}</li>
-                            ))}
-                          </ul>
-                        )}
-                        {e.notes && <p className="mt-1 text-xs text-muted-foreground">{e.notes}</p>}
-                        {!isNonExercise && (
-                          <a
-                            href={demoUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="mt-2 inline-flex items-center gap-1 rounded-md border border-border bg-background/60 px-2 py-1 text-[10px] font-semibold text-muted-foreground hover:border-gold/50 hover:text-gold"
-                          >
-                            <PlayCircle className="h-3 w-3" /> Demo ansehen
-                          </a>
-                        )}
-                      </div>
-                    );
-                  };
-                  const Section = ({ label, list }: { label: string; list: Exercise[] }) =>
-                    list.length ? (
-                      <div className="space-y-2">
-                        <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</div>
-                        {list.map(renderCard)}
-                      </div>
-                    ) : null;
-                  return (
-                    <>
-                      <Section label="Warm-up" list={groups.warmup} />
-                      <Section label="Arbeitssätze" list={groups.working} />
-                      <Section label="Cool-down" list={groups.cooldown} />
-                    </>
-                  );
-                })()}
-            {((planType === "nutrition" ? meals : exercises).filter(
-              (x: any) => itemToVirtual[x.id] === activeDay,
-            ).length === 0) && (
-              <p className="text-sm text-muted-foreground">Keine {empty} für diesen Tag.</p>
-            )}
-          </div>
+                };
+                const Section = ({ label, list }: { label: string; list: Exercise[] }) =>
+                  list.length ? (
+                    <div className="space-y-2">
+                      <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</div>
+                      {list.map(renderCard)}
+                    </div>
+                  ) : null;
+                return (
+                  <>
+                    <Section label="Warm-up" list={groups.warmup} />
+                    <Section label="Arbeitssätze" list={groups.working} />
+                    <Section label="Cool-down" list={groups.cooldown} />
+                  </>
+                );
+              })()}
+              {exercises.filter((x) => itemToVirtual[x.id] === activeDay).length === 0 && (
+                <p className="text-sm text-muted-foreground">Keine {empty} für diesen Tag.</p>
+              )}
+            </div>
+          )}
         </>
       )}
       {recipeMeal && (

@@ -19,15 +19,7 @@ import { Link, useParams } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Utensils,
-  Check,
-  Loader2,
-  BookOpen,
-  Sparkles,
-} from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
 import {
@@ -35,6 +27,7 @@ import {
   BULLS_DAY_TYPE_LABELS,
 } from "@/lib/performance-nutrition/bulls-nutrition.functions";
 import { RecipeDialog } from "./RecipeDialog";
+import { DayPlanView, type DayPlanMeal } from "./DayPlanView";
 
 type Meal = {
   id: string;
@@ -329,157 +322,115 @@ export function BullsPlanContentView() {
 
   const target = engine.targets;
 
+  // ---- Build props for the shared DayPlanView ------------------------------
+  const WEEKDAY_LONG_DE = [
+    "Sonntag",
+    "Montag",
+    "Dienstag",
+    "Mittwoch",
+    "Donnerstag",
+    "Freitag",
+    "Samstag",
+  ];
+  const dObj = new Date(date + "T12:00:00Z");
+  const dateLabel = `${WEEKDAY_LONG_DE[dObj.getUTCDay()]}, ${String(
+    dObj.getUTCDate(),
+  ).padStart(2, "0")}.${String(dObj.getUTCMonth() + 1).padStart(2, "0")}.`;
+
+  const dayKind: "training" | "rest" | null =
+    engine.dayType === "rest" ? "rest" : engine.dayType ? "training" : null;
+
+  const eaten = useMemo(() => {
+    let kcal = 0,
+      p = 0,
+      c = 0,
+      f = 0;
+    for (const m of meals) {
+      if (!tracked[m.id]) continue;
+      const s = scaledMeal(m);
+      kcal += s.kcal;
+      p += s.protein_g;
+      c += s.carbs_g;
+      f += s.fat_g;
+    }
+    return { kcal, protein_g: p, carbs_g: c, fat_g: f };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [meals, tracked, scale, overrides]);
+
+  const dayMeals: DayPlanMeal[] = useMemo(() => {
+    return meals.map((m) => {
+      const s = scaledMeal(m);
+      const ov = overrides[m.id];
+      return {
+        id: m.id,
+        slotName: m.name,
+        title: (ov?.name ?? m.name) || "Mahlzeit",
+        description: ov?.description ?? m.description,
+        kcal: s.kcal,
+        protein_g: s.protein_g,
+        carbs_g: s.carbs_g,
+        fat_g: s.fat_g,
+        isTracked: !!tracked[m.id],
+        busy: togglingId === m.id,
+        hasRecipe: !!(ov?.description ?? m.description),
+      };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [meals, overrides, tracked, togglingId, scale]);
+
   return (
-    <div className="rounded-3xl border border-border bg-card p-5 sm:p-6">
-      {/* Header: date navigation + day type */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <div className="grid h-9 w-9 place-items-center rounded-lg bg-accent text-gold">
-            <Utensils className="h-4 w-4" />
-          </div>
-          <div>
-            <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-              Bulls Performance
-            </div>
-            <div className="font-display text-base font-bold">
+    <div className="mx-auto max-w-md px-1">
+      <DayPlanView
+        dateLabel={dateLabel}
+        dayKind={dayKind}
+        targets={
+          target
+            ? {
+                kcal: target.kcal,
+                protein_g: target.protein_g,
+                carbs_g: target.carbs_g,
+                fat_g: target.fat_g,
+              }
+            : null
+        }
+        eaten={eaten}
+        onPrevDay={() => setDate((d) => addDays(d, -1))}
+        onNextDay={() => setDate((d) => addDays(d, +1))}
+        meals={dayMeals}
+        canTrack={!!clientId}
+        onToggle={(id) => {
+          const m = meals.find((x) => x.id === id);
+          if (m) toggleMeal(m);
+        }}
+        onRecipe={(id) => {
+          const m = meals.find((x) => x.id === id);
+          if (m) setRecipeMeal(m);
+        }}
+        headerNote={
+          <div className="space-y-1">
+            <div className="text-[11px] text-muted-foreground">
               {BULLS_DAY_TYPE_LABELS[engine.dayType]}
-            </div>
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-              {engine.dayTypeSource === "manual" ? "manuell" : "automatisch"}
               {engine.sessionIntensity ? ` · ${engine.sessionIntensity}` : null}
+              {" · "}
+              {engine.dayTypeSource === "manual" ? "manuell" : "automatisch"}
             </div>
+            {engine.coachReviewRequired && (
+              <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1.5 text-[11px] text-amber-200">
+                Coach-Review empfohlen — bitte mit deinem Coach abstimmen.
+              </div>
+            )}
+            {loadingMeals && (
+              <div className="text-[11px] text-muted-foreground">Lade Mahlzeiten…</div>
+            )}
+            {target && planKcalTotal > 0 && Math.abs(scale - 1) > 0.02 && (
+              <div className="text-[10px] text-muted-foreground">
+                Mengen skaliert · Faktor {scale.toFixed(2)}x
+                {dayName ? ` · ${dayName}` : null}
+              </div>
+            )}
           </div>
-        </div>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => setDate((d) => addDays(d, -1))}
-            className="grid h-8 w-8 place-items-center rounded-md border border-border bg-background/40 text-muted-foreground hover:text-gold"
-            aria-label="Vorheriger Tag"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <div className="min-w-[110px] rounded-md border border-border bg-background/40 px-2 py-1 text-center text-xs font-semibold">
-            {date === today() ? "Heute" : date}
-          </div>
-          <button
-            onClick={() => setDate((d) => addDays(d, +1))}
-            className="grid h-8 w-8 place-items-center rounded-md border border-border bg-background/40 text-muted-foreground hover:text-gold"
-            aria-label="Nächster Tag"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-
-      {/* Engine target header */}
-      {target ? (
-        <div className="mt-4 rounded-2xl border border-gold/40 bg-gradient-to-br from-accent/40 to-card p-4">
-          <div className="text-[10px] uppercase tracking-[0.2em] text-gold">
-            Tagesziel (Engine)
-          </div>
-          <div className="mt-1 flex items-baseline gap-2">
-            <div className="font-display text-3xl font-bold">{target.kcal}</div>
-            <div className="text-xs text-muted-foreground">kcal</div>
-          </div>
-          <div className="mt-2 grid grid-cols-3 gap-2 text-[11px]">
-            <MacroPill label="Protein" value={`${target.protein_g} g`} />
-            <MacroPill label="Kohlh." value={`${target.carbs_g} g`} />
-            <MacroPill label="Fett" value={`${target.fat_g} g`} />
-          </div>
-          {engine.coachReviewRequired && (
-            <div className="mt-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1.5 text-[11px] text-amber-200">
-              Coach-Review empfohlen — bitte mit deinem Coach abstimmen.
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="mt-4 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 text-xs text-amber-200">
-          Tagesziel konnte nicht berechnet werden.
-        </div>
-      )}
-
-      {/* Meals list — engine-scaled */}
-      <div className="mt-5">
-        <div className="flex items-center justify-between">
-          <div className="text-xs uppercase tracking-wider text-muted-foreground">
-            Mahlzeiten {dayName ? `· ${dayName}` : null}
-          </div>
-          {target && planKcalTotal > 0 && (
-            <div className="text-[10px] text-muted-foreground">
-              skaliert · Faktor {(scale).toFixed(2)}x
-            </div>
-          )}
-        </div>
-
-        {loadingMeals ? (
-          <div className="mt-3 text-sm text-muted-foreground">
-            Lade Mahlzeiten…
-          </div>
-        ) : meals.length === 0 ? (
-          <p className="mt-3 text-sm text-muted-foreground">
-            Für diesen Tag ist noch kein Plan hinterlegt. Dein Coach kann
-            Mahlzeiten aus der bestehenden Rezeptdatenbank zuweisen.
-          </p>
-        ) : (
-          <div className="mt-3 space-y-3">
-            {meals.map((m) => {
-              const s = scaledMeal(m);
-              const isTracked = !!tracked[m.id];
-              const busy = togglingId === m.id;
-              return (
-                <div
-                  key={m.id}
-                  className={`rounded-2xl border p-4 ${
-                    isTracked
-                      ? "border-emerald-500/40 bg-emerald-500/5"
-                      : "border-border bg-background/40"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <button
-                      type="button"
-                      onClick={() => toggleMeal(m)}
-                      disabled={busy}
-                      className="flex-1 text-left"
-                    >
-                      <div className="text-sm font-bold text-gold">
-                        {s.name}
-                      </div>
-                      {s.description && (
-                        <p className="mt-1 text-xs text-foreground/90">
-                          {s.description}
-                        </p>
-                      )}
-                      <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-                        <span>{s.kcal} kcal</span>
-                        <span>· P {s.protein_g}g</span>
-                        <span>· KH {s.carbs_g}g</span>
-                        <span>· F {s.fat_g}g</span>
-                      </div>
-                    </button>
-                    <div className="flex flex-col items-end gap-1">
-                      <button
-                        type="button"
-                        onClick={() => setRecipeMeal(m)}
-                        className="inline-flex items-center gap-1 rounded-md border border-border bg-background/60 px-2 py-1 text-[10px] font-semibold text-muted-foreground hover:border-gold/50 hover:text-gold"
-                      >
-                        <BookOpen className="h-3 w-3" /> Rezept
-                      </button>
-                      {isTracked ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
-                          <Check className="h-3 w-3" /> getrackt
-                        </span>
-                      ) : busy ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-                      ) : null}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+        }
+      />
 
       {recipeMeal && (
         <RecipeDialog
@@ -489,19 +440,8 @@ export function BullsPlanContentView() {
           onClose={() => setRecipeMeal(null)}
         />
       )}
-      {/* Silence unused refetch — kept for future coach overrides refresh */}
       <div className="hidden">{String(!!refetchEngine)}</div>
     </div>
   );
 }
 
-function MacroPill({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg bg-background/40 p-2 text-center">
-      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-        {label}
-      </div>
-      <div className="font-display text-sm font-bold">{value}</div>
-    </div>
-  );
-}
