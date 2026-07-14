@@ -468,18 +468,22 @@ Jede Mahlzeit MUSS aus dieser Erlaubt-Liste komponiert sein. Wenn du im Descript
       return { wkKey, wkLabel, type };
     });
 
-    // Lange Pläne dürfen nicht als ein riesiger KI-Request laufen — das führt
-    // zuverlässig zu 524-Timeouts. Die KI erstellt max. 7 hochwertige Basistage,
-    // der Server rollt diese anschließend deterministisch auf bis zu 31 Tage aus.
-    const aiPlanDays = Math.min(planDays, 7);
-    const aiSchedule = schedule.slice(0, aiPlanDays);
+    // Lange Pläne dürfen nicht als ein riesiger KI-Request laufen — in der
+    // Produktions-Queue wird der Worker sonst beendet, bevor die AI fertig ist.
+    // Deshalb erzeugt die AI nur je eine Vorlage für Trainingstag/Restday; der
+    // Server rollt diese deterministisch auf bis zu 31 Tage aus.
+    const aiSchedule = schedule.reduce<PlanScheduleDay[]>((acc, day) => {
+      if (!acc.some((entry) => entry.type === day.type)) acc.push(day);
+      return acc.length >= 2 ? acc : acc;
+    }, []);
+    const aiPlanDays = Math.max(1, aiSchedule.length);
     const trainingCount = schedule.filter((s) => s.type === "training").length;
     const restCount = schedule.length - trainingCount;
     const aiTrainingCount = aiSchedule.filter((s) => s.type === "training").length;
     const aiRestCount = aiSchedule.length - aiTrainingCount;
 
     const scheduleLines = aiSchedule
-      .map((s, i) => `Tag ${i + 1} (${s.wkLabel}): ${s.type === "training" ? "TRAININGSTAG" : "RESTDAY"}`)
+      .map((s, i) => `Basis ${i + 1} (${s.wkLabel}): ${s.type === "training" ? "TRAININGSTAG" : "RESTDAY"}`)
       .join("\n");
 
     const targetsBlock = `Es gibt ZWEI verschiedene Tagesziele — jeder Tag MUSS dem Typ aus dem Tagesplan unten folgen.
@@ -683,13 +687,14 @@ WICHTIG zu name/description:
       for (const model of MODEL_CANDIDATES) {
         try {
           const raw = await callModel(model, finalPrompt);
-          if (!raw.trim() || !raw.includes("{")) {
+          const jsonText = extractJsonObject(raw);
+          if (!jsonText) {
             lastError = new Error(`Leere Antwort von ${model}`);
             continue;
           }
           let parsed: { days?: GeneratedDay[] } = {};
           try {
-            parsed = JSON.parse(raw);
+            parsed = JSON.parse(jsonText);
           } catch {
             lastError = new Error(`Antwort von ${model} konnte nicht gelesen werden.`);
             continue;
