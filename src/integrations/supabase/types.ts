@@ -1813,6 +1813,13 @@ export type Database = {
             referencedRelation: "nutrition_foods"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "food_alias_learning_food_id_fkey"
+            columns: ["food_id"]
+            isOneToOne: false
+            referencedRelation: "nutrition_foods_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       food_entries: {
@@ -8358,6 +8365,99 @@ export type Database = {
       }
     }
     Views: {
+      nutrition_foods_public: {
+        Row: {
+          aliases: string[] | null
+          carbs_per_100g: number | null
+          category: string | null
+          citation: string | null
+          created_at: string | null
+          default_state:
+            | Database["public"]["Enums"]["nutrition_food_state"]
+            | null
+          density_g_per_ml: number | null
+          fat_per_100g: number | null
+          fiber_per_100g: number | null
+          id: string | null
+          is_active: boolean | null
+          kcal_per_100g: number | null
+          license: string | null
+          name: string | null
+          protein_per_100g: number | null
+          safe_for_smart: boolean | null
+          salt_per_100g: number | null
+          source: Database["public"]["Enums"]["nutrition_food_source"] | null
+          source_id: string | null
+          source_name: string | null
+          sugar_per_100g: number | null
+          text_id: string | null
+          unit_type: Database["public"]["Enums"]["nutrition_food_unit"] | null
+          updated_at: string | null
+          verified_at: string | null
+          verified_by_coach: boolean | null
+        }
+        Insert: {
+          aliases?: string[] | null
+          carbs_per_100g?: number | null
+          category?: string | null
+          citation?: string | null
+          created_at?: string | null
+          default_state?:
+            | Database["public"]["Enums"]["nutrition_food_state"]
+            | null
+          density_g_per_ml?: number | null
+          fat_per_100g?: number | null
+          fiber_per_100g?: number | null
+          id?: string | null
+          is_active?: boolean | null
+          kcal_per_100g?: number | null
+          license?: string | null
+          name?: string | null
+          protein_per_100g?: number | null
+          safe_for_smart?: boolean | null
+          salt_per_100g?: number | null
+          source?: Database["public"]["Enums"]["nutrition_food_source"] | null
+          source_id?: string | null
+          source_name?: string | null
+          sugar_per_100g?: number | null
+          text_id?: string | null
+          unit_type?: Database["public"]["Enums"]["nutrition_food_unit"] | null
+          updated_at?: string | null
+          verified_at?: string | null
+          verified_by_coach?: boolean | null
+        }
+        Update: {
+          aliases?: string[] | null
+          carbs_per_100g?: number | null
+          category?: string | null
+          citation?: string | null
+          created_at?: string | null
+          default_state?:
+            | Database["public"]["Enums"]["nutrition_food_state"]
+            | null
+          density_g_per_ml?: number | null
+          fat_per_100g?: number | null
+          fiber_per_100g?: number | null
+          id?: string | null
+          is_active?: boolean | null
+          kcal_per_100g?: number | null
+          license?: string | null
+          name?: string | null
+          protein_per_100g?: number | null
+          safe_for_smart?: boolean | null
+          salt_per_100g?: number | null
+          source?: Database["public"]["Enums"]["nutrition_food_source"] | null
+          source_id?: string | null
+          source_name?: string | null
+          sugar_per_100g?: number | null
+          text_id?: string | null
+          unit_type?: Database["public"]["Enums"]["nutrition_food_unit"] | null
+          updated_at?: string | null
+          verified_at?: string | null
+          verified_by_coach?: boolean | null
+        }
+        Relationships: []
+      }
       public_app_reviews: {
         Row: {
           comment: string | null
