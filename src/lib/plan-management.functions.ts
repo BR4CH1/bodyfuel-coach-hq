@@ -115,6 +115,7 @@ export const getCustomerPlanOverview = createServerFn({ method: "GET" })
       )
       .eq("client_id", data.user_id)
       .eq("plan_type", "nutrition")
+      .eq("performance_context", false)
       .order("created_at", { ascending: false });
 
     const all = (rows ?? []) as any[];
@@ -166,7 +167,7 @@ export const transitionPlanStatus = createServerFn({ method: "POST" })
 
     const { data: plan } = await supabaseAdmin
       .from("nutrition_plans")
-      .select("id, client_id, plan_type, status, source, kcal, protein_g, carbs_g, fat_g")
+      .select("id, client_id, plan_type, status, source, kcal, protein_g, carbs_g, fat_g, performance_context")
       .eq("id", data.plan_id)
       .maybeSingle();
     if (!plan) throw new Error("Plan nicht gefunden");
@@ -189,6 +190,7 @@ export const transitionPlanStatus = createServerFn({ method: "POST" })
         .update({ status: "archived" })
         .eq("client_id", (plan as any).client_id)
         .eq("plan_type", (plan as any).plan_type)
+        .eq("performance_context", Boolean((plan as any).performance_context))
         .eq("status", "active")
         .neq("id", data.plan_id);
     }
