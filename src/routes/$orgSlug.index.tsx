@@ -192,8 +192,8 @@ function OrgIndex() {
     );
   }
 
-  // Signed in but no usable role in this org.
-  if (ctx && flags && flags.role === "none" && !flags.isSuperAdmin) {
+  // Signed in but no usable role in this org (no membership AND no staff row).
+  if (ctx && flags && flags.role === "none" && !flags.isSuperAdmin && !hasAnyOrgRelation) {
     return (
       <div className="min-h-screen bg-background text-foreground">
         <div className="mx-auto flex min-h-screen max-w-lg flex-col items-center justify-center px-6 py-16 text-center">
