@@ -33,7 +33,6 @@ export const Route = createFileRoute("/api/public/hooks/process-autopilot-jobs")
           .from("smart_autopilot_jobs")
           .update({
             status: "pending",
-            attempts: 0,
             error: "Plan-Erstellung wurde unterbrochen und wird automatisch neu gestartet.",
           })
           .eq("status", "running")
