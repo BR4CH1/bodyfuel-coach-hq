@@ -323,6 +323,7 @@ export function PlanContentView({ clientId, planType }: Props) {
       .select("id, client_id, title, weeks_count, scheduled_start_date, scheduled_end_date")
       .eq("client_id", clientId)
       .eq("plan_type", planType)
+      .eq("performance_context", false)
       .eq("is_active", true)
       .maybeSingle();
     setPlan((planRow as Plan) ?? null);
