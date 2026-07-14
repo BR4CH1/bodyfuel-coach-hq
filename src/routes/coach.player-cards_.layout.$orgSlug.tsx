@@ -136,11 +136,19 @@ function LayoutEditorPage() {
         }
       } else {
         const init = d.initial as { x: number; y: number; fontSize?: number };
-        (next as any)[d.key] = { ...init, x: init.x + dx, y: init.y + dy };
+        if (d.mode === "move") {
+          (next as any)[d.key] = { ...init, x: init.x + dx, y: init.y + dy };
+        } else {
+          // Schriftgröße per Drag: dy (nach unten größer) skaliert die fontSize.
+          const initFs = init.fontSize ?? 40;
+          const nextFs = Math.max(10, Math.min(400, Math.round(initFs + dy)));
+          (next as any)[d.key] = { ...init, fontSize: nextFs };
+        }
       }
       return next;
     });
   };
+
 
   const onPointerUp = () => { dragRef.current = null; };
 
