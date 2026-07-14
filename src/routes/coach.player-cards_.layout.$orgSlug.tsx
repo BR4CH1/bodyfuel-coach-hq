@@ -291,6 +291,7 @@ function LayoutEditorPage() {
                 const fs = li.fontSize ?? 40;
                 const w = Math.max(80, fs * 2);
                 const h = fs + 20;
+                const handleSize = Math.max(18, Math.min(36, fs * 0.4));
                 return (
                   <g key={key}>
                     <rect
@@ -303,9 +304,22 @@ function LayoutEditorPage() {
                       style={{ cursor: "move" }}
                       onPointerDown={(e) => onPointerDown(key, "move", e)}
                     />
+                    {/* Resize-Griff — Schriftgröße per Drag anpassen */}
+                    <rect
+                      x={li.x + w / 2 - handleSize}
+                      y={li.y + 8 - handleSize}
+                      width={handleSize}
+                      height={handleSize}
+                      fill="#E10600"
+                      stroke="#ffffff"
+                      strokeWidth={1}
+                      style={{ cursor: "nwse-resize" }}
+                      onPointerDown={(e) => onPointerDown(key, "resize", e)}
+                    />
                   </g>
                 );
               })}
+
             </svg>
           </div>
         </div>
