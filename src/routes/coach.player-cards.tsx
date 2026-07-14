@@ -201,20 +201,42 @@ function CoachPlayerCardsPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2 self-start sm:self-end">
           <Link
-            to="/coach/player-cards/layout"
-            className="inline-flex items-center gap-1.5 rounded-full border border-border px-4 py-2 text-xs font-bold uppercase tracking-wider hover:border-bulls-red"
-          >
-            Layout bearbeiten
-          </Link>
-          <Link
             to="/coach/player-cards/ranking"
             className="inline-flex items-center gap-1.5 rounded-full bg-bulls-red px-4 py-2 text-xs font-bold uppercase tracking-wider text-white transition hover:opacity-90"
           >
             <Trophy className="h-3.5 w-3.5" />
-            Rangliste & Player of the Month
+            Rangliste &amp; Player of the Month
           </Link>
         </div>
       </header>
+
+      {/* Vorlagen pro Verein */}
+      <section className="rounded-2xl border border-border bg-card/60 p-4">
+        <div className="mb-3 flex items-end justify-between gap-2">
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-bulls-red">Vorlagen</div>
+            <h2 className="font-display text-lg font-bold">Karten-Design pro Verein</h2>
+            <p className="text-xs text-muted-foreground">
+              Jeder Verein bekommt seine eigene Karten-Vorlage. Weitere Vereine können jederzeit ergänzt werden.
+            </p>
+          </div>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <Link
+            to="/coach/player-cards/layout/$orgSlug"
+            params={{ orgSlug: "bulls" }}
+            className="group flex items-center justify-between rounded-xl border border-border bg-background/40 p-4 hover:border-bulls-red"
+          >
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Coesfeld Bulls</div>
+              <div className="mt-0.5 font-display text-base font-bold">Vorlage „Elite"</div>
+              <div className="text-[11px] text-muted-foreground">Bearbeiten &amp; freigeben</div>
+            </div>
+            <span className="text-xs text-muted-foreground group-hover:text-bulls-red">→</span>
+          </Link>
+        </div>
+      </section>
+
 
       {/* Filters + Sort */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-6">
