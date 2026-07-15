@@ -168,19 +168,23 @@ function OrgHome() {
               </span>
             )}
           </div>
-          <Link
-            to="/$orgSlug/profil"
-            params={{ orgSlug: org.slug }}
-            className="shrink-0"
-            aria-label="Zum Profil"
-          >
-            <UserAvatar
-              path={(data.profile as any)?.avatar_url ?? null}
-              name={first}
-              size={64}
-              className="ring-2 ring-white/40"
-            />
-          </Link>
+          <div className="flex shrink-0 items-center gap-2">
+            <AthletePlayerCardThumb userId={supabaseUser?.id} />
+            <Link
+              to="/$orgSlug/profil"
+              params={{ orgSlug: org.slug }}
+              className="shrink-0"
+              aria-label="Zum Profil"
+            >
+              <UserAvatar
+                path={(data.profile as any)?.avatar_url ?? null}
+                name={first}
+                size={64}
+                className="ring-2 ring-white/40"
+              />
+            </Link>
+          </div>
+
         </div>
 
       </header>
