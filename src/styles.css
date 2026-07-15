@@ -275,3 +275,96 @@
   animation: pc-upgrade-sparkle-rot 2s ease-in-out infinite;
 }
 
+/* ---------- Player Card Reveal (Pack Opening) ---------- */
+
+@keyframes pcr-radial-pulse {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50%      { opacity: 0.95; transform: scale(1.08); }
+}
+.pcr-radial { animation: pcr-radial-pulse 2.4s ease-in-out infinite; }
+
+@keyframes pcr-rays-spin {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to   { transform: translate(-50%, -50%) rotate(360deg); }
+}
+.pcr-rays { animation: pcr-rays-spin 22s linear infinite; opacity: 0.65; mix-blend-mode: screen; }
+
+@keyframes pcr-particle-rise {
+  0%   { transform: translateY(110vh) scale(0.6); opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { transform: translateY(-10vh) scale(1.1); opacity: 0; }
+}
+.pcr-particle {
+  position: absolute;
+  bottom: 0;
+  border-radius: 9999px;
+  animation-name: pcr-particle-rise;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes pcr-flash-fade {
+  0%   { opacity: 0; }
+  15%  { opacity: 0.95; }
+  100% { opacity: 0; }
+}
+.pcr-flash { animation: pcr-flash-fade 0.35s ease-out forwards; }
+
+@keyframes pcr-card-intro-kf {
+  0%   { opacity: 0; transform: translate3d(-40vw, 0, -400px) rotateY(-70deg) rotateZ(-8deg) scale(0.6); filter: blur(6px); }
+  60%  { opacity: 1; transform: translate3d(0, 0, -100px) rotateY(-20deg) rotateZ(-2deg) scale(0.85); filter: blur(1px); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0) rotateY(0deg) rotateZ(0deg) scale(1); filter: blur(0); }
+}
+.pcr-card-intro { animation: pcr-card-intro-kf 1.7s cubic-bezier(0.2, 0.9, 0.25, 1.1) forwards; }
+
+@keyframes pcr-card-land-kf {
+  0%   { transform: scale(1.18) translateZ(60px); }
+  40%  { transform: scale(0.96); }
+  70%  { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+.pcr-card-land { animation: pcr-card-land-kf 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.2) forwards; }
+
+@keyframes pcr-shake-kf {
+  0%, 100% { transform: translate(0, 0); }
+  15%      { transform: translate(-6px, 3px); }
+  30%      { transform: translate(5px, -4px); }
+  45%      { transform: translate(-4px, 2px); }
+  60%      { transform: translate(3px, -2px); }
+  80%      { transform: translate(-1px, 1px); }
+}
+.pcr-shake { animation: pcr-shake-kf 0.5s ease-out; }
+
+@keyframes pcr-shine-kf {
+  0%   { transform: translateX(-140%) skewX(-18deg); }
+  100% { transform: translateX(160%) skewX(-18deg); }
+}
+.pcr-shine {
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.08) 40%, rgba(255,255,255,0.55) 50%, rgba(255,255,255,0.08) 60%, transparent 100%);
+  animation: pcr-shine-kf 2.4s ease-in-out infinite;
+  animation-delay: 2.1s;
+  mix-blend-mode: screen;
+}
+
+@keyframes pcr-border-pulse-kf {
+  0%, 100% { opacity: 0.4; }
+  50%      { opacity: 0.9; }
+}
+.pcr-border-pulse { animation: pcr-border-pulse-kf 2.2s ease-in-out infinite; animation-delay: 2s; }
+
+@keyframes pcr-badge-in {
+  0%   { opacity: 0; transform: translateY(12px) scale(0.9); filter: blur(6px); }
+  100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+.pcr-badge > * { animation: pcr-badge-in 0.5s ease-out both; }
+.pcr-badge > *:nth-child(2) { animation-delay: 0.12s; }
+.pcr-badge > *:nth-child(3) { animation-delay: 0.28s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pcr-radial, .pcr-rays, .pcr-particle, .pcr-shine, .pcr-border-pulse { animation: none !important; }
+  .pcr-card-intro, .pcr-card-land, .pcr-shake, .pcr-badge > * { animation-duration: 0.1s !important; }
+}
+
+
