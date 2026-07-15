@@ -13,6 +13,7 @@ import { PlayerCardBack } from "./PlayerCardBack";
 import { PlayerCardFlip } from "./PlayerCardFlip";
 import { PlayerCardShareDialog } from "./PlayerCardShareDialog";
 import { PlayerCardManualEditor } from "./PlayerCardManualEditor";
+import { CustomCardImageUploader } from "./CustomCardImageUploader";
 import { getPlayerCardForAthlete, recomputePlayerCard, ensurePlayerCardCutout } from "@/lib/player-cards.functions";
 import { usePlayerCardDesign } from "@/lib/player-cards/useDesign";
 
