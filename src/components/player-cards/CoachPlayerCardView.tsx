@@ -13,6 +13,7 @@ import { PlayerCardBack } from "./PlayerCardBack";
 import { PlayerCardFlip } from "./PlayerCardFlip";
 import { PlayerCardShareDialog } from "./PlayerCardShareDialog";
 import { PlayerCardManualEditor } from "./PlayerCardManualEditor";
+import { CustomCardImageUploader } from "./CustomCardImageUploader";
 import { getPlayerCardForAthlete, recomputePlayerCard, ensurePlayerCardCutout } from "@/lib/player-cards.functions";
 import { usePlayerCardDesign } from "@/lib/player-cards/useDesign";
 
@@ -119,9 +120,16 @@ export function CoachPlayerCardView({
         </div>
       </div>
 
+      <CustomCardImageUploader
+        userId={userId}
+        currentPath={(q.data?.card as any)?.custom_card_image_url ?? null}
+        invalidateKey={["player-card", "athlete", userId]}
+      />
+
       {cardData && (
         <PlayerCardShareDialog data={cardData} open={shareOpen} onClose={() => setShareOpen(false)} />
       )}
+
 
       {q.isLoading ? (
         <div className="grid place-items-center rounded-2xl border border-border bg-card p-10">

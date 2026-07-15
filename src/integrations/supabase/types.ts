@@ -6608,6 +6608,7 @@ export type Database = {
           bfr: number | null
           computed_at: string
           created_at: string
+          custom_card_image_url: string | null
           end_score: number | null
           id: string
           is_provisional: boolean
@@ -6632,6 +6633,7 @@ export type Database = {
           bfr?: number | null
           computed_at?: string
           created_at?: string
+          custom_card_image_url?: string | null
           end_score?: number | null
           id?: string
           is_provisional?: boolean
@@ -6656,6 +6658,7 @@ export type Database = {
           bfr?: number | null
           computed_at?: string
           created_at?: string
+          custom_card_image_url?: string | null
           end_score?: number | null
           id?: string
           is_provisional?: boolean

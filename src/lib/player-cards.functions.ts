@@ -1140,3 +1140,46 @@ export const savePlayerCardManualOverrides = createServerFn({ method: "POST" })
     }
     return { ok: true, overrides: mergedOverrides };
   });
+
+/**
+ * saveCustomPlayerCardImage — Coach/Org-Staff speichert (oder löscht) den
+ * Storage-Pfad zu einem hochgeladenen fertigen Karten-Bild für einen Athleten.
+ * Pfad-Konvention: "<athlete_user_id>/<filename>" im Bucket "player-card-images".
+ */
+export const saveCustomPlayerCardImage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    z.object({
+      user_id: z.string().uuid(),
+      storage_path: z.string().nullable(),
+    }).parse,
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    if (data.user_id !== userId) {
+      await assertCoachOrOrgStaffForAthlete(context, data.user_id, "athlete");
+    }
+    const { data: existing } = await supabase
+      .from("player_cards")
+      .select("id")
+      .eq("user_id", data.user_id)
+      .maybeSingle();
+    if (existing) {
+      const { error } = await supabase
+        .from("player_cards")
+        .update({ custom_card_image_url: data.storage_path, updated_at: new Date().toISOString() } as any)
+        .eq("user_id", data.user_id);
+      if (error) throw new Error(error.message);
+    } else {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { error } = await supabaseAdmin.from("player_cards").insert({
+        user_id: data.user_id,
+        custom_card_image_url: data.storage_path,
+        is_provisional: true,
+        is_published: true,
+      } as any);
+      if (error) throw new Error(error.message);
+    }
+    return { ok: true, storage_path: data.storage_path };
+  });
+
