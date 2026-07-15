@@ -24,6 +24,7 @@ import { OrganizationContextSwitcher, setActiveContext } from "@/components/orga
 import { Route as OrgLayoutRoute } from "./$orgSlug";
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/bodyfuel/UserAvatar";
+import { AthletePlayerCardThumb } from "@/components/player-cards/AthletePlayerCardThumb";
 import { PlanStatusChip } from "@/components/organizations/PlanStatusChip";
 import { LoadWeekBanner } from "@/components/bodyfuel/LoadWeekBanner";
 
