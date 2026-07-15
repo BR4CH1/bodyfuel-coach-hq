@@ -1167,7 +1167,7 @@ export const saveCustomPlayerCardImage = createServerFn({ method: "POST" })
     if (existing) {
       const { error } = await supabase
         .from("player_cards")
-        .update({ custom_card_image_url: data.storage_path, updated_at: new Date().toISOString() })
+        .update({ custom_card_image_url: data.storage_path, updated_at: new Date().toISOString() } as any)
         .eq("user_id", data.user_id);
       if (error) throw new Error(error.message);
     } else {
@@ -1177,7 +1177,7 @@ export const saveCustomPlayerCardImage = createServerFn({ method: "POST" })
         custom_card_image_url: data.storage_path,
         is_provisional: true,
         is_published: true,
-      });
+      } as any);
       if (error) throw new Error(error.message);
     }
     return { ok: true, storage_path: data.storage_path };
