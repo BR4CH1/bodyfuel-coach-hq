@@ -27,6 +27,20 @@ export function AutopilotStatusCard({ userId }: { userId: string }) {
     },
   });
 
+  const jobKey = (job as any)?.id ?? (job as any)?.updated_at ?? null;
+  const ackStorageKey = jobKey ? `bf:autopilot-ack:${userId}:${jobKey}` : null;
+
+  // "Startklar" nur beim ersten Mal zeigen — danach lokal als gesehen markieren.
+  const [acked, setAcked] = useState<boolean>(false);
+  useEffect(() => {
+    if (!ackStorageKey) return;
+    try {
+      setAcked(localStorage.getItem(ackStorageKey) === "1");
+    } catch {
+      setAcked(false);
+    }
+  }, [ackStorageKey]);
+
   // Wenn der Job fertig ist, einmal die Plan-Caches invalidieren.
   useEffect(() => {
     if (job?.status === "done") {
@@ -36,23 +50,26 @@ export function AutopilotStatusCard({ userId }: { userId: string }) {
     }
   }, [job?.status, qc]);
 
+  const dismiss = () => {
+    if (ackStorageKey) {
+      try {
+        localStorage.setItem(ackStorageKey, "1");
+      } catch {
+        /* ignore */
+      }
+    }
+    setHidden(true);
+  };
+
   if (!job || hidden) return null;
   if (job.status === "done") {
+    if (acked) return null;
     return (
-      <Card className="mb-4 flex items-center gap-3 border-emerald-500/40 bg-emerald-500/10 p-4">
-        <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-        <div className="flex-1">
-          <p className="text-sm font-semibold">Dein Autopilot ist startklar ✨</p>
-          <p className="text-xs text-muted-foreground">
-            Ernährungs- und Trainingsplan wurden im Hintergrund erstellt und aktiviert.
-          </p>
-        </div>
-        <Button size="sm" variant="ghost" onClick={() => setHidden(true)}>
-          OK
-        </Button>
-      </Card>
+      <AutoAckDoneCard onDismiss={dismiss} ackStorageKey={ackStorageKey} />
     );
   }
+
+
   if (job.status === "failed") {
     return (
       <Card className="mb-4 flex items-start gap-3 border-amber-500/40 bg-amber-500/10 p-4">
@@ -92,3 +109,38 @@ export function AutopilotStatusCard({ userId }: { userId: string }) {
     </Card>
   );
 }
+
+function AutoAckDoneCard({
+  onDismiss,
+  ackStorageKey,
+}: {
+  onDismiss: () => void;
+  ackStorageKey: string | null;
+}) {
+  // Beim ersten Rendern direkt als „gesehen" markieren, damit die Karte
+  // nach Reload / Navigation nicht erneut auftaucht.
+  useEffect(() => {
+    if (!ackStorageKey) return;
+    try {
+      localStorage.setItem(ackStorageKey, "1");
+    } catch {
+      /* ignore */
+    }
+  }, [ackStorageKey]);
+
+  return (
+    <Card className="mb-4 flex items-center gap-3 border-emerald-500/40 bg-emerald-500/10 p-4">
+      <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+      <div className="flex-1">
+        <p className="text-sm font-semibold">Dein Autopilot ist startklar ✨</p>
+        <p className="text-xs text-muted-foreground">
+          Ernährungs- und Trainingsplan wurden im Hintergrund erstellt und aktiviert.
+        </p>
+      </div>
+      <Button size="sm" variant="ghost" onClick={onDismiss}>
+        OK
+      </Button>
+    </Card>
+  );
+}
+
