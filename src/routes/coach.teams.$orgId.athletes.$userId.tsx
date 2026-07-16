@@ -91,7 +91,7 @@ function AthleteProfile() {
 
         <div className="-mx-4 overflow-x-auto px-4">
           <div className="flex min-w-max gap-1.5">
-            {TABS.map((t) => (
+            {(data.org.slug === "bulls" ? [...BASE_TABS, PLAYER_CARD_TAB] : BASE_TABS).map((t: TabDef) => (
               <button
                 key={t.key}
                 onClick={() => setTab(t.key)}
