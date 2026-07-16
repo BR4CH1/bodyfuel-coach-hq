@@ -65,20 +65,10 @@ export function AutopilotStatusCard({ userId }: { userId: string }) {
   if (job.status === "done") {
     if (acked) return null;
     return (
-      <Card className="mb-4 flex items-center gap-3 border-emerald-500/40 bg-emerald-500/10 p-4">
-        <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-        <div className="flex-1">
-          <p className="text-sm font-semibold">Dein Autopilot ist startklar ✨</p>
-          <p className="text-xs text-muted-foreground">
-            Ernährungs- und Trainingsplan wurden im Hintergrund erstellt und aktiviert.
-          </p>
-        </div>
-        <Button size="sm" variant="ghost" onClick={dismiss}>
-          OK
-        </Button>
-      </Card>
+      <AutoAckDoneCard onDismiss={dismiss} ackStorageKey={ackStorageKey} />
     );
   }
+
 
   if (job.status === "failed") {
     return (
