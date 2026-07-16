@@ -16,15 +16,16 @@ import { AthleteTrainingTab } from "@/components/coach/athlete/AthleteTrainingTa
 import { AthleteNutritionTab } from "@/components/coach/athlete/AthleteNutritionTab";
 import { CoachPlayerCardView } from "@/components/player-cards/CoachPlayerCardView";
 
-const TABS = [
+const BASE_TABS = [
   { key: "overview", label: "Übersicht" },
   { key: "tasks", label: "Aufgaben" },
   { key: "checkins", label: "Check-ins" },
   { key: "performance", label: "Performance" },
   { key: "training", label: "Training" },
   { key: "nutrition", label: "Ernährung" },
-  { key: "player-card", label: "Spielerkarte" },
 ] as const;
+const PLAYER_CARD_TAB = { key: "player-card", label: "Spielerkarte" } as const;
+type TabDef = { key: string; label: string };
 
 type TabKey = (typeof TABS)[number]["key"];
 
