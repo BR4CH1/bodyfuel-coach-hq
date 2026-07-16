@@ -48,7 +48,7 @@ function AthleteProfile() {
   const { orgId, userId } = Route.useParams();
   const search = Route.useSearch();
   const navigate = useNavigate();
-  const tab: TabKey = (TABS.find((t) => t.key === search.tab)?.key ?? "overview") as TabKey;
+  const tab: TabKey = search.tab ?? "overview";
 
   const fetch = useServerFn(getCoachAthleteDetail);
   const { data, isLoading } = useQuery({
