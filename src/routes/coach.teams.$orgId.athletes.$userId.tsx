@@ -27,7 +27,7 @@ const BASE_TABS = [
 const PLAYER_CARD_TAB = { key: "player-card", label: "Spielerkarte" } as const;
 type TabDef = { key: string; label: string };
 
-type TabKey = (typeof TABS)[number]["key"];
+type TabKey = string;
 
 const searchSchema = z.object({
   tab: fallback(z.string(), "overview").default("overview"),
