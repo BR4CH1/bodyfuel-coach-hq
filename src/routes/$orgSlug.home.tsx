@@ -169,7 +169,7 @@ function OrgHome() {
             )}
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <AthletePlayerCardThumb userId={supabaseUser?.id} />
+            {org.slug === "bulls" && <AthletePlayerCardThumb userId={supabaseUser?.id} />}
             <Link
               to="/$orgSlug/profil"
               params={{ orgSlug: org.slug }}

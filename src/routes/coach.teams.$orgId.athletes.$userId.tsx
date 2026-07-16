@@ -16,17 +16,18 @@ import { AthleteTrainingTab } from "@/components/coach/athlete/AthleteTrainingTa
 import { AthleteNutritionTab } from "@/components/coach/athlete/AthleteNutritionTab";
 import { CoachPlayerCardView } from "@/components/player-cards/CoachPlayerCardView";
 
-const TABS = [
+const BASE_TABS = [
   { key: "overview", label: "Übersicht" },
   { key: "tasks", label: "Aufgaben" },
   { key: "checkins", label: "Check-ins" },
   { key: "performance", label: "Performance" },
   { key: "training", label: "Training" },
   { key: "nutrition", label: "Ernährung" },
-  { key: "player-card", label: "Spielerkarte" },
 ] as const;
+const PLAYER_CARD_TAB = { key: "player-card", label: "Spielerkarte" } as const;
+type TabDef = { key: string; label: string };
 
-type TabKey = (typeof TABS)[number]["key"];
+type TabKey = string;
 
 const searchSchema = z.object({
   tab: fallback(z.string(), "overview").default("overview"),
@@ -47,7 +48,7 @@ function AthleteProfile() {
   const { orgId, userId } = Route.useParams();
   const search = Route.useSearch();
   const navigate = useNavigate();
-  const tab: TabKey = (TABS.find((t) => t.key === search.tab)?.key ?? "overview") as TabKey;
+  const tab: TabKey = search.tab ?? "overview";
 
   const fetch = useServerFn(getCoachAthleteDetail);
   const { data, isLoading } = useQuery({
@@ -90,7 +91,7 @@ function AthleteProfile() {
 
         <div className="-mx-4 overflow-x-auto px-4">
           <div className="flex min-w-max gap-1.5">
-            {TABS.map((t) => (
+            {(data.org.slug === "bulls" ? [...BASE_TABS, PLAYER_CARD_TAB] : BASE_TABS).map((t: TabDef) => (
               <button
                 key={t.key}
                 onClick={() => setTab(t.key)}
@@ -118,7 +119,7 @@ function AthleteProfile() {
         {tab === "nutrition" && (
           <AthleteNutritionTab data={data} orgId={orgId} userId={userId} />
         )}
-        {tab === "player-card" && (
+        {tab === "player-card" && data.org.slug === "bulls" && (
           <CoachPlayerCardView
             userId={userId}
             jerseyNumber={data.athlete.jersey_number != null ? String(data.athlete.jersey_number) : null}
