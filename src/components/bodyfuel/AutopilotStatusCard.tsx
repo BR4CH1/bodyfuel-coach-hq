@@ -109,3 +109,38 @@ export function AutopilotStatusCard({ userId }: { userId: string }) {
     </Card>
   );
 }
+
+function AutoAckDoneCard({
+  onDismiss,
+  ackStorageKey,
+}: {
+  onDismiss: () => void;
+  ackStorageKey: string | null;
+}) {
+  // Beim ersten Rendern direkt als „gesehen" markieren, damit die Karte
+  // nach Reload / Navigation nicht erneut auftaucht.
+  useEffect(() => {
+    if (!ackStorageKey) return;
+    try {
+      localStorage.setItem(ackStorageKey, "1");
+    } catch {
+      /* ignore */
+    }
+  }, [ackStorageKey]);
+
+  return (
+    <Card className="mb-4 flex items-center gap-3 border-emerald-500/40 bg-emerald-500/10 p-4">
+      <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+      <div className="flex-1">
+        <p className="text-sm font-semibold">Dein Autopilot ist startklar ✨</p>
+        <p className="text-xs text-muted-foreground">
+          Ernährungs- und Trainingsplan wurden im Hintergrund erstellt und aktiviert.
+        </p>
+      </div>
+      <Button size="sm" variant="ghost" onClick={onDismiss}>
+        OK
+      </Button>
+    </Card>
+  );
+}
+
