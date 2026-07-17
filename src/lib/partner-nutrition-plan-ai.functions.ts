@@ -526,9 +526,11 @@ ${targetBlockFor(b.name, b.targets)}
 Bei gemeinsamen Mahlzeiten: BEIDE bekommen dasselbe Gericht ("name" identisch), aber unterschiedliche Zutatenmengen und Makros — passend zu ihrem individuellen Tagesziel.
 Bei individuellen Mahlzeiten: frei wählbar pro Person.
 
-🚨 HARTE AUSSCHLÜSSE (für BEIDE — gilt immer):
-ALLERGIEN: ${mergedAllergies.join(", ") || "(keine)"}
-NO-GOS für gemeinsame Gerichte vermeiden: ${mergedNogos.join(", ") || "(keine)"}
+🚨 HARTE AUSSCHLÜSSE — ABSOLUT VERBOTEN, auch als Zutat, auch in gemeinsamen Gerichten. Wenn eine dieser Zutaten in einem Gericht (name, description ODER ingredients) einer Person vorkommt, wird der komplette Plan verworfen und neu erzeugt.
+ALLERGIEN (beide zusammen): ${mergedAllergies.join(", ") || "(keine)"}
+NO-GOS ${a.name} (dürfen in KEINER Mahlzeit von ${a.name} vorkommen — auch nicht in shared Gerichten, die ${a.name} isst): ${a.nogos.join(", ") || "(keine)"}
+NO-GOS ${b.name} (dürfen in KEINER Mahlzeit von ${b.name} vorkommen — auch nicht in shared Gerichten, die ${b.name} isst): ${b.nogos.join(", ") || "(keine)"}
+Bei shared Slots: Wähle Gerichte, die NICHT die Vereinigung beider No-Go-Listen enthalten. Ersetze z. B. Kartoffeln durch Reis, Nudeln oder Süßkartoffel (sofern nicht selbst verboten).
 
 VORLIEBEN ${a.name}: Lieblings ${[...a.favFoods, ...a.favoriteNames].slice(0, 8).join(", ") || "—"}; mag ${a.liked.slice(0, 6).join(", ") || "—"}; meiden ${[...a.disliked, ...a.skipNames].slice(0, 6).join(", ") || "—"}
 VORLIEBEN ${b.name}: Lieblings ${[...b.favFoods, ...b.favoriteNames].slice(0, 8).join(", ") || "—"}; mag ${b.liked.slice(0, 6).join(", ") || "—"}; meiden ${[...b.disliked, ...b.skipNames].slice(0, 6).join(", ") || "—"}
