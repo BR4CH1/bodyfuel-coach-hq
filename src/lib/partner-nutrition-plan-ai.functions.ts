@@ -728,9 +728,11 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
           }
         }
 
+        const slotOrder: Record<Slot, number> = { breakfast: 0, lunch: 1, dinner: 2, snack: 3 };
+        const orderedRawMeals = [...rawMeals].sort((x, y) => slotOrder[x.slot] - slotOrder[y.slot]);
         const meals: ComputedPersonMeal[] = [];
-        for (let mealIdx = 0; mealIdx < rawMeals.length; mealIdx++) {
-          const m = rawMeals[mealIdx];
+        for (let mealIdx = 0; mealIdx < orderedRawMeals.length; mealIdx++) {
+          const m = orderedRawMeals[mealIdx];
           const structured = coerceIngredients((m as any).ingredients ?? null);
           const ingredientsForMath = structured.length
             ? structured
