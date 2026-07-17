@@ -719,7 +719,8 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
         const slots = new Set(rawMeals.map((m) => m.slot));
         for (const required of ["breakfast", "lunch", "dinner"] as const) {
           if (!slots.has(required)) {
-            const fallback = buildFallbackMealForSlot(required, safePool, forbidden);
+            const activeForbidden = sharedSlots[required] ? forbidden : personForbidden;
+            const fallback = buildFallbackMealForSlot(required, safePool, activeForbidden);
             if (fallback) {
               rawMeals.push(fallback);
               slots.add(required);
@@ -746,7 +747,8 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
             : await computeMealFromDescription(supabase, m.description ?? null, { smartOnly: true, requireResolvedIds: true });
 
           if (!isUsableEngineResult(computed)) {
-            const fallback = buildFallbackMealForSlot(m.slot, safePool, forbidden);
+            const activeForbidden = sharedSlots[m.slot] ? forbidden : personForbidden;
+            const fallback = buildFallbackMealForSlot(m.slot, safePool, activeForbidden);
             if (fallback && fallback.name !== m.name) {
               const fallbackStructured = coerceIngredients((fallback as any).ingredients ?? null);
               const fallbackComputed = await computeMealFromIngredients(supabase, fallbackStructured, {
