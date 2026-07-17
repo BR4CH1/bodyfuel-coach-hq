@@ -130,6 +130,120 @@ function containsForbiddenFood(haystack: string, forbidden: string[]): boolean {
   );
 }
 
+function matchesFood(food: SafePoolFood, probes: string[]): boolean {
+  const hay = `${food.text_id} ${food.name} ${(food.aliases ?? []).join(" ")}`.toLowerCase();
+  return probes.some((probe) => hay.includes(probe));
+}
+
+function findSafeFood(pool: SafePoolFood[], probes: string[], forbidden: string[]): SafePoolFood | null {
+  return pool.find((food) => matchesFood(food, probes) && !containsForbiddenFood(food.name, forbidden)) ?? null;
+}
+
+function makeFallbackMeal(
+  slot: Slot,
+  title: string,
+  ingredients: Array<{ food: SafePoolFood; grams: number }>,
+): PersonMeal {
+  const normalizedIngredients = ingredients.map(({ food, grams }) => ({
+    food_id: food.text_id,
+    name: food.name,
+    amount: grams,
+    unit: "g",
+    grams,
+  }));
+  return {
+    slot,
+    name: title,
+    description: normalizedIngredients.map((ing) => `${ing.grams}g ${ing.name}`).join(", "),
+    ingredients: normalizedIngredients,
+    kcal: 0,
+    protein_g: 0,
+    carbs_g: 0,
+    fat_g: 0,
+  };
+}
+
+function buildFallbackMealForSlot(
+  slot: Slot,
+  safePool: SafePoolFood[],
+  forbidden: string[],
+): PersonMeal | null {
+  const by = (probes: string[]) => findSafeFood(safePool, probes, forbidden);
+  const hafer = by(["haferflocken"]);
+  const skyr = by(["skyr", "magerquark", "quark"]);
+  const banane = by(["banane"]);
+  const reis = by(["reis_basmati_gekocht", "reis_jasmin_gekocht", "reis", "gekocht"]);
+  const pasta = by(["nudeln_hartweizen_gekocht", "vollkornnudeln_gekocht", "nudeln", "pasta"]);
+  const brot = by(["vollkornbrot", "roggenbrot", "toastbrot"]);
+  const wrap = by(["wrap"]);
+  const protein = by(["haehnchenbrust_gekocht", "hahnchenbrust_gekocht", "putenbrust_aufschnitt", "thunfisch", "seitan"]);
+  const gemuese = by(["gemischtes_gem", "rohkost", "brokkoli", "paprika", "tomate", "gurke"]);
+  const olivenoel = by(["oliven"]);
+  const obst = by(["apfel", "banane", "beeren"]);
+  const mandeln = by(["mandeln"]);
+  const shake = by(["protein_shake", "protein shake", "whey"]);
+
+  if (slot === "breakfast") {
+    if (hafer && skyr && obst) return makeFallbackMeal("breakfast", "Skyr-Hafer-Bowl", [
+      { food: hafer, grams: 70 },
+      { food: skyr, grams: 250 },
+      { food: obst, grams: 150 },
+    ]);
+    if (hafer && obst) return makeFallbackMeal("breakfast", "Hafer-Obst-Bowl", [
+      { food: hafer, grams: 90 },
+      { food: obst, grams: 150 },
+    ]);
+  }
+
+  if (slot === "lunch") {
+    const carb = reis ?? pasta ?? wrap ?? brot;
+    if (carb && protein && gemuese) return makeFallbackMeal("lunch", "Protein-Bowl", [
+      { food: carb, grams: carb === wrap ? 120 : carb === brot ? 140 : 260 },
+      { food: protein, grams: 160 },
+      { food: gemuese, grams: 220 },
+      ...(olivenoel ? [{ food: olivenoel, grams: 10 }] : []),
+    ]);
+    if (carb && skyr && gemuese) return makeFallbackMeal("lunch", "Schnelle Protein-Mahlzeit", [
+      { food: carb, grams: carb === wrap ? 120 : carb === brot ? 140 : 260 },
+      { food: skyr, grams: 250 },
+      { food: gemuese, grams: 200 },
+    ]);
+  }
+
+  if (slot === "dinner") {
+    const carb = pasta ?? reis ?? wrap ?? brot;
+    if (carb && protein && gemuese) return makeFallbackMeal("dinner", "Protein-Gemüse-Teller", [
+      { food: carb, grams: carb === wrap ? 120 : carb === brot ? 140 : 260 },
+      { food: protein, grams: 170 },
+      { food: gemuese, grams: 250 },
+      ...(olivenoel ? [{ food: olivenoel, grams: 10 }] : []),
+    ]);
+  }
+
+  if (slot === "snack") {
+    if (skyr && banane) return makeFallbackMeal("snack", "Skyr-Bananen-Snack", [
+      { food: skyr, grams: 250 },
+      { food: banane, grams: 120 },
+    ]);
+    if (shake && obst) return makeFallbackMeal("snack", "Protein-Obst-Snack", [
+      { food: shake, grams: 330 },
+      { food: obst, grams: 150 },
+    ]);
+    if (obst && mandeln) return makeFallbackMeal("snack", "Obst-Mandel-Snack", [
+      { food: obst, grams: 180 },
+      { food: mandeln, grams: 25 },
+    ]);
+  }
+
+  const genericProtein = skyr ?? protein ?? shake;
+  const genericCarb = hafer ?? reis ?? pasta ?? brot ?? wrap ?? obst;
+  if (genericProtein && genericCarb) return makeFallbackMeal(slot, `${slotLabel(slot)} Ersatz`, [
+    { food: genericProtein, grams: genericProtein === shake ? 330 : 220 },
+    { food: genericCarb, grams: genericCarb === hafer ? 70 : genericCarb === brot ? 120 : 160 },
+  ]);
+  return null;
+}
+
 async function loadPerson(supabase: any, userId: string) {
   const [
     { data: profile },
