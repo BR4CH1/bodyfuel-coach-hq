@@ -5,20 +5,24 @@ import { Sparkles, Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getMyAutopilotJob } from "@/lib/autopilot-jobs.functions";
+import { useEntitlements } from "@/lib/bodyfuel/entitlements";
 
 /**
  * Zeigt während der asynchronen Autopilot-Plan-Generierung einen
  * Status-Banner. Pollt alle 6s solange ein Job läuft.
+ * Nur für Smart-Nutzer sichtbar — Coaching/Free sehen den Autopilot nie.
  */
 export function AutopilotStatusCard({ userId }: { userId: string }) {
   const qc = useQueryClient();
   const fn = useServerFn(getMyAutopilotJob);
   const [hidden, setHidden] = useState(false);
+  const { hasBodyfuelSmart, loading: entLoading } = useEntitlements();
 
   const { data: job } = useQuery({
     queryKey: ["autopilot-job", userId],
     queryFn: () => fn(),
-    enabled: !!userId && !hidden,
+    enabled: !!userId && !hidden && !entLoading && hasBodyfuelSmart,
+
     refetchInterval: (q) => {
       const j: any = q.state.data;
       if (!j) return false;
@@ -61,6 +65,7 @@ export function AutopilotStatusCard({ userId }: { userId: string }) {
     setHidden(true);
   };
 
+  if (!hasBodyfuelSmart) return null;
   if (!job || hidden) return null;
   if (job.status === "done") {
     if (acked) return null;
