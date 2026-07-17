@@ -653,10 +653,12 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
     let prepared: Awaited<ReturnType<typeof prepareGeneratedDays>> | null = null;
     let lastRawSample = "";
     let correctionNote = "";
+    // gemini-3-flash-preview: ~2s statt ~110s bei gemini-2.5-flash — kein
+    // Worker-Timeout mehr. Pro-Fallback entfernt (wurde bei 130s vom Worker
+    // gecancelt und produzierte nie ein Ergebnis).
     const attempts: Array<{ model: string; extra: string }> = [
-      { model: "google/gemini-2.5-flash", extra: "" },
-      { model: "google/gemini-2.5-flash", extra: "\n\nWICHTIG: Antworte SOFORT mit dem JSON — keine leere Antwort, kein Fließtext, kein Kommentar. Wenn du unsicher bist, verwende Standard-Zutaten aus der Erlaubt-Liste." },
-      { model: "google/gemini-2.5-pro", extra: "\n\nWICHTIG: Antworte SOFORT mit dem vollständigen JSON gemäß Schema. Keine leere Antwort." },
+      { model: "google/gemini-3-flash-preview", extra: "" },
+      { model: "google/gemini-3-flash-preview", extra: "\n\nWICHTIG: Antworte SOFORT mit dem vollständigen JSON gemäß Schema — keine leere Antwort, kein Fließtext, kein Kommentar." },
     ];
 
     for (let att = 0; att < attempts.length; att++) {
