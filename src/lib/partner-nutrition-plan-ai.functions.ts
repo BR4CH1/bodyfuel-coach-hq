@@ -28,6 +28,8 @@ type GeneratedDay = {
   person_b: PersonMeal[];
 };
 
+type SafePoolFood = { text_id: string; name: string; aliases: string[] };
+
 function clonePersonMeal(meal: PersonMeal): PersonMeal {
   return {
     ...meal,
@@ -103,6 +105,29 @@ function buildIssn(input: MacroTarget): { training: MacroTarget; rest: MacroTarg
 
 function slotLabel(slot: Slot): string {
   return slot === "breakfast" ? "Frühstück" : slot === "lunch" ? "Mittagessen" : slot === "dinner" ? "Abendessen" : "Snack";
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function forbiddenVariants(raw: string): string[] {
+  const term = raw.toLowerCase().trim();
+  if (!term) return [];
+  const variants = new Set([term]);
+  if (term.endsWith("n") && term.length > 4) variants.add(term.slice(0, -1));
+  if (term.endsWith("en") && term.length > 5) variants.add(term.slice(0, -2));
+  return [...variants].filter((v) => v.length >= 3);
+}
+
+function containsForbiddenFood(haystack: string, forbidden: string[]): boolean {
+  const hay = haystack.toLowerCase();
+  return forbidden.some((raw) =>
+    forbiddenVariants(raw).some((term) => {
+      const re = new RegExp(`(^|[^a-zäöüß])${escapeRegExp(term)}([^a-zäöüß]|$)`, "i");
+      return re.test(hay);
+    }),
+  );
 }
 
 async function loadPerson(supabase: any, userId: string) {
