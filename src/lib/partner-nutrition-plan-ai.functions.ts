@@ -740,6 +740,31 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
             : await computeMealFromDescription(supabase, m.description ?? null, { smartOnly: true, requireResolvedIds: true });
 
           if (!isUsableEngineResult(computed)) {
+            const fallback = buildFallbackMealForSlot(m.slot, safePool, forbidden);
+            if (fallback && fallback.name !== m.name) {
+              const fallbackStructured = coerceIngredients((fallback as any).ingredients ?? null);
+              const fallbackComputed = await computeMealFromIngredients(supabase, fallbackStructured, {
+                smartOnly: true,
+                requireResolvedIds: true,
+              });
+              if (isUsableEngineResult(fallbackComputed)) {
+                console.warn(
+                  `[partner-plan] ${who.name}, Tag ${dayIndex + 1}: ${slotLabel(m.slot)} wurde wegen unberechenbarer Zutaten durch DB-Safe-Fallback ersetzt`,
+                );
+                meals.push({
+                  ...fallback,
+                  ingredients: fallbackStructured,
+                  kcal: fallbackComputed.kcal,
+                  protein_g: fallbackComputed.protein_g,
+                  carbs_g: fallbackComputed.carbs_g,
+                  fat_g: fallbackComputed.fat_g,
+                  _compute_warnings: fallbackComputed.warnings,
+                  _data_source: fallbackComputed.data_source,
+                  _verified_ratio: fallbackComputed.coverage,
+                } as ComputedPersonMeal);
+                continue;
+              }
+            }
             const unresolved = ((computed as any)?.unresolved_ingredients ?? [])
               .map((u: any) => `${u.name}${u.food_id ? ` (food_id="${u.food_id}")` : ""}`)
               .join(", ");
