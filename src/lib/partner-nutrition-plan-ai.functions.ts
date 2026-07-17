@@ -28,6 +28,8 @@ type GeneratedDay = {
   person_b: PersonMeal[];
 };
 
+type SafePoolFood = { text_id: string; name: string; aliases: string[] };
+
 function clonePersonMeal(meal: PersonMeal): PersonMeal {
   return {
     ...meal,
@@ -103,6 +105,143 @@ function buildIssn(input: MacroTarget): { training: MacroTarget; rest: MacroTarg
 
 function slotLabel(slot: Slot): string {
   return slot === "breakfast" ? "Frühstück" : slot === "lunch" ? "Mittagessen" : slot === "dinner" ? "Abendessen" : "Snack";
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function forbiddenVariants(raw: string): string[] {
+  const term = raw.toLowerCase().trim();
+  if (!term) return [];
+  const variants = new Set([term]);
+  if (term.endsWith("n") && term.length > 4) variants.add(term.slice(0, -1));
+  if (term.endsWith("en") && term.length > 5) variants.add(term.slice(0, -2));
+  return [...variants].filter((v) => v.length >= 3);
+}
+
+function containsForbiddenFood(haystack: string, forbidden: string[]): boolean {
+  const hay = haystack.toLowerCase();
+  return forbidden.some((raw) =>
+    forbiddenVariants(raw).some((term) => {
+      const re = new RegExp(`(^|[^a-zäöüß])${escapeRegExp(term)}([^a-zäöüß]|$)`, "i");
+      return re.test(hay);
+    }),
+  );
+}
+
+function matchesFood(food: SafePoolFood, probes: string[]): boolean {
+  const hay = `${food.text_id} ${food.name} ${(food.aliases ?? []).join(" ")}`.toLowerCase();
+  return probes.some((probe) => hay.includes(probe));
+}
+
+function findSafeFood(pool: SafePoolFood[], probes: string[], forbidden: string[]): SafePoolFood | null {
+  return pool.find((food) => matchesFood(food, probes) && !containsForbiddenFood(food.name, forbidden)) ?? null;
+}
+
+function makeFallbackMeal(
+  slot: Slot,
+  title: string,
+  ingredients: Array<{ food: SafePoolFood; grams: number }>,
+): PersonMeal {
+  const normalizedIngredients = ingredients.map(({ food, grams }) => ({
+    food_id: food.text_id,
+    name: food.name,
+    amount: grams,
+    unit: "g",
+    grams,
+  }));
+  return {
+    slot,
+    name: title,
+    description: normalizedIngredients.map((ing) => `${ing.grams}g ${ing.name}`).join(", "),
+    ingredients: normalizedIngredients,
+    kcal: 0,
+    protein_g: 0,
+    carbs_g: 0,
+    fat_g: 0,
+  };
+}
+
+function buildFallbackMealForSlot(
+  slot: Slot,
+  safePool: SafePoolFood[],
+  forbidden: string[],
+): PersonMeal | null {
+  const by = (probes: string[]) => findSafeFood(safePool, probes, forbidden);
+  const hafer = by(["haferflocken"]);
+  const skyr = by(["skyr", "magerquark", "quark"]);
+  const banane = by(["banane"]);
+  const reis = by(["reis_basmati_gekocht", "reis_jasmin_gekocht", "reis", "gekocht"]);
+  const pasta = by(["nudeln_hartweizen_gekocht", "vollkornnudeln_gekocht", "nudeln", "pasta"]);
+  const brot = by(["vollkornbrot", "roggenbrot", "toastbrot"]);
+  const wrap = by(["wrap"]);
+  const protein = by(["haehnchenbrust_gekocht", "hahnchenbrust_gekocht", "putenbrust_aufschnitt", "thunfisch", "seitan"]);
+  const gemuese = by(["gemischtes_gem", "rohkost", "brokkoli", "paprika", "tomate", "gurke"]);
+  const olivenoel = by(["oliven"]);
+  const obst = by(["apfel", "banane", "beeren"]);
+  const mandeln = by(["mandeln"]);
+  const shake = by(["protein_shake", "protein shake", "whey"]);
+
+  if (slot === "breakfast") {
+    if (hafer && skyr && obst) return makeFallbackMeal("breakfast", "Skyr-Hafer-Bowl", [
+      { food: hafer, grams: 70 },
+      { food: skyr, grams: 250 },
+      { food: obst, grams: 150 },
+    ]);
+    if (hafer && obst) return makeFallbackMeal("breakfast", "Hafer-Obst-Bowl", [
+      { food: hafer, grams: 90 },
+      { food: obst, grams: 150 },
+    ]);
+  }
+
+  if (slot === "lunch") {
+    const carb = reis ?? pasta ?? wrap ?? brot;
+    if (carb && protein && gemuese) return makeFallbackMeal("lunch", "Protein-Bowl", [
+      { food: carb, grams: carb === wrap ? 120 : carb === brot ? 140 : 260 },
+      { food: protein, grams: 160 },
+      { food: gemuese, grams: 220 },
+      ...(olivenoel ? [{ food: olivenoel, grams: 10 }] : []),
+    ]);
+    if (carb && skyr && gemuese) return makeFallbackMeal("lunch", "Schnelle Protein-Mahlzeit", [
+      { food: carb, grams: carb === wrap ? 120 : carb === brot ? 140 : 260 },
+      { food: skyr, grams: 250 },
+      { food: gemuese, grams: 200 },
+    ]);
+  }
+
+  if (slot === "dinner") {
+    const carb = pasta ?? reis ?? wrap ?? brot;
+    if (carb && protein && gemuese) return makeFallbackMeal("dinner", "Protein-Gemüse-Teller", [
+      { food: carb, grams: carb === wrap ? 120 : carb === brot ? 140 : 260 },
+      { food: protein, grams: 170 },
+      { food: gemuese, grams: 250 },
+      ...(olivenoel ? [{ food: olivenoel, grams: 10 }] : []),
+    ]);
+  }
+
+  if (slot === "snack") {
+    if (skyr && banane) return makeFallbackMeal("snack", "Skyr-Bananen-Snack", [
+      { food: skyr, grams: 250 },
+      { food: banane, grams: 120 },
+    ]);
+    if (shake && obst) return makeFallbackMeal("snack", "Protein-Obst-Snack", [
+      { food: shake, grams: 330 },
+      { food: obst, grams: 150 },
+    ]);
+    if (obst && mandeln) return makeFallbackMeal("snack", "Obst-Mandel-Snack", [
+      { food: obst, grams: 180 },
+      { food: mandeln, grams: 25 },
+    ]);
+  }
+
+  const genericProtein = skyr ?? protein ?? shake;
+  const genericCarb = hafer ?? reis ?? pasta ?? brot ?? wrap ?? obst;
+  if (genericProtein && genericCarb) return makeFallbackMeal(slot, `${slotLabel(slot)} Ersatz`, [
+    { food: genericProtein, grams: genericProtein === shake ? 330 : 220 },
+    { food: genericCarb, grams: genericCarb === hafer ? 70 : genericCarb === brot ? 120 : 160 },
+  ]);
+  return null;
 }
 
 async function loadPerson(supabase: any, userId: string) {
@@ -370,10 +509,11 @@ export const generatePartnerNutritionPlanDraft = createServerFn({ method: "POST"
     const mergedAllergies = Array.from(new Set([...a.allergies, ...b.allergies].map((s) => s.toLowerCase())));
     const mergedNogos = Array.from(new Set([...a.nogos, ...b.nogos].map((s) => s.toLowerCase())));
     const forbidden = Array.from(new Set([...mergedAllergies, ...mergedNogos].map((s) => s.trim()).filter(Boolean)));
-    const filterMeals = (ms: PersonMeal[]) =>
+    const filterMeals = (ms: PersonMeal[], personForbidden: string[]) =>
       ms.filter((m) => {
-        const hay = `${m.name} ${m.description ?? ""} ${JSON.stringify((m as any).ingredients ?? [])}`.toLowerCase();
-        return !forbidden.some((f) => hay.includes(f));
+        const hay = `${m.name} ${m.description ?? ""} ${JSON.stringify((m as any).ingredients ?? [])}`;
+        const activeForbidden = sharedSlots[m.slot] ? forbidden : personForbidden;
+        return !containsForbiddenFood(hay, activeForbidden);
       });
 
     const SHARED = (["breakfast", "lunch", "dinner", "snack"] as const)
@@ -572,17 +712,32 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
       const issues: string[] = [];
 
       for (let dayIndex = 0; dayIndex < expandedDays.length; dayIndex++) {
-        const rawMeals = filterMeals(pickMeals(expandedDays[dayIndex]));
+        const personForbidden = Array.from(
+          new Set([...mergedAllergies, ...who.nogos.map((s: string) => s.toLowerCase())]),
+        );
+        const rawMeals = filterMeals(pickMeals(expandedDays[dayIndex]), personForbidden);
         const slots = new Set(rawMeals.map((m) => m.slot));
         for (const required of ["breakfast", "lunch", "dinner"] as const) {
           if (!slots.has(required)) {
-            issues.push(`${who.name}, Tag ${dayIndex + 1}: ${slotLabel(required)} fehlt oder wurde wegen No-Go/Allergie entfernt`);
+            const activeForbidden = sharedSlots[required] ? forbidden : personForbidden;
+            const fallback = buildFallbackMealForSlot(required, safePool, activeForbidden);
+            if (fallback) {
+              rawMeals.push(fallback);
+              slots.add(required);
+              console.warn(
+                `[partner-plan] ${who.name}, Tag ${dayIndex + 1}: ${slotLabel(required)} wurde durch DB-Safe-Fallback ersetzt`,
+              );
+            } else {
+              issues.push(`${who.name}, Tag ${dayIndex + 1}: ${slotLabel(required)} fehlt oder wurde wegen No-Go/Allergie entfernt`);
+            }
           }
         }
 
+        const slotOrder: Record<Slot, number> = { breakfast: 0, lunch: 1, dinner: 2, snack: 3 };
+        const orderedRawMeals = [...rawMeals].sort((x, y) => slotOrder[x.slot] - slotOrder[y.slot]);
         const meals: ComputedPersonMeal[] = [];
-        for (let mealIdx = 0; mealIdx < rawMeals.length; mealIdx++) {
-          const m = rawMeals[mealIdx];
+        for (let mealIdx = 0; mealIdx < orderedRawMeals.length; mealIdx++) {
+          const m = orderedRawMeals[mealIdx];
           const structured = coerceIngredients((m as any).ingredients ?? null);
           const ingredientsForMath = structured.length
             ? structured
@@ -592,6 +747,32 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
             : await computeMealFromDescription(supabase, m.description ?? null, { smartOnly: true, requireResolvedIds: true });
 
           if (!isUsableEngineResult(computed)) {
+            const activeForbidden = sharedSlots[m.slot] ? forbidden : personForbidden;
+            const fallback = buildFallbackMealForSlot(m.slot, safePool, activeForbidden);
+            if (fallback && fallback.name !== m.name) {
+              const fallbackStructured = coerceIngredients((fallback as any).ingredients ?? null);
+              const fallbackComputed = await computeMealFromIngredients(supabase, fallbackStructured, {
+                smartOnly: true,
+                requireResolvedIds: true,
+              });
+              if (isUsableEngineResult(fallbackComputed)) {
+                console.warn(
+                  `[partner-plan] ${who.name}, Tag ${dayIndex + 1}: ${slotLabel(m.slot)} wurde wegen unberechenbarer Zutaten durch DB-Safe-Fallback ersetzt`,
+                );
+                meals.push({
+                  ...fallback,
+                  ingredients: fallbackStructured,
+                  kcal: fallbackComputed.kcal,
+                  protein_g: fallbackComputed.protein_g,
+                  carbs_g: fallbackComputed.carbs_g,
+                  fat_g: fallbackComputed.fat_g,
+                  _compute_warnings: fallbackComputed.warnings,
+                  _data_source: fallbackComputed.data_source,
+                  _verified_ratio: fallbackComputed.coverage,
+                } as ComputedPersonMeal);
+                continue;
+              }
+            }
             const unresolved = ((computed as any)?.unresolved_ingredients ?? [])
               .map((u: any) => `${u.name}${u.food_id ? ` (food_id="${u.food_id}")` : ""}`)
               .join(", ");
