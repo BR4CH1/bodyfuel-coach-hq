@@ -65,6 +65,7 @@ export function AutopilotStatusCard({ userId }: { userId: string }) {
     setHidden(true);
   };
 
+  if (!hasBodyfuelSmart) return null;
   if (!job || hidden) return null;
   if (job.status === "done") {
     if (acked) return null;
