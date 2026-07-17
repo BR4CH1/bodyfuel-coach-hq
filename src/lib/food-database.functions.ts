@@ -41,7 +41,7 @@ export const getFoodDatabaseStats = createServerFn({ method: "GET" })
       (supabase.from("foods" as any) as any)
         .select("*", { count: "exact", head: true })
         .eq("is_verified", true),
-      supabase.rpc("exec_sql" as any, { sql: "" }).then(() => null).catch(() => null),
+      Promise.resolve(null),
       (supabase.from("import_runs" as any) as any)
         .select("*")
         .order("started_at", { ascending: false })
