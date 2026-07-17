@@ -90,6 +90,7 @@ import { Route as BullsNutritionRouteImport } from './routes/bulls.nutrition'
 import { Route as BullsCheckinRouteImport } from './routes/bulls.checkin'
 import { Route as BullsBenchmarksRouteImport } from './routes/bulls.benchmarks'
 import { Route as AdminPlayerCardsRouteImport } from './routes/admin.player-cards'
+import { Route as AdminFoodDatabaseRouteImport } from './routes/admin.food-database'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as OrgSlugTrainingRouteImport } from './routes/$orgSlug.training'
@@ -566,6 +567,11 @@ const AdminPlayerCardsRoute = AdminPlayerCardsRouteImport.update({
   path: '/admin/player-cards',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminFoodDatabaseRoute = AdminFoodDatabaseRouteImport.update({
+  id: '/admin/food-database',
+  path: '/admin/food-database',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const Char91DotwellKnownChar93OauthProtectedResourceRoute =
   Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
     id: '/.well-known/oauth-protected-resource',
@@ -980,6 +986,7 @@ export interface FileRoutesByFullPath {
   '/$orgSlug/training': typeof OrgSlugTrainingRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/admin/food-database': typeof AdminFoodDatabaseRoute
   '/admin/player-cards': typeof AdminPlayerCardsRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
   '/bulls/checkin': typeof BullsCheckinRoute
@@ -1125,6 +1132,7 @@ export interface FileRoutesByTo {
   '/$orgSlug/training': typeof OrgSlugTrainingRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/admin/food-database': typeof AdminFoodDatabaseRoute
   '/admin/player-cards': typeof AdminPlayerCardsRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
   '/bulls/checkin': typeof BullsCheckinRoute
@@ -1271,6 +1279,7 @@ export interface FileRoutesById {
   '/$orgSlug/training': typeof OrgSlugTrainingRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/admin/food-database': typeof AdminFoodDatabaseRoute
   '/admin/player-cards': typeof AdminPlayerCardsRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
   '/bulls/checkin': typeof BullsCheckinRoute
@@ -1424,6 +1433,7 @@ export interface FileRouteTypes {
     | '/$orgSlug/training'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/admin/food-database'
     | '/admin/player-cards'
     | '/bulls/benchmarks'
     | '/bulls/checkin'
@@ -1569,6 +1579,7 @@ export interface FileRouteTypes {
     | '/$orgSlug/training'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/admin/food-database'
     | '/admin/player-cards'
     | '/bulls/benchmarks'
     | '/bulls/checkin'
@@ -1714,6 +1725,7 @@ export interface FileRouteTypes {
     | '/$orgSlug/training'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/admin/food-database'
     | '/admin/player-cards'
     | '/bulls/benchmarks'
     | '/bulls/checkin'
@@ -1857,6 +1869,7 @@ export interface RootRouteChildren {
   WelcomeRoute: typeof WelcomeRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  AdminFoodDatabaseRoute: typeof AdminFoodDatabaseRoute
   AdminPlayerCardsRoute: typeof AdminPlayerCardsRoute
   BullsBenchmarksRoute: typeof BullsBenchmarksRoute
   BullsCheckinRoute: typeof BullsCheckinRoute
@@ -2465,6 +2478,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/player-cards'
       fullPath: '/admin/player-cards'
       preLoaderRoute: typeof AdminPlayerCardsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/food-database': {
+      id: '/admin/food-database'
+      path: '/admin/food-database'
+      fullPath: '/admin/food-database'
+      preLoaderRoute: typeof AdminFoodDatabaseRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/.well-known/oauth-protected-resource': {
@@ -3272,6 +3292,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  AdminFoodDatabaseRoute: AdminFoodDatabaseRoute,
   AdminPlayerCardsRoute: AdminPlayerCardsRoute,
   BullsBenchmarksRoute: BullsBenchmarksRoute,
   BullsCheckinRoute: BullsCheckinRoute,
