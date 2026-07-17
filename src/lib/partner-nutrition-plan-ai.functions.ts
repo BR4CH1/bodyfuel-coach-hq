@@ -511,8 +511,8 @@ export const generatePartnerNutritionPlanDraft = createServerFn({ method: "POST"
     const forbidden = Array.from(new Set([...mergedAllergies, ...mergedNogos].map((s) => s.trim()).filter(Boolean)));
     const filterMeals = (ms: PersonMeal[]) =>
       ms.filter((m) => {
-        const hay = `${m.name} ${m.description ?? ""} ${JSON.stringify((m as any).ingredients ?? [])}`.toLowerCase();
-        return !forbidden.some((f) => hay.includes(f));
+        const hay = `${m.name} ${m.description ?? ""} ${JSON.stringify((m as any).ingredients ?? [])}`;
+        return !containsForbiddenFood(hay, forbidden);
       });
 
     const SHARED = (["breakfast", "lunch", "dinner", "snack"] as const)
@@ -715,7 +715,16 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
         const slots = new Set(rawMeals.map((m) => m.slot));
         for (const required of ["breakfast", "lunch", "dinner"] as const) {
           if (!slots.has(required)) {
-            issues.push(`${who.name}, Tag ${dayIndex + 1}: ${slotLabel(required)} fehlt oder wurde wegen No-Go/Allergie entfernt`);
+            const fallback = buildFallbackMealForSlot(required, safePool, forbidden);
+            if (fallback) {
+              rawMeals.push(fallback);
+              slots.add(required);
+              console.warn(
+                `[partner-plan] ${who.name}, Tag ${dayIndex + 1}: ${slotLabel(required)} wurde durch DB-Safe-Fallback ersetzt`,
+              );
+            } else {
+              issues.push(`${who.name}, Tag ${dayIndex + 1}: ${slotLabel(required)} fehlt oder wurde wegen No-Go/Allergie entfernt`);
+            }
           }
         }
 
