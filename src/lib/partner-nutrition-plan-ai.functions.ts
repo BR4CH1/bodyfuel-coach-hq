@@ -509,10 +509,11 @@ export const generatePartnerNutritionPlanDraft = createServerFn({ method: "POST"
     const mergedAllergies = Array.from(new Set([...a.allergies, ...b.allergies].map((s) => s.toLowerCase())));
     const mergedNogos = Array.from(new Set([...a.nogos, ...b.nogos].map((s) => s.toLowerCase())));
     const forbidden = Array.from(new Set([...mergedAllergies, ...mergedNogos].map((s) => s.trim()).filter(Boolean)));
-    const filterMeals = (ms: PersonMeal[]) =>
+    const filterMeals = (ms: PersonMeal[], personForbidden: string[]) =>
       ms.filter((m) => {
         const hay = `${m.name} ${m.description ?? ""} ${JSON.stringify((m as any).ingredients ?? [])}`;
-        return !containsForbiddenFood(hay, forbidden);
+        const activeForbidden = sharedSlots[m.slot] ? forbidden : personForbidden;
+        return !containsForbiddenFood(hay, activeForbidden);
       });
 
     const SHARED = (["breakfast", "lunch", "dinner", "snack"] as const)
@@ -711,7 +712,10 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
       const issues: string[] = [];
 
       for (let dayIndex = 0; dayIndex < expandedDays.length; dayIndex++) {
-        const rawMeals = filterMeals(pickMeals(expandedDays[dayIndex]));
+        const personForbidden = Array.from(
+          new Set([...mergedAllergies, ...who.nogos.map((s: string) => s.toLowerCase())]),
+        );
+        const rawMeals = filterMeals(pickMeals(expandedDays[dayIndex]), personForbidden);
         const slots = new Set(rawMeals.map((m) => m.slot));
         for (const required of ["breakfast", "lunch", "dinner"] as const) {
           if (!slots.has(required)) {
