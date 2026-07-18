@@ -10,7 +10,7 @@ export type FuelyTimelineEvent = {
   summary: string | null;
   cta_label: string | null;
   cta_href: string | null;
-  metadata: Record<string, unknown>;
+  metadata: Record<string, any>;
   coach_visible: boolean;
   occurred_at: string;
   created_at: string;
