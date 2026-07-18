@@ -501,6 +501,15 @@ export async function runFuelyTool(
           summary: `+${glasses} Glas Wasser`,
           undo_minutes: 30,
         });
+        await emitTimeline(supabase, userId, {
+          event_type: "action",
+          category: "water",
+          icon: "💧",
+          title: `${glasses * 250} ml Wasser eingetragen`,
+          summary: `Heute insgesamt ${newGlasses} Glas`,
+          coach_visible: true,
+          metadata: { glasses_added: glasses, total_glasses: newGlasses },
+        });
         return { done: true, added_glasses: glasses, total_glasses: newGlasses, log_id: logId };
       }
 
