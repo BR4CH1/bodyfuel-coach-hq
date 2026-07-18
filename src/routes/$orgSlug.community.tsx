@@ -125,6 +125,10 @@ function OrgCommunity() {
         </div>
       </div>
 
+      <div className="mx-auto max-w-md px-4 pt-4">
+        <FuelyDailyCard orgSlug={org.slug} />
+      </div>
+
       {tab === "feed" ? <FeedPane primary={primary} /> : <RankingPane primary={primary} />}
     </OrgAthleteLayout>
   );
