@@ -651,6 +651,17 @@ export async function runFuelyTool(
           summary: `${row.name} · ${Math.round(row.kcal)} kcal`,
           undo_minutes: 60,
         });
+        await emitTimeline(supabase, userId, {
+          event_type: "action",
+          category: "food",
+          icon: "🍽",
+          title: `${row.name}`,
+          summary: `${Math.round(row.kcal)} kcal · ${Math.round(row.protein_g)} g Protein`,
+          coach_visible: true,
+          metadata: { meal: row.meal, kcal: row.kcal, protein_g: row.protein_g },
+        });
+        const proteinMile = await detectProteinGoalMilestone(supabase, userId, today);
+        if (proteinMile) await emitTimeline(supabase, userId, proteinMile);
         return { done: true, entry_id: (ins as any).id, log_id: logId };
       }
 
