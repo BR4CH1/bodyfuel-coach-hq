@@ -142,7 +142,9 @@ function RootComponent() {
             <NameCompletionGate />
             <CookieConsent />
             <OfflineStatus />
+            <FuelyFAB />
             <Toaster theme="dark" />
+
         </SessionProvider>
       </ConsentProvider>
     </QueryClientProvider>
