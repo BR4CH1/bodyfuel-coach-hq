@@ -72,15 +72,25 @@ export function FuelyFAB() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   const [anim, setAnim] = useState<FuelyAnimation>("idle");
+  const [emotion, setEmotion] = useState<FuelyEmotion>("waving");
   const [toast, setToast] = useState<FuelyToast | null>(null);
   const [unread, setUnread] = useState(0);
+  const [sleeping, setSleeping] = useState(false);
+  const lastActivityRef = useRef(Date.now());
 
+  // Öffentliche API
   useEffect(() => {
     let counter = 0;
     pushToastRef = (t) => {
       counter += 1;
       const next = { ...t, id: counter };
       setToast(next);
+      // Sanfter Haptik-Puls auf Mobile
+      try {
+        if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+          (navigator as any).vibrate?.([15, 40, 15]);
+        }
+      } catch {}
       window.setTimeout(() => {
         setToast((cur) => (cur?.id === next.id ? null : cur));
       }, 5000);
@@ -92,12 +102,48 @@ export function FuelyFAB() {
     };
   }, []);
 
-  // Ziel-Org für Fuely-Chat: erst URL-Segment, sonst primäre Org des Users.
-  const targetOrgSlug = useMemo(() => {
-    const seg = pathname.split("/").filter(Boolean)[0];
-    // /$orgSlug/... erkennen wir daran, dass der zweite Segment-Level existiert
-    // und der erste Segmentwert kein bekannter Top-Level-Route-Name ist.
-    const topLevelRoutes = new Set([
+  // Idle-Zyklus: alle 12–20s zufällige Emotion/Animation wählen, solange kein Toast/Unread aktiv.
+  useEffect(() => {
+    let cancelled = false;
+    function schedule() {
+      const delay = 12000 + Math.random() * 8000;
+      window.setTimeout(() => {
+        if (cancelled) return;
+        // Nichts überschreiben, wenn Nutzer gerade Fuely-Interaktion hat
+        if (!toast && unread === 0) {
+          const pick = pickIdle();
+          setEmotion(pick.emotion);
+          setAnim(pick.anim);
+        }
+        schedule();
+      }, delay);
+    }
+    schedule();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Sleep-Modus: nach 5 Min ohne Interaktion Fuely „dösen" lassen.
+  useEffect(() => {
+    const bump = () => {
+      lastActivityRef.current = Date.now();
+      if (sleeping) setSleeping(false);
+    };
+    const events = ["pointerdown", "keydown", "scroll", "touchstart"];
+    events.forEach((e) => window.addEventListener(e, bump, { passive: true }));
+    const iv = window.setInterval(() => {
+      if (Date.now() - lastActivityRef.current > 5 * 60 * 1000) {
+        setSleeping(true);
+      }
+    }, 30_000);
+    return () => {
+      events.forEach((e) => window.removeEventListener(e, bump));
+      window.clearInterval(iv);
+    };
+  }, [sleeping]);
+
       "auth","login","dashboard","coach","coach-tools","admin","app","tracker",
       "smart","messages","achievements","ranking","measurements","profile",
       "progress","training","training-import","nutrition","community","checkout",
