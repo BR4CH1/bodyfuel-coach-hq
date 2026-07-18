@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/bodyfuel/UserAvatar";
 import { AthletePlayerCardThumb } from "@/components/player-cards/AthletePlayerCardThumb";
 import { Fuely } from "@/components/bodyfuel/Fuely";
+import { FuelyDailyCard } from "@/components/bodyfuel/FuelyDailyCard";
 import { PlanStatusChip } from "@/components/organizations/PlanStatusChip";
 import { LoadWeekBanner } from "@/components/bodyfuel/LoadWeekBanner";
 
@@ -200,6 +201,8 @@ function OrgHome() {
 
       <main className="mx-auto max-w-md px-4 py-5 space-y-5">
         <ReadinessGateHint userId={supabaseUser?.id} orgSlug={org.slug} />
+
+        <FuelyDailyCard orgSlug={org.slug} />
 
         <DayStatusBanner
           sessions={(data as any).today_sessions ?? []}
