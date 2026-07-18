@@ -41,53 +41,7 @@ GRENZEN:
 - Keine extremen Diäten oder gefährlichen Praktiken.`;
 
 
-async function buildUserContext(supabase: any, userId: string): Promise<string> {
-  const today = new Date().toISOString().slice(0, 10);
 
-  const [profileR, targetsR, todayFoodR, weightR, memR] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("display_name, first_name, gender, height_cm, current_weight_kg, target_weight_kg, goal, activity_level, birthdate")
-      .eq("id", userId)
-      .maybeSingle(),
-    supabase.from("nutrition_targets").select("kcal, protein_g, carbs_g, fat_g").eq("user_id", userId).maybeSingle(),
-    supabase.from("food_entries").select("kcal, protein_g, carbs_g, fat_g").eq("user_id", userId).eq("entry_date", today),
-    supabase.from("bulls_weight_logs").select("log_date, weight_kg").eq("user_id", userId).order("log_date", { ascending: false }).limit(5),
-    supabase.from("fuely_memories").select("category, content, importance").eq("user_id", userId).order("importance", { ascending: false }).limit(40),
-  ]);
-
-  const profile = profileR.data ?? {};
-  const targets = targetsR.data ?? null;
-  const todayFood = (todayFoodR.data ?? []) as any[];
-  const eaten = todayFood.reduce(
-    (acc, r) => ({
-      kcal: acc.kcal + Number(r.kcal ?? 0),
-      p: acc.p + Number(r.protein_g ?? 0),
-      c: acc.c + Number(r.carbs_g ?? 0),
-      f: acc.f + Number(r.fat_g ?? 0),
-    }),
-    { kcal: 0, p: 0, c: 0, f: 0 },
-  );
-
-  const memoryBlock = (memR.data ?? [])
-    .map((m: any) => `- (${m.category}) ${m.content}`)
-    .join("\n") || "- (noch keine Langzeit-Erinnerungen gespeichert)";
-
-  return `KONTEXT — Nutzerdaten (heute ${today}):
-Name: ${profile.display_name ?? profile.first_name ?? "unbekannt"}
-Geschlecht: ${profile.gender ?? "?"} | Größe: ${profile.height_cm ?? "?"} cm
-Aktuelles Gewicht: ${profile.current_weight_kg ?? "?"} kg | Zielgewicht: ${profile.target_weight_kg ?? "?"} kg
-Ziel: ${profile.goal ?? "?"} | Aktivität: ${profile.activity_level ?? "?"}
-
-TAGESZIEL: ${targets ? `${targets.kcal} kcal • P ${targets.protein_g}g • KH ${targets.carbs_g}g • F ${targets.fat_g}g` : "noch nicht gesetzt"}
-HEUTE GEGESSEN: ${Math.round(eaten.kcal)} kcal • P ${Math.round(eaten.p)}g • KH ${Math.round(eaten.c)}g • F ${Math.round(eaten.f)}g
-${targets ? `NOCH OFFEN: ${Math.max(0, targets.kcal - eaten.kcal)} kcal • P ${Math.max(0, targets.protein_g - eaten.p).toFixed(0)}g` : ""}
-
-GEWICHTSVERLAUF (letzte Einträge): ${(weightR.data ?? []).map((w: any) => `${w.log_date}: ${w.weight_kg}kg`).join(", ") || "keine"}
-
-LANGZEIT-MEMORY (was du dir über den Nutzer gemerkt hast):
-${memoryBlock}`;
-}
 
 async function callFuely(
   messages: any[],
