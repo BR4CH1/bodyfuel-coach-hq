@@ -2467,6 +2467,54 @@ export type Database = {
         }
         Relationships: []
       }
+      fuely_timeline_events: {
+        Row: {
+          category: string | null
+          coach_visible: boolean
+          created_at: string
+          cta_href: string | null
+          cta_label: string | null
+          event_type: string
+          icon: string | null
+          id: string
+          metadata: Json
+          occurred_at: string
+          summary: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          coach_visible?: boolean
+          created_at?: string
+          cta_href?: string | null
+          cta_label?: string | null
+          event_type: string
+          icon?: string | null
+          id?: string
+          metadata?: Json
+          occurred_at?: string
+          summary?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          coach_visible?: boolean
+          created_at?: string
+          cta_href?: string | null
+          cta_label?: string | null
+          event_type?: string
+          icon?: string | null
+          id?: string
+          metadata?: Json
+          occurred_at?: string
+          summary?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       gift_hubs: {
         Row: {
           code: string

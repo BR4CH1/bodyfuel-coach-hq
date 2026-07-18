@@ -2,6 +2,8 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { fallback, zodValidator } from "@tanstack/zod-adapter";
+import { z } from "zod";
 import { ArrowLeft, Brain, Send, Trash2, Sparkles, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -13,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Fuely, type FuelyEmotion } from "@/components/bodyfuel/Fuely";
+import { FuelyTimeline } from "@/components/bodyfuel/FuelyTimeline";
 import {
   listFuelyMessages,
   sendFuelyMessage,
@@ -24,7 +27,12 @@ import {
   type FuelyMemory,
 } from "@/lib/fuely.functions";
 
+const fuelySearchSchema = z.object({
+  tab: fallback(z.enum(["chat", "timeline"]), "chat").default("chat"),
+});
+
 export const Route = createFileRoute("/$orgSlug/fuely")({
+  validateSearch: zodValidator(fuelySearchSchema),
   component: FuelyPage,
 });
 
@@ -41,8 +49,12 @@ const QUICK_ACTIONS: QuickAction[] = [
 
 function FuelyPage() {
   const { orgSlug } = Route.useParams();
+  const search = Route.useSearch();
+  const tab = search.tab;
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const setTab = (next: "chat" | "timeline") =>
+    navigate({ to: "/$orgSlug/fuely", params: { orgSlug }, search: { tab: next }, replace: true });
   const [userId, setUserId] = useState<string | null>(null);
   const [firstName, setFirstName] = useState<string>("");
   const [input, setInput] = useState("");
@@ -172,6 +184,32 @@ function FuelyPage() {
         </Button>
       </header>
 
+      {/* Tabs */}
+      <div className="border-b border-border bg-card/60 px-4">
+        <div className="mx-auto flex max-w-2xl gap-1 py-2">
+          {(["chat", "timeline"] as const).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setTab(t)}
+              className={`rounded-full px-4 py-1.5 text-xs font-semibold uppercase tracking-wider transition ${
+                tab === t
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              {t === "chat" ? "Chat" : "Timeline"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {tab === "timeline" ? (
+        <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-4">
+          <FuelyTimeline />
+        </div>
+      ) : (
+      <>
       {/* Messages */}
       <ScrollArea className="flex-1">
         <div ref={scrollRef} className="mx-auto flex max-w-2xl flex-col gap-3 px-4 py-4">
@@ -256,6 +294,9 @@ function FuelyPage() {
           </Button>
         </form>
       </div>
+      </>
+      )}
+
 
       {/* Clear confirm */}
       <Dialog open={showClear} onOpenChange={setShowClear}>

@@ -210,6 +210,25 @@ export const getFuelyDailyNote = createServerFn({ method: "POST" })
       .single();
 
     if (error) throw new Error(error.message);
+
+    // Timeline-Eintrag (privat) — Morning bzw. Evening
+    try {
+      const { insertTimelineEvent } = await import("./fuely-timeline.server");
+      const isMorning = data.kind === "morning";
+      const preview = content.split(/\n\n/)[0]?.slice(0, 160) ?? "";
+      await insertTimelineEvent(supabase, userId, {
+        event_type: isMorning ? "morning_briefing" : "evening_review",
+        category: isMorning ? "morning" : "evening",
+        icon: isMorning ? "🌅" : "🌙",
+        title: isMorning ? "Morgen-Briefing" : "Tagesrückblick",
+        summary: preview,
+        coach_visible: false,
+        metadata: { note_id: (inserted as any)?.id ?? null },
+      });
+    } catch {
+      // Timeline-Fehler dürfen die Note nicht killen
+    }
+
     return inserted as any;
   });
 

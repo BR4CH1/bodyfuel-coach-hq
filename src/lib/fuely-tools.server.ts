@@ -6,12 +6,31 @@
  * Server-only Datei (`.server.ts`), nicht ins Client-Bundle importieren.
  */
 
+import {
+  insertTimelineEvent,
+  detectWeightMilestone,
+  detectProteinGoalMilestone,
+  type TimelineEventInput,
+} from "./fuely-timeline.server";
+
 type SB = any; // typed as any to avoid heavy type gymnastics; RLS enforced
 
 function isoDay(offset = 0) {
   const d = new Date();
   d.setDate(d.getDate() + offset);
   return d.toISOString().slice(0, 10);
+}
+
+async function emitTimeline(
+  supabase: SB,
+  userId: string,
+  event: TimelineEventInput,
+): Promise<void> {
+  try {
+    await insertTimelineEvent(supabase, userId, event);
+  } catch {
+    /* nie den Tool-Call blocken */
+  }
 }
 
 /** OpenAI-Tools-Definition, wird an das Gateway geschickt. */
@@ -482,6 +501,15 @@ export async function runFuelyTool(
           summary: `+${glasses} Glas Wasser`,
           undo_minutes: 30,
         });
+        await emitTimeline(supabase, userId, {
+          event_type: "action",
+          category: "water",
+          icon: "💧",
+          title: `${glasses * 250} ml Wasser eingetragen`,
+          summary: `Heute insgesamt ${newGlasses} Glas`,
+          coach_visible: true,
+          metadata: { glasses_added: glasses, total_glasses: newGlasses },
+        });
         return { done: true, added_glasses: glasses, total_glasses: newGlasses, log_id: logId };
       }
 
@@ -520,6 +548,17 @@ export async function runFuelyTool(
           summary: `Gewicht: ${w} kg`,
           undo_minutes: 60,
         });
+        await emitTimeline(supabase, userId, {
+          event_type: "action",
+          category: "weight",
+          icon: "⚖️",
+          title: `Gewicht: ${w.toFixed(1)} kg`,
+          summary: null,
+          coach_visible: true,
+          metadata: { weight_kg: w },
+        });
+        const wMile = await detectWeightMilestone(supabase, userId, w);
+        if (wMile) await emitTimeline(supabase, userId, wMile);
         return { done: true, weight_kg: w, log_id: logId };
       }
 
@@ -569,6 +608,17 @@ export async function runFuelyTool(
           summary: `Maße aktualisiert`,
           undo_minutes: 60,
         });
+        await emitTimeline(supabase, userId, {
+          event_type: "action",
+          category: "measurement",
+          icon: "📏",
+          title: "Körpermaße aktualisiert",
+          summary: Object.entries(payload)
+            .map(([k, v]) => `${k}: ${v}`)
+            .join(" · "),
+          coach_visible: true,
+          metadata: payload,
+        });
         return { done: true, saved: payload, log_id: logId };
       }
 
@@ -601,6 +651,17 @@ export async function runFuelyTool(
           summary: `${row.name} · ${Math.round(row.kcal)} kcal`,
           undo_minutes: 60,
         });
+        await emitTimeline(supabase, userId, {
+          event_type: "action",
+          category: "food",
+          icon: "🍽",
+          title: `${row.name}`,
+          summary: `${Math.round(row.kcal)} kcal · ${Math.round(row.protein_g)} g Protein`,
+          coach_visible: true,
+          metadata: { meal: row.meal, kcal: row.kcal, protein_g: row.protein_g },
+        });
+        const proteinMile = await detectProteinGoalMilestone(supabase, userId, today);
+        if (proteinMile) await emitTimeline(supabase, userId, proteinMile);
         return { done: true, entry_id: (ins as any).id, log_id: logId };
       }
 
@@ -644,6 +705,15 @@ export async function runFuelyTool(
           summary: "Training abgehakt",
           undo_minutes: 60,
         });
+        await emitTimeline(supabase, userId, {
+          event_type: "action",
+          category: "training",
+          icon: "🏋️",
+          title: "Training erfolgreich abgeschlossen",
+          summary: (prev as any).focus ?? null,
+          coach_visible: true,
+          metadata: { session_id: sessionId, focus: (prev as any).focus ?? null },
+        });
         return { done: true, session_id: sessionId, log_id: logId };
       }
 
@@ -684,6 +754,14 @@ export async function runFuelyTool(
           new_value: { session_date: newDate },
           summary: `Training auf ${newDate} verschoben`,
           undo_minutes: 120,
+        });
+        await emitTimeline(supabase, userId, {
+          event_type: "action",
+          category: "training",
+          icon: "📅",
+          title: `Training verschoben auf ${newDate}`,
+          coach_visible: true,
+          metadata: { session_id: sessionId, new_date: newDate, previous_date: (prev as any).session_date },
         });
         return { done: true, session_id: sessionId, new_date: newDate, log_id: logId };
       }
