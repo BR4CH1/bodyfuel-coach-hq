@@ -92,7 +92,7 @@ function FuelyPage() {
       qc.invalidateQueries({ queryKey: ["fuely-messages", userId] });
     },
     onError: (e: any) => {
-      toast({ title: "Fuely", description: e?.message ?? "Etwas ist schiefgelaufen", variant: "destructive" });
+      toast.error(e?.message ?? "Fuely konnte nicht antworten");
       qc.invalidateQueries({ queryKey: ["fuely-messages", userId] });
     },
   });
