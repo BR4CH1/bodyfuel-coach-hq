@@ -284,10 +284,9 @@ export const sendFuelyMessage = createServerFn({ method: "POST" })
       await extractMemories(supabase, userId, data.content, assistantText, apiKey);
 
       return { user: userRow as FuelyMessage, assistant: assistantRow as FuelyMessage, nav };
+    },
+  );
 
-
-    return { user: userRow as FuelyMessage, assistant: assistantRow as FuelyMessage };
-  });
 
 export const clearFuelyChat = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
