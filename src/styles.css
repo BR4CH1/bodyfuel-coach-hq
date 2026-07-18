@@ -368,3 +368,31 @@
 }
 
 
+
+/* Fuely mascot animations */
+@keyframes fuely-idle-breath {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-2px) scale(1.02); }
+}
+@keyframes fuely-bounce {
+  0%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-14%); }
+  60% { transform: translateY(0); }
+  75% { transform: translateY(-6%); }
+}
+@keyframes fuely-wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-4deg); }
+  75% { transform: rotate(4deg); }
+}
+@keyframes fuely-float {
+  0%, 100% { transform: translateY(0) rotate(-1deg); }
+  50% { transform: translateY(-6px) rotate(1deg); }
+}
+.fuely-idle { animation: fuely-idle-breath 3.6s ease-in-out infinite; transform-origin: 50% 90%; }
+.fuely-bounce { animation: fuely-bounce 1.4s ease-in-out infinite; transform-origin: 50% 90%; }
+.fuely-wiggle { animation: fuely-wiggle 2.2s ease-in-out infinite; transform-origin: 50% 90%; }
+.fuely-float { animation: fuely-float 4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .fuely-idle, .fuely-bounce, .fuely-wiggle, .fuely-float { animation: none; }
+}
