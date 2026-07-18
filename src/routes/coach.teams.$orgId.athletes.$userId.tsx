@@ -121,6 +121,11 @@ function AthleteProfile() {
         {tab === "nutrition" && (
           <AthleteNutritionTab data={data} orgId={orgId} userId={userId} />
         )}
+        {tab === "fuely-timeline" && (
+          <div className="rounded-2xl border border-[#252525] bg-[#0b0b0b] p-4">
+            <FuelyTimeline forUserId={userId} coachView emptyHint="Der Athlet hat noch keine Fuely-Aktivitäten geteilt." />
+          </div>
+        )}
         {tab === "player-card" && data.org.slug === "bulls" && (
           <CoachPlayerCardView
             userId={userId}
