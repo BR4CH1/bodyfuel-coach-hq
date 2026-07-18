@@ -25,6 +25,7 @@ import { Route as OrgLayoutRoute } from "./$orgSlug";
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/bodyfuel/UserAvatar";
 import { AthletePlayerCardThumb } from "@/components/player-cards/AthletePlayerCardThumb";
+import { Fuely } from "@/components/bodyfuel/Fuely";
 import { PlanStatusChip } from "@/components/organizations/PlanStatusChip";
 import { LoadWeekBanner } from "@/components/bodyfuel/LoadWeekBanner";
 
@@ -154,6 +155,7 @@ function OrgHome() {
               <div className="text-xs opacity-75">{greet()},</div>
               <div className="font-display text-xl font-bold">{first}</div>
             </div>
+            <Fuely emotion="waving" size="md" animation="idle" className="ml-1 shrink-0" />
           </div>
           <OrganizationContextSwitcher compact />
         </div>
