@@ -18,6 +18,8 @@ import { PaymentTestModeBanner } from "../components/PaymentTestModeBanner";
 import { OfflineStatus } from "../components/bodyfuel/OfflineStatus";
 import { ReferralAttacher } from "../components/bodyfuel/ReferralAttacher";
 import { NameCompletionGate } from "../components/bodyfuel/NameCompletionGate";
+import { FuelyFAB } from "../components/bodyfuel/FuelyFAB";
+
 
 function NotFoundComponent() {
   return (
@@ -140,7 +142,9 @@ function RootComponent() {
             <NameCompletionGate />
             <CookieConsent />
             <OfflineStatus />
+            <FuelyFAB />
             <Toaster theme="dark" />
+
         </SessionProvider>
       </ConsentProvider>
     </QueryClientProvider>
