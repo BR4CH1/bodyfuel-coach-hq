@@ -6,12 +6,31 @@
  * Server-only Datei (`.server.ts`), nicht ins Client-Bundle importieren.
  */
 
+import {
+  insertTimelineEvent,
+  detectWeightMilestone,
+  detectProteinGoalMilestone,
+  type TimelineEventInput,
+} from "./fuely-timeline.server";
+
 type SB = any; // typed as any to avoid heavy type gymnastics; RLS enforced
 
 function isoDay(offset = 0) {
   const d = new Date();
   d.setDate(d.getDate() + offset);
   return d.toISOString().slice(0, 10);
+}
+
+async function emitTimeline(
+  supabase: SB,
+  userId: string,
+  event: TimelineEventInput,
+): Promise<void> {
+  try {
+    await insertTimelineEvent(supabase, userId, event);
+  } catch {
+    /* nie den Tool-Call blocken */
+  }
 }
 
 /** OpenAI-Tools-Definition, wird an das Gateway geschickt. */
