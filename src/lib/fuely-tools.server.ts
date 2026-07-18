@@ -705,6 +705,15 @@ export async function runFuelyTool(
           summary: "Training abgehakt",
           undo_minutes: 60,
         });
+        await emitTimeline(supabase, userId, {
+          event_type: "action",
+          category: "training",
+          icon: "🏋️",
+          title: "Training erfolgreich abgeschlossen",
+          summary: (prev as any).focus ?? null,
+          coach_visible: true,
+          metadata: { session_id: sessionId, focus: (prev as any).focus ?? null },
+        });
         return { done: true, session_id: sessionId, log_id: logId };
       }
 
