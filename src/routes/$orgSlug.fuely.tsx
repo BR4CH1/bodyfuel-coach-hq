@@ -44,6 +44,7 @@ function FuelyPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [userId, setUserId] = useState<string | null>(null);
+  const [firstName, setFirstName] = useState<string>("");
   const [input, setInput] = useState("");
   const [showMemories, setShowMemories] = useState(false);
   const [showClear, setShowClear] = useState(false);
@@ -51,11 +52,22 @@ function FuelyPage() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) navigate({ to: "/auth" });
-      else setUserId(data.user.id);
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (!data.user) {
+        navigate({ to: "/auth" });
+        return;
+      }
+      setUserId(data.user.id);
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("display_name")
+        .eq("id", data.user.id)
+        .maybeSingle();
+      const dn = (prof as any)?.display_name?.trim() ?? "";
+      setFirstName(dn ? dn.split(/\s+/)[0] : "");
     });
   }, [navigate]);
+
 
   const listFn = useServerFn(listFuelyMessages);
   const sendFn = useServerFn(sendFuelyMessage);
