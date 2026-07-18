@@ -5,11 +5,32 @@
  * mit Idle-Animation. Tap → kurzes Winken, dann Navigation zur Fuely-Chat-Seite.
  * Optional: Notification-Badge und flüchtige Speech-Bubble.
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { Fuely, type FuelyAnimation } from "@/components/bodyfuel/Fuely";
+import { Fuely, type FuelyAnimation, type FuelyEmotion } from "@/components/bodyfuel/Fuely";
 import { useSession } from "@/lib/bodyfuel/session";
 import { useEntitlements } from "@/lib/bodyfuel/entitlements";
+
+/** Idle-Zyklus: welche Emotion+Animation zufällig rotieren. */
+const IDLE_CYCLE: Array<{ emotion: FuelyEmotion; anim: FuelyAnimation; weight: number }> = [
+  { emotion: "waving", anim: "idle", weight: 4 },
+  { emotion: "happy", anim: "idle", weight: 4 },
+  { emotion: "happy", anim: "float", weight: 2 },
+  { emotion: "motivated", anim: "idle", weight: 2 },
+  { emotion: "thinking", anim: "idle", weight: 2 },
+  { emotion: "waving", anim: "wiggle", weight: 1 },
+  { emotion: "celebrating", anim: "bounce", weight: 1 },
+];
+function pickIdle() {
+  const total = IDLE_CYCLE.reduce((s, i) => s + i.weight, 0);
+  let r = Math.random() * total;
+  for (const item of IDLE_CYCLE) {
+    r -= item.weight;
+    if (r <= 0) return item;
+  }
+  return IDLE_CYCLE[0];
+}
+
 
 // Pfade, auf denen Fuely NICHT erscheinen soll (Auth, Legal, Marketing-Landing).
 const HIDDEN_PREFIXES = [
