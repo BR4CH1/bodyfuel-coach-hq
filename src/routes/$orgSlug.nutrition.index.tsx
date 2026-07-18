@@ -10,6 +10,7 @@ import { getOrgHomeData } from "@/lib/organizations/athlete.functions";
 import { enqueueAutopilotJob, getMyAutopilotJob } from "@/lib/autopilot-jobs.functions";
 import { OrgAthleteLayout } from "@/components/organizations/OrgAthleteLayout";
 import { AutopilotStatusCard } from "@/components/bodyfuel/AutopilotStatusCard";
+import { FuelyDailyCard } from "@/components/bodyfuel/FuelyDailyCard";
 import { MacroTargetsCard } from "@/components/bodyfuel/MacroTargetsCard";
 import { PlanContentView } from "@/components/bodyfuel/PlanContentView";
 import { BullsPlanContentView } from "@/components/bodyfuel/BullsPlanContentView";
