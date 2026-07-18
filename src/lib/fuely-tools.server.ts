@@ -548,6 +548,17 @@ export async function runFuelyTool(
           summary: `Gewicht: ${w} kg`,
           undo_minutes: 60,
         });
+        await emitTimeline(supabase, userId, {
+          event_type: "action",
+          category: "weight",
+          icon: "⚖️",
+          title: `Gewicht: ${w.toFixed(1)} kg`,
+          summary: null,
+          coach_visible: true,
+          metadata: { weight_kg: w },
+        });
+        const wMile = await detectWeightMilestone(supabase, userId, w);
+        if (wMile) await emitTimeline(supabase, userId, wMile);
         return { done: true, weight_kg: w, log_id: logId };
       }
 
