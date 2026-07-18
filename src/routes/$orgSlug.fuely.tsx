@@ -82,7 +82,7 @@ function FuelyPage() {
   const messages: FuelyMessage[] = messagesQ.data?.items ?? [];
 
   const sendMutation = useMutation({
-    mutationFn: (content: string) => sendFn({ data: { content } }),
+    mutationFn: (content: string) => sendFn({ data: { content, orgSlug } }),
     onMutate: async (content) => {
       // optimistic user message
       qc.setQueryData<{ items: FuelyMessage[] }>(["fuely-messages", userId], (prev) => ({
@@ -97,7 +97,12 @@ function FuelyPage() {
         ],
       }));
     },
-    onSuccess: () => {
+    onSuccess: (res: any) => {
+      if (res?.nav?.path) {
+        toast(res.nav.label ?? "Öffnen", {
+          action: { label: "Los", onClick: () => navigate({ to: res.nav.path }) },
+        });
+      }
       qc.invalidateQueries({ queryKey: ["fuely-messages", userId] });
     },
     onError: (e: any) => {
@@ -105,6 +110,7 @@ function FuelyPage() {
       qc.invalidateQueries({ queryKey: ["fuely-messages", userId] });
     },
   });
+
 
   const clearMutation = useMutation({
     mutationFn: () => clearFn(),
