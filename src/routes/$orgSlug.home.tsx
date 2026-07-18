@@ -155,7 +155,7 @@ function OrgHome() {
               <div className="text-xs opacity-75">{greet()},</div>
               <div className="font-display text-xl font-bold">{first}</div>
             </div>
-            <Fuely emotion="waving" size="md" animation="idle" className="ml-1 shrink-0" />
+            
           </div>
           <OrganizationContextSwitcher compact />
         </div>

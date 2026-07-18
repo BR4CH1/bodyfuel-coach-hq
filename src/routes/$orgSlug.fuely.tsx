@@ -136,7 +136,7 @@ function FuelyPage() {
         </Link>
         <Fuely emotion={emotion} size="sm" animation={sendMutation.isPending ? "wiggle" : "idle"} />
         <div className="flex-1">
-          <div className="font-display text-base font-bold leading-tight">Fuely AI</div>
+          <div className="font-display text-base font-bold leading-tight">Fuely</div>
           <div className="text-[11px] text-muted-foreground">Dein persönlicher BodyFuel Coach</div>
         </div>
         <Sheet open={showMemories} onOpenChange={setShowMemories}>
