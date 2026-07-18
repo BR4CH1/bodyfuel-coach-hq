@@ -89,18 +89,28 @@ LANGZEIT-MEMORY (was du dir über den Nutzer gemerkt hast):
 ${memoryBlock}`;
 }
 
-async function callFuely(messages: any[], apiKey: string): Promise<string> {
+async function callFuely(
+  messages: any[],
+  apiKey: string,
+  opts?: { tools?: any[]; tool_choice?: "auto" | "none" },
+): Promise<any> {
+  const body: any = { model: FUELY_MODEL, messages };
+  if (opts?.tools?.length) {
+    body.tools = opts.tools;
+    body.tool_choice = opts.tool_choice ?? "auto";
+  }
   const res = await fetch(AI_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
-    body: JSON.stringify({ model: FUELY_MODEL, messages }),
+    body: JSON.stringify(body),
   });
   if (res.status === 429) throw new Error("Fuely ist gerade überlastet — versuch's gleich nochmal.");
   if (res.status === 402) throw new Error("Fuelys Guthaben ist aufgebraucht — bitte lade Credits nach.");
   if (!res.ok) throw new Error(`Fuely konnte nicht antworten (${res.status})`);
   const j = await res.json();
-  return j?.choices?.[0]?.message?.content?.trim() ?? "Hmm, mir fehlen gerade die Worte 🤔";
+  return j?.choices?.[0]?.message ?? { content: "Hmm, mir fehlen gerade die Worte 🤔" };
 }
+
 
 async function extractMemories(
   supabase: any,
