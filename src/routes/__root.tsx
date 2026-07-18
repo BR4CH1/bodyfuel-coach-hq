@@ -19,6 +19,8 @@ import { OfflineStatus } from "../components/bodyfuel/OfflineStatus";
 import { ReferralAttacher } from "../components/bodyfuel/ReferralAttacher";
 import { NameCompletionGate } from "../components/bodyfuel/NameCompletionGate";
 import { FuelyFAB } from "../components/bodyfuel/FuelyFAB";
+import { FuelyHintEngine } from "../components/bodyfuel/FuelyHintEngine";
+
 
 
 function NotFoundComponent() {
@@ -143,6 +145,8 @@ function RootComponent() {
             <CookieConsent />
             <OfflineStatus />
             <FuelyFAB />
+            <FuelyHintEngine />
+
             <Toaster theme="dark" />
 
         </SessionProvider>

@@ -101,15 +101,18 @@ export function FuelyFAB() {
 
   const handleTap = () => {
     setAnim("wiggle");
+    setUnread(0);
     window.setTimeout(() => {
       setAnim("idle");
       if (toast?.href) {
         navigate({ to: toast.href });
+        setToast(null);
       } else if (targetOrgSlug) {
         navigate({ to: "/$orgSlug/fuely", params: { orgSlug: targetOrgSlug } });
       }
     }, 450);
   };
+
 
   const activeAnim: FuelyAnimation = unread > 0 && anim === "idle" ? "bounce" : anim;
 
