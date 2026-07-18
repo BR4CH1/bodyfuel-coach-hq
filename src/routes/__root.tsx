@@ -145,6 +145,8 @@ function RootComponent() {
             <CookieConsent />
             <OfflineStatus />
             <FuelyFAB />
+            <FuelyHintEngine />
+
             <Toaster theme="dark" />
 
         </SessionProvider>
