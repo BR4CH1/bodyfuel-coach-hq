@@ -2,6 +2,8 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { fallback, zodValidator } from "@tanstack/zod-adapter";
+import { z } from "zod";
 import { ArrowLeft, Brain, Send, Trash2, Sparkles, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -13,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Fuely, type FuelyEmotion } from "@/components/bodyfuel/Fuely";
+import { FuelyTimeline } from "@/components/bodyfuel/FuelyTimeline";
 import {
   listFuelyMessages,
   sendFuelyMessage,
@@ -24,7 +27,12 @@ import {
   type FuelyMemory,
 } from "@/lib/fuely.functions";
 
+const fuelySearchSchema = z.object({
+  tab: fallback(z.enum(["chat", "timeline"]), "chat").default("chat"),
+});
+
 export const Route = createFileRoute("/$orgSlug/fuely")({
+  validateSearch: zodValidator(fuelySearchSchema),
   component: FuelyPage,
 });
 
