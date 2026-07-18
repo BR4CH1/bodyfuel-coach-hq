@@ -178,69 +178,113 @@ export const listFuelyMessages = createServerFn({ method: "GET" })
 
 export const sendFuelyMessage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { content: string }) => {
+  .inputValidator((d: { content: string; orgSlug?: string }) => {
     const c = String(d?.content ?? "").trim();
     if (!c) throw new Error("Nachricht ist leer");
     if (c.length > 4000) throw new Error("Nachricht zu lang");
-    return { content: c };
+    const orgSlug = d?.orgSlug ? String(d.orgSlug).slice(0, 60) : "";
+    return { content: c, orgSlug };
   })
-  .handler(async ({ data, context }): Promise<{ user: FuelyMessage; assistant: FuelyMessage }> => {
-    const { supabase, userId } = context;
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("Fuely ist gerade nicht konfiguriert (LOVABLE_API_KEY fehlt)");
+  .handler(
+    async ({ data, context }): Promise<{
+      user: FuelyMessage;
+      assistant: FuelyMessage;
+      nav?: { path: string; label: string } | null;
+    }> => {
+      const { supabase, userId } = context;
+      const apiKey = process.env.LOVABLE_API_KEY;
+      if (!apiKey) throw new Error("Fuely ist gerade nicht konfiguriert (LOVABLE_API_KEY fehlt)");
 
-    // Persist user message immediately
-    const { data: userRow, error: uErr } = await supabase
-      .from("fuely_messages")
-      .insert({ user_id: userId, role: "user", content: data.content })
-      .select("id, role, content, created_at")
-      .single();
-    if (uErr) throw new Error(uErr.message);
+      const { FUELY_TOOLS, runFuelyTool } = await import("./fuely-tools.server");
 
-    // Load recent history + user context
-    const [historyR, contextBlock] = await Promise.all([
-      supabase
+      // Persist user message immediately
+      const { data: userRow, error: uErr } = await supabase
+        .from("fuely_messages")
+        .insert({ user_id: userId, role: "user", content: data.content })
+        .select("id, role, content, created_at")
+        .single();
+      if (uErr) throw new Error(uErr.message);
+
+      const { data: hist } = await supabase
         .from("fuely_messages")
         .select("role, content")
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
-        .limit(40),
-      buildUserContext(supabase, userId),
-    ]);
-    const history = (historyR.data ?? []).reverse();
+        .limit(30);
+      const history = (hist ?? []).reverse();
 
-    const messages = [
-      { role: "system", content: SYSTEM_PROMPT },
-      { role: "system", content: contextBlock },
-      ...history.map((m: any) => ({ role: m.role, content: m.content })),
-    ];
+      const today = new Date().toISOString().slice(0, 10);
+      const messages: any[] = [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "system", content: `Heute ist ${today}. Nutze Tools, um Nutzerdaten zu holen.` },
+        ...history.map((m: any) => ({ role: m.role, content: m.content })),
+      ];
 
-    let assistantText: string;
-    try {
-      assistantText = await callFuely(messages, apiKey);
-    } catch (e: any) {
-      // Roll forward: save an assistant error msg so the user sees it
-      const fallback =
-        e?.message?.includes("überlastet") || e?.message?.includes("Guthaben")
-          ? e.message
-          : "Ich hab' gerade kurz einen Aussetzer — versuch's nochmal 👊";
-      const { data: aRow } = await supabase
+      let assistantText = "";
+      let nav: { path: string; label: string } | null = null;
+
+      try {
+        for (let step = 0; step < 4; step++) {
+          const msg = await callFuely(messages, apiKey, { tools: FUELY_TOOLS as any });
+          const toolCalls = (msg?.tool_calls ?? []) as any[];
+          if (!toolCalls.length) {
+            assistantText = String(msg?.content ?? "").trim() || "Hmm, mir fehlen gerade die Worte 🤔";
+            break;
+          }
+          messages.push({
+            role: "assistant",
+            content: msg?.content ?? "",
+            tool_calls: toolCalls,
+          });
+          for (const tc of toolCalls) {
+            let args: any = {};
+            try {
+              args = tc?.function?.arguments ? JSON.parse(tc.function.arguments) : {};
+            } catch { /* ignore */ }
+            const result = await runFuelyTool(supabase, userId, data.orgSlug || null, {
+              id: tc.id,
+              name: tc?.function?.name,
+              args,
+            });
+            if (tc?.function?.name === "navigate_to" && result?.path) {
+              nav = { path: String(result.path), label: String(result.label ?? "Öffnen") };
+            }
+            messages.push({
+              role: "tool",
+              tool_call_id: tc.id,
+              content: JSON.stringify(result).slice(0, 8000),
+            });
+          }
+        }
+        if (!assistantText) {
+          // Force a plain answer without tools if we ran out of steps
+          const finalMsg = await callFuely(messages, apiKey, { tools: FUELY_TOOLS as any, tool_choice: "none" });
+          assistantText = String(finalMsg?.content ?? "").trim() || "Ich brauch' nochmal einen Anlauf — frag mich nochmal 👊";
+        }
+      } catch (e: any) {
+        const fallback =
+          e?.message?.includes("überlastet") || e?.message?.includes("Guthaben")
+            ? e.message
+            : "Ich hab' gerade kurz einen Aussetzer — versuch's nochmal 👊";
+        const { data: aRow } = await supabase
+          .from("fuely_messages")
+          .insert({ user_id: userId, role: "assistant", content: fallback })
+          .select("id, role, content, created_at")
+          .single();
+        return { user: userRow as FuelyMessage, assistant: aRow as FuelyMessage, nav: null };
+      }
+
+      const { data: assistantRow, error: aErr } = await supabase
         .from("fuely_messages")
-        .insert({ user_id: userId, role: "assistant", content: fallback })
+        .insert({ user_id: userId, role: "assistant", content: assistantText })
         .select("id, role, content, created_at")
         .single();
-      return { user: userRow as FuelyMessage, assistant: aRow as FuelyMessage };
-    }
+      if (aErr) throw new Error(aErr.message);
 
-    const { data: assistantRow, error: aErr } = await supabase
-      .from("fuely_messages")
-      .insert({ user_id: userId, role: "assistant", content: assistantText })
-      .select("id, role, content, created_at")
-      .single();
-    if (aErr) throw new Error(aErr.message);
+      await extractMemories(supabase, userId, data.content, assistantText, apiKey);
 
-    // best-effort memory extraction
-    await extractMemories(supabase, userId, data.content, assistantText, apiKey);
+      return { user: userRow as FuelyMessage, assistant: assistantRow as FuelyMessage, nav };
+
 
     return { user: userRow as FuelyMessage, assistant: assistantRow as FuelyMessage };
   });
