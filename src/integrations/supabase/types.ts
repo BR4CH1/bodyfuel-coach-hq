@@ -2380,6 +2380,39 @@ export type Database = {
         }
         Relationships: []
       }
+      fuely_daily_notes: {
+        Row: {
+          content: string
+          created_at: string
+          data_snapshot: Json | null
+          id: string
+          kind: string
+          note_date: string
+          read_at: string | null
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          data_snapshot?: Json | null
+          id?: string
+          kind: string
+          note_date?: string
+          read_at?: string | null
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          data_snapshot?: Json | null
+          id?: string
+          kind?: string
+          note_date?: string
+          read_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       fuely_memories: {
         Row: {
           category: string
