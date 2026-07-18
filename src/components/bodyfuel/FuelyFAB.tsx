@@ -144,7 +144,12 @@ export function FuelyFAB() {
     };
   }, [sleeping]);
 
+  // Ziel-Org für Fuely-Chat: erst URL-Segment, sonst primäre Org des Users.
+  const targetOrgSlug = useMemo(() => {
+    const seg = pathname.split("/").filter(Boolean)[0];
+    const topLevelRoutes = new Set([
       "auth","login","dashboard","coach","coach-tools","admin","app","tracker",
+
       "smart","messages","achievements","ranking","measurements","profile",
       "progress","training","training-import","nutrition","community","checkout",
       "welcome","impressum","datenschutz","trust","unsubscribe","join","guardian-consent",
