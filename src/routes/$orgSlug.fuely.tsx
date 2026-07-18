@@ -30,17 +30,14 @@ export const Route = createFileRoute("/$orgSlug/fuely")({
 
 type QuickAction = { emoji: string; label: string; prompt: string };
 const QUICK_ACTIONS: QuickAction[] = [
-  { emoji: "🥗", label: "Ernährungsplan", prompt: "Kannst du meinen Ernährungsplan für heute checken und mir kurz sagen, was ich noch essen sollte?" },
-  { emoji: "🏋", label: "Trainingsplan", prompt: "Was steht heute trainingstechnisch an und wie soll ich rangehen?" },
-  { emoji: "📷", label: "Essen analysieren", prompt: "Ich möchte eine Mahlzeit analysieren — hilf mir bei Kalorien und Makros." },
-  { emoji: "📈", label: "Fortschritt", prompt: "Wie steht's um meinen Fortschritt der letzten 2 Wochen? Bin ich auf Kurs?" },
-  { emoji: "🍳", label: "Rezept", prompt: "Schlag mir ein Rezept vor, das zu meinem heutigen Kalorien-/Makroziel passt." },
+  { emoji: "🍽", label: "Ernährung analysieren", prompt: "Analysiere meine heutige Ernährung — bin ich auf Kurs bei Kalorien und Protein?" },
+  { emoji: "🏋", label: "Trainingsplan erklären", prompt: "Erkläre mir kurz meinen aktuellen Trainingsplan und was heute wichtig ist." },
+  { emoji: "📈", label: "Fortschritt bewerten", prompt: "Wie steht's um meinen Fortschritt der letzten 2 Wochen? Ehrliche Einschätzung bitte." },
+  { emoji: "🥤", label: "Tagesziele", prompt: "Was sind heute meine wichtigsten Ziele und was fehlt mir noch?" },
   { emoji: "🔥", label: "Motivation", prompt: "Ich brauch' kurz einen Motivationsschub." },
-  { emoji: "💊", label: "Supplements", prompt: "Welche Supplements machen für mein Ziel Sinn?" },
-  { emoji: "💧", label: "Wasser", prompt: "Wie viel Wasser sollte ich heute noch trinken?" },
-  { emoji: "😴", label: "Schlaf", prompt: "Wie kann ich meinen Schlaf verbessern?" },
-  { emoji: "⚡", label: "Tagesanalyse", prompt: "Fass mir meinen heutigen Tag kurz zusammen — was lief gut, was fehlt noch?" },
+  { emoji: "🎯", label: "Challenge finden", prompt: "Schlag mir eine passende Challenge oder ein Mini-Ziel für die nächste Woche vor." },
 ];
+
 
 function FuelyPage() {
   const { orgSlug } = Route.useParams();
