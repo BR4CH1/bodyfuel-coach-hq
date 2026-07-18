@@ -608,6 +608,17 @@ export async function runFuelyTool(
           summary: `Maße aktualisiert`,
           undo_minutes: 60,
         });
+        await emitTimeline(supabase, userId, {
+          event_type: "action",
+          category: "measurement",
+          icon: "📏",
+          title: "Körpermaße aktualisiert",
+          summary: Object.entries(payload)
+            .map(([k, v]) => `${k}: ${v}`)
+            .join(" · "),
+          coach_visible: true,
+          metadata: payload,
+        });
         return { done: true, saved: payload, log_id: logId };
       }
 
