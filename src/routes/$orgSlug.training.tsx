@@ -8,6 +8,7 @@ import { getOrgAthleticTraining, getOrgHomeData } from "@/lib/organizations/athl
 import { OrgAthleteLayout } from "@/components/organizations/OrgAthleteLayout";
 import { PlanStatusChip } from "@/components/organizations/PlanStatusChip";
 import { BullsAthleteAthleticSession } from "@/components/bodyfuel/BullsAthleteAthleticSession";
+import { FuelyDailyCard } from "@/components/bodyfuel/FuelyDailyCard";
 import { Route as OrgLayoutRoute } from "./$orgSlug";
 
 
