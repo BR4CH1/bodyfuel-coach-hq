@@ -187,12 +187,12 @@ export function FuelyFAB() {
 
 
   const activeAnim: FuelyAnimation = unread > 0 && anim === "idle" ? "bounce" : anim;
+  const activeEmotion: FuelyEmotion = sleeping ? "thinking" : emotion;
 
   return (
     <div
       className="pointer-events-none fixed right-3 z-[60] flex flex-col items-end"
       style={{
-        // Über der Bottom-Nav (~64px) + Safe Area
         bottom: "calc(env(safe-area-inset-bottom, 0px) + 76px)",
       }}
       aria-live="polite"
@@ -214,9 +214,9 @@ export function FuelyFAB() {
         type="button"
         onClick={handleTap}
         aria-label="Fuely öffnen"
-        className="pointer-events-auto relative grid h-16 w-16 place-items-center rounded-full transition active:scale-95"
+        className={`pointer-events-auto relative grid h-16 w-16 place-items-center rounded-full transition active:scale-95 ${sleeping ? "opacity-70" : ""}`}
       >
-        <Fuely emotion="waving" animation={activeAnim} size="md" />
+        <Fuely emotion={activeEmotion} animation={activeAnim} size="md" />
         {unread > 0 && (
           <span className="absolute -right-0.5 -top-0.5 grid h-5 min-w-5 place-items-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white shadow ring-2 ring-background">
             {unread > 9 ? "9+" : unread}
@@ -228,3 +228,4 @@ export function FuelyFAB() {
 }
 
 export default FuelyFAB;
+
