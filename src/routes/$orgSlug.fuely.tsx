@@ -49,8 +49,12 @@ const QUICK_ACTIONS: QuickAction[] = [
 
 function FuelyPage() {
   const { orgSlug } = Route.useParams();
+  const search = Route.useSearch();
+  const tab = search.tab;
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const setTab = (next: "chat" | "timeline") =>
+    navigate({ to: "/$orgSlug/fuely", params: { orgSlug }, search: { tab: next }, replace: true });
   const [userId, setUserId] = useState<string | null>(null);
   const [firstName, setFirstName] = useState<string>("");
   const [input, setInput] = useState("");
