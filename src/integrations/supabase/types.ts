@@ -2329,6 +2329,57 @@ export type Database = {
         }
         Relationships: []
       }
+      fuely_action_log: {
+        Row: {
+          action_type: string
+          created_at: string
+          id: string
+          new_value: Json | null
+          old_value: Json | null
+          organization_id: string | null
+          source: string
+          status: string
+          summary: string | null
+          target_id: string | null
+          target_table: string | null
+          undo_until: string | null
+          undone_at: string | null
+          user_id: string
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          organization_id?: string | null
+          source?: string
+          status?: string
+          summary?: string | null
+          target_id?: string | null
+          target_table?: string | null
+          undo_until?: string | null
+          undone_at?: string | null
+          user_id: string
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          organization_id?: string | null
+          source?: string
+          status?: string
+          summary?: string | null
+          target_id?: string | null
+          target_table?: string | null
+          undo_until?: string | null
+          undone_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       fuely_memories: {
         Row: {
           category: string
