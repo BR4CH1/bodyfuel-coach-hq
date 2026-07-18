@@ -173,12 +173,16 @@ function FuelyPage() {
             <div className="mt-6 flex flex-col items-center gap-4 text-center">
               <Fuely emotion="waving" size="xl" animation="float" />
               <div className="space-y-2">
-                <div className="font-display text-2xl font-bold">Hey 👋 Ich bin Fuely.</div>
+                <div className="font-display text-2xl font-bold">
+                  👋 Hallo{firstName ? ` ${firstName}` : ""}
+                </div>
+                <div className="font-display text-lg font-semibold">Ich bin Fuely.</div>
                 <p className="max-w-sm text-sm text-muted-foreground">
-                  Ich begleite dich auf deinem Weg zu mehr Gesundheit, Leistung und besseren Gewohnheiten.
-                  Frag mich alles rund um Ernährung, Training, Motivation oder deine Fortschritte.
+                  Dein smarter Begleiter für Training, Ernährung und Gesundheit.
+                  Frag mich alles — ich kenne deine Daten und helfe dir, dranzubleiben.
                 </p>
               </div>
+
             </div>
           )}
 
