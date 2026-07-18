@@ -184,6 +184,32 @@ function FuelyPage() {
         </Button>
       </header>
 
+      {/* Tabs */}
+      <div className="border-b border-border bg-card/60 px-4">
+        <div className="mx-auto flex max-w-2xl gap-1 py-2">
+          {(["chat", "timeline"] as const).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setTab(t)}
+              className={`rounded-full px-4 py-1.5 text-xs font-semibold uppercase tracking-wider transition ${
+                tab === t
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              {t === "chat" ? "Chat" : "Timeline"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {tab === "timeline" ? (
+        <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-4">
+          <FuelyTimeline />
+        </div>
+      ) : (
+      <>
       {/* Messages */}
       <ScrollArea className="flex-1">
         <div ref={scrollRef} className="mx-auto flex max-w-2xl flex-col gap-3 px-4 py-4">
