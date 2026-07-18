@@ -18,6 +18,7 @@ import {
 } from "@/lib/organizations/ranking.functions";
 import { OrgAthleteLayout } from "@/components/organizations/OrgAthleteLayout";
 import { BullsRankingContent } from "@/components/bodyfuel/BullsRankingContent";
+import { FuelyDailyCard } from "@/components/bodyfuel/FuelyDailyCard";
 import { Route as OrgLayoutRoute } from "./$orgSlug";
 
 
