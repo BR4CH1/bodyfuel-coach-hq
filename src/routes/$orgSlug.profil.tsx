@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { activatePersonalBodyFuelContext } from "@/components/organizations/OrganizationContextSwitcher";
 import { UserAvatar } from "@/components/bodyfuel/UserAvatar";
 import { ProfilePhotoUpload } from "@/components/bodyfuel/ProfilePhotoUpload";
+import { FuelyDailyCard } from "@/components/bodyfuel/FuelyDailyCard";
 
 
 export const Route = createFileRoute("/$orgSlug/profil")({
