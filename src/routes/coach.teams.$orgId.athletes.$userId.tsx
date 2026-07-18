@@ -15,6 +15,7 @@ import { AthletePerformanceTab } from "@/components/coach/athlete/AthletePerform
 import { AthleteTrainingTab } from "@/components/coach/athlete/AthleteTrainingTab";
 import { AthleteNutritionTab } from "@/components/coach/athlete/AthleteNutritionTab";
 import { CoachPlayerCardView } from "@/components/player-cards/CoachPlayerCardView";
+import { FuelyTimeline } from "@/components/bodyfuel/FuelyTimeline";
 
 const BASE_TABS = [
   { key: "overview", label: "Übersicht" },
@@ -23,6 +24,7 @@ const BASE_TABS = [
   { key: "performance", label: "Performance" },
   { key: "training", label: "Training" },
   { key: "nutrition", label: "Ernährung" },
+  { key: "fuely-timeline", label: "Fuely" },
 ] as const;
 const PLAYER_CARD_TAB = { key: "player-card", label: "Spielerkarte" } as const;
 type TabDef = { key: string; label: string };
