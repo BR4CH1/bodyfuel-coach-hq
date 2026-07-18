@@ -201,9 +201,8 @@ function OrgHome() {
 
       <main className="mx-auto max-w-md px-4 py-5 space-y-5">
         <ReadinessGateHint userId={supabaseUser?.id} orgSlug={org.slug} />
-
         <FuelyDailyCard orgSlug={org.slug} />
-        <FuelyTimelineCard orgSlug={org.slug} />
+
 
         <DayStatusBanner
           sessions={(data as any).today_sessions ?? []}
