@@ -18,6 +18,7 @@ import {
 } from "@/lib/organizations/ranking.functions";
 import { OrgAthleteLayout } from "@/components/organizations/OrgAthleteLayout";
 import { BullsRankingContent } from "@/components/bodyfuel/BullsRankingContent";
+import { FuelyDailyCard } from "@/components/bodyfuel/FuelyDailyCard";
 import { Route as OrgLayoutRoute } from "./$orgSlug";
 
 
@@ -122,6 +123,10 @@ function OrgCommunity() {
             );
           })}
         </div>
+      </div>
+
+      <div className="mx-auto max-w-md px-4 pt-4">
+        <FuelyDailyCard orgSlug={org.slug} />
       </div>
 
       {tab === "feed" ? <FeedPane primary={primary} /> : <RankingPane primary={primary} />}

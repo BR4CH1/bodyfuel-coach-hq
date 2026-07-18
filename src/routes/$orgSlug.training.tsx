@@ -8,6 +8,7 @@ import { getOrgAthleticTraining, getOrgHomeData } from "@/lib/organizations/athl
 import { OrgAthleteLayout } from "@/components/organizations/OrgAthleteLayout";
 import { PlanStatusChip } from "@/components/organizations/PlanStatusChip";
 import { BullsAthleteAthleticSession } from "@/components/bodyfuel/BullsAthleteAthleticSession";
+import { FuelyDailyCard } from "@/components/bodyfuel/FuelyDailyCard";
 import { Route as OrgLayoutRoute } from "./$orgSlug";
 
 
@@ -73,6 +74,7 @@ function OrgTraining() {
       </header>
 
       <main className="mx-auto max-w-md px-4 py-5 space-y-6">
+        <FuelyDailyCard orgSlug={org.slug} />
         <PlanStatusChip userId={supabaseUser?.id} />
         <section>
           <Title>Deine Sessions</Title>

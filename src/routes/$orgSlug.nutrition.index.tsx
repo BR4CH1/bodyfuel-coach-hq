@@ -10,6 +10,7 @@ import { getOrgHomeData } from "@/lib/organizations/athlete.functions";
 import { enqueueAutopilotJob, getMyAutopilotJob } from "@/lib/autopilot-jobs.functions";
 import { OrgAthleteLayout } from "@/components/organizations/OrgAthleteLayout";
 import { AutopilotStatusCard } from "@/components/bodyfuel/AutopilotStatusCard";
+import { FuelyDailyCard } from "@/components/bodyfuel/FuelyDailyCard";
 import { MacroTargetsCard } from "@/components/bodyfuel/MacroTargetsCard";
 import { PlanContentView } from "@/components/bodyfuel/PlanContentView";
 import { BullsPlanContentView } from "@/components/bodyfuel/BullsPlanContentView";
@@ -87,6 +88,7 @@ function OrgNutrition() {
       </header>
 
       <main className="mx-auto max-w-md space-y-5 px-4 py-5">
+        <FuelyDailyCard orgSlug={org.slug} />
         {supabaseUser?.id && <AutopilotStatusCard userId={supabaseUser.id} />}
         {supabaseUser?.id && !jobRunning && (
           <div className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4">

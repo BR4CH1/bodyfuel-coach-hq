@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -28,6 +29,26 @@ export function FuelyDailyCard({ orgSlug, className }: Props) {
   const note = q.data as any;
   const isEvening = kind === "evening";
   const Icon = isEvening ? Moon : Sparkles;
+
+  // Auto-mark-read nach 3s Sichtbarkeit — danach ist die Karte "gesehen"
+  // und verschwindet beim nächsten Laden.
+  const markedRef = useRef(false);
+  useEffect(() => {
+    if (!note?.id || note.read_at || markedRef.current) return;
+    const t = setTimeout(async () => {
+      markedRef.current = true;
+      try {
+        await markRead({ data: { id: note.id } });
+        qc.setQueryData(["fuely-daily", kind], { ...note, read_at: new Date().toISOString() });
+      } catch {
+        /* egal */
+      }
+    }, 3000);
+    return () => clearTimeout(t);
+  }, [note?.id, note?.read_at, kind, markRead, qc]);
+
+  // Bereits gelesen → ausblenden
+  if (note?.read_at) return null;
 
   const openChat = async () => {
     if (note?.id && !note.read_at) {

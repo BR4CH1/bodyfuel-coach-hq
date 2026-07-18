@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { activatePersonalBodyFuelContext } from "@/components/organizations/OrganizationContextSwitcher";
 import { UserAvatar } from "@/components/bodyfuel/UserAvatar";
 import { ProfilePhotoUpload } from "@/components/bodyfuel/ProfilePhotoUpload";
+import { FuelyDailyCard } from "@/components/bodyfuel/FuelyDailyCard";
 
 
 export const Route = createFileRoute("/$orgSlug/profil")({
@@ -64,6 +65,7 @@ function OrgProfil() {
         </div>
       </header>
       <main className="mx-auto max-w-md px-4 py-5 space-y-4">
+        <FuelyDailyCard orgSlug={org.slug} />
         {supabaseUser && (
           <ProfilePhotoUpload
             userId={supabaseUser.id}
