@@ -138,7 +138,134 @@ export const FUELY_TOOLS = [
       },
     },
   },
+  // ============ WRITE / ACTION TOOLS ============
+  {
+    type: "function",
+    function: {
+      name: "log_water",
+      description:
+        "Trägt Wasser für den heutigen Tag ein. Entweder in Millilitern (ml) ODER in Gläsern (glasses). 1 Glas = 250 ml.",
+      parameters: {
+        type: "object",
+        properties: {
+          ml: { type: "integer", minimum: 50, maximum: 5000 },
+          glasses: { type: "integer", minimum: 1, maximum: 30 },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "log_weight",
+      description: "Speichert das aktuelle Gewicht des Nutzers (in kg).",
+      parameters: {
+        type: "object",
+        required: ["weight_kg"],
+        properties: {
+          weight_kg: { type: "number", minimum: 20, maximum: 300 },
+          note: { type: "string" },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "log_measurement",
+      description:
+        "Speichert einzelne Körpermaße (Taille, Hüfte, Brust, Oberschenkel, Bizeps, KFA). Nur ausfüllen, was der Nutzer nennt.",
+      parameters: {
+        type: "object",
+        properties: {
+          waist_cm: { type: "number", minimum: 30, maximum: 200 },
+          hip_cm: { type: "number", minimum: 30, maximum: 200 },
+          chest_cm: { type: "number", minimum: 30, maximum: 200 },
+          thigh_left_cm: { type: "number", minimum: 20, maximum: 120 },
+          thigh_right_cm: { type: "number", minimum: 20, maximum: 120 },
+          biceps_left_cm: { type: "number", minimum: 15, maximum: 80 },
+          biceps_right_cm: { type: "number", minimum: 15, maximum: 80 },
+          body_fat_pct: { type: "number", minimum: 3, maximum: 60 },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "add_food_entry",
+      description:
+        "Fügt einen Lebensmittel-/Mahlzeitenrecord für heute hinzu. Nutze das für Ad-hoc-Einträge, wenn der Nutzer konkret sagt was er gegessen hat.",
+      parameters: {
+        type: "object",
+        required: ["name", "meal", "kcal"],
+        properties: {
+          name: { type: "string", description: "Kurzer Name, z.B. 'Magerquark 250g'" },
+          meal: {
+            type: "string",
+            enum: ["breakfast", "lunch", "dinner", "snack"],
+          },
+          serving_g: { type: "number", minimum: 1, maximum: 3000 },
+          kcal: { type: "number", minimum: 0, maximum: 5000 },
+          protein_g: { type: "number", minimum: 0, maximum: 300 },
+          carbs_g: { type: "number", minimum: 0, maximum: 500 },
+          fat_g: { type: "number", minimum: 0, maximum: 300 },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "complete_training",
+      description:
+        "Markiert das heutige (oder ein bestimmtes) Training als erledigt. Ohne 'session_id' wird das nächste offene Training verwendet.",
+      parameters: {
+        type: "object",
+        properties: {
+          session_id: { type: "string" },
+          note: { type: "string" },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "reschedule_training",
+      description:
+        "Verschiebt eine Trainingseinheit auf ein anderes Datum. Ohne 'session_id' wird die nächste geplante Einheit genommen.",
+      parameters: {
+        type: "object",
+        required: ["new_date"],
+        properties: {
+          session_id: { type: "string" },
+          new_date: { type: "string", description: "ISO-Datum YYYY-MM-DD" },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "undo_last_action",
+      description:
+        "Macht die letzte durch Fuely ausgeführte Aktion rückgängig (nur innerhalb des Undo-Fensters).",
+      parameters: { type: "object", properties: {} },
+    },
+  },
 ] as const;
+
+// Aktionstypen, die eine explizite Nutzer-Bestätigung im Chat erfordern,
+// BEVOR sie ausgeführt werden. Fuely soll dann erst zusammenfassen und fragen.
+export const HIGH_RISK_ACTIONS = new Set<string>([
+  "replace_nutrition_plan",
+  "replace_training_plan",
+  "change_calorie_target",
+  "bulk_delete_entries",
+  "override_coach_setting",
+]);
+
 
 export type ToolCall = { id: string; name: string; args: any };
 
