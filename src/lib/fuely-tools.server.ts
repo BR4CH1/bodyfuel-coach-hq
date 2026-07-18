@@ -755,6 +755,14 @@ export async function runFuelyTool(
           summary: `Training auf ${newDate} verschoben`,
           undo_minutes: 120,
         });
+        await emitTimeline(supabase, userId, {
+          event_type: "action",
+          category: "training",
+          icon: "📅",
+          title: `Training verschoben auf ${newDate}`,
+          coach_visible: true,
+          metadata: { session_id: sessionId, new_date: newDate, previous_date: (prev as any).session_date },
+        });
         return { done: true, session_id: sessionId, new_date: newDate, log_id: logId };
       }
 
