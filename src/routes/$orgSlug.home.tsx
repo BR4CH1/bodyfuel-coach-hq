@@ -204,6 +204,7 @@ function OrgHome() {
         <ReadinessGateHint userId={supabaseUser?.id} orgSlug={org.slug} />
 
         <FuelyDailyCard orgSlug={org.slug} />
+        <FuelyTimelineCard orgSlug={org.slug} />
 
         <DayStatusBanner
           sessions={(data as any).today_sessions ?? []}
