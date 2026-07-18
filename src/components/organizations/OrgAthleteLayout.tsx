@@ -110,6 +110,19 @@ export function OrgAthleteLayout({
     <div className={`min-h-screen bg-background pb-20 text-foreground ${themeClass}`.trim()}>
       {children}
 
+      {/* Fuely AI — floating access point, sichtbar auf jeder Athleten-Seite */}
+      {loc.pathname !== `/${slug}/fuely` && (
+        <Link
+          to="/$orgSlug/fuely"
+          params={{ orgSlug: slug }}
+          aria-label="Fuely AI öffnen"
+          className="fixed bottom-24 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg ring-2 ring-background transition hover:scale-105"
+          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        >
+          <span className="text-2xl">💬</span>
+        </Link>
+      )}
+
       <nav
         className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 backdrop-blur"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
