@@ -1,72 +1,96 @@
-# Phase 1 – Player Cards Fundament
 
-Baut das Datenmodell, die BFR-Berechnung und die Karte inkl. 3D-Flip. Kein Share, kein Coach-Grid, keine Badges — die folgen in späteren Phasen.
+# Fuely OS – Plan
 
-## Datenquelle für Attribute
+Vieles der Vision existiert bereits (globaler FAB, Chat mit Memory, Hint Engine für Protein/Wasser/Training/Check-in/Streaks/Motivation, Emotionen). Der Ausbau wird in fokussierte Phasen zerlegt, damit wir nach jeder Phase live testen können.
 
-Vorhanden: `bulls_performance_tests` (verifizierte Tests mit `test_id` wie `sprint_40yd`, `broad_jump`, `bench_press_5rm`, `trap_bar_5rm`, `cmj_height`, `a505_left/right`, `rast_6x35m`) sowie `performance_test_attempts` (Framework-Tests). Football-Preset nutzt zunächst die Bulls-Tests, weil dort echte, verifizierte Werte liegen. Fehlende Testkategorien (z.B. 10m Sprint, YoYo, Beep, Pull-Ups) werden als "Noch nicht getestet" gekennzeichnet und der BFR als **Vorläufig** markiert.
+## Phase 1 – Präsenz & Chat Polish (klein, sofort)
 
-Attribut-Mapping (Phase 1):
-- **SPD** ← `sprint_40yd`
-- **ACC** ← `sprint_10yd` (fällt aktuell auf 40yd-Split zurück wenn kein 10yd)
-- **AGI** ← `a505_left`+`a505_right` (Mittelwert)
-- **POW** ← `broad_jump` + `cmj_height` (gewichtet)
-- **STR** ← `bench_press_5rm` + `trap_bar_5rm` relativ zum Körpergewicht (e1RM Epley)
-- **END** ← `rast_6x35m` (bis später YoYo/Beep integriert werden)
+- **Idle-Varianten:** Zufälliger Wechsel zwischen atmen, blinzeln, schaukeln, hüpfen. Nach ~5 Min Inaktivität "Schlafen".
+- **Chat-Header** wie beschrieben: „👋 Hallo {Vorname}. Ich bin Fuely. Dein smarter Begleiter …" als Empty-State-Message.
+- **Schnellaktionen** auf die 6 gewünschten reduzieren (Ernährung analysieren, Trainingsplan erklären, Fortschritt bewerten, Tagesziele, Motivation, Challenge finden).
+- **Vibration** (`navigator.vibrate`) bei neuen Hints auf Mobile.
 
-Benchmark-Kurven pro Attribut sind seedbar und linear-interpoliert (analog `strengthScoreV2.ts`), Output 0–99.
+## Phase 2 – Daten-Toolbelt (Kern für „echte KI")
 
-## Datenbank (Migration)
+Statt heute nur Kontext-Injection bekommt Fuely echte Tool-Calls über AI SDK (`google/gemini-3-flash-preview`). Jedes Tool ist ein Server-Fn hinter `requireSupabaseAuth`. Erste Tools:
 
-Vier Tabellen im `public` Schema, alle mit GRANTs + RLS:
+- `getProfile`, `getGoals`
+- `getTodayNutrition`, `getNutritionHistory(days)`
+- `getTodayTraining`, `getTrainingHistory(weeks)`, `getPRs`
+- `getMeasurements(range)`, `getBodyfatTrend`
+- `getStreaks`, `getChallenges`, `getBadges`, `getXp`
+- `getCheckinHistory`
+- `getCoachMessages`, `getCoachTasks`
+- `getTeamContext` (Position, Verein, Verletzungen)
+- `navigateTo(path)` — Rückgabewert wird clientseitig ausgeführt (Router navigate)
 
-- `player_card_position_weights` – Sport/Position → Gewichtung SPD/ACC/AGI/POW/STR/END. Seed: Football-Preset (QB, RB, WR, TE, OL, DL, LB, CB, S) mit den vom User angegebenen Werten. `TO authenticated SELECT`, `TO service_role ALL`.
-- `player_card_benchmarks` – Attribut-Key → Ankerpunkte `{value, score}[]` als JSONB. Seed: Football-Kurven.
-- `player_cards` – aktuelle Karte pro User: `user_id`, `bfr`, `spd/acc/agi/pow/str/end`, `tier` (bronze/silver/gold/elite/legendary), `is_provisional`, `missing_tests jsonb`, `attributes_detail jsonb`, `computed_at`, `organization_id`, `position_key`.  
-  Policies: SELECT eigenes + Org-Staff via `has_role`, INSERT/UPDATE nur `service_role` (server-fn).
-- `player_card_history` – Snapshot bei jedem Recompute: `player_card_id`, `bfr`, alle Attribute, `snapshot_at`. Policies analog.
+Damit erfüllt sich Punkt 3 (voller Datenzugriff), 12 (Smart Navigation) und 15 (KI-Coach-Fragen) automatisch.
 
-Kartenstufen (Tier) leiten sich aus BFR ab: 40–59 Bronze / 60–69 Silber / 70–79 Gold / 80–89 Elite / 90–99 Legendary.
+## Phase 3 – Tagesassistent & Abendreview
 
-## Server-Funktionen (`src/lib/player-cards.functions.ts`)
+- **Morning Brief** (07–10 Uhr, 1×/Tag): Server-Fn `getFuelyDailyBrief` sammelt Kcal-, Protein-, Wasser-, Schritt-Ziel, geplantes Training, Streak, offene Challenge. FAB öffnet automatisch eine Speech-Bubble „Guten Morgen 👋 …" mit CTA „Los geht's" → öffnet Chat mit Brief-Card.
+- **Evening Review** (20–22 Uhr, 1×/Tag): ✅/❌ Training, Wasser, Protein, Kalorien + XP + Badges des Tages.
+- **Dedup** wie bei bestehender Hint Engine via localStorage.
 
-- `recomputePlayerCard({ user_id })` – protected. Lädt neueste verifizierte Tests + Profil (Geburtsdatum, Größe, Gewicht, Position, Team, org, Foto), berechnet Attribute → BFR → Tier, upserted `player_cards`, hängt Snapshot an `player_card_history`. Coach oder eigener Nutzer.
-- `getMyPlayerCard()` – protected, liest Karte + letzte 10 History-Punkte für den Verlauf.
-- `getPlayerCardForAthlete({ user_id })` – protected, Coach-Access.
+## Phase 4 – Muster-Analyse (Proaktivität)
 
-Pure Engine unter `src/lib/player-cards/engine.ts` (keine Supabase-Abhängigkeit), testbar analog `strengthScoreV2`.
+Neuer nächtlicher Job `analyze-fuely-patterns` (pg_cron → `/api/public/hooks/analyze-fuely-patterns`):
 
-## UI
+- Rolling 7/14/30-Tage-Vergleiche pro User
+- Regeln: Proteinziel N Tage verfehlt · Trainingslast steigt/fällt >20 % · Gewicht stagniert 14 Tage · Schlaf verschlechtert · Check-ins unregelmäßig · Beintraining ausgelassen · Muskelmasse fällt bei stabilem Gewicht
+- Ergebnis landet in neuer Tabelle `fuely_insights (user_id, kind, severity, message, cta_href, created_at, seen_at)`
+- FAB pollt `fuely_insights` (bereits vorhandener 5-Min-Tick) und zeigt höchste ungesehene Insight als Bubble.
 
-- `src/components/player-cards/PlayerCard.tsx` – die eigentliche Karte, orientiert am hochgeladenen Bild:
-  - Metallic-Rahmen, dunkler Hintergrund, dynamische Vereinsfarben (aus `organizations` – primary/secondary/text)
-  - Links oben große BFR-Zahl + "BFR" Label, Position + Trikotnummer
-  - Rechts oben Vereinslogo, seitlich vertikaler Claim
-  - Mitte: freigestelltes Spielerbild (Profilbild, `object-cover`, Glow)
-  - Unten: Nachname groß in Metallic-Style, Vorname kleiner darüber; Team · Position · #Nummer
-  - 6 Attribut-Kacheln (SPD/ACC/AGI/POW/STR/END) mit Icon (lucide), Zahl, 6-Segment-Fortschrittsleiste, "XX PCTL"
-  - Kartenstufe · Letztes Update · Grösste Stärke
-- `src/components/player-cards/PlayerCardBack.tsx` – Rückseite:
-  - BFR-Verlauf (Recharts LineChart aus History)
-  - Fortschritt seit letztem Test (Delta pro Attribut)
-  - Persönliche Bestleistungen (letzte verifizierte Testwerte pro Testkey)
-  - Automatischer Coach-Summary-Text (deterministisch aus den größten Deltas — keine KI in Phase 1)
-- `src/components/player-cards/PlayerCardFlip.tsx` – Wrapper mit CSS 3D-Flip (transform-style: preserve-3d, rotateY), klickbar
-- Design-Tokens: neue CSS-Variablen in `src/styles.css` für Metallic-Gradient und Tier-Farben (Bronze/Silber/Gold/Elite/Legendary), damit später weitere Vereinsfarben ohne Code-Änderung greifen
+## Phase 5 – Celebration System
 
-## Einbindung
+- Zentraler Trigger `celebrateFuely({ kind, title, subtitle })` (neues Gewicht, Trainingsabschluss, Challenge, Badge, Level, Streak).
+- Vollbild-Overlay mit Konfetti + Fuely-Sprung (bereits vorhandene `fuely-celebrating` Asset) + optionaler Sound.
+- Hooks in `training_sessions` completion, `weekly_checkins`, Streak-Milestone, XP-Level-Up.
 
-- `src/routes/profile.tsx` und `src/routes/bulls.performance.index.tsx` bekommen einen neuen Bereich **PLAYER CARD** direkt unter den Stammdaten. Loader ruft `getMyPlayerCard` via `ensureQueryData`.
-- Fallback wenn noch keine Karte existiert: Button "Karte generieren" → ruft `recomputePlayerCard` und invalidiert Query.
+## Phase 6 – Coach Intelligence
 
-## Bewusst NICHT in Phase 1
+Neues Coach-Dashboard-Widget „Fuely für Coaches" nutzt dieselbe Insights-Tabelle mit `scope = 'coach'`:
 
-Share/Export (PNG/PDF/IG), Coach-Player-Cards-Grid, Badges, Live-Upgrade-Animation, Player/Team of the Month, Ranglisten-Seite, Admin-Editor für Gewichtungen/Benchmarks, Coach-Ratings, weitere Sportart-Presets. Struktur (Tabellen `player_card_position_weights`, `player_card_benchmarks`) ist bereits so gebaut, dass diese in Phase 4 ohne Schemaänderung ergänzt werden.
+- Häufige Fehlzeiten
+- Leistung sinkt (Trainingssession-Volume/RPE)
+- Ungewöhnliche Gewichtsänderung
+- Fehlende Check-ins
+- Verletzungsmeldung
+- Dauerhaft niedriges Protein / Hydration
 
-## Technische Details
+Nur im Performance-Bereich, respektiert Team-/Coach-Assignments.
 
-- Migration in einem Schub mit CREATE TABLE + GRANT + RLS + POLICY + Seed. Kein Anon-Grant (alle Reads authenticated).
-- `recomputePlayerCard` läuft mit `requireSupabaseAuth`, greift für Schreibzugriffe via dynamischem `await import('@/integrations/supabase/client.server')` auf den Service-Role-Client zu (nach Autorisierungscheck).
-- 3D-Flip via reines CSS (Tailwind + custom utility `@utility card-flip`), GPU-beschleunigt, `will-change: transform`.
-- Mobile-first (Karte skaliert per aspect-ratio 2/3), auf Desktop max-width 480px.
-- Tests: kurzer Vitest für Engine (Gewichtung, Interpolation, Tier-Mapping).
+## Phase 7 – Sprache & Persönlichkeit
+
+- System-Prompt-Refactor: Persona-Sheet (locker, kurz, motivierend, nie belehrend), Emotions-Marker im Antwortformat (`__emotion:happy__` etc.), Frontend parst und setzt Fuely-Emotion im Chat-Header + FAB.
+- Sprachausgabe / Voice-Input später über Web Speech API (Phase 8+ / Zukunft).
+
+## Phase 8 – Zukunft (nicht jetzt)
+
+Apple Health / Google Fit / Garmin / Whoop / Oura / Kamera-/Video-/Lebensmittelerkennung — dedizierte Roadmap, sobald Kernphasen stehen.
+
+---
+
+## Technischer Überblick
+
+- **Neue Server-Fns:** `src/lib/fuely-tools.functions.ts` (12–15 Tools), `src/lib/fuely-brief.functions.ts` (Morning/Evening), `src/lib/fuely-insights.functions.ts`.
+- **Neuer Cron-Endpoint:** `src/routes/api/public/hooks/analyze-fuely-patterns.ts` (nightly).
+- **Neue Tabelle:** `fuely_insights` mit RLS (User sieht eigene; Coach sieht Insights zugewiesener Athleten via `has_coach_access`).
+- **AI Layer:** `src/lib/fuely.functions.ts` erweitert um AI-SDK-`tool()`-Definitionen + Gemini-3-Streaming.
+- **FAB/Engine:** bereits vorhanden, wird um Idle-Zyklen, Vibration, Insights-Poll und Celebrations erweitert.
+- **Chat UI:** Header-Copy, Quick Actions, Emotions-Parser.
+
+---
+
+## Reihenfolge & Rückfrage
+
+Ich schlage vor, wir gehen **1 → 2 → 3 → 4** zuerst (das ist der Kern von „Fuely OS"), danach 5–7. **Phase 2 (Tools) ist die eigentliche Aufwertung** — erst damit hört Fuely auf, generisch zu antworten, und wird zum echten Coach.
+
+Bitte kurz bestätigen:
+
+1. **Reihenfolge okay?** (1→2→3→4→5→6→7) Oder willst du eine Phase vorziehen (z. B. Celebration/Coach zuerst)?
+2. **Ton für Fuely:** Duzen, locker, deutsche Sprüche mit gelegentlichem Emoji — passt das oder soll er nüchterner klingen?
+3. **Sound bei Celebrations:** ja / nein / erstmal aus, später Toggle im Profil?
+
+Danach starte ich mit Phase 1 + 2 in einem Rutsch.
+

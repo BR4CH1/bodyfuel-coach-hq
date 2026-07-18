@@ -30,23 +30,21 @@ export const Route = createFileRoute("/$orgSlug/fuely")({
 
 type QuickAction = { emoji: string; label: string; prompt: string };
 const QUICK_ACTIONS: QuickAction[] = [
-  { emoji: "🥗", label: "Ernährungsplan", prompt: "Kannst du meinen Ernährungsplan für heute checken und mir kurz sagen, was ich noch essen sollte?" },
-  { emoji: "🏋", label: "Trainingsplan", prompt: "Was steht heute trainingstechnisch an und wie soll ich rangehen?" },
-  { emoji: "📷", label: "Essen analysieren", prompt: "Ich möchte eine Mahlzeit analysieren — hilf mir bei Kalorien und Makros." },
-  { emoji: "📈", label: "Fortschritt", prompt: "Wie steht's um meinen Fortschritt der letzten 2 Wochen? Bin ich auf Kurs?" },
-  { emoji: "🍳", label: "Rezept", prompt: "Schlag mir ein Rezept vor, das zu meinem heutigen Kalorien-/Makroziel passt." },
+  { emoji: "🍽", label: "Ernährung analysieren", prompt: "Analysiere meine heutige Ernährung — bin ich auf Kurs bei Kalorien und Protein?" },
+  { emoji: "🏋", label: "Trainingsplan erklären", prompt: "Erkläre mir kurz meinen aktuellen Trainingsplan und was heute wichtig ist." },
+  { emoji: "📈", label: "Fortschritt bewerten", prompt: "Wie steht's um meinen Fortschritt der letzten 2 Wochen? Ehrliche Einschätzung bitte." },
+  { emoji: "🥤", label: "Tagesziele", prompt: "Was sind heute meine wichtigsten Ziele und was fehlt mir noch?" },
   { emoji: "🔥", label: "Motivation", prompt: "Ich brauch' kurz einen Motivationsschub." },
-  { emoji: "💊", label: "Supplements", prompt: "Welche Supplements machen für mein Ziel Sinn?" },
-  { emoji: "💧", label: "Wasser", prompt: "Wie viel Wasser sollte ich heute noch trinken?" },
-  { emoji: "😴", label: "Schlaf", prompt: "Wie kann ich meinen Schlaf verbessern?" },
-  { emoji: "⚡", label: "Tagesanalyse", prompt: "Fass mir meinen heutigen Tag kurz zusammen — was lief gut, was fehlt noch?" },
+  { emoji: "🎯", label: "Challenge finden", prompt: "Schlag mir eine passende Challenge oder ein Mini-Ziel für die nächste Woche vor." },
 ];
+
 
 function FuelyPage() {
   const { orgSlug } = Route.useParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [userId, setUserId] = useState<string | null>(null);
+  const [firstName, setFirstName] = useState<string>("");
   const [input, setInput] = useState("");
   const [showMemories, setShowMemories] = useState(false);
   const [showClear, setShowClear] = useState(false);
@@ -54,11 +52,22 @@ function FuelyPage() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) navigate({ to: "/auth" });
-      else setUserId(data.user.id);
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (!data.user) {
+        navigate({ to: "/auth" });
+        return;
+      }
+      setUserId(data.user.id);
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("display_name")
+        .eq("id", data.user.id)
+        .maybeSingle();
+      const dn = (prof as any)?.display_name?.trim() ?? "";
+      setFirstName(dn ? dn.split(/\s+/)[0] : "");
     });
   }, [navigate]);
+
 
   const listFn = useServerFn(listFuelyMessages);
   const sendFn = useServerFn(sendFuelyMessage);
@@ -73,7 +82,7 @@ function FuelyPage() {
   const messages: FuelyMessage[] = messagesQ.data?.items ?? [];
 
   const sendMutation = useMutation({
-    mutationFn: (content: string) => sendFn({ data: { content } }),
+    mutationFn: (content: string) => sendFn({ data: { content, orgSlug } }),
     onMutate: async (content) => {
       // optimistic user message
       qc.setQueryData<{ items: FuelyMessage[] }>(["fuely-messages", userId], (prev) => ({
@@ -88,7 +97,12 @@ function FuelyPage() {
         ],
       }));
     },
-    onSuccess: () => {
+    onSuccess: (res: any) => {
+      if (res?.nav?.path) {
+        toast(res.nav.label ?? "Öffnen", {
+          action: { label: "Los", onClick: () => navigate({ to: res.nav.path }) },
+        });
+      }
       qc.invalidateQueries({ queryKey: ["fuely-messages", userId] });
     },
     onError: (e: any) => {
@@ -96,6 +110,7 @@ function FuelyPage() {
       qc.invalidateQueries({ queryKey: ["fuely-messages", userId] });
     },
   });
+
 
   const clearMutation = useMutation({
     mutationFn: () => clearFn(),
@@ -164,12 +179,16 @@ function FuelyPage() {
             <div className="mt-6 flex flex-col items-center gap-4 text-center">
               <Fuely emotion="waving" size="xl" animation="float" />
               <div className="space-y-2">
-                <div className="font-display text-2xl font-bold">Hey 👋 Ich bin Fuely.</div>
+                <div className="font-display text-2xl font-bold">
+                  👋 Hallo{firstName ? ` ${firstName}` : ""}
+                </div>
+                <div className="font-display text-lg font-semibold">Ich bin Fuely.</div>
                 <p className="max-w-sm text-sm text-muted-foreground">
-                  Ich begleite dich auf deinem Weg zu mehr Gesundheit, Leistung und besseren Gewohnheiten.
-                  Frag mich alles rund um Ernährung, Training, Motivation oder deine Fortschritte.
+                  Dein smarter Begleiter für Training, Ernährung und Gesundheit.
+                  Frag mich alles — ich kenne deine Daten und helfe dir, dranzubleiben.
                 </p>
               </div>
+
             </div>
           )}
 
