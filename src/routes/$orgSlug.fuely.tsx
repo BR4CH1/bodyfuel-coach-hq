@@ -294,6 +294,9 @@ function FuelyPage() {
           </Button>
         </form>
       </div>
+      </>
+      )}
+
 
       {/* Clear confirm */}
       <Dialog open={showClear} onOpenChange={setShowClear}>
