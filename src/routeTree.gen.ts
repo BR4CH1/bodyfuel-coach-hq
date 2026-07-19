@@ -21,6 +21,7 @@ import { Route as CommunityRouteImport } from './routes/community'
 import { Route as DailyChecklistRouteImport } from './routes/daily-checklist'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as DatenschutzRouteImport } from './routes/datenschutz'
+import { Route as FuelyRouteImport } from './routes/fuely'
 import { Route as GuardianConsentRouteImport } from './routes/guardian-consent'
 import { Route as ImpressumRouteImport } from './routes/impressum'
 import { Route as LoginRouteImport } from './routes/login'
@@ -220,6 +221,11 @@ const DashboardRoute = DashboardRouteImport.update({
 const DatenschutzRoute = DatenschutzRouteImport.update({
   id: '/datenschutz',
   path: '/datenschutz',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FuelyRoute = FuelyRouteImport.update({
+  id: '/fuely',
+  path: '/fuely',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GuardianConsentRoute = GuardianConsentRouteImport.update({
@@ -968,6 +974,7 @@ export interface FileRoutesByFullPath {
   '/daily-checklist': typeof DailyChecklistRoute
   '/dashboard': typeof DashboardRoute
   '/datenschutz': typeof DatenschutzRoute
+  '/fuely': typeof FuelyRoute
   '/guardian-consent': typeof GuardianConsentRoute
   '/impressum': typeof ImpressumRoute
   '/login': typeof LoginRoute
@@ -1119,6 +1126,7 @@ export interface FileRoutesByTo {
   '/daily-checklist': typeof DailyChecklistRoute
   '/dashboard': typeof DashboardRoute
   '/datenschutz': typeof DatenschutzRoute
+  '/fuely': typeof FuelyRoute
   '/guardian-consent': typeof GuardianConsentRoute
   '/impressum': typeof ImpressumRoute
   '/login': typeof LoginRoute
@@ -1265,6 +1273,7 @@ export interface FileRoutesById {
   '/daily-checklist': typeof DailyChecklistRoute
   '/dashboard': typeof DashboardRoute
   '/datenschutz': typeof DatenschutzRoute
+  '/fuely': typeof FuelyRoute
   '/guardian-consent': typeof GuardianConsentRoute
   '/impressum': typeof ImpressumRoute
   '/login': typeof LoginRoute
@@ -1421,6 +1430,7 @@ export interface FileRouteTypes {
     | '/daily-checklist'
     | '/dashboard'
     | '/datenschutz'
+    | '/fuely'
     | '/guardian-consent'
     | '/impressum'
     | '/login'
@@ -1572,6 +1582,7 @@ export interface FileRouteTypes {
     | '/daily-checklist'
     | '/dashboard'
     | '/datenschutz'
+    | '/fuely'
     | '/guardian-consent'
     | '/impressum'
     | '/login'
@@ -1717,6 +1728,7 @@ export interface FileRouteTypes {
     | '/daily-checklist'
     | '/dashboard'
     | '/datenschutz'
+    | '/fuely'
     | '/guardian-consent'
     | '/impressum'
     | '/login'
@@ -1872,6 +1884,7 @@ export interface RootRouteChildren {
   DailyChecklistRoute: typeof DailyChecklistRoute
   DashboardRoute: typeof DashboardRoute
   DatenschutzRoute: typeof DatenschutzRoute
+  FuelyRoute: typeof FuelyRoute
   GuardianConsentRoute: typeof GuardianConsentRoute
   ImpressumRoute: typeof ImpressumRoute
   LoginRoute: typeof LoginRoute
@@ -2020,6 +2033,13 @@ declare module '@tanstack/react-router' {
       path: '/datenschutz'
       fullPath: '/datenschutz'
       preLoaderRoute: typeof DatenschutzRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/fuely': {
+      id: '/fuely'
+      path: '/fuely'
+      fullPath: '/fuely'
+      preLoaderRoute: typeof FuelyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/guardian-consent': {
@@ -3311,6 +3331,7 @@ const rootRouteChildren: RootRouteChildren = {
   DailyChecklistRoute: DailyChecklistRoute,
   DashboardRoute: DashboardRoute,
   DatenschutzRoute: DatenschutzRoute,
+  FuelyRoute: FuelyRoute,
   GuardianConsentRoute: GuardianConsentRoute,
   ImpressumRoute: ImpressumRoute,
   LoginRoute: LoginRoute,
