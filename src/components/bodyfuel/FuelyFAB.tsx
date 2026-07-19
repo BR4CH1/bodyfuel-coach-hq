@@ -165,7 +165,7 @@ export function FuelyFAB() {
   const hidden =
     loading ||
     !supabaseUser ||
-    !targetOrgSlug ||
+    pathname === "/fuely" ||
     pathname.endsWith("/fuely") ||
     HIDDEN_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + "/"));
 
@@ -181,6 +181,8 @@ export function FuelyFAB() {
         setToast(null);
       } else if (targetOrgSlug) {
         navigate({ to: "/$orgSlug/fuely", params: { orgSlug: targetOrgSlug } });
+      } else {
+        navigate({ to: "/fuely" });
       }
     }, 450);
   };
