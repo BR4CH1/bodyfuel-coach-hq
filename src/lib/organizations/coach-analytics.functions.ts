@@ -74,7 +74,7 @@ export type AttentionEntry = {
 /** Analytical coach cockpit data — rolling 7-day window with vs. previous 7 days. */
 export const getOrgCoachAnalytics = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { orgId: string }) => ({ orgId: String(d.orgId) }))
+  .validator((d: { orgId: string }) => ({ orgId: String(d.orgId) }))
   .handler(async ({ data, context }): Promise<CoachAnalytics | null> => {
     const { supabase, userId } = context;
 

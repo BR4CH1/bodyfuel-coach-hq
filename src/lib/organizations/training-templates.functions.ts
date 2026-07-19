@@ -21,7 +21,7 @@ async function assertOrgAccess(
 
 export const listTrainingTemplates = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { organization_id: string }) => d)
+  .validator((d: { organization_id: string }) => d)
   .handler(async ({ data, context }) => {
     await assertOrgAccess(context, data.organization_id);
     const { data: rows, error } = await context.supabase
@@ -35,7 +35,7 @@ export const listTrainingTemplates = createServerFn({ method: "GET" })
 
 export const createTrainingTemplate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (d: {
       organization_id: string;
       name: string;
@@ -74,7 +74,7 @@ export const createTrainingTemplate = createServerFn({ method: "POST" })
 
 export const updateTrainingTemplate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (d: {
       id: string;
       patch: Partial<{
@@ -114,7 +114,7 @@ export const updateTrainingTemplate = createServerFn({ method: "POST" })
 
 export const duplicateTrainingTemplate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id: string }) => d)
+  .validator((d: { id: string }) => d)
   .handler(async ({ data, context }) => {
     const cur = await context.supabase
       .from("org_training_session_template")
@@ -146,7 +146,7 @@ export const duplicateTrainingTemplate = createServerFn({ method: "POST" })
 
 export const deleteTrainingTemplate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id: string }) => d)
+  .validator((d: { id: string }) => d)
   .handler(async ({ data, context }) => {
     const cur = await context.supabase
       .from("org_training_session_template")

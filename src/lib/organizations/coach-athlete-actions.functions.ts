@@ -43,7 +43,7 @@ const sendMsgSchema = z.object({
 
 export const sendOrgMessageToAthlete = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => sendMsgSchema.parse(d))
+  .validator((d) => sendMsgSchema.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId: callerId } = context;
     await assertOrgAccess(supabase, callerId, data.orgId);
@@ -68,7 +68,7 @@ const noteCreateSchema = z.object({
 
 export const createCoachAthleteNote = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => noteCreateSchema.parse(d))
+  .validator((d) => noteCreateSchema.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId: callerId } = context;
     await assertOrgAccess(supabase, callerId, data.orgId);
@@ -103,7 +103,7 @@ export type CoachAthleteNote = {
 
 export const listCoachAthleteNotes = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => noteListSchema.parse(d))
+  .validator((d) => noteListSchema.parse(d))
   .handler(async ({ data, context }): Promise<{ notes: CoachAthleteNote[] }> => {
     const { supabase, userId: callerId } = context;
     await assertOrgAccess(supabase, callerId, data.orgId);
@@ -146,7 +146,7 @@ const noteDeleteSchema = z.object({ noteId: z.string().uuid() });
 
 export const deleteCoachAthleteNote = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => noteDeleteSchema.parse(d))
+  .validator((d) => noteDeleteSchema.parse(d))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("coach_athlete_notes")

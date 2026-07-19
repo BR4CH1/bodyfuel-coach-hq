@@ -22,7 +22,7 @@ const TS_STATUS_TO_ATS: Record<string, "scheduled" | "in_progress" | "completed"
 
 export const getMyAthleticSessions = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { from?: string; to?: string } | undefined) => d ?? {})
+  .validator((d: { from?: string; to?: string } | undefined) => d ?? {})
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     let q = supabase
@@ -55,7 +55,7 @@ export const getMyAthleticSessions = createServerFn({ method: "GET" })
 
 export const toggleAthleticExerciseDone = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { session_id: string; exercise_id: string; done: boolean }) => d)
+  .validator((d: { session_id: string; exercise_id: string; done: boolean }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const cur = await supabase
@@ -82,7 +82,7 @@ export const toggleAthleticExerciseDone = createServerFn({ method: "POST" })
 
 export const completeAthleticSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { session_id: string }) => d)
+  .validator((d: { session_id: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const cur = await supabase

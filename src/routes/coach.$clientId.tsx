@@ -1,16 +1,8 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { ArrowLeft, Flame, Mail } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
+import { ClientRecharts } from "@/components/charts/ClientRecharts";
 
-import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-} from "recharts";
 import {
   ACHIEVEMENTS,
   findClient,
@@ -48,7 +40,6 @@ export const Route = createFileRoute("/coach/$clientId")({
     </AppLayout>
   ),
 });
-
 
 function ClientDetail() {
   const { clientId } = Route.useParams();
@@ -124,28 +115,42 @@ function ClientDetail() {
       <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
         <h2 className="mb-4 font-display text-lg font-bold">Punkte – letzte 14 Tage</h2>
         <div className="h-64 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={days}>
-              <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="date" stroke="var(--muted-foreground)" fontSize={11} />
-              <YAxis stroke="var(--muted-foreground)" fontSize={11} domain={[0, MAX_DAILY_POINTS]} />
-              <Tooltip
-                contentStyle={{
-                  background: "var(--card)",
-                  border: "1px solid var(--border)",
-                  borderRadius: 8,
-                  fontSize: 12,
-                }}
-              />
-              <Line
-                type="monotone"
-                dataKey="Punkte"
-                stroke="var(--gold)"
-                strokeWidth={2.5}
-                dot={{ r: 3, fill: "var(--gold)" }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          <ClientRecharts
+            fallback={
+              <div className="grid h-full place-items-center text-sm text-muted-foreground">
+                Diagramm wird geladen…
+              </div>
+            }
+          >
+            {({ ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Line }) => (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={days}>
+                  <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="date" stroke="var(--muted-foreground)" fontSize={11} />
+                  <YAxis
+                    stroke="var(--muted-foreground)"
+                    fontSize={11}
+                    domain={[0, MAX_DAILY_POINTS]}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      background: "var(--card)",
+                      border: "1px solid var(--border)",
+                      borderRadius: 8,
+                      fontSize: 12,
+                    }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="Punkte"
+                    stroke="var(--gold)"
+                    strokeWidth={2.5}
+                    dot={{ r: 3, fill: "var(--gold)" }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </ClientRecharts>
         </div>
       </div>
 

@@ -11,7 +11,7 @@ export type { RecalcReason, DirtyDayReport };
  */
 export const recalcNutritionForDirtyDays = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (data: {
       orgId: string;
       teamId?: string | null;

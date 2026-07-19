@@ -28,7 +28,7 @@ export const getMyAutopilotJob = createServerFn({ method: "GET" })
  */
 export const enqueueAutopilotJob = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { mode?: "full" | "nutrition_only" } | undefined) => d ?? {})
+  .validator((d: { mode?: "full" | "nutrition_only" } | undefined) => d ?? {})
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

@@ -20,7 +20,7 @@ export const listNutritionAdjustmentsForAthlete = createServerFn({
   method: "GET",
 })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { userId: string; limit?: number }) => data)
+  .validator((data: { userId: string; limit?: number }) => data)
   .handler(async ({ data, context }) => {
     const { supabase, userId: callerId } = context;
     const targetId = data.userId;

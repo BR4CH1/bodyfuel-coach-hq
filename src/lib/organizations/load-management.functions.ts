@@ -24,7 +24,7 @@ export type LoadDay = {
 
 export const listLoadWeek = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (data: { orgId: string; teamId?: string | null; weekStart: string; weekEnd: string }) => data,
   )
   .handler(async ({ data, context }) => {
@@ -43,7 +43,7 @@ export const listLoadWeek = createServerFn({ method: "GET" })
 
 export const upsertLoadDay = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (data: {
       orgId: string;
       teamId?: string | null;
@@ -123,7 +123,7 @@ export const upsertLoadDay = createServerFn({ method: "POST" })
 
 export const deleteLoadDay = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { id: string }) => data)
+  .validator((data: { id: string }) => data)
   .handler(async ({ data, context }) => {
     // Row-Info vor dem Löschen einlesen, damit wir gezielt recalcen können.
     const { data: existing } = await context.supabase
@@ -162,7 +162,7 @@ export const deleteLoadDay = createServerFn({ method: "POST" })
  */
 export const getLoadForAthlete = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { orgId: string; teamId?: string | null; date: string }) => data)
+  .validator((data: { orgId: string; teamId?: string | null; date: string }) => data)
   .handler(async ({ data, context }) => {
     // 1) Athleten-Override
     const { data: ov } = await context.supabase
@@ -203,7 +203,7 @@ export const getLoadForAthlete = createServerFn({ method: "GET" })
 
 export const upsertAthleteLoadOverride = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (data: { orgId: string; date: string; load_level: number; note?: string | null }) => data,
   )
   .handler(async ({ data, context }) => {
@@ -259,7 +259,7 @@ export const upsertAthleteLoadOverride = createServerFn({ method: "POST" })
 
 export const clearAthleteLoadOverride = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { orgId: string; date: string }) => data)
+  .validator((data: { orgId: string; date: string }) => data)
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("organization_load_day_athlete_overrides")

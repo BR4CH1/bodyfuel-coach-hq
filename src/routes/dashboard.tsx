@@ -1,6 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Flame, Target, Calendar, TrendingUp, ArrowRight, Plus, CalendarCheck, ListChecks, Dumbbell } from "lucide-react";
+import {
+  Flame,
+  Target,
+  Calendar,
+  TrendingUp,
+  ArrowRight,
+  Plus,
+  CalendarCheck,
+  ListChecks,
+  Dumbbell,
+} from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { MyPackagePanel } from "@/components/bodyfuel/MyPackagePanel";
 
@@ -12,8 +22,6 @@ import { AchievementsCard } from "@/components/bodyfuel/AchievementsCard";
 
 import { CheckinResultNotifier } from "@/components/bodyfuel/CheckinResultNotifier";
 
-
-
 import { SmartAnalysisCTA } from "@/components/bodyfuel/SmartAnalysisCTA";
 import { StrengthCheckStatus } from "@/components/bodyfuel/StrengthCheckStatus";
 import { DailyMacroSummary } from "@/components/bodyfuel/DailyMacroSummary";
@@ -22,6 +30,12 @@ import { TrialStatusBanner, TrialWelcomeDialog } from "@/components/bodyfuel/Tri
 import { TrialChecklist } from "@/components/bodyfuel/TrialChecklist";
 import { SportWeekdaysPrompt } from "@/components/bodyfuel/SportWeekdaysPrompt";
 import { RankingInvitePopup } from "@/components/bodyfuel/RankingInvitePopup";
+
+import {
+  CustomerFuelyBriefing,
+  CustomerFuelyBriefingSkeleton,
+} from "@/features/customer-dashboard/components/CustomerFuelyBriefing";
+import { buildCustomerBriefing } from "@/features/customer-dashboard/lib/customer-briefing.logic";
 
 import { useTrial } from "@/hooks/use-trial";
 
@@ -53,7 +67,9 @@ function DashboardContent() {
     supabaseUser?.email?.split("@")[0] ??
     user?.name.split(" ")[0] ??
     "";
-  const [dbPoints, setDbPoints] = useState<{ total: number; today: number; streak: number } | null>(null);
+  const [dbPoints, setDbPoints] = useState<{ total: number; today: number; streak: number } | null>(
+    null,
+  );
 
   useEffect(() => {
     if (!supabaseUser) return;
@@ -104,16 +120,13 @@ function DashboardContent() {
       <SportWeekdaysPrompt />
       {supabaseUser && <TrialChecklistGate userId={supabaseUser.id} />}
 
-
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
             Willkommen zurück
           </p>
-          <h1 className="font-display text-3xl font-bold sm:text-4xl">
-            Hey {greetingName} 👋
-          </h1>
+          <h1 className="font-display text-3xl font-bold sm:text-4xl">Hey {greetingName} 👋</h1>
         </div>
         <Link
           to="/check-in"
@@ -137,7 +150,9 @@ function DashboardContent() {
               <div className="font-display text-base font-bold">
                 Noch {MAX_DAILY_POINTS - today} von {MAX_DAILY_POINTS} Punkten heute
               </div>
-              <div className="text-xs text-muted-foreground">Hak deine Tagesziele ab — Streak nicht reißen lassen!</div>
+              <div className="text-xs text-muted-foreground">
+                Hak deine Tagesziele ab — Streak nicht reißen lassen!
+              </div>
             </div>
           </div>
           <ArrowRight className="h-5 w-5 text-gold transition group-hover:translate-x-1" />
@@ -147,9 +162,6 @@ function DashboardContent() {
       {supabaseUser && <PendingPaymentBanner userId={supabaseUser.id} />}
       {supabaseUser && <MyPackagePanel />}
       {supabaseUser && <SmartRenewalCard />}
-
-
-
 
       {/* Level hero card */}
       <div className="relative overflow-hidden rounded-3xl border border-border bg-card p-6 sm:p-8">
@@ -190,15 +202,10 @@ function DashboardContent() {
 
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-1 sm:gap-2">
             <Stat label="Gesamt" value={points} suffix="Pkt" />
-          <Link to="/daily-checklist" className="contents">
-            <Stat label="Heute" value={today} suffix={`/ ${MAX_DAILY_POINTS}`} />
-          </Link>
-            <Stat
-              label="Streak"
-              value={streak}
-              suffix="Tage"
-              accent={streak > 0}
-            />
+            <Link to="/daily-checklist" className="contents">
+              <Stat label="Heute" value={today} suffix={`/ ${MAX_DAILY_POINTS}`} />
+            </Link>
+            <Stat label="Streak" value={streak} suffix="Tage" accent={streak > 0} />
           </div>
         </div>
       </div>
@@ -365,7 +372,9 @@ function RealUserDashboard() {
 
       const { data: up } = await supabase
         .from("user_points")
-        .select("total_points, daily_points, performance_points, current_streak, longest_streak, level")
+        .select(
+          "total_points, daily_points, performance_points, current_streak, longest_streak, level",
+        )
         .eq("user_id", supabaseUser.id)
         .maybeSingle();
       setUserPts({
@@ -382,7 +391,8 @@ function RealUserDashboard() {
         .select("next_checkin_date")
         .eq("id", supabaseUser.id)
         .maybeSingle();
-      setNextCheckin((prof as any)?.next_checkin_date ?? null);
+      const profileCheckin = prof as { next_checkin_date: string | null } | null;
+      setNextCheckin(profileCheckin?.next_checkin_date ?? null);
 
       // Detect: did the user submit this week's check-in?
       // Robust gegenüber Zeitzonen-Drift: statt exakt `week_start = Montag`
@@ -395,7 +405,9 @@ function RealUserDashboard() {
       })();
       const { data: thisWeekCi } = await supabase
         .from("weekly_checkins")
-        .select("waist_cm, chest_cm, hip_cm, thigh_left_cm, thigh_right_cm, biceps_left_cm, biceps_right_cm, week_start")
+        .select(
+          "waist_cm, chest_cm, hip_cm, thigh_left_cm, thigh_right_cm, biceps_left_cm, biceps_right_cm, week_start",
+        )
         .eq("user_id", supabaseUser.id)
         .gte("week_start", sixDaysAgo)
         .lte("week_start", todayStr)
@@ -404,14 +416,23 @@ function RealUserDashboard() {
         .maybeSingle();
       if (thisWeekCi) {
         setCheckinSubmittedThisWeek(true);
+        const checkinMeasures = thisWeekCi as {
+          waist_cm: number | null;
+          chest_cm: number | null;
+          hip_cm: number | null;
+          thigh_left_cm: number | null;
+          thigh_right_cm: number | null;
+          biceps_left_cm: number | null;
+          biceps_right_cm: number | null;
+        };
         const measures = [
-          thisWeekCi.waist_cm,
-          thisWeekCi.chest_cm,
-          thisWeekCi.hip_cm,
-          (thisWeekCi as any).thigh_left_cm,
-          (thisWeekCi as any).thigh_right_cm,
-          (thisWeekCi as any).biceps_left_cm,
-          (thisWeekCi as any).biceps_right_cm,
+          checkinMeasures.waist_cm,
+          checkinMeasures.chest_cm,
+          checkinMeasures.hip_cm,
+          checkinMeasures.thigh_left_cm,
+          checkinMeasures.thigh_right_cm,
+          checkinMeasures.biceps_left_cm,
+          checkinMeasures.biceps_right_cm,
         ];
         const allMissing = measures.every((v) => v == null);
         setCheckinMissingMeasures(allMissing);
@@ -419,7 +440,6 @@ function RealUserDashboard() {
         setCheckinSubmittedThisWeek(false);
         setCheckinMissingMeasures(false);
       }
-
 
       const { count: tCount } = await supabase
         .from("training_set_logs")
@@ -438,8 +458,7 @@ function RealUserDashboard() {
       const rows = (planRows as { id: string; status: string }[] | null) ?? [];
       setHasActivePlan(rows.some((r) => r.status === "active"));
       setPlanUnderReview(
-        rows.some((r) => r.status === "needs_review") &&
-          !rows.some((r) => r.status === "active"),
+        rows.some((r) => r.status === "needs_review") && !rows.some((r) => r.status === "active"),
       );
 
       setLoading(false);
@@ -451,9 +470,7 @@ function RealUserDashboard() {
   const checkinInfo = (() => {
     const today = new Date(todayStr);
     const target = nextCheckin ? new Date(nextCheckin) : null;
-    const diffDays = target
-      ? Math.round((target.getTime() - today.getTime()) / 86400000)
-      : null;
+    const diffDays = target ? Math.round((target.getTime() - today.getTime()) / 86400000) : null;
 
     // Coach hat einen NEUEN Termin (in der Zukunft) gesetzt → Countdown gewinnt.
     if (target && diffDays !== null && diffDays > 0) {
@@ -487,10 +504,21 @@ function RealUserDashboard() {
     return { tone: "today" as const, label: "Check-in heute fällig" };
   })();
 
+  const fuelyBriefing = buildCustomerBriefing({
+    checkin: checkinInfo,
+    checkinMissingMeasures,
+    trainedToday,
+    measuredToday,
+    todayPoints: todayDbPoints,
+    maxDailyPoints: MAX_DAILY_POINTS,
+    measurementCount: count,
+    latestMeasurementAt: latest?.measured_at ?? null,
+    hasActivePlan,
+    planUnderReview,
+  });
 
   return (
     <div className="space-y-6">
-      
       <TrialWelcomeDialog />
       <RankingInvitePopup />
       <CheckinResultNotifier />
@@ -498,54 +526,10 @@ function RealUserDashboard() {
       <SportWeekdaysPrompt />
       {supabaseUser && <TrialChecklistGate userId={supabaseUser.id} />}
 
-
-      {checkinInfo && (
-        <Link
-          to="/check-in"
-          className={
-            "flex items-center justify-between rounded-2xl border p-4 transition " +
-            (checkinInfo.tone === "overdue"
-              ? "border-destructive/60 bg-destructive/10 hover:border-destructive"
-              : checkinInfo.tone === "today"
-                ? "border-gold/60 bg-gradient-to-br from-gold/15 to-transparent hover:border-gold"
-                : "border-border bg-card hover:border-gold/40")
-          }
-        >
-          <div className="flex items-center gap-3">
-            <div
-              className={
-                "grid h-10 w-10 place-items-center rounded-xl " +
-                (checkinInfo.tone === "overdue"
-                  ? "bg-destructive text-destructive-foreground"
-                  : "bg-gradient-gold text-primary-foreground")
-              }
-            >
-              <CalendarCheck className="h-5 w-5" />
-            </div>
-            <div>
-              <div
-                className={
-                  "text-xs uppercase tracking-wider " +
-                  (checkinInfo.tone === "overdue" ? "text-destructive" : "text-gold")
-                }
-              >
-                Check-in
-              </div>
-              <div className="font-display text-base font-bold">{checkinInfo.label}</div>
-            </div>
-          </div>
-          <ArrowRight className="h-5 w-5 text-muted-foreground" />
-        </Link>
-      )}
-
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-            Willkommen
-          </p>
-          <h1 className="font-display text-3xl font-bold sm:text-4xl">
-            Hey {name} 👋
-          </h1>
+          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Willkommen</p>
+          <h1 className="font-display text-3xl font-bold sm:text-4xl">Hey {name} 👋</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Pflege deine Körpermaße, damit dein Coach deinen Fortschritt sieht.
           </p>
@@ -558,6 +542,12 @@ function RealUserDashboard() {
         />
       </div>
 
+      {loading ? (
+        <CustomerFuelyBriefingSkeleton />
+      ) : (
+        <CustomerFuelyBriefing briefing={fuelyBriefing} />
+      )}
+
       {supabaseUser && <AutopilotStatusCard userId={supabaseUser.id} />}
       {supabaseUser && <SmartAnalysisCTA />}
       {supabaseUser && planUnderReview && (
@@ -567,8 +557,8 @@ function RealUserDashboard() {
             Dein Smart Plan wird gerade geprüft.
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            Wir prüfen gerade die Nährwerte, damit dein Plan korrekt ist. Du wirst
-            benachrichtigt, sobald er freigeschaltet ist.
+            Wir prüfen gerade die Nährwerte, damit dein Plan korrekt ist. Du wirst benachrichtigt,
+            sobald er freigeschaltet ist.
           </p>
         </div>
       )}
@@ -595,7 +585,8 @@ function RealUserDashboard() {
                 <div className="mt-2 text-sm text-muted-foreground">
                   {next ? (
                     <>
-                      Noch <span className="font-semibold text-foreground">{next.min - points}</span>{" "}
+                      Noch{" "}
+                      <span className="font-semibold text-foreground">{next.min - points}</span>{" "}
                       Punkte bis <span className="text-gold">{next.name}</span>
                     </>
                   ) : (
@@ -619,7 +610,12 @@ function RealUserDashboard() {
               <div className="grid grid-cols-3 gap-3 sm:grid-cols-1 sm:gap-2">
                 <Stat label="Gesamt" value={points} suffix="Pkt" />
                 <Stat label="Heute" value={todayDbPoints} suffix={`/ ${MAX_DAILY_POINTS}`} />
-                <Stat label="Training" value={userPts.perf} suffix="Pkt" accent={userPts.perf > 0} />
+                <Stat
+                  label="Training"
+                  value={userPts.perf}
+                  suffix="Pkt"
+                  accent={userPts.perf > 0}
+                />
               </div>
             </div>
           </div>
@@ -645,11 +641,7 @@ function RealUserDashboard() {
 
       {supabaseUser && <AchievementsCard userId={supabaseUser.id} />}
 
-      
-
       {supabaseUser && <TrainingDevelopmentCard clientId={supabaseUser.id} />}
-
-
 
       {/* Paket & Verlängerung — ans Ende */}
       <div id="my-package" className="scroll-mt-24 space-y-4">
@@ -736,7 +728,16 @@ function PendingPaymentBanner({ userId }: { userId: string }) {
         .eq("user_id", userId)
         .eq("status", "pending")
         .order("created_at", { ascending: false });
-      setPending((data as any) ?? []);
+      setPending(
+        (data as
+          | {
+              id: string;
+              amount_eur: number | string;
+              note: string | null;
+              created_at: string;
+            }[]
+          | null) ?? [],
+      );
     })();
   }, [userId]);
 
@@ -764,9 +765,7 @@ function PendingPaymentBanner({ userId }: { userId: string }) {
   const badge = overdue ? "text-destructive" : "text-gold";
 
   return (
-    <div
-      className={`rounded-2xl border bg-gradient-to-r to-transparent p-5 ${accent}`}
-    >
+    <div className={`rounded-2xl border bg-gradient-to-r to-transparent p-5 ${accent}`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-start gap-3">
           <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-gold text-primary-foreground shadow-gold">
@@ -785,15 +784,16 @@ function PendingPaymentBanner({ userId }: { userId: string }) {
               {overdue
                 ? `${Math.abs(daysLeft)} Tag(e) überfällig`
                 : daysLeft <= 0
-                ? "Heute fällig"
-                : `Noch ${daysLeft} Tag${daysLeft === 1 ? "" : "e"} Zeit`}
+                  ? "Heute fällig"
+                  : `Noch ${daysLeft} Tag${daysLeft === 1 ? "" : "e"} Zeit`}
               {pending.some((p) => p.note)
-                ? ` · ${pending.map((p) => p.note).filter(Boolean).join(" · ")}`
+                ? ` · ${pending
+                    .map((p) => p.note)
+                    .filter(Boolean)
+                    .join(" · ")}`
                 : ""}
             </div>
-            <div className={`mt-1 font-display text-lg ${badge}`}>
-              {total.toFixed(2)} €
-            </div>
+            <div className={`mt-1 font-display text-lg ${badge}`}>{total.toFixed(2)} €</div>
           </div>
         </div>
         <Link
@@ -824,7 +824,9 @@ function DashboardQuickActions({ excludeKeys = [] }: { excludeKeys?: readonly Qu
     try {
       const raw = localStorage.getItem(SEEN_STORAGE_KEY);
       if (raw) setSeen(JSON.parse(raw));
-    } catch {}
+    } catch {
+      // Local storage can be unavailable in privacy modes.
+    }
   }, []);
 
   const markSeen = (key: string) => {
@@ -833,7 +835,9 @@ function DashboardQuickActions({ excludeKeys = [] }: { excludeKeys?: readonly Qu
       const next = { ...prev, [key]: true };
       try {
         localStorage.setItem(SEEN_STORAGE_KEY, JSON.stringify(next));
-      } catch {}
+      } catch {
+        // The action still works when persistence is unavailable.
+      }
       return next;
     });
   };
@@ -867,5 +871,3 @@ function TrialChecklistGate({ userId }: { userId: string }) {
   if (!isTrial) return null;
   return <TrialChecklist userId={userId} />;
 }
-
-

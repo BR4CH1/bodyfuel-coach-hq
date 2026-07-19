@@ -130,7 +130,7 @@ function sourcePriority(source: FoodSource | undefined): number {
 
 /** Barcode lookup via OpenFoodFacts */
 export const lookupBarcode = createServerFn({ method: "POST" })
-  .inputValidator((d: { barcode: string }) => d)
+  .validator((d: { barcode: string }) => d)
   .handler(async ({ data }) => {
     const code = data.barcode.replace(/\D/g, "");
     if (!code) throw new Error("Ungültiger Barcode");
@@ -145,7 +145,7 @@ export const lookupBarcode = createServerFn({ method: "POST" })
 
 /** Search foods: DB + OFF in parallel mit harten Timeouts — UI hängt nie. */
 export const searchFoods = createServerFn({ method: "POST" })
-  .inputValidator((d: { query: string }) => d)
+  .validator((d: { query: string }) => d)
   .handler(async ({ data }) => {
     const q = data.query.trim();
     if (!q) return [] as FoodResult[];
@@ -246,7 +246,7 @@ async function assertCoach(supabase: any, userId: string) {
 
 export const setNutritionTargets = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (d: {
       user_id: string;
       kcal: number;
@@ -301,7 +301,7 @@ export const setNutritionTargets = createServerFn({ method: "POST" })
 
 export const getNutritionTargets = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { user_id: string }) => d)
+  .validator((d: { user_id: string }) => d)
   .handler(async ({ data, context }) => {
     let db = context.supabase;
     if (data.user_id !== context.userId) {
@@ -324,7 +324,7 @@ export type DayType = "training" | "rest";
 /** Returns the effective day type for a user/date, plus its source. */
 export const getDayType = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { user_id: string; date: string }) => d)
+  .validator((d: { user_id: string; date: string }) => d)
   .handler(async ({ data, context }) => {
     if (data.user_id !== context.userId) {
       await assertCoach(context.supabase, context.userId);
@@ -371,7 +371,7 @@ export const getDayType = createServerFn({ method: "POST" })
 
 export const setDayType = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (d: { user_id: string; date: string; kind: DayType | null }) => d,
   )
   .handler(async ({ data, context }) => {
@@ -502,7 +502,7 @@ export function deriveRestFromTraining(t: {
 /** Extract daily kcal/macros from the user's active nutrition plan (DB first, PDF fallback) */
 export const extractTargetsFromPlan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { user_id: string }) => d)
+  .validator((d: { user_id: string }) => d)
   .handler(async ({ data, context }) => {
     await assertCoachOrOrgStaffForAthlete(context, data.user_id, "nutrition");
 
@@ -627,7 +627,7 @@ Antworte ausschließlich mit gültigem JSON:
  * Beispiele: "Döner Kalb mit Soße", "Pizza Salami", "Caesar Salat mit Hähnchen".
  */
 export const estimateFoodFromText = createServerFn({ method: "POST" })
-  .inputValidator((d: { query: string }) => d)
+  .validator((d: { query: string }) => d)
   .handler(async ({ data }): Promise<FoodResult> => {
     const q = data.query.trim();
     if (!q) throw new Error("Bitte gib ein Lebensmittel ein.");
@@ -702,7 +702,7 @@ JSON-Schema:
  */
 export const searchFoodsDb = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { query: string; limit?: number }) => d)
+  .validator((d: { query: string; limit?: number }) => d)
   .handler(async ({ data, context }): Promise<FoodResult[]> => {
     const q = data.query.trim();
     if (!q) return [];

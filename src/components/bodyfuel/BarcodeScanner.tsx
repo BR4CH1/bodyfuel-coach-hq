@@ -1,13 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import {
-  BrowserMultiFormatReader,
-  type IScannerControls,
-} from "@zxing/browser";
-import {
-  BarcodeFormat,
-  DecodeHintType,
-  NotFoundException,
-} from "@zxing/library";
+import type { IScannerControls } from "@zxing/browser";
 import { X, Flashlight, FlashlightOff, Keyboard, Loader2 } from "lucide-react";
 
 /**
@@ -20,16 +12,6 @@ import { X, Flashlight, FlashlightOff, Keyboard, Loader2 } from "lucide-react";
  *  4. Torch + zoom controls when the device supports them.
  *  5. Manual entry fallback for damaged / hard-to-read barcodes.
  */
-
-const PRODUCT_FORMATS = [
-  BarcodeFormat.EAN_13,
-  BarcodeFormat.EAN_8,
-  BarcodeFormat.UPC_A,
-  BarcodeFormat.UPC_E,
-  BarcodeFormat.CODE_128,
-  BarcodeFormat.CODE_39,
-  BarcodeFormat.ITF,
-];
 
 // Native BarcodeDetector types (not in lib.dom yet on all TS versions)
 type NativeBarcodeDetector = {
@@ -47,9 +29,7 @@ function isValidEan(code: string): boolean {
   if (!/^\d{8}$|^\d{12,14}$/.test(code)) return code.length >= 6; // non-EAN formats: accept if length plausible
   const digits = code.split("").map(Number);
   const check = digits.pop()!;
-  const sum = digits
-    .reverse()
-    .reduce((acc, d, i) => acc + d * (i % 2 === 0 ? 3 : 1), 0);
+  const sum = digits.reverse().reduce((acc, d, i) => acc + d * (i % 2 === 0 ? 3 : 1), 0);
   const calc = (10 - (sum % 10)) % 10;
   return calc === check;
 }
@@ -88,8 +68,7 @@ export function BarcodeScanner({
         confirmCountRef.current = 1;
       }
       // Require 2 matching reads OR a valid EAN checksum right away.
-      const accept =
-        confirmCountRef.current >= 2 || (/^\d{8,14}$/.test(code) && isValidEan(code));
+      const accept = confirmCountRef.current >= 2 || (/^\d{8,14}$/.test(code) && isValidEan(code));
       if (accept && !stoppedRef.current) {
         stoppedRef.current = true;
         try {
@@ -149,15 +128,7 @@ export function BarcodeScanner({
         const NativeCtor = getNativeDetectorCtor();
         if (NativeCtor) {
           const detector = new NativeCtor({
-            formats: [
-              "ean_13",
-              "ean_8",
-              "upc_a",
-              "upc_e",
-              "code_128",
-              "code_39",
-              "itf",
-            ],
+            formats: ["ean_13", "ean_8", "upc_a", "upc_e", "code_128", "code_39", "itf"],
           });
           const tick = async () => {
             if (stoppedRef.current || cancelled) return;
@@ -171,26 +142,37 @@ export function BarcodeScanner({
           };
           rafRef.current = requestAnimationFrame(tick);
         } else {
-          // Fallback: @zxing/browser
-          const hints = new Map<DecodeHintType, unknown>();
-          hints.set(DecodeHintType.POSSIBLE_FORMATS, PRODUCT_FORMATS);
+          // Fallback: @zxing/browser — nur im Browser laden, damit der
+          // Scanner nicht im SSR-/Cloudflare-Bundle landet.
+          const [{ BrowserMultiFormatReader }, zxing] = await Promise.all([
+            import("@zxing/browser"),
+            import("@zxing/library"),
+          ]);
+          const { BarcodeFormat, DecodeHintType, NotFoundException } = zxing;
+          const productFormats = [
+            BarcodeFormat.EAN_13,
+            BarcodeFormat.EAN_8,
+            BarcodeFormat.UPC_A,
+            BarcodeFormat.UPC_E,
+            BarcodeFormat.CODE_128,
+            BarcodeFormat.CODE_39,
+            BarcodeFormat.ITF,
+          ];
+          const hints = new Map<(typeof DecodeHintType)[keyof typeof DecodeHintType], unknown>();
+          hints.set(DecodeHintType.POSSIBLE_FORMATS, productFormats);
           hints.set(DecodeHintType.TRY_HARDER, true);
           const reader = new BrowserMultiFormatReader(hints, {
             delayBetweenScanAttempts: 120,
             delayBetweenScanSuccess: 500,
           });
-          zxingControlsRef.current = await reader.decodeFromStream(
-            stream,
-            video,
-            (result, err) => {
-              if (stoppedRef.current) return;
-              if (result) handleHit(result.getText());
-              // ignore NotFoundException (normal per-frame miss)
-              if (err && !(err instanceof NotFoundException)) {
-                // swallow — non-fatal
-              }
-            },
-          );
+          zxingControlsRef.current = await reader.decodeFromStream(stream, video, (result, err) => {
+            if (stoppedRef.current) return;
+            if (result) handleHit(result.getText());
+            // ignore NotFoundException (normal per-frame miss)
+            if (err && !(err instanceof NotFoundException)) {
+              // swallow — non-fatal
+            }
+          });
         }
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Kamera-Fehler";
@@ -246,11 +228,7 @@ export function BarcodeScanner({
               className="rounded-md p-2 hover:bg-secondary"
               aria-label={torchOn ? "Licht aus" : "Licht an"}
             >
-              {torchOn ? (
-                <FlashlightOff className="h-5 w-5" />
-              ) : (
-                <Flashlight className="h-5 w-5" />
-              )}
+              {torchOn ? <FlashlightOff className="h-5 w-5" /> : <Flashlight className="h-5 w-5" />}
             </button>
           )}
           <button
@@ -271,13 +249,7 @@ export function BarcodeScanner({
       </div>
 
       <div className="relative flex-1 overflow-hidden bg-black">
-        <video
-          ref={videoRef}
-          className="h-full w-full object-cover"
-          playsInline
-          muted
-          autoPlay
-        />
+        <video ref={videoRef} className="h-full w-full object-cover" playsInline muted autoPlay />
         <div className="pointer-events-none absolute inset-0 grid place-items-center">
           <div className="relative h-36 w-[80%] max-w-sm">
             <div className="absolute inset-0 rounded-xl shadow-[0_0_0_9999px_rgba(0,0,0,0.55)]" />

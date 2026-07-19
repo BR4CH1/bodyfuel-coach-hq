@@ -51,7 +51,7 @@ export const listPlayerCardDesigns = createServerFn({ method: "GET" })
   });
 
 export const getPlayerCardDesign = createServerFn({ method: "GET" })
-  .inputValidator((data: { orgSlug?: string | null } | undefined) =>
+  .validator((data: { orgSlug?: string | null } | undefined) =>
     z.object({ orgSlug: z.string().min(1).nullable().optional() }).parse(data ?? {}),
   )
   .handler(async ({ data }): Promise<PlayerCardDesign | null> => {
@@ -83,7 +83,7 @@ export const getPlayerCardDesign = createServerFn({ method: "GET" })
 
 export const savePlayerCardDesign = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: {
+  .validator((data: {
     orgSlug: string;
     name?: string | null;
     layout_json: any;

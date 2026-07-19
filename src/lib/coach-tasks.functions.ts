@@ -31,7 +31,7 @@ export const listCoachTaskStates = createServerFn({ method: "GET" })
 
 export const setCoachTaskState = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (d: {
       task_key: string;
       action: "complete" | "reopen" | "snooze";
@@ -73,7 +73,7 @@ export const setCoachTaskState = createServerFn({ method: "POST" })
 
 export const extendClientPlan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (d: {
       client_id: string;
       kind: "nutrition" | "training";

@@ -33,7 +33,7 @@ export const getMyNickname = createServerFn({ method: "GET" })
 
 export const setMyNickname = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { nickname: string }) => d)
+  .validator((d: { nickname: string }) => d)
   .handler(async ({ data, context }) => {
     const nick = (data.nickname ?? "").trim();
     if (!/^[A-Za-z0-9_-]{2,20}$/.test(nick)) {

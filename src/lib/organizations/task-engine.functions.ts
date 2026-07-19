@@ -21,7 +21,7 @@ type EngineInput = { organization_id: string; horizon_days?: number };
 
 export const runOrgTaskEngine = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: EngineInput) => ({
+  .validator((d: EngineInput) => ({
     organization_id: String(d.organization_id),
     horizon_days: Math.min(Math.max(d.horizon_days ?? 14, 1), 30),
   }))
@@ -55,7 +55,7 @@ export const runOrgTaskEngine = createServerFn({ method: "POST" })
 /** List tasks for a given day (org-wide) — coach only. */
 export const listOrgTasksForDay = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { organization_id: string; date?: string; team_id?: string | null }) => d)
+  .validator((d: { organization_id: string; date?: string; team_id?: string | null }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const orgId = data.organization_id;
@@ -91,7 +91,7 @@ export const listOrgTasksForDay = createServerFn({ method: "GET" })
 /** Create a manual staff task (org, team, or single athlete). */
 export const createManualOrgTask = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (d: {
       organization_id: string;
       team_id?: string | null;
@@ -161,7 +161,7 @@ export const createManualOrgTask = createServerFn({ method: "POST" })
 /** Team-training-schedule CRUD for staff/coach. */
 export const upsertTeamTrainingSchedule = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (d: {
       team_id: string;
       entries: { weekday: number; start_time?: string | null; end_time?: string | null; title?: string; active?: boolean }[];
@@ -217,7 +217,7 @@ export const upsertTeamTrainingSchedule = createServerFn({ method: "POST" })
 
 export const getTeamTrainingSchedule = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { organization_id: string }) => d)
+  .validator((d: { organization_id: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const { data: teams } = await supabase
@@ -236,7 +236,7 @@ export const getTeamTrainingSchedule = createServerFn({ method: "GET" })
 /** Onboarding audit: per athlete, which required org fields are missing. */
 export const getOrgAthletesOnboardingAudit = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { organization_id: string }) => d)
+  .validator((d: { organization_id: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const orgId = data.organization_id;
@@ -376,7 +376,7 @@ export const getOrgAthletesOnboardingAudit = createServerFn({ method: "GET" })
 /** Staff list joined with profile names (no email). */
 export const listOrgStaffWithProfiles = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { organization_id: string }) => d)
+  .validator((d: { organization_id: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const orgId = data.organization_id;

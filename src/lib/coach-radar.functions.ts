@@ -838,7 +838,7 @@ export const getCoachRadar = createServerFn({ method: "GET" })
 
 export const resolveCoachInboxTask = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { task: InboxTask; action: "done" | "ignored" }) => input)
+  .validator((input: { task: InboxTask; action: "done" | "ignored" }) => input)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     await assertCoach(supabase, userId);
@@ -866,7 +866,7 @@ export const resolveCoachInboxTask = createServerFn({ method: "POST" })
 
 export const unresolveCoachInboxTask = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { alert_key: string }) => input)
+  .validator((input: { alert_key: string }) => input)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     await assertCoach(supabase, userId);
@@ -881,7 +881,7 @@ export const unresolveCoachInboxTask = createServerFn({ method: "POST" })
 
 export const dismissRadarClient = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { user_id: string; name: string; primary_reason: string }) => input)
+  .validator((input: { user_id: string; name: string; primary_reason: string }) => input)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     await assertCoach(supabase, userId);
@@ -907,7 +907,7 @@ export const dismissRadarClient = createServerFn({ method: "POST" })
   });
 export const getCustomerRadarStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { user_id: string }) => d)
+  .validator((d: { user_id: string }) => d)
   .handler(async ({ data, context }): Promise<RadarClient | null> => {
     const { supabase, userId } = context;
     await assertCoach(supabase, userId);

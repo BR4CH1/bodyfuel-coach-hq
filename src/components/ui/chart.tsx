@@ -1,7 +1,9 @@
 import * as React from "react";
-import * as RechartsPrimitive from "recharts";
-
+import { ClientRecharts } from "@/components/charts/ClientRecharts";
 import { cn } from "@/lib/utils";
+
+type RechartsModule = typeof import("recharts");
+type RechartsLegendProps = import("recharts").LegendProps;
 
 // Format: { THEME_NAME: CSS_SELECTOR }
 const THEMES = { light: "", dark: ".dark" } as const;
@@ -36,7 +38,7 @@ const ChartContainer = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div"> & {
     config: ChartConfig;
-    children: React.ComponentProps<typeof RechartsPrimitive.ResponsiveContainer>["children"];
+    children: React.ComponentProps<RechartsModule["ResponsiveContainer"]>["children"];
   }
 >(({ id, className, children, config, ...props }, ref) => {
   const uniqueId = React.useId();
@@ -54,7 +56,13 @@ const ChartContainer = React.forwardRef<
         {...props}
       >
         <ChartStyle id={chartId} config={config} />
-        <RechartsPrimitive.ResponsiveContainer>{children}</RechartsPrimitive.ResponsiveContainer>
+        <ClientRecharts>
+          {({ ResponsiveContainer }) => (
+            <ResponsiveContainer width="100%" height="100%">
+              {children}
+            </ResponsiveContainer>
+          )}
+        </ClientRecharts>
       </div>
     </ChartContext.Provider>
   );
@@ -90,11 +98,14 @@ ${colorConfig
   );
 };
 
-const ChartTooltip = RechartsPrimitive.Tooltip;
+const ChartTooltip = (props: React.ComponentPropsWithoutRef<RechartsModule["Tooltip"]>) => (
+  <ClientRecharts>{({ Tooltip }) => <Tooltip {...props} />}</ClientRecharts>
+);
+ChartTooltip.displayName = "ChartTooltip";
 
 const ChartTooltipContent = React.forwardRef<
   HTMLDivElement,
-  React.ComponentProps<typeof RechartsPrimitive.Tooltip> &
+  React.ComponentPropsWithoutRef<RechartsModule["Tooltip"]> &
     React.ComponentProps<"div"> & {
       hideLabel?: boolean;
       hideIndicator?: boolean;
@@ -238,12 +249,15 @@ const ChartTooltipContent = React.forwardRef<
 );
 ChartTooltipContent.displayName = "ChartTooltip";
 
-const ChartLegend = RechartsPrimitive.Legend;
+const ChartLegend = (props: React.ComponentPropsWithoutRef<RechartsModule["Legend"]>) => (
+  <ClientRecharts>{({ Legend }) => <Legend {...props} />}</ClientRecharts>
+);
+ChartLegend.displayName = "ChartLegend";
 
 const ChartLegendContent = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div"> &
-    Pick<RechartsPrimitive.LegendProps, "payload" | "verticalAlign"> & {
+    Pick<RechartsLegendProps, "payload" | "verticalAlign"> & {
       hideIcon?: boolean;
       nameKey?: string;
     }

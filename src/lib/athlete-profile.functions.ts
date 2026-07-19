@@ -76,7 +76,7 @@ function sanitize(input: AthleteProfileInput): Record<string, unknown> {
 /** Self-service: signed-in user updates own athlete fields (RLS scoped). */
 export const updateMyAthleteProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: AthleteProfileInput) => data)
+  .validator((data: AthleteProfileInput) => data)
   .handler(async ({ data, context }) => {
     const patch = sanitize(data);
     const { error } = await context.supabase
@@ -90,7 +90,7 @@ export const updateMyAthleteProfile = createServerFn({ method: "POST" })
 /** Coach updates another user's athlete profile. */
 export const updateCustomerAthleteProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: AthleteProfileInput & { user_id: string }) => data)
+  .validator((data: AthleteProfileInput & { user_id: string }) => data)
   .handler(async ({ data, context }) => {
     const { data: isCoach } = await context.supabase.rpc("has_role", {
       _user_id: context.userId,

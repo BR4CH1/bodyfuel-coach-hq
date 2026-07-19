@@ -44,7 +44,7 @@ async function assertCanManageMembers(
 
 export const getMemberCourseInstructor = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) =>
+  .validator((d) =>
     z.object({ orgId: z.string().uuid(), userId: z.string().uuid() }).parse(d),
   )
   .handler(async ({ data, context }) => {
@@ -63,7 +63,7 @@ export const getMemberCourseInstructor = createServerFn({ method: "GET" })
 
 export const setMemberCourseInstructor = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) =>
+  .validator((d) =>
     z
       .object({
         orgId: z.string().uuid(),

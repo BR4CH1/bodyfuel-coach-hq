@@ -19,7 +19,7 @@ const TYPES: SessionType[] = ["strength", "cardio", "class", "mobility", "sport"
 
 export const logTrainingSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: LogTrainingSessionInput) => d)
+  .validator((d: LogTrainingSessionInput) => d)
   .handler(async ({ data, context }) => {
     if (!TYPES.includes(data.session_type)) throw new Error("Ungültiger Typ");
     const name = (data.name ?? "").trim().slice(0, 120);
@@ -90,7 +90,7 @@ export const logTrainingSession = createServerFn({ method: "POST" })
 
 export const listTrainingSessions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { client_id?: string; days?: number }) => d)
+  .validator((d: { client_id?: string; days?: number }) => d)
   .handler(async ({ data, context }) => {
     const target = data.client_id ?? context.userId;
     if (target !== context.userId) {
@@ -116,7 +116,7 @@ export const listTrainingSessions = createServerFn({ method: "POST" })
 
 export const deleteTrainingSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id: string }) => d)
+  .validator((d: { id: string }) => d)
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("training_sessions")

@@ -38,7 +38,7 @@ async function ensureCoach(ctx: { supabase: any; userId: string }) {
 
 export const listPhotoAssessments = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { userId?: string }) => d)
+  .validator((d: { userId?: string }) => d)
   .handler(async ({ data, context }) => {
     const target = data.userId ?? context.userId;
     const { data: rows, error } = await context.supabase
@@ -52,7 +52,7 @@ export const listPhotoAssessments = createServerFn({ method: "GET" })
 
 export const savePhotoAssessment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: Partial<PhotoAssessment> & { user_id: string }) =>
+  .validator((d: Partial<PhotoAssessment> & { user_id: string }) =>
     z
       .object({
         id: z.string().uuid().optional(),
@@ -95,7 +95,7 @@ export const savePhotoAssessment = createServerFn({ method: "POST" })
 
 export const deletePhotoAssessment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
+  .validator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     await ensureCoach(context);
     const { error } = await context.supabase.from("photo_assessments").delete().eq("id", data.id);
@@ -106,7 +106,7 @@ export const deletePhotoAssessment = createServerFn({ method: "POST" })
 // AI compare: takes file_paths for before+after sets, generates signed URLs, calls Lovable AI Gateway.
 export const aiComparePhotos = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: {
+  .validator((d: {
     user_id: string;
     before_paths: string[];
     after_paths: string[];

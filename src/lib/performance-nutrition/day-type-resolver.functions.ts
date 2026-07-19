@@ -303,7 +303,7 @@ export async function collectPerformanceDayTypeSignals(
  */
 export const resolvePerformanceDayType = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (d: { organization_id: string; user_id?: string; date: string }) => d,
   )
   .handler(async ({ data, context }): Promise<DayTypeResolution> => {

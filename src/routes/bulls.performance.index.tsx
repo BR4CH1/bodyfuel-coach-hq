@@ -68,7 +68,7 @@ function PerformanceIndex() {
         {!position && (
           <div className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
             Setze zuerst deine Position im{" "}
-            <Link to="/bulls" className="underline">Bulls-Hub</Link>, damit dein Score berechnet werden kann.
+            <Link to="/$orgSlug/onboarding" params={{ orgSlug: "bulls" }} className="underline">Bulls-Onboarding</Link>, damit dein Score berechnet werden kann.
           </div>
         )}
       </section>

@@ -57,7 +57,7 @@ async function loadTrainingPlan(
 
 export const getCustomerTrainingPlanOverview = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { user_id: string }) => d)
+  .validator((d: { user_id: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     let db = supabase;
@@ -104,7 +104,7 @@ export const getCustomerTrainingPlanOverview = createServerFn({ method: "GET" })
 
 export const transitionTrainingPlanStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (d: { plan_id: string; to: TrainingPlanStatus }) => d,
   )
   .handler(async ({ data, context }) => {
@@ -139,7 +139,7 @@ export const transitionTrainingPlanStatus = createServerFn({ method: "POST" })
 
 export const deleteTrainingPlanDraft = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { plan_id: string }) => d)
+  .validator((d: { plan_id: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: plan } = await supabaseAdmin
@@ -161,7 +161,7 @@ export const deleteTrainingPlanDraft = createServerFn({ method: "POST" })
 
 export const updateTrainingPlanScheduling = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (d: {
       plan_id: string;
       scheduled_start_date?: string | null;
@@ -194,7 +194,7 @@ export const updateTrainingPlanScheduling = createServerFn({ method: "POST" })
 
 export const setAutoPublishTraining = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { user_id: string; auto_publish: boolean }) => d)
+  .validator((d: { user_id: string; auto_publish: boolean }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const db = data.user_id === userId

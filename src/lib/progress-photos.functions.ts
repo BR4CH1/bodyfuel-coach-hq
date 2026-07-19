@@ -19,7 +19,7 @@ const poseEnum = z.enum(["front", "side_left", "side_right", "back"]);
 
 export const listProgressPhotos = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { userId?: string; limit?: number }) => d)
+  .validator((d: { userId?: string; limit?: number }) => d)
   .handler(async ({ data, context }) => {
     const target = data.userId ?? context.userId;
     const limit = data.limit ?? 100;
@@ -45,7 +45,7 @@ export const listProgressPhotos = createServerFn({ method: "GET" })
 
 export const registerProgressPhoto = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { file_path: string; pose: ProgressPose; taken_on?: string; note?: string }) =>
+  .validator((d: { file_path: string; pose: ProgressPose; taken_on?: string; note?: string }) =>
     z
       .object({
         file_path: z.string().min(1),
@@ -73,7 +73,7 @@ export const registerProgressPhoto = createServerFn({ method: "POST" })
 
 export const deleteProgressPhoto = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
+  .validator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: row, error: e1 } = await context.supabase
       .from("progress_photos")

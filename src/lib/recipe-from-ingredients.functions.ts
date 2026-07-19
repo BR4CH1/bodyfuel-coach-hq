@@ -3,7 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export const generateRecipeFromIngredients = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { ingredients: string; goal?: string }) => {
+  .validator((d: { ingredients: string; goal?: string }) => {
     if (!d.ingredients?.trim()) throw new Error("Bitte Zutaten angeben.");
     return d;
   })

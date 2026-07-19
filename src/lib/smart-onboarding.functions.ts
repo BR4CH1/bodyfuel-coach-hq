@@ -46,7 +46,7 @@ export type SmartOnboardingInput = {
 
 export const completeSmartOnboarding = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: SmartOnboardingInput) => d)
+  .validator((d: SmartOnboardingInput) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 

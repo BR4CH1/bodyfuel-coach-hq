@@ -75,7 +75,7 @@ const submitSchema = z.object({
 
 export const submitPerformanceTest = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((raw: unknown) => submitSchema.parse(raw))
+  .validator((raw: unknown) => submitSchema.parse(raw))
   .handler(async ({ data, context }) => {
     await assertBulls(context.supabase, context.userId);
 
@@ -119,7 +119,7 @@ export const submitPerformanceTest = createServerFn({ method: "POST" })
 /** Create a signed upload URL for video upload. Client uploads directly to Storage. */
 export const createVideoUploadUrl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { test_id: string; ext?: string }) => d)
+  .validator((d: { test_id: string; ext?: string }) => d)
   .handler(async ({ data, context }) => {
     await assertBulls(context.supabase, context.userId);
     const ext = (data.ext || "mp4").replace(/[^a-z0-9]/gi, "").toLowerCase().slice(0, 5) || "mp4";
@@ -135,7 +135,7 @@ export const createVideoUploadUrl = createServerFn({ method: "POST" })
 /** Signed URL for playback (60 min). Works for own videos, or for coaches for any. */
 export const getVideoSignedUrl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { path: string }) => d)
+  .validator((d: { path: string }) => d)
   .handler(async ({ data, context }) => {
     const { data: signed, error } = await context.supabase.storage
       .from(BUCKET)
@@ -210,7 +210,7 @@ const verifySchema = z.object({
 
 export const decidePerformanceTest = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((raw: unknown) => verifySchema.parse(raw))
+  .validator((raw: unknown) => verifySchema.parse(raw))
   .handler(async ({ data, context }) => {
     if (!(await isCoachOrStaff(context.supabase, context.userId))) {
       throw new Error("Nicht berechtigt");
@@ -250,7 +250,7 @@ export const decidePerformanceTest = createServerFn({ method: "POST" })
 
 export const listAthletePerformanceTests = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((raw: unknown) =>
+  .validator((raw: unknown) =>
     z.object({ userId: z.string().uuid() }).parse(raw),
   )
   .handler(async ({ data, context }) => {

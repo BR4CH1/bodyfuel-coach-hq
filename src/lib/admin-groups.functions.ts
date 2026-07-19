@@ -11,7 +11,7 @@ async function assertCoach(supabase: any, userId: string) {
 
 export const listUserGroups = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { user_id: string }) => d)
+  .validator((d: { user_id: string }) => d)
   .handler(async ({ data, context }) => {
     await assertCoach(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -25,7 +25,7 @@ export const listUserGroups = createServerFn({ method: "POST" })
 
 export const setUserGroup = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { user_id: string; group: GroupName; enabled: boolean }) => d)
+  .validator((d: { user_id: string; group: GroupName; enabled: boolean }) => d)
   .handler(async ({ data, context }) => {
     await assertCoach(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

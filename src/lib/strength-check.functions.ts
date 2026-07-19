@@ -196,7 +196,7 @@ export const getMyStrengthHistory = createServerFn({ method: "GET" })
 
 export const startStrengthCheck = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { bodyweight_kg?: number | null }) => d)
+  .validator((d: { bodyweight_kg?: number | null }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     // Reuse an existing draft if present.
@@ -228,7 +228,7 @@ export const startStrengthCheck = createServerFn({ method: "POST" })
 
 export const saveStrengthResult = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (d: {
       check_id: string;
       test_key: StrengthTestKey;
@@ -271,7 +271,7 @@ export const saveStrengthResult = createServerFn({ method: "POST" })
 
 export const completeStrengthCheck = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { check_id: string; bodyweight_kg?: number | null; notes?: string | null }) => d)
+  .validator((d: { check_id: string; bodyweight_kg?: number | null; notes?: string | null }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: chk } = await supabase
@@ -381,7 +381,7 @@ export const completeStrengthCheck = createServerFn({ method: "POST" })
 
 export const deleteStrengthResult = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { check_id: string; test_key: StrengthTestKey }) => d)
+  .validator((d: { check_id: string; test_key: StrengthTestKey }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { error } = await supabase
@@ -397,7 +397,7 @@ export const deleteStrengthResult = createServerFn({ method: "POST" })
 // Coach: read another user's overview (RLS allows via has_role)
 export const getCustomerStrengthOverview = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { user_id: string }) => d)
+  .validator((d: { user_id: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: isCoach } = await supabase.rpc("has_role", { _user_id: userId, _role: "coach" });

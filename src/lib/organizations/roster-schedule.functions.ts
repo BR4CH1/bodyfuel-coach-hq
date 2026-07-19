@@ -49,7 +49,7 @@ async function assertTeamInOrg(supabase: any, teamId: string, orgId: string) {
 /** Positionsgruppen eines Teams inkl. Anzahl aktiver Spieler. */
 export const listTeamPositionGroups = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { organization_id: string; team_id: string }) => d)
+  .validator((d: { organization_id: string; team_id: string }) => d)
   .handler(async ({ data, context }) => {
     await assertOrgManager(context, data.organization_id);
     await assertTeamInOrg(context.supabase, data.team_id, data.organization_id);
@@ -63,7 +63,7 @@ export const listTeamPositionGroups = createServerFn({ method: "GET" })
 /** Athleten eines Teams, optional gefiltert nach Positionsgruppe + Freitextsuche. */
 export const listTeamAthletesForAssign = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (d: {
       organization_id: string;
       team_id: string;
@@ -120,7 +120,7 @@ export const listTeamAthletesForAssign = createServerFn({ method: "GET" })
 
 export const getGroupTrainingSchedule = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { organization_id: string; team_id: string; position_group: string }) => d)
+  .validator((d: { organization_id: string; team_id: string; position_group: string }) => d)
   .handler(async ({ data, context }) => {
     await assertOrgManager(context, data.organization_id, "manage_training");
     await assertTeamInOrg(context.supabase, data.team_id, data.organization_id);
@@ -135,7 +135,7 @@ export const getGroupTrainingSchedule = createServerFn({ method: "GET" })
 
 export const upsertGroupTrainingSchedule = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (d: {
       organization_id: string;
       team_id: string;
@@ -172,7 +172,7 @@ export const upsertGroupTrainingSchedule = createServerFn({ method: "POST" })
 
 export const getAthleteTrainingSchedule = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { organization_id: string; user_id: string; team_id?: string | null }) => d)
+  .validator((d: { organization_id: string; user_id: string; team_id?: string | null }) => d)
   .handler(async ({ data, context }) => {
     await assertOrgManager(context, data.organization_id, "manage_training");
     const { data: rows, error } = await context.supabase
@@ -185,7 +185,7 @@ export const getAthleteTrainingSchedule = createServerFn({ method: "GET" })
 
 export const upsertAthleteTrainingSchedule = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (d: {
       organization_id: string;
       user_id: string;
@@ -223,7 +223,7 @@ export const upsertAthleteTrainingSchedule = createServerFn({ method: "POST" })
 
 export const getTeamNutritionSchedule = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { organization_id: string; team_id: string }) => d)
+  .validator((d: { organization_id: string; team_id: string }) => d)
   .handler(async ({ data, context }) => {
     await assertOrgManager(context, data.organization_id, "manage_nutrition");
     await assertTeamInOrg(context.supabase, data.team_id, data.organization_id);
@@ -237,7 +237,7 @@ export const getTeamNutritionSchedule = createServerFn({ method: "GET" })
 
 export const upsertTeamNutritionSchedule = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (d: {
       organization_id: string;
       team_id: string;
@@ -270,7 +270,7 @@ export const upsertTeamNutritionSchedule = createServerFn({ method: "POST" })
 
 export const getGroupNutritionSchedule = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { organization_id: string; team_id: string; position_group: string }) => d)
+  .validator((d: { organization_id: string; team_id: string; position_group: string }) => d)
   .handler(async ({ data, context }) => {
     await assertOrgManager(context, data.organization_id, "manage_nutrition");
     await assertTeamInOrg(context.supabase, data.team_id, data.organization_id);
@@ -285,7 +285,7 @@ export const getGroupNutritionSchedule = createServerFn({ method: "GET" })
 
 export const upsertGroupNutritionSchedule = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (d: {
       organization_id: string;
       team_id: string;
@@ -320,7 +320,7 @@ export const upsertGroupNutritionSchedule = createServerFn({ method: "POST" })
 
 export const getAthleteNutritionSchedule = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { organization_id: string; user_id: string }) => d)
+  .validator((d: { organization_id: string; user_id: string }) => d)
   .handler(async ({ data, context }) => {
     await assertOrgManager(context, data.organization_id, "manage_nutrition");
     const { data: rows, error } = await context.supabase
@@ -333,7 +333,7 @@ export const getAthleteNutritionSchedule = createServerFn({ method: "GET" })
 
 export const upsertAthleteNutritionSchedule = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (d: {
       organization_id: string;
       user_id: string;

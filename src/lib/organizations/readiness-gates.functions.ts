@@ -22,7 +22,7 @@ export type OrgReadinessGateSummary = {
  */
 export const getOrgReadinessGateSummary = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { orgId: string; days?: number }) => ({
+  .validator((d: { orgId: string; days?: number }) => ({
     orgId: String(d.orgId),
     days: d.days ?? 14,
   }))
