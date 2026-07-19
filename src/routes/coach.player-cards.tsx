@@ -49,7 +49,7 @@ function CoachPlayerCardsPage() {
   const listFn = useServerFn(listCoachPlayerCards);
 
   useEffect(() => {
-    if (!sessionLoading && !supabaseUser) navigate({ to: "/auth" });
+    if (!sessionLoading && !supabaseUser) navigate({ to: "/auth", search: { next: undefined } });
   }, [sessionLoading, supabaseUser, navigate]);
 
   const q = useQuery({

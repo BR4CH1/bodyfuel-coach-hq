@@ -65,7 +65,7 @@ function RankingPage() {
   const listFn = useServerFn(listCoachPlayerCards);
 
   useEffect(() => {
-    if (!loading && !supabaseUser) navigate({ to: "/auth" });
+    if (!loading && !supabaseUser) navigate({ to: "/auth", search: { next: undefined } });
   }, [loading, supabaseUser, navigate]);
 
   const orgsQ = useQuery({

@@ -39,7 +39,7 @@ function CoachPage() {
   useEffect(() => {
     if (sessionLoading) return;
     if (!supabaseUser) {
-      navigate({ to: "/auth" });
+      navigate({ to: "/auth", search: { next: undefined } });
       return;
     }
     if (accessQ.isSuccess && !canCoach) {

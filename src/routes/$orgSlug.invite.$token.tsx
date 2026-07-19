@@ -149,7 +149,7 @@ function InviteAccept() {
           {error ?? "Diese Einladung existiert nicht mehr."}
         </p>
         <Button asChild className="mt-6" variant="outline">
-          <Link to="/auth">Zum Login</Link>
+          <Link to="/auth" search={{ next: undefined }}>Zum Login</Link>
         </Button>
       </Centered>
     );
@@ -168,7 +168,7 @@ function InviteAccept() {
           Bitte die Vereinsleitung um eine neue Einladung.
         </p>
         <Button asChild className="mt-6" variant="outline">
-          <Link to="/auth">Zum Login</Link>
+          <Link to="/auth" search={{ next: undefined }}>Zum Login</Link>
         </Button>
       </Centered>
     );

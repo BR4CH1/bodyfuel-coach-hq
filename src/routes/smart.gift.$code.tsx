@@ -210,7 +210,7 @@ function GiftRedeemPage() {
                 </Button>
                 <p className="text-center text-xs text-muted-foreground">
                   Schon dabei?{" "}
-                  <Link to="/auth" className="text-gold hover:underline">Einloggen</Link>
+                  <Link to="/auth" search={{ next: undefined }} className="text-gold hover:underline">Einloggen</Link>
                   {" "}und Link erneut öffnen.
                 </p>
               </form>

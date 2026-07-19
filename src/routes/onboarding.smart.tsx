@@ -126,7 +126,7 @@ function SmartOnboardingPage() {
   const completeFn = useServerFn(completeSmartOnboarding);
 
   useEffect(() => {
-    if (!loading && !supabaseUser) navigate({ to: "/auth" });
+    if (!loading && !supabaseUser) navigate({ to: "/auth", search: { next: undefined } });
   }, [loading, supabaseUser, navigate]);
 
   const { data: status } = useQuery({
