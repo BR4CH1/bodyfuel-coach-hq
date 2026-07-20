@@ -11,7 +11,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
  */
 export const backfillNutritionRecalcAll = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((data: { horizonDays?: number; orgId?: string | null }) => data)
+  .inputValidator((data: { horizonDays?: number; orgId?: string | null }) => data)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 

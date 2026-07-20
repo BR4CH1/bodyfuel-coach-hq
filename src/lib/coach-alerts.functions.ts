@@ -630,7 +630,7 @@ export const getCoachActionAlerts = createServerFn({ method: "GET" })
 
 export const resolveCoachAlert = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (input: {
       alert: CoachActionAlert;
       action: "done" | "ignored";
@@ -664,7 +664,7 @@ export const resolveCoachAlert = createServerFn({ method: "POST" })
 
 export const unresolveCoachAlert = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((input: { alert_key: string }) => input)
+  .inputValidator((input: { alert_key: string }) => input)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     await assertCoach(supabase, userId);

@@ -54,7 +54,7 @@ function applyCheckedToItems(items: ShoppingItem[], itemKey: string, checked: bo
  */
 export const generateShoppingList = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (d: { days?: number; plan_id?: string; force?: boolean; scope?: "individual" | "combined" }) =>
       d,
   )
@@ -180,7 +180,7 @@ export const generateShoppingList = createServerFn({ method: "POST" })
 
 export const setShoppingItemChecked = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (d: {
       plan_id: string;
       scope: "individual" | "combined";
@@ -397,7 +397,7 @@ export const getMyShoppingLists = createServerFn({ method: "GET" })
  */
 export const getPlanContent = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { plan_id: string }) => d)
+  .inputValidator((d: { plan_id: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

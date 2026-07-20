@@ -57,7 +57,7 @@ function currentBerlinYearMonth(): { year: number; month: number } {
 // ================================================
 export const getOrgMonthlyRanking = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { slug: string; year?: number; month?: number }) => {
+  .inputValidator((d: { slug: string; year?: number; month?: number }) => {
     const fb = currentBerlinYearMonth();
     return {
       slug: String(d.slug),
@@ -97,7 +97,7 @@ export const getOrgMonthlyRanking = createServerFn({ method: "GET" })
 // ================================================
 export const getOrgMyScore = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { slug: string; year?: number; month?: number }) => {
+  .inputValidator((d: { slug: string; year?: number; month?: number }) => {
     const fb = currentBerlinYearMonth();
     return {
       slug: String(d.slug),
@@ -155,7 +155,7 @@ export const getOrgMyScore = createServerFn({ method: "GET" })
 // ================================================
 export const getOrgMyHistory = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { slug: string; limit?: number }) => ({
+  .inputValidator((d: { slug: string; limit?: number }) => ({
     slug: String(d.slug),
     limit: Math.min(Math.max(d.limit ?? 40, 1), 200),
   }))
@@ -181,7 +181,7 @@ export const getOrgMyHistory = createServerFn({ method: "GET" })
 // ================================================
 export const getOrgHallOfFame = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { slug: string; limit?: number }) => ({
+  .inputValidator((d: { slug: string; limit?: number }) => ({
     slug: String(d.slug),
     limit: Math.min(Math.max(d.limit ?? 12, 1), 60),
   }))
@@ -202,7 +202,7 @@ export const getOrgHallOfFame = createServerFn({ method: "GET" })
 // ================================================
 export const adjustOrgPointsManual = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: {
+  .inputValidator((d: {
     slug: string;
     userId: string;
     points: number;
@@ -242,7 +242,7 @@ export const adjustOrgPointsManual = createServerFn({ method: "POST" })
 // ================================================
 export const finalizeOrgMonthNow = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { slug: string; year: number; month: number }) => ({
+  .inputValidator((d: { slug: string; year: number; month: number }) => ({
     slug: String(d.slug),
     year: Number(d.year),
     month: Number(d.month),

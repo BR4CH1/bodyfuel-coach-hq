@@ -7,7 +7,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export const getOrgPerformanceFramework = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { organization_id: string }) => d)
+  .inputValidator((d: { organization_id: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const { data: framework } = await supabase
@@ -49,7 +49,7 @@ export const getOrgPerformanceFramework = createServerFn({ method: "GET" })
 
 export const createBattery = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { framework_id: string; organization_id: string; name: string; description?: string; recommended_retest_days?: number | null }) => d)
+  .inputValidator((d: { framework_id: string; organization_id: string; name: string; description?: string; recommended_retest_days?: number | null }) => d)
   .handler(async ({ data, context }) => {
     const { data: row, error } = await context.supabase
       .from("performance_test_batteries")
@@ -69,7 +69,7 @@ export const createBattery = createServerFn({ method: "POST" })
 
 export const createTestDefinition = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: {
+  .inputValidator((d: {
     battery_id: string;
     key: string;
     name: string;
@@ -110,7 +110,7 @@ export const createTestDefinition = createServerFn({ method: "POST" })
 
 export const createMetricDefinition = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: {
+  .inputValidator((d: {
     framework_id: string;
     key: string;
     name: string;
@@ -144,7 +144,7 @@ export const createMetricDefinition = createServerFn({ method: "POST" })
 
 export const upsertDomainMetricWeight = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { framework_id: string; domain_id: string; metric_definition_id: string; weight: number }) => d)
+  .inputValidator((d: { framework_id: string; domain_id: string; metric_definition_id: string; weight: number }) => d)
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("performance_domain_metric_weights")
@@ -155,7 +155,7 @@ export const upsertDomainMetricWeight = createServerFn({ method: "POST" })
 
 export const upsertPositionDomainWeight = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { position_profile_id: string; domain_id: string; weight: number }) => d)
+  .inputValidator((d: { position_profile_id: string; domain_id: string; weight: number }) => d)
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("performance_position_domain_weights")
@@ -170,7 +170,7 @@ export const upsertPositionDomainWeight = createServerFn({ method: "POST" })
 
 export const listPerformanceSessions = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { organization_id: string }) => d)
+  .inputValidator((d: { organization_id: string }) => d)
   .handler(async ({ data, context }) => {
     const { data: rows } = await context.supabase
       .from("performance_test_sessions")
@@ -182,7 +182,7 @@ export const listPerformanceSessions = createServerFn({ method: "GET" })
 
 export const createPerformanceSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: {
+  .inputValidator((d: {
     organization_id: string;
     battery_id: string;
     name: string;
@@ -242,7 +242,7 @@ export const createPerformanceSession = createServerFn({ method: "POST" })
 
 export const updatePerformanceSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { session_id: string; patch: Partial<{ name: string; test_date: string; location: string | null; entry_mode: "by_test" | "by_athlete"; measurement_method_default: string | null; notes: string | null; test_day: "field" | "strength" | "full" | null }> }) => d)
+  .inputValidator((d: { session_id: string; patch: Partial<{ name: string; test_date: string; location: string | null; entry_mode: "by_test" | "by_athlete"; measurement_method_default: string | null; notes: string | null; test_day: "field" | "strength" | "full" | null }> }) => d)
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("performance_test_sessions")
@@ -254,7 +254,7 @@ export const updatePerformanceSession = createServerFn({ method: "POST" })
 
 export const startPerformanceSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { session_id: string }) => d)
+  .inputValidator((d: { session_id: string }) => d)
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("performance_test_sessions")
@@ -266,7 +266,7 @@ export const startPerformanceSession = createServerFn({ method: "POST" })
 
 export const cancelPerformanceSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { session_id: string }) => d)
+  .inputValidator((d: { session_id: string }) => d)
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("performance_test_sessions")
@@ -278,7 +278,7 @@ export const cancelPerformanceSession = createServerFn({ method: "POST" })
 
 export const upsertSessionBodyweightSnapshot = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { session_id: string; organization_id: string; user_id: string; weight_kg: number; source?: string }) => d)
+  .inputValidator((d: { session_id: string; organization_id: string; user_id: string; weight_kg: number; source?: string }) => d)
   .handler(async ({ data, context }) => {
     // Delete existing bodyweight_kg snapshot for this session/user, then insert.
     await context.supabase
@@ -309,7 +309,7 @@ export const upsertSessionBodyweightSnapshot = createServerFn({ method: "POST" }
  */
 export const listOrgAthletesForPerformance = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { organization_id: string; team_id?: string | null }) => d)
+  .inputValidator((d: { organization_id: string; team_id?: string | null }) => d)
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const { data: memberships } = await supabase
@@ -377,7 +377,7 @@ export const listOrgAthletesForPerformance = createServerFn({ method: "GET" })
  */
 export const getPerformanceSessionProgress = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { session_id: string }) => d)
+  .inputValidator((d: { session_id: string }) => d)
   .handler(async ({ data, context }) => {
     const { computeTestResult } = await import("./test-result");
     const { supabase } = context;
@@ -433,7 +433,7 @@ export const getPerformanceSessionProgress = createServerFn({ method: "GET" })
 
 export const getPerformanceSession = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { session_id: string }) => d)
+  .inputValidator((d: { session_id: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const { data: session } = await supabase.from("performance_test_sessions").select("*").eq("id", data.session_id).single();
@@ -459,7 +459,7 @@ export const getPerformanceSession = createServerFn({ method: "GET" })
 
 export const addTestAttempt = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: {
+  .inputValidator((d: {
     session_id: string;
     user_id: string;
     test_definition_id: string;
@@ -493,7 +493,7 @@ export const addTestAttempt = createServerFn({ method: "POST" })
 
 export const invalidateAttempt = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { attempt_id: string; reason: string }) => d)
+  .inputValidator((d: { attempt_id: string; reason: string }) => d)
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("performance_test_attempts")
@@ -505,7 +505,7 @@ export const invalidateAttempt = createServerFn({ method: "POST" })
 
 export const completePerformanceSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { session_id: string }) => d)
+  .inputValidator((d: { session_id: string }) => d)
   .handler(async ({ data, context }) => {
     const { error: uErr } = await context.supabase
       .from("performance_test_sessions")
@@ -523,7 +523,7 @@ export const completePerformanceSession = createServerFn({ method: "POST" })
 
 export const getAthletePerformanceProfile = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { organization_id: string; user_id?: string }) => d)
+  .inputValidator((d: { organization_id: string; user_id?: string }) => d)
   .handler(async ({ data, context }) => {
     const uid = data.user_id ?? context.userId;
     const { supabase } = context;
@@ -558,7 +558,7 @@ export const getAthletePerformanceProfile = createServerFn({ method: "GET" })
 
 export const getPerformanceTeamMatrix = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { organization_id: string }) => d)
+  .inputValidator((d: { organization_id: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const { data: profiles } = await supabase
@@ -594,7 +594,7 @@ export const getPerformanceTeamMatrix = createServerFn({ method: "GET" })
 
 export const upsertCoachFocusArea = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { organization_id: string; user_id: string; framework_id: string; domain_id?: string | null; label: string; priority: number; status?: "suggested" | "confirmed" | "dismissed"; id?: string }) => d)
+  .inputValidator((d: { organization_id: string; user_id: string; framework_id: string; domain_id?: string | null; label: string; priority: number; status?: "suggested" | "confirmed" | "dismissed"; id?: string }) => d)
   .handler(async ({ data, context }) => {
     if (data.id) {
       const { error } = await context.supabase
@@ -621,7 +621,7 @@ export const upsertCoachFocusArea = createServerFn({ method: "POST" })
 
 export const removeCoachFocusArea = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { id: string }) => d)
+  .inputValidator((d: { id: string }) => d)
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("performance_athlete_focus_areas").delete().eq("id", data.id);
     if (error) throw new Error(error.message);

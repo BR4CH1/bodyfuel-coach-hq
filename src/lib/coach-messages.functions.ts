@@ -35,7 +35,7 @@ async function assertCoach(ctx: { supabase: any; userId: string }) {
 // === Client: send to coach ===
 export const sendMessageToCoach = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { body: string }) => d)
+  .inputValidator((d: { body: string }) => d)
   .handler(async ({ data, context }) => {
     const body = (data.body ?? "").trim();
     if (!body) throw new Error("Nachricht darf nicht leer sein");
@@ -95,7 +95,7 @@ export const getMyUnreadCount = createServerFn({ method: "GET" })
 // === Coach: send to single client ===
 export const sendMessageToClient = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { userId: string; body: string }) => d)
+  .inputValidator((d: { userId: string; body: string }) => d)
   .handler(async ({ data, context }) => {
     await assertCoach(context);
     const body = (data.body ?? "").trim();
@@ -115,7 +115,7 @@ export const sendMessageToClient = createServerFn({ method: "POST" })
 // === Coach: broadcast to all clients (clients + free) ===
 export const broadcastFromCoach = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { body: string; audience?: "all" | "client" | "free" }) => d)
+  .inputValidator((d: { body: string; audience?: "all" | "client" | "free" }) => d)
   .handler(async ({ data, context }) => {
     await assertCoach(context);
     const body = (data.body ?? "").trim();
@@ -222,7 +222,7 @@ export const getCoachInbox = createServerFn({ method: "GET" })
 // === Coach: get one thread ===
 export const getThreadForClient = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { userId: string }) => d)
+  .inputValidator((d: { userId: string }) => d)
   .handler(async ({ data, context }) => {
     await assertCoach(context);
     const { data: msgs, error } = await context.supabase
@@ -237,7 +237,7 @@ export const getThreadForClient = createServerFn({ method: "GET" })
 // === Coach: mark thread read ===
 export const markThreadReadByCoach = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { userId: string }) => d)
+  .inputValidator((d: { userId: string }) => d)
   .handler(async ({ data, context }) => {
     await assertCoach(context);
     const { error } = await context.supabase

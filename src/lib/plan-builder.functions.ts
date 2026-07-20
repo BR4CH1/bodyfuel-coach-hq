@@ -82,7 +82,7 @@ export const listMealLibrary = createServerFn({ method: "GET" })
 
 export const getCustomerPlanContext = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { customerId: string }) => d)
+  .inputValidator((d: { customerId: string }) => d)
   .handler(async ({ data, context }): Promise<CustomerPlanContext> => {
     await assertCoachOrOrgStaffForAthlete(context, data.customerId, "nutrition");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -231,7 +231,7 @@ async function persistBuilderPlan(
 
 export const saveBuilderPlan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (d: {
       customerId: string;
       title: string;
@@ -252,7 +252,7 @@ export const saveBuilderPlan = createServerFn({ method: "POST" })
  */
 export const saveBuilderPartnerPlan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (d: {
       customerId: string;
       partnerId: string;
@@ -346,7 +346,7 @@ export type LoadedBuilderPlan = {
 
 export const loadNutritionPlanForBuilder = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { planId: string }) => d)
+  .inputValidator((d: { planId: string }) => d)
   .handler(async ({ data, context }): Promise<LoadedBuilderPlan> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: plan, error: pErr } = await supabaseAdmin

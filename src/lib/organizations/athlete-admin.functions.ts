@@ -10,7 +10,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
  */
 export const deleteOrgAthlete = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((data: { org_id: string; user_id: string }) => data)
+  .inputValidator((data: { org_id: string; user_id: string }) => data)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     if (data.user_id === userId) {
@@ -59,7 +59,7 @@ export const deleteOrgAthlete = createServerFn({ method: "POST" })
  */
 export const removeAthleteFromOrg = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((data: { org_id: string; user_id: string }) => data)
+  .inputValidator((data: { org_id: string; user_id: string }) => data)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     if (data.user_id === userId) {

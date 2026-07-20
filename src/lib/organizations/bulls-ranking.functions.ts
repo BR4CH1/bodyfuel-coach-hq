@@ -75,7 +75,7 @@ async function assertBullsAccess(supabase: any, userId: string): Promise<"admin"
 // ================================================
 export const getBullsRanking = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { timeframe?: Timeframe; teamId?: string | null; position?: string | null }) => ({
+  .inputValidator((d: { timeframe?: Timeframe; teamId?: string | null; position?: string | null }) => ({
     timeframe: (d.timeframe ?? "season") as Timeframe,
     teamId: d.teamId ?? null,
     position: d.position?.trim() || null,
@@ -100,7 +100,7 @@ export const getBullsRanking = createServerFn({ method: "GET" })
 // ================================================
 export const getBullsMyScore = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { timeframe?: Timeframe }) => ({ timeframe: (d.timeframe ?? "season") as Timeframe }))
+  .inputValidator((d: { timeframe?: Timeframe }) => ({ timeframe: (d.timeframe ?? "season") as Timeframe }))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     await assertBullsAccess(supabase, userId);
@@ -147,7 +147,7 @@ export const getBullsMyScore = createServerFn({ method: "GET" })
 // ================================================
 export const getBullsMyHistory = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { limit?: number }) => ({ limit: Math.min(Math.max(d.limit ?? 40, 1), 200) }))
+  .inputValidator((d: { limit?: number }) => ({ limit: Math.min(Math.max(d.limit ?? 40, 1), 200) }))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     await assertBullsAccess(supabase, userId);
@@ -186,7 +186,7 @@ export const listBullsTeams = createServerFn({ method: "GET" })
 // ================================================
 export const adjustBullsPointsManual = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: {
+  .inputValidator((d: {
     userId: string;
     points: number;
     reason: string;
@@ -247,7 +247,7 @@ function currentBerlinYearMonth(): { year: number; month: number } {
 
 export const getBullsMonthlyRanking = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { year?: number; month?: number }) => {
+  .inputValidator((d: { year?: number; month?: number }) => {
     const fallback = currentBerlinYearMonth();
     return {
       year: Number.isFinite(d.year) ? Number(d.year) : fallback.year,
@@ -284,7 +284,7 @@ export const getBullsMonthlyRanking = createServerFn({ method: "GET" })
 // ================================================
 export const getBullsHallOfFame = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { limit?: number }) => ({ limit: Math.min(Math.max(d.limit ?? 24, 1), 60) }))
+  .inputValidator((d: { limit?: number }) => ({ limit: Math.min(Math.max(d.limit ?? 24, 1), 60) }))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     await assertBullsAccess(supabase, userId);
@@ -317,7 +317,7 @@ export const getBullsMyAwards = createServerFn({ method: "GET" })
 // ================================================
 export const getBullsArchivedMonth = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { year: number; month: number; limit?: number }) => ({
+  .inputValidator((d: { year: number; month: number; limit?: number }) => ({
     year: Number(d.year),
     month: Number(d.month),
     limit: Math.min(Math.max(d.limit ?? 10, 1), 50),
@@ -344,7 +344,7 @@ export const getBullsArchivedMonth = createServerFn({ method: "GET" })
 // ================================================
 export const finalizeBullsMonthNow = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { year: number; month: number }) => ({
+  .inputValidator((d: { year: number; month: number }) => ({
     year: Number(d.year),
     month: Number(d.month),
   }))

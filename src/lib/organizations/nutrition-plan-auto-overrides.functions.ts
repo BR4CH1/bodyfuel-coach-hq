@@ -15,7 +15,7 @@ export type AutoOverrideInfo = {
  */
 export const listAutoOverridesForAthlete = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((data: { fromDate: string; toDate: string }) => data)
+  .inputValidator((data: { fromDate: string; toDate: string }) => data)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: rows, error } = await supabase
