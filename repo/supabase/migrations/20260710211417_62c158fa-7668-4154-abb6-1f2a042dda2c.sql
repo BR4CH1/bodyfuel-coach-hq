@@ -1,0 +1,1 @@
+INSERT INTO organization_features (organization_id, feature, enabled) VALUES ('c6de13a5-6212-41e6-aa11-b4ee8238292f', 'load_management', true) ON CONFLICT (organization_id, feature) DO UPDATE SET enabled = true;

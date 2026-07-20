@@ -1,0 +1,2 @@
+DROP POLICY "plan files: clients read own" ON storage.objects;
+CREATE POLICY "plan files: clients read own" ON storage.objects FOR SELECT TO authenticated USING ((bucket_id = 'nutrition-plans'::text) AND (has_role(auth.uid(), 'coach'::app_role) OR (EXISTS ( SELECT 1 FROM nutrition_plans np WHERE ((np.client_id = auth.uid()) AND (np.file_path = objects.name))))));

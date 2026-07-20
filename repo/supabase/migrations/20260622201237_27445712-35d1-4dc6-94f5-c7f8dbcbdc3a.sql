@@ -1,0 +1,1 @@
+CREATE POLICY "Coaches can view all subscriptions" ON public.subscriptions FOR SELECT TO authenticated USING (public.has_role(auth.uid(), 'coach'::public.app_role));

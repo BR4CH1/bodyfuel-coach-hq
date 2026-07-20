@@ -1,0 +1,37 @@
+import type { Stripe } from "@stripe/stripe-js";
+
+type StripeEnv = "sandbox" | "live";
+
+const clientToken = import.meta.env.VITE_PAYMENTS_CLIENT_TOKEN as string | undefined;
+
+function paymentsEnvironment(): StripeEnv {
+  if (clientToken?.startsWith("pk_test_")) return "sandbox";
+  if (clientToken?.startsWith("pk_live_")) return "live";
+  throw new Error(
+    "Bezahlung ist für diesen Build noch nicht konfiguriert. Bitte den Go-Live-Prozess abschließen.",
+  );
+}
+
+let stripePromise: Promise<Stripe | null> | null = null;
+
+export function getStripe(): Promise<Stripe | null> {
+  if (!stripePromise) {
+    stripePromise = (async () => {
+      if (import.meta.env.SSR) return null;
+      paymentsEnvironment();
+      const { loadStripe } = await import("@stripe/stripe-js");
+      return loadStripe(clientToken as string);
+    })();
+  }
+  return stripePromise;
+}
+
+export function getStripeEnvironment(): StripeEnv {
+  return paymentsEnvironment();
+}
+
+export function isPaymentsConfigured(): boolean {
+  return (
+    !!clientToken && (clientToken.startsWith("pk_test_") || clientToken.startsWith("pk_live_"))
+  );
+}

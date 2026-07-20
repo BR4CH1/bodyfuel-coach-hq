@@ -1,0 +1,2 @@
+CREATE POLICY "coach read all measurements" ON public.body_measurements FOR SELECT TO authenticated USING (has_role(auth.uid(), 'coach'::app_role));
+CREATE POLICY "coach read all food" ON public.food_entries FOR SELECT TO authenticated USING (has_role(auth.uid(), 'coach'::app_role));

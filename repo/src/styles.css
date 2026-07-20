@@ -1,0 +1,398 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --font-display: "Oswald", "Inter", sans-serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+}
+
+:root {
+  --radius: 0.75rem;
+
+  /* Dark sport theme — black & gold */
+  --background: oklch(0.14 0.005 250);
+  --foreground: oklch(0.97 0.005 90);
+
+  --card: oklch(0.18 0.006 250);
+  --card-foreground: oklch(0.97 0.005 90);
+
+  --popover: oklch(0.18 0.006 250);
+  --popover-foreground: oklch(0.97 0.005 90);
+
+  --primary: oklch(0.68 0.17 148);          /* green */
+  --primary-foreground: oklch(0.16 0.01 250);
+
+  --gold: oklch(0.72 0.18 148);
+  --gold-soft: oklch(0.82 0.14 150);
+
+  --secondary: oklch(0.24 0.008 250);
+  --secondary-foreground: oklch(0.97 0.005 90);
+
+  --muted: oklch(0.22 0.006 250);
+  --muted-foreground: oklch(0.68 0.012 250);
+
+  --accent: oklch(0.30 0.06 148);
+  --accent-foreground: oklch(0.97 0.005 90);
+
+  --destructive: oklch(0.62 0.22 25);
+  --destructive-foreground: oklch(0.98 0 0);
+
+  --success: oklch(0.74 0.17 145);
+  --warning: oklch(0.78 0.18 60);
+
+  --border: oklch(0.28 0.008 250);
+  --input: oklch(0.24 0.008 250);
+  --ring: oklch(0.72 0.18 148);
+
+  --chart-1: oklch(0.72 0.18 148);
+  --chart-2: oklch(0.82 0.14 150);
+  --chart-3: oklch(0.7 0.15 220);
+  --chart-4: oklch(0.62 0.22 25);
+  --chart-5: oklch(0.78 0.18 60);
+}
+
+@layer base {
+  * { border-color: var(--color-border); }
+  html, body { background-color: var(--color-background); color: var(--color-foreground); }
+  body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+  h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: 0.01em; }
+}
+
+/* Green gradient utilities */
+@utility text-gradient-gold {
+  background: linear-gradient(135deg, oklch(0.82 0.16 150) 0%, oklch(0.62 0.18 148) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@utility bg-gradient-gold {
+  background: linear-gradient(135deg, oklch(0.78 0.17 150) 0%, oklch(0.58 0.18 148) 100%);
+}
+
+@utility shadow-gold {
+  box-shadow: 0 10px 30px -10px oklch(0.72 0.18 148 / 0.4);
+}
+
+/* Bulls (Coesfeld Bulls) brand tokens */
+:root {
+  --bulls-red: oklch(0.62 0.22 25);
+  --bulls-red-bright: oklch(0.68 0.24 25);
+  --bulls-black: oklch(0.10 0.005 250);
+}
+
+@utility bg-bulls-red {
+  background-color: var(--bulls-red);
+}
+@utility text-bulls-red {
+  color: var(--bulls-red);
+}
+@utility border-bulls-red {
+  border-color: var(--bulls-red);
+}
+@utility bg-gradient-bulls {
+  background: linear-gradient(135deg, var(--bulls-red-bright) 0%, var(--bulls-red) 100%);
+}
+@utility shadow-bulls {
+  box-shadow: 0 10px 30px -10px var(--bulls-red);
+}
+
+/* -----------------------------------------------------------------
+ * Bulls theme — remaps BodyFuel "gold" tokens to Bulls red inside
+ * `.bulls-theme` scope. Any Smart component using text-gold /
+ * bg-gold / border-gold / ring-gold / var(--gold) automatically
+ * re-brands. Applied by BullsGate and OrgAthleteLayout (slug=bulls).
+ * ----------------------------------------------------------------- */
+.bulls-theme {
+  --gold: var(--bulls-red);
+  --gold-soft: var(--bulls-red-bright);
+  --primary: var(--bulls-red);
+  --ring: var(--bulls-red);
+  --accent: oklch(0.30 0.08 25);
+}
+.bulls-theme .bg-gradient-gold,
+.bulls-theme [class~="bg-gradient-gold"] {
+  background: linear-gradient(135deg, var(--bulls-red-bright) 0%, var(--bulls-red) 100%) !important;
+}
+.bulls-theme .text-gradient-gold,
+.bulls-theme [class~="text-gradient-gold"] {
+  background: linear-gradient(135deg, var(--bulls-red-bright) 0%, var(--bulls-red) 100%) !important;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.bulls-theme .shadow-gold,
+.bulls-theme [class~="shadow-gold"] {
+  box-shadow: 0 10px 30px -10px var(--bulls-red) !important;
+}
+
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+}
+
+/* ────────────────────────────────────────────────────────────
+ * Player Cards
+ * ──────────────────────────────────────────────────────────── */
+:root {
+  --pc-frame-metal: linear-gradient(160deg, #4a4d55 0%, #cfd3dc 18%, #7a7e88 42%, #1e1f24 62%, #cfd3dc 82%, #4a4d55 100%);
+}
+
+@utility pc-flip-3d {
+  perspective: 1600px;
+}
+@utility pc-flip-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 700ms cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+@utility pc-flip-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+@utility pc-flip-back {
+  transform: rotateY(180deg);
+}
+@utility pc-flip-active {
+  transform: rotateY(180deg);
+}
+
+@utility pc-metal-frame {
+  background: var(--pc-frame-metal);
+}
+@utility pc-tier-glow-bronze {
+  box-shadow: 0 0 0 2px rgba(201, 138, 91, 0.4), 0 20px 60px -20px rgba(201, 138, 91, 0.5);
+}
+@utility pc-tier-glow-silver {
+  box-shadow: 0 0 0 2px rgba(207, 211, 220, 0.4), 0 20px 60px -20px rgba(207, 211, 220, 0.5);
+}
+@utility pc-tier-glow-gold {
+  box-shadow: 0 0 0 2px rgba(242, 201, 76, 0.4), 0 20px 60px -20px rgba(242, 201, 76, 0.55);
+}
+@utility pc-tier-glow-elite {
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.5), 0 20px 60px -20px rgba(220, 38, 38, 0.6);
+}
+@utility pc-tier-glow-legendary {
+  box-shadow: 0 0 0 2px rgba(213, 0, 249, 0.55), 0 20px 60px -20px rgba(213, 0, 249, 0.6);
+}
+
+@keyframes pc-badge-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.55), inset 0 0 12px rgba(250, 204, 21, 0.35); }
+  50%      { box-shadow: 0 0 0 6px rgba(250, 204, 21, 0), inset 0 0 18px rgba(250, 204, 21, 0.55); }
+}
+@utility pc-badge-new {
+  animation: pc-badge-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes pc-fadein {
+  0%   { opacity: 0; transform: translateY(14px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@utility pc-fadein {
+  animation: pc-fadein 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ── Upgrade-Overlay ────────────────────────────────────────── */
+@keyframes pc-upgrade-confetti-fall {
+  0% { transform: translateY(-40px) rotate(0deg); opacity: 0; }
+  10% { opacity: 1; }
+  100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+}
+@utility pc-upgrade-confetti {
+  animation-name: pc-upgrade-confetti-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+@keyframes pc-upgrade-pop-in {
+  0%   { transform: scale(0.7) translateY(20px); opacity: 0; }
+  60%  { transform: scale(1.04) translateY(-4px); opacity: 1; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+@utility pc-upgrade-pop {
+  animation: pc-upgrade-pop-in 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes pc-upgrade-tier-shine {
+  0%, 100% { filter: brightness(1) drop-shadow(0 0 8px rgba(255,255,255,0.2)); }
+  50%      { filter: brightness(1.3) drop-shadow(0 0 22px rgba(255,255,255,0.55)); }
+}
+@utility pc-upgrade-tier {
+  animation: pc-upgrade-tier-shine 2.2s ease-in-out infinite;
+}
+
+@keyframes pc-upgrade-sparkle-rot {
+  0%   { transform: rotate(0deg) scale(1); }
+  50%  { transform: rotate(180deg) scale(1.2); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+@utility pc-upgrade-sparkle {
+  animation: pc-upgrade-sparkle-rot 2s ease-in-out infinite;
+}
+
+/* ---------- Player Card Reveal (Pack Opening) ---------- */
+
+@keyframes pcr-radial-pulse {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50%      { opacity: 0.95; transform: scale(1.08); }
+}
+.pcr-radial { animation: pcr-radial-pulse 2.4s ease-in-out infinite; }
+
+@keyframes pcr-rays-spin {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to   { transform: translate(-50%, -50%) rotate(360deg); }
+}
+.pcr-rays { animation: pcr-rays-spin 22s linear infinite; opacity: 0.65; mix-blend-mode: screen; }
+
+@keyframes pcr-particle-rise {
+  0%   { transform: translateY(110vh) scale(0.6); opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { transform: translateY(-10vh) scale(1.1); opacity: 0; }
+}
+.pcr-particle {
+  position: absolute;
+  bottom: 0;
+  border-radius: 9999px;
+  animation-name: pcr-particle-rise;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes pcr-flash-fade {
+  0%   { opacity: 0; }
+  15%  { opacity: 0.95; }
+  100% { opacity: 0; }
+}
+.pcr-flash { animation: pcr-flash-fade 0.35s ease-out forwards; }
+
+@keyframes pcr-card-intro-kf {
+  0%   { opacity: 0; transform: translate3d(-40vw, 0, -400px) rotateY(-70deg) rotateZ(-8deg) scale(0.6); filter: blur(6px); }
+  60%  { opacity: 1; transform: translate3d(0, 0, -100px) rotateY(-20deg) rotateZ(-2deg) scale(0.85); filter: blur(1px); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0) rotateY(0deg) rotateZ(0deg) scale(1); filter: blur(0); }
+}
+.pcr-card-intro { animation: pcr-card-intro-kf 1.7s cubic-bezier(0.2, 0.9, 0.25, 1.1) forwards; }
+
+@keyframes pcr-card-land-kf {
+  0%   { transform: scale(1.18) translateZ(60px); }
+  40%  { transform: scale(0.96); }
+  70%  { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+.pcr-card-land { animation: pcr-card-land-kf 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.2) forwards; }
+
+@keyframes pcr-shake-kf {
+  0%, 100% { transform: translate(0, 0); }
+  15%      { transform: translate(-6px, 3px); }
+  30%      { transform: translate(5px, -4px); }
+  45%      { transform: translate(-4px, 2px); }
+  60%      { transform: translate(3px, -2px); }
+  80%      { transform: translate(-1px, 1px); }
+}
+.pcr-shake { animation: pcr-shake-kf 0.5s ease-out; }
+
+@keyframes pcr-shine-kf {
+  0%   { transform: translateX(-140%) skewX(-18deg); }
+  100% { transform: translateX(160%) skewX(-18deg); }
+}
+.pcr-shine {
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.08) 40%, rgba(255,255,255,0.55) 50%, rgba(255,255,255,0.08) 60%, transparent 100%);
+  animation: pcr-shine-kf 2.4s ease-in-out infinite;
+  animation-delay: 2.1s;
+  mix-blend-mode: screen;
+}
+
+@keyframes pcr-border-pulse-kf {
+  0%, 100% { opacity: 0.4; }
+  50%      { opacity: 0.9; }
+}
+.pcr-border-pulse { animation: pcr-border-pulse-kf 2.2s ease-in-out infinite; animation-delay: 2s; }
+
+@keyframes pcr-badge-in {
+  0%   { opacity: 0; transform: translateY(12px) scale(0.9); filter: blur(6px); }
+  100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+.pcr-badge > * { animation: pcr-badge-in 0.5s ease-out both; }
+.pcr-badge > *:nth-child(2) { animation-delay: 0.12s; }
+.pcr-badge > *:nth-child(3) { animation-delay: 0.28s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pcr-radial, .pcr-rays, .pcr-particle, .pcr-shine, .pcr-border-pulse { animation: none !important; }
+  .pcr-card-intro, .pcr-card-land, .pcr-shake, .pcr-badge > * { animation-duration: 0.1s !important; }
+}
+
+
+
+/* Fuely mascot animations */
+@keyframes fuely-idle-breath {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-2px) scale(1.02); }
+}
+@keyframes fuely-bounce {
+  0%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-14%); }
+  60% { transform: translateY(0); }
+  75% { transform: translateY(-6%); }
+}
+@keyframes fuely-wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-4deg); }
+  75% { transform: rotate(4deg); }
+}
+@keyframes fuely-float {
+  0%, 100% { transform: translateY(0) rotate(-1deg); }
+  50% { transform: translateY(-6px) rotate(1deg); }
+}
+.fuely-idle { animation: fuely-idle-breath 3.6s ease-in-out infinite; transform-origin: 50% 90%; }
+.fuely-bounce { animation: fuely-bounce 1.4s ease-in-out infinite; transform-origin: 50% 90%; }
+.fuely-wiggle { animation: fuely-wiggle 2.2s ease-in-out infinite; transform-origin: 50% 90%; }
+.fuely-float { animation: fuely-float 4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .fuely-idle, .fuely-bounce, .fuely-wiggle, .fuely-float { animation: none; }
+}
