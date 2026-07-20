@@ -101,6 +101,7 @@ export function buildCoachFollowUps({ view, leads, limit = 3 }: BuildCoachFollow
       reason:
         client._score.reasons.slice(0, 2).join(" · ") || `Coach Score ${client._score.score}/100`,
       message: riskMessage(client.display_name, client._score.reasons),
+      emailSubject: "Kurzer Check-in zu deinem Coaching",
       target: { kind: "customer", userId: client.id },
     });
   });
@@ -118,6 +119,7 @@ export function buildCoachFollowUps({ view, leads, limit = 3 }: BuildCoachFollow
           ? `${plan.kind === "nutrition" ? "Ernährungs" : "Trainings"}plan seit ${Math.abs(plan.days)} Tagen abgelaufen`
           : `${plan.kind === "nutrition" ? "Ernährungs" : "Trainings"}plan läuft in ${plan.days} Tagen aus`,
       message: planMessage(plan.name, plan.days, plan.kind),
+      emailSubject: "Dein BodyFuel Plan – kurze Abstimmung",
       target: { kind: "customer", userId: plan.id },
     });
   });
@@ -132,7 +134,8 @@ export function buildCoachFollowUps({ view, leads, limit = 3 }: BuildCoachFollow
       tone: "attention",
       reason: lead.goal ? `Neue Anfrage: ${lead.goal}` : "Neue Coaching-Anfrage",
       message: leadMessage(lead),
-      target: { kind: "leads" },
+      emailSubject: "Deine Anfrage bei BodyFuel",
+      target: { kind: "lead", leadId: lead.id },
     });
   });
 
@@ -146,6 +149,7 @@ export function buildCoachFollowUps({ view, leads, limit = 3 }: BuildCoachFollow
       tone: "attention",
       reason: client.last_checkin ? "Wochen-Check-in noch offen" : "Noch kein Check-in vorhanden",
       message: checkinMessage(client.display_name),
+      emailSubject: "Dein Wochen-Check-in ist noch offen",
       target: { kind: "customer", userId: client.id },
     });
   });
@@ -160,6 +164,7 @@ export function buildCoachFollowUps({ view, leads, limit = 3 }: BuildCoachFollow
       tone: "attention",
       reason: client.days === null ? "Noch keine Aktivität" : `Seit ${client.days} Tagen inaktiv`,
       message: inactiveMessage(client.display_name, client.days),
+      emailSubject: "Kurzer Check-in von deinem BodyFuel Coach",
       target: { kind: "customer", userId: client.id },
     });
   });

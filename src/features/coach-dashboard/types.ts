@@ -92,7 +92,8 @@ export type CoachBriefingViewModel = {
 
 export type CoachFollowUpTone = "urgent" | "attention" | "info";
 
-export type CoachFollowUpTarget = { kind: "customer"; userId: string } | { kind: "leads" };
+export type CoachFollowUpTarget =
+  { kind: "customer"; userId: string } | { kind: "lead"; leadId: string };
 
 export type CoachFollowUpDraft = {
   id: string;
@@ -101,5 +102,38 @@ export type CoachFollowUpDraft = {
   tone: CoachFollowUpTone;
   reason: string;
   message: string;
+  emailSubject: string;
   target: CoachFollowUpTarget;
+};
+
+export type CoachWorkloadMetric = {
+  label: "Risiko" | "Check-ins" | "Pläne ≤ 3 Tage" | "Leads";
+  value: number;
+  tone: "urgent" | "attention" | "info" | "neutral";
+};
+
+export type CoachWorkloadViewModel = {
+  state: "critical" | "busy" | "steady" | "clear";
+  title: string;
+  summary: string;
+  total: number;
+  metrics: CoachWorkloadMetric[];
+};
+
+export type CoachIntelligenceSignal = {
+  id: string;
+  userId: string;
+  name: string;
+  category: "stagnation" | "risk" | "attention";
+  severity: "urgent" | "attention" | "info";
+  headline: string;
+  detail: string;
+};
+
+export type CoachIntelligenceViewModel = {
+  title: string;
+  summary: string;
+  stagnating: CoachIntelligenceSignal[];
+  atRisk: CoachIntelligenceSignal[];
+  needsAttention: CoachIntelligenceSignal[];
 };

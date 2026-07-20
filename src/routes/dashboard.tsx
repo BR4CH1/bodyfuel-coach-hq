@@ -35,6 +35,8 @@ import {
   CustomerFuelyBriefing,
   CustomerFuelyBriefingSkeleton,
 } from "@/features/customer-dashboard/components/CustomerFuelyBriefing";
+import { CustomerFuelyMomentum } from "@/features/customer-dashboard/components/CustomerFuelyMomentum";
+import { buildCustomerMomentum } from "@/features/customer-dashboard/lib/customer-momentum.logic";
 import { buildCustomerBriefing } from "@/features/customer-dashboard/lib/customer-briefing.logic";
 
 import { useTrial } from "@/hooks/use-trial";
@@ -516,6 +518,7 @@ function RealUserDashboard() {
     hasActivePlan,
     planUnderReview,
   });
+  const fuelyMomentum = buildCustomerMomentum(fuelyBriefing);
 
   return (
     <div className="space-y-6">
@@ -547,6 +550,8 @@ function RealUserDashboard() {
       ) : (
         <CustomerFuelyBriefing briefing={fuelyBriefing} />
       )}
+
+      {!loading && <CustomerFuelyMomentum momentum={fuelyMomentum} />}
 
       {supabaseUser && <AutopilotStatusCard userId={supabaseUser.id} />}
       {supabaseUser && <SmartAnalysisCTA />}

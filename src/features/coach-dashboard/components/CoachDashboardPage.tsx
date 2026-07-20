@@ -10,6 +10,8 @@ import { CoachCustomerOverviewSection } from "@/features/coach-dashboard/compone
 import { CoachDashboardHeader } from "@/features/coach-dashboard/components/CoachDashboardHeader";
 import { CoachFuelyBriefing } from "@/features/coach-dashboard/components/CoachFuelyBriefing";
 import { CoachFuelyFollowUps } from "@/features/coach-dashboard/components/CoachFuelyFollowUps";
+import { CoachFuelyWorkload } from "@/features/coach-dashboard/components/CoachFuelyWorkload";
+import { CoachFuelyIntelligence } from "@/features/coach-dashboard/components/CoachFuelyIntelligence";
 import { CoachPerformanceNotice } from "@/features/coach-dashboard/components/CoachPerformanceNotice";
 import { CoachRankingPanel } from "@/features/coach-dashboard/components/CoachRankingPanel";
 import { SectionHeader } from "@/features/coach-dashboard/components/CoachDashboardPrimitives";
@@ -26,6 +28,8 @@ export function CoachDashboardPage() {
     performancePending,
     briefing,
     followUps,
+    workload,
+    intelligence,
     isLoading,
     isError,
     error,
@@ -58,6 +62,8 @@ export function CoachDashboardPage() {
       {!isLoading && !isError && (
         <div className="space-y-8">
           <CoachFuelyBriefing briefing={briefing} />
+          <CoachFuelyWorkload workload={workload} />
+          <CoachFuelyIntelligence intelligence={intelligence} />
           <CoachFuelyFollowUps drafts={followUps} />
           <CoachDashboardSummary data={radar} />
           <CoachRadarCard data={radar} />

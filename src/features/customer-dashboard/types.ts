@@ -38,3 +38,16 @@ export type CustomerCheckinBriefing = {
   tone: "overdue" | "today" | "soon" | "future" | "review";
   label: string;
 };
+
+export type CustomerMomentumSignal = {
+  label: "Training" | "Messung" | "Tagespunkte";
+  complete: boolean;
+};
+
+export type CustomerMomentumViewModel = {
+  state: "start" | "moving" | "strong" | "complete";
+  title: string;
+  summary: string;
+  completion: number;
+  signals: CustomerMomentumSignal[];
+};

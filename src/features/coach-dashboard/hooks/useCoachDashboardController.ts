@@ -11,6 +11,8 @@ import { loadCoachDashboardData } from "@/features/coach-dashboard/lib/coach-das
 import { buildCoachDashboardViewModel } from "@/features/coach-dashboard/lib/coach-dashboard.logic";
 import { buildCoachBriefing } from "@/features/coach-dashboard/lib/coach-briefing.logic";
 import { buildCoachFollowUps } from "@/features/coach-dashboard/lib/coach-followups.logic";
+import { buildCoachWorkload } from "@/features/coach-dashboard/lib/coach-workload.logic";
+import { buildCoachIntelligence } from "@/features/coach-dashboard/lib/coach-intelligence.logic";
 import type { CoachClient, CoachLead } from "@/features/coach-dashboard/types";
 
 const EMPTY_CLIENTS: CoachClient[] = [];
@@ -64,6 +66,8 @@ export function useCoachDashboardController() {
     [view, leads, performancePending, showPerformanceNavigation],
   );
   const followUps = useMemo(() => buildCoachFollowUps({ view, leads }), [view, leads]);
+  const workload = useMemo(() => buildCoachWorkload(view, leads), [view, leads]);
+  const intelligence = useMemo(() => buildCoachIntelligence(view), [view]);
 
   return {
     clients,
@@ -74,6 +78,8 @@ export function useCoachDashboardController() {
     performancePending,
     briefing,
     followUps,
+    workload,
+    intelligence,
     isLoading: dashboardQuery.isLoading,
     isError: dashboardQuery.isError,
     error: dashboardQuery.error,
