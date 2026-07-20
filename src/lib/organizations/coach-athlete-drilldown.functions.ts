@@ -96,7 +96,7 @@ const CATEGORY_LABELS: Record<"lower" | "push" | "pull" | "core", string> = {
 
 export const getCoachAthleteDetail = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { orgId: string; userId: string }) => ({
+  .inputValidator((d: { orgId: string; userId: string }) => ({
     orgId: String(d.orgId),
     userId: String(d.userId),
   }))

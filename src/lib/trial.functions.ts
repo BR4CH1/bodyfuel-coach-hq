@@ -163,7 +163,7 @@ export const startMyTrial = createServerFn({ method: "POST" })
 /** Coach: Trial verlängern (beliebige Tageszahl 1–365). Verlängert auch abgelaufene Trials. */
 export const coachExtendTrial = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((data: { user_id: string; days: number }) => data)
+  .inputValidator((data: { user_id: string; days: number }) => data)
   .handler(async ({ data, context }) => {
     await assertCoach(context.supabase, context.userId);
     if (!Number.isFinite(data.days) || data.days < 1 || data.days > 365) {
@@ -196,7 +196,7 @@ export const coachExtendTrial = createServerFn({ method: "POST" })
 /** Coach: Neues Trial starten (auch nach Mitgliedschaft / Ablauf). */
 export const coachStartTrial = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((data: { user_id: string; days: number }) => data)
+  .inputValidator((data: { user_id: string; days: number }) => data)
   .handler(async ({ data, context }) => {
     await assertCoach(context.supabase, context.userId);
     if (!Number.isFinite(data.days) || data.days < 1 || data.days > 365) {
@@ -216,7 +216,7 @@ export const coachStartTrial = createServerFn({ method: "POST" })
 /** Coach: Trial sofort beenden. */
 export const coachEndTrial = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((data: { user_id: string }) => data)
+  .inputValidator((data: { user_id: string }) => data)
   .handler(async ({ data, context }) => {
     await assertCoach(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -231,7 +231,7 @@ export const coachEndTrial = createServerFn({ method: "POST" })
 /** Coach: Mitglied aktivieren (schaltet Premiumfunktionen frei). */
 export const coachActivateMember = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((data: { user_id: string }) => data)
+  .inputValidator((data: { user_id: string }) => data)
   .handler(async ({ data, context }) => {
     await assertCoach(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

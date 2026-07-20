@@ -64,7 +64,7 @@ async function assertCanManageRoster(ctx: PermCtx): Promise<void> {
 /** UI-seitige Prüfung: darf der aktuelle User den Kader (der Org) verwalten? */
 export const canManageRoster = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { organization_id: string; team_id?: string | null }) => d)
+  .inputValidator((d: { organization_id: string; team_id?: string | null }) => d)
   .handler(async ({ data, context }) => {
     try {
       await assertCanManageRoster({
@@ -82,7 +82,7 @@ export const canManageRoster = createServerFn({ method: "GET" })
 /** Athleten-Einladung erstellen. Nutzt organization_invites (assigned_role='athlete'). */
 export const createAthleteInvite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (d: {
       organization_id: string;
       team_id: string;
@@ -167,7 +167,7 @@ export const createAthleteInvite = createServerFn({ method: "POST" })
 /** Manuell einen Kaderplatz ohne Account anlegen (pending). */
 export const createPendingRosterAthlete = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (d: {
       organization_id: string;
       team_id: string | null;
@@ -213,7 +213,7 @@ export const createPendingRosterAthlete = createServerFn({ method: "POST" })
 /** Liste pending Roster-Einträge einer Organisation. */
 export const listPendingRosterAthletes = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { organization_id: string }) => d)
+  .inputValidator((d: { organization_id: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const { data: rows, error } = await supabase
@@ -229,7 +229,7 @@ export const listPendingRosterAthletes = createServerFn({ method: "GET" })
 /** Pending Roster-Eintrag löschen. */
 export const deletePendingRosterAthlete = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { id: string }) => d)
+  .inputValidator((d: { id: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: row } = await supabase
@@ -256,7 +256,7 @@ export const deletePendingRosterAthlete = createServerFn({ method: "POST" })
  */
 export const removeAthleteFromTeam = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { organization_id: string; user_id: string; team_id: string }) => d)
+  .inputValidator((d: { organization_id: string; user_id: string; team_id: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     await assertCanManageRoster({
@@ -282,7 +282,7 @@ export const removeAthleteFromTeam = createServerFn({ method: "POST" })
  */
 export const searchExistingAthletes = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { organization_id: string; query: string }) => d)
+  .inputValidator((d: { organization_id: string; query: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     await assertCanManageRoster({ supabase, userId, organization_id: data.organization_id });
@@ -382,7 +382,7 @@ export const searchExistingAthletes = createServerFn({ method: "POST" })
 /** Bestehenden Nutzer direkt einem Team der Organisation hinzufügen. */
 export const addExistingUserToTeam = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (d: {
       organization_id: string;
       team_id: string;

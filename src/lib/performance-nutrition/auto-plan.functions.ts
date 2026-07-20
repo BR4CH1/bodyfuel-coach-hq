@@ -106,7 +106,7 @@ export interface WeekRunSummary {
 
 export const enqueuePerformancePlanJob = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (d: {
       organization_id: string;
       team_id?: string | null;

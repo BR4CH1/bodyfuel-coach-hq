@@ -99,7 +99,7 @@ async function loadPlan(supabase: any, id: string): Promise<PlanSummary | null> 
 
 export const getCustomerPlanOverview = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { user_id: string }) => d)
+  .inputValidator((d: { user_id: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     let db = supabase;
@@ -160,7 +160,7 @@ export const getCustomerPlanOverview = createServerFn({ method: "GET" })
 
 export const transitionPlanStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { plan_id: string; to: PlanStatus }) => d)
+  .inputValidator((d: { plan_id: string; to: PlanStatus }) => d)
   .handler(async ({ data, context }) => {
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -301,7 +301,7 @@ export const transitionPlanStatus = createServerFn({ method: "POST" })
 
 export const deletePlanDraft = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { plan_id: string }) => d)
+  .inputValidator((d: { plan_id: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: plan } = await supabaseAdmin
@@ -323,7 +323,7 @@ export const deletePlanDraft = createServerFn({ method: "POST" })
 
 export const updatePlanScheduling = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (d: {
       plan_id: string;
       scheduled_start_date?: string | null;
@@ -356,7 +356,7 @@ export const updatePlanScheduling = createServerFn({ method: "POST" })
 
 export const setAutoPublish = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { user_id: string; auto_publish: boolean }) => d)
+  .inputValidator((d: { user_id: string; auto_publish: boolean }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const db = data.user_id === userId
@@ -375,7 +375,7 @@ export const setAutoPublish = createServerFn({ method: "POST" })
 
 export const getPlanPreview = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { plan_id: string }) => d)
+  .inputValidator((d: { plan_id: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: plan } = await supabase

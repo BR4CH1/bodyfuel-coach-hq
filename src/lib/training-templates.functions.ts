@@ -42,7 +42,7 @@ export const listTrainingTemplates = createServerFn({ method: "GET" })
 // ---------- Get with latest version structure ----------
 export const getTrainingTemplate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { templateId: string }) => d)
+  .inputValidator((d: { templateId: string }) => d)
   .handler(async ({ data, context }): Promise<TrainingTemplateDetail> => {
     await assertGlobalCoachOrAnyOrgCoach(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -75,7 +75,7 @@ export const getTrainingTemplate = createServerFn({ method: "POST" })
 // ---------- Save as template (create OR new version) ----------
 export const saveAsTrainingTemplate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: {
+  .inputValidator((d: {
     templateId?: string | null;
     name: string;
     description?: string | null;
@@ -143,7 +143,7 @@ export const saveAsTrainingTemplate = createServerFn({ method: "POST" })
 // ---------- Rename ----------
 export const renameTrainingTemplate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { templateId: string; name: string; description?: string | null; tags?: string[] }) => d)
+  .inputValidator((d: { templateId: string; name: string; description?: string | null; tags?: string[] }) => d)
   .handler(async ({ data, context }) => {
     await assertGlobalCoachOrAnyOrgCoach(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -162,7 +162,7 @@ export const renameTrainingTemplate = createServerFn({ method: "POST" })
 // ---------- Duplicate ----------
 export const duplicateTrainingTemplate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { templateId: string }) => d)
+  .inputValidator((d: { templateId: string }) => d)
   .handler(async ({ data, context }): Promise<{ template_id: string }> => {
     await assertGlobalCoachOrAnyOrgCoach(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -206,7 +206,7 @@ export const duplicateTrainingTemplate = createServerFn({ method: "POST" })
 // ---------- Delete (soft archive) ----------
 export const deleteTrainingTemplate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { templateId: string }) => d)
+  .inputValidator((d: { templateId: string }) => d)
   .handler(async ({ data, context }) => {
     await assertGlobalCoachOrAnyOrgCoach(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -221,7 +221,7 @@ export const deleteTrainingTemplate = createServerFn({ method: "POST" })
 // ---------- Assign to athlete (materialize LIVE plan) ----------
 export const assignTemplateToAthlete = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: {
+  .inputValidator((d: {
     templateId: string;
     customerId: string;
     startDate: string; // ISO Monday

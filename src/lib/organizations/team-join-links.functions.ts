@@ -53,7 +53,7 @@ async function assertCanManage(
 
 export const createTeamJoinLink = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { organization_id: string; team_id: string; expires_at?: string | null; max_uses?: number | null }) => d)
+  .inputValidator((d: { organization_id: string; team_id: string; expires_at?: string | null; max_uses?: number | null }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     await assertCanManage(supabase, userId, data.organization_id, data.team_id);
@@ -78,7 +78,7 @@ export const createTeamJoinLink = createServerFn({ method: "POST" })
 
 export const listTeamJoinLinks = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { organization_id: string; team_id: string }) => d)
+  .inputValidator((d: { organization_id: string; team_id: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     await assertCanManage(supabase, userId, data.organization_id, data.team_id);
@@ -101,7 +101,7 @@ export const listTeamJoinLinks = createServerFn({ method: "GET" })
 
 export const revokeTeamJoinLink = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { id: string; organization_id: string; team_id: string }) => d)
+  .inputValidator((d: { id: string; organization_id: string; team_id: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     await assertCanManage(supabase, userId, data.organization_id, data.team_id);
@@ -118,7 +118,7 @@ export const revokeTeamJoinLink = createServerFn({ method: "POST" })
 // ---------------------------------------------------------------------------
 
 export const getTeamJoinLinkPreview = createServerFn({ method: "GET" })
-  .validator((d: { token: string }) => ({ token: String(d.token).trim() }))
+  .inputValidator((d: { token: string }) => ({ token: String(d.token).trim() }))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: link } = await supabaseAdmin
@@ -160,7 +160,7 @@ export const getTeamJoinLinkPreview = createServerFn({ method: "GET" })
 
 export const acceptTeamJoinLink = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { token: string }) => ({ token: String(d.token).trim() }))
+  .inputValidator((d: { token: string }) => ({ token: String(d.token).trim() }))
   .handler(async ({ data, context }) => {
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

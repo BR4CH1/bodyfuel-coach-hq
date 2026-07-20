@@ -60,7 +60,7 @@ async function assertTeamAccess(
 
 export const listTeamTrainingWeeks = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (d: { organization_id: string; team_id: string; from?: string; to?: string }) => d,
   )
   .handler(async ({ data, context }) => {
@@ -79,7 +79,7 @@ export const listTeamTrainingWeeks = createServerFn({ method: "GET" })
 
 export const getTeamTrainingWeek = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (d: { organization_id: string; team_id: string; week_start: string }) => d,
   )
   .handler(async ({ data, context }) => {
@@ -129,7 +129,7 @@ export const getTeamTrainingWeek = createServerFn({ method: "GET" })
 
 export const upsertTeamTrainingWeek = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (d: {
       organization_id: string;
       team_id: string;
@@ -217,7 +217,7 @@ export const upsertTeamTrainingWeek = createServerFn({ method: "POST" })
 
 export const publishTeamTrainingWeek = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (d: { organization_id: string; team_id: string; week_start: string }) => d,
   )
   .handler(async ({ data, context }) => {
@@ -336,7 +336,7 @@ export const publishTeamTrainingWeek = createServerFn({ method: "POST" })
 
 export const getMyTeamTrainingWeeks = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { organization_id?: string | null } | undefined) => d ?? {})
+  .inputValidator((d: { organization_id?: string | null } | undefined) => d ?? {})
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     // Alle aktiven Teams des Users; optional auf eine Organisation eingegrenzt.

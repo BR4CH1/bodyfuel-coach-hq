@@ -171,7 +171,7 @@ async function callFuelyText(system: string, snapshot: any, apiKey: string): Pro
 
 export const getFuelyDailyNote = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((input: { kind: Kind }) => {
+  .inputValidator((input: { kind: Kind }) => {
     if (input?.kind !== "morning" && input?.kind !== "evening") throw new Error("invalid kind");
     return input;
   })
@@ -234,7 +234,7 @@ export const getFuelyDailyNote = createServerFn({ method: "POST" })
 
 export const markFuelyDailyRead = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((input: { id: string }) => input)
+  .inputValidator((input: { id: string }) => input)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     await supabase

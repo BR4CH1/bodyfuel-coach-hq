@@ -18,7 +18,7 @@ async function assertCoach(supabase: any, userId: string) {
 /* ---------------- LEADS (Erstgespräch-Anfragen) ---------------- */
 
 export const submitLead = createServerFn({ method: "POST" })
-  .validator(
+  .inputValidator(
     (data: {
       name: string;
       email: string;
@@ -72,7 +72,7 @@ export const listLeads = createServerFn({ method: "GET" })
 
 export const updateLeadStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (data: { id: string; status: "new" | "contacted" | "converted" | "declined" }) => data,
   )
   .handler(async ({ data, context }) => {
@@ -234,7 +234,7 @@ export const listCustomers = createServerFn({ method: "GET" })
 
 export const createCustomer = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (data: {
       first_name: string;
       last_name: string;
@@ -418,7 +418,7 @@ export const createCustomer = createServerFn({ method: "POST" })
 
 export const getCustomerDetail = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((data: { user_id: string }) => data)
+  .inputValidator((data: { user_id: string }) => data)
   .handler(async ({ data, context }) => {
     await assertCoach(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -501,7 +501,7 @@ export const getCustomerDetail = createServerFn({ method: "POST" })
 
 export const updateCustomerCoachingInfo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (data: {
       user_id: string;
       coaching_goal?: string | null;
@@ -560,7 +560,7 @@ export const updateCustomerCoachingInfo = createServerFn({ method: "POST" })
  */
 export const setCustomerWeight = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((data: { user_id: string; weight_kg: number; measured_at?: string | null }) => data)
+  .inputValidator((data: { user_id: string; weight_kg: number; measured_at?: string | null }) => data)
   .handler(async ({ data, context }) => {
     await assertCoach(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -578,7 +578,7 @@ export const setCustomerWeight = createServerFn({ method: "POST" })
 
 export const getCustomerRecentActivity = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((data: { user_id: string; days?: number }) => data)
+  .inputValidator((data: { user_id: string; days?: number }) => data)
   .handler(async ({ data, context }) => {
     await assertCoach(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -686,7 +686,7 @@ export const getCustomerRecentActivity = createServerFn({ method: "POST" })
 
 export const resendInvite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((data: { user_id: string; origin?: string }) => data)
+  .inputValidator((data: { user_id: string; origin?: string }) => data)
   .handler(async ({ data, context }) => {
     await assertCoach(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -728,7 +728,7 @@ export const resendInvite = createServerFn({ method: "POST" })
 
 export const sendPasswordReset = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((data: { user_id: string; origin?: string }) => data)
+  .inputValidator((data: { user_id: string; origin?: string }) => data)
   .handler(async ({ data, context }) => {
     await assertCoach(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -747,7 +747,7 @@ export const sendPasswordReset = createServerFn({ method: "POST" })
 
 export const setCustomerActive = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((data: { user_id: string; active: boolean }) => data)
+  .inputValidator((data: { user_id: string; active: boolean }) => data)
   .handler(async ({ data, context }) => {
     await assertCoach(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -760,7 +760,7 @@ export const setCustomerActive = createServerFn({ method: "POST" })
 
 export const setCustomerPassword = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((data: { user_id: string; password: string }) => data)
+  .inputValidator((data: { user_id: string; password: string }) => data)
   .handler(async ({ data, context }) => {
     await assertCoach(context.supabase, context.userId);
     if (!data.password || data.password.length < 8) {
@@ -776,7 +776,7 @@ export const setCustomerPassword = createServerFn({ method: "POST" })
 
 export const deleteCustomer = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((data: { user_id: string }) => data)
+  .inputValidator((data: { user_id: string }) => data)
   .handler(async ({ data, context }) => {
     await assertCoach(context.supabase, context.userId);
     if (data.user_id === context.userId) {
@@ -795,7 +795,7 @@ export const deleteCustomer = createServerFn({ method: "POST" })
 
 export const updateCustomerPackage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (data: {
       package_id: string;
       package?: PackageKey;
@@ -854,7 +854,7 @@ export const updateCustomerPackage = createServerFn({ method: "POST" })
 
 export const confirmPayment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((data: { payment_id: string; extend_days?: number }) => data)
+  .inputValidator((data: { payment_id: string; extend_days?: number }) => data)
   .handler(async ({ data, context }) => {
     await assertCoach(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -962,7 +962,7 @@ export const requestRenewal = createServerFn({ method: "POST" })
 
 export const createPackageRequest = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (data: {
       request_type: "renewal" | "change" | "contact";
       requested_package?: PackageKey | null;
@@ -1042,7 +1042,7 @@ export const listPackageRequests = createServerFn({ method: "GET" })
 
 export const updatePackageRequest = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (data: {
       id: string;
       status: "pending" | "approved" | "declined";
@@ -1136,7 +1136,7 @@ function periodStart(period: RankingPeriod): string | null {
 
 export const getRanking = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { period: RankingPeriod }) => d)
+  .inputValidator((d: { period: RankingPeriod }) => d)
   .handler(async ({ data, context }) => {
     await assertCoach(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -1208,7 +1208,7 @@ export const getRanking = createServerFn({ method: "POST" })
  */
 export const coachCreatePackage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (data: {
       user_id: string;
       package: PackageKey;

@@ -119,7 +119,7 @@ function toMacroDTO(r: PerformanceNutritionResult): BullsMacroDTO | null {
 
 export const getBullsDailyNutritionTargets = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (d: {
       /** YYYY-MM-DD */
       date: string;
@@ -315,7 +315,7 @@ export const getBullsDailyNutritionTargets = createServerFn({ method: "POST" })
  */
 export const setBullsDayType = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (d: {
       date: string;
       kind: BullsDayType | null;

@@ -446,7 +446,7 @@ const WEEKDAY_LABELS_DE = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"] as const;
 
 export const generatePartnerNutritionPlanDraft = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (d: {
       user_a: string;
       user_b: string;

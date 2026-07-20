@@ -4,7 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 // ============== Favorites ==============
 export const toggleFavorite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { meal_id: string }) => d)
+  .inputValidator((d: { meal_id: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: existing } = await supabase
@@ -27,7 +27,7 @@ export const toggleFavorite = createServerFn({ method: "POST" })
 
 export const getFavoriteStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { meal_id: string }) => d)
+  .inputValidator((d: { meal_id: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: row } = await supabase
@@ -95,7 +95,7 @@ export const listMyFavorites = createServerFn({ method: "GET" })
 // ============== Ratings ==============
 export const setRating = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { meal_id: string; stars: number; comment?: string | null }) => {
+  .inputValidator((d: { meal_id: string; stars: number; comment?: string | null }) => {
     if (!Number.isInteger(d.stars) || d.stars < 1 || d.stars > 5) {
       throw new Error("Bewertung muss 1–5 sein");
     }
@@ -118,7 +118,7 @@ export const setRating = createServerFn({ method: "POST" })
 
 export const getMyRating = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { meal_id: string }) => d)
+  .inputValidator((d: { meal_id: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: row } = await supabase
@@ -133,7 +133,7 @@ export const getMyRating = createServerFn({ method: "GET" })
 // ============== Interactions ==============
 export const logInteraction = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { meal_id: string; kind: "shown" | "eaten" | "swapped"; meta?: any }) => d)
+  .inputValidator((d: { meal_id: string; kind: "shown" | "eaten" | "swapped"; meta?: any }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { error } = await supabase.from("meal_interactions").insert({
