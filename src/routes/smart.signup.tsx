@@ -321,7 +321,7 @@ function SmartSignupPage() {
           {!supabaseUser ? (
             <div>
               Schon dabei?{" "}
-              <Link to="/auth" className="text-gold hover:underline">Einloggen</Link>
+              <Link to="/auth" search={{ next: undefined }} className="text-gold hover:underline">Einloggen</Link>
             </div>
           ) : (
             <div>

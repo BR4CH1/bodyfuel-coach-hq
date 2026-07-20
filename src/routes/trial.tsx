@@ -234,7 +234,7 @@ function SmartTrialSignupPage() {
 
             <p className="text-center text-xs text-muted-foreground">
               Bereits Mitglied?{" "}
-              <Link to="/auth" className="font-semibold text-gold hover:underline">
+              <Link to="/auth" search={{ next: undefined }} className="font-semibold text-gold hover:underline">
                 Hier einloggen
               </Link>
             </p>

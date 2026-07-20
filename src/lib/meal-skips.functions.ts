@@ -16,7 +16,7 @@ export type SkipReasonKey = (typeof SKIP_REASONS)[number]["key"];
 
 export const logMealSkip = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (d: { meal_id: string; meal_name?: string; reason: string; note?: string; skip_date?: string }) => d,
   )
   .handler(async ({ data, context }) => {
@@ -45,7 +45,7 @@ export const logMealSkip = createServerFn({ method: "POST" })
 
 export const removeMealSkip = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { meal_id: string; skip_date?: string }) => d)
+  .validator((d: { meal_id: string; skip_date?: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const skipDate = data.skip_date ?? new Date().toISOString().slice(0, 10);
@@ -61,7 +61,7 @@ export const removeMealSkip = createServerFn({ method: "POST" })
 
 export const getMySkipsForDate = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { skip_date?: string }) => d)
+  .validator((d: { skip_date?: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const skipDate = data.skip_date ?? new Date().toISOString().slice(0, 10);

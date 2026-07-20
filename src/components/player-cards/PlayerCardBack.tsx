@@ -1,10 +1,21 @@
 /**
  * Player Card — Rückseite. BFR-Verlauf, PBs, Coach-Summary, Fortschritt.
  */
-import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
+import { ClientRecharts } from "@/components/charts/ClientRecharts";
 import type { PlayerCardData } from "./PlayerCard";
 import type { AttributeKey } from "@/lib/player-cards/engine";
-import { PlayerCardBadgeWall, type BadgeDefinitionRow, type BadgeUnlockRow } from "./PlayerCardBadgeWall";
+import {
+  PlayerCardBadgeWall,
+  type BadgeDefinitionRow,
+  type BadgeUnlockRow,
+} from "./PlayerCardBadgeWall";
+
+type VerifiedPlayerTest = {
+  test_id: string;
+  result_value: number | string;
+  result_unit: string;
+  performed_at: string;
+};
 
 export type PlayerCardHistoryPoint = {
   bfr: number | null;
@@ -38,18 +49,29 @@ const TEST_LABELS: Record<string, string> = {
   rast_6x35m: "RAST 6 × 35 m",
 };
 
-function buildCoachSummary(current: PlayerCardData["card"], previous: PlayerCardHistoryPoint | null): string {
+function buildCoachSummary(
+  current: PlayerCardData["card"],
+  previous: PlayerCardHistoryPoint | null,
+): string {
   if (!previous || current.bfr == null) {
     return "Wir sammeln gerade deine Basiswerte. Ein paar Tests mehr und wir können deine Entwicklung präzise beschreiben.";
   }
   const attrs: AttributeKey[] = ["SPD", "ACC", "AGI", "POW", "STR", "END"];
   const currentMap: Record<AttributeKey, number | null> = {
-    SPD: current.spd, ACC: current.acc, AGI: current.agi,
-    POW: current.pow, STR: current.str, END: current.end_score,
+    SPD: current.spd,
+    ACC: current.acc,
+    AGI: current.agi,
+    POW: current.pow,
+    STR: current.str,
+    END: current.end_score,
   };
   const prevMap: Record<AttributeKey, number | null> = {
-    SPD: previous.spd, ACC: previous.acc, AGI: previous.agi,
-    POW: previous.pow, STR: previous.str, END: previous.end_score,
+    SPD: previous.spd,
+    ACC: previous.acc,
+    AGI: previous.agi,
+    POW: previous.pow,
+    STR: previous.str,
+    END: previous.end_score,
   };
   const deltas = attrs
     .map((k) => ({ key: k, delta: (currentMap[k] ?? 0) - (prevMap[k] ?? 0) }))
@@ -63,7 +85,8 @@ function buildCoachSummary(current: PlayerCardData["card"], previous: PlayerCard
   if (lost && lost.delta < 0) {
     parts.push(`Größtes Entwicklungsfeld: ${ATTR_LABEL[lost.key]} (${lost.delta}).`);
   }
-  if (!parts.length) parts.push("Deine Werte sind stabil — nächster Test zeigt, wohin die Reise geht.");
+  if (!parts.length)
+    parts.push("Deine Werte sind stabil — nächster Test zeigt, wohin die Reise geht.");
   return parts.join(" ");
 }
 
@@ -76,7 +99,9 @@ export function PlayerCardBack({
   history: PlayerCardHistoryPoint[];
   badges?: { definitions: BadgeDefinitionRow[]; unlocks: BadgeUnlockRow[] };
 }) {
-  const { card, organization, verifiedTests } = data as PlayerCardData & { verifiedTests?: any[] };
+  const { card, organization } = data;
+  const verifiedTests = (data as PlayerCardData & { verifiedTests?: VerifiedPlayerTest[] })
+    .verifiedTests;
   const primary = organization?.primary_color ?? "#dc2626";
   const accent = organization?.accent_color ?? primary;
   const bg = organization?.background_color ?? "#0a0a0a";
@@ -92,15 +117,25 @@ export function PlayerCardBack({
 
   const attrs: AttributeKey[] = ["SPD", "ACC", "AGI", "POW", "STR", "END"];
   const currentMap: Record<AttributeKey, number | null> = {
-    SPD: card.spd, ACC: card.acc, AGI: card.agi,
-    POW: card.pow, STR: card.str, END: card.end_score,
+    SPD: card.spd,
+    ACC: card.acc,
+    AGI: card.agi,
+    POW: card.pow,
+    STR: card.str,
+    END: card.end_score,
   };
-  const prevMap: Record<AttributeKey, number | null> = previous ? {
-    SPD: previous.spd, ACC: previous.acc, AGI: previous.agi,
-    POW: previous.pow, STR: previous.str, END: previous.end_score,
-  } : { SPD: null, ACC: null, AGI: null, POW: null, STR: null, END: null };
+  const prevMap: Record<AttributeKey, number | null> = previous
+    ? {
+        SPD: previous.spd,
+        ACC: previous.acc,
+        AGI: previous.agi,
+        POW: previous.pow,
+        STR: previous.str,
+        END: previous.end_score,
+      }
+    : { SPD: null, ACC: null, AGI: null, POW: null, STR: null, END: null };
 
-  const pbList = ((verifiedTests as any[]) ?? []).slice(0, 20);
+  const pbList = (verifiedTests ?? []).slice(0, 20);
   // Beste Werte pro test_id.
   const pbMap = new Map<string, { value: number; unit: string; performed_at: string }>();
   for (const t of pbList) {
@@ -124,7 +159,10 @@ export function PlayerCardBack({
         }}
       >
         <div className="text-center">
-          <div className="text-[10px] font-bold uppercase tracking-[0.3em]" style={{ color: accent }}>
+          <div
+            className="text-[10px] font-bold uppercase tracking-[0.3em]"
+            style={{ color: accent }}
+          >
             Player Details
           </div>
           <div className="font-display text-lg font-black">BFR Entwicklung</div>
@@ -133,14 +171,48 @@ export function PlayerCardBack({
         {/* BFR Chart */}
         <div className="mt-2 h-32 w-full">
           {chartData.length >= 2 ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
-                <XAxis dataKey="date" tick={{ fontSize: 9, fill: "#ffffff80" }} axisLine={false} tickLine={false} />
-                <YAxis domain={[40, 99]} tick={{ fontSize: 9, fill: "#ffffff80" }} axisLine={false} tickLine={false} width={30} />
-                <Tooltip contentStyle={{ background: "#111", border: `1px solid ${accent}`, fontSize: 11 }} labelStyle={{ color: "#fff" }} />
-                <Line type="monotone" dataKey="bfr" stroke={accent} strokeWidth={2.5} dot={{ r: 3, fill: accent }} />
-              </LineChart>
-            </ResponsiveContainer>
+            <ClientRecharts
+              fallback={
+                <div className="flex h-full items-center justify-center text-[10px] text-white/50">
+                  Verlauf wird geladen…
+                </div>
+              }
+            >
+              {({ ResponsiveContainer, LineChart, XAxis, YAxis, Tooltip, Line }) => (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fontSize: 9, fill: "#ffffff80" }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      domain={[40, 99]}
+                      tick={{ fontSize: 9, fill: "#ffffff80" }}
+                      axisLine={false}
+                      tickLine={false}
+                      width={30}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        background: "#111",
+                        border: `1px solid ${accent}`,
+                        fontSize: 11,
+                      }}
+                      labelStyle={{ color: "#fff" }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="bfr"
+                      stroke={accent}
+                      strokeWidth={2.5}
+                      dot={{ r: 3, fill: accent }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
+            </ClientRecharts>
           ) : (
             <div className="flex h-full items-center justify-center text-[10px] text-white/50">
               Noch nicht genug Datenpunkte für einen Verlauf.
@@ -163,7 +235,16 @@ export function PlayerCardBack({
                   <span className="text-white/70">{k}</span>
                   <span
                     className="tabular-nums font-bold"
-                    style={{ color: delta == null ? "#ffffff80" : delta > 0 ? "#4ade80" : delta < 0 ? "#f87171" : "#ffffff80" }}
+                    style={{
+                      color:
+                        delta == null
+                          ? "#ffffff80"
+                          : delta > 0
+                            ? "#4ade80"
+                            : delta < 0
+                              ? "#f87171"
+                              : "#ffffff80",
+                    }}
                   >
                     {delta == null ? "—" : `${delta > 0 ? "+" : ""}${delta}`}
                   </span>
@@ -223,7 +304,6 @@ export function PlayerCardBack({
             </div>
           </div>
         )}
-
 
         <div className="mt-3 text-center text-[8px] uppercase tracking-[0.3em] text-white/40">
           BodyFuel Performance • Tippen zum Umdrehen

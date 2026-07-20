@@ -11,7 +11,7 @@ async function assertCoach(supabase: any, userId: string) {
 // Insights for one customer
 export const getCustomerRecipeInsights = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { user_id: string }) => d)
+  .validator((d: { user_id: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     await assertCoach(supabase, userId);

@@ -62,7 +62,7 @@ export const listAffiliatePartners = createServerFn({ method: "GET" })
 
 export const createAffiliatePartner = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (input: {
       name: string;
       email?: string;
@@ -112,7 +112,7 @@ export const createAffiliatePartner = createServerFn({ method: "POST" })
 
 export const updateAffiliatePartner = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (input: {
       id: string;
       patch: Partial<{
@@ -182,7 +182,7 @@ export const updateAffiliatePartner = createServerFn({ method: "POST" })
 
 export const deleteAffiliatePartner = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string }) => z.object({ id: z.string().uuid() }).parse(input))
+  .validator((input: { id: string }) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     await assertCoach(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -228,7 +228,7 @@ export const listAffiliateReferrals = createServerFn({ method: "GET" })
 
 export const markReferralPaid = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string; note?: string }) =>
+  .validator((input: { id: string; note?: string }) =>
     z.object({ id: z.string().uuid(), note: z.string().trim().max(500).optional() }).parse(input),
   )
   .handler(async ({ data, context }) => {
@@ -244,7 +244,7 @@ export const markReferralPaid = createServerFn({ method: "POST" })
 
 export const voidReferral = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string; reason?: string }) =>
+  .validator((input: { id: string; reason?: string }) =>
     z.object({ id: z.string().uuid(), reason: z.string().trim().max(500).optional() }).parse(input),
   )
   .handler(async ({ data, context }) => {
@@ -261,7 +261,7 @@ export const voidReferral = createServerFn({ method: "POST" })
 /** Called from the client after sign-in, with the slug stored in localStorage. */
 export const attachReferralForSelf = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { slug: string }) =>
+  .validator((input: { slug: string }) =>
     z.object({ slug: z.string().trim().min(1).max(64) }).parse(input),
   )
   .handler(async ({ data, context }) => {
@@ -279,7 +279,7 @@ export const attachReferralForSelf = createServerFn({ method: "POST" })
  * um dem Kunden vor Zahlung Feedback zu geben.
  */
 export const resolveDiscountCode = createServerFn({ method: "POST" })
-  .inputValidator((input: { code: string }) =>
+  .validator((input: { code: string }) =>
     z.object({ code: z.string().trim().min(1).max(64) }).parse(input),
   )
   .handler(async ({ data }) => {

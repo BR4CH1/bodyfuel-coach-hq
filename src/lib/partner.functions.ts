@@ -10,7 +10,7 @@ async function assertCoach(supabase: any, userId: string) {
 /** Listet alle Kunden, mit denen ein Kunde gekoppelt werden könnte (alle anderen Kunden des Coaches). */
 export const listLinkablePartners = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { user_id: string }) => d)
+  .validator((d: { user_id: string }) => d)
   .handler(async ({ data, context }) => {
     await assertCoach(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -46,7 +46,7 @@ export const listLinkablePartners = createServerFn({ method: "POST" })
 /** Lädt die aktuelle Kopplung eines Kunden (falls vorhanden). */
 export const getPartnerLink = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { user_id: string }) => d)
+  .validator((d: { user_id: string }) => d)
   .handler(async ({ data, context }) => {
     if (data.user_id !== context.userId) {
       await assertCoachOrOrgStaffForAthlete(context, data.user_id, "nutrition");
@@ -72,7 +72,7 @@ export const getPartnerLink = createServerFn({ method: "POST" })
 /** Koppelt zwei Kunden — entfernt vorher bestehende Kopplungen beider. */
 export const linkPartner = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { user_a: string; user_b: string }) => d)
+  .validator((d: { user_a: string; user_b: string }) => d)
   .handler(async ({ data, context }) => {
     await assertCoach(context.supabase, context.userId);
     if (data.user_a === data.user_b) throw new Error("Partner muss eine andere Person sein.");
@@ -95,7 +95,7 @@ export const linkPartner = createServerFn({ method: "POST" })
 
 export const unlinkPartner = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { user_id: string }) => d)
+  .validator((d: { user_id: string }) => d)
   .handler(async ({ data, context }) => {
     await assertCoach(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

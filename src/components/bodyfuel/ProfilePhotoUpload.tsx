@@ -1,9 +1,16 @@
-import { useCallback, useRef, useState } from "react";
-import Cropper, { type Area } from "react-easy-crop";
+import { lazy, Suspense, useCallback, useRef, useState } from "react";
+import type { Area } from "react-easy-crop";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Camera, Trash2, ZoomIn, ZoomOut, Loader2 } from "lucide-react";
 import { UserAvatar, invalidateAvatarCache } from "./UserAvatar";
+
+const ClientCropper = import.meta.env.SSR
+  ? null
+  : lazy(async () => {
+      const module = await import("react-easy-crop");
+      return { default: module.default };
+    });
 
 /**
  * Profilbild-Upload für BodyFuel Performance.
@@ -15,11 +22,18 @@ import { UserAvatar, invalidateAvatarCache } from "./UserAvatar";
  *   durch mittigen Default-Crop; der User verschiebt/zoomt selbst.
  */
 
+function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
+}
+
 async function getCroppedBlob(imageSrc: string, area: Area): Promise<Blob> {
   const img = new Image();
   img.crossOrigin = "anonymous";
   img.src = imageSrc;
-  await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = () => rej(new Error("image load failed")); });
+  await new Promise<void>((res, rej) => {
+    img.onload = () => res();
+    img.onerror = () => rej(new Error("image load failed"));
+  });
   const canvas = document.createElement("canvas");
   const size = 400;
   canvas.width = size;
@@ -53,10 +67,20 @@ export function ProfilePhotoUpload({
 
   const onFile = (f: File | null) => {
     if (!f) return;
-    if (!f.type.startsWith("image/")) { toast.error("Bitte ein Bild auswählen"); return; }
-    if (f.size > 8 * 1024 * 1024) { toast.error("Bild ist zu groß (max. 8 MB)"); return; }
+    if (!f.type.startsWith("image/")) {
+      toast.error("Bitte ein Bild auswählen");
+      return;
+    }
+    if (f.size > 8 * 1024 * 1024) {
+      toast.error("Bild ist zu groß (max. 8 MB)");
+      return;
+    }
     const reader = new FileReader();
-    reader.onload = () => { setImgSrc(String(reader.result)); setCrop({ x: 0, y: 0 }); setZoom(1); };
+    reader.onload = () => {
+      setImgSrc(String(reader.result));
+      setCrop({ x: 0, y: 0 });
+      setZoom(1);
+    };
     reader.readAsDataURL(f);
   };
 
@@ -72,14 +96,17 @@ export function ProfilePhotoUpload({
         .from("avatars")
         .upload(path, blob, { upsert: true, contentType: "image/jpeg", cacheControl: "0" });
       if (upErr) throw upErr;
-      const { error: pErr } = await supabase.from("profiles").update({ avatar_url: path }).eq("id", userId);
+      const { error: pErr } = await supabase
+        .from("profiles")
+        .update({ avatar_url: path })
+        .eq("id", userId);
       if (pErr) throw pErr;
       invalidateAvatarCache(path);
       onChange(path);
       setImgSrc(null);
       toast.success("Profilbild aktualisiert");
-    } catch (e: any) {
-      toast.error(e?.message ?? "Upload fehlgeschlagen");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Upload fehlgeschlagen"));
     } finally {
       setSaving(false);
     }
@@ -92,12 +119,15 @@ export function ProfilePhotoUpload({
         await supabase.storage.from("avatars").remove([currentPath]);
         invalidateAvatarCache(currentPath);
       }
-      const { error } = await supabase.from("profiles").update({ avatar_url: null }).eq("id", userId);
+      const { error } = await supabase
+        .from("profiles")
+        .update({ avatar_url: null })
+        .eq("id", userId);
       if (error) throw error;
       onChange(null);
       toast.success("Profilbild entfernt");
-    } catch (e: any) {
-      toast.error(e?.message ?? "Entfernen fehlgeschlagen");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Entfernen fehlgeschlagen"));
     } finally {
       setRemoving(false);
     }
@@ -107,8 +137,8 @@ export function ProfilePhotoUpload({
     <section className="rounded-2xl border border-border bg-card p-6">
       <h2 className="font-display text-lg font-bold">Profilbild</h2>
       <p className="mt-1 text-xs text-muted-foreground">
-        Nutze am besten ein Foto, auf dem dein Gesicht gut erkennbar ist. So können Coaches und Medical
-        dich schneller zuordnen. Kein Passfoto-Zwang.
+        Nutze am besten ein Foto, auf dem dein Gesicht gut erkennbar ist. So können Coaches und
+        Medical dich schneller zuordnen. Kein Passfoto-Zwang.
       </p>
 
       {!imgSrc && (
@@ -130,7 +160,11 @@ export function ProfilePhotoUpload({
                 disabled={removing}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-destructive/30 bg-background px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 disabled:opacity-50"
               >
-                {removing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                {removing ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="h-3.5 w-3.5" />
+                )}
                 Foto entfernen
               </button>
             )}
@@ -148,17 +182,23 @@ export function ProfilePhotoUpload({
       {imgSrc && (
         <div className="mt-4 space-y-3">
           <div className="relative h-72 w-full overflow-hidden rounded-xl bg-black">
-            <Cropper
-              image={imgSrc}
-              crop={crop}
-              zoom={zoom}
-              aspect={1}
-              cropShape="round"
-              showGrid={false}
-              onCropChange={setCrop}
-              onZoomChange={setZoom}
-              onCropComplete={onComplete}
-            />
+            {ClientCropper ? (
+              <Suspense fallback={<div className="h-full w-full animate-pulse bg-muted" />}>
+                <ClientCropper
+                  image={imgSrc}
+                  crop={crop}
+                  zoom={zoom}
+                  aspect={1}
+                  cropShape="round"
+                  showGrid={false}
+                  onCropChange={setCrop}
+                  onZoomChange={setZoom}
+                  onCropComplete={onComplete}
+                />
+              </Suspense>
+            ) : (
+              <div className="h-full w-full bg-black" />
+            )}
           </div>
           <div className="flex items-center gap-2">
             <ZoomOut className="h-4 w-4 text-muted-foreground" />

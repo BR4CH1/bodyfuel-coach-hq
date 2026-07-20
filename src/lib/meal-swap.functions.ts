@@ -13,7 +13,7 @@ type Suggestion = {
 
 export const suggestMealSwaps = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { meal_id: string; user_note?: string | null }) => d)
+  .validator((d: { meal_id: string; user_note?: string | null }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const apiKey = process.env.LOVABLE_API_KEY;

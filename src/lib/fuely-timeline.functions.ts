@@ -18,7 +18,7 @@ export type FuelyTimelineEvent = {
 
 export const listFuelyTimeline = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (input: { limit?: number; before?: string; forUserId?: string; coachView?: boolean }) => ({
       limit: Math.min(60, Math.max(5, Number(input?.limit ?? 30))),
       before: input?.before,
@@ -52,7 +52,7 @@ export const listFuelyTimeline = createServerFn({ method: "POST" })
 
 export const deleteFuelyTimelineEvent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string }) => input)
+  .validator((input: { id: string }) => input)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { error } = await supabase

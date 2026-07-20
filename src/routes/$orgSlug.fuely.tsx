@@ -66,7 +66,7 @@ function FuelyPage() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
       if (!data.user) {
-        navigate({ to: "/auth" });
+        navigate({ to: "/auth", search: { next: undefined } });
         return;
       }
       setUserId(data.user.id);

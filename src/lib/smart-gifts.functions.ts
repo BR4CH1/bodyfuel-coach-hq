@@ -43,7 +43,7 @@ export const listGiftCodes = createServerFn({ method: "GET" })
 
 export const createGiftCode = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (input: {
       label?: string;
       days?: number;
@@ -98,7 +98,7 @@ export const createGiftCode = createServerFn({ method: "POST" })
 
 export const deleteGiftCode = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { code: string }) =>
+  .validator((input: { code: string }) =>
     z.object({ code: z.string().min(1).max(64) }).parse(input),
   )
   .handler(async ({ data, context }) => {
@@ -112,7 +112,7 @@ export const deleteGiftCode = createServerFn({ method: "POST" })
   });
 
 export const validateGiftCode = createServerFn({ method: "POST" })
-  .inputValidator((input: { code: string }) =>
+  .validator((input: { code: string }) =>
     z.object({ code: z.string().trim().min(1).max(64) }).parse(input),
   )
   .handler(async ({ data }) => {
@@ -142,7 +142,7 @@ export const validateGiftCode = createServerFn({ method: "POST" })
 
 export const redeemGiftCode = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { code: string }) =>
+  .validator((input: { code: string }) =>
     z.object({ code: z.string().trim().min(1).max(64) }).parse(input),
   )
   .handler(async ({ data, context }) => {

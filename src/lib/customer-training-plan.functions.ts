@@ -124,7 +124,7 @@ async function callGateway(messages: any[]): Promise<any> {
 
 export const parseCustomerTrainingPlan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (d: {
       mode: "text" | "image" | "pdf";
       payload: string;
@@ -181,7 +181,7 @@ export const parseCustomerTrainingPlan = createServerFn({ method: "POST" })
 
 export const saveCustomerTrainingPlan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { plan: ImportedPlan }) => d)
+  .validator((d: { plan: ImportedPlan }) => d)
   .handler(async ({ data, context }) => {
     const { userId } = context;
     const plan = normalizePlan(data.plan);

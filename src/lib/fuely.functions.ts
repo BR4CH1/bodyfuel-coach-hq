@@ -140,7 +140,7 @@ export const listFuelyMessages = createServerFn({ method: "GET" })
 
 export const sendFuelyMessage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { content: string; orgSlug?: string }) => {
+  .validator((d: { content: string; orgSlug?: string }) => {
     const c = String(d?.content ?? "").trim();
     if (!c) throw new Error("Nachricht ist leer");
     if (c.length > 4000) throw new Error("Nachricht zu lang");
@@ -274,7 +274,7 @@ export const listFuelyMemories = createServerFn({ method: "GET" })
 
 export const upsertFuelyMemory = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id?: string; category?: string; content: string; importance?: number }) => d)
+  .validator((d: { id?: string; category?: string; content: string; importance?: number }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const row = {
@@ -296,7 +296,7 @@ export const upsertFuelyMemory = createServerFn({ method: "POST" })
 
 export const deleteFuelyMemory = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id: string }) => d)
+  .validator((d: { id: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { error } = await supabase.from("fuely_memories").delete().eq("id", data.id).eq("user_id", userId);

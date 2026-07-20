@@ -1,14 +1,5 @@
-import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ReferenceLine,
-} from "recharts";
 import { TrendingDown, TrendingUp, Minus } from "lucide-react";
+import { ClientRecharts } from "@/components/charts/ClientRecharts";
 
 type Measurement = { measured_at: string; weight_kg: number | null };
 
@@ -45,10 +36,7 @@ export function WeightProgressChart({
   const first = points[0];
   const latest = points[points.length - 1];
   const totalDelta = +(latest.weight - first.weight).toFixed(1);
-  const totalDays = Math.max(
-    1,
-    Math.round((latest.ts - first.ts) / 86400000),
-  );
+  const totalDays = Math.max(1, Math.round((latest.ts - first.ts) / 86400000));
 
   const within = (days: number) => {
     const cutoff = latest.ts - days * 86400000;
@@ -58,8 +46,7 @@ export function WeightProgressChart({
   const delta7 = within(7);
   const delta30 = within(30);
 
-  const goalDelta =
-    goalWeight != null ? +(latest.weight - goalWeight).toFixed(1) : null;
+  const goalDelta = goalWeight != null ? +(latest.weight - goalWeight).toFixed(1) : null;
 
   // Min/Max for nicer y-axis
   const weights = points.map((p) => p.weight);
@@ -141,48 +128,67 @@ export function WeightProgressChart({
       </div>
 
       <div className="h-56 w-full sm:h-64">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
-            <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="label" stroke="var(--muted-foreground)" fontSize={11} />
-            <YAxis
-              stroke="var(--muted-foreground)"
-              fontSize={11}
-              domain={yDomain}
-              tickFormatter={(v: number) => `${v}`}
-            />
-            <Tooltip
-              contentStyle={{
-                background: "var(--card)",
-                border: "1px solid var(--border)",
-                borderRadius: 8,
-                fontSize: 12,
-              }}
-              formatter={(v: number) => [`${v} kg`, "Gewicht"]}
-            />
-            {goalWeight != null && (
-              <ReferenceLine
-                y={goalWeight}
-                stroke="var(--primary)"
-                strokeDasharray="4 4"
-                label={{
-                  value: `Ziel ${goalWeight} kg`,
-                  position: "insideTopRight",
-                  fill: "var(--primary)",
-                  fontSize: 10,
-                }}
-              />
-            )}
-            <Line
-              type="monotone"
-              dataKey="Gewicht"
-              stroke="var(--primary)"
-              strokeWidth={2.5}
-              dot={{ r: 3, fill: "var(--primary)" }}
-              activeDot={{ r: 5 }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+        <ClientRecharts
+          fallback={
+            <div className="grid h-full place-items-center text-sm text-muted-foreground">
+              Diagramm wird geladen…
+            </div>
+          }
+        >
+          {({
+            ResponsiveContainer,
+            LineChart,
+            CartesianGrid,
+            XAxis,
+            YAxis,
+            Tooltip,
+            ReferenceLine,
+            Line,
+          }) => (
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
+                <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="label" stroke="var(--muted-foreground)" fontSize={11} />
+                <YAxis
+                  stroke="var(--muted-foreground)"
+                  fontSize={11}
+                  domain={yDomain}
+                  tickFormatter={(value) => String(value)}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: "var(--card)",
+                    border: "1px solid var(--border)",
+                    borderRadius: 8,
+                    fontSize: 12,
+                  }}
+                  formatter={(value) => [`${Number(value)} kg`, "Gewicht"]}
+                />
+                {goalWeight != null && (
+                  <ReferenceLine
+                    y={goalWeight}
+                    stroke="var(--primary)"
+                    strokeDasharray="4 4"
+                    label={{
+                      value: `Ziel ${goalWeight} kg`,
+                      position: "insideTopRight",
+                      fill: "var(--primary)",
+                      fontSize: 10,
+                    }}
+                  />
+                )}
+                <Line
+                  type="monotone"
+                  dataKey="Gewicht"
+                  stroke="var(--primary)"
+                  strokeWidth={2.5}
+                  dot={{ r: 3, fill: "var(--primary)" }}
+                  activeDot={{ r: 5 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </ClientRecharts>
       </div>
     </div>
   );

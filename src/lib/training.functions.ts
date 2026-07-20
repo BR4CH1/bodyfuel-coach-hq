@@ -67,7 +67,7 @@ type ParsedDay = { name: string; exercises: ParsedExercise[] };
 
 export const parseTrainingPlan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { plan_id: string }) => data)
+  .validator((data: { plan_id: string }) => data)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const apiKey = process.env.LOVABLE_API_KEY;
@@ -196,7 +196,7 @@ Keine Erklärungen.`;
 
 export const logSet = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (data: {
       exercise_id: string;
       set_number: number;
@@ -223,7 +223,7 @@ export const logSet = createServerFn({ method: "POST" })
 
 export const deleteSetLog = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { id: string }) => data)
+  .validator((data: { id: string }) => data)
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("training_set_logs")
@@ -245,7 +245,7 @@ export const deleteSetLog = createServerFn({ method: "POST" })
  */
 export const progressAfterExercise = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { exercise_id: string; session_date?: string }) => data)
+  .validator((data: { exercise_id: string; session_date?: string }) => data)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
@@ -380,7 +380,7 @@ export const progressAfterExercise = createServerFn({ method: "POST" })
  */
 export const completeTrainingSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { day_id: string; session_date?: string }) => data)
+  .validator((data: { day_id: string; session_date?: string }) => data)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
@@ -627,7 +627,7 @@ export const completeTrainingSession = createServerFn({ method: "POST" })
  */
 export const addOwnTrainingExercise = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (data: {
       day_id: string;
       name: string;
@@ -702,7 +702,7 @@ export const addOwnTrainingExercise = createServerFn({ method: "POST" })
  */
 export const deleteOwnTrainingExercise = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { exercise_id: string }) => data)
+  .validator((data: { exercise_id: string }) => data)
   .handler(async ({ data, context }) => {
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

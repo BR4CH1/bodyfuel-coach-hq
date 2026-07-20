@@ -8,7 +8,7 @@ import { assertCoachOrOrgStaffForAthlete } from "@/lib/organizations/org-coach-a
  */
 export const generateAiTrainingPlanDraft = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (d: {
       user_id: string;
       title?: string;

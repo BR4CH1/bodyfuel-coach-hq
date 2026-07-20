@@ -29,7 +29,7 @@ export type CheckinDraft = {
 
 export const generateCheckinDraft = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { user_id: string }) => d)
+  .validator((d: { user_id: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     await assertCoach(supabase, userId);
@@ -249,7 +249,7 @@ export type CheckinDraftRecord = {
 
 export const listCheckinDrafts = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { user_id: string; limit?: number }) => d)
+  .validator((d: { user_id: string; limit?: number }) => d)
   .handler(async ({ data, context }): Promise<{ items: CheckinDraftRecord[] }> => {
     const { supabase, userId } = context;
     await assertCoach(supabase, userId);
@@ -265,7 +265,7 @@ export const listCheckinDrafts = createServerFn({ method: "GET" })
 
 export const decideCheckinDraft = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (d: {
       draft_id: string;
       decision: "approved" | "edited" | "rejected";
@@ -303,7 +303,7 @@ export const decideCheckinDraft = createServerFn({ method: "POST" })
 
 export const setCheckinDraftActionDecision = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (d: {
       draft_id: string;
       action_index: number;
@@ -336,7 +336,7 @@ export const setCheckinDraftActionDecision = createServerFn({ method: "POST" })
 
 export const deleteCheckinDraft = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { draft_id: string }) => d)
+  .validator((d: { draft_id: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     await assertCoach(supabase, userId);

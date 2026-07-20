@@ -38,7 +38,7 @@ const createSchema = z.object({
 
 export const createAthleteTask = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => createSchema.parse(d))
+  .validator((d) => createSchema.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId: callerId } = context;
     await assertCoachAccess(supabase, callerId, data.orgId);
@@ -75,7 +75,7 @@ const updateSchema = z.object({
 
 export const updateAthleteTask = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => updateSchema.parse(d))
+  .validator((d) => updateSchema.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId: callerId } = context;
     await assertCoachAccess(supabase, callerId, data.orgId);
@@ -105,7 +105,7 @@ const deleteSchema = z.object({
 
 export const deleteAthleteTask = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => deleteSchema.parse(d))
+  .validator((d) => deleteSchema.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId: callerId } = context;
     await assertCoachAccess(supabase, callerId, data.orgId);

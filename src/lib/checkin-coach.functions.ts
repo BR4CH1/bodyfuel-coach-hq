@@ -3,7 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export const setCheckinCoachNote = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { checkin_id: string; coach_notes: string }) => d)
+  .validator((d: { checkin_id: string; coach_notes: string }) => d)
   .handler(async ({ data, context }) => {
     const { data: isCoach, error: rErr } = await context.supabase.rpc("has_role", {
       _user_id: context.userId,

@@ -302,7 +302,7 @@ async function doRecompute(supabase: any, targetUserId: string) {
 /** Karte für sich selbst oder — mit Coach-Rechten — für einen anderen Athleten neu berechnen. */
 export const recomputePlayerCard = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(z.object({ user_id: z.string().uuid().optional() }).parse)
+  .validator(z.object({ user_id: z.string().uuid().optional() }).parse)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const target = data.user_id ?? userId;
@@ -393,7 +393,7 @@ export const getMyPlayerCard = createServerFn({ method: "GET" })
 
 export const getPlayerCardForAthlete = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(z.object({ user_id: z.string().uuid() }).parse)
+  .validator(z.object({ user_id: z.string().uuid() }).parse)
   .handler(async ({ data, context }) => {
     if (data.user_id !== context.userId) {
       await assertCoachOrOrgStaffForAthlete(context, data.user_id, "athlete");
@@ -404,7 +404,7 @@ export const getPlayerCardForAthlete = createServerFn({ method: "GET" })
 /** Markiert Badge-Unlocks als gesehen — schaltet die "Neu"-Animation aus. */
 export const markBadgeUnlocksSeen = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(z.object({ badge_keys: z.array(z.string()).optional() }).parse)
+  .validator(z.object({ badge_keys: z.array(z.string()).optional() }).parse)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     let q = supabase
@@ -566,7 +566,7 @@ async function assertOrgAccess(supabase: any, userId: string, orgId: string): Pr
 /** Rangliste einer Organisation, optional gefiltert nach Team. */
 export const getPlayerCardRanking = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { organization_id: string; team_id?: string | null; limit?: number }) => ({
+  .validator((d: { organization_id: string; team_id?: string | null; limit?: number }) => ({
     organization_id: String(d.organization_id),
     team_id: d.team_id ? String(d.team_id) : null,
     limit: Math.min(Math.max(Number(d.limit ?? 100), 1), 500),
@@ -602,7 +602,7 @@ function currentYearMonth(): { year: number; month: number } {
 /** Kandidaten für "Player of the Month" — sortiert nach BFR-Delta im Monat. */
 export const getPlayerOfTheMonthCandidates = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { organization_id: string; year?: number; month?: number }) => {
+  .validator((d: { organization_id: string; year?: number; month?: number }) => {
     const fb = currentYearMonth();
     return {
       organization_id: String(d.organization_id),
@@ -638,7 +638,7 @@ export const getPlayerOfTheMonthCandidates = createServerFn({ method: "GET" })
 /** Team of the Month — durchschnittliches BFR-Delta pro Team im Monat. */
 export const getTeamOfTheMonthCandidates = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { organization_id: string; year?: number; month?: number }) => {
+  .validator((d: { organization_id: string; year?: number; month?: number }) => {
     const fb = currentYearMonth();
     return {
       organization_id: String(d.organization_id),
@@ -667,7 +667,7 @@ export const getTeamOfTheMonthCandidates = createServerFn({ method: "GET" })
 /** Coach setzt Player of the Month für einen Monat (award_kind: top_bfr | top_delta). */
 export const finalizePlayerOfTheMonth = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: {
+  .validator((d: {
     organization_id: string;
     year: number;
     month: number;
@@ -713,7 +713,7 @@ export const finalizePlayerOfTheMonth = createServerFn({ method: "POST" })
 /** Hall of Fame — vergangene Auszeichnungen. */
 export const getPlayerCardHallOfFame = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { organization_id: string; limit?: number }) => ({
+  .validator((d: { organization_id: string; limit?: number }) => ({
     organization_id: String(d.organization_id),
     limit: Math.min(Math.max(Number(d.limit ?? 24), 1), 120),
   }))
@@ -770,7 +770,7 @@ async function assertPlatformOwner(supabase: any, userId: string): Promise<void>
 /** Alle Positionsgewichtungen (öffentlich lesbar für alle authenticated). */
 export const listPlayerCardPositionWeights = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { sport?: string }) => ({ sport: d?.sport ?? null }))
+  .validator((d: { sport?: string }) => ({ sport: d?.sport ?? null }))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     let q = supabase.from("player_card_position_weights").select("*").order("sport").order("position_key");
@@ -783,7 +783,7 @@ export const listPlayerCardPositionWeights = createServerFn({ method: "GET" })
 /** Alle Benchmark-Definitionen. */
 export const listPlayerCardBenchmarks = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { sport?: string }) => ({ sport: d?.sport ?? null }))
+  .validator((d: { sport?: string }) => ({ sport: d?.sport ?? null }))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     let q = supabase.from("player_card_benchmarks").select("*").order("sport").order("attribute_key").order("metric_key");
@@ -796,7 +796,7 @@ export const listPlayerCardBenchmarks = createServerFn({ method: "GET" })
 /** Position anlegen oder aktualisieren. Gewichtungen werden auf Summe 1 normalisiert. */
 export const upsertPlayerCardPositionWeight = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: {
+  .validator((d: {
     id?: string | null;
     sport: string;
     position_key: string;
@@ -851,7 +851,7 @@ export const upsertPlayerCardPositionWeight = createServerFn({ method: "POST" })
 
 export const deletePlayerCardPositionWeight = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id: string }) => ({ id: String(d.id) }))
+  .validator((d: { id: string }) => ({ id: String(d.id) }))
   .handler(async ({ data, context }) => {
     await assertPlatformOwner(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -866,7 +866,7 @@ export const deletePlayerCardPositionWeight = createServerFn({ method: "POST" })
 /** Benchmark-Kurve upserten. Ankerpunkte werden nach `value` sortiert. */
 export const upsertPlayerCardBenchmark = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: {
+  .validator((d: {
     id?: string | null;
     sport: string;
     attribute_key: string;
@@ -920,7 +920,7 @@ export const upsertPlayerCardBenchmark = createServerFn({ method: "POST" })
 
 export const deletePlayerCardBenchmark = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id: string }) => ({ id: String(d.id) }))
+  .validator((d: { id: string }) => ({ id: String(d.id) }))
   .handler(async ({ data, context }) => {
     await assertPlatformOwner(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -946,7 +946,7 @@ export const deletePlayerCardBenchmark = createServerFn({ method: "POST" })
  */
 export const ensurePlayerCardCutout = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(z.object({ user_id: z.string().uuid().optional(), force: z.boolean().optional() }).parse)
+  .validator(z.object({ user_id: z.string().uuid().optional(), force: z.boolean().optional() }).parse)
   .handler(async ({ data, context }) => {
     const targetUserId = data.user_id ?? context.userId;
     if (targetUserId !== context.userId) {
@@ -1084,7 +1084,7 @@ export const ensurePlayerCardCutout = createServerFn({ method: "POST" })
 const OverrideNumber = z.union([z.number().int().min(0).max(99), z.null()]).optional();
 export const savePlayerCardManualOverrides = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     z.object({
       user_id: z.string().uuid(),
       overrides: z.object({
@@ -1148,7 +1148,7 @@ export const savePlayerCardManualOverrides = createServerFn({ method: "POST" })
  */
 export const saveCustomPlayerCardImage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     z.object({
       user_id: z.string().uuid(),
       storage_path: z.string().nullable(),

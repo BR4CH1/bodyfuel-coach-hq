@@ -3,15 +3,18 @@
  * Wird sowohl im Share-Dialog (Einzelkarte) als auch beim Coach-Bulk-Export
  * (mehrere Karten in ZIP) verwendet.
  */
-import { toPng, toBlob } from "html-to-image";
-
 export type ExportOptions = {
   /** Skalierungsfaktor für höhere Auflösung. 2 = Retina-Qualität, 3 = Print. */
   pixelRatio?: number;
   backgroundColor?: string;
 };
 
-export async function cardToPngDataUrl(node: HTMLElement, opts: ExportOptions = {}): Promise<string> {
+export async function cardToPngDataUrl(
+  node: HTMLElement,
+  opts: ExportOptions = {},
+): Promise<string> {
+  if (import.meta.env.SSR) throw new Error("PNG-Export ist nur im Browser verfügbar");
+  const { toPng } = await import("html-to-image");
   return await toPng(node, {
     pixelRatio: opts.pixelRatio ?? 2,
     backgroundColor: opts.backgroundColor ?? "#000000",
@@ -21,6 +24,8 @@ export async function cardToPngDataUrl(node: HTMLElement, opts: ExportOptions = 
 }
 
 export async function cardToPngBlob(node: HTMLElement, opts: ExportOptions = {}): Promise<Blob> {
+  if (import.meta.env.SSR) throw new Error("PNG-Export ist nur im Browser verfügbar");
+  const { toBlob } = await import("html-to-image");
   const blob = await toBlob(node, {
     pixelRatio: opts.pixelRatio ?? 2,
     backgroundColor: opts.backgroundColor ?? "#000000",
@@ -43,10 +48,12 @@ export function downloadBlob(blob: Blob, filename: string) {
 }
 
 export function slugify(input: string): string {
-  return input
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-zA-Z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .toLowerCase() || "player-card";
+  return (
+    input
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-zA-Z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .toLowerCase() || "player-card"
+  );
 }

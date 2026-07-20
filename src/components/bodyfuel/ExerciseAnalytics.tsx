@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { Trophy, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { ClientRecharts } from "@/components/charts/ClientRecharts";
 import {
   type SetLog,
   type Metric,
@@ -81,38 +81,50 @@ export function ExerciseAnalytics({ logs }: { logs: SetLog[] }) {
         </div>
       ) : (
         <div className="h-44 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={points} margin={{ top: 6, right: 8, left: -16, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-              <XAxis
-                dataKey="date"
-                stroke="var(--muted-foreground)"
-                fontSize={10}
-                tickFormatter={(d) => d.slice(5).replace("-", ".")}
-              />
-              <YAxis stroke="var(--muted-foreground)" fontSize={10} width={36} />
-              <Tooltip
-                contentStyle={{
-                  background: "var(--card)",
-                  border: "1px solid var(--border)",
-                  borderRadius: 8,
-                  fontSize: 12,
-                  color: "var(--card-foreground)",
-                }}
-                formatter={(v: number) => [`${v} ${metricLabel.unit}`, metricLabel.label]}
-                labelFormatter={(l) => new Date(l).toLocaleDateString("de-DE")}
-              />
-              <Line
-                type="monotone"
-                dataKey={metric}
-                stroke="var(--gold)"
-                strokeWidth={2}
-                dot={{ r: 3, fill: "var(--gold)" }}
-                activeDot={{ r: 5, fill: "var(--gold)" }}
-              />
-
-            </LineChart>
-          </ResponsiveContainer>
+          <ClientRecharts
+            fallback={
+              <div className="grid h-full place-items-center text-[11px] text-muted-foreground">
+                Diagramm wird geladen…
+              </div>
+            }
+          >
+            {({ ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Line }) => (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={points} margin={{ top: 6, right: 8, left: -16, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis
+                    dataKey="date"
+                    stroke="var(--muted-foreground)"
+                    fontSize={10}
+                    tickFormatter={(date) => String(date).slice(5).replace("-", ".")}
+                  />
+                  <YAxis stroke="var(--muted-foreground)" fontSize={10} width={36} />
+                  <Tooltip
+                    contentStyle={{
+                      background: "var(--card)",
+                      border: "1px solid var(--border)",
+                      borderRadius: 8,
+                      fontSize: 12,
+                      color: "var(--card-foreground)",
+                    }}
+                    formatter={(value) => [
+                      `${Number(value)} ${metricLabel.unit}`,
+                      metricLabel.label,
+                    ]}
+                    labelFormatter={(label) => new Date(String(label)).toLocaleDateString("de-DE")}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey={metric}
+                    stroke="var(--gold)"
+                    strokeWidth={2}
+                    dot={{ r: 3, fill: "var(--gold)" }}
+                    activeDot={{ r: 5, fill: "var(--gold)" }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </ClientRecharts>
         </div>
       )}
 
@@ -131,7 +143,9 @@ export function ExerciseAnalytics({ logs }: { logs: SetLog[] }) {
         <Stat
           label="Δ"
           value={
-            delta == null ? "—" : `${delta > 0 ? "+" : ""}${Math.round(delta * 10) / 10} ${metricLabel.unit}`
+            delta == null
+              ? "—"
+              : `${delta > 0 ? "+" : ""}${Math.round(delta * 10) / 10} ${metricLabel.unit}`
           }
           icon={
             delta == null ? (

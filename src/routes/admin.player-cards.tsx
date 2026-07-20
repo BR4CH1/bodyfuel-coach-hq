@@ -53,7 +53,7 @@ function AdminPage() {
   const [isOwner, setIsOwner] = useState<boolean | null>(null);
 
   useEffect(() => {
-    if (!loading && !supabaseUser) navigate({ to: "/auth" });
+    if (!loading && !supabaseUser) navigate({ to: "/auth", search: { next: undefined } });
   }, [loading, supabaseUser, navigate]);
 
   useEffect(() => {

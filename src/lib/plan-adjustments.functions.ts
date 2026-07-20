@@ -42,7 +42,7 @@ export type PlanAdjustmentResponse = {
 
 export const generatePlanAdjustments = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { user_id: string }) => d)
+  .validator((d: { user_id: string }) => d)
   .handler(async ({ data, context }): Promise<PlanAdjustmentResponse> => {
     const { supabase, userId } = context;
     await assertCoach(supabase, userId);
@@ -295,7 +295,7 @@ Antworte AUSSCHLIESSLICH mit gültigem JSON:
 
 export const applyNutritionAdjustment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (d: {
       user_id: string;
       kcal: number;
@@ -352,7 +352,7 @@ export type TrainingApplyAction =
 
 export const applyTrainingAdjustment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { user_id: string; action: TrainingApplyAction }) => d)
+  .validator((d: { user_id: string; action: TrainingApplyAction }) => d)
   .handler(async ({ data, context }) => {
     const { userId } = context;
     const supabase = context.supabase as any;
@@ -430,7 +430,7 @@ export const applyTrainingAdjustment = createServerFn({ method: "POST" })
 
 export const listPlanAdjustmentHistory = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { user_id: string; limit?: number }) => d)
+  .validator((d: { user_id: string; limit?: number }) => d)
   .handler(async ({ data, context }) => {
     const { userId } = context;
     const supabase = context.supabase as any;

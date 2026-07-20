@@ -19,7 +19,7 @@ function AppEntryPage() {
     if (loading || ent.loading) return;
 
     if (!supabaseUser) {
-      navigate({ to: "/auth", replace: true });
+      navigate({ to: "/auth", search: { next: undefined }, replace: true });
       return;
     }
 

@@ -2,17 +2,8 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
-import JSZip from "jszip";
 import { toast } from "sonner";
-import {
-  ArrowUpDown,
-  Download,
-  Filter,
-  Loader2,
-  Share2,
-  Trophy,
-  Users,
-} from "lucide-react";
+import { ArrowUpDown, Download, Filter, Loader2, Share2, Trophy, Users } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { useSession } from "@/lib/bodyfuel/session";
 import { listCoachPlayerCards } from "@/lib/player-cards.functions";
@@ -49,7 +40,7 @@ function CoachPlayerCardsPage() {
   const listFn = useServerFn(listCoachPlayerCards);
 
   useEffect(() => {
-    if (!sessionLoading && !supabaseUser) navigate({ to: "/auth" });
+    if (!sessionLoading && !supabaseUser) navigate({ to: "/auth", search: { next: undefined } });
   }, [sessionLoading, supabaseUser, navigate]);
 
   const q = useQuery({
@@ -67,9 +58,11 @@ function CoachPlayerCardsPage() {
   const [shareData, setShareData] = useState<PlayerCardData | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [savedLayout, setSavedLayout] = useState<PlayerCardLayout>(DEFAULT_LAYOUT);
-  useEffect(() => { setSavedLayout(loadLayout()); }, []);
+  useEffect(() => {
+    setSavedLayout(loadLayout());
+  }, []);
 
-  const cards = q.data?.cards ?? [];
+  const cards = useMemo(() => q.data?.cards ?? [], [q.data?.cards]);
 
   const filterOptions = useMemo(() => {
     const positions = new Set<string>();
@@ -130,15 +123,16 @@ function CoachPlayerCardsPage() {
   const [bulkQueue, setBulkQueue] = useState<PlayerCardData[]>([]);
 
   const startBulkExport = async () => {
-    if (selected.size === 0) return;
+    if (selected.size === 0 || import.meta.env.SSR) return;
     const items = filtered.filter((c) => selected.has(c.card.id));
+    const { default: JSZip } = await import("jszip");
     const zip = new JSZip();
     setBulkBusy(true);
     try {
       for (const item of items) {
         // Render the card off-screen synchronously and snap it.
         const data: PlayerCardData = {
-          card: item.card as any,
+          card: item.card as PlayerCardData["card"],
           profile: item.profile,
           bullsProfile: item.bullsProfile,
           organization: item.organization,
@@ -168,8 +162,8 @@ function CoachPlayerCardsPage() {
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 5_000);
       toast.success(`${items.length} Karten exportiert`);
-    } catch (e: any) {
-      toast.error(e?.message ?? "Bulk-Export fehlgeschlagen");
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Bulk-Export fehlgeschlagen");
     } finally {
       setBulkBusy(false);
     }
@@ -196,7 +190,8 @@ function CoachPlayerCardsPage() {
           </div>
           <h1 className="font-display text-3xl font-bold">Player Cards</h1>
           <p className="text-xs text-muted-foreground">
-            Alle Karten aus deinen Vereinen. Filtern, sortieren, einzeln teilen oder mehrere als ZIP herunterladen.
+            Alle Karten aus deinen Vereinen. Filtern, sortieren, einzeln teilen oder mehrere als ZIP
+            herunterladen.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 self-start sm:self-end">
@@ -214,10 +209,13 @@ function CoachPlayerCardsPage() {
       <section className="rounded-2xl border border-border bg-card/60 p-4">
         <div className="mb-3 flex items-end justify-between gap-2">
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-bulls-red">Vorlagen</div>
+            <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-bulls-red">
+              Vorlagen
+            </div>
             <h2 className="font-display text-lg font-bold">Karten-Design pro Verein</h2>
             <p className="text-xs text-muted-foreground">
-              Jeder Verein bekommt seine eigene Karten-Vorlage. Weitere Vereine können jederzeit ergänzt werden.
+              Jeder Verein bekommt seine eigene Karten-Vorlage. Weitere Vereine können jederzeit
+              ergänzt werden.
             </p>
           </div>
         </div>
@@ -228,7 +226,9 @@ function CoachPlayerCardsPage() {
             className="group flex items-center justify-between rounded-xl border border-border bg-background/40 p-4 hover:border-bulls-red"
           >
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Coesfeld Bulls</div>
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Coesfeld Bulls
+              </div>
               <div className="mt-0.5 font-display text-base font-bold">Vorlage „Elite"</div>
               <div className="text-[11px] text-muted-foreground">Bearbeiten &amp; freigeben</div>
             </div>
@@ -236,7 +236,6 @@ function CoachPlayerCardsPage() {
           </Link>
         </div>
       </section>
-
 
       {/* Filters + Sort */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-6">
@@ -257,7 +256,10 @@ function CoachPlayerCardsPage() {
           label="Position"
           value={posFilter}
           onChange={setPosFilter}
-          options={[["all", "Alle Positionen"], ...filterOptions.positions.map((p) => [p, p] as [string, string])]}
+          options={[
+            ["all", "Alle Positionen"],
+            ...filterOptions.positions.map((p) => [p, p] as [string, string]),
+          ]}
         />
         <FilterSelect
           label="Altersklasse"
@@ -295,10 +297,16 @@ function CoachPlayerCardsPage() {
           <div className="flex items-center gap-2">
             <Users className="h-4 w-4 text-bulls-red" />
             <span className="font-semibold">{selected.size} ausgewählt</span>
-            <button onClick={selectAll} className="text-white/70 underline-offset-2 hover:underline">
+            <button
+              onClick={selectAll}
+              className="text-white/70 underline-offset-2 hover:underline"
+            >
               Alle sichtbaren
             </button>
-            <button onClick={clearSelection} className="text-white/70 underline-offset-2 hover:underline">
+            <button
+              onClick={clearSelection}
+              className="text-white/70 underline-offset-2 hover:underline"
+            >
               Auswahl leeren
             </button>
           </div>
@@ -308,7 +316,11 @@ function CoachPlayerCardsPage() {
             disabled={bulkBusy}
             className="inline-flex items-center gap-1.5 rounded-full bg-bulls-red px-4 py-1.5 text-[11px] font-bold uppercase tracking-wider text-white hover:opacity-90 disabled:opacity-50"
           >
-            {bulkBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+            {bulkBusy ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Download className="h-3.5 w-3.5" />
+            )}
             {bulkBusy ? "Rendere…" : "Als ZIP exportieren"}
           </button>
         </div>
@@ -327,7 +339,7 @@ function CoachPlayerCardsPage() {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {filtered.map((c) => {
             const data: PlayerCardData = {
-              card: c.card as any,
+              card: c.card as PlayerCardData["card"],
               profile: c.profile,
               bullsProfile: c.bullsProfile,
               organization: c.organization,
@@ -373,7 +385,14 @@ function CoachPlayerCardsPage() {
       {/* Off-screen Node für Bulk-Rendering. */}
       <div
         aria-hidden
-        style={{ position: "fixed", left: "-99999px", top: 0, width: 600, height: 900, pointerEvents: "none" }}
+        style={{
+          position: "fixed",
+          left: "-99999px",
+          top: 0,
+          width: 600,
+          height: 900,
+          pointerEvents: "none",
+        }}
       >
         {bulkQueue[0] && (
           <div ref={bulkExportRef} style={{ width: 600, height: 900 }}>

@@ -37,7 +37,7 @@ export const getBullsProfile = createServerFn({ method: "GET" })
 
 export const upsertBullsProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: {
+  .validator((d: {
     first_name: string;
     last_name: string;
     email: string;
@@ -60,7 +60,7 @@ export const upsertBullsProfile = createServerFn({ method: "POST" })
 
 export const logBullsWeight = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { weight_kg: number; log_date?: string }) => d)
+  .validator((d: { weight_kg: number; log_date?: string }) => d)
   .handler(async ({ data, context }) => {
     await assertBulls(context.supabase, context.userId);
     const log_date = data.log_date ?? new Date().toISOString().slice(0, 10);
@@ -91,7 +91,7 @@ export const listBullsWeights = createServerFn({ method: "GET" })
 
 export const trackHubEvent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { kind: string }) => d)
+  .validator((d: { kind: string }) => d)
   .handler(async ({ data, context }) => {
     await assertBulls(context.supabase, context.userId);
     const allowed = new Set([
@@ -159,7 +159,7 @@ export const listProgressPhotos = createServerFn({ method: "GET" })
 
 export const saveProgressPhotoSet = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { photo_date: string; front_path?: string | null; side_path?: string | null; back_path?: string | null }) => d)
+  .validator((d: { photo_date: string; front_path?: string | null; side_path?: string | null; back_path?: string | null }) => d)
   .handler(async ({ data, context }) => {
     await assertBulls(context.supabase, context.userId);
     const { error } = await context.supabase.from("bulls_progress_photos").insert({

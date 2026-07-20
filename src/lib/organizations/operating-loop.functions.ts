@@ -39,7 +39,7 @@ async function assertOrgAccess(supabase: any, userId: string, orgId: string, req
 
 export const listOrgCommunityPosts = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { slug: string; limit?: number }) => ({
+  .validator((d: { slug: string; limit?: number }) => ({
     slug: String(d.slug).toLowerCase().trim(),
     limit: Math.min(Math.max(d.limit ?? 30, 1), 100),
   }))
@@ -102,7 +102,7 @@ export const listOrgCommunityPosts = createServerFn({ method: "GET" })
 
 export const createOrgCommunityPost = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { organization_id: string; team_id?: string | null; post_type?: string; content: string; image_path?: string | null }) => ({
+  .validator((d: { organization_id: string; team_id?: string | null; post_type?: string; content: string; image_path?: string | null }) => ({
     organization_id: d.organization_id,
     team_id: d.team_id ?? null,
     post_type: d.post_type || "general",
@@ -148,7 +148,7 @@ export const createOrgCommunityPost = createServerFn({ method: "POST" })
 
 export const getOrgChallengeRanking = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { slug: string }) => ({ slug: String(d.slug).toLowerCase().trim() }))
+  .validator((d: { slug: string }) => ({ slug: String(d.slug).toLowerCase().trim() }))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: org } = await supabase
@@ -220,7 +220,7 @@ export const getOrgChallengeRanking = createServerFn({ method: "GET" })
 
 export const createOrgChallenge = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: {
+  .validator((d: {
     organization_id: string;
     team_id?: string | null;
     name: string;
@@ -254,7 +254,7 @@ export const createOrgChallenge = createServerFn({ method: "POST" })
 
 export const listOrgChallenges = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { organization_id: string }) => d)
+  .validator((d: { organization_id: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     await assertOrgAccess(supabase, userId, data.organization_id);
@@ -272,7 +272,7 @@ export const listOrgChallenges = createServerFn({ method: "GET" })
 
 export const listChallengeRules = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { challenge_id: string }) => d)
+  .validator((d: { challenge_id: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const { data: rules } = await supabase
@@ -285,7 +285,7 @@ export const listChallengeRules = createServerFn({ method: "GET" })
 
 export const upsertChallengeRule = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: {
+  .validator((d: {
     id?: string;
     challenge_id: string;
     rule_type: string;
@@ -325,7 +325,7 @@ export const upsertChallengeRule = createServerFn({ method: "POST" })
 
 export const awardChallengeBonus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { challenge_id: string; user_id: string; points: number; reason?: string }) => d)
+  .validator((d: { challenge_id: string; user_id: string; points: number; reason?: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: ch } = await supabase
@@ -356,7 +356,7 @@ export const awardChallengeBonus = createServerFn({ method: "POST" })
 
 export const listOrgAthleticPlans = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { organization_id: string }) => d)
+  .validator((d: { organization_id: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     await assertOrgAccess(supabase, userId, data.organization_id);
@@ -370,7 +370,7 @@ export const listOrgAthleticPlans = createServerFn({ method: "GET" })
 
 export const createOrgAthleticPlan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: {
+  .validator((d: {
     organization_id: string;
     name: string;
     description?: string | null;
@@ -411,7 +411,7 @@ export const createOrgAthleticPlan = createServerFn({ method: "POST" })
 
 export const updateOrgAthleticPlanStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { plan_id: string; status: string }) => d)
+  .validator((d: { plan_id: string; status: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { error } = await supabase
@@ -424,7 +424,7 @@ export const updateOrgAthleticPlanStatus = createServerFn({ method: "POST" })
 
 export const getOrgAthleticSession = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { session_id: string }) => d)
+  .validator((d: { session_id: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const { data: sess } = await supabase
@@ -464,7 +464,7 @@ export const getOrgAthleticSession = createServerFn({ method: "GET" })
 
 export const completeOrgAthleticSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: {
+  .validator((d: {
     session_id: string;
     task_id?: string | null;
     duration_minutes?: number | null;
@@ -569,75 +569,11 @@ async function awardPointsForEvent(
 // STAFF
 // ============================================================
 
-export const STAFF_PRESETS: Record<string, { role: string; permissions: string[]; scope_hint?: "org" | "team" }> = {
-  ORGANIZATION_ADMIN: {
-    role: "organization_admin",
-    scope_hint: "org",
-    permissions: [
-      "view_members", "manage_members",
-      "view_training", "manage_training",
-      "view_performance", "manage_performance",
-      "view_checkins",
-      "view_nutrition",
-      "manage_challenges", "manage_ranking",
-      "manage_community",
-      "manage_staff",
-      "manage_organization",
-    ],
-  },
-  TEAM_COACH: {
-    role: "coach",
-    scope_hint: "team",
-    permissions: [
-      "view_members",
-      "view_training", "manage_training",
-      "view_checkins",
-      "manage_challenges",
-      "manage_community",
-    ],
-  },
-  PERFORMANCE_COACH: {
-    role: "staff",
-    scope_hint: "team",
-    permissions: [
-      "view_members",
-      "view_training", "manage_training",
-      "view_performance", "manage_performance",
-      "view_checkins",
-    ],
-  },
-  NUTRITION_COACH: {
-    role: "staff",
-    scope_hint: "org",
-    permissions: ["view_members", "view_nutrition"],
-  },
-  COMMUNITY_MANAGER: {
-    role: "staff",
-    scope_hint: "org",
-    permissions: ["manage_challenges", "manage_ranking", "manage_community"],
-  },
-  CUSTOM: {
-    role: "staff",
-    scope_hint: "org",
-    permissions: [],
-  },
-};
-
-export const ALL_PERMISSIONS = [
-  "view_members", "manage_members",
-  "view_training", "manage_training",
-  "view_performance", "manage_performance",
-  "view_checkins",
-  "view_nutrition",
-  "manage_challenges", "manage_ranking",
-  "manage_community",
-  "manage_staff",
-  "manage_organization",
-] as const;
+export { STAFF_PRESETS, ALL_PERMISSIONS } from "@/lib/organizations/staff-presets";
 
 export const addOrgStaff = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: {
+  .validator((d: {
     organization_id: string;
     email?: string;
     user_id?: string;
@@ -769,7 +705,7 @@ export const addOrgStaff = createServerFn({ method: "POST" })
 
 export const updateOrgStaffPermissions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id: string; role?: string; permissions?: string[]; team_id?: string | null }) => d)
+  .validator((d: { id: string; role?: string; permissions?: string[]; team_id?: string | null }) => d)
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const patch: any = {};
@@ -790,7 +726,7 @@ export const updateOrgStaffPermissions = createServerFn({ method: "POST" })
  */
 export const removeOrgStaff = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id: string; delete_account?: boolean }) => d)
+  .validator((d: { id: string; delete_account?: boolean }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
@@ -843,7 +779,7 @@ export const removeOrgStaff = createServerFn({ method: "POST" })
 /** List pending staff invites for an org. */
 export const listOrgStaffInvites = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { organization_id: string }) => d)
+  .validator((d: { organization_id: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const { data: rows, error } = await supabase
@@ -857,7 +793,7 @@ export const listOrgStaffInvites = createServerFn({ method: "GET" })
 
 export const revokeOrgStaffInvite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id: string }) => d)
+  .validator((d: { id: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const { error } = await supabase
@@ -871,7 +807,7 @@ export const revokeOrgStaffInvite = createServerFn({ method: "POST" })
 /** Accept an invite as the currently-signed-in user. */
 export const acceptOrgStaffInvite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { invite_token: string }) => d)
+  .validator((d: { invite_token: string }) => d)
   .handler(async ({ data, context }) => {
     const { userId } = context;
     const { data: result, error } = await (context.supabase as any).rpc("accept_organization_invite", {
@@ -889,7 +825,7 @@ export const acceptOrgStaffInvite = createServerFn({ method: "POST" })
 /** Called when an athlete opens /daily-check with ?org=<slug>&task=<id>. */
 export const attachDailyCheckOrgContext = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { org_slug: string; task_id?: string | null; check_date?: string }) => d)
+  .validator((d: { org_slug: string; task_id?: string | null; check_date?: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: org } = await supabase

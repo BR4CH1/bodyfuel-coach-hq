@@ -21,7 +21,7 @@ export function BullsGate({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (loading || ent.loading) return;
     if (!supabaseUser) {
-      navigate({ to: "/auth" });
+      navigate({ to: "/auth", search: { next: undefined } });
       return;
     }
     if (!hasBullsAccess) {
