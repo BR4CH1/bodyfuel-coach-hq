@@ -41,7 +41,7 @@ const slotEnum = z.enum(["breakfast", "lunch", "dinner", "snack", "any"]);
 
 export const listCustomMeals = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { userId?: string }) => d)
+  .inputValidator((d: { userId?: string }) => d)
   .handler(async ({ data, context }) => {
     const target = data.userId ?? context.userId;
     const { data: rows, error } = await context.supabase
@@ -55,7 +55,7 @@ export const listCustomMeals = createServerFn({ method: "GET" })
 
 export const saveCustomMeal = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: {
+  .inputValidator((d: {
     id?: string;
     name: string;
     meal_slot?: MealSlot;
@@ -104,7 +104,7 @@ export const saveCustomMeal = createServerFn({ method: "POST" })
 
 export const deleteCustomMeal = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
+  .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("custom_meals").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
@@ -113,7 +113,7 @@ export const deleteCustomMeal = createServerFn({ method: "POST" })
 
 export const trackCustomMeal = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { id: string; slot?: MealSlot; scale?: number }) =>
+  .inputValidator((d: { id: string; slot?: MealSlot; scale?: number }) =>
     z
       .object({
         id: z.string().uuid(),

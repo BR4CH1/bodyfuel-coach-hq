@@ -27,7 +27,7 @@ import type { PerformanceNutritionResult } from "./types";
 
 export const getPerformanceNutritionProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { organization_id: string }) => d)
+  .inputValidator((d: { organization_id: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: row, error } = await supabase
@@ -44,7 +44,7 @@ export const getPerformanceNutritionProfile = createServerFn({ method: "POST" })
 
 export const savePerformanceNutritionProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (d: {
       organization_id: string;
       sex_for_energy_calculation: EnergySex | null;
@@ -111,7 +111,7 @@ export const savePerformanceNutritionProfile = createServerFn({ method: "POST" }
  */
 export const getNutritionTargetForDate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (d: {
       organization_id: string;
       /** YYYY-MM-DD */

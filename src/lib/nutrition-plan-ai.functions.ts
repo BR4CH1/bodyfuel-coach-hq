@@ -16,7 +16,7 @@ export type { GenerateNutritionPlanOpts } from "@/features/nutrition-plan-ai/typ
  */
 export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((data: GenerateNutritionPlanInput) => data)
+  .inputValidator((data: GenerateNutritionPlanInput) => data)
   .handler(async ({ data, context }) => {
     const { userId } = context;
     const target = data.user_id;

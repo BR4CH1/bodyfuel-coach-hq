@@ -18,7 +18,7 @@ export type ReadinessGateEvent = {
  */
 export const listRecentReadinessGateEvents = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((data: { userId: string; days?: number }) => data)
+  .inputValidator((data: { userId: string; days?: number }) => data)
   .handler(async ({ data, context }) => {
     const { supabase, userId: callerId } = context;
 

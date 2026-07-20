@@ -37,7 +37,7 @@ const submitSchema = z.object({
 /** Spieler reicht seinen eigenen Check-in ein (Upsert pro Tag). */
 export const submitCheckin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: unknown) => submitSchema.parse(d))
+  .inputValidator((d: unknown) => submitSchema.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const today = new Date().toISOString().slice(0, 10);
@@ -66,7 +66,7 @@ export const submitCheckin = createServerFn({ method: "POST" })
 /** Coach liest Check-ins eines Athleten. Zugriff durch RLS gesichert. */
 export const listAthleteCheckins = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: unknown) =>
+  .inputValidator((d: unknown) =>
     z.object({ userId: z.string().uuid(), limit: z.number().int().min(1).max(200).optional() }).parse(d),
   )
   .handler(async ({ data, context }) => {

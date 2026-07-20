@@ -14,7 +14,7 @@ const APP_URL = "https://bodyfuel-coaching.com";
  */
 export const startGuardianConsent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((data: {
+  .inputValidator((data: {
     birthdate: string;
     guardianName?: string;
     guardianEmail?: string;

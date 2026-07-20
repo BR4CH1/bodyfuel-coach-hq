@@ -29,7 +29,7 @@ type ParsedDay = { name: string; meals: ParsedMeal[] };
 
 export const parseNutritionPlan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((data: { plan_id: string }) => data)
+  .inputValidator((data: { plan_id: string }) => data)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const apiKey = process.env.LOVABLE_API_KEY;
@@ -182,7 +182,7 @@ Antworte ausschließlich mit gültigem JSON:
 
 export const estimateMealMacros = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((data: { meal_id: string }) => data)
+  .inputValidator((data: { meal_id: string }) => data)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
@@ -250,7 +250,7 @@ export const estimateMealMacros = createServerFn({ method: "POST" })
 
 export const getMealMacroDebug = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((data: { meal_id: string }) => data)
+  .inputValidator((data: { meal_id: string }) => data)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
@@ -327,7 +327,7 @@ export const getMealMacroDebug = createServerFn({ method: "POST" })
 
 export const generateMealRecipe = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((data: { meal_id: string; force?: boolean }) => data)
+  .inputValidator((data: { meal_id: string; force?: boolean }) => data)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 

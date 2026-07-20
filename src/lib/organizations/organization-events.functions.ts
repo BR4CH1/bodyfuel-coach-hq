@@ -40,7 +40,7 @@ export type OrgEvent = {
 
 export const listOrgEvents = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (data: {
       orgId: string;
       teamId?: string | null;
@@ -66,7 +66,7 @@ export const listOrgEvents = createServerFn({ method: "GET" })
 
 export const upsertOrgEvent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (data: {
       id?: string | null;
       orgId: string;
@@ -142,7 +142,7 @@ export const upsertOrgEvent = createServerFn({ method: "POST" })
 
 export const deleteOrgEvent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((data: { id: string }) => data)
+  .inputValidator((data: { id: string }) => data)
   .handler(async ({ data, context }) => {
     // Event-Info vor dem Löschen laden, damit wir bei Matches den
     // MD-1/MD/MD+1-Recalc gezielt fahren können.
@@ -259,7 +259,7 @@ export async function getNextMatchForAthlete(
  */
 export const listMatchDatesForWeek = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (data: { orgId: string; teamId?: string | null; weekStart: string; weekEnd: string }) => data,
   )
   .handler(async ({ data, context }) => {

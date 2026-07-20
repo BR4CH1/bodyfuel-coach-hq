@@ -7,7 +7,7 @@ import { scoreOfCheckin, summarize } from "@/lib/readiness";
 /** Home data: today's tasks + status cards + active challenge. Membership-scoped. */
 export const getOrgHomeData = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { slug: string }) => ({ slug: String(d.slug).toLowerCase().trim() }))
+  .inputValidator((d: { slug: string }) => ({ slug: String(d.slug).toLowerCase().trim() }))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
@@ -227,7 +227,7 @@ export const getOrgHomeData = createServerFn({ method: "GET" })
 /** Mark a task done/skipped. */
 export const updateOrgTaskStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { taskId: string; status: "open" | "done" | "skipped" }) => d)
+  .inputValidator((d: { taskId: string; status: "open" | "done" | "skipped" }) => d)
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("organization_tasks")
@@ -241,7 +241,7 @@ export const updateOrgTaskStatus = createServerFn({ method: "POST" })
 /** Athletic training entry data. */
 export const getOrgAthleticTraining = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { slug: string }) => ({ slug: String(d.slug).toLowerCase().trim() }))
+  .inputValidator((d: { slug: string }) => ({ slug: String(d.slug).toLowerCase().trim() }))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: org } = await supabase
@@ -324,7 +324,7 @@ export const getOrgAthleticTraining = createServerFn({ method: "GET" })
 /** Ranking data — points sorted, org-scoped. */
 export const getOrgRanking = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { slug: string }) => ({ slug: String(d.slug).toLowerCase().trim() }))
+  .inputValidator((d: { slug: string }) => ({ slug: String(d.slug).toLowerCase().trim() }))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: org } = await supabase
@@ -385,7 +385,7 @@ export const getOrgRanking = createServerFn({ method: "GET" })
  *  optional initial body measurement (weight_kg), and marks onboarding_completed. */
 export const completeOrganizationOnboardingV2 = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (d: {
       organization_id: string;
       team_id?: string | null;
@@ -568,7 +568,7 @@ export const completeOrganizationOnboardingV2 = createServerFn({ method: "POST" 
  *  KEINE Größe, KEIN Gewicht, KEINE Position. */
 export const completeStaffOrganizationOnboarding = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (d: {
       organization_id: string;
       display_name?: string | null;
@@ -607,7 +607,7 @@ export const completeStaffOrganizationOnboarding = createServerFn({ method: "POS
 /** Coach: detailed org overview. */
 export const getOrgCoachDetail = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { orgId: string }) => d)
+  .inputValidator((d: { orgId: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 

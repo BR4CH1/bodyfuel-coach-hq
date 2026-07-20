@@ -65,7 +65,7 @@ function bucketPlans(rows: CoachPlanRow[]): CoachPlanBuckets {
 
 export const listCustomerNutritionPlans = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { client_id: string }) => d)
+  .inputValidator((d: { client_id: string }) => d)
   .handler(async ({ data, context }) => {
     await assertCoach(context);
     const { supabase } = context;
@@ -82,7 +82,7 @@ export const listCustomerNutritionPlans = createServerFn({ method: "GET" })
 
 export const checkNutritionPlanConflict = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (d: { client_id: string; start_date: string; end_date: string; exclude_plan_id?: string }) => d,
   )
   .handler(async ({ data, context }) => {
@@ -104,7 +104,7 @@ export const checkNutritionPlanConflict = createServerFn({ method: "POST" })
 
 export const setNutritionPlanStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (d: {
       plan_id: string;
       status: "draft" | "approved" | "published" | "active" | "archived";

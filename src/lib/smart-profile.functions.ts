@@ -44,7 +44,7 @@ export const getMySmartProfile = createServerFn({ method: "GET" })
 
 export const saveSmartProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: Partial<SmartNutritionProfile> & { complete?: boolean }) => d)
+  .inputValidator((d: Partial<SmartNutritionProfile> & { complete?: boolean }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { complete, ...rest } = data;
@@ -63,7 +63,7 @@ export const saveSmartProfile = createServerFn({ method: "POST" })
 // Coach reads any profile (RLS allows)
 export const getCustomerSmartProfile = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { user_id: string }) => d)
+  .inputValidator((d: { user_id: string }) => d)
   .handler(async ({ data, context }) => {
     const db = data.user_id === context.userId
       ? context.supabase
@@ -83,7 +83,7 @@ export const getCustomerSmartProfile = createServerFn({ method: "GET" })
 // If the client has an active nutrition partner, the budget is mirrored to both.
 export const setCustomerWeeklyBudget = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { user_id: string; weekly_budget_eur: number | null }) => d)
+  .inputValidator((d: { user_id: string; weekly_budget_eur: number | null }) => d)
   .handler(async ({ data, context }) => {
     await assertCoachOrOrgStaffForAthlete(context, data.user_id, "nutrition");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -119,7 +119,7 @@ export const setCustomerWeeklyBudget = createServerFn({ method: "POST" })
 // (e.g. "nur Airfryer, kein Herd"). Used by the AI prompt to constrain recipes.
 export const setCustomerKitchenEquipment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: {
+  .inputValidator((d: {
     user_id: string;
     kitchen_equipment?: string[];
     kitchen_equipment_notes?: string | null;
