@@ -5,7 +5,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 /** Zentrale + private Lebensmittelsuche (max 50). */
 export const searchFoods = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((input) =>
+  .inputValidator((input) =>
     z
       .object({
         q: z.string().min(1),

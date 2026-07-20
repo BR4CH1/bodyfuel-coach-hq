@@ -147,7 +147,7 @@ function normalizeTrainingPlan(input: any): ImportedPlan {
  */
 export const saveCoachTrainingPlanDraft = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { client_id: string; plan: ImportedPlan; title?: string }) => d)
+  .inputValidator((d: { client_id: string; plan: ImportedPlan; title?: string }) => d)
   .handler(async ({ data, context }) => {
     await assertCoach(context);
     const plan = normalizeTrainingPlan(data.plan);
@@ -320,7 +320,7 @@ function normalizeNutritionPlan(input: any): ImportedNutritionPlan {
  */
 export const parseCoachNutritionPlan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { mode: "text" | "image" | "pdf"; payload: string; filename?: string }) => d)
+  .inputValidator((d: { mode: "text" | "image" | "pdf"; payload: string; filename?: string }) => d)
   .handler(async ({ data, context }) => {
     await assertCoach(context);
     if (!data.payload || data.payload.length < 10) throw new Error("Kein Inhalt zum Parsen.");
@@ -369,7 +369,7 @@ export type NutritionSaveMode = "new_plan" | "append_week" | "replace_week" | "r
  */
 export const saveCoachNutritionPlanDraft = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (d: {
       client_id: string;
       plan: ImportedNutritionPlan;

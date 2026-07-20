@@ -29,7 +29,7 @@ async function assertOrgAccess(
 
 export const listWeekTemplates = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { organization_id: string }) => d)
+  .inputValidator((d: { organization_id: string }) => d)
   .handler(async ({ data, context }) => {
     await assertOrgAccess(context, data.organization_id);
     const { data: rows, error } = await context.supabase
@@ -50,7 +50,7 @@ export const listWeekTemplates = createServerFn({ method: "GET" })
 
 export const createWeekTemplate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (d: {
       organization_id: string;
       name: string;
@@ -82,7 +82,7 @@ export const createWeekTemplate = createServerFn({ method: "POST" })
 
 export const updateWeekTemplate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (d: {
       id: string;
       patch: Partial<{
@@ -116,7 +116,7 @@ export const updateWeekTemplate = createServerFn({ method: "POST" })
 
 export const deleteWeekTemplate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { id: string }) => d)
+  .inputValidator((d: { id: string }) => d)
   .handler(async ({ data, context }) => {
     const cur = await context.supabase
       .from("org_training_week_template")

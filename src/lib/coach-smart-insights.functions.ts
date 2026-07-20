@@ -12,7 +12,7 @@ async function assertCoachOrSelf(supabase: any, userId: string, target: string) 
 
 export const getCustomerSmartProfile = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { user_id: string }) => d)
+  .inputValidator((d: { user_id: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     await assertCoachOrSelf(supabase, userId, data.user_id);
@@ -27,7 +27,7 @@ export const getCustomerSmartProfile = createServerFn({ method: "GET" })
 
 export const getCustomerRiskFlags = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { user_id: string }) => d)
+  .inputValidator((d: { user_id: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     await assertCoachOrSelf(supabase, userId, data.user_id);
@@ -163,7 +163,7 @@ export const getCustomerRiskFlags = createServerFn({ method: "GET" })
 
 export const getCustomerSkipBreakdown = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { user_id: string }) => d)
+  .inputValidator((d: { user_id: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     await assertCoachOrSelf(supabase, userId, data.user_id);
@@ -192,7 +192,7 @@ export const getCustomerSkipBreakdown = createServerFn({ method: "GET" })
 
 export const setCustomerAutoPublish = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { user_id: string; auto_publish: boolean }) => d)
+  .inputValidator((d: { user_id: string; auto_publish: boolean }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: isCoach } = await supabase.rpc("has_role", {

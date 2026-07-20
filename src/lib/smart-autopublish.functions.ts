@@ -12,7 +12,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
  */
 export const activateLatestSmartPlan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (d: { user_id: string; plan_type: "nutrition" | "training" }) => d,
   )
   .handler(async ({ data, context }) => {

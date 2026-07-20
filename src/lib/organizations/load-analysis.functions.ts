@@ -119,7 +119,7 @@ function weekDatesFrom(weekStart: string): string[] {
 
 export const suggestLoadWeek = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (data: {
       orgId: string;
       teamId?: string | null;

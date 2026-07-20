@@ -24,7 +24,7 @@ const SELECT_COLS =
 
 export const listMealWishes = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { userId?: string; includeHistory?: boolean }) => d)
+  .inputValidator((d: { userId?: string; includeHistory?: boolean }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const target = data.userId ?? userId;
@@ -54,7 +54,7 @@ export const listMealWishes = createServerFn({ method: "GET" })
 
 export const addMealWish = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: {
+  .inputValidator((d: {
     wish: string;
     meal_slot?: MealSlot;
     for_person?: string;
@@ -108,7 +108,7 @@ export const addMealWish = createServerFn({ method: "POST" })
 
 export const updateMealWishAssignment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: {
+  .inputValidator((d: {
     id: string;
     meal_slot?: MealSlot;
     for_person?: string | null;
@@ -141,7 +141,7 @@ export const updateMealWishAssignment = createServerFn({ method: "POST" })
 
 export const deleteMealWish = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
+  .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("meal_wishes").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
@@ -150,7 +150,7 @@ export const deleteMealWish = createServerFn({ method: "POST" })
 
 export const reviewMealWish = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { id: string; status: "approved" | "rejected"; coach_note?: string }) =>
+  .inputValidator((d: { id: string; status: "approved" | "rejected"; coach_note?: string }) =>
     z
       .object({
         id: z.string().uuid(),

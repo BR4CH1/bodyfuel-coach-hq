@@ -19,7 +19,7 @@ export type TierMetrics = {
 // === Track a single upgrade event ===
 export const trackUpgradeEvent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (d: {
       to_tier: UpgradeTier;
       from_tier?: UpgradeTier | null;

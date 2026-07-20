@@ -401,7 +401,7 @@ Antworte ausschließlich als valides JSON:
 
 export const analyzeMealPhoto = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { image_data_url: string; note?: string }) =>
+  .inputValidator((d: { image_data_url: string; note?: string }) =>
     z
       .object({
         image_data_url: z
@@ -514,7 +514,7 @@ export type MatchIngredientResult = {
 
 export const matchIngredientName = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { name: string }) =>
+  .inputValidator((d: { name: string }) =>
     z.object({ name: z.string().trim().min(1).max(200) }).parse(d),
   )
   .handler(async ({ data, context }): Promise<MatchIngredientResult> => {
@@ -537,7 +537,7 @@ export const matchIngredientName = createServerFn({ method: "POST" })
 
 export const learnFoodAlias = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { term: string; food_id: string }) =>
+  .inputValidator((d: { term: string; food_id: string }) =>
     z
       .object({
         term: z.string().trim().min(1).max(200),

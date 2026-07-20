@@ -47,7 +47,7 @@ async function resolveOrCreateCustomer(
 
 export const createSmartCheckoutSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (data: {
       priceId: string;
       returnUrl: string;
@@ -166,7 +166,7 @@ export const createSmartCheckoutSession = createServerFn({ method: "POST" })
 
 export const createPortalSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (data: { returnUrl?: string; environment: StripeEnv }) => data,
   )
   .handler(async ({ data, context }): Promise<PortalSessionResult> => {

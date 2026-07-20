@@ -45,7 +45,7 @@ const NUTRITION_FIELDS = [
 
 export const getPerformanceOnboardingCompletion = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: { organizationId: string }) => d)
+  .inputValidator((d: { organizationId: string }) => d)
   .handler(async ({ data, context }): Promise<OnboardingCompletionResult> => {
     const { supabase, userId } = context;
     const [
@@ -123,7 +123,7 @@ export const getPerformanceOnboardingCompletion = createServerFn({ method: "POST
  */
 export const savePerformanceNutritionPreferences = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (d: {
       organizationId: string;
       favorite_foods?: string[] | null;

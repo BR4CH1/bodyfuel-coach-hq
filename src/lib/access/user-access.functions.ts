@@ -231,7 +231,7 @@ export const resolveMyAccess = createServerFn({ method: "GET" })
 /** Coach/Admin-Resolver für einen anderen User (Debug-View). */
 export const resolveUserAccessAsAdmin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((data: unknown) =>
+  .inputValidator((data: unknown) =>
     z.object({ userId: z.string().uuid() }).parse(data),
   )
   .handler(async ({ data, context }) => {

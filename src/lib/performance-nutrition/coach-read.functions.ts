@@ -134,7 +134,7 @@ function flagsToMissing(flags: string[]): string[] {
 
 export const getCoachAthletePerformanceNutrition = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
+  .inputValidator(
     (d: {
       organization_id: string;
       target_user_id: string;
