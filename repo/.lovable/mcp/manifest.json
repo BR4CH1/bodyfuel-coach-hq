@@ -1,0 +1,116 @@
+{
+  "version": 1,
+  "sdk_version": "0.20.0",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://afbiawtnqnxvaihlnmcd.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "bodyfuel-mcp",
+      "version": "0.1.0",
+      "title": "BODYFUEL Coaching"
+    },
+    "tools": [
+      {
+        "name": "whoami",
+        "title": "Who am I",
+        "description": "Returns the signed-in BODYFUEL user's profile (name, role, goal).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "nutrition_today",
+        "title": "Today's nutrition",
+        "description": "Returns the signed-in user's nutrition target and consumed kcal/macros for today.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "recent_weight",
+        "title": "Recent weight measurements",
+        "description": "Returns the signed-in user's most recent body-weight measurements.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 90,
+              "default": 14,
+              "description": "How many entries to return (max 90)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "log_weight",
+        "title": "Log a body-weight measurement",
+        "description": "Inserts a new body-weight measurement (kg) for the signed-in user, timestamped now.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "weight_kg": {
+              "type": "number",
+              "minimum": 25,
+              "maximum": 400,
+              "description": "Body weight in kg (25–400)."
+            },
+            "body_fat_pct": {
+              "type": "number",
+              "minimum": 2,
+              "maximum": 70,
+              "description": "Optional body-fat percentage."
+            },
+            "notes": {
+              "type": "string",
+              "maxLength": 500,
+              "description": "Optional short note."
+            }
+          },
+          "required": [
+            "weight_kg"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}

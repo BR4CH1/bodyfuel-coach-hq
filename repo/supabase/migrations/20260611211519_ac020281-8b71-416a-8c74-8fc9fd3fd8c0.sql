@@ -1,0 +1,2 @@
+ALTER TABLE public.nutrition_plans ADD COLUMN IF NOT EXISTS plan_type TEXT NOT NULL DEFAULT 'nutrition' CHECK (plan_type IN ('nutrition','training'));
+CREATE INDEX IF NOT EXISTS nutrition_plans_client_type_idx ON public.nutrition_plans (client_id, plan_type, created_at DESC);
