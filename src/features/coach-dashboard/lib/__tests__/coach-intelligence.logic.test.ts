@@ -21,14 +21,13 @@ const client = {
 it("prioritizes stagnation, risk and attention signals", () => {
   const view: CoachDashboardViewModel = {
     weekStart: "2026-07-20",
-    clients: [client],
     openWeek: [client],
     inactive: [{ ...client, days: 8 }],
     recentMeasurements: [],
     recentNutrition: [],
     recentTraining: [],
     expiringPlans: [],
-    planOverview: [],
+    planOverview: [client],
     scoreById: new Map(),
     scoreCounts: { green: 0, yellow: 0, red: 1 },
     redClients: [{ ...client, _score: { score: 21, level: "red", reasons: ["Check-in fehlt"] } }],

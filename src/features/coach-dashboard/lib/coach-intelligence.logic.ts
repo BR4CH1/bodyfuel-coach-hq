@@ -17,9 +17,21 @@ function uniqueByUser(signals: CoachIntelligenceSignal[]) {
   });
 }
 
-export function buildCoachIntelligence(view: CoachDashboardViewModel): CoachIntelligenceViewModel {
-  const stagnating = view.clients
-    .filter((client) => (client.plateau_days ?? 0) >= 7)
+export function buildCoachIntelligence(
+  view: CoachDashboardViewModel | null | undefined,
+): CoachIntelligenceViewModel {
+  const safeView = view ?? ({} as Partial<CoachDashboardViewModel>);
+  const clientsSource = Array.isArray((safeView as { clients?: unknown }).clients)
+    ? ((safeView as { clients?: CoachDashboardViewModel["openWeek"] }).clients ?? [])
+    : Array.isArray(safeView.planOverview)
+      ? safeView.planOverview
+      : [];
+  const openWeek = Array.isArray(safeView.openWeek) ? safeView.openWeek : [];
+  const inactive = Array.isArray(safeView.inactive) ? safeView.inactive : [];
+  const redClients = Array.isArray(safeView.redClients) ? safeView.redClients : [];
+
+  const stagnating = clientsSource
+    .filter((client) => (client?.plateau_days ?? 0) >= 7)
     .sort((left, right) => (right.plateau_days ?? 0) - (left.plateau_days ?? 0))
     .slice(0, 4)
     .map<CoachIntelligenceSignal>((client) => ({
@@ -32,7 +44,7 @@ export function buildCoachIntelligence(view: CoachDashboardViewModel): CoachInte
       detail: `Seit ${client.plateau_days ?? 0} Tagen ist kein klarer Fortschritt erkennbar.`,
     }));
 
-  const atRisk = view.redClients.slice(0, 4).map<CoachIntelligenceSignal>((client) => ({
+  const atRisk = redClients.slice(0, 4).map<CoachIntelligenceSignal>((client) => ({
     id: `risk-${client.id}`,
     userId: client.id,
     name: nameOf(client.display_name),
@@ -40,11 +52,12 @@ export function buildCoachIntelligence(view: CoachDashboardViewModel): CoachInte
     severity: "urgent",
     headline: `${nameOf(client.display_name)} hat erhöhten Betreuungsbedarf`,
     detail:
-      client._score.reasons.slice(0, 2).join(" · ") || `Coach Score ${client._score.score}/100`,
+      (client._score?.reasons ?? []).slice(0, 2).join(" · ") ||
+      `Coach Score ${client._score?.score ?? 0}/100`,
   }));
 
   const attentionCandidates: CoachIntelligenceSignal[] = [
-    ...view.openWeek.map((client) => ({
+    ...openWeek.map((client) => ({
       id: `checkin-${client.id}`,
       userId: client.id,
       name: nameOf(client.display_name),
@@ -53,7 +66,7 @@ export function buildCoachIntelligence(view: CoachDashboardViewModel): CoachInte
       headline: `${nameOf(client.display_name)} hat keinen aktuellen Check-in`,
       detail: "Fuely empfiehlt eine persönliche Erinnerung.",
     })),
-    ...view.inactive.map((client) => ({
+    ...inactive.map((client) => ({
       id: `inactive-${client.id}`,
       userId: client.id,
       name: nameOf(client.display_name),
@@ -61,7 +74,7 @@ export function buildCoachIntelligence(view: CoachDashboardViewModel): CoachInte
       severity: "attention" as const,
       headline: `${nameOf(client.display_name)} ist inaktiv`,
       detail:
-        client.days === null
+        client.days === null || client.days === undefined
           ? "Aktivität konnte nicht bestimmt werden."
           : `Seit ${client.days} Tagen keine relevante Aktivität.`,
     })),
