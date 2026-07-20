@@ -23,7 +23,8 @@
     "build:profile:no-pwa": "node scripts/run-profiled-build.mjs --no-pwa",
     "build:profile:inline-ssr": "node scripts/run-profiled-build.mjs --inline-ssr",
     "build:profile:report": "node scripts/analyze-build-profile.mjs",
-    "check:browser-only-imports": "node scripts/check-browser-only-imports.mjs"
+    "check:browser-only-imports": "node scripts/check-browser-only-imports.mjs",
+    "postbuild": "node scripts/generate-pwa.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -118,7 +119,8 @@
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
     "vite": "^7.3.1",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "workbox-build": "^7.4.1"
   },
   "pnpm": {
     "overrides": {
