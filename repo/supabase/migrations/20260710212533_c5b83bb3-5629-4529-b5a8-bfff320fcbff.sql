@@ -1,2 +1,0 @@
-ALTER TABLE public.plan_adjustment_history DROP CONSTRAINT IF EXISTS plan_adjustment_history_kind_check;
-ALTER TABLE public.plan_adjustment_history ADD CONSTRAINT plan_adjustment_history_kind_check CHECK (kind = ANY (ARRAY['nutrition'::text, 'training'::text]) OR kind LIKE 'load_change:%');

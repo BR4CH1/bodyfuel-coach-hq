@@ -17,8 +17,13 @@ function uniqueByUser(signals: CoachIntelligenceSignal[]) {
   });
 }
 
-export function buildCoachIntelligence(view: CoachDashboardViewModel): CoachIntelligenceViewModel {
-  const stagnating = view.clients
+export function buildCoachIntelligence(
+  view: CoachDashboardViewModel,
+  clients?: CoachDashboardViewModel["clients"],
+): CoachIntelligenceViewModel {
+  const intelligenceClients = clients ?? view.clients ?? [];
+
+  const stagnating = intelligenceClients
     .filter((client) => (client.plateau_days ?? 0) >= 7)
     .sort((left, right) => (right.plateau_days ?? 0) - (left.plateau_days ?? 0))
     .slice(0, 4)

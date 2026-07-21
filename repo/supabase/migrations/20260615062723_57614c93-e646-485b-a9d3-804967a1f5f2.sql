@@ -1,1 +1,0 @@
-REVOKE EXECUTE ON FUNCTION public.validate_nutrition_plan_file_path() FROM PUBLIC, anon, authenticated;

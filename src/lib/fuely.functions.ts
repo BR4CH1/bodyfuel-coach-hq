@@ -47,10 +47,6 @@ GRENZEN:
 - Keine extremen Diäten oder gefährlichen Praktiken.
 - Coach-Vorgaben (Trainingsplan vom Coach, verordnete Ernährung) niemals eigenmächtig überschreiben.`;
 
-
-
-
-
 async function callFuely(
   messages: any[],
   apiKey: string,
@@ -66,13 +62,14 @@ async function callFuely(
     headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
     body: JSON.stringify(body),
   });
-  if (res.status === 429) throw new Error("Fuely ist gerade überlastet — versuch's gleich nochmal.");
-  if (res.status === 402) throw new Error("Fuelys Guthaben ist aufgebraucht — bitte lade Credits nach.");
+  if (res.status === 429)
+    throw new Error("Fuely ist gerade überlastet — versuch's gleich nochmal.");
+  if (res.status === 402)
+    throw new Error("Fuelys Guthaben ist aufgebraucht — bitte lade Credits nach.");
   if (!res.ok) throw new Error(`Fuely konnte nicht antworten (${res.status})`);
   const j = await res.json();
   return j?.choices?.[0]?.message ?? { content: "Hmm, mir fehlen gerade die Worte 🤔" };
 }
-
 
 async function extractMemories(
   supabase: any,
@@ -138,6 +135,63 @@ export const listFuelyMessages = createServerFn({ method: "GET" })
     return { items: (data ?? []) as FuelyMessage[] };
   });
 
+type LocalCalorieChange = {
+  kcal: number;
+  minimumKcal: number | null;
+  durationDays: number | null;
+  applyTo: "all_days" | "training_days" | "rest_days";
+  recalculateMacros: boolean;
+};
+
+function parseLocalCalorieChange(content: string): LocalCalorieChange | null {
+  const normalized = content.toLowerCase().replace(/\.(?=\d{3}\b)/g, "");
+
+  if (!/(kalorien|kalorienziel|kcal)/.test(normalized)) return null;
+
+  const explicitKcal = [...normalized.matchAll(/(\d{3,4})\s*(?:kcal|kalorien)/g)];
+  const contextualKcal = normalized.match(/(?:kalorienziel|kalorien|kcal)\D{0,24}(\d{3,4})/);
+
+  const kcal = Number(explicitKcal[0]?.[1] ?? contextualKcal?.[1]);
+  if (!Number.isFinite(kcal) || kcal < 1200 || kcal > 6000) return null;
+
+  const minimumMatch = normalized.match(
+    /(?:mindestens|minimum|min\.?|untergrenze)\D{0,20}(\d{3,4})/,
+  );
+  const durationMatch = normalized.match(/(?:für\s+)?(\d{1,2})\s*tag(?:e|en)?/);
+
+  const minimumKcal = minimumMatch ? Number(minimumMatch[1]) : null;
+  const durationDays = durationMatch ? Math.max(1, Math.min(90, Number(durationMatch[1]))) : null;
+
+  let applyTo: LocalCalorieChange["applyTo"] = "all_days";
+  if (/trainingstag|trainingstage|trainingstagen/.test(normalized)) {
+    applyTo = "training_days";
+  } else if (/ruhetag|ruhetage|restday|resttage/.test(normalized)) {
+    applyTo = "rest_days";
+  }
+
+  const recalculateMacros = !/(makros?\s+(?:nicht|unverändert)|ohne\s+(?:neue\s+)?makro)/.test(
+    normalized,
+  );
+
+  return {
+    kcal,
+    minimumKcal,
+    durationDays,
+    applyTo,
+    recalculateMacros,
+  };
+}
+
+function isLocalConfirmation(content: string) {
+  return /^(ja|jep|jo|okay|ok|bestätigen|speichern|mach(?:en)?|los)(?:[!. ]*)$/i.test(
+    content.trim(),
+  );
+}
+
+function isLocalCancellation(content: string) {
+  return /^(nein|abbrechen|abbruch|stop|stopp)(?:[!. ]*)$/i.test(content.trim());
+}
+
 export const sendFuelyMessage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { content: string; orgSlug?: string }) => {
@@ -148,15 +202,16 @@ export const sendFuelyMessage = createServerFn({ method: "POST" })
     return { content: c, orgSlug };
   })
   .handler(
-    async ({ data, context }): Promise<{
+    async ({
+      data,
+      context,
+    }): Promise<{
       user: FuelyMessage;
       assistant: FuelyMessage;
       nav?: { path: string; label: string } | null;
     }> => {
       const { supabase, userId } = context;
       const apiKey = process.env.LOVABLE_API_KEY;
-      if (!apiKey) throw new Error("Fuely ist gerade nicht konfiguriert (LOVABLE_API_KEY fehlt)");
-
       const { FUELY_TOOLS, runFuelyTool } = await import("./fuely-tools.server");
 
       // Persist user message immediately
@@ -175,6 +230,107 @@ export const sendFuelyMessage = createServerFn({ method: "POST" })
         .limit(30);
       const history = (hist ?? []).reverse();
 
+      if (!apiKey) {
+        const directChange = parseLocalCalorieChange(data.content);
+        let pendingChange: LocalCalorieChange | null = null;
+
+        for (const message of history.slice(-7, -1).reverse()) {
+          if (message.role !== "user") continue;
+          pendingChange = parseLocalCalorieChange(String(message.content ?? ""));
+          if (pendingChange) break;
+        }
+
+        let localAssistantText: string;
+
+        if (isLocalCancellation(data.content)) {
+          localAssistantText = "Alles klar, die Änderung wurde abgebrochen 👍";
+        } else if (isLocalConfirmation(data.content)) {
+          if (!pendingChange) {
+            localAssistantText =
+              "Ich habe keine offene Kalorienänderung gefunden. Schreib mir das gewünschte Kalorienziel bitte noch einmal.";
+          } else {
+            const result = await runFuelyTool(supabase, userId, data.orgSlug || null, {
+              id: `local-calorie-${Date.now()}`,
+              name: "change_calorie_target",
+              args: {
+                kcal: pendingChange.kcal,
+                minimum_kcal: pendingChange.minimumKcal,
+                duration_days: pendingChange.durationDays,
+                apply_to: pendingChange.applyTo,
+                recalculate_macros: pendingChange.recalculateMacros,
+                confirmed: true,
+              },
+            });
+
+            if (result?.error) {
+              localAssistantText = `Ich konnte nichts ändern: ${String(result.error)}`;
+            } else {
+              const macros = result?.macros ?? {};
+              localAssistantText = [
+                "Gespeichert ✅",
+                "",
+                `• Kalorienziel: ${result.kcal} kcal`,
+                result.duration_days
+                  ? `• Zeitraum: ${result.duration_days} Tage`
+                  : "• Zeitraum: dauerhaft",
+                result.minimum_kcal ? `• Untergrenze: ${result.minimum_kcal} kcal` : null,
+                `• Protein: ${macros.protein_g ?? "–"} g`,
+                `• Kohlenhydrate: ${macros.carbs_g ?? "–"} g`,
+                `• Fett: ${macros.fat_g ?? "–"} g`,
+              ]
+                .filter(Boolean)
+                .join("\n");
+            }
+          }
+        } else if (directChange) {
+          const applies =
+            directChange.applyTo === "training_days"
+              ? "nur an Trainingstagen"
+              : directChange.applyTo === "rest_days"
+                ? "nur an Ruhetagen"
+                : "an allen Tagen";
+
+          localAssistantText = [
+            "Ich würde Folgendes ändern:",
+            "",
+            `• Kalorienziel: ${directChange.kcal} kcal`,
+            directChange.durationDays
+              ? `• Zeitraum: für ${directChange.durationDays} Tage`
+              : "• Zeitraum: dauerhaft",
+            `• Gilt: ${applies}`,
+            directChange.minimumKcal ? `• Untergrenze: ${directChange.minimumKcal} kcal` : null,
+            directChange.recalculateMacros
+              ? "• Makros werden passend neu berechnet"
+              : "• Makros bleiben unverändert",
+            "",
+            "Soll ich das wirklich speichern? Schreib einfach „Ja“ oder „Abbrechen“.",
+          ]
+            .filter(Boolean)
+            .join("\n");
+        } else {
+          localAssistantText =
+            "Diese Anfrage kann ich im lokalen Modus gerade noch nicht zuverlässig beantworten. Kalorienziele kann ich bereits direkt ändern; Trainingsplan-Abfragen werden als Nächstes angebunden.";
+        }
+
+        const { data: localAssistantRow, error: localAssistantError } = await supabase
+          .from("fuely_messages")
+          .insert({
+            user_id: userId,
+            role: "assistant",
+            content: localAssistantText,
+          })
+          .select("id, role, content, created_at")
+          .single();
+
+        if (localAssistantError) throw new Error(localAssistantError.message);
+
+        return {
+          user: userRow as FuelyMessage,
+          assistant: localAssistantRow as FuelyMessage,
+          nav: null,
+        };
+      }
+
       const today = new Date().toISOString().slice(0, 10);
       const messages: any[] = [
         { role: "system", content: SYSTEM_PROMPT },
@@ -190,7 +346,8 @@ export const sendFuelyMessage = createServerFn({ method: "POST" })
           const msg = await callFuely(messages, apiKey, { tools: FUELY_TOOLS as any });
           const toolCalls = (msg?.tool_calls ?? []) as any[];
           if (!toolCalls.length) {
-            assistantText = String(msg?.content ?? "").trim() || "Hmm, mir fehlen gerade die Worte 🤔";
+            assistantText =
+              String(msg?.content ?? "").trim() || "Hmm, mir fehlen gerade die Worte 🤔";
             break;
           }
           messages.push({
@@ -202,7 +359,9 @@ export const sendFuelyMessage = createServerFn({ method: "POST" })
             let args: any = {};
             try {
               args = tc?.function?.arguments ? JSON.parse(tc.function.arguments) : {};
-            } catch { /* ignore */ }
+            } catch {
+              /* ignore */
+            }
             const result = await runFuelyTool(supabase, userId, data.orgSlug || null, {
               id: tc.id,
               name: tc?.function?.name,
@@ -220,8 +379,13 @@ export const sendFuelyMessage = createServerFn({ method: "POST" })
         }
         if (!assistantText) {
           // Force a plain answer without tools if we ran out of steps
-          const finalMsg = await callFuely(messages, apiKey, { tools: FUELY_TOOLS as any, tool_choice: "none" });
-          assistantText = String(finalMsg?.content ?? "").trim() || "Ich brauch' nochmal einen Anlauf — frag mich nochmal 👊";
+          const finalMsg = await callFuely(messages, apiKey, {
+            tools: FUELY_TOOLS as any,
+            tool_choice: "none",
+          });
+          assistantText =
+            String(finalMsg?.content ?? "").trim() ||
+            "Ich brauch' nochmal einen Anlauf — frag mich nochmal 👊";
         }
       } catch (e: any) {
         const fallback =
@@ -249,7 +413,6 @@ export const sendFuelyMessage = createServerFn({ method: "POST" })
     },
   );
 
-
 export const clearFuelyChat = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -274,22 +437,34 @@ export const listFuelyMemories = createServerFn({ method: "GET" })
 
 export const upsertFuelyMemory = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id?: string; category?: string; content: string; importance?: number }) => d)
+  .inputValidator(
+    (d: { id?: string; category?: string; content: string; importance?: number }) => d,
+  )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const row = {
       user_id: userId,
       category: String(data.category ?? "general").slice(0, 40),
-      content: String(data.content ?? "").trim().slice(0, 500),
+      content: String(data.content ?? "")
+        .trim()
+        .slice(0, 500),
       importance: Math.max(1, Math.min(5, Number(data.importance ?? 3))),
     };
     if (!row.content) throw new Error("Erinnerung ist leer");
     if (data.id) {
-      const { error } = await supabase.from("fuely_memories").update(row).eq("id", data.id).eq("user_id", userId);
+      const { error } = await supabase
+        .from("fuely_memories")
+        .update(row)
+        .eq("id", data.id)
+        .eq("user_id", userId);
       if (error) throw new Error(error.message);
       return { ok: true, id: data.id };
     }
-    const { data: ins, error } = await supabase.from("fuely_memories").insert(row).select("id").single();
+    const { data: ins, error } = await supabase
+      .from("fuely_memories")
+      .insert(row)
+      .select("id")
+      .single();
     if (error) throw new Error(error.message);
     return { ok: true, id: (ins as any).id as string };
   });
@@ -299,7 +474,11 @@ export const deleteFuelyMemory = createServerFn({ method: "POST" })
   .inputValidator((d: { id: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { error } = await supabase.from("fuely_memories").delete().eq("id", data.id).eq("user_id", userId);
+    const { error } = await supabase
+      .from("fuely_memories")
+      .delete()
+      .eq("id", data.id)
+      .eq("user_id", userId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

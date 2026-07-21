@@ -264,6 +264,35 @@ export const FUELY_TOOLS = [
       },
     },
   },
+
+  {
+    type: "function",
+    function: {
+      name: "change_calorie_target",
+      description:
+        "Ändert das tägliche Kalorienziel wirklich im Ernährungssystem. Nutze dieses Tool nur nach einer eindeutigen Bestätigung des Nutzers. Unterstützt einen befristeten Testzeitraum und eine optionale Kalorien-Untergrenze.",
+      parameters: {
+        type: "object",
+        required: ["kcal", "confirmed"],
+        properties: {
+          kcal: { type: "integer", minimum: 1200, maximum: 6000 },
+          minimum_kcal: { type: "integer", minimum: 1000, maximum: 6000 },
+          duration_days: { type: "integer", minimum: 1, maximum: 90 },
+          apply_to: {
+            type: "string",
+            enum: ["all_days", "training_days", "rest_days"],
+            default: "all_days",
+          },
+          recalculate_macros: { type: "boolean", default: true },
+          confirmed: {
+            type: "boolean",
+            description:
+              "Nur true setzen, wenn der Nutzer die konkrete Änderung ausdrücklich bestätigt hat.",
+          },
+        },
+      },
+    },
+  },
   {
     type: "function",
     function: {
@@ -284,7 +313,6 @@ export const HIGH_RISK_ACTIONS = new Set<string>([
   "bulk_delete_entries",
   "override_coach_setting",
 ]);
-
 
 export type ToolCall = { id: string; name: string; args: any };
 
@@ -346,7 +374,10 @@ export async function runFuelyTool(
             ? {
                 kcal: Math.max(0, Number(t.kcal) - eaten.kcal),
                 protein_g: Math.max(0, Number(t.protein_g) - eaten.protein_g),
-                water_glasses: Math.max(0, Number(t.water_glasses ?? 0) - Number((water as any)?.glasses ?? 0)),
+                water_glasses: Math.max(
+                  0,
+                  Number(t.water_glasses ?? 0) - Number((water as any)?.glasses ?? 0),
+                ),
               }
             : null,
         };
@@ -474,6 +505,7 @@ export async function runFuelyTool(
       }
 
       // ============ WRITE ACTIONS ============
+
       case "log_water": {
         const glasses = args?.glasses
           ? Number(args.glasses)
@@ -533,7 +565,12 @@ export async function runFuelyTool(
         } else {
           const { data: ins, error } = await supabase
             .from("body_measurements")
-            .insert({ user_id: userId, measured_at: today, weight_kg: w, notes: args?.note ?? null })
+            .insert({
+              user_id: userId,
+              measured_at: today,
+              weight_kg: w,
+              notes: args?.note ?? null,
+            })
             .select("id")
             .single();
           if (error) return { error: error.message };
@@ -579,7 +616,9 @@ export async function runFuelyTool(
         const today = isoDay();
         const { data: existing } = await supabase
           .from("body_measurements")
-          .select("id, waist_cm, hip_cm, chest_cm, thigh_left_cm, thigh_right_cm, biceps_left_cm, biceps_right_cm, body_fat_pct")
+          .select(
+            "id, waist_cm, hip_cm, chest_cm, thigh_left_cm, thigh_right_cm, biceps_left_cm, biceps_right_cm, body_fat_pct",
+          )
           .eq("user_id", userId)
           .eq("measured_at", today)
           .maybeSingle();
@@ -761,9 +800,151 @@ export async function runFuelyTool(
           icon: "📅",
           title: `Training verschoben auf ${newDate}`,
           coach_visible: true,
-          metadata: { session_id: sessionId, new_date: newDate, previous_date: (prev as any).session_date },
+          metadata: {
+            session_id: sessionId,
+            new_date: newDate,
+            previous_date: (prev as any).session_date,
+          },
         });
         return { done: true, session_id: sessionId, new_date: newDate, log_id: logId };
+      }
+
+      case "change_calorie_target": {
+        const kcal = Math.round(Number(args?.kcal));
+        const minimumKcal =
+          args?.minimum_kcal == null ? null : Math.round(Number(args.minimum_kcal));
+        const durationDays =
+          args?.duration_days == null
+            ? null
+            : Math.max(1, Math.min(90, Math.round(Number(args.duration_days))));
+        const applyTo = String(args?.apply_to ?? "all_days");
+        const confirmed = args?.confirmed === true;
+        if (!confirmed) {
+          return {
+            requires_confirmation: true,
+            action: "change_calorie_target",
+            summary: `${kcal} kcal${durationDays ? ` für ${durationDays} Tage` : " dauerhaft"}${minimumKcal ? ` · Untergrenze ${minimumKcal} kcal` : ""}`,
+            instruction:
+              "Bitte den Nutzer erst ausdrücklich bestätigen lassen und das Tool danach mit confirmed=true erneut aufrufen.",
+          };
+        }
+        if (!(kcal >= 1200 && kcal <= 6000))
+          return { error: "Kalorienziel außerhalb des erlaubten Bereichs." };
+        if (minimumKcal != null && minimumKcal > kcal)
+          return { error: "Die Untergrenze darf nicht über dem Ziel liegen." };
+
+        const { data: previous, error: readError } = await supabase
+          .from("nutrition_targets")
+          .select(
+            "kcal, protein_g, carbs_g, fat_g, kcal_rest, protein_g_rest, carbs_g_rest, fat_g_rest, water_glasses",
+          )
+          .eq("user_id", userId)
+          .maybeSingle();
+        if (readError) return { error: readError.message };
+
+        // Smart Upsert: Ein fehlender Ziel-Datensatz darf die Fuely-Aktion nicht blockieren.
+        // Protein wird bevorzugt aus dem vorhandenen Ziel übernommen, sonst aus dem Profilgewicht
+        // abgeleitet (2 g/kg) und zuletzt auf einen sicheren Standardwert gesetzt.
+        let profileWeight: number | null = null;
+        if (!previous) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("current_weight_kg")
+            .eq("id", userId)
+            .maybeSingle();
+          const rawWeight = Number((profile as any)?.current_weight_kg);
+          profileWeight = Number.isFinite(rawWeight) && rawWeight > 0 ? rawWeight : null;
+        }
+        const createdNewTarget = !previous;
+        const protein = Math.max(
+          60,
+          Math.round(
+            Number((previous as any)?.protein_g) || (profileWeight ? profileWeight * 2 : 150),
+          ),
+        );
+        const fat =
+          args?.recalculate_macros === false && previous
+            ? Number((previous as any).fat_g ?? 0)
+            : Math.max(40, Math.round((kcal * 0.28) / 9));
+        const carbs =
+          args?.recalculate_macros === false && previous
+            ? Number((previous as any).carbs_g ?? 0)
+            : Math.max(0, Math.round((kcal - protein * 4 - fat * 9) / 4));
+        const patch: any = {
+          user_id: userId,
+          updated_by: userId,
+          water_glasses: Number((previous as any)?.water_glasses ?? 8),
+        };
+        if (applyTo === "all_days" || applyTo === "training_days") {
+          patch.kcal = kcal;
+          patch.protein_g = protein;
+          patch.carbs_g = carbs;
+          patch.fat_g = fat;
+        }
+        if (applyTo === "all_days" || applyTo === "rest_days") {
+          patch.kcal_rest = kcal;
+          patch.protein_g_rest = Number((previous as any)?.protein_g_rest ?? protein);
+          patch.carbs_g_rest = carbs;
+          patch.fat_g_rest = fat;
+        }
+        const { error: updateError } = await supabase
+          .from("nutrition_targets")
+          .upsert(patch, { onConflict: "user_id" });
+        if (updateError) return { error: updateError.message };
+
+        const startsAt = isoDay();
+        const endsAt = durationDays ? isoDay(durationDays - 1) : null;
+        const logId = await logAction(supabase, userId, {
+          action_type: "change_calorie_target",
+          target_table: "nutrition_targets",
+          target_id: userId,
+          old_value: previous,
+          new_value: {
+            ...patch,
+            created_new_target: createdNewTarget,
+            minimum_kcal: minimumKcal,
+            starts_at: startsAt,
+            ends_at: endsAt,
+            duration_days: durationDays,
+            apply_to: applyTo,
+          },
+          summary: `${createdNewTarget ? "Ernährungsziel angelegt: " : ""}${kcal} kcal${durationDays ? ` für ${durationDays} Tage` : ""}`,
+          undo_minutes: 24 * 60,
+        });
+        await emitTimeline(supabase, userId, {
+          event_type: "action",
+          category: "nutrition",
+          icon: "🎯",
+          title: createdNewTarget
+            ? `Ernährungsziel mit ${kcal} kcal angelegt`
+            : `Kalorienziel auf ${kcal} kcal gesetzt`,
+          summary: `${durationDays ? `${durationDays} Tage · ` : ""}${minimumKcal ? `Untergrenze ${minimumKcal} kcal · ` : ""}${Math.round(protein)} g Protein · ${carbs} g KH · ${fat} g Fett`,
+          coach_visible: true,
+          metadata: {
+            kcal,
+            minimum_kcal: minimumKcal,
+            duration_days: durationDays,
+            starts_at: startsAt,
+            ends_at: endsAt,
+            apply_to: applyTo,
+            protein_g: protein,
+            carbs_g: carbs,
+            fat_g: fat,
+          },
+        });
+        return {
+          done: true,
+          created_new_target: createdNewTarget,
+          kcal,
+          minimum_kcal: minimumKcal,
+          duration_days: durationDays,
+          starts_at: startsAt,
+          ends_at: endsAt,
+          macros: { protein_g: protein, carbs_g: carbs, fat_g: fat },
+          apply_to: applyTo,
+          log_id: logId,
+          undo_available_minutes: 1440,
+        };
       }
 
       case "undo_last_action": {
@@ -903,6 +1084,30 @@ async function revertAction(
           .eq("client_id", userId);
         return { ok: !error, error: error?.message };
       }
+      case "change_calorie_target": {
+        // Wurde der Datensatz durch Fuely neu angelegt, bedeutet Undo: Datensatz löschen.
+        if (!row.old_value && row.new_value?.created_new_target === true) {
+          const { error } = await supabase.from("nutrition_targets").delete().eq("user_id", userId);
+          return { ok: !error, error: error?.message };
+        }
+        const old = row.old_value ?? {};
+        const { error } = await supabase
+          .from("nutrition_targets")
+          .update({
+            kcal: old.kcal,
+            protein_g: old.protein_g,
+            carbs_g: old.carbs_g,
+            fat_g: old.fat_g,
+            kcal_rest: old.kcal_rest,
+            protein_g_rest: old.protein_g_rest,
+            carbs_g_rest: old.carbs_g_rest,
+            fat_g_rest: old.fat_g_rest,
+            water_glasses: old.water_glasses ?? 8,
+            updated_by: userId,
+          })
+          .eq("user_id", userId);
+        return { ok: !error, error: error?.message };
+      }
       default:
         return { ok: false, error: "Aktionstyp nicht rückgängig machbar" };
     }
@@ -910,4 +1115,3 @@ async function revertAction(
     return { ok: false, error: e?.message ?? "revert failed" };
   }
 }
-

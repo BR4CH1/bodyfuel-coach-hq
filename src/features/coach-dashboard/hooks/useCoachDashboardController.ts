@@ -67,7 +67,7 @@ export function useCoachDashboardController() {
   );
   const followUps = useMemo(() => buildCoachFollowUps({ view, leads }), [view, leads]);
   const workload = useMemo(() => buildCoachWorkload(view, leads), [view, leads]);
-  const intelligence = useMemo(() => buildCoachIntelligence(view), [view]);
+  const intelligence = useMemo(() => buildCoachIntelligence(view, clients), [view, clients]);
 
   return {
     clients,

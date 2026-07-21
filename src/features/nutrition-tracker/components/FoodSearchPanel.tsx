@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { FoodResult } from "@/lib/nutrition.functions";
 import type { FavoriteCandidate, FavoriteFood, FoodPickOptions, RecentFood } from "../types";
-import { FavoriteButton, FoodNutritionLine, FoodResultRow } from "./FoodResultRow";
+import { FavoriteButton, FoodNutritionLine, FoodResultRow, FoodThumb } from "./FoodResultRow";
 
 export function FoodSearchPanel({
   query,
@@ -167,10 +167,13 @@ function FoodSuggestions({
                             : "100",
                     })
                   }
-                  className="min-w-0 flex-1 px-2 py-3 text-left hover:bg-secondary"
+                  className="flex min-w-0 flex-1 items-center gap-3 px-2 py-3 text-left hover:bg-secondary"
                 >
-                  <div className="truncate text-sm font-medium">{food.name}</div>
-                  <FoodNutritionLine food={food} />
+                  <FoodThumb food={food} />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-medium">{food.name}</div>
+                    <FoodNutritionLine food={food} />
+                  </div>
                 </button>
                 <FavoriteButton active onClick={() => onToggleFavorite(food)} />
               </li>
@@ -197,10 +200,13 @@ function FoodSuggestions({
                       amount: String(Math.round(food.last_amount_g)),
                     })
                   }
-                  className="min-w-0 flex-1 px-2 py-3 text-left hover:bg-secondary"
+                  className="flex min-w-0 flex-1 items-center gap-3 px-2 py-3 text-left hover:bg-secondary"
                 >
-                  <div className="truncate text-sm font-medium">{food.name}</div>
-                  <FoodNutritionLine food={food} />
+                  <FoodThumb food={food} />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-medium">{food.name}</div>
+                    <FoodNutritionLine food={food} />
+                  </div>
                 </button>
                 <FavoriteButton active={isFavorite(food)} onClick={() => onToggleFavorite(food)} />
               </li>

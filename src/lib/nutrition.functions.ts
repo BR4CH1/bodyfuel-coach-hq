@@ -42,12 +42,7 @@ function mapOff(p: any): FoodResult | null {
   const sq = Number(p.serving_quantity);
   const serving_g = isFinite(sq) && sq > 0 ? sq : null;
   return {
-    name:
-      p.product_name_de ||
-      p.product_name ||
-      p.generic_name_de ||
-      p.generic_name ||
-      "Unbekannt",
+    name: p.product_name_de || p.product_name || p.generic_name_de || p.generic_name || "Unbekannt",
     brand: p.brands || null,
     barcode: p.code || null,
     kcal_per_100g: kcal,
@@ -56,6 +51,8 @@ function mapOff(p: any): FoodResult | null {
     fat_per_100g: Number(n["fat_100g"] ?? 0),
     serving_g,
     serving_label: (p.serving_size as string) || null,
+    image_url: p.image_front_small_url ?? p.image_front_url ?? p.image_url ?? null,
+    image_source: "open_food_facts",
     source: "open_food_facts",
     verified_by_coach: false,
   };
@@ -98,7 +95,11 @@ function compactFoodTerm(value: string): string {
   return normalizeFoodTerm(value).replace(/\s+/g, "");
 }
 
-function matchesFoodQuery(name: string, aliases: string[] | null | undefined, query: string): boolean {
+function matchesFoodQuery(
+  name: string,
+  aliases: string[] | null | undefined,
+  query: string,
+): boolean {
   const normalizedQuery = normalizeFoodTerm(query);
   const compactQuery = compactFoodTerm(query);
   if (!normalizedQuery || !compactQuery) return false;
@@ -185,7 +186,7 @@ export const searchFoods = createServerFn({ method: "POST" })
         const { data: rows } = await supabaseAdmin
           .from("nutrition_foods")
           .select(
-            "name, aliases, source, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, verified_by_coach, default_state",
+            "name, aliases, source, image_url, image_source, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, verified_by_coach, default_state",
           )
           .eq("needs_review", false)
           .limit(1000);
@@ -203,8 +204,14 @@ export const searchFoods = createServerFn({ method: "POST" })
             serving_label: r.default_state ? `pro 100 g (${r.default_state})` : null,
             source: r.source,
             verified_by_coach: !!r.verified_by_coach,
+            image_url: r.image_url ?? null,
+            image_source: r.image_source ?? null,
           }))
-          .sort((a, b) => sourcePriority(a.source) - sourcePriority(b.source) || scoreResult(b, q) - scoreResult(a, q))
+          .sort(
+            (a, b) =>
+              sourcePriority(a.source) - sourcePriority(b.source) ||
+              scoreResult(b, q) - scoreResult(a, q),
+          )
           .slice(0, 15);
       } catch {
         /* ignore */
@@ -214,10 +221,10 @@ export const searchFoods = createServerFn({ method: "POST" })
     const offUrl =
       `https://search.openfoodfacts.org/search?` +
       `q=${encodeURIComponent(q)}` +
-      `&langs=de,en&page_size=30&fields=code,product_name,product_name_de,generic_name,generic_name_de,brands,nutriments,serving_size,serving_quantity` +
+      `&langs=de,en&page_size=30&fields=code,product_name,product_name_de,generic_name,generic_name_de,brands,nutriments,serving_size,serving_quantity,image_front_small_url,image_front_url,image_url` +
       `&sort_by=-popularity_key&countries_tags=germany,switzerland,austria`;
     const fields =
-      "code,product_name,product_name_de,generic_name,generic_name_de,brands,nutriments,serving_size,serving_quantity";
+      "code,product_name,product_name_de,generic_name,generic_name_de,brands,nutriments,serving_size,serving_quantity,image_front_small_url,image_front_url,image_url";
     const deUrl = `https://de.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=25&sort_by=unique_scans_n&fields=${fields}`;
 
     // Alles parallel mit hartem Timeout. Egal welche Quelle wegfällt — Suche kommt zurück.
@@ -234,7 +241,6 @@ export const searchFoods = createServerFn({ method: "POST" })
     arr.sort((a, b) => scoreResult(b, q) - scoreResult(a, q));
     return arr.slice(0, 25);
   });
-
 
 /* ----------- Targets (coach only) ----------- */
 
@@ -288,9 +294,15 @@ export const setNutritionTargets = createServerFn({ method: "POST" })
     const { error } = await supabaseAdmin.from("nutrition_targets").upsert(
       {
         user_id: data.user_id,
-        kcal, protein_g, carbs_g, fat_g,
+        kcal,
+        protein_g,
+        carbs_g,
+        fat_g,
         water_glasses: Math.max(1, Math.round(data.water_glasses)),
-        kcal_rest, protein_g_rest, carbs_g_rest, fat_g_rest,
+        kcal_rest,
+        protein_g_rest,
+        carbs_g_rest,
+        fat_g_rest,
         updated_by: context.userId,
       },
       { onConflict: "user_id" },
@@ -346,10 +358,12 @@ export const getDayType = createServerFn({ method: "POST" })
       .maybeSingle();
     const weekdays: string[] = (prof as any)?.training_weekdays ?? [];
     if (weekdays.length) {
-      const KEYS = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
+      const KEYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
       const wkKey = KEYS[new Date(`${data.date}T12:00:00`).getDay()];
       return {
-        kind: (weekdays.map((s) => s.toLowerCase()).includes(wkKey) ? "training" : "rest") as DayType,
+        kind: (weekdays.map((s) => s.toLowerCase()).includes(wkKey)
+          ? "training"
+          : "rest") as DayType,
         source: "auto" as const,
       };
     }
@@ -368,12 +382,9 @@ export const getDayType = createServerFn({ method: "POST" })
     };
   });
 
-
 export const setDayType = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
-    (d: { user_id: string; date: string; kind: DayType | null }) => d,
-  )
+  .inputValidator((d: { user_id: string; date: string; kind: DayType | null }) => d)
   .handler(async ({ data, context }) => {
     if (data.user_id !== context.userId) {
       await assertCoach(context.supabase, context.userId);
@@ -402,9 +413,14 @@ export async function computeTargetsFromPlanDB(
   supabase: any,
   planId: string,
 ): Promise<{
-  kcal: number; protein_g: number; carbs_g: number; fat_g: number;
-  kcal_rest: number | null; protein_g_rest: number | null;
-  carbs_g_rest: number | null; fat_g_rest: number | null;
+  kcal: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  kcal_rest: number | null;
+  protein_g_rest: number | null;
+  carbs_g_rest: number | null;
+  fat_g_rest: number | null;
 } | null> {
   const { data: days } = await supabase
     .from("nutrition_plan_days")
@@ -416,7 +432,10 @@ export async function computeTargetsFromPlanDB(
   const { data: meals } = await supabase
     .from("nutrition_plan_meals")
     .select("day_id, kcal, protein_g, carbs_g, fat_g")
-    .in("day_id", dayRows.map((d) => d.id));
+    .in(
+      "day_id",
+      dayRows.map((d) => d.id),
+    );
   const mealRows = (meals ?? []) as any[];
   if (!mealRows.length) return null;
 
@@ -481,7 +500,10 @@ export async function computeTargetsFromPlanDB(
  *   - Kalorien: ergeben sich aus den Makros (P*4 + C*4 + F*9).
  */
 export function deriveRestFromTraining(t: {
-  kcal: number; protein_g: number; carbs_g: number; fat_g: number;
+  kcal: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
 }) {
   const round50 = (v: number) => Math.max(50, Math.round(v / 50) * 50);
   const protein_g = t.protein_g;
@@ -543,7 +565,8 @@ export const extractTargetsFromPlan = createServerFn({ method: "POST" })
     // 3) PDF fallback
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("Keine Werte im Plan und kein LOVABLE_API_KEY für PDF-Fallback");
-    if (!(plan as any).file_path) throw new Error("Keine Werte im Plan gefunden. Bitte manuell eintragen.");
+    if (!(plan as any).file_path)
+      throw new Error("Keine Werte im Plan gefunden. Bitte manuell eintragen.");
 
     const { data: file, error: dlErr } = await supabaseAdmin.storage
       .from("nutrition-plans")
@@ -577,10 +600,18 @@ Antworte ausschließlich mit gültigem JSON:
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         response_format: { type: "json_object" },
-        messages: [{ role: "user", content: [
-          { type: "text", text: prompt },
-          { type: "file", file: { filename: "plan.pdf", file_data: `data:application/pdf;base64,${b64}` } },
-        ] }],
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: prompt },
+              {
+                type: "file",
+                file: { filename: "plan.pdf", file_data: `data:application/pdf;base64,${b64}` },
+              },
+            ],
+          },
+        ],
       }),
     });
     if (!aiRes.ok) {
@@ -590,8 +621,11 @@ Antworte ausschließlich mit gültigem JSON:
     const aiJson = await aiRes.json();
     const raw = aiJson?.choices?.[0]?.message?.content ?? "";
     let parsed: any;
-    try { parsed = typeof raw === "string" ? JSON.parse(raw) : raw; }
-    catch { throw new Error("Antwort konnte nicht gelesen werden"); }
+    try {
+      parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+    } catch {
+      throw new Error("Antwort konnte nicht gelesen werden");
+    }
 
     const nz = (v: any) => {
       const n = Number(v);
@@ -602,15 +636,17 @@ Antworte ausschließlich mit gültigem JSON:
     const carbs_g = Math.max(0, Math.round(Number(parsed.carbs_g) || 0));
     const fat_g = Math.max(0, Math.round(Number(parsed.fat_g) || 0));
     const water_l = Number(parsed.water_l);
-    const water_glasses = isFinite(water_l) && water_l > 0
-      ? Math.max(4, Math.round((water_l * 1000) / 250))
-      : null;
+    const water_glasses =
+      isFinite(water_l) && water_l > 0 ? Math.max(4, Math.round((water_l * 1000) / 250)) : null;
 
     if (!kcal && !protein_g) {
       throw new Error("Keine Werte im Plan gefunden. Bitte manuell eintragen.");
     }
     return {
-      kcal, protein_g, carbs_g, fat_g,
+      kcal,
+      protein_g,
+      carbs_g,
+      fat_g,
       kcal_rest: nz(parsed.kcal_rest),
       protein_g_rest: nz(parsed.protein_g_rest),
       carbs_g_rest: nz(parsed.carbs_g_rest),
@@ -668,8 +704,11 @@ JSON-Schema:
     const aiJson = await aiRes.json();
     const raw = aiJson?.choices?.[0]?.message?.content ?? "{}";
     let parsed: any;
-    try { parsed = typeof raw === "string" ? JSON.parse(raw) : raw; }
-    catch { throw new Error("Antwort konnte nicht gelesen werden."); }
+    try {
+      parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+    } catch {
+      throw new Error("Antwort konnte nicht gelesen werden.");
+    }
 
     const num = (v: any) => {
       const n = Number(v);
@@ -710,7 +749,7 @@ export const searchFoodsDb = createServerFn({ method: "POST" })
     const { data: rows, error } = await context.supabase
       .from("nutrition_foods")
       .select(
-        "name, source, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, verified_by_coach, unit_type, default_state, aliases",
+        "name, source, image_url, image_source, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, verified_by_coach, unit_type, default_state, aliases",
       )
       .eq("needs_review", false)
       .limit(1000);
@@ -730,6 +769,8 @@ export const searchFoodsDb = createServerFn({ method: "POST" })
         serving_label: r.default_state ? `pro 100 g (${r.default_state})` : null,
         source: r.source,
         verified_by_coach: !!r.verified_by_coach,
+        image_url: r.image_url ?? null,
+        image_source: r.image_source ?? null,
       }));
     mapped.sort((a, b) => {
       const pa = sourcePriority(a.source);
@@ -743,5 +784,3 @@ export const searchFoodsDb = createServerFn({ method: "POST" })
     });
     return mapped.slice(0, limit);
   });
-
-
