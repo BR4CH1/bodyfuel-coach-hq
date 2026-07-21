@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import type { FoodResult } from "@/lib/nutrition.functions";
 import { amountInGrams, parseFoodAmount } from "../lib/nutrition-tracker.logic";
 import type { FoodUnit } from "../types";
+import { FoodThumbnail } from "./FoodResultRow";
 import { SourceBadge } from "./SourceBadge";
 
 export function FoodAmountEditor({
@@ -37,20 +38,23 @@ export function FoodAmountEditor({
   return (
     <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="flex items-center gap-1">
-            <div className="text-sm font-semibold">{food.name}</div>
-            {isCoach && <SourceBadge source={food.source} verified={food.verified_by_coach} />}
-          </div>
-          <div className="text-xs text-muted-foreground">
-            {food.brand ?? "—"}
-            {food.serving_g ? ` · 1 Stück ≈ ${food.serving_g} g` : ""}
-          </div>
-          {isCoach && food.source === "ai_estimate" && (
-            <div className="mt-1 rounded-md border border-amber-500/30 bg-amber-500/5 px-2 py-1 text-[11px] text-amber-300">
-              ⚠ KI-Schätzung – Werte vor dem Speichern prüfen. Nicht aus geprüfter Datenbank.
+        <div className="flex min-w-0 items-start gap-3">
+          <FoodThumbnail src={food.image_url} alt={food.name} />
+          <div className="min-w-0">
+            <div className="flex items-center gap-1">
+              <div className="text-sm font-semibold">{food.name}</div>
+              {isCoach && <SourceBadge source={food.source} verified={food.verified_by_coach} />}
             </div>
-          )}
+            <div className="text-xs text-muted-foreground">
+              {food.brand ?? "—"}
+              {food.serving_g ? ` · 1 Stück ≈ ${food.serving_g} g` : ""}
+            </div>
+            {isCoach && food.source === "ai_estimate" && (
+              <div className="mt-1 rounded-md border border-amber-500/30 bg-amber-500/5 px-2 py-1 text-[11px] text-amber-300">
+                ⚠ KI-Schätzung – Werte vor dem Speichern prüfen. Nicht aus geprüfter Datenbank.
+              </div>
+            )}
+          </div>
         </div>
         <button
           type="button"
