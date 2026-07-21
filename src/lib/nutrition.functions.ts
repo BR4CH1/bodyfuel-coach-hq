@@ -810,27 +810,29 @@ export const searchFoodsDb = createServerFn({ method: "POST" })
     const { data: rows, error } = await context.supabase
       .from("nutrition_foods")
       .select(
-        "name, source, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, verified_by_coach, unit_type, default_state, aliases",
+        "id, name, source, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, verified_by_coach, unit_type, default_state, aliases, image_url, image_source",
       )
       .eq("needs_review", false)
       .limit(1000);
     if (error) return [];
     const term = q.toLowerCase();
-    const mapped: FoodResult[] = (rows ?? [])
-      .filter((r: any) => matchesFoodQuery(r.name, r.aliases, q))
-      .map((r: any) => ({
-        name: r.name,
-        brand: null,
-        barcode: null,
-        kcal_per_100g: Number(r.kcal_per_100g) || 0,
-        protein_per_100g: Number(r.protein_per_100g) || 0,
-        carbs_per_100g: Number(r.carbs_per_100g) || 0,
-        fat_per_100g: Number(r.fat_per_100g) || 0,
-        serving_g: null,
-        serving_label: r.default_state ? `pro 100 g (${r.default_state})` : null,
-        source: r.source,
-        verified_by_coach: !!r.verified_by_coach,
-      }));
+    const filtered = (rows ?? []).filter((r: any) => matchesFoodQuery(r.name, r.aliases, q));
+    const ids: string[] = filtered.map((r: any) => r.id);
+    const mapped: FoodResult[] = filtered.map((r: any) => ({
+      name: r.name,
+      brand: null,
+      barcode: null,
+      kcal_per_100g: Number(r.kcal_per_100g) || 0,
+      protein_per_100g: Number(r.protein_per_100g) || 0,
+      carbs_per_100g: Number(r.carbs_per_100g) || 0,
+      fat_per_100g: Number(r.fat_per_100g) || 0,
+      serving_g: null,
+      serving_label: r.default_state ? `pro 100 g (${r.default_state})` : null,
+      source: r.source,
+      verified_by_coach: !!r.verified_by_coach,
+      image_url: r.image_url ?? null,
+      image_source: r.image_source ?? null,
+    }));
     mapped.sort((a, b) => {
       const pa = sourcePriority(a.source);
       const pb = sourcePriority(b.source);
@@ -841,7 +843,38 @@ export const searchFoodsDb = createServerFn({ method: "POST" })
       const bx = bn === term ? 0 : bn.startsWith(term) ? 1 : 2;
       return ax - bx || scoreResult(b, q) - scoreResult(a, q);
     });
-    return mapped.slice(0, limit);
+    const top = mapped.slice(0, limit);
+    // Reorder ids to match top slice
+    const topIds = top.map((row) => {
+      const idx = mapped.indexOf(row);
+      return ids[idx] ?? "";
+    });
+
+    // Enrich missing images via OFF search by name (best effort, short timeout)
+    const missing = top.filter((r, i) => !r.image_url && topIds[i]);
+    if (missing.length) {
+      try {
+        const imgFields =
+          "code,product_name,product_name_de,generic_name,generic_name_de,brands,nutriments,image_front_small_url,image_small_url,image_front_url,image_url";
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 2500);
+        const url = `https://de.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=25&fields=${imgFields}`;
+        const res = await fetch(url, {
+          headers: { "User-Agent": "BodyFuelCoaching/1.0 (coach app)" },
+          signal: ctrl.signal,
+        }).catch(() => null);
+        clearTimeout(t);
+        if (res?.ok) {
+          const json = (await res.json()) as any;
+          await enrichDbRowsWithOffImages(top, topIds, [json]);
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
+    return top;
   });
+
 
 
