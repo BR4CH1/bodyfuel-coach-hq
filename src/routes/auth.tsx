@@ -115,6 +115,11 @@ function AuthPage() {
         });
         if (error) throw error;
         toast.success("Willkommen zurück!");
+        // Defensiv: direkt weiter navigieren, damit ein hängender
+        // onAuthStateChange / Profile-Load die UI nicht blockiert.
+        const target = next ?? "/app";
+        window.location.assign(target);
+        return;
       }
     } catch (err: unknown) {
       const raw = err instanceof Error ? err.message : "Fehler";
