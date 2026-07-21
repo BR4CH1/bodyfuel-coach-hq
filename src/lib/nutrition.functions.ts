@@ -13,6 +13,10 @@ export type FoodSource =
   | null;
 
 export type FoodResult = {
+  /** Primärschlüssel aus nutrition_foods, wenn der Treffer aus unserer DB stammt. */
+  id?: string | null;
+  /** Stabiler nutrition_foods.text_id für Plan- und Rezeptverknüpfungen. */
+  text_id?: string | null;
   name: string;
   brand: string | null;
   barcode: string | null;
@@ -28,24 +32,10 @@ export type FoodResult = {
   source?: FoodSource;
   /** True wenn Coach geprüft */
   verified_by_coach?: boolean;
-  /** Produktbild-URL (aus DB oder OFF) */
+  /** Produkt- oder Datenbankfoto für Suche, Mengenansicht und Tagebuch. */
   image_url?: string | null;
-  /** Quelle des Bildes (bodyfuel, open_food_facts, brand, manual) */
   image_source?: string | null;
 };
-
-
-function offImage(p: any): string | null {
-  return (
-    p?.image_front_small_url ||
-    p?.image_small_url ||
-    p?.image_front_url ||
-    p?.image_url ||
-    p?.selected_images?.front?.small?.de ||
-    p?.selected_images?.front?.small?.en ||
-    null
-  );
-}
 
 function mapOff(p: any): FoodResult | null {
   const n = p?.nutriments;
@@ -58,14 +48,10 @@ function mapOff(p: any): FoodResult | null {
   }
   const sq = Number(p.serving_quantity);
   const serving_g = isFinite(sq) && sq > 0 ? sq : null;
-  const image_url = offImage(p);
   return {
-    name:
-      p.product_name_de ||
-      p.product_name ||
-      p.generic_name_de ||
-      p.generic_name ||
-      "Unbekannt",
+    id: null,
+    text_id: null,
+    name: p.product_name_de || p.product_name || p.generic_name_de || p.generic_name || "Unbekannt",
     brand: p.brands || null,
     barcode: p.code || null,
     kcal_per_100g: kcal,
@@ -74,73 +60,12 @@ function mapOff(p: any): FoodResult | null {
     fat_per_100g: Number(n["fat_100g"] ?? 0),
     serving_g,
     serving_label: (p.serving_size as string) || null,
+    image_url: p.image_front_small_url ?? p.image_front_url ?? p.image_url ?? null,
+    image_source: "open_food_facts",
     source: "open_food_facts",
     verified_by_coach: false,
-    image_url,
-    image_source: image_url ? "open_food_facts" : null,
   };
 }
-
-async function enrichDbRowsWithOffImages(
-  rows: FoodResult[],
-  ids: string[],
-  offJsons: any[],
-): Promise<void> {
-  const candidates: any[] = [];
-  for (const json of offJsons) {
-    if (!json) continue;
-    for (const p of json.hits ?? json.products ?? []) candidates.push(p);
-  }
-  if (!candidates.length) return;
-
-  const updates: Array<{ id: string; url: string }> = [];
-  for (let i = 0; i < rows.length; i++) {
-    const row = rows[i];
-    const id = ids[i];
-    if (!id || row.image_url) continue;
-    const normName = normalizeFoodTerm(row.name);
-    const compName = compactFoodTerm(row.name);
-    if (!normName) continue;
-    let match: any = null;
-    for (const p of candidates) {
-      const name =
-        p.product_name_de || p.product_name || p.generic_name_de || p.generic_name || "";
-      if (!name) continue;
-      const norm = normalizeFoodTerm(name);
-      const comp = compactFoodTerm(name);
-      if (norm === normName || comp === compName || norm.includes(normName)) {
-        if (offImage(p)) {
-          match = p;
-          break;
-        }
-      }
-    }
-    if (!match) continue;
-    const url = offImage(match);
-    if (!url) continue;
-    row.image_url = url;
-    row.image_source = "open_food_facts";
-    updates.push({ id, url });
-  }
-
-  if (!updates.length) return;
-  try {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    await Promise.all(
-      updates.map((u) =>
-        supabaseAdmin
-          .from("nutrition_foods")
-          .update({ image_url: u.url, image_source: "open_food_facts" })
-          .eq("id", u.id),
-      ),
-    );
-  } catch {
-    /* best effort */
-  }
-}
-
-
-
 
 function scoreResult(r: FoodResult, q: string): number {
   const name = r.name.toLowerCase();
@@ -179,7 +104,11 @@ function compactFoodTerm(value: string): string {
   return normalizeFoodTerm(value).replace(/\s+/g, "");
 }
 
-function matchesFoodQuery(name: string, aliases: string[] | null | undefined, query: string): boolean {
+function matchesFoodQuery(
+  name: string,
+  aliases: string[] | null | undefined,
+  query: string,
+): boolean {
   const normalizedQuery = normalizeFoodTerm(query);
   const compactQuery = compactFoodTerm(query);
   if (!normalizedQuery || !compactQuery) return false;
@@ -260,61 +189,54 @@ export const searchFoods = createServerFn({ method: "POST" })
 
     // DB-Lookup (geprüfte Lebensmittel)
     let dbRows: FoodResult[] = [];
-    let dbRowIds: string[] = [];
     const dbPromise = (async () => {
       try {
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { data: rows } = await supabaseAdmin
           .from("nutrition_foods")
           .select(
-            "id, name, aliases, source, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, verified_by_coach, default_state, image_url, image_source",
+            "id, text_id, name, aliases, source, image_url, image_source, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, verified_by_coach, default_state",
           )
           .eq("needs_review", false)
           .limit(1000);
-        const filtered = (rows ?? [])
+        dbRows = (rows ?? [])
           .filter((r: any) => matchesFoodQuery(r.name, r.aliases, q))
+          .map((r: any) => ({
+            id: r.id,
+            text_id: r.text_id,
+            name: r.name,
+            brand: null,
+            barcode: null,
+            kcal_per_100g: Number(r.kcal_per_100g) || 0,
+            protein_per_100g: Number(r.protein_per_100g) || 0,
+            carbs_per_100g: Number(r.carbs_per_100g) || 0,
+            fat_per_100g: Number(r.fat_per_100g) || 0,
+            serving_g: null,
+            serving_label: r.default_state ? `pro 100 g (${r.default_state})` : null,
+            source: r.source,
+            verified_by_coach: !!r.verified_by_coach,
+            image_url: r.image_url ?? null,
+            image_source: r.image_source ?? null,
+          }))
           .sort(
-            (a: any, b: any) =>
+            (a, b) =>
               sourcePriority(a.source) - sourcePriority(b.source) ||
-              scoreResult(
-                { ...b, brand: null, barcode: null, serving_g: null, serving_label: null } as FoodResult,
-                q,
-              ) -
-                scoreResult(
-                  { ...a, brand: null, barcode: null, serving_g: null, serving_label: null } as FoodResult,
-                  q,
-                ),
+              scoreResult(b, q) - scoreResult(a, q),
           )
           .slice(0, 15);
-        dbRowIds = filtered.map((r: any) => r.id);
-        dbRows = filtered.map((r: any) => ({
-          name: r.name,
-          brand: null,
-          barcode: null,
-          kcal_per_100g: Number(r.kcal_per_100g) || 0,
-          protein_per_100g: Number(r.protein_per_100g) || 0,
-          carbs_per_100g: Number(r.carbs_per_100g) || 0,
-          fat_per_100g: Number(r.fat_per_100g) || 0,
-          serving_g: null,
-          serving_label: r.default_state ? `pro 100 g (${r.default_state})` : null,
-          source: r.source,
-          verified_by_coach: !!r.verified_by_coach,
-          image_url: r.image_url ?? null,
-          image_source: r.image_source ?? null,
-        }));
       } catch {
         /* ignore */
       }
     })();
 
-    const imgFields =
-      "code,product_name,product_name_de,generic_name,generic_name_de,brands,nutriments,serving_size,serving_quantity,image_front_small_url,image_small_url,image_front_url,image_url";
     const offUrl =
       `https://search.openfoodfacts.org/search?` +
       `q=${encodeURIComponent(q)}` +
-      `&langs=de,en&page_size=30&fields=${imgFields}` +
+      `&langs=de,en&page_size=30&fields=code,product_name,product_name_de,generic_name,generic_name_de,brands,nutriments,serving_size,serving_quantity,image_front_small_url,image_front_url,image_url` +
       `&sort_by=-popularity_key&countries_tags=germany,switzerland,austria`;
-    const deUrl = `https://de.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=25&sort_by=unique_scans_n&fields=${imgFields}`;
+    const fields =
+      "code,product_name,product_name_de,generic_name,generic_name_de,brands,nutriments,serving_size,serving_quantity,image_front_small_url,image_front_url,image_url";
+    const deUrl = `https://de.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=25&sort_by=unique_scans_n&fields=${fields}`;
 
     // Alles parallel mit hartem Timeout. Egal welche Quelle wegfällt — Suche kommt zurück.
     const [, offJson, deJson] = await Promise.all([
@@ -323,9 +245,6 @@ export const searchFoods = createServerFn({ method: "POST" })
       fetchWithTimeout(deUrl, 3500),
     ]);
 
-    // Enrich DB rows without image via OFF response (match on name), and persist
-    await enrichDbRowsWithOffImages(dbRows, dbRowIds, [offJson, deJson]);
-
     for (const m of dbRows) pushUnique(m);
     if (offJson) for (const p of offJson.hits ?? offJson.products ?? []) pushUnique(mapOff(p));
     if (deJson) for (const p of deJson.products ?? []) pushUnique(mapOff(p));
@@ -333,8 +252,6 @@ export const searchFoods = createServerFn({ method: "POST" })
     arr.sort((a, b) => scoreResult(b, q) - scoreResult(a, q));
     return arr.slice(0, 25);
   });
-
-
 
 /* ----------- Targets (coach only) ----------- */
 
@@ -388,9 +305,15 @@ export const setNutritionTargets = createServerFn({ method: "POST" })
     const { error } = await supabaseAdmin.from("nutrition_targets").upsert(
       {
         user_id: data.user_id,
-        kcal, protein_g, carbs_g, fat_g,
+        kcal,
+        protein_g,
+        carbs_g,
+        fat_g,
         water_glasses: Math.max(1, Math.round(data.water_glasses)),
-        kcal_rest, protein_g_rest, carbs_g_rest, fat_g_rest,
+        kcal_rest,
+        protein_g_rest,
+        carbs_g_rest,
+        fat_g_rest,
         updated_by: context.userId,
       },
       { onConflict: "user_id" },
@@ -446,10 +369,12 @@ export const getDayType = createServerFn({ method: "POST" })
       .maybeSingle();
     const weekdays: string[] = (prof as any)?.training_weekdays ?? [];
     if (weekdays.length) {
-      const KEYS = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
+      const KEYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
       const wkKey = KEYS[new Date(`${data.date}T12:00:00`).getDay()];
       return {
-        kind: (weekdays.map((s) => s.toLowerCase()).includes(wkKey) ? "training" : "rest") as DayType,
+        kind: (weekdays.map((s) => s.toLowerCase()).includes(wkKey)
+          ? "training"
+          : "rest") as DayType,
         source: "auto" as const,
       };
     }
@@ -468,12 +393,9 @@ export const getDayType = createServerFn({ method: "POST" })
     };
   });
 
-
 export const setDayType = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
-    (d: { user_id: string; date: string; kind: DayType | null }) => d,
-  )
+  .inputValidator((d: { user_id: string; date: string; kind: DayType | null }) => d)
   .handler(async ({ data, context }) => {
     if (data.user_id !== context.userId) {
       await assertCoach(context.supabase, context.userId);
@@ -502,9 +424,14 @@ export async function computeTargetsFromPlanDB(
   supabase: any,
   planId: string,
 ): Promise<{
-  kcal: number; protein_g: number; carbs_g: number; fat_g: number;
-  kcal_rest: number | null; protein_g_rest: number | null;
-  carbs_g_rest: number | null; fat_g_rest: number | null;
+  kcal: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  kcal_rest: number | null;
+  protein_g_rest: number | null;
+  carbs_g_rest: number | null;
+  fat_g_rest: number | null;
 } | null> {
   const { data: days } = await supabase
     .from("nutrition_plan_days")
@@ -516,7 +443,10 @@ export async function computeTargetsFromPlanDB(
   const { data: meals } = await supabase
     .from("nutrition_plan_meals")
     .select("day_id, kcal, protein_g, carbs_g, fat_g")
-    .in("day_id", dayRows.map((d) => d.id));
+    .in(
+      "day_id",
+      dayRows.map((d) => d.id),
+    );
   const mealRows = (meals ?? []) as any[];
   if (!mealRows.length) return null;
 
@@ -581,7 +511,10 @@ export async function computeTargetsFromPlanDB(
  *   - Kalorien: ergeben sich aus den Makros (P*4 + C*4 + F*9).
  */
 export function deriveRestFromTraining(t: {
-  kcal: number; protein_g: number; carbs_g: number; fat_g: number;
+  kcal: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
 }) {
   const round50 = (v: number) => Math.max(50, Math.round(v / 50) * 50);
   const protein_g = t.protein_g;
@@ -643,7 +576,8 @@ export const extractTargetsFromPlan = createServerFn({ method: "POST" })
     // 3) PDF fallback
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("Keine Werte im Plan und kein LOVABLE_API_KEY für PDF-Fallback");
-    if (!(plan as any).file_path) throw new Error("Keine Werte im Plan gefunden. Bitte manuell eintragen.");
+    if (!(plan as any).file_path)
+      throw new Error("Keine Werte im Plan gefunden. Bitte manuell eintragen.");
 
     const { data: file, error: dlErr } = await supabaseAdmin.storage
       .from("nutrition-plans")
@@ -677,10 +611,18 @@ Antworte ausschließlich mit gültigem JSON:
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         response_format: { type: "json_object" },
-        messages: [{ role: "user", content: [
-          { type: "text", text: prompt },
-          { type: "file", file: { filename: "plan.pdf", file_data: `data:application/pdf;base64,${b64}` } },
-        ] }],
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: prompt },
+              {
+                type: "file",
+                file: { filename: "plan.pdf", file_data: `data:application/pdf;base64,${b64}` },
+              },
+            ],
+          },
+        ],
       }),
     });
     if (!aiRes.ok) {
@@ -690,8 +632,11 @@ Antworte ausschließlich mit gültigem JSON:
     const aiJson = await aiRes.json();
     const raw = aiJson?.choices?.[0]?.message?.content ?? "";
     let parsed: any;
-    try { parsed = typeof raw === "string" ? JSON.parse(raw) : raw; }
-    catch { throw new Error("Antwort konnte nicht gelesen werden"); }
+    try {
+      parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+    } catch {
+      throw new Error("Antwort konnte nicht gelesen werden");
+    }
 
     const nz = (v: any) => {
       const n = Number(v);
@@ -702,15 +647,17 @@ Antworte ausschließlich mit gültigem JSON:
     const carbs_g = Math.max(0, Math.round(Number(parsed.carbs_g) || 0));
     const fat_g = Math.max(0, Math.round(Number(parsed.fat_g) || 0));
     const water_l = Number(parsed.water_l);
-    const water_glasses = isFinite(water_l) && water_l > 0
-      ? Math.max(4, Math.round((water_l * 1000) / 250))
-      : null;
+    const water_glasses =
+      isFinite(water_l) && water_l > 0 ? Math.max(4, Math.round((water_l * 1000) / 250)) : null;
 
     if (!kcal && !protein_g) {
       throw new Error("Keine Werte im Plan gefunden. Bitte manuell eintragen.");
     }
     return {
-      kcal, protein_g, carbs_g, fat_g,
+      kcal,
+      protein_g,
+      carbs_g,
+      fat_g,
       kcal_rest: nz(parsed.kcal_rest),
       protein_g_rest: nz(parsed.protein_g_rest),
       carbs_g_rest: nz(parsed.carbs_g_rest),
@@ -768,8 +715,11 @@ JSON-Schema:
     const aiJson = await aiRes.json();
     const raw = aiJson?.choices?.[0]?.message?.content ?? "{}";
     let parsed: any;
-    try { parsed = typeof raw === "string" ? JSON.parse(raw) : raw; }
-    catch { throw new Error("Antwort konnte nicht gelesen werden."); }
+    try {
+      parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+    } catch {
+      throw new Error("Antwort konnte nicht gelesen werden.");
+    }
 
     const num = (v: any) => {
       const n = Number(v);
@@ -810,29 +760,32 @@ export const searchFoodsDb = createServerFn({ method: "POST" })
     const { data: rows, error } = await context.supabase
       .from("nutrition_foods")
       .select(
-        "id, name, source, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, verified_by_coach, unit_type, default_state, aliases, image_url, image_source",
+        "id, text_id, name, source, image_url, image_source, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, verified_by_coach, unit_type, default_state, aliases",
       )
+      .eq("is_active", true)
       .eq("needs_review", false)
       .limit(1000);
     if (error) return [];
     const term = q.toLowerCase();
-    const filtered = (rows ?? []).filter((r: any) => matchesFoodQuery(r.name, r.aliases, q));
-    const ids: string[] = filtered.map((r: any) => r.id);
-    const mapped: FoodResult[] = filtered.map((r: any) => ({
-      name: r.name,
-      brand: null,
-      barcode: null,
-      kcal_per_100g: Number(r.kcal_per_100g) || 0,
-      protein_per_100g: Number(r.protein_per_100g) || 0,
-      carbs_per_100g: Number(r.carbs_per_100g) || 0,
-      fat_per_100g: Number(r.fat_per_100g) || 0,
-      serving_g: null,
-      serving_label: r.default_state ? `pro 100 g (${r.default_state})` : null,
-      source: r.source,
-      verified_by_coach: !!r.verified_by_coach,
-      image_url: r.image_url ?? null,
-      image_source: r.image_source ?? null,
-    }));
+    const mapped: FoodResult[] = (rows ?? [])
+      .filter((r: any) => matchesFoodQuery(r.name, r.aliases, q))
+      .map((r: any) => ({
+        id: r.id,
+        text_id: r.text_id,
+        name: r.name,
+        brand: null,
+        barcode: null,
+        kcal_per_100g: Number(r.kcal_per_100g) || 0,
+        protein_per_100g: Number(r.protein_per_100g) || 0,
+        carbs_per_100g: Number(r.carbs_per_100g) || 0,
+        fat_per_100g: Number(r.fat_per_100g) || 0,
+        serving_g: null,
+        serving_label: r.default_state ? `pro 100 g (${r.default_state})` : null,
+        source: r.source,
+        verified_by_coach: !!r.verified_by_coach,
+        image_url: r.image_url ?? null,
+        image_source: r.image_source ?? null,
+      }));
     mapped.sort((a, b) => {
       const pa = sourcePriority(a.source);
       const pb = sourcePriority(b.source);
@@ -843,38 +796,5 @@ export const searchFoodsDb = createServerFn({ method: "POST" })
       const bx = bn === term ? 0 : bn.startsWith(term) ? 1 : 2;
       return ax - bx || scoreResult(b, q) - scoreResult(a, q);
     });
-    const top = mapped.slice(0, limit);
-    // Reorder ids to match top slice
-    const topIds = top.map((row) => {
-      const idx = mapped.indexOf(row);
-      return ids[idx] ?? "";
-    });
-
-    // Enrich missing images via OFF search by name (best effort, short timeout)
-    const missing = top.filter((r, i) => !r.image_url && topIds[i]);
-    if (missing.length) {
-      try {
-        const imgFields =
-          "code,product_name,product_name_de,generic_name,generic_name_de,brands,nutriments,image_front_small_url,image_small_url,image_front_url,image_url";
-        const ctrl = new AbortController();
-        const t = setTimeout(() => ctrl.abort(), 2500);
-        const url = `https://de.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=25&fields=${imgFields}`;
-        const res = await fetch(url, {
-          headers: { "User-Agent": "BodyFuelCoaching/1.0 (coach app)" },
-          signal: ctrl.signal,
-        }).catch(() => null);
-        clearTimeout(t);
-        if (res?.ok) {
-          const json = (await res.json()) as any;
-          await enrichDbRowsWithOffImages(top, topIds, [json]);
-        }
-      } catch {
-        /* ignore */
-      }
-    }
-
-    return top;
+    return mapped.slice(0, limit);
   });
-
-
-

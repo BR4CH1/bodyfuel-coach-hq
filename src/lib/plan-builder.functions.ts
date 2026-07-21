@@ -7,13 +7,46 @@ import {
 
 // 0=Sun..6=Sat, matches JS Date.getUTCDay()
 const WEEKDAY_MAP: Record<string, number> = {
-  sunday: 0, sun: 0, so: 0, sonntag: 0, "0": 0, "7": 0,
-  monday: 1, mon: 1, mo: 1, montag: 1, "1": 1,
-  tuesday: 2, tue: 2, tues: 2, di: 2, dienstag: 2, "2": 2,
-  wednesday: 3, wed: 3, mi: 3, mittwoch: 3, "3": 3,
-  thursday: 4, thu: 4, thur: 4, thurs: 4, do: 4, donnerstag: 4, "4": 4,
-  friday: 5, fri: 5, fr: 5, freitag: 5, "5": 5,
-  saturday: 6, sat: 6, sa: 6, samstag: 6, sonnabend: 6, "6": 6,
+  sunday: 0,
+  sun: 0,
+  so: 0,
+  sonntag: 0,
+  "0": 0,
+  "7": 0,
+  monday: 1,
+  mon: 1,
+  mo: 1,
+  montag: 1,
+  "1": 1,
+  tuesday: 2,
+  tue: 2,
+  tues: 2,
+  di: 2,
+  dienstag: 2,
+  "2": 2,
+  wednesday: 3,
+  wed: 3,
+  mi: 3,
+  mittwoch: 3,
+  "3": 3,
+  thursday: 4,
+  thu: 4,
+  thur: 4,
+  thurs: 4,
+  do: 4,
+  donnerstag: 4,
+  "4": 4,
+  friday: 5,
+  fri: 5,
+  fr: 5,
+  freitag: 5,
+  "5": 5,
+  saturday: 6,
+  sat: 6,
+  sa: 6,
+  samstag: 6,
+  sonnabend: 6,
+  "6": 6,
 };
 function normalizeWeekdays(v: any): number[] {
   if (!Array.isArray(v)) return [];
@@ -48,12 +81,23 @@ export type LibraryMeal = {
   budget: "low" | "medium" | "high";
   main_protein: string | null;
   main_carb: string | null;
+  image_url?: string | null;
+  image_path?: string | null;
+  image_status?: "none" | "pending" | "generating" | "ready" | "fallback" | "failed";
+  image_source?: string | null;
+  image_generated_at?: string | null;
 };
 
 export type CustomerPlanContext = {
   targets: {
-    kcal_train: number; protein_train: number; carbs_train: number; fat_train: number;
-    kcal_rest: number; protein_rest: number; carbs_rest: number; fat_rest: number;
+    kcal_train: number;
+    protein_train: number;
+    carbs_train: number;
+    fat_train: number;
+    kcal_rest: number;
+    protein_rest: number;
+    carbs_rest: number;
+    fat_rest: number;
   };
   favoriteFoods: string[];
   noGoFoods: string[];
@@ -87,14 +131,25 @@ export const getCustomerPlanContext = createServerFn({ method: "POST" })
     await assertCoachOrOrgStaffForAthlete(context, data.customerId, "nutrition");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const [{ data: prof }, { data: tgt }] = await Promise.all([
-      supabaseAdmin.from("smart_nutrition_profile").select("*").eq("user_id", data.customerId).maybeSingle(),
-      supabaseAdmin.from("nutrition_targets").select("*").eq("user_id", data.customerId).maybeSingle(),
+      supabaseAdmin
+        .from("smart_nutrition_profile")
+        .select("*")
+        .eq("user_id", data.customerId)
+        .maybeSingle(),
+      supabaseAdmin
+        .from("nutrition_targets")
+        .select("*")
+        .eq("user_id", data.customerId)
+        .maybeSingle(),
     ]);
 
     const toList = (v: any): string[] => {
       if (!v) return [];
       if (Array.isArray(v)) return v.map((s) => String(s).trim().toLowerCase()).filter(Boolean);
-      return String(v).split(/[,\n;]+/).map((s) => s.trim().toLowerCase()).filter(Boolean);
+      return String(v)
+        .split(/[,\n;]+/)
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean);
     };
     const merge = (...vs: any[]) => Array.from(new Set(vs.flatMap(toList)));
 
@@ -184,6 +239,31 @@ async function persistBuilderPlan(
   if (!planId) throw new Error("Speichern fehlgeschlagen");
 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const libraryIds = Array.from(
+    new Set(
+      data.days.flatMap((day) =>
+        day.meals.map((meal) => meal.library_meal_id).filter((id): id is string => Boolean(id)),
+      ),
+    ),
+  );
+  const libraryImages = new Map<
+    string,
+    {
+      image_url: string | null;
+      image_path: string | null;
+      image_status: string;
+      image_source: string | null;
+      image_generated_at: string | null;
+    }
+  >();
+  if (libraryIds.length) {
+    const { data: imageRows } = await supabaseAdmin
+      .from("coach_meal_library")
+      .select("id, image_url, image_path, image_status, image_source, image_generated_at")
+      .in("id", libraryIds);
+    for (const row of imageRows ?? []) libraryImages.set(row.id, row);
+  }
+
   const { data: dayRows } = await supabaseAdmin
     .from("nutrition_plan_days")
     .select("id, sort_order")
@@ -209,6 +289,7 @@ async function persistBuilderPlan(
     const mealArr = mealRows ?? [];
     for (let mi = 0; mi < src.meals.length && mi < mealArr.length; mi++) {
       const m = src.meals[mi];
+      const libraryImage = m.library_meal_id ? libraryImages.get(m.library_meal_id) : undefined;
       await supabaseAdmin
         .from("nutrition_plan_meals")
         .update({
@@ -216,6 +297,15 @@ async function persistBuilderPlan(
           library_meal_id: m.library_meal_id ?? null,
           is_locked: !!m.is_locked,
           linked_prep_group: m.linked_prep_group ?? null,
+          ...(libraryImage?.image_url
+            ? {
+                image_url: libraryImage.image_url,
+                image_path: libraryImage.image_path,
+                image_status: libraryImage.image_status,
+                image_source: libraryImage.image_source,
+                image_generated_at: libraryImage.image_generated_at,
+              }
+            : {}),
         } as any)
         .eq("id", mealArr[mi].id);
     }
@@ -296,8 +386,16 @@ export const saveBuilderPartnerPlan = createServerFn({ method: "POST" })
 
     // Cross-link partner_meal_id where linked_partner_group matches.
     const [{ data: daysA }, { data: daysB }] = await Promise.all([
-      supabaseAdmin.from("nutrition_plan_days").select("id, sort_order").eq("plan_id", A.plan_id).order("sort_order"),
-      supabaseAdmin.from("nutrition_plan_days").select("id, sort_order").eq("plan_id", B.plan_id).order("sort_order"),
+      supabaseAdmin
+        .from("nutrition_plan_days")
+        .select("id, sort_order")
+        .eq("plan_id", A.plan_id)
+        .order("sort_order"),
+      supabaseAdmin
+        .from("nutrition_plan_days")
+        .select("id, sort_order")
+        .eq("plan_id", B.plan_id)
+        .order("sort_order"),
     ]);
     const dA = daysA ?? [];
     const dB = daysB ?? [];
@@ -326,8 +424,14 @@ export const saveBuilderPartnerPlan = createServerFn({ method: "POST" })
         if (bIdxSrc < 0 || bIdxSrc >= mB.length) continue;
         const aId = mA[ai].id;
         const bId = mB[bIdxSrc].id;
-        await supabaseAdmin.from("nutrition_plan_meals").update({ partner_meal_id: bId } as any).eq("id", aId);
-        await supabaseAdmin.from("nutrition_plan_meals").update({ partner_meal_id: aId } as any).eq("id", bId);
+        await supabaseAdmin
+          .from("nutrition_plan_meals")
+          .update({ partner_meal_id: bId } as any)
+          .eq("id", aId);
+        await supabaseAdmin
+          .from("nutrition_plan_meals")
+          .update({ partner_meal_id: aId } as any)
+          .eq("id", bId);
       }
     }
 
@@ -368,13 +472,15 @@ export const loadNutritionPlanForBuilder = createServerFn({ method: "POST" })
     const mealRes = dayIds.length
       ? await supabaseAdmin
           .from("nutrition_plan_meals")
-          .select("id, day_id, sort_order, meal_slot, name, description, library_meal_id, is_locked, linked_prep_group, ingredients_json")
+          .select(
+            "id, day_id, sort_order, meal_slot, name, description, library_meal_id, is_locked, linked_prep_group, ingredients_json",
+          )
           .in("day_id", dayIds)
           .order("sort_order")
       : ({ data: [] as any[] } as any);
 
     const byDay = new Map<string, any[]>();
-    for (const m of ((mealRes.data ?? []) as any[])) {
+    for (const m of (mealRes.data ?? []) as any[]) {
       const arr = byDay.get(m.day_id) ?? [];
       arr.push(m);
       byDay.set(m.day_id, arr);
@@ -409,7 +515,11 @@ export const loadNutritionPlanForBuilder = createServerFn({ method: "POST" })
     });
 
     const endIso = (plan as any).scheduled_end_date ?? start;
-    return { plan_id: (plan as any).id, title: (plan as any).title ?? "Wochenplan", startDate: start, endDate: endIso, days };
+    return {
+      plan_id: (plan as any).id,
+      title: (plan as any).title ?? "Wochenplan",
+      startDate: start,
+      endDate: endIso,
+      days,
+    };
   });
-
-

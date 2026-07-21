@@ -109,7 +109,7 @@ export function useAddFoodFlow({
     const { data } = await supabase
       .from("food_favorites")
       .select(
-        "id, name, brand, barcode, serving_g, serving_label, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, last_amount_g",
+        "id, name, brand, barcode, serving_g, serving_label, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, last_amount_g, image_url",
       )
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
@@ -126,6 +126,7 @@ export function useAddFoodFlow({
       carbs_per_100g: number;
       fat_per_100g: number;
       last_amount_g: number | null;
+      image_url: string | null;
     }>;
 
     setFavorites(
@@ -141,6 +142,7 @@ export function useAddFoodFlow({
         carbs_per_100g: Number(row.carbs_per_100g),
         fat_per_100g: Number(row.fat_per_100g),
         last_amount_g: row.last_amount_g != null ? Number(row.last_amount_g) : null,
+        image_url: row.image_url,
       })),
     );
   }, [userId]);
@@ -176,6 +178,7 @@ export function useAddFoodFlow({
           carbs_per_100g: food.carbs_per_100g,
           fat_per_100g: food.fat_per_100g,
           last_amount_g: food.last_amount_g ?? null,
+          image_url: food.image_url ?? null,
         })
         .select("id")
         .single();
@@ -197,6 +200,7 @@ export function useAddFoodFlow({
           carbs_per_100g: food.carbs_per_100g,
           fat_per_100g: food.fat_per_100g,
           last_amount_g: food.last_amount_g ?? null,
+          image_url: food.image_url ?? null,
         },
         ...items,
       ]);
@@ -294,7 +298,9 @@ export function useAddFoodFlow({
       setLoadingRecent(true);
       const { data } = await supabase
         .from("food_entries")
-        .select("name, brand, barcode, serving_g, kcal, protein_g, carbs_g, fat_g, created_at")
+        .select(
+          "name, brand, barcode, serving_g, kcal, protein_g, carbs_g, fat_g, image_url, created_at",
+        )
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(100);
@@ -311,6 +317,7 @@ export function useAddFoodFlow({
         protein_g: number;
         carbs_g: number;
         fat_g: number;
+        image_url: string | null;
       }>) {
         const key = `${row.barcode || row.name}|${row.brand ?? ""}`;
         if (seen.has(key)) continue;
@@ -330,6 +337,7 @@ export function useAddFoodFlow({
           carbs_per_100g: Number(row.carbs_g) * factor,
           fat_per_100g: Number(row.fat_g) * factor,
           last_amount_g: servingGrams,
+          image_url: row.image_url,
         });
         if (recent.length >= 15) break;
       }
@@ -386,11 +394,14 @@ export function useAddFoodFlow({
         carbs_g: meal.carbs_g ? +Number(meal.carbs_g).toFixed(1) : 0,
         fat_g: meal.fat_g ? +Number(meal.fat_g).toFixed(1) : 0,
         source: `custom:${meal.id}`,
+        image_url: meal.image_url,
       };
       const { data: row, error } = await supabase
         .from("food_entries")
         .insert(payload)
-        .select("id, meal, name, brand, serving_g, kcal, protein_g, carbs_g, fat_g, source, image_url")
+        .select(
+          "id, meal, name, brand, serving_g, kcal, protein_g, carbs_g, fat_g, source, image_url",
+        )
         .single();
       if (error) {
         toast.error(error.message);
@@ -445,7 +456,9 @@ export function useAddFoodFlow({
     const { data, error } = await supabase
       .from("food_entries")
       .insert(payload)
-      .select("id, meal, name, brand, serving_g, kcal, protein_g, carbs_g, fat_g, source, image_url")
+      .select(
+        "id, meal, name, brand, serving_g, kcal, protein_g, carbs_g, fat_g, source, image_url",
+      )
       .single();
     if (error) {
       toast.error(error.message);

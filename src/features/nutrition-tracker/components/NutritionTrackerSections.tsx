@@ -10,6 +10,7 @@ import type { DayType } from "@/lib/nutrition.functions";
 import { MEALS } from "../constants";
 import { cleanPlanEntryName, shiftIsoDate, todayIso } from "../lib/nutrition-tracker.logic";
 import type { FoodEntry, Meal, NutritionTargets, NutritionTotals } from "../types";
+import { FoodThumb } from "./FoodResultRow";
 import { NutritionRing } from "./NutritionRing";
 
 function bullsDayTypeLabel(kind: BullsDayType | string): string {
@@ -305,24 +306,14 @@ export function MealCard({
       {entries.length > 0 && (
         <ul className="mt-3 divide-y divide-border">
           {entries.map((entry) => {
-            const isPlan = entry.source?.startsWith("plan:") ?? false;
+            const isPlan =
+              entry.source?.startsWith("plan:") || entry.source?.startsWith("perf_plan:");
+            const displayName = cleanPlanEntryName(entry.name, entry.source);
             return (
               <li key={entry.id} className="flex items-center gap-3 py-2">
-                {entry.image_url ? (
-                  <img
-                    src={entry.image_url}
-                    alt=""
-                    loading="lazy"
-                    className="h-10 w-10 shrink-0 rounded-md bg-secondary object-cover"
-                    onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).style.display = "none";
-                    }}
-                  />
-                ) : null}
+                <FoodThumb food={{ name: displayName, image_url: entry.image_url }} />
                 <div className="min-w-0 flex-1">
-                  <div className="break-words text-sm font-medium">
-                    {cleanPlanEntryName(entry.name, entry.source)}
-                  </div>
+                  <div className="break-words text-sm font-medium">{displayName}</div>
                   <div className="text-[11px] text-muted-foreground">
                     {entry.brand ? `${entry.brand} · ` : ""}
                     {isPlan ? "" : `${Number(entry.serving_g)} g · `}
