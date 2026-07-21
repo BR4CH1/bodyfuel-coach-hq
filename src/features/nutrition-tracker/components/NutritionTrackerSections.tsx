@@ -308,6 +308,17 @@ export function MealCard({
             const isPlan = entry.source?.startsWith("plan:") ?? false;
             return (
               <li key={entry.id} className="flex items-center gap-3 py-2">
+                {entry.image_url ? (
+                  <img
+                    src={entry.image_url}
+                    alt=""
+                    loading="lazy"
+                    className="h-10 w-10 shrink-0 rounded-md bg-secondary object-cover"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).style.display = "none";
+                    }}
+                  />
+                ) : null}
                 <div className="min-w-0 flex-1">
                   <div className="break-words text-sm font-medium">
                     {cleanPlanEntryName(entry.name, entry.source)}
