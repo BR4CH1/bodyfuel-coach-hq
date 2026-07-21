@@ -41,18 +41,20 @@ export function FoodAmountEditor({
         <div className="flex min-w-0 items-start gap-3">
           <FoodThumbnail src={food.image_url} alt={food.name} />
           <div className="min-w-0">
-            <div className="text-sm font-semibold">{food.name}</div>
-            {isCoach && <SourceBadge source={food.source} verified={food.verified_by_coach} />}
-          </div>
-          <div className="text-xs text-muted-foreground">
-            {food.brand ?? "—"}
-            {food.serving_g ? ` · 1 Stück ≈ ${food.serving_g} g` : ""}
-          </div>
-          {isCoach && food.source === "ai_estimate" && (
-            <div className="mt-1 rounded-md border border-amber-500/30 bg-amber-500/5 px-2 py-1 text-[11px] text-amber-300">
-              ⚠ KI-Schätzung – Werte vor dem Speichern prüfen. Nicht aus geprüfter Datenbank.
+            <div className="flex items-center gap-1">
+              <div className="text-sm font-semibold">{food.name}</div>
+              {isCoach && <SourceBadge source={food.source} verified={food.verified_by_coach} />}
             </div>
-          )}
+            <div className="text-xs text-muted-foreground">
+              {food.brand ?? "—"}
+              {food.serving_g ? ` · 1 Stück ≈ ${food.serving_g} g` : ""}
+            </div>
+            {isCoach && food.source === "ai_estimate" && (
+              <div className="mt-1 rounded-md border border-amber-500/30 bg-amber-500/5 px-2 py-1 text-[11px] text-amber-300">
+                ⚠ KI-Schätzung – Werte vor dem Speichern prüfen. Nicht aus geprüfter Datenbank.
+              </div>
+            )}
+          </div>
         </div>
         <button
           type="button"
