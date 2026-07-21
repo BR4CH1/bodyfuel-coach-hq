@@ -200,46 +200,61 @@ export const searchFoods = createServerFn({ method: "POST" })
 
     // DB-Lookup (geprüfte Lebensmittel)
     let dbRows: FoodResult[] = [];
+    let dbRowIds: string[] = [];
     const dbPromise = (async () => {
       try {
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { data: rows } = await supabaseAdmin
           .from("nutrition_foods")
           .select(
-            "name, aliases, source, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, verified_by_coach, default_state",
+            "id, name, aliases, source, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, verified_by_coach, default_state, image_url, image_source",
           )
           .eq("needs_review", false)
           .limit(1000);
-        dbRows = (rows ?? [])
+        const filtered = (rows ?? [])
           .filter((r: any) => matchesFoodQuery(r.name, r.aliases, q))
-          .map((r: any) => ({
-            name: r.name,
-            brand: null,
-            barcode: null,
-            kcal_per_100g: Number(r.kcal_per_100g) || 0,
-            protein_per_100g: Number(r.protein_per_100g) || 0,
-            carbs_per_100g: Number(r.carbs_per_100g) || 0,
-            fat_per_100g: Number(r.fat_per_100g) || 0,
-            serving_g: null,
-            serving_label: r.default_state ? `pro 100 g (${r.default_state})` : null,
-            source: r.source,
-            verified_by_coach: !!r.verified_by_coach,
-          }))
-          .sort((a, b) => sourcePriority(a.source) - sourcePriority(b.source) || scoreResult(b, q) - scoreResult(a, q))
+          .sort(
+            (a: any, b: any) =>
+              sourcePriority(a.source) - sourcePriority(b.source) ||
+              scoreResult(
+                { ...b, brand: null, barcode: null, serving_g: null, serving_label: null } as FoodResult,
+                q,
+              ) -
+                scoreResult(
+                  { ...a, brand: null, barcode: null, serving_g: null, serving_label: null } as FoodResult,
+                  q,
+                ),
+          )
           .slice(0, 15);
+        dbRowIds = filtered.map((r: any) => r.id);
+        dbRows = filtered.map((r: any) => ({
+          name: r.name,
+          brand: null,
+          barcode: null,
+          kcal_per_100g: Number(r.kcal_per_100g) || 0,
+          protein_per_100g: Number(r.protein_per_100g) || 0,
+          carbs_per_100g: Number(r.carbs_per_100g) || 0,
+          fat_per_100g: Number(r.fat_per_100g) || 0,
+          serving_g: null,
+          serving_label: r.default_state ? `pro 100 g (${r.default_state})` : null,
+          source: r.source,
+          verified_by_coach: !!r.verified_by_coach,
+          image_url: r.image_url ?? null,
+          image_source: r.image_source ?? null,
+        }));
       } catch {
         /* ignore */
       }
     })();
 
+    const imgFields =
+      "code,product_name,product_name_de,generic_name,generic_name_de,brands,nutriments,serving_size,serving_quantity,image_front_small_url,image_small_url,image_front_url,image_url";
     const offUrl =
       `https://search.openfoodfacts.org/search?` +
       `q=${encodeURIComponent(q)}` +
-      `&langs=de,en&page_size=30&fields=code,product_name,product_name_de,generic_name,generic_name_de,brands,nutriments,serving_size,serving_quantity` +
+      `&langs=de,en&page_size=30&fields=${imgFields}` +
       `&sort_by=-popularity_key&countries_tags=germany,switzerland,austria`;
-    const fields =
-      "code,product_name,product_name_de,generic_name,generic_name_de,brands,nutriments,serving_size,serving_quantity";
-    const deUrl = `https://de.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=25&sort_by=unique_scans_n&fields=${fields}`;
+    const deUrl = `https://de.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=25&sort_by=unique_scans_n&fields=${imgFields}`;
 
     // Alles parallel mit hartem Timeout. Egal welche Quelle wegfällt — Suche kommt zurück.
     const [, offJson, deJson] = await Promise.all([
@@ -248,6 +263,9 @@ export const searchFoods = createServerFn({ method: "POST" })
       fetchWithTimeout(deUrl, 3500),
     ]);
 
+    // Enrich DB rows without image via OFF response (match on name), and persist
+    await enrichDbRowsWithOffImages(dbRows, dbRowIds, [offJson, deJson]);
+
     for (const m of dbRows) pushUnique(m);
     if (offJson) for (const p of offJson.hits ?? offJson.products ?? []) pushUnique(mapOff(p));
     if (deJson) for (const p of deJson.products ?? []) pushUnique(mapOff(p));
@@ -255,6 +273,7 @@ export const searchFoods = createServerFn({ method: "POST" })
     arr.sort((a, b) => scoreResult(b, q) - scoreResult(a, q));
     return arr.slice(0, 25);
   });
+
 
 
 /* ----------- Targets (coach only) ----------- */
