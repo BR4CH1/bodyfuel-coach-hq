@@ -13,6 +13,7 @@ export type FoodEntry = {
   carbs_g: number;
   fat_g: number;
   source: string | null;
+  image_url?: string | null;
 };
 
 export type RecentFood = FoodResult & { last_amount_g: number };
