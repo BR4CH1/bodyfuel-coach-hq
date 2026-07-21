@@ -241,7 +241,7 @@ export const searchFoods = createServerFn({ method: "POST" })
     const arr: FoodResult[] = [];
     const pushUnique = (m: FoodResult | null) => {
       if (!m) return;
-      const key = (m.barcode || m.name.toLowerCase()) + "|" + (m.brand ?? "").toLowerCase();
+      const key = (m.barcode || String(m.name ?? "").toLowerCase()) + "|" + String(m.brand ?? "").toLowerCase();
       if (seen.has(key)) return;
       seen.add(key);
       arr.push(m);
