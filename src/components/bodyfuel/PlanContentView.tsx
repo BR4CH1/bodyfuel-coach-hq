@@ -1,22 +1,53 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, Sparkles, Utensils, Dumbbell, Check, Shuffle, BookOpen, Repeat, PlayCircle, CalendarRange, AlertTriangle } from "lucide-react";
+import {
+  Loader2,
+  Sparkles,
+  Utensils,
+  Dumbbell,
+  Check,
+  Shuffle,
+  BookOpen,
+  Repeat,
+  PlayCircle,
+  CalendarRange,
+  AlertTriangle,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
-import { parseNutritionPlan, estimateMealMacros, getMealMacroDebug } from "@/lib/nutrition-plan.functions";
+import {
+  parseNutritionPlan,
+  estimateMealMacros,
+  getMealMacroDebug,
+} from "@/lib/nutrition-plan.functions";
 import { parseTrainingPlan } from "@/lib/training.functions";
 import { getDayType } from "@/lib/nutrition.functions";
 import { logInteraction } from "@/lib/meal-feedback.functions";
 import { getMySkipsForDate, removeMealSkip } from "@/lib/meal-skips.functions";
 import { formatDateRange } from "@/lib/format-date-range";
+import type { MealImageStatus } from "@/lib/meal-images.functions";
 import { RecipeDialog } from "./RecipeDialog";
 import { MealSwapDialog } from "./MealSwapDialog";
 import { SkipReasonDialog } from "./SkipReasonDialog";
 import { DayPlanView, type DayPlanMeal } from "./DayPlanView";
+import { useAutoGeneratePlanMealImages } from "./useAutoGeneratePlanMealImages";
 
-type Plan = { id: string; client_id: string; title: string; weeks_count?: number | null; scheduled_start_date?: string | null; scheduled_end_date?: string | null };
-type Day = { id: string; name: string; sort_order: number; week_number?: number | null; day_date?: string | null };
+type Plan = {
+  id: string;
+  client_id: string;
+  title: string;
+  weeks_count?: number | null;
+  scheduled_start_date?: string | null;
+  scheduled_end_date?: string | null;
+};
+type Day = {
+  id: string;
+  name: string;
+  sort_order: number;
+  week_number?: number | null;
+  day_date?: string | null;
+};
 type Meal = {
   id: string;
   day_id: string;
@@ -27,6 +58,8 @@ type Meal = {
   carbs_g: number | null;
   fat_g: number | null;
   sort_order: number;
+  image_url?: string | null;
+  image_status?: MealImageStatus | null;
   data_source?: "db_verified" | "db_mixed" | "ai_estimate" | "coach_verified" | null;
   verified_ratio?: number | null;
   compute_warnings?: string[] | null;
@@ -87,16 +120,33 @@ const pickRandom = <T,>(arr: T[]): T | null =>
 
 // Map a German weekday abbreviation at the start of a day name to JS getDay() (0=Sun..6=Sat).
 const WEEKDAY_MAP: Record<string, number> = {
-  so: 0, son: 0, sonntag: 0,
-  mo: 1, mon: 1, montag: 1,
-  di: 2, die: 2, dienstag: 2,
-  mi: 3, mit: 3, mittwoch: 3,
-  do: 4, don: 4, donnerstag: 4,
-  fr: 5, fre: 5, freitag: 5,
-  sa: 6, sam: 6, samstag: 6,
+  so: 0,
+  son: 0,
+  sonntag: 0,
+  mo: 1,
+  mon: 1,
+  montag: 1,
+  di: 2,
+  die: 2,
+  dienstag: 2,
+  mi: 3,
+  mit: 3,
+  mittwoch: 3,
+  do: 4,
+  don: 4,
+  donnerstag: 4,
+  fr: 5,
+  fre: 5,
+  freitag: 5,
+  sa: 6,
+  sam: 6,
+  samstag: 6,
 };
 function weekdayFromName(name: string): number | null {
-  const m = name.trim().toLowerCase().match(/^([a-zäöü]+)/);
+  const m = name
+    .trim()
+    .toLowerCase()
+    .match(/^([a-zäöü]+)/);
   if (!m) return null;
   const key = m[1];
   if (key in WEEKDAY_MAP) return WEEKDAY_MAP[key];
@@ -106,8 +156,18 @@ function weekdayFromName(name: string): number | null {
 
 // Derive the German weekday label from an ISO date (YYYY-MM-DD).
 // This is the SINGLE SOURCE OF TRUTH — never derive weekday from the day name.
-const WEEKDAY_LONG_DE = ["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"];
-function weekdayLabelFromISO(iso: string | null | undefined): { long: string; short: string; wd: number } | null {
+const WEEKDAY_LONG_DE = [
+  "Sonntag",
+  "Montag",
+  "Dienstag",
+  "Mittwoch",
+  "Donnerstag",
+  "Freitag",
+  "Samstag",
+];
+function weekdayLabelFromISO(
+  iso: string | null | undefined,
+): { long: string; short: string; wd: number } | null {
   if (!iso) return null;
   const d = new Date(iso + "T00:00:00");
   if (isNaN(d.getTime())) return null;
@@ -130,9 +190,15 @@ function fmtKg(raw: string): string {
   return `${nfKg.format(n)} kg`;
 }
 // Collapse an array like ["37.5","37.5","37.5"] → "37,5 kg"; mixed → satz-liste.
-function renderTargetWeights(raw: string | null): { compact: string | null; perSet: string[] | null } {
+function renderTargetWeights(raw: string | null): {
+  compact: string | null;
+  perSet: string[] | null;
+} {
   if (!raw) return { compact: null, perSet: null };
-  const parts = raw.split(",").map((s) => s.trim()).filter(Boolean);
+  const parts = raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
   if (!parts.length) return { compact: null, perSet: null };
   const nums = parts.map((p) => (/^-?\d+([.,]\d+)?$/.test(p) ? p : null));
   const allNumeric = nums.every((n) => n !== null);
@@ -147,11 +213,15 @@ function renderTargetWeights(raw: string | null): { compact: string | null; perS
 // Collapse reps "8,8,8,10" → "8" or "8–10"; else passthrough.
 function renderTargetReps(raw: string | null, targetSets: number | null): string {
   if (!raw) return "—";
-  const parts = raw.split(",").map((s) => s.trim()).filter(Boolean);
+  const parts = raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
   if (!parts.length) return "—";
   const nums = parts.map((p) => Number(p)).filter((n) => Number.isFinite(n));
   if (nums.length === parts.length && nums.length > 0) {
-    const lo = Math.min(...nums), hi = Math.max(...nums);
+    const lo = Math.min(...nums),
+      hi = Math.max(...nums);
     const setsPrefix = targetSets ? `${targetSets} × ` : "";
     return `${setsPrefix}${lo === hi ? `${lo}` : `${lo}–${hi}`}`;
   }
@@ -159,15 +229,61 @@ function renderTargetReps(raw: string | null, targetSets: number | null): string
 }
 
 const INSTRUCTION_SIGNALS = [
-  "Alles", "Zubereitung", "Zubereiten", "Anleitung", "Zusammen", "Mischen",
-  "Kochen", "Backen", "Braten", "Garen", "Dünsten", "Dämpfen", "Grillen",
-  "Zubereitungs", "Vorbereitung", "Vorbereiten", "Schneiden", "Würfeln",
-  "Rühren", "Unterheben", "Vermengen", "Zusammenfügen", "In eine", "In den",
-  "In die", "Auf dem", "Im Ofen", "Aufwärmen", "Erhitzen", "Abkühlen",
-  "Kaltstellen", "Kühlschrank", "Über Nacht", "Mindestens", "Ca.", "Ca ",
-  "Min.", "Minuten", "Stunden", "Lassen", "Kühl", "Warm", "Heiß",
-  "Pfanne", "Topf", "Schüssel", "Ofen", "Herd", "Mikrowelle", "Dampfgarer",
-  "Grill", "Mixen", "Pürieren", "Aufschlagen", "Verrühren",
+  "Alles",
+  "Zubereitung",
+  "Zubereiten",
+  "Anleitung",
+  "Zusammen",
+  "Mischen",
+  "Kochen",
+  "Backen",
+  "Braten",
+  "Garen",
+  "Dünsten",
+  "Dämpfen",
+  "Grillen",
+  "Zubereitungs",
+  "Vorbereitung",
+  "Vorbereiten",
+  "Schneiden",
+  "Würfeln",
+  "Rühren",
+  "Unterheben",
+  "Vermengen",
+  "Zusammenfügen",
+  "In eine",
+  "In den",
+  "In die",
+  "Auf dem",
+  "Im Ofen",
+  "Aufwärmen",
+  "Erhitzen",
+  "Abkühlen",
+  "Kaltstellen",
+  "Kühlschrank",
+  "Über Nacht",
+  "Mindestens",
+  "Ca.",
+  "Ca ",
+  "Min.",
+  "Minuten",
+  "Stunden",
+  "Lassen",
+  "Kühl",
+  "Warm",
+  "Heiß",
+  "Pfanne",
+  "Topf",
+  "Schüssel",
+  "Ofen",
+  "Herd",
+  "Mikrowelle",
+  "Dampfgarer",
+  "Grill",
+  "Mixen",
+  "Pürieren",
+  "Aufschlagen",
+  "Verrühren",
 ];
 
 function cleanDescription(desc: string | null): string | null {
@@ -203,7 +319,10 @@ type VirtualDay = { id: string; name: string; realDayId: string };
 type DayLike = { id: string; name: string; sort_order: number };
 type ItemLike = { id: string; day_id: string; name: string; sort_order: number };
 
-function buildVirtualDays<T extends ItemLike>(days: DayLike[], items: T[]): {
+function buildVirtualDays<T extends ItemLike>(
+  days: DayLike[],
+  items: T[],
+): {
   virtualDays: VirtualDay[];
   itemToVirtual: Record<string, string>;
   itemDisplayName: Record<string, string>;
@@ -221,7 +340,10 @@ function buildVirtualDays<T extends ItemLike>(days: DayLike[], items: T[]): {
     let allHaveGroup = dayItems.length > 0;
     dayItems.forEach((m, idx) => {
       const g = extractDayGroup(m.name);
-      if (!g) { allHaveGroup = false; return; }
+      if (!g) {
+        allHaveGroup = false;
+        return;
+      }
       const key = g.group;
       if (!groups.has(key)) groups.set(key, { items: [], firstIndex: idx });
       groups.get(key)!.items.push(m);
@@ -229,13 +351,13 @@ function buildVirtualDays<T extends ItemLike>(days: DayLike[], items: T[]): {
     });
 
     if (allHaveGroup && groups.size > 1) {
-      const sorted = [...groups.entries()].sort(
-        (a, b) => a[1].firstIndex - b[1].firstIndex,
-      );
+      const sorted = [...groups.entries()].sort((a, b) => a[1].firstIndex - b[1].firstIndex);
       for (const [groupName, info] of sorted) {
         const vid = `${day.id}::${groupName}`;
         virtualDays.push({ id: vid, name: groupName, realDayId: day.id });
-        info.items.forEach((m) => { itemToVirtual[m.id] = vid; });
+        info.items.forEach((m) => {
+          itemToVirtual[m.id] = vid;
+        });
       }
     } else {
       virtualDays.push({ id: day.id, name: day.name, realDayId: day.id });
@@ -281,13 +403,13 @@ export function PlanContentView({ clientId, planType }: Props) {
     protein_g: number | null;
     carbs_g: number | null;
     fat_g: number | null;
+    image_url: string | null;
   };
   const [overrides, setOverrides] = useState<Record<string, Override>>({}); // meal_id -> override
   const [revertingId, setRevertingId] = useState<string>("");
   const logFn = useServerFn(logInteraction);
   const getSkipsFn = useServerFn(getMySkipsForDate);
   const removeSkipFn = useServerFn(removeMealSkip);
-
 
   const dayTable = planType === "nutrition" ? "nutrition_plan_days" : "training_days";
   const itemTable = planType === "nutrition" ? "nutrition_plan_meals" : "training_exercises";
@@ -306,14 +428,42 @@ export function PlanContentView({ clientId, planType }: Props) {
     const renamed: Day[] = days.map((d) => {
       const wd = weekdayLabelFromISO(d.day_date ?? null);
       // Existierende Wochentag-Präfixe wie "Mo — X" oder "Mo · X" abstreifen.
-      const baseName = (d.name ?? "").replace(/^(mo|di|mi|do|fr|sa|so|montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag)\s*[—\-–:|·]\s*/i, "").trim() || "Trainingstag";
+      const baseName =
+        (d.name ?? "")
+          .replace(
+            /^(mo|di|mi|do|fr|sa|so|montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag)\s*[—\-–:|·]\s*/i,
+            "",
+          )
+          .trim() || "Trainingstag";
       if (!wd) return { ...d, name: baseName };
       const dateLabel = formatDateDE(d.day_date ?? null);
       const prefix = dateLabel ? `${wd.long}, ${dateLabel}` : wd.long;
-      return { ...d, name: /ruhetag|rest|pause|frei/i.test(baseName) ? `${prefix} — Ruhetag` : `${prefix} — ${baseName}` };
+      return {
+        ...d,
+        name: /ruhetag|rest|pause|frei/i.test(baseName)
+          ? `${prefix} — Ruhetag`
+          : `${prefix} — ${baseName}`,
+      };
     });
     return buildVirtualDays(renamed, items);
   }, [days, meals, exercises, planType]);
+
+  useAutoGeneratePlanMealImages({
+    enabled: planType === "nutrition" && Boolean(activeDay),
+    meals: meals.filter((meal) => itemToVirtual[meal.id] === activeDay),
+    onUpdate: (mealId, imageUrl, imageStatus) => {
+      setMeals((current) =>
+        current.map((meal) =>
+          meal.id === mealId ? { ...meal, image_url: imageUrl, image_status: imageStatus } : meal,
+        ),
+      );
+      setRecipeMeal((current) =>
+        current?.id === mealId
+          ? { ...current, image_url: imageUrl, image_status: imageStatus }
+          : current,
+      );
+    },
+  });
 
   const reload = async () => {
     if (!clientId) return;
@@ -329,7 +479,11 @@ export function PlanContentView({ clientId, planType }: Props) {
     setPlan((planRow as Plan) ?? null);
 
     if (!planRow) {
-      setDays([]); setMeals([]); setExercises([]); setLoading(false); return;
+      setDays([]);
+      setMeals([]);
+      setExercises([]);
+      setLoading(false);
+      return;
     }
     const { data: dayRows } = await supabase
       .from(dayTable)
@@ -366,23 +520,29 @@ export function PlanContentView({ clientId, planType }: Props) {
     }
     setDays(dayList);
 
-
     if (dayList.length) {
       const { data: itemRows } = await supabase
         .from(itemTable)
         .select("*")
-        .in("day_id", dayList.map((d) => d.id))
+        .in(
+          "day_id",
+          dayList.map((d) => d.id),
+        )
         .order("sort_order");
       if (planType === "nutrition") setMeals((itemRows as Meal[]) ?? []);
       else setExercises((itemRows as Exercise[]) ?? []);
     } else {
-      setMeals([]); setExercises([]);
+      setMeals([]);
+      setExercises([]);
     }
     setLoading(false);
   };
 
   const reloadTracked = async () => {
-    if (!canTrack) { setTracked({}); return; }
+    if (!canTrack) {
+      setTracked({});
+      return;
+    }
     const { data } = await supabase
       .from("food_entries")
       .select("id, source")
@@ -398,33 +558,52 @@ export function PlanContentView({ clientId, planType }: Props) {
   };
 
   const reloadSkips = async () => {
-    if (!canTrack) { setSkipped({}); return; }
+    if (!canTrack) {
+      setSkipped({});
+      return;
+    }
     try {
       const res = await getSkipsFn({ data: { skip_date: todayKey() } });
       const map: Record<string, string> = {};
-      (res.items ?? []).forEach((s: any) => { if (s.meal_id) map[s.meal_id] = s.reason; });
+      (res.items ?? []).forEach((s: any) => {
+        if (s.meal_id) map[s.meal_id] = s.reason;
+      });
       setSkipped(map);
     } catch {}
   };
 
   const reloadOverrides = async () => {
-    if (!isSelf || planType !== "nutrition") { setOverrides({}); return; }
+    if (!isSelf || planType !== "nutrition") {
+      setOverrides({});
+      return;
+    }
     const { data } = await supabase
       .from("nutrition_plan_meal_overrides")
-      .select("id, plan_meal_id, name, description, kcal, protein_g, carbs_g, fat_g")
+      .select("id, plan_meal_id, name, description, kcal, protein_g, carbs_g, fat_g, image_url")
       .eq("user_id", clientId)
       .eq("override_date", todayKey());
     const map: Record<string, Override> = {};
-    ((data as Override[]) ?? []).forEach((o) => { map[o.plan_meal_id] = o; });
+    ((data as Override[]) ?? []).forEach((o) => {
+      map[o.plan_meal_id] = o;
+    });
     setOverrides(map);
   };
 
-  useEffect(() => { reload(); /* eslint-disable-next-line */ }, [clientId, planType]);
-  useEffect(() => { reloadTracked(); reloadSkips(); reloadOverrides(); /* eslint-disable-next-line */ }, [clientId, planType, supabaseUser?.id]);
+  useEffect(() => {
+    reload(); /* eslint-disable-next-line */
+  }, [clientId, planType]);
+  useEffect(() => {
+    reloadTracked();
+    reloadSkips();
+    reloadOverrides(); /* eslint-disable-next-line */
+  }, [clientId, planType, supabaseUser?.id]);
 
   // Fetch today's day type (only for self / nutrition); used to auto-pick a matching day.
   useEffect(() => {
-    if (!isSelf || planType !== "nutrition") { setDayKind(null); return; }
+    if (!isSelf || planType !== "nutrition") {
+      setDayKind(null);
+      return;
+    }
     let cancelled = false;
     (async () => {
       try {
@@ -434,14 +613,18 @@ export function PlanContentView({ clientId, planType }: Props) {
         if (!cancelled) setDayKind(null);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [clientId, planType, isSelf, getDayTypeFn]);
 
   // Auto-pick today's weekday (e.g. "Mo — Trainingstag") for today; respect saved manual pick.
   useEffect(() => {
     if (!virtualDays.length) return;
     let saved = "";
-    try { saved = localStorage.getItem(pickStorageKey) ?? ""; } catch {}
+    try {
+      saved = localStorage.getItem(pickStorageKey) ?? "";
+    } catch {}
     if (saved && virtualDays.find((d) => d.id === saved)) {
       setActiveDay((cur) => (cur === saved ? cur : saved));
       return;
@@ -449,18 +632,18 @@ export function PlanContentView({ clientId, planType }: Props) {
     if (activeDay && virtualDays.find((d) => d.id === activeDay)) return;
     const todayWd = new Date().getDay();
     const todayMatch = virtualDays.find((d) => weekdayFromName(d.name) === todayWd);
-    if (todayMatch) { setActiveDay(todayMatch.id); return; }
+    if (todayMatch) {
+      setActiveDay(todayMatch.id);
+      return;
+    }
     const matches = dayKind
-      ? virtualDays.filter((d) =>
-          dayKind === "rest" ? isRestDay(d.name) : !isRestDay(d.name),
-        )
+      ? virtualDays.filter((d) => (dayKind === "rest" ? isRestDay(d.name) : !isRestDay(d.name)))
       : [];
     const pool = matches.length ? matches : virtualDays;
     const pick = pickRandom(pool) ?? virtualDays[0];
     if (pick) setActiveDay(pick.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [virtualDays, dayKind]);
-
 
   // Notify the Training Tracker (separate component on the /training page) so
   // it auto-expands the matching day section when the user picks one above.
@@ -470,7 +653,9 @@ export function PlanContentView({ clientId, planType }: Props) {
     const name = vd?.name;
     if (!name) return;
     const key = `bf:training:active-day-name:${clientId}`;
-    try { localStorage.setItem(key, name); } catch {}
+    try {
+      localStorage.setItem(key, name);
+    } catch {}
     try {
       window.dispatchEvent(
         new CustomEvent("bf:training-active-day", { detail: { clientId, name } }),
@@ -487,17 +672,22 @@ export function PlanContentView({ clientId, planType }: Props) {
     const pick = pickRandom(pool.length ? pool : virtualDays);
     if (pick) {
       setActiveDay(pick.id);
-      try { localStorage.setItem(pickStorageKey, pick.id); } catch {}
+      try {
+        localStorage.setItem(pickStorageKey, pick.id);
+      } catch {}
     }
   };
-
 
   const handleParse = async () => {
     if (!plan) return;
     setParsing(true);
     try {
       const fn = planType === "nutrition" ? parseNutrition : parseTraining;
-      const res = await fn({ data: { plan_id: plan.id } }) as { days: number; meals?: number; exercises?: number };
+      const res = (await fn({ data: { plan_id: plan.id } })) as {
+        days: number;
+        meals?: number;
+        exercises?: number;
+      };
       toast.success(
         planType === "nutrition"
           ? `${res.days} Tage · ${res.meals ?? 0} Mahlzeiten gelesen`
@@ -519,7 +709,11 @@ export function PlanContentView({ clientId, planType }: Props) {
       if (existing) {
         const { error } = await supabase.from("food_entries").delete().eq("id", existing);
         if (error) throw error;
-        setTracked((t) => { const n = { ...t }; delete n[m.id]; return n; });
+        setTracked((t) => {
+          const n = { ...t };
+          delete n[m.id];
+          return n;
+        });
         toast.success(`${m.name} entfernt`);
       } else {
         const meta = extractDayGroup(m.name);
@@ -537,7 +731,10 @@ export function PlanContentView({ clientId, planType }: Props) {
         // Prefer "Mahlzeit N" number from the name when present
         const mn = m.name.match(/Mahlzeit\s*(\d+)/i);
         if (mn) idx = Math.max(0, parseInt(mn[1], 10) - 1);
-        const slot = slotFromName(m.name) ?? slotFromName(itemDisplayName[m.id] ?? "") ?? mealSlot(idx, list.length);
+        const slot =
+          slotFromName(m.name) ??
+          slotFromName(itemDisplayName[m.id] ?? "") ??
+          mealSlot(idx, list.length);
 
         let kcal = m.kcal ?? 0;
         let p = m.protein_g ?? 0;
@@ -546,8 +743,15 @@ export function PlanContentView({ clientId, planType }: Props) {
         if (!kcal && !p && !c && !f) {
           try {
             const est = await estimateMacros({ data: { meal_id: m.id } });
-            kcal = est.kcal; p = est.protein_g; c = est.carbs_g; f = est.fat_g;
-            setMeals((arr) => arr.map((x) => x.id === m.id ? { ...x, kcal, protein_g: p, carbs_g: c, fat_g: f } : x));
+            kcal = est.kcal;
+            p = est.protein_g;
+            c = est.carbs_g;
+            f = est.fat_g;
+            setMeals((arr) =>
+              arr.map((x) =>
+                x.id === m.id ? { ...x, kcal, protein_g: p, carbs_g: c, fat_g: f } : x,
+              ),
+            );
           } catch (e: any) {
             toast.error("Nährwerte konnten nicht geschätzt werden");
             return;
@@ -570,6 +774,7 @@ export function PlanContentView({ clientId, planType }: Props) {
             protein_g: p,
             carbs_g: c,
             fat_g: f,
+            image_url: m.image_url ?? null,
             source: `plan:${m.id}`,
           })
           .select("id")
@@ -577,7 +782,9 @@ export function PlanContentView({ clientId, planType }: Props) {
         if (error) throw error;
         setTracked((t) => ({ ...t, [m.id]: (data as { id: string }).id }));
         toast.success(`${m.name} getrackt`);
-        try { await logFn({ data: { meal_id: m.id, kind: "eaten" } }); } catch {}
+        try {
+          await logFn({ data: { meal_id: m.id, kind: "eaten" } });
+        } catch {}
       }
     } catch (e: any) {
       toast.error(e?.message ?? "Tracken fehlgeschlagen");
@@ -598,8 +805,16 @@ export function PlanContentView({ clientId, planType }: Props) {
         .eq("user_id", clientId)
         .eq("entry_date", todayKey())
         .eq("source", `custom:${m.id}`);
-      setOverrides((o) => { const n = { ...o }; delete n[m.id]; return n; });
-      setTracked((t) => { const n = { ...t }; delete n[m.id]; return n; });
+      setOverrides((o) => {
+        const n = { ...o };
+        delete n[m.id];
+        return n;
+      });
+      setTracked((t) => {
+        const n = { ...t };
+        delete n[m.id];
+        return n;
+      });
       toast.success("Originalmahlzeit wiederhergestellt");
     } catch (e: any) {
       toast.error(e?.message ?? "Wiederherstellen fehlgeschlagen");
@@ -612,19 +827,27 @@ export function PlanContentView({ clientId, planType }: Props) {
     if (!isCoach || planType !== "nutrition") return;
     setLoadingDebugId(m.id);
     try {
-      const res = await debugMacros({ data: { meal_id: m.id } }) as MealMacroDebug;
+      const res = (await debugMacros({ data: { meal_id: m.id } })) as MealMacroDebug;
       setMealDebug((cur) => ({ ...cur, [m.id]: res }));
-      setMeals((arr) => arr.map((x) => x.id === m.id ? {
-        ...x,
-        kcal: res.totals.kcal,
-        protein_g: res.totals.protein_g,
-        carbs_g: res.totals.carbs_g,
-        fat_g: res.totals.fat_g,
-        data_source: res.data_source as Meal["data_source"],
-        verified_ratio: res.coverage,
-        compute_warnings: res.warnings,
-      } : x));
-      toast.success(`Debug neu berechnet: ${res.totals.kcal} kcal · ${res.totals.protein_g}P/${res.totals.carbs_g}KH/${res.totals.fat_g}F`);
+      setMeals((arr) =>
+        arr.map((x) =>
+          x.id === m.id
+            ? {
+                ...x,
+                kcal: res.totals.kcal,
+                protein_g: res.totals.protein_g,
+                carbs_g: res.totals.carbs_g,
+                fat_g: res.totals.fat_g,
+                data_source: res.data_source as Meal["data_source"],
+                verified_ratio: res.coverage,
+                compute_warnings: res.warnings,
+              }
+            : x,
+        ),
+      );
+      toast.success(
+        `Debug neu berechnet: ${res.totals.kcal} kcal · ${res.totals.protein_g}P/${res.totals.carbs_g}KH/${res.totals.fat_g}F`,
+      );
     } catch (e: any) {
       toast.error(e?.message ?? "Debug fehlgeschlagen");
     } finally {
@@ -652,7 +875,9 @@ export function PlanContentView({ clientId, planType }: Props) {
             <Icon className="h-4 w-4" />
           </div>
           <div>
-            <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">{eyebrow}</div>
+            <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+              {eyebrow}
+            </div>
             <div className="font-display text-base font-bold">Inhalt</div>
             {planDateRange && (
               <div className="mt-0.5 inline-flex items-center gap-1 text-[11px] font-semibold text-primary">
@@ -668,7 +893,11 @@ export function PlanContentView({ clientId, planType }: Props) {
             disabled={parsing}
             className="inline-flex items-center gap-2 rounded-lg border border-gold/40 bg-accent/30 px-3 py-2 text-xs font-semibold text-gold hover:bg-accent/50 disabled:opacity-60"
           >
-            {parsing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+            {parsing ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Sparkles className="h-3.5 w-3.5" />
+            )}
             {days.length ? "Neu aus PDF lesen" : "Aus PDF lesen"}
           </button>
         )}
@@ -686,7 +915,9 @@ export function PlanContentView({ clientId, planType }: Props) {
             <div className="flex items-center justify-between gap-2">
               <label className="text-xs uppercase tracking-wider text-muted-foreground">
                 {isSelf && dayKind
-                  ? dayKind === "rest" ? "Heute: Restday" : "Heute: Trainingstag"
+                  ? dayKind === "rest"
+                    ? "Heute: Restday"
+                    : "Heute: Trainingstag"
                   : "Tag wählen"}
               </label>
               {isSelf && planType === "nutrition" && virtualDays.length > 1 && (
@@ -702,16 +933,19 @@ export function PlanContentView({ clientId, planType }: Props) {
               value={activeDay}
               onChange={(e) => {
                 setActiveDay(e.target.value);
-                try { localStorage.setItem(pickStorageKey, e.target.value); } catch {}
+                try {
+                  localStorage.setItem(pickStorageKey, e.target.value);
+                } catch {}
               }}
               className="mt-2 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             >
               {virtualDays.map((d) => (
-                <option key={d.id} value={d.id}>{d.name}</option>
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
               ))}
             </select>
           </div>
-
 
           {canTrack && (
             <p className="mt-3 text-[11px] text-muted-foreground">
@@ -724,7 +958,7 @@ export function PlanContentView({ clientId, planType }: Props) {
               const dayMealsRaw = meals.filter((m) => itemToVirtual[m.id] === activeDay);
               const dayMeals: DayPlanMeal[] = dayMealsRaw.map((m) => {
                 const ov = overrides[m.id];
-                const effName = ov?.name ?? (itemDisplayName[m.id] ?? m.name);
+                const effName = ov?.name ?? itemDisplayName[m.id] ?? m.name;
                 const effDescription = ov ? ov.description : m.description;
                 const effKcal = ov ? ov.kcal : m.kcal;
                 const effProtein = ov ? ov.protein_g : m.protein_g;
@@ -733,8 +967,7 @@ export function PlanContentView({ clientId, planType }: Props) {
                 // Wenn Name "Frühstück: Rührei mit …" → Slot als Kategorie, Rest als Titel
                 const colonIdx = effName.indexOf(":");
                 const slotName = colonIdx > 0 ? effName.slice(0, colonIdx).trim() : effName;
-                const title =
-                  colonIdx > 0 ? effName.slice(colonIdx + 1).trim() : effName;
+                const title = colonIdx > 0 ? effName.slice(colonIdx + 1).trim() : effName;
                 return {
                   id: m.id,
                   slotName,
@@ -744,16 +977,12 @@ export function PlanContentView({ clientId, planType }: Props) {
                   protein_g: effProtein,
                   carbs_g: effCarbs,
                   fat_g: effFat,
+                  imageUrl: ov?.image_url ?? m.image_url ?? null,
+                  imageStatus: ov?.image_url ? "ready" : m.image_status,
                   isTracked: !!tracked[m.id],
                   busy: togglingId === m.id,
                   hasRecipe: !!effDescription,
-                  canSwap:
-                    canTrack &&
-                    !ov &&
-                    !!m.kcal &&
-                    !!m.protein_g &&
-                    !!m.carbs_g &&
-                    !!m.fat_g,
+                  canSwap: canTrack && !ov && !!m.kcal && !!m.protein_g && !!m.carbs_g && !!m.fat_g,
                   hasOverride: !!ov,
                 };
               });
@@ -786,28 +1015,29 @@ export function PlanContentView({ clientId, planType }: Props) {
               const vd = virtualDays.find((d) => d.id === activeDay);
               const dateLabel = vd?.name ?? "";
               const dKind: "training" | "rest" | null =
-                dayKind ??
-                (vd && isRestDay(vd.name) ? "rest" : vd ? "training" : null);
+                dayKind ?? (vd && isRestDay(vd.name) ? "rest" : vd ? "training" : null);
 
               const idx = virtualDays.findIndex((d) => d.id === activeDay);
-              const goPrev = idx > 0
-                ? () => {
-                    const target = virtualDays[idx - 1];
-                    setActiveDay(target.id);
-                    try {
-                      localStorage.setItem(pickStorageKey, target.id);
-                    } catch {}
-                  }
-                : undefined;
-              const goNext = idx >= 0 && idx < virtualDays.length - 1
-                ? () => {
-                    const target = virtualDays[idx + 1];
-                    setActiveDay(target.id);
-                    try {
-                      localStorage.setItem(pickStorageKey, target.id);
-                    } catch {}
-                  }
-                : undefined;
+              const goPrev =
+                idx > 0
+                  ? () => {
+                      const target = virtualDays[idx - 1];
+                      setActiveDay(target.id);
+                      try {
+                        localStorage.setItem(pickStorageKey, target.id);
+                      } catch {}
+                    }
+                  : undefined;
+              const goNext =
+                idx >= 0 && idx < virtualDays.length - 1
+                  ? () => {
+                      const target = virtualDays[idx + 1];
+                      setActiveDay(target.id);
+                      try {
+                        localStorage.setItem(pickStorageKey, target.id);
+                      } catch {}
+                    }
+                  : undefined;
 
               return (
                 <div className="mt-3">
@@ -848,30 +1078,45 @@ export function PlanContentView({ clientId, planType }: Props) {
                 const groupOf = (e: Exercise): "warmup" | "working" | "cooldown" => {
                   const t = e.set_type;
                   if (t === "warmup" || t === "cooldown") return t;
-                  if (t === "working" || t === "backoff" || t === "dropset" || t === "amrap") return "working";
+                  if (t === "working" || t === "backoff" || t === "dropset" || t === "amrap")
+                    return "working";
                   const n = (e.name ?? "").toLowerCase();
                   if (/^(warm-?up|warmup|aufwärm)/.test(n)) return "warmup";
                   if (/^(cool-?down|cooldown|abwärm)/.test(n)) return "cooldown";
                   return "working";
                 };
-                const groups: Record<"warmup" | "working" | "cooldown", Exercise[]> = { warmup: [], working: [], cooldown: [] };
+                const groups: Record<"warmup" | "working" | "cooldown", Exercise[]> = {
+                  warmup: [],
+                  working: [],
+                  cooldown: [],
+                };
                 for (const e of dayExercises) groups[groupOf(e)].push(e);
                 const renderCard = (e: Exercise) => {
                   const exName = itemDisplayName[e.id] ?? e.name;
-                  const isNonExercise = /rest|ruh|pause|frei|mobility|foam|dehn|stretch|recovery|spiel|game|training bei|mannschaft|warm-?up|cool-?down|aufwärm|abwärm/i.test(exName);
+                  const isNonExercise =
+                    /rest|ruh|pause|frei|mobility|foam|dehn|stretch|recovery|spiel|game|training bei|mannschaft|warm-?up|cool-?down|aufwärm|abwärm/i.test(
+                      exName,
+                    );
                   const demoUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(exName + " Übung Ausführung")}`;
                   const repsLabel = renderTargetReps(e.target_reps, e.target_sets ?? null);
                   const { compact, perSet } = renderTargetWeights(e.target_weights);
                   return (
-                    <div key={e.id} className="rounded-2xl border border-border bg-background/40 p-4">
+                    <div
+                      key={e.id}
+                      className="rounded-2xl border border-border bg-background/40 p-4"
+                    >
                       <div className="flex items-baseline justify-between gap-3">
                         <div className="text-sm font-semibold">{exName}</div>
                         <div className="text-xs text-muted-foreground text-right">{repsLabel}</div>
                       </div>
-                      {compact && (<div className="mt-1 text-xs text-gold/90">{compact}</div>)}
+                      {compact && <div className="mt-1 text-xs text-gold/90">{compact}</div>}
                       {perSet && (
                         <ul className="mt-1 space-y-0.5 text-xs text-gold/90">
-                          {perSet.map((w, i) => (<li key={i}>Satz {i + 1} · {w}</li>))}
+                          {perSet.map((w, i) => (
+                            <li key={i}>
+                              Satz {i + 1} · {w}
+                            </li>
+                          ))}
                         </ul>
                       )}
                       {e.notes && <p className="mt-1 text-xs text-muted-foreground">{e.notes}</p>}
@@ -891,7 +1136,9 @@ export function PlanContentView({ clientId, planType }: Props) {
                 const Section = ({ label, list }: { label: string; list: Exercise[] }) =>
                   list.length ? (
                     <div className="space-y-2">
-                      <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</div>
+                      <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        {label}
+                      </div>
                       {list.map(renderCard)}
                     </div>
                   ) : null;
@@ -916,6 +1163,18 @@ export function PlanContentView({ clientId, planType }: Props) {
           displayName={itemDisplayName[recipeMeal.id] ?? recipeMeal.name}
           isCoach={isCoach}
           onClose={() => setRecipeMeal(null)}
+          onImageChanged={(imageUrl, imageStatus) => {
+            setMeals((current) =>
+              current.map((meal) =>
+                meal.id === recipeMeal.id
+                  ? { ...meal, image_url: imageUrl, image_status: imageStatus }
+                  : meal,
+              ),
+            );
+            setRecipeMeal((current) =>
+              current ? { ...current, image_url: imageUrl, image_status: imageStatus } : current,
+            );
+          }}
         />
       )}
       {swapMeal && isSelf && (
@@ -924,7 +1183,9 @@ export function PlanContentView({ clientId, planType }: Props) {
           displayName={itemDisplayName[swapMeal.id] ?? swapMeal.name}
           userId={clientId}
           onClose={() => setSwapMeal(null)}
-          onSwapped={() => { reloadTracked(); }}
+          onSwapped={() => {
+            reloadTracked();
+          }}
         />
       )}
       {skipMeal && isSelf && (
@@ -932,7 +1193,9 @@ export function PlanContentView({ clientId, planType }: Props) {
           mealId={skipMeal.id}
           mealName={itemDisplayName[skipMeal.id] ?? skipMeal.name}
           onClose={() => setSkipMeal(null)}
-          onSkipped={() => { reloadSkips(); }}
+          onSkipped={() => {
+            reloadSkips();
+          }}
         />
       )}
     </div>
