@@ -81,6 +81,66 @@ function mapOff(p: any): FoodResult | null {
   };
 }
 
+async function enrichDbRowsWithOffImages(
+  rows: FoodResult[],
+  ids: string[],
+  offJsons: any[],
+): Promise<void> {
+  const candidates: any[] = [];
+  for (const json of offJsons) {
+    if (!json) continue;
+    for (const p of json.hits ?? json.products ?? []) candidates.push(p);
+  }
+  if (!candidates.length) return;
+
+  const updates: Array<{ id: string; url: string }> = [];
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const id = ids[i];
+    if (!id || row.image_url) continue;
+    const normName = normalizeFoodTerm(row.name);
+    const compName = compactFoodTerm(row.name);
+    if (!normName) continue;
+    let match: any = null;
+    for (const p of candidates) {
+      const name =
+        p.product_name_de || p.product_name || p.generic_name_de || p.generic_name || "";
+      if (!name) continue;
+      const norm = normalizeFoodTerm(name);
+      const comp = compactFoodTerm(name);
+      if (norm === normName || comp === compName || norm.includes(normName)) {
+        if (offImage(p)) {
+          match = p;
+          break;
+        }
+      }
+    }
+    if (!match) continue;
+    const url = offImage(match);
+    if (!url) continue;
+    row.image_url = url;
+    row.image_source = "open_food_facts";
+    updates.push({ id, url });
+  }
+
+  if (!updates.length) return;
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await Promise.all(
+      updates.map((u) =>
+        supabaseAdmin
+          .from("nutrition_foods")
+          .update({ image_url: u.url, image_source: "open_food_facts" })
+          .eq("id", u.id),
+      ),
+    );
+  } catch {
+    /* best effort */
+  }
+}
+
+
+
 
 function scoreResult(r: FoodResult, q: string): number {
   const name = r.name.toLowerCase();
