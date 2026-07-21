@@ -38,8 +38,9 @@ export function FoodAmountEditor({
   return (
     <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="flex items-center gap-1">
+        <div className="flex min-w-0 items-start gap-3">
+          <FoodThumbnail src={food.image_url} alt={food.name} />
+          <div className="min-w-0">
             <div className="text-sm font-semibold">{food.name}</div>
             {isCoach && <SourceBadge source={food.source} verified={food.verified_by_coach} />}
           </div>
