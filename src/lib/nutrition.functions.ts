@@ -13,6 +13,10 @@ export type FoodSource =
   | null;
 
 export type FoodResult = {
+  /** Primärschlüssel aus nutrition_foods, wenn der Treffer aus unserer DB stammt. */
+  id?: string | null;
+  /** Stabiler nutrition_foods.text_id für Plan- und Rezeptverknüpfungen. */
+  text_id?: string | null;
   name: string;
   brand: string | null;
   barcode: string | null;
@@ -60,6 +64,8 @@ function mapOff(p: any): FoodResult | null {
   const serving_g = isFinite(sq) && sq > 0 ? sq : null;
   const image_url = offImage(p);
   return {
+    id: null,
+    text_id: null,
     name:
       p.product_name_de ||
       p.product_name ||
@@ -267,7 +273,7 @@ export const searchFoods = createServerFn({ method: "POST" })
         const { data: rows } = await supabaseAdmin
           .from("nutrition_foods")
           .select(
-            "id, name, aliases, source, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, verified_by_coach, default_state, image_url, image_source",
+            "id, text_id, name, aliases, source, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, verified_by_coach, default_state, image_url, image_source",
           )
           .eq("needs_review", false)
           .limit(1000);
@@ -288,6 +294,8 @@ export const searchFoods = createServerFn({ method: "POST" })
           .slice(0, 15);
         dbRowIds = filtered.map((r: any) => r.id);
         dbRows = filtered.map((r: any) => ({
+          id: r.id,
+          text_id: r.text_id,
           name: r.name,
           brand: null,
           barcode: null,
@@ -333,8 +341,6 @@ export const searchFoods = createServerFn({ method: "POST" })
     arr.sort((a, b) => scoreResult(b, q) - scoreResult(a, q));
     return arr.slice(0, 25);
   });
-
-
 
 /* ----------- Targets (coach only) ----------- */
 
@@ -810,8 +816,9 @@ export const searchFoodsDb = createServerFn({ method: "POST" })
     const { data: rows, error } = await context.supabase
       .from("nutrition_foods")
       .select(
-        "id, name, source, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, verified_by_coach, unit_type, default_state, aliases, image_url, image_source",
+        "id, text_id, name, source, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, verified_by_coach, unit_type, default_state, aliases, image_url, image_source",
       )
+      .eq("is_active", true)
       .eq("needs_review", false)
       .limit(1000);
     if (error) return [];
@@ -819,6 +826,8 @@ export const searchFoodsDb = createServerFn({ method: "POST" })
     const filtered = (rows ?? []).filter((r: any) => matchesFoodQuery(r.name, r.aliases, q));
     const ids: string[] = filtered.map((r: any) => r.id);
     const mapped: FoodResult[] = filtered.map((r: any) => ({
+      id: r.id,
+      text_id: r.text_id,
       name: r.name,
       brand: null,
       barcode: null,
@@ -875,6 +884,4 @@ export const searchFoodsDb = createServerFn({ method: "POST" })
 
     return top;
   });
-
-
 

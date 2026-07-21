@@ -36,6 +36,18 @@ export function FoodThumbnail({
   );
 }
 
+/** Compatibility wrapper used by recent/favorite food lists. */
+export function FoodThumb({
+  food,
+}: {
+  food: {
+    name: string;
+    image_url?: string | null;
+  };
+}) {
+  return <FoodThumbnail src={food.image_url} alt={food.name} />;
+}
+
 export function FoodNutritionLine({
   food,
   showServing = false,
@@ -105,4 +117,3 @@ export function FoodResultRow({
     </li>
   );
 }
-

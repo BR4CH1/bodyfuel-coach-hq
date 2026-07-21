@@ -1,6 +1,7 @@
 import { ChefHat } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { MealImageThumb } from "@/components/bodyfuel/MealImageThumb";
 import type { CustomMeal } from "@/lib/custom-meals.functions";
 
 export function CustomMealsPanel({
@@ -36,15 +37,23 @@ export function CustomMealsPanel({
             <li key={meal.id}>
               <button
                 onClick={() => onAddMeal(meal)}
-                className="w-full px-2 py-3 text-left hover:bg-secondary"
+                className="flex w-full items-center gap-3 px-2 py-3 text-left hover:bg-secondary"
               >
-                <div className="truncate text-sm font-medium">{meal.name}</div>
-                <div className="text-[11px] text-muted-foreground">
-                  {meal.kcal ? `${Math.round(meal.kcal)} kcal` : "—"}
-                  {meal.protein_g ? ` · P ${Number(meal.protein_g).toFixed(1)}` : ""}
-                  {meal.carbs_g ? ` · K ${Number(meal.carbs_g).toFixed(1)}` : ""}
-                  {meal.fat_g ? ` · F ${Number(meal.fat_g).toFixed(1)}` : ""}
-                  {meal.ingredients?.length ? ` · ${meal.ingredients.length} Zutaten` : ""}
+                <MealImageThumb
+                  name={meal.name}
+                  imageUrl={meal.image_url}
+                  status={meal.image_status}
+                  className="h-14 w-16"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-medium">{meal.name}</div>
+                  <div className="text-[11px] text-muted-foreground">
+                    {meal.kcal ? `${Math.round(meal.kcal)} kcal` : "—"}
+                    {meal.protein_g ? ` · P ${Number(meal.protein_g).toFixed(1)}` : ""}
+                    {meal.carbs_g ? ` · KH ${Number(meal.carbs_g).toFixed(1)}` : ""}
+                    {meal.fat_g ? ` · F ${Number(meal.fat_g).toFixed(1)}` : ""}
+                    {meal.ingredients?.length ? ` · ${meal.ingredients.length} Zutaten` : ""}
+                  </div>
                 </div>
               </button>
             </li>
