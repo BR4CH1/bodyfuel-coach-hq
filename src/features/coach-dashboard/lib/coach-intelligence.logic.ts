@@ -1,10 +1,11 @@
 import type {
+  CoachClient,
   CoachDashboardViewModel,
   CoachIntelligenceSignal,
   CoachIntelligenceViewModel,
 } from "@/features/coach-dashboard/types";
 
-function nameOf(value: string | null) {
+function nameOf(value: string | null | undefined) {
   return value?.trim() || "Unbenannter Kunde";
 }
 
@@ -19,18 +20,16 @@ function uniqueByUser(signals: CoachIntelligenceSignal[]) {
 
 export function buildCoachIntelligence(
   view: CoachDashboardViewModel | null | undefined,
+  clients: CoachClient[] | null | undefined = [],
 ): CoachIntelligenceViewModel {
-  const safeView = view ?? ({} as Partial<CoachDashboardViewModel>);
-  const clientsSource = Array.isArray((safeView as { clients?: unknown }).clients)
-    ? ((safeView as { clients?: CoachDashboardViewModel["openWeek"] }).clients ?? [])
-    : Array.isArray(safeView.planOverview)
-      ? safeView.planOverview
-      : [];
-  const openWeek = Array.isArray(safeView.openWeek) ? safeView.openWeek : [];
-  const inactive = Array.isArray(safeView.inactive) ? safeView.inactive : [];
-  const redClients = Array.isArray(safeView.redClients) ? safeView.redClients : [];
+  const safeClients = Array.isArray(clients) ? clients : [];
+  const fallbackClients = Array.isArray(view?.planOverview) ? view.planOverview : [];
+  const intelligenceClients = safeClients.length > 0 ? safeClients : fallbackClients;
+  const openWeek = Array.isArray(view?.openWeek) ? view.openWeek : [];
+  const inactive = Array.isArray(view?.inactive) ? view.inactive : [];
+  const redClients = Array.isArray(view?.redClients) ? view.redClients : [];
 
-  const stagnating = clientsSource
+  const stagnating = intelligenceClients
     .filter((client) => (client?.plateau_days ?? 0) >= 7)
     .sort((left, right) => (right.plateau_days ?? 0) - (left.plateau_days ?? 0))
     .slice(0, 4)

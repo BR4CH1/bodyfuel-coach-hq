@@ -1,8 +1,8 @@
 import { expect, it } from "vitest";
 import { buildCoachIntelligence } from "@/features/coach-dashboard/lib/coach-intelligence.logic";
-import type { CoachDashboardViewModel } from "@/features/coach-dashboard/types";
+import type { CoachClient, CoachDashboardViewModel } from "@/features/coach-dashboard/types";
 
-const client = {
+const client: CoachClient = {
   id: "u1",
   display_name: "Manu",
   last_checkin: null,
@@ -18,24 +18,34 @@ const client = {
   plateau_days: 12,
 };
 
-it("prioritizes stagnation, risk and attention signals", () => {
-  const view: CoachDashboardViewModel = {
-    weekStart: "2026-07-20",
-    openWeek: [client],
-    inactive: [{ ...client, days: 8 }],
-    recentMeasurements: [],
-    recentNutrition: [],
-    recentTraining: [],
-    expiringPlans: [],
-    planOverview: [client],
-    scoreById: new Map(),
-    scoreCounts: { green: 0, yellow: 0, red: 1 },
-    redClients: [{ ...client, _score: { score: 21, level: "red", reasons: ["Check-in fehlt"] } }],
-  };
+const view: CoachDashboardViewModel = {
+  weekStart: "2026-07-20",
+  openWeek: [client],
+  inactive: [{ ...client, days: 8 }],
+  recentMeasurements: [],
+  recentNutrition: [],
+  recentTraining: [],
+  expiringPlans: [],
+  planOverview: [],
+  scoreById: new Map(),
+  scoreCounts: { green: 0, yellow: 0, red: 1 },
+  redClients: [{ ...client, _score: { score: 21, level: "red", reasons: ["Check-in fehlt"] } }],
+};
 
-  const result = buildCoachIntelligence(view);
+it("prioritizes stagnation, risk and attention signals", () => {
+  const result = buildCoachIntelligence(view, [client]);
   expect(result.stagnating).toHaveLength(1);
   expect(result.atRisk).toHaveLength(1);
   expect(result.needsAttention).toHaveLength(0);
   expect(result.summary).toContain("2");
+});
+
+it("does not crash when the dashboard view or client list is unavailable", () => {
+  expect(buildCoachIntelligence(undefined, undefined)).toEqual({
+    title: "Coach Intelligence ist ruhig",
+    summary: "Aktuell gibt es keine auffälligen Kundensignale.",
+    stagnating: [],
+    atRisk: [],
+    needsAttention: [],
+  });
 });

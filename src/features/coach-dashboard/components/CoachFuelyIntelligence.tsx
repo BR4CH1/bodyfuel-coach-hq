@@ -1,7 +1,14 @@
 import { Link } from "@tanstack/react-router";
-import { Activity, AlertTriangle, Brain, ChevronRight, TrendingDown } from "lucide-react";
-
+import {
+  Activity,
+  AlertTriangle,
+  Brain,
+  ChevronRight,
+  MessageCircleMore,
+  TrendingDown,
+} from "lucide-react";
 import type {
+  CoachFollowUpCategory,
   CoachIntelligenceSignal,
   CoachIntelligenceViewModel,
 } from "@/features/coach-dashboard/types";
@@ -9,13 +16,30 @@ import { cn } from "@/lib/utils";
 
 export function CoachFuelyIntelligence({
   intelligence,
+  onOpenFollowUps,
 }: {
   intelligence: CoachIntelligenceViewModel;
+  onOpenFollowUps?: (category: CoachFollowUpCategory) => void;
 }) {
   const groups = [
-    { title: "Wer stagniert?", icon: TrendingDown, signals: intelligence.stagnating },
-    { title: "Wer ist gefährdet?", icon: AlertTriangle, signals: intelligence.atRisk },
-    { title: "Wer braucht Aufmerksamkeit?", icon: Activity, signals: intelligence.needsAttention },
+    {
+      title: "Wer stagniert?",
+      icon: TrendingDown,
+      signals: intelligence.stagnating,
+      category: "stagnation" as const,
+    },
+    {
+      title: "Wer ist gefährdet?",
+      icon: AlertTriangle,
+      signals: intelligence.atRisk,
+      category: "risk" as const,
+    },
+    {
+      title: "Wer braucht Aufmerksamkeit?",
+      icon: Activity,
+      signals: intelligence.needsAttention,
+      category: "attention" as const,
+    },
   ];
 
   return (
@@ -30,18 +54,35 @@ export function CoachFuelyIntelligence({
           <p className="mt-1 text-sm text-muted-foreground">{intelligence.summary}</p>
         </div>
       </div>
-
       <div className="mt-5 grid gap-4 xl:grid-cols-3">
-        {groups.map(({ title, icon: Icon, signals }) => (
+        {groups.map(({ title, icon: Icon, signals, category }) => (
           <div key={title} className="rounded-2xl border border-border bg-background/50 p-4">
-            <div className="flex items-center gap-2 font-display font-bold">
-              <Icon className="h-4 w-4 text-gold" /> {title}
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 font-display font-bold">
+                <Icon className="h-4 w-4 text-gold" /> {title}
+              </div>
+              {signals.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => onOpenFollowUps?.(category)}
+                  className="rounded-md border border-gold/30 p-2 text-gold"
+                  title="Passende Follow-ups anzeigen"
+                >
+                  <MessageCircleMore className="h-4 w-4" />
+                </button>
+              )}
             </div>
             <div className="mt-3 space-y-2">
               {signals.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Keine auffälligen Signale.</p>
               ) : (
-                signals.map((signal) => <SignalRow key={signal.id} signal={signal} />)
+                signals.map((signal) => (
+                  <SignalRow
+                    key={signal.id}
+                    signal={signal}
+                    onFollowUp={() => onOpenFollowUps?.(category)}
+                  />
+                ))
               )}
             </div>
           </div>
@@ -51,23 +92,38 @@ export function CoachFuelyIntelligence({
   );
 }
 
-function SignalRow({ signal }: { signal: CoachIntelligenceSignal }) {
+function SignalRow({
+  signal,
+  onFollowUp,
+}: {
+  signal: CoachIntelligenceSignal;
+  onFollowUp: () => void;
+}) {
   return (
-    <Link
-      to="/coach/customers/$userId"
-      params={{ userId: signal.userId }}
+    <div
       className={cn(
-        "flex items-start justify-between gap-3 rounded-xl border p-3 transition hover:-translate-y-0.5",
+        "rounded-xl border p-3",
         signal.severity === "urgent"
           ? "border-red-500/30 bg-red-500/8"
           : "border-amber-500/25 bg-amber-500/8",
       )}
     >
-      <div>
-        <div className="text-sm font-semibold leading-tight">{signal.headline}</div>
-        <div className="mt-1 text-xs leading-relaxed text-muted-foreground">{signal.detail}</div>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-sm font-semibold leading-tight">{signal.headline}</div>
+          <div className="mt-1 text-xs leading-relaxed text-muted-foreground">{signal.detail}</div>
+        </div>
+        <Link to="/coach/customers/$userId" params={{ userId: signal.userId }}>
+          <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+        </Link>
       </div>
-      <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-    </Link>
+      <button
+        type="button"
+        onClick={onFollowUp}
+        className="mt-3 inline-flex items-center text-xs font-semibold text-gold"
+      >
+        <MessageCircleMore className="mr-1.5 h-4 w-4" /> Follow-up anzeigen
+      </button>
+    </div>
   );
 }

@@ -1,1 +1,0 @@
-UPDATE public.profiles SET demo_client_key = 'andreas' WHERE id = 'bea74ecf-c932-4e35-ad31-bfe158866ea8';

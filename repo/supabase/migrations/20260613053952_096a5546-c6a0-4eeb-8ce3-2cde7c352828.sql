@@ -1,1 +1,0 @@
-REVOKE EXECUTE ON FUNCTION public.compute_daily_check_points() FROM PUBLIC, anon, authenticated;

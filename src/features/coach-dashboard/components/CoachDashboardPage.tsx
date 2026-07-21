@@ -16,8 +16,11 @@ import { CoachPerformanceNotice } from "@/features/coach-dashboard/components/Co
 import { CoachRankingPanel } from "@/features/coach-dashboard/components/CoachRankingPanel";
 import { SectionHeader } from "@/features/coach-dashboard/components/CoachDashboardPrimitives";
 import { useCoachDashboardController } from "@/features/coach-dashboard/hooks/useCoachDashboardController";
+import type { CoachFollowUpCategory } from "@/features/coach-dashboard/types";
+import { useState } from "react";
 
 export function CoachDashboardPage() {
+  const [followUpFilter, setFollowUpFilter] = useState<CoachFollowUpCategory | null>(null);
   const controller = useCoachDashboardController();
   const {
     clients,
@@ -62,9 +65,37 @@ export function CoachDashboardPage() {
       {!isLoading && !isError && (
         <div className="space-y-8">
           <CoachFuelyBriefing briefing={briefing} />
-          <CoachFuelyWorkload workload={workload} />
-          <CoachFuelyIntelligence intelligence={intelligence} />
-          <CoachFuelyFollowUps drafts={followUps} />
+          <CoachFuelyWorkload
+            workload={workload}
+            onOpenFollowUps={(category) => {
+              setFollowUpFilter(category);
+              window.setTimeout(
+                () =>
+                  document
+                    .getElementById("fuely-followups")
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+                0,
+              );
+            }}
+          />
+          <CoachFuelyIntelligence
+            intelligence={intelligence}
+            onOpenFollowUps={(category) => {
+              setFollowUpFilter(category);
+              window.setTimeout(
+                () =>
+                  document
+                    .getElementById("fuely-followups")
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+                0,
+              );
+            }}
+          />
+          <CoachFuelyFollowUps
+            drafts={followUps}
+            selectedCategory={followUpFilter}
+            onClearFilter={() => setFollowUpFilter(null)}
+          />
           <CoachDashboardSummary data={radar} />
           <CoachRadarCard data={radar} />
           <CoachTaskInboxCard data={radar} />

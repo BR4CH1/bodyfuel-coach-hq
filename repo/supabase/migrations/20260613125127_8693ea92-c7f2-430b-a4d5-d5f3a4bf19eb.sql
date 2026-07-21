@@ -1,1 +1,0 @@
-ALTER TABLE public.training_exercises ADD COLUMN IF NOT EXISTS target_weights text;

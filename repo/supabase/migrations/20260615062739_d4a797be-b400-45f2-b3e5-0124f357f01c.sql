@@ -1,1 +1,0 @@
-ALTER FUNCTION public.validate_nutrition_plan_file_path() SECURITY INVOKER;

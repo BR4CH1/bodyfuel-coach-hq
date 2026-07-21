@@ -1,1 +1,0 @@
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.daily_checks TO authenticated; GRANT ALL ON public.daily_checks TO service_role;

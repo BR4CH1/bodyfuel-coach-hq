@@ -1,1 +1,0 @@
-INSERT INTO public.email_unsubscribe_tokens(email, token) VALUES ('schraderm@web.de', '3312683b1806d342cdaaaf90d2c7cf83862253bc3a14cc149d9f6542cafc5df8') ON CONFLICT (email) DO UPDATE SET token = EXCLUDED.token, used_at = NULL;
