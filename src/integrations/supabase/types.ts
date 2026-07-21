@@ -2887,6 +2887,8 @@ export type Database = {
           fat_per_100g: number
           fiber_per_100g: number | null
           id: string
+          image_source: string | null
+          image_url: string | null
           is_active: boolean
           kcal_per_100g: number
           license: string | null
@@ -2920,6 +2922,8 @@ export type Database = {
           fat_per_100g?: number
           fiber_per_100g?: number | null
           id?: string
+          image_source?: string | null
+          image_url?: string | null
           is_active?: boolean
           kcal_per_100g: number
           license?: string | null
@@ -2953,6 +2957,8 @@ export type Database = {
           fat_per_100g?: number
           fiber_per_100g?: number | null
           id?: string
+          image_source?: string | null
+          image_url?: string | null
           is_active?: boolean
           kcal_per_100g?: number
           license?: string | null
