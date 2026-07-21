@@ -390,7 +390,7 @@ export function useAddFoodFlow({
       const { data: row, error } = await supabase
         .from("food_entries")
         .insert(payload)
-        .select("id, meal, name, brand, serving_g, kcal, protein_g, carbs_g, fat_g, source")
+        .select("id, meal, name, brand, serving_g, kcal, protein_g, carbs_g, fat_g, source, image_url")
         .single();
       if (error) {
         toast.error(error.message);
@@ -444,7 +444,7 @@ export function useAddFoodFlow({
     const { data, error } = await supabase
       .from("food_entries")
       .insert(payload)
-      .select("id, meal, name, brand, serving_g, kcal, protein_g, carbs_g, fat_g, source")
+      .select("id, meal, name, brand, serving_g, kcal, protein_g, carbs_g, fat_g, source, image_url")
       .single();
     if (error) {
       toast.error(error.message);
