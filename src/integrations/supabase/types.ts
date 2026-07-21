@@ -1870,6 +1870,7 @@ export type Database = {
           entry_date: string
           fat_g: number
           id: string
+          image_url: string | null
           kcal: number
           meal: string
           name: string
@@ -1887,6 +1888,7 @@ export type Database = {
           entry_date?: string
           fat_g?: number
           id?: string
+          image_url?: string | null
           kcal?: number
           meal: string
           name: string
@@ -1904,6 +1906,7 @@ export type Database = {
           entry_date?: string
           fat_g?: number
           id?: string
+          image_url?: string | null
           kcal?: number
           meal?: string
           name?: string
