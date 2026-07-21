@@ -1171,11 +1171,6 @@ export type Database = {
           effort: Database["public"]["Enums"]["meal_effort_level"]
           fat_g: number
           id: string
-          image_generated_at: string | null
-          image_path: string | null
-          image_source: string | null
-          image_status: string
-          image_url: string | null
           ingredients: Json
           instructions: string | null
           is_active: boolean
@@ -1204,11 +1199,6 @@ export type Database = {
           effort?: Database["public"]["Enums"]["meal_effort_level"]
           fat_g?: number
           id?: string
-          image_generated_at?: string | null
-          image_path?: string | null
-          image_source?: string | null
-          image_status?: string
-          image_url?: string | null
           ingredients?: Json
           instructions?: string | null
           is_active?: boolean
@@ -1237,11 +1227,6 @@ export type Database = {
           effort?: Database["public"]["Enums"]["meal_effort_level"]
           fat_g?: number
           id?: string
-          image_generated_at?: string | null
-          image_path?: string | null
-          image_source?: string | null
-          image_status?: string
-          image_url?: string | null
           ingredients?: Json
           instructions?: string | null
           is_active?: boolean
@@ -1533,12 +1518,6 @@ export type Database = {
           created_at: string
           fat_g: number | null
           id: string
-          image_error: string | null
-          image_generated_at: string | null
-          image_path: string | null
-          image_source: string | null
-          image_status: string
-          image_url: string | null
           ingredients: Json
           kcal: number | null
           meal_slot: string
@@ -1553,12 +1532,6 @@ export type Database = {
           created_at?: string
           fat_g?: number | null
           id?: string
-          image_error?: string | null
-          image_generated_at?: string | null
-          image_path?: string | null
-          image_source?: string | null
-          image_status?: string
-          image_url?: string | null
           ingredients?: Json
           kcal?: number | null
           meal_slot?: string
@@ -1573,12 +1546,6 @@ export type Database = {
           created_at?: string
           fat_g?: number | null
           id?: string
-          image_error?: string | null
-          image_generated_at?: string | null
-          image_path?: string | null
-          image_source?: string | null
-          image_status?: string
-          image_url?: string | null
           ingredients?: Json
           kcal?: number | null
           meal_slot?: string
@@ -1959,7 +1926,6 @@ export type Database = {
           created_at: string
           fat_per_100g: number
           id: string
-          image_url: string | null
           kcal_per_100g: number
           last_amount_g: number | null
           name: string
@@ -1975,7 +1941,6 @@ export type Database = {
           created_at?: string
           fat_per_100g?: number
           id?: string
-          image_url?: string | null
           kcal_per_100g?: number
           last_amount_g?: number | null
           name: string
@@ -1991,7 +1956,6 @@ export type Database = {
           created_at?: string
           fat_per_100g?: number
           id?: string
-          image_url?: string | null
           kcal_per_100g?: number
           last_amount_g?: number | null
           name?: string
@@ -3099,7 +3063,6 @@ export type Database = {
           description: string | null
           fat_g: number | null
           id: string
-          image_url: string | null
           kcal: number | null
           name: string
           override_date: string
@@ -3114,7 +3077,6 @@ export type Database = {
           description?: string | null
           fat_g?: number | null
           id?: string
-          image_url?: string | null
           kcal?: number | null
           name: string
           override_date: string
@@ -3129,7 +3091,6 @@ export type Database = {
           description?: string | null
           fat_g?: number | null
           id?: string
-          image_url?: string | null
           kcal?: number | null
           name?: string
           override_date?: string
@@ -3159,11 +3120,6 @@ export type Database = {
           description: string | null
           fat_g: number | null
           id: string
-          image_generated_at: string | null
-          image_path: string | null
-          image_source: string | null
-          image_status: string
-          image_url: string | null
           ingredients_json: Json | null
           is_locked: boolean
           is_shared: boolean
@@ -3191,11 +3147,6 @@ export type Database = {
           description?: string | null
           fat_g?: number | null
           id?: string
-          image_generated_at?: string | null
-          image_path?: string | null
-          image_source?: string | null
-          image_status?: string
-          image_url?: string | null
           ingredients_json?: Json | null
           is_locked?: boolean
           is_shared?: boolean
@@ -3223,11 +3174,6 @@ export type Database = {
           description?: string | null
           fat_g?: number | null
           id?: string
-          image_generated_at?: string | null
-          image_path?: string | null
-          image_source?: string | null
-          image_status?: string
-          image_url?: string | null
           ingredients_json?: Json | null
           is_locked?: boolean
           is_shared?: boolean
