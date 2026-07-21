@@ -240,8 +240,8 @@ export function useAddFoodFlow({
         const seen = new Set<string>();
         const merged: FoodResult[] = [];
         for (const food of [...databaseResults, ...local, ...remoteResults]) {
-          const key = `${food.barcode || compactFoodSearchTerm(food.name)}|${(
-            food.brand ?? ""
+          const key = `${food.barcode || compactFoodSearchTerm(food.name)}|${String(
+            food.brand ?? "",
           ).toLowerCase()}`;
           if (seen.has(key)) continue;
           seen.add(key);
