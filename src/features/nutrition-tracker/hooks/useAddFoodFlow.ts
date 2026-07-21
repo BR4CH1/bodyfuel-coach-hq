@@ -440,6 +440,7 @@ export function useAddFoodFlow({
       carbs_g: +(picking.carbs_per_100g * factor).toFixed(1),
       fat_g: +(picking.fat_per_100g * factor).toFixed(1),
       source: picking.source ?? (picking.barcode ? "barcode" : "manual"),
+      image_url: picking.image_url ?? null,
     };
     const { data, error } = await supabase
       .from("food_entries")
