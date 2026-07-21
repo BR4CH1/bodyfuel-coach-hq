@@ -35,6 +35,18 @@ export type FoodResult = {
 };
 
 
+function offImage(p: any): string | null {
+  return (
+    p?.image_front_small_url ||
+    p?.image_small_url ||
+    p?.image_front_url ||
+    p?.image_url ||
+    p?.selected_images?.front?.small?.de ||
+    p?.selected_images?.front?.small?.en ||
+    null
+  );
+}
+
 function mapOff(p: any): FoodResult | null {
   const n = p?.nutriments;
   if (!n) return null;
@@ -46,6 +58,7 @@ function mapOff(p: any): FoodResult | null {
   }
   const sq = Number(p.serving_quantity);
   const serving_g = isFinite(sq) && sq > 0 ? sq : null;
+  const image_url = offImage(p);
   return {
     name:
       p.product_name_de ||
@@ -63,8 +76,11 @@ function mapOff(p: any): FoodResult | null {
     serving_label: (p.serving_size as string) || null,
     source: "open_food_facts",
     verified_by_coach: false,
+    image_url,
+    image_source: image_url ? "open_food_facts" : null,
   };
 }
+
 
 function scoreResult(r: FoodResult, q: string): number {
   const name = r.name.toLowerCase();
