@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import type { FoodResult } from "@/lib/nutrition.functions";
 import { amountInGrams, parseFoodAmount } from "../lib/nutrition-tracker.logic";
 import type { FoodUnit } from "../types";
+import { FoodThumbnail } from "./FoodResultRow";
 import { SourceBadge } from "./SourceBadge";
 
 export function FoodAmountEditor({
