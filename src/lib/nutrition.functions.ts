@@ -28,7 +28,12 @@ export type FoodResult = {
   source?: FoodSource;
   /** True wenn Coach geprüft */
   verified_by_coach?: boolean;
+  /** Produktbild-URL (aus DB oder OFF) */
+  image_url?: string | null;
+  /** Quelle des Bildes (bodyfuel, open_food_facts, brand, manual) */
+  image_source?: string | null;
 };
+
 
 function mapOff(p: any): FoodResult | null {
   const n = p?.nutriments;
