@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { MealImageStatus } from "@/lib/meal-images.functions";
+
 
 export type MealSlot = "breakfast" | "lunch" | "dinner" | "snack" | "any";
 
