@@ -130,53 +130,45 @@ export function OrganizationContextSwitcher({ compact = false }: { compact?: boo
             Mein BODYFUEL
           </button>
           <div className="my-1 border-t border-border" />
-          {contexts.map((e) => {
+          {contexts.flatMap((e) => {
             const hasAthlete = !!e.athlete;
             const hasStaff = !!e.staff;
-            const dual = hasAthlete && hasStaff;
             const isActive = active === e.organization.slug;
-            const currentMode = dual ? (getOrgMode(e.organization.slug) ?? "athlete") : null;
-            return (
-              <div key={e.organization.id} className="rounded">
+            const currentMode = hasAthlete && hasStaff ? getOrgMode(e.organization.slug) : null;
+            const rows: JSX.Element[] = [];
+            if (hasAthlete) {
+              const rowActive = isActive && (!hasStaff || currentMode === "athlete");
+              rows.push(
                 <button
+                  key={e.organization.id + ":athlete"}
                   type="button"
-                  onClick={() => goOrg(e)}
-                  className={`flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm hover:bg-secondary ${isActive ? "font-bold" : ""}`}
+                  onClick={() => goOrg(e, "athlete")}
+                  className={`flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm hover:bg-secondary ${rowActive ? "font-bold" : ""}`}
                 >
                   <span className="truncate">{e.organization.name}</span>
-                  <span className="ml-2 flex shrink-0 gap-1">
-                    {hasAthlete && (
-                      <span className="rounded-sm bg-secondary px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        Athlete
-                      </span>
-                    )}
-                    {hasStaff && (
-                      <span className="rounded-sm bg-primary/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-primary">
-                        {staffLabel(e.staff!.role)}
-                      </span>
-                    )}
+                  <span className="ml-2 shrink-0 rounded-sm bg-secondary px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Athlete
                   </span>
-                </button>
-                {dual && (
-                  <div className="mb-1 flex gap-1 px-3 pb-1">
-                    <button
-                      type="button"
-                      onClick={() => goOrg(e, "athlete")}
-                      className={`flex-1 rounded px-2 py-1 text-[10px] font-semibold uppercase tracking-wider ${currentMode === "athlete" && isActive ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:bg-secondary/70"}`}
-                    >
-                      Athletenbereich
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => goOrg(e, "staff")}
-                      className={`flex-1 rounded px-2 py-1 text-[10px] font-semibold uppercase tracking-wider ${currentMode === "staff" && isActive ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:bg-secondary/70"}`}
-                    >
-                      Staffbereich
-                    </button>
-                  </div>
-                )}
-              </div>
-            );
+                </button>,
+              );
+            }
+            if (hasStaff) {
+              const rowActive = isActive && (!hasAthlete || currentMode === "staff");
+              rows.push(
+                <button
+                  key={e.organization.id + ":staff"}
+                  type="button"
+                  onClick={() => goOrg(e, "staff")}
+                  className={`flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm hover:bg-secondary ${rowActive ? "font-bold" : ""}`}
+                >
+                  <span className="truncate">{e.organization.name}</span>
+                  <span className="ml-2 shrink-0 rounded-sm bg-primary/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-primary">
+                    {staffLabel(e.staff!.role)}
+                  </span>
+                </button>,
+              );
+            }
+            return rows;
           })}
         </div>
       )}
