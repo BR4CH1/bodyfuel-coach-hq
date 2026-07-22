@@ -66,7 +66,7 @@ export const listCustomMeals = createServerFn({ method: "GET" })
       .eq("user_id", target)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
-    return (rows ?? []) as CustomMeal[];
+    return (rows ?? []) as unknown as CustomMeal[];
   });
 
 export const saveCustomMeal = createServerFn({ method: "POST" })
@@ -116,7 +116,7 @@ export const saveCustomMeal = createServerFn({ method: "POST" })
       : context.supabase.from("custom_meals").insert(payload).select().single();
     const { data: row, error } = await q;
     if (error) throw new Error(error.message);
-    return row as CustomMeal;
+    return row as unknown as CustomMeal;
   });
 
 export const deleteCustomMeal = createServerFn({ method: "POST" })
@@ -146,7 +146,7 @@ export const trackCustomMeal = createServerFn({ method: "POST" })
       .eq("id", data.id)
       .single();
     if (error || !meal) throw new Error(error?.message ?? "Mahlzeit nicht gefunden");
-    const m = meal as CustomMeal;
+    const m = meal as unknown as CustomMeal;
     const scale = data.scale ?? 1;
     const slot =
       data.slot && data.slot !== "any" ? data.slot : m.meal_slot !== "any" ? m.meal_slot : "snack";
