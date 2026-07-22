@@ -135,7 +135,7 @@ export function OrganizationContextSwitcher({ compact = false }: { compact?: boo
             const hasStaff = !!e.staff;
             const isActive = active === e.organization.slug;
             const currentMode = hasAthlete && hasStaff ? getOrgMode(e.organization.slug) : null;
-            const rows: React.ReactNode[] = [];
+            const rows: ReactNode[] = [];
             if (hasAthlete) {
               const rowActive = isActive && (!hasStaff || currentMode === "athlete");
               rows.push(
