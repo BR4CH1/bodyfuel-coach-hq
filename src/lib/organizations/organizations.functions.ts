@@ -125,15 +125,33 @@ export const getMyOrgContexts = createServerFn({ method: "GET" })
     if (memRes.error) throw new Error(memRes.error.message);
     if (staffRes.error) throw new Error(staffRes.error.message);
 
+    const STAFF_MEMBERSHIP_ROLES = new Set([
+      "coach",
+      "organization_admin",
+      "head_coach",
+      "team_coach",
+      "performance_coach",
+      "nutrition_coach",
+      "community_manager",
+      "staff",
+    ]);
+
     const byId = new Map<string, OrgContextEntry>();
     for (const m of (memRes.data ?? []) as any[]) {
       const org = m.organization as OrganizationSummary;
       if (!org) continue;
-      byId.set(org.id, {
+      const entry: OrgContextEntry = byId.get(org.id) ?? {
         organization: org,
-        athlete: { role: m.role, onboarding_completed: !!m.onboarding_completed },
+        athlete: null,
         staff: null,
-      });
+      };
+      if (m.role === "athlete") {
+        entry.athlete = { role: m.role, onboarding_completed: !!m.onboarding_completed };
+      } else if (STAFF_MEMBERSHIP_ROLES.has(m.role) && !entry.staff) {
+        // Membership role signals staff access even without a staff_assignments row.
+        entry.staff = { role: m.role, permissions: [], team_id: null };
+      }
+      byId.set(org.id, entry);
     }
     for (const s of (staffRes.data ?? []) as any[]) {
       const org = s.organization as OrganizationSummary;
