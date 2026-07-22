@@ -7,22 +7,24 @@
 // Hard rules:
 //   1. The AI may write recipe text + ingredients list, but NEVER macros.
 //   2. Every calorie/macro shown to the user comes from this engine.
-//   3. factor = grams / 100;  kcal = per100g.kcal * factor;  (same for P/C/F)
-//   4. Total kcal MUST equal round(P*4 + C*4 + F*9). Tolerance 8 %.
+//   3. factor = amount / 100 in the food's canonical unit (ml for liquids, g otherwise).
+//   4. Energy plausibility uses EU 1169/2011 factors incl. fibre/alcohol/polyols/acids.
 //   5. Validation: known carb staples (Brot, Reis, Nudeln, Haferflocken, …)
 //      must produce realistic carbs. Otherwise a warning is recorded.
 // ============================================================
 
 export type EngineIngredient = {
-  name: string;          // raw name as written by the AI / user
-  grams: number;         // canonical mass in grams (0 = ignore, e.g. water/spices)
-  display?: string;      // optional pretty label (e.g. "3 Scheiben Vollkornbrot (100g)")
+  name: string; // raw name as written by the AI / user
+  grams: number; // legacy numeric amount; interpreted using unit/food type
+  amount?: number; // canonical displayed amount
+  unit?: "g" | "ml"; // liquids ml, every other food g
+  display?: string; // optional pretty label (e.g. "3 Scheiben Vollkornbrot (100g)")
   /** Optional stable slug (nutrition_foods.text_id). If set, used as primary key for lookup. */
   food_id?: string | null;
 };
 
 export type LookupOptions = {
-  /** If true, only Smart-safe foods (safe_for_smart + is_active + verified_by_coach) are accepted. */
+  /** If true, only active foods that passed the catalog audit are accepted. */
   smartOnly?: boolean;
 };
 
@@ -51,7 +53,7 @@ export type EngineResult = {
   protein_g: number;
   carbs_g: number;
   fat_g: number;
-  coverage: number;            // 0..1 of (matched grams) / (total grams of weighted ingredients)
+  coverage: number; // 0..1 of (matched grams) / (total grams of weighted ingredients)
   data_source: "db_verified" | "db_mixed" | "ai_estimate";
   warnings: string[];
   debug: IngredientDebug[];
@@ -76,6 +78,11 @@ type FoodRow = {
   aliases: string[] | null;
   default_state?: string | null;
   unit_type?: string | null;
+  density_g_per_ml?: number | null;
+  fiber_per_100g?: number | null;
+  alcohol_per_100g?: number | null;
+  polyols_per_100g?: number | null;
+  organic_acids_per_100g?: number | null;
 };
 
 const SOURCE_PRIORITY: Record<string, number> = {
@@ -88,25 +95,88 @@ const SOURCE_PRIORITY: Record<string, number> = {
 };
 
 const STOPWORDS = new Set([
-  "roh", "gekocht", "gegart", "gebraten", "gedünstet", "gegrillt",
-  "gekochter", "gekochte", "gekochtes", "gekochten", "gekochtem",
-  "frisch", "trocken", "tk", "tiefgekühlt", "dose", "optional",
-  "fettarm", "mager", "magerer", "magere", "magerem", "natur", "pur",
-  "fett", "prozent", "extra", "groß", "große", "gross", "grosse",
-  "light", "zuckerarm", "ungesüßt", "ungesalzen", "gewürfelt",
-  "geschnitten", "gerieben", "gehackt", "fein", "grob", "kalt", "warm",
-  "gefroren", "aufgetaut", "abgetropft", "fertig", "magerstufe",
-  "vanille", "schokolade", "streifen", "sticks", "ohne", "zuckerzusatz",
-  "scheibe", "scheiben", "stück", "stueck", "stk", "je", "el", "tl",
-  "esslöffel", "teelöffel", "prise", "prisen", "bund", "g", "gramm",
-  "ml", "milliliter", "l", "liter", "kg",
+  "roh",
+  "gekocht",
+  "gegart",
+  "gebraten",
+  "gedünstet",
+  "gegrillt",
+  "gekochter",
+  "gekochte",
+  "gekochtes",
+  "gekochten",
+  "gekochtem",
+  "frisch",
+  "trocken",
+  "tk",
+  "tiefgekühlt",
+  "dose",
+  "optional",
+  "fettarm",
+  "mager",
+  "magerer",
+  "magere",
+  "magerem",
+  "natur",
+  "pur",
+  "fett",
+  "prozent",
+  "extra",
+  "groß",
+  "große",
+  "gross",
+  "grosse",
+  "light",
+  "zuckerarm",
+  "ungesüßt",
+  "ungesalzen",
+  "gewürfelt",
+  "geschnitten",
+  "gerieben",
+  "gehackt",
+  "fein",
+  "grob",
+  "kalt",
+  "warm",
+  "gefroren",
+  "aufgetaut",
+  "abgetropft",
+  "fertig",
+  "magerstufe",
+  "vanille",
+  "schokolade",
+  "streifen",
+  "sticks",
+  "ohne",
+  "zuckerzusatz",
+  "scheibe",
+  "scheiben",
+  "stück",
+  "stueck",
+  "stk",
+  "je",
+  "el",
+  "tl",
+  "esslöffel",
+  "teelöffel",
+  "prise",
+  "prisen",
+  "bund",
+  "g",
+  "gramm",
+  "ml",
+  "milliliter",
+  "l",
+  "liter",
+  "kg",
 ]);
 
 const BLOCKING_WARNING_PREFIX = "KRITISCH:";
 
 const STATE_HINTS = {
   raw: /\b(roh(?:e|er|es|en|em)?|ungekocht|trocken|dry|raw)\b/i,
-  cooked: /\b(gekocht(?:e|er|es|en|em)?|gegart(?:e|er|es|en|em)?|gebraten(?:e|er|es|en|em)?|gegrillt(?:e|er|es|en|em)?|gebacken(?:e|er|es|en|em)?|zubereitet|cooked)\b/i,
+  cooked:
+    /\b(gekocht(?:e|er|es|en|em)?|gegart(?:e|er|es|en|em)?|gebraten(?:e|er|es|en|em)?|gegrillt(?:e|er|es|en|em)?|gebacken(?:e|er|es|en|em)?|zubereitet|cooked)\b/i,
   deli: /\b(aufschnitt|geräuchert(?:e|er|es|en|em)?|geraeuchert(?:e|er|es|en|em)?|dose|konserve|abgetropft)\b/i,
 };
 
@@ -190,17 +260,18 @@ const PROBE_REWRITES: Array<[RegExp, string]> = [
   [/\bapfelmark\b/g, "apfelmus"],
 ];
 
-
 function normalize(s: string): string {
-  return s
-    .toLowerCase()
-    .replace(/\(.*?\)/g, " ")
-    .replace(/[0-9.,]+/g, " ")
-    // Treat hyphens, slashes and other separators as spaces so compounds like
-    // "Light-Käse", "Joghurt-Dressing", "BBQ/Honig" tokenize correctly.
-    .replace(/[%(),;:/\-_]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+  return (
+    s
+      .toLowerCase()
+      .replace(/\(.*?\)/g, " ")
+      .replace(/[0-9.,]+/g, " ")
+      // Treat hyphens, slashes and other separators as spaces so compounds like
+      // "Light-Käse", "Joghurt-Dressing", "BBQ/Honig" tokenize correctly.
+      .replace(/[%(),;:/\-_]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+  );
 }
 
 function tokens(name: string): string[] {
@@ -214,7 +285,13 @@ function rewrittenProbes(norm: string): string[] {
   for (const [re, replacement] of PROBE_REWRITES) {
     re.lastIndex = 0;
     if (re.test(norm)) {
-      out.add(norm.replace(re, replacement).replace(/\b(mager)\s+\1\b/g, "$1").replace(/\s+/g, " ").trim());
+      out.add(
+        norm
+          .replace(re, replacement)
+          .replace(/\b(mager)\s+\1\b/g, "$1")
+          .replace(/\s+/g, " ")
+          .trim(),
+      );
       out.add(replacement);
     }
   }
@@ -252,11 +329,14 @@ function rowMatchScore(row: FoodRow, safe: string, rawName: string): number {
 }
 
 const FOOD_SELECT =
-  "id,text_id,name,kcal_per_100g,protein_per_100g,carbs_per_100g,fat_per_100g,verified_by_coach,is_active,safe_for_smart,source,aliases,default_state,unit_type";
+  "id,text_id,name,kcal_per_100g,protein_per_100g,carbs_per_100g,fat_per_100g,fiber_per_100g,alcohol_per_100g,polyols_per_100g,organic_acids_per_100g,verified_by_coach,is_active,safe_for_smart,source,aliases,default_state,unit_type,density_g_per_ml";
 
-function applySmartFilter<Q extends { eq: (col: string, val: any) => Q }>(q: Q, smartOnly?: boolean): Q {
+function applySmartFilter<Q extends { eq: (col: string, val: any) => Q }>(
+  q: Q,
+  smartOnly?: boolean,
+): Q {
   if (!smartOnly) return q;
-  return q.eq("safe_for_smart", true).eq("is_active", true).eq("verified_by_coach", true);
+  return q.eq("safe_for_smart", true).eq("is_active", true);
 }
 
 /** Direct lookup by stable text_id / slug. Fastest path — no fuzzy matching. */
@@ -265,7 +345,9 @@ export async function lookupFoodByTextId(
   textId: string,
   opts: LookupOptions = {},
 ): Promise<FoodRow | null> {
-  const id = String(textId ?? "").trim().toLowerCase();
+  const id = String(textId ?? "")
+    .trim()
+    .toLowerCase();
   if (!id) return null;
   let q = supabase.from("nutrition_foods").select(FOOD_SELECT).eq("text_id", id).limit(1);
   q = applySmartFilter(q, opts.smartOnly);
@@ -326,16 +408,34 @@ export async function lookupFood(
 
 /** Major carbohydrate staples — if these appear, carbs must be substantial. */
 const CARB_STAPLES: Array<{ re: RegExp; minCarbsPer100g: number; label: string }> = [
-  { re: /\b(brot|brötchen|broetchen|toast|baguette|wrap|tortilla)\b/i, minCarbsPer100g: 35, label: "Brot" },
+  {
+    re: /\b(brot|brötchen|broetchen|toast|baguette|wrap|tortilla)\b/i,
+    minCarbsPer100g: 35,
+    label: "Brot",
+  },
   { re: /\b(reis)\b/i, minCarbsPer100g: 25, label: "Reis" }, // gekocht ~28, roh ~78
-  { re: /\b(nudel|pasta|spaghetti|penne|fusilli|tagliatelle)\b/i, minCarbsPer100g: 25, label: "Pasta" },
-  { re: /\b(haferflocken|porridge|oats|müsli|muesli)\b/i, minCarbsPer100g: 55, label: "Haferflocken" },
-  { re: /\b(kartoffel|kartoffeln|süßkartoffel|suesskartoffel)\b/i, minCarbsPer100g: 14, label: "Kartoffel" },
+  {
+    re: /\b(nudel|pasta|spaghetti|penne|fusilli|tagliatelle)\b/i,
+    minCarbsPer100g: 25,
+    label: "Pasta",
+  },
+  {
+    re: /\b(haferflocken|porridge|oats|müsli|muesli)\b/i,
+    minCarbsPer100g: 55,
+    label: "Haferflocken",
+  },
+  {
+    re: /\b(kartoffel|kartoffeln|süßkartoffel|suesskartoffel)\b/i,
+    minCarbsPer100g: 14,
+    label: "Kartoffel",
+  },
   { re: /\b(couscous|bulgur|quinoa)\b/i, minCarbsPer100g: 18, label: "Getreide-Beilage" },
 ];
 
-const HIGH_IMPACT_INGREDIENT = /\b(hähnchen|haehnchen|huhn|pute|truthahn|rind|hack|steak|schinken|aufschnitt|lachs|fisch|thunfisch|ei|eier|tofu|tempeh|skyr|quark|joghurt|hüttenkäse|huettenkaese|käse|kaese|mozzarella|feta|gouda|emmentaler|frischkäse|frischkaese|protein|riegel|reis|nudel|pasta|spaghetti|kartoffel|brot|brötchen|broetchen|wrap|tortilla|hafer|müsli|muesli|quinoa|bulgur|couscous|linsen|kichererbsen|bohnen|öl|oel|olivenöl|olivenoel|butter|kokosmilch|nuss|nüsse|nuesse|mandel|avocado)\b/i;
-const LOW_IMPACT_INGREDIENT = /\b(wasser|salz|pfeffer|gewürz|gewuerz|zimt|kräuter|kraeuter|essig|zitrone|limette|salat|salatmix|blattsalat|gurke|tomate|tomaten|cherrytomaten|zucchini|paprika|brokkoli|blumenkohl|spinat|spargel|champignon|champignons|pilz|pilze|zwiebel|knoblauch|lauch|lauchzwiebel|frühlingszwiebel|sellerie|möhre|moehre|karotte|karotten|radieschen|rucola|feldsalat|gem(?:ü|ue)se|gem(?:ü|ue)semix|tk[-\s]?gem(?:ü|ue)se|rohkost|wokgem(?:ü|ue)se|grillgem(?:ü|ue)se|ofengem(?:ü|ue)se|obst|apfel|äpfel|aepfel|apfelmus|apfelmark|banane|beere|beeren|erdbeere|erdbeeren|himbeere|himbeeren|heidelbeere|heidelbeeren|blaubeere|blaubeeren|orange|kiwi|birne|trauben|mango|ananas|mandarine)\b/i;
+const HIGH_IMPACT_INGREDIENT =
+  /\b(hähnchen|haehnchen|huhn|pute|truthahn|rind|hack|steak|schinken|aufschnitt|lachs|fisch|thunfisch|ei|eier|tofu|tempeh|skyr|quark|joghurt|hüttenkäse|huettenkaese|käse|kaese|mozzarella|feta|gouda|emmentaler|frischkäse|frischkaese|protein|riegel|reis|nudel|pasta|spaghetti|kartoffel|brot|brötchen|broetchen|wrap|tortilla|hafer|müsli|muesli|quinoa|bulgur|couscous|linsen|kichererbsen|bohnen|öl|oel|olivenöl|olivenoel|butter|kokosmilch|nuss|nüsse|nuesse|mandel|avocado)\b/i;
+const LOW_IMPACT_INGREDIENT =
+  /\b(wasser|salz|pfeffer|gewürz|gewuerz|zimt|kräuter|kraeuter|essig|zitrone|limette|salat|salatmix|blattsalat|gurke|tomate|tomaten|cherrytomaten|zucchini|paprika|brokkoli|blumenkohl|spinat|spargel|champignon|champignons|pilz|pilze|zwiebel|knoblauch|lauch|lauchzwiebel|frühlingszwiebel|sellerie|möhre|moehre|karotte|karotten|radieschen|rucola|feldsalat|gem(?:ü|ue)se|gem(?:ü|ue)semix|tk[-\s]?gem(?:ü|ue)se|rohkost|wokgem(?:ü|ue)se|grillgem(?:ü|ue)se|ofengem(?:ü|ue)se|obst|apfel|äpfel|aepfel|apfelmus|apfelmark|banane|beere|beeren|erdbeere|erdbeeren|himbeere|himbeeren|heidelbeere|heidelbeeren|blaubeere|blaubeeren|orange|kiwi|birne|trauben|mango|ananas|mandarine)\b/i;
 
 function isBlockingMissingIngredient(ing: EngineIngredient): boolean {
   const grams = Number(ing.grams) || 0;
@@ -344,16 +444,22 @@ function isBlockingMissingIngredient(ing: EngineIngredient): boolean {
   return grams >= 120 && !LOW_IMPACT_INGREDIENT.test(ing.name);
 }
 
-export function hasBlockingWarnings(result: Pick<EngineResult, "warnings"> | null | undefined): boolean {
+export function hasBlockingWarnings(
+  result: Pick<EngineResult, "warnings"> | null | undefined,
+): boolean {
   return !!result?.warnings?.some((w) => w.startsWith(BLOCKING_WARNING_PREFIX));
 }
 
-export function isUsableEngineResult(result: EngineResult | null | undefined): result is EngineResult {
+export function isUsableEngineResult(
+  result: EngineResult | null | undefined,
+): result is EngineResult {
   return !!result && result.coverage >= 0.6 && !hasBlockingWarnings(result);
 }
 
 /** Strict variant for Smart plans: every weighted ingredient must resolve to a food row. */
-export function isFullyResolvedResult(result: EngineResult | null | undefined): result is EngineResult {
+export function isFullyResolvedResult(
+  result: EngineResult | null | undefined,
+): result is EngineResult {
   return (
     !!result &&
     (result.unresolved_ingredients?.length ?? 0) === 0 &&
@@ -371,18 +477,31 @@ export async function computeMealFromIngredients(
   const debug: IngredientDebug[] = [];
   const warnings: string[] = [];
   const unresolved: EngineResult["unresolved_ingredients"] = [];
-  let kcal = 0, p = 0, c = 0, f = 0;
-  let totalGrams = 0, matchedGrams = 0;
+  let kcal = 0,
+    p = 0,
+    c = 0,
+    f = 0,
+    fibre = 0,
+    alcohol = 0,
+    polyols = 0,
+    acids = 0;
+  let totalAmount = 0,
+    matchedAmount = 0;
   let anyMatched = false;
   let anyMissed = false;
 
   for (const ing of ingredients) {
-    const grams = Number(ing.grams) || 0;
-    if (grams <= 0) {
+    const amount = Number(ing.amount ?? ing.grams) || 0;
+    if (amount <= 0) {
       // Spices/water/optional — record but ignore for math + coverage.
       debug.push({
-        input: ing, matched_food: null, grams_used: 0,
-        kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0,
+        input: ing,
+        matched_food: null,
+        grams_used: 0,
+        kcal: 0,
+        protein_g: 0,
+        carbs_g: 0,
+        fat_g: 0,
         warning: null,
       });
       continue;
@@ -396,31 +515,69 @@ export async function computeMealFromIngredients(
     if (!food) {
       food = await lookupFood(supabase, ing.name, { smartOnly: opts.smartOnly });
     }
-    totalGrams += grams;
+    totalAmount += amount;
     if (!food) {
       anyMissed = true;
-      unresolved.push({ name: ing.name, food_id: ing.food_id ?? null, grams });
+      unresolved.push({ name: ing.name, food_id: ing.food_id ?? null, grams: amount });
       const isBlocking = opts.requireResolvedIds || isBlockingMissingIngredient(ing);
       const prefix = isBlocking ? BLOCKING_WARNING_PREFIX + " " : "";
-      const idInfo = ing.food_id ? ` [food_id="${ing.food_id}" nicht im ${opts.smartOnly ? "Safe-Pool" : "Katalog"}]` : "";
-      const w = `${prefix}Zutat nicht in DB gefunden: „${ing.name}"${idInfo} (${grams} g) — Nährwerte ignoriert.`;
+      const idInfo = ing.food_id
+        ? ` [food_id="${ing.food_id}" nicht im ${opts.smartOnly ? "Safe-Pool" : "Katalog"}]`
+        : "";
+      const w = `${prefix}Zutat nicht in DB gefunden: „${ing.name}"${idInfo} (${amount} ${ing.unit ?? "g"}) — Nährwerte ignoriert.`;
       warnings.push(w);
       debug.push({
-        input: ing, matched_food: null, grams_used: grams,
-        kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0,
+        input: ing,
+        matched_food: null,
+        grams_used: amount,
+        kcal: 0,
+        protein_g: 0,
+        carbs_g: 0,
+        fat_g: 0,
+        warning: w,
+      });
+      continue;
+    }
+
+    const foodUnit: "g" | "ml" = food.unit_type === "ml" ? "ml" : "g";
+    if (ing.unit && ing.unit !== foodUnit) {
+      anyMissed = true;
+      unresolved.push({ name: ing.name, food_id: ing.food_id ?? null, grams: amount });
+      const w = `${BLOCKING_WARNING_PREFIX} Falsche Einheit für „${ing.name}": ${ing.unit}; erlaubt ist nur ${foodUnit}.`;
+      warnings.push(w);
+      debug.push({
+        input: ing,
+        matched_food: {
+          id: food.id,
+          name: food.name,
+          source: food.source,
+          verified: food.verified_by_coach,
+        },
+        grams_used: amount,
+        kcal: 0,
+        protein_g: 0,
+        carbs_g: 0,
+        fat_g: 0,
         warning: w,
       });
       continue;
     }
 
     anyMatched = true;
-    matchedGrams += grams;
-    const factor = grams / 100;
+    matchedAmount += amount;
+    const factor = amount / 100;
     const ik = (food.kcal_per_100g ?? 0) * factor;
     const ip = (food.protein_per_100g ?? 0) * factor;
     const ic = (food.carbs_per_100g ?? 0) * factor;
     const ifa = (food.fat_per_100g ?? 0) * factor;
-    kcal += ik; p += ip; c += ic; f += ifa;
+    kcal += ik;
+    p += ip;
+    c += ic;
+    f += ifa;
+    fibre += Number(food.fiber_per_100g ?? 0) * factor;
+    alcohol += Number(food.alcohol_per_100g ?? 0) * factor;
+    polyols += Number(food.polyols_per_100g ?? 0) * factor;
+    acids += Number(food.organic_acids_per_100g ?? 0) * factor;
 
     // Validation: known carb staple must yield realistic carbs.
     let ingWarn: string | null = null;
@@ -434,8 +591,13 @@ export async function computeMealFromIngredients(
 
     debug.push({
       input: ing,
-      matched_food: { id: food.id, name: food.name, source: food.source, verified: food.verified_by_coach },
-      grams_used: grams,
+      matched_food: {
+        id: food.id,
+        name: food.name,
+        source: food.source,
+        verified: food.verified_by_coach,
+      },
+      grams_used: amount,
       kcal: round1(ik),
       protein_g: round1(ip),
       carbs_g: round1(ic),
@@ -444,24 +606,24 @@ export async function computeMealFromIngredients(
     });
   }
 
-  // Force kcal = 4P + 4C + 9F (within rounding) — never trust kcal from
-  // outside math. This is the *single* place this constraint is enforced.
-  const macroKcal = Math.round(p * 4 + c * 4 + f * 9);
+  // EU energy factors. Fibre is separate from carbohydrates and must not be
+  // counted as ordinary carbs; alcohol/polyols/organic acids contribute too.
+  const macroKcal = Math.round(
+    p * 4 + c * 4 + f * 9 + fibre * 2 + alcohol * 7 + polyols * 2.4 + acids * 3,
+  );
   const summedKcal = Math.round(kcal);
-  if (summedKcal > 0 && Math.abs(macroKcal - summedKcal) / summedKcal > 0.08) {
+  if (summedKcal > 0 && Math.abs(macroKcal - summedKcal) > Math.max(20, summedKcal * 0.15)) {
     warnings.push(
-      `Plausibilitäts-Hinweis: Summe aus Lebensmittel-kcal (${summedKcal}) und 4·P + 4·C + 9·F (${macroKcal}) weichen >8 % ab. Verwende den Makro-Wert.`,
+      `Plausibilitäts-Hinweis: deklarierte Energie (${summedKcal}) und EU-Nährwertfaktoren (${macroKcal}) weichen deutlich ab. Datensatz prüfen.`,
     );
   }
 
-  const coverage = totalGrams > 0 ? matchedGrams / totalGrams : 0;
+  const coverage = totalAmount > 0 ? matchedAmount / totalAmount : 0;
   const data_source: EngineResult["data_source"] =
-    anyMatched && !anyMissed ? "db_verified"
-    : anyMatched ? "db_mixed"
-    : "ai_estimate";
+    anyMatched && !anyMissed ? "db_verified" : anyMatched ? "db_mixed" : "ai_estimate";
 
   return {
-    kcal: macroKcal,
+    kcal: summedKcal,
     protein_g: Math.round(p),
     carbs_g: Math.round(c),
     fat_g: Math.round(f),
@@ -484,7 +646,10 @@ function cleanIngredientName(raw: string): string {
   return raw
     .replace(/\((?:je\s*)?\d+(?:[.,]\d+)?\s*(?:g|gramm|ml|l|kg)\)/gi, " ")
     .replace(/[()]/g, " ")
-    .replace(/^\s*\d+(?:[.,]\d+)?\s*(scheiben?|stück|stueck|stk\.?|wraps?|tortillas?|brötchen|broetchen|semmeln?|riegel)\s+/i, " ")
+    .replace(
+      /^\s*\d+(?:[.,]\d+)?\s*(scheiben?|stück|stueck|stk\.?|wraps?|tortillas?|brötchen|broetchen|semmeln?|riegel)\s+/i,
+      " ",
+    )
     .replace(/\bje\s*\d+(?:[.,]\d+)?\s*(?:g|gramm|ml|l|kg)\b/gi, " ")
     .replace(PARSER_STOP_WORDS, " ")
     .replace(/[,;:]/g, " ")
@@ -507,7 +672,12 @@ function splitIngredientText(text: string): string[] {
     }
   }
   if (current.trim()) parts.push(current.trim());
-  return parts.flatMap((p) => p.split(/\s+(?:und|\+)\s+/i).map((x) => x.trim()).filter(Boolean));
+  return parts.flatMap((p) =>
+    p
+      .split(/\s+(?:und|\+)\s+/i)
+      .map((x) => x.trim())
+      .filter(Boolean),
+  );
 }
 
 function parseFraction(token: string): number | null {
@@ -522,13 +692,23 @@ function parseFraction(token: string): number | null {
 }
 
 const PIECE_GRAMS: Array<[RegExp, number]> = [
-  [/\bapfel\b/i, 150], [/\bbirne\b/i, 150], [/\bbanane\b/i, 120], [/\borange\b/i, 180],
-  [/\bzitrone\b/i, 80], [/\bei\b|\beier\b/i, 60], [/\bscheibe\b|\bscheiben\b/i, 45],
+  [/\bapfel\b/i, 150],
+  [/\bbirne\b/i, 150],
+  [/\bbanane\b/i, 120],
+  [/\borange\b/i, 180],
+  [/\bzitrone\b/i, 80],
+  [/\bei\b|\beier\b/i, 60],
+  [/\bscheibe\b|\bscheiben\b/i, 45],
   [/\b(wrap|wraps|tortilla|tortillas)\b/i, 60],
   [/\b(brötchen|broetchen|semmel|semmeln)\b/i, 70],
   [/\b(reiswaffel|reiswaffeln)\b/i, 8],
-  [/\bkartoffel\b/i, 120], [/\btomate\b/i, 90], [/\bgurke\b/i, 300], [/\bpaprika\b/i, 150],
-  [/\bzwiebel\b/i, 80], [/\bknoblauch(?:zehe)?\b/i, 5], [/\bavocado\b/i, 170],
+  [/\bkartoffel\b/i, 120],
+  [/\btomate\b/i, 90],
+  [/\bgurke\b/i, 300],
+  [/\bpaprika\b/i, 150],
+  [/\bzwiebel\b/i, 80],
+  [/\bknoblauch(?:zehe)?\b/i, 5],
+  [/\bavocado\b/i, 170],
   [/\b(proteinriegel|eiweißriegel|eiweissriegel)\b/i, 55],
 ];
 
@@ -603,12 +783,19 @@ function parseIngredientLine(raw: string): ParsedIngredient | null {
   return { raw: original, name, grams };
 }
 
-export function parseDescriptionToEngineIngredients(description: string | null | undefined): EngineIngredient[] {
+export function parseDescriptionToEngineIngredients(
+  description: string | null | undefined,
+): EngineIngredient[] {
   if (!description) return [];
   return splitIngredientText(description)
     .map(parseIngredientLine)
     .filter((p): p is ParsedIngredient => !!p)
-    .map((p) => ({ name: p.name, grams: Math.max(0, Math.round(p.grams ?? 0)), display: p.raw }));
+    .map((p) => {
+      const unit: "g" | "ml" =
+        /(?:^|\()\s*(?:\d+(?:[.,]\d+)?\s*)?(?:ml|milliliter|l|liter)\b/i.test(p.raw) ? "ml" : "g";
+      const amount = Math.max(0, Math.round(p.grams ?? 0));
+      return { name: p.name, grams: amount, amount, unit, display: p.raw };
+    });
 }
 
 export async function computeMealFromDescription(
@@ -635,25 +822,33 @@ export function coerceIngredients(raw: unknown): EngineIngredient[] {
     if (!r || typeof r !== "object") continue;
     const name = String(r.name ?? "").trim();
     if (!name) continue;
-    let grams = 0;
-    if (typeof r.grams === "number") grams = r.grams;
-    else if (typeof r.amount_g === "number") grams = r.amount_g;
-    else if (typeof r.amount === "number") {
-      const u = String(r.unit ?? "g").toLowerCase();
-      if (u === "g" || u === "gramm") grams = r.amount;
-      else if (u === "kg") grams = r.amount * 1000;
-      else if (u === "ml" || u === "milliliter") grams = r.amount; // density 1.0 fallback
-      else if (u === "l" || u === "liter") grams = r.amount * 1000;
-      else if (u === "el" || u === "esslöffel") grams = r.amount * 15;
-      else if (u === "tl" || u === "teelöffel") grams = r.amount * 5;
-      else if (u === "prise" || u === "prisen") grams = 0; // spices ignored
-      else grams = 0; // unknown unit → ignore for math
+    const rawUnit = String(r.unit ?? "g").toLowerCase();
+    let unit: "g" | "ml" =
+      rawUnit === "ml" || rawUnit === "milliliter" || rawUnit === "l" || rawUnit === "liter"
+        ? "ml"
+        : "g";
+    let amount = 0;
+    if (typeof r.amount === "number") {
+      amount = r.amount;
+      if (rawUnit === "kg" || rawUnit === "l" || rawUnit === "liter") amount *= 1000;
+      else if (rawUnit === "el" || rawUnit === "esslöffel") amount *= 15;
+      else if (rawUnit === "tl" || rawUnit === "teelöffel") amount *= 5;
+      else if (rawUnit === "prise" || rawUnit === "prisen") amount = 0;
+    } else if (typeof r.grams === "number") {
+      amount = r.grams;
+    } else if (typeof r.amount_g === "number") {
+      amount = r.amount_g;
+      unit = "g";
     }
+    const grams = amount;
     const foodIdRaw = (r as any).food_id ?? (r as any).text_id ?? (r as any).id;
-    const food_id = typeof foodIdRaw === "string" && foodIdRaw.trim() ? foodIdRaw.trim().toLowerCase() : null;
+    const food_id =
+      typeof foodIdRaw === "string" && foodIdRaw.trim() ? foodIdRaw.trim().toLowerCase() : null;
     out.push({
       name,
       grams: Math.max(0, Math.round(grams)),
+      amount: Math.max(0, Math.round(amount)),
+      unit,
       display: typeof r.display === "string" ? r.display : undefined,
       food_id,
     });
@@ -666,7 +861,16 @@ export function coerceIngredients(raw: unknown): EngineIngredient[] {
 export type SelfTestCase = {
   name: string;
   ingredients: EngineIngredient[];
-  expect: { kcalMin: number; kcalMax: number; pMin: number; pMax: number; cMin: number; cMax: number; fMin: number; fMax: number };
+  expect: {
+    kcalMin: number;
+    kcalMax: number;
+    pMin: number;
+    pMax: number;
+    cMin: number;
+    cMax: number;
+    fMin: number;
+    fMax: number;
+  };
 };
 
 export const SELF_TEST_CASES: SelfTestCase[] = [
@@ -678,7 +882,16 @@ export const SELF_TEST_CASES: SelfTestCase[] = [
       { name: "Wasser", grams: 0 },
       { name: "Zimt", grams: 0 },
     ],
-    expect: { kcalMin: 420, kcalMax: 500, pMin: 12, pMax: 16, cMin: 65, cMax: 90, fMin: 6, fMax: 10 },
+    expect: {
+      kcalMin: 420,
+      kcalMax: 500,
+      pMin: 12,
+      pMax: 16,
+      cMin: 65,
+      cMax: 90,
+      fMin: 6,
+      fMax: 10,
+    },
   },
   {
     name: "Vollkornbrot + Rinderaufschnitt + Tomate + Gewürzgurken",
@@ -688,7 +901,16 @@ export const SELF_TEST_CASES: SelfTestCase[] = [
       { name: "Tomate", grams: 100 },
       { name: "Gewürzgurken", grams: 50 },
     ],
-    expect: { kcalMin: 300, kcalMax: 420, pMin: 25, pMax: 40, cMin: 35, cMax: 60, fMin: 3, fMax: 9 },
+    expect: {
+      kcalMin: 300,
+      kcalMax: 420,
+      pMin: 25,
+      pMax: 40,
+      cMin: 35,
+      cMax: 60,
+      fMin: 3,
+      fMax: 9,
+    },
   },
   {
     name: "100 g Reis roh",
@@ -701,9 +923,9 @@ export const SELF_TEST_CASES: SelfTestCase[] = [
     expect: { kcalMin: 95, kcalMax: 135, pMin: 20, pMax: 26, cMin: 0, cMax: 2, fMin: 0, fMax: 4 },
   },
   {
-    name: "100 g Olivenöl",
-    ingredients: [{ name: "Olivenöl", grams: 100 }],
-    expect: { kcalMin: 860, kcalMax: 905, pMin: 0, pMax: 1, cMin: 0, cMax: 1, fMin: 95, fMax: 100 },
+    name: "100 ml Olivenöl",
+    ingredients: [{ name: "Olivenöl", grams: 100, amount: 100, unit: "ml" }],
+    expect: { kcalMin: 790, kcalMax: 830, pMin: 0, pMax: 1, cMin: 0, cMax: 1, fMin: 89, fMax: 93 },
   },
 ];
 
@@ -732,7 +954,13 @@ export async function runEngineSelfTests(supabase: any): Promise<{
       reasons.push(`C ${res.carbs_g} außerhalb [${tc.expect.cMin}, ${tc.expect.cMax}]`);
     if (res.fat_g < tc.expect.fMin || res.fat_g > tc.expect.fMax)
       reasons.push(`F ${res.fat_g} außerhalb [${tc.expect.fMin}, ${tc.expect.fMax}]`);
-    runs.push({ name: tc.name, passed: reasons.length === 0, result: res, expect: tc.expect, reasons });
+    runs.push({
+      name: tc.name,
+      passed: reasons.length === 0,
+      result: res,
+      expect: tc.expect,
+      reasons,
+    });
   }
   const passed = runs.filter((r) => r.passed).length;
   return { passed, failed: runs.length - passed, runs };

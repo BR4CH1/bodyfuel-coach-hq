@@ -74,8 +74,8 @@ describe("nutrition plan prompt builder", () => {
       source: createSource({
         profile: { allergies: ["Fisch"], nogo_foods: ["Nüsse"] },
         safeFoods: [
-          { text_id: "haferflocken", name: "Haferflocken", aliases: ["Oats"] },
-          { text_id: "skyr_natur", name: "Skyr natur", aliases: [] },
+          { text_id: "haferflocken", name: "Haferflocken", aliases: ["Oats"], unit: "g" },
+          { text_id: "skyr_natur", name: "Skyr natur", aliases: [], unit: "g" },
         ],
       }),
       opts: BASE_OPTS,
@@ -83,8 +83,8 @@ describe("nutrition plan prompt builder", () => {
     });
 
     expect(context.forbidden).toContain("lachs");
-    expect(context.prompt).toContain("haferflocken | Haferflocken (aka Oats)");
-    expect(context.prompt).toContain("skyr_natur | Skyr natur");
+    expect(context.prompt).toContain("haferflocken | Haferflocken | Einheit: g (aka Oats)");
+    expect(context.prompt).toContain("skyr_natur | Skyr natur | Einheit: g");
   });
 
   it("includes approved wishes and a deterministic plateau note", () => {

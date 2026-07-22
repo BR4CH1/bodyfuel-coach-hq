@@ -48,6 +48,9 @@ Ordne die BLS-Spalten den BodyFuel-Feldern zu:
 - gesättigte Fettsäuren -> saturated_fat_g
 - Natrium -> sodium_mg
 - Salz, falls vorhanden -> salt_g
+- Alkohol -> alcohol_g
+- mehrwertige Alkohole/Polyole -> polyols_g
+- organische Säuren -> organic_acids_g
 
 Absichtlich erfolgt kein blindes automatisches Mapping, damit keine falschen
 Nährstoffwerte durch geänderte oder mehrdeutige BLS-Spalten entstehen.

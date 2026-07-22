@@ -52,7 +52,9 @@ export function useNutritionTracker(variant: NutritionTrackerVariant) {
     if (!userId) return;
     const { data, error } = await supabase
       .from("food_entries")
-      .select("id, meal, name, brand, serving_g, kcal, protein_g, carbs_g, fat_g, source, image_url")
+      .select(
+        "id, food_id, meal, name, brand, serving_amount, amount_unit, serving_g, kcal, protein_g, carbs_g, fat_g, source",
+      )
       .eq("user_id", userId)
       .eq("entry_date", date)
       .order("created_at", { ascending: true });
@@ -73,7 +75,9 @@ export function useNutritionTracker(variant: NutritionTrackerVariant) {
         const [entriesResult, waterResult] = await Promise.all([
           supabase
             .from("food_entries")
-            .select("id, meal, name, brand, serving_g, kcal, protein_g, carbs_g, fat_g, source, image_url")
+            .select(
+              "id, food_id, meal, name, brand, serving_amount, amount_unit, serving_g, kcal, protein_g, carbs_g, fat_g, source",
+            )
             .eq("user_id", userId)
             .eq("entry_date", date)
             .order("created_at", { ascending: true }),

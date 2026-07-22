@@ -17,6 +17,7 @@ type SafePoolRow = {
   text_id?: string | null;
   name?: string | null;
   aliases?: string[] | null;
+  unit_type?: string | null;
 };
 
 export async function loadNutritionPlanSourceData(
@@ -82,10 +83,9 @@ export async function loadNutritionPlanSourceData(
       .is("consumed_at", null),
     supabase
       .from("nutrition_foods")
-      .select("text_id,name,aliases")
+      .select("text_id,name,aliases,unit_type")
       .eq("safe_for_smart", true)
       .eq("is_active", true)
-      .eq("verified_by_coach", true)
       .order("name", { ascending: true })
       .limit(600),
   ]);
@@ -98,6 +98,7 @@ export async function loadNutritionPlanSourceData(
       text_id: String(row.text_id),
       name: String(row.name),
       aliases: Array.isArray(row.aliases) ? row.aliases.slice(0, 4) : [],
+      unit: row.unit_type === "ml" ? "ml" : "g",
     }));
 
   return {

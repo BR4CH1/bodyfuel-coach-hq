@@ -28,7 +28,6 @@ export function AddFoodDialog({
   loadingRecent,
   customMeals,
   loadingMeals,
-  aiEstimating,
   isCoach,
   unit,
   amountStr,
@@ -41,10 +40,8 @@ export function AddFoodDialog({
   onPickFood,
   onToggleFavorite,
   isFavorite,
-  onEstimateWithAi,
   onOpenBuilder,
   onAddCustomMeal,
-  onUnitChange,
   onAmountChange,
   onBack,
   onAddPicked,
@@ -61,7 +58,6 @@ export function AddFoodDialog({
   loadingRecent: boolean;
   customMeals: CustomMeal[];
   loadingMeals: boolean;
-  aiEstimating: boolean;
   isCoach: boolean;
   unit: FoodUnit;
   amountStr: string;
@@ -74,10 +70,8 @@ export function AddFoodDialog({
   onPickFood: (food: FoodResult, options?: FoodPickOptions) => void;
   onToggleFavorite: (food: FavoriteCandidate) => void;
   isFavorite: (food: FoodResult) => boolean;
-  onEstimateWithAi: () => void;
   onOpenBuilder: () => void;
   onAddCustomMeal: (meal: CustomMeal) => void;
-  onUnitChange: (unit: FoodUnit) => void;
   onAmountChange: (value: string) => void;
   onBack: () => void;
   onAddPicked: () => void;
@@ -115,7 +109,6 @@ export function AddFoodDialog({
                 recentFoods={recentFoods}
                 loadingFavorites={loadingFavorites}
                 loadingRecent={loadingRecent}
-                aiEstimating={aiEstimating}
                 isCoach={isCoach}
                 onQueryChange={onQueryChange}
                 onSearch={onSearch}
@@ -124,7 +117,6 @@ export function AddFoodDialog({
                 onPickFood={onPickFood}
                 onToggleFavorite={onToggleFavorite}
                 isFavorite={isFavorite}
-                onEstimateWithAi={onEstimateWithAi}
               />
             ) : (
               <CustomMealsPanel
@@ -145,10 +137,9 @@ export function AddFoodDialog({
             onToggleFavorite={() =>
               onToggleFavorite({
                 ...picking,
-                last_amount_g: parseFoodAmount(amountStr) || null,
+                last_amount: parseFoodAmount(amountStr) || null,
               })
             }
-            onUnitChange={onUnitChange}
             onAmountChange={onAmountChange}
             onBack={onBack}
             onAdd={onAddPicked}

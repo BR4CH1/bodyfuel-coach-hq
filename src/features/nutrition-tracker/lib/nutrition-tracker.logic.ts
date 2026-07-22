@@ -1,4 +1,5 @@
 import type { FoodResult } from "@/lib/nutrition.functions";
+import { amountToGrams, macroFactorForAmount } from "@/lib/food-units";
 import type { FoodEntry, FoodUnit, NutritionTotals } from "../types";
 
 export function todayIso(): string {
@@ -67,7 +68,11 @@ export function parseFoodAmount(value: string): number {
 }
 
 export function amountInGrams(food: FoodResult, unit: FoodUnit, amount: number): number {
-  return unit === "piece" && food.serving_g ? amount * food.serving_g : amount;
+  return amountToGrams({ ...food, unit }, amount);
+}
+
+export function nutritionFactorForAmount(amount: number): number {
+  return macroFactorForAmount(amount);
 }
 
 export function cleanPlanEntryName(name: string, source: string | null): string {
