@@ -33,11 +33,16 @@ export type CustomMeal = {
   image_status: string | null;
   image_path: string | null;
   image_source: string | null;
+  image_url: string | null;
+  image_status: MealImageStatus | null;
+  image_path: string | null;
+  image_source: string | null;
   image_error: string | null;
   image_generated_at: string | null;
   created_at: string;
   updated_at: string;
 };
+
 
 
 const ingredientSchema = z.object({
