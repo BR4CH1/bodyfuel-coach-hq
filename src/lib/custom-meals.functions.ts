@@ -30,10 +30,6 @@ export type CustomMeal = {
   fat_g: number | null;
   notes: string | null;
   image_url: string | null;
-  image_status: string | null;
-  image_path: string | null;
-  image_source: string | null;
-  image_url: string | null;
   image_status: MealImageStatus | null;
   image_path: string | null;
   image_source: string | null;
@@ -42,6 +38,7 @@ export type CustomMeal = {
   created_at: string;
   updated_at: string;
 };
+
 
 
 
