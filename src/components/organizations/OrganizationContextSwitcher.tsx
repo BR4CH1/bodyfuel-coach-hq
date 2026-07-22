@@ -43,14 +43,17 @@ export function setOrgMode(slug: string, mode: "athlete" | "staff") {
 
 const STAFF_ROLE_LABEL: Record<string, string> = {
   organization_admin: "Admin",
-  team_coach: "Team Coach",
-  performance_coach: "Performance Coach",
-  nutrition_coach: "Nutrition Coach",
+  coach: "Coach",
+  head_coach: "Coach",
+  team_coach: "Coach",
+  performance_coach: "Coach",
+  nutrition_coach: "Coach",
   community_manager: "Community",
-  custom: "Staff",
+  staff: "Coach",
+  custom: "Coach",
 };
 function staffLabel(role: string) {
-  return STAFF_ROLE_LABEL[role] ?? "Staff";
+  return STAFF_ROLE_LABEL[role] ?? "Coach";
 }
 
 export function OrganizationContextSwitcher({ compact = false }: { compact?: boolean }) {
