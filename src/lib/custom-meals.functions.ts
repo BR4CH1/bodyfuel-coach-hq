@@ -27,9 +27,16 @@ export type CustomMeal = {
   carbs_g: number | null;
   fat_g: number | null;
   notes: string | null;
+  image_url: string | null;
+  image_status: string | null;
+  image_path: string | null;
+  image_source: string | null;
+  image_error: string | null;
+  image_generated_at: string | null;
   created_at: string;
   updated_at: string;
 };
+
 
 const ingredientSchema = z.object({
   name: z.string().trim().min(1).max(120),
