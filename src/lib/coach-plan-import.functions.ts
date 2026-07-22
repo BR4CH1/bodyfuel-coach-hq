@@ -100,7 +100,13 @@ function buildMessages(
 // ───────────────────────── TRAINING ─────────────────────────
 
 const CATEGORIES = new Set([
-  "barbell", "dumbbell", "machine", "cardio", "core", "bodyweight", "cable",
+  "barbell",
+  "dumbbell",
+  "machine",
+  "cardio",
+  "core",
+  "bodyweight",
+  "cable",
 ]);
 
 function normalizeTrainingPlan(input: any): ImportedPlan {
@@ -114,26 +120,39 @@ function normalizeTrainingPlan(input: any): ImportedPlan {
       }
     }
   }
-  const cleaned = days.map((d) => ({
-    name: String(d?.name ?? "Trainingstag").slice(0, 120),
-    focus: d?.focus ? String(d.focus).slice(0, 120) : null,
-    week_number: Number.isFinite(Number(d?.week_number)) ? Math.max(1, Math.min(12, Number(d.week_number))) : 1,
-    exercises: (Array.isArray(d?.exercises) ? d.exercises : []).map((e: any) => ({
-      name: String(e?.name ?? "").slice(0, 200),
-      category: e?.category && CATEGORIES.has(String(e.category)) ? String(e.category) : null,
-      target_sets: Number.isFinite(Number(e?.target_sets))
-        ? Math.max(1, Math.min(20, Math.round(Number(e.target_sets)))) : null,
-      target_reps: e?.target_reps ? String(e.target_reps).slice(0, 80) : null,
-      target_weights: e?.target_weights ? String(e.target_weights).slice(0, 120) : null,
-      rest_seconds: Number.isFinite(Number(e?.rest_seconds))
-        ? Math.max(15, Math.min(600, Math.round(Number(e.rest_seconds)))) : null,
-      notes: e?.notes ? String(e.notes).slice(0, 500) : null,
-    })).filter((e: any) => e.name),
-  })).filter((d: any) => d.exercises.length || d.name);
+  const cleaned = days
+    .map((d) => ({
+      name: String(d?.name ?? "Trainingstag").slice(0, 120),
+      focus: d?.focus ? String(d.focus).slice(0, 120) : null,
+      week_number: Number.isFinite(Number(d?.week_number))
+        ? Math.max(1, Math.min(12, Number(d.week_number)))
+        : 1,
+      exercises: (Array.isArray(d?.exercises) ? d.exercises : [])
+        .map((e: any) => ({
+          name: String(e?.name ?? "").slice(0, 200),
+          category: e?.category && CATEGORIES.has(String(e.category)) ? String(e.category) : null,
+          target_sets: Number.isFinite(Number(e?.target_sets))
+            ? Math.max(1, Math.min(20, Math.round(Number(e.target_sets))))
+            : null,
+          target_reps: e?.target_reps ? String(e.target_reps).slice(0, 80) : null,
+          target_weights: e?.target_weights ? String(e.target_weights).slice(0, 120) : null,
+          rest_seconds: Number.isFinite(Number(e?.rest_seconds))
+            ? Math.max(15, Math.min(600, Math.round(Number(e.rest_seconds))))
+            : null,
+          notes: e?.notes ? String(e.notes).slice(0, 500) : null,
+        }))
+        .filter((e: any) => e.name),
+    }))
+    .filter((d: any) => d.exercises.length || d.name);
 
-  const weeks_count = Math.max(1, Math.min(12,
-    Number(raw.weeks_count) || cleaned.reduce((m: number, d: any) => Math.max(m, d.week_number ?? 1), 1),
-  ));
+  const weeks_count = Math.max(
+    1,
+    Math.min(
+      12,
+      Number(raw.weeks_count) ||
+        cleaned.reduce((m: number, d: any) => Math.max(m, d.week_number ?? 1), 1),
+    ),
+  );
   return {
     title: raw.title ? String(raw.title).slice(0, 160) : undefined,
     weeks_count,
@@ -173,7 +192,9 @@ export const saveCoachTrainingPlanDraft = createServerFn({ method: "POST" })
       .from("nutrition_plans")
       .insert({
         client_id: data.client_id,
-        title: data.title?.trim() || plan.title?.trim() ||
+        title:
+          data.title?.trim() ||
+          plan.title?.trim() ||
           `Coach-Trainingsplan — ${today.toLocaleDateString("de-DE")}`,
         plan_type: "training",
         is_active: false,
@@ -187,8 +208,10 @@ export const saveCoachTrainingPlanDraft = createServerFn({ method: "POST" })
         scheduled_end_date: endDate.toISOString().slice(0, 10),
         weeks_count: weeks,
       } as any)
-      .select("id").single();
-    if (planErr || !planRow) throw new Error(planErr?.message ?? "Plan konnte nicht angelegt werden");
+      .select("id")
+      .single();
+    if (planErr || !planRow)
+      throw new Error(planErr?.message ?? "Plan konnte nicht angelegt werden");
 
     let totalEx = 0;
     let dayIdx = 0;
@@ -201,7 +224,8 @@ export const saveCoachTrainingPlanDraft = createServerFn({ method: "POST" })
           sort_order: dayIdx++,
           week_number: d.week_number ?? 1,
         } as any)
-        .select("id").single();
+        .select("id")
+        .single();
       if (dayErr || !dayRow) continue;
 
       const rows = d.exercises.map((e: any, idx: number) => ({
@@ -216,8 +240,7 @@ export const saveCoachTrainingPlanDraft = createServerFn({ method: "POST" })
         sort_order: idx,
       }));
       if (rows.length) {
-        const { error: exErr } = await supabaseAdmin
-          .from("training_exercises").insert(rows as any);
+        const { error: exErr } = await supabaseAdmin.from("training_exercises").insert(rows as any);
         if (!exErr) totalEx += rows.length;
       }
     }
@@ -232,7 +255,12 @@ export const saveCoachTrainingPlanDraft = createServerFn({ method: "POST" })
 
 // ───────────────────────── NUTRITION ─────────────────────────
 
-export type ImportedNutritionIngredient = { name: string; grams?: number | null; amount?: number | null; unit?: string | null };
+export type ImportedNutritionIngredient = {
+  name: string;
+  grams?: number | null;
+  amount?: number | null;
+  unit?: "g" | "ml" | null;
+};
 export type ImportedNutritionMeal = {
   slot: "breakfast" | "lunch" | "dinner" | "snack";
   name: string;
@@ -265,7 +293,7 @@ Antworte AUSSCHLIESSLICH mit gültigem JSON in dieser Form:
           "ingredients": [
             { "name": "Haferflocken", "grams": 80 },
             { "name": "Apfel", "grams": 150 },
-            { "name": "Magermilch", "grams": 200 }
+            { "name": "Magermilch", "amount": 200, "unit": "ml" }
           ]
         }
       ]
@@ -275,38 +303,48 @@ Antworte AUSSCHLIESSLICH mit gültigem JSON in dieser Form:
 Regeln:
 - slot: einer von "breakfast" | "lunch" | "dinner" | "snack"
 - type: "training" oder "rest" (falls erkennbar, sonst weglassen)
-- Jede Zutat MUSS einen "name" und eine Mengenangabe haben — bevorzugt "grams" (Zahl in Gramm). Wenn keine Gramm-Angabe ableitbar ist, gib "amount" + "unit" an (z.B. "amount": 1, "unit": "Stück") — der Server rechnet das in Gramm um.
+- Jede Zutat MUSS einen "name" und eine Mengenangabe haben. Flüssigkeiten ausschließlich als
+  "amount" + "unit":"ml", alles andere als "grams" oder "amount" + "unit":"g".
+  Stück, Scheibe, EL, TL, Tasse, Portion und unbestimmte Mengen sind verboten. Rechne zählbare
+  Lebensmittel als Gesamtgewicht in g um.
 - Keine Nährwerte angeben — die werden serverseitig aus der Datenbank berechnet.
 - Keine Erklärungen außerhalb des JSON.`;
 
 function normalizeNutritionPlan(input: any): ImportedNutritionPlan {
   const raw: any = input ?? {};
   const days = Array.isArray(raw.days) ? raw.days : [];
-  const cleaned: ImportedNutritionDay[] = days.map((d: any, i: number) => {
-    const meals = Array.isArray(d?.meals) ? d.meals : [];
-    return {
-      name: String(d?.name ?? `Tag ${i + 1}`).slice(0, 80),
-      type: d?.type === "training" || d?.type === "rest" ? d.type : undefined,
-      meals: meals.map((m: any): ImportedNutritionMeal => {
-        const slotRaw = String(m?.slot ?? "snack").toLowerCase();
-        const slot: ImportedNutritionMeal["slot"] =
-          slotRaw === "breakfast" || slotRaw === "lunch" || slotRaw === "dinner"
-            ? slotRaw : "snack";
-        const ings = Array.isArray(m?.ingredients) ? m.ingredients : [];
-        return {
-          slot,
-          name: String(m?.name ?? "Mahlzeit").slice(0, 200),
-          description: m?.description ? String(m.description).slice(0, 500) : null,
-          ingredients: ings.map((ing: any) => ({
-            name: String(ing?.name ?? "").slice(0, 120),
-            grams: Number.isFinite(Number(ing?.grams)) ? Number(ing.grams) : null,
-            amount: Number.isFinite(Number(ing?.amount)) ? Number(ing.amount) : null,
-            unit: ing?.unit ? String(ing.unit).slice(0, 24) : null,
-          })).filter((x: any) => x.name),
-        };
-      }).filter((m: any) => m.name),
-    };
-  }).filter((d: any) => d.meals.length);
+  const cleaned: ImportedNutritionDay[] = days
+    .map((d: any, i: number) => {
+      const meals = Array.isArray(d?.meals) ? d.meals : [];
+      return {
+        name: String(d?.name ?? `Tag ${i + 1}`).slice(0, 80),
+        type: d?.type === "training" || d?.type === "rest" ? d.type : undefined,
+        meals: meals
+          .map((m: any): ImportedNutritionMeal => {
+            const slotRaw = String(m?.slot ?? "snack").toLowerCase();
+            const slot: ImportedNutritionMeal["slot"] =
+              slotRaw === "breakfast" || slotRaw === "lunch" || slotRaw === "dinner"
+                ? slotRaw
+                : "snack";
+            const ings = Array.isArray(m?.ingredients) ? m.ingredients : [];
+            return {
+              slot,
+              name: String(m?.name ?? "Mahlzeit").slice(0, 200),
+              description: m?.description ? String(m.description).slice(0, 500) : null,
+              ingredients: ings
+                .map((ing: any) => ({
+                  name: String(ing?.name ?? "").slice(0, 120),
+                  grams: Number.isFinite(Number(ing?.grams)) ? Number(ing.grams) : null,
+                  amount: Number.isFinite(Number(ing?.amount)) ? Number(ing.amount) : null,
+                  unit: ing?.unit === "ml" ? "ml" : ing?.unit === "g" ? "g" : null,
+                }))
+                .filter((x: any) => x.name),
+            };
+          })
+          .filter((m: any) => m.name),
+      };
+    })
+    .filter((d: any) => d.meals.length);
 
   return {
     title: raw.title ? String(raw.title).slice(0, 160) : undefined,
@@ -328,31 +366,28 @@ export const parseCoachNutritionPlan = createServerFn({ method: "POST" })
       data.mode === "text"
         ? "Wandle den folgenden Ernährungsplan in das geforderte JSON-Format um:"
         : "Extrahiere den Ernährungsplan aus dieser Datei als JSON wie spezifiziert.";
-    const messages = buildMessages(NUTRITION_SYSTEM_PROMPT, data.mode, data.payload, data.filename, userText);
+    const messages = buildMessages(
+      NUTRITION_SYSTEM_PROMPT,
+      data.mode,
+      data.payload,
+      data.filename,
+      userText,
+    );
     const parsed = await callGateway(messages);
     return normalizeNutritionPlan(parsed);
   });
 
-/** Sehr grobe Standard-Umrechnung amount+unit → grams, wenn AI keine Gramm liefert. */
-function approxGramsFromUnit(name: string, amount: number, unit: string): number {
+/** Nur verlustfreie metrische Umrechnung; Portionsschätzungen sind absichtlich verboten. */
+function canonicalAmount(
+  amount: number,
+  unit: string,
+): { amount: number; unit: "g" | "ml" } | null {
   const u = unit.toLowerCase().trim();
-  if (u === "g" || u === "gramm") return amount;
-  if (u === "kg") return amount * 1000;
-  if (u === "ml" || u === "milliliter") return amount; // Wasser-Dichte als Näherung
-  if (u === "l" || u === "liter") return amount * 1000;
-  if (u === "tl" || u === "teelöffel") return amount * 5;
-  if (u === "el" || u === "esslöffel") return amount * 15;
-  if (u === "stück" || u === "stk" || u === "stk.") {
-    const n = name.toLowerCase();
-    if (/apfel|birne|orange/.test(n)) return amount * 150;
-    if (/banane/.test(n)) return amount * 120;
-    if (/ei|eier/.test(n)) return amount * 60;
-    if (/scheibe|toast|brot/.test(n)) return amount * 30;
-    return amount * 80;
-  }
-  if (u === "tasse" || u === "cup") return amount * 240;
-  if (u === "prise") return 1;
-  return amount;
+  if (u === "g" || u === "gramm") return { amount, unit: "g" };
+  if (u === "kg") return { amount: amount * 1000, unit: "g" };
+  if (u === "ml" || u === "milliliter") return { amount, unit: "ml" };
+  if (u === "l" || u === "liter") return { amount: amount * 1000, unit: "ml" };
+  return null;
 }
 
 export type NutritionSaveMode = "new_plan" | "append_week" | "replace_week" | "replace_plan";
@@ -395,7 +430,10 @@ export const saveCoachNutritionPlanDraft = createServerFn({ method: "POST" })
       name: string;
       description: string | null;
       ingredients: ImportedNutritionIngredient[];
-      kcal: number; protein_g: number; carbs_g: number; fat_g: number;
+      kcal: number;
+      protein_g: number;
+      carbs_g: number;
+      fat_g: number;
       data_source: string;
       verified_ratio: number;
       warnings: string[];
@@ -410,18 +448,31 @@ export const saveCoachNutritionPlanDraft = createServerFn({ method: "POST" })
       let daySum = { kcal: 0, p: 0, c: 0, f: 0 };
       for (const m of d.meals) {
         const engineIngs = m.ingredients.map((ing) => {
-          let grams = Number(ing.grams ?? 0);
-          if (!grams && ing.amount && ing.unit) {
-            grams = approxGramsFromUnit(ing.name, Number(ing.amount), String(ing.unit));
+          const grams = Number(ing.grams ?? 0);
+          const canonical =
+            grams > 0
+              ? { amount: grams, unit: "g" as const }
+              : ing.amount && ing.unit
+                ? canonicalAmount(Number(ing.amount), ing.unit)
+                : null;
+          if (!canonical || canonical.amount <= 0) {
+            throw new Error(
+              `Ungültige Menge für „${ing.name}": Flüssigkeiten müssen in ml, alles andere in g angegeben sein.`,
+            );
           }
-          return { name: ing.name, grams: Math.max(0, Math.round(grams)) };
+          return {
+            name: ing.name,
+            grams: Math.round(canonical.amount),
+            amount: Math.round(canonical.amount),
+            unit: canonical.unit,
+          };
         });
         const result = await computeMealFromIngredients(supabaseAdmin, engineIngs);
         meals.push({
           slot: m.slot,
           name: m.name,
           description: m.description ?? null,
-          ingredients: m.ingredients,
+          ingredients: engineIngs,
           kcal: Math.round(result.kcal),
           protein_g: Math.round(result.protein_g),
           carbs_g: Math.round(result.carbs_g),
@@ -446,7 +497,7 @@ export const saveCoachNutritionPlanDraft = createServerFn({ method: "POST" })
       throw new Error("Keine Mahlzeiten erkannt.");
     }
 
-    const avgKcal = Math.round((dailySum.kcal / Math.max(1, dayCount)) / 50) * 50;
+    const avgKcal = Math.round(dailySum.kcal / Math.max(1, dayCount) / 50) * 50;
     const avgP = Math.round(dailySum.p / Math.max(1, dayCount));
     const avgC = Math.round(dailySum.c / Math.max(1, dayCount));
     const avgF = Math.round(dailySum.f / Math.max(1, dayCount));
@@ -456,7 +507,9 @@ export const saveCoachNutritionPlanDraft = createServerFn({ method: "POST" })
       if (!data.target_plan_id) throw new Error("Zielplan fehlt.");
       const { data: target, error: tErr } = await supabaseAdmin
         .from("nutrition_plans")
-        .select("id, client_id, plan_type, weeks_count, scheduled_start_date, scheduled_end_date, status")
+        .select(
+          "id, client_id, plan_type, weeks_count, scheduled_start_date, scheduled_end_date, status",
+        )
         .eq("id", data.target_plan_id)
         .single();
       if (tErr || !target) throw new Error("Zielplan nicht gefunden.");
@@ -507,7 +560,8 @@ export const saveCoachNutritionPlanDraft = createServerFn({ method: "POST" })
             sort_order: baseSort + i,
             week_number: weekNumber,
           } as any)
-          .select("id").single();
+          .select("id")
+          .single();
         if (dErr || !dayRow) continue;
 
         let snackCounter = 0;
@@ -516,19 +570,27 @@ export const saveCoachNutritionPlanDraft = createServerFn({ method: "POST" })
           if (m.slot === "breakfast") slotLabel = "Frühstück";
           else if (m.slot === "lunch") slotLabel = "Mittagessen";
           else if (m.slot === "dinner") slotLabel = "Abendessen";
-          else { snackCounter += 1; slotLabel = `Snack ${snackCounter}`; }
+          else {
+            snackCounter += 1;
+            slotLabel = `Snack ${snackCounter}`;
+          }
           return {
             day_id: dayRow.id,
             name: `${d.name} — ${slotLabel}: ${m.name}`,
             description: m.description ?? null,
-            ingredients_json: m.ingredients.length ? m.ingredients.map((ing) => ({
-              name: ing.name,
-              grams: Number(ing.grams ?? 0) || null,
-              amount: ing.amount ?? null,
-              unit: ing.unit ?? null,
-            })) : null,
+            ingredients_json: m.ingredients.length
+              ? m.ingredients.map((ing) => ({
+                  name: ing.name,
+                  grams: Number(ing.grams ?? 0) || null,
+                  amount: ing.amount ?? null,
+                  unit: ing.unit ?? null,
+                }))
+              : null,
             compute_warnings: m.warnings,
-            kcal: m.kcal, protein_g: m.protein_g, carbs_g: m.carbs_g, fat_g: m.fat_g,
+            kcal: m.kcal,
+            protein_g: m.protein_g,
+            carbs_g: m.carbs_g,
+            fat_g: m.fat_g,
             sort_order: idx,
             data_source: m.data_source,
             verified_ratio: m.verified_ratio,
@@ -536,7 +598,8 @@ export const saveCoachNutritionPlanDraft = createServerFn({ method: "POST" })
         });
         if (mealRows.length) {
           const { error: mErr } = await supabaseAdmin
-            .from("nutrition_plan_meals").insert(mealRows as any);
+            .from("nutrition_plan_meals")
+            .insert(mealRows as any);
           if (!mErr) insertedMeals += mealRows.length;
         }
       }
@@ -607,7 +670,9 @@ export const saveCoachNutritionPlanDraft = createServerFn({ method: "POST" })
       .from("nutrition_plans")
       .insert({
         client_id: data.client_id,
-        title: data.title?.trim() || plan.title?.trim() ||
+        title:
+          data.title?.trim() ||
+          plan.title?.trim() ||
           `Coach-Ernährungsplan — ${today.toLocaleDateString("de-DE")}`,
         plan_type: "nutrition",
         is_active: false,
@@ -625,8 +690,10 @@ export const saveCoachNutritionPlanDraft = createServerFn({ method: "POST" })
         carbs_g: avgC,
         fat_g: avgF,
       } as any)
-      .select("id").single();
-    if (planErr || !planRow) throw new Error(planErr?.message ?? "Plan konnte nicht angelegt werden");
+      .select("id")
+      .single();
+    if (planErr || !planRow)
+      throw new Error(planErr?.message ?? "Plan konnte nicht angelegt werden");
 
     let totalMeals = 0;
     for (let i = 0; i < computedDays.length; i++) {
@@ -634,7 +701,8 @@ export const saveCoachNutritionPlanDraft = createServerFn({ method: "POST" })
       const { data: dayRow, error: dErr } = await supabaseAdmin
         .from("nutrition_plan_days")
         .insert({ plan_id: planRow.id, name: d.name, sort_order: i, week_number: 1 } as any)
-        .select("id").single();
+        .select("id")
+        .single();
       if (dErr || !dayRow) continue;
 
       let snackCounter = 0;
@@ -643,17 +711,22 @@ export const saveCoachNutritionPlanDraft = createServerFn({ method: "POST" })
         if (m.slot === "breakfast") slotLabel = "Frühstück";
         else if (m.slot === "lunch") slotLabel = "Mittagessen";
         else if (m.slot === "dinner") slotLabel = "Abendessen";
-        else { snackCounter += 1; slotLabel = `Snack ${snackCounter}`; }
+        else {
+          snackCounter += 1;
+          slotLabel = `Snack ${snackCounter}`;
+        }
         return {
           day_id: dayRow.id,
           name: `${d.name} — ${slotLabel}: ${m.name}`,
           description: m.description ?? null,
-          ingredients_json: m.ingredients.length ? m.ingredients.map((ing) => ({
-            name: ing.name,
-            grams: Number(ing.grams ?? 0) || null,
-            amount: ing.amount ?? null,
-            unit: ing.unit ?? null,
-          })) : null,
+          ingredients_json: m.ingredients.length
+            ? m.ingredients.map((ing) => ({
+                name: ing.name,
+                grams: Number(ing.grams ?? 0) || null,
+                amount: ing.amount ?? null,
+                unit: ing.unit ?? null,
+              }))
+            : null,
           compute_warnings: m.warnings,
           kcal: m.kcal,
           protein_g: m.protein_g,
@@ -666,7 +739,8 @@ export const saveCoachNutritionPlanDraft = createServerFn({ method: "POST" })
       });
       if (mealRows.length) {
         const { error: mErr } = await supabaseAdmin
-          .from("nutrition_plan_meals").insert(mealRows as any);
+          .from("nutrition_plan_meals")
+          .insert(mealRows as any);
         if (!mErr) totalMeals += mealRows.length;
       }
     }
@@ -681,7 +755,11 @@ export const saveCoachNutritionPlanDraft = createServerFn({ method: "POST" })
       const apiKey = process.env.LOVABLE_API_KEY;
       if (apiKey) {
         const { generateShoppingListForPlan } = await import("./shopping-list-engine.server");
-        await generateShoppingListForPlan({ apiKey, planId: planRow.id, windowDays: Math.min(7, computedDays.length) });
+        await generateShoppingListForPlan({
+          apiKey,
+          planId: planRow.id,
+          windowDays: Math.min(7, computedDays.length),
+        });
       }
     } catch {
       // non-fatal
@@ -689,4 +767,3 @@ export const saveCoachNutritionPlanDraft = createServerFn({ method: "POST" })
 
     return { ok: true, plan_id: planRow.id, days: computedDays.length, meals: totalMeals, mode };
   });
-

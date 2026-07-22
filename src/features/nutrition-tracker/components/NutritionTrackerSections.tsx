@@ -7,6 +7,7 @@ import {
   type BullsDayType,
 } from "@/lib/performance-nutrition/bulls-nutrition.functions";
 import type { DayType } from "@/lib/nutrition.functions";
+import { formatFoodAmount } from "@/lib/food-units";
 import { MEALS } from "../constants";
 import { cleanPlanEntryName, shiftIsoDate, todayIso } from "../lib/nutrition-tracker.logic";
 import type { FoodEntry, Meal, NutritionTargets, NutritionTotals } from "../types";
@@ -308,24 +309,18 @@ export function MealCard({
             const isPlan = entry.source?.startsWith("plan:") ?? false;
             return (
               <li key={entry.id} className="flex items-center gap-3 py-2">
-                {entry.image_url ? (
-                  <img
-                    src={entry.image_url}
-                    alt=""
-                    loading="lazy"
-                    className="h-10 w-10 shrink-0 rounded-md bg-secondary object-cover"
-                    onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).style.display = "none";
-                    }}
-                  />
-                ) : null}
                 <div className="min-w-0 flex-1">
                   <div className="break-words text-sm font-medium">
                     {cleanPlanEntryName(entry.name, entry.source)}
                   </div>
                   <div className="text-[11px] text-muted-foreground">
                     {entry.brand ? `${entry.brand} · ` : ""}
-                    {isPlan ? "" : `${Number(entry.serving_g)} g · `}
+                    {isPlan
+                      ? ""
+                      : `${formatFoodAmount(
+                          Number(entry.serving_amount ?? entry.serving_g),
+                          entry.amount_unit === "ml" ? "ml" : "g",
+                        )} · `}
                     {Math.round(Number(entry.kcal))} kcal · P {Number(entry.protein_g)} · K{" "}
                     {Number(entry.carbs_g)} · F {Number(entry.fat_g)}
                   </div>

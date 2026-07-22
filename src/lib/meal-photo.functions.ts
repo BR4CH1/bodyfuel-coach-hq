@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { FoodAmountUnit } from "@/lib/food-units";
 
 /**
  * AI-Gerichtserkennung per Foto + intelligentes Matching mit der
@@ -35,14 +36,15 @@ export type FoodMatch = {
   protein_per_100g: number;
   carbs_per_100g: number;
   fat_per_100g: number;
-  piece_g: number | null;
+  unit: FoodAmountUnit;
+  density_g_per_ml: number | null;
   score: number; // 0..1
 };
 
 export type MealPhotoIngredient = {
   name: string;
   estimated_amount: number;
-  unit: "g" | "ml" | "piece";
+  unit: FoodAmountUnit;
   confidence: number;
   needs_confirmation: boolean;
   match_status: MatchStatus;
@@ -235,8 +237,7 @@ function scoreMatch(candidateName: string, aliases: string[] | null, query: stri
         // Token-Overlap + Fuzzy
         const hSet = new Set(hTokens.map(singularize));
         const overlap = qTokens.map(singularize).filter((t) => hSet.has(t)).length;
-        const tokenScore =
-          overlap === 0 ? 0 : (2 * overlap) / (qTokens.length + hTokens.length);
+        const tokenScore = overlap === 0 ? 0 : (2 * overlap) / (qTokens.length + hTokens.length);
 
         const tri = trigramSim(q, h);
         const lev = levenshtein(q, h);
@@ -289,18 +290,48 @@ type CandidateRow = {
   protein_per_100g: number;
   carbs_per_100g: number;
   fat_per_100g: number;
+  unit_type: string | null;
+  density_g_per_ml: number | null;
 };
 
-async function loadCandidatePool(supabase: any): Promise<CandidateRow[]> {
-  const { data } = await supabase
-    .from("nutrition_foods")
-    .select(
-      "id, name, aliases, source, verified_by_coach, kcal_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g",
-    )
-    .eq("is_active", true)
-    .eq("needs_review", false)
-    .limit(4000);
-  return (data ?? []) as CandidateRow[];
+const PREPARATION_WORDS = new Set([
+  "frisch",
+  "roh",
+  "gekocht",
+  "gegart",
+  "gebraten",
+  "gebacken",
+  "gegrillt",
+  "geduenstet",
+  "gedünstet",
+]);
+
+function catalogTerms(query: string): string[] {
+  const full = applySynonyms(query);
+  const withoutPreparation = full
+    .split(/\s+/)
+    .filter((word) => !PREPARATION_WORDS.has(word))
+    .join(" ")
+    .trim();
+  return Array.from(new Set([full, withoutPreparation].filter(Boolean)));
+}
+
+async function loadCandidatePool(supabase: any, queries: string[]): Promise<CandidateRow[]> {
+  const terms = Array.from(new Set(queries.flatMap(catalogTerms))).slice(0, 30);
+  const responses = await Promise.all(
+    terms.map((term) =>
+      (supabase.rpc as any)("search_nutrition_foods", {
+        _q: term,
+        _max_results: 50,
+      }),
+    ),
+  );
+  const unique = new Map<string, CandidateRow>();
+  for (const response of responses) {
+    if (response.error) continue;
+    for (const row of (response.data ?? []) as CandidateRow[]) unique.set(row.id, row);
+  }
+  return [...unique.values()];
 }
 
 async function loadLearnedAliases(
@@ -331,7 +362,11 @@ function toFoodMatch(row: CandidateRow, score: number): FoodMatch {
     protein_per_100g: Number(row.protein_per_100g) || 0,
     carbs_per_100g: Number(row.carbs_per_100g) || 0,
     fat_per_100g: Number(row.fat_per_100g) || 0,
-    piece_g: null,
+    unit: row.unit_type === "ml" ? "ml" : "g",
+    density_g_per_ml:
+      row.unit_type === "ml" && Number(row.density_g_per_ml) > 0
+        ? Number(row.density_g_per_ml)
+        : null,
     score: Math.round(score * 100) / 100,
   };
 }
@@ -376,7 +411,8 @@ const PROMPT = `Du bist Ernährungs-Assistent bei BodyFuel. Analysiere das Foto 
 Erkenne:
 - Gesamtgericht (dish_name), knapp auf Deutsch (z.B. "Hähnchen mit Reis und Gemüse").
 - Alle sichtbaren Zutaten & Getränke einzeln.
-- Für jede Zutat: geschätzte Menge in g, ml (Flüssig) oder piece (zählbar).
+- Für jede Zutat: geschätzte Gesamtmenge. Flüssigkeiten ausschließlich in ml, alles andere
+  ausschließlich in g. Auch zählbare Lebensmittel (Ei, Banane, Scheibe Brot) als Gesamtgewicht in g.
 - Konfidenz (0.0–1.0) pro Zutat und für das Gesamtgericht.
 
 Wichtig:
@@ -390,7 +426,7 @@ Antworte ausschließlich als valides JSON:
   "dish_name": string,
   "confidence": number,
   "ingredients": [
-    { "name": string, "estimated_amount": number, "unit": "g"|"ml"|"piece", "confidence": number }
+    { "name": string, "estimated_amount": number, "unit": "g"|"ml", "confidence": number }
   ],
   "questions": string[]
 }`;
@@ -459,8 +495,7 @@ export const analyzeMealPhoto = createServerFn({ method: "POST" })
         const name = String(i?.name ?? "").trim();
         const amt = Number(i?.estimated_amount);
         if (!name || !isFinite(amt) || amt <= 0) return null;
-        const unit: "g" | "ml" | "piece" =
-          i?.unit === "ml" ? "ml" : i?.unit === "piece" ? "piece" : "g";
+        const unit: FoodAmountUnit = i?.unit === "ml" ? "ml" : "g";
         const conf = Math.max(0, Math.min(1, Number(i?.confidence ?? 0.5)));
         return { name, estimated_amount: amt, unit, confidence: conf };
       })
@@ -468,24 +503,28 @@ export const analyzeMealPhoto = createServerFn({ method: "POST" })
 
     const terms = preIngredients.map((i: { name: string }) => normalize(applySynonyms(i.name)));
     const [pool, learned] = await Promise.all([
-      loadCandidatePool(context.supabase),
+      loadCandidatePool(
+        context.supabase,
+        preIngredients.map((i: { name: string }) => i.name),
+      ),
       loadLearnedAliases(context.supabase, terms),
     ]);
 
     const ingredients: MealPhotoIngredient[] = preIngredients.map(
-      (i: { name: string; estimated_amount: number; unit: "g" | "ml" | "piece"; confidence: number }) => {
+      (i: { name: string; estimated_amount: number; unit: FoodAmountUnit; confidence: number }) => {
         const term = normalize(applySynonyms(i.name));
         const ranked = rankCandidates(i.name, pool, learned.get(term));
         const status = statusFromScore(ranked.bestScore, !!ranked.best);
         return {
           name: i.name,
           estimated_amount: i.estimated_amount,
-          unit: i.unit,
+          unit: ranked.best?.unit ?? i.unit,
           confidence: i.confidence,
           needs_confirmation:
             status === "needs_choice" || status === "not_found" || i.confidence < 0.6,
           match_status: status,
-          matched: status === "auto_matched" || status === "auto_matched_editable" ? ranked.best : null,
+          matched:
+            status === "auto_matched" || status === "auto_matched_editable" ? ranked.best : null,
           candidates: ranked.candidates,
         };
       },
@@ -496,7 +535,10 @@ export const analyzeMealPhoto = createServerFn({ method: "POST" })
       confidence: Math.max(0, Math.min(1, Number(parsed.confidence ?? 0.6))),
       ingredients,
       questions: Array.isArray(parsed.questions)
-        ? parsed.questions.map((q: any) => String(q)).filter(Boolean).slice(0, 3)
+        ? parsed.questions
+            .map((q: any) => String(q))
+            .filter(Boolean)
+            .slice(0, 3)
         : [],
       needs_review: ingredients.some((i) => i.needs_confirmation),
     };
@@ -520,7 +562,7 @@ export const matchIngredientName = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<MatchIngredientResult> => {
     const term = normalize(applySynonyms(data.name));
     const [pool, learned] = await Promise.all([
-      loadCandidatePool(context.supabase),
+      loadCandidatePool(context.supabase, [data.name]),
       loadLearnedAliases(context.supabase, [term]),
     ]);
     const ranked = rankCandidates(data.name, pool, learned.get(term));

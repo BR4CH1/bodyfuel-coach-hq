@@ -190,6 +190,7 @@ export type SafeFoodSource = {
   text_id: string;
   name: string;
   aliases: string[];
+  unit: "g" | "ml";
 };
 
 export type NutritionPlanSourceData = {

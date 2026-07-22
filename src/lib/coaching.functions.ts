@@ -106,7 +106,10 @@ export const listCustomers = createServerFn({ method: "GET" })
     const byUser = new Map<string, any>();
     for (const p of packagesRaw ?? []) {
       const cur = byUser.get(p.user_id);
-      if (!cur) { byUser.set(p.user_id, p); continue; }
+      if (!cur) {
+        byUser.set(p.user_id, p);
+        continue;
+      }
       const better =
         (p.is_active && !cur.is_active) ||
         (p.is_active === cur.is_active &&
@@ -154,11 +157,12 @@ export const listCustomers = createServerFn({ method: "GET" })
       ? await supabaseAdmin
           .from("suppressed_emails")
           .select("email")
-          .in("email", emailList.map((e) => e.toLowerCase()))
+          .in(
+            "email",
+            emailList.map((e) => e.toLowerCase()),
+          )
       : { data: [] as { email: string }[] };
-    const suppressedSet = new Set(
-      (suppressed ?? []).map((s) => s.email.toLowerCase()),
-    );
+    const suppressedSet = new Set((suppressed ?? []).map((s) => s.email.toLowerCase()));
 
     const paymentsByUser = new Map<string, typeof payments>();
     for (const p of payments ?? []) {
@@ -175,20 +179,11 @@ export const listCustomers = createServerFn({ method: "GET" })
       const pending = userPayments.filter((x) => x.status === "pending");
       const confirmed = userPayments
         .filter((x) => x.status === "confirmed")
-        .sort(
-          (a, b) =>
-            new Date(b.payment_date).getTime() -
-            new Date(a.payment_date).getTime(),
-        );
+        .sort((a, b) => new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime());
 
-      const pending_amount = pending.reduce(
-        (s, x) => s + Number(x.amount_eur),
-        0,
-      );
+      const pending_amount = pending.reduce((s, x) => s + Number(x.amount_eur), 0);
       const oldestPending = pending.length
-        ? pending.reduce((a, b) =>
-            new Date(a.created_at) < new Date(b.created_at) ? a : b,
-          )
+        ? pending.reduce((a, b) => (new Date(a.created_at) < new Date(b.created_at) ? a : b))
         : null;
 
       let payment_due_date: string | null = null;
@@ -230,7 +225,6 @@ export const listCustomers = createServerFn({ method: "GET" })
       };
     });
   });
-
 
 export const createCustomer = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -277,7 +271,9 @@ export const createCustomer = createServerFn({ method: "POST" })
       name: displayName,
       email,
       phone: data.phone || null,
-      desired_package: ["starter", "coaching", "premium"].includes(data.package as string) ? data.package : null,
+      desired_package: ["starter", "coaching", "premium"].includes(data.package as string)
+        ? data.package
+        : null,
       status: "converted",
       message: data.notes || null,
     });
@@ -313,27 +309,26 @@ export const createCustomer = createServerFn({ method: "POST" })
     } else if (data.skip_invite) {
       // Silent anlegen (z.B. Influencer) – kein Invite-Mail.
       // Zufallspasswort; Coach kann später Reset-Link teilen.
-      const randomPassword =
-        crypto.randomUUID().replace(/-/g, "") + "Aa1!";
-      const { data: created, error: createErr } =
-        await supabaseAdmin.auth.admin.createUser({
-          email,
-          password: randomPassword,
-          email_confirm: true,
-          user_metadata: {
-            display_name: displayName,
-            first_name: firstName,
-            last_name: lastName,
-            full_name: displayName,
-            name: displayName,
-            ...(isFree ? { tier: "free" } : { role: "client" }),
-          },
-        });
+      const randomPassword = crypto.randomUUID().replace(/-/g, "") + "Aa1!";
+      const { data: created, error: createErr } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password: randomPassword,
+        email_confirm: true,
+        user_metadata: {
+          display_name: displayName,
+          first_name: firstName,
+          last_name: lastName,
+          full_name: displayName,
+          name: displayName,
+          ...(isFree ? { tier: "free" } : { role: "client" }),
+        },
+      });
       if (createErr) throw new Error(createErr.message);
       newUserId = created.user!.id;
     } else {
-      const { data: invited, error: invErr } =
-        await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+      const { data: invited, error: invErr } = await supabaseAdmin.auth.admin.inviteUserByEmail(
+        email,
+        {
           data: {
             display_name: displayName,
             first_name: firstName,
@@ -343,7 +338,8 @@ export const createCustomer = createServerFn({ method: "POST" })
             ...(isFree ? { tier: "free" } : { role: "client" }),
           },
           redirectTo: isFree ? `${origin}/tracker/app` : `${origin}/welcome`,
-        });
+        },
+      );
       if (invErr) throw new Error(invErr.message);
       newUserId = invited.user.id;
     }
@@ -407,10 +403,7 @@ export const createCustomer = createServerFn({ method: "POST" })
     if (data.bulls) {
       await supabaseAdmin
         .from("user_groups")
-        .upsert(
-          { user_id: newUserId, group_name: "bulls" },
-          { onConflict: "user_id,group_name" },
-        );
+        .upsert({ user_id: newUserId, group_name: "bulls" }, { onConflict: "user_id,group_name" });
     }
 
     return { ok: true, user_id: newUserId, trial: isTrial };
@@ -423,7 +416,20 @@ export const getCustomerDetail = createServerFn({ method: "POST" })
     await assertCoach(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const [profile, pkgs, payments, userRes, measurements, groups, lastFood, lastSet, lastCheck, lastWater, lastMeas, targets] = await Promise.all([
+    const [
+      profile,
+      pkgs,
+      payments,
+      userRes,
+      measurements,
+      groups,
+      lastFood,
+      lastSet,
+      lastCheck,
+      lastWater,
+      lastMeas,
+      targets,
+    ] = await Promise.all([
       supabaseAdmin.from("profiles").select("*").eq("id", data.user_id).maybeSingle(),
       supabaseAdmin
         .from("customer_packages")
@@ -441,23 +447,53 @@ export const getCustomerDetail = createServerFn({ method: "POST" })
         .select("*")
         .eq("user_id", data.user_id)
         .order("measured_at", { ascending: false }),
+      supabaseAdmin.from("user_groups").select("group_name").eq("user_id", data.user_id),
       supabaseAdmin
-        .from("user_groups")
-        .select("group_name")
-        .eq("user_id", data.user_id),
-      supabaseAdmin.from("food_entries").select("created_at").eq("user_id", data.user_id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
-      supabaseAdmin.from("training_set_logs").select("performed_at").eq("client_id", data.user_id).order("performed_at", { ascending: false }).limit(1).maybeSingle(),
-      supabaseAdmin.from("daily_checks").select("updated_at, created_at").eq("user_id", data.user_id).order("updated_at", { ascending: false }).limit(1).maybeSingle(),
-      supabaseAdmin.from("water_logs").select("created_at").eq("user_id", data.user_id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
-      supabaseAdmin.from("body_measurements").select("created_at").eq("user_id", data.user_id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
-      supabaseAdmin.from("nutrition_targets").select("kcal, protein_g, carbs_g, fat_g, kcal_rest, protein_g_rest, carbs_g_rest, fat_g_rest").eq("user_id", data.user_id).maybeSingle(),
+        .from("food_entries")
+        .select("created_at")
+        .eq("user_id", data.user_id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabaseAdmin
+        .from("training_set_logs")
+        .select("performed_at")
+        .eq("client_id", data.user_id)
+        .order("performed_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabaseAdmin
+        .from("daily_checks")
+        .select("updated_at, created_at")
+        .eq("user_id", data.user_id)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabaseAdmin
+        .from("water_logs")
+        .select("created_at")
+        .eq("user_id", data.user_id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabaseAdmin
+        .from("body_measurements")
+        .select("created_at")
+        .eq("user_id", data.user_id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabaseAdmin
+        .from("nutrition_targets")
+        .select(
+          "kcal, protein_g, carbs_g, fat_g, kcal_rest, protein_g_rest, carbs_g_rest, fat_g_rest",
+        )
+        .eq("user_id", data.user_id)
+        .maybeSingle(),
     ]);
 
-
     const u = userRes.data.user as any;
-    const banned = u?.banned_until
-      ? new Date(u.banned_until).getTime() > Date.now()
-      : false;
+    const banned = u?.banned_until ? new Date(u.banned_until).getTime() > Date.now() : false;
     const status: "invited" | "active" | "deactivated" = banned
       ? "deactivated"
       : u?.last_sign_in_at
@@ -494,9 +530,6 @@ export const getCustomerDetail = createServerFn({ method: "POST" })
         status,
       },
     };
-
-
-
   });
 
 export const updateCustomerCoachingInfo = createServerFn({ method: "POST" })
@@ -531,16 +564,21 @@ export const updateCustomerCoachingInfo = createServerFn({ method: "POST" })
       patch.daily_step_goal = n;
     }
     if (data.sport !== undefined) patch.sport = data.sport ? data.sport.slice(0, 80) : null;
-    if (data.injuries !== undefined) patch.injuries = data.injuries ? data.injuries.slice(0, 500) : null;
-    if (data.training_experience !== undefined) patch.training_experience = data.training_experience;
+    if (data.injuries !== undefined)
+      patch.injuries = data.injuries ? data.injuries.slice(0, 500) : null;
+    if (data.training_experience !== undefined)
+      patch.training_experience = data.training_experience;
     if (data.height_cm !== undefined) {
-      patch.height_cm = data.height_cm == null ? null : Math.max(80, Math.min(260, Number(data.height_cm)));
+      patch.height_cm =
+        data.height_cm == null ? null : Math.max(80, Math.min(260, Number(data.height_cm)));
     }
     if (data.birthdate !== undefined) patch.birthdate = data.birthdate || null;
     if (data.gender !== undefined) patch.gender = data.gender;
     if (data.goal_weight_kg !== undefined) {
       patch.goal_weight_kg =
-        data.goal_weight_kg == null ? null : Math.max(30, Math.min(300, Number(data.goal_weight_kg)));
+        data.goal_weight_kg == null
+          ? null
+          : Math.max(30, Math.min(300, Number(data.goal_weight_kg)));
     }
     if (data.goal_target_date !== undefined) patch.goal_target_date = data.goal_target_date || null;
     if (data.activity_level !== undefined) patch.activity_level = data.activity_level;
@@ -560,7 +598,9 @@ export const updateCustomerCoachingInfo = createServerFn({ method: "POST" })
  */
 export const setCustomerWeight = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { user_id: string; weight_kg: number; measured_at?: string | null }) => data)
+  .inputValidator(
+    (data: { user_id: string; weight_kg: number; measured_at?: string | null }) => data,
+  )
   .handler(async ({ data, context }) => {
     await assertCoach(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -573,8 +613,6 @@ export const setCustomerWeight = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
-
-
 
 export const getCustomerRecentActivity = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -605,7 +643,9 @@ export const getCustomerRecentActivity = createServerFn({ method: "POST" })
         .lte("check_date", toDate),
       supabaseAdmin
         .from("food_entries")
-        .select("entry_date, meal, name, kcal, protein_g, carbs_g, fat_g, serving_g")
+        .select(
+          "entry_date, meal, name, kcal, protein_g, carbs_g, fat_g, serving_g, serving_amount, amount_unit",
+        )
         .eq("user_id", data.user_id)
         .gte("entry_date", fromDate)
         .lte("entry_date", toDate)
@@ -669,6 +709,8 @@ export const getCustomerRecentActivity = createServerFn({ method: "POST" })
             carbs_g: Number(f.carbs_g || 0),
             fat_g: Number(f.fat_g || 0),
             serving_g: Number(f.serving_g || 0),
+            serving_amount: Number(f.serving_amount || f.serving_g || 0),
+            amount_unit: f.amount_unit === "ml" ? "ml" : "g",
           })),
         },
         training: {
@@ -927,7 +969,10 @@ export const getMyPackage = createServerFn({ method: "GET" })
       .select("*")
       .eq("user_id", context.userId)
       .order("payment_date", { ascending: false });
-    return { active: pkgs?.find((p) => p.is_active) ?? pkgs?.[0] ?? null, payments: payments ?? [] };
+    return {
+      active: pkgs?.find((p) => p.is_active) ?? pkgs?.[0] ?? null,
+      payments: payments ?? [],
+    };
   });
 
 export const requestRenewal = createServerFn({ method: "POST" })
@@ -1043,11 +1088,8 @@ export const listPackageRequests = createServerFn({ method: "GET" })
 export const updatePackageRequest = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
-    (data: {
-      id: string;
-      status: "pending" | "approved" | "declined";
-      coach_note?: string;
-    }) => data,
+    (data: { id: string; status: "pending" | "approved" | "declined"; coach_note?: string }) =>
+      data,
   )
   .handler(async ({ data, context }) => {
     await assertCoach(context.supabase, context.userId);
@@ -1109,7 +1151,6 @@ export const updatePackageRequest = createServerFn({ method: "POST" })
 
     return { ok: true };
   });
-
 
 /* ---------------- RANKING ---------------- */
 
@@ -1184,12 +1225,10 @@ export const getRanking = createServerFn({ method: "POST" })
         .select("user_id, points, approved")
         .in("user_id", ids)
         .gte("training_date", start!);
-      (perf.data ?? []).forEach(
-        (r: { user_id: string; points: number; approved: boolean }) => {
-          if (!r.approved) return;
-          totals.set(r.user_id, (totals.get(r.user_id) ?? 0) + (r.points ?? 0));
-        },
-      );
+      (perf.data ?? []).forEach((r: { user_id: string; points: number; approved: boolean }) => {
+        if (!r.approved) return;
+        totals.set(r.user_id, (totals.get(r.user_id) ?? 0) + (r.points ?? 0));
+      });
     }
 
     const rows: RankingEntry[] = ids.map((id) => ({
@@ -1232,9 +1271,10 @@ export const coachCreatePackage = createServerFn({ method: "POST" })
     const start = data.start_date || today;
     let end = data.end_date;
     if (!end) {
-      const days = Number.isFinite(data.duration_days) && (data.duration_days as number) > 0
-        ? Math.min(3650, Math.floor(data.duration_days as number))
-        : 30;
+      const days =
+        Number.isFinite(data.duration_days) && (data.duration_days as number) > 0
+          ? Math.min(3650, Math.floor(data.duration_days as number))
+          : 30;
       const d = new Date(start);
       d.setUTCDate(d.getUTCDate() + days);
       end = d.toISOString().slice(0, 10);
@@ -1264,10 +1304,7 @@ export const coachCreatePackage = createServerFn({ method: "POST" })
     if (insErr) throw new Error(insErr.message);
 
     // Profil auf aktiven Mitgliedsstatus setzen, Trial-Felder zurücksetzen.
-    await supabaseAdmin
-      .from("profiles")
-      .update({ trial_status: "active" })
-      .eq("id", data.user_id);
+    await supabaseAdmin.from("profiles").update({ trial_status: "active" }).eq("id", data.user_id);
 
     return { ok: true, package_id: created?.id ?? null, start_date: start, end_date: end };
   });

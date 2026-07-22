@@ -1,10 +1,10 @@
-import { Barcode, Camera, Loader2, Sparkles } from "lucide-react";
+import { Barcode, Camera, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { FoodResult } from "@/lib/nutrition.functions";
 import type { FavoriteCandidate, FavoriteFood, FoodPickOptions, RecentFood } from "../types";
-import { FavoriteButton, FoodNutritionLine, FoodResultRow } from "./FoodResultRow";
+import { FavoriteButton, FoodNutritionLine, FoodResultRow, FoodThumb } from "./FoodResultRow";
 
 export function FoodSearchPanel({
   query,
@@ -14,7 +14,6 @@ export function FoodSearchPanel({
   recentFoods,
   loadingFavorites,
   loadingRecent,
-  aiEstimating,
   isCoach,
   onQueryChange,
   onSearch,
@@ -23,7 +22,6 @@ export function FoodSearchPanel({
   onPickFood,
   onToggleFavorite,
   isFavorite,
-  onEstimateWithAi,
 }: {
   query: string;
   searching: boolean;
@@ -32,7 +30,6 @@ export function FoodSearchPanel({
   recentFoods: RecentFood[];
   loadingFavorites: boolean;
   loadingRecent: boolean;
-  aiEstimating: boolean;
   isCoach: boolean;
   onQueryChange: (query: string) => void;
   onSearch: () => void;
@@ -41,7 +38,6 @@ export function FoodSearchPanel({
   onPickFood: (food: FoodResult, options?: FoodPickOptions) => void;
   onToggleFavorite: (food: FavoriteCandidate) => void;
   isFavorite: (food: FoodResult) => boolean;
-  onEstimateWithAi: () => void;
 }) {
   const hasQuery = query.trim() !== "";
 
@@ -81,34 +77,7 @@ export function FoodSearchPanel({
           />
         )}
 
-        {hasQuery && results.length === 0 && (
-          <EmptySearchState
-            searching={searching}
-            aiEstimating={aiEstimating}
-            onEstimateWithAi={onEstimateWithAi}
-          />
-        )}
-
-        {hasQuery && results.length > 0 && !searching && (
-          <div className="flex justify-end pb-2">
-            <button
-              type="button"
-              onClick={onEstimateWithAi}
-              disabled={aiEstimating}
-              className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-gold disabled:opacity-50"
-            >
-              {aiEstimating ? (
-                <>
-                  <Loader2 className="h-3 w-3 animate-spin" /> Schätzt…
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-3 w-3" /> Nichts passt? Schätzung
-                </>
-              )}
-            </button>
-          </div>
-        )}
+        {hasQuery && results.length === 0 && <EmptySearchState searching={searching} />}
 
         <ul className="divide-y divide-border">
           {results.map((food, index) => (
@@ -158,19 +127,18 @@ function FoodSuggestions({
                 <button
                   onClick={() =>
                     onPickFood(food, {
-                      unit: food.serving_g ? "piece" : "g",
+                      unit: food.unit,
                       amount:
-                        food.last_amount_g != null
-                          ? String(Math.round(food.last_amount_g))
-                          : food.serving_g
-                            ? "1"
-                            : "100",
+                        food.last_amount != null ? String(Math.round(food.last_amount)) : "100",
                     })
                   }
-                  className="min-w-0 flex-1 px-2 py-3 text-left hover:bg-secondary"
+                  className="flex min-w-0 flex-1 items-center gap-3 px-2 py-3 text-left hover:bg-secondary"
                 >
-                  <div className="truncate text-sm font-medium">{food.name}</div>
-                  <FoodNutritionLine food={food} />
+                  <FoodThumb food={food} />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-medium">{food.name}</div>
+                    <FoodNutritionLine food={food} />
+                  </div>
                 </button>
                 <FavoriteButton active onClick={() => onToggleFavorite(food)} />
               </li>
@@ -193,14 +161,17 @@ function FoodSuggestions({
                 <button
                   onClick={() =>
                     onPickFood(food, {
-                      unit: "g",
-                      amount: String(Math.round(food.last_amount_g)),
+                      unit: food.unit,
+                      amount: String(Math.round(food.last_amount)),
                     })
                   }
-                  className="min-w-0 flex-1 px-2 py-3 text-left hover:bg-secondary"
+                  className="flex min-w-0 flex-1 items-center gap-3 px-2 py-3 text-left hover:bg-secondary"
                 >
-                  <div className="truncate text-sm font-medium">{food.name}</div>
-                  <FoodNutritionLine food={food} />
+                  <FoodThumb food={food} />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-medium">{food.name}</div>
+                    <FoodNutritionLine food={food} />
+                  </div>
                 </button>
                 <FavoriteButton active={isFavorite(food)} onClick={() => onToggleFavorite(food)} />
               </li>
@@ -218,15 +189,7 @@ function FoodSuggestions({
   );
 }
 
-function EmptySearchState({
-  searching,
-  aiEstimating,
-  onEstimateWithAi,
-}: {
-  searching: boolean;
-  aiEstimating: boolean;
-  onEstimateWithAi: () => void;
-}) {
+function EmptySearchState({ searching }: { searching: boolean }) {
   return (
     <div className="flex flex-col items-center gap-3 py-6 text-center">
       <p className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
@@ -239,23 +202,10 @@ function EmptySearchState({
         )}
       </p>
       {!searching && (
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={onEstimateWithAi}
-          disabled={aiEstimating}
-          className="gap-2 border-gold/40 text-gold hover:bg-gold/10"
-        >
-          {aiEstimating ? (
-            <>
-              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Schätzt…
-            </>
-          ) : (
-            <>
-              <Sparkles className="h-3.5 w-3.5" /> Nährwerte schätzen
-            </>
-          )}
-        </Button>
+        <p className="max-w-xs text-[11px] text-muted-foreground">
+          Nur geprüfte Lebensmittel werden angezeigt. Fehlende Produkte bitte zum Datenbank-Import
+          melden.
+        </p>
       )}
     </div>
   );

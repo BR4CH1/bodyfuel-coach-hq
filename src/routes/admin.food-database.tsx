@@ -36,7 +36,10 @@ function FoodDatabaseAdminPage() {
   return (
     <div className="container mx-auto max-w-6xl space-y-6 p-4 sm:p-6">
       <div className="flex items-center justify-between">
-        <Link to="/coach" className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+        <Link
+          to="/coach"
+          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        >
           <ArrowLeft className="h-4 w-4" /> Coach
         </Link>
         <Button variant="outline" size="sm" onClick={refresh} disabled={loading}>
@@ -51,8 +54,9 @@ function FoodDatabaseAdminPage() {
           <h1 className="font-display text-2xl font-bold">Lebensmittel-Datenbank</h1>
         </div>
         <p className="text-sm text-muted-foreground">
-          Zentrale BodyFuel-Datenbank. Importe (USDA, Open Food Facts, BLS) laufen über die Python-Skripte
-          im <code>bodyfuel_food_database/</code> ImportKit und schreiben direkt in Supabase.
+          Ein zentraler, auditierter Katalog für Suche, Tracker und Ernährungspläne. Importe (USDA,
+          Open Food Facts, BLS) laufen über das <code>bodyfuel_food_database/</code> ImportKit und
+          schreiben in <code>nutrition_foods</code>.
         </p>
       </div>
 
@@ -64,10 +68,15 @@ function FoodDatabaseAdminPage() {
 
       {stats && (
         <>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-5">
             <Stat label="Gesamt zentral" value={stats.totalFoods.toLocaleString("de-DE")} />
-            <Stat label="Verifiziert" value={stats.verifiedFoods.toLocaleString("de-DE")} />
-            <Stat label="Private Nutzer-Lebensmittel" value={stats.userFoods.toLocaleString("de-DE")} />
+            <Stat label="Freigegeben" value={stats.safeFoods.toLocaleString("de-DE")} />
+            <Stat label="Prüfung nötig" value={stats.reviewFoods.toLocaleString("de-DE")} />
+            <Stat label="Flüssigkeiten (ml)" value={stats.liquidFoods.toLocaleString("de-DE")} />
+            <Stat
+              label="Private Nutzer-Lebensmittel"
+              value={stats.userFoods.toLocaleString("de-DE")}
+            />
           </div>
 
           <div className="rounded-2xl border border-border bg-card p-4">
@@ -95,9 +104,8 @@ function FoodDatabaseAdminPage() {
               <div className="p-4 text-sm text-muted-foreground">
                 Noch keine Importläufe protokolliert. Starte einen Import mit den Python-Skripten:
                 <pre className="mt-2 overflow-x-auto rounded bg-muted p-2 text-xs">
-python scripts/import_usda.py
-python scripts/import_openfoodfacts.py
-python scripts/import_bls.py
+                  python scripts/import_usda.py python scripts/import_openfoodfacts.py python
+                  scripts/import_bls.py
                 </pre>
               </div>
             ) : (
