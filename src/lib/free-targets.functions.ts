@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { calculateProteinTarget } from "@/lib/nutrition-protein-policy";
 
 const schema = z.object({
   height_cm: z.coerce.number().int().positive().max(260),
@@ -33,22 +34,22 @@ function calculateFreeTargets(data: {
   const age = data.birthdate
     ? Math.max(15, Math.floor((Date.now() - new Date(data.birthdate).getTime()) / 31557600000))
     : null;
-  const bmr = h && age
-    ? data.gender === "female"
-      ? 10 * w + 6.25 * h - 5 * age - 161
-      : 10 * w + 6.25 * h - 5 * age + 5
-    : w * 24;
+  const bmr =
+    h && age
+      ? data.gender === "female"
+        ? 10 * w + 6.25 * h - 5 * age - 161
+        : 10 * w + 6.25 * h - 5 * age + 5
+      : w * 24;
   const goalMult: Record<FreeGoal, { t: number; r: number }> = {
-    fat_loss: { t: 0.80, r: 0.78 },
-    maintain: { t: 1.00, r: 1.00 },
-    lean_bulk: { t: 1.10, r: 1.05 },
+    fat_loss: { t: 0.8, r: 0.78 },
+    maintain: { t: 1.0, r: 1.0 },
+    lean_bulk: { t: 1.1, r: 1.05 },
   };
   const gm = goalMult[data.goal];
   const round50 = (v: number) => Math.max(1000, Math.round(v / 50) * 50);
   const kcal_t = round50(bmr * 1.6 * gm.t);
   const kcal_r = round50(bmr * 1.4 * gm.r);
-  const proteinPerKg = data.goal === "fat_loss" ? 2.2 : data.goal === "lean_bulk" ? 2.0 : 1.8;
-  const protein = Math.round(w * proteinPerKg);
+  const protein = calculateProteinTarget(w, data.goal);
   const fat_t = Math.round(w * (data.goal === "fat_loss" ? 0.8 : 0.9));
   const fat_r = Math.round(w * (data.goal === "fat_loss" ? 0.9 : 1.0));
   const carbs_t = Math.max(0, Math.round((kcal_t - protein * 4 - fat_t * 9) / 4));
@@ -148,7 +149,9 @@ export const seedFromUserMetadata = createServerFn({ method: "POST" })
     const height_cm = heightFromMeta ?? profileHeight;
     const weight_kg = weightFromMeta ?? latestWeight;
     const genderMeta = String(meta.seed_gender ?? "");
-    const gender = ["male", "female", "other"].includes(genderMeta) ? genderMeta : ((prof as any)?.gender ?? "other");
+    const gender = ["male", "female", "other"].includes(genderMeta)
+      ? genderMeta
+      : ((prof as any)?.gender ?? "other");
     const birthdate = String(meta.seed_birthdate ?? (prof as any)?.birthdate ?? "");
     const goal = asGoal(meta.seed_goal ?? (prof as any)?.training_goal);
 

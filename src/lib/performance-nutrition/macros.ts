@@ -15,6 +15,7 @@ import {
   type PerformanceDayType,
   type PerformanceGoal,
 } from "./constants";
+import { MAX_PROTEIN_G_PER_KG } from "../nutrition-protein-policy";
 
 function roundToNearest5(n: number): number {
   return Math.round(n / 5) * 5;
@@ -57,9 +58,7 @@ export function calculateMacros(input: MacroInput): MacroResult {
   const { isYouth, age, weightKg, goal, dayType, positionCluster, targetEnergyKcal } = input;
 
   // 1) Protein
-  const proteinFactor = isYouth
-    ? getYouthProteinFactor(age)
-    : PROTEIN_FACTORS_ADULT[goal];
+  const proteinFactor = isYouth ? getYouthProteinFactor(age) : PROTEIN_FACTORS_ADULT[goal];
   let proteinG = weightKg * proteinFactor;
 
   // 2) Fat (with hard minimum)
@@ -80,7 +79,7 @@ export function calculateMacros(input: MacroInput): MacroResult {
   const energyFloorApplied = carbsG > calculatedCarbsG;
 
   // 4) Round all macros to nearest 5 g
-  proteinG = roundToNearest5(proteinG);
+  proteinG = Math.min(roundToNearest5(proteinG), Math.floor(weightKg * MAX_PROTEIN_G_PER_KG));
   fatG = roundToNearest5(fatG);
   carbsG = roundToNearest5(carbsG);
 
