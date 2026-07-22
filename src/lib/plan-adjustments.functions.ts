@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { capProteinAndShiftToCarbs } from "@/lib/nutrition-protein-policy";
 
 async function assertCoach(supabase: any, userId: string) {
   const { data: isCoach } = await supabase.rpc("has_role", {
@@ -59,17 +60,23 @@ export const generatePlanAdjustments = createServerFn({ method: "POST" })
       await Promise.all([
         supabase
           .from("profiles")
-          .select("first_name, gender, height_cm, current_weight_kg, target_weight_kg, goal, activity_level, birthdate")
+          .select(
+            "first_name, gender, height_cm, current_weight_kg, target_weight_kg, goal, activity_level, birthdate",
+          )
           .eq("id", target)
           .maybeSingle(),
         supabase
           .from("nutrition_targets")
-          .select("kcal, protein_g, carbs_g, fat_g, kcal_rest, protein_g_rest, carbs_g_rest, fat_g_rest")
+          .select(
+            "kcal, protein_g, carbs_g, fat_g, kcal_rest, protein_g_rest, carbs_g_rest, fat_g_rest",
+          )
           .eq("user_id", target)
           .maybeSingle(),
         supabase
           .from("weekly_checkins")
-          .select("week_start, weight_kg, training_adherence, nutrition_adherence, energy, sleep_quality, struggles")
+          .select(
+            "week_start, weight_kg, training_adherence, nutrition_adherence, energy, sleep_quality, struggles",
+          )
           .eq("user_id", target)
           .order("week_start", { ascending: false })
           .limit(4),
@@ -194,7 +201,7 @@ ALLGEMEINE REGELN:
 - Wenn nutrition_intake_14d.logged_days < 5 → confidence höchstens "low" + Warnung "Zu wenig Tracking-Tage".
 - Bei Gewichtsplateau (|change_pct_per_week| < 0.2) im Cut → kcal runter ODER Cardio/NEAT.
 - Bei Gewichtsverlust > 1%/Woche → kcal anheben (Muskelverlust-Risiko).
-- Protein: ~1.8–2.2 g/kg im Cut, ~1.6–2.0 im Aufbau.
+- Protein: ~1.8–2.0 g/kg im Cut, ~1.6–1.8 im Aufbau. NIEMALS über 2.0 g/kg Körpergewicht.
 - Bei completion_rate < 0.6 → Volumen reduzieren oder Frequenz anpassen, NICHT erhöhen.
 - Bei avg_energy < 5 oder avg_sleep_quality < 5 → Deload oder kcal-Reserve berücksichtigen.
 - Wenn current_targets fehlt: nutrition=null + Warnung.
@@ -202,7 +209,7 @@ ALLGEMEINE REGELN:
 
 VARIANTEN-UNTERSCHIED:
 - Konservativ: kcal-Änderung ±50–150, max +1/-1 Satz Volumen, vorsichtige Sprache.
-- Aggressiv: kcal-Änderung ±200–400, ±2 Sätze Volumen oder Deload, klarere Maßnahmen — aber innerhalb sicherer Grenzen (Protein nicht unter 1.6 g/kg, kcal nicht unter BMR*1.1).
+- Aggressiv: kcal-Änderung ±200–400, ±2 Sätze Volumen oder Deload, klarere Maßnahmen — aber innerhalb sicherer Grenzen (Protein 1.6–2.0 g/kg, kcal nicht unter BMR*1.1).
 
 Antworte AUSSCHLIESSLICH mit gültigem JSON:
 {
@@ -239,7 +246,8 @@ Antworte AUSSCHLIESSLICH mit gültigem JSON:
       }),
     });
 
-    if (aiRes.status === 429) throw new Error("Rate-Limit erreicht — bitte gleich nochmal versuchen.");
+    if (aiRes.status === 429)
+      throw new Error("Rate-Limit erreicht — bitte gleich nochmal versuchen.");
     if (aiRes.status === 402) throw new Error("Guthaben aufgebraucht — bitte aufladen.");
     if (!aiRes.ok) {
       const txt = await aiRes.text();
@@ -254,24 +262,36 @@ Antworte AUSSCHLIESSLICH mit gültigem JSON:
       throw new Error("Antwort konnte nicht gelesen werden.");
     }
 
-    const normalizeVariant = (v: any, fallbackLabel: "Konservativ" | "Aggressiv"): PlanAdjustmentVariant => ({
-      label:
-        v?.label === "Konservativ" || v?.label === "Aggressiv" ? v.label : fallbackLabel,
+    const profileForWeight = profileRes.data as { current_weight_kg?: unknown } | null;
+    const latestWeight = Number(weights[0]?.weight_kg ?? profileForWeight?.current_weight_kg);
+    const weightForProteinCap =
+      Number.isFinite(latestWeight) && latestWeight > 0 ? latestWeight : null;
+
+    const normalizeNutrition = (nutrition: Record<string, unknown>): NutritionAdjustment => {
+      const shifted = capProteinAndShiftToCarbs({
+        proteinG: Number(nutrition.protein_g ?? 0),
+        carbsG: Number(nutrition.carbs_g ?? 0),
+        weightKg: weightForProteinCap,
+      });
+      return {
+        kcal: Math.round(Number(nutrition.kcal ?? 0)),
+        protein_g: shifted.proteinG,
+        carbs_g: shifted.carbsG,
+        fat_g: Math.round(Number(nutrition.fat_g ?? 0)),
+        rationale: String(nutrition.rationale ?? ""),
+      };
+    };
+
+    const normalizeVariant = (
+      v: any,
+      fallbackLabel: "Konservativ" | "Aggressiv",
+    ): PlanAdjustmentVariant => ({
+      label: v?.label === "Konservativ" || v?.label === "Aggressiv" ? v.label : fallbackLabel,
       summary: typeof v?.summary === "string" ? v.summary : "",
       confidence: (["high", "medium", "low"].includes(v?.confidence) ? v.confidence : "low") as
-        | "high"
-        | "medium"
-        | "low",
+        "high" | "medium" | "low",
       nutrition:
-        v?.nutrition && typeof v.nutrition === "object"
-          ? {
-              kcal: Math.round(Number(v.nutrition.kcal ?? 0)),
-              protein_g: Math.round(Number(v.nutrition.protein_g ?? 0)),
-              carbs_g: Math.round(Number(v.nutrition.carbs_g ?? 0)),
-              fat_g: Math.round(Number(v.nutrition.fat_g ?? 0)),
-              rationale: String(v.nutrition.rationale ?? ""),
-            }
-          : null,
+        v?.nutrition && typeof v.nutrition === "object" ? normalizeNutrition(v.nutrition) : null,
       training: Array.isArray(v?.training)
         ? v.training.slice(0, 5).map((t: any) => ({
             area: (["volume", "intensity", "frequency", "exercise_swap", "deload"].includes(t?.area)
@@ -316,11 +336,33 @@ export const applyNutritionAdjustment = createServerFn({ method: "POST" })
       .eq("user_id", data.user_id)
       .maybeSingle();
 
+    const [{ data: latestMeasurement }, { data: profile }] = await Promise.all([
+      supabase
+        .from("body_measurements")
+        .select("weight_kg")
+        .eq("user_id", data.user_id)
+        .not("weight_kg", "is", null)
+        .order("measured_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase.from("profiles").select("current_weight_kg").eq("id", data.user_id).maybeSingle(),
+    ]);
+    const measurementForWeight = latestMeasurement as { weight_kg?: unknown } | null;
+    const profileForWeight = profile as { current_weight_kg?: unknown } | null;
+    const latestWeight = Number(
+      measurementForWeight?.weight_kg ?? profileForWeight?.current_weight_kg,
+    );
+    const shifted = capProteinAndShiftToCarbs({
+      proteinG: data.protein_g,
+      carbsG: data.carbs_g,
+      weightKg: Number.isFinite(latestWeight) && latestWeight > 0 ? latestWeight : null,
+    });
+
     const patch = {
       user_id: data.user_id,
       kcal: Math.max(800, Math.min(6000, Math.round(data.kcal))),
-      protein_g: Math.max(0, Math.round(data.protein_g)),
-      carbs_g: Math.max(0, Math.round(data.carbs_g)),
+      protein_g: shifted.proteinG,
+      carbs_g: shifted.carbsG,
       fat_g: Math.max(0, Math.round(data.fat_g)),
       updated_by: userId,
       updated_at: new Date().toISOString(),
@@ -338,7 +380,12 @@ export const applyNutritionAdjustment = createServerFn({ method: "POST" })
       area: "macros",
       summary: `kcal ${patch.kcal} · P${patch.protein_g}/C${patch.carbs_g}/F${patch.fat_g}`,
       before_json: before ?? null,
-      after_json: { kcal: patch.kcal, protein_g: patch.protein_g, carbs_g: patch.carbs_g, fat_g: patch.fat_g },
+      after_json: {
+        kcal: patch.kcal,
+        protein_g: patch.protein_g,
+        carbs_g: patch.carbs_g,
+        fat_g: patch.fat_g,
+      },
       rationale: data.rationale ?? null,
     });
 
@@ -368,10 +415,7 @@ export const applyTrainingAdjustment = createServerFn({ method: "POST" })
 
     if (!plan) throw new Error("Kein aktiver Trainingsplan gefunden.");
 
-    const { data: days } = await supabase
-      .from("training_days")
-      .select("id")
-      .eq("plan_id", plan.id);
+    const { data: days } = await supabase.from("training_days").select("id").eq("plan_id", plan.id);
     const dayIds = (days ?? []).map((d: any) => d.id);
 
     let summary = "";
@@ -391,7 +435,9 @@ export const applyTrainingAdjustment = createServerFn({ method: "POST" })
       for (const u of updates) {
         await supabase.from("training_exercises").update({ target_sets: u.next }).eq("id", u.id);
       }
-      beforeSnapshot = { exercises: (exs ?? []).map((e: any) => ({ name: e.name, sets: e.target_sets })) };
+      beforeSnapshot = {
+        exercises: (exs ?? []).map((e: any) => ({ name: e.name, sets: e.target_sets })),
+      };
       afterSnapshot = { sets_delta: action.sets_delta, affected: updates.length };
       summary = `Volumen ${action.sets_delta > 0 ? "+" : ""}${action.sets_delta} Sätze auf ${updates.length} Übungen`;
     } else if (action.type === "deload" && dayIds.length > 0) {
@@ -407,7 +453,9 @@ export const applyTrainingAdjustment = createServerFn({ method: "POST" })
       for (const u of updates) {
         await supabase.from("training_exercises").update({ target_sets: u.next }).eq("id", u.id);
       }
-      beforeSnapshot = { exercises: (exs ?? []).map((e: any) => ({ name: e.name, sets: e.target_sets })) };
+      beforeSnapshot = {
+        exercises: (exs ?? []).map((e: any) => ({ name: e.name, sets: e.target_sets })),
+      };
       afterSnapshot = { scale, affected: updates.length };
       summary = `Deload-Woche: Sätze × ${scale.toFixed(2)} (${updates.length} Übungen)`;
     } else {

@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { calculateProteinTarget, capProteinAndShiftToCarbs } from "./nutrition-protein-policy";
 import { daysUntilNextShopping } from "./shopping-cycle";
 
 type MacroTarget = { kcal: number; protein_g: number; carbs_g: number; fat_g: number };
@@ -350,16 +351,20 @@ async function loadPerson(supabase: any, userId: string) {
     if (goalDirection === "cut") tdee -= 400;
     else if (goalDirection === "bulk") tdee += 300;
     baseKcal = Math.round(tdee / 10) * 10;
-    const ppk = goalDirection === "cut" ? 2.2 : goalDirection === "bulk" ? 2.0 : 1.8;
-    baseProtein = Math.round(currentWeight * ppk);
+    baseProtein = calculateProteinTarget(currentWeight, goalDirection);
     baseFat = Math.round((baseKcal * 0.27) / 9);
     baseCarbs = Math.max(80, Math.round((baseKcal - baseProtein * 4 - baseFat * 9) / 4));
   }
 
+  const cappedBase = capProteinAndShiftToCarbs({
+    proteinG: baseProtein ?? 150,
+    carbsG: baseCarbs ?? 240,
+    weightKg: currentWeight,
+  });
   const tg = buildIssn({
     kcal: baseKcal ?? 2200,
-    protein_g: baseProtein ?? 150,
-    carbs_g: baseCarbs ?? 240,
+    protein_g: cappedBase.proteinG,
+    carbs_g: cappedBase.carbsG,
     fat_g: baseFat ?? 70,
   });
 
@@ -538,7 +543,7 @@ export const generatePartnerNutritionPlanDraft = createServerFn({ method: "POST"
       .join("\n");
 
     const targetBlockFor = (n: string, tg: { training: MacroTarget; rest: MacroTarget }) =>
-      `${n} — TRAINING: ${tg.training.kcal} kcal / P ${tg.training.protein_g} / KH ${tg.training.carbs_g} / F ${tg.training.fat_g}; REST: ${tg.rest.kcal} kcal / P ${tg.rest.protein_g} / KH ${tg.rest.carbs_g} / F ${tg.rest.fat_g}`;
+      `${n} — TRAINING: ${tg.training.kcal} kcal / P max. ${tg.training.protein_g} / KH ${tg.training.carbs_g} / F ${tg.training.fat_g}; REST: ${tg.rest.kcal} kcal / P max. ${tg.rest.protein_g} / KH ${tg.rest.carbs_g} / F ${tg.rest.fat_g}`;
 
     // Wünsche per applies_to neu verteilen:
     // - self  → bleibt bei der Person, die ihn eingereicht hat
@@ -659,6 +664,7 @@ ${noCookBlock}
 🎯 INDIVIDUELLE ZIELE (NIE angleichen):
 ${targetBlockFor(a.name, a.targets)}
 ${targetBlockFor(b.name, b.targets)}
+Die P-Werte sind HARTE Tagesobergrenzen. Protein ideal bis 5 g darunter treffen, aber niemals überschreiten; verbleibende Kalorien auf Kohlenhydrate verteilen.
 
 🍽️ GEMEINSAME MAHLZEITEN: ${SHARED || "(keine)"}
 👤 INDIVIDUELLE MAHLZEITEN: ${SOLO || "(keine)"}
@@ -796,6 +802,14 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
           } as ComputedPersonMeal);
         }
 
+        const target = pickType(dayIndex) === "rest" ? who.targets.rest : who.targets.training;
+        const proteinTotal = meals.reduce((sum, meal) => sum + meal.protein_g, 0);
+        if (proteinTotal > target.protein_g) {
+          issues.push(
+            `${who.name}, Tag ${dayIndex + 1}: Protein-Obergrenze überschritten (${Math.round(proteinTotal)} g statt max. ${target.protein_g} g)`,
+          );
+        }
+
         cleaned.push({
           name: `${schedule[dayIndex].label} — ${pickType(dayIndex) === "rest" ? "Restday" : "Trainingstag"}`,
           meals,
@@ -882,13 +896,18 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
           generatedDays = candidate;
           break;
         } catch (e: any) {
-          const issues = Array.isArray(e?.issues) ? e.issues : [e?.message ?? "unbekannter Fehler"];
+          const issues: string[] = Array.isArray(e?.issues)
+            ? e.issues.map((issue: unknown) => String(issue))
+            : [String(e?.message ?? "unbekannter Fehler")];
           console.warn(
-            `[partner-plan] attempt ${att + 1}/${attempts.length} failed safe-pool validation (model=${model}).`,
+            `[partner-plan] attempt ${att + 1}/${attempts.length} failed validation (model=${model}).`,
             issues.slice(0, 8),
           );
-          const uniqueBad = Array.from(new Set(issues.map((x: string) => String(x)))).slice(0, 20);
-          correctionNote = `\n\n⚠️ RETRY-KORREKTUR: Der vorherige Versuch enthielt Zutaten/Mahlzeiten, die NICHT eindeutig aus dem SAFE FOOD POOL berechenbar waren oder wegen No-Go/Allergie entfernt wurden:\n- ${uniqueBad.join("\n- ")}\n\nGeneriere den Plan komplett neu. Verwende AUSSCHLIESSLICH food_id-Werte aus dem SAFE FOOD POOL. Ersetze Energy Bar/Proteinriegel/Fertigprodukte durch konkrete Katalog-Zutaten, sofern kein passender food_id existiert.`;
+          const uniqueBad = Array.from(new Set(issues)).slice(0, 20);
+          const hasProteinBreach = uniqueBad.some((issue) => issue.includes("Protein-Obergrenze"));
+          correctionNote = hasProteinBreach
+            ? `\n\n⚠️ RETRY-KORREKTUR: Die aus den Zutaten berechnete Protein-Tagessumme überschritt die harte Obergrenze:\n- ${uniqueBad.join("\n- ")}\n\nGeneriere den Plan komplett neu. Reduziere proteinreiche Zutaten; ersetze die frei werdenden Kalorien durch kohlenhydratreiche Zutaten aus dem SAFE FOOD POOL. Kein Tag darf den P-max-Wert überschreiten.`
+            : `\n\n⚠️ RETRY-KORREKTUR: Der vorherige Versuch enthielt Zutaten/Mahlzeiten, die NICHT eindeutig aus dem SAFE FOOD POOL berechenbar waren oder wegen No-Go/Allergie entfernt wurden:\n- ${uniqueBad.join("\n- ")}\n\nGeneriere den Plan komplett neu. Verwende AUSSCHLIESSLICH food_id-Werte aus dem SAFE FOOD POOL. Ersetze Energy Bar/Proteinriegel/Fertigprodukte durch konkrete Katalog-Zutaten, sofern kein passender food_id existiert.`;
           continue;
         }
       }

@@ -8,6 +8,7 @@ import type {
   PlanScheduleDay,
 } from "@/features/nutrition-plan-ai/types";
 import type { EngineIngredient, EngineResult } from "@/lib/nutrition-engine.server";
+import { calculateProteinTarget, capProteinAndShiftToCarbs } from "@/lib/nutrition-protein-policy";
 
 export const MAX_KCAL_PER_MEAL = 850;
 
@@ -260,9 +261,7 @@ export function resolveNutritionTargets(input: {
     if (input.goalDirection === "cut") tdee -= 400;
     else if (input.goalDirection === "bulk") tdee += 300;
     kcal = Math.round(tdee / 10) * 10;
-    const proteinPerKg =
-      input.goalDirection === "cut" ? 2.2 : input.goalDirection === "bulk" ? 2 : 1.8;
-    protein = Math.round(input.currentWeight * proteinPerKg);
+    protein = calculateProteinTarget(input.currentWeight, input.goalDirection);
     fat = Math.round((kcal * 0.27) / 9);
     carbs = Math.max(80, Math.round((kcal - protein * 4 - fat * 9) / 4));
   }
@@ -273,6 +272,19 @@ export function resolveNutritionTargets(input: {
     carbs_g: carbs ?? 240,
     fat_g: fat ?? 70,
   };
+  const capTarget = (target: MacroTarget): MacroTarget => {
+    const capped = capProteinAndShiftToCarbs({
+      proteinG: target.protein_g,
+      carbsG: target.carbs_g,
+      weightKg: input.currentWeight,
+    });
+    return {
+      ...target,
+      protein_g: capped.proteinG,
+      carbs_g: capped.carbsG,
+    };
+  };
+  training = capTarget(training);
   const hasRestTargets =
     source.kcal_rest != null &&
     source.protein_g_rest != null &&
@@ -281,12 +293,12 @@ export function resolveNutritionTargets(input: {
   if (hasRestTargets) {
     return {
       training,
-      rest: {
+      rest: capTarget({
         kcal: source.kcal_rest!,
         protein_g: source.protein_g_rest!,
         carbs_g: source.carbs_g_rest!,
         fat_g: source.fat_g_rest!,
-      },
+      }),
     };
   }
   const cycled = buildIssnCarbCyclingTargets(training);

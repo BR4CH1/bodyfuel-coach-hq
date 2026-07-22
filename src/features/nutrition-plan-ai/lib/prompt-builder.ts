@@ -75,7 +75,7 @@ function buildPlateauNote(weightSeries: WeightMeasurementSource[], now: Date): s
   if (Math.abs(difference) > 0.3) return "";
 
   const days = Math.round((nowMs - new Date(olderReference.measured_at).getTime()) / 86_400_000);
-  return `⚠️ GEWICHTSPLATEAU erkannt: Gewicht stagniert seit ~${days} Tagen (Δ ${difference > 0 ? "+" : ""}${difference} kg). Passe Kalorien & Portionen um −100 bis −200 kcal/Tag an (bei Fettabbau-Ziel) bzw. +100 bis +200 kcal/Tag (bei Aufbau). Wähle bewusst sättigendere/energieärmere Alternativen (mehr Volumen, mehr Protein, weniger versteckte Fette) bzw. energiedichtere Optionen bei Aufbau. Halte die unten genannten Tagesziele weiterhin innerhalb ±5 %.`;
+  return `⚠️ GEWICHTSPLATEAU erkannt: Gewicht stagniert seit ~${days} Tagen (Δ ${difference > 0 ? "+" : ""}${difference} kg). Passe Kalorien & Portionen um −100 bis −200 kcal/Tag an (bei Fettabbau-Ziel) bzw. +100 bis +200 kcal/Tag (bei Aufbau). Wähle bewusst sättigendere/energieärmere Alternativen (mehr Volumen, weniger versteckte Fette) bzw. energiedichtere Optionen bei Aufbau. Halte die unten genannten Tagesziele weiterhin ein; die Protein-Obergrenze darf nicht überschritten werden.`;
 }
 
 function resolveKitchenRestrictions(profile: SmartNutritionProfileSource) {
@@ -288,15 +288,15 @@ export function buildNutritionPlanGenerationContext(input: {
 Trainingstage haben IMMER mehr Kalorien & Kohlenhydrate als Restdays (höherer Glykogen-/Energiebedarf).
 Protein bleibt an beiden Tagen ähnlich. Fett darf am Restday leicht höher sein.
 
-TRAININGSTAG-Ziel (für "type":"training", ±5 % treffen):
+TRAININGSTAG-Ziel (für "type":"training"):
 - kcal: ${trainingTargets.kcal}
-- Protein: ${trainingTargets.protein_g} g
+- Protein (HARTE Tagesobergrenze): ${trainingTargets.protein_g} g
 - Kohlenhydrate: ${trainingTargets.carbs_g} g
 - Fett: ${trainingTargets.fat_g} g
 
-RESTDAY-Ziel (für "type":"rest", ±5 % treffen):
+RESTDAY-Ziel (für "type":"rest"):
 - kcal: ${restTargets.kcal}
-- Protein: ${restTargets.protein_g} g
+- Protein (HARTE Tagesobergrenze): ${restTargets.protein_g} g
 - Kohlenhydrate: ${restTargets.carbs_g} g
 - Fett: ${restTargets.fat_g} g
 
@@ -340,7 +340,7 @@ Die Kalorien-/Makro-Ziele sind auf aktuelles Gewicht, Wunschgewicht und Training
 
 🚨 KALORIEN-OBERGRENZE PRO MAHLZEIT: 850 kcal (HART). Keine einzelne Mahlzeit darf 850 kcal überschreiten — auch nicht Frühstück, Mittag oder Abend. Wenn das Tages-kcal-Ziel mit 4 Mahlzeiten nicht erreicht wird, FÜGE WEITERE SNACKS HINZU (Snack 2, Snack 3, …), bis das Tagesziel erreicht ist. Lieber 5–7 kleinere Mahlzeiten als 3–4 zu große. Verteile Kalorien gleichmäßig: typisch Hauptmahlzeiten 500–800 kcal, Snacks 150–400 kcal.
 
-🎯 ZIELWERTE EXAKT TREFFEN: Tages-kcal innerhalb ±3 %, Protein/Kohlenhydrate/Fett jeweils innerhalb ±5 g der Vorgaben. Plane Portionsgrößen mathematisch so, dass die Summe der Mahlzeiten möglichst genau den Tageszielen entspricht — nicht überschreiten, nicht unterschreiten.
+🎯 ZIELWERTE EXAKT TREFFEN: Tages-kcal innerhalb ±3 %, Kohlenhydrate/Fett jeweils innerhalb ±5 g. Protein ideal zwischen Vorgabe−5 g und Vorgabe, aber NIEMALS über der angegebenen Protein-Obergrenze. Verteile verbleibende Kalorien auf Kohlenhydrate. Plane Portionsgrößen mathematisch so, dass die Summe der Mahlzeiten möglichst genau den Tageszielen entspricht.
 ${noCookBlock}
 
 ${plateauNote ? `\n${plateauNote}\n` : ""}
