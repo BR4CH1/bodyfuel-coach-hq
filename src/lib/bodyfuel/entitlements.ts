@@ -31,6 +31,10 @@ export type Entitlements = {
   primaryStaffRole: StaffRoleKey | null;
   /** Staff-Rolle je Organisation, damit der aktive Coach-Kontext nie die Rolle einer anderen Org übernimmt. */
   staffRolesByOrg: Record<string, StaffRoleKey>;
+  /** Aktive Vereins-Slugs je Organisations-ID, damit Routen stale Coach-Kontexte sauber zurückführen können. */
+  orgSlugsById: Record<string, string>;
+  /** Aktive Organisations-IDs je Slug. */
+  orgIdsBySlug: Record<string, string>;
   loading: boolean;
 };
 
@@ -45,6 +49,8 @@ const EMPTY: Entitlements = {
   primaryOrgId: null,
   primaryStaffRole: null,
   staffRolesByOrg: {},
+  orgSlugsById: {},
+  orgIdsBySlug: {},
   loading: false,
 };
 
@@ -100,6 +106,14 @@ export function useEntitlements(): Entitlements {
         organization: { id: string; slug: string; status: string } | null;
       }>;
       const activeStaff = staffRows.filter((r) => r.organization?.status === "active");
+
+      const orgSlugsById: Record<string, string> = {};
+      const orgIdsBySlug: Record<string, string> = {};
+      for (const org of [...activeMems, ...activeStaff.map((row) => row.organization).filter(Boolean)]) {
+        if (!org?.id || !org.slug) continue;
+        orgSlugsById[org.id] = org.slug;
+        orgIdsBySlug[org.slug] = org.id;
+      }
 
       const primaryOrg = activeMems[0] ?? activeStaff[0]?.organization ?? null;
       const primaryOrgSlug = primaryOrg?.slug ?? null;
@@ -157,6 +171,8 @@ export function useEntitlements(): Entitlements {
         primaryOrgId,
         primaryStaffRole,
         staffRolesByOrg,
+        orgSlugsById,
+        orgIdsBySlug,
       };
     },
   });
@@ -175,6 +191,8 @@ export function useEntitlements(): Entitlements {
       primaryOrgId: null as string | null,
       primaryStaffRole: null as StaffRoleKey | null,
       staffRolesByOrg: {} as Record<string, StaffRoleKey>,
+      orgSlugsById: {} as Record<string, string>,
+      orgIdsBySlug: {} as Record<string, string>,
     };
   const hasAny = d.hasBodyfuelSmart || d.hasBodyfuelCoaching;
 
@@ -189,6 +207,8 @@ export function useEntitlements(): Entitlements {
     primaryOrgId: d.primaryOrgId,
     primaryStaffRole: d.primaryStaffRole,
     staffRolesByOrg: d.staffRolesByOrg,
+    orgSlugsById: d.orgSlugsById,
+    orgIdsBySlug: d.orgIdsBySlug,
     loading: false,
   };
 }
