@@ -92,6 +92,7 @@ function OrgIndex() {
 
   const chooseMode = (mode: "athlete" | "staff") => {
     setOrgMode(org.slug, mode);
+    setActiveContext(org.slug, mode);
     setNeedsChoice(false);
     if (!ctx || !flags) return;
     if (mode === "staff") {
