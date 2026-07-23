@@ -193,7 +193,15 @@ function FoodSuggestions({
   );
 }
 
-function EmptySearchState({ searching }: { searching: boolean }) {
+function EmptySearchState({
+  searching,
+  estimatingAi,
+  onEstimateAi,
+}: {
+  searching: boolean;
+  estimatingAi: boolean;
+  onEstimateAi: () => void;
+}) {
   return (
     <div className="flex flex-col items-center gap-3 py-6 text-center">
       <p className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
@@ -206,10 +214,30 @@ function EmptySearchState({ searching }: { searching: boolean }) {
         )}
       </p>
       {!searching && (
-        <p className="max-w-xs text-[11px] text-muted-foreground">
-          Nur geprüfte Lebensmittel werden angezeigt. Fehlende Produkte bitte zum Datenbank-Import
-          melden.
-        </p>
+        <>
+          <p className="max-w-xs text-[11px] text-muted-foreground">
+            Nutze die KI-Schätzung als Fallback — Werte sind ungefähr und werden mit Quelle
+            „KI-Schätzung" markiert.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onEstimateAi}
+            disabled={estimatingAi}
+            className="border-primary/40 text-primary hover:bg-primary/10"
+          >
+            {estimatingAi ? (
+              <>
+                <Loader2 className="mr-2 h-3 w-3 animate-spin" /> Schätze…
+              </>
+            ) : (
+              <>
+                <Sparkles className="mr-2 h-3 w-3" /> KI-Schätzung
+              </>
+            )}
+          </Button>
+        </>
       )}
     </div>
   );
