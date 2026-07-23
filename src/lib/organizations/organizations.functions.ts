@@ -164,6 +164,15 @@ export const getMyOrgContexts = createServerFn({ method: "GET" })
       };
       byId.set(org.id, existing);
     }
+    // Dual-role by default: any org where the user has staff access should also
+    // expose the personal customer/athlete view, so the switcher lists both
+    // "Coach" and "Athlete" entries side by side even without a dedicated
+    // athlete membership row.
+    for (const entry of byId.values()) {
+      if (entry.staff && !entry.athlete) {
+        entry.athlete = { role: "athlete", onboarding_completed: true };
+      }
+    }
     return Array.from(byId.values());
   });
 
