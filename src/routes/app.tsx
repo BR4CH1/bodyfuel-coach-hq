@@ -29,18 +29,21 @@ function AppEntryPage() {
     // pushed into the coach dashboard on reload.
     const activeCtx = getActiveOrgContext();
     if (activeCtx) {
-      if (activeCtx.mode === "staff" && ent.primaryOrgId && ent.primaryOrgSlug === activeCtx.slug) {
-        navigate({ to: "/coach/teams/$orgId", params: { orgId: ent.primaryOrgId }, replace: true });
+      const activeOrgId = ent.orgIdsBySlug[activeCtx.slug] ?? null;
+      const hasStaffAccess = activeOrgId ? !!ent.staffRolesByOrg[activeOrgId] : false;
+
+      if (activeCtx.mode === "staff" && activeOrgId && hasStaffAccess) {
+        navigate({ to: "/coach/teams/$orgId", params: { orgId: activeOrgId }, replace: true });
         return;
       }
       if (activeCtx.mode === "athlete") {
         navigate({ to: "/$orgSlug/home", params: { orgSlug: activeCtx.slug }, replace: true });
         return;
       }
-      // Fallback for staff mode when the active slug isn't the primary org:
-      // land on the org index which will re-route based on stored mode.
+      // Stale staff context after role removal: fall back to the same org's
+      // athlete portal instead of sending the user into a forbidden cockpit.
       if (activeCtx.mode === "staff") {
-        navigate({ to: "/$orgSlug", params: { orgSlug: activeCtx.slug }, replace: true });
+        navigate({ to: "/$orgSlug/home", params: { orgSlug: activeCtx.slug }, replace: true });
         return;
       }
     }
