@@ -31,6 +31,7 @@ export function AddFoodDialog({
   isCoach,
   unit,
   amountStr,
+  estimatingAi,
   onClose,
   onSourceChange,
   onQueryChange,
@@ -45,6 +46,7 @@ export function AddFoodDialog({
   onAmountChange,
   onBack,
   onAddPicked,
+  onEstimateAi,
 }: {
   openMeal: Meal;
   picking: FoodResult | null;
