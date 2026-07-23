@@ -127,6 +127,55 @@ export function targetsFor(day: BuilderDay, ctx: CustomerPlanContext) {
       };
 }
 
+export type MacroValues = { kcal: number; p: number; c: number; f: number };
+
+export type DayNutritionSummary = {
+  totals: MacroValues;
+  target: MacroValues;
+  filledSlots: number;
+  totalSlots: number;
+  isComplete: boolean;
+  isBalanced: boolean;
+};
+
+export function summarizeDay(
+  day: BuilderDay,
+  ctx: CustomerPlanContext,
+  library: LibraryMeal[],
+): DayNutritionSummary {
+  const target = targetsFor(day, ctx);
+  const totals = day.meals.reduce<MacroValues>(
+    (acc, meal) => {
+      const macros = mealMacros(meal, library);
+      return {
+        kcal: acc.kcal + macros.kcal,
+        p: acc.p + macros.p,
+        c: acc.c + macros.c,
+        f: acc.f + macros.f,
+      };
+    },
+    { kcal: 0, p: 0, c: 0, f: 0 },
+  );
+  const filledSlots = new Set(day.meals.map((meal) => meal.slot)).size;
+  const relativeKcalDifference = target.kcal
+    ? Math.abs(totals.kcal - target.kcal) / target.kcal
+    : 0;
+
+  return {
+    totals,
+    target,
+    filledSlots,
+    totalSlots: SLOTS.length,
+    isComplete: filledSlots === SLOTS.length,
+    isBalanced: filledSlots === SLOTS.length && relativeKcalDifference <= 0.1,
+  };
+}
+
+export function macroProgress(value: number, target: number): number {
+  if (!target) return 0;
+  return Math.max(0, Math.min(100, Math.round((value / target) * 100)));
+}
+
 // Returns { day, missing: Slot[] } — never touches locked meals.
 export function autoFillDayImpl(
   day: BuilderDay,
@@ -314,9 +363,14 @@ export function rebalanceDay(
   library: LibraryMeal[],
 ): BuilderDay {
   const t = targetsFor(day, ctx).kcal;
-  const cur = day.meals.reduce((s, m) => s + mealMacros(m, library).kcal, 0);
-  if (!t || !cur) return day;
-  const scale = t / cur;
+  const lockedKcal = day.meals
+    .filter((meal) => meal.is_locked)
+    .reduce((sum, meal) => sum + mealMacros(meal, library).kcal, 0);
+  const unlockedKcal = day.meals
+    .filter((meal) => !meal.is_locked)
+    .reduce((sum, meal) => sum + mealMacros(meal, library).kcal, 0);
+  if (!t || !unlockedKcal) return day;
+  const scale = Math.max(0, t - lockedKcal) / unlockedKcal;
   if (scale > 0.92 && scale < 1.08) return day;
   return {
     ...day,
