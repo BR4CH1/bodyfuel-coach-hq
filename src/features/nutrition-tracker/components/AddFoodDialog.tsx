@@ -114,6 +114,7 @@ export function AddFoodDialog({
                 loadingFavorites={loadingFavorites}
                 loadingRecent={loadingRecent}
                 isCoach={isCoach}
+                estimatingAi={estimatingAi}
                 onQueryChange={onQueryChange}
                 onSearch={onSearch}
                 onOpenScanner={onOpenScanner}
@@ -121,6 +122,7 @@ export function AddFoodDialog({
                 onPickFood={onPickFood}
                 onToggleFavorite={onToggleFavorite}
                 isFavorite={isFavorite}
+                onEstimateAi={onEstimateAi}
               />
             ) : (
               <CustomMealsPanel
