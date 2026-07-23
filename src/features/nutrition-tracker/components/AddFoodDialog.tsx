@@ -63,7 +63,9 @@ export function AddFoodDialog({
   isCoach: boolean;
   unit: FoodUnit;
   amountStr: string;
+  estimatingAi: boolean;
   onClose: () => void;
+  onEstimateAi: () => void;
   onSourceChange: (source: AddFoodSource) => void;
   onQueryChange: (query: string) => void;
   onSearch: () => void;
