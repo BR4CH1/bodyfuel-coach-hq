@@ -1,4 +1,4 @@
-import { Barcode, Camera, Loader2 } from "lucide-react";
+import { Barcode, Camera, Loader2, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ export function FoodSearchPanel({
   loadingFavorites,
   loadingRecent,
   isCoach,
+  estimatingAi,
   onQueryChange,
   onSearch,
   onOpenScanner,
@@ -22,6 +23,7 @@ export function FoodSearchPanel({
   onPickFood,
   onToggleFavorite,
   isFavorite,
+  onEstimateAi,
 }: {
   query: string;
   searching: boolean;
@@ -31,6 +33,7 @@ export function FoodSearchPanel({
   loadingFavorites: boolean;
   loadingRecent: boolean;
   isCoach: boolean;
+  estimatingAi: boolean;
   onQueryChange: (query: string) => void;
   onSearch: () => void;
   onOpenScanner: () => void;
@@ -38,6 +41,7 @@ export function FoodSearchPanel({
   onPickFood: (food: FoodResult, options?: FoodPickOptions) => void;
   onToggleFavorite: (food: FavoriteCandidate) => void;
   isFavorite: (food: FoodResult) => boolean;
+  onEstimateAi: () => void;
 }) {
   const hasQuery = query.trim() !== "";
 
@@ -77,7 +81,13 @@ export function FoodSearchPanel({
           />
         )}
 
-        {hasQuery && results.length === 0 && <EmptySearchState searching={searching} />}
+        {hasQuery && results.length === 0 && (
+          <EmptySearchState
+            searching={searching}
+            estimatingAi={estimatingAi}
+            onEstimateAi={onEstimateAi}
+          />
+        )}
 
         <ul className="divide-y divide-border">
           {results.map((food, index) => (
@@ -189,7 +199,15 @@ function FoodSuggestions({
   );
 }
 
-function EmptySearchState({ searching }: { searching: boolean }) {
+function EmptySearchState({
+  searching,
+  estimatingAi,
+  onEstimateAi,
+}: {
+  searching: boolean;
+  estimatingAi: boolean;
+  onEstimateAi: () => void;
+}) {
   return (
     <div className="flex flex-col items-center gap-3 py-6 text-center">
       <p className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
@@ -202,10 +220,30 @@ function EmptySearchState({ searching }: { searching: boolean }) {
         )}
       </p>
       {!searching && (
-        <p className="max-w-xs text-[11px] text-muted-foreground">
-          Nur geprüfte Lebensmittel werden angezeigt. Fehlende Produkte bitte zum Datenbank-Import
-          melden.
-        </p>
+        <>
+          <p className="max-w-xs text-[11px] text-muted-foreground">
+            Nutze die KI-Schätzung als Fallback — Werte sind ungefähr und werden mit Quelle
+            „KI-Schätzung" markiert.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onEstimateAi}
+            disabled={estimatingAi}
+            className="border-primary/40 text-primary hover:bg-primary/10"
+          >
+            {estimatingAi ? (
+              <>
+                <Loader2 className="mr-2 h-3 w-3 animate-spin" /> Schätze…
+              </>
+            ) : (
+              <>
+                <Sparkles className="mr-2 h-3 w-3" /> KI-Schätzung
+              </>
+            )}
+          </Button>
+        </>
       )}
     </div>
   );

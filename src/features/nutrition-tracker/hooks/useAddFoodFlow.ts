@@ -12,7 +12,12 @@ import { toast } from "sonner";
 import { clearFormDraft, useFormDraft } from "@/hooks/use-form-draft";
 import { supabase } from "@/integrations/supabase/client";
 import { listCustomMeals, type CustomMeal } from "@/lib/custom-meals.functions";
-import { lookupBarcode, searchFoodsDb, type FoodResult } from "@/lib/nutrition.functions";
+import {
+  estimateFoodFromText,
+  lookupBarcode,
+  searchFoodsDb,
+  type FoodResult,
+} from "@/lib/nutrition.functions";
 import {
   amountInGrams,
   favoriteKey,
@@ -62,10 +67,12 @@ export function useAddFoodFlow({
   const [source, setSource] = useState<AddFoodSource>("food");
   const [customMeals, setCustomMeals] = useState<CustomMeal[]>([]);
   const [loadingMeals, setLoadingMeals] = useState(false);
+  const [estimatingAi, setEstimatingAi] = useState(false);
 
   const listCustomMealsFn = useServerFn(listCustomMeals);
   const searchDbFn = useServerFn(searchFoodsDb);
   const lookupFn = useServerFn(lookupBarcode);
+  const estimateFn = useServerFn(estimateFoodFromText);
 
   const draftKey = userId ? `bf.nutritionTracker.add.${userId}.${date}.v1` : null;
   useFormDraft(draftKey, { openMeal, query, picking, unit, amountStr, source }, (draft) => {
@@ -403,6 +410,26 @@ export function useAddFoodFlow({
     [lookupFn, pickFood],
   );
 
+  const estimateAi = useCallback(
+    async (overrideQuery?: string) => {
+      const term = (overrideQuery ?? query).trim();
+      if (!term) {
+        toast.error("Bitte Lebensmittel eingeben");
+        return;
+      }
+      setEstimatingAi(true);
+      try {
+        const food = await estimateFn({ data: { query: term } });
+        pickFood(food);
+      } catch (error) {
+        toast.error((error as Error).message);
+      } finally {
+        setEstimatingAi(false);
+      }
+    },
+    [estimateFn, pickFood, query],
+  );
+
   const addPicked = useCallback(async () => {
     if (!picking || !openMeal || !userId) return;
     const amount = parseFoodAmount(amountStr);
@@ -473,6 +500,8 @@ export function useAddFoodFlow({
     source,
     customMeals,
     loadingMeals,
+    estimatingAi,
+    estimateAi,
     setQuery,
     setSource,
     setUnit,
