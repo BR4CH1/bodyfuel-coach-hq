@@ -68,7 +68,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
     select: (s) => ({ pathname: s.location.pathname, hash: s.location.hash }),
   });
   const routeOrgId = pathname.match(/^\/coach\/teams\/([^/]+)/)?.[1] ?? null;
-  const activeOrgContext = getActiveOrgContext();
+  const selectedOrgContext = getActiveOrgContext();
   const isBullsRoute = pathname.startsWith("/bulls");
   const isCoachTeamsRoute = /^\/coach\/teams(\/|$)/.test(pathname);
   const freeBullsAccess = isFreeUser && isBullsRoute && hasGroup("bulls");
@@ -84,8 +84,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
     entitlements.hasTeamAccess &&
     !entitlements.hasAnyPersonalBodyfuel;
 
-  const activeOrgId = activeOrgContext?.slug ? entitlements.orgIdsBySlug[activeOrgContext.slug] ?? null : null;
-  const orgId = routeOrgId ?? (activeOrgContext?.mode === "staff" ? activeOrgId : null) ?? entitlements.primaryOrgId;
+  const activeOrgId = selectedOrgContext?.slug ? entitlements.orgIdsBySlug[selectedOrgContext.slug] ?? null : null;
+  const orgId = routeOrgId ?? (selectedOrgContext?.mode === "staff" ? activeOrgId : null) ?? entitlements.primaryOrgId;
   const orgSlug = orgId ? entitlements.orgSlugsById[orgId] ?? entitlements.primaryOrgSlug : entitlements.primaryOrgSlug;
   const staffRole = orgId ? entitlements.staffRolesByOrg[orgId] ?? null : null;
   const isPlatformCoachOrgRoute = isCoach && !!routeOrgId;
