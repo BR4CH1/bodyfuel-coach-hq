@@ -29,16 +29,19 @@ function AppEntryPage() {
     // pushed into the coach dashboard on reload.
     const activeCtx = getActiveOrgContext();
     if (activeCtx) {
-      const match = ent.orgContexts?.find((o) => o.slug === activeCtx.slug);
-      if (match) {
-        if (activeCtx.mode === "staff" && match.id) {
-          navigate({ to: "/coach/teams/$orgId", params: { orgId: match.id }, replace: true });
-          return;
-        }
-        if (activeCtx.mode === "athlete") {
-          navigate({ to: "/$orgSlug/home", params: { orgSlug: activeCtx.slug }, replace: true });
-          return;
-        }
+      if (activeCtx.mode === "staff" && ent.primaryOrgId && ent.primaryOrgSlug === activeCtx.slug) {
+        navigate({ to: "/coach/teams/$orgId", params: { orgId: ent.primaryOrgId }, replace: true });
+        return;
+      }
+      if (activeCtx.mode === "athlete") {
+        navigate({ to: "/$orgSlug/home", params: { orgSlug: activeCtx.slug }, replace: true });
+        return;
+      }
+      // Fallback for staff mode when the active slug isn't the primary org:
+      // land on the org index which will re-route based on stored mode.
+      if (activeCtx.mode === "staff") {
+        navigate({ to: "/$orgSlug", params: { orgSlug: activeCtx.slug }, replace: true });
+        return;
       }
     }
 
