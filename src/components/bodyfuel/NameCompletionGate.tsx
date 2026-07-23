@@ -137,7 +137,13 @@ export function NameCompletionGate() {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/90 px-4 backdrop-blur-sm">
+    <div
+      className="fixed inset-0 z-[200] flex items-center justify-center overflow-y-auto bg-background/95 px-4 py-6 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      onPointerDownCapture={(e) => e.stopPropagation()}
+      onClickCapture={(e) => e.stopPropagation()}
+    >
       <div className="w-full max-w-md rounded-3xl border border-border bg-card p-6 shadow-gold sm:p-8">
         <div className="mb-4 flex items-center gap-3">
           <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-gold">
