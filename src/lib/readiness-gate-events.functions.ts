@@ -38,7 +38,7 @@ export const listRecentReadinessGateEvents = createServerFn({ method: "POST" })
     const { data: rows, error } = await supabase
       .from("training_progression_events")
       .select(
-        "id, source_session_date, evaluated_at, decision, readiness_gate, readiness_gate_reason, source_exercise_id, training_exercises:source_exercise_id(name)",
+        "id, source_session_date, evaluated_at, decision, readiness_gate, readiness_gate_reason, source_exercise_id",
       )
       .eq("client_id", data.userId)
       .not("readiness_gate", "is", null)
@@ -47,6 +47,18 @@ export const listRecentReadinessGateEvents = createServerFn({ method: "POST" })
       .limit(30);
     if (error) throw new Error(error.message);
 
+    const exerciseIds = Array.from(
+      new Set(((rows as any[]) ?? []).map((r) => r.source_exercise_id).filter(Boolean)),
+    );
+    const nameById = new Map<string, string>();
+    if (exerciseIds.length > 0) {
+      const { data: exs } = await supabase
+        .from("training_exercises")
+        .select("id, name")
+        .in("id", exerciseIds);
+      for (const e of (exs as any[]) ?? []) nameById.set(String(e.id), String(e.name));
+    }
+
     return ((rows as any[]) ?? []).map((r): ReadinessGateEvent => ({
       id: String(r.id),
       source_session_date: String(r.source_session_date),
@@ -54,6 +66,6 @@ export const listRecentReadinessGateEvents = createServerFn({ method: "POST" })
       decision: String(r.decision),
       readiness_gate: r.readiness_gate,
       readiness_gate_reason: r.readiness_gate_reason ?? null,
-      exercise_name: r.training_exercises?.name ?? null,
+      exercise_name: r.source_exercise_id ? nameById.get(String(r.source_exercise_id)) ?? null : null,
     }));
   });
