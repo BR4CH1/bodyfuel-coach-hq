@@ -85,7 +85,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   const orgId = routeOrgId ?? entitlements.primaryOrgId;
   const orgSlug = entitlements.primaryOrgSlug;
-  const staffRole = entitlements.primaryStaffRole;
+  const staffRole = routeOrgId
+    ? entitlements.staffRolesByOrg[routeOrgId] ?? null
+    : entitlements.primaryStaffRole;
   const isPlatformCoachOrgRoute = isCoach && !!routeOrgId;
   const cockpitBase = orgId ? `/coach/teams/${orgId}` : null;
 
@@ -341,10 +343,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
   // 2) Team-only Nutzer → reduzierte Vereins-Nav (Zum Verein + Mein BodyFuel)
   // 3) Sonst → klassische Client-Nav (+ Bulls, wenn Gruppe vorhanden)
   const staffRoleLabel =
-    entitlements.primaryStaffRole === "organization_admin" ? "Vereinsleitung" :
-    entitlements.primaryStaffRole === "head_coach" ? "Head Coach" :
-    entitlements.primaryStaffRole === "team_coach" ? "Teamcoach" :
-    entitlements.primaryStaffRole === "staff" ? "Staff" :
+    staffRole === "organization_admin" ? "Vereinsleitung" :
+    staffRole === "head_coach" ? "Head Coach" :
+    staffRole === "team_coach" ? "Teamcoach" :
+    staffRole === "staff" ? "Staff" :
     null;
 
   // Rollenabhängige Vereins-Navigation. Source of Truth ist

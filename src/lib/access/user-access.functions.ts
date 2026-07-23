@@ -16,6 +16,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import {
+  buildAvailableContexts,
+  type AvailableContext,
+} from "@/lib/access/user-access.logic";
+
+export type { AvailableContext } from "@/lib/access/user-access.logic";
 
 export type OrgMembershipInfo = {
   organizationId: string;
@@ -29,16 +35,6 @@ export type OrgMembershipInfo = {
   athleteProfileLinked: boolean;
   membershipStatus: string;
 };
-
-export type AvailableContext =
-  | { type: "personal_bodyfuel"; label: string }
-  | {
-      type: "organization";
-      organizationId: string;
-      organizationSlug: string;
-      label: string;
-      role: string;
-    };
 
 export type UserAccessWarning =
   | "athlete_profile_orphaned"
@@ -181,20 +177,10 @@ async function loadAccess(
 
   const organizationMemberships = [...rows.values()].sort((a, b) => a.sortKey - b.sortKey);
 
-  const availableContexts: AvailableContext[] = [];
-  if (personalBodyfuelAccess) {
-    availableContexts.push({ type: "personal_bodyfuel", label: "Mein BODYFUEL" });
-  }
-  for (const m of organizationMemberships) {
-    if (m.membershipStatus !== "active") continue;
-    availableContexts.push({
-      type: "organization",
-      organizationId: m.organizationId,
-      organizationSlug: m.organizationSlug,
-      label: m.organizationName,
-      role: m.staffRole ?? m.role,
-    });
-  }
+  const availableContexts: AvailableContext[] = buildAvailableContexts(
+    personalBodyfuelAccess,
+    organizationMemberships,
+  );
 
   const warnings: UserAccessWarning[] = [];
   const hasInactive = organizationMemberships.some((m) => m.membershipStatus !== "active");
