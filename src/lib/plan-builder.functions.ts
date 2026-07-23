@@ -106,6 +106,9 @@ export type CustomerPlanContext = {
   dietStyle: string | null;
   budgetBand: string | null;
   mealPrepStyle: string | null;
+  eatingStyle: string | null;
+  mealPrepDays: number | null;
+  varietyLevel: "low" | "medium" | "high" | null;
   trainingWeekdays: number[]; // 0=Sun..6=Sat
 };
 
@@ -121,7 +124,18 @@ export const listMealLibrary = createServerFn({ method: "GET" })
       .order("category")
       .order("name");
     if (error) throw error;
-    return (data ?? []) as unknown as LibraryMeal[];
+    return (data ?? []).map((row) => {
+      const meal = row as unknown as LibraryMeal;
+      const rawUrl = meal.image_url?.trim() ?? "";
+      const storagePath =
+        meal.image_path?.trim() || (rawUrl && !/^https?:\/\//i.test(rawUrl) ? rawUrl : "");
+      const imageUrl = /^https?:\/\//i.test(rawUrl)
+        ? rawUrl
+        : storagePath
+          ? supabaseAdmin.storage.from("meal-images").getPublicUrl(storagePath).data.publicUrl
+          : null;
+      return { ...meal, image_url: imageUrl };
+    });
   });
 
 export const getCustomerPlanContext = createServerFn({ method: "POST" })
@@ -171,6 +185,17 @@ export const getCustomerPlanContext = createServerFn({ method: "POST" })
       dietStyle: prof?.diet_style ?? null,
       budgetBand: prof?.budget_band ?? null,
       mealPrepStyle: prof?.meal_prep_style ?? null,
+      eatingStyle: prof?.eating_style ?? null,
+      mealPrepDays:
+        prof?.meal_prep_days == null || !Number.isFinite(Number(prof.meal_prep_days))
+          ? null
+          : Math.max(1, Math.min(7, Math.round(Number(prof.meal_prep_days)))),
+      varietyLevel:
+        prof?.variety_level === "low" ||
+        prof?.variety_level === "medium" ||
+        prof?.variety_level === "high"
+          ? prof.variety_level
+          : null,
       trainingWeekdays: normalizeWeekdays(prof?.training_weekdays),
     };
   });

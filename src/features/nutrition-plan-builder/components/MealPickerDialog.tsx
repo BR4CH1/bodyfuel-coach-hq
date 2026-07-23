@@ -54,7 +54,9 @@ export function MealPickerDialog({
         .filter(
           ({ reasons }) =>
             !reasons.some((reason) =>
-              /^(Allergie\/Intoleranz|No-Go|Nicht vegan|Nicht vegetarisch)/.test(reason),
+              /^(Allergie\/Intoleranz|No-Go|Nicht vegan|Nicht vegetarisch|Nicht pescetarisch)/.test(
+                reason,
+              ),
             ),
         )
         .sort((a, b) => b.score - a.score),

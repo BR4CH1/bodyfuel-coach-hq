@@ -1,7 +1,18 @@
+import { useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Link2, Link2Off, Lock, Minus, Plus, Shuffle, Trash2, Utensils } from "lucide-react";
+import {
+  Link2,
+  Link2Off,
+  LoaderCircle,
+  Lock,
+  Minus,
+  Plus,
+  Shuffle,
+  Trash2,
+  Utensils,
+} from "lucide-react";
 import type { BuilderMeal, CustomerPlanContext, LibraryMeal } from "@/lib/plan-builder.functions";
 import { mealMacros, type PartnerSlotLink, type Slot } from "../lib/plan-builder.logic";
 import { MealPickerDialog } from "./MealPickerDialog";
@@ -20,6 +31,7 @@ interface MealSlotRowProps {
   onLockToggle: () => void;
   onRemove: () => void;
   partnerLink?: PartnerSlotLink;
+  onEnsureMealImage?: (mealId: string) => void;
 }
 
 export function MealSlotRow({
@@ -36,6 +48,7 @@ export function MealSlotRow({
   onLockToggle,
   onRemove,
   partnerLink,
+  onEnsureMealImage,
 }: MealSlotRowProps) {
   const macros = meal ? mealMacros(meal, library) : { kcal: 0, p: 0, c: 0, f: 0 };
   const factor = meal?.portion_factor ?? 1;
@@ -44,6 +57,17 @@ export function MealSlotRow({
     ? library.find((candidate) => candidate.id === meal.library_meal_id)
     : undefined;
   const imageUrl = libraryMeal?.image_url;
+
+  useEffect(() => {
+    if (
+      libraryMeal?.id &&
+      !imageUrl &&
+      libraryMeal.image_status !== "generating" &&
+      onEnsureMealImage
+    ) {
+      onEnsureMealImage(libraryMeal.id);
+    }
+  }, [imageUrl, libraryMeal?.id, libraryMeal?.image_status, onEnsureMealImage]);
 
   const setFactor = (next: number) => {
     const clamped = Math.max(0.25, Math.min(4, Math.round(next * 4) / 4));
@@ -100,6 +124,10 @@ export function MealSlotRow({
         <div className="hidden w-28 shrink-0 bg-muted sm:block">
           {imageUrl ? (
             <img src={imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
+          ) : libraryMeal?.image_status === "generating" ? (
+            <div className="flex h-full items-center justify-center bg-gradient-to-br from-emerald-500/20 to-muted">
+              <LoaderCircle className="h-7 w-7 animate-spin text-emerald-500" />
+            </div>
           ) : (
             <div className="flex h-full items-center justify-center bg-gradient-to-br from-emerald-500/20 to-muted">
               <Utensils className="h-7 w-7 text-emerald-500/70" />

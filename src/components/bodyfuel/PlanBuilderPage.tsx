@@ -82,6 +82,7 @@ export function PlanBuilderPage({
     copyDayPair,
     runAutoFillWeek,
     undoWeekFill,
+    ensureLibraryMealImage,
   } = usePlanBuilder({ userId, planId, returnOrgId });
 
   const [activeDayIndex, setActiveDayIndex] = useState(0);
@@ -330,7 +331,16 @@ export function PlanBuilderPage({
               Gemeinsamer Plan mit <b>{partnerName}</b>. Zwei verknüpfte Pläne mit eigenen Zielen
               und Portionen pro Person.
             </div>
-            <Switch checked={partnerMode} onCheckedChange={setPartnerMode} />
+            <div className="flex shrink-0 items-center gap-2">
+              <Badge variant={partnerMode ? "default" : "outline"}>
+                {partnerMode ? "Aktiv" : "Aus"}
+              </Badge>
+              <Switch
+                checked={partnerMode}
+                onCheckedChange={setPartnerMode}
+                aria-label="Partnerplan aktivieren"
+              />
+            </div>
           </CardContent>
         </Card>
       )}
@@ -435,6 +445,7 @@ export function PlanBuilderPage({
             onClientChange={(update) => setDay(activeDayIndex, update)}
             onPartnerChange={(update) => setPartnerDay(activeDayIndex, update)}
             onCopy={() => setCopyChoiceIdx(activeDayIndex)}
+            onEnsureMealImage={ensureLibraryMealImage}
           />
         ) : (
           <DayCard
@@ -444,6 +455,7 @@ export function PlanBuilderPage({
             ctx={customerContext!}
             onChange={(update) => setDay(activeDayIndex, update)}
             onCopy={() => copyClientDay(activeDayIndex)}
+            onEnsureMealImage={ensureLibraryMealImage}
           />
         ))}
 

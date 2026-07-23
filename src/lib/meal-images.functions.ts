@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
+import { assertGlobalCoachOrAnyOrgCoach } from "@/lib/organizations/org-coach-access";
 import {
   buildMealImagePrompt,
   coerceMealImageIngredients,
@@ -13,7 +14,7 @@ import {
 
 export type MealImageStatus = "none" | "pending" | "generating" | "ready" | "fallback" | "failed";
 
-type MealImageTarget = "custom_meal" | "plan_meal";
+type MealImageTarget = "custom_meal" | "plan_meal" | "library_meal";
 
 type CustomMealImageRow = {
   id: string;
@@ -36,6 +37,15 @@ type PlanMealImageRow = {
   image_status: MealImageStatus;
 };
 
+type LibraryMealImageRow = {
+  id: string;
+  name: string;
+  description: string | null;
+  ingredients: unknown;
+  image_url: string | null;
+  image_status: MealImageStatus;
+};
+
 type ImageGatewayResponse = {
   data?: Array<{ b64_json?: string }>;
 };
@@ -53,7 +63,7 @@ type MealImageSource = {
 };
 
 const inputSchema = z.object({
-  target: z.enum(["custom_meal", "plan_meal"]),
+  target: z.enum(["custom_meal", "plan_meal", "library_meal"]),
   meal_id: z.string().uuid(),
   force: z.boolean().optional().default(false),
 });
@@ -64,6 +74,28 @@ async function loadSource(
   userId: string,
   supabase: SupabaseClient<Database>,
 ): Promise<MealImageSource> {
+  if (target === "library_meal") {
+    const { data, error } = await supabase
+      .from("coach_meal_library")
+      .select("id, name, description, ingredients, image_url, image_status")
+      .eq("id", mealId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!data) throw new Error("Bibliotheksmahlzeit nicht gefunden");
+    const row = data as LibraryMealImageRow;
+    return {
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      ingredients: coerceMealImageIngredients(row.ingredients),
+      rawIngredients: row.ingredients,
+      imageUrl: row.image_url,
+      imageStatus: row.image_status,
+      libraryMealId: null,
+      ownerPath: "library",
+    };
+  }
+
   if (target === "custom_meal") {
     const { data, error } = await supabase
       .from("custom_meals")
@@ -116,8 +148,16 @@ export const generateMealImage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: z.input<typeof inputSchema>) => inputSchema.parse(input))
   .handler(async ({ data, context }) => {
-    const source = await loadSource(data.target, data.meal_id, context.userId, context.supabase);
+    if (data.target === "library_meal") {
+      await assertGlobalCoachOrAnyOrgCoach(context);
+    }
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const source = await loadSource(
+      data.target,
+      data.meal_id,
+      context.userId,
+      data.target === "library_meal" ? supabaseAdmin : context.supabase,
+    );
 
     if (!data.force && source.imageUrl && source.imageStatus === "ready") {
       return { status: "cached" as const, image_url: source.imageUrl };
@@ -145,7 +185,12 @@ export const generateMealImage = createServerFn({ method: "POST" })
     }
 
     const fallbackImage = firstIngredientImageUrl(source.rawIngredients);
-    const table = data.target === "custom_meal" ? "custom_meals" : "nutrition_plan_meals";
+    const table =
+      data.target === "custom_meal"
+        ? "custom_meals"
+        : data.target === "library_meal"
+          ? "coach_meal_library"
+          : "nutrition_plan_meals";
     await supabaseAdmin.from(table).update({ image_status: "generating" }).eq("id", source.id);
 
     const apiKey = process.env.LOVABLE_API_KEY;
@@ -198,7 +243,12 @@ export const generateMealImage = createServerFn({ method: "POST" })
         throw new Error("Ungültige Bildgröße");
       }
 
-      const folder = data.target === "custom_meal" ? `custom/${source.ownerPath}` : "plans";
+      const folder =
+        data.target === "custom_meal"
+          ? `custom/${source.ownerPath}`
+          : data.target === "library_meal"
+            ? "library"
+            : "plans";
       const imagePath = `${folder}/${source.id}/${Date.now()}.png`;
       const { error: uploadError } = await supabaseAdmin.storage
         .from("meal-images")
