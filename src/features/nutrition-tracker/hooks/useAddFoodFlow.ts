@@ -67,10 +67,12 @@ export function useAddFoodFlow({
   const [source, setSource] = useState<AddFoodSource>("food");
   const [customMeals, setCustomMeals] = useState<CustomMeal[]>([]);
   const [loadingMeals, setLoadingMeals] = useState(false);
+  const [estimatingAi, setEstimatingAi] = useState(false);
 
   const listCustomMealsFn = useServerFn(listCustomMeals);
   const searchDbFn = useServerFn(searchFoodsDb);
   const lookupFn = useServerFn(lookupBarcode);
+  const estimateFn = useServerFn(estimateFoodFromText);
 
   const draftKey = userId ? `bf.nutritionTracker.add.${userId}.${date}.v1` : null;
   useFormDraft(draftKey, { openMeal, query, picking, unit, amountStr, source }, (draft) => {
