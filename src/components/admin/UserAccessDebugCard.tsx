@@ -109,9 +109,9 @@ export function UserAccessDebugCard({ userId }: { userId: string }) {
           {data.availableContexts.length === 0 && (
             <span className="text-xs text-muted-foreground">Keine.</span>
           )}
-          {data.availableContexts.map((c, i) => (
+          {data.availableContexts.map((c) => (
             <span
-              key={i}
+              key={c.contextKey}
               className="rounded-md border border-border bg-background px-2 py-1 text-[11px] font-semibold uppercase tracking-wider"
             >
               {c.type === "personal_bodyfuel" ? "🏠 " : "🏛 "}
