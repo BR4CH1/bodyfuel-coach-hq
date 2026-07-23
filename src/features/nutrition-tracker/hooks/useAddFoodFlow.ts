@@ -410,6 +410,26 @@ export function useAddFoodFlow({
     [lookupFn, pickFood],
   );
 
+  const estimateAi = useCallback(
+    async (overrideQuery?: string) => {
+      const term = (overrideQuery ?? query).trim();
+      if (!term) {
+        toast.error("Bitte Lebensmittel eingeben");
+        return;
+      }
+      setEstimatingAi(true);
+      try {
+        const food = await estimateFn({ data: { query: term } });
+        pickFood(food);
+      } catch (error) {
+        toast.error((error as Error).message);
+      } finally {
+        setEstimatingAi(false);
+      }
+    },
+    [estimateFn, pickFood, query],
+  );
+
   const addPicked = useCallback(async () => {
     if (!picking || !openMeal || !userId) return;
     const amount = parseFoodAmount(amountStr);
