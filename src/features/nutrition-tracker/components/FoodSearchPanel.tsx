@@ -81,7 +81,13 @@ export function FoodSearchPanel({
           />
         )}
 
-        {hasQuery && results.length === 0 && <EmptySearchState searching={searching} />}
+        {hasQuery && results.length === 0 && (
+          <EmptySearchState
+            searching={searching}
+            estimatingAi={estimatingAi}
+            onEstimateAi={onEstimateAi}
+          />
+        )}
 
         <ul className="divide-y divide-border">
           {results.map((food, index) => (
