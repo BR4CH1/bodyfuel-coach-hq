@@ -500,6 +500,8 @@ export function useAddFoodFlow({
     source,
     customMeals,
     loadingMeals,
+    estimatingAi,
+    estimateAi,
     setQuery,
     setSource,
     setUnit,
