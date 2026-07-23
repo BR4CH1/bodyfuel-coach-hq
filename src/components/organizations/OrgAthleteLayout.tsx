@@ -84,7 +84,7 @@ export function OrgAthleteLayout({
     },
   });
   useEffect(() => {
-    setActiveContext(slug);
+    setActiveContext(slug, "athlete");
   }, [slug]);
   const hasCourseToolsInThisOrg = courseInstructorOrgSlugs.includes(slug);
   const nav = [
