@@ -752,8 +752,49 @@ export const removeOrgStaff = createServerFn({ method: "POST" })
     }
 
     if (!data.delete_account) {
-      const { error } = await supabase.from("staff_assignments").delete().eq("id", data.id);
-      if (error) throw new Error(error.message);
+      // Coach-Rechte VOLLSTÄNDIG entziehen — sonst bleibt der Coach-Zugang
+      // über organization_memberships.role='coach' oder die globale
+      // user_roles-Coach-Rolle erhalten. Service Role, weil die
+      // Self-Elevation-Guards das Downgrade unter RLS blocken.
+      const targetUserId = (target as any).user_id as string;
+      const targetOrgId = (target as any).organization_id as string;
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+      // 1. Die konkrete Staff-Zuweisung entfernen.
+      const { error: delErr } = await supabaseAdmin
+        .from("staff_assignments")
+        .delete()
+        .eq("id", data.id);
+      if (delErr) throw new Error(delErr.message);
+
+      // 2. Falls in DIESER Org noch eine Coach/Admin-Membership existiert,
+      //    auf 'athlete' zurückstufen (Person bleibt Kunde der Org).
+      await supabaseAdmin
+        .from("organization_memberships")
+        .update({ role: "athlete" as any })
+        .eq("user_id", targetUserId)
+        .eq("organization_id", targetOrgId)
+        .neq("role", "athlete");
+
+      // 3. Globale Plattform-Coach-Rolle nur entziehen, wenn die Person
+      //    NIRGENDWO mehr Coach/Staff ist.
+      const [{ data: remainingStaff }, { data: remainingCoachMems }] = await Promise.all([
+        supabaseAdmin.from("staff_assignments").select("id").eq("user_id", targetUserId).limit(1),
+        supabaseAdmin
+          .from("organization_memberships")
+          .select("organization_id")
+          .eq("user_id", targetUserId)
+          .neq("role", "athlete")
+          .limit(1),
+      ]);
+      if ((remainingStaff ?? []).length === 0 && (remainingCoachMems ?? []).length === 0) {
+        await supabaseAdmin
+          .from("user_roles")
+          .delete()
+          .eq("user_id", targetUserId)
+          .eq("role", "coach" as any);
+      }
+
       return { ok: true, deleted_account: false };
     }
 
