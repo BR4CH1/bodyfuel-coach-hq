@@ -15,6 +15,7 @@ export function FoodSearchPanel({
   loadingFavorites,
   loadingRecent,
   isCoach,
+  estimatingAi,
   onQueryChange,
   onSearch,
   onOpenScanner,
@@ -22,6 +23,7 @@ export function FoodSearchPanel({
   onPickFood,
   onToggleFavorite,
   isFavorite,
+  onEstimateAi,
 }: {
   query: string;
   searching: boolean;
@@ -31,6 +33,7 @@ export function FoodSearchPanel({
   loadingFavorites: boolean;
   loadingRecent: boolean;
   isCoach: boolean;
+  estimatingAi: boolean;
   onQueryChange: (query: string) => void;
   onSearch: () => void;
   onOpenScanner: () => void;
@@ -38,6 +41,7 @@ export function FoodSearchPanel({
   onPickFood: (food: FoodResult, options?: FoodPickOptions) => void;
   onToggleFavorite: (food: FavoriteCandidate) => void;
   isFavorite: (food: FoodResult) => boolean;
+  onEstimateAi: () => void;
 }) {
   const hasQuery = query.trim() !== "";
 
