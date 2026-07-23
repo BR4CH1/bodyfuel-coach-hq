@@ -583,15 +583,72 @@ Antworte ausschließlich mit gültigem JSON:
     };
   });
 
-/* ----------- Keine Nährwert-Schätzungen ----------- */
+/* ----------- KI-Schätzung (Fallback für fehlende Katalog-Einträge) ----------- */
 
-/** @deprecated Makros dürfen nur aus dem auditierten internen Katalog kommen. */
+/**
+ * Schätzt Makros für ein Lebensmittel per Lovable AI.
+ * Ergebnis wird als FoodResult mit Quelle `ai_estimate` zurückgegeben — es wird NICHT
+ * in den Katalog geschrieben. Der User bestätigt Menge im Amount-Editor.
+ */
 export const estimateFoodFromText = createServerFn({ method: "POST" })
-  .inputValidator((d: { query: string }) => d)
-  .handler(async (): Promise<FoodResult> => {
-    throw new Error(
-      "KI-Schätzungen sind deaktiviert. Das Lebensmittel muss zuerst in den geprüften BodyFuel-Katalog importiert werden.",
-    );
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { query: string }) => {
+    if (!d?.query?.trim()) throw new Error("Bitte Lebensmittel angeben.");
+    return d;
+  })
+  .handler(async ({ data }): Promise<FoodResult> => {
+    const apiKey = process.env.LOVABLE_API_KEY;
+    if (!apiKey) throw new Error("KI-Schätzung nicht verfügbar (LOVABLE_API_KEY fehlt).");
+    const query = data.query.trim();
+
+    const prompt = `Schätze Nährwerte pro 100 g (oder pro 100 ml bei Flüssigkeiten) für dieses Lebensmittel: "${query}".
+Nutze übliche europäische Durchschnittswerte (BLS/USDA-nah). Kohlenhydrate OHNE Ballaststoffe.
+Antworte NUR mit gültigem JSON:
+{"name":"Kurzer deutscher Name","unit":"g"|"ml","kcal_per_100g":number,"protein_per_100g":number,"carbs_per_100g":number,"fat_per_100g":number,"fiber_per_100g":number|null}`;
+
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        response_format: { type: "json_object" },
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+    if (res.status === 429) throw new Error("Rate-Limit erreicht — bitte gleich nochmal versuchen.");
+    if (res.status === 402) throw new Error("KI-Guthaben aufgebraucht — bitte aufladen.");
+    if (!res.ok) throw new Error(`KI-Fehler [${res.status}]`);
+
+    const json = await res.json();
+    const raw = json?.choices?.[0]?.message?.content ?? "{}";
+    let parsed: any = {};
+    try {
+      parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+    } catch {
+      throw new Error("KI-Antwort konnte nicht gelesen werden.");
+    }
+
+    const unit: FoodAmountUnit = parsed.unit === "ml" ? "ml" : "g";
+    const num = (v: any) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+    return {
+      id: null,
+      name: String(parsed.name || query).slice(0, 120),
+      brand: null,
+      barcode: null,
+      unit,
+      density_g_per_ml: null,
+      kcal_per_100g: num(parsed.kcal_per_100g),
+      protein_per_100g: num(parsed.protein_per_100g),
+      carbs_per_100g: num(parsed.carbs_per_100g),
+      fat_per_100g: num(parsed.fat_per_100g),
+      fiber_per_100g: parsed.fiber_per_100g == null ? null : num(parsed.fiber_per_100g),
+      serving_g: null,
+      serving_label: `KI-Schätzung pro 100 ${unit}`,
+      source: "ai_estimate",
+      verified_by_coach: false,
+      image_url: null,
+      image_source: null,
+    };
   });
 
 /* ----------- BodyFuel Lebensmittel-DB (BLS 4.0 + verified) ----------- */
