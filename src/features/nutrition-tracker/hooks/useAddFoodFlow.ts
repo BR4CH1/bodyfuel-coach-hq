@@ -12,7 +12,12 @@ import { toast } from "sonner";
 import { clearFormDraft, useFormDraft } from "@/hooks/use-form-draft";
 import { supabase } from "@/integrations/supabase/client";
 import { listCustomMeals, type CustomMeal } from "@/lib/custom-meals.functions";
-import { lookupBarcode, searchFoodsDb, type FoodResult } from "@/lib/nutrition.functions";
+import {
+  estimateFoodFromText,
+  lookupBarcode,
+  searchFoodsDb,
+  type FoodResult,
+} from "@/lib/nutrition.functions";
 import {
   amountInGrams,
   favoriteKey,
