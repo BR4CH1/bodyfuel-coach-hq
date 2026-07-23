@@ -64,6 +64,19 @@ export function NameCompletionGate() {
       if (cancelled) return;
       setDisplay(data?.display_name ?? null);
       setChecked(true);
+      // Prefill aus Auth-Metadata (falls beim Signup gesetzt) — sonst bleiben
+      // die Felder leer. Wichtig für per Invite/Import angelegte User, damit
+      // sie nicht bei Null anfangen.
+      const meta = (supabaseUser.user_metadata ?? {}) as {
+        first_name?: string;
+        last_name?: string;
+        given_name?: string;
+        family_name?: string;
+      };
+      const mf = (meta.first_name ?? meta.given_name ?? "").toString().trim();
+      const ml = (meta.last_name ?? meta.family_name ?? "").toString().trim();
+      if (mf) setFirst((v) => v || mf);
+      if (ml) setLast((v) => v || ml);
     })();
     return () => {
       cancelled = true;
@@ -71,6 +84,19 @@ export function NameCompletionGate() {
   }, [supabaseUser, loading]);
 
   const incomplete = useMemo(() => checked && isNameIncomplete(display), [checked, display]);
+
+  // Wenn der Gate offen ist, den Body-Scroll sperren, damit die
+  // dahinterliegende Route nicht weiterscrollt/rendert und den Fokus aus
+  // dem Input reißt (Ursache: „Man kann keinen Namen eingeben").
+  useEffect(() => {
+    if (!incomplete) return;
+    if (typeof document === "undefined") return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [incomplete]);
 
   if (!supabaseUser || !incomplete) return null;
 
