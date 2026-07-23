@@ -4,7 +4,10 @@ import {
   autoFillDayImpl,
   buildBuilderDays,
   cloneBuilderDays,
+  macroProgress,
+  rebalanceDay,
   remapMealsForCopy,
+  summarizeDay,
 } from "../plan-builder.logic";
 
 const context: CustomerPlanContext = {
@@ -162,5 +165,86 @@ describe("autoFillDayImpl", () => {
     expect(result.day.meals.find((meal) => meal.slot === "breakfast")?.name).toBe(
       "Fixiertes Frühstück",
     );
+  });
+});
+
+describe("summarizeDay", () => {
+  it("liefert Füllstand, Makros und einen belastbaren Fertig-Status", () => {
+    const library = [
+      libraryMeal("breakfast", "breakfast", { kcal: 600 }),
+      libraryMeal("lunch", "lunch", { kcal: 600 }),
+      libraryMeal("dinner", "dinner", { kcal: 600 }),
+      libraryMeal("snack", "snack", { kcal: 400 }),
+    ];
+    const day: BuilderDay = {
+      name: "Tag 1",
+      type: "rest",
+      meals: library.map((meal) => ({
+        slot: meal.category as BuilderDay["meals"][number]["slot"],
+        name: meal.name,
+        library_meal_id: meal.id,
+        ingredients: [],
+        portion_factor: 1,
+      })),
+    };
+
+    const summary = summarizeDay(day, context, library);
+
+    expect(summary.filledSlots).toBe(4);
+    expect(summary.totals.kcal).toBe(2200);
+    expect(summary.isComplete).toBe(true);
+    expect(summary.isBalanced).toBe(true);
+  });
+});
+
+describe("macroProgress", () => {
+  it("begrenzt Fortschritt für die Anzeige auf 0 bis 100 Prozent", () => {
+    expect(macroProgress(1250, 1000)).toBe(100);
+    expect(macroProgress(500, 1000)).toBe(50);
+    expect(macroProgress(500, 0)).toBe(0);
+  });
+});
+
+describe("rebalanceDay", () => {
+  it("passt nur freie Portionen an und berücksichtigt fixierte Mahlzeiten", () => {
+    const library = [
+      libraryMeal("breakfast", "breakfast", { kcal: 600 }),
+      libraryMeal("lunch", "lunch", { kcal: 800 }),
+      libraryMeal("dinner", "dinner", { kcal: 800 }),
+    ];
+    const day: BuilderDay = {
+      name: "Tag 1",
+      type: "rest",
+      meals: [
+        {
+          slot: "breakfast",
+          name: "Fix",
+          library_meal_id: "breakfast",
+          ingredients: [],
+          portion_factor: 1,
+          is_locked: true,
+        },
+        {
+          slot: "lunch",
+          name: "Lunch",
+          library_meal_id: "lunch",
+          ingredients: [],
+          portion_factor: 0.5,
+        },
+        {
+          slot: "dinner",
+          name: "Dinner",
+          library_meal_id: "dinner",
+          ingredients: [],
+          portion_factor: 0.5,
+        },
+      ],
+    };
+
+    const result = rebalanceDay(day, context, library);
+
+    expect(result.meals[0].portion_factor).toBe(1);
+    expect(result.meals[1].portion_factor).toBe(1);
+    expect(result.meals[2].portion_factor).toBe(1);
   });
 });
