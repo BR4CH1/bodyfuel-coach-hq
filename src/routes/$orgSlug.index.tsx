@@ -45,12 +45,11 @@ function OrgIndex() {
     // Nur echte "keine Verbindung"-Fälle blockieren.
     if (flags.role === "none" && !flags.isSuperAdmin && !hasAnyOrgRelation) return;
 
-    setActiveContext(org.slug);
-
     const staffOnboardingDone = !!(ctx.staff as any)?.onboarding_completed_at;
     const athleteOnboardingDone = !!ctx.membership?.onboarding_completed;
 
     const goStaff = () => {
+      setActiveContext(org.slug, "staff");
       setOrgMode(org.slug, "staff");
       if (flags.isAnyStaff && !staffOnboardingDone) {
         navigate({ to: "/$orgSlug/onboarding", params: { orgSlug: org.slug }, replace: true });
@@ -60,6 +59,7 @@ function OrgIndex() {
     };
 
     const goAthlete = () => {
+      setActiveContext(org.slug, "athlete");
       setOrgMode(org.slug, "athlete");
       if (!athleteOnboardingDone) {
         navigate({ to: "/$orgSlug/onboarding", params: { orgSlug: org.slug }, replace: true });
@@ -80,19 +80,7 @@ function OrgIndex() {
       return;
     }
 
-    // Fallback: Staff-Assignment vorhanden, aber Rolle nicht sauber gemappt.
-    if (ctx.staff) {
-      goStaff();
-      return;
-    }
-
-    // Fallback: Reine Nicht-Athlet-Mitgliedschaft ('member') → Vereins-Home.
-    if (ctx.membership) {
-      goAthlete();
-      return;
-    }
-
-    // Dual (Player + Staff) → Kontext-Wahl beim ersten Mal.
+    // Dual (Player + Staff) → Kontext-Wahl beim ersten Mal, danach persistierter Modus.
     const stored = getOrgMode(org.slug);
     if (!stored) {
       setNeedsChoice(true);
