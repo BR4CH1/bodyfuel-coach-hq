@@ -14,6 +14,7 @@ import type {
 import {
   autoFillDayPair,
   makeGroupId,
+  rebalanceDay,
   scaleFactorToTarget,
   targetsFor,
   type PartnerSlotLink,
@@ -34,6 +35,7 @@ export function PartnerDayBlock({
   onClientChange,
   onPartnerChange,
   onCopy,
+  onEnsureMealImage,
 }: {
   clientDay: BuilderDay;
   partnerDay: BuilderDay;
@@ -46,6 +48,7 @@ export function PartnerDayBlock({
   onClientChange: (u: (d: BuilderDay) => BuilderDay) => void;
   onPartnerChange: (u: (d: BuilderDay) => BuilderDay) => void;
   onCopy: () => void;
+  onEnsureMealImage?: (mealId: string) => void;
 }) {
   // Sync coupled meals (same linked_partner_group) → recipe from client mirrors to partner.
   // Portion factor stays per person. Runs after render.
@@ -89,8 +92,8 @@ export function PartnerDayBlock({
       "empty_only",
       sharedSlots,
     );
-    onClientChange(() => res.client);
-    onPartnerChange(() => res.partner);
+    onClientChange(() => rebalanceDay(res.client, clientCtx, library));
+    onPartnerChange(() => rebalanceDay(res.partner, partnerCtx, library));
     if (res.missing > 0) {
       toast.warning(
         `Für ${res.missing} Slot(s) wurde keine passende Mahlzeit gefunden. Bitte Mahlzeitendatenbank erweitern oder Filter prüfen.`,
@@ -275,6 +278,9 @@ export function PartnerDayBlock({
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="client">
+          <div className="mb-2 text-xs font-medium text-muted-foreground">
+            Person wechseln – Mahlzeiten und Portionen getrennt bearbeiten
+          </div>
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="client">{clientName}</TabsTrigger>
             <TabsTrigger value="partner">{partnerName}</TabsTrigger>
@@ -288,6 +294,7 @@ export function PartnerDayBlock({
               onCopy={onCopy}
               hideHeaderActions
               partnerLinkForSlot={linkForClient}
+              onEnsureMealImage={onEnsureMealImage}
             />
           </TabsContent>
           <TabsContent value="partner" className="mt-3">
@@ -299,6 +306,7 @@ export function PartnerDayBlock({
               onCopy={onCopy}
               hideHeaderActions
               partnerLinkForSlot={linkForPartner}
+              onEnsureMealImage={onEnsureMealImage}
             />
           </TabsContent>
         </Tabs>

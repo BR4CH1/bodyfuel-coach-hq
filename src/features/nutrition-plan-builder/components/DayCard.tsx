@@ -31,6 +31,7 @@ export function DayCard({
   onCopy,
   hideHeaderActions,
   partnerLinkForSlot,
+  onEnsureMealImage,
 }: {
   day: BuilderDay;
   library: LibraryMeal[];
@@ -39,6 +40,7 @@ export function DayCard({
   onCopy: () => void;
   hideHeaderActions?: boolean;
   partnerLinkForSlot?: (slot: Slot) => PartnerSlotLink | undefined;
+  onEnsureMealImage?: (mealId: string) => void;
 }) {
   const { target, totals, filledSlots, totalSlots, isBalanced } = summarizeDay(day, ctx, library);
 
@@ -188,7 +190,7 @@ export function DayCard({
           `Für ${res.missing.length} Slot(s) wurde keine passende Mahlzeit gefunden. Bitte Mahlzeitendatenbank erweitern oder Filter prüfen.`,
         );
       }
-      return res.day;
+      return rebalanceDay(res.day, ctx, library);
     });
   };
 
@@ -361,6 +363,7 @@ export function DayCard({
               }
               onRemove={() => removeMealAtSlot(slot.key)}
               partnerLink={partnerLinkForSlot?.(slot.key)}
+              onEnsureMealImage={onEnsureMealImage}
             />
           );
         })}

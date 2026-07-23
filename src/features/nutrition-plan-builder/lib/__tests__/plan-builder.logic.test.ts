@@ -2,11 +2,15 @@ import { describe, expect, it } from "vitest";
 import type { BuilderDay, CustomerPlanContext, LibraryMeal } from "@/lib/plan-builder.functions";
 import {
   autoFillDayImpl,
+  autoFillWeekImpl,
   buildBuilderDays,
   cloneBuilderDays,
+  macroFitScore,
   macroProgress,
+  mealRepeatSpan,
   rebalanceDay,
   remapMealsForCopy,
+  scoreMeal,
   summarizeDay,
 } from "../plan-builder.logic";
 
@@ -28,6 +32,9 @@ const context: CustomerPlanContext = {
   dietStyle: null,
   budgetBand: null,
   mealPrepStyle: null,
+  eatingStyle: null,
+  mealPrepDays: null,
+  varietyLevel: null,
   trainingWeekdays: [1, 3],
 };
 
@@ -171,10 +178,30 @@ describe("autoFillDayImpl", () => {
 describe("summarizeDay", () => {
   it("liefert Füllstand, Makros und einen belastbaren Fertig-Status", () => {
     const library = [
-      libraryMeal("breakfast", "breakfast", { kcal: 600 }),
-      libraryMeal("lunch", "lunch", { kcal: 600 }),
-      libraryMeal("dinner", "dinner", { kcal: 600 }),
-      libraryMeal("snack", "snack", { kcal: 400 }),
+      libraryMeal("breakfast", "breakfast", {
+        kcal: 600,
+        protein_g: 45,
+        carbs_g: 55,
+        fat_g: 20,
+      }),
+      libraryMeal("lunch", "lunch", {
+        kcal: 600,
+        protein_g: 45,
+        carbs_g: 55,
+        fat_g: 20,
+      }),
+      libraryMeal("dinner", "dinner", {
+        kcal: 600,
+        protein_g: 45,
+        carbs_g: 55,
+        fat_g: 20,
+      }),
+      libraryMeal("snack", "snack", {
+        kcal: 400,
+        protein_g: 45,
+        carbs_g: 45,
+        fat_g: 20,
+      }),
     ];
     const day: BuilderDay = {
       name: "Tag 1",
@@ -195,6 +222,28 @@ describe("summarizeDay", () => {
     expect(summary.isComplete).toBe(true);
     expect(summary.isBalanced).toBe(true);
   });
+
+  it("markiert passende Kalorien bei deutlich verfehlten Makros nicht als ausbalanciert", () => {
+    const library = [
+      libraryMeal("breakfast", "breakfast", { kcal: 600 }),
+      libraryMeal("lunch", "lunch", { kcal: 600 }),
+      libraryMeal("dinner", "dinner", { kcal: 600 }),
+      libraryMeal("snack", "snack", { kcal: 400 }),
+    ];
+    const day: BuilderDay = {
+      name: "Tag 1",
+      type: "rest",
+      meals: library.map((meal) => ({
+        slot: meal.category as BuilderDay["meals"][number]["slot"],
+        name: meal.name,
+        library_meal_id: meal.id,
+        ingredients: [],
+        portion_factor: 1,
+      })),
+    };
+
+    expect(summarizeDay(day, context, library).isBalanced).toBe(false);
+  });
 });
 
 describe("macroProgress", () => {
@@ -202,6 +251,28 @@ describe("macroProgress", () => {
     expect(macroProgress(1250, 1000)).toBe(100);
     expect(macroProgress(500, 1000)).toBe(50);
     expect(macroProgress(500, 0)).toBe(0);
+  });
+});
+
+describe("scoreMeal", () => {
+  it("bevorzugt ein passendes Gesamt-Makroprofil gegenüber einer einseitigen Mahlzeit", () => {
+    const remaining = { kcal: 700, p: 50, c: 75, f: 20 };
+    const balanced = libraryMeal("balanced", "lunch", {
+      kcal: 700,
+      protein_g: 50,
+      carbs_g: 75,
+      fat_g: 20,
+    });
+    const proteinHeavy = libraryMeal("protein-heavy", "lunch", {
+      kcal: 700,
+      protein_g: 95,
+      carbs_g: 25,
+      fat_g: 30,
+    });
+
+    expect(scoreMeal(balanced, context, "rest", remaining).score).toBeGreaterThan(
+      scoreMeal(proteinHeavy, context, "rest", remaining).score,
+    );
   });
 });
 
@@ -241,10 +312,65 @@ describe("rebalanceDay", () => {
       ],
     };
 
+    const before = summarizeDay(day, context, library);
     const result = rebalanceDay(day, context, library);
+    const after = summarizeDay(result, context, library);
 
     expect(result.meals[0].portion_factor).toBe(1);
-    expect(result.meals[1].portion_factor).toBe(1);
-    expect(result.meals[2].portion_factor).toBe(1);
+    expect(macroFitScore(after.totals, after.target)).toBeLessThan(
+      macroFitScore(before.totals, before.target),
+    );
+  });
+});
+
+describe("autoFillWeekImpl", () => {
+  const variedLibrary = (["breakfast", "lunch", "dinner", "snack"] as const).flatMap((category) => [
+    libraryMeal(`${category}-a`, category),
+    libraryMeal(`${category}-b`, category),
+    libraryMeal(`${category}-c`, category),
+  ]);
+  const emptyDays: BuilderDay[] = Array.from({ length: 4 }, (_, index) => ({
+    name: `Tag ${index + 1}`,
+    type: "rest",
+    meals: [],
+  }));
+
+  it("rotiert Gerichte bei hoher gewünschter Abwechslung", () => {
+    const result = autoFillWeekImpl(
+      emptyDays.slice(0, 3),
+      {
+        ...context,
+        varietyLevel: "high",
+        mealPrepStyle: "daily",
+      },
+      variedLibrary,
+      "empty_only",
+    );
+    const breakfastIds = result.days.map(
+      (day) => day.meals.find((meal) => meal.slot === "breakfast")?.library_meal_id,
+    );
+
+    expect(new Set(breakfastIds).size).toBe(3);
+  });
+
+  it("wiederholt mealprep-taugliche Gerichte blockweise", () => {
+    const result = autoFillWeekImpl(
+      emptyDays,
+      {
+        ...context,
+        varietyLevel: "low",
+        mealPrepStyle: "meal_prep",
+      },
+      variedLibrary,
+      "empty_only",
+    );
+    const breakfastIds = result.days.map(
+      (day) => day.meals.find((meal) => meal.slot === "breakfast")?.library_meal_id,
+    );
+
+    expect(mealRepeatSpan({ ...context, varietyLevel: "low", mealPrepStyle: "meal_prep" })).toBe(3);
+    expect(breakfastIds[1]).toBe(breakfastIds[0]);
+    expect(breakfastIds[2]).toBe(breakfastIds[0]);
+    expect(breakfastIds[3]).not.toBe(breakfastIds[0]);
   });
 });
