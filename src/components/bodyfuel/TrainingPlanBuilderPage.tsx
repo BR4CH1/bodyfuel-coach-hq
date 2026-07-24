@@ -1159,7 +1159,7 @@ function ExerciseRow({
             onChange={(event) => onChange({ name: event.target.value })}
             placeholder="Übungsname"
             aria-label="Übungsname"
-            className="min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-2 py-2 text-sm font-bold outline-none transition hover:border-border focus:border-primary focus:bg-card"
+            className="min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-2 py-2 text-sm font-bold text-foreground outline-none transition placeholder:text-foreground/70 hover:border-border focus:border-primary focus:bg-card"
           />
         </div>
 
