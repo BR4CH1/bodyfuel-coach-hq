@@ -349,7 +349,7 @@ export async function persistTrainingPlan(data: {
         generated_by: "coach_manual",
         source: "manual",
         uploaded_by: data.uploadedBy,
-        file_path: `coach-manual/${data.customerId}/training-${Date.now()}.json`,
+        file_path: `${data.customerId}/coach-manual/training-${Date.now()}.json`,
         file_name: "coach-training.json",
         scheduled_start_date: isoDate(start),
         scheduled_end_date: isoDate(end),
