@@ -26,6 +26,7 @@ import {
   type AutoFillMode,
   type SharedSlotsMap,
 } from "@/features/nutrition-plan-builder/lib/plan-builder.logic";
+import { clearFormDraft, useFormDraft } from "@/hooks/use-form-draft";
 
 type UsePlanBuilderParams = {
   userId: string;
@@ -57,6 +58,7 @@ export function usePlanBuilder({ userId, planId, returnOrgId }: UsePlanBuilderPa
   const loadPlan = useServerFn(loadNutritionPlanForBuilder);
   const generateLibraryImage = useServerFn(generateMealImage);
   const requestedLibraryImages = useRef(new Set<string>());
+  const restoredDraft = useRef(false);
 
   const libraryQuery = useQuery({
     queryKey: ["meal-library"],
@@ -90,9 +92,28 @@ export function usePlanBuilder({ userId, planId, returnOrgId }: UsePlanBuilderPa
   const [days, setDays] = useState<BuilderDay[]>([]);
   const [partnerDays, setPartnerDays] = useState<BuilderDay[]>([]);
   const [copyChoiceIdx, setCopyChoiceIdx] = useState<number | null>(null);
+  const draftKey = useMemo(
+    () => `bf.planBuilder.draft.${userId}.${planId ?? "new"}`,
+    [userId, planId],
+  );
 
   const partnerId = partnerLinkQuery.data?.partner_id ?? null;
   const partnerName = partnerLinkQuery.data?.partner_name ?? "Partner";
+
+  useFormDraft(
+    draftKey,
+    { title, startDate, endDate, partnerMode, sharedSlots, days, partnerDays },
+    (draft) => {
+      restoredDraft.current = true;
+      if (typeof draft.title === "string") setTitle(draft.title);
+      if (typeof draft.startDate === "string") setStartDate(draft.startDate);
+      if (typeof draft.endDate === "string") setEndDate(draft.endDate);
+      if (typeof draft.partnerMode === "boolean") setPartnerMode(draft.partnerMode);
+      if (draft.sharedSlots) setSharedSlots(draft.sharedSlots);
+      if (Array.isArray(draft.days)) setDays(draft.days);
+      if (Array.isArray(draft.partnerDays)) setPartnerDays(draft.partnerDays);
+    },
+  );
 
   useEffect(() => {
     setPartnerMode(Boolean(partnerId));
@@ -124,7 +145,7 @@ export function usePlanBuilder({ userId, planId, returnOrgId }: UsePlanBuilderPa
   }, [startDate, numDays, trainingWeekdays, partnerTrainingWeekdays, partnerMode]);
 
   useEffect(() => {
-    if (!planId || !loadedPlanQuery.data || loadedPlanApplied) return;
+    if (!planId || !loadedPlanQuery.data || loadedPlanApplied || restoredDraft.current) return;
     setTitle(loadedPlanQuery.data.title);
     setStartDate(loadedPlanQuery.data.startDate);
     setEndDate(loadedPlanQuery.data.endDate);
@@ -221,6 +242,7 @@ export function usePlanBuilder({ userId, planId, returnOrgId }: UsePlanBuilderPa
         });
       }
       toast.success(publish ? "Plan veröffentlicht" : "Plan als Entwurf gespeichert");
+      clearFormDraft(draftKey);
       goBack();
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : "Speichern fehlgeschlagen");

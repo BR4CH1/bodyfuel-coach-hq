@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
 import { useEntitlements } from "@/lib/bodyfuel/entitlements";
 import { getActiveOrgContext } from "@/components/organizations/OrganizationContextSwitcher";
+import { getLastAppRoute } from "@/hooks/use-last-app-route";
 
 export const Route = createFileRoute("/app")({
   head: () => ({ meta: [{ title: "App — BODYFUEL" }] }),
@@ -21,6 +22,12 @@ function AppEntryPage() {
 
     if (!supabaseUser) {
       navigate({ to: "/auth", search: { next: undefined }, replace: true });
+      return;
+    }
+
+    const lastRoute = getLastAppRoute();
+    if (lastRoute && lastRoute !== "/app") {
+      navigate({ to: lastRoute as any, replace: true } as any);
       return;
     }
 

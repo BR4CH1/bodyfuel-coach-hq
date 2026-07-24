@@ -20,6 +20,7 @@ import { ReferralAttacher } from "../components/bodyfuel/ReferralAttacher";
 import { NameCompletionGate } from "../components/bodyfuel/NameCompletionGate";
 import { FuelyFAB } from "../components/bodyfuel/FuelyFAB";
 import { FuelyHintEngine } from "../components/bodyfuel/FuelyHintEngine";
+import { useRememberLastAppRoute } from "@/hooks/use-last-app-route";
 
 
 
@@ -120,6 +121,7 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  useRememberLastAppRoute();
   useEffect(() => {
     void (async () => {
       try {

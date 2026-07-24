@@ -44,7 +44,7 @@ function AuthPage() {
     if (loading) return;
     if (!supabaseUser) return;
     if (next) {
-      window.location.href = next;
+      navigate({ to: next as any, replace: true } as any);
       return;
     }
     navigate({ to: "/app", replace: true });
@@ -115,10 +115,9 @@ function AuthPage() {
         });
         if (error) throw error;
         toast.success("Willkommen zurück!");
-        // Defensiv: direkt weiter navigieren, damit ein hängender
-        // onAuthStateChange / Profile-Load die UI nicht blockiert.
+        // Defensiv: direkt weiter navigieren, ohne einen vollen Reload auszulösen.
         const target = next ?? "/app";
-        window.location.assign(target);
+        navigate({ to: target as any, replace: true } as any);
         return;
       }
     } catch (err: unknown) {

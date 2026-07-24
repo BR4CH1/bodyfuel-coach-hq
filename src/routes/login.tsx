@@ -73,6 +73,7 @@ function LoginPage() {
       });
       if (error) throw error;
       toast.success("Willkommen zurück!");
+      navigate({ to: "/app", replace: true });
     } catch (err: unknown) {
       const raw = err instanceof Error ? err.message : "Login fehlgeschlagen";
       const msg = /invalid login credentials/i.test(raw)

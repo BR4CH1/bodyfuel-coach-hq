@@ -1042,6 +1042,7 @@ function ExerciseCard({
   };
 
   // Notes per exercise per day
+  const noteKey = `bf.tt.note.${clientId}.${ex.id}.${todayStr}`;
   const [note, setNote] = useState("");
   const [noteLoaded, setNoteLoaded] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1057,16 +1058,28 @@ function ExerciseCard({
         .eq("note_date", todayStr)
         .maybeSingle();
       if (!alive) return;
-      setNote((data?.note as string | undefined) ?? "");
+      const serverNote = (data?.note as string | undefined) ?? "";
+      let localDraft: string | null = null;
+      try {
+        localDraft = window.localStorage.getItem(noteKey);
+      } catch {
+        localDraft = null;
+      }
+      setNote(localDraft ?? serverNote);
       setNoteLoaded(true);
     })();
     return () => {
       alive = false;
     };
-  }, [ex.id, clientId, todayStr]);
+  }, [ex.id, clientId, todayStr, noteKey]);
 
   const onNoteChange = (val: string) => {
     setNote(val);
+    try {
+      window.localStorage.setItem(noteKey, val);
+    } catch {
+      /* ignore */
+    }
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
       const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
@@ -1091,6 +1104,7 @@ function ExerciseCard({
             { exercise_id: ex.id, client_id: clientId, note_date: todayStr, note: val },
             { onConflict: "exercise_id,client_id,note_date" },
           );
+        window.localStorage.removeItem(noteKey);
       } catch {
         /* silent */
       }

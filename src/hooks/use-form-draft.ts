@@ -24,17 +24,22 @@ export function useFormDraft<T extends Record<string, unknown>>(
 ) {
   const { enabled = true, debounceMs = 250 } = options;
   const restored = useRef(false);
+  const restoredKey = useRef<string | null>(null);
+  const skipInitialPersist = useRef(false);
   const restoreRef = useRef(restore);
+  const latestSerialized = useRef<string | null>(null);
   restoreRef.current = restore;
 
   // Restore once on mount.
   useEffect(() => {
-    if (!enabled || !key || restored.current) return;
+    if (!enabled || !key || restoredKey.current === key) return;
+    restoredKey.current = key;
     restored.current = true;
     try {
       const raw = localStorage.getItem(key);
       if (!raw) return;
       const parsed = JSON.parse(raw) as Partial<T>;
+      skipInitialPersist.current = true;
       restoreRef.current(parsed);
     } catch {
       // ignore corrupt drafts
@@ -45,14 +50,35 @@ export function useFormDraft<T extends Record<string, unknown>>(
   // Persist on change (debounced).
   useEffect(() => {
     if (!enabled || !key || !restored.current) return;
-    const t = setTimeout(() => {
+    if (skipInitialPersist.current) {
+      skipInitialPersist.current = false;
+      return;
+    }
+    const serialized = JSON.stringify(values);
+    latestSerialized.current = serialized;
+    const write = () => {
       try {
-        localStorage.setItem(key, JSON.stringify(values));
+        localStorage.setItem(key, latestSerialized.current ?? serialized);
       } catch {
         // quota / private mode — ignore
       }
+    };
+    const t = setTimeout(() => {
+      write();
     }, debounceMs);
-    return () => clearTimeout(t);
+    const flushOnHide = () => {
+      if (document.visibilityState === "hidden") write();
+    };
+    window.addEventListener("pagehide", write);
+    window.addEventListener("beforeunload", write);
+    document.addEventListener("visibilitychange", flushOnHide);
+    return () => {
+      clearTimeout(t);
+      write();
+      window.removeEventListener("pagehide", write);
+      window.removeEventListener("beforeunload", write);
+      document.removeEventListener("visibilitychange", flushOnHide);
+    };
   }, [key, enabled, debounceMs, JSON.stringify(values)]);
 }
 
