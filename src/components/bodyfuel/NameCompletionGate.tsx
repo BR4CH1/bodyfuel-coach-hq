@@ -64,6 +64,19 @@ export function NameCompletionGate() {
       if (cancelled) return;
       setDisplay(data?.display_name ?? null);
       setChecked(true);
+      // Prefill aus Auth-Metadata (falls beim Signup gesetzt) — sonst bleiben
+      // die Felder leer. Wichtig für per Invite/Import angelegte User, damit
+      // sie nicht bei Null anfangen.
+      const meta = (supabaseUser.user_metadata ?? {}) as {
+        first_name?: string;
+        last_name?: string;
+        given_name?: string;
+        family_name?: string;
+      };
+      const mf = (meta.first_name ?? meta.given_name ?? "").toString().trim();
+      const ml = (meta.last_name ?? meta.family_name ?? "").toString().trim();
+      if (mf) setFirst((v) => v || mf);
+      if (ml) setLast((v) => v || ml);
     })();
     return () => {
       cancelled = true;
@@ -71,6 +84,19 @@ export function NameCompletionGate() {
   }, [supabaseUser, loading]);
 
   const incomplete = useMemo(() => checked && isNameIncomplete(display), [checked, display]);
+
+  // Wenn der Gate offen ist, den Body-Scroll sperren, damit die
+  // dahinterliegende Route nicht weiterscrollt/rendert und den Fokus aus
+  // dem Input reißt (Ursache: „Man kann keinen Namen eingeben").
+  useEffect(() => {
+    if (!incomplete) return;
+    if (typeof document === "undefined") return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [incomplete]);
 
   if (!supabaseUser || !incomplete) return null;
 
@@ -111,7 +137,13 @@ export function NameCompletionGate() {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/90 px-4 backdrop-blur-sm">
+    <div
+      className="fixed inset-0 z-[200] flex items-center justify-center overflow-y-auto bg-background/95 px-4 py-6 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      onPointerDownCapture={(e) => e.stopPropagation()}
+      onClickCapture={(e) => e.stopPropagation()}
+    >
       <div className="w-full max-w-md rounded-3xl border border-border bg-card p-6 shadow-gold sm:p-8">
         <div className="mb-4 flex items-center gap-3">
           <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-gold">

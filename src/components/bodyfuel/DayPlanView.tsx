@@ -18,6 +18,9 @@ import {
   ChevronDown,
 } from "lucide-react";
 
+import { MealImageThumb } from "./MealImageThumb";
+import type { MealImageStatus } from "@/lib/meal-images.functions";
+
 export type DayPlanMeal = {
   id: string;
   /** Originaler Slot-Name aus dem Plan (z.B. "Frühstück", "Snack 1", "Pre-Workout"). */
@@ -30,6 +33,8 @@ export type DayPlanMeal = {
   protein_g: number | null;
   carbs_g: number | null;
   fat_g: number | null;
+  imageUrl?: string | null;
+  imageStatus?: MealImageStatus | null;
   isTracked: boolean;
   busy?: boolean;
   hasRecipe?: boolean;
@@ -236,10 +241,7 @@ function ProgressBar({ current, max }: { current: number; max: number }) {
   const pct = max > 0 ? Math.min(100, Math.round((current / max) * 100)) : 0;
   return (
     <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
-      <div
-        className="h-full rounded-full bg-primary transition-all"
-        style={{ width: `${pct}%` }}
-      />
+      <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
     </div>
   );
 }
@@ -302,20 +304,23 @@ function MealCard({
           <span className="mt-0.5 h-6 w-6 shrink-0" aria-hidden />
         )}
 
+        <MealImageThumb
+          name={m.title}
+          imageUrl={m.imageUrl}
+          status={m.imageStatus}
+          className={compact ? "h-12 w-14" : "h-16 w-20"}
+        />
+
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-2">
             <div className="min-w-0">
               <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                 {m.label}
               </div>
-              <div className="truncate text-sm font-bold text-foreground">
-                {m.title}
-              </div>
+              <div className="truncate text-sm font-bold text-foreground">{m.title}</div>
             </div>
             {m.kcal != null && (
-              <div className="shrink-0 text-xs font-semibold text-primary">
-                {m.kcal} kcal
-              </div>
+              <div className="shrink-0 text-xs font-semibold text-primary">{m.kcal} kcal</div>
             )}
           </div>
 
@@ -335,13 +340,9 @@ function MealCard({
                   className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-muted-foreground hover:text-primary"
                 >
                   <ChevronDown
-                    className={`h-3 w-3 transition-transform ${
-                      expanded ? "rotate-180" : ""
-                    }`}
+                    className={`h-3 w-3 transition-transform ${expanded ? "rotate-180" : ""}`}
                   />
-                  {expanded
-                    ? "weniger anzeigen"
-                    : `+ ${ingredients.length - 3} weitere Zutaten`}
+                  {expanded ? "weniger anzeigen" : `+ ${ingredients.length - 3} weitere Zutaten`}
                 </button>
               )}
             </div>
@@ -463,8 +464,8 @@ export function DayPlanView({
               <div className="text-xs text-muted-foreground">kcal</div>
             </div>
             <div className="mt-1 text-[11px] text-muted-foreground">
-              Protein {targets.protein_g ?? "—"} g · Kohlenhydrate{" "}
-              {targets.carbs_g ?? "—"} g · Fett {targets.fat_g ?? "—"} g
+              Protein {targets.protein_g ?? "—"} g · Kohlenhydrate {targets.carbs_g ?? "—"} g · Fett{" "}
+              {targets.fat_g ?? "—"} g
             </div>
             <div className="mt-3 space-y-1">
               <ProgressBar current={eaten.kcal} max={targets.kcal ?? 0} />
@@ -540,13 +541,10 @@ export function DayPlanView({
               label="Differenz"
               value={`${
                 targets.kcal != null
-                  ? (eaten.kcal - targets.kcal >= 0 ? "+" : "") +
-                    (eaten.kcal - targets.kcal)
+                  ? (eaten.kcal - targets.kcal >= 0 ? "+" : "") + (eaten.kcal - targets.kcal)
                   : "—"
               } kcal`}
-              accent={
-                targets.kcal != null && Math.abs(eaten.kcal - targets.kcal) > 100
-              }
+              accent={targets.kcal != null && Math.abs(eaten.kcal - targets.kcal) > 100}
             />
             <BalanceRow
               label="Protein"
@@ -556,10 +554,7 @@ export function DayPlanView({
               label="Kohlenhydrate"
               value={`${eaten.carbs_g} / ${targets.carbs_g ?? "—"} g`}
             />
-            <BalanceRow
-              label="Fett"
-              value={`${eaten.fat_g} / ${targets.fat_g ?? "—"} g`}
-            />
+            <BalanceRow label="Fett" value={`${eaten.fat_g} / ${targets.fat_g ?? "—"} g`} />
           </div>
         </div>
       )}
@@ -567,15 +562,7 @@ export function DayPlanView({
   );
 }
 
-function BalanceRow({
-  label,
-  value,
-  accent,
-}: {
-  label: string;
-  value: string;
-  accent?: boolean;
-}) {
+function BalanceRow({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
     <div className="flex items-baseline justify-between gap-2">
       <span className="text-muted-foreground">{label}</span>

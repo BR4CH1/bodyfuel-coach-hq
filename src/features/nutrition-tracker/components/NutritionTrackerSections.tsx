@@ -7,6 +7,7 @@ import {
   type BullsDayType,
 } from "@/lib/performance-nutrition/bulls-nutrition.functions";
 import type { DayType } from "@/lib/nutrition.functions";
+import { formatFoodAmount } from "@/lib/food-units";
 import { MEALS } from "../constants";
 import { cleanPlanEntryName, shiftIsoDate, todayIso } from "../lib/nutrition-tracker.logic";
 import type { FoodEntry, Meal, NutritionTargets, NutritionTotals } from "../types";
@@ -314,7 +315,12 @@ export function MealCard({
                   </div>
                   <div className="text-[11px] text-muted-foreground">
                     {entry.brand ? `${entry.brand} · ` : ""}
-                    {isPlan ? "" : `${Number(entry.serving_g)} g · `}
+                    {isPlan
+                      ? ""
+                      : `${formatFoodAmount(
+                          Number(entry.serving_amount ?? entry.serving_g),
+                          entry.amount_unit === "ml" ? "ml" : "g",
+                        )} · `}
                     {Math.round(Number(entry.kcal))} kcal · P {Number(entry.protein_g)} · K{" "}
                     {Number(entry.carbs_g)} · F {Number(entry.fat_g)}
                   </div>

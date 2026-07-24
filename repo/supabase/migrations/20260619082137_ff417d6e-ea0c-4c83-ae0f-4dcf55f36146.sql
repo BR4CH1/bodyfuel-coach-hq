@@ -1,1 +1,0 @@
-REVOKE EXECUTE ON FUNCTION public.auto_activate_due_plans() FROM PUBLIC, anon, authenticated;

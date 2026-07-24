@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
@@ -10,12 +10,14 @@ import {
   saveBuilderPartnerPlan,
   saveBuilderPlan,
   type BuilderDay,
+  type LibraryMeal,
 } from "@/lib/plan-builder.functions";
+import { generateMealImage, type MealImageStatus } from "@/lib/meal-images.functions";
 import { getPartnerLink } from "@/lib/partner.functions";
 import {
   addDays,
-  autoFillDayImpl,
-  autoFillDayPair,
+  autoFillWeekImpl,
+  autoFillWeekPairImpl,
   buildBuilderDays,
   cloneBuilderDays,
   isoDate,
@@ -46,12 +48,15 @@ const EMPTY_WEEKDAYS: number[] = [];
 
 export function usePlanBuilder({ userId, planId, returnOrgId }: UsePlanBuilderParams) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const listLibrary = useServerFn(listMealLibrary);
   const getContext = useServerFn(getCustomerPlanContext);
   const savePlan = useServerFn(saveBuilderPlan);
   const savePartnerPlan = useServerFn(saveBuilderPartnerPlan);
   const getPartner = useServerFn(getPartnerLink);
   const loadPlan = useServerFn(loadNutritionPlanForBuilder);
+  const generateLibraryImage = useServerFn(generateMealImage);
+  const requestedLibraryImages = useRef(new Set<string>());
 
   const libraryQuery = useQuery({
     queryKey: ["meal-library"],
@@ -88,6 +93,10 @@ export function usePlanBuilder({ userId, planId, returnOrgId }: UsePlanBuilderPa
 
   const partnerId = partnerLinkQuery.data?.partner_id ?? null;
   const partnerName = partnerLinkQuery.data?.partner_name ?? "Partner";
+
+  useEffect(() => {
+    setPartnerMode(Boolean(partnerId));
+  }, [partnerId]);
 
   const partnerContextQuery = useQuery({
     queryKey: ["plan-ctx", partnerId],
@@ -145,6 +154,51 @@ export function usePlanBuilder({ userId, planId, returnOrgId }: UsePlanBuilderPa
       previous.map((day, currentIndex) => (currentIndex === index ? update(day) : day)),
     );
   };
+
+  const ensureLibraryMealImage = useCallback(
+    (mealId: string) => {
+      if (requestedLibraryImages.current.has(mealId)) return;
+      const currentLibrary = queryClient.getQueryData<LibraryMeal[]>(["meal-library"]) ?? [];
+      const currentMeal = currentLibrary.find((meal) => meal.id === mealId);
+      if (!currentMeal || currentMeal.image_url) return;
+
+      requestedLibraryImages.current.add(mealId);
+      queryClient.setQueryData<LibraryMeal[]>(["meal-library"], (previous = []) =>
+        previous.map((meal) =>
+          meal.id === mealId ? { ...meal, image_status: "generating" } : meal,
+        ),
+      );
+
+      void generateLibraryImage({
+        data: { target: "library_meal", meal_id: mealId, force: false },
+      })
+        .then((result) => {
+          const status: MealImageStatus =
+            result.status === "generated" ||
+            result.status === "cached" ||
+            result.status === "preserved"
+              ? "ready"
+              : result.status === "fallback"
+                ? "fallback"
+                : "failed";
+          queryClient.setQueryData<LibraryMeal[]>(["meal-library"], (previous = []) =>
+            previous.map((meal) =>
+              meal.id === mealId
+                ? { ...meal, image_url: result.image_url ?? null, image_status: status }
+                : meal,
+            ),
+          );
+        })
+        .catch(() => {
+          queryClient.setQueryData<LibraryMeal[]>(["meal-library"], (previous = []) =>
+            previous.map((meal) =>
+              meal.id === mealId ? { ...meal, image_status: "failed" } : meal,
+            ),
+          );
+        });
+    },
+    [generateLibraryImage, queryClient],
+  );
 
   const handleSave = async (publish: boolean) => {
     try {
@@ -295,31 +349,22 @@ export function usePlanBuilder({ userId, planId, returnOrgId }: UsePlanBuilderPa
 
     let missingCount = 0;
     if (partnerMode && partnerContextQuery.data) {
-      const nextClient: BuilderDay[] = [];
-      const nextPartner: BuilderDay[] = [];
-      for (let index = 0; index < days.length; index += 1) {
-        const pair = autoFillDayPair(
-          days[index],
-          partnerDays[index],
-          context,
-          partnerContextQuery.data,
-          library,
-          mode,
-          sharedSlots,
-        );
-        missingCount += pair.missing;
-        nextClient.push(pair.client);
-        nextPartner.push(pair.partner);
-      }
-      setDays(nextClient);
-      setPartnerDays(nextPartner);
+      const result = autoFillWeekPairImpl(
+        days,
+        partnerDays,
+        context,
+        partnerContextQuery.data,
+        library,
+        mode,
+        sharedSlots,
+      );
+      missingCount += result.missing;
+      setDays(result.clientDays);
+      setPartnerDays(result.partnerDays);
     } else {
-      const nextDays = days.map((day) => {
-        const result = autoFillDayImpl(day, context, library, mode);
-        missingCount += result.missing.length;
-        return result.day;
-      });
-      setDays(nextDays);
+      const result = autoFillWeekImpl(days, context, library, mode);
+      missingCount += result.missing;
+      setDays(result.days);
     }
 
     if (missingCount > 0) {
@@ -376,5 +421,6 @@ export function usePlanBuilder({ userId, planId, returnOrgId }: UsePlanBuilderPa
     copyDayPair,
     runAutoFillWeek,
     undoWeekFill,
+    ensureLibraryMealImage,
   };
 }

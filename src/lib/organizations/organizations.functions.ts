@@ -125,15 +125,33 @@ export const getMyOrgContexts = createServerFn({ method: "GET" })
     if (memRes.error) throw new Error(memRes.error.message);
     if (staffRes.error) throw new Error(staffRes.error.message);
 
+    const STAFF_MEMBERSHIP_ROLES = new Set([
+      "coach",
+      "organization_admin",
+      "head_coach",
+      "team_coach",
+      "performance_coach",
+      "nutrition_coach",
+      "community_manager",
+      "staff",
+    ]);
+
     const byId = new Map<string, OrgContextEntry>();
     for (const m of (memRes.data ?? []) as any[]) {
       const org = m.organization as OrganizationSummary;
       if (!org) continue;
-      byId.set(org.id, {
+      const entry: OrgContextEntry = byId.get(org.id) ?? {
         organization: org,
-        athlete: { role: m.role, onboarding_completed: !!m.onboarding_completed },
+        athlete: null,
         staff: null,
-      });
+      };
+      if (m.role === "athlete") {
+        entry.athlete = { role: m.role, onboarding_completed: !!m.onboarding_completed };
+      } else if (STAFF_MEMBERSHIP_ROLES.has(m.role) && !entry.staff) {
+        // Membership role signals staff access even without a staff_assignments row.
+        entry.staff = { role: m.role, permissions: [], team_id: null };
+      }
+      byId.set(org.id, entry);
     }
     for (const s of (staffRes.data ?? []) as any[]) {
       const org = s.organization as OrganizationSummary;
@@ -146,6 +164,12 @@ export const getMyOrgContexts = createServerFn({ method: "GET" })
       };
       byId.set(org.id, existing);
     }
+    // Nur tatsächlich vorhandene Zugriffe zurückgeben. Ein Athleteneintrag
+    // entsteht ausschließlich aus einer echten organization_memberships-Zeile
+    // mit role='athlete'. Ein Coach-Eintrag entsteht aus staff_assignments
+    // ODER einer Membership mit Staff-Rolle. Kein synthetisches Auto-Inject
+    // — Rollen werden nicht dedupliziert oder überschrieben, sondern jede
+    // Kombination (org × rolle) wird als eigener AccessContext ausgegeben.
     return Array.from(byId.values());
   });
 
@@ -376,10 +400,9 @@ export const acceptOrganizationInvite = createServerFn({ method: "POST" })
     }
 
     // Fachliche Trennung:
-    // - `organization_memberships` = Zugehörigkeit + Athletenrolle. Für
-    //   Staff-Einladungen speichern wir hier NUR den neutralen Marker
-    //   `member`, damit Athletenlogik/Home-Redirects sie nicht als Spieler
-    //   interpretieren.
+    // - `organization_memberships` = Zugehörigkeit + Athletenrolle. Für reine
+    //   Staff-User ohne bestehende Membership speichern wir den neutralen
+    //   Marker `member`. Eine vorhandene Athletenrolle bleibt immer erhalten.
     // - `staff_assignments` = tatsächliche Vereinsrolle + Berechtigungen.
     const assignedRole = invite.assigned_role;
     const isAthleteInvite = assignedRole === "athlete";
@@ -429,18 +452,37 @@ export const acceptOrganizationInvite = createServerFn({ method: "POST" })
       }
 
     } else {
-      // Staff-Einladung: Zugehörigkeit als neutrale Membership + Rolle in
-      // staff_assignments mit den Permissions aus der Einladung.
-      const { error: memErr } = await supabaseAdmin.from("organization_memberships").upsert(
-        {
-          user_id: userId,
-          organization_id: invite.organization_id,
-          role: "member",
-          status: "active",
-        },
-        { onConflict: "user_id,organization_id" },
-      );
-      if (memErr) throw new Error(memErr.message);
+      // Staff-Einladung: Eine bestehende Athletenrolle muss erhalten bleiben.
+      // organization_memberships hat absichtlich nur eine Zeile pro User+Org;
+      // die additive Coach-Rolle lebt ausschließlich in staff_assignments.
+      // Ein blindes Upsert mit role="member" würde Dual-Role-User wieder zu
+      // reinen Staff-Usern machen.
+      const { data: existingMembership, error: existingMembershipErr } =
+        await supabaseAdmin
+          .from("organization_memberships")
+          .select("id, role, status")
+          .eq("user_id", userId)
+          .eq("organization_id", invite.organization_id)
+          .maybeSingle();
+      if (existingMembershipErr) throw new Error(existingMembershipErr.message);
+
+      if (existingMembership) {
+        const { error: memErr } = await supabaseAdmin
+          .from("organization_memberships")
+          .update({ status: "active" })
+          .eq("id", existingMembership.id);
+        if (memErr) throw new Error(memErr.message);
+      } else {
+        const { error: memErr } = await supabaseAdmin
+          .from("organization_memberships")
+          .insert({
+            user_id: userId,
+            organization_id: invite.organization_id,
+            role: "member",
+            status: "active",
+          });
+        if (memErr) throw new Error(memErr.message);
+      }
 
       const { error: staffErr } = await supabaseAdmin.from("staff_assignments").upsert(
         {

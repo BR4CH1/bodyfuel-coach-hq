@@ -51,6 +51,36 @@ describe("nutrition plan AI domain logic", () => {
     expect(derived.rest.protein_g).toBe(derived.training.protein_g);
   });
 
+  it("caps stored and calculated protein at 2 g/kg and shifts the remainder to carbs", () => {
+    const stored = resolveNutritionTargets({
+      source: {
+        kcal: 2600,
+        protein_g: 230,
+        carbs_g: 260,
+        fat_g: 70,
+        kcal_rest: 2300,
+        protein_g_rest: 220,
+        carbs_g_rest: 210,
+        fat_g_rest: 75,
+      },
+      currentWeight: 100,
+      goalDirection: "cut",
+    });
+    expect(stored.training).toMatchObject({ protein_g: 200, carbs_g: 290 });
+    expect(stored.rest).toMatchObject({ protein_g: 200, carbs_g: 230 });
+
+    const calculated = resolveNutritionTargets({
+      currentWeight: 80,
+      height: 180,
+      ageYears: 30,
+      gender: "male",
+      activityLevel: "active",
+      goalDirection: "cut",
+    });
+    expect(calculated.training.protein_g).toBe(160);
+    expect(calculated.rest.protein_g).toBe(160);
+  });
+
   it("builds weekday-aligned schedules and one AI template per day type", () => {
     const schedule = buildPlanSchedule({
       start: new Date("2026-07-20T12:00:00.000Z"),

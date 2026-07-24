@@ -1,1 +1,0 @@
-REVOKE SELECT (user_id) ON public.app_reviews FROM anon;

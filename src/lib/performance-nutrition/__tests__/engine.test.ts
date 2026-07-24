@@ -292,8 +292,21 @@ describe("Macros — protein stays stable between REST and FOOTBALL_TRAINING", (
       referenceDate: REF_2026,
     });
     expect(rest.proteinG).toBe(training.proteinG);
-    expect((training.carbsG ?? 0)).toBeGreaterThan(rest.carbsG ?? 0);
-    expect((training.targetKcal ?? 0)).toBeGreaterThan(rest.targetKcal ?? 0);
+    expect(training.carbsG ?? 0).toBeGreaterThan(rest.carbsG ?? 0);
+    expect(training.targetKcal ?? 0).toBeGreaterThan(rest.targetKcal ?? 0);
+  });
+
+  it("never rounds protein above 2 g/kg", () => {
+    const p = profile({
+      birthDate: "1998-01-01",
+      performanceGoal: "FAT_LOSS",
+      weightKg: 84,
+    });
+    const result = calculatePerformanceNutritionTarget(p, {
+      dayType: "REST",
+      referenceDate: REF_2026,
+    });
+    expect(result.proteinG).toBeLessThanOrEqual(168);
   });
 });
 
@@ -312,7 +325,7 @@ describe("Carb floor can raise final target kcal", () => {
     });
     expect(r.energyFloorApplied).toBe(true);
     expect(r.flags).toContain("CARBOHYDRATE_PERFORMANCE_FLOOR_APPLIED");
-    expect((r.targetKcal ?? 0)).toBeGreaterThan((r.goalAdjustedEnergy ?? 0));
+    expect(r.targetKcal ?? 0).toBeGreaterThan(r.goalAdjustedEnergy ?? 0);
   });
 });
 
@@ -327,10 +340,10 @@ describe("Missing data / review-required", () => {
     expect(r.targetKcal).toBeNull();
   });
   it("Missing weight → MISSING_DATA", () => {
-    const r = calculatePerformanceNutritionTarget(
-      profile({ weightKg: null }),
-      { dayType: "REST", referenceDate: REF_2026 },
-    );
+    const r = calculatePerformanceNutritionTarget(profile({ weightKg: null }), {
+      dayType: "REST",
+      referenceDate: REF_2026,
+    });
     expect(r.status).toBe("MISSING_DATA");
   });
 });

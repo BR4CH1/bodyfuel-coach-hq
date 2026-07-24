@@ -2,52 +2,23 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, Plus, Trash2, X, ChefHat, Sparkles } from "lucide-react";
+import { Loader2, Plus, Trash2, X, ChefHat } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { searchFoods, searchFoodsDb, estimateFoodFromText, type FoodResult } from "@/lib/nutrition.functions";
+import { searchFoodsDb, type FoodResult } from "@/lib/nutrition.functions";
+import { amountToGrams, macroFactorForAmount, type FoodAmountUnit } from "@/lib/food-units";
 import { saveCustomMeal } from "@/lib/custom-meals.functions";
-import { LOCAL_FOODS } from "@/lib/bodyfuel/localFoods";
-
 
 type Ingredient = {
   name: string;
+  amount: number;
+  unit: FoodAmountUnit;
   amount_g: number;
   kcal: number;
   protein_g: number;
   carbs_g: number;
   fat_g: number;
 };
-
-function normalizeFoodSearchTerm(value: string) {
-  return value
-    .toLowerCase()
-    .replace(/ä/g, "ae")
-    .replace(/ö/g, "oe")
-    .replace(/ü/g, "ue")
-    .replace(/ß/g, "ss")
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
-
-function compactFoodSearchTerm(value: string) {
-  return normalizeFoodSearchTerm(value).replace(/\s+/g, "");
-}
-
-function localFoodMatches(value: string, term: string) {
-  const haystack = normalizeFoodSearchTerm(value);
-  const compactHaystack = compactFoodSearchTerm(value);
-  const needle = normalizeFoodSearchTerm(term);
-  const compactNeedle = compactFoodSearchTerm(term);
-  const tokens = needle.split(/\s+/).filter(Boolean);
-  return (
-    haystack.includes(needle) ||
-    compactHaystack.includes(compactNeedle) ||
-    tokens.every((token) => haystack.includes(token) || compactHaystack.includes(token))
-  );
-}
 
 export function MealBuilderDialog({
   userId,
@@ -59,41 +30,18 @@ export function MealBuilderDialog({
   onClose: () => void;
 }) {
   const qc = useQueryClient();
-  const searchFn = useServerFn(searchFoods);
   const searchDbFn = useServerFn(searchFoodsDb);
-  const estimateFn = useServerFn(estimateFoodFromText);
   const saveFn = useServerFn(saveCustomMeal);
-
 
   const [name, setName] = useState("");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<FoodResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [picking, setPicking] = useState<FoodResult | null>(null);
-  const [unit, setUnit] = useState<"g" | "piece">("g");
+  const [unit, setUnit] = useState<FoodAmountUnit>("g");
   const [amountStr, setAmountStr] = useState("100");
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [saving, setSaving] = useState(false);
-  const [estimating, setEstimating] = useState(false);
-
-  const estimateWithAi = async () => {
-    const term = query.trim();
-    if (!term) return;
-    setEstimating(true);
-    try {
-      const r = await estimateFn({ data: { query: term } });
-      setResults([r]);
-      setPicking(r);
-      setUnit(r.serving_g ? "piece" : "g");
-      setAmountStr(r.serving_g ? "1" : "100");
-      toast.success("Schätzung erstellt – Werte prüfen & übernehmen.");
-    } catch (e) {
-      toast.error((e as Error).message);
-    } finally {
-      setEstimating(false);
-    }
-  };
-
 
   // Reset when opened
   useEffect(() => {
@@ -115,25 +63,10 @@ export function MealBuilderDialog({
       return;
     }
     const t = setTimeout(async () => {
-      const local = LOCAL_FOODS.filter(
-        (f) => localFoodMatches(f.name, term) || (f.aliases ?? []).some((a) => localFoodMatches(a, term)),
-      ).map(({ aliases: _aliases, ...r }) => r);
-      if (local.length > 0) setResults(local);
       setSearching(true);
       try {
-        const [dbResults, remote] = await Promise.all([
-          searchDbFn({ data: { query: term, limit: 15 } }).catch(() => [] as FoodResult[]),
-          searchFn({ data: { query: term } }).catch(() => [] as FoodResult[]),
-        ]);
-        const seen = new Set<string>();
-        const merged: FoodResult[] = [];
-        for (const r of [...dbResults, ...local, ...remote]) {
-          const key = `${r.barcode || compactFoodSearchTerm(r.name)}|${(r.brand ?? "").toLowerCase()}`;
-          if (seen.has(key)) continue;
-          seen.add(key);
-          merged.push(r);
-        }
-        setResults(merged);
+        const dbResults = await searchDbFn({ data: { query: term, limit: 50 } });
+        setResults(dbResults);
       } catch (e) {
         toast.error((e as Error).message);
       } finally {
@@ -141,7 +74,7 @@ export function MealBuilderDialog({
       }
     }, 300);
     return () => clearTimeout(t);
-  }, [query, open, picking, searchFn, searchDbFn]);
+  }, [query, open, picking, searchDbFn]);
 
   if (!open) return null;
 
@@ -162,12 +95,18 @@ export function MealBuilderDialog({
       toast.error("Bitte gültige Menge eingeben");
       return;
     }
-    const grams = unit === "piece" && picking.serving_g ? amt * picking.serving_g : amt;
-    const f = grams / 100;
+    if (unit !== picking.unit) {
+      toast.error(`Dieses Lebensmittel wird ausschließlich in ${picking.unit} geführt.`);
+      return;
+    }
+    const grams = amountToGrams(picking, amt);
+    const f = macroFactorForAmount(amt);
     setIngredients((xs) => [
       ...xs,
       {
         name: picking.name,
+        amount: +amt.toFixed(1),
+        unit,
         amount_g: +grams.toFixed(1),
         kcal: Math.round(picking.kcal_per_100g * f),
         protein_g: +(picking.protein_per_100g * f).toFixed(1),
@@ -200,6 +139,8 @@ export function MealBuilderDialog({
           meal_slot: "any",
           ingredients: ingredients.map((i) => ({
             name: i.name,
+            amount: i.amount,
+            unit: i.unit,
             amount_g: i.amount_g,
             kcal: i.kcal,
             protein_g: i.protein_g,
@@ -274,7 +215,8 @@ export function MealBuilderDialog({
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-sm font-medium">{i.name}</div>
                       <div className="text-[11px] text-muted-foreground">
-                        {Math.round(i.amount_g)} g · {i.kcal} kcal · P {i.protein_g.toFixed(1)} · K {i.carbs_g.toFixed(1)} · F {i.fat_g.toFixed(1)}
+                        {Math.round(i.amount)} {i.unit} · {i.kcal} kcal · P {i.protein_g.toFixed(1)}{" "}
+                        · K {i.carbs_g.toFixed(1)} · F {i.fat_g.toFixed(1)}
                       </div>
                     </div>
                     <button
@@ -308,26 +250,19 @@ export function MealBuilderDialog({
                 ) : results.length === 0 ? (
                   <div className="flex flex-col items-center gap-3 py-6 text-center text-xs text-muted-foreground">
                     {searching ? (
-                      <span className="flex items-center gap-2"><Loader2 className="h-3 w-3 animate-spin" /> Suche…</span>
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="h-3 w-3 animate-spin" /> Suche…
+                      </span>
                     ) : (
                       <>
                         <span>Keine Treffer in der Datenbank.</span>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={estimateWithAi}
-                          disabled={estimating}
-                        >
-                          {estimating ? (
-                            <><Loader2 className="h-3 w-3 animate-spin" /> Schätzt…</>
-                          ) : (
-                            <><Sparkles className="h-3 w-3" /> Nährwerte mit KI schätzen</>
-                          )}
-                        </Button>
+                        <span className="max-w-xs text-[11px]">
+                          Fehlende Produkte müssen zuerst in den geprüften Katalog importiert
+                          werden.
+                        </span>
                       </>
                     )}
                   </div>
-
                 ) : (
                   <ul className="divide-y divide-border">
                     {results.map((r, i) => (
@@ -335,96 +270,47 @@ export function MealBuilderDialog({
                         <button
                           onClick={() => {
                             setPicking(r);
-                            setUnit(r.serving_g ? "piece" : "g");
-                            setAmountStr(r.serving_g ? "1" : "100");
+                            setUnit(r.unit);
+                            setAmountStr("100");
                           }}
                           className="w-full px-2 py-3 text-left hover:bg-secondary"
                         >
                           <div className="truncate text-sm font-medium">{r.name}</div>
                           <div className="text-[11px] text-muted-foreground">
                             {r.brand ? `${r.brand} · ` : ""}
-                            {Math.round(r.kcal_per_100g)} kcal · P {r.protein_per_100g.toFixed(1)} · K {r.carbs_per_100g.toFixed(1)} · F {r.fat_per_100g.toFixed(1)} (/100g)
-                            {r.serving_g ? ` · 1 Stück ≈ ${r.serving_g} g` : ""}
+                            {Math.round(r.kcal_per_100g)} kcal · P {r.protein_per_100g.toFixed(1)} ·
+                            K {r.carbs_per_100g.toFixed(1)} · F {r.fat_per_100g.toFixed(1)} (/100{" "}
+                            {r.unit})
                           </div>
                         </button>
                       </li>
                     ))}
                   </ul>
                 )}
-                {!searching && query.trim() !== "" && results.length > 0 && (
-                  <div className="mt-2 flex justify-center">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={estimateWithAi}
-                      disabled={estimating}
-                      className="text-xs text-muted-foreground"
-                    >
-                      {estimating ? (
-                        <><Loader2 className="h-3 w-3 animate-spin" /> Schätzt…</>
-                      ) : (
-                        <><Sparkles className="h-3 w-3" /> Nichts passt? KI-Schätzung</>
-                      )}
-                    </Button>
-                  </div>
-                )}
-
               </div>
             </>
           ) : (
             (() => {
               const amt = parseFloat(amountStr.replace(",", ".")) || 0;
-              const grams = unit === "piece" && picking.serving_g ? amt * picking.serving_g : amt;
-              const f = grams / 100;
+              const f = macroFactorForAmount(amt);
               return (
                 <div className="space-y-3">
                   <div>
                     <div className="text-sm font-semibold">{picking.name}</div>
                     <div className="text-xs text-muted-foreground">
                       {picking.brand ?? "—"}
-                      {picking.serving_g ? ` · 1 Stück ≈ ${picking.serving_g} g` : ""}
+                      {` · Referenz: 100 ${picking.unit}`}
                     </div>
                   </div>
-                  {picking.serving_g && (
-                    <div className="inline-flex rounded-md border border-border bg-background/40 p-0.5 text-xs">
-                      <button
-                        onClick={() => {
-                          setUnit("g");
-                          setAmountStr((s) => {
-                            const a = parseFloat(s.replace(",", ".")) || 0;
-                            return String(Math.round(a * (picking.serving_g ?? 1)));
-                          });
-                        }}
-                        className={`rounded px-3 py-1 ${unit === "g" ? "bg-gold text-primary-foreground" : "text-muted-foreground"}`}
-                      >
-                        Gramm
-                      </button>
-                      <button
-                        onClick={() => {
-                          setUnit("piece");
-                          setAmountStr((s) => {
-                            const a = parseFloat(s.replace(",", ".")) || 0;
-                            const sg = picking.serving_g ?? 1;
-                            return (a / sg).toFixed(a / sg < 1 ? 2 : 1).replace(/\.?0+$/, "");
-                          });
-                        }}
-                        className={`rounded px-3 py-1 ${unit === "piece" ? "bg-gold text-primary-foreground" : "text-muted-foreground"}`}
-                      >
-                        Stück
-                      </button>
-                    </div>
-                  )}
                   <div>
                     <label className="text-xs uppercase tracking-wider text-muted-foreground">
-                      Menge ({unit === "piece" ? "Stück" : "g"})
+                      Menge ({unit})
                     </label>
                     <Input
                       type="text"
                       inputMode="decimal"
                       value={amountStr}
-                      onChange={(e) =>
-                        setAmountStr(e.target.value.replace(/[^0-9.,]/g, ""))
-                      }
+                      onChange={(e) => setAmountStr(e.target.value.replace(/[^0-9.,]/g, ""))}
                       className="mt-1"
                     />
                   </div>
@@ -452,7 +338,10 @@ export function MealBuilderDialog({
                     <Button variant="outline" onClick={() => setPicking(null)} className="flex-1">
                       Zurück
                     </Button>
-                    <Button onClick={addPicked} className="flex-1 bg-gradient-gold text-primary-foreground">
+                    <Button
+                      onClick={addPicked}
+                      className="flex-1 bg-gradient-gold text-primary-foreground"
+                    >
                       <Plus className="h-4 w-4" /> Hinzufügen
                     </Button>
                   </div>
@@ -469,7 +358,13 @@ export function MealBuilderDialog({
             disabled={saving || ingredients.length === 0 || !name.trim()}
             className="w-full bg-gradient-gold text-primary-foreground disabled:opacity-50"
           >
-            {saving ? <><Loader2 className="h-4 w-4 animate-spin" /> Speichern…</> : "Mahlzeit speichern"}
+            {saving ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" /> Speichern…
+              </>
+            ) : (
+              "Mahlzeit speichern"
+            )}
           </Button>
         </div>
       </div>

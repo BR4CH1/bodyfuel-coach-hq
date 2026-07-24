@@ -55,6 +55,10 @@ function buildUnresolvedCorrectionNote(
   return `⚠️ RETRY ${attempt}/${MAX_GENERATION_ATTEMPTS - 1}: Folgende Zutaten waren im vorherigen Versuch NICHT im geschlossenen Lebensmittel-Katalog:\n- ${uniqueIngredients.join("\n- ")}\n\nBitte generiere den Plan komplett neu und verwende AUSSCHLIESSLICH text_ids aus dem SAFE FOOD POOL oben. Jede Zutat MUSS ein Feld "food_id" mit einer text_id aus der Liste haben. Wähle die nächstpassende Alternative für die oben genannten Zutaten.`;
 }
 
+function buildProteinCorrectionNote(breaches: string[], attempt: number): string {
+  return `⚠️ RETRY ${attempt}/${MAX_GENERATION_ATTEMPTS - 1}: Die aus den Zutaten berechnete Protein-Tagessumme lag über der harten Obergrenze:\n- ${breaches.slice(0, 8).join("\n- ")}\n\nGeneriere den Plan neu. Reduziere proteinreiche Zutaten so weit, dass jeder Tag höchstens seinen angegebenen Proteinwert erreicht. Ersetze die frei werdenden Kalorien durch kohlenhydratreiche Zutaten aus dem SAFE FOOD POOL.`;
+}
+
 function buildRawDays(
   generatedDays: GeneratedDay[],
   context: NutritionPlanGenerationContext,
@@ -121,6 +125,7 @@ export async function generateComputedNutritionPlan(input: {
 
   let lastCleaned: CleanedPlanDay[] | null = null;
   let lastUnresolved: UnresolvedIngredient[] = [];
+  let lastProteinBreaches: string[] = [];
   let correctionNote = "";
 
   for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt += 1) {
@@ -143,6 +148,7 @@ export async function generateComputedNutritionPlan(input: {
     }
 
     const attemptUnresolved: UnresolvedIngredient[] = [];
+    const attemptProteinBreaches: string[] = [];
     const baseCache = new Map<string, Promise<ComputedGeneratedMeal[]>>();
 
     const computeDayMeals = async (
@@ -201,6 +207,11 @@ export async function generateComputedNutritionPlan(input: {
       );
 
       const finalSums = sumMealMacros(correctedMeals);
+      if (finalSums.protein_g > day.target.protein_g) {
+        attemptProteinBreaches.push(
+          `${day.name}: ${Math.round(finalSums.protein_g)} g statt max. ${day.target.protein_g} g`,
+        );
+      }
       const kcalDeviation =
         Math.abs(finalSums.kcal - day.target.kcal) / Math.max(1, day.target.kcal);
       const macroDeviation =
@@ -236,14 +247,22 @@ export async function generateComputedNutritionPlan(input: {
 
     lastCleaned = cleaned;
     lastUnresolved = attemptUnresolved;
-    if (attemptUnresolved.length === 0) break;
+    lastProteinBreaches = attemptProteinBreaches;
+    if (attemptUnresolved.length === 0 && attemptProteinBreaches.length === 0) break;
     if (attempt < MAX_GENERATION_ATTEMPTS) {
-      correctionNote = buildUnresolvedCorrectionNote(attemptUnresolved, attempt);
+      correctionNote = attemptUnresolved.length
+        ? buildUnresolvedCorrectionNote(attemptUnresolved, attempt)
+        : buildProteinCorrectionNote(attemptProteinBreaches, attempt);
     }
   }
 
   if (!lastCleaned) {
     throw new Error("Der Ernährungsplan konnte nicht berechnet werden.");
+  }
+  if (lastProteinBreaches.length > 0) {
+    throw new Error(
+      `Protein-Obergrenze konnte nicht eingehalten werden: ${lastProteinBreaches.slice(0, 6).join("; ")}.`,
+    );
   }
 
   return { cleaned: lastCleaned, unresolved: lastUnresolved };

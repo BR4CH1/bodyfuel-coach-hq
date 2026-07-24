@@ -1,10 +1,18 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { calculateProteinTarget, capProteinAndShiftToCarbs } from "./nutrition-protein-policy";
 import { daysUntilNextShopping } from "./shopping-cycle";
 
 type MacroTarget = { kcal: number; protein_g: number; carbs_g: number; fat_g: number };
 type Slot = "breakfast" | "lunch" | "dinner" | "snack";
-type AiIngredient = { name: string; amount?: number; unit?: string; grams?: number; food_id?: string; text_id?: string };
+type AiIngredient = {
+  name: string;
+  amount?: number;
+  unit?: string;
+  grams?: number;
+  food_id?: string;
+  text_id?: string;
+};
 type PersonMeal = {
   slot: Slot;
   name: string;
@@ -45,7 +53,9 @@ function cloneComputedPersonMeal(meal: ComputedPersonMeal): ComputedPersonMeal {
     ingredients: Array.isArray(meal.ingredients)
       ? meal.ingredients.map((ing) => ({ ...ing }))
       : undefined,
-    _compute_warnings: Array.isArray(meal._compute_warnings) ? [...meal._compute_warnings] : undefined,
+    _compute_warnings: Array.isArray(meal._compute_warnings)
+      ? [...meal._compute_warnings]
+      : undefined,
   };
 }
 
@@ -104,7 +114,13 @@ function buildIssn(input: MacroTarget): { training: MacroTarget; rest: MacroTarg
 }
 
 function slotLabel(slot: Slot): string {
-  return slot === "breakfast" ? "Frühstück" : slot === "lunch" ? "Mittagessen" : slot === "dinner" ? "Abendessen" : "Snack";
+  return slot === "breakfast"
+    ? "Frühstück"
+    : slot === "lunch"
+      ? "Mittagessen"
+      : slot === "dinner"
+        ? "Abendessen"
+        : "Snack";
 }
 
 function escapeRegExp(value: string): string {
@@ -135,8 +151,16 @@ function matchesFood(food: SafePoolFood, probes: string[]): boolean {
   return probes.some((probe) => hay.includes(probe));
 }
 
-function findSafeFood(pool: SafePoolFood[], probes: string[], forbidden: string[]): SafePoolFood | null {
-  return pool.find((food) => matchesFood(food, probes) && !containsForbiddenFood(food.name, forbidden)) ?? null;
+function findSafeFood(
+  pool: SafePoolFood[],
+  probes: string[],
+  forbidden: string[],
+): SafePoolFood | null {
+  return (
+    pool.find(
+      (food) => matchesFood(food, probes) && !containsForbiddenFood(food.name, forbidden),
+    ) ?? null
+  );
 }
 
 function makeFallbackMeal(
@@ -176,7 +200,13 @@ function buildFallbackMealForSlot(
   const pasta = by(["nudeln_hartweizen_gekocht", "vollkornnudeln_gekocht", "nudeln", "pasta"]);
   const brot = by(["vollkornbrot", "roggenbrot", "toastbrot"]);
   const wrap = by(["wrap"]);
-  const protein = by(["haehnchenbrust_gekocht", "hahnchenbrust_gekocht", "putenbrust_aufschnitt", "thunfisch", "seitan"]);
+  const protein = by([
+    "haehnchenbrust_gekocht",
+    "hahnchenbrust_gekocht",
+    "putenbrust_aufschnitt",
+    "thunfisch",
+    "seitan",
+  ]);
   const gemuese = by(["gemischtes_gem", "rohkost", "brokkoli", "paprika", "tomate", "gurke"]);
   const olivenoel = by(["oliven"]);
   const obst = by(["apfel", "banane", "beeren"]);
@@ -184,63 +214,72 @@ function buildFallbackMealForSlot(
   const shake = by(["protein_shake", "protein shake", "whey"]);
 
   if (slot === "breakfast") {
-    if (hafer && skyr && obst) return makeFallbackMeal("breakfast", "Skyr-Hafer-Bowl", [
-      { food: hafer, grams: 70 },
-      { food: skyr, grams: 250 },
-      { food: obst, grams: 150 },
-    ]);
-    if (hafer && obst) return makeFallbackMeal("breakfast", "Hafer-Obst-Bowl", [
-      { food: hafer, grams: 90 },
-      { food: obst, grams: 150 },
-    ]);
+    if (hafer && skyr && obst)
+      return makeFallbackMeal("breakfast", "Skyr-Hafer-Bowl", [
+        { food: hafer, grams: 70 },
+        { food: skyr, grams: 250 },
+        { food: obst, grams: 150 },
+      ]);
+    if (hafer && obst)
+      return makeFallbackMeal("breakfast", "Hafer-Obst-Bowl", [
+        { food: hafer, grams: 90 },
+        { food: obst, grams: 150 },
+      ]);
   }
 
   if (slot === "lunch") {
     const carb = reis ?? pasta ?? wrap ?? brot;
-    if (carb && protein && gemuese) return makeFallbackMeal("lunch", "Protein-Bowl", [
-      { food: carb, grams: carb === wrap ? 120 : carb === brot ? 140 : 260 },
-      { food: protein, grams: 160 },
-      { food: gemuese, grams: 220 },
-      ...(olivenoel ? [{ food: olivenoel, grams: 10 }] : []),
-    ]);
-    if (carb && skyr && gemuese) return makeFallbackMeal("lunch", "Schnelle Protein-Mahlzeit", [
-      { food: carb, grams: carb === wrap ? 120 : carb === brot ? 140 : 260 },
-      { food: skyr, grams: 250 },
-      { food: gemuese, grams: 200 },
-    ]);
+    if (carb && protein && gemuese)
+      return makeFallbackMeal("lunch", "Protein-Bowl", [
+        { food: carb, grams: carb === wrap ? 120 : carb === brot ? 140 : 260 },
+        { food: protein, grams: 160 },
+        { food: gemuese, grams: 220 },
+        ...(olivenoel ? [{ food: olivenoel, grams: 10 }] : []),
+      ]);
+    if (carb && skyr && gemuese)
+      return makeFallbackMeal("lunch", "Schnelle Protein-Mahlzeit", [
+        { food: carb, grams: carb === wrap ? 120 : carb === brot ? 140 : 260 },
+        { food: skyr, grams: 250 },
+        { food: gemuese, grams: 200 },
+      ]);
   }
 
   if (slot === "dinner") {
     const carb = pasta ?? reis ?? wrap ?? brot;
-    if (carb && protein && gemuese) return makeFallbackMeal("dinner", "Protein-Gemüse-Teller", [
-      { food: carb, grams: carb === wrap ? 120 : carb === brot ? 140 : 260 },
-      { food: protein, grams: 170 },
-      { food: gemuese, grams: 250 },
-      ...(olivenoel ? [{ food: olivenoel, grams: 10 }] : []),
-    ]);
+    if (carb && protein && gemuese)
+      return makeFallbackMeal("dinner", "Protein-Gemüse-Teller", [
+        { food: carb, grams: carb === wrap ? 120 : carb === brot ? 140 : 260 },
+        { food: protein, grams: 170 },
+        { food: gemuese, grams: 250 },
+        ...(olivenoel ? [{ food: olivenoel, grams: 10 }] : []),
+      ]);
   }
 
   if (slot === "snack") {
-    if (skyr && banane) return makeFallbackMeal("snack", "Skyr-Bananen-Snack", [
-      { food: skyr, grams: 250 },
-      { food: banane, grams: 120 },
-    ]);
-    if (shake && obst) return makeFallbackMeal("snack", "Protein-Obst-Snack", [
-      { food: shake, grams: 330 },
-      { food: obst, grams: 150 },
-    ]);
-    if (obst && mandeln) return makeFallbackMeal("snack", "Obst-Mandel-Snack", [
-      { food: obst, grams: 180 },
-      { food: mandeln, grams: 25 },
-    ]);
+    if (skyr && banane)
+      return makeFallbackMeal("snack", "Skyr-Bananen-Snack", [
+        { food: skyr, grams: 250 },
+        { food: banane, grams: 120 },
+      ]);
+    if (shake && obst)
+      return makeFallbackMeal("snack", "Protein-Obst-Snack", [
+        { food: shake, grams: 330 },
+        { food: obst, grams: 150 },
+      ]);
+    if (obst && mandeln)
+      return makeFallbackMeal("snack", "Obst-Mandel-Snack", [
+        { food: obst, grams: 180 },
+        { food: mandeln, grams: 25 },
+      ]);
   }
 
   const genericProtein = skyr ?? protein ?? shake;
   const genericCarb = hafer ?? reis ?? pasta ?? brot ?? wrap ?? obst;
-  if (genericProtein && genericCarb) return makeFallbackMeal(slot, `${slotLabel(slot)} Ersatz`, [
-    { food: genericProtein, grams: genericProtein === shake ? 330 : 220 },
-    { food: genericCarb, grams: genericCarb === hafer ? 70 : genericCarb === brot ? 120 : 160 },
-  ]);
+  if (genericProtein && genericCarb)
+    return makeFallbackMeal(slot, `${slotLabel(slot)} Ersatz`, [
+      { food: genericProtein, grams: genericProtein === shake ? 330 : 220 },
+      { food: genericCarb, grams: genericCarb === hafer ? 70 : genericCarb === brot ? 120 : 160 },
+    ]);
   return null;
 }
 
@@ -258,7 +297,9 @@ async function loadPerson(supabase: any, userId: string) {
     supabase.from("smart_nutrition_profile").select("*").eq("user_id", userId).maybeSingle(),
     supabase
       .from("profiles")
-      .select("display_name, height_cm, birthdate, gender, goal_weight_kg, activity_level, coaching_goal")
+      .select(
+        "display_name, height_cm, birthdate, gender, goal_weight_kg, activity_level, coaching_goal",
+      )
       .eq("id", userId)
       .maybeSingle(),
     supabase
@@ -350,33 +391,52 @@ async function loadPerson(supabase: any, userId: string) {
     if (goalDirection === "cut") tdee -= 400;
     else if (goalDirection === "bulk") tdee += 300;
     baseKcal = Math.round(tdee / 10) * 10;
-    const ppk = goalDirection === "cut" ? 2.2 : goalDirection === "bulk" ? 2.0 : 1.8;
-    baseProtein = Math.round(currentWeight * ppk);
+    baseProtein = calculateProteinTarget(currentWeight, goalDirection);
     baseFat = Math.round((baseKcal * 0.27) / 9);
     baseCarbs = Math.max(80, Math.round((baseKcal - baseProtein * 4 - baseFat * 9) / 4));
   }
 
+  const cappedBase = capProteinAndShiftToCarbs({
+    proteinG: baseProtein ?? 150,
+    carbsG: baseCarbs ?? 240,
+    weightKg: currentWeight,
+  });
   const tg = buildIssn({
     kcal: baseKcal ?? 2200,
-    protein_g: baseProtein ?? 150,
-    carbs_g: baseCarbs ?? 240,
+    protein_g: cappedBase.proteinG,
+    carbs_g: cappedBase.carbsG,
     fat_g: baseFat ?? 70,
   });
 
   const allergies = [
     ...(p.allergies ?? []),
-    ...((p.extra_allergies ?? "").split(",").map((s: string) => s.trim()).filter(Boolean)),
+    ...(p.extra_allergies ?? "")
+      .split(",")
+      .map((s: string) => s.trim())
+      .filter(Boolean),
   ];
   const nogos = [
     ...(p.nogo_foods ?? []),
-    ...((p.extra_nogos ?? "").split(",").map((s: string) => s.trim()).filter(Boolean)),
+    ...(p.extra_nogos ?? "")
+      .split(",")
+      .map((s: string) => s.trim())
+      .filter(Boolean),
   ];
   const favFoods = [
     ...(p.favorite_foods ?? []),
-    ...((p.extra_favorites ?? "").split(",").map((s: string) => s.trim()).filter(Boolean)),
+    ...(p.extra_favorites ?? "")
+      .split(",")
+      .map((s: string) => s.trim())
+      .filter(Boolean),
   ];
-  const liked = (ratings ?? []).filter((r: any) => r.stars >= 4).map((r: any) => r.meal?.name).filter(Boolean);
-  const disliked = (ratings ?? []).filter((r: any) => r.stars <= 2).map((r: any) => r.meal?.name).filter(Boolean);
+  const liked = (ratings ?? [])
+    .filter((r: any) => r.stars >= 4)
+    .map((r: any) => r.meal?.name)
+    .filter(Boolean);
+  const disliked = (ratings ?? [])
+    .filter((r: any) => r.stars <= 2)
+    .map((r: any) => r.meal?.name)
+    .filter(Boolean);
   const favoriteNames = (favs ?? []).map((f: any) => f.meal?.name).filter(Boolean);
   const skipNames = (skips ?? []).map((s: any) => s.meal_name).filter(Boolean);
   const wishesRaw = ((wishesData as any[]) ?? []).map((w) => ({
@@ -386,7 +446,8 @@ async function loadPerson(supabase: any, userId: string) {
   }));
   const approvedWishes = wishesRaw.map((w) => w.wish).filter(Boolean);
   const approvedWishIds = wishesRaw.map((w) => w.id).filter(Boolean);
-  const weeklyBudget: number | null = p.weekly_budget_eur != null ? Number(p.weekly_budget_eur) : null;
+  const weeklyBudget: number | null =
+    p.weekly_budget_eur != null ? Number(p.weekly_budget_eur) : null;
   const kitchenEquipment: string[] = Array.isArray(p.kitchen_equipment) ? p.kitchen_equipment : [];
   const kitchenEquipmentNotes: string = (p.kitchen_equipment_notes ?? "").toString().trim();
 
@@ -425,7 +486,8 @@ function normalizeMealsToTargets(meals: PersonMeal[], target: MacroTarget): Pers
     }),
     { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0 },
   );
-  const scale = (v: number, f: number, t: number) => Math.max(0, Math.round(v * (t / Math.max(1, f))));
+  const scale = (v: number, f: number, t: number) =>
+    Math.max(0, Math.round(v * (t / Math.max(1, f))));
   const out = meals.map((m) => ({
     ...m,
     kcal: scale(+m.kcal || 0, sums.kcal, target.kcal),
@@ -441,7 +503,15 @@ function normalizeMealsToTargets(meals: PersonMeal[], target: MacroTarget): Pers
   return out;
 }
 
-const WEEKDAY_KEYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
+const WEEKDAY_KEYS = [
+  "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+] as const;
 const WEEKDAY_LABELS_DE = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"] as const;
 
 export const generatePartnerNutritionPlanDraft = createServerFn({ method: "POST" })
@@ -472,7 +542,10 @@ export const generatePartnerNutritionPlanDraft = createServerFn({ method: "POST"
       snack: !!data.shared_slots?.snack,
     };
 
-    const [a, b] = await Promise.all([loadPerson(supabase, data.user_a), loadPerson(supabase, data.user_b)]);
+    const [a, b] = await Promise.all([
+      loadPerson(supabase, data.user_a),
+      loadPerson(supabase, data.user_b),
+    ]);
 
     const startMode: "today" | "next_shopping" = data.start_mode ?? "today";
     // Use the EARLIER next-shopping day across both users.
@@ -487,7 +560,10 @@ export const generatePartnerNutritionPlanDraft = createServerFn({ method: "POST"
     const planDays =
       fixedDays ??
       (startMode === "next_shopping"
-        ? Math.min(daysUntilNextShopping(a.shoppingDays, start), daysUntilNextShopping(b.shoppingDays, start))
+        ? Math.min(
+            daysUntilNextShopping(a.shoppingDays, start),
+            daysUntilNextShopping(b.shoppingDays, start),
+          )
         : Math.min(daysA, daysB));
 
     const dayTypeFor = (user: typeof a, idx: number, date: Date): "training" | "rest" => {
@@ -506,9 +582,13 @@ export const generatePartnerNutritionPlanDraft = createServerFn({ method: "POST"
       };
     });
 
-    const mergedAllergies = Array.from(new Set([...a.allergies, ...b.allergies].map((s) => s.toLowerCase())));
+    const mergedAllergies = Array.from(
+      new Set([...a.allergies, ...b.allergies].map((s) => s.toLowerCase())),
+    );
     const mergedNogos = Array.from(new Set([...a.nogos, ...b.nogos].map((s) => s.toLowerCase())));
-    const forbidden = Array.from(new Set([...mergedAllergies, ...mergedNogos].map((s) => s.trim()).filter(Boolean)));
+    const forbidden = Array.from(
+      new Set([...mergedAllergies, ...mergedNogos].map((s) => s.trim()).filter(Boolean)),
+    );
     const filterMeals = (ms: PersonMeal[], personForbidden: string[]) =>
       ms.filter((m) => {
         const hay = `${m.name} ${m.description ?? ""} ${JSON.stringify((m as any).ingredients ?? [])}`;
@@ -538,7 +618,7 @@ export const generatePartnerNutritionPlanDraft = createServerFn({ method: "POST"
       .join("\n");
 
     const targetBlockFor = (n: string, tg: { training: MacroTarget; rest: MacroTarget }) =>
-      `${n} — TRAINING: ${tg.training.kcal} kcal / P ${tg.training.protein_g} / KH ${tg.training.carbs_g} / F ${tg.training.fat_g}; REST: ${tg.rest.kcal} kcal / P ${tg.rest.protein_g} / KH ${tg.rest.carbs_g} / F ${tg.rest.fat_g}`;
+      `${n} — TRAINING: ${tg.training.kcal} kcal / P max. ${tg.training.protein_g} / KH ${tg.training.carbs_g} / F ${tg.training.fat_g}; REST: ${tg.rest.kcal} kcal / P max. ${tg.rest.protein_g} / KH ${tg.rest.carbs_g} / F ${tg.rest.fat_g}`;
 
     // Wünsche per applies_to neu verteilen:
     // - self  → bleibt bei der Person, die ihn eingereicht hat
@@ -546,11 +626,15 @@ export const generatePartnerNutritionPlanDraft = createServerFn({ method: "POST"
     // - both  → bei beiden Personen
     const aWishesFinal = [
       ...a.wishesRaw.filter((w) => w.applies_to !== "partner").map((w) => w.wish),
-      ...b.wishesRaw.filter((w) => w.applies_to === "partner" || w.applies_to === "both").map((w) => w.wish),
+      ...b.wishesRaw
+        .filter((w) => w.applies_to === "partner" || w.applies_to === "both")
+        .map((w) => w.wish),
     ];
     const bWishesFinal = [
       ...b.wishesRaw.filter((w) => w.applies_to !== "partner").map((w) => w.wish),
-      ...a.wishesRaw.filter((w) => w.applies_to === "partner" || w.applies_to === "both").map((w) => w.wish),
+      ...a.wishesRaw
+        .filter((w) => w.applies_to === "partner" || w.applies_to === "both")
+        .map((w) => w.wish),
     ];
     const wishesA = aWishesFinal;
     const wishesB = bWishesFinal;
@@ -569,16 +653,52 @@ ${wishesB.length ? `${b.name}: ${wishesB.map((w, i) => `${i + 1}. ${w}`).join(";
       .join(" | ");
     const equipmentLowerP = equipmentUnion.map((e) => e.toLowerCase());
     const notesLowerP = (equipmentNotesCombined || "").toLowerCase();
-    const cookingDevicesP = ["herd", "stove", "ofen", "backofen", "oven", "airfryer", "air fryer", "heißluft", "mikrowelle", "microwave", "kochplatte", "induktion", "gas", "grill", "thermomix", "reiskocher", "wasserkocher", "kettle", "dampfgarer", "slow cooker", "instant pot", "multikocher", "pfanne", "topf"];
-    const hasCookingDeviceP = equipmentLowerP.some((e) => cookingDevicesP.some((d) => e.includes(d)));
-    const notesIndicatesNoCookP = /\b(keine k(ü|ue)che|nur k(ü|ue)hlschrank|alles\s+(muss\s+)?kalt|no[- ]?cook|kein herd|kein ofen|nichts kochen|nicht kochen)\b/.test(notesLowerP);
-    const isNoCookP = (equipmentUnion.length > 0 || (equipmentNotesCombined && equipmentNotesCombined.length > 0)) && (!hasCookingDeviceP || notesIndicatesNoCookP);
+    const cookingDevicesP = [
+      "herd",
+      "stove",
+      "ofen",
+      "backofen",
+      "oven",
+      "airfryer",
+      "air fryer",
+      "heißluft",
+      "mikrowelle",
+      "microwave",
+      "kochplatte",
+      "induktion",
+      "gas",
+      "grill",
+      "thermomix",
+      "reiskocher",
+      "wasserkocher",
+      "kettle",
+      "dampfgarer",
+      "slow cooker",
+      "instant pot",
+      "multikocher",
+      "pfanne",
+      "topf",
+    ];
+    const hasCookingDeviceP = equipmentLowerP.some((e) =>
+      cookingDevicesP.some((d) => e.includes(d)),
+    );
+    const notesIndicatesNoCookP =
+      /\b(keine k(ü|ue)che|nur k(ü|ue)hlschrank|alles\s+(muss\s+)?kalt|no[- ]?cook|kein herd|kein ofen|nichts kochen|nicht kochen)\b/.test(
+        notesLowerP,
+      );
+    const isNoCookP =
+      (equipmentUnion.length > 0 ||
+        (equipmentNotesCombined && equipmentNotesCombined.length > 0)) &&
+      (!hasCookingDeviceP || notesIndicatesNoCookP);
 
-    const equipmentBlock = equipmentUnion.length || equipmentNotesCombined
-      ? `\n🍳 KÜCHENAUSSTATTUNG (HARTE EINSCHRÄNKUNG — beide kochen gemeinsam; nur Rezepte vorschlagen, die mit DIESEN Geräten zubereitbar sind):\n${
-          equipmentUnion.length ? "Verfügbare Geräte: " + equipmentUnion.join(", ") : "(keine Liste vom Coach)"
-        }${equipmentNotesCombined ? "\nCoach-Notiz: " + equipmentNotesCombined : ""}\nWenn z. B. KEIN HERD verfügbar ist, dürfen Rezepte nicht „in der Pfanne anbraten" verlangen — Garmethode an Airfryer/Backofen/Mikrowelle anpassen.\n`
-      : "";
+    const equipmentBlock =
+      equipmentUnion.length || equipmentNotesCombined
+        ? `\n🍳 KÜCHENAUSSTATTUNG (HARTE EINSCHRÄNKUNG — beide kochen gemeinsam; nur Rezepte vorschlagen, die mit DIESEN Geräten zubereitbar sind):\n${
+            equipmentUnion.length
+              ? "Verfügbare Geräte: " + equipmentUnion.join(", ")
+              : "(keine Liste vom Coach)"
+          }${equipmentNotesCombined ? "\nCoach-Notiz: " + equipmentNotesCombined : ""}\nWenn z. B. KEIN HERD verfügbar ist, dürfen Rezepte nicht „in der Pfanne anbraten" verlangen — Garmethode an Airfryer/Backofen/Mikrowelle anpassen.\n`
+        : "";
 
     const noCookBlock = isNoCookP
       ? `\n\n🧊🧊🧊 ABSOLUTE NO-COOK-REGEL (HÖCHSTE PRIORITÄT — überschreibt alle anderen Vorschläge):
@@ -606,8 +726,6 @@ Beide Partner haben KEINE Garmethode verfügbar (nur Kühlschrank / alles muss k
 Jede Mahlzeit MUSS aus dieser Erlaubt-Liste komponiert sein. Worte wie "gekocht/gebacken/angebraten" in description sind FALSCH.\n`
       : "";
 
-
-
     const combinedBudget =
       (a.weeklyBudget ?? 0) + (b.weeklyBudget ?? 0) > 0
         ? (a.weeklyBudget ?? 0) + (b.weeklyBudget ?? 0)
@@ -624,10 +742,9 @@ Jede Mahlzeit MUSS aus dieser Erlaubt-Liste komponiert sein. Worte wie "gekocht/
     // der Server berechnet anschließend ausschließlich gegen diesen Safe-Pool.
     const { data: safePoolRows } = await supabase
       .from("nutrition_foods")
-      .select("text_id,name,aliases")
+      .select("text_id,name,aliases,unit_type")
       .eq("safe_for_smart", true)
       .eq("is_active", true)
-      .eq("verified_by_coach", true)
       .order("name", { ascending: true })
       .limit(600);
     const safePool = ((safePoolRows as any[]) ?? [])
@@ -636,21 +753,24 @@ Jede Mahlzeit MUSS aus dieser Erlaubt-Liste komponiert sein. Worte wie "gekocht/
         text_id: String(r.text_id),
         name: String(r.name),
         aliases: Array.isArray(r.aliases) ? (r.aliases as string[]).slice(0, 4) : [],
+        unit: r.unit_type === "ml" ? "ml" : "g",
       }));
     if (!safePool.length) {
-      throw new Error("Kein geprüfter Lebensmittel-Katalog verfügbar — Planerstellung abgebrochen.");
+      throw new Error(
+        "Kein geprüfter Lebensmittel-Katalog verfügbar — Planerstellung abgebrochen.",
+      );
     }
     const safePoolPromptLines = safePool
       .map((f) =>
         f.aliases.length
-          ? `- ${f.text_id} | ${f.name} (aka ${f.aliases.slice(0, 3).join(", ")})`
-          : `- ${f.text_id} | ${f.name}`,
+          ? `- ${f.text_id} | ${f.name} | Einheit: ${f.unit} (aka ${f.aliases.slice(0, 3).join(", ")})`
+          : `- ${f.text_id} | ${f.name} | Einheit: ${f.unit}`,
       )
       .join("\n");
     const foodWhitelistBlock = `\n✅ GESCHLOSSENER LEBENSMITTEL-KATALOG (SAFE FOOD POOL — HART):
 Jede Zutat MUSS ein Feld "food_id" haben, dessen Wert exakt einer text_id aus dieser Liste entspricht. Keine anderen Lebensmittel — keine Synonyme außerhalb der Liste, keine Marken, keine Energy Bars/Proteinriegel/Fertiggerichte, wenn sie nicht als text_id in der Liste stehen. Wenn eine Wunsch-Zutat fehlt, wähle die nächstpassende text_id aus dieser Liste.
 
-Format je Zeile: text_id | Kanonischer Name (aka Alias1, Alias2)
+Format je Zeile: text_id | Kanonischer Name | erlaubte Einheit (aka Alias1, Alias2)
 ${safePoolPromptLines}\n`;
 
     const prompt = `Erstelle eine ${aiPlanDays}-Tage-Basiswoche für einen ${planDays}-Tage-Partner-Ernährungsplan für ZWEI Personen, die zusammen essen. Der Server wiederholt diese Basiswoche anschließend bis Tag ${planDays}; antworte deshalb NICHT mit ${planDays} Tagen, sondern exakt mit ${aiPlanDays} Basistagen.
@@ -659,6 +779,7 @@ ${noCookBlock}
 🎯 INDIVIDUELLE ZIELE (NIE angleichen):
 ${targetBlockFor(a.name, a.targets)}
 ${targetBlockFor(b.name, b.targets)}
+Die P-Werte sind HARTE Tagesobergrenzen. Protein ideal bis 5 g darunter treffen, aber niemals überschreiten; verbleibende Kalorien auf Kohlenhydrate verteilen.
 
 🍽️ GEMEINSAME MAHLZEITEN: ${SHARED || "(keine)"}
 👤 INDIVIDUELLE MAHLZEITEN: ${SOLO || "(keine)"}
@@ -681,11 +802,11 @@ ${scheduleLines}
 
 Antworte AUSSCHLIESSLICH mit gültigem JSON:
 {"days":[{"type_a":"training","type_b":"rest","person_a":[{"slot":"breakfast","name":"...","description":"80g Haferflocken, 200g Skyr natur","ingredients":[{"food_id":"haferflocken","name":"Haferflocken","amount":80,"unit":"g"},{"food_id":"skyr_natur","name":"Skyr natur","amount":200,"unit":"g"}],"kcal":0,"protein_g":0,"carbs_g":0,"fat_g":0}], "person_b":[...]}]}
-Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/snack). Bei shared-Slots MUSS "name" zwischen person_a und person_b für denselben Slot am selben Tag identisch sein. "description" = NUR kommagetrennte Zutaten mit konkreten Mengen (g, ml, Stück, EL/TL). Niemals "Portion" oder "nach Geschmack".
-🧮 STRUKTURIERTE ZUTATEN SIND PFLICHT — die Berechnung läuft ausschließlich über food_id + Gramm:
+Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/snack). Bei shared-Slots MUSS "name" zwischen person_a und person_b für denselben Slot am selben Tag identisch sein. "description" = NUR kommagetrennte Zutaten mit konkreten Mengen: Flüssigkeiten in ml, alles andere in g. Niemals Stück, Scheibe, EL, TL, "Portion" oder "nach Geschmack".
+🧮 STRUKTURIERTE ZUTATEN SIND PFLICHT — die Berechnung läuft ausschließlich über food_id + kanonische Einheit:
 - Jede Mahlzeit braucht ein ingredients-Array mit allen Zutaten.
 - Jede Zutat MUSS "food_id" enthalten — exakt eine text_id aus dem SAFE FOOD POOL oben. Keine Ausnahme.
-- Zusätzlich: "name", "amount", "unit" und bei Stück/Scheibe/EL/TL zusätzlich "grams" als Gesamtgewicht.
+- Zusätzlich: "name", "amount", "unit". Flüssigkeiten MÜSSEN "ml", alle anderen Lebensmittel MÜSSEN "g" verwenden. Andere Einheiten sind verboten.
 - Nährwerte dürfen 0 sein — der Server berechnet sie deterministisch aus der Lebensmittel-DB, KI-Schätzungen werden ignoriert.
 - Wenn du eine Zutat verwendest, deren food_id NICHT im Katalog steht, wird der komplette Versuch verworfen und neu generiert.`;
 
@@ -698,7 +819,13 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
     } = await import("./nutrition-engine.server");
 
     const personA = (g: any): PersonMeal[] =>
-      (g?.person_a ?? g?.personA ?? g?.a ?? g?.meals_a ?? g?.user_a ?? g?.meals ?? []) as PersonMeal[];
+      (g?.person_a ??
+        g?.personA ??
+        g?.a ??
+        g?.meals_a ??
+        g?.user_a ??
+        g?.meals ??
+        []) as PersonMeal[];
     const personB = (g: any): PersonMeal[] =>
       (g?.person_b ?? g?.personB ?? g?.b ?? g?.meals_b ?? g?.user_b ?? []) as PersonMeal[];
 
@@ -728,7 +855,9 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
                 `[partner-plan] ${who.name}, Tag ${dayIndex + 1}: ${slotLabel(required)} wurde durch DB-Safe-Fallback ersetzt`,
               );
             } else {
-              issues.push(`${who.name}, Tag ${dayIndex + 1}: ${slotLabel(required)} fehlt oder wurde wegen No-Go/Allergie entfernt`);
+              issues.push(
+                `${who.name}, Tag ${dayIndex + 1}: ${slotLabel(required)} fehlt oder wurde wegen No-Go/Allergie entfernt`,
+              );
             }
           }
         }
@@ -743,18 +872,28 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
             ? structured
             : parseDescriptionToEngineIngredients(m.description ?? null);
           const computed = structured.length
-            ? await computeMealFromIngredients(supabase, structured, { smartOnly: true, requireResolvedIds: true })
-            : await computeMealFromDescription(supabase, m.description ?? null, { smartOnly: true, requireResolvedIds: true });
+            ? await computeMealFromIngredients(supabase, structured, {
+                smartOnly: true,
+                requireResolvedIds: true,
+              })
+            : await computeMealFromDescription(supabase, m.description ?? null, {
+                smartOnly: true,
+                requireResolvedIds: true,
+              });
 
           if (!isUsableEngineResult(computed)) {
             const activeForbidden = sharedSlots[m.slot] ? forbidden : personForbidden;
             const fallback = buildFallbackMealForSlot(m.slot, safePool, activeForbidden);
             if (fallback && fallback.name !== m.name) {
               const fallbackStructured = coerceIngredients((fallback as any).ingredients ?? null);
-              const fallbackComputed = await computeMealFromIngredients(supabase, fallbackStructured, {
-                smartOnly: true,
-                requireResolvedIds: true,
-              });
+              const fallbackComputed = await computeMealFromIngredients(
+                supabase,
+                fallbackStructured,
+                {
+                  smartOnly: true,
+                  requireResolvedIds: true,
+                },
+              );
               if (isUsableEngineResult(fallbackComputed)) {
                 console.warn(
                   `[partner-plan] ${who.name}, Tag ${dayIndex + 1}: ${slotLabel(m.slot)} wurde wegen unberechenbarer Zutaten durch DB-Safe-Fallback ersetzt`,
@@ -776,7 +915,9 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
             const unresolved = ((computed as any)?.unresolved_ingredients ?? [])
               .map((u: any) => `${u.name}${u.food_id ? ` (food_id="${u.food_id}")` : ""}`)
               .join(", ");
-            const warnings = Array.isArray((computed as any)?.warnings) ? (computed as any).warnings.join(" | ") : "";
+            const warnings = Array.isArray((computed as any)?.warnings)
+              ? (computed as any).warnings.join(" | ")
+              : "";
             issues.push(
               `${who.name}, Tag ${dayIndex + 1}, Mahlzeit ${mealIdx + 1} (${m.name}): ${unresolved || warnings || "nicht aus Safe-Pool berechenbar"}`,
             );
@@ -794,6 +935,14 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
             _data_source: computed.data_source,
             _verified_ratio: computed.coverage,
           } as ComputedPersonMeal);
+        }
+
+        const target = pickType(dayIndex) === "rest" ? who.targets.rest : who.targets.training;
+        const proteinTotal = meals.reduce((sum, meal) => sum + meal.protein_g, 0);
+        if (proteinTotal > target.protein_g) {
+          issues.push(
+            `${who.name}, Tag ${dayIndex + 1}: Protein-Obergrenze überschritten (${Math.round(proteinTotal)} g statt max. ${target.protein_g} g)`,
+          );
         }
 
         cleaned.push({
@@ -817,8 +966,18 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
       bCleaned: CleanedPartnerDay[];
     }> {
       const expandedDays = expandPartnerGeneratedDays(baseDays, schedule, planDays);
-      const aCleaned = await buildCleanedDaysFor(a, expandedDays, (i) => schedule[i].type_a, (g) => personA(g));
-      const bCleaned = await buildCleanedDaysFor(b, expandedDays, (i) => schedule[i].type_b, (g) => personB(g));
+      const aCleaned = await buildCleanedDaysFor(
+        a,
+        expandedDays,
+        (i) => schedule[i].type_a,
+        (g) => personA(g),
+      );
+      const bCleaned = await buildCleanedDaysFor(
+        b,
+        expandedDays,
+        (i) => schedule[i].type_b,
+        (g) => personB(g),
+      );
       return { days: expandedDays, aCleaned, bCleaned };
     }
 
@@ -827,8 +986,8 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
     // aber kein Content). In dem Fall retry und schließlich auf Pro-Modell
     // wechseln, statt den Coach mit „Keine Mahlzeiten geliefert" abzuwürgen.
     const countMeals = (g: any) =>
-      ((g?.person_a ?? g?.personA ?? g?.a ?? g?.meals_a ?? g?.user_a ?? g?.meals ?? []).length) +
-      ((g?.person_b ?? g?.personB ?? g?.b ?? g?.meals_b ?? g?.user_b ?? []).length);
+      (g?.person_a ?? g?.personA ?? g?.a ?? g?.meals_a ?? g?.user_a ?? g?.meals ?? []).length +
+      (g?.person_b ?? g?.personB ?? g?.b ?? g?.meals_b ?? g?.user_b ?? []).length;
 
     let generatedDays: GeneratedDay[] = [];
     let prepared: Awaited<ReturnType<typeof prepareGeneratedDays>> | null = null;
@@ -839,7 +998,11 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
     // gecancelt und produzierte nie ein Ergebnis).
     const attempts: Array<{ model: string; extra: string }> = [
       { model: "google/gemini-3-flash-preview", extra: "" },
-      { model: "google/gemini-3-flash-preview", extra: "\n\nWICHTIG: Antworte SOFORT mit dem vollständigen JSON gemäß Schema — keine leere Antwort, kein Fließtext, kein Kommentar." },
+      {
+        model: "google/gemini-3-flash-preview",
+        extra:
+          "\n\nWICHTIG: Antworte SOFORT mit dem vollständigen JSON gemäß Schema — keine leere Antwort, kein Fließtext, kein Kommentar.",
+      },
     ];
 
     for (let att = 0; att < attempts.length; att++) {
@@ -860,12 +1023,16 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
         continue;
       }
       const raw = (await aiRes.json())?.choices?.[0]?.message?.content ?? "{}";
-      lastRawSample = typeof raw === "string" ? raw.slice(0, 300) : JSON.stringify(raw).slice(0, 300);
+      lastRawSample =
+        typeof raw === "string" ? raw.slice(0, 300) : JSON.stringify(raw).slice(0, 300);
       let parsed: { days?: GeneratedDay[] } = {};
       try {
         parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
       } catch {
-        console.warn(`[partner-plan] attempt ${att + 1}/${attempts.length}: JSON parse failed. sample=`, lastRawSample);
+        console.warn(
+          `[partner-plan] attempt ${att + 1}/${attempts.length}: JSON parse failed. sample=`,
+          lastRawSample,
+        );
         continue;
       }
       const candidate = (parsed.days ?? [])
@@ -882,13 +1049,18 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
           generatedDays = candidate;
           break;
         } catch (e: any) {
-          const issues = Array.isArray(e?.issues) ? e.issues : [e?.message ?? "unbekannter Fehler"];
+          const issues: string[] = Array.isArray(e?.issues)
+            ? e.issues.map((issue: unknown) => String(issue))
+            : [String(e?.message ?? "unbekannter Fehler")];
           console.warn(
-            `[partner-plan] attempt ${att + 1}/${attempts.length} failed safe-pool validation (model=${model}).`,
+            `[partner-plan] attempt ${att + 1}/${attempts.length} failed validation (model=${model}).`,
             issues.slice(0, 8),
           );
-          const uniqueBad = Array.from(new Set(issues.map((x: string) => String(x)))).slice(0, 20);
-          correctionNote = `\n\n⚠️ RETRY-KORREKTUR: Der vorherige Versuch enthielt Zutaten/Mahlzeiten, die NICHT eindeutig aus dem SAFE FOOD POOL berechenbar waren oder wegen No-Go/Allergie entfernt wurden:\n- ${uniqueBad.join("\n- ")}\n\nGeneriere den Plan komplett neu. Verwende AUSSCHLIESSLICH food_id-Werte aus dem SAFE FOOD POOL. Ersetze Energy Bar/Proteinriegel/Fertigprodukte durch konkrete Katalog-Zutaten, sofern kein passender food_id existiert.`;
+          const uniqueBad = Array.from(new Set(issues)).slice(0, 20);
+          const hasProteinBreach = uniqueBad.some((issue) => issue.includes("Protein-Obergrenze"));
+          correctionNote = hasProteinBreach
+            ? `\n\n⚠️ RETRY-KORREKTUR: Die aus den Zutaten berechnete Protein-Tagessumme überschritt die harte Obergrenze:\n- ${uniqueBad.join("\n- ")}\n\nGeneriere den Plan komplett neu. Reduziere proteinreiche Zutaten; ersetze die frei werdenden Kalorien durch kohlenhydratreiche Zutaten aus dem SAFE FOOD POOL. Kein Tag darf den P-max-Wert überschreiten.`
+            : `\n\n⚠️ RETRY-KORREKTUR: Der vorherige Versuch enthielt Zutaten/Mahlzeiten, die NICHT eindeutig aus dem SAFE FOOD POOL berechenbar waren oder wegen No-Go/Allergie entfernt wurden:\n- ${uniqueBad.join("\n- ")}\n\nGeneriere den Plan komplett neu. Verwende AUSSCHLIESSLICH food_id-Werte aus dem SAFE FOOD POOL. Ersetze Energy Bar/Proteinriegel/Fertigprodukte durch konkrete Katalog-Zutaten, sofern kein passender food_id existiert.`;
           continue;
         }
       }
@@ -992,14 +1164,18 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
         for (let idx = 0; idx < meals.length; idx++) {
           const m = meals[idx];
           const isShared = sharedSlots[m.slot] === true;
-          const prefix = isShared ? `🍽️ Gemeinsam mit ${otherName} — ${slotLabel(m.slot)}` : slotLabel(m.slot);
+          const prefix = isShared
+            ? `🍽️ Gemeinsam mit ${otherName} — ${slotLabel(m.slot)}`
+            : slotLabel(m.slot);
           const { data: mealRow, error: mealErr } = await supabase
             .from("nutrition_plan_meals")
             .insert({
               day_id: dayId,
               name: `${prefix}: ${m.name}`,
               description: m.description ?? null,
-              ingredients_json: coerceIngredients((m as any).ingredients ?? null).length ? coerceIngredients((m as any).ingredients ?? null) : null,
+              ingredients_json: coerceIngredients((m as any).ingredients ?? null).length
+                ? coerceIngredients((m as any).ingredients ?? null)
+                : null,
               compute_warnings: (m as any)._compute_warnings ?? [],
               kcal: m.kcal,
               protein_g: m.protein_g,
@@ -1014,7 +1190,9 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
             .single();
           if (mealErr || !mealRow?.id) {
             console.error("[partner-plan] meal insert failed", { who, dayId, mealErr, meal: m });
-            throw new Error(`Mahlzeit konnte nicht gespeichert werden: ${mealErr?.message ?? "unbekannt"}`);
+            throw new Error(
+              `Mahlzeit konnte nicht gespeichert werden: ${mealErr?.message ?? "unbekannt"}`,
+            );
           }
           rows.push(mealRow.id);
         }
@@ -1040,8 +1218,14 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
           const aId = mA.ids[d][i];
           const bId = mB.ids[d][i];
           if (aId && bId) {
-            await supabase.from("nutrition_plan_meals").update({ partner_meal_id: bId }).eq("id", aId);
-            await supabase.from("nutrition_plan_meals").update({ partner_meal_id: aId }).eq("id", bId);
+            await supabase
+              .from("nutrition_plan_meals")
+              .update({ partner_meal_id: bId })
+              .eq("id", aId);
+            await supabase
+              .from("nutrition_plan_meals")
+              .update({ partner_meal_id: aId })
+              .eq("id", bId);
           }
         }
       }
@@ -1052,9 +1236,8 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
     // the caller is not the partner's plan owner.
     let shoppingListWarning: string | null = null;
     try {
-      const { generateShoppingListForPlan, generateCombinedShoppingList } = await import(
-        "./shopping-list-engine.server"
-      );
+      const { generateShoppingListForPlan, generateCombinedShoppingList } =
+        await import("./shopping-list-engine.server");
       await generateShoppingListForPlan({ apiKey, planId: A.planId, windowDays: planDays });
       await generateShoppingListForPlan({ apiKey, planId: B.planId, windowDays: planDays });
       await generateCombinedShoppingList({
@@ -1071,7 +1254,11 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
     }
 
     // Mark each user's approved wishes as consumed only if the AI actually used them.
-    const norm = (s: string) => s.toLowerCase().replace(/[^a-zäöüß0-9 ]+/g, " ").trim();
+    const norm = (s: string) =>
+      s
+        .toLowerCase()
+        .replace(/[^a-zäöüß0-9 ]+/g, " ")
+        .trim();
     const consumeUsedWishes = async (person: typeof a, bundle: typeof A) => {
       if (!person.approvedWishIds?.length) return;
       const haystack = bundle.mealsByDay
@@ -1094,5 +1281,11 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
     await consumeUsedWishes(a, A);
     await consumeUsedWishes(b, B);
 
-    return { ok: true, plan_a: A.planId, plan_b: B.planId, days: planDays, shopping_list_warning: shoppingListWarning };
+    return {
+      ok: true,
+      plan_a: A.planId,
+      plan_b: B.planId,
+      days: planDays,
+      shopping_list_warning: shoppingListWarning,
+    };
   });

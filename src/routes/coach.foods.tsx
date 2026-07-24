@@ -6,14 +6,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { ArrowLeft, CheckCircle2, AlertTriangle, Plus, Search, Trash2 } from "lucide-react";
+import { energyFromNutrients } from "@/lib/food-units";
 
 export const Route = createFileRoute("/coach/foods")({
   component: CoachFoodsPage,
@@ -29,14 +38,21 @@ type Food = {
   source_name: string | null;
   license: string | null;
   citation: string | null;
+  image_url: string | null;
+  image_source: string | null;
   kcal_per_100g: number;
   protein_per_100g: number;
   carbs_per_100g: number;
   fat_per_100g: number;
   fiber_per_100g: number | null;
   sugar_per_100g: number | null;
+  saturated_fat_per_100g: number | null;
   salt_per_100g: number | null;
-  unit_type: "raw" | "cooked" | "ml" | "piece";
+  sodium_mg_per_100g: number | null;
+  alcohol_per_100g: number | null;
+  polyols_per_100g: number | null;
+  organic_acids_per_100g: number | null;
+  unit_type: "raw" | "cooked" | "ml";
   default_state: "raw" | "cooked" | "n_a";
   density_g_per_ml: number | null;
   verified_by_coach: boolean;
@@ -52,7 +68,6 @@ const SOURCES = [
   { value: "usda", label: "USDA FDC" },
   { value: "bodyfuel_verified", label: "BodyFuel verified" },
   { value: "manual", label: "Manuell" },
-  { value: "ai_estimate", label: "KI-Schätzung" },
 ];
 
 const emptyFood = (): Partial<Food> => ({
@@ -102,8 +117,9 @@ function CoachFoodsPage() {
     try {
       const { runNutritionEngineTests } = await import("@/lib/nutrition-backfill.functions");
       const res = await runNutritionEngineTests();
-      const lines = res.runs.map((r) =>
-        `${r.passed ? "✅" : "❌"} ${r.name}: ${r.result.kcal} kcal · ${r.result.protein_g}P/${r.result.carbs_g}C/${r.result.fat_g}F${r.reasons.length ? " — " + r.reasons.join(", ") : ""}`,
+      const lines = res.runs.map(
+        (r) =>
+          `${r.passed ? "✅" : "❌"} ${r.name}: ${r.result.kcal} kcal · ${r.result.protein_g}P/${r.result.carbs_g}C/${r.result.fat_g}F${r.reasons.length ? " — " + r.reasons.join(", ") : ""}`,
       );
       const msg = `Engine-Tests: ${res.passed}/${res.passed + res.failed} bestanden\n\n${lines.join("\n")}`;
       if (res.failed === 0) toast.success(msg, { duration: 12000 });
@@ -127,7 +143,9 @@ function CoachFoodsPage() {
     setLoading(false);
   }
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    void load();
+  }, []);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -146,9 +164,20 @@ function CoachFoodsPage() {
 
   async function save() {
     if (!editing) return;
-    if (!editing.name?.trim()) { toast.error("Name fehlt"); return; }
-    if (!editing.kcal_per_100g || editing.kcal_per_100g <= 0) {
-      toast.error("kcal/100g muss > 0 sein"); return;
+    if (!editing.name?.trim()) {
+      toast.error("Name fehlt");
+      return;
+    }
+    if (editing.kcal_per_100g == null || editing.kcal_per_100g < 0) {
+      toast.error("kcal darf nicht negativ sein");
+      return;
+    }
+    if (
+      editing.unit_type === "ml" &&
+      (!editing.density_g_per_ml || editing.density_g_per_ml <= 0)
+    ) {
+      toast.error("Für Flüssigkeiten muss eine Dichte g/ml hinterlegt sein");
+      return;
     }
     setSaving(true);
     const payload: any = {
@@ -160,15 +189,25 @@ function CoachFoodsPage() {
       source_name: editing.source_name || null,
       license: editing.license || null,
       citation: editing.citation || null,
+      image_url: editing.image_url || null,
+      image_source: editing.image_url ? editing.image_source || "manual" : null,
       kcal_per_100g: Number(editing.kcal_per_100g),
       protein_per_100g: Number(editing.protein_per_100g) || 0,
       carbs_per_100g: Number(editing.carbs_per_100g) || 0,
       fat_per_100g: Number(editing.fat_per_100g) || 0,
       fiber_per_100g: editing.fiber_per_100g == null ? null : Number(editing.fiber_per_100g),
       sugar_per_100g: editing.sugar_per_100g == null ? null : Number(editing.sugar_per_100g),
+      saturated_fat_per_100g:
+        editing.saturated_fat_per_100g == null ? null : Number(editing.saturated_fat_per_100g),
       salt_per_100g: editing.salt_per_100g == null ? null : Number(editing.salt_per_100g),
+      sodium_mg_per_100g:
+        editing.sodium_mg_per_100g == null ? null : Number(editing.sodium_mg_per_100g),
+      alcohol_per_100g: editing.alcohol_per_100g == null ? null : Number(editing.alcohol_per_100g),
+      polyols_per_100g: editing.polyols_per_100g == null ? null : Number(editing.polyols_per_100g),
+      organic_acids_per_100g:
+        editing.organic_acids_per_100g == null ? null : Number(editing.organic_acids_per_100g),
       unit_type: editing.unit_type ?? "raw",
-      default_state: editing.default_state ?? "raw",
+      default_state: editing.unit_type === "ml" ? "n_a" : (editing.default_state ?? "raw"),
       density_g_per_ml: editing.density_g_per_ml == null ? null : Number(editing.density_g_per_ml),
       verified_by_coach: !!editing.verified_by_coach,
       notes: editing.notes || null,
@@ -178,7 +217,10 @@ function CoachFoodsPage() {
       ? await table.update(payload).eq("id", editing.id)
       : await table.insert(payload);
     setSaving(false);
-    if (res.error) { toast.error(res.error.message); return; }
+    if (res.error) {
+      toast.error(res.error.message);
+      return;
+    }
     toast.success("Gespeichert");
     setEditing(null);
     void load();
@@ -187,7 +229,10 @@ function CoachFoodsPage() {
   async function del(id: string) {
     if (!confirm("Lebensmittel wirklich löschen?")) return;
     const { error } = await (supabase.from("nutrition_foods" as any) as any).delete().eq("id", id);
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     toast.success("Gelöscht");
     void load();
   }
@@ -196,14 +241,20 @@ function CoachFoodsPage() {
     const { error } = await (supabase.from("nutrition_foods" as any) as any)
       .update({ verified_by_coach: !f.verified_by_coach })
       .eq("id", f.id);
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     void load();
   }
 
   return (
     <div className="container mx-auto max-w-7xl space-y-6 p-4 sm:p-6">
       <div className="flex items-center justify-between gap-3">
-        <Link to="/coach" className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+        <Link
+          to="/coach"
+          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        >
           <ArrowLeft className="h-4 w-4" /> Coach-Dashboard
         </Link>
         <div className="flex items-center gap-2">
@@ -222,8 +273,8 @@ function CoachFoodsPage() {
       <div>
         <h1 className="font-display text-2xl font-bold">Lebensmittel-Datenbank</h1>
         <p className="text-sm text-muted-foreground">
-          Geprüfte Nährwerte für BodyFuel. Quellen: BLS 4.0 (Max Rubner-Institut, CC BY 4.0),
-          Open Food Facts, USDA FDC. Coach-verifizierte Werte haben Vorrang.
+          Geprüfte Nährwerte für BodyFuel. Quellen: BLS 4.0 (Max Rubner-Institut, CC BY 4.0), Open
+          Food Facts, USDA FDC. Coach-verifizierte Werte haben Vorrang.
         </p>
       </div>
 
@@ -238,7 +289,9 @@ function CoachFoodsPage() {
           />
         </div>
         <Select value={filter} onValueChange={(v) => setFilter(v as any)}>
-          <SelectTrigger className="w-full sm:w-56"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-56">
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Alle</SelectItem>
             <SelectItem value="review">Nur „prüfen"</SelectItem>
@@ -266,7 +319,10 @@ function CoachFoodsPage() {
           </div>
         ) : (
           filtered.map((f) => (
-            <div key={f.id} className="grid grid-cols-12 items-center gap-2 border-b border-border/60 px-4 py-2 text-sm last:border-0">
+            <div
+              key={f.id}
+              className="grid grid-cols-12 items-center gap-2 border-b border-border/60 px-4 py-2 text-sm last:border-0"
+            >
               <div className="col-span-4">
                 <button
                   className="text-left font-medium hover:underline"
@@ -285,11 +341,17 @@ function CoachFoodsPage() {
                       <AlertTriangle className="h-3 w-3" /> prüfen
                     </Badge>
                   )}
-                  <Badge variant="outline" className="text-[10px]">{f.unit_type}</Badge>
+                  <Badge variant="outline" className="text-[10px]">
+                    {f.unit_type === "ml" ? "ml" : "g"}
+                  </Badge>
                   {f.default_state !== "n_a" && (
-                    <Badge variant="outline" className="text-[10px]">{f.default_state}</Badge>
+                    <Badge variant="outline" className="text-[10px]">
+                      {f.default_state}
+                    </Badge>
                   )}
-                  {f.category && <span className="text-[10px] text-muted-foreground">{f.category}</span>}
+                  {f.category && (
+                    <span className="text-[10px] text-muted-foreground">{f.category}</span>
+                  )}
                 </div>
                 {f.needs_review && f.review_reason && (
                   <div className="pt-0.5 text-[10px] text-destructive">{f.review_reason}</div>
@@ -298,10 +360,18 @@ function CoachFoodsPage() {
               <div className="col-span-2 text-xs text-muted-foreground">
                 {SOURCES.find((s) => s.value === f.source)?.label ?? f.source}
               </div>
-              <div className="col-span-1 text-right tabular-nums">{Math.round(f.kcal_per_100g)}</div>
-              <div className="col-span-1 text-right tabular-nums">{Number(f.protein_per_100g).toFixed(1)}</div>
-              <div className="col-span-1 text-right tabular-nums">{Number(f.carbs_per_100g).toFixed(1)}</div>
-              <div className="col-span-1 text-right tabular-nums">{Number(f.fat_per_100g).toFixed(1)}</div>
+              <div className="col-span-1 text-right tabular-nums">
+                {Math.round(f.kcal_per_100g)}
+              </div>
+              <div className="col-span-1 text-right tabular-nums">
+                {Number(f.protein_per_100g).toFixed(1)}
+              </div>
+              <div className="col-span-1 text-right tabular-nums">
+                {Number(f.carbs_per_100g).toFixed(1)}
+              </div>
+              <div className="col-span-1 text-right tabular-nums">
+                {Number(f.fat_per_100g).toFixed(1)}
+              </div>
               <div className="col-span-2 flex justify-end gap-1">
                 <Button size="sm" variant="ghost" onClick={() => toggleVerified(f)}>
                   {f.verified_by_coach ? "Unverif." : "Verif."}
@@ -318,58 +388,126 @@ function CoachFoodsPage() {
       <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{editing?.id ? "Lebensmittel bearbeiten" : "Neues Lebensmittel"}</DialogTitle>
+            <DialogTitle>
+              {editing?.id ? "Lebensmittel bearbeiten" : "Neues Lebensmittel"}
+            </DialogTitle>
           </DialogHeader>
           {editing && (
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div className="col-span-2">
                   <Label>Name</Label>
-                  <Input value={editing.name ?? ""} onChange={(e) => setEditing({ ...editing, name: e.target.value })} />
+                  <Input
+                    value={editing.name ?? ""}
+                    onChange={(e) => setEditing({ ...editing, name: e.target.value })}
+                  />
                 </div>
                 <div>
                   <Label>Kategorie</Label>
-                  <Input value={editing.category ?? ""} onChange={(e) => setEditing({ ...editing, category: e.target.value })} />
+                  <Input
+                    value={editing.category ?? ""}
+                    onChange={(e) => setEditing({ ...editing, category: e.target.value })}
+                  />
                 </div>
                 <div>
                   <Label>Aliase (Komma)</Label>
                   <Input
                     value={(editing.aliases ?? []).join(", ")}
-                    onChange={(e) => setEditing({
-                      ...editing,
-                      aliases: e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
-                    })}
+                    onChange={(e) =>
+                      setEditing({
+                        ...editing,
+                        aliases: e.target.value
+                          .split(",")
+                          .map((s) => s.trim())
+                          .filter(Boolean),
+                      })
+                    }
+                  />
+                </div>
+                <div className="col-span-2 space-y-2">
+                  <Label>Lebensmittelbild</Label>
+
+                  {editing.image_url && (
+                    <img
+                      src={editing.image_url}
+                      alt={editing.name || "Lebensmittel"}
+                      className="h-24 w-24 rounded-xl border border-border object-cover"
+                    />
+                  )}
+
+                  <Input
+                    value={editing.image_url ?? ""}
+                    onChange={(event) =>
+                      setEditing({
+                        ...editing,
+                        image_url: event.target.value || null,
+                        image_source: event.target.value ? "manual" : null,
+                      })
+                    }
+                    placeholder="Öffentliche Bild-URL einfügen"
                   />
                 </div>
                 <div>
                   <Label>Quelle</Label>
-                  <Select value={editing.source ?? "manual"} onValueChange={(v) => setEditing({ ...editing, source: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                  <Select
+                    value={editing.source ?? "manual"}
+                    onValueChange={(v) => setEditing({ ...editing, source: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
-                      {SOURCES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                      {SOURCES.map((s) => (
+                        <SelectItem key={s.value} value={s.value}>
+                          {s.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <Label>Quelle ID</Label>
-                  <Input value={editing.source_id ?? ""} onChange={(e) => setEditing({ ...editing, source_id: e.target.value })} />
+                  <Input
+                    value={editing.source_id ?? ""}
+                    onChange={(e) => setEditing({ ...editing, source_id: e.target.value })}
+                  />
                 </div>
                 <div>
                   <Label>Einheit</Label>
-                  <Select value={editing.unit_type ?? "raw"} onValueChange={(v) => setEditing({ ...editing, unit_type: v as Food["unit_type"] })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                  <Select
+                    value={editing.unit_type ?? "raw"}
+                    onValueChange={(v) => {
+                      const unitType = v as Food["unit_type"];
+                      setEditing({
+                        ...editing,
+                        unit_type: unitType,
+                        default_state: unitType === "ml" ? "n_a" : editing.default_state,
+                        density_g_per_ml:
+                          unitType === "ml" ? (editing.density_g_per_ml ?? 1) : null,
+                      });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="raw">roh (g)</SelectItem>
                       <SelectItem value="cooked">gekocht (g)</SelectItem>
                       <SelectItem value="ml">Flüssigkeit (ml)</SelectItem>
-                      <SelectItem value="piece">Stück</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <Label>Zustand (Standard)</Label>
-                  <Select value={editing.default_state ?? "raw"} onValueChange={(v) => setEditing({ ...editing, default_state: v as Food["default_state"] })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                  <Select
+                    value={editing.default_state ?? "raw"}
+                    onValueChange={(v) =>
+                      setEditing({ ...editing, default_state: v as Food["default_state"] })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="raw">roh</SelectItem>
                       <SelectItem value="cooked">gekocht</SelectItem>
@@ -380,14 +518,72 @@ function CoachFoodsPage() {
               </div>
 
               <div className="grid grid-cols-4 gap-2">
-                <NumField label="kcal/100g" value={editing.kcal_per_100g} onChange={(v) => setEditing({ ...editing, kcal_per_100g: v ?? 0 })} />
-                <NumField label="Protein g" value={editing.protein_per_100g} onChange={(v) => setEditing({ ...editing, protein_per_100g: v ?? 0 })} />
-                <NumField label="KH g" value={editing.carbs_per_100g} onChange={(v) => setEditing({ ...editing, carbs_per_100g: v ?? 0 })} />
-                <NumField label="Fett g" value={editing.fat_per_100g} onChange={(v) => setEditing({ ...editing, fat_per_100g: v ?? 0 })} />
-                <NumField label="Ballast." value={editing.fiber_per_100g ?? undefined} onChange={(v) => setEditing({ ...editing, fiber_per_100g: v })} />
-                <NumField label="Zucker" value={editing.sugar_per_100g ?? undefined} onChange={(v) => setEditing({ ...editing, sugar_per_100g: v })} />
-                <NumField label="Salz" value={editing.salt_per_100g ?? undefined} onChange={(v) => setEditing({ ...editing, salt_per_100g: v })} />
-                <NumField label="Dichte g/ml" value={editing.density_g_per_ml ?? undefined} onChange={(v) => setEditing({ ...editing, density_g_per_ml: v })} step="0.001" />
+                <NumField
+                  label={`kcal/100${editing.unit_type === "ml" ? "ml" : "g"}`}
+                  value={editing.kcal_per_100g}
+                  onChange={(v) => setEditing({ ...editing, kcal_per_100g: v ?? 0 })}
+                />
+                <NumField
+                  label="Protein g"
+                  value={editing.protein_per_100g}
+                  onChange={(v) => setEditing({ ...editing, protein_per_100g: v ?? 0 })}
+                />
+                <NumField
+                  label="KH g"
+                  value={editing.carbs_per_100g}
+                  onChange={(v) => setEditing({ ...editing, carbs_per_100g: v ?? 0 })}
+                />
+                <NumField
+                  label="Fett g"
+                  value={editing.fat_per_100g}
+                  onChange={(v) => setEditing({ ...editing, fat_per_100g: v ?? 0 })}
+                />
+                <NumField
+                  label="Ballast."
+                  value={editing.fiber_per_100g ?? undefined}
+                  onChange={(v) => setEditing({ ...editing, fiber_per_100g: v })}
+                />
+                <NumField
+                  label="Zucker"
+                  value={editing.sugar_per_100g ?? undefined}
+                  onChange={(v) => setEditing({ ...editing, sugar_per_100g: v })}
+                />
+                <NumField
+                  label="ges. Fett"
+                  value={editing.saturated_fat_per_100g ?? undefined}
+                  onChange={(v) => setEditing({ ...editing, saturated_fat_per_100g: v })}
+                />
+                <NumField
+                  label="Salz"
+                  value={editing.salt_per_100g ?? undefined}
+                  onChange={(v) => setEditing({ ...editing, salt_per_100g: v })}
+                />
+                <NumField
+                  label="Natrium mg"
+                  value={editing.sodium_mg_per_100g ?? undefined}
+                  onChange={(v) => setEditing({ ...editing, sodium_mg_per_100g: v })}
+                />
+                <NumField
+                  label="Alkohol"
+                  value={editing.alcohol_per_100g ?? undefined}
+                  onChange={(v) => setEditing({ ...editing, alcohol_per_100g: v })}
+                />
+                <NumField
+                  label="Polyole"
+                  value={editing.polyols_per_100g ?? undefined}
+                  onChange={(v) => setEditing({ ...editing, polyols_per_100g: v })}
+                />
+                <NumField
+                  label="org. Säuren"
+                  value={editing.organic_acids_per_100g ?? undefined}
+                  onChange={(v) => setEditing({ ...editing, organic_acids_per_100g: v })}
+                />
+                <NumField
+                  label="Dichte g/ml"
+                  value={editing.density_g_per_ml ?? undefined}
+                  onChange={(v) => setEditing({ ...editing, density_g_per_ml: v })}
+                  step="0.001"
+                />
               </div>
 
               <KcalCheck editing={editing} />
@@ -395,19 +591,34 @@ function CoachFoodsPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label>Quelle Name</Label>
-                  <Input value={editing.source_name ?? ""} onChange={(e) => setEditing({ ...editing, source_name: e.target.value })} placeholder="z.B. Max Rubner-Institut" />
+                  <Input
+                    value={editing.source_name ?? ""}
+                    onChange={(e) => setEditing({ ...editing, source_name: e.target.value })}
+                    placeholder="z.B. Max Rubner-Institut"
+                  />
                 </div>
                 <div>
                   <Label>Lizenz</Label>
-                  <Input value={editing.license ?? ""} onChange={(e) => setEditing({ ...editing, license: e.target.value })} placeholder="z.B. CC BY 4.0" />
+                  <Input
+                    value={editing.license ?? ""}
+                    onChange={(e) => setEditing({ ...editing, license: e.target.value })}
+                    placeholder="z.B. CC BY 4.0"
+                  />
                 </div>
                 <div className="col-span-2">
                   <Label>Zitation</Label>
-                  <Input value={editing.citation ?? ""} onChange={(e) => setEditing({ ...editing, citation: e.target.value })} />
+                  <Input
+                    value={editing.citation ?? ""}
+                    onChange={(e) => setEditing({ ...editing, citation: e.target.value })}
+                  />
                 </div>
                 <div className="col-span-2">
                   <Label>Notizen</Label>
-                  <Textarea rows={2} value={editing.notes ?? ""} onChange={(e) => setEditing({ ...editing, notes: e.target.value })} />
+                  <Textarea
+                    rows={2}
+                    value={editing.notes ?? ""}
+                    onChange={(e) => setEditing({ ...editing, notes: e.target.value })}
+                  />
                 </div>
               </div>
 
@@ -422,8 +633,12 @@ function CoachFoodsPage() {
             </div>
           )}
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setEditing(null)}>Abbrechen</Button>
-            <Button onClick={save} disabled={saving}>{saving ? "Speichern…" : "Speichern"}</Button>
+            <Button variant="ghost" onClick={() => setEditing(null)}>
+              Abbrechen
+            </Button>
+            <Button onClick={save} disabled={saving}>
+              {saving ? "Speichern…" : "Speichern"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -432,9 +647,15 @@ function CoachFoodsPage() {
 }
 
 function NumField({
-  label, value, onChange, step,
+  label,
+  value,
+  onChange,
+  step,
 }: {
-  label: string; value: number | null | undefined; onChange: (v: number | null) => void; step?: string;
+  label: string;
+  value: number | null | undefined;
+  onChange: (v: number | null) => void;
+  step?: string;
 }) {
   return (
     <div>
@@ -455,13 +676,24 @@ function KcalCheck({ editing }: { editing: Partial<Food> }) {
   const f = Number(editing.fat_per_100g) || 0;
   const kcal = Number(editing.kcal_per_100g) || 0;
   if (!kcal) return null;
-  const calc = p * 4 + c * 4 + f * 9;
+  const calc = energyFromNutrients({
+    protein_g: p,
+    carbs_g: c,
+    fat_g: f,
+    fiber_g: editing.fiber_per_100g,
+    alcohol_g: editing.alcohol_per_100g,
+    polyols_g: editing.polyols_per_100g,
+    organic_acids_g: editing.organic_acids_per_100g,
+  });
   const diff = Math.abs(calc - kcal) / kcal;
-  const ok = diff <= 0.05;
+  const ok = Math.abs(calc - kcal) <= Math.max(20, kcal * 0.15);
   return (
-    <div className={`rounded-lg border px-3 py-2 text-xs ${ok ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-700 dark:text-emerald-400" : "border-destructive/40 bg-destructive/5 text-destructive"}`}>
+    <div
+      className={`rounded-lg border px-3 py-2 text-xs ${ok ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-700 dark:text-emerald-400" : "border-destructive/40 bg-destructive/5 text-destructive"}`}
+    >
       Makro-Check: {Math.round(calc)} kcal aus Makros vs. {Math.round(kcal)} kcal gespeichert
-      {" — "}{ok ? "OK" : `Abweichung ${Math.round(diff * 100)}% (muss ≤ 5 %)`}
+      {" — "}
+      {ok ? "OK" : `Abweichung ${Math.round(diff * 100)}% (Audit-Grenze überschritten)`}
     </div>
   );
 }

@@ -28,10 +28,10 @@ export function AddFoodDialog({
   loadingRecent,
   customMeals,
   loadingMeals,
-  aiEstimating,
   isCoach,
   unit,
   amountStr,
+  estimatingAi,
   onClose,
   onSourceChange,
   onQueryChange,
@@ -41,13 +41,12 @@ export function AddFoodDialog({
   onPickFood,
   onToggleFavorite,
   isFavorite,
-  onEstimateWithAi,
   onOpenBuilder,
   onAddCustomMeal,
-  onUnitChange,
   onAmountChange,
   onBack,
   onAddPicked,
+  onEstimateAi,
 }: {
   openMeal: Meal;
   picking: FoodResult | null;
@@ -61,11 +60,12 @@ export function AddFoodDialog({
   loadingRecent: boolean;
   customMeals: CustomMeal[];
   loadingMeals: boolean;
-  aiEstimating: boolean;
   isCoach: boolean;
   unit: FoodUnit;
   amountStr: string;
+  estimatingAi: boolean;
   onClose: () => void;
+  onEstimateAi: () => void;
   onSourceChange: (source: AddFoodSource) => void;
   onQueryChange: (query: string) => void;
   onSearch: () => void;
@@ -74,10 +74,8 @@ export function AddFoodDialog({
   onPickFood: (food: FoodResult, options?: FoodPickOptions) => void;
   onToggleFavorite: (food: FavoriteCandidate) => void;
   isFavorite: (food: FoodResult) => boolean;
-  onEstimateWithAi: () => void;
   onOpenBuilder: () => void;
   onAddCustomMeal: (meal: CustomMeal) => void;
-  onUnitChange: (unit: FoodUnit) => void;
   onAmountChange: (value: string) => void;
   onBack: () => void;
   onAddPicked: () => void;
@@ -115,8 +113,8 @@ export function AddFoodDialog({
                 recentFoods={recentFoods}
                 loadingFavorites={loadingFavorites}
                 loadingRecent={loadingRecent}
-                aiEstimating={aiEstimating}
                 isCoach={isCoach}
+                estimatingAi={estimatingAi}
                 onQueryChange={onQueryChange}
                 onSearch={onSearch}
                 onOpenScanner={onOpenScanner}
@@ -124,7 +122,7 @@ export function AddFoodDialog({
                 onPickFood={onPickFood}
                 onToggleFavorite={onToggleFavorite}
                 isFavorite={isFavorite}
-                onEstimateWithAi={onEstimateWithAi}
+                onEstimateAi={onEstimateAi}
               />
             ) : (
               <CustomMealsPanel
@@ -145,10 +143,9 @@ export function AddFoodDialog({
             onToggleFavorite={() =>
               onToggleFavorite({
                 ...picking,
-                last_amount_g: parseFoodAmount(amountStr) || null,
+                last_amount: parseFoodAmount(amountStr) || null,
               })
             }
-            onUnitChange={onUnitChange}
             onAmountChange={onAmountChange}
             onBack={onBack}
             onAdd={onAddPicked}

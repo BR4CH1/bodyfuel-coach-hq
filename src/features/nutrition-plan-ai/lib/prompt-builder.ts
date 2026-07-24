@@ -75,7 +75,7 @@ function buildPlateauNote(weightSeries: WeightMeasurementSource[], now: Date): s
   if (Math.abs(difference) > 0.3) return "";
 
   const days = Math.round((nowMs - new Date(olderReference.measured_at).getTime()) / 86_400_000);
-  return `⚠️ GEWICHTSPLATEAU erkannt: Gewicht stagniert seit ~${days} Tagen (Δ ${difference > 0 ? "+" : ""}${difference} kg). Passe Kalorien & Portionen um −100 bis −200 kcal/Tag an (bei Fettabbau-Ziel) bzw. +100 bis +200 kcal/Tag (bei Aufbau). Wähle bewusst sättigendere/energieärmere Alternativen (mehr Volumen, mehr Protein, weniger versteckte Fette) bzw. energiedichtere Optionen bei Aufbau. Halte die unten genannten Tagesziele weiterhin innerhalb ±5 %.`;
+  return `⚠️ GEWICHTSPLATEAU erkannt: Gewicht stagniert seit ~${days} Tagen (Δ ${difference > 0 ? "+" : ""}${difference} kg). Passe Kalorien & Portionen um −100 bis −200 kcal/Tag an (bei Fettabbau-Ziel) bzw. +100 bis +200 kcal/Tag (bei Aufbau). Wähle bewusst sättigendere/energieärmere Alternativen (mehr Volumen, weniger versteckte Fette) bzw. energiedichtere Optionen bei Aufbau. Halte die unten genannten Tagesziele weiterhin ein; die Protein-Obergrenze darf nicht überschritten werden.`;
 }
 
 function resolveKitchenRestrictions(profile: SmartNutritionProfileSource) {
@@ -128,7 +128,7 @@ Der Kunde hat KEINE Garmethode verfügbar (nur Kühlschrank / alles muss kalt au
 - Beef Jerky, Nüsse, Nussmus, Trockenfrüchte
 - Milch, Pflanzendrinks, Skyr-Drinks
 
-Jede Mahlzeit MUSS aus dieser Erlaubt-Liste komponiert sein. Wenn du im Description-Feld auch nur EIN Wort wie "gekocht", "gebacken", "angebraten", "gegart" verwendest, ist der Plan FALSCH. Beispiele für gültige No-Cook-Mittagessen: „150g Putenbrust-Aufschnitt, 60g Vollkornbrot, 30g Hüttenkäse, 100g Tomate, 50g Gurke" oder „200g Thunfisch (Dose, abgetropft), 150g Kichererbsen (Dose), 100g Paprika, 50g Mais, 1 EL Olivenöl".\n`
+Jede Mahlzeit MUSS aus dieser Erlaubt-Liste komponiert sein. Wenn du im Description-Feld auch nur EIN Wort wie "gekocht", "gebacken", "angebraten", "gegart" verwendest, ist der Plan FALSCH. Beispiele für gültige No-Cook-Mittagessen: „150g Putenbrust-Aufschnitt, 60g Vollkornbrot, 30g Hüttenkäse, 100g Tomate, 50g Gurke" oder „200g Thunfisch (Dose, abgetropft), 150g Kichererbsen (Dose), 100g Paprika, 50g Mais, 15ml Olivenöl".\n`
     : "";
 
   return { isNoCook, equipmentBlock, noCookBlock };
@@ -138,8 +138,8 @@ function buildSafeFoodBlock(safeFoods: SafeFoodSource[]): string {
   const lines = safeFoods
     .map((food) =>
       food.aliases.length
-        ? `- ${food.text_id} | ${food.name} (aka ${food.aliases.slice(0, 3).join(", ")})`
-        : `- ${food.text_id} | ${food.name}`,
+        ? `- ${food.text_id} | ${food.name} | Einheit: ${food.unit} (aka ${food.aliases.slice(0, 3).join(", ")})`
+        : `- ${food.text_id} | ${food.name} | Einheit: ${food.unit}`,
     )
     .join("\n");
   if (!lines) return "";
@@ -147,7 +147,7 @@ function buildSafeFoodBlock(safeFoods: SafeFoodSource[]): string {
   return `\n✅ GESCHLOSSENER LEBENSMITTEL-KATALOG (SAFE FOOD POOL — HART):
 Jede Zutat MUSS ein Feld "food_id" haben, dessen Wert exakt einer text_id aus dieser Liste entspricht. Keine anderen Lebensmittel — auch keine ähnlichen Synonyme, keine Marken, keine Freitext-Neuerfindungen. Wenn eine Wunsch-Zutat fehlt, wähle die nächstpassende text_id aus dieser Liste.
 
-Format je Zeile: text_id | Kanonischer Name (aka Alias1, Alias2)
+Format je Zeile: text_id | Kanonischer Name | erlaubte Einheit (aka Alias1, Alias2)
 ${lines}
 `;
 }
@@ -288,15 +288,15 @@ export function buildNutritionPlanGenerationContext(input: {
 Trainingstage haben IMMER mehr Kalorien & Kohlenhydrate als Restdays (höherer Glykogen-/Energiebedarf).
 Protein bleibt an beiden Tagen ähnlich. Fett darf am Restday leicht höher sein.
 
-TRAININGSTAG-Ziel (für "type":"training", ±5 % treffen):
+TRAININGSTAG-Ziel (für "type":"training"):
 - kcal: ${trainingTargets.kcal}
-- Protein: ${trainingTargets.protein_g} g
+- Protein (HARTE Tagesobergrenze): ${trainingTargets.protein_g} g
 - Kohlenhydrate: ${trainingTargets.carbs_g} g
 - Fett: ${trainingTargets.fat_g} g
 
-RESTDAY-Ziel (für "type":"rest", ±5 % treffen):
+RESTDAY-Ziel (für "type":"rest"):
 - kcal: ${restTargets.kcal}
-- Protein: ${restTargets.protein_g} g
+- Protein (HARTE Tagesobergrenze): ${restTargets.protein_g} g
 - Kohlenhydrate: ${restTargets.carbs_g} g
 - Fett: ${restTargets.fat_g} g
 
@@ -340,7 +340,7 @@ Die Kalorien-/Makro-Ziele sind auf aktuelles Gewicht, Wunschgewicht und Training
 
 🚨 KALORIEN-OBERGRENZE PRO MAHLZEIT: 850 kcal (HART). Keine einzelne Mahlzeit darf 850 kcal überschreiten — auch nicht Frühstück, Mittag oder Abend. Wenn das Tages-kcal-Ziel mit 4 Mahlzeiten nicht erreicht wird, FÜGE WEITERE SNACKS HINZU (Snack 2, Snack 3, …), bis das Tagesziel erreicht ist. Lieber 5–7 kleinere Mahlzeiten als 3–4 zu große. Verteile Kalorien gleichmäßig: typisch Hauptmahlzeiten 500–800 kcal, Snacks 150–400 kcal.
 
-🎯 ZIELWERTE EXAKT TREFFEN: Tages-kcal innerhalb ±3 %, Protein/Kohlenhydrate/Fett jeweils innerhalb ±5 g der Vorgaben. Plane Portionsgrößen mathematisch so, dass die Summe der Mahlzeiten möglichst genau den Tageszielen entspricht — nicht überschreiten, nicht unterschreiten.
+🎯 ZIELWERTE EXAKT TREFFEN: Tages-kcal innerhalb ±3 %, Kohlenhydrate/Fett jeweils innerhalb ±5 g. Protein ideal zwischen Vorgabe−5 g und Vorgabe, aber NIEMALS über der angegebenen Protein-Obergrenze. Verteile verbleibende Kalorien auf Kohlenhydrate. Plane Portionsgrößen mathematisch so, dass die Summe der Mahlzeiten möglichst genau den Tageszielen entspricht.
 ${noCookBlock}
 
 ${plateauNote ? `\n${plateauNote}\n` : ""}
@@ -369,15 +369,15 @@ ${prepHint} ${budgetHint}
 
 
 Antworte AUSSCHLIESSLICH mit gültigem JSON in folgender Form:
-{"days":[{"name":"Tag 1","type":"training","meals":[{"slot":"breakfast","name":"Overnight Oats","description":"80g Haferflocken, 250ml Milch 1,5%, 150g Skyr natur, 100g Beeren gemischt, 15g Chia-Samen, 15g Mandeln","ingredients":[{"food_id":"haferflocken","name":"Haferflocken","amount":80,"unit":"g"},{"food_id":"milch_1_5","name":"Milch 1,5%","amount":250,"unit":"ml","grams":250},{"food_id":"skyr_natur","name":"Skyr natur","amount":150,"unit":"g"},{"food_id":"beeren_gemischt","name":"Beeren gemischt","amount":100,"unit":"g"},{"food_id":"chia_samen","name":"Chia-Samen","amount":15,"unit":"g"},{"food_id":"mandeln","name":"Mandeln","amount":15,"unit":"g"}],"kcal":0,"protein_g":0,"carbs_g":0,"fat_g":0}]}]}
+{"days":[{"name":"Tag 1","type":"training","meals":[{"slot":"breakfast","name":"Overnight Oats","description":"80g Haferflocken, 250ml Milch 1,5%, 150g Skyr natur, 100g Beeren gemischt, 15g Chia-Samen, 15g Mandeln","ingredients":[{"food_id":"haferflocken","name":"Haferflocken","amount":80,"unit":"g"},{"food_id":"milch_1_5","name":"Milch 1,5%","amount":250,"unit":"ml"},{"food_id":"skyr_natur","name":"Skyr natur","amount":150,"unit":"g"},{"food_id":"beeren_gemischt","name":"Beeren gemischt","amount":100,"unit":"g"},{"food_id":"chia_samen","name":"Chia-Samen","amount":15,"unit":"g"},{"food_id":"mandeln","name":"Mandeln","amount":15,"unit":"g"}],"kcal":0,"protein_g":0,"carbs_g":0,"fat_g":0}]}]}
 
-🧮 STRUKTURIERTE ZUTATEN SIND PFLICHT — die Berechnung läuft ausschließlich über food_id + Gramm:
+🧮 STRUKTURIERTE ZUTATEN SIND PFLICHT — die Berechnung läuft ausschließlich über food_id + kanonische Einheit:
 - Jede Mahlzeit MUSS ein "ingredients"-Array enthalten, mit JEDER einzelnen Zutat aus der Description.
 - Jede Zutat MUSS ein Feld "food_id" haben — der Wert ist eine text_id aus dem GESCHLOSSENEN LEBENSMITTEL-KATALOG oben. Keine Ausnahme.
-- Zusätzlich: "name" (Anzeige-Name, darf der kanonische Name sein), "amount" (Zahl) und "unit" (g, ml, EL, TL, Stück). Bei Stück/Scheibe/EL/TL MUSS zusätzlich "grams" mit dem Gesamtgewicht angegeben werden.
+- Zusätzlich: "name" (Anzeige-Name, darf der kanonische Name sein), "amount" (Zahl) und "unit". Flüssigkeiten MÜSSEN "ml" verwenden, alle anderen Lebensmittel MÜSSEN "g" verwenden. Andere Einheiten sind verboten.
 - "amount" + "unit" müssen genau zur Mengenangabe im Description-Text passen.
-- Nährwerte ("kcal","protein_g","carbs_g","fat_g") IMMER auf 0 setzen — der Server berechnet sie deterministisch aus food_id + Gramm. Schätze NIEMALS selbst.
-- Wasser, Gewürze, Salz, Pfeffer, Zimt: in "ingredients" mit amount:0 oder unit:"prise" angeben (zählen nicht in die Makros). food_id ist trotzdem Pflicht, sofern im Katalog vorhanden — sonst weglassen.
+- Nährwerte ("kcal","protein_g","carbs_g","fat_g") IMMER auf 0 setzen — der Server berechnet sie deterministisch aus food_id + Menge. Schätze NIEMALS selbst.
+- Wasser: in ml. Gewürze, Salz, Pfeffer und Zimt: in g oder mit amount:0 angeben. food_id ist trotzdem Pflicht, sofern im Katalog vorhanden — sonst weglassen.
 
 ❌ Wenn du eine Zutat verwendest, deren food_id NICHT im Katalog steht, wird die gesamte Mahlzeit verworfen und ggf. der Plan zur Coach-Prüfung markiert.
 
@@ -386,7 +386,7 @@ Genau ${aiPlanDays} Basistage in der vorgegebenen Reihenfolge, mindestens 4 Mahl
 WICHTIG zu name/description:
 - "name" = konkreter Gerichtsname (z. B. Overnight Oats, Hähnchen-Reis-Bowl).
 - "description" = NUR kommagetrennte Zutaten mit Mengen für die Anzeige (z. B. 80g Haferflocken, 250ml Milch). NIEMALS Zubereitungsanweisungen.
-- JEDE Zutat MUSS eine konkrete Menge in g, ml, Stück oder EL/TL haben — NIEMALS "Portion", "etwas", "nach Geschmack" o. ä. Auch Salat, Gemüse, Beilagen und Toppings IMMER in Gramm angeben (z. B. "150g Blattsalat", "200g Brokkoli", "30g Feldsalat").`;
+- JEDE Zutat MUSS eine konkrete Menge haben: Flüssigkeiten ausschließlich in ml, alles andere ausschließlich in g. NIEMALS Stück, Scheibe, EL, TL, Portion, "etwas" oder "nach Geschmack". Auch Salat, Gemüse, Beilagen und Toppings IMMER in Gramm angeben (z. B. "150g Blattsalat", "200g Brokkoli", "30g Feldsalat").`;
 
   return {
     start,

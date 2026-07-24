@@ -127,12 +127,110 @@ export function targetsFor(day: BuilderDay, ctx: CustomerPlanContext) {
       };
 }
 
+export type MacroValues = { kcal: number; p: number; c: number; f: number };
+
+export type DayNutritionSummary = {
+  totals: MacroValues;
+  target: MacroValues;
+  filledSlots: number;
+  totalSlots: number;
+  isComplete: boolean;
+  isBalanced: boolean;
+};
+
+export function summarizeDay(
+  day: BuilderDay,
+  ctx: CustomerPlanContext,
+  library: LibraryMeal[],
+): DayNutritionSummary {
+  const target = targetsFor(day, ctx);
+  const totals = day.meals.reduce<MacroValues>(
+    (acc, meal) => {
+      const macros = mealMacros(meal, library);
+      return {
+        kcal: acc.kcal + macros.kcal,
+        p: acc.p + macros.p,
+        c: acc.c + macros.c,
+        f: acc.f + macros.f,
+      };
+    },
+    { kcal: 0, p: 0, c: 0, f: 0 },
+  );
+  const filledSlots = new Set(day.meals.map((meal) => meal.slot)).size;
+  const relativeDifference = (value: number, targetValue: number) =>
+    targetValue ? Math.abs(value - targetValue) / targetValue : 0;
+  const macrosBalanced =
+    relativeDifference(totals.kcal, target.kcal) <= 0.08 &&
+    relativeDifference(totals.p, target.p) <= 0.12 &&
+    relativeDifference(totals.c, target.c) <= 0.12 &&
+    relativeDifference(totals.f, target.f) <= 0.12;
+
+  return {
+    totals,
+    target,
+    filledSlots,
+    totalSlots: SLOTS.length,
+    isComplete: filledSlots === SLOTS.length,
+    isBalanced: filledSlots === SLOTS.length && macrosBalanced,
+  };
+}
+
+export function macroProgress(value: number, target: number): number {
+  if (!target) return 0;
+  return Math.max(0, Math.min(100, Math.round((value / target) * 100)));
+}
+
+export type AutoFillSelectionContext = {
+  usageCount?: ReadonlyMap<string, number>;
+  selectionSeed?: number;
+};
+
+function seededMealNoise(mealId: string, seed: number): number {
+  let hash = 2166136261;
+  const value = `${mealId}:${seed}`;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (Math.abs(hash) % 1000) / 1000;
+}
+
+function adjustedMealScore(
+  meal: LibraryMeal,
+  baseScore: number,
+  ctx: CustomerPlanContext,
+  selection?: AutoFillSelectionContext,
+): number {
+  const usageCount = selection?.usageCount?.get(meal.id) ?? 0;
+  const varietyPenalty = ctx.varietyLevel === "high" ? 55 : ctx.varietyLevel === "low" ? 8 : 28;
+  const noiseRange = ctx.varietyLevel === "high" ? 12 : ctx.varietyLevel === "low" ? 2 : 6;
+  const noise = seededMealNoise(meal.id, selection?.selectionSeed ?? 0) * noiseRange;
+  return baseScore - usageCount * varietyPenalty + noise;
+}
+
+export function mealRepeatSpan(ctx: CustomerPlanContext): number {
+  const style = (ctx.mealPrepStyle ?? "").toLowerCase();
+  const eatingStyle = (ctx.eatingStyle ?? "").toLowerCase();
+  let span = 1;
+
+  if (eatingStyle === "meal_prep") span = ctx.mealPrepDays ?? 3;
+  else if (style === "meal_prep") span = 3;
+  else if (style === "2_3_week") span = 2;
+  else if (style === "low_effort") span = 3;
+
+  if (ctx.varietyLevel === "low") span = Math.max(2, span);
+  if (ctx.varietyLevel === "high") span = span > 1 ? Math.min(2, span) : 1;
+
+  return Math.max(1, Math.min(7, Math.round(span)));
+}
+
 // Returns { day, missing: Slot[] } — never touches locked meals.
 export function autoFillDayImpl(
   day: BuilderDay,
   ctx: CustomerPlanContext,
   library: LibraryMeal[],
   mode: AutoFillMode,
+  selection?: AutoFillSelectionContext,
 ): { day: BuilderDay; missing: Slot[] } {
   let meals: BuilderMeal[] = day.meals.map((m) => ({ ...m }));
   // In "all_unlocked" mode: remove unlocked meals before filling
@@ -165,9 +263,16 @@ export function autoFillDayImpl(
 
     const candidates = library
       .filter((m) => m.category === slot)
-      .map((m) => ({ meal: m, ...scoreMeal(m, ctx, day.type, remaining()) }))
+      .map((m) => {
+        const result = scoreMeal(m, ctx, day.type, remaining());
+        return {
+          meal: m,
+          ...result,
+          adjustedScore: adjustedMealScore(m, result.score, ctx, selection),
+        };
+      })
       .filter((x) => x.score > 0)
-      .sort((a, b) => b.score - a.score);
+      .sort((a, b) => b.adjustedScore - a.adjustedScore);
     const best = candidates[0];
     if (!best) {
       missing.push(slot);
@@ -204,10 +309,79 @@ export function autoFillDayImpl(
   return { day: { ...day, meals }, missing };
 }
 
+export function autoFillWeekImpl(
+  days: BuilderDay[],
+  ctx: CustomerPlanContext,
+  library: LibraryMeal[],
+  mode: AutoFillMode,
+): { days: BuilderDay[]; missing: number } {
+  const nextDays: BuilderDay[] = [];
+  const usageCount = new Map<string, number>();
+  const repeatSpan = mealRepeatSpan(ctx);
+  let missing = 0;
+
+  for (let dayIndex = 0; dayIndex < days.length; dayIndex += 1) {
+    const sourceDay = days[dayIndex];
+    let workingDay: BuilderDay = {
+      ...sourceDay,
+      meals:
+        mode === "all_unlocked"
+          ? sourceDay.meals
+              .filter((meal) => meal.is_locked)
+              .map((meal) => ({
+                ...meal,
+                ingredients: meal.ingredients.map((ingredient) => ({ ...ingredient })),
+              }))
+          : sourceDay.meals.map((meal) => ({
+              ...meal,
+              ingredients: meal.ingredients.map((ingredient) => ({ ...ingredient })),
+            })),
+    };
+
+    if (dayIndex > 0 && repeatSpan > 1 && dayIndex % repeatSpan !== 0) {
+      const occupiedSlots = new Set(workingDay.meals.map((meal) => meal.slot));
+      const copiedMeals = remapMealsForCopy(nextDays[dayIndex - 1].meals, new Map(), new Map())
+        .filter((meal) => {
+          if (occupiedSlots.has(meal.slot) || !meal.library_meal_id) return false;
+          const libraryMeal = library.find((candidate) => candidate.id === meal.library_meal_id);
+          if (!libraryMeal?.mealprep_ok) return false;
+          return workingDay.type === "training"
+            ? libraryMeal.suitable_training
+            : libraryMeal.suitable_rest;
+        })
+        .map((meal) => ({ ...meal, is_locked: false, linked_partner_group: null }));
+
+      workingDay = {
+        ...workingDay,
+        meals: [...workingDay.meals, ...copiedMeals],
+      };
+    }
+
+    const result = autoFillDayImpl(workingDay, ctx, library, "empty_only", {
+      usageCount,
+      selectionSeed: dayIndex + 1,
+    });
+    const balancedDay = rebalanceDay(result.day, ctx, library);
+    missing += result.missing.length;
+    nextDays.push(balancedDay);
+
+    for (const meal of balancedDay.meals) {
+      if (!meal.library_meal_id) continue;
+      usageCount.set(meal.library_meal_id, (usageCount.get(meal.library_meal_id) ?? 0) + 1);
+    }
+  }
+
+  return { days: nextDays, missing };
+}
+
 // Auto-fill for two linked days (partner mode).
 // Strategy per slot: prefer a shared meal (score > 0 for both, quantities scaled per person).
 // Fallback: independent picks per person.
 export type SharedSlotsMap = Record<Slot, boolean>;
+export type AutoFillPairSelectionContext = {
+  client?: AutoFillSelectionContext;
+  partner?: AutoFillSelectionContext;
+};
 
 export function autoFillDayPair(
   clientDay: BuilderDay,
@@ -217,6 +391,7 @@ export function autoFillDayPair(
   library: LibraryMeal[],
   mode: AutoFillMode,
   sharedSlots: SharedSlotsMap = { breakfast: true, lunch: true, dinner: true, snack: true },
+  selection?: AutoFillPairSelectionContext,
 ): { client: BuilderDay; partner: BuilderDay; missing: number } {
   const filterKeep = (arr: BuilderMeal[]) =>
     mode === "all_unlocked" ? arr.filter((m) => m.is_locked) : arr.map((m) => ({ ...m }));
@@ -252,7 +427,14 @@ export function autoFillDayPair(
         .map((m) => {
           const sc = scoreMeal(m, clientCtx, clientDay.type, cRem);
           const sp = scoreMeal(m, partnerCtx, partnerDay.type, pRem);
-          return { meal: m, combined: sc.score + sp.score, sc: sc.score, sp: sp.score };
+          return {
+            meal: m,
+            combined:
+              adjustedMealScore(m, sc.score, clientCtx, selection?.client) +
+              adjustedMealScore(m, sp.score, partnerCtx, selection?.partner),
+            sc: sc.score,
+            sp: sp.score,
+          };
         })
         .filter((x) => x.sc > 0 && x.sp > 0)
         .sort((a, b) => b.combined - a.combined);
@@ -282,9 +464,16 @@ export function autoFillDayPair(
       const cRem = remainingFor(clientMeals, clientDay, clientCtx);
       const cCand = library
         .filter((m) => m.category === slot)
-        .map((m) => ({ meal: m, ...scoreMeal(m, clientCtx, clientDay.type, cRem) }))
+        .map((m) => {
+          const result = scoreMeal(m, clientCtx, clientDay.type, cRem);
+          return {
+            meal: m,
+            ...result,
+            adjustedScore: adjustedMealScore(m, result.score, clientCtx, selection?.client),
+          };
+        })
         .filter((x) => x.score > 0)
-        .sort((a, b) => b.score - a.score)[0];
+        .sort((a, b) => b.adjustedScore - a.adjustedScore)[0];
       if (cCand) clientMeals.push(mealFromLibrary(cCand.meal, slot));
       else missing++;
     }
@@ -292,9 +481,16 @@ export function autoFillDayPair(
       const pRem = remainingFor(partnerMeals, partnerDay, partnerCtx);
       const pCand = library
         .filter((m) => m.category === slot)
-        .map((m) => ({ meal: m, ...scoreMeal(m, partnerCtx, partnerDay.type, pRem) }))
+        .map((m) => {
+          const result = scoreMeal(m, partnerCtx, partnerDay.type, pRem);
+          return {
+            meal: m,
+            ...result,
+            adjustedScore: adjustedMealScore(m, result.score, partnerCtx, selection?.partner),
+          };
+        })
         .filter((x) => x.score > 0)
-        .sort((a, b) => b.score - a.score)[0];
+        .sort((a, b) => b.adjustedScore - a.adjustedScore)[0];
       if (pCand) partnerMeals.push(mealFromLibrary(pCand.meal, slot));
       else missing++;
     }
@@ -307,23 +503,261 @@ export function autoFillDayPair(
   };
 }
 
-// Re-scales unlocked meal portions so day kcal ≈ target kcal.
+export function autoFillWeekPairImpl(
+  clientDays: BuilderDay[],
+  partnerDays: BuilderDay[],
+  clientCtx: CustomerPlanContext,
+  partnerCtx: CustomerPlanContext,
+  library: LibraryMeal[],
+  mode: AutoFillMode,
+  sharedSlots: SharedSlotsMap,
+): { clientDays: BuilderDay[]; partnerDays: BuilderDay[]; missing: number } {
+  const nextClientDays: BuilderDay[] = [];
+  const nextPartnerDays: BuilderDay[] = [];
+  const clientUsage = new Map<string, number>();
+  const partnerUsage = new Map<string, number>();
+  const clientRepeatSpan = mealRepeatSpan(clientCtx);
+  const partnerRepeatSpan = mealRepeatSpan(partnerCtx);
+  let missing = 0;
+
+  const prepareDay = (day: BuilderDay): BuilderDay => ({
+    ...day,
+    meals:
+      mode === "all_unlocked"
+        ? day.meals
+            .filter((meal) => meal.is_locked)
+            .map((meal) => ({
+              ...meal,
+              ingredients: meal.ingredients.map((ingredient) => ({ ...ingredient })),
+            }))
+        : day.meals.map((meal) => ({
+            ...meal,
+            ingredients: meal.ingredients.map((ingredient) => ({ ...ingredient })),
+          })),
+  });
+
+  const copyRepeatableMeals = (
+    previousDay: BuilderDay,
+    currentDay: BuilderDay,
+    partnerGroupMap: Map<string, string>,
+  ) => {
+    const occupiedSlots = new Set(currentDay.meals.map((meal) => meal.slot));
+    return remapMealsForCopy(previousDay.meals, partnerGroupMap, new Map())
+      .filter((meal) => {
+        if (occupiedSlots.has(meal.slot) || !meal.library_meal_id) return false;
+        const libraryMeal = library.find((candidate) => candidate.id === meal.library_meal_id);
+        if (!libraryMeal?.mealprep_ok) return false;
+        return currentDay.type === "training"
+          ? libraryMeal.suitable_training
+          : libraryMeal.suitable_rest;
+      })
+      .map((meal) => ({ ...meal, is_locked: false }));
+  };
+
+  for (
+    let dayIndex = 0;
+    dayIndex < Math.min(clientDays.length, partnerDays.length);
+    dayIndex += 1
+  ) {
+    let clientDay = prepareDay(clientDays[dayIndex]);
+    let partnerDay = prepareDay(partnerDays[dayIndex]);
+    const partnerGroupMap = new Map<string, string>();
+
+    if (dayIndex > 0 && clientRepeatSpan > 1 && dayIndex % clientRepeatSpan !== 0) {
+      clientDay = {
+        ...clientDay,
+        meals: [
+          ...clientDay.meals,
+          ...copyRepeatableMeals(nextClientDays[dayIndex - 1], clientDay, partnerGroupMap),
+        ],
+      };
+    }
+    if (dayIndex > 0 && partnerRepeatSpan > 1 && dayIndex % partnerRepeatSpan !== 0) {
+      partnerDay = {
+        ...partnerDay,
+        meals: [
+          ...partnerDay.meals,
+          ...copyRepeatableMeals(nextPartnerDays[dayIndex - 1], partnerDay, partnerGroupMap),
+        ],
+      };
+    }
+
+    const clientGroups = new Set(
+      clientDay.meals
+        .map((meal) => meal.linked_partner_group)
+        .filter((group): group is string => Boolean(group)),
+    );
+    const partnerGroups = new Set(
+      partnerDay.meals
+        .map((meal) => meal.linked_partner_group)
+        .filter((group): group is string => Boolean(group)),
+    );
+    const sharedGroups = new Set([...clientGroups].filter((group) => partnerGroups.has(group)));
+    clientDay = {
+      ...clientDay,
+      meals: clientDay.meals.map((meal) =>
+        meal.linked_partner_group && !sharedGroups.has(meal.linked_partner_group)
+          ? { ...meal, linked_partner_group: null }
+          : meal,
+      ),
+    };
+    partnerDay = {
+      ...partnerDay,
+      meals: partnerDay.meals.map((meal) =>
+        meal.linked_partner_group && !sharedGroups.has(meal.linked_partner_group)
+          ? { ...meal, linked_partner_group: null }
+          : meal,
+      ),
+    };
+
+    const result = autoFillDayPair(
+      clientDay,
+      partnerDay,
+      clientCtx,
+      partnerCtx,
+      library,
+      "empty_only",
+      sharedSlots,
+      {
+        client: { usageCount: clientUsage, selectionSeed: dayIndex + 1 },
+        partner: { usageCount: partnerUsage, selectionSeed: dayIndex + 101 },
+      },
+    );
+    const balancedClient = rebalanceDay(result.client, clientCtx, library);
+    const balancedPartner = rebalanceDay(result.partner, partnerCtx, library);
+    nextClientDays.push(balancedClient);
+    nextPartnerDays.push(balancedPartner);
+    missing += result.missing;
+
+    for (const meal of balancedClient.meals) {
+      if (!meal.library_meal_id) continue;
+      clientUsage.set(meal.library_meal_id, (clientUsage.get(meal.library_meal_id) ?? 0) + 1);
+    }
+    for (const meal of balancedPartner.meals) {
+      if (!meal.library_meal_id) continue;
+      partnerUsage.set(meal.library_meal_id, (partnerUsage.get(meal.library_meal_id) ?? 0) + 1);
+    }
+  }
+
+  return {
+    clientDays: nextClientDays,
+    partnerDays: nextPartnerDays,
+    missing,
+  };
+}
+
+export function macroFitScore(totals: MacroValues, target: MacroValues): number {
+  const dimensions = [
+    { value: totals.kcal, target: target.kcal, weight: 2.5, tolerance: 0.05 },
+    { value: totals.p, target: target.p, weight: 1.7, tolerance: 0.08 },
+    { value: totals.c, target: target.c, weight: 1.5, tolerance: 0.08 },
+    { value: totals.f, target: target.f, weight: 1.5, tolerance: 0.08 },
+  ];
+
+  return dimensions.reduce((score, dimension) => {
+    if (!dimension.target) return score;
+    const relativeDifference = (dimension.value - dimension.target) / dimension.target;
+    const outsideTolerance = Math.max(0, Math.abs(relativeDifference) - dimension.tolerance);
+    const overshootFactor = relativeDifference > 0 ? 1.08 : 1;
+    return (
+      score +
+      dimension.weight * overshootFactor * (relativeDifference ** 2 + outsideTolerance ** 2 * 4)
+    );
+  }, 0);
+}
+
+// Optimizes unlocked portions against calories, protein, carbs and fat together.
 export function rebalanceDay(
   day: BuilderDay,
   ctx: CustomerPlanContext,
   library: LibraryMeal[],
 ): BuilderDay {
-  const t = targetsFor(day, ctx).kcal;
-  const cur = day.meals.reduce((s, m) => s + mealMacros(m, library).kcal, 0);
-  if (!t || !cur) return day;
-  const scale = t / cur;
-  if (scale > 0.92 && scale < 1.08) return day;
+  const target = targetsFor(day, ctx);
+  const lockedTotals = day.meals.reduce<MacroValues>(
+    (totals, meal) => {
+      if (!meal.is_locked) return totals;
+      const macros = mealMacros(meal, library);
+      return {
+        kcal: totals.kcal + macros.kcal,
+        p: totals.p + macros.p,
+        c: totals.c + macros.c,
+        f: totals.f + macros.f,
+      };
+    },
+    { kcal: 0, p: 0, c: 0, f: 0 },
+  );
+  const adjustableMeals = day.meals.flatMap((meal, index) => {
+    if (meal.is_locked || !meal.library_meal_id) return [];
+    const unitMacros = mealMacros({ ...meal, portion_factor: 1 }, library);
+    if (!unitMacros.kcal) return [];
+    return [{ index, unitMacros }];
+  });
+  if (adjustableMeals.length === 0) return day;
+
+  const factors = adjustableMeals.map(({ index }) => day.meals[index].portion_factor ?? 1);
+  let bestFactors = [...factors];
+  let bestScore = Number.POSITIVE_INFINITY;
+  const factorOptions = Array.from({ length: 16 }, (_, index) => (index + 1) * 0.25);
+
+  const scoreFactors = (candidateFactors: number[]) => {
+    const totals = adjustableMeals.reduce<MacroValues>(
+      (sum, meal, index) => {
+        const factor = candidateFactors[index];
+        return {
+          kcal: sum.kcal + meal.unitMacros.kcal * factor,
+          p: sum.p + meal.unitMacros.p * factor,
+          c: sum.c + meal.unitMacros.c * factor,
+          f: sum.f + meal.unitMacros.f * factor,
+        };
+      },
+      { ...lockedTotals },
+    );
+    const portionPenalty =
+      candidateFactors.reduce((sum, factor) => sum + Math.abs(factor - 1), 0) * 0.0015;
+    return macroFitScore(totals, target) + portionPenalty;
+  };
+
+  if (adjustableMeals.length <= 4) {
+    const search = (mealIndex: number) => {
+      if (mealIndex === adjustableMeals.length) {
+        const score = scoreFactors(factors);
+        if (score < bestScore) {
+          bestScore = score;
+          bestFactors = [...factors];
+        }
+        return;
+      }
+      for (const factor of factorOptions) {
+        factors[mealIndex] = factor;
+        search(mealIndex + 1);
+      }
+    };
+    search(0);
+  } else {
+    bestScore = scoreFactors(bestFactors);
+    for (let pass = 0; pass < 8; pass += 1) {
+      for (let mealIndex = 0; mealIndex < adjustableMeals.length; mealIndex += 1) {
+        for (const factor of factorOptions) {
+          const candidate = [...bestFactors];
+          candidate[mealIndex] = factor;
+          const score = scoreFactors(candidate);
+          if (score < bestScore) {
+            bestScore = score;
+            bestFactors = candidate;
+          }
+        }
+      }
+    }
+  }
+
+  const factorByMealIndex = new Map(
+    adjustableMeals.map((meal, index) => [meal.index, bestFactors[index]]),
+  );
   return {
     ...day,
-    meals: day.meals.map((m) => {
-      if (m.is_locked) return m;
-      const nf = Math.max(0.25, Math.min(4, Math.round((m.portion_factor ?? 1) * scale * 4) / 4));
-      return { ...m, portion_factor: nf };
+    meals: day.meals.map((meal, index) => {
+      const factor = factorByMealIndex.get(index);
+      return factor == null ? meal : { ...meal, portion_factor: factor };
     }),
   };
 }
@@ -393,6 +827,32 @@ export function scoreMeal(
     reasons.push("Gute Proteinmenge");
   }
 
+  // Prefer meals whose macro density matches what is still missing for the day.
+  // This improves the actual meal combination before portion optimization runs.
+  const remainingKcal = Math.max(200, remaining.kcal);
+  const mealKcal = Math.max(1, Number(m.kcal));
+  const macroDimensions = [
+    { meal: Number(m.protein_g), remaining: remaining.p, weight: 1.15 },
+    { meal: Number(m.carbs_g), remaining: remaining.c, weight: 1 },
+    { meal: Number(m.fat_g), remaining: remaining.f, weight: 1 },
+  ];
+  let macroDensityScore = 0;
+  let matchingMacroDimensions = 0;
+  for (const dimension of macroDimensions) {
+    if (dimension.remaining <= 0) {
+      if (dimension.meal > 0) macroDensityScore -= 4 * dimension.weight;
+      continue;
+    }
+    const targetDensity = dimension.remaining / remainingKcal;
+    const mealDensity = dimension.meal / mealKcal;
+    const densityRatio = Math.max(0.05, mealDensity / Math.max(0.001, targetDensity));
+    const densityDifference = Math.abs(Math.log(densityRatio));
+    macroDensityScore += Math.max(-12, 8 - densityDifference * 8) * dimension.weight;
+    if (densityDifference <= 0.3) matchingMacroDimensions += 1;
+  }
+  score += macroDensityScore;
+  if (matchingMacroDimensions >= 2) reasons.push("Makroprofil passt");
+
   const hay = [
     m.name,
     m.description ?? "",
@@ -435,13 +895,37 @@ export function scoreMeal(
         reasons.push("Nicht vegetarisch");
       }
     }
+    if (ds.includes("pesc") && /hähnchen|huhn|pute|rind|schwein|hackfleisch/.test(hay)) {
+      score -= 100;
+      reasons.push("Nicht pescetarisch");
+    }
   }
 
-  if (ctx.mealPrepStyle && ctx.mealPrepStyle.toLowerCase().includes("prep") && !m.mealprep_ok) {
-    score -= 10;
-    reasons.push("Nicht mealprep-tauglich");
+  const prepStyle = (ctx.mealPrepStyle ?? "").toLowerCase();
+  const wantsMealPrep =
+    (ctx.eatingStyle ?? "").toLowerCase() === "meal_prep" ||
+    prepStyle === "meal_prep" ||
+    prepStyle === "2_3_week" ||
+    prepStyle === "low_effort";
+  if (wantsMealPrep) {
+    if (m.mealprep_ok) {
+      score += 12;
+      reasons.push("Passt zum Mealprep");
+    } else {
+      score -= 30;
+      reasons.push("Nicht mealprep-tauglich");
+    }
   }
-  if (ctx.budgetBand === "low" && m.budget === "high") {
+  if (prepStyle === "low_effort") {
+    if (m.effort === "low") {
+      score += 10;
+      reasons.push("Wenig Aufwand");
+    } else if (m.effort === "high") {
+      score -= 25;
+      reasons.push("Zu aufwendig");
+    }
+  }
+  if ((ctx.budgetBand === "low" || ctx.budgetBand === "<50") && m.budget === "high") {
     score -= 15;
     reasons.push("Über Budget");
   }

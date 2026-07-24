@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { Copy, Link2, Link2Off, Sparkles } from "lucide-react";
+import { Copy, Link2, Link2Off, SlidersHorizontal, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import type {
   BuilderDay,
@@ -13,9 +13,11 @@ import type {
 import {
   SLOTS,
   autoFillDayImpl,
+  macroProgress,
   makeGroupId,
   mealFromLibrary,
-  mealMacros,
+  rebalanceDay,
+  summarizeDay,
   type PartnerSlotLink,
   type Slot,
 } from "../lib/plan-builder.logic";
@@ -29,6 +31,7 @@ export function DayCard({
   onCopy,
   hideHeaderActions,
   partnerLinkForSlot,
+  onEnsureMealImage,
 }: {
   day: BuilderDay;
   library: LibraryMeal[];
@@ -37,40 +40,9 @@ export function DayCard({
   onCopy: () => void;
   hideHeaderActions?: boolean;
   partnerLinkForSlot?: (slot: Slot) => PartnerSlotLink | undefined;
+  onEnsureMealImage?: (mealId: string) => void;
 }) {
-  const target =
-    day.type === "training"
-      ? {
-          kcal: ctx.targets.kcal_train,
-          p: ctx.targets.protein_train,
-          c: ctx.targets.carbs_train,
-          f: ctx.targets.fat_train,
-        }
-      : {
-          kcal: ctx.targets.kcal_rest,
-          p: ctx.targets.protein_rest,
-          c: ctx.targets.carbs_rest,
-          f: ctx.targets.fat_rest,
-        };
-
-  const totals = day.meals.reduce(
-    (acc, m) => {
-      const mm = mealMacros(m, library);
-      acc.kcal += mm.kcal;
-      acc.p += mm.p;
-      acc.c += mm.c;
-      acc.f += mm.f;
-      return acc;
-    },
-    { kcal: 0, p: 0, c: 0, f: 0 },
-  );
-
-  const color = (diff: number, tgt: number) => {
-    const pct = tgt ? Math.abs(diff) / tgt : 0;
-    if (pct <= 0.05) return "text-emerald-500";
-    if (pct <= 0.1) return "text-amber-500";
-    return "text-destructive";
-  };
+  const { target, totals, filledSlots, totalSlots, isBalanced } = summarizeDay(day, ctx, library);
 
   // ---- Meal helpers ----
   const setMealAtSlot = (slot: Slot, next: BuilderMeal | null) => {
@@ -218,13 +190,18 @@ export function DayCard({
           `Für ${res.missing.length} Slot(s) wurde keine passende Mahlzeit gefunden. Bitte Mahlzeitendatenbank erweitern oder Filter prüfen.`,
         );
       }
-      return res.day;
+      return rebalanceDay(res.day, ctx, library);
     });
   };
 
+  const balancePortions = () => {
+    onChange((current) => rebalanceDay(current, ctx, library));
+    toast.success("Portionen wurden an das Kalorienziel angepasst.");
+  };
+
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
+    <Card className="overflow-hidden">
+      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 border-b border-border/70 bg-muted/20 pb-3">
         <div className="flex items-center gap-2">
           {!hideHeaderActions && <CardTitle className="text-sm">{day.name}</CardTitle>}
           <Badge
@@ -247,6 +224,15 @@ export function DayCard({
               <Sparkles className="mr-1 h-3 w-3" />
               Tag automatisch füllen
             </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={day.meals.length === 0}
+              onClick={balancePortions}
+            >
+              <SlidersHorizontal className="mr-1 h-3 w-3" />
+              Portionen ans Ziel
+            </Button>
             <Button size="sm" variant="ghost" onClick={onCopy}>
               <Copy className="mr-1 h-3 w-3" />
               auf nächsten Tag
@@ -260,32 +246,69 @@ export function DayCard({
           </Button>
         )}
       </CardHeader>
-      <CardContent className="space-y-2">
+      <CardContent className="space-y-4 pt-4">
         {/* Balance */}
-        <div className="grid grid-cols-4 gap-2 rounded-lg bg-muted p-2 text-[11px]">
-          {(
-            [
-              ["kcal", totals.kcal, target.kcal, "kcal"],
-              ["P", totals.p, target.p, "g"],
-              ["C", totals.c, target.c, "g"],
-              ["F", totals.f, target.f, "g"],
-            ] as const
-          ).map(([k, v, t, u]) => {
-            const diff = Math.round(v - t);
-            return (
-              <div key={k} className="text-center">
-                <div className="text-muted-foreground">{k}</div>
-                <div className="font-mono">
-                  {Math.round(v)}/{t}
-                  {u}
-                </div>
-                <div className={`font-mono ${color(diff, t)}`}>
-                  {diff > 0 ? "+" : ""}
-                  {diff}
-                </div>
+        <div className="rounded-xl border border-border bg-background p-3">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <div className="text-sm font-semibold">Tagesbilanz</div>
+              <div className="text-xs text-muted-foreground">
+                {filledSlots}/{totalSlots} Mahlzeiten geplant
               </div>
-            );
-          })}
+            </div>
+            <Badge
+              variant={isBalanced ? "default" : "outline"}
+              className={
+                isBalanced
+                  ? "bg-emerald-500 text-white hover:bg-emerald-500"
+                  : "text-muted-foreground"
+              }
+            >
+              {isBalanced ? "Im Zielbereich" : "Noch offen"}
+            </Badge>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {(
+              [
+                ["Kalorien", totals.kcal, target.kcal, "kcal", "bg-emerald-500"],
+                ["Protein", totals.p, target.p, "g", "bg-sky-500"],
+                ["Kohlenhydrate", totals.c, target.c, "g", "bg-amber-500"],
+                ["Fett", totals.f, target.f, "g", "bg-violet-500"],
+              ] as const
+            ).map(([label, value, targetValue, unit, barColor]) => {
+              const diff = Math.round(value - targetValue);
+              const differencePercent = targetValue ? Math.abs(diff) / targetValue : 0;
+              const statusColor =
+                differencePercent <= 0.05
+                  ? "text-emerald-500"
+                  : differencePercent <= 0.1
+                    ? "text-amber-500"
+                    : "text-muted-foreground";
+              return (
+                <div key={label} className="space-y-1.5 rounded-lg bg-muted/50 p-2.5">
+                  <div className="flex items-center justify-between gap-2 text-[11px]">
+                    <span className="font-medium">{label}</span>
+                    <span className="text-muted-foreground">
+                      {Math.round(value)} / {targetValue} {unit}
+                    </span>
+                  </div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className={`h-full rounded-full transition-all ${barColor}`}
+                      style={{ width: `${macroProgress(value, targetValue)}%` }}
+                    />
+                  </div>
+                  <div className={`text-[10px] ${statusColor}`}>
+                    {diff === 0
+                      ? "Ziel erreicht"
+                      : diff > 0
+                        ? `${Math.abs(diff)} ${unit} über Ziel`
+                        : `${Math.abs(diff)} ${unit} offen`}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* Mealprep coupling */}
@@ -340,6 +363,7 @@ export function DayCard({
               }
               onRemove={() => removeMealAtSlot(slot.key)}
               partnerLink={partnerLinkForSlot?.(slot.key)}
+              onEnsureMealImage={onEnsureMealImage}
             />
           );
         })}

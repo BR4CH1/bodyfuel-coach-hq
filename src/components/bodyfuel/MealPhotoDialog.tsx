@@ -51,9 +51,9 @@ function uid() {
 function macrosFor(ing: EditableIngredient) {
   const m = ing.matched;
   if (!m) return { kcal: 0, protein: 0, carbs: 0, fat: 0, grams: 0 };
+  const f = ing.estimated_amount / 100;
   const grams =
-    ing.unit === "piece" ? ing.estimated_amount * (m.piece_g ?? 100) : ing.estimated_amount;
-  const f = grams / 100;
+    m.unit === "ml" ? ing.estimated_amount * (m.density_g_per_ml ?? 1) : ing.estimated_amount;
   return {
     grams,
     kcal: m.kcal_per_100g * f,
@@ -116,8 +116,7 @@ export function MealPhotoDialog({
   const saveMealFn = useServerFn(saveCustomMeal);
 
   const analyze = useMutation({
-    mutationFn: (input: { image_data_url: string; note?: string }) =>
-      analyzeFn({ data: input }),
+    mutationFn: (input: { image_data_url: string; note?: string }) => analyzeFn({ data: input }),
     onSuccess: (r) => {
       setResult(r);
       setDishName(r.dish_name);
@@ -199,8 +198,7 @@ export function MealPhotoDialog({
   const updateItem = (id: string, patch: Partial<EditableIngredient>) =>
     setItems((prev) => prev.map((i) => (i.clientId === id ? { ...i, ...patch } : i)));
 
-  const removeItem = (id: string) =>
-    setItems((prev) => prev.filter((i) => i.clientId !== id));
+  const removeItem = (id: string) => setItems((prev) => prev.filter((i) => i.clientId !== id));
 
   const addBlankItem = () =>
     setItems((prev) => [
@@ -223,6 +221,7 @@ export function MealPhotoDialog({
   const pickCandidate = async (item: EditableIngredient, cand: FoodMatch) => {
     updateItem(item.clientId, {
       matched: cand,
+      unit: cand.unit,
       match_status: "auto_matched",
       needs_confirmation: false,
       user_confirmed: true,
@@ -257,10 +256,10 @@ export function MealPhotoDialog({
           r.match_status === "auto_matched" || r.match_status === "auto_matched_editable"
             ? r.best
             : null,
+        unit: r.best?.unit ?? item.unit,
         candidates: r.candidates,
         match_status: r.match_status,
-        needs_confirmation:
-          r.match_status === "needs_choice" || r.match_status === "not_found",
+        needs_confirmation: r.match_status === "needs_choice" || r.match_status === "not_found",
       });
     } catch {
       /* still allow local edit */
@@ -300,6 +299,9 @@ export function MealPhotoDialog({
           entry_date: entryDate,
           meal: slot,
           name: i.name,
+          food_id: i.matched!.id,
+          serving_amount: +(i.estimated_amount * portionScale).toFixed(1),
+          amount_unit: i.matched!.unit,
           serving_g: +(m.grams * portionScale).toFixed(1),
           kcal: Math.round(m.kcal * portionScale),
           protein_g: +(m.protein * portionScale).toFixed(1),
@@ -334,6 +336,8 @@ export function MealPhotoDialog({
             const m = macrosFor(i);
             return {
               name: i.name,
+              amount: +(i.estimated_amount * portionScale).toFixed(1),
+              unit: i.matched?.unit ?? i.unit,
               amount_g: +(m.grams * portionScale).toFixed(1) || null,
               kcal: Math.round(m.kcal * portionScale) || null,
               protein_g: +(m.protein * portionScale).toFixed(1) || null,
@@ -511,9 +515,7 @@ export function MealPhotoDialog({
                       <div className="mb-1 text-xs">{q}</div>
                       <Input
                         value={answers[i] ?? ""}
-                        onChange={(e) =>
-                          setAnswers((a) => ({ ...a, [i]: e.target.value }))
-                        }
+                        onChange={(e) => setAnswers((a) => ({ ...a, [i]: e.target.value }))}
                         placeholder="Antwort (optional)"
                       />
                     </div>
@@ -642,7 +644,9 @@ export function MealPhotoDialog({
 // Zutaten-Zeile mit Inline-Kandidatenauswahl
 // ────────────────────────────────────────────────────────────────────────────
 
-function statusLabel(status: MatchStatus): { text: string; tone: "ok" | "info" | "warn" | "danger" } | null {
+function statusLabel(
+  status: MatchStatus,
+): { text: string; tone: "ok" | "info" | "warn" | "danger" } | null {
   switch (status) {
     case "auto_matched":
       return { text: "Automatisch zugeordnet", tone: "ok" };
@@ -672,7 +676,7 @@ function IngredientRow({
   onChangeName: (n: string) => void;
   onNameCommit: (n: string) => void;
   onChangeAmount: (v: number) => void;
-  onChangeUnit: (u: "g" | "ml" | "piece") => void;
+  onChangeUnit: (u: "g" | "ml") => void;
   onRemove: () => void;
   onPickCandidate: (c: FoodMatch) => void;
   onClear: () => void;
@@ -683,10 +687,9 @@ function IngredientRow({
   const m = macrosFor(item);
   const status = statusLabel(item.match_status);
   const needsChoice = item.match_status === "needs_choice" || item.match_status === "not_found";
-  const bg =
-    needsChoice
-      ? "border-border bg-background/40"
-      : item.match_status === "auto_matched_editable"
+  const bg = needsChoice
+    ? "border-border bg-background/40"
+    : item.match_status === "auto_matched_editable"
       ? "border-gold/40 bg-gold/5"
       : "border-border bg-background/40";
 
@@ -719,12 +722,12 @@ function IngredientRow({
         />
         <select
           value={item.unit}
-          onChange={(e) => onChangeUnit(e.target.value as "g" | "ml" | "piece")}
+          onChange={(e) => onChangeUnit(e.target.value as "g" | "ml")}
+          disabled={Boolean(item.matched)}
           className="rounded-md border border-border bg-background px-2 text-sm"
         >
           <option value="g">g</option>
           <option value="ml">ml</option>
-          <option value="piece">Stück</option>
         </select>
       </div>
 
@@ -735,12 +738,11 @@ function IngredientRow({
             <div className="text-foreground">
               <Check className="mr-1 inline h-3 w-3 text-emerald-500" />
               {item.matched.name}
-              {item.matched.verified_by_coach && (
-                <span className="ml-1 text-emerald-500">✓</span>
-              )}
+              {item.matched.verified_by_coach && <span className="ml-1 text-emerald-500">✓</span>}
             </div>
             <div className="text-muted-foreground">
-              {Math.round(m.kcal)} kcal · P {m.protein.toFixed(1)} · K {m.carbs.toFixed(1)} · F {m.fat.toFixed(1)}
+              {Math.round(m.kcal)} kcal · P {m.protein.toFixed(1)} · K {m.carbs.toFixed(1)} · F{" "}
+              {m.fat.toFixed(1)}
               {status && status.tone !== "ok" && (
                 <span className="ml-2 text-gold">· {status.text}</span>
               )}
@@ -770,7 +772,8 @@ function IngredientRow({
                   <div>
                     <div className="font-medium">{c.name}</div>
                     <div className="text-[10px] text-muted-foreground">
-                      {Math.round(c.kcal_per_100g)} kcal/100 · Score {(c.score * 100).toFixed(0)}%
+                      {Math.round(c.kcal_per_100g)} kcal/100 {c.unit} · Score{" "}
+                      {(c.score * 100).toFixed(0)}%
                     </div>
                   </div>
                   <Check className="h-3.5 w-3.5 text-muted-foreground" />

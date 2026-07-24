@@ -1171,6 +1171,11 @@ export type Database = {
           effort: Database["public"]["Enums"]["meal_effort_level"]
           fat_g: number
           id: string
+          image_generated_at: string | null
+          image_path: string | null
+          image_source: string | null
+          image_status: string
+          image_url: string | null
           ingredients: Json
           instructions: string | null
           is_active: boolean
@@ -1199,6 +1204,11 @@ export type Database = {
           effort?: Database["public"]["Enums"]["meal_effort_level"]
           fat_g?: number
           id?: string
+          image_generated_at?: string | null
+          image_path?: string | null
+          image_source?: string | null
+          image_status?: string
+          image_url?: string | null
           ingredients?: Json
           instructions?: string | null
           is_active?: boolean
@@ -1227,6 +1237,11 @@ export type Database = {
           effort?: Database["public"]["Enums"]["meal_effort_level"]
           fat_g?: number
           id?: string
+          image_generated_at?: string | null
+          image_path?: string | null
+          image_source?: string | null
+          image_status?: string
+          image_url?: string | null
           ingredients?: Json
           instructions?: string | null
           is_active?: boolean
@@ -1518,6 +1533,12 @@ export type Database = {
           created_at: string
           fat_g: number | null
           id: string
+          image_error: string | null
+          image_generated_at: string | null
+          image_path: string | null
+          image_source: string | null
+          image_status: string
+          image_url: string | null
           ingredients: Json
           kcal: number | null
           meal_slot: string
@@ -1532,6 +1553,12 @@ export type Database = {
           created_at?: string
           fat_g?: number | null
           id?: string
+          image_error?: string | null
+          image_generated_at?: string | null
+          image_path?: string | null
+          image_source?: string | null
+          image_status?: string
+          image_url?: string | null
           ingredients?: Json
           kcal?: number | null
           meal_slot?: string
@@ -1546,6 +1573,12 @@ export type Database = {
           created_at?: string
           fat_g?: number | null
           id?: string
+          image_error?: string | null
+          image_generated_at?: string | null
+          image_path?: string | null
+          image_source?: string | null
+          image_status?: string
+          image_url?: string | null
           ingredients?: Json
           kcal?: number | null
           meal_slot?: string
@@ -1863,57 +1896,84 @@ export type Database = {
       }
       food_entries: {
         Row: {
+          amount_unit: string
           barcode: string | null
           brand: string | null
           carbs_g: number
           created_at: string
           entry_date: string
           fat_g: number
+          food_id: string | null
           id: string
+          image_url: string | null
           kcal: number
           meal: string
           name: string
           protein_g: number
+          serving_amount: number
           serving_g: number
           source: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          amount_unit?: string
           barcode?: string | null
           brand?: string | null
           carbs_g?: number
           created_at?: string
           entry_date?: string
           fat_g?: number
+          food_id?: string | null
           id?: string
+          image_url?: string | null
           kcal?: number
           meal: string
           name: string
           protein_g?: number
+          serving_amount?: number
           serving_g?: number
           source?: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          amount_unit?: string
           barcode?: string | null
           brand?: string | null
           carbs_g?: number
           created_at?: string
           entry_date?: string
           fat_g?: number
+          food_id?: string | null
           id?: string
+          image_url?: string | null
           kcal?: number
           meal?: string
           name?: string
           protein_g?: number
+          serving_amount?: number
           serving_g?: number
           source?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "food_entries_food_id_fkey"
+            columns: ["food_id"]
+            isOneToOne: false
+            referencedRelation: "nutrition_foods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "food_entries_food_id_fkey"
+            columns: ["food_id"]
+            isOneToOne: false
+            referencedRelation: "nutrition_foods_public"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       food_favorites: {
         Row: {
@@ -1921,14 +1981,20 @@ export type Database = {
           brand: string | null
           carbs_per_100g: number
           created_at: string
+          density_g_per_ml: number | null
           fat_per_100g: number
+          food_id: string | null
           id: string
+          image_url: string | null
           kcal_per_100g: number
+          last_amount: number | null
           last_amount_g: number | null
           name: string
           protein_per_100g: number
+          reference_unit: string
           serving_g: number | null
           serving_label: string | null
+          source: string | null
           user_id: string
         }
         Insert: {
@@ -1936,14 +2002,20 @@ export type Database = {
           brand?: string | null
           carbs_per_100g?: number
           created_at?: string
+          density_g_per_ml?: number | null
           fat_per_100g?: number
+          food_id?: string | null
           id?: string
+          image_url?: string | null
           kcal_per_100g?: number
+          last_amount?: number | null
           last_amount_g?: number | null
           name: string
           protein_per_100g?: number
+          reference_unit?: string
           serving_g?: number | null
           serving_label?: string | null
+          source?: string | null
           user_id: string
         }
         Update: {
@@ -1951,17 +2023,38 @@ export type Database = {
           brand?: string | null
           carbs_per_100g?: number
           created_at?: string
+          density_g_per_ml?: number | null
           fat_per_100g?: number
+          food_id?: string | null
           id?: string
+          image_url?: string | null
           kcal_per_100g?: number
+          last_amount?: number | null
           last_amount_g?: number | null
           name?: string
           protein_per_100g?: number
+          reference_unit?: string
           serving_g?: number | null
           serving_label?: string | null
+          source?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "food_favorites_food_id_fkey"
+            columns: ["food_id"]
+            isOneToOne: false
+            referencedRelation: "nutrition_foods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "food_favorites_food_id_fkey"
+            columns: ["food_id"]
+            isOneToOne: false
+            referencedRelation: "nutrition_foods_public"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       food_library_favorites: {
         Row: {
@@ -2876,10 +2969,16 @@ export type Database = {
       }
       nutrition_foods: {
         Row: {
+          alcohol_per_100g: number | null
           aliases: string[]
+          audit_status: string
+          audited_at: string | null
+          barcode: string | null
+          brand: string | null
           carbs_per_100g: number
           category: string | null
           citation: string | null
+          country_codes: string[] | null
           created_at: string
           created_by: string | null
           default_state: Database["public"]["Enums"]["nutrition_food_state"]
@@ -2887,19 +2986,33 @@ export type Database = {
           fat_per_100g: number
           fiber_per_100g: number | null
           id: string
+          image_source: string | null
+          image_url: string | null
+          imported_at: string
           is_active: boolean
           kcal_per_100g: number
+          language_code: string
           license: string | null
+          macro_reference_unit: string
           name: string
           needs_review: boolean
           notes: string | null
+          organic_acids_per_100g: number | null
+          polyols_per_100g: number | null
           protein_per_100g: number
+          quality_score: number | null
+          raw_data: Json | null
           review_reason: string | null
           safe_for_smart: boolean
           salt_per_100g: number | null
+          saturated_fat_per_100g: number | null
+          search_text: string
+          sodium_mg_per_100g: number | null
           source: Database["public"]["Enums"]["nutrition_food_source"]
           source_id: string | null
           source_name: string | null
+          source_updated_at: string | null
+          source_verified: boolean
           sugar_per_100g: number | null
           text_id: string
           unit_type: Database["public"]["Enums"]["nutrition_food_unit"]
@@ -2907,12 +3020,19 @@ export type Database = {
           verified_at: string | null
           verified_by: string | null
           verified_by_coach: boolean
+          volume_conversion_estimated: boolean
         }
         Insert: {
+          alcohol_per_100g?: number | null
           aliases?: string[]
+          audit_status?: string
+          audited_at?: string | null
+          barcode?: string | null
+          brand?: string | null
           carbs_per_100g?: number
           category?: string | null
           citation?: string | null
+          country_codes?: string[] | null
           created_at?: string
           created_by?: string | null
           default_state?: Database["public"]["Enums"]["nutrition_food_state"]
@@ -2920,19 +3040,33 @@ export type Database = {
           fat_per_100g?: number
           fiber_per_100g?: number | null
           id?: string
+          image_source?: string | null
+          image_url?: string | null
+          imported_at?: string
           is_active?: boolean
           kcal_per_100g: number
+          language_code?: string
           license?: string | null
+          macro_reference_unit?: string
           name: string
           needs_review?: boolean
           notes?: string | null
+          organic_acids_per_100g?: number | null
+          polyols_per_100g?: number | null
           protein_per_100g?: number
+          quality_score?: number | null
+          raw_data?: Json | null
           review_reason?: string | null
           safe_for_smart?: boolean
           salt_per_100g?: number | null
+          saturated_fat_per_100g?: number | null
+          search_text?: string
+          sodium_mg_per_100g?: number | null
           source?: Database["public"]["Enums"]["nutrition_food_source"]
           source_id?: string | null
           source_name?: string | null
+          source_updated_at?: string | null
+          source_verified?: boolean
           sugar_per_100g?: number | null
           text_id: string
           unit_type?: Database["public"]["Enums"]["nutrition_food_unit"]
@@ -2940,12 +3074,19 @@ export type Database = {
           verified_at?: string | null
           verified_by?: string | null
           verified_by_coach?: boolean
+          volume_conversion_estimated?: boolean
         }
         Update: {
+          alcohol_per_100g?: number | null
           aliases?: string[]
+          audit_status?: string
+          audited_at?: string | null
+          barcode?: string | null
+          brand?: string | null
           carbs_per_100g?: number
           category?: string | null
           citation?: string | null
+          country_codes?: string[] | null
           created_at?: string
           created_by?: string | null
           default_state?: Database["public"]["Enums"]["nutrition_food_state"]
@@ -2953,19 +3094,33 @@ export type Database = {
           fat_per_100g?: number
           fiber_per_100g?: number | null
           id?: string
+          image_source?: string | null
+          image_url?: string | null
+          imported_at?: string
           is_active?: boolean
           kcal_per_100g?: number
+          language_code?: string
           license?: string | null
+          macro_reference_unit?: string
           name?: string
           needs_review?: boolean
           notes?: string | null
+          organic_acids_per_100g?: number | null
+          polyols_per_100g?: number | null
           protein_per_100g?: number
+          quality_score?: number | null
+          raw_data?: Json | null
           review_reason?: string | null
           safe_for_smart?: boolean
           salt_per_100g?: number | null
+          saturated_fat_per_100g?: number | null
+          search_text?: string
+          sodium_mg_per_100g?: number | null
           source?: Database["public"]["Enums"]["nutrition_food_source"]
           source_id?: string | null
           source_name?: string | null
+          source_updated_at?: string | null
+          source_verified?: boolean
           sugar_per_100g?: number | null
           text_id?: string
           unit_type?: Database["public"]["Enums"]["nutrition_food_unit"]
@@ -2973,6 +3128,7 @@ export type Database = {
           verified_at?: string | null
           verified_by?: string | null
           verified_by_coach?: boolean
+          volume_conversion_estimated?: boolean
         }
         Relationships: []
       }
@@ -3054,6 +3210,7 @@ export type Database = {
           description: string | null
           fat_g: number | null
           id: string
+          image_url: string | null
           kcal: number | null
           name: string
           override_date: string
@@ -3068,6 +3225,7 @@ export type Database = {
           description?: string | null
           fat_g?: number | null
           id?: string
+          image_url?: string | null
           kcal?: number | null
           name: string
           override_date: string
@@ -3082,6 +3240,7 @@ export type Database = {
           description?: string | null
           fat_g?: number | null
           id?: string
+          image_url?: string | null
           kcal?: number | null
           name?: string
           override_date?: string
@@ -3111,6 +3270,11 @@ export type Database = {
           description: string | null
           fat_g: number | null
           id: string
+          image_generated_at: string | null
+          image_path: string | null
+          image_source: string | null
+          image_status: string
+          image_url: string | null
           ingredients_json: Json | null
           is_locked: boolean
           is_shared: boolean
@@ -3138,6 +3302,11 @@ export type Database = {
           description?: string | null
           fat_g?: number | null
           id?: string
+          image_generated_at?: string | null
+          image_path?: string | null
+          image_source?: string | null
+          image_status?: string
+          image_url?: string | null
           ingredients_json?: Json | null
           is_locked?: boolean
           is_shared?: boolean
@@ -3165,6 +3334,11 @@ export type Database = {
           description?: string | null
           fat_g?: number | null
           id?: string
+          image_generated_at?: string | null
+          image_path?: string | null
+          image_source?: string | null
+          image_status?: string
+          image_url?: string | null
           ingredients_json?: Json | null
           is_locked?: boolean
           is_shared?: boolean
@@ -9356,10 +9530,16 @@ export type Database = {
       }
       nutrition_foods_public: {
         Row: {
+          alcohol_per_100g: number | null
           aliases: string[] | null
+          audit_status: string | null
+          audited_at: string | null
+          barcode: string | null
+          brand: string | null
           carbs_per_100g: number | null
           category: string | null
           citation: string | null
+          country_codes: string[] | null
           created_at: string | null
           default_state:
             | Database["public"]["Enums"]["nutrition_food_state"]
@@ -9368,16 +9548,29 @@ export type Database = {
           fat_per_100g: number | null
           fiber_per_100g: number | null
           id: string | null
+          image_source: string | null
+          image_url: string | null
+          imported_at: string | null
           is_active: boolean | null
           kcal_per_100g: number | null
+          language_code: string | null
           license: string | null
+          macro_reference_unit: string | null
           name: string | null
+          organic_acids_per_100g: number | null
+          polyols_per_100g: number | null
           protein_per_100g: number | null
+          quality_score: number | null
           safe_for_smart: boolean | null
           salt_per_100g: number | null
+          saturated_fat_per_100g: number | null
+          search_text: string | null
+          sodium_mg_per_100g: number | null
           source: Database["public"]["Enums"]["nutrition_food_source"] | null
           source_id: string | null
           source_name: string | null
+          source_updated_at: string | null
+          source_verified: boolean | null
           sugar_per_100g: number | null
           text_id: string | null
           unit_type: Database["public"]["Enums"]["nutrition_food_unit"] | null
@@ -9386,10 +9579,16 @@ export type Database = {
           verified_by_coach: boolean | null
         }
         Insert: {
+          alcohol_per_100g?: number | null
           aliases?: string[] | null
+          audit_status?: string | null
+          audited_at?: string | null
+          barcode?: string | null
+          brand?: string | null
           carbs_per_100g?: number | null
           category?: string | null
           citation?: string | null
+          country_codes?: string[] | null
           created_at?: string | null
           default_state?:
             | Database["public"]["Enums"]["nutrition_food_state"]
@@ -9398,16 +9597,29 @@ export type Database = {
           fat_per_100g?: number | null
           fiber_per_100g?: number | null
           id?: string | null
+          image_source?: string | null
+          image_url?: string | null
+          imported_at?: string | null
           is_active?: boolean | null
           kcal_per_100g?: number | null
+          language_code?: string | null
           license?: string | null
+          macro_reference_unit?: string | null
           name?: string | null
+          organic_acids_per_100g?: number | null
+          polyols_per_100g?: number | null
           protein_per_100g?: number | null
+          quality_score?: number | null
           safe_for_smart?: boolean | null
           salt_per_100g?: number | null
+          saturated_fat_per_100g?: number | null
+          search_text?: string | null
+          sodium_mg_per_100g?: number | null
           source?: Database["public"]["Enums"]["nutrition_food_source"] | null
           source_id?: string | null
           source_name?: string | null
+          source_updated_at?: string | null
+          source_verified?: boolean | null
           sugar_per_100g?: number | null
           text_id?: string | null
           unit_type?: Database["public"]["Enums"]["nutrition_food_unit"] | null
@@ -9416,10 +9628,16 @@ export type Database = {
           verified_by_coach?: boolean | null
         }
         Update: {
+          alcohol_per_100g?: number | null
           aliases?: string[] | null
+          audit_status?: string | null
+          audited_at?: string | null
+          barcode?: string | null
+          brand?: string | null
           carbs_per_100g?: number | null
           category?: string | null
           citation?: string | null
+          country_codes?: string[] | null
           created_at?: string | null
           default_state?:
             | Database["public"]["Enums"]["nutrition_food_state"]
@@ -9428,16 +9646,29 @@ export type Database = {
           fat_per_100g?: number | null
           fiber_per_100g?: number | null
           id?: string | null
+          image_source?: string | null
+          image_url?: string | null
+          imported_at?: string | null
           is_active?: boolean | null
           kcal_per_100g?: number | null
+          language_code?: string | null
           license?: string | null
+          macro_reference_unit?: string | null
           name?: string | null
+          organic_acids_per_100g?: number | null
+          polyols_per_100g?: number | null
           protein_per_100g?: number | null
+          quality_score?: number | null
           safe_for_smart?: boolean | null
           salt_per_100g?: number | null
+          saturated_fat_per_100g?: number | null
+          search_text?: string | null
+          sodium_mg_per_100g?: number | null
           source?: Database["public"]["Enums"]["nutrition_food_source"] | null
           source_id?: string | null
           source_name?: string | null
+          source_updated_at?: string | null
+          source_verified?: boolean | null
           sugar_per_100g?: number | null
           text_id?: string | null
           unit_type?: Database["public"]["Enums"]["nutrition_food_unit"] | null
@@ -9865,6 +10096,7 @@ export type Database = {
         }
         Returns: number
       }
+      normalize_food_search: { Args: { _value: string }; Returns: string }
       nutrition_foods_slugify: { Args: { _name: string }; Returns: string }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
@@ -9942,6 +10174,64 @@ export type Database = {
           source: string
           sugar_g: number
         }[]
+      }
+      search_nutrition_foods: {
+        Args: { _max_results?: number; _q: string }
+        Returns: {
+          alcohol_per_100g: number | null
+          aliases: string[] | null
+          audit_status: string | null
+          audited_at: string | null
+          barcode: string | null
+          brand: string | null
+          carbs_per_100g: number | null
+          category: string | null
+          citation: string | null
+          country_codes: string[] | null
+          created_at: string | null
+          default_state:
+            | Database["public"]["Enums"]["nutrition_food_state"]
+            | null
+          density_g_per_ml: number | null
+          fat_per_100g: number | null
+          fiber_per_100g: number | null
+          id: string | null
+          image_source: string | null
+          image_url: string | null
+          imported_at: string | null
+          is_active: boolean | null
+          kcal_per_100g: number | null
+          language_code: string | null
+          license: string | null
+          macro_reference_unit: string | null
+          name: string | null
+          organic_acids_per_100g: number | null
+          polyols_per_100g: number | null
+          protein_per_100g: number | null
+          quality_score: number | null
+          safe_for_smart: boolean | null
+          salt_per_100g: number | null
+          saturated_fat_per_100g: number | null
+          search_text: string | null
+          sodium_mg_per_100g: number | null
+          source: Database["public"]["Enums"]["nutrition_food_source"] | null
+          source_id: string | null
+          source_name: string | null
+          source_updated_at: string | null
+          source_verified: boolean | null
+          sugar_per_100g: number | null
+          text_id: string | null
+          unit_type: Database["public"]["Enums"]["nutrition_food_unit"] | null
+          updated_at: string | null
+          verified_at: string | null
+          verified_by_coach: boolean | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "nutrition_foods_public"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }

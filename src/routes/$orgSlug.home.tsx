@@ -72,7 +72,7 @@ function OrgHome() {
   useEffect(() => {
     if (!loading && !supabaseUser)
       navigate({ to: "/$orgSlug", params: { orgSlug: org.slug }, replace: true });
-    if (supabaseUser) setActiveContext(org.slug);
+    if (supabaseUser) setActiveContext(org.slug, "athlete");
   }, [supabaseUser, loading, org.slug, navigate]);
 
   // Task Engine wird zentral aus dem Coach-Dashboard ausgelöst (Staff/Coach-Berechtigung erforderlich).

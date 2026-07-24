@@ -36,7 +36,7 @@ import { getLevel } from "@/lib/bodyfuel/data";
 import { totalPoints } from "@/lib/bodyfuel/data";
 import { ReviewPrompt } from "./ReviewPrompt";
 import { SmartPlanReadyPopup } from "./SmartPlanReadyPopup";
-import { OrganizationContextSwitcher, getActiveContext } from "@/components/organizations/OrganizationContextSwitcher";
+import { OrganizationContextSwitcher, getActiveContext, getActiveOrgContext, setActiveContext } from "@/components/organizations/OrganizationContextSwitcher";
 import { listMyCourseInstructorOrgs } from "@/lib/course-instructor.functions";
 
 const clientNav = [
@@ -68,6 +68,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
     select: (s) => ({ pathname: s.location.pathname, hash: s.location.hash }),
   });
   const routeOrgId = pathname.match(/^\/coach\/teams\/([^/]+)/)?.[1] ?? null;
+  const selectedOrgContext = getActiveOrgContext();
   const isBullsRoute = pathname.startsWith("/bulls");
   const isCoachTeamsRoute = /^\/coach\/teams(\/|$)/.test(pathname);
   const freeBullsAccess = isFreeUser && isBullsRoute && hasGroup("bulls");
@@ -83,9 +84,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
     entitlements.hasTeamAccess &&
     !entitlements.hasAnyPersonalBodyfuel;
 
-  const orgId = routeOrgId ?? entitlements.primaryOrgId;
-  const orgSlug = entitlements.primaryOrgSlug;
-  const staffRole = entitlements.primaryStaffRole;
+  const activeOrgId = selectedOrgContext?.slug ? entitlements.orgIdsBySlug[selectedOrgContext.slug] ?? null : null;
+  const orgId = routeOrgId ?? (selectedOrgContext?.mode === "staff" ? activeOrgId : null) ?? entitlements.primaryOrgId;
+  const orgSlug = orgId ? entitlements.orgSlugsById[orgId] ?? entitlements.primaryOrgSlug : entitlements.primaryOrgSlug;
+  const staffRole = orgId ? entitlements.staffRolesByOrg[orgId] ?? null : null;
   const isPlatformCoachOrgRoute = isCoach && !!routeOrgId;
   const cockpitBase = orgId ? `/coach/teams/${orgId}` : null;
 
@@ -137,6 +139,33 @@ export function AppLayout({ children }: { children: ReactNode }) {
       navigate({ to: "/tracker/app" });
     }
   }, [user, supabaseUser, loading, navigate, isFreeUser, pathname, hasGroup]);
+
+  // Wenn ein alter Coach-Kontext aktiv ist, aber die Staff-Rechte entzogen
+  // wurden, darf die App nicht mehr im Coach-Cockpit hängen bleiben.
+  useEffect(() => {
+    if (loading || entitlements.loading || isCoach) return;
+    if (!routeOrgId) return;
+    if (entitlements.staffRolesByOrg[routeOrgId]) return;
+
+    const fallbackSlug = entitlements.orgSlugsById[routeOrgId] ?? entitlements.primaryOrgSlug;
+    if (fallbackSlug) {
+      setActiveContext(fallbackSlug, "athlete");
+      navigate({ to: "/$orgSlug/home", params: { orgSlug: fallbackSlug }, replace: true });
+      return;
+    }
+
+    setActiveContext(null);
+    navigate({ to: "/dashboard", replace: true });
+  }, [
+    loading,
+    entitlements.loading,
+    entitlements.staffRolesByOrg,
+    entitlements.orgSlugsById,
+    entitlements.primaryOrgSlug,
+    isCoach,
+    routeOrgId,
+    navigate,
+  ]);
 
   // Wenn ein Vereinskontext aktiv ist (z. B. „COESFELD BULLS"), sollen
   // persönliche Athleten-Bereiche automatisch in den Vereins-Hub geleitet
@@ -195,7 +224,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
     // Staff mit Vereinsfunktion → direkt ins passende Cockpit.
     const staffRole = entitlements.primaryStaffRole;
     const orgId = entitlements.primaryOrgId;
-    const isStaffUser = !isCoach && !!staffRole && !entitlements.hasAnyPersonalBodyfuel;
+    const isStaffUser = !isCoach && !!entitlements.primaryStaffRole && !entitlements.hasAnyPersonalBodyfuel;
     if (isStaffUser && orgId && pathname !== "/profile") {
       navigate({ to: "/coach/teams/$orgId", params: { orgId }, replace: true });
       return;
@@ -341,10 +370,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
   // 2) Team-only Nutzer → reduzierte Vereins-Nav (Zum Verein + Mein BodyFuel)
   // 3) Sonst → klassische Client-Nav (+ Bulls, wenn Gruppe vorhanden)
   const staffRoleLabel =
-    entitlements.primaryStaffRole === "organization_admin" ? "Vereinsleitung" :
-    entitlements.primaryStaffRole === "head_coach" ? "Head Coach" :
-    entitlements.primaryStaffRole === "team_coach" ? "Teamcoach" :
-    entitlements.primaryStaffRole === "staff" ? "Staff" :
+    staffRole === "organization_admin" ? "Vereinsleitung" :
+    staffRole === "head_coach" ? "Head Coach" :
+    staffRole === "team_coach" ? "Teamcoach" :
+    staffRole === "staff" ? "Staff" :
     null;
 
   // Rollenabhängige Vereins-Navigation. Source of Truth ist

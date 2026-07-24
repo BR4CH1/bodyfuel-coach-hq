@@ -26,8 +26,10 @@ import {
   getBullsDailyNutritionTargets,
   BULLS_DAY_TYPE_LABELS,
 } from "@/lib/performance-nutrition/bulls-nutrition.functions";
+import type { MealImageStatus } from "@/lib/meal-images.functions";
 import { RecipeDialog } from "./RecipeDialog";
 import { DayPlanView, type DayPlanMeal } from "./DayPlanView";
+import { useAutoGeneratePlanMealImages } from "./useAutoGeneratePlanMealImages";
 
 type Meal = {
   id: string;
@@ -39,6 +41,8 @@ type Meal = {
   carbs_g: number | null;
   fat_g: number | null;
   sort_order: number;
+  image_url?: string | null;
+  image_status?: MealImageStatus | null;
 };
 
 type Override = {
@@ -50,6 +54,7 @@ type Override = {
   protein_g: number | null;
   carbs_g: number | null;
   fat_g: number | null;
+  image_url: string | null;
 };
 
 const isoDate = (d: Date) => d.toISOString().slice(0, 10);
@@ -60,10 +65,7 @@ const addDays = (dateStr: string, delta: number) => {
   return isoDate(d);
 };
 
-const mealSlot = (
-  idx: number,
-  total: number,
-): "breakfast" | "lunch" | "dinner" | "snack" => {
+const mealSlot = (idx: number, total: number): "breakfast" | "lunch" | "dinner" | "snack" => {
   if (idx === 0) return "breakfast";
   if (idx === total - 1 && total > 1) return "dinner";
   if (idx === 1 && total > 2) return "lunch";
@@ -74,8 +76,7 @@ const slotFromName = (name: string) => {
   if (/fr(ü|u)hst(ü|u)ck|breakfast/.test(n)) return "breakfast" as const;
   if (/mittag|lunch/.test(n)) return "lunch" as const;
   if (/abend|dinner|sp(ä|a)t/.test(n)) return "dinner" as const;
-  if (/snack|shake|pre[- ]?workout|post[- ]?workout|zwischen/.test(n))
-    return "snack" as const;
+  if (/snack|shake|pre[- ]?workout|post[- ]?workout|zwischen/.test(n)) return "snack" as const;
   return null;
 };
 
@@ -137,7 +138,9 @@ export function BullsPlanContentView() {
         .select("id, name, sort_order, day_date")
         .eq("plan_id", planRow.id)
         .order("sort_order");
-      const days = (dayRows as { id: string; name: string; sort_order: number; day_date: string | null }[]) ?? [];
+      const days =
+        (dayRows as { id: string; name: string; sort_order: number; day_date: string | null }[]) ??
+        [];
       if (!days.length) {
         if (!cancelled) {
           setMeals([]);
@@ -151,18 +154,17 @@ export function BullsPlanContentView() {
       const byDate = days.find((d) => d.day_date === date);
       const wd = new Date(date + "T12:00:00Z").getUTCDay();
       const monBased = ((wd + 6) % 7) + 1; // 1..7
-      const pick =
-        byDate ?? days.find((d) => d.sort_order === monBased) ?? days[0];
+      const pick = byDate ?? days.find((d) => d.sort_order === monBased) ?? days[0];
       const { data: mealRows } = await supabase
         .from("nutrition_plan_meals")
         .select(
-          "id, day_id, name, description, kcal, protein_g, carbs_g, fat_g, sort_order",
+          "id, day_id, name, description, kcal, protein_g, carbs_g, fat_g, sort_order, image_url, image_status",
         )
         .eq("day_id", pick.id)
         .order("sort_order");
       const { data: ovRows } = await supabase
         .from("nutrition_plan_meal_overrides")
-        .select("id, plan_meal_id, name, description, kcal, protein_g, carbs_g, fat_g")
+        .select("id, plan_meal_id, name, description, kcal, protein_g, carbs_g, fat_g, image_url")
         .eq("user_id", clientId)
         .eq("override_date", date);
       const { data: entryRows } = await supabase
@@ -193,6 +195,23 @@ export function BullsPlanContentView() {
       cancelled = true;
     };
   }, [clientId, date]);
+
+  useAutoGeneratePlanMealImages({
+    enabled: Boolean(clientId && meals.length),
+    meals,
+    onUpdate: (mealId, imageUrl, imageStatus) => {
+      setMeals((current) =>
+        current.map((meal) =>
+          meal.id === mealId ? { ...meal, image_url: imageUrl, image_status: imageStatus } : meal,
+        ),
+      );
+      setRecipeMeal((current) =>
+        current?.id === mealId
+          ? { ...current, image_url: imageUrl, image_status: imageStatus }
+          : current,
+      );
+    },
+  });
 
   // -- Scaling factor: engine kcal target vs. plan-day kcal ------------------
   const planKcalTotal = useMemo(() => {
@@ -235,10 +254,7 @@ export function BullsPlanContentView() {
     try {
       const existing = tracked[m.id];
       if (existing) {
-        const { error } = await supabase
-          .from("food_entries")
-          .delete()
-          .eq("id", existing);
+        const { error } = await supabase.from("food_entries").delete().eq("id", existing);
         if (error) throw error;
         setTracked((t) => {
           const n = { ...t };
@@ -262,6 +278,7 @@ export function BullsPlanContentView() {
             protein_g: s.protein_g,
             carbs_g: s.carbs_g,
             fat_g: s.fat_g,
+            image_url: overrides[m.id]?.image_url ?? m.image_url ?? null,
             source: `perf_plan:${m.id}`,
           })
           .select("id")
@@ -270,8 +287,8 @@ export function BullsPlanContentView() {
         setTracked((t) => ({ ...t, [m.id]: (data as { id: string }).id }));
         toast.success(`${s.name} getrackt`);
       }
-    } catch (e: any) {
-      toast.error(e?.message ?? "Tracken fehlgeschlagen");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Tracken fehlgeschlagen");
     } finally {
       setTogglingId("");
     }
@@ -298,13 +315,11 @@ export function BullsPlanContentView() {
             Performance-Profil fehlt
           </div>
         </div>
-        <h2 className="mt-2 font-display text-lg font-bold">
-          Vervollständige dein Bulls-Profil
-        </h2>
+        <h2 className="mt-2 font-display text-lg font-bold">Vervollständige dein Bulls-Profil</h2>
         <p className="mt-1 text-xs text-muted-foreground">
-          Damit dein individueller Ernährungsplan automatisch erstellt werden kann,
-          brauchen wir noch ein paar Angaben zu dir: Biometrie, Ziel, Lieblingsfoods,
-          No-Gos, Allergien und Meal-Prep-Vorlieben.
+          Damit dein individueller Ernährungsplan automatisch erstellt werden kann, brauchen wir
+          noch ein paar Angaben zu dir: Biometrie, Ziel, Lieblingsfoods, No-Gos, Allergien und
+          Meal-Prep-Vorlieben.
         </p>
         {orgSlug ? (
           <Link
@@ -319,7 +334,6 @@ export function BullsPlanContentView() {
     );
   }
 
-
   const target = engine.targets;
 
   // ---- Build props for the shared DayPlanView ------------------------------
@@ -333,14 +347,15 @@ export function BullsPlanContentView() {
     "Samstag",
   ];
   const dObj = new Date(date + "T12:00:00Z");
-  const dateLabel = `${WEEKDAY_LONG_DE[dObj.getUTCDay()]}, ${String(
-    dObj.getUTCDate(),
-  ).padStart(2, "0")}.${String(dObj.getUTCMonth() + 1).padStart(2, "0")}.`;
+  const dateLabel = `${WEEKDAY_LONG_DE[dObj.getUTCDay()]}, ${String(dObj.getUTCDate()).padStart(
+    2,
+    "0",
+  )}.${String(dObj.getUTCMonth() + 1).padStart(2, "0")}.`;
 
   const dayKind: "training" | "rest" | null =
     engine.dayType === "rest" ? "rest" : engine.dayType ? "training" : null;
 
-  const eaten = useMemo(() => {
+  const eaten = (() => {
     let kcal = 0,
       p = 0,
       c = 0,
@@ -354,10 +369,9 @@ export function BullsPlanContentView() {
       f += s.fat_g;
     }
     return { kcal, protein_g: p, carbs_g: c, fat_g: f };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [meals, tracked, scale, overrides]);
+  })();
 
-  const dayMeals: DayPlanMeal[] = useMemo(() => {
+  const dayMeals: DayPlanMeal[] = (() => {
     return meals.map((m) => {
       const s = scaledMeal(m);
       const ov = overrides[m.id];
@@ -370,13 +384,14 @@ export function BullsPlanContentView() {
         protein_g: s.protein_g,
         carbs_g: s.carbs_g,
         fat_g: s.fat_g,
+        imageUrl: ov?.image_url ?? m.image_url ?? null,
+        imageStatus: ov?.image_url ? "ready" : m.image_status,
         isTracked: !!tracked[m.id],
         busy: togglingId === m.id,
         hasRecipe: !!(ov?.description ?? m.description),
       };
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [meals, overrides, tracked, togglingId, scale]);
+  })();
 
   return (
     <div className="mx-auto max-w-md px-1">
@@ -424,8 +439,7 @@ export function BullsPlanContentView() {
             )}
             {target && planKcalTotal > 0 && Math.abs(scale - 1) > 0.02 && (
               <div className="text-[10px] text-muted-foreground">
-                Mengen skaliert · Faktor {scale.toFixed(2)}x
-                {dayName ? ` · ${dayName}` : null}
+                Mengen skaliert · Faktor {scale.toFixed(2)}x{dayName ? ` · ${dayName}` : null}
               </div>
             )}
           </div>
@@ -438,10 +452,21 @@ export function BullsPlanContentView() {
           displayName={recipeMeal.name}
           isCoach={false}
           onClose={() => setRecipeMeal(null)}
+          onImageChanged={(imageUrl, imageStatus) => {
+            setMeals((current) =>
+              current.map((meal) =>
+                meal.id === recipeMeal.id
+                  ? { ...meal, image_url: imageUrl, image_status: imageStatus }
+                  : meal,
+              ),
+            );
+            setRecipeMeal((current) =>
+              current ? { ...current, image_url: imageUrl, image_status: imageStatus } : current,
+            );
+          }}
         />
       )}
       <div className="hidden">{String(!!refetchEngine)}</div>
     </div>
   );
 }
-

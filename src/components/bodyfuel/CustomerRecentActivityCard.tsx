@@ -62,9 +62,7 @@ export function CustomerRecentActivityCard({ userId }: { userId: string }) {
         </Select>
       </div>
 
-      {isLoading && (
-        <p className="mt-4 text-sm text-muted-foreground">Lade…</p>
-      )}
+      {isLoading && <p className="mt-4 text-sm text-muted-foreground">Lade…</p>}
 
       {!isLoading && day && (
         <div className="mt-6 space-y-6">
@@ -107,15 +105,15 @@ export function CustomerRecentActivityCard({ userId }: { userId: string }) {
                     <div className="min-w-0">
                       <div className="truncate font-medium">{e.name}</div>
                       <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                        {MEAL_LABEL[e.meal] ?? e.meal} · {Math.round(e.serving_g)} g
+                        {MEAL_LABEL[e.meal] ?? e.meal} · {Math.round(e.serving_amount)}{" "}
+                        {e.amount_unit}
                       </div>
                     </div>
                     <div className="shrink-0 text-right text-xs text-muted-foreground">
-                      <div className="font-semibold text-foreground">
-                        {Math.round(e.kcal)} kcal
-                      </div>
+                      <div className="font-semibold text-foreground">{Math.round(e.kcal)} kcal</div>
                       <div>
-                        P {Math.round(e.protein_g)} · K {Math.round(e.carbs_g)} · F {Math.round(e.fat_g)}
+                        P {Math.round(e.protein_g)} · K {Math.round(e.carbs_g)} · F{" "}
+                        {Math.round(e.fat_g)}
                       </div>
                     </div>
                   </li>
@@ -148,10 +146,7 @@ export function CustomerRecentActivityCard({ userId }: { userId: string }) {
                     </div>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {ex.sets.map((s, j) => (
-                        <span
-                          key={j}
-                          className="rounded-md bg-background px-2 py-0.5 text-xs"
-                        >
+                        <span key={j} className="rounded-md bg-background px-2 py-0.5 text-xs">
                           {s.weight_kg ?? "—"} kg × {s.reps ?? "—"}
                         </span>
                       ))}
@@ -170,9 +165,7 @@ export function CustomerRecentActivityCard({ userId }: { userId: string }) {
 function Metric({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="rounded-xl border border-border bg-secondary/30 px-3 py-2">
-      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-        {label}
-      </div>
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
       <div className="text-sm font-bold">{value}</div>
     </div>
   );

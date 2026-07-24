@@ -4,6 +4,7 @@ import { Flame } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
 import { useEntitlements } from "@/lib/bodyfuel/entitlements";
+import { getActiveOrgContext } from "@/components/organizations/OrganizationContextSwitcher";
 
 export const Route = createFileRoute("/app")({
   head: () => ({ meta: [{ title: "App — BODYFUEL" }] }),
@@ -21,6 +22,30 @@ function AppEntryPage() {
     if (!supabaseUser) {
       navigate({ to: "/auth", search: { next: undefined }, replace: true });
       return;
+    }
+
+    // Respect the last actively chosen org+role context so refresh keeps the
+    // user where they left off — otherwise dual-role users would always be
+    // pushed into the coach dashboard on reload.
+    const activeCtx = getActiveOrgContext();
+    if (activeCtx) {
+      const activeOrgId = ent.orgIdsBySlug[activeCtx.slug] ?? null;
+      const hasStaffAccess = activeOrgId ? !!ent.staffRolesByOrg[activeOrgId] : false;
+
+      if (activeCtx.mode === "staff" && activeOrgId && hasStaffAccess) {
+        navigate({ to: "/coach/teams/$orgId", params: { orgId: activeOrgId }, replace: true });
+        return;
+      }
+      if (activeCtx.mode === "athlete") {
+        navigate({ to: "/$orgSlug/home", params: { orgSlug: activeCtx.slug }, replace: true });
+        return;
+      }
+      // Stale staff context after role removal: fall back to the same org's
+      // athlete portal instead of sending the user into a forbidden cockpit.
+      if (activeCtx.mode === "staff") {
+        navigate({ to: "/$orgSlug/home", params: { orgSlug: activeCtx.slug }, replace: true });
+        return;
+      }
     }
 
     if (isCoach) {

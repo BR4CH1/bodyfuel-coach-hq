@@ -1,21 +1,20 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { isGlobalCoach, assertCoachOrOrgStaffForAthlete } from "@/lib/organizations/org-coach-access";
+import {
+  isGlobalCoach,
+  assertCoachOrOrgStaffForAthlete,
+} from "@/lib/organizations/org-coach-access";
 
 // Erlaubt: Ziel-User ist Caller selbst, ODER Caller ist globaler Coach,
 // ODER Caller ist Org-Staff mit `manage_nutrition`-Berechtigung für diesen
 // Athleten. Wird von den Meal-Compute-Fns unten verwendet, damit auch
 // Vereins-Coaches (Bulls & Co.) Rezepte / Makros nachrechnen können.
-async function assertMealAccess(
-  ctx: { supabase: any; userId: string },
-  clientId: string | null,
-) {
+async function assertMealAccess(ctx: { supabase: any; userId: string }, clientId: string | null) {
   if (clientId && clientId === ctx.userId) return;
   if (await isGlobalCoach(ctx.supabase, ctx.userId)) return;
   if (!clientId) throw new Error("Forbidden");
   await assertCoachOrOrgStaffForAthlete(ctx, clientId, "nutrition");
 }
-
 
 type ParsedMeal = {
   name: string;
@@ -45,7 +44,6 @@ export const parseNutritionPlan = createServerFn({ method: "POST" })
 
     // Selbst-Zugriff, globaler Coach oder Org-Nutrition-Coach für den Athleten.
     await assertMealAccess({ supabase, userId }, (plan as any).client_id ?? null);
-
 
     const { data: tgt } = await supabase
       .from("nutrition_targets")
@@ -94,11 +92,11 @@ KALORIEN-CHECK:
 ${targetLine}
 Wenn die Summe der kcal eines Tages das jeweilige Ziel um mehr als 200 kcal überschreitet, lasse einen Snack (bevorzugt den kleinsten) WEG, damit die Summe näher am Ziel liegt. Hauptmahlzeiten (Frühstück, Mittag, Abendessen) NIE weglassen.
 
-Beschreibung: eine Zeile, NUR Lebensmittel komma-getrennt mit Mengen. KEINE Zubereitungsanweisungen. JEDE Zutat braucht eine konkrete Menge in g, ml, Stück oder EL/TL — auch Salat, Gemüse, Beilagen und Toppings IMMER in Gramm (z. B. "150g Blattsalat", "200g Brokkoli"). NIE "Portion", "etwas" oder "nach Geschmack".
+Beschreibung: eine Zeile, NUR Lebensmittel komma-getrennt mit Mengen. KEINE Zubereitungsanweisungen. Flüssigkeiten immer in ml, alle anderen Lebensmittel immer in g. Stück, Scheibe, EL, TL, Portion, "etwas" und "nach Geschmack" sind verboten. Auch Salat, Gemüse, Beilagen und Toppings IMMER in Gramm (z. B. "150g Blattsalat", "200g Brokkoli").
 kcal/Protein/Kohlenhydrate/Fett: ganze Zahlen wenn angegeben, sonst null.
 
 Antworte ausschließlich mit gültigem JSON:
-{ "days": [ { "name": "Trainingstag A", "meals": [ { "name": "Frühstück", "description": "250g Skyr, 1 Banane, 30g Haferflocken", "kcal": 420, "protein_g": 35, "carbs_g": 55, "fat_g": 6 } ] } ] }`;
+{ "days": [ { "name": "Trainingstag A", "meals": [ { "name": "Frühstück", "description": "250g Skyr, 120g Banane, 30g Haferflocken", "kcal": 420, "protein_g": 35, "carbs_g": 55, "fat_g": 6 } ] } ] }`;
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -219,7 +217,9 @@ export const estimateMealMacros = createServerFn({ method: "POST" })
       : await computeMealFromDescription(supabaseAdmin, meal.description ?? null);
 
     if (!isUsableEngineResult(result)) {
-      const warnings = Array.isArray((result as any)?.warnings) ? (result as any).warnings.join(" | ") : "";
+      const warnings = Array.isArray((result as any)?.warnings)
+        ? (result as any).warnings.join(" | ")
+        : "";
       throw new Error(`Nährwerte nicht zuverlässig berechenbar. ${warnings}`.trim());
     }
 
@@ -729,7 +729,7 @@ PFLICHT-FORMAT für JEDE Zutat (genau so, ohne Ausnahme):
 Beispiele:
 - "Rinderhackfleisch: 200 g für ${selfPartner.name}, 100 g für ${otherPartner.name} — insgesamt 300 g"
 - "Reis (ungekocht): 150 g für ${selfPartner.name}, 80 g für ${otherPartner.name} — insgesamt 230 g"
-- Bei Gewürzen / Öl, das geteilt wird: "Rapsöl: 1 EL für ${selfPartner.name}, 0,5 EL für ${otherPartner.name} — insgesamt 1,5 EL"
+- Bei Öl, das geteilt wird: "Rapsöl: 15 ml für ${selfPartner.name}, 8 ml für ${otherPartner.name} — insgesamt 23 ml"
 
 Skaliere die Mengen pro Person passend zu den jeweiligen Makro-Zielen (${otherPartner.name} hat oft weniger kcal, also kleinere Portionen). Wenn in den Portion-Angaben oben schon Mengen pro Person stehen, übernimm GENAU diese und addiere die Summe.
 
@@ -740,7 +740,7 @@ Zubereitungsschritte: gemeinsame Zubereitung in einem Topf/Pfanne, am Ende auf z
 
     const onePersonBlock = !partnerBlock
       ? `Erstelle das Rezept für genau EINE Person.
-- Zutaten mit konkreten Mengen in Gramm/ml/Stück.
+- Zutaten mit konkreten Mengen: Flüssigkeiten in ml, alles andere in g.
 - Wenn die Beschreibung bereits Lebensmittel + Mengen nennt, nutze sie NUR wenn sie zu den Zielwerten passen. Sonst skaliere die Mengen so, dass die Zielwerte stimmen.`
       : "";
 
@@ -753,7 +753,7 @@ ${onePersonBlock}
 
 KRITISCH — die Mengen MÜSSEN zu den Zielwerten passen:
 - Rechne intern jede Zutat mit USDA/DGE-Werten zusammen und prüfe, dass die Summe ≈ Zielwerte ergibt, BEVOR du antwortest. Wenn nicht: Mengen anpassen.
-- Referenzwerte pro 100 g (roh/ungekocht): Reis ungekocht ~360 kcal / 78 g KH / 7 g P · Nudeln trocken ~360 kcal / 72 g KH / 12 g P · Kartoffeln roh ~70 kcal / 16 g KH · Haferflocken ~370 kcal / 60 g KH / 13 g P · Hähnchenbrust roh ~110 kcal / 23 g P · Pute ~110 kcal / 24 g P · Rinderhack 5 % ~140 kcal / 21 g P / 5 g F · Lachs ~200 kcal / 20 g P / 13 g F · Thunfisch im Saft abgetropft ~110 kcal / 25 g P · Skyr ~60 kcal / 11 g P · Magerquark ~70 kcal / 12 g P · Ei M (60 g) ~85 kcal / 7 g P / 6 g F · Olivenöl 1 EL (10 g) ~90 kcal / 10 g F · Avocado ~160 kcal / 15 g F · Gemüse ~25 kcal / 100 g.
+- Referenzwerte: feste Lebensmittel pro 100 g (roh/ungekocht), Flüssigkeiten pro 100 ml. Reis ungekocht ~360 kcal / 78 g KH / 7 g P · Nudeln trocken ~360 kcal / 72 g KH / 12 g P · Kartoffeln roh ~70 kcal / 16 g KH · Haferflocken ~370 kcal / 60 g KH / 13 g P · Hähnchenbrust roh ~110 kcal / 23 g P · Pute ~110 kcal / 24 g P · Rinderhack 5 % ~140 kcal / 21 g P / 5 g F · Lachs ~200 kcal / 20 g P / 13 g F · Thunfisch im Saft abgetropft ~110 kcal / 25 g P · Skyr ~60 kcal / 11 g P · Magerquark ~70 kcal / 12 g P · Ei ~143 kcal / 100 g · Olivenöl ~805 kcal / 91 g F pro 100 ml · Avocado ~160 kcal / 15 g F · Gemüse ~25 kcal / 100 g.
 - Beispiel: 200 g Reis ungekocht sind bereits ~720 kcal und ~155 g KH — passe das mit den anderen Zutaten zur Zielwerte-Summe oder reduziere die Menge.
 - Lieber realistische, kleinere Mengen als überdimensionierte Portionen.
 

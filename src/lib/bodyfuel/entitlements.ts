@@ -29,6 +29,12 @@ export type Entitlements = {
   primaryOrgId: string | null;
   /** Höchste Staff-Rolle im primären Verein (falls vorhanden). */
   primaryStaffRole: StaffRoleKey | null;
+  /** Staff-Rolle je Organisation, damit der aktive Coach-Kontext nie die Rolle einer anderen Org übernimmt. */
+  staffRolesByOrg: Record<string, StaffRoleKey>;
+  /** Aktive Vereins-Slugs je Organisations-ID, damit Routen stale Coach-Kontexte sauber zurückführen können. */
+  orgSlugsById: Record<string, string>;
+  /** Aktive Organisations-IDs je Slug. */
+  orgIdsBySlug: Record<string, string>;
   loading: boolean;
 };
 
@@ -42,6 +48,9 @@ const EMPTY: Entitlements = {
   primaryOrgSlug: null,
   primaryOrgId: null,
   primaryStaffRole: null,
+  staffRolesByOrg: {},
+  orgSlugsById: {},
+  orgIdsBySlug: {},
   loading: false,
 };
 
@@ -98,13 +107,23 @@ export function useEntitlements(): Entitlements {
       }>;
       const activeStaff = staffRows.filter((r) => r.organization?.status === "active");
 
+      const orgSlugsById: Record<string, string> = {};
+      const orgIdsBySlug: Record<string, string> = {};
+      for (const org of [...activeMems, ...activeStaff.map((row) => row.organization).filter(Boolean)]) {
+        if (!org?.id || !org.slug) continue;
+        orgSlugsById[org.id] = org.slug;
+        orgIdsBySlug[org.slug] = org.id;
+      }
+
       const primaryOrg = activeMems[0] ?? activeStaff[0]?.organization ?? null;
       const primaryOrgSlug = primaryOrg?.slug ?? null;
       const primaryOrgId = primaryOrg?.id ?? null;
       const hasTeamAccess = primaryOrgSlug !== null;
 
-      // Staff-Rolle im primären Verein bestimmen (Priorität:
-      // organization_admin > head_coach > team_coach > staff)
+      // Staff-Rollen pro Organisation bestimmen (Priorität:
+      // organization_admin > head_coach > team_coach > staff).
+      // Der Coach-Kontext einer Route darf nie von der "primären" Organisation
+      // des Accounts abgeleitet werden.
       const rank = (r: string | null, perms: string[] | null): number => {
         if (r === "organization_admin") return 4;
         if (r === "coach" && (perms ?? []).includes("manage_organization")) return 3;
@@ -112,20 +131,49 @@ export function useEntitlements(): Entitlements {
         if (r === "staff") return 1;
         return 0;
       };
+      const roleFromRank = (rk: number): StaffRoleKey | null =>
+        rk === 4
+          ? "organization_admin"
+          : rk === 3
+          ? "head_coach"
+          : rk === 2
+          ? "team_coach"
+          : rk === 1
+          ? "staff"
+          : null;
+
+      const staffRolesByOrg: Record<string, StaffRoleKey> = {};
+      const staffRankByOrg = new Map<string, number>();
+      for (const row of activeStaff) {
+        const organizationId = row.organization?.id;
+        if (!organizationId) continue;
+        const nextRank = rank(row.role, row.permissions);
+        if (nextRank <= (staffRankByOrg.get(organizationId) ?? 0)) continue;
+        const nextRole = roleFromRank(nextRank);
+        if (!nextRole) continue;
+        staffRankByOrg.set(organizationId, nextRank);
+        staffRolesByOrg[organizationId] = nextRole;
+      }
+
       const staffInPrimary = activeStaff
         .filter((r) => r.organization?.id === primaryOrgId)
         .sort((a, b) => rank(b.role, b.permissions) - rank(a.role, a.permissions))[0];
       let primaryStaffRole: StaffRoleKey | null = null;
       if (staffInPrimary) {
-        const rk = rank(staffInPrimary.role, staffInPrimary.permissions);
-        primaryStaffRole =
-          rk === 4 ? "organization_admin" :
-          rk === 3 ? "head_coach" :
-          rk === 2 ? "team_coach" :
-          rk === 1 ? "staff" : null;
+        primaryStaffRole = roleFromRank(rank(staffInPrimary.role, staffInPrimary.permissions));
       }
 
-      return { hasBodyfuelSmart, hasBodyfuelCoaching, hasTeamAccess, primaryOrgSlug, primaryOrgId, primaryStaffRole };
+      return {
+        hasBodyfuelSmart,
+        hasBodyfuelCoaching,
+        hasTeamAccess,
+        primaryOrgSlug,
+        primaryOrgId,
+        primaryStaffRole,
+        staffRolesByOrg,
+        orgSlugsById,
+        orgIdsBySlug,
+      };
     },
   });
 
@@ -142,6 +190,9 @@ export function useEntitlements(): Entitlements {
       primaryOrgSlug: null as string | null,
       primaryOrgId: null as string | null,
       primaryStaffRole: null as StaffRoleKey | null,
+      staffRolesByOrg: {} as Record<string, StaffRoleKey>,
+      orgSlugsById: {} as Record<string, string>,
+      orgIdsBySlug: {} as Record<string, string>,
     };
   const hasAny = d.hasBodyfuelSmart || d.hasBodyfuelCoaching;
 
@@ -155,6 +206,9 @@ export function useEntitlements(): Entitlements {
     primaryOrgSlug: d.primaryOrgSlug,
     primaryOrgId: d.primaryOrgId,
     primaryStaffRole: d.primaryStaffRole,
+    staffRolesByOrg: d.staffRolesByOrg,
+    orgSlugsById: d.orgSlugsById,
+    orgIdsBySlug: d.orgIdsBySlug,
     loading: false,
   };
 }

@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, RefreshCw, X, Sparkles, Heart, Star } from "lucide-react";
+import { Loader2, RefreshCw, X, Sparkles, Heart, Star, ImageIcon } from "lucide-react";
 import { generateMealRecipe } from "@/lib/nutrition-plan.functions";
+import { generateMealImage, type MealImageStatus } from "@/lib/meal-images.functions";
 import {
   toggleFavorite,
   getFavoriteStatus,
@@ -11,6 +12,7 @@ import {
   logInteraction,
 } from "@/lib/meal-feedback.functions";
 import { useSession } from "@/lib/bodyfuel/session";
+import { MealImageThumb } from "./MealImageThumb";
 
 type Meal = {
   id: string;
@@ -20,21 +22,29 @@ type Meal = {
   protein_g: number | null;
   carbs_g: number | null;
   fat_g: number | null;
+  image_url?: string | null;
+  image_status?: MealImageStatus | null;
 };
+
+const errorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
 
 export function RecipeDialog({
   meal,
   displayName,
   isCoach,
   onClose,
+  onImageChanged,
 }: {
   meal: Meal;
   displayName: string;
   isCoach: boolean;
   onClose: () => void;
+  onImageChanged?: (imageUrl: string | null, status: MealImageStatus) => void;
 }) {
   const { supabaseUser } = useSession();
   const generate = useServerFn(generateMealRecipe);
+  const generateImage = useServerFn(generateMealImage);
   const toggleFavFn = useServerFn(toggleFavorite);
   const getFavFn = useServerFn(getFavoriteStatus);
   const setRatingFn = useServerFn(setRating);
@@ -48,6 +58,9 @@ export function RecipeDialog({
   const [ingredients, setIngredients] = useState<string[]>([]);
   const [steps, setSteps] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(meal.image_url ?? null);
+  const [imageStatus, setImageStatus] = useState<MealImageStatus>(meal.image_status ?? "none");
+  const [imageBusy, setImageBusy] = useState(false);
 
   const [favorited, setFavorited] = useState(false);
   const [favBusy, setFavBusy] = useState(false);
@@ -57,14 +70,15 @@ export function RecipeDialog({
   const [ratingSaving, setRatingSaving] = useState(false);
 
   const load = async (force = false) => {
-    if (force) setRegenerating(true); else setLoading(true);
+    if (force) setRegenerating(true);
+    else setLoading(true);
     setError(null);
     try {
       const res = await generate({ data: { meal_id: meal.id, force } });
       setIngredients(res.ingredients);
       setSteps(res.steps);
-    } catch (e: any) {
-      setError(e?.message ?? "Rezept konnte nicht erstellt werden");
+    } catch (error) {
+      setError(errorMessage(error, "Rezept konnte nicht erstellt werden"));
     } finally {
       setLoading(false);
       setRegenerating(false);
@@ -84,12 +98,56 @@ export function RecipeDialog({
           setFavorited(f.favorited);
           setStars(r.stars ?? 0);
           setComment(r.comment ?? "");
-        } catch {}
+        } catch {
+          /* Favoriten und Bewertung sind Best-Effort. */
+        }
         try {
           await logFn({ data: { meal_id: meal.id, kind: "shown" } });
-        } catch {}
+        } catch {
+          /* Das Interaktions-Logging darf den Dialog nicht blockieren. */
+        }
       })();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [meal.id]);
+
+  useEffect(() => {
+    setImageUrl(meal.image_url ?? null);
+    setImageStatus(meal.image_status ?? "none");
+  }, [meal.image_status, meal.image_url]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (meal.image_url || meal.image_status === "generating") return;
+
+    setImageBusy(true);
+    setImageStatus("generating");
+    void generateImage({
+      data: { target: "plan_meal", meal_id: meal.id, force: false },
+    })
+      .then((result) => {
+        if (cancelled) return;
+        setImageUrl(result.image_url ?? null);
+        const nextStatus: MealImageStatus =
+          result.status === "generated" ||
+          result.status === "cached" ||
+          result.status === "preserved"
+            ? "ready"
+            : result.status === "fallback"
+              ? "fallback"
+              : "failed";
+        setImageStatus(nextStatus);
+        onImageChanged?.(result.image_url ?? null, nextStatus);
+      })
+      .catch(() => {
+        if (!cancelled) setImageStatus("failed");
+      })
+      .finally(() => {
+        if (!cancelled) setImageBusy(false);
+      });
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [meal.id]);
 
@@ -102,6 +160,32 @@ export function RecipeDialog({
     }
   };
 
+  const regenerateImage = async () => {
+    setImageBusy(true);
+    setImageStatus("generating");
+    try {
+      const result = await generateImage({
+        data: { target: "plan_meal", meal_id: meal.id, force: true },
+      });
+      setImageUrl(result.image_url ?? null);
+      const nextStatus: MealImageStatus =
+        result.status === "generated" || result.status === "cached" || result.status === "preserved"
+          ? "ready"
+          : result.status === "fallback"
+            ? "fallback"
+            : "failed";
+      setImageStatus(nextStatus);
+      onImageChanged?.(result.image_url ?? null, nextStatus);
+      if (result.image_url) toast.success("Mahlzeitenfoto aktualisiert");
+      else toast.error(result.message ?? "Foto konnte nicht erstellt werden");
+    } catch (error) {
+      setImageStatus("failed");
+      toast.error(errorMessage(error, "Foto konnte nicht erstellt werden"));
+    } finally {
+      setImageBusy(false);
+    }
+  };
+
   const handleToggleFav = async () => {
     if (!isCustomer) return;
     setFavBusy(true);
@@ -109,8 +193,8 @@ export function RecipeDialog({
       const res = await toggleFavFn({ data: { meal_id: meal.id } });
       setFavorited(res.favorited);
       toast.success(res.favorited ? "Zu Favoriten gespeichert ❤️" : "Aus Favoriten entfernt");
-    } catch (e: any) {
-      toast.error(e?.message ?? "Fehler");
+    } catch (error) {
+      toast.error(errorMessage(error, "Fehler"));
     } finally {
       setFavBusy(false);
     }
@@ -123,8 +207,8 @@ export function RecipeDialog({
     try {
       await setRatingFn({ data: { meal_id: meal.id, stars: n, comment: comment || null } });
       toast.success(`${n} Stern${n === 1 ? "" : "e"} gespeichert`);
-    } catch (e: any) {
-      toast.error(e?.message ?? "Bewertung fehlgeschlagen");
+    } catch (error) {
+      toast.error(errorMessage(error, "Bewertung fehlgeschlagen"));
     } finally {
       setRatingSaving(false);
     }
@@ -136,8 +220,8 @@ export function RecipeDialog({
     try {
       await setRatingFn({ data: { meal_id: meal.id, stars, comment: comment || null } });
       toast.success("Kommentar gespeichert");
-    } catch (e: any) {
-      toast.error(e?.message ?? "Fehler");
+    } catch (error) {
+      toast.error(errorMessage(error, "Fehler"));
     } finally {
       setRatingSaving(false);
     }
@@ -154,10 +238,14 @@ export function RecipeDialog({
       >
         <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border px-4 py-3">
           <div className="min-w-0">
-            <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Rezept</div>
+            <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+              Rezept
+            </div>
             <div className="font-display text-base font-bold leading-tight">{displayName}</div>
             {meal.description && (
-              <div className="mt-0.5 text-xs text-muted-foreground line-clamp-2">{meal.description}</div>
+              <div className="mt-0.5 text-xs text-muted-foreground line-clamp-2">
+                {meal.description}
+              </div>
             )}
             {(meal.kcal != null || meal.protein_g != null) && (
               <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">
@@ -195,6 +283,27 @@ export function RecipeDialog({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
+          <MealImageThumb
+            name={displayName}
+            imageUrl={imageUrl}
+            status={imageStatus}
+            className="mb-4 h-52 w-full rounded-2xl"
+          />
+          {!imageUrl && imageStatus === "failed" && (
+            <button
+              type="button"
+              onClick={regenerateImage}
+              disabled={imageBusy}
+              className="mb-4 inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs text-muted-foreground hover:border-gold/50 hover:text-gold"
+            >
+              {imageBusy ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <ImageIcon className="h-3.5 w-3.5" />
+              )}
+              Foto erneut erstellen
+            </button>
+          )}
           {loading ? (
             <div className="flex flex-col items-center gap-2 py-10 text-sm text-muted-foreground">
               <Loader2 className="h-5 w-5 animate-spin text-gold" />
@@ -227,7 +336,9 @@ export function RecipeDialog({
 
               {steps.length > 0 && (
                 <section>
-                  <div className="text-xs font-bold uppercase tracking-wider text-gold">Zubereitung</div>
+                  <div className="text-xs font-bold uppercase tracking-wider text-gold">
+                    Zubereitung
+                  </div>
                   <ol className="mt-2 space-y-2 text-sm">
                     {steps.map((s, i) => (
                       <li key={i} className="flex gap-3">
@@ -293,7 +404,7 @@ export function RecipeDialog({
         </div>
 
         {isCoach && !loading && (
-          <div className="shrink-0 border-t border-border px-4 py-3">
+          <div className="flex shrink-0 flex-wrap gap-2 border-t border-border px-4 py-3">
             <button
               onClick={regenerate}
               disabled={regenerating}
@@ -304,7 +415,19 @@ export function RecipeDialog({
               ) : (
                 <Sparkles className="h-3.5 w-3.5" />
               )}
-              Neu generieren
+              Rezept neu generieren
+            </button>
+            <button
+              onClick={regenerateImage}
+              disabled={imageBusy}
+              className="inline-flex items-center gap-2 rounded-md border border-gold/40 bg-accent/30 px-3 py-2 text-xs font-semibold text-gold hover:bg-accent/50 disabled:opacity-60"
+            >
+              {imageBusy ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <ImageIcon className="h-3.5 w-3.5" />
+              )}
+              Foto neu generieren
             </button>
           </div>
         )}
