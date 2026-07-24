@@ -636,7 +636,7 @@ export function TrainingPlanBuilderPage({
                   value={title}
                   onChange={(event) => setTitle(event.target.value)}
                   aria-label="Name des Trainingsplans"
-                  className="min-w-0 flex-1 border-0 bg-transparent p-0 font-sans text-xl font-black tracking-tight outline-none placeholder:text-muted-foreground/50 sm:text-2xl"
+                  className="min-w-0 flex-1 border-0 bg-transparent p-0 font-sans text-xl font-black tracking-tight text-foreground outline-none placeholder:text-foreground/70 sm:text-2xl"
                   placeholder="Name des Trainingsplans"
                 />
                 <Pencil className="h-4 w-4 shrink-0 text-muted-foreground" />
