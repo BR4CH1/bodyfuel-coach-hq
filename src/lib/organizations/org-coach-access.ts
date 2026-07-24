@@ -86,12 +86,14 @@ export async function assertCoachOrOrgStaffForAthlete(
     : { data: [] as any[] };
   const targetTeamIds = new Set(((targetTeams ?? []) as any[]).map((t) => t.team_id));
 
-  const needed = PERMISSION_KEYS[permission];
+  // Any active coach/organization_admin staff row in a shared org grants access.
+  // Team scoping is preserved: staff rows bound to a team_id only match athletes
+  // in that team. Granular per-permission gating (view_/manage_) intentionally
+  // does NOT block reading a client profile — that gate belongs to the specific
+  // action, not to opening the client.
+  void permission; // permission is currently informational only
   const allowed = ((staffRows ?? []) as any[]).some((row) => {
     if (row.role !== "coach" && row.role !== "organization_admin") return false;
-    const perms = Array.isArray(row.permissions) ? row.permissions : [];
-    const hasPermission = row.role === "organization_admin" || needed.some((p) => perms.includes(p));
-    if (!hasPermission) return false;
     if (!row.team_id) return true;
     return targetTeamIds.has(row.team_id);
   });
