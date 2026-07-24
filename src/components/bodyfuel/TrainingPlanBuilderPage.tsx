@@ -1312,7 +1312,7 @@ function TextField({
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value || null)}
         aria-label={label}
-        className="w-full rounded-lg border border-border bg-card px-2 py-2 text-center text-xs font-bold outline-none transition focus:border-primary"
+        className="w-full rounded-lg border border-border bg-card px-2 py-2 text-center text-xs font-bold text-foreground outline-none transition placeholder:text-foreground/70 focus:border-primary"
       />
     </label>
   );
