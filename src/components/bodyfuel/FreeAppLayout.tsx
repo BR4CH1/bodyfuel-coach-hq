@@ -47,7 +47,10 @@ export function FreeAppLayout({ children }: { children: ReactNode }) {
   if (!supabaseUser || !isFreeUser) return null;
 
   const displayName = profile?.display_name ?? supabaseUser.email?.split("@")[0] ?? "Athlet";
-  const nav = hasGroup("bulls") ? [...baseNav, bullsNavItem] : baseNav;
+  // Bulls Hub temporarily disabled in bottom nav (broken sub-routes).
+  void hasGroup;
+  void bullsNavItem;
+  const nav = baseNav;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
