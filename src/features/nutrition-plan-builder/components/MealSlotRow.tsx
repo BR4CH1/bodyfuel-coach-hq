@@ -70,7 +70,7 @@ export function MealSlotRow({
   }, [imageUrl, libraryMeal?.id, libraryMeal?.image_status, onEnsureMealImage]);
 
   const setFactor = (next: number) => {
-    const clamped = Math.max(0.25, Math.min(4, Math.round(next * 4) / 4));
+    const clamped = Math.max(0.25, Math.min(8, Math.round(next * 4) / 4));
     onFactor(clamped);
   };
 
