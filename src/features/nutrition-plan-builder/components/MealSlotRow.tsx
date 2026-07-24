@@ -208,7 +208,7 @@ export function MealSlotRow({
                 type="number"
                 step="0.25"
                 min={0.25}
-                max={4}
+                max={8}
                 value={factor}
                 onChange={(event) => setFactor(Number(event.target.value) || 1)}
                 className="h-8 w-14 rounded-none border-y-0 px-1 text-center text-xs"
