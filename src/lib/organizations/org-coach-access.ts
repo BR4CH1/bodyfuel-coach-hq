@@ -1,10 +1,5 @@
 export type OrgCoachPermission = "training" | "nutrition" | "athlete";
 
-const PERMISSION_KEYS: Record<OrgCoachPermission, string[]> = {
-  training: ["manage_training", "manage_organization"],
-  nutrition: ["manage_nutrition", "manage_organization"],
-  athlete: ["manage_training", "manage_nutrition", "manage_organization", "invite_athletes"],
-};
 
 export async function isGlobalCoach(supabase: any, userId: string): Promise<boolean> {
   const { data } = await supabase.rpc("has_role", {
