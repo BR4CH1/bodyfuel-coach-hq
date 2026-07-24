@@ -206,6 +206,10 @@ export type BuilderMeal = {
   name: string;
   description?: string | null;
   ingredients: Array<{ name: string; grams: number }>;
+  kcal?: number | null;
+  protein_g?: number | null;
+  carbs_g?: number | null;
+  fat_g?: number | null;
   library_meal_id?: string | null;
   is_locked?: boolean;
   portion_factor?: number; // 1.0 = normale Portion
@@ -498,7 +502,7 @@ export const loadNutritionPlanForBuilder = createServerFn({ method: "POST" })
       ? await supabaseAdmin
           .from("nutrition_plan_meals")
           .select(
-            "id, day_id, sort_order, meal_slot, name, description, library_meal_id, is_locked, linked_prep_group, ingredients_json",
+            "id, day_id, sort_order, meal_slot, name, description, library_meal_id, is_locked, linked_prep_group, ingredients_json, kcal, protein_g, carbs_g, fat_g",
           )
           .in("day_id", dayIds)
           .order("sort_order")
@@ -523,6 +527,10 @@ export const loadNutritionPlanForBuilder = createServerFn({ method: "POST" })
             name: String(x?.name ?? ""),
             grams: Math.round(Number(x?.grams ?? x?.amount_g ?? 0)),
           })),
+          kcal: m.kcal == null ? null : Number(m.kcal),
+          protein_g: m.protein_g == null ? null : Number(m.protein_g),
+          carbs_g: m.carbs_g == null ? null : Number(m.carbs_g),
+          fat_g: m.fat_g == null ? null : Number(m.fat_g),
           library_meal_id: m.library_meal_id ?? null,
           is_locked: !!m.is_locked,
           portion_factor: 1,

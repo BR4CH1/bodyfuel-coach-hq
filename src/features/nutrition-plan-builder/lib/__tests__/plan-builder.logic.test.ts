@@ -321,6 +321,34 @@ describe("rebalanceDay", () => {
       macroFitScore(before.totals, before.target),
     );
   });
+
+  it("passt importierte Plan-Mahlzeiten ohne Bibliotheks-ID anhand gespeicherter Nährwerte an", () => {
+    const day: BuilderDay = {
+      name: "Tag 1",
+      type: "rest",
+      meals: [
+        {
+          slot: "lunch",
+          name: "Importiertes Gericht",
+          ingredients: [{ name: "Reis Bowl", grams: 300 }],
+          kcal: 603,
+          protein_g: 42,
+          carbs_g: 30,
+          fat_g: 18,
+          portion_factor: 1,
+        },
+      ],
+    };
+
+    const before = summarizeDay(day, context, []);
+    const result = rebalanceDay(day, context, []);
+    const after = summarizeDay(result, context, []);
+
+    expect(result.meals[0].portion_factor).toBeGreaterThan(1);
+    expect(macroFitScore(after.totals, after.target)).toBeLessThan(
+      macroFitScore(before.totals, before.target),
+    );
+  });
 });
 
 describe("autoFillWeekImpl", () => {

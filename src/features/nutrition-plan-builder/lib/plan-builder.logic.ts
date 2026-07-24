@@ -100,7 +100,21 @@ export function mealFromLibrary(
 export function mealMacros(m: BuilderMeal, library: LibraryMeal[]) {
   const lib = library.find((x) => x.id === m.library_meal_id);
   const f = m.portion_factor && m.portion_factor > 0 ? m.portion_factor : 1;
-  if (!lib) return { kcal: 0, p: 0, c: 0, f: 0 };
+  if (!lib) {
+    const kcal = Number(m.kcal ?? 0);
+    const p = Number(m.protein_g ?? 0);
+    const c = Number(m.carbs_g ?? 0);
+    const fat = Number(m.fat_g ?? 0);
+    if (![kcal, p, c, fat].some((value) => Number.isFinite(value) && value > 0)) {
+      return { kcal: 0, p: 0, c: 0, f: 0 };
+    }
+    return {
+      kcal: Number.isFinite(kcal) ? kcal * f : 0,
+      p: Number.isFinite(p) ? p * f : 0,
+      c: Number.isFinite(c) ? c * f : 0,
+      f: Number.isFinite(fat) ? fat * f : 0,
+    };
+  }
   return {
     kcal: Number(lib.kcal) * f,
     p: Number(lib.protein_g) * f,
@@ -688,7 +702,7 @@ export function rebalanceDay(
     { kcal: 0, p: 0, c: 0, f: 0 },
   );
   const adjustableMeals = day.meals.flatMap((meal, index) => {
-    if (meal.is_locked || !meal.library_meal_id) return [];
+    if (meal.is_locked) return [];
     const unitMacros = mealMacros({ ...meal, portion_factor: 1 }, library);
     if (!unitMacros.kcal) return [];
     return [{ index, unitMacros }];
