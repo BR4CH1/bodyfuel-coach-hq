@@ -119,8 +119,18 @@ export function PlanBuilderPage({
   }
   if (!customerContext) {
     return (
-      <div className="p-6 text-sm text-destructive">
-        Das Kundenprofil konnte nicht geladen werden.
+      <div className="p-6 space-y-2">
+        <p className="text-sm font-semibold text-destructive">
+          Das Kundenprofil konnte nicht geladen werden.
+        </p>
+        <p className="text-xs text-foreground/70">
+          Entweder fehlt dir der Zugriff auf diesen Athleten in dieser Organisation,
+          oder er ist keinem Team zugeordnet, das du betreust. Prüfe die Team-Zuweisung
+          im Coach-Bereich oder wende dich an den Organisations-Admin.
+        </p>
+        <Button variant="outline" size="sm" onClick={goBack}>
+          <ArrowLeft className="mr-1 h-4 w-4" /> Zurück
+        </Button>
       </div>
     );
   }

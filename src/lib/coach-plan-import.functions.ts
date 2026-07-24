@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { assertGlobalCoachOrAnyOrgCoach } from "@/lib/organizations/org-coach-access";
 import type { ImportedPlan } from "@/lib/customer-training-plan.functions";
 
 /**
@@ -13,11 +14,8 @@ import type { ImportedPlan } from "@/lib/customer-training-plan.functions";
 // ───────────────────────── Shared helpers ─────────────────────────
 
 async function assertCoach(ctx: { supabase: any; userId: string }) {
-  const { data: isCoach } = await ctx.supabase.rpc("has_role", {
-    _user_id: ctx.userId,
-    _role: "coach",
-  });
-  if (!isCoach) throw new Error("Nur für Coaches.");
+  // Erlaubt globale Coaches UND organisations-scoped Coaches / Org-Admins.
+  await assertGlobalCoachOrAnyOrgCoach(ctx);
 }
 
 async function callGateway(messages: any[]): Promise<any> {
