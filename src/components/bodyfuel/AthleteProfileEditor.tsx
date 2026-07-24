@@ -90,7 +90,15 @@ export function AthleteProfileEditor({
   const [injuries, setInjuries] = useState(initial.injuries ?? "");
   const [experience, setExperience] = useState<Experience | "">(initial.training_experience ?? "");
 
+  // Nur einmalig aus dem Server-`initial` hydrieren. Bei späteren Refetches
+  // (z. B. nach Tab-Fokus, wenn das Handy aus der Tastensperre kommt) würde
+  // ein Reset sonst gerade getippte, aber noch nicht gespeicherte Änderungen
+  // — z. B. Sport-Wochentage — wieder auf den alten Server-Stand zurücksetzen.
+  const hydratedRef = useRef(false);
   useEffect(() => {
+    if (hydratedRef.current) return;
+    if (initial == null) return;
+    hydratedRef.current = true;
     setSport(initial.sport ?? "");
     setSportPosition(initial.sport_position ?? "");
     setSportLevel((initial.sport_level as SportLevel) ?? "");
