@@ -70,4 +70,3 @@ Training-Update nicht verändert.
 - `src/lib/training.functions.ts`
 - `src/routes/training.tsx`
 - `src/styles.css`
-
