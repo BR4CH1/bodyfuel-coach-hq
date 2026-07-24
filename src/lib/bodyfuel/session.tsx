@@ -101,10 +101,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const loadProfile = async (uid: string) => {
-    const [p, r, g] = await Promise.all([
+    const [p, r, g, s] = await Promise.all([
       supabase.from("profiles").select("id, display_name, demo_client_key, nickname, is_course_instructor").eq("id", uid).maybeSingle(),
       supabase.from("user_roles").select("role").eq("user_id", uid),
       supabase.from("user_groups").select("group_name").eq("user_id", uid),
+      supabase.from("staff_assignments").select("id").eq("user_id", uid).in("role", ["coach", "organization_admin"]).limit(1),
     ]);
     if (p.data) {
       setProfile(p.data as Profile);
@@ -115,6 +116,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     if (g.data) {
       setGroups(g.data.map((x: any) => x.group_name as string));
     }
+    const hasOrgCoach = Array.isArray(s.data) && s.data.length > 0;
+    setOrgCoach(hasOrgCoach);
     if (r.data) {
       const rolesList = r.data.map((x: any) => x.role as string);
       const effective: "coach" | "free" | "client" = rolesList.includes("coach")
@@ -123,7 +126,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         ? "free"
         : "client";
       setRole(effective);
-      if (effective !== "coach") {
+      if (effective !== "coach" && !hasOrgCoach) {
         persist(p.data?.demo_client_key ?? uid);
       }
     }
