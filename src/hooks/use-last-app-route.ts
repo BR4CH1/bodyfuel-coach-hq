@@ -28,6 +28,9 @@ const EXCLUDED_PREFIXES = [
   "/.lovable",
   "/.well-known",
   "/mcp",
+  // Bulls Hub Sub-Routes sind aktuell defekt — nicht als letzte Route
+  // wiederherstellen, sonst hängen Athleten wie Bekim beim App-Öffnen fest.
+  "/bulls",
 ];
 
 function normalizeHref(pathname: string, search = "", hash = "") {
