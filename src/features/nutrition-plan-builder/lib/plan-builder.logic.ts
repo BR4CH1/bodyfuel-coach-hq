@@ -648,17 +648,18 @@ export function autoFillWeekPairImpl(
 
 export function macroFitScore(totals: MacroValues, target: MacroValues): number {
   const dimensions = [
-    { value: totals.kcal, target: target.kcal, weight: 2.5, tolerance: 0.05 },
-    { value: totals.p, target: target.p, weight: 1.7, tolerance: 0.08 },
-    { value: totals.c, target: target.c, weight: 1.5, tolerance: 0.08 },
-    { value: totals.f, target: target.f, weight: 1.5, tolerance: 0.08 },
+    // kcal dominates so "Portionen ans Ziel" wirklich das kcal-Ziel trifft.
+    { value: totals.kcal, target: target.kcal, weight: 8, tolerance: 0.03 },
+    { value: totals.p, target: target.p, weight: 1.2, tolerance: 0.1 },
+    { value: totals.c, target: target.c, weight: 0.6, tolerance: 0.15 },
+    { value: totals.f, target: target.f, weight: 0.6, tolerance: 0.15 },
   ];
 
   return dimensions.reduce((score, dimension) => {
     if (!dimension.target) return score;
     const relativeDifference = (dimension.value - dimension.target) / dimension.target;
     const outsideTolerance = Math.max(0, Math.abs(relativeDifference) - dimension.tolerance);
-    const overshootFactor = relativeDifference > 0 ? 1.08 : 1;
+    const overshootFactor = relativeDifference > 0 ? 1.05 : 1;
     return (
       score +
       dimension.weight * overshootFactor * (relativeDifference ** 2 + outsideTolerance ** 2 * 4)
@@ -694,10 +695,17 @@ export function rebalanceDay(
   });
   if (adjustableMeals.length === 0) return day;
 
-  const factors = adjustableMeals.map(({ index }) => day.meals[index].portion_factor ?? 1);
+  const clamp = (n: number) => Math.min(8, Math.max(0.25, n));
+  const roundQuarter = (n: number) => Math.round(n * 4) / 4;
+
+  // Seed: Uniformer Faktor, der das kcal-Ziel exakt trifft (nach abzug locked kcal).
+  const remainingKcal = Math.max(0, target.kcal - lockedTotals.kcal);
+  const unitUnlockedKcal = adjustableMeals.reduce((s, m) => s + m.unitMacros.kcal, 0);
+  const seedFactor = unitUnlockedKcal > 0 ? clamp(remainingKcal / unitUnlockedKcal) : 1;
+
+  const factors = adjustableMeals.map(() => roundQuarter(seedFactor));
   let bestFactors = [...factors];
   let bestScore = Number.POSITIVE_INFINITY;
-  const factorOptions = Array.from({ length: 32 }, (_, index) => (index + 1) * 0.25);
 
   const scoreFactors = (candidateFactors: number[]) => {
     const totals = adjustableMeals.reduce<MacroValues>(
@@ -712,42 +720,32 @@ export function rebalanceDay(
       },
       { ...lockedTotals },
     );
+    // Sanfte Präferenz Richtung Portion 1, aber schwächer als früher —
+    // sonst wird das kcal-Ziel bewusst verfehlt.
     const portionPenalty =
-      candidateFactors.reduce((sum, factor) => sum + Math.abs(factor - 1), 0) * 0.0015;
+      candidateFactors.reduce((sum, factor) => sum + Math.abs(factor - 1), 0) * 0.0003;
     return macroFitScore(totals, target) + portionPenalty;
   };
 
-  if (adjustableMeals.length <= 4) {
-    const search = (mealIndex: number) => {
-      if (mealIndex === adjustableMeals.length) {
-        const score = scoreFactors(factors);
-        if (score < bestScore) {
-          bestScore = score;
-          bestFactors = [...factors];
-        }
-        return;
-      }
+  // Lokale Feinsuche um den kcal-Seed (±2 in 0.25-Schritten).
+  const factorOptions = Array.from({ length: 32 }, (_, i) => (i + 1) * 0.25);
+  bestScore = scoreFactors(bestFactors);
+
+  for (let pass = 0; pass < 12; pass += 1) {
+    let improved = false;
+    for (let mealIndex = 0; mealIndex < adjustableMeals.length; mealIndex += 1) {
       for (const factor of factorOptions) {
-        factors[mealIndex] = factor;
-        search(mealIndex + 1);
-      }
-    };
-    search(0);
-  } else {
-    bestScore = scoreFactors(bestFactors);
-    for (let pass = 0; pass < 8; pass += 1) {
-      for (let mealIndex = 0; mealIndex < adjustableMeals.length; mealIndex += 1) {
-        for (const factor of factorOptions) {
-          const candidate = [...bestFactors];
-          candidate[mealIndex] = factor;
-          const score = scoreFactors(candidate);
-          if (score < bestScore) {
-            bestScore = score;
-            bestFactors = candidate;
-          }
+        const candidate = [...bestFactors];
+        candidate[mealIndex] = factor;
+        const score = scoreFactors(candidate);
+        if (score < bestScore - 1e-6) {
+          bestScore = score;
+          bestFactors = candidate;
+          improved = true;
         }
       }
     }
+    if (!improved) break;
   }
 
   const factorByMealIndex = new Map(
@@ -761,6 +759,7 @@ export function rebalanceDay(
     }),
   };
 }
+
 
 // Deep-copy meals for day-copy: fresh linked_prep_group + linked_partner_group IDs (shared across a paired copy via caller-supplied maps).
 export function remapMealsForCopy(
