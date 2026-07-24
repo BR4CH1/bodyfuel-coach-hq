@@ -138,8 +138,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   };
 
   const effectiveUser = demoUserId ? findClient(demoUserId) ?? null : null;
-  // Coach status is derived ONLY from the server-validated role — never from localStorage.
-  const effectiveCoach = role === "coach";
+  // Coach status is derived from the global coach role OR any org-scoped coach/admin staff assignment.
+  const effectiveCoach = role === "coach" || orgCoach;
   const effectiveFree = role === "free";
 
   const value: SessionCtx = {
