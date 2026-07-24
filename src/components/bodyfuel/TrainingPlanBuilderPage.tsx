@@ -1011,7 +1011,7 @@ function DayCard({
               onChange={(event) => onUpdateDay({ name: event.target.value })}
               placeholder="z. B. Oberkörper"
               aria-label={`Name für ${WD_LONG[day.weekday]}`}
-              className="min-w-0 flex-1 border-0 bg-transparent p-0 font-sans text-base font-black outline-none placeholder:text-muted-foreground/45"
+              className="min-w-0 flex-1 border-0 bg-transparent p-0 font-sans text-base font-black text-foreground outline-none placeholder:text-foreground/75"
             />
             <Pencil className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
           </div>
