@@ -636,7 +636,7 @@ export function TrainingPlanBuilderPage({
                   value={title}
                   onChange={(event) => setTitle(event.target.value)}
                   aria-label="Name des Trainingsplans"
-                  className="min-w-0 flex-1 border-0 bg-transparent p-0 font-sans text-xl font-black tracking-tight outline-none placeholder:text-muted-foreground/50 sm:text-2xl"
+                  className="min-w-0 flex-1 border-0 bg-transparent p-0 font-sans text-xl font-black tracking-tight text-foreground outline-none placeholder:text-foreground/70 sm:text-2xl"
                   placeholder="Name des Trainingsplans"
                 />
                 <Pencil className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -1011,7 +1011,7 @@ function DayCard({
               onChange={(event) => onUpdateDay({ name: event.target.value })}
               placeholder="z. B. Oberkörper"
               aria-label={`Name für ${WD_LONG[day.weekday]}`}
-              className="min-w-0 flex-1 border-0 bg-transparent p-0 font-sans text-base font-black outline-none placeholder:text-muted-foreground/45"
+              className="min-w-0 flex-1 border-0 bg-transparent p-0 font-sans text-base font-black text-foreground outline-none placeholder:text-foreground/75"
             />
             <Pencil className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
           </div>
@@ -1159,7 +1159,7 @@ function ExerciseRow({
             onChange={(event) => onChange({ name: event.target.value })}
             placeholder="Übungsname"
             aria-label="Übungsname"
-            className="min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-2 py-2 text-sm font-bold outline-none transition hover:border-border focus:border-primary focus:bg-card"
+            className="min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-2 py-2 text-sm font-bold text-foreground outline-none transition placeholder:text-foreground/70 hover:border-border focus:border-primary focus:bg-card"
           />
         </div>
 
@@ -1288,7 +1288,7 @@ function NumField({
         step={step}
         onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}
         aria-label={label}
-        className="w-full rounded-lg border border-border bg-card px-2 py-2 text-center text-xs font-bold outline-none transition focus:border-primary"
+        className="w-full rounded-lg border border-border bg-card px-2 py-2 text-center text-xs font-bold text-foreground outline-none transition placeholder:text-foreground/70 focus:border-primary"
       />
     </label>
   );
@@ -1312,7 +1312,7 @@ function TextField({
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value || null)}
         aria-label={label}
-        className="w-full rounded-lg border border-border bg-card px-2 py-2 text-center text-xs font-bold outline-none transition focus:border-primary"
+        className="w-full rounded-lg border border-border bg-card px-2 py-2 text-center text-xs font-bold text-foreground outline-none transition placeholder:text-foreground/70 focus:border-primary"
       />
     </label>
   );
