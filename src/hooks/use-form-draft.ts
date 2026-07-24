@@ -25,6 +25,7 @@ export function useFormDraft<T extends Record<string, unknown>>(
   const { enabled = true, debounceMs = 250 } = options;
   const restored = useRef(false);
   const restoredKey = useRef<string | null>(null);
+  const skipInitialPersist = useRef(false);
   const restoreRef = useRef(restore);
   const latestSerialized = useRef<string | null>(null);
   restoreRef.current = restore;
@@ -38,6 +39,7 @@ export function useFormDraft<T extends Record<string, unknown>>(
       const raw = localStorage.getItem(key);
       if (!raw) return;
       const parsed = JSON.parse(raw) as Partial<T>;
+      skipInitialPersist.current = true;
       restoreRef.current(parsed);
     } catch {
       // ignore corrupt drafts
@@ -48,6 +50,10 @@ export function useFormDraft<T extends Record<string, unknown>>(
   // Persist on change (debounced).
   useEffect(() => {
     if (!enabled || !key || !restored.current) return;
+    if (skipInitialPersist.current) {
+      skipInitialPersist.current = false;
+      return;
+    }
     const serialized = JSON.stringify(values);
     latestSerialized.current = serialized;
     const write = () => {

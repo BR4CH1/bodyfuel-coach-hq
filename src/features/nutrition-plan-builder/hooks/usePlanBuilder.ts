@@ -58,6 +58,7 @@ export function usePlanBuilder({ userId, planId, returnOrgId }: UsePlanBuilderPa
   const loadPlan = useServerFn(loadNutritionPlanForBuilder);
   const generateLibraryImage = useServerFn(generateMealImage);
   const requestedLibraryImages = useRef(new Set<string>());
+  const restoredDraft = useRef(false);
 
   const libraryQuery = useQuery({
     queryKey: ["meal-library"],
@@ -103,6 +104,7 @@ export function usePlanBuilder({ userId, planId, returnOrgId }: UsePlanBuilderPa
     draftKey,
     { title, startDate, endDate, partnerMode, sharedSlots, days, partnerDays },
     (draft) => {
+      restoredDraft.current = true;
       if (typeof draft.title === "string") setTitle(draft.title);
       if (typeof draft.startDate === "string") setStartDate(draft.startDate);
       if (typeof draft.endDate === "string") setEndDate(draft.endDate);
@@ -143,7 +145,7 @@ export function usePlanBuilder({ userId, planId, returnOrgId }: UsePlanBuilderPa
   }, [startDate, numDays, trainingWeekdays, partnerTrainingWeekdays, partnerMode]);
 
   useEffect(() => {
-    if (!planId || !loadedPlanQuery.data || loadedPlanApplied) return;
+    if (!planId || !loadedPlanQuery.data || loadedPlanApplied || restoredDraft.current) return;
     setTitle(loadedPlanQuery.data.title);
     setStartDate(loadedPlanQuery.data.startDate);
     setEndDate(loadedPlanQuery.data.endDate);
