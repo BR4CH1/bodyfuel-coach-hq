@@ -1099,13 +1099,13 @@ function ExerciseCard({
 
   return (
     <article className="overflow-hidden rounded-2xl border border-border bg-background/45 shadow-[0_18px_45px_-38px_rgba(0,0,0,0.75)]">
-      <header className="flex items-start justify-between gap-3 border-b border-border p-4">
-        <div className="flex min-w-0 items-start gap-3">
-          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+      <header className="flex items-start justify-between gap-2 border-b border-border p-3 sm:gap-3 sm:p-4">
+        <div className="flex min-w-0 flex-1 items-start gap-2 sm:gap-3">
+          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary sm:h-11 sm:w-11">
             <Dumbbell className="h-5 w-5" />
           </div>
-          <div className="min-w-0">
-            <h4 className="truncate font-sans text-lg font-black tracking-tight">{ex.name}</h4>
+          <div className="min-w-0 flex-1">
+            <h4 className="break-words font-sans text-base font-black leading-tight tracking-tight sm:text-lg">{ex.name}</h4>
             <p className="mt-0.5 text-[11px] text-muted-foreground">
               {lastPerformance
                 ? `Letztes Mal: ${
@@ -1121,10 +1121,11 @@ function ExerciseCard({
             </p>
           </div>
         </div>
-        <span className="shrink-0 rounded-lg bg-muted px-2.5 py-1.5 text-[10px] font-black text-muted-foreground">
+        <span className="shrink-0 whitespace-nowrap rounded-lg bg-muted px-2 py-1 text-[10px] font-black text-muted-foreground sm:px-2.5 sm:py-1.5">
           {ex.target_sets ?? "?"} × {ex.target_reps ?? "?"}
         </span>
       </header>
+
 
       <div className="p-3 sm:p-4">
         <div className="space-y-2">
