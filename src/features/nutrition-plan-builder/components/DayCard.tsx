@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { Copy, Link2, Link2Off, SlidersHorizontal, Sparkles } from "lucide-react";
+import { Copy, Link2, Link2Off, Plus, SlidersHorizontal, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import type {
   BuilderDay,
@@ -21,6 +21,7 @@ import {
   type PartnerSlotLink,
   type Slot,
 } from "../lib/plan-builder.logic";
+import { MealPickerDialog } from "./MealPickerDialog";
 import { MealSlotRow } from "./MealSlotRow";
 
 export function DayCard({
@@ -44,29 +45,21 @@ export function DayCard({
 }) {
   const { target, totals, filledSlots, totalSlots, isBalanced } = summarizeDay(day, ctx, library);
 
-  // ---- Meal helpers ----
-  const setMealAtSlot = (slot: Slot, next: BuilderMeal | null) => {
+  // ---- Index-based helpers so multiple meals per slot are supported ----
+  const updateMealAtIndex = (index: number, upd: (m: BuilderMeal) => BuilderMeal) => {
     onChange((d) => {
-      const meals = d.meals.filter((x) => x.slot !== slot);
-      if (next) meals.push(next);
-      return { ...d, meals };
-    });
-  };
-
-  const updateMealAtSlot = (slot: Slot, upd: (m: BuilderMeal) => BuilderMeal) => {
-    onChange((d) => {
-      const target = d.meals.find((x) => x.slot === slot);
+      const target = d.meals[index];
       if (!target) return d;
       const updated = upd(target);
-      // Kopplung: wenn lunch/dinner in gleicher Gruppe → auch Partner spiegeln (Meal + Faktor)
+      // Mealprep-Kopplung nur wenn genau eine Mahlzeit im Slot ↔ Partnerslot
       if (target.linked_prep_group) {
         const partnerSlot: Slot | null =
           target.slot === "lunch" ? "dinner" : target.slot === "dinner" ? "lunch" : null;
         if (partnerSlot) {
           return {
             ...d,
-            meals: d.meals.map((m) => {
-              if (m.slot === slot) return updated;
+            meals: d.meals.map((m, i) => {
+              if (i === index) return updated;
               if (m.slot === partnerSlot && m.linked_prep_group === target.linked_prep_group) {
                 return {
                   ...m,
@@ -74,7 +67,6 @@ export function DayCard({
                   description: updated.description,
                   library_meal_id: updated.library_meal_id,
                   ingredients: updated.ingredients.map((i) => ({ ...i })),
-                  // Portionsfaktor pro Slot getrennt (Portion 1 vs Portion 2)
                 };
               }
               return m;
@@ -82,17 +74,16 @@ export function DayCard({
           };
         }
       }
-      return { ...d, meals: d.meals.map((m) => (m.slot === slot ? updated : m)) };
+      return { ...d, meals: d.meals.map((m, i) => (i === index ? updated : m)) };
     });
   };
 
-  const removeMealAtSlot = (slot: Slot) => {
+  const removeMealAtIndex = (index: number) => {
     onChange((d) => {
-      const target = d.meals.find((x) => x.slot === slot);
+      const target = d.meals[index];
       if (!target) return d;
-      // Kopplung auflösen bei Entfernen
       const group = target.linked_prep_group;
-      let meals = d.meals.filter((x) => x.slot !== slot);
+      let meals = d.meals.filter((_, i) => i !== index);
       if (group) {
         meals = meals.map((m) =>
           m.linked_prep_group === group ? { ...m, linked_prep_group: null } : m,
@@ -102,29 +93,29 @@ export function DayCard({
     });
   };
 
-  const pickMeal = (slot: Slot, lib: LibraryMeal) => {
+  const pickMealForEmptySlot = (slot: Slot, lib: LibraryMeal) => {
     onChange((d) => {
-      // Kopplung aktiv & Slot ist lunch oder dinner → beide setzen
       if (d.prepCoupleLunchDinner && (slot === "lunch" || slot === "dinner")) {
         const groupId = makeGroupId();
         const lunch = mealFromLibrary(lib, "lunch", 1, groupId);
         const dinner = mealFromLibrary(lib, "dinner", 1, groupId);
-        // Portion 2 markieren (nur visuell im Namen-Suffix)
         dinner.description = (lib.description ?? "") + " (Portion 2 aus Mealprep)";
         const meals = d.meals.filter((x) => x.slot !== "lunch" && x.slot !== "dinner");
         meals.push(lunch, dinner);
         return { ...d, meals };
       }
-      const meals = d.meals.filter((x) => x.slot !== slot);
-      meals.push(mealFromLibrary(lib, slot));
+      const meals = [...d.meals, mealFromLibrary(lib, slot)];
       return { ...d, meals };
     });
+  };
+
+  const addAdditionalMeal = (slot: Slot, lib: LibraryMeal) => {
+    onChange((d) => ({ ...d, meals: [...d.meals, mealFromLibrary(lib, slot)] }));
   };
 
   const toggleCouple = (on: boolean) => {
     onChange((d) => {
       if (on) {
-        // Wenn lunch existiert, dinner spiegeln; sonst gemeinsame Gruppe vergeben
         const lunch = d.meals.find((m) => m.slot === "lunch");
         const dinner = d.meals.find((m) => m.slot === "dinner");
         const groupId = makeGroupId();
@@ -149,7 +140,6 @@ export function DayCard({
             meals.push(clone);
           }
         } else if (lunch && dinner) {
-          // Beide vorhanden → dinner an lunch angleichen, in gleiche Gruppe
           const src = library.find((x) => x.id === lunch.library_meal_id);
           meals = meals.map((m) => {
             if (m.slot === "lunch") return { ...m, linked_prep_group: groupId };
@@ -170,7 +160,6 @@ export function DayCard({
         }
         return { ...d, prepCoupleLunchDinner: true, meals };
       } else {
-        // Kopplung lösen: Gruppen entfernen, Mahlzeiten bleiben
         return {
           ...d,
           prepCoupleLunchDinner: false,
@@ -195,8 +184,21 @@ export function DayCard({
   };
 
   const balancePortions = () => {
-    onChange((current) => rebalanceDay(current, ctx, library));
-    toast.success("Portionen wurden an das Kalorienziel angepasst.");
+    let changed = false;
+    onChange((current) => {
+      const next = rebalanceDay(current, ctx, library);
+      changed = next.meals.some((m, i) => (m.portion_factor ?? 1) !== (current.meals[i]?.portion_factor ?? 1));
+      return next;
+    });
+    if (changed) toast.success("Portionen wurden an das Kalorienziel angepasst.");
+    else toast.info("Keine Portionen anpassbar (Mahlzeiten fixiert oder ohne Nährwerte).");
+  };
+
+  const remaining = {
+    kcal: target.kcal - totals.kcal,
+    p: target.p - totals.p,
+    c: target.c - totals.c,
+    f: target.f - totals.f,
   };
 
   return (
@@ -253,7 +255,7 @@ export function DayCard({
             <div>
               <div className="text-sm font-semibold">Tagesbilanz</div>
               <div className="text-xs text-muted-foreground">
-                {filledSlots}/{totalSlots} Mahlzeiten geplant
+                {filledSlots}/{totalSlots} Slots · {day.meals.length} Mahlzeiten geplant
               </div>
             </div>
             <Badge
@@ -324,47 +326,93 @@ export function DayCard({
           <Switch checked={!!day.prepCoupleLunchDinner} onCheckedChange={(v) => toggleCouple(v)} />
         </div>
 
-        {/* Meals per slot */}
+        {/* Meals per slot – multiple entries pro Slot möglich */}
         {SLOTS.map((slot) => {
-          const meal = day.meals.find((m) => m.slot === slot.key);
-          const remaining = {
-            kcal: target.kcal - totals.kcal,
-            p: target.p - totals.p,
-            c: target.c - totals.c,
-            f: target.f - totals.f,
-          };
+          const slotEntries = day.meals
+            .map((m, idx) => ({ m, idx }))
+            .filter(({ m }) => m.slot === slot.key);
+
           return (
-            <MealSlotRow
-              key={slot.key}
-              slot={slot.key}
-              label={slot.label}
-              meal={meal}
-              library={library}
-              ctx={ctx}
-              dayType={day.type}
-              remaining={remaining}
-              onPick={(lib) => pickMeal(slot.key, lib)}
-              onSwap={(lib) => {
-                if (!meal) return;
-                updateMealAtSlot(slot.key, (m) => ({
-                  ...m,
-                  name: lib.name,
-                  description: lib.description,
-                  library_meal_id: lib.id,
-                  ingredients: (lib.ingredients ?? []).map((i) => ({
-                    name: i.name,
-                    grams: Math.round(i.amount_g ?? 0),
-                  })),
-                }));
-              }}
-              onFactor={(f) => updateMealAtSlot(slot.key, (m) => ({ ...m, portion_factor: f }))}
-              onLockToggle={() =>
-                updateMealAtSlot(slot.key, (m) => ({ ...m, is_locked: !m.is_locked }))
-              }
-              onRemove={() => removeMealAtSlot(slot.key)}
-              partnerLink={partnerLinkForSlot?.(slot.key)}
-              onEnsureMealImage={onEnsureMealImage}
-            />
+            <div key={slot.key} className="space-y-2">
+              {slotEntries.length === 0 ? (
+                <MealSlotRow
+                  slot={slot.key}
+                  label={slot.label}
+                  meal={undefined}
+                  library={library}
+                  ctx={ctx}
+                  dayType={day.type}
+                  remaining={remaining}
+                  onPick={(lib) => pickMealForEmptySlot(slot.key, lib)}
+                  onSwap={() => {}}
+                  onFactor={() => {}}
+                  onLockToggle={() => {}}
+                  onRemove={() => {}}
+                  partnerLink={partnerLinkForSlot?.(slot.key)}
+                  onEnsureMealImage={onEnsureMealImage}
+                />
+              ) : (
+                <>
+                  {slotEntries.map(({ m, idx }, entryIndex) => (
+                    <MealSlotRow
+                      key={idx}
+                      slot={slot.key}
+                      label={
+                        slotEntries.length > 1 ? `${slot.label} · ${entryIndex + 1}` : slot.label
+                      }
+                      meal={m}
+                      library={library}
+                      ctx={ctx}
+                      dayType={day.type}
+                      remaining={remaining}
+                      onPick={(lib) => addAdditionalMeal(slot.key, lib)}
+                      onSwap={(lib) =>
+                        updateMealAtIndex(idx, (curr) => ({
+                          ...curr,
+                          name: lib.name,
+                          description: lib.description,
+                          library_meal_id: lib.id,
+                          ingredients: (lib.ingredients ?? []).map((i) => ({
+                            name: i.name,
+                            grams: Math.round(i.amount_g ?? 0),
+                          })),
+                        }))
+                      }
+                      onFactor={(f) =>
+                        updateMealAtIndex(idx, (curr) => ({ ...curr, portion_factor: f }))
+                      }
+                      onLockToggle={() =>
+                        updateMealAtIndex(idx, (curr) => ({ ...curr, is_locked: !curr.is_locked }))
+                      }
+                      onRemove={() => removeMealAtIndex(idx)}
+                      partnerLink={
+                        entryIndex === 0 ? partnerLinkForSlot?.(slot.key) : undefined
+                      }
+                      onEnsureMealImage={onEnsureMealImage}
+                    />
+                  ))}
+                  <MealPickerDialog
+                    trigger={
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="w-full justify-center border border-dashed border-border/70 text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        <Plus className="mr-1 h-3.5 w-3.5" />
+                        Weitere {slot.label} hinzufügen
+                      </Button>
+                    }
+                    title={`Weitere Mahlzeit für ${slot.label}`}
+                    slot={slot.key}
+                    library={library}
+                    ctx={ctx}
+                    dayType={day.type}
+                    remaining={remaining}
+                    onPick={(lib) => addAdditionalMeal(slot.key, lib)}
+                  />
+                </>
+              )}
+            </div>
           );
         })}
       </CardContent>
