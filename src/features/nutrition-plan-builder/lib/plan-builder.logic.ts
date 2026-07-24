@@ -697,7 +697,7 @@ export function rebalanceDay(
   const factors = adjustableMeals.map(({ index }) => day.meals[index].portion_factor ?? 1);
   let bestFactors = [...factors];
   let bestScore = Number.POSITIVE_INFINITY;
-  const factorOptions = Array.from({ length: 16 }, (_, index) => (index + 1) * 0.25);
+  const factorOptions = Array.from({ length: 32 }, (_, index) => (index + 1) * 0.25);
 
   const scoreFactors = (candidateFactors: number[]) => {
     const totals = adjustableMeals.reduce<MacroValues>(

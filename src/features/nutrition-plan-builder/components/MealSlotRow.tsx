@@ -70,7 +70,7 @@ export function MealSlotRow({
   }, [imageUrl, libraryMeal?.id, libraryMeal?.image_status, onEnsureMealImage]);
 
   const setFactor = (next: number) => {
-    const clamped = Math.max(0.25, Math.min(4, Math.round(next * 4) / 4));
+    const clamped = Math.max(0.25, Math.min(8, Math.round(next * 4) / 4));
     onFactor(clamped);
   };
 
@@ -208,7 +208,7 @@ export function MealSlotRow({
                 type="number"
                 step="0.25"
                 min={0.25}
-                max={4}
+                max={8}
                 value={factor}
                 onChange={(event) => setFactor(Number(event.target.value) || 1)}
                 className="h-8 w-14 rounded-none border-y-0 px-1 text-center text-xs"
