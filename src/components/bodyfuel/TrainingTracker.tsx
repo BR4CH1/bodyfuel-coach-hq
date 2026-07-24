@@ -1,25 +1,64 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Sparkles, ChevronDown, ChevronRight, Trash2, Loader2, BarChart3, Check, Plus } from "lucide-react";
+import {
+  AlertTriangle,
+  BarChart3,
+  Check,
+  CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  Clock3,
+  Dumbbell,
+  Loader2,
+  Pause,
+  Play,
+  Plus,
+  RotateCcw,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
-import { parseTrainingPlan, logSet, deleteSetLog, completeTrainingSession, addOwnTrainingExercise, deleteOwnTrainingExercise } from "@/lib/training.functions";
+import {
+  parseTrainingPlan,
+  logSet,
+  deleteSetLog,
+  completeTrainingSession,
+  addOwnTrainingExercise,
+  deleteOwnTrainingExercise,
+} from "@/lib/training.functions";
 import { ExerciseAnalytics } from "./ExerciseAnalytics";
 import { normalizeExerciseName } from "@/lib/exercise-name-match";
 import { AddTrainingSessionButton } from "./AddTrainingSessionDialog";
 import { TrainingSessionsList } from "./TrainingSessionsList";
 import { enqueue, flushQueue } from "@/lib/offline/queue";
 
-
-type Plan = { id: string; client_id: string; title: string; weeks_count?: number | null; scheduled_start_date?: string | null };
-type Day = { id: string; name: string; sort_order: number; week_number?: number | null };
+type Plan = {
+  id: string;
+  client_id: string;
+  title: string;
+  weeks_count?: number | null;
+  scheduled_start_date?: string | null;
+};
+type Day = {
+  id: string;
+  name: string;
+  sort_order: number;
+  week_number?: number | null;
+  day_date?: string | null;
+};
 type Exercise = {
   id: string;
   day_id: string;
   name: string;
+  category?: string | null;
   target_sets: number | null;
   target_reps: string | null;
+  target_weights?: string | null;
+  target_rir?: number | null;
+  rest_seconds?: number | null;
   notes: string | null;
   sort_order: number;
   added_by_user?: string | null;
@@ -33,6 +72,25 @@ type SetLog = {
   reps: number | null;
   performed_at: string;
 };
+type HistoricalPlan = {
+  training_days?: Array<{
+    training_exercises?: Array<{ id?: string; name?: string }>;
+  }>;
+};
+type TrainingDecision = {
+  action: string;
+  exercise_name: string;
+  reason: string;
+};
+
+function localDateKey(value: Date | string | number = new Date()): string {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value).slice(0, 10);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 export function TrainingTracker({ clientId }: { clientId: string }) {
   const { isCoach, supabaseUser } = useSession();
@@ -57,20 +115,29 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
   const openDayKey = `bf.tt.openDay.${clientId}`;
   const [openDay, setOpenDayState] = useState<string | null>(() => {
     if (typeof window === "undefined" || !clientId) return null;
-    try { return window.localStorage.getItem(openDayKey); } catch { return null; }
+    try {
+      return window.localStorage.getItem(openDayKey);
+    } catch {
+      return null;
+    }
   });
-  const setOpenDay = (v: string | null | ((p: string | null) => string | null)) => {
-    setOpenDayState((cur) => {
-      const next = typeof v === "function" ? (v as (p: string | null) => string | null)(cur) : v;
-      try {
-        if (typeof window !== "undefined" && clientId) {
-          if (next) window.localStorage.setItem(openDayKey, next);
-          else window.localStorage.removeItem(openDayKey);
+  const setOpenDay = useCallback(
+    (v: string | null | ((p: string | null) => string | null)) => {
+      setOpenDayState((cur) => {
+        const next = typeof v === "function" ? (v as (p: string | null) => string | null)(cur) : v;
+        try {
+          if (typeof window !== "undefined" && clientId) {
+            if (next) window.localStorage.setItem(openDayKey, next);
+            else window.localStorage.removeItem(openDayKey);
+          }
+        } catch {
+          /* local storage is optional */
         }
-      } catch { /* ignore */ }
-      return next;
-    });
-  };
+        return next;
+      });
+    },
+    [clientId, openDayKey],
+  );
   const [parsing, setParsing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [activeWeek, setActiveWeek] = useState(1);
@@ -95,6 +162,7 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
       setLoading(false);
       return;
     }
+    const currentPlan = planRow as Plan;
     const { data: dayRows } = await supabase
       .from("training_days")
       .select("*")
@@ -104,8 +172,8 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
     const allDays = (dayRows as Day[]) ?? [];
 
     // For multi-week plans, only show the current week's days.
-    const wc = (planRow as any).weeks_count ?? 1;
-    const startStr = (planRow as any).scheduled_start_date as string | null;
+    const wc = currentPlan.weeks_count ?? 1;
+    const startStr = currentPlan.scheduled_start_date ?? null;
     let aw = 1;
     if (startStr && wc > 1) {
       const start = new Date(startStr + "T00:00:00");
@@ -116,16 +184,28 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
     setWeeksCount(wc);
     const dayList = allDays.filter((d) => (d.week_number ?? 1) === aw);
     setDays(dayList);
-    setOpenDay((cur) => (cur && dayList.some((d) => d.id === cur) ? cur : dayList[0]?.id ?? null));
 
     if (dayList.length) {
       const { data: exRows } = await supabase
         .from("training_exercises")
         .select("*")
-        .in("day_id", dayList.map((d) => d.id))
+        .in(
+          "day_id",
+          dayList.map((d) => d.id),
+        )
         .order("sort_order");
       const exList = (exRows as Exercise[]) ?? [];
       setExercises(exList);
+      const today = localDateKey();
+      const trainingDayIds = new Set(exList.map((exercise) => exercise.day_id));
+      const todayTraining = dayList.find(
+        (day) => day.day_date === today && trainingDayIds.has(day.id),
+      );
+      const firstTraining = dayList.find((day) => trainingDayIds.has(day.id));
+      const preferredDay = todayTraining ?? firstTraining ?? dayList[0] ?? null;
+      setOpenDay((current) =>
+        current && trainingDayIds.has(current) ? current : (preferredDay?.id ?? null),
+      );
 
       if (exList.length) {
         // Pull historic exercises across ALL of this client's training plans,
@@ -137,7 +217,7 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
           .eq("client_id", clientId)
           .eq("plan_type", "training");
         const histExercises: { id: string; name: string }[] = [];
-        for (const p of (histPlans as any[]) ?? []) {
+        for (const p of (histPlans as HistoricalPlan[]) ?? []) {
           for (const d of p?.training_days ?? []) {
             for (const e of d?.training_exercises ?? []) {
               if (e?.id && e?.name) histExercises.push({ id: e.id, name: e.name });
@@ -153,7 +233,9 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
           arr.push(h.id);
           idsByName.set(k, arr);
         }
-        const allIds = Array.from(new Set(histExercises.map((h) => h.id).concat(exList.map((e) => e.id))));
+        const allIds = Array.from(
+          new Set(histExercises.map((h) => h.id).concat(exList.map((e) => e.id))),
+        );
         const { data: logRows } = await supabase
           .from("training_set_logs")
           .select("*")
@@ -197,17 +279,23 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
     if (!clientId || !days.length) return;
     let alive = true;
     (async () => {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = localDateKey();
       const { data } = await supabase
         .from("training_day_completions")
         .select("day_id")
         .eq("client_id", clientId)
         .eq("completion_date", today)
-        .in("day_id", days.map((d) => d.id));
+        .in(
+          "day_id",
+          days.map((d) => d.id),
+        );
       if (!alive) return;
-      setCompletedDayIds(new Set(((data as any[]) ?? []).map((r) => String(r.day_id))));
+      const completionRows = (data ?? []) as Array<{ day_id: string }>;
+      setCompletedDayIds(new Set(completionRows.map((row) => String(row.day_id))));
     })();
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, [clientId, days]);
 
   // Sync open day with PlanContentView selection (top of /training page).
@@ -220,11 +308,18 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
       if (!name) return;
       const norm = name.trim().toLowerCase();
       const hit = days.find(
-        (d) => d.name.trim().toLowerCase() === norm || norm.includes(d.name.trim().toLowerCase()) || d.name.trim().toLowerCase().includes(norm),
+        (d) =>
+          d.name.trim().toLowerCase() === norm ||
+          norm.includes(d.name.trim().toLowerCase()) ||
+          d.name.trim().toLowerCase().includes(norm),
       );
       if (hit) setOpenDay(hit.id);
     };
-    try { applyName(localStorage.getItem(key)); } catch {}
+    try {
+      applyName(localStorage.getItem(key));
+    } catch {
+      /* local storage is optional */
+    }
     const onEvt = (e: Event) => {
       const detail = (e as CustomEvent<{ clientId: string; name: string }>).detail;
       if (detail?.clientId === clientId) applyName(detail.name);
@@ -238,8 +333,7 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
       window.removeEventListener("bf:training-active-day", onEvt as EventListener);
       window.removeEventListener("storage", onStorage);
     };
-  }, [days, clientId]);
-
+  }, [days, clientId, setOpenDay]);
 
   const extract = async () => {
     if (!plan) return;
@@ -256,8 +350,7 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
   };
 
   if (!supabaseUser) return null;
-  if (loading)
-    return <div className="text-sm text-muted-foreground">Lade Übungen...</div>;
+  if (loading) return <div className="text-sm text-muted-foreground">Lade Übungen...</div>;
   if (!plan)
     return (
       <div className="rounded-2xl border border-border bg-card p-5 text-sm text-muted-foreground">
@@ -265,13 +358,95 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
       </div>
     );
 
+  const trackableDays = days.filter((day) =>
+    exercises.some((exercise) => exercise.day_id === day.id),
+  );
+  const activeDay = trackableDays.find((day) => day.id === openDay) ?? trackableDays[0] ?? null;
+  const activeDayExercises = activeDay
+    ? exercises.filter((exercise) => exercise.day_id === activeDay.id)
+    : [];
+  const today = localDateKey();
+  const completedExercises = activeDayExercises.filter((exercise) => {
+    const completedSets = logs.filter(
+      (log) => log.exercise_id === exercise.id && localDateKey(log.performed_at) === today,
+    ).length;
+    return completedSets >= Math.max(1, exercise.target_sets ?? 1);
+  }).length;
+  const workoutProgress =
+    activeDayExercises.length > 0
+      ? Math.round((completedExercises / activeDayExercises.length) * 100)
+      : 0;
+  const visibleDays = isCoach ? trackableDays : activeDay ? [activeDay] : [];
+
   return (
     <div className="space-y-4">
+      <section className="overflow-hidden rounded-3xl border border-primary/20 bg-[linear-gradient(145deg,rgba(17,28,25,0.98),rgba(12,18,17,0.98))] text-white shadow-[0_24px_70px_-38px_rgba(0,0,0,0.85)]">
+        <div className="p-5 sm:p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-primary">
+                Heutiges Training
+              </p>
+              <h2 className="mt-1 font-sans text-2xl font-black tracking-tight">
+                {activeDay?.name ?? plan.title}
+              </h2>
+              <p className="mt-1 text-xs text-white/55">
+                {completedExercises} von {activeDayExercises.length} Übungen abgeschlossen
+              </p>
+            </div>
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-primary/25 bg-primary/10 text-primary">
+              <Dumbbell className="h-5 w-5" />
+            </div>
+          </div>
+
+          <div className="mt-5">
+            <div className="mb-2 flex items-center justify-between text-[10px] font-bold">
+              <span className="text-white/55">Fortschritt</span>
+              <span className="text-primary">{workoutProgress}%</span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-white/10">
+              <div
+                className="h-full rounded-full bg-primary transition-[width] duration-500"
+                style={{ width: `${workoutProgress}%` }}
+              />
+            </div>
+          </div>
+
+          {trackableDays.length > 1 && (
+            <div className="mt-4 flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+              {trackableDays.map((day) => (
+                <button
+                  key={day.id}
+                  type="button"
+                  onClick={() => setOpenDay(day.id)}
+                  className={`shrink-0 rounded-xl border px-3 py-2 text-[10px] font-black transition ${
+                    activeDay?.id === day.id
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-white/10 bg-white/5 text-white/60"
+                  }`}
+                >
+                  {day.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
       <div className="flex items-center justify-between gap-3">
-        <h2 className="font-display text-lg font-bold">Übungen tracken</h2>
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
+            {plan.title}
+          </p>
+          <h3 className="font-display text-lg font-bold">Workout protokollieren</h3>
+        </div>
         <div className="flex items-center gap-2">
           {!isCoach && (
-            <AddTrainingSessionButton onLogged={() => { /* list auto-refreshes via query */ }} />
+            <AddTrainingSessionButton
+              onLogged={() => {
+                /* list auto-refreshes via query */
+              }}
+            />
           )}
           {isCoach && (
             <button
@@ -279,73 +454,102 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
               disabled={parsing}
               className="inline-flex items-center gap-2 rounded-md bg-gradient-gold px-3 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-60"
             >
-              {parsing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              {parsing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles className="h-4 w-4" />
+              )}
               {days.length ? "Neu aus PDF extrahieren" : "Übungen aus PDF extrahieren"}
             </button>
           )}
         </div>
       </div>
 
-      {isCoach && (
-        <TrainingSessionsList clientId={clientId} selfEdit={false} days={14} />
-      )}
+      {isCoach && <TrainingSessionsList clientId={clientId} selfEdit={false} days={14} />}
 
-
-      {weeksCount > 1 && days.length > 0 && (() => {
-        const phase =
-          activeWeek === 1 ? "Anpassung"
-          : activeWeek === weeksCount ? "Deload"
-          : activeWeek === weeksCount - 1 ? "Belastungsspitze"
-          : "Aufbau";
-        return (
-          <div className="rounded-2xl border border-gold/30 bg-gold/5 px-4 py-3">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-[10px] uppercase tracking-[0.2em] text-gold">Trainingsphase</div>
-                <div className="font-display text-base font-bold">
-                  Woche {activeWeek} von {weeksCount} · {phase}
+      {weeksCount > 1 &&
+        trackableDays.length > 0 &&
+        (() => {
+          const phase =
+            activeWeek === 1
+              ? "Anpassung"
+              : activeWeek === weeksCount
+                ? "Deload"
+                : activeWeek === weeksCount - 1
+                  ? "Belastungsspitze"
+                  : "Aufbau";
+          return (
+            <div className="rounded-2xl border border-primary/25 bg-primary/5 px-4 py-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-[10px] uppercase tracking-[0.2em] text-primary">
+                    Trainingsphase
+                  </div>
+                  <div className="font-display text-base font-bold">
+                    Woche {activeWeek} von {weeksCount} · {phase}
+                  </div>
+                </div>
+                <div className="flex gap-1">
+                  {Array.from({ length: weeksCount }).map((_, i) => (
+                    <div
+                      key={i}
+                      className={`h-1.5 w-6 rounded-full ${i + 1 === activeWeek ? "bg-primary" : i + 1 < activeWeek ? "bg-primary/40" : "bg-border"}`}
+                    />
+                  ))}
                 </div>
               </div>
-              <div className="flex gap-1">
-                {Array.from({ length: weeksCount }).map((_, i) => (
-                  <div
-                    key={i}
-                    className={`h-1.5 w-6 rounded-full ${i + 1 === activeWeek ? "bg-gold" : i + 1 < activeWeek ? "bg-gold/40" : "bg-border"}`}
-                  />
-                ))}
-              </div>
             </div>
-          </div>
-        );
-      })()}
+          );
+        })()}
 
-      {!days.length && (
+      {!trackableDays.length && (
         <div className="rounded-2xl border border-border bg-card p-5 text-sm text-muted-foreground">
           {isCoach
             ? "Klick auf „Übungen extrahieren“, damit Tage und Übungen aus dem PDF gelesen werden."
             : "Dein Coach hat die Übungen noch nicht freigeschaltet."}
         </div>
-
       )}
 
-      {days.map((d) => {
-        const open = openDay === d.id;
+      {visibleDays.map((d) => {
+        const open = !isCoach || openDay === d.id;
         const dayEx = exercises.filter((e) => e.day_id === d.id);
+        const dayCompletedExercises = dayEx.filter((exercise) => {
+          const setCount = logs.filter(
+            (log) => log.exercise_id === exercise.id && localDateKey(log.performed_at) === today,
+          ).length;
+          return setCount >= Math.max(1, exercise.target_sets ?? 1);
+        }).length;
         return (
-          <div key={d.id} className="overflow-hidden rounded-2xl border border-border bg-card">
+          <div
+            key={d.id}
+            className="overflow-hidden rounded-3xl border border-border bg-card shadow-[0_22px_65px_-48px_rgba(0,0,0,0.8)]"
+          >
             <button
-              onClick={() => setOpenDay(open ? null : d.id)}
-              className="flex w-full items-center justify-between gap-2 px-5 py-4 text-left"
+              type="button"
+              onClick={() => {
+                if (isCoach) setOpenDay(open ? null : d.id);
+              }}
+              className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left"
             >
-              <div>
-                <div className="text-xs uppercase tracking-[0.2em] text-gold">Trainingstag</div>
-                <div className="font-display text-base font-bold">{d.name}</div>
-                <div className="text-[11px] text-muted-foreground">{dayEx.length} Übungen</div>
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+                  <Dumbbell className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[10px] font-black uppercase tracking-[0.18em] text-primary">
+                    Trainingstag
+                  </div>
+                  <div className="truncate font-display text-base font-bold">{d.name}</div>
+                  <div className="text-[11px] text-muted-foreground">
+                    {dayCompletedExercises} von {dayEx.length} Übungen fertig
+                  </div>
+                </div>
               </div>
-              {open ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+              {isCoach &&
+                (open ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />)}
             </button>
             {open && (
-              <div className="border-t border-border p-4 space-y-3">
+              <div className="space-y-3 border-t border-border p-3 sm:p-4">
                 {dayEx.length === 0 && (
                   <div className="text-xs text-muted-foreground">Keine Übungen.</div>
                 )}
@@ -380,78 +584,90 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
                         clientId={clientId}
                         logs={logs.filter((l) => l.exercise_id === ex.id)}
                         onLog={async (set_number, weight_kg, reps) => {
-                      const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
-                      if (isOffline) {
-                        try {
-                          await enqueue({
-                            kind: "set_log",
-                            client_id: clientId,
-                            exercise_id: ex.id,
-                            set_number,
-                            weight_kg,
-                            reps,
-                            logged_at: new Date().toISOString(),
-                          });
-                          const optimistic: SetLog = {
-                            id: `offline-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-                            exercise_id: ex.id,
-                            client_id: clientId,
-                            set_number,
-                            weight_kg,
-                            reps,
-                            performed_at: new Date().toISOString(),
-                          };
-                          setLogs((cur) => [optimistic, ...cur]);
-                          toast.success("Offline gespeichert · synct beim Wieder-Online");
-                        } catch (e: unknown) {
-                          toast.error(e instanceof Error ? e.message : "Fehler");
-                        }
-                        return;
-                      }
-                      try {
-                        const row = await logFn({
-                          data: { exercise_id: ex.id, set_number, weight_kg, reps },
-                        });
-                        setLogs((cur) => [row as SetLog, ...cur]);
-                        // Auto-check the daily "Training" task
-                        try {
-                          const date = new Date().toISOString().slice(0, 10);
-                          const { data: existing } = await supabase
-                            .from("daily_checks")
-                            .select("id, tasks, points")
-                            .eq("user_id", clientId)
-                            .eq("check_date", date)
-                            .maybeSingle();
-                          const tasks: Record<string, boolean> = { ...((existing?.tasks as Record<string, boolean>) ?? {}), training: true };
-                          const { TASKS } = await import("@/lib/bodyfuel/data");
-                          const points = TASKS.reduce((s, t) => s + (tasks[t.key] ? t.points : 0), 0);
-                          await supabase.from("daily_checks").upsert(
-                            { user_id: clientId, check_date: date, tasks, points },
-                            { onConflict: "user_id,check_date" },
-                          );
-                        } catch {}
-                        // opportunistic flush of any prior offline writes
-                        void flushQueue();
-                      } catch (e: unknown) {
-                        toast.error(e instanceof Error ? e.message : "Fehler");
-                      }
-                    }}
+                          const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+                          if (isOffline) {
+                            try {
+                              await enqueue({
+                                kind: "set_log",
+                                client_id: clientId,
+                                exercise_id: ex.id,
+                                set_number,
+                                weight_kg,
+                                reps,
+                                logged_at: new Date().toISOString(),
+                              });
+                              const optimistic: SetLog = {
+                                id: `offline-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                                exercise_id: ex.id,
+                                client_id: clientId,
+                                set_number,
+                                weight_kg,
+                                reps,
+                                performed_at: new Date().toISOString(),
+                              };
+                              setLogs((cur) => [optimistic, ...cur]);
+                              toast.success("Offline gespeichert · synct beim Wieder-Online");
+                              return true;
+                            } catch (e: unknown) {
+                              toast.error(e instanceof Error ? e.message : "Fehler");
+                              return false;
+                            }
+                          }
+                          try {
+                            const row = await logFn({
+                              data: { exercise_id: ex.id, set_number, weight_kg, reps },
+                            });
+                            setLogs((cur) => [row as SetLog, ...cur]);
+                            // Auto-check the daily "Training" task
+                            try {
+                              const date = localDateKey();
+                              const { data: existing } = await supabase
+                                .from("daily_checks")
+                                .select("id, tasks, points")
+                                .eq("user_id", clientId)
+                                .eq("check_date", date)
+                                .maybeSingle();
+                              const tasks: Record<string, boolean> = {
+                                ...((existing?.tasks as Record<string, boolean>) ?? {}),
+                                training: true,
+                              };
+                              const { TASKS } = await import("@/lib/bodyfuel/data");
+                              const points = TASKS.reduce(
+                                (s, t) => s + (tasks[t.key] ? t.points : 0),
+                                0,
+                              );
+                              await supabase
+                                .from("daily_checks")
+                                .upsert(
+                                  { user_id: clientId, check_date: date, tasks, points },
+                                  { onConflict: "user_id,check_date" },
+                                );
+                            } catch {
+                              /* daily task sync is best effort */
+                            }
+                            // opportunistic flush of any prior offline writes
+                            void flushQueue();
+                            return true;
+                          } catch (e: unknown) {
+                            toast.error(e instanceof Error ? e.message : "Fehler");
+                            return false;
+                          }
+                        }}
 
-
-                    onDelete={async (id) => {
-                      try {
-                        await deleteLogFn({ data: { id } });
-                        setLogs((cur) => cur.filter((l) => l.id !== id));
-                      } catch (e: unknown) {
-                        toast.error(e instanceof Error ? e.message : "Fehler");
-                      }
-                    }}
+                        onDelete={async (id) => {
+                          try {
+                            await deleteLogFn({ data: { id } });
+                            setLogs((cur) => cur.filter((l) => l.id !== id));
+                          } catch (e: unknown) {
+                            toast.error(e instanceof Error ? e.message : "Fehler");
+                          }
+                        }}
                       />
                     </div>
                   );
                 })}
                 {!isCoach && (
-                  <div className="rounded-xl border border-dashed border-gold/40 bg-background/40 p-3">
+                  <div className="rounded-xl border border-dashed border-primary/30 bg-background/40 p-3">
                     {addingDayId === d.id ? (
                       <div className="space-y-2">
                         <input
@@ -479,7 +695,10 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
                         <div className="flex justify-end gap-2">
                           <button
                             type="button"
-                            onClick={() => { setAddingDayId(null); setNewExName(""); }}
+                            onClick={() => {
+                              setAddingDayId(null);
+                              setNewExName("");
+                            }}
                             className="rounded-md border border-border px-3 py-1.5 text-xs"
                           >
                             Abbrechen
@@ -505,14 +724,20 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
                                 setNewExReps("8");
                                 toast.success("Übung ergänzt");
                               } catch (e: unknown) {
-                                toast.error(e instanceof Error ? e.message : "Konnte Übung nicht speichern");
+                                toast.error(
+                                  e instanceof Error ? e.message : "Konnte Übung nicht speichern",
+                                );
                               } finally {
                                 setSavingOwnEx(false);
                               }
                             }}
-                            className="inline-flex items-center gap-1 rounded-md bg-gradient-gold px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-50"
+                            className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-50"
                           >
-                            {savingOwnEx ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                            {savingOwnEx ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Plus className="h-3.5 w-3.5" />
+                            )}
                             Speichern
                           </button>
                         </div>
@@ -521,94 +746,118 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
                       <button
                         type="button"
                         onClick={() => setAddingDayId(d.id)}
-                        className="flex w-full items-center justify-center gap-2 text-xs font-semibold text-gold"
+                        className="flex w-full items-center justify-center gap-2 text-xs font-semibold text-primary"
                       >
                         <Plus className="h-4 w-4" /> Eigene Übung hinzufügen
                       </button>
                     )}
                   </div>
                 )}
-                {!isCoach && dayEx.length > 0 && (() => {
-                  const todayStr = new Date().toISOString().slice(0, 10);
-                  const isCompleted = completedDayIds.has(d.id);
-                  const hasTodayLog = logs.some(
-                    (l) =>
-                      dayEx.some((e) => e.id === l.exercise_id) &&
-                      l.performed_at.slice(0, 10) === todayStr,
-                  );
-                  const isBusy = completingDayId === d.id;
-                  return (
-                    <div className="pt-2">
-                      <button
-                        type="button"
-                        disabled={isBusy || isCompleted || !hasTodayLog}
-                        onClick={async () => {
-                          if (isCompleted || isBusy) return;
-                          setCompletingDayId(d.id);
-                          try {
-                            const res = await completeSessionFn({
-                              data: { day_id: d.id, session_date: todayStr },
-                            });
-                            const decisions = (res as any)?.decisions ?? [];
-                            const changed = decisions.filter((x: any) =>
-                              ["increase_load", "reduce_load", "increase_reps_target", "reduce_volume"].includes(x.action),
-                            );
-                            toast.success(
-                              `Einheit abgeschlossen · ${decisions.length} Übungen ausgewertet${changed.length ? ` · ${changed.length} Anpassung${changed.length === 1 ? "" : "en"}` : ""}.`,
-                            );
-                            // "PLAN UPDATE" — pro geänderter Übung eine nachvollziehbare Toast-Nachricht
-                            for (const c of changed.slice(0, 4)) {
-                              const arrow =
-                                c.action === "increase_load" ? "⬆︎ Gewicht"
-                                : c.action === "reduce_load" ? "⬇︎ Gewicht"
-                                : c.action === "increase_reps_target" ? "⬆︎ Wiederholungen"
-                                : "⬇︎ Volumen";
-                              toast(`PLAN UPDATE · ${c.exercise_name}`, {
-                                description: `${arrow} — ${c.reason}`,
-                                duration: 7000,
+                {!isCoach && (
+                  <Link
+                    to="/check-in"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-transparent px-3 py-2 text-xs font-bold text-muted-foreground transition hover:border-destructive/25 hover:bg-destructive/5 hover:text-destructive"
+                  >
+                    <AlertTriangle className="h-4 w-4" /> Schmerzen oder Einschränkungen melden
+                  </Link>
+                )}
+                {!isCoach &&
+                  dayEx.length > 0 &&
+                  (() => {
+                    const todayStr = localDateKey();
+                    const isCompleted = completedDayIds.has(d.id);
+                    const hasTodayLog = logs.some(
+                      (l) =>
+                        dayEx.some((e) => e.id === l.exercise_id) &&
+                        localDateKey(l.performed_at) === todayStr,
+                    );
+                    const isBusy = completingDayId === d.id;
+                    return (
+                      <div className="pt-2">
+                        <button
+                          type="button"
+                          disabled={isBusy || isCompleted || !hasTodayLog}
+                          onClick={async () => {
+                            if (isCompleted || isBusy) return;
+                            setCompletingDayId(d.id);
+                            try {
+                              const res = await completeSessionFn({
+                                data: {
+                                  day_id: d.id,
+                                  session_date: todayStr,
+                                  timezone_offset_minutes: new Date().getTimezoneOffset(),
+                                },
                               });
+                              const decisions = (res.decisions ?? []) as TrainingDecision[];
+                              const changed = decisions.filter((decision) =>
+                                [
+                                  "increase_load",
+                                  "reduce_load",
+                                  "increase_reps_target",
+                                  "reduce_volume",
+                                ].includes(decision.action),
+                              );
+                              toast.success(
+                                `Einheit abgeschlossen · ${decisions.length} Übungen ausgewertet${changed.length ? ` · ${changed.length} Anpassung${changed.length === 1 ? "" : "en"}` : ""}.`,
+                              );
+                              // "PLAN UPDATE" — pro geänderter Übung eine nachvollziehbare Toast-Nachricht
+                              for (const c of changed.slice(0, 4)) {
+                                const arrow =
+                                  c.action === "increase_load"
+                                    ? "⬆︎ Gewicht"
+                                    : c.action === "reduce_load"
+                                      ? "⬇︎ Gewicht"
+                                      : c.action === "increase_reps_target"
+                                        ? "⬆︎ Wiederholungen"
+                                        : "⬇︎ Volumen";
+                                toast(`PLAN UPDATE · ${c.exercise_name}`, {
+                                  description: `${arrow} — ${c.reason}`,
+                                  duration: 7000,
+                                });
+                              }
+                              setCompletedDayIds((cur) => new Set(cur).add(d.id));
+                            } catch (e: unknown) {
+                              toast.error(
+                                e instanceof Error ? e.message : "Abschluss fehlgeschlagen",
+                              );
+                            } finally {
+                              setCompletingDayId(null);
                             }
-                            setCompletedDayIds((cur) => new Set(cur).add(d.id));
-                          } catch (e: unknown) {
-                            toast.error(e instanceof Error ? e.message : "Abschluss fehlgeschlagen");
-                          } finally {
-                            setCompletingDayId(null);
-                          }
-                        }}
-                        className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition ${
-                          isCompleted
-                            ? "border border-gold/40 bg-gold/10 text-gold"
-                            : hasTodayLog
-                            ? "bg-gradient-gold text-primary-foreground hover:opacity-90"
-                            : "border border-border bg-muted text-muted-foreground"
-                        } disabled:opacity-60`}
-                      >
-                        {isBusy ? (
-                          <>
-                            <Loader2 className="h-4 w-4 animate-spin" /> Werte Session aus…
-                          </>
-                        ) : isCompleted ? (
-                          <>
-                            <Check className="h-4 w-4" /> Einheit abgeschlossen
-                          </>
-                        ) : (
-                          <>
-                            <Check className="h-4 w-4" />
-                            {hasTodayLog ? "Einheit abschließen" : "Erst Sätze loggen"}
-                          </>
+                          }}
+                          className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-sm font-black transition ${
+                            isCompleted
+                              ? "border border-primary/40 bg-primary/10 text-primary"
+                              : hasTodayLog
+                                ? "bg-primary text-primary-foreground shadow-[0_14px_30px_-18px_rgba(16,185,90,0.9)] hover:brightness-95"
+                                : "border border-border bg-muted text-muted-foreground"
+                          } disabled:opacity-60`}
+                        >
+                          {isBusy ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin" /> Werte Session aus…
+                            </>
+                          ) : isCompleted ? (
+                            <>
+                              <CheckCircle2 className="h-4 w-4" /> Einheit abgeschlossen
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle2 className="h-4 w-4" />
+                              {hasTodayLog ? "Einheit abschließen" : "Erst Sätze loggen"}
+                            </>
+                          )}
+                        </button>
+                        {!hasTodayLog && !isCompleted && (
+                          <p className="mt-1 text-center text-[10px] text-muted-foreground">
+                            Nach dem Loggen deiner Sätze wertet die Smart-Progression alle Übungen
+                            auf einmal aus.
+                          </p>
                         )}
-                      </button>
-                      {!hasTodayLog && !isCompleted && (
-                        <p className="mt-1 text-center text-[10px] text-muted-foreground">
-                          Nach dem Loggen deiner Sätze wertet die Smart-Progression alle Übungen auf einmal aus.
-                        </p>
-                      )}
-                    </div>
-                  );
-                })()}
+                      </div>
+                    );
+                  })()}
               </div>
             )}
-
           </div>
         );
       })}
@@ -619,7 +868,7 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
 function parsePlanList(raw: string | null | undefined): string[] {
   if (!raw) return [];
   return String(raw)
-    .split(/[,|;\/]/)
+    .split(/[,|;/]/)
     .map((s) => s.trim())
     .filter(Boolean);
 }
@@ -628,6 +877,13 @@ function firstNumber(s: string | undefined): string {
   if (!s) return "";
   const m = s.match(/\d+(?:[.,]\d+)?/);
   return m ? m[0].replace(".", ",") : "";
+}
+
+function formatRestTime(totalSeconds: number): string {
+  const safeSeconds = Math.max(0, Math.round(totalSeconds));
+  const minutes = Math.floor(safeSeconds / 60);
+  const seconds = safeSeconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
 function ExerciseCard({
@@ -640,28 +896,60 @@ function ExerciseCard({
   ex: Exercise;
   clientId: string;
   logs: SetLog[];
-  onLog: (set_number: number, weight_kg: number | null, reps: number | null) => void;
+  onLog: (
+    set_number: number,
+    weight_kg: number | null,
+    reps: number | null,
+  ) => boolean | Promise<boolean>;
   onDelete: (id: string) => void;
 }) {
   const targetSets = ex.target_sets ?? 3;
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const lastSession = logs[0]?.performed_at?.slice(0, 10);
-  const todaysLogs = logs.filter((l) => l.performed_at.slice(0, 10) === todayStr);
-  const previousLogs = logs.filter((l) => l.performed_at.slice(0, 10) !== todayStr);
+  const todayStr = localDateKey();
+  const todaysLogs = logs.filter((log) => localDateKey(log.performed_at) === todayStr);
+  const previousLogs = logs.filter((log) => localDateKey(log.performed_at) !== todayStr);
+  const lastSession = previousLogs[0] ? localDateKey(previousLogs[0].performed_at) : null;
+  const lastPerformance = previousLogs[0] ?? null;
+  const plannedRestSeconds = Math.max(15, Math.min(600, ex.rest_seconds ?? 90));
+  const [restRemaining, setRestRemaining] = useState(plannedRestSeconds);
+  const [restRunning, setRestRunning] = useState(false);
+  const [savingSet, setSavingSet] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!restRunning) return;
+    const timer = window.setInterval(() => {
+      setRestRemaining((current) => {
+        if (current <= 1) {
+          window.clearInterval(timer);
+          setRestRunning(false);
+          return 0;
+        }
+        return current - 1;
+      });
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [restRunning]);
+
+  const startRestTimer = () => {
+    setRestRemaining(plannedRestSeconds);
+    setRestRunning(true);
+  };
 
   const isPerSide = /kurzhantel|dumbbell|\bkh\b|\bdb\b|einarmig|one[- ]?arm|single[- ]?arm/i.test(
     ex.name,
   );
   // Nur am Übungsnamen erkennen — Notizen können Worte wie "halten" enthalten
   // (z.B. "Handgelenke stabil halten"), ohne dass die Übung zeitbasiert ist.
-  const isTimeBased = /\bplank\b|unterarmst(ü|ue)tz|isometr|wandsitz|wall[- ]?sit|hollow|dead[- ]?hang|h(ä|ae)ngen|l[- ]?sit|side ?bridge|seitst(ü|ue)tz|bridge halten|stat(ic|isch)|halten\b/i.test(
-    ex.name,
-  );
+  const isTimeBased =
+    /\bplank\b|unterarmst(ü|ue)tz|isometr|wandsitz|wall[- ]?sit|hollow|dead[- ]?hang|h(ä|ae)ngen|l[- ]?sit|side ?bridge|seitst(ü|ue)tz|bridge halten|stat(ic|isch)|halten\b/i.test(
+      ex.name,
+    );
   const weightHint = isPerSide ? "pro Seite" : "Gesamtgewicht";
 
   // Per-set targets (from coach's plan); fall back to single value or last log.
   const repList = parsePlanList(ex.target_reps);
-  const wList = parsePlanList((ex as unknown as { target_weights?: string | null }).target_weights ?? null);
+  const wList = parsePlanList(
+    (ex as unknown as { target_weights?: string | null }).target_weights ?? null,
+  );
 
   const defaultRepsFor = (n: number): string => {
     const planned = repList[Math.min(n - 1, repList.length - 1)] ?? ex.target_reps ?? "";
@@ -699,7 +987,10 @@ function ExerciseCard({
     }
   }, [overrides, overridesKey]);
   const setOverride = (n: number, key: "w" | "r", val: string) =>
-    setOverrides((cur) => ({ ...cur, [n]: { w: cur[n]?.w ?? "", r: cur[n]?.r ?? "", [key]: val } }));
+    setOverrides((cur) => ({
+      ...cur,
+      [n]: { w: cur[n]?.w ?? "", r: cur[n]?.r ?? "", [key]: val },
+    }));
 
   // Zusätzliche Sätze, die der Kunde spontan dranhängt (über den Plan hinaus).
   const extraKey = `bf.tt.extra.${clientId}.${ex.id}.${todayStr}`;
@@ -721,13 +1012,19 @@ function ExerciseCard({
     }
   }, [extraSets, extraKey]);
 
+  const renderedSetCount = Math.max(targetSets + extraSets, todaysLogs.length);
+  const nextIncompleteSet =
+    Array.from({ length: renderedSetCount }, (_, index) => index + 1).find(
+      (setNumber) => !todaysLogs.some((log) => log.set_number === setNumber),
+    ) ?? null;
+
   const valueFor = (n: number, key: "w" | "r"): string => {
     const o = overrides[n]?.[key];
     if (o !== undefined && o !== "") return o;
     return key === "w" ? defaultWeightFor(n) : defaultRepsFor(n);
   };
 
-  const logSetFor = (n: number) => {
+  const logSetFor = async (n: number) => {
     const wStr = isTimeBased ? "" : valueFor(n, "w");
     const rStr = valueFor(n, "r");
     const w = wStr === "" ? null : Number(wStr.replace(",", "."));
@@ -735,7 +1032,13 @@ function ExerciseCard({
     if (w !== null && (Number.isNaN(w) || w < 0)) return toast.error("Gewicht ungültig");
     if (r !== null && (Number.isNaN(r) || r < 0))
       return toast.error(isTimeBased ? "Sek. ungültig" : "Wdh. ungültig");
-    onLog(n, w, r);
+    setSavingSet(n);
+    try {
+      const saved = await onLog(n, w, r);
+      if (saved) startRestTimer();
+    } finally {
+      setSavingSet(null);
+    }
   };
 
   // Notes per exercise per day
@@ -795,179 +1098,290 @@ function ExerciseCard({
   };
 
   return (
-    <div className="rounded-xl border border-border/60 bg-background/40 p-3">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="truncate text-sm font-semibold">{ex.name}</div>
-          <div className="text-[11px] text-muted-foreground">
-            Soll: {ex.target_sets ?? "?"} × {ex.target_reps ?? "?"}
-            {ex.notes ? ` · ${ex.notes}` : ""}
+    <article className="overflow-hidden rounded-2xl border border-border bg-background/45 shadow-[0_18px_45px_-38px_rgba(0,0,0,0.75)]">
+      <header className="flex items-start justify-between gap-3 border-b border-border p-4">
+        <div className="flex min-w-0 items-start gap-3">
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+            <Dumbbell className="h-5 w-5" />
           </div>
-          <div className={`mt-0.5 text-[10px] font-medium ${isTimeBased ? "text-primary" : isPerSide ? "text-primary" : "text-muted-foreground/80"}`}>
-            {isTimeBased ? "⏱️ Zeit in Sekunden" : `⚖️ Gewicht ${weightHint}`}
+          <div className="min-w-0">
+            <h4 className="truncate font-sans text-lg font-black tracking-tight">{ex.name}</h4>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              {lastPerformance
+                ? `Letztes Mal: ${
+                    isTimeBased
+                      ? `${lastPerformance.reps ?? "—"} Sek.`
+                      : `${lastPerformance.weight_kg ?? "—"} kg × ${lastPerformance.reps ?? "—"}`
+                  }`
+                : "Noch keine vorherige Leistung"}
+            </p>
+            <p className="mt-1 text-[10px] font-bold text-primary">
+              {isTimeBased ? "Zeit in Sekunden" : `Gewicht ${weightHint}`}
+              {ex.notes ? ` · ${ex.notes}` : ""}
+            </p>
           </div>
         </div>
-      </div>
+        <span className="shrink-0 rounded-lg bg-muted px-2.5 py-1.5 text-[10px] font-black text-muted-foreground">
+          {ex.target_sets ?? "?"} × {ex.target_reps ?? "?"}
+        </span>
+      </header>
 
-      {/* Per-set rows: pre-filled greyed defaults, tap to overwrite, check to log */}
-      <div className="mt-3 space-y-2">
-        <div
-          className={`grid items-center gap-2 px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground ${
-            isTimeBased
-              ? "grid-cols-[2.25rem_1fr_2.25rem]"
-              : "grid-cols-[2.25rem_1fr_1fr_2.25rem]"
-          }`}
-        >
-          <div>Satz</div>
-          {isTimeBased ? (
-            <div>Sek.</div>
-          ) : (
-            <>
-              <div>Wdh.</div>
-              <div>{isPerSide ? "kg/Seite" : "kg"}</div>
-            </>
-          )}
-          <div className="text-right">✓</div>
-        </div>
-        {Array.from({ length: Math.max(targetSets + extraSets, todaysLogs.length) }).map((_, i) => {
-          const setNum = i + 1;
-          const log = todaysLogs.find((l) => l.set_number === setNum);
-          const done = !!log;
-          const wVal = done ? String(log!.weight_kg ?? "") : overrides[setNum]?.w ?? "";
-          const rVal = done ? String(log!.reps ?? "") : overrides[setNum]?.r ?? "";
-          const wPh = defaultWeightFor(setNum);
-          const rPh = defaultRepsFor(setNum);
-          return (
-            <div
-              key={setNum}
-              className={`grid items-center gap-2 rounded-lg border px-2 py-1.5 ${
-                isTimeBased
-                  ? "grid-cols-[2.25rem_1fr_2.25rem]"
-                  : "grid-cols-[2.25rem_1fr_1fr_2.25rem]"
-              } ${done ? "border-gold/40 bg-gold/5" : "border-border/60 bg-background/60"}`}
-            >
-              <div className="text-center text-sm font-bold text-muted-foreground">{setNum}</div>
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                value={rVal}
-                placeholder={rPh}
-                disabled={done}
-                onChange={(e) => setOverride(setNum, "r", e.target.value.replace(/[^0-9]/g, ""))}
-                onFocus={(e) => {
-                  if (!overrides[setNum]?.r && rPh) {
-                    setOverride(setNum, "r", rPh);
-                    requestAnimationFrame(() => {
-                      const el = e.target as HTMLInputElement;
-                      el.setSelectionRange(el.value.length, el.value.length);
-                    });
-                  }
-                }}
-                className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-center text-sm placeholder:text-muted-foreground/50 disabled:opacity-100"
-              />
-              {!isTimeBased && (
+      <div className="p-3 sm:p-4">
+        <div className="space-y-2">
+          <div
+            className={`grid items-center gap-2 px-2 text-[9px] font-black uppercase tracking-[0.14em] text-muted-foreground ${
+              isTimeBased ? "grid-cols-[2rem_1fr_2.5rem]" : "grid-cols-[2rem_1fr_1fr_2.5rem_2.5rem]"
+            }`}
+          >
+            <div>Satz</div>
+            {isTimeBased ? (
+              <div>Sek.</div>
+            ) : (
+              <>
+                <div>{isPerSide ? "kg/Seite" : "kg"}</div>
+                <div>Wdh.</div>
+                <div>RIR</div>
+              </>
+            )}
+            <div className="text-right">✓</div>
+          </div>
+
+          {Array.from({ length: renderedSetCount }).map((_, index) => {
+            const setNum = index + 1;
+            const log = todaysLogs.find((item) => item.set_number === setNum);
+            const done = !!log;
+            const weightValue = done ? String(log!.weight_kg ?? "") : (overrides[setNum]?.w ?? "");
+            const repsValue = done ? String(log!.reps ?? "") : (overrides[setNum]?.r ?? "");
+            const weightPlaceholder = defaultWeightFor(setNum);
+            const repsPlaceholder = defaultRepsFor(setNum);
+
+            return (
+              <div
+                key={setNum}
+                className={`grid items-center gap-2 rounded-xl border px-2 py-2 ${
+                  isTimeBased
+                    ? "grid-cols-[2rem_1fr_2.5rem]"
+                    : "grid-cols-[2rem_1fr_1fr_2.5rem_2.5rem]"
+                } ${done ? "border-primary/35 bg-primary/5" : "border-border bg-card/65"}`}
+              >
+                <div className="text-center text-sm font-black text-muted-foreground">{setNum}</div>
+
+                {!isTimeBased && (
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    pattern="[0-9.,]*"
+                    value={weightValue}
+                    placeholder={weightPlaceholder}
+                    disabled={done}
+                    aria-label={`Gewicht Satz ${setNum}`}
+                    onChange={(event) =>
+                      setOverride(setNum, "w", event.target.value.replace(/[^0-9.,]/g, ""))
+                    }
+                    onFocus={(event) => {
+                      if (!overrides[setNum]?.w && weightPlaceholder) {
+                        setOverride(setNum, "w", weightPlaceholder);
+                        requestAnimationFrame(() => {
+                          event.target.setSelectionRange(
+                            event.target.value.length,
+                            event.target.value.length,
+                          );
+                        });
+                      }
+                    }}
+                    className="w-full rounded-lg border border-input bg-background px-2 py-2 text-center text-sm font-bold outline-none placeholder:text-muted-foreground/45 focus:border-primary disabled:opacity-100"
+                  />
+                )}
+
                 <input
                   type="text"
-                  inputMode="decimal"
-                  pattern="[0-9.,]*"
-                  value={wVal}
-                  placeholder={wPh}
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={repsValue}
+                  placeholder={repsPlaceholder}
                   disabled={done}
-                  onChange={(e) => setOverride(setNum, "w", e.target.value.replace(/[^0-9.,]/g, ""))}
-                  onFocus={(e) => {
-                    if (!overrides[setNum]?.w && wPh) {
-                      setOverride(setNum, "w", wPh);
+                  aria-label={`${isTimeBased ? "Sekunden" : "Wiederholungen"} Satz ${setNum}`}
+                  onChange={(event) =>
+                    setOverride(setNum, "r", event.target.value.replace(/[^0-9]/g, ""))
+                  }
+                  onFocus={(event) => {
+                    if (!overrides[setNum]?.r && repsPlaceholder) {
+                      setOverride(setNum, "r", repsPlaceholder);
                       requestAnimationFrame(() => {
-                        const el = e.target as HTMLInputElement;
-                        el.setSelectionRange(el.value.length, el.value.length);
+                        event.target.setSelectionRange(
+                          event.target.value.length,
+                          event.target.value.length,
+                        );
                       });
                     }
                   }}
-                  className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-center text-sm placeholder:text-muted-foreground/50 disabled:opacity-100"
+                  className="w-full rounded-lg border border-input bg-background px-2 py-2 text-center text-sm font-bold outline-none placeholder:text-muted-foreground/45 focus:border-primary disabled:opacity-100"
                 />
-              )}
-              <div className="flex justify-end">
-                {done ? (
-                  <button
-                    onClick={() => onDelete(log!.id)}
-                    className="rounded-full p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                    aria-label="Satz löschen"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => logSetFor(setNum)}
-                    className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-gold text-gold hover:bg-gold hover:text-primary-foreground"
-                    aria-label={`Satz ${setNum} abhaken`}
-                  >
-                    <Check className="h-3.5 w-3.5" />
-                  </button>
+
+                {!isTimeBased && (
+                  <div className="rounded-lg border border-border bg-muted/60 px-1 py-2 text-center text-xs font-black text-muted-foreground">
+                    {ex.target_rir ?? "—"}
+                  </div>
                 )}
+
+                <div className="flex justify-end">
+                  {done ? (
+                    <button
+                      type="button"
+                      onClick={() => onDelete(log!.id)}
+                      className="grid h-8 w-8 place-items-center rounded-full bg-primary text-primary-foreground transition hover:bg-destructive"
+                      aria-label="Gespeicherten Satz löschen"
+                      title="Satz löschen"
+                    >
+                      <Check className="h-4 w-4" />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => void logSetFor(setNum)}
+                      disabled={savingSet !== null}
+                      className="grid h-8 w-8 place-items-center rounded-full border-2 border-primary text-primary transition hover:bg-primary hover:text-primary-foreground disabled:opacity-50"
+                      aria-label={`Satz ${setNum} speichern`}
+                    >
+                      {savingSet === setNum ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Check className="h-4 w-4" />
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
+            );
+          })}
+
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setExtraSets((count) => count + 1)}
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-dashed border-border px-2 py-2 text-[10px] font-bold text-muted-foreground transition hover:border-primary/40 hover:text-primary"
+            >
+              <Plus className="h-3.5 w-3.5" /> Satz hinzufügen
+            </button>
+            {extraSets > 0 && (
+              <button
+                type="button"
+                onClick={() => setExtraSets((count) => Math.max(0, count - 1))}
+                className="rounded-xl border border-border px-3 py-2 text-[10px] font-bold text-muted-foreground transition hover:text-destructive"
+              >
+                Zusatzsatz entfernen
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-4 flex items-center gap-3 rounded-2xl border border-border bg-card p-3">
+          <div
+            className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${
+              restRunning ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
+            }`}
+          >
+            <Clock3 className="h-4 w-4" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">
+              Satzpause
             </div>
-          );
-        })}
-        <button
-          type="button"
-          onClick={() => setExtraSets((n) => n + 1)}
-          className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-border/70 px-2 py-2 text-[11px] font-semibold text-muted-foreground hover:border-gold/50 hover:text-gold"
-        >
-          <Plus className="h-3.5 w-3.5" /> Satz hinzufügen
-        </button>
-        {extraSets > 0 && (
+            <div className="font-sans text-2xl font-black tabular-nums">
+              {formatRestTime(restRemaining)}
+            </div>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => {
+                if (restRemaining === 0) setRestRemaining(plannedRestSeconds);
+                setRestRunning((running) => !running);
+              }}
+              className="grid h-9 w-9 place-items-center rounded-xl border border-border text-muted-foreground transition hover:border-primary/35 hover:text-primary"
+              aria-label={restRunning ? "Pausentimer anhalten" : "Pausentimer starten"}
+            >
+              {restRunning ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setRestRemaining(plannedRestSeconds);
+                setRestRunning(false);
+              }}
+              className="grid h-9 w-9 place-items-center rounded-xl border border-border text-muted-foreground transition hover:border-primary/35 hover:text-primary"
+              aria-label="Pausentimer zurücksetzen"
+            >
+              <RotateCcw className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        {nextIncompleteSet !== null ? (
           <button
             type="button"
-            onClick={() => setExtraSets((n) => Math.max(0, n - 1))}
-            className="mx-auto block text-[10px] text-muted-foreground hover:text-foreground underline"
+            onClick={() => void logSetFor(nextIncompleteSet)}
+            disabled={savingSet !== null}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3.5 text-sm font-black text-primary-foreground shadow-[0_14px_30px_-18px_rgba(16,185,90,0.9)] transition hover:brightness-95 disabled:opacity-50"
           >
-            Letzten Zusatzsatz entfernen
+            {savingSet === nextIncompleteSet ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <CheckCircle2 className="h-4 w-4" />
+            )}
+            Satz {nextIncompleteSet} speichern
           </button>
+        ) : (
+          <div className="mt-3 flex items-center justify-center gap-2 rounded-xl border border-primary/25 bg-primary/10 px-4 py-3 text-sm font-black text-primary">
+            <CheckCircle2 className="h-4 w-4" /> Alle Sätze abgeschlossen
+          </div>
         )}
-      </div>
 
-      {/* Per-exercise note for today */}
-      <div className="mt-3">
         <textarea
           value={note}
-          onChange={(e) => onNoteChange(e.target.value)}
-          placeholder={noteLoaded ? "Notiz zur Übung (z. B. Gefühl, Technik, Pause)…" : "Lade Notiz…"}
+          onChange={(event) => onNoteChange(event.target.value)}
+          placeholder={
+            noteLoaded
+              ? "Notiz zur Übung: Gefühl, Technik oder Einschränkung …"
+              : "Notiz wird geladen …"
+          }
           rows={2}
-          className="w-full resize-none rounded-md border border-input bg-background/60 px-2 py-1.5 text-xs placeholder:text-muted-foreground/60"
+          className="mt-3 w-full resize-none rounded-xl border border-input bg-card/60 px-3 py-2 text-xs outline-none placeholder:text-muted-foreground/60 focus:border-primary"
         />
-      </div>
 
-      {previousLogs.length > 0 && (
-        <details className="mt-3">
-          <summary className="cursor-pointer text-[11px] text-muted-foreground">
-            Verlauf ({previousLogs.length}) · zuletzt {lastSession}
-          </summary>
-          <ul className="mt-2 space-y-1 text-[11px]">
-            {previousLogs.slice(0, 20).map((l) => (
-              <li key={l.id} className="flex items-center justify-between gap-2">
-                <span className="text-muted-foreground">
-                  {l.performed_at.slice(0, 10)} · Satz {l.set_number}
-                </span>
-                <span className="font-medium">
-                  {isTimeBased ? `${l.reps ?? "—"} Sek.` : `${l.weight_kg ?? "—"} kg × ${l.reps ?? "—"}`}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          {previousLogs.length > 0 && (
+            <details className="rounded-xl border border-border bg-card p-3">
+              <summary className="cursor-pointer text-[11px] font-bold text-muted-foreground">
+                Verlauf ({previousLogs.length}) · zuletzt {lastSession}
+              </summary>
+              <ul className="mt-2 max-h-44 space-y-1 overflow-y-auto text-[11px]">
+                {previousLogs.slice(0, 20).map((log) => (
+                  <li key={log.id} className="flex items-center justify-between gap-2">
+                    <span className="text-muted-foreground">
+                      {localDateKey(log.performed_at)} · Satz {log.set_number}
+                    </span>
+                    <span className="font-bold">
+                      {isTimeBased
+                        ? `${log.reps ?? "—"} Sek.`
+                        : `${log.weight_kg ?? "—"} kg × ${log.reps ?? "—"}`}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
 
-      <details className="mt-3">
-        <summary className="flex cursor-pointer items-center gap-1 text-[11px] font-semibold text-gold">
-          <BarChart3 className="h-3.5 w-3.5" /> Fortschrittsanalyse
-        </summary>
-        <div className="mt-2">
-          <ExerciseAnalytics logs={logs} />
+          <details className="rounded-xl border border-border bg-card p-3">
+            <summary className="flex cursor-pointer items-center gap-1.5 text-[11px] font-bold text-primary">
+              <BarChart3 className="h-3.5 w-3.5" /> Fortschrittsanalyse
+            </summary>
+            <div className="mt-2">
+              <ExerciseAnalytics logs={logs} />
+            </div>
+          </details>
         </div>
-      </details>
-    </div>
+      </div>
+    </article>
   );
 }
-
-
