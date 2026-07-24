@@ -464,8 +464,64 @@ export const saveBuilderPartnerPlan = createServerFn({ method: "POST" })
       }
     }
 
+    // Ensure a nutrition_partners link exists (both directions checked) so
+    // shopping list & partner-mode UIs light up like the AI-generated flow.
+    const { data: existingLink } = await supabaseAdmin
+      .from("nutrition_partners")
+      .select("id")
+      .or(
+        `and(user_a.eq.${data.customerId},user_b.eq.${data.partnerId}),and(user_a.eq.${data.partnerId},user_b.eq.${data.customerId})`,
+      )
+      .maybeSingle();
+    if (!existingLink) {
+      await supabaseAdmin.from("nutrition_partners").insert({
+        user_a: data.customerId,
+        user_b: data.partnerId,
+        created_by: context.userId,
+      } as any);
+    }
+
+    // Build individual + combined shopping lists (best-effort, like AI flow).
+    const apiKey = process.env.LOVABLE_API_KEY;
+    if (apiKey) {
+      try {
+        const { daysUntilNextShopping } = await import("./shopping-cycle");
+        const { data: prof } = await supabaseAdmin
+          .from("smart_nutrition_profile")
+          .select("shopping_days")
+          .eq("user_id", data.customerId)
+          .maybeSingle();
+        const windowDays = daysUntilNextShopping((prof as any)?.shopping_days);
+        const { generateShoppingListForPlan, generateCombinedShoppingList } =
+          await import("./shopping-list-engine.server");
+        await generateShoppingListForPlan({
+          supabase: supabaseAdmin,
+          apiKey,
+          planId: A.plan_id,
+          windowDays,
+        });
+        await generateShoppingListForPlan({
+          supabase: supabaseAdmin,
+          apiKey,
+          planId: B.plan_id,
+          windowDays,
+        });
+        await generateCombinedShoppingList({
+          apiKey,
+          planAId: A.plan_id,
+          planBId: B.plan_id,
+          userA: data.customerId,
+          userB: data.partnerId,
+          windowDays,
+        });
+      } catch (e) {
+        console.error("Partner shopping list (manual plan) failed:", e);
+      }
+    }
+
     return { ok: true, client_plan_id: A.plan_id, partner_plan_id: B.plan_id };
   });
+
 
 // -------- Load existing plan for editing --------
 
