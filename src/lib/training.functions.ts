@@ -1,9 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import {
-  progressExerciseAfterSession,
-  type LoggedSet,
-} from "./training-engine/progression";
+import { progressExerciseAfterSession, type LoggedSet } from "./training-engine/progression";
 import {
   normalizeExerciseKey,
   readinessCooldownActive,
@@ -16,10 +13,7 @@ import {
 import type { ReadinessCheckin } from "@/lib/readiness";
 
 /** Zentrales Laden der letzten 30 Tage Check-ins für das Readiness-Gate. */
-async function loadRecentCheckins(
-  supabase: any,
-  userId: string,
-): Promise<ReadinessCheckin[]> {
+async function loadRecentCheckins(supabase: any, userId: string): Promise<ReadinessCheckin[]> {
   const since = new Date();
   since.setDate(since.getDate() - 30);
   const { data } = await supabase
@@ -28,7 +22,7 @@ async function loadRecentCheckins(
     .eq("user_id", userId)
     .gte("checkin_date", since.toISOString().slice(0, 10))
     .order("checkin_date", { ascending: false });
-  return ((data as ReadinessCheckin[]) ?? []);
+  return (data as ReadinessCheckin[]) ?? [];
 }
 
 /**
@@ -37,10 +31,7 @@ async function loadRecentCheckins(
  * Wird genutzt, um die Confidence auch NACH dem akuten Gate-Zeitraum
  * gedeckelt zu halten, bis 7 Tage ohne harte Bremse vergangen sind.
  */
-async function loadRecentHardGateDates(
-  supabase: any,
-  userId: string,
-): Promise<string[]> {
+async function loadRecentHardGateDates(supabase: any, userId: string): Promise<string[]> {
   const since = new Date();
   since.setDate(since.getDate() - 7);
   const { data } = await supabase
@@ -49,12 +40,8 @@ async function loadRecentHardGateDates(
     .eq("client_id", userId)
     .eq("readiness_gate", "reduce")
     .gte("source_session_date", since.toISOString().slice(0, 10));
-  return ((data as any[]) ?? [])
-    .map((r) => String(r.source_session_date))
-    .filter(Boolean);
+  return ((data as any[]) ?? []).map((r) => String(r.source_session_date)).filter(Boolean);
 }
-
-
 
 type ParsedExercise = {
   name: string;
@@ -173,18 +160,20 @@ Keine Erklärungen.`;
       if (dayErr || !dayRow) throw new Error(dayErr?.message || "Insert fehlgeschlagen");
       const exes = Array.isArray(d.exercises) ? d.exercises : [];
       if (!exes.length) continue;
-      const rows = exes.map((e, i) => ({
-        day_id: dayRow.id,
-        name: String(e.name ?? "").slice(0, 200),
-        target_sets:
-          typeof e.target_sets === "number" && Number.isFinite(e.target_sets)
-            ? Math.max(1, Math.min(20, Math.round(e.target_sets)))
-            : null,
-        target_reps: e.target_reps ? String(e.target_reps).slice(0, 80) : null,
-        target_weights: e.target_weights ? String(e.target_weights).slice(0, 120) : null,
-        notes: e.notes ? String(e.notes).slice(0, 500) : null,
-        sort_order: i,
-      })).filter((r) => r.name);
+      const rows = exes
+        .map((e, i) => ({
+          day_id: dayRow.id,
+          name: String(e.name ?? "").slice(0, 200),
+          target_sets:
+            typeof e.target_sets === "number" && Number.isFinite(e.target_sets)
+              ? Math.max(1, Math.min(20, Math.round(e.target_sets)))
+              : null,
+          target_reps: e.target_reps ? String(e.target_reps).slice(0, 80) : null,
+          target_weights: e.target_weights ? String(e.target_weights).slice(0, 120) : null,
+          notes: e.notes ? String(e.notes).slice(0, 500) : null,
+          sort_order: i,
+        }))
+        .filter((r) => r.name);
       totalEx += rows.length;
       if (rows.length) {
         const { error: exErr } = await supabaseAdmin.from("training_exercises").insert(rows);
@@ -225,10 +214,7 @@ export const deleteSetLog = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: { id: string }) => data)
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
-      .from("training_set_logs")
-      .delete()
-      .eq("id", data.id);
+    const { error } = await context.supabase.from("training_set_logs").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -301,8 +287,6 @@ export const progressAfterExercise = createServerFn({ method: "POST" })
     const gated = applyReadinessGateWithMeta(rawDecision, gate);
     const decision = gated.decision;
 
-
-
     // Nächste Instanz derselben Übung im selben Plan finden (nachfolgende Tage)
     const currentSort = Number(day.sort_order ?? 0);
     const { data: nextDayRows } = await supabase
@@ -314,11 +298,17 @@ export const progressAfterExercise = createServerFn({ method: "POST" })
       .limit(60);
 
     let nextExerciseId: string | null = null;
-    const currentName = String((ex as any).name ?? "").toLowerCase().trim();
-    for (const d of ((nextDayRows as any[]) ?? [])) {
+    const currentName = String((ex as any).name ?? "")
+      .toLowerCase()
+      .trim();
+    for (const d of (nextDayRows as any[]) ?? []) {
       for (const e of d.training_exercises ?? []) {
         if ((e.set_type ?? "working") !== "working") continue;
-        if (String(e.name ?? "").toLowerCase().trim() === currentName) {
+        if (
+          String(e.name ?? "")
+            .toLowerCase()
+            .trim() === currentName
+        ) {
           nextExerciseId = e.id;
           break;
         }
@@ -334,15 +324,15 @@ export const progressAfterExercise = createServerFn({ method: "POST" })
 
     if (
       nextExerciseId &&
-      (
-        (changesLoad && decision.next_target_weights) ||
-        (changesReps && decision.next_target_reps)
-      )
+      ((changesLoad && decision.next_target_weights) || (changesReps && decision.next_target_reps))
     ) {
       const patch: Record<string, unknown> = { notes: decision.reason };
       if (decision.next_target_weights) patch.target_weights = decision.next_target_weights;
       if (decision.next_target_reps) patch.target_reps = decision.next_target_reps;
-      await supabase.from("training_exercises").update(patch as any).eq("id", nextExerciseId);
+      await supabase
+        .from("training_exercises")
+        .update(patch as any)
+        .eq("id", nextExerciseId);
     }
 
     await supabase.from("training_progression_events").insert({
@@ -380,17 +370,27 @@ export const progressAfterExercise = createServerFn({ method: "POST" })
  */
 export const completeTrainingSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { day_id: string; session_date?: string }) => data)
+  .inputValidator(
+    (data: { day_id: string; session_date?: string; timezone_offset_minutes?: number }) => data,
+  )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
     const date = data.session_date ?? new Date().toISOString().slice(0, 10);
-    const dayStart = new Date(date + "T00:00:00Z").toISOString();
-    const dayEnd = new Date(new Date(date + "T00:00:00Z").getTime() + 86400000).toISOString();
+    const timezoneOffsetMinutes = Number.isFinite(data.timezone_offset_minutes)
+      ? Math.max(-840, Math.min(840, Number(data.timezone_offset_minutes)))
+      : 0;
+    // Date#getTimezoneOffset is UTC - local time. Adding it to local midnight
+    // produces the matching UTC boundary (e.g. Berlin summer: -120 minutes).
+    const dayStartMs = new Date(date + "T00:00:00Z").getTime() + timezoneOffsetMinutes * 60_000;
+    const dayStart = new Date(dayStartMs).toISOString();
+    const dayEnd = new Date(dayStartMs + 86_400_000).toISOString();
 
     const { data: dayEx, error: dayErr } = await supabase
       .from("training_exercises")
-      .select("id, name, set_type, target_sets, target_reps, target_weights, target_rir, smart_lock, day_id, training_days!inner(plan_id, sort_order, day_date)")
+      .select(
+        "id, name, set_type, target_sets, target_reps, target_weights, target_rir, smart_lock, day_id, training_days!inner(plan_id, sort_order, day_date)",
+      )
       .eq("day_id", data.day_id)
       .order("sort_order", { ascending: true });
     if (dayErr) throw new Error(dayErr.message);
@@ -413,7 +413,7 @@ export const completeTrainingSession = createServerFn({ method: "POST" })
     if (logErr) throw new Error(logErr.message);
 
     const setsByExercise = new Map<string, LoggedSet[]>();
-    for (const r of ((logs as any[]) ?? [])) {
+    for (const r of (logs as any[]) ?? []) {
       const id = String(r.exercise_id);
       const arr = setsByExercise.get(id) ?? [];
       arr.push({
@@ -444,7 +444,6 @@ export const completeTrainingSession = createServerFn({ method: "POST" })
     const hardGateDates = await loadRecentHardGateDates(supabase, userId);
     const cooldownActive = readinessCooldownActive(hardGateDates);
 
-
     for (const ex of workingEx) {
       const sets = (setsByExercise.get(ex.id) ?? []).sort((a, b) => a.set_number - b.set_number);
       if (sets.length === 0) continue;
@@ -460,7 +459,6 @@ export const completeTrainingSession = createServerFn({ method: "POST" })
       const { applySmartLock } = await import("./training-engine/lock");
       const decision = applySmartLock(gated.decision, (ex as any).smart_lock ?? "none");
 
-
       const planId = ex.training_days?.plan_id;
       const currentSort = Number(ex.training_days?.sort_order ?? 0);
       let nextExerciseId: string | null = null;
@@ -472,11 +470,17 @@ export const completeTrainingSession = createServerFn({ method: "POST" })
           .gt("sort_order", currentSort)
           .order("sort_order", { ascending: true })
           .limit(60);
-        const currentName = String(ex.name ?? "").toLowerCase().trim();
-        for (const d of ((nextDayRows as any[]) ?? [])) {
+        const currentName = String(ex.name ?? "")
+          .toLowerCase()
+          .trim();
+        for (const d of (nextDayRows as any[]) ?? []) {
           for (const e of d.training_exercises ?? []) {
             if ((e.set_type ?? "working") !== "working") continue;
-            if (String(e.name ?? "").toLowerCase().trim() === currentName) {
+            if (
+              String(e.name ?? "")
+                .toLowerCase()
+                .trim() === currentName
+            ) {
               nextExerciseId = e.id;
               break;
             }
@@ -493,15 +497,16 @@ export const completeTrainingSession = createServerFn({ method: "POST" })
 
       if (
         nextExerciseId &&
-        (
-          (changesLoad && decision.next_target_weights) ||
-          (changesReps && decision.next_target_reps)
-        )
+        ((changesLoad && decision.next_target_weights) ||
+          (changesReps && decision.next_target_reps))
       ) {
         const patch: Record<string, unknown> = { notes: decision.reason };
         if (decision.next_target_weights) patch.target_weights = decision.next_target_weights;
         if (decision.next_target_reps) patch.target_reps = decision.next_target_reps;
-        await supabase.from("training_exercises").update(patch as any).eq("id", nextExerciseId);
+        await supabase
+          .from("training_exercises")
+          .update(patch as any)
+          .eq("id", nextExerciseId);
       }
 
       await supabase.from("training_progression_events").insert({
@@ -541,13 +546,14 @@ export const completeTrainingSession = createServerFn({ method: "POST" })
         // NICHT als Progressions-Erfolg — der lebendige Plan-Wert
         // (Confidence/Trend/Streak) soll durch bewusst gehaltene Sessions
         // nicht künstlich verbessert werden.
-        const isSuccess = !gateActive && (
-          decision.action === "increase_load" || decision.action === "increase_reps_target"
-        );
+        const isSuccess =
+          !gateActive &&
+          (decision.action === "increase_load" || decision.action === "increase_reps_target");
         const isFailure = decision.action === "reduce_load" || decision.action === "reduce_volume";
-        const currentLoad = decision.action === "increase_load"
-          ? decision.next_load
-          : decision.previous_load ?? decision.next_load;
+        const currentLoad =
+          decision.action === "increase_load"
+            ? decision.next_load
+            : (decision.previous_load ?? decision.next_load);
 
         if (gateActive) {
           mapped.progression_status = "holding";
@@ -555,7 +561,6 @@ export const completeTrainingSession = createServerFn({ method: "POST" })
         } else if (cooldownActive) {
           mapped.last_reason = `⏳ Gate-Cooldown aktiv (7d Nachwirkung) — ${mapped.last_reason}`;
         }
-
 
         const { data: prev } = await supabase
           .from("athlete_exercise_state")
@@ -568,30 +573,27 @@ export const completeTrainingSession = createServerFn({ method: "POST" })
         const successful = Number(prevRow?.successful_sessions ?? 0) + (isSuccess ? 1 : 0);
         const failed = Number(prevRow?.failed_sessions ?? 0) + (isFailure ? 1 : 0);
 
-        await supabase
-          .from("athlete_exercise_state")
-          .upsert(
-            {
-              user_id: userId,
-              exercise_key: key,
-              exercise_name: exerciseName,
-              current_working_load: currentLoad,
-              recommended_next_load: mapped.recommended_next_load,
-              target_rep_min: mapped.target_rep_min,
-              target_rep_max: mapped.target_rep_max,
-              progression_status: mapped.progression_status,
-              confidence: mapped.confidence,
-              trend: mapped.trend,
-              successful_sessions: successful,
-              failed_sessions: failed,
-              last_completed_at: new Date().toISOString(),
-              last_decision: mapped.last_decision,
-              last_reason: mapped.last_reason,
-            } as any,
-            { onConflict: "user_id,exercise_key" },
-          );
+        await supabase.from("athlete_exercise_state").upsert(
+          {
+            user_id: userId,
+            exercise_key: key,
+            exercise_name: exerciseName,
+            current_working_load: currentLoad,
+            recommended_next_load: mapped.recommended_next_load,
+            target_rep_min: mapped.target_rep_min,
+            target_rep_max: mapped.target_rep_max,
+            progression_status: mapped.progression_status,
+            confidence: mapped.confidence,
+            trend: mapped.trend,
+            successful_sessions: successful,
+            failed_sessions: failed,
+            last_completed_at: new Date().toISOString(),
+            last_decision: mapped.last_decision,
+            last_reason: mapped.last_reason,
+          } as any,
+          { onConflict: "user_id,exercise_key" },
+        );
       }
-
 
       decisions.push({
         exercise_id: ex.id,
@@ -618,7 +620,6 @@ export const completeTrainingSession = createServerFn({ method: "POST" })
     return { ok: true as const, evaluated: decisions.length, decisions };
   });
 
-
 /**
  * Ergänzt eine EIGENE Übung des Kunden zu einem bestehenden Trainingstag.
  * Der Coach-Plan bleibt unverändert – die Übung wird über `added_by_user`
@@ -640,7 +641,9 @@ export const addOwnTrainingExercise = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { userId } = context;
-    const name = String(data.name ?? "").trim().slice(0, 200);
+    const name = String(data.name ?? "")
+      .trim()
+      .slice(0, 200);
     if (!name) throw new Error("Bitte gib einen Übungsnamen ein.");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -667,14 +670,12 @@ export const addOwnTrainingExercise = createServerFn({ method: "POST" })
       .maybeSingle();
     const nextSort = ((sortRow as any)?.sort_order ?? -1) + 1;
 
-    const sets =
-      Number.isFinite(Number(data.target_sets))
-        ? Math.max(1, Math.min(20, Math.round(Number(data.target_sets))))
-        : 3;
-    const rest =
-      Number.isFinite(Number(data.rest_seconds))
-        ? Math.max(15, Math.min(600, Math.round(Number(data.rest_seconds))))
-        : 90;
+    const sets = Number.isFinite(Number(data.target_sets))
+      ? Math.max(1, Math.min(20, Math.round(Number(data.target_sets))))
+      : 3;
+    const rest = Number.isFinite(Number(data.rest_seconds))
+      ? Math.max(15, Math.min(600, Math.round(Number(data.rest_seconds))))
+      : 90;
 
     const { data: row, error } = await supabaseAdmin
       .from("training_exercises")
@@ -722,4 +723,3 @@ export const deleteOwnTrainingExercise = createServerFn({ method: "POST" })
     if (delErr) throw new Error(delErr.message);
     return { ok: true };
   });
-
