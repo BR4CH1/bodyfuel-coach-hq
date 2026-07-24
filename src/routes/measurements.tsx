@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { WeightProgressChart } from "@/components/bodyfuel/WeightProgressChart";
 import { ProgressPhotosCard } from "@/components/bodyfuel/ProgressPhotosCard";
+import { clearFormDraft, useFormDraft } from "@/hooks/use-form-draft";
 
 export const Route = createFileRoute("/measurements")({
   head: () => ({ meta: [{ title: "Körpermaße — BODYFUEL" }] }),
@@ -72,6 +73,11 @@ function MeasurementsContent() {
     biceps_left_cm: "",
     biceps_right_cm: "",
     notes: "",
+  });
+  const measurementDraftKey = uid ? `bf.measurements.new.${uid}` : null;
+
+  useFormDraft(measurementDraftKey, m, (draft) => {
+    setM((previous) => ({ ...previous, ...draft }));
   });
 
   const load = async () => {
@@ -141,6 +147,7 @@ function MeasurementsContent() {
     setSavingMeasurement(false);
     if (error) return toast.error(error.message);
     toast.success("Eintrag gespeichert");
+    clearFormDraft(measurementDraftKey);
     setM({
       measured_at: today,
       weight_kg: "",

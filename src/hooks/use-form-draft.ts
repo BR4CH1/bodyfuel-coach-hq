@@ -24,13 +24,15 @@ export function useFormDraft<T extends Record<string, unknown>>(
 ) {
   const { enabled = true, debounceMs = 250 } = options;
   const restored = useRef(false);
+  const restoredKey = useRef<string | null>(null);
   const restoreRef = useRef(restore);
   const latestSerialized = useRef<string | null>(null);
   restoreRef.current = restore;
 
   // Restore once on mount.
   useEffect(() => {
-    if (!enabled || !key || restored.current) return;
+    if (!enabled || !key || restoredKey.current === key) return;
+    restoredKey.current = key;
     restored.current = true;
     try {
       const raw = localStorage.getItem(key);
