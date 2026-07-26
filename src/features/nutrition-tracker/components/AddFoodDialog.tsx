@@ -11,9 +11,11 @@ import type {
   Meal,
   RecentFood,
 } from "../types";
+import { CustomMealPortionEditor } from "./CustomMealPortionEditor";
 import { CustomMealsPanel } from "./CustomMealsPanel";
 import { FoodAmountEditor } from "./FoodAmountEditor";
 import { FoodSearchPanel } from "./FoodSearchPanel";
+
 
 export function AddFoodDialog({
   openMeal,
@@ -43,6 +45,12 @@ export function AddFoodDialog({
   isFavorite,
   onOpenBuilder,
   onAddCustomMeal,
+  pickingMeal,
+  portionStr,
+  savingMeal,
+  onPortionChange,
+  onPickCustomMeal,
+  onBackToMeals,
   onAmountChange,
   onBack,
   onAddPicked,
@@ -75,7 +83,13 @@ export function AddFoodDialog({
   onToggleFavorite: (food: FavoriteCandidate) => void;
   isFavorite: (food: FoodResult) => boolean;
   onOpenBuilder: () => void;
-  onAddCustomMeal: (meal: CustomMeal) => void;
+  onAddCustomMeal: () => void;
+  pickingMeal: CustomMeal | null;
+  portionStr: string;
+  savingMeal: boolean;
+  onPortionChange: (value: string) => void;
+  onPickCustomMeal: (meal: CustomMeal) => void;
+  onBackToMeals: () => void;
   onAmountChange: (value: string) => void;
   onBack: () => void;
   onAddPicked: () => void;
@@ -96,7 +110,16 @@ export function AddFoodDialog({
           </button>
         </div>
 
-        {!picking ? (
+        {pickingMeal ? (
+          <CustomMealPortionEditor
+            meal={pickingMeal}
+            portionStr={portionStr}
+            saving={savingMeal}
+            onPortionChange={onPortionChange}
+            onBack={onBackToMeals}
+            onAdd={onAddCustomMeal}
+          />
+        ) : !picking ? (
           <div className="flex min-h-0 flex-1 flex-col p-4">
             <SourceTabs
               source={source}
@@ -129,7 +152,7 @@ export function AddFoodDialog({
                 meals={customMeals}
                 loading={loadingMeals}
                 onOpenBuilder={onOpenBuilder}
-                onAddMeal={onAddCustomMeal}
+                onAddMeal={onPickCustomMeal}
               />
             )}
           </div>

@@ -15,6 +15,15 @@ import { checkFoodEnergy } from "@/lib/food-energy";
 
 import { listCustomMeals, type CustomMeal } from "@/lib/custom-meals.functions";
 import {
+  customMealEntryName,
+  formatPortionFactor,
+  parsePortionFactor,
+  scaleCustomMeal,
+} from "../lib/custom-meal-portion.logic";
+
+const LAST_PORTION_KEY = "bf.nutritionTracker.lastMealPortion";
+
+import {
   estimateFoodFromText,
   lookupBarcode,
   searchFoodsDb,
@@ -69,7 +78,11 @@ export function useAddFoodFlow({
   const [source, setSource] = useState<AddFoodSource>("food");
   const [customMeals, setCustomMeals] = useState<CustomMeal[]>([]);
   const [loadingMeals, setLoadingMeals] = useState(false);
+  const [pickingMeal, setPickingMeal] = useState<CustomMeal | null>(null);
+  const [portionStr, setPortionStr] = useState("1");
+  const [savingMeal, setSavingMeal] = useState(false);
   const [estimatingAi, setEstimatingAi] = useState(false);
+
 
   const listCustomMealsFn = useServerFn(listCustomMeals);
   const searchDbFn = useServerFn(searchFoodsDb);
@@ -382,44 +395,70 @@ export function useAddFoodFlow({
   const closeAddDialog = useCallback(() => {
     setOpenMeal(null);
     setPicking(null);
+    setPickingMeal(null);
   }, []);
 
-  const addCustomMeal = useCallback(
-    async (meal: CustomMeal) => {
-      if (!openMeal || !userId) return;
-      const payload = {
-        user_id: userId,
-        entry_date: date,
-        meal: openMeal,
-        name: meal.name,
-        food_id: null,
-        serving_amount: 100,
-        amount_unit: "g",
-        serving_g: 100,
-        kcal: Math.round(meal.kcal ?? 0),
-        protein_g: meal.protein_g ? +Number(meal.protein_g).toFixed(1) : 0,
-        carbs_g: meal.carbs_g ? +Number(meal.carbs_g).toFixed(1) : 0,
-        fat_g: meal.fat_g ? +Number(meal.fat_g).toFixed(1) : 0,
-        source: `custom:${meal.id}`,
-      };
-      const { data: row, error } = await supabase
-        .from("food_entries")
-        .insert(payload)
-        .select(
-          "id, food_id, meal, name, brand, serving_amount, amount_unit, serving_g, kcal, protein_g, carbs_g, fat_g, source",
-        )
-        .single();
-      if (error) {
-        toast.error(error.message);
-        return;
-      }
-      setEntries((entries) => [...entries, row as FoodEntry]);
-      setOpenMeal(null);
-      clearFormDraft(draftKey);
-      toast.success("Mahlzeit hinzugefügt");
-    },
-    [date, draftKey, openMeal, setEntries, userId],
-  );
+  const pickCustomMeal = useCallback((meal: CustomMeal) => {
+    setPickingMeal(meal);
+    let suggested = "1";
+    try {
+      const stored = window.localStorage.getItem(LAST_PORTION_KEY);
+      if (stored && parsePortionFactor(stored) > 0) suggested = stored;
+    } catch {
+      /* ignore storage errors */
+    }
+    setPortionStr(suggested);
+  }, []);
+
+  const addCustomMeal = useCallback(async () => {
+    const meal = pickingMeal;
+    if (!meal || !openMeal || !userId) return;
+    const factor = parsePortionFactor(portionStr);
+    if (factor <= 0) {
+      toast.error("Bitte eine gültige Portionsmenge eingeben");
+      return;
+    }
+    const scaled = scaleCustomMeal(meal, factor);
+    setSavingMeal(true);
+    const payload = {
+      user_id: userId,
+      entry_date: date,
+      meal: openMeal,
+      name: customMealEntryName(meal, factor),
+      food_id: null,
+      serving_amount: scaled.serving_g > 0 ? scaled.serving_g : Math.round(factor * 100),
+      amount_unit: "g",
+      serving_g: scaled.serving_g > 0 ? scaled.serving_g : Math.round(factor * 100),
+      kcal: scaled.kcal,
+      protein_g: scaled.protein_g,
+      carbs_g: scaled.carbs_g,
+      fat_g: scaled.fat_g,
+      source: `custom:${meal.id}`,
+    };
+    const { data: row, error } = await supabase
+      .from("food_entries")
+      .insert(payload)
+      .select(
+        "id, food_id, meal, name, brand, serving_amount, amount_unit, serving_g, kcal, protein_g, carbs_g, fat_g, source",
+      )
+      .single();
+    setSavingMeal(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    try {
+      window.localStorage.setItem(LAST_PORTION_KEY, formatPortionFactor(factor));
+    } catch {
+      /* ignore storage errors */
+    }
+    setEntries((entries) => [...entries, row as FoodEntry]);
+    setPickingMeal(null);
+    setOpenMeal(null);
+    clearFormDraft(draftKey);
+    toast.success("Mahlzeit hinzugefügt");
+  }, [date, draftKey, openMeal, pickingMeal, portionStr, setEntries, userId]);
+
 
   const handleBarcode = useCallback(
     async (code: string) => {
@@ -524,6 +563,13 @@ export function useAddFoodFlow({
     source,
     customMeals,
     loadingMeals,
+    pickingMeal,
+    portionStr,
+    savingMeal,
+    setPortionStr,
+    pickCustomMeal,
+    backToMeals: () => setPickingMeal(null),
+
     estimatingAi,
     estimateAi,
     setQuery,
