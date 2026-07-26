@@ -92,7 +92,7 @@ const SYNONYM_INDEX: Map<string, Set<string>> = (() => {
 export function singularizeGermanToken(token: string): string[] {
   const forms = new Set<string>();
   const t = token;
-  if (t.length < 4) return [];
+  if (t.length < 3) return [];
   const suffixes: Array<[RegExp, string]> = [
     [/(.+)nen$/, "$1"],
     [/(.+)er$/, "$1"],
@@ -104,7 +104,7 @@ export function singularizeGermanToken(token: string): string[] {
   for (const [pattern, replacement] of suffixes) {
     if (pattern.test(t)) {
       const candidate = t.replace(pattern, replacement);
-      if (candidate.length >= 3) forms.add(candidate);
+      if (candidate.length >= 2) forms.add(candidate);
     }
   }
   return [...forms];
@@ -120,7 +120,7 @@ export function pluralizeGermanToken(token: string): string[] {
  * Erzeugt Suchvarianten (inkl. Original) für eine Nutzereingabe.
  * Die Liste ist deterministisch sortiert: Originalbegriff zuerst.
  */
-export function expandFoodQuery(query: string, maxVariants = 12): string[] {
+export function expandFoodQuery(query: string, maxVariants = 24): string[] {
   const raw = normalizeFoodTerm(query);
   if (!raw) return [];
 
