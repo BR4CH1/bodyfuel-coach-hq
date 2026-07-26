@@ -209,10 +209,12 @@ export const lookupBarcode = createServerFn({ method: "POST" })
       .select(FOOD_SEARCH_SELECT)
       .eq("barcode", code)
       .eq("is_active", true)
-      .eq("safe_for_smart", true)
+      .neq("audit_status", "needs_review")
       .maybeSingle();
-    if (error || !row) {
+    if (error) throw new Error(`Barcode-Suche fehlgeschlagen: ${error.message}`);
+    if (!row) {
       throw new Error("Barcode ist noch nicht im geprüften BodyFuel-Katalog");
+
     }
     return mapNutritionFoodRow(row);
   });
