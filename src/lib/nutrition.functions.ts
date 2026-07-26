@@ -2,6 +2,14 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertCoachOrOrgStaffForAthlete } from "@/lib/organizations/org-coach-access";
 import type { FoodAmountUnit } from "@/lib/food-units";
+import { checkFoodEnergy } from "@/lib/food-energy";
+import {
+  expandFoodQuery,
+  normalizeFoodTerm,
+  rankFoodResults,
+  foodSourcePriority,
+} from "@/lib/food-search.logic";
+
 
 export type FoodSource =
   | "bls_4_0"
