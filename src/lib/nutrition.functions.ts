@@ -52,6 +52,8 @@ export type FoodResult = {
   /** true, wenn der kcal-Wert unplausibel war und aus den Makros korrigiert wurde. */
   energy_flagged?: boolean;
   energy_note?: string | null;
+  /** Synonyme aus dem Katalog — nur für Relevanz-Ranking, nicht für die Anzeige. */
+  aliases?: string[] | null;
 };
 
 
@@ -72,6 +74,7 @@ function mapNutritionFoodRow(r: any): FoodResult {
   return {
     id: r.id ?? null,
     name: String(r.name ?? ""),
+    aliases: Array.isArray(r.aliases) ? r.aliases.map((a: unknown) => String(a ?? "")) : null,
     brand: r.brand ?? (source === "open_food_facts" ? (r.source_name ?? null) : null),
     barcode: r.barcode ?? (source === "open_food_facts" ? (r.source_id ?? null) : null),
     unit,
