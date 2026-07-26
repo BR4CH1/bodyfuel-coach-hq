@@ -215,10 +215,18 @@ export function buildCoachFollowUps({
     }),
   );
 
+  // Pro Empfänger nur der wichtigste Entwurf — ein Kunde darf nicht mehrfach erscheinen.
   const seen = new Set<string>();
+  const recipientKey = (item: PrioritizedDraft) =>
+    item.target.kind === "customer" ? `customer:${item.target.userId}` : `lead:${item.target.leadId}`;
   return candidates
     .sort((a, b) => a.priority - b.priority)
-    .filter((item) => !seen.has(item.sourceSignalId) && seen.add(item.sourceSignalId))
+    .filter((item) => {
+      const key = recipientKey(item);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
     .slice(0, Math.max(0, limit))
     .map(({ priority: _, ...draft }) => draft);
 }
