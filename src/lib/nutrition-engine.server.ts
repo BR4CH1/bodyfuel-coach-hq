@@ -13,6 +13,8 @@
 //      must produce realistic carbs. Otherwise a warning is recorded.
 // ============================================================
 
+import { checkFoodEnergy } from "@/lib/food-energy";
+
 export type EngineIngredient = {
   name: string; // raw name as written by the AI / user
   grams: number; // legacy numeric amount; interpreted using unit/food type
@@ -566,7 +568,17 @@ export async function computeMealFromIngredients(
     anyMatched = true;
     matchedAmount += amount;
     const factor = amount / 100;
-    const ik = (food.kcal_per_100g ?? 0) * factor;
+    const validatedKcal = checkFoodEnergy({
+      kcal_per_100g: food.kcal_per_100g,
+      protein_per_100g: food.protein_per_100g,
+      carbs_per_100g: food.carbs_per_100g,
+      fat_per_100g: food.fat_per_100g,
+      fiber_per_100g: food.fiber_per_100g,
+      alcohol_per_100g: food.alcohol_per_100g,
+      polyols_per_100g: food.polyols_per_100g,
+      organic_acids_per_100g: food.organic_acids_per_100g,
+    }).kcal_per_100g;
+    const ik = validatedKcal * factor;
     const ip = (food.protein_per_100g ?? 0) * factor;
     const ic = (food.carbs_per_100g ?? 0) * factor;
     const ifa = (food.fat_per_100g ?? 0) * factor;

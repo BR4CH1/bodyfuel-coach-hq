@@ -50,7 +50,7 @@ function NutritionPage() {
   return (
     <div className="space-y-5">
       <Link
-        to="/bulls"
+        to="/dashboard"
         className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-bulls-red"
       >
         <ArrowLeft className="h-3 w-3" /> Zurück zum Hub

@@ -64,7 +64,10 @@ describe("Eier-Suche", () => {
       "Eier",
     );
     expect(ranked[0].name).toBe("Ei (roh)");
-    expect(ranked.map((r) => r.name).indexOf("Eisbergsalat (roh)")).toBeGreaterThan(1);
+    // Substring-Rauschen wird komplett ausgefiltert
+    expect(ranked.map((r) => r.name)).not.toContain("Eisbergsalat (roh)");
+    expect(ranked.map((r) => r.name)).toContain("Bio-Eier Freilandhaltung");
+
   });
 });
 

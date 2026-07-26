@@ -43,10 +43,10 @@ function CoachPage() {
       return;
     }
     if (accessQ.isSuccess && !canCoach) {
-      navigate({ to: "/bulls" });
+      navigate({ to: "/dashboard" });
     }
     if (accessQ.isError) {
-      navigate({ to: "/bulls" });
+      navigate({ to: "/dashboard" });
     }
   }, [sessionLoading, supabaseUser, accessQ.isSuccess, accessQ.isError, canCoach, navigate]);
 

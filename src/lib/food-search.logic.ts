@@ -186,6 +186,7 @@ export function isTypoMatch(candidate: string, term: string): boolean {
 
 export type RankableFood = {
   name: string;
+  aliases?: string[] | null;
   brand?: string | null;
   source?: string | null;
   verified_by_coach?: boolean | null;
@@ -243,6 +244,13 @@ export function scoreFoodMatch(food: RankableFood, query: string): number {
   else if (variants.some((v) => containsWord(name, v))) score += 20;
   else if (nameTokens.some((token) => isTypoMatch(token, term))) score += 25;
   else if (name.includes(term) && term.length >= 5) score += 10;
+  else if (
+    (food.aliases ?? []).some((alias) => {
+      const a = normalizeFoodTerm(String(alias ?? ""));
+      return a !== "" && (a === term || variants.some((v) => a === v));
+    })
+  )
+    score += 40;
   else return -100; // kein sinnvoller Bezug zur Suche
 
   // Quellenqualität
@@ -261,8 +269,10 @@ export function scoreFoodMatch(food: RankableFood, query: string): number {
 
 
 export function rankFoodResults<T extends RankableFood>(results: T[], query: string): T[] {
-  return [...results]
+  const scored = [...results]
     .map((food, index) => ({ food, index, score: scoreFoodMatch(food, query) }))
-    .sort((a, b) => b.score - a.score || a.index - b.index)
-    .map((entry) => entry.food);
+    .sort((a, b) => b.score - a.score || a.index - b.index);
+  // Substring-Rauschen (z.B. "Eisbergsalat" bei "Ei") ausblenden — außer es bleibt sonst nichts übrig.
+  const relevant = scored.filter((entry) => entry.score > -100);
+  return (relevant.length > 0 ? relevant : scored).map((entry) => entry.food);
 }

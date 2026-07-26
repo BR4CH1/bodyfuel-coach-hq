@@ -65,15 +65,21 @@ export function checkFoodEnergy(input: EnergyCheckInput): EnergyCheckResult {
 
   // Ohne Makros lässt sich nichts prüfen — Originalwert bleibt bestehen.
   if (computed <= 0) {
+    // Wasser, Salz, Gewürze: alle Werte explizit 0 → korrekt, keine Markierung.
+    const explicitZero =
+      [input.kcal_per_100g, input.protein_per_100g, input.carbs_per_100g, input.fat_per_100g].every(
+        (v) => v != null && Number.isFinite(Number(v)),
+      ) && kcal <= 0;
     return {
       kcal_per_100g: kcal,
       computed_kcal: 0,
       deviation_pct: 0,
       corrected: false,
-      flagged: kcal <= 0,
-      reason: kcal <= 0 ? "Keine Nährwerte hinterlegt" : null,
+      flagged: kcal <= 0 && !explicitZero,
+      reason: kcal <= 0 && !explicitZero ? "Keine Nährwerte hinterlegt" : null,
     };
   }
+
 
   // kcal fehlt komplett → aus Makros ableiten (sicherer Fallback).
   if (kcal <= 0) {

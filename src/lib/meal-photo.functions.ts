@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { FoodAmountUnit } from "@/lib/food-units";
+import { checkFoodEnergy } from "@/lib/food-energy";
 
 /**
  * AI-Gerichtserkennung per Foto + intelligentes Matching mit der
@@ -358,7 +359,12 @@ function toFoodMatch(row: CandidateRow, score: number): FoodMatch {
     name: row.name,
     source: row.source ?? "manual",
     verified_by_coach: !!row.verified_by_coach,
-    kcal_per_100g: Number(row.kcal_per_100g) || 0,
+    kcal_per_100g: checkFoodEnergy({
+      kcal_per_100g: Number(row.kcal_per_100g) || 0,
+      protein_per_100g: Number(row.protein_per_100g) || 0,
+      carbs_per_100g: Number(row.carbs_per_100g) || 0,
+      fat_per_100g: Number(row.fat_per_100g) || 0,
+    }).kcal_per_100g,
     protein_per_100g: Number(row.protein_per_100g) || 0,
     carbs_per_100g: Number(row.carbs_per_100g) || 0,
     fat_per_100g: Number(row.fat_per_100g) || 0,

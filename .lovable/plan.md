@@ -1,96 +1,48 @@
+## QA-Ergebnis (read-only, keine Änderungen)
 
-# Fuely OS – Plan
+### Was geprüft wurde
+Typecheck (tsgo), 26 Testdateien/185 Tests, DB-RPCs `search_nutrition_foods` / `search_nutrition_foods_variants` mit Ei/Eier/Vollei/Spiegelei/Rührei/Haferflocken, Energie-Plausibilisierung über alle 372 Katalogeinträge, Konsistenz der Code-Pfade (Suche, Barcode, Favoriten, Recent, KI-Schätzung), Console-Logs (leer).
 
-Vieles der Vision existiert bereits (globaler FAB, Chat mit Memory, Hint Engine für Protein/Wasser/Training/Check-in/Streaks/Motivation, Emotionen). Der Ausbau wird in fokussierte Phasen zerlegt, damit wir nach jeder Phase live testen können.
+### Bestätigte Fehler
 
-## Phase 1 – Präsenz & Chat Polish (klein, sofort)
+**1. Typecheck bricht mit 17 Fehlern — Schweregrad: hoch (Regression)**
+Nach dem Löschen von `src/routes/bulls.index.tsx` existiert die Route `/bulls` nicht mehr, es wird aber weiterhin dorthin navigiert:
+`src/components/bodyfuel/BullsRankingContent.tsx:150`, `src/routes/bulls.benchmarks.tsx:124`, `bulls.checkin.tsx:91`, `bulls.nutrition.index.tsx:53`, `bulls.performance.index.tsx:39`, `bulls.performance.tsx:18`, `bulls.photos.tsx:76`, `bulls.recovery.tsx:97`, `bulls.training.tsx:41`, `bulls.weight.tsx:61`, `coach.bulls-performance.tsx:46/49`, `smart.gift.$code.tsx:62/67/107/162`.
+Laufzeitfolge: Navigation ins Leere / Fehlerseite für Bulls-Athleten. Nicht durch den Ernährungs-Fix verursacht, aber aktuell offen.
 
-- **Idle-Varianten:** Zufälliger Wechsel zwischen atmen, blinzeln, schaukeln, hüpfen. Nach ~5 Min Inaktivität "Schlafen".
-- **Chat-Header** wie beschrieben: „👋 Hallo {Vorname}. Ich bin Fuely. Dein smarter Begleiter …" als Empty-State-Message.
-- **Schnellaktionen** auf die 6 gewünschten reduzieren (Ernährung analysieren, Trainingsplan erklären, Fortschritt bewerten, Tagesziele, Motivation, Challenge finden).
-- **Vibration** (`navigator.vibrate`) bei neuen Hints auf Mobile.
+**2. `src/routes/fuely.tsx:68` — Schweregrad: mittel**
+`navigate({ to: "/auth" })` ohne erforderlichen `search`-Parameter → Typfehler und potenziell fehlerhafter Redirect für nicht eingeloggte Nutzer.
 
-## Phase 2 – Daten-Toolbelt (Kern für „echte KI")
+**3. Test rot: `coach-followups.logic.test.ts` — Schweregrad: mittel**
+„deduplicates a customer who appears in several warning categories": erwartet 1 Draft, erhält 4. Die Dedupe-Logik in `src/features/coach-dashboard/lib/coach-followups.logic.ts` greift nicht. Fachlich: Coaches sehen denselben Kunden mehrfach in den Follow-ups. Unabhängig vom Ernährungs-Fix, aber real.
 
-Statt heute nur Kontext-Injection bekommt Fuely echte Tool-Calls über AI SDK (`google/gemini-3-flash-preview`). Jedes Tool ist ein Server-Fn hinter `requireSupabaseAuth`. Erste Tools:
+**4. Barcode-Scan kann nie erfolgreich sein — Schweregrad: mittel**
+`nutrition_foods` enthält **0 Datensätze mit `barcode`**. `lookupBarcode` (`src/lib/nutrition.functions.ts:198`) sucht ausschließlich mit `.eq("barcode", code)` und zusätzlich `safe_for_smart = true` → jeder Scan endet in „Barcode ist noch nicht im geprüften BodyFuel-Katalog". Zudem inkonsistent: die Suche filtert über `audit_status`, Barcode über `safe_for_smart` (156 der 372 Einträge sind nicht `safe_for_smart`).
 
-- `getProfile`, `getGoals`
-- `getTodayNutrition`, `getNutritionHistory(days)`
-- `getTodayTraining`, `getTrainingHistory(weeks)`, `getPRs`
-- `getMeasurements(range)`, `getBodyfatTrend`
-- `getStreaks`, `getChallenges`, `getBadges`, `getXp`
-- `getCheckinHistory`
-- `getCoachMessages`, `getCoachTasks`
-- `getTeamContext` (Position, Verein, Verletzungen)
-- `navigateTo(path)` — Rückgabewert wird clientseitig ausgeführt (Router navigate)
+**5. RPC-Fehler werden stillschweigend geschluckt — Schweregrad: mittel**
+In `runCatalogSearch` (`src/lib/nutrition.functions.ts`, ca. Z. 130-165) werden `direct.error` und `variantHits.error` nie geprüft; bei einem RPC-Fehler erscheint für den Nutzer nur „Keine Treffer in der Datenbank" statt einer Fehlermeldung — genau das Symptom, das ursprünglich gemeldet wurde, wäre wieder unsichtbar.
 
-Damit erfüllt sich Punkt 3 (voller Datenzugriff), 12 (Smart Navigation) und 15 (KI-Coach-Fragen) automatisch.
+**6. Suchrauschen durch Substring-Matching bei kurzen Begriffen — Schweregrad: niedrig/mittel**
+Beide RPCs matchen mit `search_text LIKE '%token%'`. Bei „ei" liefert die DB u. a. „Eisbergsalat", „Essig", „Beef Jerky", „Casein Protein Pulver". Das TS-Ranking (`rankFoodResults`) schiebt die richtigen Treffer nach oben, das Rauschen bleibt aber in der Liste und verdrängt bei `limit = 15` echte Treffer. Kein Wortgrenzen-/Trigram-Schwellenwert vorhanden.
 
-## Phase 3 – Tagesassistent & Abendreview
+**7. Dubletten im Ei-Datenbestand — Schweregrad: niedrig**
+„Ei (roh)" = 139 kcal und „Vollei (roh)" = 143 kcal sind derselbe Sachverhalt mit abweichenden Werten (beide `bodyfuel_verified`). Nutzer erhalten je nach Auswahl unterschiedliche Ergebnisse.
 
-- **Morning Brief** (07–10 Uhr, 1×/Tag): Server-Fn `getFuelyDailyBrief` sammelt Kcal-, Protein-, Wasser-, Schritt-Ziel, geplantes Training, Streak, offene Challenge. FAB öffnet automatisch eine Speech-Bubble „Guten Morgen 👋 …" mit CTA „Los geht's" → öffnet Chat mit Brief-Card.
-- **Evening Review** (20–22 Uhr, 1×/Tag): ✅/❌ Training, Wasser, Protein, Kalorien + XP + Badges des Tages.
-- **Dedup** wie bei bestehender Hint Engine via localStorage.
+**8. Restbestand unplausibler Datensätze — Schweregrad: niedrig**
+3 Einträge überschreiten die Toleranz (>25 % bzw. >25 kcal), 4 Einträge haben `kcal <= 0`. Die Anzeige korrigiert das zur Laufzeit (`checkFoodEnergy`), die DB-Werte bleiben aber falsch und werden von Pfaden ohne Validierung genutzt.
 
-## Phase 4 – Muster-Analyse (Proaktivität)
+**9. Validierungslücke außerhalb des Trackers — Schweregrad: mittel**
+`checkFoodEnergy` wird nur in `nutrition.functions.ts` (Suche, KI-Schätzung) und `useAddFoodFlow.ts` (Favoriten, Recent) angewandt. **Nicht** validiert werden: `src/features/nutrition-plan-ai/server/meal-computation.server.ts`, `src/lib/nutrition-engine.server.ts`, `src/lib/meal-photo.functions.ts`, `src/components/bodyfuel/MealBuilderDialog.tsx` (Totals) und `src/routes/coach.foods.tsx`. Smart-Pläne und Foto-Tracking können also weiterhin die unkorrigierten kcal verwenden.
 
-Neuer nächtlicher Job `analyze-fuely-patterns` (pg_cron → `/api/public/hooks/analyze-fuely-patterns`):
+### Als korrekt bestätigt
+- Ei/Eier/Vollei/Spiegelei/Rührei/Haferflocken liefern jeweils Treffer (Ei 20, Spiegelei 1, Rührei 1, Haferflocken 4); die geseedeten Verified-Einträge sind aktiv und plausibel.
+- `food-energy.test.ts` (6) und `food-search.logic.test.ts` grün; keine kcal-Ausreißer mehr bei Ei-/Haferflocken-Datensätzen (Kölln-Fall behoben).
+- Keine Console-Fehler in der Preview-Momentaufnahme.
 
-- Rolling 7/14/30-Tage-Vergleiche pro User
-- Regeln: Proteinziel N Tage verfehlt · Trainingslast steigt/fällt >20 % · Gewicht stagniert 14 Tage · Schlaf verschlechtert · Check-ins unregelmäßig · Beintraining ausgelassen · Muskelmasse fällt bei stabilem Gewicht
-- Ergebnis landet in neuer Tabelle `fuely_insights (user_id, kind, severity, message, cta_href, created_at, seen_at)`
-- FAB pollt `fuely_insights` (bereits vorhandener 5-Min-Tick) und zeigt höchste ungesehene Insight als Bubble.
+### Empfohlene Reihenfolge einer Behebung (separat zu beauftragen)
+1. `/bulls`-Navigationen (Punkt 1) + `fuely.tsx` (Punkt 2) — blockieren den Typecheck.
+2. RPC-Fehlerbehandlung (Punkt 5) und Barcode-Pfad (Punkt 4).
+3. Validierung auf Plan-/Foto-Pfade ausweiten (Punkt 9), Dubletten und DB-Ausreißer bereinigen (7, 8).
+4. Wortgrenzen-Ranking für kurze Begriffe (Punkt 6), Follow-up-Dedupe (Punkt 3).
 
-## Phase 5 – Celebration System
-
-- Zentraler Trigger `celebrateFuely({ kind, title, subtitle })` (neues Gewicht, Trainingsabschluss, Challenge, Badge, Level, Streak).
-- Vollbild-Overlay mit Konfetti + Fuely-Sprung (bereits vorhandene `fuely-celebrating` Asset) + optionaler Sound.
-- Hooks in `training_sessions` completion, `weekly_checkins`, Streak-Milestone, XP-Level-Up.
-
-## Phase 6 – Coach Intelligence
-
-Neues Coach-Dashboard-Widget „Fuely für Coaches" nutzt dieselbe Insights-Tabelle mit `scope = 'coach'`:
-
-- Häufige Fehlzeiten
-- Leistung sinkt (Trainingssession-Volume/RPE)
-- Ungewöhnliche Gewichtsänderung
-- Fehlende Check-ins
-- Verletzungsmeldung
-- Dauerhaft niedriges Protein / Hydration
-
-Nur im Performance-Bereich, respektiert Team-/Coach-Assignments.
-
-## Phase 7 – Sprache & Persönlichkeit
-
-- System-Prompt-Refactor: Persona-Sheet (locker, kurz, motivierend, nie belehrend), Emotions-Marker im Antwortformat (`__emotion:happy__` etc.), Frontend parst und setzt Fuely-Emotion im Chat-Header + FAB.
-- Sprachausgabe / Voice-Input später über Web Speech API (Phase 8+ / Zukunft).
-
-## Phase 8 – Zukunft (nicht jetzt)
-
-Apple Health / Google Fit / Garmin / Whoop / Oura / Kamera-/Video-/Lebensmittelerkennung — dedizierte Roadmap, sobald Kernphasen stehen.
-
----
-
-## Technischer Überblick
-
-- **Neue Server-Fns:** `src/lib/fuely-tools.functions.ts` (12–15 Tools), `src/lib/fuely-brief.functions.ts` (Morning/Evening), `src/lib/fuely-insights.functions.ts`.
-- **Neuer Cron-Endpoint:** `src/routes/api/public/hooks/analyze-fuely-patterns.ts` (nightly).
-- **Neue Tabelle:** `fuely_insights` mit RLS (User sieht eigene; Coach sieht Insights zugewiesener Athleten via `has_coach_access`).
-- **AI Layer:** `src/lib/fuely.functions.ts` erweitert um AI-SDK-`tool()`-Definitionen + Gemini-3-Streaming.
-- **FAB/Engine:** bereits vorhanden, wird um Idle-Zyklen, Vibration, Insights-Poll und Celebrations erweitert.
-- **Chat UI:** Header-Copy, Quick Actions, Emotions-Parser.
-
----
-
-## Reihenfolge & Rückfrage
-
-Ich schlage vor, wir gehen **1 → 2 → 3 → 4** zuerst (das ist der Kern von „Fuely OS"), danach 5–7. **Phase 2 (Tools) ist die eigentliche Aufwertung** — erst damit hört Fuely auf, generisch zu antworten, und wird zum echten Coach.
-
-Bitte kurz bestätigen:
-
-1. **Reihenfolge okay?** (1→2→3→4→5→6→7) Oder willst du eine Phase vorziehen (z. B. Celebration/Coach zuerst)?
-2. **Ton für Fuely:** Duzen, locker, deutsche Sprüche mit gelegentlichem Emoji — passt das oder soll er nüchterner klingen?
-3. **Sound bei Celebrations:** ja / nein / erstmal aus, später Toggle im Profil?
-
-Danach starte ich mit Phase 1 + 2 in einem Rutsch.
-
+Es wurden keine Dateien geändert.

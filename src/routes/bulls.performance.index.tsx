@@ -36,7 +36,7 @@ function PerformanceIndex() {
 
   return (
     <div className="space-y-6">
-      <Link to="/bulls" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-bulls-red">
+      <Link to="/dashboard" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-bulls-red">
         ← Zurück zum Hub
       </Link>
 

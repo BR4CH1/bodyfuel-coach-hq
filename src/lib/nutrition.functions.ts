@@ -52,6 +52,8 @@ export type FoodResult = {
   /** true, wenn der kcal-Wert unplausibel war und aus den Makros korrigiert wurde. */
   energy_flagged?: boolean;
   energy_note?: string | null;
+  /** Synonyme aus dem Katalog — nur für Relevanz-Ranking, nicht für die Anzeige. */
+  aliases?: string[] | null;
 };
 
 
@@ -72,6 +74,7 @@ function mapNutritionFoodRow(r: any): FoodResult {
   return {
     id: r.id ?? null,
     name: String(r.name ?? ""),
+    aliases: Array.isArray(r.aliases) ? r.aliases.map((a: unknown) => String(a ?? "")) : null,
     brand: r.brand ?? (source === "open_food_facts" ? (r.source_name ?? null) : null),
     barcode: r.barcode ?? (source === "open_food_facts" ? (r.source_id ?? null) : null),
     unit,
@@ -155,8 +158,13 @@ async function runCatalogSearch(
       : Promise.resolve({ data: [], error: null }),
   ]);
 
+  // RPC-Fehler dürfen nicht als "keine Treffer" erscheinen.
+  const rpcError = direct?.error ?? variantHits?.error;
+  if (rpcError) throw new Error(`Lebensmittelsuche fehlgeschlagen: ${rpcError.message}`);
+
   const catalogRows = [...((direct?.data ?? []) as any[]), ...((variantHits?.data ?? []) as any[])];
   const catalog = catalogRows.map(mapNutritionFoodRow);
+
 
   const normalizedVariants = variants.map(normalizeFoodTerm);
   const own = ((ownFoods?.data ?? []) as any[])
@@ -204,10 +212,12 @@ export const lookupBarcode = createServerFn({ method: "POST" })
       .select(FOOD_SEARCH_SELECT)
       .eq("barcode", code)
       .eq("is_active", true)
-      .eq("safe_for_smart", true)
+      .neq("audit_status", "needs_review")
       .maybeSingle();
-    if (error || !row) {
+    if (error) throw new Error(`Barcode-Suche fehlgeschlagen: ${error.message}`);
+    if (!row) {
       throw new Error("Barcode ist noch nicht im geprüften BodyFuel-Katalog");
+
     }
     return mapNutritionFoodRow(row);
   });
