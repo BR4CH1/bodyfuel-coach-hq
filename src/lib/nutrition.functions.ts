@@ -155,8 +155,13 @@ async function runCatalogSearch(
       : Promise.resolve({ data: [], error: null }),
   ]);
 
+  // RPC-Fehler dürfen nicht als "keine Treffer" erscheinen.
+  const rpcError = direct?.error ?? variantHits?.error;
+  if (rpcError) throw new Error(`Lebensmittelsuche fehlgeschlagen: ${rpcError.message}`);
+
   const catalogRows = [...((direct?.data ?? []) as any[]), ...((variantHits?.data ?? []) as any[])];
   const catalog = catalogRows.map(mapNutritionFoodRow);
+
 
   const normalizedVariants = variants.map(normalizeFoodTerm);
   const own = ((ownFoods?.data ?? []) as any[])
