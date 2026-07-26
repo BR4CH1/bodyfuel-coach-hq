@@ -717,25 +717,7 @@ export const searchFoodsDb = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { query: string; limit?: number }) => d)
   .handler(async ({ data, context }): Promise<FoodResult[]> => {
-    const q = data.query.trim();
-    if (!q) return [];
     const limit = Math.min(50, Math.max(1, data.limit ?? 15));
-    const { data: rows, error } = await (context.supabase.rpc as any)("search_nutrition_foods", {
-      _q: q,
-      _max_results: limit,
-    });
-    if (error) return [];
-    const term = q.toLowerCase();
-    const mapped: FoodResult[] = ((rows ?? []) as any[]).map(mapNutritionFoodRow);
-    mapped.sort((a, b) => {
-      const pa = sourcePriority(a.source);
-      const pb = sourcePriority(b.source);
-      if (pa !== pb) return pa - pb;
-      const an = a.name.toLowerCase();
-      const bn = b.name.toLowerCase();
-      const ax = an === term ? 0 : an.startsWith(term) ? 1 : 2;
-      const bx = bn === term ? 0 : bn.startsWith(term) ? 1 : 2;
-      return ax - bx || scoreResult(b, q) - scoreResult(a, q);
-    });
-    return mapped.slice(0, limit);
+    return runCatalogSearch(context.supabase, data.query, limit, context.userId);
   });
+
