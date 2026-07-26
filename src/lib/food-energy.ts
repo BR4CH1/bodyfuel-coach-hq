@@ -113,12 +113,9 @@ export function checkFoodEnergy(input: EnergyCheckInput): EnergyCheckResult {
 }
 
 /** Wendet die Prüfung auf ein Objekt mit *_per_100g-Feldern an. */
-export function withValidatedEnergy<
-  T extends EnergyCheckInput & {
-    energy_flagged?: boolean;
-    energy_note?: string | null;
-  },
->(food: T): T {
+export function withValidatedEnergy<T extends EnergyCheckInput>(
+  food: T,
+): T & { energy_flagged: boolean; energy_note: string | null } {
   const result = checkFoodEnergy(food);
   return {
     ...food,
@@ -127,3 +124,4 @@ export function withValidatedEnergy<
     energy_note: result.reason,
   };
 }
+
