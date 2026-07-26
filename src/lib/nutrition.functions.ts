@@ -685,6 +685,14 @@ Antworte NUR mit gültigem JSON:
 
     const unit: FoodAmountUnit = parsed.unit === "ml" ? "ml" : "g";
     const num = (v: any) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+    const macros = {
+      protein_per_100g: num(parsed.protein_per_100g),
+      carbs_per_100g: num(parsed.carbs_per_100g),
+      fat_per_100g: num(parsed.fat_per_100g),
+      fiber_per_100g: parsed.fiber_per_100g == null ? null : num(parsed.fiber_per_100g),
+    };
+    // Auch KI-Werte laufen durch die zentrale Energie-Plausibilisierung.
+    const energy = checkFoodEnergy({ kcal_per_100g: num(parsed.kcal_per_100g), ...macros });
     return {
       id: null,
       name: String(parsed.name || query).slice(0, 120),
@@ -692,19 +700,19 @@ Antworte NUR mit gültigem JSON:
       barcode: null,
       unit,
       density_g_per_ml: null,
-      kcal_per_100g: num(parsed.kcal_per_100g),
-      protein_per_100g: num(parsed.protein_per_100g),
-      carbs_per_100g: num(parsed.carbs_per_100g),
-      fat_per_100g: num(parsed.fat_per_100g),
-      fiber_per_100g: parsed.fiber_per_100g == null ? null : num(parsed.fiber_per_100g),
+      kcal_per_100g: energy.kcal_per_100g,
+      ...macros,
       serving_g: null,
       serving_label: `KI-Schätzung pro 100 ${unit}`,
       source: "ai_estimate",
       verified_by_coach: false,
       image_url: null,
       image_source: null,
+      energy_flagged: energy.flagged,
+      energy_note: energy.reason,
     };
   });
+
 
 /* ----------- BodyFuel Lebensmittel-DB (BLS 4.0 + verified) ----------- */
 
