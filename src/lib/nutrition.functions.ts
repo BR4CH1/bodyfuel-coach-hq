@@ -49,7 +49,11 @@ export type FoodResult = {
   verified_by_coach?: boolean;
   image_url?: string | null;
   image_source?: string | null;
+  /** true, wenn der kcal-Wert unplausibel war und aus den Makros korrigiert wurde. */
+  energy_flagged?: boolean;
+  energy_note?: string | null;
 };
+
 
 function mapNutritionFoodRow(r: any): FoodResult {
   const unit: FoodAmountUnit = r.unit_type === "ml" ? "ml" : "g";
