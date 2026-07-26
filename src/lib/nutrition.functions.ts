@@ -223,22 +223,9 @@ export const searchFoods = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { query: string }) => d)
   .handler(async ({ data, context }): Promise<FoodResult[]> => {
-    const q = data.query.trim();
-    if (!q) return [];
-    const { data: rows, error } = await (context.supabase.rpc as any)("search_nutrition_foods", {
-      _q: q,
-      _max_results: 50,
-    });
-    if (error) return [];
-    return ((rows ?? []) as any[])
-      .map(mapNutritionFoodRow)
-      .sort(
-        (a, b) =>
-          sourcePriority(a.source) - sourcePriority(b.source) ||
-          scoreResult(b, q) - scoreResult(a, q),
-      )
-      .slice(0, 50);
+    return runCatalogSearch(context.supabase, data.query, 50, context.userId);
   });
+
 
 /* ----------- Targets (coach only) ----------- */
 
