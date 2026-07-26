@@ -129,24 +129,35 @@ export function useAddFoodFlow({
     }>;
 
     setFavorites(
-      rows.map((row) => ({
-        fav_id: row.id,
-        id: row.food_id,
-        name: row.name,
-        brand: row.brand,
-        barcode: row.barcode,
-        serving_g: row.serving_g,
-        serving_label: row.serving_label,
-        kcal_per_100g: Number(row.kcal_per_100g),
-        protein_per_100g: Number(row.protein_per_100g),
-        carbs_per_100g: Number(row.carbs_per_100g),
-        fat_per_100g: Number(row.fat_per_100g),
-        unit: row.reference_unit === "ml" ? "ml" : "g",
-        density_g_per_ml: row.density_g_per_ml == null ? null : Number(row.density_g_per_ml),
-        last_amount: row.last_amount != null ? Number(row.last_amount) : null,
-        source: (row.source as FoodResult["source"]) ?? null,
-      })),
+      rows.map((row) => {
+        const energy = checkFoodEnergy({
+          kcal_per_100g: Number(row.kcal_per_100g),
+          protein_per_100g: Number(row.protein_per_100g),
+          carbs_per_100g: Number(row.carbs_per_100g),
+          fat_per_100g: Number(row.fat_per_100g),
+        });
+        return {
+          fav_id: row.id,
+          id: row.food_id,
+          name: row.name,
+          brand: row.brand == null ? null : String(row.brand),
+          barcode: row.barcode,
+          serving_g: row.serving_g,
+          serving_label: row.serving_label,
+          kcal_per_100g: energy.kcal_per_100g,
+          protein_per_100g: Number(row.protein_per_100g),
+          carbs_per_100g: Number(row.carbs_per_100g),
+          fat_per_100g: Number(row.fat_per_100g),
+          unit: row.reference_unit === "ml" ? "ml" : ("g" as FoodUnit),
+          density_g_per_ml: row.density_g_per_ml == null ? null : Number(row.density_g_per_ml),
+          last_amount: row.last_amount != null ? Number(row.last_amount) : null,
+          source: (row.source as FoodResult["source"]) ?? null,
+          energy_flagged: energy.flagged,
+          energy_note: energy.reason,
+        };
+      }),
     );
+
   }, [userId]);
 
   const toggleFavorite = useCallback(
