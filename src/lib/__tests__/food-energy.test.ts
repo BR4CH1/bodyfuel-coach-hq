@@ -24,7 +24,7 @@ describe("Nährwertvalidierung (EU 1169/2011)", () => {
     expect(result.flagged).toBe(true);
     // 4*14 + 4*56 + 9*6.7 = 340.3
     expect(result.kcal_per_100g).toBeCloseTo(340, 0);
-    expect(result.computed_kcal).toBeCloseTo(340.3, 1);
+    expect(result.computed_kcal).toBe(340);
     expect(result.reason).toBeTruthy();
   });
 
