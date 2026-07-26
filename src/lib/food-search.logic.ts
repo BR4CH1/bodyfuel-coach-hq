@@ -213,25 +213,37 @@ export function foodSourcePriority(source: string | null | undefined): number {
  * Relevanzscore eines Treffers. Höher = besser.
  * Exakte Namenstreffer und generische (markenlose) Grundlebensmittel gewinnen.
  */
+/** Wortgrenzen-Treffer: verhindert, dass "ei" in "Eisbergsalat" zählt. */
+function containsWord(haystack: string, needle: string): boolean {
+  if (!needle) return false;
+  return new RegExp(`(^|\\s)${needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(\\s|$)`).test(haystack);
+}
+
+function startsWithWord(haystack: string, needle: string): boolean {
+  return haystack === needle || haystack.startsWith(`${needle} `);
+}
+
 export function scoreFoodMatch(food: RankableFood, query: string): number {
   const term = normalizeFoodTerm(query);
   const variants = expandFoodQuery(query);
   const name = normalizeFoodTerm(food.name);
   // Klammerzusätze wie "(roh)" für den Vergleich ausblenden
   const bareName = normalizeFoodTerm(String(food.name).replace(/\([^)]*\)/g, ""));
-  const nameTokens = new Set(name.split(/\s+/).filter(Boolean));
+  const nameTokens = name.split(/\s+/).filter(Boolean);
+  const tokenSet = new Set(nameTokens);
 
   let score = 0;
   if (name === term || bareName === term) score += 120;
   else if (variants.some((v) => bareName === v || name === v)) score += 100;
-  else if (name.startsWith(`${term} `) || bareName.startsWith(`${term} `)) score += 80;
-  else if (name.startsWith(term)) score += 70;
-  else if (nameTokens.has(term) || variants.some((v) => nameTokens.has(v))) score += 60;
-  else if (variants.some((v) => name.startsWith(v))) score += 45;
-  else if (name.includes(` ${term}`)) score += 30;
-  else if (name.includes(term)) score += 12;
-  else if (variants.some((v) => name.includes(v))) score += 8;
-  else if ([...nameTokens].some((token) => isTypoMatch(token, term))) score += 25;
+  else if (startsWithWord(name, term) || startsWithWord(bareName, term)) score += 80;
+  else if (tokenSet.has(term)) score += 60;
+  else if (variants.some((v) => startsWithWord(name, v) || startsWithWord(bareName, v))) score += 50;
+  else if (variants.some((v) => tokenSet.has(v))) score += 45;
+  else if (containsWord(name, term)) score += 30;
+  else if (variants.some((v) => containsWord(name, v))) score += 20;
+  else if (nameTokens.some((token) => isTypoMatch(token, term))) score += 25;
+  else if (name.includes(term) && term.length >= 5) score += 10;
+  else return -100; // kein sinnvoller Bezug zur Suche
 
   // Quellenqualität
   score += Math.max(0, 24 - foodSourcePriority(food.source) * 6);
@@ -246,6 +258,7 @@ export function scoreFoodMatch(food: RankableFood, query: string): number {
 
   return score;
 }
+
 
 export function rankFoodResults<T extends RankableFood>(results: T[], query: string): T[] {
   return [...results]
