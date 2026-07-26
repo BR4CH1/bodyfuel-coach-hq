@@ -313,10 +313,18 @@ export function useAddFoodFlow({
         const servingAmount = Number(row.serving_amount) || Number(row.serving_g) || 0;
         if (servingAmount <= 0) continue;
         const factor = 100 / servingAmount;
+        // Der gespeicherte Tracking-Eintrag bleibt unverändert; nur der daraus
+        // abgeleitete Wiederverwendungs-Vorschlag wird plausibilisiert.
+        const energy = checkFoodEnergy({
+          kcal_per_100g: Number(row.kcal) * factor,
+          protein_per_100g: Number(row.protein_g) * factor,
+          carbs_per_100g: Number(row.carbs_g) * factor,
+          fat_per_100g: Number(row.fat_g) * factor,
+        });
         recent.push({
           id: row.food_id,
           name: row.name,
-          brand: row.brand,
+          brand: row.brand == null ? null : String(row.brand),
           barcode: row.barcode,
           serving_g: null,
           serving_label: null,
@@ -325,13 +333,16 @@ export function useAddFoodFlow({
             row.amount_unit === "ml" && Number(row.serving_g) > 0
               ? Number(row.serving_g) / servingAmount
               : null,
-          kcal_per_100g: Number(row.kcal) * factor,
+          kcal_per_100g: energy.kcal_per_100g,
           protein_per_100g: Number(row.protein_g) * factor,
           carbs_per_100g: Number(row.carbs_g) * factor,
           fat_per_100g: Number(row.fat_g) * factor,
           last_amount: servingAmount,
           source: (row.source as FoodResult["source"]) ?? null,
+          energy_flagged: energy.flagged,
+          energy_note: energy.reason,
         });
+
         if (recent.length >= 15) break;
       }
       setRecentFoods(recent);
