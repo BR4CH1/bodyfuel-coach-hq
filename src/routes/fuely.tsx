@@ -65,7 +65,7 @@ function PersonalFuelyPage() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
       if (!data.user) {
-        navigate({ to: "/auth", search: { redirect: "/fuely" } });
+        navigate({ to: "/auth", search: { next: "/fuely" } });
         return;
       }
       setUserId(data.user.id);
