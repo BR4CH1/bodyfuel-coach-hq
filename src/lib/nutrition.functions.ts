@@ -104,6 +104,8 @@ const FOOD_SEARCH_SELECT =
 function sourcePriority(source: FoodSource | undefined): number {
   return foodSourcePriority(source ?? null);
 }
+void sourcePriority;
+
 
 function dedupeFoodResults(results: FoodResult[]): FoodResult[] {
   const seen = new Set<string>();
