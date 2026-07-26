@@ -11,6 +11,8 @@ import { toast } from "sonner";
 
 import { clearFormDraft, useFormDraft } from "@/hooks/use-form-draft";
 import { supabase } from "@/integrations/supabase/client";
+import { checkFoodEnergy } from "@/lib/food-energy";
+
 import { listCustomMeals, type CustomMeal } from "@/lib/custom-meals.functions";
 import {
   estimateFoodFromText,
@@ -129,24 +131,35 @@ export function useAddFoodFlow({
     }>;
 
     setFavorites(
-      rows.map((row) => ({
-        fav_id: row.id,
-        id: row.food_id,
-        name: row.name,
-        brand: row.brand,
-        barcode: row.barcode,
-        serving_g: row.serving_g,
-        serving_label: row.serving_label,
-        kcal_per_100g: Number(row.kcal_per_100g),
-        protein_per_100g: Number(row.protein_per_100g),
-        carbs_per_100g: Number(row.carbs_per_100g),
-        fat_per_100g: Number(row.fat_per_100g),
-        unit: row.reference_unit === "ml" ? "ml" : "g",
-        density_g_per_ml: row.density_g_per_ml == null ? null : Number(row.density_g_per_ml),
-        last_amount: row.last_amount != null ? Number(row.last_amount) : null,
-        source: (row.source as FoodResult["source"]) ?? null,
-      })),
+      rows.map((row) => {
+        const energy = checkFoodEnergy({
+          kcal_per_100g: Number(row.kcal_per_100g),
+          protein_per_100g: Number(row.protein_per_100g),
+          carbs_per_100g: Number(row.carbs_per_100g),
+          fat_per_100g: Number(row.fat_per_100g),
+        });
+        return {
+          fav_id: row.id,
+          id: row.food_id,
+          name: row.name,
+          brand: row.brand == null ? null : String(row.brand),
+          barcode: row.barcode,
+          serving_g: row.serving_g,
+          serving_label: row.serving_label,
+          kcal_per_100g: energy.kcal_per_100g,
+          protein_per_100g: Number(row.protein_per_100g),
+          carbs_per_100g: Number(row.carbs_per_100g),
+          fat_per_100g: Number(row.fat_per_100g),
+          unit: row.reference_unit === "ml" ? "ml" : ("g" as FoodUnit),
+          density_g_per_ml: row.density_g_per_ml == null ? null : Number(row.density_g_per_ml),
+          last_amount: row.last_amount != null ? Number(row.last_amount) : null,
+          source: (row.source as FoodResult["source"]) ?? null,
+          energy_flagged: energy.flagged,
+          energy_note: energy.reason,
+        };
+      }),
     );
+
   }, [userId]);
 
   const toggleFavorite = useCallback(
@@ -300,10 +313,18 @@ export function useAddFoodFlow({
         const servingAmount = Number(row.serving_amount) || Number(row.serving_g) || 0;
         if (servingAmount <= 0) continue;
         const factor = 100 / servingAmount;
+        // Der gespeicherte Tracking-Eintrag bleibt unverändert; nur der daraus
+        // abgeleitete Wiederverwendungs-Vorschlag wird plausibilisiert.
+        const energy = checkFoodEnergy({
+          kcal_per_100g: Number(row.kcal) * factor,
+          protein_per_100g: Number(row.protein_g) * factor,
+          carbs_per_100g: Number(row.carbs_g) * factor,
+          fat_per_100g: Number(row.fat_g) * factor,
+        });
         recent.push({
           id: row.food_id,
           name: row.name,
-          brand: row.brand,
+          brand: row.brand == null ? null : String(row.brand),
           barcode: row.barcode,
           serving_g: null,
           serving_label: null,
@@ -312,13 +333,16 @@ export function useAddFoodFlow({
             row.amount_unit === "ml" && Number(row.serving_g) > 0
               ? Number(row.serving_g) / servingAmount
               : null,
-          kcal_per_100g: Number(row.kcal) * factor,
+          kcal_per_100g: energy.kcal_per_100g,
           protein_per_100g: Number(row.protein_g) * factor,
           carbs_per_100g: Number(row.carbs_g) * factor,
           fat_per_100g: Number(row.fat_g) * factor,
           last_amount: servingAmount,
           source: (row.source as FoodResult["source"]) ?? null,
+          energy_flagged: energy.flagged,
+          energy_note: energy.reason,
         });
+
         if (recent.length >= 15) break;
       }
       setRecentFoods(recent);

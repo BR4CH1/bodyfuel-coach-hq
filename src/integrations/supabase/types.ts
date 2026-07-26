@@ -10233,6 +10233,64 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      search_nutrition_foods_variants: {
+        Args: { _max_results?: number; _terms: string[] }
+        Returns: {
+          alcohol_per_100g: number | null
+          aliases: string[] | null
+          audit_status: string | null
+          audited_at: string | null
+          barcode: string | null
+          brand: string | null
+          carbs_per_100g: number | null
+          category: string | null
+          citation: string | null
+          country_codes: string[] | null
+          created_at: string | null
+          default_state:
+            | Database["public"]["Enums"]["nutrition_food_state"]
+            | null
+          density_g_per_ml: number | null
+          fat_per_100g: number | null
+          fiber_per_100g: number | null
+          id: string | null
+          image_source: string | null
+          image_url: string | null
+          imported_at: string | null
+          is_active: boolean | null
+          kcal_per_100g: number | null
+          language_code: string | null
+          license: string | null
+          macro_reference_unit: string | null
+          name: string | null
+          organic_acids_per_100g: number | null
+          polyols_per_100g: number | null
+          protein_per_100g: number | null
+          quality_score: number | null
+          safe_for_smart: boolean | null
+          salt_per_100g: number | null
+          saturated_fat_per_100g: number | null
+          search_text: string | null
+          sodium_mg_per_100g: number | null
+          source: Database["public"]["Enums"]["nutrition_food_source"] | null
+          source_id: string | null
+          source_name: string | null
+          source_updated_at: string | null
+          source_verified: boolean | null
+          sugar_per_100g: number | null
+          text_id: string | null
+          unit_type: Database["public"]["Enums"]["nutrition_food_unit"] | null
+          updated_at: string | null
+          verified_at: string | null
+          verified_by_coach: boolean | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "nutrition_foods_public"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       unaccent: { Args: { "": string }; Returns: string }

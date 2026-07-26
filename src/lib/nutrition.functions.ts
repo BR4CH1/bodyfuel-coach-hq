@@ -2,6 +2,14 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertCoachOrOrgStaffForAthlete } from "@/lib/organizations/org-coach-access";
 import type { FoodAmountUnit } from "@/lib/food-units";
+import { checkFoodEnergy } from "@/lib/food-energy";
+import {
+  expandFoodQuery,
+  normalizeFoodTerm,
+  rankFoodResults,
+  foodSourcePriority,
+} from "@/lib/food-search.logic";
+
 
 export type FoodSource =
   | "bls_4_0"
@@ -41,20 +49,35 @@ export type FoodResult = {
   verified_by_coach?: boolean;
   image_url?: string | null;
   image_source?: string | null;
+  /** true, wenn der kcal-Wert unplausibel war und aus den Makros korrigiert wurde. */
+  energy_flagged?: boolean;
+  energy_note?: string | null;
 };
+
 
 function mapNutritionFoodRow(r: any): FoodResult {
   const unit: FoodAmountUnit = r.unit_type === "ml" ? "ml" : "g";
   const source = r.source as FoodSource;
+  const energy = checkFoodEnergy({
+    kcal_per_100g: Number(r.kcal_per_100g),
+    protein_per_100g: Number(r.protein_per_100g),
+    carbs_per_100g: Number(r.carbs_per_100g),
+    fat_per_100g: Number(r.fat_per_100g),
+    fiber_per_100g: r.fiber_per_100g == null ? null : Number(r.fiber_per_100g),
+    alcohol_per_100g: r.alcohol_per_100g == null ? null : Number(r.alcohol_per_100g),
+    polyols_per_100g: r.polyols_per_100g == null ? null : Number(r.polyols_per_100g),
+    organic_acids_per_100g:
+      r.organic_acids_per_100g == null ? null : Number(r.organic_acids_per_100g),
+  });
   return {
     id: r.id ?? null,
-    name: r.name,
+    name: String(r.name ?? ""),
     brand: r.brand ?? (source === "open_food_facts" ? (r.source_name ?? null) : null),
     barcode: r.barcode ?? (source === "open_food_facts" ? (r.source_id ?? null) : null),
     unit,
     density_g_per_ml:
       unit === "ml" && Number(r.density_g_per_ml) > 0 ? Number(r.density_g_per_ml) : null,
-    kcal_per_100g: Number(r.kcal_per_100g) || 0,
+    kcal_per_100g: energy.kcal_per_100g,
     protein_per_100g: Number(r.protein_per_100g) || 0,
     carbs_per_100g: Number(r.carbs_per_100g) || 0,
     fat_per_100g: Number(r.fat_per_100g) || 0,
@@ -70,59 +93,104 @@ function mapNutritionFoodRow(r: any): FoodResult {
     verified_by_coach: !!r.verified_by_coach,
     image_url: r.image_url ?? null,
     image_source: r.image_source ?? null,
+    energy_flagged: energy.flagged,
+    energy_note: energy.reason,
   };
 }
 
 const FOOD_SEARCH_SELECT =
   "id,name,aliases,source,source_id,source_name,brand,barcode,image_url,image_source,kcal_per_100g,protein_per_100g,carbs_per_100g,fat_per_100g,fiber_per_100g,sugar_per_100g,saturated_fat_per_100g,salt_per_100g,sodium_mg_per_100g,verified_by_coach,unit_type,default_state,density_g_per_ml,is_active,safe_for_smart";
 
-function scoreResult(r: FoodResult, q: string): number {
-  const name = r.name.toLowerCase();
-  const term = q.toLowerCase();
-  const compactName = compactFoodTerm(name);
-  const compactTerm = compactFoodTerm(term);
-  let score = 0;
-  if (name === term) score += 100;
-  else if (compactName === compactTerm) score += 95;
-  else if (name.startsWith(term)) score += 60;
-  else if (compactName.startsWith(compactTerm)) score += 55;
-  else if (name.includes(term)) score += 30;
-  else if (compactName.includes(compactTerm)) score += 25;
-  if (r.serving_g) score += 15; // hat Portionsgröße
-  if (r.protein_per_100g > 0 && r.carbs_per_100g >= 0 && r.fat_per_100g >= 0) score += 10;
-  if (r.brand) score += 3;
-  // Kürzere Namen meist generischer / relevanter
-  score -= Math.min(20, Math.max(0, name.length - term.length) / 4);
-  return score;
+
+
+function dedupeFoodResults(results: FoodResult[]): FoodResult[] {
+  const seen = new Set<string>();
+  const out: FoodResult[] = [];
+  for (const food of results) {
+    const key = food.id
+      ? `id:${food.id}`
+      : `n:${normalizeFoodTerm(food.name)}|${normalizeFoodTerm(food.brand ?? "")}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(food);
+  }
+  return out;
 }
 
-function normalizeFoodTerm(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/ä/g, "ae")
-    .replace(/ö/g, "oe")
-    .replace(/ü/g, "ue")
-    .replace(/ß/g, "ss")
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
+/**
+ * Einheitliche Katalogsuche für Tracker, Coach-Tools und Planer.
+ *
+ * 1) Direkte Suche mit dem Originalbegriff
+ * 2) Synonym-/Plural-Varianten über search_nutrition_foods_variants
+ * 3) Eigene Lebensmittel des Users (user_foods)
+ * 4) Zentrale Nährwertprüfung + Relevanzranking
+ */
+async function runCatalogSearch(
+  supabase: any,
+  query: string,
+  limit: number,
+  userId?: string,
+): Promise<FoodResult[]> {
+  const q = query.trim();
+  if (!q) return [];
+  const variants = expandFoodQuery(q);
+  const fetchLimit = Math.min(100, Math.max(limit, 50));
+
+  const [direct, variantHits, ownFoods] = await Promise.all([
+    supabase.rpc("search_nutrition_foods", { _q: q, _max_results: fetchLimit }),
+    variants.length > 1
+      ? supabase.rpc("search_nutrition_foods_variants", {
+          _terms: variants,
+          _max_results: fetchLimit,
+        })
+      : Promise.resolve({ data: [], error: null }),
+    userId
+      ? supabase
+          .from("user_foods")
+          .select(
+            "id,name,brand,barcode,kcal,protein_g,carbohydrates_g,fat_g,fiber_g,sugar_g,saturated_fat_g,salt_g,sodium_mg",
+          )
+          .eq("user_id", userId)
+          .limit(25)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  const catalogRows = [...((direct?.data ?? []) as any[]), ...((variantHits?.data ?? []) as any[])];
+  const catalog = catalogRows.map(mapNutritionFoodRow);
+
+  const normalizedVariants = variants.map(normalizeFoodTerm);
+  const own = ((ownFoods?.data ?? []) as any[])
+    .filter((row) => {
+      const haystack = normalizeFoodTerm(`${row.name ?? ""} ${row.brand ?? ""}`);
+      return normalizedVariants.some((variant) =>
+        variant.split(/\s+/).every((token) => token && haystack.includes(token)),
+      );
+    })
+    .map((row) =>
+      mapNutritionFoodRow({
+        id: row.id,
+        name: row.name,
+        brand: row.brand,
+        barcode: row.barcode,
+        source: "manual",
+        unit_type: "raw",
+        kcal_per_100g: row.kcal,
+        protein_per_100g: row.protein_g,
+        carbs_per_100g: row.carbohydrates_g,
+        fat_per_100g: row.fat_g,
+        fiber_per_100g: row.fiber_g,
+        sugar_per_100g: row.sugar_g,
+        saturated_fat_per_100g: row.saturated_fat_g,
+        salt_per_100g: row.salt_g,
+        sodium_mg_per_100g: row.sodium_mg,
+      }),
+    );
+
+  const merged = dedupeFoodResults([...catalog, ...own]);
+  return rankFoodResults(merged, q).slice(0, limit);
 }
 
-function compactFoodTerm(value: string): string {
-  return normalizeFoodTerm(value).replace(/\s+/g, "");
-}
 
-function sourcePriority(source: FoodSource | undefined): number {
-  const prio: Record<string, number> = {
-    bodyfuel_verified: 0,
-    bls_4_0: 1,
-    open_food_facts: 2,
-    usda: 3,
-    ai_estimate: 9,
-  };
-  return prio[source ?? ""] ?? 5;
-}
 
 /** Barcode lookup ausschließlich im intern importierten und freigegebenen Katalog. */
 export const lookupBarcode = createServerFn({ method: "POST" })
@@ -153,22 +221,9 @@ export const searchFoods = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { query: string }) => d)
   .handler(async ({ data, context }): Promise<FoodResult[]> => {
-    const q = data.query.trim();
-    if (!q) return [];
-    const { data: rows, error } = await (context.supabase.rpc as any)("search_nutrition_foods", {
-      _q: q,
-      _max_results: 50,
-    });
-    if (error) return [];
-    return ((rows ?? []) as any[])
-      .map(mapNutritionFoodRow)
-      .sort(
-        (a, b) =>
-          sourcePriority(a.source) - sourcePriority(b.source) ||
-          scoreResult(b, q) - scoreResult(a, q),
-      )
-      .slice(0, 50);
+    return runCatalogSearch(context.supabase, data.query, 50, context.userId);
   });
+
 
 /* ----------- Targets (coach only) ----------- */
 
@@ -630,6 +685,14 @@ Antworte NUR mit gültigem JSON:
 
     const unit: FoodAmountUnit = parsed.unit === "ml" ? "ml" : "g";
     const num = (v: any) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+    const macros = {
+      protein_per_100g: num(parsed.protein_per_100g),
+      carbs_per_100g: num(parsed.carbs_per_100g),
+      fat_per_100g: num(parsed.fat_per_100g),
+      fiber_per_100g: parsed.fiber_per_100g == null ? null : num(parsed.fiber_per_100g),
+    };
+    // Auch KI-Werte laufen durch die zentrale Energie-Plausibilisierung.
+    const energy = checkFoodEnergy({ kcal_per_100g: num(parsed.kcal_per_100g), ...macros });
     return {
       id: null,
       name: String(parsed.name || query).slice(0, 120),
@@ -637,19 +700,19 @@ Antworte NUR mit gültigem JSON:
       barcode: null,
       unit,
       density_g_per_ml: null,
-      kcal_per_100g: num(parsed.kcal_per_100g),
-      protein_per_100g: num(parsed.protein_per_100g),
-      carbs_per_100g: num(parsed.carbs_per_100g),
-      fat_per_100g: num(parsed.fat_per_100g),
-      fiber_per_100g: parsed.fiber_per_100g == null ? null : num(parsed.fiber_per_100g),
+      kcal_per_100g: energy.kcal_per_100g,
+      ...macros,
       serving_g: null,
       serving_label: `KI-Schätzung pro 100 ${unit}`,
       source: "ai_estimate",
       verified_by_coach: false,
       image_url: null,
       image_source: null,
+      energy_flagged: energy.flagged,
+      energy_note: energy.reason,
     };
   });
+
 
 /* ----------- BodyFuel Lebensmittel-DB (BLS 4.0 + verified) ----------- */
 
@@ -660,25 +723,7 @@ export const searchFoodsDb = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { query: string; limit?: number }) => d)
   .handler(async ({ data, context }): Promise<FoodResult[]> => {
-    const q = data.query.trim();
-    if (!q) return [];
     const limit = Math.min(50, Math.max(1, data.limit ?? 15));
-    const { data: rows, error } = await (context.supabase.rpc as any)("search_nutrition_foods", {
-      _q: q,
-      _max_results: limit,
-    });
-    if (error) return [];
-    const term = q.toLowerCase();
-    const mapped: FoodResult[] = ((rows ?? []) as any[]).map(mapNutritionFoodRow);
-    mapped.sort((a, b) => {
-      const pa = sourcePriority(a.source);
-      const pb = sourcePriority(b.source);
-      if (pa !== pb) return pa - pb;
-      const an = a.name.toLowerCase();
-      const bn = b.name.toLowerCase();
-      const ax = an === term ? 0 : an.startsWith(term) ? 1 : 2;
-      const bx = bn === term ? 0 : bn.startsWith(term) ? 1 : 2;
-      return ax - bx || scoreResult(b, q) - scoreResult(a, q);
-    });
-    return mapped.slice(0, limit);
+    return runCatalogSearch(context.supabase, data.query, limit, context.userId);
   });
+

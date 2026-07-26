@@ -42,16 +42,25 @@ export function FoodThumb({
   );
 }
 
-export function FoodNutritionLine({ food }: { food: NutritionFood }) {
+export function FoodNutritionLine({ food }: { food: NutritionFood & { energy_flagged?: boolean } }) {
   return (
     <div className="mt-0.5 truncate text-xs text-muted-foreground">
       {Math.round(Number(food.kcal_per_100g) || 0)} kcal
       {" · "}P {Number(food.protein_per_100g).toFixed(1)} g{" · "}KH{" "}
       {Number(food.carbs_per_100g).toFixed(1)} g{" · "}F {Number(food.fat_per_100g).toFixed(1)} g
       {` / 100 ${food.unit}`}
+      {food.energy_flagged && (
+        <span
+          className="ml-1 rounded bg-destructive/10 px-1 py-0.5 text-[10px] font-medium text-destructive"
+          title="kcal des Datensatzes waren unplausibel und wurden aus den Makros berechnet."
+        >
+          kcal korrigiert
+        </span>
+      )}
     </div>
   );
 }
+
 
 export function FavoriteButton({ active, onClick }: { active: boolean; onClick: () => void }) {
   return (
