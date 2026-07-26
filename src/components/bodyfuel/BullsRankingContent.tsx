@@ -147,7 +147,7 @@ export function BullsRankingContent({ showBackLink = true }: { showBackLink?: bo
     <div className="mx-auto max-w-3xl space-y-5 px-4 pb-24 pt-3">
       {showBackLink && (
         <Link
-          to="/bulls"
+          to="/dashboard"
           className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-3.5 w-3.5" />

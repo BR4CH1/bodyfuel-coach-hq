@@ -59,12 +59,12 @@ function GiftRedeemPage() {
         const res = await redeem({ data: { code } });
         setRedeemed(true);
         toast.success(`${info.hub_label ?? "Mitgliedschaft"} freigeschaltet — willkommen!`);
-        navigate({ to: res.hub_kind === "group" ? "/bulls" : "/onboarding/smart" });
+        navigate({ to: res.hub_kind === "group" ? "/dashboard" : "/onboarding/smart" });
       } catch (e: any) {
         const msg = e?.message ?? "";
         // Bereits eingelöst / Code verbraucht → still ignorieren und zum passenden Bereich leiten
         if (/bereits eingelöst|bereits ein/i.test(msg)) {
-          navigate({ to: info.hub_kind === "group" ? "/bulls" : "/onboarding/smart" });
+          navigate({ to: info.hub_kind === "group" ? "/dashboard" : "/onboarding/smart" });
           return;
         }
         toast.error(msg || "Einlösen fehlgeschlagen");
@@ -104,7 +104,7 @@ function GiftRedeemPage() {
       const res = await redeem({ data: { code } });
       setRedeemed(true);
       toast.success(`${info?.valid ? info.hub_label : "Mitgliedschaft"} freigeschaltet — willkommen!`);
-      navigate({ to: res.hub_kind === "group" ? "/bulls" : "/onboarding/smart" });
+      navigate({ to: res.hub_kind === "group" ? "/dashboard" : "/onboarding/smart" });
     } catch (err: any) {
       const msg = /already registered|user already/i.test(err?.message ?? "")
         ? "Diese E-Mail ist bereits registriert. Bitte einloggen, dann öffne den Link erneut."
@@ -159,7 +159,7 @@ function GiftRedeemPage() {
                     setBusy(true);
                     try {
                       const res = await redeem({ data: { code } });
-                      navigate({ to: res.hub_kind === "group" ? "/bulls" : "/onboarding/smart" });
+                      navigate({ to: res.hub_kind === "group" ? "/dashboard" : "/onboarding/smart" });
                     } catch (e: any) {
                       toast.error(e?.message ?? "Fehler");
                     } finally {

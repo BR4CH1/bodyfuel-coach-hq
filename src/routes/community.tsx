@@ -65,7 +65,7 @@ function CommunityHub() {
         />
         {hasGroup("bulls") && (
           <HubLink
-            to="/bulls"
+            to="/dashboard"
             icon={<Shield className="h-5 w-5" />}
             title="Bulls Hub"
             description="Exklusiver Bereich für die Bulls"
