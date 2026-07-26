@@ -11,6 +11,8 @@ import { toast } from "sonner";
 
 import { clearFormDraft, useFormDraft } from "@/hooks/use-form-draft";
 import { supabase } from "@/integrations/supabase/client";
+import { checkFoodEnergy } from "@/lib/food-energy";
+
 import { listCustomMeals, type CustomMeal } from "@/lib/custom-meals.functions";
 import {
   estimateFoodFromText,
