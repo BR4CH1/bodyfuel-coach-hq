@@ -5,6 +5,7 @@ import { parseFoodAmount } from "../lib/nutrition-tracker.logic";
 import type {
   AddFoodSource,
   FavoriteCandidate,
+  FoodAmountMode,
   FavoriteFood,
   FoodPickOptions,
   FoodUnit,
@@ -33,6 +34,7 @@ export function AddFoodDialog({
   isCoach,
   unit,
   amountStr,
+  amountMode,
   estimatingAi,
   onClose,
   onSourceChange,
@@ -52,6 +54,7 @@ export function AddFoodDialog({
   onPickCustomMeal,
   onBackToMeals,
   onAmountChange,
+  onAmountModeChange,
   onBack,
   onAddPicked,
   onEstimateAi,
@@ -71,6 +74,7 @@ export function AddFoodDialog({
   isCoach: boolean;
   unit: FoodUnit;
   amountStr: string;
+  amountMode: FoodAmountMode;
   estimatingAi: boolean;
   onClose: () => void;
   onEstimateAi: () => void;
@@ -91,6 +95,7 @@ export function AddFoodDialog({
   onPickCustomMeal: (meal: CustomMeal) => void;
   onBackToMeals: () => void;
   onAmountChange: (value: string) => void;
+  onAmountModeChange: (mode: FoodAmountMode) => void;
   onBack: () => void;
   onAddPicked: () => void;
 }) {
@@ -162,6 +167,7 @@ export function AddFoodDialog({
             isCoach={isCoach}
             unit={unit}
             amountStr={amountStr}
+            amountMode={amountMode}
             favorite={isFavorite(picking)}
             onToggleFavorite={() =>
               onToggleFavorite({
@@ -170,6 +176,7 @@ export function AddFoodDialog({
               })
             }
             onAmountChange={onAmountChange}
+            onAmountModeChange={onAmountModeChange}
             onBack={onBack}
             onAdd={onAddPicked}
           />
