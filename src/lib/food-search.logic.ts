@@ -251,7 +251,23 @@ export function scoreFoodMatch(food: RankableFood, query: string): number {
     })
   )
     score += 40;
-  else return -100; // kein sinnvoller Bezug zur Suche
+  else {
+    // Markensuche: "Milbona", "Aldi Haferflocken" o. Ä. treffen über die Marke.
+    const brand = normalizeFoodTerm(String(food.brand ?? ""));
+    const brandTokens = new Set(brand.split(/\s+/).filter(Boolean));
+    const termTokens = term.split(/\s+/).filter(Boolean);
+    const brandHit =
+      brand !== "" &&
+      (brand === term ||
+        brandTokens.has(term) ||
+        termTokens.some((t) => brandTokens.has(t) || (t.length >= 4 && brand.includes(t))));
+    if (!brandHit) return -100; // kein sinnvoller Bezug zur Suche
+    // Restliche Suchtokens müssen zumindest im Namen auftauchen.
+    const rest = termTokens.filter((t) => !brandTokens.has(t) && !brand.includes(t));
+    if (rest.length && !rest.every((t) => name.includes(t))) return -100;
+    score += brand === term ? 70 : 45;
+  }
+
 
   // Quellenqualität
   score += Math.max(0, 24 - foodSourcePriority(food.source) * 6);

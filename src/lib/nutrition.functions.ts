@@ -11,50 +11,9 @@ import {
 } from "@/lib/food-search.logic";
 
 
-export type FoodSource =
-  | "bls_4_0"
-  | "bodyfuel_verified"
-  | "open_food_facts"
-  | "usda"
-  | "ai_estimate"
-  | "barcode"
-  | "manual"
-  | null;
+export type { FoodSource, FoodResult } from "@/lib/nutrition.types";
+import type { FoodResult, FoodSource } from "@/lib/nutrition.types";
 
-export type FoodResult = {
-  id?: string | null;
-  name: string;
-  brand: string | null;
-  barcode: string | null;
-  /** Eingabe- und Referenzeinheit: Flüssigkeiten ml, alle anderen Lebensmittel g. */
-  unit: FoodAmountUnit;
-  /** Nur für Flüssigkeiten; dient der Legacy-Massenablage, nicht der Makro-Skalierung. */
-  density_g_per_ml: number | null;
-  kcal_per_100g: number;
-  protein_per_100g: number;
-  carbs_per_100g: number;
-  fat_per_100g: number;
-  fiber_per_100g?: number | null;
-  sugar_per_100g?: number | null;
-  saturated_fat_per_100g?: number | null;
-  salt_per_100g?: number | null;
-  sodium_mg_per_100g?: number | null;
-  /** Gramm pro Stück/Portion (z.B. 1 Scheibe Toast = 25g), falls bekannt */
-  serving_g: number | null;
-  /** Roh-Label von OFF, z.B. "1 slice (25g)" oder "30 g" */
-  serving_label: string | null;
-  /** Datenquelle (bls_4_0, bodyfuel_verified, open_food_facts, usda, ai_estimate, …) */
-  source?: FoodSource;
-  /** True wenn Coach geprüft */
-  verified_by_coach?: boolean;
-  image_url?: string | null;
-  image_source?: string | null;
-  /** true, wenn der kcal-Wert unplausibel war und aus den Makros korrigiert wurde. */
-  energy_flagged?: boolean;
-  energy_note?: string | null;
-  /** Synonyme aus dem Katalog — nur für Relevanz-Ranking, nicht für die Anzeige. */
-  aliases?: string[] | null;
-};
 
 
 function mapNutritionFoodRow(r: any): FoodResult {
@@ -139,7 +98,9 @@ async function runCatalogSearch(
   const variants = expandFoodQuery(q);
   const fetchLimit = Math.min(100, Math.max(limit, 50));
 
-  const [direct, variantHits, ownFoods] = await Promise.all([
+  const { searchOpenFoodFacts } = await import("@/lib/open-food-facts.server");
+
+  const [direct, variantHits, ownFoods, brandHits] = await Promise.all([
     supabase.rpc("search_nutrition_foods", { _q: q, _max_results: fetchLimit }),
     variants.length > 1
       ? supabase.rpc("search_nutrition_foods_variants", {
@@ -156,6 +117,8 @@ async function runCatalogSearch(
           .eq("user_id", userId)
           .limit(25)
       : Promise.resolve({ data: [], error: null }),
+    // Markenprodukte (Milbona, Aldi, ja!, …) ergänzend aus Open Food Facts.
+    searchOpenFoodFacts(q, fetchLimit).catch(() => [] as FoodResult[]),
   ]);
 
   // RPC-Fehler dürfen nicht als "keine Treffer" erscheinen.
@@ -194,13 +157,14 @@ async function runCatalogSearch(
       }),
     );
 
-  const merged = dedupeFoodResults([...catalog, ...own]);
+  const merged = dedupeFoodResults([...catalog, ...own, ...(brandHits as FoodResult[])]);
   return rankFoodResults(merged, q).slice(0, limit);
 }
 
 
 
-/** Barcode lookup ausschließlich im intern importierten und freigegebenen Katalog. */
+
+/** Barcode-Lookup: erst interner Katalog, dann Open Food Facts (Markenprodukte). */
 export const lookupBarcode = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { barcode: string }) => d)
@@ -215,12 +179,14 @@ export const lookupBarcode = createServerFn({ method: "POST" })
       .neq("audit_status", "needs_review")
       .maybeSingle();
     if (error) throw new Error(`Barcode-Suche fehlgeschlagen: ${error.message}`);
-    if (!row) {
-      throw new Error("Barcode ist noch nicht im geprüften BodyFuel-Katalog");
+    if (row) return mapNutritionFoodRow(row);
 
-    }
-    return mapNutritionFoodRow(row);
+    const { lookupOpenFoodFactsBarcode } = await import("@/lib/open-food-facts.server");
+    const off = await lookupOpenFoodFactsBarcode(code);
+    if (!off) throw new Error("Produkt nicht gefunden");
+    return off;
   });
+
 
 /**
  * Kompatibilitäts-Suche. Live-Abfragen externer Datenquellen sind bewusst
