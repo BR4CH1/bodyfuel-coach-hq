@@ -98,7 +98,9 @@ async function runCatalogSearch(
   const variants = expandFoodQuery(q);
   const fetchLimit = Math.min(100, Math.max(limit, 50));
 
-  const [direct, variantHits, ownFoods] = await Promise.all([
+  const { searchOpenFoodFacts } = await import("@/lib/open-food-facts.server");
+
+  const [direct, variantHits, ownFoods, brandHits] = await Promise.all([
     supabase.rpc("search_nutrition_foods", { _q: q, _max_results: fetchLimit }),
     variants.length > 1
       ? supabase.rpc("search_nutrition_foods_variants", {
@@ -115,6 +117,8 @@ async function runCatalogSearch(
           .eq("user_id", userId)
           .limit(25)
       : Promise.resolve({ data: [], error: null }),
+    // Markenprodukte (Milbona, Aldi, ja!, …) ergänzend aus Open Food Facts.
+    searchOpenFoodFacts(q, fetchLimit).catch(() => [] as FoodResult[]),
   ]);
 
   // RPC-Fehler dürfen nicht als "keine Treffer" erscheinen.
@@ -153,9 +157,10 @@ async function runCatalogSearch(
       }),
     );
 
-  const merged = dedupeFoodResults([...catalog, ...own]);
+  const merged = dedupeFoodResults([...catalog, ...own, ...(brandHits as FoodResult[])]);
   return rankFoodResults(merged, q).slice(0, limit);
 }
+
 
 
 
