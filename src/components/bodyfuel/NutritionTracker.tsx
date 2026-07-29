@@ -87,6 +87,8 @@ export function NutritionTracker({ variant = "personal" }: { variant?: "personal
           isCoach={tracker.isCoach}
           unit={addFood.unit}
           amountStr={addFood.amountStr}
+          amountMode={addFood.amountMode}
+          onAmountModeChange={addFood.setAmountMode}
           estimatingAi={addFood.estimatingAi}
           onEstimateAi={() => addFood.estimateAi()}
           onClose={addFood.closeAddDialog}

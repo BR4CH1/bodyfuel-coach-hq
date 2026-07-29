@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { clearFormDraft, useFormDraft } from "@/hooks/use-form-draft";
 import { supabase } from "@/integrations/supabase/client";
 import { checkFoodEnergy } from "@/lib/food-energy";
+import { piecePresetFor, piecesToGrams } from "@/lib/food-piece-sizes";
 
 import { listCustomMeals, type CustomMeal } from "@/lib/custom-meals.functions";
 import {
@@ -40,6 +41,7 @@ import type {
   FavoriteCandidate,
   FavoriteFood,
   FoodEntry,
+  FoodAmountMode,
   FoodPickOptions,
   FoodUnit,
   Meal,
@@ -68,6 +70,7 @@ export function useAddFoodFlow({
   const [picking, setPicking] = useState<FoodResult | null>(null);
   const [unit, setUnit] = useState<FoodUnit>("g");
   const [amountStr, setAmountStr] = useState("100");
+  const [amountMode, setAmountMode] = useState<FoodAmountMode>("unit");
   const [scannerOpen, setScannerOpen] = useState(false);
   const [photoOpen, setPhotoOpen] = useState(false);
   const [builderOpen, setBuilderOpen] = useState(false);
@@ -246,8 +249,31 @@ export function useAddFoodFlow({
   const pickFood = useCallback((food: FoodResult, options?: FoodPickOptions) => {
     setPicking(food);
     setUnit(options?.unit ?? food.unit);
+    const preset = piecePresetFor(food);
+    if (preset && !options?.amount) {
+      setAmountMode("piece");
+      setAmountStr("1");
+      return;
+    }
+    setAmountMode("unit");
     setAmountStr(options?.amount ?? "100");
   }, []);
+
+  const changeAmountMode = useCallback(
+    (mode: FoodAmountMode) => {
+      setAmountMode(mode);
+      const preset = picking ? piecePresetFor(picking) : null;
+      if (!preset) return;
+      const current = parseFoodAmount(amountStr);
+      if (mode === "piece") {
+        const pieces = current > 0 ? current / preset.grams : 1;
+        setAmountStr(String(Math.round(pieces * 10) / 10));
+      } else {
+        setAmountStr(String(Math.round(piecesToGrams(current, preset))));
+      }
+    },
+    [amountStr, picking],
+  );
 
   const runSearch = useCallback(
     async (overrideQuery?: string) => {
@@ -505,8 +531,11 @@ export function useAddFoodFlow({
       toast.error(`Dieses Lebensmittel wird ausschließlich in ${picking.unit} geführt.`);
       return;
     }
-    const grams = amountInGrams(picking, unit, amount);
-    const factor = nutritionFactorForAmount(amount);
+    const preset = piecePresetFor(picking);
+    const pieceMode = amountMode === "piece" && preset !== null;
+    const displayAmount = pieceMode && preset ? piecesToGrams(amount, preset) : amount;
+    const grams = amountInGrams(picking, unit, displayAmount);
+    const factor = nutritionFactorForAmount(displayAmount);
     const payload = {
       user_id: userId,
       entry_date: date,
@@ -515,7 +544,7 @@ export function useAddFoodFlow({
       name: picking.name,
       brand: picking.brand,
       barcode: picking.barcode,
-      serving_amount: +amount.toFixed(1),
+      serving_amount: +displayAmount.toFixed(1),
       amount_unit: unit,
       serving_g: +grams.toFixed(1),
       kcal: Math.round(picking.kcal_per_100g * factor),
@@ -543,7 +572,7 @@ export function useAddFoodFlow({
     setOpenMeal(null);
     clearFormDraft(draftKey);
     toast.success("Eintrag hinzugefügt");
-  }, [amountStr, date, draftKey, openMeal, picking, setEntries, unit, userId]);
+  }, [amountMode, amountStr, date, draftKey, openMeal, picking, setEntries, unit, userId]);
 
   return {
     openMeal,
@@ -553,6 +582,8 @@ export function useAddFoodFlow({
     picking,
     unit,
     amountStr,
+    amountMode,
+    setAmountMode: changeAmountMode,
     scannerOpen,
     photoOpen,
     builderOpen,
