@@ -38,6 +38,8 @@ export type NutritionTotals = Omit<NutritionTargets, "water_glasses">;
 
 export type FoodUnit = FoodAmountUnit;
 export type AddFoodSource = "food" | "meal";
+/** "unit" = Eingabe in g/ml, "piece" = Eingabe in Stück/Scheibe. */
+export type FoodAmountMode = "unit" | "piece";
 
 export type FoodPickOptions = {
   unit?: FoodUnit;

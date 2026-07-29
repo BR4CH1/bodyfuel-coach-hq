@@ -3,8 +3,9 @@ import { Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { FoodResult } from "@/lib/nutrition.functions";
+import { piecePresetFor, piecesToGrams } from "@/lib/food-piece-sizes";
 import { nutritionFactorForAmount, parseFoodAmount } from "../lib/nutrition-tracker.logic";
-import type { FoodUnit } from "../types";
+import type { FoodAmountMode, FoodUnit } from "../types";
 import { SourceBadge } from "./SourceBadge";
 
 export function FoodAmountEditor({
@@ -12,9 +13,11 @@ export function FoodAmountEditor({
   isCoach,
   unit,
   amountStr,
+  amountMode,
   favorite,
   onToggleFavorite,
   onAmountChange,
+  onAmountModeChange,
   onBack,
   onAdd,
 }: {
@@ -22,14 +25,20 @@ export function FoodAmountEditor({
   isCoach: boolean;
   unit: FoodUnit;
   amountStr: string;
+  amountMode: FoodAmountMode;
   favorite: boolean;
   onToggleFavorite: () => void;
   onAmountChange: (value: string) => void;
+  onAmountModeChange: (mode: FoodAmountMode) => void;
   onBack: () => void;
   onAdd: () => void;
 }) {
+  const preset = piecePresetFor(food);
+  const pieceMode = amountMode === "piece" && preset !== null;
   const amount = parseFoodAmount(amountStr);
-  const factor = nutritionFactorForAmount(amount);
+  const grams = pieceMode && preset ? piecesToGrams(amount, preset) : amount;
+  const factor = nutritionFactorForAmount(grams);
+  const inputLabel = pieceMode && preset ? preset.label : unit;
 
   return (
     <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
@@ -56,18 +65,58 @@ export function FoodAmountEditor({
         </button>
       </div>
 
+      {preset && (
+        <div className="inline-flex rounded-md border border-border bg-background/40 p-0.5 text-xs">
+          <button
+            type="button"
+            onClick={() => onAmountModeChange("piece")}
+            className={`rounded px-3 py-1.5 ${
+              pieceMode ? "bg-gold text-primary-foreground" : "text-muted-foreground"
+            }`}
+          >
+            {preset.label}
+          </button>
+          <button
+            type="button"
+            onClick={() => onAmountModeChange("unit")}
+            className={`rounded px-3 py-1.5 ${
+              pieceMode ? "text-muted-foreground" : "bg-gold text-primary-foreground"
+            }`}
+          >
+            {unit}
+          </button>
+        </div>
+      )}
+
       <div>
         <label className="text-xs uppercase tracking-wider text-muted-foreground">
-          Menge ({unit})
+          Menge ({inputLabel})
         </label>
         <Input
           type="text"
           inputMode="decimal"
           value={amountStr}
           onChange={(event) => onAmountChange(event.target.value.replace(/[^0-9.,]/g, ""))}
-          placeholder={unit === "ml" ? "z.B. 250" : "z.B. 100"}
+          placeholder={pieceMode ? "z.B. 2" : unit === "ml" ? "z.B. 250" : "z.B. 100"}
           className="mt-1"
         />
+        {pieceMode && preset && (
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <span className="text-[11px] text-muted-foreground">
+              ≈ {Math.round(grams)} {unit} (1 {preset.label} ≈ {preset.grams} {unit})
+            </span>
+            {[1, 2, 3].map((value) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => onAmountChange(String(value))}
+                className="rounded border border-border px-2 py-0.5 text-[11px] text-muted-foreground hover:bg-secondary"
+              >
+                {value}×
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="rounded-lg bg-secondary/40 p-3 text-xs">
