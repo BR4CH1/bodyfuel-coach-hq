@@ -98,7 +98,7 @@ export function mapOffProduct(p: any): FoodResult | null {
   return {
     id: null,
     name: name.slice(0, 140),
-    brand: p.brands ? String(p.brands).split(",")[0].trim() : null,
+    brand: offBrand(p),
     barcode: p.code ? String(p.code) : null,
     unit,
     density_g_per_ml: null,
@@ -120,40 +120,59 @@ export function mapOffProduct(p: any): FoodResult | null {
     image_source: image_url ? "open_food_facts" : null,
     energy_flagged: energy.flagged,
     energy_note: energy.reason,
-    aliases: p.brands ? [String(p.brands)] : null,
+    aliases: offBrandList(p),
   };
 }
 
-/** Markenprodukt-Suche (DE/AT/CH). Best effort — Fehler liefern eine leere Liste. */
+/** OFF liefert Marken je nach Endpoint als String oder Array. */
+function offBrandList(p: any): string[] | null {
+  const raw = p?.brands;
+  const list = Array.isArray(raw)
+    ? raw.map((b) => String(b ?? "").trim())
+    : String(raw ?? "")
+        .split(",")
+        .map((b) => b.trim());
+  const cleaned = list.filter(Boolean);
+  return cleaned.length ? cleaned : null;
+}
+
+function offBrand(p: any): string | null {
+  return offBrandList(p)?.[0] ?? null;
+}
+
+/** Markenprodukt-Suche über die aktuelle OFF-Such-API. Best effort. */
 export async function searchOpenFoodFacts(query: string, limit = 25): Promise<FoodResult[]> {
   const q = query.trim();
   if (!q) return [];
   const pageSize = Math.min(50, Math.max(10, limit));
+  const base = "https://search.openfoodfacts.org/search";
+  const common = `&page_size=${pageSize}&fields=${OFF_FIELDS}`;
   const deUrl =
-    `https://de.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}` +
-    `&search_simple=1&action=process&json=1&page_size=${pageSize}` +
-    `&sort_by=unique_scans_n&fields=${OFF_FIELDS}`;
-  const worldUrl =
-    `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}` +
-    `&search_simple=1&action=process&json=1&page_size=${pageSize}` +
-    `&sort_by=unique_scans_n&fields=${OFF_FIELDS}`;
+    `${base}?q=${encodeURIComponent(q)}&langs=de,en${common}` +
+    `&countries_tags=germany,austria,switzerland&sort_by=-popularity_key`;
+  const worldUrl = `${base}?q=${encodeURIComponent(q)}&langs=de,en${common}`;
 
   const [de, world] = await Promise.all([
-    fetchJsonWithTimeout(deUrl, 4000),
-    fetchJsonWithTimeout(worldUrl, 4000),
+    fetchJsonWithTimeout(deUrl, 4500),
+    fetchJsonWithTimeout(worldUrl, 4500),
   ]);
 
   const products = [
-    ...((de?.products ?? de?.hits ?? []) as any[]),
-    ...((world?.products ?? world?.hits ?? []) as any[]),
+    ...((de?.hits ?? de?.products ?? []) as any[]),
+    ...((world?.hits ?? world?.products ?? []) as any[]),
   ];
   const out: FoodResult[] = [];
+  const seen = new Set<string>();
   for (const p of products) {
+    const key = String(p?.code ?? "");
+    if (key && seen.has(key)) continue;
+    if (key) seen.add(key);
     const mapped = mapOffProduct(p);
     if (mapped) out.push(mapped);
   }
   return out;
 }
+
 
 /** Barcode-Fallback, wenn der interne Katalog den Code nicht kennt. */
 export async function lookupOpenFoodFactsBarcode(code: string): Promise<FoodResult | null> {
