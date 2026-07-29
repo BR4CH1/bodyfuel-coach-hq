@@ -164,7 +164,7 @@ async function runCatalogSearch(
 
 
 
-/** Barcode lookup ausschließlich im intern importierten und freigegebenen Katalog. */
+/** Barcode-Lookup: erst interner Katalog, dann Open Food Facts (Markenprodukte). */
 export const lookupBarcode = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { barcode: string }) => d)
@@ -179,12 +179,14 @@ export const lookupBarcode = createServerFn({ method: "POST" })
       .neq("audit_status", "needs_review")
       .maybeSingle();
     if (error) throw new Error(`Barcode-Suche fehlgeschlagen: ${error.message}`);
-    if (!row) {
-      throw new Error("Barcode ist noch nicht im geprüften BodyFuel-Katalog");
+    if (row) return mapNutritionFoodRow(row);
 
-    }
-    return mapNutritionFoodRow(row);
+    const { lookupOpenFoodFactsBarcode } = await import("@/lib/open-food-facts.server");
+    const off = await lookupOpenFoodFactsBarcode(code);
+    if (!off) throw new Error("Produkt nicht gefunden");
+    return off;
   });
+
 
 /**
  * Kompatibilitäts-Suche. Live-Abfragen externer Datenquellen sind bewusst
