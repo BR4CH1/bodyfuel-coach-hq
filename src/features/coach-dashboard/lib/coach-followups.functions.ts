@@ -7,17 +7,33 @@ import type { Database } from "@/integrations/supabase/types";
 
 const SITE_NAME = "BODYFUEL";
 const SENDER_DOMAIN = "notify.bodyfuel-coaching.com";
-const FROM_DOMAIN = "bodyfuel-coaching.com";
+const FROM_ADDRESS = "Manuel | BodyFuel <manuel@bodyfuel-coaching.com>";
+const REPLY_TO = "manuel@bodyfuel-coaching.com";
+const TASK_PREFIX = "fuely-followup:";
+
+const targetSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("customer"), userId: z.string().uuid() }),
+  z.object({ kind: z.literal("lead"), leadId: z.string().uuid() }),
+]);
 
 const inputSchema = z.object({
-  target: z.discriminatedUnion("kind", [
-    z.object({ kind: z.literal("customer"), userId: z.string().uuid() }),
-    z.object({ kind: z.literal("lead"), leadId: z.string().uuid() }),
-  ]),
+  sourceSignalId: z.string().trim().min(1).max(220),
+  target: targetSchema,
   channel: z.enum(["message", "email", "both"]),
   body: z.string().trim().min(1).max(4000),
   subject: z.string().trim().min(1).max(160),
 });
+
+const actionSchema = z.object({
+  sourceSignalId: z.string().trim().min(1).max(220),
+  status: z.enum(["snoozed", "completed", "dismissed"]),
+  until: z.string().datetime().optional(),
+  reason: z.string().trim().max(500).optional(),
+  completedAt: z.string().datetime().optional(),
+  deliveryChannel: z.enum(["message", "email", "both", "manual"]).optional(),
+});
+
+export type CoachFollowUpAction = z.infer<typeof actionSchema>;
 
 async function assertCoach(ctx: { supabase: SupabaseClient<Database>; userId: string }) {
   const { data, error } = await ctx.supabase.rpc("has_role", {
@@ -26,6 +42,10 @@ async function assertCoach(ctx: { supabase: SupabaseClient<Database>; userId: st
   });
   if (error) throw new Error(error.message);
   if (!data) throw new Error("Nicht autorisiert");
+}
+
+function taskKey(sourceSignalId: string) {
+  return `${TASK_PREFIX}${sourceSignalId}`;
 }
 
 function escapeHtml(value: string) {
@@ -37,9 +57,100 @@ function escapeHtml(value: string) {
     .replaceAll("'", "&#039;");
 }
 
-async function resolveRecipientEmail(
-  target: z.infer<typeof inputSchema>["target"],
-): Promise<string> {
+async function saveAction(
+  supabase: SupabaseClient<Database>,
+  coachId: string,
+  action: CoachFollowUpAction,
+) {
+  const completedAt =
+    action.status === "completed" || action.status === "dismissed"
+      ? (action.completedAt ?? new Date().toISOString())
+      : null;
+  const snoozedUntil = action.status === "snoozed" ? (action.until ?? null) : null;
+  const note = JSON.stringify({
+    kind: "fuely-followup",
+    status: action.status,
+    reason: action.reason ?? null,
+    deliveryChannel: action.deliveryChannel ?? null,
+    completedAt,
+  });
+
+  const { error } = await supabase.from("coach_task_state").upsert(
+    {
+      coach_id: coachId,
+      task_key: taskKey(action.sourceSignalId),
+      completed_at: completedAt,
+      snoozed_until: snoozedUntil,
+      note,
+    },
+    { onConflict: "coach_id,task_key" },
+  );
+  if (error) throw new Error(error.message);
+}
+
+function parseAction(row: {
+  task_key: string;
+  completed_at: string | null;
+  snoozed_until: string | null;
+  note: string | null;
+}): CoachFollowUpAction | null {
+  const sourceSignalId = row.task_key.slice(TASK_PREFIX.length);
+  if (!sourceSignalId) return null;
+  let metadata: {
+    status?: CoachFollowUpAction["status"];
+    reason?: string | null;
+    deliveryChannel?: CoachFollowUpAction["deliveryChannel"] | null;
+    completedAt?: string | null;
+  } = {};
+  try {
+    metadata = row.note ? JSON.parse(row.note) : {};
+  } catch {
+    metadata = {};
+  }
+
+  const status =
+    metadata.status ?? (row.snoozed_until ? "snoozed" : row.completed_at ? "completed" : null);
+  if (!status) return null;
+
+  return {
+    sourceSignalId,
+    status,
+    ...(row.snoozed_until ? { until: row.snoozed_until } : {}),
+    ...(metadata.reason ? { reason: metadata.reason } : {}),
+    ...(metadata.deliveryChannel ? { deliveryChannel: metadata.deliveryChannel } : {}),
+    ...(row.completed_at || metadata.completedAt
+      ? { completedAt: row.completed_at ?? metadata.completedAt ?? undefined }
+      : {}),
+  };
+}
+
+export const listCoachFollowUpActions = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertCoach(context);
+    const { data, error } = await context.supabase
+      .from("coach_task_state")
+      .select("task_key, completed_at, snoozed_until, note")
+      .eq("coach_id", context.userId)
+      .like("task_key", `${TASK_PREFIX}%`);
+    if (error) throw new Error(error.message);
+    return {
+      items: (data ?? [])
+        .map(parseAction)
+        .filter((item): item is CoachFollowUpAction => Boolean(item)),
+    };
+  });
+
+export const saveCoachFollowUpAction = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: unknown) => actionSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    await assertCoach(context);
+    await saveAction(context.supabase, context.userId, data);
+    return { ok: true };
+  });
+
+async function resolveRecipientEmail(target: z.infer<typeof targetSchema>): Promise<string> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
   if (target.kind === "lead") {
@@ -57,52 +168,107 @@ async function resolveRecipientEmail(
   return data.user.email.trim().toLowerCase();
 }
 
-async function queueEmail(input: {
-  target: z.infer<typeof inputSchema>["target"];
+async function sendEmailNow(input: {
+  coachId: string;
+  sourceSignalId: string;
+  target: z.infer<typeof targetSchema>;
   subject: string;
   body: string;
 }) {
+  const apiKey = process.env.LOVABLE_API_KEY;
+  if (!apiKey) {
+    throw new Error(
+      "E-Mail-Versand ist noch nicht konfiguriert (LOVABLE_API_KEY fehlt auf dem Server).",
+    );
+  }
+
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const to = await resolveRecipientEmail(input.target);
-  const messageId = `coach-followup:${crypto.randomUUID()}`;
-  const htmlBody = escapeHtml(input.body).replaceAll("\n", "<br />");
-  const html = `<div style="font-family:Arial,sans-serif;line-height:1.6;color:#111"><p>${htmlBody}</p><p style="margin-top:24px;color:#666;font-size:12px">Gesendet über ${SITE_NAME}</p></div>`;
+  const { data: suppressed, error: suppressionError } = await supabaseAdmin
+    .from("suppressed_emails")
+    .select("id")
+    .eq("email", to)
+    .maybeSingle();
+  if (suppressionError) throw new Error("E-Mail-Sperrstatus konnte nicht geprüft werden.");
+  if (suppressed) throw new Error("Diese E-Mail-Adresse ist für den Versand gesperrt.");
 
-  const { error: logError } = await supabaseAdmin.from("email_send_log").insert({
+  const messageId = `coach-followup:${input.coachId}:${input.sourceSignalId}`;
+  const htmlBody = escapeHtml(input.body).replaceAll("\n", "<br />");
+  const html = `<div style="font-family:Arial,sans-serif;line-height:1.6;color:#111"><p>${htmlBody}</p><p style="margin-top:28px">Beste Grüße<br><strong>Manuel | BodyFuel</strong></p></div>`;
+
+  await supabaseAdmin.from("email_send_log").insert({
     message_id: messageId,
     template_name: "coach-followup",
     recipient_email: to,
     status: "pending",
   });
-  if (logError) throw new Error(logError.message);
 
-  const { error } = await supabaseAdmin.rpc("enqueue_email", {
-    queue_name: "transactional_emails",
-    payload: {
+  try {
+    const { sendLovableEmail } = await import("@lovable.dev/email-js");
+    const result = await sendLovableEmail(
+      {
+        to,
+        from: FROM_ADDRESS,
+        reply_to: REPLY_TO,
+        sender_domain: SENDER_DOMAIN,
+        subject: input.subject,
+        html,
+        text: `${input.body}\n\nBeste Grüße\nManuel | BodyFuel`,
+        purpose: "transactional",
+        label: "coach-followup",
+        idempotency_key: messageId,
+        message_id: messageId,
+      },
+      { apiKey, sendUrl: process.env.LOVABLE_SEND_URL },
+    );
+    if (!result.success) throw new Error("Der Maildienst hat den Versand nicht bestätigt.");
+
+    const { error: sentLogError } = await supabaseAdmin.from("email_send_log").insert({
       message_id: messageId,
-      to,
-      from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
-      sender_domain: SENDER_DOMAIN,
-      subject: input.subject,
-      html,
-      text: input.body,
-      purpose: "transactional",
-      label: "coach-followup",
-      idempotency_key: messageId,
-      queued_at: new Date().toISOString(),
-    },
-  });
-  if (error) throw new Error(error.message);
+      template_name: "coach-followup",
+      recipient_email: to,
+      status: "sent",
+    });
+    // A retry with the same idempotency key can reach this point after the
+    // original response was lost. The unique sent-log then proves delivery.
+    if (sentLogError && !sentLogError.message.toLowerCase().includes("duplicate")) {
+      console.error("coach follow-up sent-log failed", sentLogError);
+    }
+    return { sent: true, messageId };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    await supabaseAdmin.from("email_send_log").insert({
+      message_id: messageId,
+      template_name: "coach-followup",
+      recipient_email: to,
+      status: "failed",
+      error_message: message.slice(0, 1000),
+    });
+    throw new Error(`E-Mail konnte nicht versendet werden: ${message}`);
+  }
 }
 
 export const sendCoachFollowUp = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => inputSchema.parse(data))
+  .validator((data: unknown) => inputSchema.parse(data))
   .handler(async ({ data, context }) => {
     await assertCoach(context);
 
     const shouldSendMessage = data.channel === "message" || data.channel === "both";
     const shouldSendEmail = data.channel === "email" || data.channel === "both";
+
+    // The external delivery uses a deterministic idempotency key. It is sent
+    // before the in-app message so a mail failure never produces a false
+    // "both sent" state.
+    if (shouldSendEmail) {
+      await sendEmailNow({
+        coachId: context.userId,
+        sourceSignalId: data.sourceSignalId,
+        target: data.target,
+        subject: data.subject,
+        body: data.body,
+      });
+    }
 
     if (shouldSendMessage) {
       if (data.target.kind !== "customer") {
@@ -117,9 +283,14 @@ export const sendCoachFollowUp = createServerFn({ method: "POST" })
       if (error) throw new Error(error.message);
     }
 
-    if (shouldSendEmail) {
-      await queueEmail({ target: data.target, subject: data.subject, body: data.body });
-    }
+    // Persist completion on the server before returning success. If the phone
+    // locks after delivery, the follow-up still remains completed everywhere.
+    await saveAction(context.supabase, context.userId, {
+      sourceSignalId: data.sourceSignalId,
+      status: "completed",
+      completedAt: new Date().toISOString(),
+      deliveryChannel: data.channel,
+    });
 
-    return { ok: true, channel: data.channel };
+    return { ok: true, channel: data.channel, emailSent: shouldSendEmail };
   });

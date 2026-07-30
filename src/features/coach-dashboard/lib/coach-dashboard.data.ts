@@ -4,7 +4,7 @@ import type { CoachClient, CoachDashboardData, CoachLead } from "@/features/coac
 type QueryError = { message?: string } | null;
 type QueryResult<T> = { data: T[] | null; error: QueryError };
 
-type RoleRow = { user_id: string };
+type ActivePackageRow = { user_id: string };
 type ProfileRow = { id: string; display_name: string | null };
 type CheckinRow = { user_id: string; week_start: string; submitted_at: string | null };
 type MeasurementRow = { user_id: string; weight_kg: number | null; measured_at: string };
@@ -246,11 +246,18 @@ async function loadClients(clientIds: string[]): Promise<CoachClient[]> {
 }
 
 export async function loadCoachDashboardData(): Promise<CoachDashboardData> {
-  const roles = await readRows<RoleRow>(
-    "client roles",
-    supabase.from("user_roles").select("user_id").eq("role", "client"),
+  // "Mein BODYFUEL" is the personal coaching workspace. A global client role
+  // alone only means that somebody registered at some point; it does not mean
+  // that Manuel is actively coaching that person.
+  const activePackages = await readRows<ActivePackageRow>(
+    "active coaching packages",
+    supabase
+      .from("customer_packages")
+      .select("user_id")
+      .eq("is_active", true)
+      .in("package", ["starter", "coaching", "premium"]),
   );
-  const clientIds = [...new Set(roles.map((role) => role.user_id).filter(Boolean))];
+  const clientIds = [...new Set(activePackages.map((row) => row.user_id).filter(Boolean))];
 
   const [clients, leads] = await Promise.all([
     loadClients(clientIds),

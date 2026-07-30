@@ -34,44 +34,16 @@ import { normalizeExerciseName } from "@/lib/exercise-name-match";
 import { AddTrainingSessionButton } from "./AddTrainingSessionDialog";
 import { TrainingSessionsList } from "./TrainingSessionsList";
 import { enqueue, flushQueue } from "@/lib/offline/queue";
+import {
+  clearTrainingTrackerSnapshot,
+  readTrainingTrackerSnapshot,
+  writeTrainingTrackerSnapshot,
+  type CachedTrainingDay as Day,
+  type CachedTrainingExercise as Exercise,
+  type CachedTrainingPlan as Plan,
+  type CachedTrainingSetLog as SetLog,
+} from "@/lib/training/training-tracker-cache";
 
-type Plan = {
-  id: string;
-  client_id: string;
-  title: string;
-  weeks_count?: number | null;
-  scheduled_start_date?: string | null;
-};
-type Day = {
-  id: string;
-  name: string;
-  sort_order: number;
-  week_number?: number | null;
-  day_date?: string | null;
-};
-type Exercise = {
-  id: string;
-  day_id: string;
-  name: string;
-  category?: string | null;
-  target_sets: number | null;
-  target_reps: string | null;
-  target_weights?: string | null;
-  target_rir?: number | null;
-  rest_seconds?: number | null;
-  notes: string | null;
-  sort_order: number;
-  added_by_user?: string | null;
-};
-type SetLog = {
-  id: string;
-  exercise_id: string;
-  client_id: string;
-  set_number: number;
-  weight_kg: number | null;
-  reps: number | null;
-  performed_at: string;
-};
 type HistoricalPlan = {
   training_days?: Array<{
     training_exercises?: Array<{ id?: string; name?: string }>;
@@ -90,6 +62,25 @@ function localDateKey(value: Date | string | number = new Date()): string {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function withTimeout<T>(work: PromiseLike<T>, timeoutMs = 12_000): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = window.setTimeout(
+      () => reject(new Error("Zeitüberschreitung beim Laden. Bitte Verbindung prüfen.")),
+      timeoutMs,
+    );
+    Promise.resolve(work).then(
+      (value) => {
+        window.clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        window.clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
 }
 
 export function TrainingTracker({ clientId }: { clientId: string }) {
@@ -113,14 +104,7 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [logs, setLogs] = useState<SetLog[]>([]);
   const openDayKey = `bf.tt.openDay.${clientId}`;
-  const [openDay, setOpenDayState] = useState<string | null>(() => {
-    if (typeof window === "undefined" || !clientId) return null;
-    try {
-      return window.localStorage.getItem(openDayKey);
-    } catch {
-      return null;
-    }
-  });
+  const [openDay, setOpenDayState] = useState<string | null>(null);
   const setOpenDay = useCallback(
     (v: string | null | ((p: string | null) => string | null)) => {
       setOpenDayState((cur) => {
@@ -139,140 +123,196 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
     [clientId, openDayKey],
   );
   const [parsing, setParsing] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [activeWeek, setActiveWeek] = useState(1);
   const [weeksCount, setWeeksCount] = useState(1);
 
-  const reload = async () => {
+  const reload = async (cachedView = Boolean(plan)) => {
     if (!clientId) return;
-    setLoading(true);
-    const { data: planRow } = await supabase
-      .from("nutrition_plans")
-      .select("id, client_id, title, weeks_count, scheduled_start_date")
-      .eq("client_id", clientId)
-      .eq("plan_type", "training")
-      .eq("is_active", true)
-      .maybeSingle();
-    setPlan((planRow as Plan) ?? null);
-
-    if (!planRow) {
-      setDays([]);
-      setExercises([]);
-      setLogs([]);
-      setLoading(false);
-      return;
-    }
-    const currentPlan = planRow as Plan;
-    const { data: dayRows } = await supabase
-      .from("training_days")
-      .select("*")
-      .eq("plan_id", planRow.id)
-      .order("week_number")
-      .order("sort_order");
-    const allDays = (dayRows as Day[]) ?? [];
-
-    // For multi-week plans, only show the current week's days.
-    const wc = currentPlan.weeks_count ?? 1;
-    const startStr = currentPlan.scheduled_start_date ?? null;
-    let aw = 1;
-    if (startStr && wc > 1) {
-      const start = new Date(startStr + "T00:00:00");
-      const diffDays = Math.floor((Date.now() - start.getTime()) / 86400000);
-      aw = Math.max(1, Math.min(wc, Math.floor(diffDays / 7) + 1));
-    }
-    setActiveWeek(aw);
-    setWeeksCount(wc);
-    const dayList = allDays.filter((d) => (d.week_number ?? 1) === aw);
-    setDays(dayList);
-
-    if (dayList.length) {
-      const { data: exRows } = await supabase
-        .from("training_exercises")
-        .select("*")
-        .in(
-          "day_id",
-          dayList.map((d) => d.id),
-        )
-        .order("sort_order");
-      const exList = (exRows as Exercise[]) ?? [];
-      setExercises(exList);
-      const today = localDateKey();
-      const trainingDayIds = new Set(exList.map((exercise) => exercise.day_id));
-      const todayTraining = dayList.find(
-        (day) => day.day_date === today && trainingDayIds.has(day.id),
-      );
-      const firstTraining = dayList.find((day) => trainingDayIds.has(day.id));
-      const preferredDay = todayTraining ?? firstTraining ?? dayList[0] ?? null;
-      setOpenDay((current) =>
-        current && trainingDayIds.has(current) ? current : (preferredDay?.id ?? null),
-      );
-
-      if (exList.length) {
-        // Pull historic exercises across ALL of this client's training plans,
-        // so logs from previous plans still feed into PRs / trend analysis
-        // when names match (e.g. "Bankdrücken Langhantel" from a prior plan).
-        const { data: histPlans } = await supabase
+    setLoadError(null);
+    setLoading(!cachedView);
+    setRefreshing(cachedView);
+    try {
+      const { data: planRow, error: planError } = await withTimeout(
+        supabase
           .from("nutrition_plans")
-          .select("id, training_days(id, training_exercises(id, name))")
+          .select("id, client_id, title, weeks_count, scheduled_start_date")
           .eq("client_id", clientId)
-          .eq("plan_type", "training");
-        const histExercises: { id: string; name: string }[] = [];
-        for (const p of (histPlans as HistoricalPlan[]) ?? []) {
-          for (const d of p?.training_days ?? []) {
-            for (const e of d?.training_exercises ?? []) {
-              if (e?.id && e?.name) histExercises.push({ id: e.id, name: e.name });
+          .eq("plan_type", "training")
+          .eq("is_active", true)
+          .maybeSingle(),
+      );
+      if (planError) throw planError;
+      setPlan((planRow as Plan) ?? null);
+
+      if (!planRow) {
+        setDays([]);
+        setExercises([]);
+        setLogs([]);
+        clearTrainingTrackerSnapshot(clientId);
+        return;
+      }
+      const currentPlan = planRow as Plan;
+      const { data: dayRows, error: dayError } = await withTimeout(
+        supabase
+          .from("training_days")
+          .select("*")
+          .eq("plan_id", planRow.id)
+          .order("week_number")
+          .order("sort_order"),
+      );
+      if (dayError) throw dayError;
+      const allDays = (dayRows as Day[]) ?? [];
+
+      // For multi-week plans, only show the current week's days.
+      const wc = currentPlan.weeks_count ?? 1;
+      const startStr = currentPlan.scheduled_start_date ?? null;
+      let aw = 1;
+      if (startStr && wc > 1) {
+        const start = new Date(startStr + "T00:00:00");
+        const diffDays = Math.floor((Date.now() - start.getTime()) / 86400000);
+        aw = Math.max(1, Math.min(wc, Math.floor(diffDays / 7) + 1));
+      }
+      setActiveWeek(aw);
+      setWeeksCount(wc);
+      const dayList = allDays.filter((d) => (d.week_number ?? 1) === aw);
+      setDays(dayList);
+
+      if (dayList.length) {
+        const { data: exRows, error: exerciseError } = await withTimeout(
+          supabase
+            .from("training_exercises")
+            .select("*")
+            .in(
+              "day_id",
+              dayList.map((d) => d.id),
+            )
+            .order("sort_order"),
+        );
+        if (exerciseError) throw exerciseError;
+        const exList = (exRows as Exercise[]) ?? [];
+        setExercises(exList);
+        const today = localDateKey();
+        const trainingDayIds = new Set(exList.map((exercise) => exercise.day_id));
+        const todayTraining = dayList.find(
+          (day) => day.day_date === today && trainingDayIds.has(day.id),
+        );
+        const firstTraining = dayList.find((day) => trainingDayIds.has(day.id));
+        const preferredDay = todayTraining ?? firstTraining ?? dayList[0] ?? null;
+        setOpenDay((current) =>
+          current && trainingDayIds.has(current) ? current : (preferredDay?.id ?? null),
+        );
+
+        if (exList.length) {
+          // Pull historic exercises across ALL of this client's training plans,
+          // so logs from previous plans still feed into PRs / trend analysis
+          // when names match (e.g. "Bankdrücken Langhantel" from a prior plan).
+          const { data: histPlans } = await supabase
+            .from("nutrition_plans")
+            .select("id, training_days(id, training_exercises(id, name))")
+            .eq("client_id", clientId)
+            .eq("plan_type", "training");
+          const histExercises: { id: string; name: string }[] = [];
+          for (const p of (histPlans as HistoricalPlan[]) ?? []) {
+            for (const d of p?.training_days ?? []) {
+              for (const e of d?.training_exercises ?? []) {
+                if (e?.id && e?.name) histExercises.push({ id: e.id, name: e.name });
+              }
             }
           }
+          // name-group → all exercise ids that share that normalized name
+          const idsByName = new Map<string, string[]>();
+          for (const h of histExercises) {
+            const k = normalizeExerciseName(h.name);
+            if (!k) continue;
+            const arr = idsByName.get(k) ?? [];
+            arr.push(h.id);
+            idsByName.set(k, arr);
+          }
+          const allIds = Array.from(
+            new Set(histExercises.map((h) => h.id).concat(exList.map((e) => e.id))),
+          );
+          const { data: logRows } = await supabase
+            .from("training_set_logs")
+            .select("*")
+            .in("exercise_id", allIds)
+            .eq("client_id", clientId)
+            .order("performed_at", { ascending: false })
+            .limit(2000);
+          // Rewrite log.exercise_id to a current-plan exercise id when the
+          // historic log belongs to a name-matched exercise. That lets the
+          // existing `logs.filter(l => l.exercise_id === ex.id)` keep working
+          // unchanged for both display and analytics.
+          const currentByName = new Map<string, string>();
+          for (const e of exList) currentByName.set(normalizeExerciseName(e.name), e.id);
+          const remapped = ((logRows as SetLog[]) ?? []).map((l) => {
+            // already current? keep.
+            if (exList.some((e) => e.id === l.exercise_id)) return l;
+            // find name of the historic exercise this log belongs to
+            const h = histExercises.find((x) => x.id === l.exercise_id);
+            if (!h) return l;
+            const target = currentByName.get(normalizeExerciseName(h.name));
+            return target ? { ...l, exercise_id: target } : l;
+          });
+          setLogs(remapped);
+        } else {
+          setLogs([]);
         }
-        // name-group → all exercise ids that share that normalized name
-        const idsByName = new Map<string, string[]>();
-        for (const h of histExercises) {
-          const k = normalizeExerciseName(h.name);
-          if (!k) continue;
-          const arr = idsByName.get(k) ?? [];
-          arr.push(h.id);
-          idsByName.set(k, arr);
-        }
-        const allIds = Array.from(
-          new Set(histExercises.map((h) => h.id).concat(exList.map((e) => e.id))),
-        );
-        const { data: logRows } = await supabase
-          .from("training_set_logs")
-          .select("*")
-          .in("exercise_id", allIds)
-          .eq("client_id", clientId)
-          .order("performed_at", { ascending: false })
-          .limit(2000);
-        // Rewrite log.exercise_id to a current-plan exercise id when the
-        // historic log belongs to a name-matched exercise. That lets the
-        // existing `logs.filter(l => l.exercise_id === ex.id)` keep working
-        // unchanged for both display and analytics.
-        const currentByName = new Map<string, string>();
-        for (const e of exList) currentByName.set(normalizeExerciseName(e.name), e.id);
-        const remapped = ((logRows as SetLog[]) ?? []).map((l) => {
-          // already current? keep.
-          if (exList.some((e) => e.id === l.exercise_id)) return l;
-          // find name of the historic exercise this log belongs to
-          const h = histExercises.find((x) => x.id === l.exercise_id);
-          if (!h) return l;
-          const target = currentByName.get(normalizeExerciseName(h.name));
-          return target ? { ...l, exercise_id: target } : l;
-        });
-        setLogs(remapped);
       } else {
+        setExercises([]);
         setLogs([]);
       }
-    } else {
-      setExercises([]);
-      setLogs([]);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Trainingsdaten konnten nicht geladen werden.";
+      setLoadError(message);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
-    reload();
+    const cached = readTrainingTrackerSnapshot(clientId);
+    if (cached) {
+      setPlan(cached.plan);
+      setDays(cached.days);
+      setExercises(cached.exercises);
+      setLogs(cached.logs);
+      setActiveWeek(cached.activeWeek);
+      setWeeksCount(cached.weeksCount);
+      setLoading(false);
+    }
+    try {
+      setOpenDayState(window.localStorage.getItem(openDayKey));
+    } catch {
+      setOpenDayState(null);
+    }
+    void reload(Boolean(cached));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
+
+  // Every meaningful tracker change is persisted. This includes optimistic
+  // offline logs and exercises the athlete adds during the session.
+  useEffect(() => {
+    if (!clientId || !plan || loading) return;
+    const timer = window.setTimeout(
+      () =>
+        writeTrainingTrackerSnapshot({
+          clientId,
+          plan,
+          days,
+          exercises,
+          logs,
+          activeWeek,
+          weeksCount,
+        }),
+      120,
+    );
+    return () => window.clearTimeout(timer);
+  }, [activeWeek, clientId, days, exercises, loading, logs, plan, weeksCount]);
 
   // Heute bereits abgeschlossene Trainingstage nachladen (für UI-State des Buttons)
   useEffect(() => {
@@ -351,6 +391,20 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
 
   if (!supabaseUser) return null;
   if (loading) return <div className="text-sm text-muted-foreground">Lade Übungen...</div>;
+  if (!plan && loadError)
+    return (
+      <div className="rounded-2xl border border-amber-500/30 bg-amber-500/8 p-5 text-sm">
+        <div className="font-semibold">Training konnte gerade nicht geladen werden.</div>
+        <div className="mt-1 text-muted-foreground">{loadError}</div>
+        <button
+          type="button"
+          onClick={() => void reload()}
+          className="mt-3 rounded-lg border border-amber-500/35 px-3 py-2 text-xs font-semibold text-amber-500"
+        >
+          Erneut versuchen
+        </button>
+      </div>
+    );
   if (!plan)
     return (
       <div className="rounded-2xl border border-border bg-card p-5 text-sm text-muted-foreground">
@@ -380,6 +434,26 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
 
   return (
     <div className="space-y-4">
+      {(refreshing || loadError) && (
+        <div
+          className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-2 text-[11px] ${
+            loadError
+              ? "border-amber-500/30 bg-amber-500/8 text-amber-500"
+              : "border-primary/20 bg-primary/5 text-muted-foreground"
+          }`}
+        >
+          <span>
+            {loadError
+              ? "Letzter sicherer Stand – Verbindung wird beim nächsten Versuch aktualisiert."
+              : "Aktualisiere Trainingsdaten im Hintergrund …"}
+          </span>
+          {loadError && (
+            <button type="button" onClick={() => void reload()} className="font-bold">
+              Neu laden
+            </button>
+          )}
+        </div>
+      )}
       <section className="overflow-hidden rounded-3xl border border-primary/20 bg-[linear-gradient(145deg,rgba(17,28,25,0.98),rgba(12,18,17,0.98))] text-white shadow-[0_24px_70px_-38px_rgba(0,0,0,0.85)]">
         <div className="p-5 sm:p-6">
           <div className="flex items-start justify-between gap-4">
@@ -910,27 +984,82 @@ function ExerciseCard({
   const lastSession = previousLogs[0] ? localDateKey(previousLogs[0].performed_at) : null;
   const lastPerformance = previousLogs[0] ?? null;
   const plannedRestSeconds = Math.max(15, Math.min(600, ex.rest_seconds ?? 90));
-  const [restRemaining, setRestRemaining] = useState(plannedRestSeconds);
-  const [restRunning, setRestRunning] = useState(false);
+  const restTimerKey = `bf.tt.rest.${clientId}.${ex.id}.${todayStr}`;
+  const initialRestTimer = useRef<{
+    remaining: number;
+    running: boolean;
+    deadline: number | null;
+  } | null>(null);
+  if (initialRestTimer.current === null) {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(restTimerKey) || "null") as {
+        remaining?: number;
+        running?: boolean;
+        deadline?: number | null;
+      } | null;
+      const deadline =
+        parsed?.running && typeof parsed.deadline === "number" ? parsed.deadline : null;
+      const remaining = deadline
+        ? Math.max(0, Math.ceil((deadline - Date.now()) / 1000))
+        : Math.max(0, Number(parsed?.remaining) || plannedRestSeconds);
+      initialRestTimer.current = {
+        remaining,
+        running: Boolean(deadline && remaining > 0),
+        deadline,
+      };
+    } catch {
+      initialRestTimer.current = {
+        remaining: plannedRestSeconds,
+        running: false,
+        deadline: null,
+      };
+    }
+  }
+  const [restRemaining, setRestRemaining] = useState(initialRestTimer.current.remaining);
+  const [restRunning, setRestRunning] = useState(initialRestTimer.current.running);
+  const [restDeadline, setRestDeadline] = useState<number | null>(
+    initialRestTimer.current.deadline,
+  );
   const [savingSet, setSavingSet] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!restRunning) return;
-    const timer = window.setInterval(() => {
-      setRestRemaining((current) => {
-        if (current <= 1) {
-          window.clearInterval(timer);
-          setRestRunning(false);
-          return 0;
-        }
-        return current - 1;
-      });
-    }, 1000);
-    return () => window.clearInterval(timer);
-  }, [restRunning]);
+    if (!restRunning || !restDeadline) return;
+    const tick = () => {
+      const next = Math.max(0, Math.ceil((restDeadline - Date.now()) / 1000));
+      setRestRemaining(next);
+      if (next === 0) {
+        setRestRunning(false);
+        setRestDeadline(null);
+      }
+    };
+    tick();
+    const timer = window.setInterval(tick, 500);
+    document.addEventListener("visibilitychange", tick);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", tick);
+    };
+  }, [restDeadline, restRunning]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        restTimerKey,
+        JSON.stringify({
+          remaining: restRemaining,
+          running: restRunning,
+          deadline: restDeadline,
+        }),
+      );
+    } catch {
+      /* optional browser cache */
+    }
+  }, [restDeadline, restRemaining, restRunning, restTimerKey]);
 
   const startRestTimer = () => {
+    const deadline = Date.now() + plannedRestSeconds * 1000;
     setRestRemaining(plannedRestSeconds);
+    setRestDeadline(deadline);
     setRestRunning(true);
   };
 
@@ -987,10 +1116,18 @@ function ExerciseCard({
     }
   }, [overrides, overridesKey]);
   const setOverride = (n: number, key: "w" | "r", val: string) =>
-    setOverrides((cur) => ({
-      ...cur,
-      [n]: { w: cur[n]?.w ?? "", r: cur[n]?.r ?? "", [key]: val },
-    }));
+    setOverrides((cur) => {
+      const next = {
+        ...cur,
+        [n]: { w: cur[n]?.w ?? "", r: cur[n]?.r ?? "", [key]: val },
+      };
+      try {
+        window.localStorage.setItem(overridesKey, JSON.stringify(next));
+      } catch {
+        /* optional browser cache */
+      }
+      return next;
+    });
 
   // Zusätzliche Sätze, die der Kunde spontan dranhängt (über den Plan hinaus).
   const extraKey = `bf.tt.extra.${clientId}.${ex.id}.${todayStr}`;
@@ -1119,7 +1256,9 @@ function ExerciseCard({
             <Dumbbell className="h-5 w-5" />
           </div>
           <div className="min-w-0 flex-1">
-            <h4 className="break-words font-sans text-base font-black leading-tight tracking-tight sm:text-lg">{ex.name}</h4>
+            <h4 className="break-words font-sans text-base font-black leading-tight tracking-tight sm:text-lg">
+              {ex.name}
+            </h4>
             <p className="mt-0.5 text-[11px] text-muted-foreground">
               {lastPerformance
                 ? `Letztes Mal: ${
@@ -1139,7 +1278,6 @@ function ExerciseCard({
           {ex.target_sets ?? "?"} × {ex.target_reps ?? "?"}
         </span>
       </header>
-
 
       <div className="p-3 sm:p-4">
         <div className="space-y-2">
@@ -1310,8 +1448,15 @@ function ExerciseCard({
             <button
               type="button"
               onClick={() => {
-                if (restRemaining === 0) setRestRemaining(plannedRestSeconds);
-                setRestRunning((running) => !running);
+                if (restRunning) {
+                  setRestRunning(false);
+                  setRestDeadline(null);
+                  return;
+                }
+                const seconds = restRemaining === 0 ? plannedRestSeconds : restRemaining;
+                setRestRemaining(seconds);
+                setRestDeadline(Date.now() + seconds * 1000);
+                setRestRunning(true);
               }}
               className="grid h-9 w-9 place-items-center rounded-xl border border-border text-muted-foreground transition hover:border-primary/35 hover:text-primary"
               aria-label={restRunning ? "Pausentimer anhalten" : "Pausentimer starten"}
@@ -1323,6 +1468,7 @@ function ExerciseCard({
               onClick={() => {
                 setRestRemaining(plannedRestSeconds);
                 setRestRunning(false);
+                setRestDeadline(null);
               }}
               className="grid h-9 w-9 place-items-center rounded-xl border border-border text-muted-foreground transition hover:border-primary/35 hover:text-primary"
               aria-label="Pausentimer zurücksetzen"

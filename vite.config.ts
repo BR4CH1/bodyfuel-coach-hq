@@ -22,7 +22,9 @@ if (mcpEnabled) plugins.push(mcpPlugin());
 if (pwaEnabled) {
   plugins.push(
     VitePWA({
-      registerType: "autoUpdate",
+      // Never activate a new service worker while a workout/form is open.
+      // The waiting worker becomes active after all tabs are closed.
+      registerType: "prompt",
       injectRegister: null,
       filename: "sw.js",
       devOptions: { enabled: false },

@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Activity, CalendarClock, Clock, Inbox, Users } from "lucide-react";
+import { CalendarClock, ChevronDown, Clock, Inbox, Settings2, Users } from "lucide-react";
 
 import { StatPill } from "@/features/coach-dashboard/components/CoachDashboardPrimitives";
 
@@ -9,19 +9,15 @@ export function CoachDashboardHeader({
   leadCount,
   openCheckinCount,
   expiringPlanCount,
-  showPerformanceNavigation,
-  performancePending,
 }: {
   weekStart: string;
   clientCount: number;
   leadCount: number;
   openCheckinCount: number;
   expiringPlanCount: number;
-  showPerformanceNavigation: boolean;
-  performancePending: number;
 }) {
   return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+    <div className="space-y-4">
       <div>
         <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Coach</p>
         <h1 className="font-display text-3xl font-bold sm:text-4xl">Dashboard</h1>
@@ -30,8 +26,8 @@ export function CoachDashboardHeader({
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        <StatPill icon={<Users className="h-4 w-4" />} value={clientCount} label="Kunden" />
+      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+        <StatPill icon={<Users className="h-4 w-4" />} value={clientCount} label="aktive Kunden" />
         <StatPill icon={<Inbox className="h-4 w-4" />} value={leadCount} label="Neue Leads" />
         <StatPill
           icon={<Clock className="h-4 w-4" />}
@@ -45,36 +41,22 @@ export function CoachDashboardHeader({
           label="Pläne laufen aus"
           warn={expiringPlanCount > 0}
         />
-
-        <QuickLink to="/coach/package-requests" icon="📦" label="Paketanfragen" />
-        <QuickLink to="/coach/gifts" icon="🎁" label="Geschenklinks" />
-        <QuickLink to="/coach/affiliates" icon="🤝" label="Affiliate Partner" />
-        <QuickLink to="/coach/foods" icon="🥗" label="Lebensmittel-DB" />
-
-        {showPerformanceNavigation && (
-          <Link
-            to="/coach/bulls-performance"
-            className="relative flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm hover:border-bulls-red/60"
-          >
-            <Activity className="h-4 w-4 text-bulls-red" />
-            <span className="font-display text-sm font-bold">Performance Tests</span>
-            {performancePending > 0 && (
-              <span className="ml-1 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-bulls-red px-1.5 py-0.5 text-[10px] font-bold text-white">
-                {performancePending}
-              </span>
-            )}
-          </Link>
-        )}
-        {showPerformanceNavigation && (
-          <QuickLink
-            to="/coach/player-cards"
-            icon="🎴"
-            label="Player Cards"
-            className="hover:border-bulls-red/60"
-            iconClassName="text-bulls-red"
-          />
-        )}
       </div>
+
+      <details className="group rounded-2xl border border-border bg-card">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold">
+          <span className="inline-flex items-center gap-2">
+            <Settings2 className="h-4 w-4 text-gold" /> Weitere Coach-Tools
+          </span>
+          <ChevronDown className="h-4 w-4 text-muted-foreground transition group-open:rotate-180" />
+        </summary>
+        <div className="grid gap-2 border-t border-border p-3 sm:grid-cols-2 lg:grid-cols-4">
+          <QuickLink to="/coach/package-requests" icon="📦" label="Paketanfragen" />
+          <QuickLink to="/coach/gifts" icon="🎁" label="Geschenklinks" />
+          <QuickLink to="/coach/affiliates" icon="🤝" label="Affiliate Partner" />
+          <QuickLink to="/coach/foods" icon="🥗" label="Lebensmittel-DB" />
+        </div>
+      </details>
     </div>
   );
 }
@@ -86,12 +68,7 @@ function QuickLink({
   className = "hover:border-gold/40",
   iconClassName = "text-gold",
 }: {
-  to:
-    | "/coach/package-requests"
-    | "/coach/gifts"
-    | "/coach/affiliates"
-    | "/coach/foods"
-    | "/coach/player-cards";
+  to: "/coach/package-requests" | "/coach/gifts" | "/coach/affiliates" | "/coach/foods";
   icon: string;
   label: string;
   className?: string;

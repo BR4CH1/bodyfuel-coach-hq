@@ -18,8 +18,8 @@ const IDLE_CYCLE: Array<{ emotion: FuelyEmotion; anim: FuelyAnimation; weight: n
   { emotion: "happy", anim: "float", weight: 2 },
   { emotion: "motivated", anim: "idle", weight: 2 },
   { emotion: "thinking", anim: "idle", weight: 2 },
-  { emotion: "waving", anim: "wiggle", weight: 1 },
-  { emotion: "celebrating", anim: "bounce", weight: 1 },
+  { emotion: "waving", anim: "wave", weight: 1 },
+  { emotion: "celebrating", anim: "celebrate", weight: 1 },
 ];
 function pickIdle() {
   const total = IDLE_CYCLE.reduce((s, i) => s + i.weight, 0);
@@ -30,7 +30,6 @@ function pickIdle() {
   }
   return IDLE_CYCLE[0];
 }
-
 
 // Pfade, auf denen Fuely NICHT erscheinen soll (Auth, Legal, Marketing-Landing).
 const HIDDEN_PREFIXES = [
@@ -148,13 +147,47 @@ export function FuelyFAB() {
   const targetOrgSlug = useMemo(() => {
     const seg = pathname.split("/").filter(Boolean)[0];
     const topLevelRoutes = new Set([
-      "auth","login","dashboard","coach","coach-tools","admin","app","tracker",
+      "auth",
+      "login",
+      "dashboard",
+      "coach",
+      "coach-tools",
+      "admin",
+      "app",
+      "tracker",
 
-      "smart","messages","achievements","ranking","measurements","profile",
-      "progress","training","training-import","nutrition","community","checkout",
-      "welcome","impressum","datenschutz","trust","unsubscribe","join","guardian-consent",
-      "check-in","daily-checklist","mein-bodyfuel","onboarding","strength-check",
-      "api",".lovable",".well-known",".mcp","bulls","email","lovable","mcp",
+      "smart",
+      "messages",
+      "achievements",
+      "ranking",
+      "measurements",
+      "profile",
+      "progress",
+      "training",
+      "training-import",
+      "nutrition",
+      "community",
+      "checkout",
+      "welcome",
+      "impressum",
+      "datenschutz",
+      "trust",
+      "unsubscribe",
+      "join",
+      "guardian-consent",
+      "check-in",
+      "daily-checklist",
+      "mein-bodyfuel",
+      "onboarding",
+      "strength-check",
+      "api",
+      ".lovable",
+      ".well-known",
+      ".mcp",
+      "bulls",
+      "email",
+      "lovable",
+      "mcp",
     ]);
     if (seg && !topLevelRoutes.has(seg)) return seg;
     // bulls hat eine eigene Route-Struktur — dort ebenfalls auf $orgSlug.fuely
@@ -172,7 +205,7 @@ export function FuelyFAB() {
   if (hidden) return null;
 
   const handleTap = () => {
-    setAnim("wiggle");
+    setAnim("wave");
     setUnread(0);
     window.setTimeout(() => {
       setAnim("idle");
@@ -186,7 +219,6 @@ export function FuelyFAB() {
       }
     }, 450);
   };
-
 
   const activeAnim: FuelyAnimation = unread > 0 && anim === "idle" ? "bounce" : anim;
   const activeEmotion: FuelyEmotion = sleeping ? "thinking" : emotion;
@@ -230,4 +262,3 @@ export function FuelyFAB() {
 }
 
 export default FuelyFAB;
-

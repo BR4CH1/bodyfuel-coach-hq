@@ -44,7 +44,7 @@ export function CustomerFuelyBriefing({ briefing }: { briefing: CustomerBriefing
           <div className="flex items-center gap-4">
             <Fuely
               emotion={briefing.emotion}
-              animation={clear ? "bounce" : "idle"}
+              animation={clear ? "celebrate" : "idle"}
               size="lg"
               className="shrink-0"
             />

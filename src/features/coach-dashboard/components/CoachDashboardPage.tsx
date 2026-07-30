@@ -1,42 +1,23 @@
-import { CoachDashboardSummary } from "@/components/bodyfuel/CoachDashboardSummary";
 import { CoachMessagesCard } from "@/components/bodyfuel/CoachMessagesCard";
-import { CoachRadarCard } from "@/components/bodyfuel/CoachRadarCard";
-import { CoachTaskInboxCard } from "@/components/bodyfuel/CoachTaskInboxCard";
 import { CoachTrialOverview } from "@/components/bodyfuel/CoachTrialOverview";
 import { PendingDraftsCard } from "@/components/bodyfuel/PendingDraftsCard";
 import { TierMetricsCard } from "@/components/bodyfuel/TierMetricsCard";
-import { CoachAttentionSection } from "@/features/coach-dashboard/components/CoachAttentionSection";
 import { CoachCustomerOverviewSection } from "@/features/coach-dashboard/components/CoachCustomerOverviewSection";
 import { CoachDashboardHeader } from "@/features/coach-dashboard/components/CoachDashboardHeader";
 import { CoachFuelyBriefing } from "@/features/coach-dashboard/components/CoachFuelyBriefing";
 import { CoachFuelyFollowUps } from "@/features/coach-dashboard/components/CoachFuelyFollowUps";
 import { CoachFuelyWorkload } from "@/features/coach-dashboard/components/CoachFuelyWorkload";
-import { CoachFuelyIntelligence } from "@/features/coach-dashboard/components/CoachFuelyIntelligence";
-import { CoachPerformanceNotice } from "@/features/coach-dashboard/components/CoachPerformanceNotice";
 import { CoachRankingPanel } from "@/features/coach-dashboard/components/CoachRankingPanel";
-import { SectionHeader } from "@/features/coach-dashboard/components/CoachDashboardPrimitives";
 import { useCoachDashboardController } from "@/features/coach-dashboard/hooks/useCoachDashboardController";
-import type { CoachFollowUpCategory } from "@/features/coach-dashboard/types";
+import type { CoachFollowUpCategory, CoachWorkloadKey } from "@/features/coach-dashboard/types";
 import { useState } from "react";
 
 export function CoachDashboardPage() {
   const [followUpFilter, setFollowUpFilter] = useState<CoachFollowUpCategory | null>(null);
+  const [workloadFocus, setWorkloadFocus] = useState<CoachWorkloadKey | null>(null);
   const controller = useCoachDashboardController();
-  const {
-    clients,
-    leads,
-    view,
-    radar,
-    showPerformanceNavigation,
-    performancePending,
-    briefing,
-    followUps,
-    workload,
-    intelligence,
-    isLoading,
-    isError,
-    error,
-  } = controller;
+  const { clients, leads, view, briefing, followUps, workload, isLoading, isError, error } =
+    controller;
 
   return (
     <div className="space-y-6">
@@ -46,8 +27,6 @@ export function CoachDashboardPage() {
         leadCount={leads.length}
         openCheckinCount={view.openWeek.length}
         expiringPlanCount={view.expiringPlans.length}
-        showPerformanceNavigation={showPerformanceNavigation}
-        performancePending={performancePending}
       />
 
       {isLoading && (
@@ -64,45 +43,31 @@ export function CoachDashboardPage() {
 
       {!isLoading && !isError && (
         <div className="space-y-8">
-          <CoachFuelyBriefing briefing={briefing} />
-          <CoachFuelyWorkload
-            workload={workload}
-            onOpenFollowUps={(category) => {
-              setFollowUpFilter(category);
+          <CoachFuelyBriefing
+            briefing={briefing}
+            onOpenWorkload={(key) => {
+              setWorkloadFocus(key);
               window.setTimeout(
                 () =>
                   document
-                    .getElementById("fuely-followups")
+                    .getElementById("fuely-workload")
                     ?.scrollIntoView({ behavior: "smooth", block: "start" }),
                 0,
               );
             }}
           />
-          <CoachFuelyIntelligence
-            intelligence={intelligence}
-            onOpenFollowUps={(category) => {
-              setFollowUpFilter(category);
-              window.setTimeout(
-                () =>
-                  document
-                    .getElementById("fuely-followups")
-                    ?.scrollIntoView({ behavior: "smooth", block: "start" }),
-                0,
-              );
-            }}
-          />
+          <div id="fuely-workload" className="scroll-mt-24">
+            <CoachFuelyWorkload
+              workload={workload}
+              focusKey={workloadFocus}
+              onOpenFollowUps={(category) => setFollowUpFilter(category)}
+            />
+          </div>
           <CoachFuelyFollowUps
             drafts={followUps}
             selectedCategory={followUpFilter}
             onClearFilter={() => setFollowUpFilter(null)}
           />
-          <CoachDashboardSummary data={radar} />
-          <CoachRadarCard data={radar} />
-          <CoachTaskInboxCard data={radar} />
-
-          {showPerformanceNavigation && <CoachPerformanceNotice pending={performancePending} />}
-
-          <TierMetricsCard />
           <CoachMessagesCard />
           <PendingDraftsCard
             redClients={view.redClients.map((client) => ({
@@ -111,29 +76,28 @@ export function CoachDashboardPage() {
             }))}
           />
 
-          <CoachAttentionSection
-            openWeek={view.openWeek}
-            expiringPlans={view.expiringPlans}
-            inactive={view.inactive}
-            leads={leads}
-            scoreById={view.scoreById}
-          />
-
-          <CoachCustomerOverviewSection
-            clients={clients}
-            planOverview={view.planOverview}
-            recentMeasurements={view.recentMeasurements}
-            recentNutrition={view.recentNutrition}
-            recentTraining={view.recentTraining}
-            scoreCounts={view.scoreCounts}
-            redClients={view.redClients}
-          />
-
-          <SectionHeader title="Umsatz & Conversion" subtitle="Trials und Paketanfragen" />
-          <CoachTrialOverview />
-
-          <SectionHeader title="Community & Rankings" subtitle="Top-Athleten im Zeitraum" />
-          <CoachRankingPanel />
+          <details className="group rounded-3xl border border-border bg-card">
+            <summary className="cursor-pointer list-none px-5 py-4 font-display text-lg font-bold">
+              Kunden, Umsatz & Auswertungen
+              <span className="ml-2 text-xs font-normal text-muted-foreground">
+                bei Bedarf öffnen
+              </span>
+            </summary>
+            <div className="space-y-6 border-t border-border p-4 sm:p-5">
+              <CoachCustomerOverviewSection
+                clients={clients}
+                planOverview={view.planOverview}
+                recentMeasurements={view.recentMeasurements}
+                recentNutrition={view.recentNutrition}
+                recentTraining={view.recentTraining}
+                scoreCounts={view.scoreCounts}
+                redClients={view.redClients}
+              />
+              <TierMetricsCard />
+              <CoachTrialOverview />
+              <CoachRankingPanel />
+            </div>
+          </details>
         </div>
       )}
     </div>

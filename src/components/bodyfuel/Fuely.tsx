@@ -7,7 +7,7 @@
  * Beispiele:
  *   <Fuely emotion="happy" />
  *   <Fuely emotion="waving" size="lg" message="Hey Manuel 👋" />
- *   <Fuely emotion="celebrating" animation="bounce" size="xl" />
+ *   <Fuely emotion="celebrating" animation="celebrate" size="xl" />
  */
 import { cn } from "@/lib/utils";
 import happy from "@/assets/fuely-happy.png.asset.json";
@@ -18,16 +18,10 @@ import waving from "@/assets/fuely-waving.png.asset.json";
 import sad from "@/assets/fuely-sad.png.asset.json";
 
 export type FuelyEmotion =
-  | "happy"
-  | "motivated"
-  | "thinking"
-  | "celebrating"
-  | "waving"
-  | "sad"
-  | "proud"
-  | "focused";
+  "happy" | "motivated" | "thinking" | "celebrating" | "waving" | "sad" | "proud" | "focused";
 
-export type FuelyAnimation = "idle" | "bounce" | "wiggle" | "float" | "none";
+export type FuelyAnimation =
+  "idle" | "bounce" | "wiggle" | "float" | "wave" | "thinking" | "success" | "celebrate" | "none";
 export type FuelySize = "xs" | "sm" | "md" | "lg" | "xl";
 
 const EMOTION_ASSET: Record<FuelyEmotion, { url: string }> = {
@@ -54,6 +48,10 @@ const ANIMATION_CLASS: Record<FuelyAnimation, string> = {
   bounce: "fuely-bounce",
   wiggle: "fuely-wiggle",
   float: "fuely-float",
+  wave: "fuely-wave",
+  thinking: "fuely-thinking",
+  success: "fuely-success",
+  celebrate: "fuely-celebrate",
   none: "",
 };
 
@@ -95,10 +93,7 @@ export function Fuely({
         />
         <div className="relative mb-2 max-w-[220px] rounded-2xl rounded-bl-sm bg-white px-3 py-2 text-sm text-neutral-900 shadow-md">
           {message}
-          <span
-            aria-hidden
-            className="absolute -left-1.5 bottom-2 h-3 w-3 rotate-45 bg-white"
-          />
+          <span aria-hidden className="absolute -left-1.5 bottom-2 h-3 w-3 rotate-45 bg-white" />
         </div>
       </div>
     );
