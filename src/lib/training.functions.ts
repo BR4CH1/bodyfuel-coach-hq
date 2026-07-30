@@ -221,6 +221,7 @@ export const deleteSetLog = createServerFn({ method: "POST" })
 
 /**
 
+
  * Session-Complete-Trigger. Beim Klick auf „Einheit abschließen":
  *  1. Alle Working-Übungen des Trainingstags laden
  *  2. Nur solche mit mind. einem geloggten Working-Set am Session-Datum
