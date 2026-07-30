@@ -5,8 +5,6 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
 
-const SITE_NAME = "BODYFUEL";
-const SENDER_DOMAIN = "notify.bodyfuel-coaching.com";
 const FROM_ADDRESS = "Manuel | BodyFuel <manuel@bodyfuel-coaching.com>";
 const REPLY_TO = "manuel@bodyfuel-coaching.com";
 const TASK_PREFIX = "fuely-followup:";
@@ -175,13 +173,6 @@ async function sendEmailNow(input: {
   subject: string;
   body: string;
 }) {
-  const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) {
-    throw new Error(
-      "E-Mail-Versand ist noch nicht konfiguriert (LOVABLE_API_KEY fehlt auf dem Server).",
-    );
-  }
-
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const to = await resolveRecipientEmail(input.target);
   const { data: suppressed, error: suppressionError } = await supabaseAdmin
@@ -201,33 +192,31 @@ async function sendEmailNow(input: {
     template_name: "coach-followup",
     recipient_email: to,
     status: "pending",
+    metadata: { provider: "resend" },
   });
 
   try {
-    const { sendLovableEmail } = await import("@lovable.dev/email-js");
-    const result = await sendLovableEmail(
-      {
-        to,
-        from: FROM_ADDRESS,
-        reply_to: REPLY_TO,
-        sender_domain: SENDER_DOMAIN,
-        subject: input.subject,
-        html,
-        text: `${input.body}\n\nBeste Grüße\nManuel | BodyFuel`,
-        purpose: "transactional",
-        label: "coach-followup",
-        idempotency_key: messageId,
-        message_id: messageId,
-      },
-      { apiKey, sendUrl: process.env.LOVABLE_SEND_URL },
-    );
-    if (!result.success) throw new Error("Der Maildienst hat den Versand nicht bestätigt.");
+    const { sendResendEmail } = await import("@/lib/email/resend.server");
+    const result = await sendResendEmail({
+      to,
+      from: FROM_ADDRESS,
+      replyTo: REPLY_TO,
+      subject: input.subject,
+      html,
+      text: `${input.body}\n\nBeste Grüße\nManuel | BodyFuel`,
+      idempotencyKey: messageId,
+      category: "coach-followup",
+    });
 
     const { error: sentLogError } = await supabaseAdmin.from("email_send_log").insert({
       message_id: messageId,
       template_name: "coach-followup",
       recipient_email: to,
       status: "sent",
+      metadata: {
+        provider: "resend",
+        provider_message_id: result.id,
+      },
     });
     // A retry with the same idempotency key can reach this point after the
     // original response was lost. The unique sent-log then proves delivery.
@@ -243,6 +232,7 @@ async function sendEmailNow(input: {
       recipient_email: to,
       status: "failed",
       error_message: message.slice(0, 1000),
+      metadata: { provider: "resend" },
     });
     throw new Error(`E-Mail konnte nicht versendet werden: ${message}`);
   }
