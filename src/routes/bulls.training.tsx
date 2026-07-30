@@ -61,18 +61,27 @@ function TrainingPage() {
 
       {supabaseUser && <BullsAthleteAthleticSession />}
 
-
-      {isTrial || isExpired ? (
-        <TrialTrainingPlan />
-      ) : (
-        supabaseUser && <PlanContentView clientId={supabaseUser.id} planType="training" />
-      )}
-
       {supabaseUser && !isExpired && (
         <section className="space-y-4">
           <TrainingTracker clientId={supabaseUser.id} />
         </section>
       )}
+
+      {isTrial || isExpired ? (
+        <TrialTrainingPlan />
+      ) : (
+        supabaseUser && (
+          <details className="rounded-2xl border border-border bg-card">
+            <summary className="cursor-pointer list-none px-5 py-4 text-sm font-bold">
+              Vollständigen Trainingsplan anzeigen
+            </summary>
+            <div className="border-t border-border p-4">
+              <PlanContentView clientId={supabaseUser.id} planType="training" />
+            </div>
+          </details>
+        )
+      )}
+
     </div>
   );
 }
