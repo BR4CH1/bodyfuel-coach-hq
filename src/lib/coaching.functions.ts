@@ -92,9 +92,30 @@ export const listCustomers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertCoach(context.supabase, context.userId);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const { data: packagesRaw, error } = await supabaseAdmin
+    // Lovable Cloud injects the service-role key in production. Local GitHub
+    // previews do not necessarily have that secret. The customer list itself
+    // is still safe to load through the authenticated coach client because all
+    // involved tables are protected by coach-aware RLS policies.
+    let adminClient: typeof context.supabase | null = null;
+    if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      try {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { error: probeError } = await supabaseAdmin
+          .from("customer_packages")
+          .select("id")
+          .limit(1);
+        if (!probeError) adminClient = supabaseAdmin;
+      } catch (adminError) {
+        console.warn(
+          "[Customers] Supabase admin client unavailable; using authenticated coach access.",
+          adminError instanceof Error ? adminError.message : "Unknown admin-client error",
+        );
+      }
+    }
+    const customerDb = adminClient ?? context.supabase;
+
+    const { data: packagesRaw, error } = await customerDb
       .from("customer_packages")
       .select("*")
       .order("created_at", { ascending: false });
@@ -121,26 +142,33 @@ export const listCustomers = createServerFn({ method: "GET" })
     const userIds = [...new Set(packages.map((p) => p.user_id))];
     if (userIds.length === 0) return [];
 
-    const { data: profiles } = await supabaseAdmin
+    const { data: profiles } = await customerDb
       .from("profiles")
       .select("id, display_name, phone, nickname")
       .in("id", userIds);
 
-    // Need emails too
-    const { data: usersData } = await supabaseAdmin.auth.admin.listUsers({
-      page: 1,
-      perPage: 1000,
-    });
-    const emailMap = new Map(usersData.users.map((u) => [u.id, u.email]));
+    // Auth emails and suppression status require the service role. They are
+    // optional for rendering the customer list, so local previews continue
+    // with names and package data when the Lovable-only secret is unavailable.
+    const emailMap = new Map<string, string | undefined>();
+    if (adminClient) {
+      const { data: usersData, error: usersError } = await adminClient.auth.admin.listUsers({
+        page: 1,
+        perPage: 1000,
+      });
+      if (!usersError) {
+        for (const user of usersData.users) emailMap.set(user.id, user.email);
+      }
+    }
     const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));
 
     // Zahlungen laden für Status-Badges
-    const { data: payments } = await supabaseAdmin
+    const { data: payments } = await customerDb
       .from("payment_history")
       .select("user_id, status, amount_eur, created_at, payment_date")
       .in("user_id", userIds);
 
-    const { data: groupsData } = await supabaseAdmin
+    const { data: groupsData } = await customerDb
       .from("user_groups")
       .select("user_id, group_name")
       .in("user_id", userIds);
@@ -153,8 +181,8 @@ export const listCustomers = createServerFn({ method: "GET" })
 
     // Email-Abmeldungen laden
     const emailList = [...emailMap.values()].filter(Boolean) as string[];
-    const { data: suppressed } = emailList.length
-      ? await supabaseAdmin
+    const { data: suppressed } = adminClient && emailList.length
+      ? await adminClient
           .from("suppressed_emails")
           .select("email")
           .in(
@@ -210,7 +238,7 @@ export const listCustomers = createServerFn({ method: "GET" })
         email: emailMap.get(p.user_id) ?? null,
         email_subscribed: (() => {
           const e = emailMap.get(p.user_id);
-          return e ? !suppressedSet.has(e.toLowerCase()) : true;
+          return e ? !suppressedSet.has(e.toLowerCase()) : null;
         })(),
         display_name: profileMap.get(p.user_id)?.display_name ?? null,
         nickname: (profileMap.get(p.user_id) as any)?.nickname ?? null,

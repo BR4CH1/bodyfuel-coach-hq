@@ -32,7 +32,13 @@ function CustomersList() {
   const trialFn = useServerFn(listTrialUsers);
   const freeFn = useServerFn(listFreeUsers);
   const radarFn = useServerFn(getCoachRadar);
-  const { data, isLoading } = useQuery({
+  const {
+    data,
+    isLoading,
+    error: customerError,
+    refetch: refetchCustomers,
+    isFetching: customersFetching,
+  } = useQuery({
     queryKey: ["customers"],
     queryFn: () => fn(),
   });
@@ -165,6 +171,31 @@ function CustomersList() {
         />
       </div>
 
+      {customerError && (
+        <div className="flex flex-col gap-3 rounded-2xl border border-destructive/50 bg-destructive/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
+            <div>
+              <p className="font-semibold text-destructive">Kunden konnten nicht geladen werden</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {customerError instanceof Error
+                  ? customerError.message
+                  : "Unbekannter Fehler beim Laden der Kundenliste."}
+              </p>
+            </div>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={customersFetching}
+            onClick={() => void refetchCustomers()}
+          >
+            {customersFetching ? "Lädt…" : "Erneut laden"}
+          </Button>
+        </div>
+      )}
+
       {/* Free Tracker KPIs */}
       {freeCount > 0 && (
         <div className="grid gap-3 sm:grid-cols-3">
@@ -227,9 +258,13 @@ function CustomersList() {
       {filter !== "trial" && filter !== "trial_expired" && filter !== "free" && isLoading && (
         <p className="text-sm text-muted-foreground">Lade…</p>
       )}
-      {filter !== "trial" && filter !== "trial_expired" && filter !== "free" && data && filtered.length === 0 && filter !== "all" && (
+      {filter !== "trial" && filter !== "trial_expired" && filter !== "free" && data && filtered.length === 0 && (
         <p className="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground">
-          Keine Kunden in dieser Ansicht.
+          {search.trim()
+            ? "Keine Kunden für diese Suche gefunden."
+            : filter === "all"
+              ? "Keine Kundenpakete gefunden."
+              : "Keine Kunden in dieser Ansicht."}
         </p>
       )}
 
@@ -265,7 +300,13 @@ function CustomersList() {
                       </div>
                       <div className="text-xs text-muted-foreground">
                         {c.email ?? "—"}
-                        <span className="ml-1.5">{c.email_subscribed === false ? "Mail ❌" : "Mail ✅"}</span>
+                        <span className="ml-1.5">
+                          {c.email_subscribed == null
+                            ? "Mail —"
+                            : c.email_subscribed
+                              ? "Mail ✅"
+                              : "Mail ❌"}
+                        </span>
                       </div>
                     </td>
                     <td className="px-4 py-3 uppercase tracking-wider text-gold">{c.package}</td>
@@ -320,7 +361,13 @@ function CustomersList() {
                     </div>
                     <p className="truncate text-xs text-muted-foreground">
                       {c.email ?? "—"}
-                      <span className="ml-1.5">{c.email_subscribed === false ? "Mail ❌" : "Mail ✅"}</span>
+                      <span className="ml-1.5">
+                        {c.email_subscribed == null
+                          ? "Mail —"
+                          : c.email_subscribed
+                            ? "Mail ✅"
+                            : "Mail ❌"}
+                      </span>
                     </p>
                   </div>
                   <PaymentBadge c={c} />
