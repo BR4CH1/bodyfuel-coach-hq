@@ -1,15 +1,44 @@
-import { createFileRoute, Outlet, notFound } from "@tanstack/react-router";
+import { createFileRoute, Outlet, notFound, redirect } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { getOrganizationBySlug, type OrganizationSummary } from "@/lib/organizations/organizations.functions";
 import { OrganizationBrandProvider } from "@/lib/organizations/context";
 
+/**
+ * Auth-Weiterleitungen hängen Parameter teils ohne Trennzeichen an
+ * ("/welcomeerror=access_denied&...", "/authcode=..."). Diese landeten hier im
+ * dynamischen Organisations-Segment und zeigten „Diese Organisation existiert
+ * nicht.". Wir reparieren solche Links, bevor die Organisation geladen wird.
+ */
+const AUTH_BASES = ["welcome", "auth", "login", "reset"] as const;
+
+function repairAuthSlug(slug: string): { base: string; params: string } | null {
+  for (const base of AUTH_BASES) {
+    if (slug.length > base.length && slug.startsWith(base)) {
+      const rest = slug.slice(base.length).replace(/^[?#&]+/, "");
+      if (/^[A-Za-z0-9_]+=/.test(rest)) return { base, params: rest };
+    }
+  }
+  return null;
+}
+
 export const Route = createFileRoute("/$orgSlug")({
+  beforeLoad: ({ params }) => {
+    const repaired = repairAuthSlug(params.orgSlug);
+    if (repaired) {
+      throw redirect({
+        to: repaired.base === "welcome" ? "/welcome" : `/${repaired.base}`,
+        hash: repaired.params,
+        replace: true,
+      } as any);
+    }
+  },
   loader: async ({ params }) => {
     const org = await getOrganizationBySlug({ data: { slug: params.orgSlug } });
     if (!org) throw notFound();
     return { org };
   },
+
   head: ({ loaderData }) => ({
     meta: [
       { title: `${loaderData?.org.name ?? "Organisation"} — BODYFUEL` },
