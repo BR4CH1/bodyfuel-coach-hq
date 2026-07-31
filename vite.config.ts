@@ -27,16 +27,20 @@ if (pwaEnabled) {
       registerType: "prompt",
       injectRegister: null,
       filename: "sw.js",
+      outDir: ".output/public",
       devOptions: { enabled: false },
       manifest: false,
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,webmanifest,woff2}"],
-        navigateFallback: "/",
-        navigateFallbackDenylist: [/^\/api\//, /^\/~oauth/, /^\/lovable\//],
+        navigateFallback: undefined,
         cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
-            urlPattern: ({ request }) => request.mode === "navigate",
+            urlPattern: ({ request, url }) =>
+              request.mode === "navigate" &&
+              !url.pathname.startsWith("/api/") &&
+              !url.pathname.startsWith("/~oauth") &&
+              !url.pathname.startsWith("/lovable/"),
             handler: "NetworkFirst",
             options: {
               cacheName: "bf-pages",
