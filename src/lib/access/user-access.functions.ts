@@ -16,10 +16,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import {
-  buildAvailableContexts,
-  type AvailableContext,
-} from "@/lib/access/user-access.logic";
+import { buildAvailableContexts, type AvailableContext } from "@/lib/access/user-access.logic";
+import { determineHomeRoute } from "@/lib/auth-flow.logic";
 
 export type { AvailableContext } from "@/lib/access/user-access.logic";
 
@@ -56,12 +54,10 @@ export type UserAccess = {
   organizationMemberships: OrgMembershipInfo[];
   availableContexts: AvailableContext[];
   warnings: UserAccessWarning[];
+  homeRoute: string;
 };
 
-async function loadAccess(
-  supabase: any,
-  userId: string,
-): Promise<UserAccess> {
+async function loadAccess(supabase: any, userId: string): Promise<UserAccess> {
   const [
     profileRes,
     pkgRes,
@@ -71,6 +67,7 @@ async function loadAccess(
     memRes,
     staffRes,
     teamRes,
+    measurementRes,
   ] = await Promise.all([
     supabase.from("profiles").select("id, display_name, email").eq("id", userId).maybeSingle(),
     supabase
@@ -97,28 +94,28 @@ async function loadAccess(
       .from("team_memberships")
       .select("team_id, team:organization_teams!inner(id, name, organization_id)")
       .eq("user_id", userId),
+    supabase
+      .from("body_measurements")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId),
   ]);
 
-  const packages = ((pkgRes.data ?? []) as any[]).map((p) =>
-    String(p.package ?? "").toLowerCase(),
-  );
+  const packages = ((pkgRes.data ?? []) as any[]).map((p) => String(p.package ?? "").toLowerCase());
   const pkgSet = new Set(packages);
   const activeSubs = ((subRes.data ?? []) as any[]).some(
     (s) => s.status === "active" || s.status === "trialing",
   );
   const smartAccess = pkgSet.has("smart");
   const coachingAccess =
-    pkgSet.has("coaching") ||
-    pkgSet.has("starter") ||
-    pkgSet.has("premium") ||
-    activeSubs;
+    pkgSet.has("coaching") || pkgSet.has("starter") || pkgSet.has("premium") || activeSubs;
   const personalBodyfuelAccess = smartAccess || coachingAccess;
 
   const roles = ((rolesRes.data ?? []) as any[]).map((r) => r.role);
-  const isPlatformCoach = roles.includes("coach");
+  const isPlatformCoach = roles.includes("coach") || roles.includes("platform_owner");
 
   const groups = ((groupsRes.data ?? []) as any[]).map((g) => g.group_name);
-  const freeAccess = groups.includes("free") || groups.includes("bulls_free");
+  const freeAccess =
+    roles.includes("free") || groups.includes("free") || groups.includes("bulls_free");
   const isBullsGroup = groups.includes("bulls");
 
   const teamsByOrg = new Map<string, { id: string; name: string }[]>();
@@ -192,6 +189,13 @@ async function loadAccess(
     warnings.push("bodyfuel_customer_without_personal_context");
   }
 
+  const accessForRoute = {
+    isPlatformCoach,
+    personalBodyfuelAccess,
+    freeAccess,
+    organizationMemberships: organizationMemberships.map(({ sortKey: _s, ...rest }) => rest),
+  };
+
   return {
     userId,
     email: profileRes.data?.email ?? null,
@@ -201,9 +205,10 @@ async function loadAccess(
     coachingAccess,
     freeAccess,
     isPlatformCoach,
-    organizationMemberships: organizationMemberships.map(({ sortKey: _s, ...rest }) => rest),
+    organizationMemberships: accessForRoute.organizationMemberships,
     availableContexts,
     warnings,
+    homeRoute: determineHomeRoute(accessForRoute, measurementRes.count ?? 0),
   };
 }
 
@@ -217,9 +222,7 @@ export const resolveMyAccess = createServerFn({ method: "GET" })
 /** Coach/Admin-Resolver für einen anderen User (Debug-View). */
 export const resolveUserAccessAsAdmin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) =>
-    z.object({ userId: z.string().uuid() }).parse(data),
-  )
+  .inputValidator((data: unknown) => z.object({ userId: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
     const { data: isCoach } = await context.supabase.rpc("has_role", {
       _user_id: context.userId,

@@ -77,9 +77,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    supabase.auth.getSession()
+    supabase.auth
+      .getUser()
       .then(async ({ data }) => {
-        const user = data.session?.user ?? null;
+        const user = data.user ?? null;
         setSupabaseUser(user);
         if (user) {
           await loadProfile(user.id);
@@ -102,10 +103,19 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const loadProfile = async (uid: string) => {
     const [p, r, g, s] = await Promise.all([
-      supabase.from("profiles").select("id, display_name, demo_client_key, nickname, is_course_instructor").eq("id", uid).maybeSingle(),
+      supabase
+        .from("profiles")
+        .select("id, display_name, demo_client_key, nickname, is_course_instructor")
+        .eq("id", uid)
+        .maybeSingle(),
       supabase.from("user_roles").select("role").eq("user_id", uid),
       supabase.from("user_groups").select("group_name").eq("user_id", uid),
-      supabase.from("staff_assignments").select("id").eq("user_id", uid).in("role", ["coach", "organization_admin"]).limit(1),
+      supabase
+        .from("staff_assignments")
+        .select("id")
+        .eq("user_id", uid)
+        .in("role", ["coach", "organization_admin"])
+        .limit(1),
     ]);
     if (p.data) {
       setProfile(p.data as Profile);
@@ -123,8 +133,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       const effective: "coach" | "free" | "client" = rolesList.includes("coach")
         ? "coach"
         : rolesList.includes("free")
-        ? "free"
-        : "client";
+          ? "free"
+          : "client";
       setRole(effective);
       if (effective !== "coach" && !hasOrgCoach) {
         persist(p.data?.demo_client_key ?? uid);
@@ -137,7 +147,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     else localStorage.removeItem(KEY);
   };
 
-  const effectiveUser = demoUserId ? findClient(demoUserId) ?? null : null;
+  const effectiveUser = demoUserId ? (findClient(demoUserId) ?? null) : null;
   // Coach status is derived from the global coach role OR any org-scoped coach/admin staff assignment.
   const effectiveCoach = role === "coach" || orgCoach;
   const effectiveFree = role === "free";
