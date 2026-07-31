@@ -42,14 +42,17 @@ function WelcomePage() {
       const hash = new URLSearchParams(url.hash.replace(/^#/, ""));
       const get = (k: string) => url.searchParams.get(k) ?? hash.get(k);
       const providerError = get("error_description") ?? get("error");
+      const accessToken = get("access_token");
+      const refreshToken = get("refresh_token");
+      const code = get("code");
+      const tokenHash = get("token_hash");
+      const type = get("type");
+      const hasInviteCredentials = Boolean(
+        (accessToken && refreshToken) || code || tokenHash,
+      );
 
       try {
         if (providerError) throw new Error(providerError.replace(/\+/g, " "));
-        const accessToken = get("access_token");
-        const refreshToken = get("refresh_token");
-        const code = get("code");
-        const tokenHash = get("token_hash");
-        const type = get("type");
 
         if (accessToken && refreshToken) {
           const { error: sessionError } = await supabase.auth.setSession({
@@ -76,7 +79,17 @@ function WelcomePage() {
       const { data } = await supabase.auth.getSession();
       if (!active) return;
       window.history.replaceState({}, "", window.location.pathname);
-      if (data.session) {
+
+      // /welcome is only the one-time invite landing page. Once its token has
+      // already been consumed (for example after updateUser emits USER_UPDATED
+      // or the customer reloads), an existing session must continue to the app
+      // instead of showing the password form again.
+      if (data.session && (!hasInviteCredentials || providerError)) {
+        await navigate({ to: "/app", replace: true });
+        return;
+      }
+
+      if (data.session && hasInviteCredentials) {
         setReady(true);
       } else {
         setError("Der Einladungslink ist ungültig oder abgelaufen. Bitte fordere eine neue Einladung an.");
@@ -88,7 +101,7 @@ function WelcomePage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [navigate]);
 
   const submitPassword = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -109,7 +122,9 @@ function WelcomePage() {
       return;
     }
     toast.success("Passwort gespeichert. Willkommen bei BODYFUEL!");
-    navigate({ to: "/app", replace: true });
+    // A hard replace is intentional here: mobile mail browsers can otherwise
+    // restore the consumed invite document during auth-state invalidation.
+    window.location.replace("/app");
   };
 
   return (
