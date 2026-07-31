@@ -141,7 +141,7 @@ export const listCoachFollowUpActions = createServerFn({ method: "GET" })
 
 export const saveCoachFollowUpAction = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((data: unknown) => actionSchema.parse(data))
+  .inputValidator((data: unknown) => actionSchema.parse(data))
   .handler(async ({ data, context }) => {
     await assertCoach(context);
     await saveAction(context.supabase, context.userId, data);
@@ -240,7 +240,7 @@ async function sendEmailNow(input: {
 
 export const sendCoachFollowUp = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((data: unknown) => inputSchema.parse(data))
+  .inputValidator((data: unknown) => inputSchema.parse(data))
   .handler(async ({ data, context }) => {
     await assertCoach(context);
 
