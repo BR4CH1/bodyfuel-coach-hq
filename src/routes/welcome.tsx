@@ -163,11 +163,16 @@ function WelcomePage() {
               Bitte erstelle dein persönliches Passwort für deinen Zugang.
             </p>
 
-            {!hasSession ? (
+            {checking ? (
+              <div className="mt-6 rounded-xl border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
+                Link wird geprüft…
+              </div>
+            ) : !hasSession ? (
               <div className="mt-6 space-y-4">
                 <div className="rounded-xl border border-warning/40 bg-warning/10 p-4 text-sm">
-                  Dein Link ist abgelaufen oder ungültig. Bitte fordere unten einen neuen Link an — er ist 15 Minuten gültig.
+                  Dein Link ist abgelaufen oder wurde bereits benutzt. Bitte fordere unten einen neuen Link an — er ist 60 Minuten gültig.
                 </div>
+
                 <form onSubmit={requestNewLink} className="space-y-3">
                   <div className="space-y-2">
                     <Label htmlFor="resend-email">Deine E-Mail-Adresse</Label>
