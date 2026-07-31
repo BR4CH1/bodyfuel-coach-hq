@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { User } from "lucide-react";
+import { useLocation } from "@tanstack/react-router";
 
 /**
  * Prüft, ob ein `display_name` als vollständiger Vor- + Nachname durchgeht.
@@ -40,6 +41,7 @@ const nameSchema = z.object({
 });
 
 export function NameCompletionGate() {
+  const pathname = useLocation({ select: (location) => location.pathname });
   const { supabaseUser, loading } = useSession();
   const [display, setDisplay] = useState<string | null | undefined>(undefined);
   const [checked, setChecked] = useState(false);
@@ -98,7 +100,8 @@ export function NameCompletionGate() {
     };
   }, [incomplete]);
 
-  if (!supabaseUser || !incomplete) return null;
+  const isAuthFlow = pathname === "/welcome" || pathname === "/auth" || pathname === "/login";
+  if (!supabaseUser || !incomplete || isAuthFlow) return null;
 
   const save = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
