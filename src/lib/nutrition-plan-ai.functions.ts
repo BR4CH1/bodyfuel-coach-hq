@@ -1,10 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import type {
-  GenerateNutritionPlanInput,
-  GenerateNutritionPlanOpts,
-  NutritionPlanGenerationResult,
-  NutritionPlanSupabaseClient,
-} from "@/features/nutrition-plan-ai/types";
+import type { GenerateNutritionPlanInput } from "@/features/nutrition-plan-ai/types";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertCoachOrOrgStaffForAthlete } from "@/lib/organizations/org-coach-access";
 
@@ -42,17 +37,3 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
       apiKey,
     });
   });
-
-/**
- * Server-only compatibility wrapper used by autopilot and renewal jobs.
- * The implementation stays behind a dynamic import so this client-importable
- * server-function entry never pulls server modules into the browser bundle.
- */
-export async function generateAiNutritionPlanCore(
-  supabase: NutritionPlanSupabaseClient,
-  opts: GenerateNutritionPlanOpts,
-): Promise<NutritionPlanGenerationResult> {
-  const { generateAiNutritionPlanCore: generateCore } =
-    await import("@/features/nutrition-plan-ai/server/generate-plan.server");
-  return await generateCore(supabase, opts);
-}

@@ -70,7 +70,9 @@ export const Route = createFileRoute("/api/public/hooks/process-autopilot-jobs")
             }
 
             if (job.step === "nutrition") {
-              const { generateAiNutritionPlanCore } = await import("@/lib/nutrition-plan-ai.functions");
+              const { generateAiNutritionPlanCore } = await import(
+                "@/features/nutrition-plan-ai/server/generate-plan.server"
+              );
               const res = await generateAiNutritionPlanCore(supabaseAdmin as any, {
                 target: job.user_id,
                 uploadedBy: job.user_id,
