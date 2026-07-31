@@ -8,11 +8,24 @@ import { useSession } from "@/lib/bodyfuel/session";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PUBLIC_APP_ORIGIN, sanitizeInternalRedirect } from "@/lib/auth-flow.logic";
 
 export const Route = createFileRoute("/auth")({
-  head: () => ({ meta: [{ title: "Login — BODYFUEL" }] }),
+  head: () => ({
+    meta: [
+      { title: "Login — BODYFUEL" },
+      { name: "description", content: "Bei BODYFUEL anmelden oder einen Account erstellen." },
+      { property: "og:title", content: "Login — BODYFUEL" },
+      {
+        property: "og:description",
+        content: "Bei BODYFUEL anmelden oder einen Account erstellen.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   validateSearch: (s: Record<string, unknown>) => ({
-    next: typeof s.next === "string" && s.next.startsWith("/") && !s.next.startsWith("//") ? s.next : undefined,
+    next: sanitizeInternalRedirect(s.next),
   }),
   component: AuthPage,
 });
@@ -78,10 +91,9 @@ function AuthPage() {
     setBusy(true);
     try {
       if (mode === "signup") {
-        const emailRedirectTo =
-          typeof window !== "undefined"
-            ? `${window.location.origin}${next ?? "/app"}`
-            : undefined;
+        const emailRedirectTo = `${PUBLIC_APP_ORIGIN}/welcome?mode=confirm${
+          next ? `&next=${encodeURIComponent(next)}` : ""
+        }`;
         const displayName = `${firstParsed} ${lastParsed}`.replace(/\s+/g, " ").trim();
         const { data, error } = await supabase.auth.signUp({
           email: ev.data,
@@ -125,8 +137,8 @@ function AuthPage() {
       const msg = /invalid login credentials/i.test(raw)
         ? "E-Mail oder Passwort falsch. Tipp: E-Mail bitte neu eintippen (Autofill kann fehlerhaft sein)."
         : /already registered|user already/i.test(raw)
-        ? "Diese E-Mail ist bereits registriert. Bitte einloggen."
-        : raw;
+          ? "Diese E-Mail ist bereits registriert. Bitte einloggen."
+          : raw;
       toast.error(msg);
     } finally {
       setBusy(false);
@@ -223,7 +235,6 @@ function AuthPage() {
                 autoCorrect="off"
                 spellCheck={false}
               />
-
             </div>
           </div>
 
@@ -241,7 +252,6 @@ function AuthPage() {
                 required
                 autoComplete={mode === "signup" ? "new-password" : "current-password"}
               />
-
             </div>
           </div>
 
@@ -278,4 +288,3 @@ function AuthPage() {
     </div>
   );
 }
-

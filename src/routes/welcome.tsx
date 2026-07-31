@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { parseAuthLink } from "@/lib/auth-flow.logic";
 
 export const Route = createFileRoute("/welcome")({
   head: () => ({
@@ -13,7 +14,10 @@ export const Route = createFileRoute("/welcome")({
       { title: "Einladung annehmen — BODYFUEL" },
       { name: "description", content: "BODYFUEL-Einladung annehmen und Passwort festlegen." },
       { property: "og:title", content: "Einladung annehmen — BODYFUEL" },
-      { property: "og:description", content: "BODYFUEL-Einladung annehmen und Passwort festlegen." },
+      {
+        property: "og:description",
+        content: "BODYFUEL-Einladung annehmen und Passwort festlegen.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -30,69 +34,75 @@ function WelcomePage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Invite- und Recovery-Links may use PKCE query params or legacy hash tokens.
-  // Redeem the link first, then deliberately keep the user on this public page
-  // until a password has been chosen.
   useEffect(() => {
     let active = true;
 
     const run = async () => {
       if (typeof window === "undefined") return;
-      const url = new URL(window.location.href);
-      const hash = new URLSearchParams(url.hash.replace(/^#/, ""));
-      const get = (k: string) => url.searchParams.get(k) ?? hash.get(k);
-      const providerError = get("error_description") ?? get("error");
-      const accessToken = get("access_token");
-      const refreshToken = get("refresh_token");
-      const code = get("code");
-      const tokenHash = get("token_hash");
-      const type = get("type");
-      const hasInviteCredentials = Boolean(
-        (accessToken && refreshToken) || code || tokenHash,
-      );
+      const link = parseAuthLink(window.location.href);
+      let redemptionFailed = false;
 
       try {
-        if (providerError) throw new Error(providerError.replace(/\+/g, " "));
+        if (link.error) throw new Error(link.error.replace(/\+/g, " "));
 
-        if (accessToken && refreshToken) {
+        if (link.accessToken && link.refreshToken) {
           const { error: sessionError } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
+            access_token: link.accessToken,
+            refresh_token: link.refreshToken,
           });
           if (sessionError) throw sessionError;
-        } else if (code) {
-          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+        } else if (link.code) {
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(link.code);
           if (exchangeError) throw exchangeError;
-        } else if (tokenHash) {
+        } else if (link.tokenHash) {
+          const supportedTypes = ["invite", "recovery", "signup", "magiclink"] as const;
+          const otpType = supportedTypes.find((value) => value === link.type) ?? "invite";
           const { error: verifyError } = await supabase.auth.verifyOtp({
-            token_hash: tokenHash,
-            type: (type as "invite" | "recovery" | "signup" | "magiclink") ?? "invite",
+            token_hash: link.tokenHash,
+            type: otpType,
           });
           if (verifyError) throw verifyError;
         }
       } catch (linkError: unknown) {
-        const message = linkError instanceof Error ? linkError.message : "Einladung konnte nicht geöffnet werden.";
-        const { data } = await supabase.auth.getSession();
-        if (!data.session && active) setError(message);
+        redemptionFailed = true;
+        const message =
+          linkError instanceof Error
+            ? linkError.message
+            : "Einladung konnte nicht geöffnet werden.";
+        const { data } = await supabase.auth.getUser();
+        if (!data.user && active) {
+          setError(message);
+          setChecking(false);
+          return;
+        }
       }
 
-      const { data } = await supabase.auth.getSession();
+      const { data, error: userError } = await supabase.auth.getUser();
       if (!active) return;
       window.history.replaceState({}, "", window.location.pathname);
 
-      // /welcome is only the one-time invite landing page. Once its token has
-      // already been consumed (for example after updateUser emits USER_UPDATED
-      // or the customer reloads), an existing session must continue to the app
-      // instead of showing the password form again.
-      if (data.session && (!hasInviteCredentials || providerError)) {
-        await navigate({ to: "/app", replace: true });
+      if (redemptionFailed && data.user) {
+        window.location.replace(new URL("/app", window.location.origin).href);
         return;
       }
 
-      if (data.session && hasInviteCredentials) {
+      if (data.user && link.mode === "confirm") {
+        window.location.replace(new URL(link.next ?? "/app", window.location.origin).href);
+        return;
+      }
+
+      if (data.user && !link.hasCredentials) {
+        window.location.replace(new URL("/app", window.location.origin).href);
+        return;
+      }
+
+      if (data.user && link.hasCredentials) {
         setReady(true);
       } else {
-        setError("Der Einladungslink ist ungültig oder abgelaufen. Bitte fordere eine neue Einladung an.");
+        setError(
+          userError?.message ||
+            "Der Einladungslink ist ungültig oder abgelaufen. Bitte fordere eine neue Einladung an.",
+        );
       }
       setChecking(false);
     };
@@ -118,15 +128,22 @@ function WelcomePage() {
     try {
       const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) throw updateError;
+      const { error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError) throw refreshError;
+      const { data: verified, error: verifyError } = await supabase.auth.getUser();
+      if (verifyError || !verified.user) {
+        throw verifyError ?? new Error("Die Sitzung konnte nicht bestätigt werden.");
+      }
 
-      // Leave the consumed invite document synchronously and absolutely. This
-      // deliberately bypasses router state and prevents mobile mail browsers
-      // from restoring /welcome from their navigation history.
       const appUrl = new URL("/app", window.location.origin);
       window.history.replaceState({}, "", appUrl.pathname);
-      window.location.assign(appUrl.href);
+      window.location.replace(appUrl.href);
     } catch (updateError: unknown) {
-      toast.error(updateError instanceof Error ? updateError.message : "Passwort konnte nicht gespeichert werden.");
+      toast.error(
+        updateError instanceof Error
+          ? updateError.message
+          : "Passwort konnte nicht gespeichert werden.",
+      );
       setSaving(false);
     }
   };
@@ -137,14 +154,20 @@ function WelcomePage() {
         <div className="mx-auto grid h-11 w-11 place-items-center rounded-xl bg-gradient-gold">
           <Flame className="h-5 w-5 text-primary-foreground" />
         </div>
-        <h1 className="mt-6 text-center font-display text-2xl font-bold">Willkommen bei BODYFUEL</h1>
+        <h1 className="mt-6 text-center font-display text-2xl font-bold">
+          Willkommen bei BODYFUEL
+        </h1>
 
         {checking ? (
           <p className="mt-2 text-center text-sm text-muted-foreground">Einladung wird geprüft…</p>
         ) : error && !ready ? (
           <div className="mt-4 text-center">
             <p className="text-sm text-destructive">{error}</p>
-            <Button className="mt-6" variant="outline" onClick={() => navigate({ to: "/auth" })}>
+            <Button
+              className="mt-6"
+              variant="outline"
+              onClick={() => navigate({ to: "/auth", search: { next: undefined } })}
+            >
               Zum Login
             </Button>
           </div>
@@ -181,7 +204,11 @@ function WelcomePage() {
                 required
               />
             </div>
-            <Button type="submit" className="w-full bg-gradient-gold text-primary-foreground" disabled={saving}>
+            <Button
+              type="submit"
+              className="w-full bg-gradient-gold text-primary-foreground"
+              disabled={saving}
+            >
               {saving ? "Wird gespeichert…" : "Passwort festlegen & starten"}
             </Button>
           </form>

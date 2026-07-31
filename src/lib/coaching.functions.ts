@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { PUBLIC_APP_ORIGIN } from "@/lib/auth-flow.logic";
 
 const PAYPAL_ME = "https://www.paypal.me/ManuSchrader";
 
@@ -183,15 +184,16 @@ export const listCustomers = createServerFn({ method: "GET" })
 
     // Email-Abmeldungen laden
     const emailList = [...emailMap.values()].filter(Boolean) as string[];
-    const { data: suppressed } = adminClient && emailList.length
-      ? await adminClient
-          .from("suppressed_emails")
-          .select("email")
-          .in(
-            "email",
-            emailList.map((e) => e.toLowerCase()),
-          )
-      : { data: [] as { email: string }[] };
+    const { data: suppressed } =
+      adminClient && emailList.length
+        ? await adminClient
+            .from("suppressed_emails")
+            .select("email")
+            .in(
+              "email",
+              emailList.map((e) => e.toLowerCase()),
+            )
+        : { data: [] as { email: string }[] };
     const suppressedSet = new Set((suppressed ?? []).map((s) => s.email.toLowerCase()));
 
     const paymentsByUser = new Map<string, typeof payments>();
@@ -288,7 +290,7 @@ export const createCustomer = createServerFn({ method: "POST" })
 
     // Immer die veröffentlichte URL nutzen, nie die Preview-Origin – sonst landen
     // Empfänger auf der Lovable-Preview, die einen Lovable-Login verlangt.
-    const origin = "https://bodyfuel-coaching.com";
+    const origin = PUBLIC_APP_ORIGIN;
 
     // Invite per Magic Link. Trigger handle_new_user erstellt profile+user_roles.
     const firstName = data.first_name.trim().split(/\s+/)[0] ?? "";
@@ -336,6 +338,12 @@ export const createCustomer = createServerFn({ method: "POST" })
       const profileUpdate: any = { phone: data.phone || null };
       if (!existingProfile?.display_name) profileUpdate.display_name = displayName;
       await supabaseAdmin.from("profiles").update(profileUpdate).eq("id", newUserId);
+      if (!data.skip_invite) {
+        const { error: resetError } = await supabaseAdmin.auth.resetPasswordForEmail(email, {
+          redirectTo: `${origin}/welcome`,
+        });
+        if (resetError) throw new Error(resetError.message);
+      }
     } else if (data.skip_invite) {
       // Silent anlegen (z.B. Influencer) – kein Invite-Mail.
       // Zufallspasswort; Coach kann später Reset-Link teilen.
@@ -455,8 +463,9 @@ export const getCustomerDetail = createServerFn({ method: "POST" })
     if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
       try {
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        const { data: authData, error: authError } =
-          await supabaseAdmin.auth.admin.getUserById(data.user_id);
+        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.getUserById(
+          data.user_id,
+        );
         if (!authError) authUser = authData.user;
       } catch (adminError) {
         console.warn(
@@ -781,7 +790,7 @@ export const resendInvite = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertCoach(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const origin = "https://bodyfuel-coaching.com";
+    const origin = PUBLIC_APP_ORIGIN;
 
     const { data: u } = await supabaseAdmin.auth.admin.getUserById(data.user_id);
     const email = u.user?.email;
@@ -823,7 +832,7 @@ export const sendPasswordReset = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertCoach(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const origin = "https://bodyfuel-coaching.com";
+    const origin = PUBLIC_APP_ORIGIN;
 
     const { data: u } = await supabaseAdmin.auth.admin.getUserById(data.user_id);
     const email = u.user?.email;
