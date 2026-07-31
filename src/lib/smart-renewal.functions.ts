@@ -143,7 +143,7 @@ export const renewSmartNutritionPlan = createServerFn({ method: "POST" })
     if (!apiKey) throw new Error("AI-Service nicht erreichbar.");
 
     const { generateAiNutritionPlanCore } = await import(
-      "./nutrition-plan-ai.functions"
+      "@/features/nutrition-plan-ai/server/generate-plan.server"
     );
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     await generateAiNutritionPlanCore(supabaseAdmin as any, {

@@ -24,7 +24,13 @@ const TONE_STYLES: Record<CoachBriefingItemTone, string> = {
   info: "border-gold/25 bg-gold/5 hover:border-gold/50",
 };
 
-export function CoachFuelyBriefing({ briefing }: { briefing: CoachBriefingViewModel }) {
+export function CoachFuelyBriefing({
+  briefing,
+  onOpenWorkload,
+}: {
+  briefing: CoachBriefingViewModel;
+  onOpenWorkload?: (key: "risk" | "checkin" | "plan" | "lead") => void;
+}) {
   const isClear = briefing.state === "clear";
 
   return (
@@ -42,7 +48,7 @@ export function CoachFuelyBriefing({ briefing }: { briefing: CoachBriefingViewMo
         <div className="flex items-center gap-4 lg:w-[290px] lg:shrink-0">
           <Fuely
             emotion={briefing.emotion}
-            animation={isClear ? "bounce" : "idle"}
+            animation={isClear ? "celebrate" : "idle"}
             size="lg"
             className="shrink-0"
           />
@@ -68,7 +74,12 @@ export function CoachFuelyBriefing({ briefing }: { briefing: CoachBriefingViewMo
         ) : (
           <div className="grid flex-1 gap-3 md:grid-cols-3">
             {briefing.items.map((item, index) => (
-              <BriefingAction key={item.id} item={item} rank={index + 1} />
+              <BriefingAction
+                key={item.id}
+                item={item}
+                rank={index + 1}
+                onOpenWorkload={onOpenWorkload}
+              />
             ))}
           </div>
         )}
@@ -77,7 +88,15 @@ export function CoachFuelyBriefing({ briefing }: { briefing: CoachBriefingViewMo
   );
 }
 
-function BriefingAction({ item, rank }: { item: CoachBriefingItem; rank: number }) {
+function BriefingAction({
+  item,
+  rank,
+  onOpenWorkload,
+}: {
+  item: CoachBriefingItem;
+  rank: number;
+  onOpenWorkload?: (key: "risk" | "checkin" | "plan" | "lead") => void;
+}) {
   const content = (
     <>
       <div className="flex items-start justify-between gap-3">
@@ -112,6 +131,22 @@ function BriefingAction({ item, rank }: { item: CoachBriefingItem; rank: number 
         </Link>
       );
     case "customers":
+      if (onOpenWorkload) {
+        const key = item.id.includes("checkin")
+          ? "checkin"
+          : item.id.includes("plan")
+            ? "plan"
+            : "risk";
+        return (
+          <button
+            type="button"
+            onClick={() => onOpenWorkload(key)}
+            className={cn(className, "text-left")}
+          >
+            {content}
+          </button>
+        );
+      }
       return (
         <Link to="/coach/customers" className={className}>
           {content}

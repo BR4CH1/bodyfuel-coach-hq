@@ -23,7 +23,9 @@ export const Route = createFileRoute("/api/public/hooks/regen-nutrition-plans")(
         }
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        const { generateAiNutritionPlanCore } = await import("@/lib/nutrition-plan-ai.functions");
+        const { generateAiNutritionPlanCore } = await import(
+          "@/features/nutrition-plan-ai/server/generate-plan.server"
+        );
         const { hasActiveSmartSubscription } = await import("@/lib/smart-subscription.server");
 
         const today = new Date().toISOString().slice(0, 10);

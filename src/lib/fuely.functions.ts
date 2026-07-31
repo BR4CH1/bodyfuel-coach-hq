@@ -4,6 +4,17 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 const FUELY_MODEL = "google/gemini-3-flash-preview";
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
+function bodyFuelToday() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Berlin",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${value.year}-${value.month}-${value.day}`;
+}
+
 export type FuelyMessage = {
   id: string;
   role: "user" | "assistant" | "system";
@@ -20,7 +31,7 @@ export type FuelyMemory = {
   updated_at: string;
 };
 
-const SYSTEM_PROMPT = `Du bist Fuely — das offizielle Maskottchen und der persönliche KI-Coach von BodyFuel.
+const SYSTEM_PROMPT = `Du bist Fuely — das offizielle Maskottchen und der smarte Begleiter von BodyFuel.
 
 PERSÖNLICHKEIT:
 - Locker, warm, motivierend. Wie ein guter Freund, der Ahnung hat.
@@ -33,6 +44,8 @@ PERSÖNLICHKEIT:
 DATENZUGRIFF (TOOLS):
 - Du hast Tools, um auf echte Nutzerdaten zuzugreifen (Ernährung, Training, Check-ins, Gewicht, Streaks, Challenges, Coach-Nachrichten, Memory).
 - Nutze Tools proaktiv, wenn die Frage konkrete Daten braucht — rate NIE.
+- Behaupte niemals, etwas geprüft, gespeichert, verschoben oder erledigt zu haben, wenn das Tool dies nicht eindeutig bestätigt.
+- Wenn ein Tool einen Fehler meldet, sag ehrlich und kurz, dass die Aktion nicht ausgeführt wurde.
 - Fasse Tool-Ergebnisse in eigenen Worten zusammen, nicht als Rohdaten-Dump.
 - Nutze 'navigate_to', wenn du den Nutzer zu einem Bereich schicken willst (Training, Ernährung, Check-in).
 
@@ -46,10 +59,6 @@ GRENZEN:
 - Keine medizinischen Diagnosen. Bei ernsten Symptomen: Arzt empfehlen.
 - Keine extremen Diäten oder gefährlichen Praktiken.
 - Coach-Vorgaben (Trainingsplan vom Coach, verordnete Ernährung) niemals eigenmächtig überschreiben.`;
-
-
-
-
 
 async function callFuely(
   messages: any[],
@@ -66,13 +75,14 @@ async function callFuely(
     headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
     body: JSON.stringify(body),
   });
-  if (res.status === 429) throw new Error("Fuely ist gerade überlastet — versuch's gleich nochmal.");
-  if (res.status === 402) throw new Error("Fuelys Guthaben ist aufgebraucht — bitte lade Credits nach.");
+  if (res.status === 429)
+    throw new Error("Fuely ist gerade überlastet — versuch's gleich nochmal.");
+  if (res.status === 402)
+    throw new Error("Fuelys Guthaben ist aufgebraucht — bitte lade Credits nach.");
   if (!res.ok) throw new Error(`Fuely konnte nicht antworten (${res.status})`);
   const j = await res.json();
   return j?.choices?.[0]?.message ?? { content: "Hmm, mir fehlen gerade die Worte 🤔" };
 }
-
 
 async function extractMemories(
   supabase: any,
@@ -140,15 +150,21 @@ export const listFuelyMessages = createServerFn({ method: "GET" })
 
 export const sendFuelyMessage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { content: string; orgSlug?: string }) => {
+  .validator((d: { content: string; orgSlug?: string }) => {
     const c = String(d?.content ?? "").trim();
     if (!c) throw new Error("Nachricht ist leer");
     if (c.length > 4000) throw new Error("Nachricht zu lang");
-    const orgSlug = d?.orgSlug ? String(d.orgSlug).slice(0, 60) : "";
+    const orgSlug = d?.orgSlug ? String(d.orgSlug).trim().slice(0, 60) : "";
+    if (orgSlug && !/^[a-z0-9-]+$/i.test(orgSlug)) {
+      throw new Error("Ungültiger Organisationspfad");
+    }
     return { content: c, orgSlug };
   })
   .handler(
-    async ({ data, context }): Promise<{
+    async ({
+      data,
+      context,
+    }): Promise<{
       user: FuelyMessage;
       assistant: FuelyMessage;
       nav?: { path: string; label: string } | null;
@@ -175,7 +191,7 @@ export const sendFuelyMessage = createServerFn({ method: "POST" })
         .limit(30);
       const history = (hist ?? []).reverse();
 
-      const today = new Date().toISOString().slice(0, 10);
+      const today = bodyFuelToday();
       const messages: any[] = [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "system", content: `Heute ist ${today}. Nutze Tools, um Nutzerdaten zu holen.` },
@@ -190,7 +206,8 @@ export const sendFuelyMessage = createServerFn({ method: "POST" })
           const msg = await callFuely(messages, apiKey, { tools: FUELY_TOOLS as any });
           const toolCalls = (msg?.tool_calls ?? []) as any[];
           if (!toolCalls.length) {
-            assistantText = String(msg?.content ?? "").trim() || "Hmm, mir fehlen gerade die Worte 🤔";
+            assistantText =
+              String(msg?.content ?? "").trim() || "Hmm, mir fehlen gerade die Worte 🤔";
             break;
           }
           messages.push({
@@ -202,13 +219,15 @@ export const sendFuelyMessage = createServerFn({ method: "POST" })
             let args: any = {};
             try {
               args = tc?.function?.arguments ? JSON.parse(tc.function.arguments) : {};
-            } catch { /* ignore */ }
+            } catch {
+              /* ignore */
+            }
             const result = await runFuelyTool(supabase, userId, data.orgSlug || null, {
               id: tc.id,
               name: tc?.function?.name,
               args,
             });
-            if (tc?.function?.name === "navigate_to" && result?.path) {
+            if (result?.path) {
               nav = { path: String(result.path), label: String(result.label ?? "Öffnen") };
             }
             messages.push({
@@ -220,8 +239,13 @@ export const sendFuelyMessage = createServerFn({ method: "POST" })
         }
         if (!assistantText) {
           // Force a plain answer without tools if we ran out of steps
-          const finalMsg = await callFuely(messages, apiKey, { tools: FUELY_TOOLS as any, tool_choice: "none" });
-          assistantText = String(finalMsg?.content ?? "").trim() || "Ich brauch' nochmal einen Anlauf — frag mich nochmal 👊";
+          const finalMsg = await callFuely(messages, apiKey, {
+            tools: FUELY_TOOLS as any,
+            tool_choice: "none",
+          });
+          assistantText =
+            String(finalMsg?.content ?? "").trim() ||
+            "Ich brauch' nochmal einen Anlauf — frag mich nochmal 👊";
         }
       } catch (e: any) {
         const fallback =
@@ -249,7 +273,6 @@ export const sendFuelyMessage = createServerFn({ method: "POST" })
     },
   );
 
-
 export const clearFuelyChat = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -274,32 +297,46 @@ export const listFuelyMemories = createServerFn({ method: "GET" })
 
 export const upsertFuelyMemory = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id?: string; category?: string; content: string; importance?: number }) => d)
+  .validator((d: { id?: string; category?: string; content: string; importance?: number }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const row = {
       user_id: userId,
       category: String(data.category ?? "general").slice(0, 40),
-      content: String(data.content ?? "").trim().slice(0, 500),
+      content: String(data.content ?? "")
+        .trim()
+        .slice(0, 500),
       importance: Math.max(1, Math.min(5, Number(data.importance ?? 3))),
     };
     if (!row.content) throw new Error("Erinnerung ist leer");
     if (data.id) {
-      const { error } = await supabase.from("fuely_memories").update(row).eq("id", data.id).eq("user_id", userId);
+      const { error } = await supabase
+        .from("fuely_memories")
+        .update(row)
+        .eq("id", data.id)
+        .eq("user_id", userId);
       if (error) throw new Error(error.message);
       return { ok: true, id: data.id };
     }
-    const { data: ins, error } = await supabase.from("fuely_memories").insert(row).select("id").single();
+    const { data: ins, error } = await supabase
+      .from("fuely_memories")
+      .insert(row)
+      .select("id")
+      .single();
     if (error) throw new Error(error.message);
     return { ok: true, id: (ins as any).id as string };
   });
 
 export const deleteFuelyMemory = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { id: string }) => d)
+  .validator((d: { id: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { error } = await supabase.from("fuely_memories").delete().eq("id", data.id).eq("user_id", userId);
+    const { error } = await supabase
+      .from("fuely_memories")
+      .delete()
+      .eq("id", data.id)
+      .eq("user_id", userId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

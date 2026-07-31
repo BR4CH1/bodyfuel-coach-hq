@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ChevronDown, ChevronUp, MessageCircleMore, UserRoundSearch } from "lucide-react";
 
@@ -27,11 +27,17 @@ const CATEGORY_BY_KEY: Record<CoachWorkloadMetric["key"], CoachFollowUpCategory>
 export function CoachFuelyWorkload({
   workload,
   onOpenFollowUps,
+  focusKey,
 }: {
   workload: CoachWorkloadViewModel;
   onOpenFollowUps?: (category: CoachFollowUpCategory) => void;
+  focusKey?: CoachWorkloadMetric["key"] | null;
 }) {
   const [openKey, setOpenKey] = useState<CoachWorkloadMetric["key"] | null>(null);
+
+  useEffect(() => {
+    if (focusKey) setOpenKey(focusKey);
+  }, [focusKey]);
 
   return (
     <section className="rounded-3xl border border-border bg-card p-5 sm:p-6">

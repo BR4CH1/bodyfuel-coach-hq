@@ -12,7 +12,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Fuely, type FuelyEmotion } from "@/components/bodyfuel/Fuely";
 import { FuelyTimeline } from "@/components/bodyfuel/FuelyTimeline";
@@ -39,12 +45,51 @@ export const Route = createFileRoute("/fuely")({
 
 type QuickAction = { emoji: string; label: string; prompt: string };
 const QUICK_ACTIONS: QuickAction[] = [
-  { emoji: "🍽", label: "Ernährung analysieren", prompt: "Analysiere meine heutige Ernährung — bin ich auf Kurs bei Kalorien und Protein?" },
-  { emoji: "🏋", label: "Trainingsplan erklären", prompt: "Erkläre mir kurz meinen aktuellen Trainingsplan und was heute wichtig ist." },
-  { emoji: "📈", label: "Fortschritt bewerten", prompt: "Wie steht's um meinen Fortschritt der letzten 2 Wochen? Ehrliche Einschätzung bitte." },
-  { emoji: "🥤", label: "Tagesziele", prompt: "Was sind heute meine wichtigsten Ziele und was fehlt mir noch?" },
+  {
+    emoji: "🍽",
+    label: "Ernährung analysieren",
+    prompt: "Analysiere meine heutige Ernährung — bin ich auf Kurs bei Kalorien und Protein?",
+  },
+  {
+    emoji: "🏋",
+    label: "Trainingsplan erklären",
+    prompt: "Erkläre mir kurz meinen aktuellen Trainingsplan und was heute wichtig ist.",
+  },
+  { emoji: "💧", label: "Wasser +250 ml", prompt: "Trage bitte 250 ml Wasser für heute ein." },
+  {
+    emoji: "🧠",
+    label: "Regeneration prüfen",
+    prompt:
+      "Prüfe meine letzten Check-ins: Wie steht es um Schlaf, Energie, Stress und Regeneration?",
+  },
+  {
+    emoji: "💬",
+    label: "Coach-Nachrichten",
+    prompt: "Gibt es neue oder wichtige Nachrichten von meinem Coach?",
+  },
+  {
+    emoji: "📈",
+    label: "Fortschritt bewerten",
+    prompt: "Wie steht's um meinen Fortschritt der letzten 2 Wochen? Ehrliche Einschätzung bitte.",
+  },
+  {
+    emoji: "🥤",
+    label: "Tagesziele",
+    prompt: "Was sind heute meine wichtigsten Ziele und was fehlt mir noch?",
+  },
   { emoji: "🔥", label: "Motivation", prompt: "Ich brauch' kurz einen Motivationsschub." },
-  { emoji: "🎯", label: "Challenge finden", prompt: "Schlag mir eine passende Challenge oder ein Mini-Ziel für die nächste Woche vor." },
+  {
+    emoji: "🎯",
+    label: "Challenge finden",
+    prompt: "Schlag mir eine passende Challenge oder ein Mini-Ziel für die nächste Woche vor.",
+  },
+  {
+    emoji: "⚙️",
+    label: "Kalorienziel",
+    prompt:
+      "Ich möchte mein Kalorienziel anpassen. Prüfe zuerst meine Daten und frag mich nach Ziel und Bestätigung, bevor du etwas änderst.",
+  },
+  { emoji: "✅", label: "Check-in öffnen", prompt: "Öffne bitte meinen Check-in." },
 ];
 
 function PersonalFuelyPage() {
@@ -97,7 +142,12 @@ function PersonalFuelyPage() {
       qc.setQueryData<{ items: FuelyMessage[] }>(["fuely-messages", userId], (prev) => ({
         items: [
           ...(prev?.items ?? []),
-          { id: `optim-${Date.now()}`, role: "user", content, created_at: new Date().toISOString() },
+          {
+            id: `optim-${Date.now()}`,
+            role: "user",
+            content,
+            created_at: new Date().toISOString(),
+          },
         ],
       }));
     },
@@ -141,6 +191,9 @@ function PersonalFuelyPage() {
 
   const isEmpty = messages.length === 0 && !messagesQ.isLoading;
   const emotion: FuelyEmotion = sendMutation.isPending ? "thinking" : isEmpty ? "waving" : "happy";
+  const lastAssistantId = [...messages]
+    .reverse()
+    .find((message) => message.role === "assistant")?.id;
 
   return (
     <div className="flex min-h-[100dvh] flex-col bg-background text-foreground">
@@ -148,10 +201,14 @@ function PersonalFuelyPage() {
         <Link to="/dashboard" aria-label="Zurück" className="rounded-full p-1.5 hover:bg-muted">
           <ArrowLeft className="h-5 w-5" />
         </Link>
-        <Fuely emotion={emotion} size="sm" animation={sendMutation.isPending ? "wiggle" : "idle"} />
+        <Fuely
+          emotion={emotion}
+          size="sm"
+          animation={sendMutation.isPending ? "thinking" : isEmpty ? "wave" : "idle"}
+        />
         <div className="flex-1">
           <div className="font-display text-base font-bold leading-tight">Fuely</div>
-          <div className="text-[11px] text-muted-foreground">Dein persönlicher BodyFuel Coach</div>
+          <div className="text-[11px] text-muted-foreground">Dein smarter BodyFuel Begleiter</div>
         </div>
         <Sheet open={showMemories} onOpenChange={setShowMemories}>
           <SheetTrigger asChild>
@@ -166,7 +223,12 @@ function PersonalFuelyPage() {
             <FuelyMemoryPanel userId={userId} />
           </SheetContent>
         </Sheet>
-        <Button variant="ghost" size="icon" aria-label="Chat leeren" onClick={() => setShowClear(true)}>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Chat leeren"
+          onClick={() => setShowClear(true)}
+        >
           <Trash2 className="h-5 w-5" />
         </Button>
       </header>
@@ -179,7 +241,9 @@ function PersonalFuelyPage() {
               type="button"
               onClick={() => setTab(t)}
               className={`rounded-full px-4 py-1.5 text-xs font-semibold uppercase tracking-wider transition ${
-                tab === t ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                tab === t
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted"
               }`}
             >
               {t === "chat" ? "Chat" : "Timeline"}
@@ -198,31 +262,31 @@ function PersonalFuelyPage() {
             <div ref={scrollRef} className="mx-auto flex max-w-2xl flex-col gap-3 px-4 py-4">
               {isEmpty && (
                 <div className="mt-6 flex flex-col items-center gap-4 text-center">
-                  <Fuely emotion="waving" size="xl" animation="float" />
+                  <Fuely emotion="waving" size="xl" animation="wave" />
                   <div className="space-y-2">
                     <div className="font-display text-2xl font-bold">
                       👋 Hallo{firstName ? ` ${firstName}` : ""}
                     </div>
                     <div className="font-display text-lg font-semibold">Ich bin Fuely.</div>
                     <p className="max-w-sm text-sm text-muted-foreground">
-                      Dein smarter Begleiter für Training, Ernährung und Gesundheit.
-                      Frag mich alles — ich kenne deine Daten und helfe dir, dranzubleiben.
+                      Dein smarter Begleiter für Training, Ernährung und Gesundheit. Frag mich alles
+                      — ich kenne deine Daten und helfe dir, dranzubleiben.
                     </p>
                   </div>
                 </div>
               )}
 
               {messages.map((m) => (
-                <MessageBubble key={m.id} m={m} />
+                <MessageBubble key={m.id} m={m} isLatest={m.id === lastAssistantId} />
               ))}
 
               {sendMutation.isPending && (
-                <div className="flex items-end gap-2">
-                  <Fuely emotion="thinking" size="xs" animation="wiggle" />
+                <div className="flex items-end gap-2" role="status" aria-label="Fuely denkt nach">
+                  <Fuely emotion="thinking" size="xs" animation="thinking" />
                   <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm bg-muted px-3 py-2">
-                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/60 [animation-delay:0ms]" />
-                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/60 [animation-delay:120ms]" />
-                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/60 [animation-delay:240ms]" />
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/60 [animation-delay:0ms] motion-reduce:animate-none" />
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/60 [animation-delay:120ms] motion-reduce:animate-none" />
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/60 [animation-delay:240ms] motion-reduce:animate-none" />
                   </div>
                 </div>
               )}
@@ -246,25 +310,43 @@ function PersonalFuelyPage() {
             </div>
           </div>
 
-          <div className="border-t border-border bg-background px-3 py-3" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
+          <div
+            className="border-t border-border bg-background px-3 py-3"
+            style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+          >
             <form
               className="mx-auto flex max-w-2xl items-end gap-2"
-              onSubmit={(e) => { e.preventDefault(); submit(); }}
+              onSubmit={(e) => {
+                e.preventDefault();
+                submit();
+              }}
             >
               <Textarea
                 ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); }
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    submit();
+                  }
                 }}
                 placeholder="Frag Fuely alles ..."
                 rows={1}
                 className="min-h-[44px] max-h-40 resize-none"
                 disabled={sendMutation.isPending}
               />
-              <Button type="submit" size="icon" className="h-11 w-11 shrink-0" disabled={!input.trim() || sendMutation.isPending}>
-                {sendMutation.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+              <Button
+                type="submit"
+                size="icon"
+                className="h-11 w-11 shrink-0"
+                disabled={!input.trim() || sendMutation.isPending}
+              >
+                {sendMutation.isPending ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Send className="h-5 w-5" />
+                )}
               </Button>
             </form>
           </div>
@@ -277,11 +359,18 @@ function PersonalFuelyPage() {
             <DialogTitle>Chat mit Fuely leeren?</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Der gesamte Chatverlauf wird gelöscht. Deine langfristigen Erinnerungen (Memory) bleiben erhalten.
+            Der gesamte Chatverlauf wird gelöscht. Deine langfristigen Erinnerungen (Memory) bleiben
+            erhalten.
           </p>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setShowClear(false)}>Abbrechen</Button>
-            <Button variant="destructive" onClick={() => clearMutation.mutate()} disabled={clearMutation.isPending}>
+            <Button variant="ghost" onClick={() => setShowClear(false)}>
+              Abbrechen
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => clearMutation.mutate()}
+              disabled={clearMutation.isPending}
+            >
               Löschen
             </Button>
           </DialogFooter>
@@ -291,7 +380,7 @@ function PersonalFuelyPage() {
   );
 }
 
-function MessageBubble({ m }: { m: FuelyMessage }) {
+function MessageBubble({ m, isLatest = false }: { m: FuelyMessage; isLatest?: boolean }) {
   const isUser = m.role === "user";
   if (isUser) {
     return (
@@ -304,7 +393,7 @@ function MessageBubble({ m }: { m: FuelyMessage }) {
   }
   return (
     <div className="flex items-end gap-2">
-      <Fuely emotion="happy" size="xs" className="mb-1" />
+      <Fuely emotion="happy" size="xs" animation={isLatest ? "success" : "idle"} className="mb-1" />
       <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-bl-sm bg-muted px-3.5 py-2 text-sm">
         {m.content}
       </div>
@@ -327,7 +416,8 @@ function FuelyMemoryPanel({ userId }: { userId: string | null }) {
   const [newCategory, setNewCategory] = useState("general");
 
   const addMutation = useMutation({
-    mutationFn: () => upsertFn({ data: { content: newContent, category: newCategory, importance: 3 } }),
+    mutationFn: () =>
+      upsertFn({ data: { content: newContent, category: newCategory, importance: 3 } }),
     onSuccess: () => {
       setNewContent("");
       qc.invalidateQueries({ queryKey: ["fuely-memories", userId] });
@@ -354,8 +444,8 @@ function FuelyMemoryPanel({ userId }: { userId: string | null }) {
       <div className="flex items-start gap-3 rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
         <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
         <p>
-          Das merkt sich Fuely dauerhaft über dich (Ziele, Vorlieben, Verletzungen usw.).
-          Du kannst jederzeit Einträge hinzufügen, ändern oder löschen.
+          Das merkt sich Fuely dauerhaft über dich (Ziele, Vorlieben, Verletzungen usw.). Du kannst
+          jederzeit Einträge hinzufügen, ändern oder löschen.
         </p>
       </div>
 
@@ -379,7 +469,11 @@ function FuelyMemoryPanel({ userId }: { userId: string | null }) {
             }}
           />
         </div>
-        <Button size="sm" onClick={() => addMutation.mutate()} disabled={!newContent.trim() || addMutation.isPending}>
+        <Button
+          size="sm"
+          onClick={() => addMutation.mutate()}
+          disabled={!newContent.trim() || addMutation.isPending}
+        >
           Speichern
         </Button>
       </div>
@@ -395,7 +489,9 @@ function FuelyMemoryPanel({ userId }: { userId: string | null }) {
           {byCat.map(([cat, list]) => (
             <div key={cat} className="space-y-2">
               <div className="flex items-center gap-2">
-                <Badge variant="secondary" className="uppercase">{cat}</Badge>
+                <Badge variant="secondary" className="uppercase">
+                  {cat}
+                </Badge>
                 <span className="text-xs text-muted-foreground">{list.length}</span>
               </div>
               <ul className="space-y-1.5">

@@ -120,7 +120,11 @@ export const ensureTrialTrainingPlan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const r = await seedTrialTrainingPlanFor(context.userId);
-    try { await seedTrialNutritionTargetsFor(context.userId); } catch (e) { console.error(e); }
+    try {
+      await seedTrialNutritionTargetsFor(context.userId);
+    } catch (e) {
+      console.error(e);
+    }
     return r;
   });
 
@@ -157,8 +161,6 @@ export const startMyTrial = createServerFn({ method: "POST" })
     // erstellt.
     return { ok: true, trial_status: "trial" as const, trial_start: start, trial_end: end };
   });
-
-
 
 /** Coach: Trial verlängern (beliebige Tageszahl 1–365). Verlängert auch abgelaufene Trials. */
 export const coachExtendTrial = createServerFn({ method: "POST" })
@@ -275,7 +277,10 @@ export const listTrialUsers = createServerFn({ method: "GET" })
       ? await supabaseAdmin
           .from("suppressed_emails")
           .select("email")
-          .in("email", emailList.map((e) => e.toLowerCase()))
+          .in(
+            "email",
+            emailList.map((e) => e.toLowerCase()),
+          )
       : { data: [] as { email: string }[] };
     const suppressedSet = new Set((suppressed ?? []).map((s: any) => s.email.toLowerCase()));
 

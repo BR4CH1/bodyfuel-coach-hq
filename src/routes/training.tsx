@@ -97,7 +97,7 @@ function TrainingPage() {
           <PlansView planType="training" onClientChange={setClientId} />
           {supabaseUser && effectiveId && (
             <section className="space-y-4">
-              <TrainingTracker key={trackerKey} clientId={effectiveId} />
+              <TrainingTracker key={`${trackerKey}:${effectiveId}`} clientId={effectiveId} />
             </section>
           )}
         </>
@@ -107,7 +107,7 @@ function TrainingPage() {
 
           {supabaseUser && !isExpired && effectiveId && (
             <section className="space-y-4">
-              <TrainingTracker key={trackerKey} clientId={effectiveId} />
+              <TrainingTracker key={`${trackerKey}:${effectiveId}`} clientId={effectiveId} />
             </section>
           )}
 

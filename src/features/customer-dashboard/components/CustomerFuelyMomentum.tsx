@@ -10,7 +10,7 @@ export function CustomerFuelyMomentum({ momentum }: { momentum: CustomerMomentum
       <div className="flex items-start gap-4">
         <Fuely
           emotion={momentum.state === "complete" ? "celebrating" : "motivated"}
-          animation={momentum.state === "complete" ? "bounce" : "idle"}
+          animation={momentum.state === "complete" ? "success" : "idle"}
           size="md"
           className="shrink-0"
         />

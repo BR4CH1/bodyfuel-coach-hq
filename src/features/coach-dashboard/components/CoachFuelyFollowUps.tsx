@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -19,7 +19,12 @@ import { toast } from "sonner";
 
 import { Fuely } from "@/components/bodyfuel/Fuely";
 import { Button } from "@/components/ui/button";
-import { sendCoachFollowUp } from "@/features/coach-dashboard/lib/coach-followups.functions";
+import {
+  listCoachFollowUpActions,
+  saveCoachFollowUpAction,
+  sendCoachFollowUp,
+  type CoachFollowUpAction,
+} from "@/features/coach-dashboard/lib/coach-followups.functions";
 import type {
   CoachFollowUpCategory,
   CoachFollowUpDraft,
@@ -38,6 +43,7 @@ type StoredAction = {
 };
 
 type StateMap = Record<string, StoredAction>;
+const COMPLETED_COOLDOWN_MS = 14 * 24 * 60 * 60 * 1000;
 
 const TONE_STYLES: Record<CoachFollowUpTone, string> = {
   urgent: "border-red-500/30 bg-red-500/7",
@@ -55,6 +61,13 @@ export function CoachFuelyFollowUps({
   onClearFilter?: () => void;
 }) {
   const [state, setState] = useState<StateMap>({});
+  const listActionsFn = useServerFn(listCoachFollowUpActions);
+  const saveActionFn = useServerFn(saveCoachFollowUpAction);
+  const actionsQuery = useQuery({
+    queryKey: ["coach-followup-actions"],
+    queryFn: () => listActionsFn(),
+    staleTime: 15_000,
+  });
 
   useEffect(() => {
     try {
@@ -65,11 +78,64 @@ export function CoachFuelyFollowUps({
     }
   }, []);
 
+  useEffect(() => {
+    if (!actionsQuery.data?.items) return;
+    const serverState = Object.fromEntries(
+      actionsQuery.data.items.map((action) => [
+        action.sourceSignalId,
+        {
+          status: action.status,
+          until: action.until,
+          reason: action.reason,
+          completedAt: action.completedAt,
+          deliveryChannel: action.deliveryChannel,
+        } satisfies StoredAction,
+      ]),
+    );
+    setState((current) => {
+      const next = { ...current, ...serverState };
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        /* browser cache is only a fast local mirror */
+      }
+      return next;
+    });
+  }, [actionsQuery.data]);
+
   function updateState(id: string, action: StoredAction) {
+    const previous = state[id];
     setState((current) => {
       const next = { ...current, [id]: action };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        /* browser cache is only a fast local mirror */
+      }
       return next;
+    });
+
+    const payload: CoachFollowUpAction = {
+      sourceSignalId: id,
+      status: action.status,
+      ...(action.until ? { until: action.until } : {}),
+      ...(action.reason ? { reason: action.reason } : {}),
+      ...(action.completedAt ? { completedAt: action.completedAt } : {}),
+      ...(action.deliveryChannel ? { deliveryChannel: action.deliveryChannel } : {}),
+    };
+    void saveActionFn({ data: payload }).catch((error: Error) => {
+      setState((current) => {
+        const next = { ...current };
+        if (previous) next[id] = previous;
+        else delete next[id];
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+        } catch {
+          /* browser cache is only a fast local mirror */
+        }
+        return next;
+      });
+      toast.error(error.message || "Follow-up-Status konnte nicht gespeichert werden.");
     });
   }
 
@@ -78,7 +144,11 @@ export function CoachFuelyFollowUps({
     return drafts.filter((draft) => {
       const action = state[draft.sourceSignalId];
       if (!action) return !selectedCategory || draft.category === selectedCategory;
-      if (action.status === "completed" || action.status === "dismissed") return false;
+      if (action.status === "dismissed") return false;
+      if (action.status === "completed") {
+        const completedAt = action.completedAt ? new Date(action.completedAt).getTime() : now;
+        if (now - completedAt < COMPLETED_COOLDOWN_MS) return false;
+      }
       if (action.status === "snoozed" && action.until && new Date(action.until).getTime() > now)
         return false;
       return !selectedCategory || draft.category === selectedCategory;
@@ -183,7 +253,13 @@ function FollowUpCard({
   const sendMutation = useMutation({
     mutationFn: (channel: "message" | "email" | "both") =>
       sendFn({
-        data: { target: draft.target, channel, body: draft.message, subject: draft.emailSubject },
+        data: {
+          sourceSignalId: draft.sourceSignalId,
+          target: draft.target,
+          channel,
+          body: draft.message,
+          subject: draft.emailSubject,
+        },
       }),
     onSuccess: (_result, channel) => {
       const label =

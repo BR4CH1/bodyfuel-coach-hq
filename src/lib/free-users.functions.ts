@@ -19,8 +19,15 @@ export const listFreeUsers = createServerFn({ method: "GET" })
 
     const [profilesRes, pointsRes, eventsRes, usersRes, groupsRes] = await Promise.all([
       supabaseAdmin.from("profiles").select("id, display_name, nickname, created_at").in("id", ids),
-      supabaseAdmin.from("user_points").select("user_id, total_points, level, current_streak, last_check_date").in("user_id", ids),
-      supabaseAdmin.from("free_user_events").select("user_id, event, created_at").in("user_id", ids).order("created_at", { ascending: false }),
+      supabaseAdmin
+        .from("user_points")
+        .select("user_id, total_points, level, current_streak, last_check_date")
+        .in("user_id", ids),
+      supabaseAdmin
+        .from("free_user_events")
+        .select("user_id, event, created_at")
+        .in("user_id", ids)
+        .order("created_at", { ascending: false }),
       supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 }),
       supabaseAdmin.from("user_groups").select("user_id, group_name").in("user_id", ids),
     ]);
@@ -32,7 +39,9 @@ export const listFreeUsers = createServerFn({ method: "GET" })
       if (!lastEventByUser.has(e.user_id)) lastEventByUser.set(e.user_id, e);
     });
     const upgradeClickedByUser = new Set(
-      (eventsRes.data ?? []).filter((e: any) => e.event === "upgrade_clicked").map((e: any) => e.user_id),
+      (eventsRes.data ?? [])
+        .filter((e: any) => e.event === "upgrade_clicked")
+        .map((e: any) => e.user_id),
     );
     const profileById = new Map<string, any>();
     (profilesRes.data ?? []).forEach((p: any) => profileById.set(p.id, p));
@@ -48,7 +57,10 @@ export const listFreeUsers = createServerFn({ method: "GET" })
       ? await supabaseAdmin
           .from("suppressed_emails")
           .select("email")
-          .in("email", emailList.map((e) => e.toLowerCase()))
+          .in(
+            "email",
+            emailList.map((e) => e.toLowerCase()),
+          )
       : { data: [] as { email: string }[] };
     const suppressedSet = new Set((suppressed ?? []).map((s: any) => s.email.toLowerCase()));
 

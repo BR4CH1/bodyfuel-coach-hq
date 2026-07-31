@@ -72,9 +72,7 @@ export const getCoachRadar = createServerFn({ method: "GET" })
       .from("user_roles")
       .select("user_id, role")
       .in("role", ["client", "free"]);
-    const ids: string[] = Array.from(
-      new Set((roles ?? []).map((r: any) => r.user_id as string)),
-    );
+    const ids: string[] = Array.from(new Set((roles ?? []).map((r: any) => r.user_id as string)));
     const clientIdSet = new Set<string>(
       (roles ?? []).filter((r: any) => r.role === "client").map((r: any) => r.user_id),
     );
@@ -90,7 +88,15 @@ export const getCoachRadar = createServerFn({ method: "GET" })
 
     if (!ids.length) {
       return {
-        summary: { red: 0, yellow: 0, orange: 0, green: 0, open_tasks: 0, expiring_plans: 0, active_warnings: 0 },
+        summary: {
+          red: 0,
+          yellow: 0,
+          orange: 0,
+          green: 0,
+          open_tasks: 0,
+          expiring_plans: 0,
+          active_warnings: 0,
+        },
         clients: [],
         inbox: [],
         resolved_keys: [],
@@ -123,10 +129,7 @@ export const getCoachRadar = createServerFn({ method: "GET" })
       subs,
       referrals,
     ] = await Promise.all([
-      supabase
-        .from("profiles")
-        .select("id, display_name, training_goal, created_at")
-        .in("id", ids),
+      supabase.from("profiles").select("id, display_name, training_goal, created_at").in("id", ids),
       supabase
         .from("body_measurements")
         .select("user_id, weight_kg, measured_at")
@@ -138,10 +141,7 @@ export const getCoachRadar = createServerFn({ method: "GET" })
         .select("user_id, entry_date, kcal, protein_g")
         .in("user_id", ids)
         .gte("entry_date", since14),
-      supabase
-        .from("nutrition_targets")
-        .select("user_id, kcal, protein_g")
-        .in("user_id", ids),
+      supabase.from("nutrition_targets").select("user_id, kcal, protein_g").in("user_id", ids),
       supabase
         .from("nutrition_plans")
         .select("id, title, client_id, plan_type, status, scheduled_start_date, scheduled_end_date")
@@ -199,13 +199,13 @@ export const getCoachRadar = createServerFn({ method: "GET" })
         .order("created_at", { ascending: false }),
       supabaseAdmin
         .from("affiliate_referrals")
-        .select("referred_user_id, source_slug, partner_id, signup_at, affiliate_partners(name, slug)")
+        .select(
+          "referred_user_id, source_slug, partner_id, signup_at, affiliate_partners(name, slug)",
+        )
         .in("referred_user_id", ids),
     ]);
 
-    const resolvedSet = new Set<string>(
-      (resolutions.data ?? []).map((r: any) => r.alert_key),
-    );
+    const resolvedSet = new Set<string>((resolutions.data ?? []).map((r: any) => r.alert_key));
 
     // ---- signup enrichment (package + source) ----
     const PKG_LABEL: Record<string, string> = {
@@ -435,7 +435,9 @@ export const getCoachRadar = createServerFn({ method: "GET" })
               `Vor ${Math.max(0, Math.floor(ageDays))} Tagen beigetreten`,
               packageByUser.get(p.id) ? `Paket: ${packageByUser.get(p.id)}` : null,
               sourceByUser.get(p.id) ? `Quelle: ${sourceByUser.get(p.id)}` : null,
-            ].filter(Boolean).join(" · "),
+            ]
+              .filter(Boolean)
+              .join(" · "),
             keySuffix: new Date(p.created_at).toISOString().slice(0, 10),
           });
         }
@@ -534,7 +536,6 @@ export const getCoachRadar = createServerFn({ method: "GET" })
           keySuffix: `${kind}:${review.id}`,
         });
       }
-
 
       // ----- WEIGHT -----
       const series = (weightsByUser.get(p.id) ?? [])
@@ -648,9 +649,11 @@ export const getCoachRadar = createServerFn({ method: "GET" })
       const waterMap = waterByUser.get(p.id);
       if (waterMap) {
         let lowWater = 0;
-        Array.from(waterMap.entries()).slice(0, 14).forEach(([, g]) => {
-          if (g < 8) lowWater++; // 8 Gläser ≈ 2 L
-        });
+        Array.from(waterMap.entries())
+          .slice(0, 14)
+          .forEach(([, g]) => {
+            if (g < 8) lowWater++; // 8 Gläser ≈ 2 L
+          });
         if (lowWater >= 4) {
           reasons.push(`Wasser <2 L an ${lowWater} Tagen`);
         }
@@ -697,9 +700,7 @@ export const getCoachRadar = createServerFn({ method: "GET" })
           priority: "important",
           kind: "checkin_overdue",
           title:
-            lcDays === null
-              ? "Noch nie eingecheckt"
-              : `Check-in seit ${lcDays} Tagen überfällig`,
+            lcDays === null ? "Noch nie eingecheckt" : `Check-in seit ${lcDays} Tagen überfällig`,
           detail: "Bitte Kunden anstupsen oder Entwurf erstellen.",
           keySuffix: lc ?? "never",
         });
@@ -843,7 +844,8 @@ export const resolveCoachInboxTask = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     await assertCoach(supabase, userId);
     const t = data.task;
-    const severity = t.priority === "critical" ? "red" : t.priority === "important" ? "orange" : "orange";
+    const severity =
+      t.priority === "critical" ? "red" : t.priority === "important" ? "orange" : "orange";
     const { error } = await supabase.from("coach_alert_resolutions").upsert(
       {
         coach_user_id: userId,

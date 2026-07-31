@@ -83,6 +83,24 @@ export const Route = createFileRoute("/coach/customers/$userId")({
   ),
 });
 
+const CUSTOMER_DETAIL_TIMEOUT_MS = 15_000;
+
+async function withCustomerDetailTimeout<T>(request: Promise<T>): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(
+      () => reject(new Error("Die Kundendaten konnten nicht geladen werden. Bitte Verbindung prüfen und erneut versuchen.")),
+      CUSTOMER_DETAIL_TIMEOUT_MS,
+    );
+  });
+
+  try {
+    return await Promise.race([request, timeout]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
+
 function CustomerDetail() {
   const { userId } = useParams({ from: "/coach/customers/$userId" });
   const navigate = useNavigate();
@@ -110,9 +128,18 @@ function CustomerDetail() {
   const [showDangerZone, setShowDangerZone] = useState(false);
 
 
-  const { data, isLoading } = useQuery({
+  const {
+    data,
+    isLoading,
+    isError,
+    error,
+    refetch,
+    isFetching,
+  } = useQuery({
     queryKey: ["customer", userId],
-    queryFn: () => getFn({ data: { user_id: userId } }),
+    queryFn: () =>
+      withCustomerDetailTimeout(getFn({ data: { user_id: userId } })),
+    retry: false,
   });
 
   const activePkg = data?.packages.find((p) => p.is_active) ?? data?.packages[0];
@@ -196,7 +223,26 @@ function CustomerDetail() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  if (isLoading || !data) return <p className="text-sm text-muted-foreground">Lade…</p>;
+  if (isLoading) return <p className="text-sm text-muted-foreground">Lade Kundendaten…</p>;
+
+  if (isError || !data) {
+    return (
+      <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-5">
+        <p className="font-display text-lg font-bold">Kundendaten konnten nicht geladen werden</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {error instanceof Error ? error.message : "Die Abfrage hat keine Daten zurückgegeben."}
+        </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button type="button" onClick={() => void refetch()} disabled={isFetching}>
+            {isFetching ? "Lade…" : "Erneut versuchen"}
+          </Button>
+          <Button asChild type="button" variant="outline">
+            <Link to="/coach/customers">Zurück zu Kunden</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   const status = data.auth?.status ?? "invited";
   const statusLabel =

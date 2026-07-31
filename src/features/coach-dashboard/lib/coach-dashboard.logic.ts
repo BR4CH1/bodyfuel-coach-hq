@@ -26,7 +26,8 @@ export function daysAgo(iso: string | null, nowMs = Date.now()): number | null {
 export function daysUntil(iso: string, today: Date): number {
   const startOfToday = new Date(today);
   startOfToday.setHours(0, 0, 0, 0);
-  return Math.ceil((new Date(iso).getTime() - startOfToday.getTime()) / DAY_MS);
+  const days = Math.ceil((new Date(iso).getTime() - startOfToday.getTime()) / DAY_MS);
+  return days === 0 ? 0 : days;
 }
 
 function latestActivityDays(client: CoachClient, nowMs: number): number | null {

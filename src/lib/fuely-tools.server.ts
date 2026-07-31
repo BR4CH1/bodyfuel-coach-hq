@@ -18,8 +18,102 @@ type SB = any; // typed as any to avoid heavy type gymnastics; RLS enforced
 
 function isoDay(offset = 0) {
   const d = new Date();
-  d.setDate(d.getDate() + offset);
-  return d.toISOString().slice(0, 10);
+  d.setUTCDate(d.getUTCDate() + offset);
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Berlin",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(d);
+  const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${value.year}-${value.month}-${value.day}`;
+}
+
+const PERSONAL_NAV_PATHS = new Set([
+  "/dashboard",
+  "/training",
+  "/nutrition",
+  "/nutrition/tracking",
+  "/nutrition/favorites",
+  "/nutrition/shopping",
+  "/check-in",
+  "/community",
+  "/profile",
+  "/progress",
+  "/strength-check",
+  "/messages",
+  "/fuely",
+]);
+
+const ORG_NAV_SEGMENTS = new Set([
+  "home",
+  "training",
+  "nutrition",
+  "nutrition/tracking",
+  "nutrition/favorites",
+  "nutrition/shopping",
+  "checkin",
+  "community",
+  "profil",
+  "performance",
+  "ranking",
+  "fuely",
+]);
+
+function trainingPath(orgSlug: string | null) {
+  return orgSlug ? `/${orgSlug}/training` : "/training";
+}
+
+export function resolveFuelyNavigationPath(
+  rawPath: unknown,
+  orgSlug: string | null,
+): string | null {
+  if (orgSlug && !/^[a-z0-9-]+$/i.test(orgSlug)) return null;
+  const raw = String(rawPath ?? "")
+    .trim()
+    .split(/[?#]/, 1)[0];
+  if (!raw.startsWith("/") || raw.includes("..") || raw.includes("\\")) return null;
+
+  if (!orgSlug) {
+    if (raw.includes("{orgSlug}")) {
+      const suffix = raw.replace(/^\/?\{orgSlug\}\/?/, "");
+      const personalAlias: Record<string, string> = {
+        home: "/dashboard",
+        training: "/training",
+        nutrition: "/nutrition",
+        "nutrition/tracking": "/nutrition/tracking",
+        "nutrition/favorites": "/nutrition/favorites",
+        "nutrition/shopping": "/nutrition/shopping",
+        checkin: "/check-in",
+        community: "/community",
+        profil: "/profile",
+        fuely: "/fuely",
+      };
+      return personalAlias[suffix] ?? null;
+    }
+    return PERSONAL_NAV_PATHS.has(raw) ? raw : null;
+  }
+
+  const personalToOrg: Record<string, string> = {
+    "/dashboard": "home",
+    "/training": "training",
+    "/nutrition": "nutrition",
+    "/nutrition/tracking": "nutrition/tracking",
+    "/nutrition/favorites": "nutrition/favorites",
+    "/nutrition/shopping": "nutrition/shopping",
+    "/check-in": "checkin",
+    "/community": "community",
+    "/profile": "profil",
+    "/fuely": "fuely",
+  };
+  const replaced = raw.replace(/\{orgSlug\}/g, orgSlug);
+  const aliasedSegment = personalToOrg[replaced];
+  if (aliasedSegment) return `/${orgSlug}/${aliasedSegment}`;
+
+  const prefix = `/${orgSlug}/`;
+  if (!replaced.startsWith(prefix)) return null;
+  const segment = replaced.slice(prefix.length).replace(/\/+$/, "");
+  return ORG_NAV_SEGMENTS.has(segment) ? `${prefix}${segment}` : null;
 }
 
 async function emitTimeline(
@@ -110,7 +204,7 @@ export const FUELY_TOOLS = [
     type: "function",
     function: {
       name: "get_streak_xp",
-      description: "Aktuelle Streak, XP, Level und Wochenpunkte.",
+      description: "Aktuelle Streak, Gesamtpunkte, Tages-/Performancepunkte und Level.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -239,7 +333,7 @@ export const FUELY_TOOLS = [
     function: {
       name: "complete_training",
       description:
-        "Markiert das heutige (oder ein bestimmtes) Training als erledigt. Ohne 'session_id' wird das nächste offene Training verwendet.",
+        "Markiert eine geplante Trainingseinheit als erledigt. Persönliche Trainingspläne werden nicht blind abgehakt, sondern mit einem Link im Satz-für-Satz-Tracker geöffnet.",
       parameters: {
         type: "object",
         properties: {
@@ -328,14 +422,27 @@ export async function runFuelyTool(
   try {
     switch (name) {
       case "get_profile": {
-        const { data } = await supabase
-          .from("profiles")
-          .select(
-            "display_name, first_name, gender, height_cm, current_weight_kg, target_weight_kg, goal, activity_level, birthdate",
-          )
-          .eq("id", userId)
-          .maybeSingle();
-        return data ?? {};
+        const [{ data: profile, error: profileError }, { data: measurement }] = await Promise.all([
+          supabase
+            .from("profiles")
+            .select(
+              "display_name, nickname, gender, height_cm, goal_weight_kg, coaching_goal, training_goal, activity_level, birthdate, injuries, sport, sport_level",
+            )
+            .eq("id", userId)
+            .maybeSingle(),
+          supabase
+            .from("body_measurements")
+            .select("measured_at, weight_kg, body_fat_pct")
+            .eq("user_id", userId)
+            .order("measured_at", { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+        ]);
+        if (profileError) return { error: profileError.message };
+        return {
+          ...(profile ?? {}),
+          current_measurement: measurement ?? null,
+        };
       }
       case "get_today_nutrition": {
         const today = isoDay();
@@ -405,89 +512,248 @@ export async function runFuelyTool(
       }
       case "get_today_training": {
         const today = isoDay();
-        const { data } = await supabase
-          .from("training_sessions")
-          .select("id, status, session_date, completed_at, focus, notes")
-          .eq("client_id", userId)
-          .eq("session_date", today);
-        return data ?? [];
+        const [{ data: sessions, error: sessionsError }, { data: plan, error: planError }] =
+          await Promise.all([
+            supabase
+              .from("training_sessions")
+              .select(
+                "id, name, status, session_date, completed_at, focus, notes, duration_minutes, start_time",
+              )
+              .eq("client_id", userId)
+              .eq("session_date", today),
+            supabase
+              .from("nutrition_plans")
+              .select("id, title, weeks_count, scheduled_start_date")
+              .eq("client_id", userId)
+              .eq("plan_type", "training")
+              .eq("is_active", true)
+              .maybeSingle(),
+          ]);
+        if (sessionsError) return { error: sessionsError.message };
+        if (planError) return { error: planError.message };
+
+        if (!plan) {
+          return {
+            date: today,
+            scheduled_sessions: sessions ?? [],
+            tracker: null,
+          };
+        }
+
+        const weeksCount = Math.max(1, Number((plan as any).weeks_count ?? 1));
+        let currentWeek = 1;
+        if ((plan as any).scheduled_start_date && weeksCount > 1) {
+          const start = new Date(`${(plan as any).scheduled_start_date}T00:00:00`);
+          const diffDays = Math.floor((Date.now() - start.getTime()) / 86_400_000);
+          currentWeek = Math.max(1, Math.min(weeksCount, Math.floor(diffDays / 7) + 1));
+        }
+
+        const { data: days, error: daysError } = await supabase
+          .from("training_days")
+          .select("id, name, day_date, week_number, sort_order")
+          .eq("plan_id", (plan as any).id)
+          .eq("week_number", currentWeek)
+          .order("sort_order", { ascending: true });
+        if (daysError) return { error: daysError.message };
+
+        const dayIds = (days ?? []).map((day: any) => day.id);
+        let exercises: any[] = [];
+        let completions: any[] = [];
+        let todayLogs: any[] = [];
+        if (dayIds.length) {
+          const [exerciseResult, completionResult] = await Promise.all([
+            supabase
+              .from("training_exercises")
+              .select(
+                "id, day_id, name, target_sets, target_reps, target_weights, target_rir, rest_seconds, sort_order",
+              )
+              .in("day_id", dayIds)
+              .order("sort_order", { ascending: true }),
+            supabase
+              .from("training_day_completions")
+              .select("day_id, completion_date, completed_at, exercises_evaluated")
+              .eq("client_id", userId)
+              .in("day_id", dayIds)
+              .eq("completion_date", today),
+          ]);
+          if (exerciseResult.error) return { error: exerciseResult.error.message };
+          if (completionResult.error) return { error: completionResult.error.message };
+          exercises = exerciseResult.data ?? [];
+          completions = completionResult.data ?? [];
+
+          const exerciseIds = exercises.map((exercise: any) => exercise.id);
+          if (exerciseIds.length) {
+            const { data: logs, error: logsError } = await supabase
+              .from("training_set_logs")
+              .select("exercise_id, set_number, weight_kg, reps, rpe, performed_at")
+              .eq("client_id", userId)
+              .in("exercise_id", exerciseIds)
+              .gte("performed_at", `${today}T00:00:00`)
+              .lt("performed_at", `${isoDay(1)}T00:00:00`)
+              .order("performed_at", { ascending: true });
+            if (logsError) return { error: logsError.message };
+            todayLogs = logs ?? [];
+          }
+        }
+
+        return {
+          date: today,
+          scheduled_sessions: sessions ?? [],
+          tracker: {
+            path: trainingPath(orgSlug),
+            plan: {
+              id: (plan as any).id,
+              title: (plan as any).title,
+              current_week: currentWeek,
+              weeks_count: weeksCount,
+            },
+            days: (days ?? []).map((day: any) => ({
+              ...day,
+              is_today: day.day_date === today,
+              completed_today: completions.some((completion: any) => completion.day_id === day.id),
+              exercises: exercises
+                .filter((exercise: any) => exercise.day_id === day.id)
+                .map((exercise: any) => ({
+                  ...exercise,
+                  completed_sets_today: todayLogs.filter(
+                    (log: any) => log.exercise_id === exercise.id,
+                  ).length,
+                })),
+            })),
+          },
+        };
       }
       case "get_training_history": {
         const weeks = Math.min(16, Math.max(1, Number(args?.weeks ?? 4)));
         const from = isoDay(-weeks * 7);
-        const { data } = await supabase
-          .from("training_sessions")
-          .select("session_date, status, completed_at, focus")
-          .eq("client_id", userId)
-          .gte("session_date", from)
-          .order("session_date", { ascending: false })
-          .limit(80);
-        return data ?? [];
+        const [
+          { data: sessions, error: sessionsError },
+          { data: completions, error: completionError },
+        ] = await Promise.all([
+          supabase
+            .from("training_sessions")
+            .select("name, session_date, status, completed_at, focus")
+            .eq("client_id", userId)
+            .gte("session_date", from)
+            .order("session_date", { ascending: false })
+            .limit(80),
+          supabase
+            .from("training_day_completions")
+            .select("day_id, completion_date, completed_at, exercises_evaluated")
+            .eq("client_id", userId)
+            .gte("completion_date", from)
+            .order("completion_date", { ascending: false })
+            .limit(80),
+        ]);
+        if (sessionsError) return { error: sessionsError.message };
+        if (completionError) return { error: completionError.message };
+        return {
+          from,
+          scheduled_sessions: sessions ?? [],
+          tracker_completions: completions ?? [],
+        };
       }
       case "get_measurements": {
         const days = Math.min(365, Math.max(7, Number(args?.days ?? 60)));
         const from = isoDay(-days);
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from("body_measurements")
-          .select("measured_at, weight_kg, body_fat_percent, waist_cm, hip_cm, chest_cm")
+          .select(
+            "measured_at, weight_kg, body_fat_pct, waist_cm, hip_cm, chest_cm, thigh_left_cm, thigh_right_cm, biceps_left_cm, biceps_right_cm, muscle_mass_kg",
+          )
           .eq("user_id", userId)
           .gte("measured_at", from)
           .order("measured_at", { ascending: false })
           .limit(60);
+        if (error) return { error: error.message };
         return data ?? [];
       }
       case "get_checkins": {
         const limit = Math.min(30, Math.max(1, Number(args?.limit ?? 10)));
-        const [{ data: athlete }, { data: weekly }] = await Promise.all([
+        const [athleteResult, weeklyResult] = await Promise.all([
           supabase
             .from("athlete_checkins")
-            .select("created_at, mood, energy, sleep_hours, notes")
+            .select(
+              "checkin_date, created_at, energy, sleep, stress, training_feel, pain_level, pain_note, notes, weight_kg",
+            )
             .eq("user_id", userId)
-            .order("created_at", { ascending: false })
+            .order("checkin_date", { ascending: false })
             .limit(limit),
           supabase
             .from("weekly_checkins")
-            .select("created_at, week_start, energy, motivation, sleep_quality, notes")
+            .select(
+              "submitted_at, week_start, mood, energy, sleep_quality, nutrition_adherence, training_adherence, struggles, wins, weight_kg",
+            )
             .eq("user_id", userId)
-            .order("created_at", { ascending: false })
+            .order("submitted_at", { ascending: false })
             .limit(limit),
         ]);
-        return { athlete: athlete ?? [], weekly: weekly ?? [] };
+        if (athleteResult.error) return { error: athleteResult.error.message };
+        if (weeklyResult.error) return { error: weeklyResult.error.message };
+        return {
+          athlete: athleteResult.data ?? [],
+          weekly: weeklyResult.data ?? [],
+        };
       }
       case "get_streak_xp": {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from("user_points")
-          .select("current_streak, longest_streak, total_points, level, weekly_points")
+          .select(
+            "current_streak, longest_streak, total_points, level, daily_points, performance_points, last_check_date",
+          )
           .eq("user_id", userId)
           .maybeSingle();
+        if (error) return { error: error.message };
         return data ?? {};
       }
       case "get_challenges": {
-        const { data: challenges } = await supabase
+        let organizationId: string | null = null;
+        if (orgSlug) {
+          const { data: organization, error: organizationError } = await supabase
+            .from("organizations")
+            .select("id")
+            .eq("slug", orgSlug)
+            .maybeSingle();
+          if (organizationError) return { error: organizationError.message };
+          organizationId = (organization as any)?.id ?? null;
+        }
+
+        let challengeQuery = supabase
           .from("organization_challenges")
-          .select("id, title, description, starts_at, ends_at, target_value, unit")
-          .gte("ends_at", isoDay())
+          .select(
+            "id, name, description, starts_at, ends_at, status, config, organization_id, team_id, visibility_scope",
+          )
+          .eq("status", "active")
           .order("ends_at", { ascending: true })
           .limit(5);
+        if (organizationId) {
+          challengeQuery = challengeQuery.eq("organization_id", organizationId);
+        }
+        const { data: challenges, error: challengeError } = await challengeQuery;
+        if (challengeError) return { error: challengeError.message };
+
         const ids = (challenges ?? []).map((c: any) => c.id);
         let progress: any[] = [];
         if (ids.length) {
-          const { data: p } = await supabase
+          const { data: p, error: progressError } = await supabase
             .from("organization_challenge_progress")
-            .select("challenge_id, current_value")
+            .select("challenge_id, points, updated_at")
             .eq("user_id", userId)
             .in("challenge_id", ids);
+          if (progressError) return { error: progressError.message };
           progress = p ?? [];
         }
         return { challenges: challenges ?? [], progress };
       }
       case "get_coach_messages": {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from("coach_messages")
-          .select("created_at, sender_id, content")
-          .eq("client_id", userId)
+          .select("id, created_at, sender_id, body, read_by_client_at")
+          .eq("thread_user_id", userId)
+          .eq("from_coach", true)
           .order("created_at", { ascending: false })
           .limit(5);
+        if (error) return { error: error.message };
         return data ?? [];
       }
       case "get_memory": {
@@ -500,18 +766,27 @@ export async function runFuelyTool(
         return data ?? [];
       }
       case "navigate_to": {
-        const raw = String(args?.path ?? "");
-        const path = orgSlug ? raw.replace(/\{orgSlug\}/g, orgSlug) : raw;
-        return { path, label: String(args?.label ?? "Öffnen") };
+        const path = resolveFuelyNavigationPath(args?.path, orgSlug);
+        if (!path) return { error: "Dieser Bereich kann nicht direkt geöffnet werden." };
+        return {
+          path,
+          label:
+            String(args?.label ?? "Öffnen")
+              .trim()
+              .slice(0, 40) || "Öffnen",
+        };
       }
 
       // ============ WRITE ACTIONS ============
 
       case "log_water": {
-        const glasses = args?.glasses
-          ? Number(args.glasses)
-          : Math.max(1, Math.round(Number(args?.ml ?? 0) / 250));
-        if (!glasses) return { error: "Menge fehlt" };
+        const hasGlasses = args?.glasses != null;
+        const hasMl = args?.ml != null;
+        if (!hasGlasses && !hasMl) return { error: "Menge fehlt" };
+        const glasses = hasGlasses
+          ? Math.round(Number(args.glasses))
+          : Math.max(1, Math.round(Number(args.ml) / 250));
+        if (!(glasses >= 1 && glasses <= 30)) return { error: "Ungültige Wassermenge" };
         const today = isoDay();
         const { data: existing } = await supabase
           .from("water_logs")
@@ -718,10 +993,18 @@ export async function runFuelyTool(
             .limit(1);
           sessionId = (data as any)?.[0]?.id;
         }
-        if (!sessionId) return { error: "Keine offene Trainingseinheit gefunden." };
+        if (!sessionId) {
+          return {
+            requires_navigation: true,
+            path: trainingPath(orgSlug),
+            label: "Training öffnen",
+            reason:
+              "Persönliche Trainingspläne werden Satz für Satz im Tracker abgeschlossen, damit Smart-Progression und alle Eingaben korrekt ausgewertet werden.",
+          };
+        }
         const { data: prev } = await supabase
           .from("training_sessions")
-          .select("status, completed_at, notes")
+          .select("status, completed_at, notes, focus")
           .eq("id", sessionId)
           .eq("client_id", userId)
           .maybeSingle();
@@ -772,7 +1055,15 @@ export async function runFuelyTool(
             .limit(1);
           sessionId = (data as any)?.[0]?.id;
         }
-        if (!sessionId) return { error: "Keine Einheit zum Verschieben gefunden." };
+        if (!sessionId) {
+          return {
+            requires_navigation: true,
+            path: trainingPath(orgSlug),
+            label: "Training öffnen",
+            reason:
+              "Der persönliche Trainingsplan wird im Tracker verwaltet. Es wurde nichts automatisch verschoben.",
+          };
+        }
         const { data: prev } = await supabase
           .from("training_sessions")
           .select("session_date, status")
@@ -854,15 +1145,10 @@ export async function runFuelyTool(
             .order("measured_at", { ascending: false })
             .limit(1)
             .maybeSingle(),
-          supabase
-            .from("profiles")
-            .select("current_weight_kg, training_goal")
-            .eq("id", userId)
-            .maybeSingle(),
+          supabase.from("profiles").select("training_goal").eq("id", userId).maybeSingle(),
         ]);
         const measurementForProtein = measurement as { weight_kg?: unknown } | null;
         const profileForProtein = profile as {
-          current_weight_kg?: unknown;
           training_goal?: string | null;
         } | null;
         const previousTargets = previous as {
@@ -872,9 +1158,7 @@ export async function runFuelyTool(
           protein_g_rest?: unknown;
           carbs_g_rest?: unknown;
         } | null;
-        const rawWeight = Number(
-          measurementForProtein?.weight_kg ?? profileForProtein?.current_weight_kg,
-        );
+        const rawWeight = Number(measurementForProtein?.weight_kg);
         const profileWeight = Number.isFinite(rawWeight) && rawWeight > 0 ? rawWeight : null;
         const createdNewTarget = !previous;
         const fallbackProtein = profileWeight

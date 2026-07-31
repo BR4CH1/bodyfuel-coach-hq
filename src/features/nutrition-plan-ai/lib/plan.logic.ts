@@ -347,10 +347,10 @@ export function buildPlanSchedule(input: {
 }
 
 export function buildAiSchedule(schedule: PlanScheduleDay[]): PlanScheduleDay[] {
-  return schedule.reduce<PlanScheduleDay[]>((acc, day) => {
-    if (!acc.some((entry) => entry.type === day.type)) acc.push(day);
-    return acc;
-  }, []);
+  return (["training", "rest"] as const).flatMap((type) => {
+    const representative = schedule.find((day) => day.type === type);
+    return representative ? [representative] : [];
+  });
 }
 
 function cloneMealForExpandedDay(meal: GeneratedMeal): GeneratedMeal {

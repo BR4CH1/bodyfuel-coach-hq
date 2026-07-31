@@ -553,8 +553,6 @@ function RealUserDashboard() {
 
       {!loading && <CustomerFuelyMomentum momentum={fuelyMomentum} />}
 
-      {supabaseUser && <AutopilotStatusCard userId={supabaseUser.id} />}
-      {supabaseUser && <SmartAnalysisCTA />}
       {supabaseUser && planUnderReview && (
         <div className="rounded-2xl border border-gold/40 bg-gold/5 p-5">
           <div className="text-xs uppercase tracking-[0.2em] text-gold">Smart Plan</div>
@@ -568,91 +566,117 @@ function RealUserDashboard() {
         </div>
       )}
       {supabaseUser && !hasActivePlan && !planUnderReview && <SmartRenewalCard />}
-      {supabaseUser && <StrengthCheckStatus variant="block" />}
       {supabaseUser && <PackageExpiryBanner userId={supabaseUser.id} />}
       {supabaseUser && <DailyMacroSummary userId={supabaseUser.id} />}
-
-      {/* Level hero card */}
-      {(() => {
-        const points = userPts.total;
-        const { level, next, progress } = getLevel(points);
-        return (
-          <div className="relative overflow-hidden rounded-3xl border border-border bg-card p-6 sm:p-8">
-            <div className="absolute -right-20 -top-20 h-60 w-60 rounded-full bg-gold/10 blur-3xl" />
-            <div className="relative grid gap-6 sm:grid-cols-[1fr_auto] sm:items-center">
-              <div>
-                <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-gold">
-                  <Flame className="h-3.5 w-3.5" /> Aktuelles Level
-                </div>
-                <div className="mt-1 font-display text-5xl font-bold text-gradient-gold sm:text-6xl">
-                  {level.name}
-                </div>
-                <div className="mt-2 text-sm text-muted-foreground">
-                  {next ? (
-                    <>
-                      Noch{" "}
-                      <span className="font-semibold text-foreground">{next.min - points}</span>{" "}
-                      Punkte bis <span className="text-gold">{next.name}</span>
-                    </>
-                  ) : (
-                    "Max Level erreicht — Legendary!"
-                  )}
-                </div>
-                <div className="mt-5 space-y-2">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">{level.name}</span>
-                    <span className="font-semibold text-foreground">{points} Pkt</span>
-                    <span className="text-muted-foreground">{next ? next.name : "MAX"}</span>
-                  </div>
-                  <div className="h-2.5 overflow-hidden rounded-full bg-secondary">
-                    <div
-                      className="h-full rounded-full bg-gradient-gold transition-all"
-                      style={{ width: `${progress}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-3 sm:grid-cols-1 sm:gap-2">
-                <Stat label="Gesamt" value={points} suffix="Pkt" />
-                <Stat label="Heute" value={todayDbPoints} suffix={`/ ${MAX_DAILY_POINTS}`} />
-                <Stat
-                  label="Training"
-                  value={userPts.perf}
-                  suffix="Pkt"
-                  accent={userPts.perf > 0}
-                />
-              </div>
-            </div>
-          </div>
-        );
-      })()}
+      {supabaseUser && <DailyChecklist userId={supabaseUser.id} />}
 
       {supabaseUser && (
-        <details className="group rounded-2xl border border-border bg-card">
-          <summary className="flex cursor-pointer items-center justify-between gap-3 p-5 text-sm font-semibold">
-            <span className="flex items-center gap-2 text-gold">
-              <Target className="h-4 w-4" />
-              <span className="uppercase tracking-wider">Punkte-Aufschlüsselung</span>
+        <details className="group rounded-3xl border border-border bg-card">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 font-display text-lg font-bold">
+            <span className="inline-flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-gold" />
+              Fortschritt, Analysen & Erfolge
             </span>
             <ArrowRight className="h-4 w-4 text-muted-foreground transition group-open:rotate-90" />
           </summary>
-          <div className="border-t border-border p-2 sm:p-3">
-            <PointsBreakdownCard userId={supabaseUser.id} />
+          <div className="space-y-6 border-t border-border p-4 sm:p-5">
+            <SmartAnalysisCTA />
+            <StrengthCheckStatus variant="block" />
+
+            {/* Level hero card */}
+            {(() => {
+              const points = userPts.total;
+              const { level, next, progress } = getLevel(points);
+              return (
+                <div className="relative overflow-hidden rounded-3xl border border-border bg-card p-6 sm:p-8">
+                  <div className="absolute -right-20 -top-20 h-60 w-60 rounded-full bg-gold/10 blur-3xl" />
+                  <div className="relative grid gap-6 sm:grid-cols-[1fr_auto] sm:items-center">
+                    <div>
+                      <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-gold">
+                        <Flame className="h-3.5 w-3.5" /> Aktuelles Level
+                      </div>
+                      <div className="mt-1 font-display text-5xl font-bold text-gradient-gold sm:text-6xl">
+                        {level.name}
+                      </div>
+                      <div className="mt-2 text-sm text-muted-foreground">
+                        {next ? (
+                          <>
+                            Noch{" "}
+                            <span className="font-semibold text-foreground">
+                              {next.min - points}
+                            </span>{" "}
+                            Punkte bis <span className="text-gold">{next.name}</span>
+                          </>
+                        ) : (
+                          "Max Level erreicht — Legendary!"
+                        )}
+                      </div>
+                      <div className="mt-5 space-y-2">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">{level.name}</span>
+                          <span className="font-semibold text-foreground">{points} Pkt</span>
+                          <span className="text-muted-foreground">{next ? next.name : "MAX"}</span>
+                        </div>
+                        <div className="h-2.5 overflow-hidden rounded-full bg-secondary">
+                          <div
+                            className="h-full rounded-full bg-gradient-gold transition-all"
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3 sm:grid-cols-1 sm:gap-2">
+                      <Stat label="Gesamt" value={points} suffix="Pkt" />
+                      <Stat label="Heute" value={todayDbPoints} suffix={`/ ${MAX_DAILY_POINTS}`} />
+                      <Stat
+                        label="Training"
+                        value={userPts.perf}
+                        suffix="Pkt"
+                        accent={userPts.perf > 0}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            <details className="group/points rounded-2xl border border-border bg-background/35">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5 text-sm font-semibold">
+                <span className="flex items-center gap-2 text-gold">
+                  <Target className="h-4 w-4" />
+                  <span className="uppercase tracking-wider">Punkte-Aufschlüsselung</span>
+                </span>
+                <ArrowRight className="h-4 w-4 text-muted-foreground transition group-open/points:rotate-90" />
+              </summary>
+              <div className="border-t border-border p-2 sm:p-3">
+                <PointsBreakdownCard userId={supabaseUser.id} />
+              </div>
+            </details>
+
+            <AchievementsCard userId={supabaseUser.id} />
+            <TrainingDevelopmentCard clientId={supabaseUser.id} />
           </div>
         </details>
       )}
 
-      {supabaseUser && <DailyChecklist userId={supabaseUser.id} />}
-
-      {supabaseUser && <AchievementsCard userId={supabaseUser.id} />}
-
-      {supabaseUser && <TrainingDevelopmentCard clientId={supabaseUser.id} />}
-
-      {/* Paket & Verlängerung — ans Ende */}
-      <div id="my-package" className="scroll-mt-24 space-y-4">
-        <MyPackagePanel />
-        {hasActivePlan && <SmartRenewalCard />}
-      </div>
+      {/* Plan-Automatik und Paketdetails bleiben verfügbar, dominieren aber nicht den Alltag. */}
+      <details
+        id="my-package"
+        className="group scroll-mt-24 rounded-3xl border border-border bg-card"
+      >
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 font-display text-lg font-bold">
+          <span className="inline-flex items-center gap-2">
+            <Dumbbell className="h-5 w-5 text-gold" />
+            Plan, Automatik & Paket
+          </span>
+          <ArrowRight className="h-4 w-4 text-muted-foreground transition group-open:rotate-90" />
+        </summary>
+        <div className="space-y-4 border-t border-border p-4 sm:p-5">
+          {supabaseUser && <AutopilotStatusCard userId={supabaseUser.id} />}
+          <MyPackagePanel />
+          {hasActivePlan && <SmartRenewalCard />}
+        </div>
+      </details>
     </div>
   );
 }
@@ -689,7 +713,9 @@ function PackageExpiryBanner({ userId }: { userId: string }) {
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    document.getElementById("my-package")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    const packageDetails = document.getElementById("my-package") as HTMLDetailsElement | null;
+    if (packageDetails) packageDetails.open = true;
+    packageDetails?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   return (
