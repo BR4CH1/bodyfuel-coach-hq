@@ -18,17 +18,72 @@ function WelcomePage() {
   const [pw2, setPw2] = useState("");
   const [busy, setBusy] = useState(false);
   const [hasSession, setHasSession] = useState(false);
+  const [checking, setChecking] = useState(true);
   const [done, setDone] = useState(false);
   const [resendEmail, setResendEmail] = useState("");
   const [resending, setResending] = useState(false);
 
+  // Einladungs- und Reset-Links können in unterschiedlichen Formaten
+  // ankommen (PKCE `?code=`, Implicit `#access_token=`, `?token_hash=`).
+  // Ohne explizites Einlösen blieb die Seite bei „Link abgelaufen" hängen,
+  // obwohl der Link gültig war.
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setHasSession(!!data.session));
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) =>
-      setHasSession(!!s),
-    );
-    return () => sub.subscription.unsubscribe();
+    let active = true;
+
+    const consumeLink = async () => {
+      if (typeof window === "undefined") return;
+      const url = new URL(window.location.href);
+      const hash = new URLSearchParams(url.hash.replace(/^#/, ""));
+      const get = (k: string) => url.searchParams.get(k) ?? hash.get(k);
+
+      const cleanUrl = () =>
+        window.history.replaceState({}, "", `${window.location.pathname}`);
+
+      try {
+        const accessToken = get("access_token");
+        const refreshToken = get("refresh_token");
+        const code = get("code");
+        const tokenHash = get("token_hash");
+        const type = get("type");
+
+        if (accessToken && refreshToken) {
+          await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+          cleanUrl();
+        } else if (code) {
+          await supabase.auth.exchangeCodeForSession(code);
+          cleanUrl();
+        } else if (tokenHash) {
+          await supabase.auth.verifyOtp({
+            token_hash: tokenHash,
+            type: (type as "invite" | "recovery" | "signup" | "magiclink") ?? "invite",
+          });
+          cleanUrl();
+        }
+      } catch {
+        /* abgelaufener oder bereits benutzter Link — unten Resend anbieten */
+      }
+
+      const { data } = await supabase.auth.getSession();
+      if (!active) return;
+      setHasSession(!!data.session);
+      setChecking(false);
+    };
+
+    void consumeLink();
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+      if (!active) return;
+      setHasSession(!!s);
+    });
+    return () => {
+      active = false;
+      sub.subscription.unsubscribe();
+    };
   }, []);
+
 
   const requestNewLink = async (e: React.FormEvent) => {
     e.preventDefault();
