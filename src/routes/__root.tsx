@@ -25,6 +25,20 @@ import { useRememberLastAppRoute } from "@/hooks/use-last-app-route";
 
 
 function NotFoundComponent() {
+  // Manche Mail-Clients bzw. Auth-Weiterleitungen hängen Parameter ohne
+  // Trennzeichen an ("/welcomeerror=access_denied&..."). Solche Links landeten
+  // im 404 statt auf der Passwort-Seite — wir reparieren sie hier.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const { pathname, search, hash } = window.location;
+    const match = pathname.match(/^\/(welcome|auth|login)(.+)$/);
+    if (!match) return;
+    const [, base, rest] = match;
+    if (rest.startsWith("/")) return;
+    const params = rest.replace(/^[?#&]*/, "");
+    window.location.replace(`/${base}${params ? `#${params}` : ""}${search}${hash}`);
+  }, []);
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
@@ -40,6 +54,7 @@ function NotFoundComponent() {
     </div>
   );
 }
+
 
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
