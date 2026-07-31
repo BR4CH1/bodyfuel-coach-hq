@@ -49,4 +49,50 @@ describe("invited customer auth flow", () => {
       ),
     ).toBe("/coach");
   });
+
+  it("routes organization athletes to their org home", () => {
+    expect(
+      determineHomeRoute(
+        {
+          isPlatformCoach: false,
+          personalBodyfuelAccess: false,
+          freeAccess: false,
+          organizationMemberships: [
+            {
+              organizationId: "org-1",
+              organizationSlug: "bulls",
+              membershipStatus: "active",
+              staffRole: null,
+            },
+          ],
+        },
+        0,
+      ),
+    ).toBe("/bulls/home");
+  });
+
+  it("never falls back into an auth redirect loop", () => {
+    const fallback = determineHomeRoute(
+      {
+        isPlatformCoach: false,
+        personalBodyfuelAccess: false,
+        freeAccess: false,
+        organizationMemberships: [],
+      },
+      0,
+    );
+    expect(fallback).toBe("/tracker/app");
+    expect(["/app", "/welcome", "/auth", "/login"]).not.toContain(fallback);
+  });
+
+  it("ignores an external next parameter on the welcome link", () => {
+    expect(
+      parseAuthLink(
+        "https://bodyfuel-coaching.com/welcome?code=pkce&next=https%3A%2F%2Fevil.example%2Fx",
+      ).next,
+    ).toBeUndefined();
+    expect(
+      parseAuthLink("https://bodyfuel-coaching.com/welcome?code=pkce&next=%2Fdashboard").next,
+    ).toBe("/dashboard");
+  });
 });

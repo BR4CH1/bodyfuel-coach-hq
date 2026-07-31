@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState, type FormEvent } from "react";
 import { Flame, Lock } from "lucide-react";
 import { toast } from "sonner";
@@ -7,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { parseAuthLink } from "@/lib/auth-flow.logic";
+import { resolveMyAccess } from "@/lib/access/user-access.functions";
 
 export const Route = createFileRoute("/welcome")({
   head: () => ({
@@ -27,12 +29,32 @@ export const Route = createFileRoute("/welcome")({
 
 function WelcomePage() {
   const navigate = useNavigate();
+  const resolveAccess = useServerFn(resolveMyAccess);
   const [checking, setChecking] = useState(true);
   const [ready, setReady] = useState(false);
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  /**
+   * Einzige Redirect-Quelle dieser Route: Zielroute kommt ausschliesslich
+   * DB-basiert aus resolveMyAccess (keine last-route/localStorage-Heuristik).
+   * Ein interner next-Parameter wird nur verwendet, wenn er die Sanitizer-
+   * Pruefung in parseAuthLink bestanden hat.
+   */
+  const goHome = async (preferredNext?: string) => {
+    let target = preferredNext;
+    if (!target) {
+      try {
+        const access = await resolveAccess();
+        target = access.homeRoute;
+      } catch {
+        target = "/app";
+      }
+    }
+    window.location.replace(new URL(target, window.location.origin).href);
+  };
 
   useEffect(() => {
     let active = true;
@@ -82,17 +104,17 @@ function WelcomePage() {
       window.history.replaceState({}, "", window.location.pathname);
 
       if (redemptionFailed && data.user) {
-        window.location.replace(new URL("/app", window.location.origin).href);
+        await goHome();
         return;
       }
 
       if (data.user && link.mode === "confirm") {
-        window.location.replace(new URL(link.next ?? "/app", window.location.origin).href);
+        await goHome(link.next);
         return;
       }
 
       if (data.user && !link.hasCredentials) {
-        window.location.replace(new URL("/app", window.location.origin).href);
+        await goHome(link.next);
         return;
       }
 
@@ -135,9 +157,8 @@ function WelcomePage() {
         throw verifyError ?? new Error("Die Sitzung konnte nicht bestätigt werden.");
       }
 
-      const appUrl = new URL("/app", window.location.origin);
-      window.history.replaceState({}, "", appUrl.pathname);
-      window.location.replace(appUrl.href);
+      window.history.replaceState({}, "", "/app");
+      await goHome();
     } catch (updateError: unknown) {
       toast.error(
         updateError instanceof Error

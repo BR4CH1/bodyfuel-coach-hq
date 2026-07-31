@@ -90,5 +90,7 @@ export function determineHomeRoute(access: HomeRouteAccess, measurementCount: nu
   );
   if (athlete) return `/${athlete.organizationSlug}/home`;
 
-  return "/auth";
+  // Sicherer Fallback: niemals zurück auf /app oder /welcome (Redirect-Loop),
+  // sondern in den frei zugänglichen Tracker.
+  return "/tracker/app";
 }
