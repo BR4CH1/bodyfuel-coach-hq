@@ -1,0 +1,2 @@
+ALTER TABLE public.leads DROP CONSTRAINT IF EXISTS leads_desired_package_check;
+ALTER TABLE public.leads ADD CONSTRAINT leads_desired_package_check CHECK (desired_package IS NULL OR desired_package = ANY (ARRAY['smart','starter','coaching','premium','trial','free','unsure']));
