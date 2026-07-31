@@ -1,12 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
 
-const FROM_ADDRESS = "Manuel | BodyFuel <manuel@bodyfuel-coaching.com>";
-const REPLY_TO = "manuel@bodyfuel-coaching.com";
 const TASK_PREFIX = "fuely-followup:";
 
 const targetSchema = z.discriminatedUnion("kind", [
@@ -44,15 +43,6 @@ async function assertCoach(ctx: { supabase: SupabaseClient<Database>; userId: st
 
 function taskKey(sourceSignalId: string) {
   return `${TASK_PREFIX}${sourceSignalId}`;
-}
-
-function escapeHtml(value: string) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
 }
 
 async function saveAction(
@@ -173,70 +163,56 @@ async function sendEmailNow(input: {
   subject: string;
   body: string;
 }) {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const to = await resolveRecipientEmail(input.target);
-  const { data: suppressed, error: suppressionError } = await supabaseAdmin
-    .from("suppressed_emails")
-    .select("id")
-    .eq("email", to)
-    .maybeSingle();
-  if (suppressionError) throw new Error("E-Mail-Sperrstatus konnte nicht geprüft werden.");
-  if (suppressed) throw new Error("Diese E-Mail-Adresse ist für den Versand gesperrt.");
-
   const messageId = `coach-followup:${input.coachId}:${input.sourceSignalId}`;
-  const htmlBody = escapeHtml(input.body).replaceAll("\n", "<br />");
-  const html = `<div style="font-family:Arial,sans-serif;line-height:1.6;color:#111"><p>${htmlBody}</p><p style="margin-top:28px">Beste Grüße<br><strong>Manuel | BodyFuel</strong></p></div>`;
 
-  await supabaseAdmin.from("email_send_log").insert({
-    message_id: messageId,
-    template_name: "coach-followup",
-    recipient_email: to,
-    status: "pending",
-    metadata: { provider: "resend" },
+  const request = getRequest();
+  const authHeader = request?.headers.get("authorization");
+  if (!authHeader) throw new Error("Sitzung abgelaufen — bitte neu anmelden.");
+
+  const origin =
+    request?.headers.get("origin") ??
+    (() => {
+      const host = request?.headers.get("host");
+      const proto = request?.headers.get("x-forwarded-proto") ?? "https";
+      return host ? `${proto}://${host}` : "https://bodyfuel-coaching.com";
+    })();
+
+  const response = await fetch(`${origin}/lovable/email/transactional/send`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: authHeader },
+    body: JSON.stringify({
+      templateName: "coach-followup",
+      recipientEmail: to,
+      idempotencyKey: messageId,
+      templateData: {
+        subject: input.subject,
+        body: input.body,
+        coachName: "Manuel | BodyFuel",
+      },
+    }),
   });
 
-  try {
-    const { sendResendEmail } = await import("@/lib/email/resend.server");
-    const result = await sendResendEmail({
-      to,
-      from: FROM_ADDRESS,
-      replyTo: REPLY_TO,
-      subject: input.subject,
-      html,
-      text: `${input.body}\n\nBeste Grüße\nManuel | BodyFuel`,
-      idempotencyKey: messageId,
-      category: "coach-followup",
-    });
+  const payload = (await response.json().catch(() => null)) as
+    | { success?: boolean; reason?: string; error?: string }
+    | null;
 
-    const { error: sentLogError } = await supabaseAdmin.from("email_send_log").insert({
-      message_id: messageId,
-      template_name: "coach-followup",
-      recipient_email: to,
-      status: "sent",
-      metadata: {
-        provider: "resend",
-        provider_message_id: result.id,
-      },
-    });
-    // A retry with the same idempotency key can reach this point after the
-    // original response was lost. The unique sent-log then proves delivery.
-    if (sentLogError && !sentLogError.message.toLowerCase().includes("duplicate")) {
-      console.error("coach follow-up sent-log failed", sentLogError);
-    }
-    return { sent: true, messageId };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    await supabaseAdmin.from("email_send_log").insert({
-      message_id: messageId,
-      template_name: "coach-followup",
-      recipient_email: to,
-      status: "failed",
-      error_message: message.slice(0, 1000),
-      metadata: { provider: "resend" },
-    });
-    throw new Error(`E-Mail konnte nicht versendet werden: ${message}`);
+  if (!response.ok) {
+    throw new Error(
+      `E-Mail konnte nicht versendet werden: ${payload?.error ?? `HTTP ${response.status}`}`,
+    );
   }
+  if (payload?.success === false) {
+    throw new Error(
+      payload.reason === "email_suppressed"
+        ? "Diese E-Mail-Adresse ist für den Versand gesperrt."
+        : `E-Mail konnte nicht versendet werden: ${payload.reason ?? "unbekannter Fehler"}`,
+    );
+  }
+
+  return { sent: true, messageId };
 }
+
 
 export const sendCoachFollowUp = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
