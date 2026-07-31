@@ -442,13 +442,32 @@ export const getCustomerDetail = createServerFn({ method: "POST" })
   .inputValidator((data: { user_id: string }) => data)
   .handler(async ({ data, context }) => {
     await assertCoach(context.supabase, context.userId);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // All customer data required to render the detail page is readable through
+    // the authenticated coach client and its RLS policies. The service-role
+    // client is optional here and is used only for Auth metadata (email,
+    // invitation and last login). This keeps GitHub/Codespaces previews usable
+    // without copying the Lovable-only service secret into a local environment.
+    const customerDb = context.supabase;
+    let authUser: any = null;
+    if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      try {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { data: authData, error: authError } =
+          await supabaseAdmin.auth.admin.getUserById(data.user_id);
+        if (!authError) authUser = authData.user;
+      } catch (adminError) {
+        console.warn(
+          "[CustomerDetail] Auth metadata unavailable; continuing with coach RLS data.",
+          adminError instanceof Error ? adminError.message : "Unknown admin-client error",
+        );
+      }
+    }
 
     const [
       profile,
       pkgs,
       payments,
-      userRes,
       measurements,
       groups,
       lastFood,
@@ -458,60 +477,59 @@ export const getCustomerDetail = createServerFn({ method: "POST" })
       lastMeas,
       targets,
     ] = await Promise.all([
-      supabaseAdmin.from("profiles").select("*").eq("id", data.user_id).maybeSingle(),
-      supabaseAdmin
+      customerDb.from("profiles").select("*").eq("id", data.user_id).maybeSingle(),
+      customerDb
         .from("customer_packages")
         .select("*")
         .eq("user_id", data.user_id)
         .order("created_at", { ascending: false }),
-      supabaseAdmin
+      customerDb
         .from("payment_history")
         .select("*")
         .eq("user_id", data.user_id)
         .order("payment_date", { ascending: false }),
-      supabaseAdmin.auth.admin.getUserById(data.user_id),
-      supabaseAdmin
+      customerDb
         .from("body_measurements")
         .select("*")
         .eq("user_id", data.user_id)
         .order("measured_at", { ascending: false }),
-      supabaseAdmin.from("user_groups").select("group_name").eq("user_id", data.user_id),
-      supabaseAdmin
+      customerDb.from("user_groups").select("group_name").eq("user_id", data.user_id),
+      customerDb
         .from("food_entries")
         .select("created_at")
         .eq("user_id", data.user_id)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle(),
-      supabaseAdmin
+      customerDb
         .from("training_set_logs")
         .select("performed_at")
         .eq("client_id", data.user_id)
         .order("performed_at", { ascending: false })
         .limit(1)
         .maybeSingle(),
-      supabaseAdmin
+      customerDb
         .from("daily_checks")
         .select("updated_at, created_at")
         .eq("user_id", data.user_id)
         .order("updated_at", { ascending: false })
         .limit(1)
         .maybeSingle(),
-      supabaseAdmin
+      customerDb
         .from("water_logs")
         .select("created_at")
         .eq("user_id", data.user_id)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle(),
-      supabaseAdmin
+      customerDb
         .from("body_measurements")
         .select("created_at")
         .eq("user_id", data.user_id)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle(),
-      supabaseAdmin
+      customerDb
         .from("nutrition_targets")
         .select(
           "kcal, protein_g, carbs_g, fat_g, kcal_rest, protein_g_rest, carbs_g_rest, fat_g_rest",
@@ -520,14 +538,8 @@ export const getCustomerDetail = createServerFn({ method: "POST" })
         .maybeSingle(),
     ]);
 
-    const u = userRes.data.user as any;
+    const u = authUser;
     const banned = u?.banned_until ? new Date(u.banned_until).getTime() > Date.now() : false;
-    const status: "invited" | "active" | "deactivated" = banned
-      ? "deactivated"
-      : u?.last_sign_in_at
-        ? "active"
-        : "invited";
-
     const activityCandidates = [
       (lastFood.data as any)?.created_at,
       (lastSet.data as any)?.performed_at,
@@ -539,6 +551,13 @@ export const getCustomerDetail = createServerFn({ method: "POST" })
     const last_activity_at = activityCandidates.length
       ? activityCandidates.reduce((a, b) => (new Date(a).getTime() > new Date(b).getTime() ? a : b))
       : null;
+    const profileStatus = String((profile.data as any)?.account_status ?? "").toLowerCase();
+    const status: "invited" | "active" | "deactivated" =
+      banned || profileStatus === "deactivated" || profileStatus === "disabled"
+        ? "deactivated"
+        : u?.last_sign_in_at || last_activity_at
+          ? "active"
+          : "invited";
 
     return {
       profile: profile.data,

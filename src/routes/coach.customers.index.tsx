@@ -2,7 +2,16 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
-import { ChevronRight, Plus, Inbox, AlertTriangle, Clock, Sparkles, Search, Flame } from "lucide-react";
+import {
+  ChevronRight,
+  Plus,
+  Inbox,
+  AlertTriangle,
+  Clock,
+  Sparkles,
+  Search,
+  Flame,
+} from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { listCustomers } from "@/lib/coaching.functions";
 import { listTrialUsers } from "@/lib/trial.functions";
@@ -64,7 +73,9 @@ function CustomersList() {
   const [search, setSearch] = useState("");
 
   const trialCount = (trials ?? []).filter((t: any) => t.trial_status === "trial").length;
-  const trialExpiredCount = (trials ?? []).filter((t: any) => t.trial_status === "trial_expired").length;
+  const trialExpiredCount = (trials ?? []).filter(
+    (t: any) => t.trial_status === "trial_expired",
+  ).length;
   const freeCount = (freeUsers ?? []).length;
   const convertedCount = (freeUsers ?? []).filter((u: any) => u.upgrade_clicked).length;
   const conversionRate = freeCount > 0 ? Math.round((convertedCount / freeCount) * 100) : 0;
@@ -75,7 +86,16 @@ function CustomersList() {
     const bulls = (data ?? []).filter((c: any) => (c.groups ?? []).includes("bulls")).length;
     const smart = (data ?? []).filter((c: any) => c.package === "smart").length;
     const customers = data?.length ?? 0;
-    return { all: customers + trialCount + freeCount, due, overdue, bulls, smart, trial: trialCount, trial_expired: trialExpiredCount, free: freeCount };
+    return {
+      all: customers + trialCount + freeCount,
+      due,
+      overdue,
+      bulls,
+      smart,
+      trial: trialCount,
+      trial_expired: trialExpiredCount,
+      free: freeCount,
+    };
   }, [data, trialCount, trialExpiredCount, freeCount]);
 
   const filtered = useMemo(() => {
@@ -96,7 +116,6 @@ function CustomersList() {
     }
     return list;
   }, [data, filter, search]);
-
 
   return (
     <div className="space-y-6">
@@ -130,7 +149,9 @@ function CustomersList() {
               <div className="flex items-center gap-3">
                 <AlertTriangle className="h-5 w-5 text-destructive" />
                 <div>
-                  <div className="text-xs uppercase tracking-wider text-destructive">Überfällig</div>
+                  <div className="text-xs uppercase tracking-wider text-destructive">
+                    Überfällig
+                  </div>
                   <div className="font-display text-lg font-bold">
                     {counts.overdue} Kunde{counts.overdue === 1 ? "" : "n"}
                   </div>
@@ -210,7 +231,9 @@ function CustomersList() {
             <div className="mt-1 font-display text-2xl font-bold">{convertedCount}</div>
           </div>
           <div className="rounded-2xl border border-border bg-card p-4">
-            <div className="text-xs uppercase tracking-wider text-muted-foreground">Conversion Rate</div>
+            <div className="text-xs uppercase tracking-wider text-muted-foreground">
+              Conversion Rate
+            </div>
             <div className="mt-1 font-display text-2xl font-bold">{conversionRate}%</div>
           </div>
         </div>
@@ -218,16 +241,18 @@ function CustomersList() {
 
       {/* Filter-Chips */}
       <div className="flex flex-wrap gap-2">
-        {([
-          ["all", `Alle (${counts.all})`],
-          ["due", `Zahlung fällig (${counts.due})`],
-          ["overdue", `Überfällig (${counts.overdue})`],
-          ["bulls", `Bulls (${counts.bulls})`],
-          ["smart", `Smart (${counts.smart})`],
-          ["trial", `Trial (${counts.trial})`],
-          ["trial_expired", `Trial abgelaufen (${counts.trial_expired})`],
-          ["free", `Free (${counts.free})`],
-        ] as [Filter, string][]).map(([key, label]) => (
+        {(
+          [
+            ["all", `Alle (${counts.all})`],
+            ["due", `Zahlung fällig (${counts.due})`],
+            ["overdue", `Überfällig (${counts.overdue})`],
+            ["bulls", `Bulls (${counts.bulls})`],
+            ["smart", `Smart (${counts.smart})`],
+            ["trial", `Trial (${counts.trial})`],
+            ["trial_expired", `Trial abgelaufen (${counts.trial_expired})`],
+            ["free", `Free (${counts.free})`],
+          ] as [Filter, string][]
+        ).map(([key, label]) => (
           <button
             key={key}
             onClick={() => setFilter(key)}
@@ -248,9 +273,7 @@ function CustomersList() {
       </div>
 
       {(filter === "trial" || filter === "trial_expired") && (
-        <TrialList
-          users={(trials ?? []).filter((t: any) => t.trial_status === filter)}
-        />
+        <TrialList users={(trials ?? []).filter((t: any) => t.trial_status === filter)} />
       )}
 
       {filter === "free" && <FreeList users={freeUsers ?? []} />}
@@ -258,47 +281,128 @@ function CustomersList() {
       {filter !== "trial" && filter !== "trial_expired" && filter !== "free" && isLoading && (
         <p className="text-sm text-muted-foreground">Lade…</p>
       )}
-      {filter !== "trial" && filter !== "trial_expired" && filter !== "free" && data && filtered.length === 0 && (
-        <p className="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground">
-          {search.trim()
-            ? "Keine Kunden für diese Suche gefunden."
-            : filter === "all"
-              ? "Keine Kundenpakete gefunden."
-              : "Keine Kunden in dieser Ansicht."}
-        </p>
-      )}
+      {filter !== "trial" &&
+        filter !== "trial_expired" &&
+        filter !== "free" &&
+        data &&
+        filtered.length === 0 && (
+          <p className="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground">
+            {search.trim()
+              ? "Keine Kunden für diese Suche gefunden."
+              : filter === "all"
+                ? "Keine Kundenpakete gefunden."
+                : "Keine Kunden in dieser Ansicht."}
+          </p>
+        )}
 
-
-
-      {filter !== "trial" && filter !== "trial_expired" && filter !== "free" && filtered.length > 0 && (
-        <>
-          {/* Desktop table */}
-          <div className="hidden overflow-x-auto rounded-2xl border border-border bg-card sm:block">
-            <table className="w-full text-sm">
-              <thead className="border-b border-border bg-secondary/40 text-left text-[11px] uppercase tracking-wider text-muted-foreground">
-                <tr>
-                  <th className="px-4 py-3">Name</th>
-                  <th className="px-4 py-3">Paket</th>
-                  <th className="px-4 py-3">Preis</th>
-                  <th className="px-4 py-3">Ende</th>
-                  <th className="px-4 py-3">Letzte Zahlung</th>
-                  <th className="px-4 py-3">Zahlung</th>
-                  <th className="px-4 py-3"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {(filtered as any[]).map((c) => (
-                  <tr key={c.id} className="border-b border-border last:border-0 hover:bg-secondary/30">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <CustomerStatusBadge level={statusByUser.get(c.user_id) ?? null} size="xs" />
-                        <span className="font-semibold">{c.display_name ?? "—"}</span>
-                        {c.nickname && (
-                          <span className="rounded bg-secondary px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">@{c.nickname}</span>
+      {filter !== "trial" &&
+        filter !== "trial_expired" &&
+        filter !== "free" &&
+        filtered.length > 0 && (
+          <>
+            {/* Desktop table */}
+            <div className="hidden overflow-x-auto rounded-2xl border border-border bg-card sm:block">
+              <table className="w-full text-sm">
+                <thead className="border-b border-border bg-secondary/40 text-left text-[11px] uppercase tracking-wider text-muted-foreground">
+                  <tr>
+                    <th className="px-4 py-3">Name</th>
+                    <th className="px-4 py-3">Paket</th>
+                    <th className="px-4 py-3">Preis</th>
+                    <th className="px-4 py-3">Ende</th>
+                    <th className="px-4 py-3">Letzte Zahlung</th>
+                    <th className="px-4 py-3">Zahlung</th>
+                    <th className="px-4 py-3"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(filtered as any[]).map((c) => (
+                    <tr
+                      key={c.id}
+                      className="border-b border-border last:border-0 hover:bg-secondary/30"
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <CustomerStatusBadge
+                            level={statusByUser.get(c.user_id) ?? null}
+                            size="xs"
+                          />
+                          <span className="font-semibold">{c.display_name ?? "—"}</span>
+                          {c.nickname && (
+                            <span className="rounded bg-secondary px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
+                              @{c.nickname}
+                            </span>
+                          )}
+                          {(c.groups ?? []).includes("bulls") && <BullsBadge />}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {c.email ?? "—"}
+                          <span className="ml-1.5">
+                            {c.email_subscribed == null
+                              ? "Mail —"
+                              : c.email_subscribed
+                                ? "Mail ✅"
+                                : "Mail ❌"}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 uppercase tracking-wider text-gold">{c.package}</td>
+                      <td className="px-4 py-3 font-display">{Number(c.price_eur).toFixed(2)} €</td>
+                      <td className="px-4 py-3">
+                        {c.end_date}
+                        {c.is_active && c.days_until_end <= 7 && c.days_until_end >= 0 && (
+                          <div className="text-[10px] uppercase tracking-wider text-gold">
+                            läuft in {c.days_until_end} T.
+                          </div>
                         )}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {c.last_payment_date ?? "—"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <PaymentBadge c={c} />
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <Link
+                          to="/coach/customers/$userId"
+                          params={{ userId: c.user_id }}
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-gold hover:underline"
+                        >
+                          Detail <ChevronRight className="h-3 w-3" />
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile cards */}
+            <div className="space-y-3 sm:hidden">
+              {(filtered as any[]).map((c) => (
+                <Link
+                  key={c.id}
+                  to="/coach/customers/$userId"
+                  params={{ userId: c.user_id }}
+                  className="block rounded-2xl border border-border bg-card p-4 active:bg-secondary/30"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <CustomerStatusBadge
+                          level={statusByUser.get(c.user_id) ?? null}
+                          size="xs"
+                        />
+                        <p className="truncate font-semibold">
+                          {c.display_name ?? "—"}
+                          {c.nickname && (
+                            <span className="ml-1.5 text-[10px] font-mono text-muted-foreground">
+                              @{c.nickname}
+                            </span>
+                          )}
+                        </p>
                         {(c.groups ?? []).includes("bulls") && <BullsBadge />}
                       </div>
-                      <div className="text-xs text-muted-foreground">
+                      <p className="truncate text-xs text-muted-foreground">
                         {c.email ?? "—"}
                         <span className="ml-1.5">
                           {c.email_subscribed == null
@@ -307,97 +411,36 @@ function CustomersList() {
                               ? "Mail ✅"
                               : "Mail ❌"}
                         </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 uppercase tracking-wider text-gold">{c.package}</td>
-                    <td className="px-4 py-3 font-display">{Number(c.price_eur).toFixed(2)} €</td>
-                    <td className="px-4 py-3">
-                      {c.end_date}
-                      {c.is_active && c.days_until_end <= 7 && c.days_until_end >= 0 && (
-                        <div className="text-[10px] uppercase tracking-wider text-gold">
-                          läuft in {c.days_until_end} T.
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {c.last_payment_date ?? "—"}
-                    </td>
-                    <td className="px-4 py-3">
-                      <PaymentBadge c={c} />
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <Link
-                        to="/coach/customers/$userId"
-                        params={{ userId: c.user_id }}
-                        className="inline-flex items-center gap-1 text-xs font-semibold text-gold hover:underline"
-                      >
-                        Detail <ChevronRight className="h-3 w-3" />
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Mobile cards */}
-          <div className="space-y-3 sm:hidden">
-            {(filtered as any[]).map((c) => (
-              <Link
-                key={c.id}
-                to="/coach/customers/$userId"
-                params={{ userId: c.user_id }}
-                className="block rounded-2xl border border-border bg-card p-4 active:bg-secondary/30"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <CustomerStatusBadge level={statusByUser.get(c.user_id) ?? null} size="xs" />
-                      <p className="truncate font-semibold">
-                        {c.display_name ?? "—"}
-                        {c.nickname && <span className="ml-1.5 text-[10px] font-mono text-muted-foreground">@{c.nickname}</span>}
                       </p>
-                      {(c.groups ?? []).includes("bulls") && <BullsBadge />}
                     </div>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {c.email ?? "—"}
-                      <span className="ml-1.5">
-                        {c.email_subscribed == null
-                          ? "Mail —"
-                          : c.email_subscribed
-                            ? "Mail ✅"
-                            : "Mail ❌"}
-                      </span>
-                    </p>
+                    <PaymentBadge c={c} />
                   </div>
-                  <PaymentBadge c={c} />
-                </div>
-                <div className="mt-3 grid grid-cols-2 gap-y-2 text-xs">
-                  <div>
-                    <p className="text-muted-foreground">Paket</p>
-                    <p className="uppercase tracking-wider text-gold">{c.package}</p>
+                  <div className="mt-3 grid grid-cols-2 gap-y-2 text-xs">
+                    <div>
+                      <p className="text-muted-foreground">Paket</p>
+                      <p className="uppercase tracking-wider text-gold">{c.package}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Preis</p>
+                      <p className="font-display">{Number(c.price_eur).toFixed(2)} €</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Ende</p>
+                      <p>{c.end_date}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Letzte Zahlung</p>
+                      <p>{c.last_payment_date ?? "—"}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-muted-foreground">Preis</p>
-                    <p className="font-display">{Number(c.price_eur).toFixed(2)} €</p>
+                  <div className="mt-3 flex items-center gap-1 text-xs font-semibold text-gold">
+                    Detail <ChevronRight className="h-3 w-3" />
                   </div>
-                  <div>
-                    <p className="text-muted-foreground">Ende</p>
-                    <p>{c.end_date}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Letzte Zahlung</p>
-                    <p>{c.last_payment_date ?? "—"}</p>
-                  </div>
-                </div>
-                <div className="mt-3 flex items-center gap-1 text-xs font-semibold text-gold">
-                  Detail <ChevronRight className="h-3 w-3" />
-                </div>
-              </Link>
-            ))}
-          </div>
-        </>
-      )}
+                </Link>
+              ))}
+            </div>
+          </>
+        )}
 
       {filter === "all" && (trials ?? []).some((t: any) => t.trial_status === "trial") && (
         <div className="space-y-2">
@@ -468,9 +511,7 @@ function TrialList({ users }: { users: any[] }) {
     <div className="space-y-3">
       {users.map((u) => {
         const dl = u.trial_end
-          ? Math.ceil(
-              (new Date(`${u.trial_end}T23:59:59Z`).getTime() - Date.now()) / 86_400_000,
-            )
+          ? Math.ceil((new Date(`${u.trial_end}T23:59:59Z`).getTime() - Date.now()) / 86_400_000)
           : null;
         const expired = u.trial_status === "trial_expired";
         return (
@@ -487,22 +528,24 @@ function TrialList({ users }: { users: any[] }) {
                   <p className="truncate font-semibold">
                     {u.display_name ?? "—"}
                     {u.nickname && (
-                      <span className="ml-1.5 text-[10px] font-mono text-muted-foreground">@{u.nickname}</span>
+                      <span className="ml-1.5 text-[10px] font-mono text-muted-foreground">
+                        @{u.nickname}
+                      </span>
                     )}
                   </p>
                   {(u.groups ?? []).includes("bulls") && <BullsBadge />}
                 </div>
                 <p className="truncate text-xs text-muted-foreground">
                   {u.email ?? "—"}
-                  <span className="ml-1.5">{u.email_subscribed === false ? "Mail ❌" : "Mail ✅"}</span>
+                  <span className="ml-1.5">
+                    {u.email_subscribed === false ? "Mail ❌" : "Mail ✅"}
+                  </span>
                 </p>
               </div>
               <span
                 className={
                   "shrink-0 rounded-full px-2 py-1 text-[10px] font-bold uppercase " +
-                  (expired
-                    ? "bg-destructive/15 text-destructive"
-                    : "bg-gold/15 text-gold")
+                  (expired ? "bg-destructive/15 text-destructive" : "bg-gold/15 text-gold")
                 }
               >
                 {expired
@@ -550,7 +593,9 @@ function FreeList({ users }: { users: any[] }) {
                   <p className="truncate font-semibold">
                     {u.display_name ?? "—"}
                     {u.nickname && (
-                      <span className="ml-1.5 text-[10px] font-mono text-muted-foreground">@{u.nickname}</span>
+                      <span className="ml-1.5 text-[10px] font-mono text-muted-foreground">
+                        @{u.nickname}
+                      </span>
                     )}
                   </p>
                   {(u.groups ?? []).includes("bulls") && <BullsBadge />}
@@ -562,14 +607,18 @@ function FreeList({ users }: { users: any[] }) {
                 </div>
                 <p className="truncate text-xs text-muted-foreground">
                   {u.email ?? "—"}
-                  <span className="ml-1.5">{u.email_subscribed === false ? "Mail ❌" : "Mail ✅"}</span>
+                  <span className="ml-1.5">
+                    {u.email_subscribed === false ? "Mail ❌" : "Mail ✅"}
+                  </span>
                 </p>
               </div>
             </div>
             <div className="mt-3 grid grid-cols-2 gap-y-2 text-xs">
               <div>
                 <p className="text-muted-foreground">Level</p>
-                <p className="font-display">{u.level} · {u.total_points} Pkt</p>
+                <p className="font-display">
+                  {u.level} · {u.total_points} Pkt
+                </p>
               </div>
               <div>
                 <p className="text-muted-foreground">Streak</p>
@@ -589,5 +638,3 @@ function FreeList({ users }: { users: any[] }) {
     </div>
   );
 }
-
-
