@@ -6,8 +6,6 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
 
-const FROM_ADDRESS = "Manuel | BodyFuel <manuel@bodyfuel-coaching.com>";
-const REPLY_TO = "manuel@bodyfuel-coaching.com";
 const TASK_PREFIX = "fuely-followup:";
 
 const targetSchema = z.discriminatedUnion("kind", [
@@ -45,15 +43,6 @@ async function assertCoach(ctx: { supabase: SupabaseClient<Database>; userId: st
 
 function taskKey(sourceSignalId: string) {
   return `${TASK_PREFIX}${sourceSignalId}`;
-}
-
-function escapeHtml(value: string) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
 }
 
 async function saveAction(
