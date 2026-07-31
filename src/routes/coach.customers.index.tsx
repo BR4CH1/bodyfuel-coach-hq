@@ -29,7 +29,19 @@ export const Route = createFileRoute("/coach/customers/")({
   ),
 });
 
-type Filter = "all" | "due" | "overdue" | "bulls" | "smart" | "trial" | "trial_expired" | "free";
+type Filter =
+  | "all"
+  | "due"
+  | "overdue"
+  | "coaching"
+  | "bulls"
+  | "smart"
+  | "trial"
+  | "trial_expired"
+  | "free";
+
+// Betreute 1:1-Coaching-Pakete — identisch zur Zählung "aktive Kunden" im Coach-Dashboard.
+const COACHING_PACKAGES = ["starter", "coaching", "premium"];
 
 function daysLeft(end: string | null): number | null {
   if (!end) return null;
@@ -85,6 +97,9 @@ function CustomersList() {
     const overdue = (data ?? []).filter((c: any) => c.payment_status === "overdue").length;
     const bulls = (data ?? []).filter((c: any) => (c.groups ?? []).includes("bulls")).length;
     const smart = (data ?? []).filter((c: any) => c.package === "smart").length;
+    const coaching = (data ?? []).filter((c: any) =>
+      COACHING_PACKAGES.includes(c.package),
+    ).length;
     const customers = data?.length ?? 0;
     return {
       all: customers + trialCount + freeCount,
@@ -92,6 +107,7 @@ function CustomersList() {
       overdue,
       bulls,
       smart,
+      coaching,
       trial: trialCount,
       trial_expired: trialExpiredCount,
       free: freeCount,
@@ -104,6 +120,8 @@ function CustomersList() {
     if (filter !== "all") {
       if (filter === "bulls") list = list.filter((c) => (c.groups ?? []).includes("bulls"));
       else if (filter === "smart") list = list.filter((c) => c.package === "smart");
+      else if (filter === "coaching")
+        list = list.filter((c) => COACHING_PACKAGES.includes(c.package));
       else list = list.filter((c) => c.payment_status === filter);
     }
     if (search.trim()) {
@@ -246,6 +264,7 @@ function CustomersList() {
             ["all", `Alle (${counts.all})`],
             ["due", `Zahlung fällig (${counts.due})`],
             ["overdue", `Überfällig (${counts.overdue})`],
+            ["coaching", `Coaching (${counts.coaching})`],
             ["bulls", `Bulls (${counts.bulls})`],
             ["smart", `Smart (${counts.smart})`],
             ["trial", `Trial (${counts.trial})`],
