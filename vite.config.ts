@@ -22,9 +22,9 @@ if (mcpEnabled) plugins.push(mcpPlugin());
 if (pwaEnabled) {
   plugins.push(
     VitePWA({
-      // Never activate a new service worker while a workout/form is open.
-      // The waiting worker becomes active after all tabs are closed.
-      registerType: "prompt",
+      // Deployments must replace old route/auth code immediately. A waiting
+      // worker previously kept the consumed invitation page alive on mobile.
+      registerType: "autoUpdate",
       injectRegister: null,
       filename: "sw.js",
       outDir: ".output/public",
@@ -38,6 +38,13 @@ if (pwaEnabled) {
           {
             urlPattern: ({ request, url }) =>
               request.mode === "navigate" &&
+              ["/welcome", "/auth", "/login", "/app"].includes(url.pathname),
+            handler: "NetworkOnly",
+          },
+          {
+            urlPattern: ({ request, url }) =>
+              request.mode === "navigate" &&
+              !["/welcome", "/auth", "/login", "/app"].includes(url.pathname) &&
               !url.pathname.startsWith("/api/") &&
               !url.pathname.startsWith("/~oauth") &&
               !url.pathname.startsWith("/lovable/"),

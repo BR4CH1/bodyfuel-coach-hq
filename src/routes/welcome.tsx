@@ -115,16 +115,20 @@ function WelcomePage() {
     }
 
     setSaving(true);
-    const { error: updateError } = await supabase.auth.updateUser({ password });
-    if (updateError) {
-      toast.error(updateError.message);
+    try {
+      const { error: updateError } = await supabase.auth.updateUser({ password });
+      if (updateError) throw updateError;
+
+      // Leave the consumed invite document synchronously and absolutely. This
+      // deliberately bypasses router state and prevents mobile mail browsers
+      // from restoring /welcome from their navigation history.
+      const appUrl = new URL("/app", window.location.origin);
+      window.history.replaceState({}, "", appUrl.pathname);
+      window.location.assign(appUrl.href);
+    } catch (updateError: unknown) {
+      toast.error(updateError instanceof Error ? updateError.message : "Passwort konnte nicht gespeichert werden.");
       setSaving(false);
-      return;
     }
-    toast.success("Passwort gespeichert. Willkommen bei BODYFUEL!");
-    // A hard replace is intentional here: mobile mail browsers can otherwise
-    // restore the consumed invite document during auth-state invalidation.
-    window.location.replace("/app");
   };
 
   return (
