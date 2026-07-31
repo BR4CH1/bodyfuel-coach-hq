@@ -44,12 +44,14 @@ export const submitLead = createServerFn({ method: "POST" })
     if (phone && !/^[+0-9 ()\/.-]{4,40}$/.test(phone)) {
       throw new Error("Ungültige Telefonnummer.");
     }
+    // Längen strikt an die DB-CHECK-Constraints angleichen, sonst schlägt der
+    // Insert fehl und die Anfrage taucht nie im Coach-Dashboard auf.
     const { error } = await supabaseAdmin.from("leads").insert({
       name: name.slice(0, 120),
       email: email.slice(0, 200),
-      phone: phone?.slice(0, 60) || null,
+      phone: phone?.slice(0, 40) || null,
       goal: data.goal?.slice(0, 200) || null,
-      current_weight: data.current_weight?.slice(0, 60) || null,
+      current_weight: data.current_weight?.slice(0, 20) || null,
       desired_package: data.desired_package || null,
       message: data.message?.slice(0, 2000) || null,
     });
