@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { toast } from "sonner";
 import {
   AlertTriangle,
@@ -43,6 +44,18 @@ import {
   type CachedTrainingPlan as Plan,
   type CachedTrainingSetLog as SetLog,
 } from "@/lib/training/training-tracker-cache";
+import {
+  createEmptyTrainingExerciseDraft,
+  createEmptyTrainingSessionDraft,
+  getTrainingExerciseDraft,
+} from "@/lib/training/training-session-state";
+import { createSupabaseWorkoutDraftAdapter } from "@/lib/training/workout-session-draft.supabase";
+import type {
+  TrainingExerciseDraft,
+  TrainingSessionDraftState,
+} from "@/lib/training/workout-session-draft.types";
+import { usePersistentWorkoutSession } from "@/lib/training/use-persistent-workout-session";
+import { WorkoutSaveIndicator } from "./WorkoutSaveIndicator";
 
 type HistoricalPlan = {
   training_days?: Array<{
@@ -62,6 +75,24 @@ function localDateKey(value: Date | string | number = new Date()): string {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function clearLegacyTrainingExerciseDrafts(
+  clientId: string,
+  exerciseIds: string[],
+  sessionDate: string,
+) {
+  if (typeof window === "undefined") return;
+  try {
+    for (const exerciseId of exerciseIds) {
+      window.localStorage.removeItem(`bf.tt.overrides.${clientId}.${exerciseId}.${sessionDate}`);
+      window.localStorage.removeItem(`bf.tt.extra.${clientId}.${exerciseId}.${sessionDate}`);
+      window.localStorage.removeItem(`bf.tt.note.${clientId}.${exerciseId}.${sessionDate}`);
+      window.localStorage.removeItem(`bf.tt.rest.${clientId}.${exerciseId}.${sessionDate}`);
+    }
+  } catch {
+    // Legacy cleanup is optional; the versioned draft was already removed.
+  }
 }
 
 function withTimeout<T>(work: PromiseLike<T>, timeoutMs = 12_000): Promise<T> {
@@ -93,10 +124,6 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
   const deleteOwnExFn = useServerFn(deleteOwnTrainingExercise);
   const [completingDayId, setCompletingDayId] = useState<string | null>(null);
   const [completedDayIds, setCompletedDayIds] = useState<Set<string>>(new Set());
-  const [addingDayId, setAddingDayId] = useState<string | null>(null);
-  const [newExName, setNewExName] = useState("");
-  const [newExSets, setNewExSets] = useState("3");
-  const [newExReps, setNewExReps] = useState("8");
   const [savingOwnEx, setSavingOwnEx] = useState(false);
 
   const [plan, setPlan] = useState<Plan | null>(null);
@@ -104,11 +131,45 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [logs, setLogs] = useState<SetLog[]>([]);
   const openDayKey = `bf.tt.openDay.${clientId}`;
-  const [openDay, setOpenDayState] = useState<string | null>(null);
+  const sessionDate = localDateKey();
+  const initialSessionDraft = useMemo(() => {
+    let legacyOpenDay: string | null = null;
+    try {
+      if (typeof window !== "undefined") legacyOpenDay = window.localStorage.getItem(openDayKey);
+    } catch {
+      legacyOpenDay = null;
+    }
+    return createEmptyTrainingSessionDraft(clientId, sessionDate, legacyOpenDay);
+  }, [clientId, openDayKey, sessionDate]);
+  const authenticatedUserId = supabaseUser?.id ?? null;
+  const remoteDraftAdapter = useMemo(() => {
+    if (isCoach || authenticatedUserId !== clientId) return undefined;
+    return createSupabaseWorkoutDraftAdapter<TrainingSessionDraftState>(
+      supabase as unknown as SupabaseClient,
+      clientId,
+    );
+  }, [authenticatedUserId, clientId, isCoach]);
+  const {
+    workoutState: sessionDraft,
+    restored: sessionDraftRestored,
+    saveStatus,
+    updateWorkout,
+    clearAfterCompletion,
+  } = usePersistentWorkoutSession<TrainingSessionDraftState>({
+    draftKey: `${clientId}:${sessionDate}`,
+    initialState: initialSessionDraft,
+    remote: remoteDraftAdapter,
+    autosaveMs: 800,
+  });
+
+  const openDay = sessionDraft.openDayId;
   const setOpenDay = useCallback(
     (v: string | null | ((p: string | null) => string | null)) => {
-      setOpenDayState((cur) => {
-        const next = typeof v === "function" ? (v as (p: string | null) => string | null)(cur) : v;
+      updateWorkout((current) => {
+        const next =
+          typeof v === "function"
+            ? (v as (p: string | null) => string | null)(current.openDayId)
+            : v;
         try {
           if (typeof window !== "undefined" && clientId) {
             if (next) window.localStorage.setItem(openDayKey, next);
@@ -117,10 +178,58 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
         } catch {
           /* local storage is optional */
         }
-        return next;
+        if (current.openDayId === next) return current;
+        return { ...current, openDayId: next };
       });
     },
-    [clientId, openDayKey],
+    [clientId, openDayKey, updateWorkout],
+  );
+  const addingDayId = sessionDraft.addingDayId;
+  const newExName = sessionDraft.newExercise.name;
+  const newExSets = sessionDraft.newExercise.sets;
+  const newExReps = sessionDraft.newExercise.reps;
+  const setAddingDayId = useCallback(
+    (value: string | null) =>
+      updateWorkout((current) =>
+        current.addingDayId === value ? current : { ...current, addingDayId: value },
+      ),
+    [updateWorkout],
+  );
+  const setNewExerciseField = useCallback(
+    (field: "name" | "sets" | "reps", value: string) =>
+      updateWorkout((current) => ({
+        ...current,
+        newExercise: { ...current.newExercise, [field]: value },
+      })),
+    [updateWorkout],
+  );
+  const updateExerciseDraft = useCallback(
+    (
+      exerciseId: string,
+      durationSeconds: number,
+      update: TrainingExerciseDraft | ((previous: TrainingExerciseDraft) => TrainingExerciseDraft),
+    ) => {
+      updateWorkout((current) => {
+        const previous = getTrainingExerciseDraft(current, exerciseId, durationSeconds);
+        const next = typeof update === "function" ? update(previous) : update;
+        return {
+          ...current,
+          activeExerciseId: exerciseId,
+          exercises: { ...current.exercises, [exerciseId]: next },
+        };
+      });
+    },
+    [updateWorkout],
+  );
+  const setActiveExercise = useCallback(
+    (exerciseId: string) => {
+      updateWorkout((current) =>
+        current.activeExerciseId === exerciseId
+          ? current
+          : { ...current, activeExerciseId: exerciseId },
+      );
+    },
+    [updateWorkout],
   );
   const [parsing, setParsing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -128,9 +237,12 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [activeWeek, setActiveWeek] = useState(1);
   const [weeksCount, setWeeksCount] = useState(1);
+  const reloadSequenceRef = useRef(0);
 
   const reload = async (cachedView = Boolean(plan)) => {
     if (!clientId) return;
+    const requestId = ++reloadSequenceRef.current;
+    const requestIsCurrent = () => reloadSequenceRef.current === requestId;
     setLoadError(null);
     setLoading(!cachedView);
     setRefreshing(cachedView);
@@ -145,9 +257,15 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
           .maybeSingle(),
       );
       if (planError) throw planError;
-      setPlan((planRow as Plan) ?? null);
+      if (!requestIsCurrent()) return;
 
       if (!planRow) {
+        // A cached workout remains usable until the backend positively returns
+        // a replacement. An auth/network wobble must never blank the screen.
+        if (cachedView && plan) {
+          throw new Error("Aktiver Trainingsplan konnte gerade nicht bestätigt werden.");
+        }
+        setPlan(null);
         setDays([]);
         setExercises([]);
         setLogs([]);
@@ -155,6 +273,7 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
         return;
       }
       const currentPlan = planRow as Plan;
+      setPlan(currentPlan);
       const { data: dayRows, error: dayError } = await withTimeout(
         supabase
           .from("training_days")
@@ -164,6 +283,7 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
           .order("sort_order"),
       );
       if (dayError) throw dayError;
+      if (!requestIsCurrent()) return;
       const allDays = (dayRows as Day[]) ?? [];
 
       // For multi-week plans, only show the current week's days.
@@ -192,6 +312,7 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
             .order("sort_order"),
         );
         if (exerciseError) throw exerciseError;
+        if (!requestIsCurrent()) return;
         const exList = (exRows as Exercise[]) ?? [];
         setExercises(exList);
         const today = localDateKey();
@@ -241,6 +362,7 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
             .eq("client_id", clientId)
             .order("performed_at", { ascending: false })
             .limit(2000);
+          if (!requestIsCurrent()) return;
           // Rewrite log.exercise_id to a current-plan exercise id when the
           // historic log belongs to a name-matched exercise. That lets the
           // existing `logs.filter(l => l.exercise_id === ex.id)` keep working
@@ -265,12 +387,15 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
         setLogs([]);
       }
     } catch (error) {
+      if (!requestIsCurrent()) return;
       const message =
         error instanceof Error ? error.message : "Trainingsdaten konnten nicht geladen werden.";
       setLoadError(message);
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (requestIsCurrent()) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   };
 
@@ -285,14 +410,16 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
       setWeeksCount(cached.weeksCount);
       setLoading(false);
     }
-    try {
-      setOpenDayState(window.localStorage.getItem(openDayKey));
-    } catch {
-      setOpenDayState(null);
-    }
     void reload(Boolean(cached));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
+
+  useEffect(() => {
+    if (!sessionDraftRestored || !plan?.id || sessionDraft.planId === plan.id) return;
+    updateWorkout((current) =>
+      current.planId === plan.id ? current : { ...current, planId: plan.id },
+    );
+  }, [plan?.id, sessionDraft.planId, sessionDraftRestored, updateWorkout]);
 
   // Every meaningful tracker change is persisted. This includes optimistic
   // offline logs and exercises the athlete adds during the session.
@@ -513,6 +640,11 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
             {plan.title}
           </p>
           <h3 className="font-display text-lg font-bold">Workout protokollieren</h3>
+          {!isCoach && (
+            <div className="mt-2">
+              <WorkoutSaveIndicator status={saveStatus} />
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {!isCoach && (
@@ -629,8 +761,22 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
                 )}
                 {dayEx.map((ex) => {
                   const isOwn = !isCoach && !!supabaseUser && ex.added_by_user === supabaseUser.id;
+                  const plannedRestSeconds = Math.max(15, Math.min(600, ex.rest_seconds ?? 90));
+                  const exerciseDraft = getTrainingExerciseDraft(
+                    sessionDraft,
+                    ex.id,
+                    plannedRestSeconds,
+                  );
                   return (
-                    <div key={ex.id} className="relative">
+                    <div
+                      key={ex.id}
+                      className={`relative rounded-2xl transition ${
+                        sessionDraft.activeExerciseId === ex.id ? "ring-1 ring-primary/25" : ""
+                      }`}
+                      data-training-exercise-id={ex.id}
+                      onPointerDown={() => setActiveExercise(ex.id)}
+                      onFocusCapture={() => setActiveExercise(ex.id)}
+                    >
                       {isOwn && (
                         <div className="mb-1 flex items-center justify-between rounded-md border border-gold/30 bg-gold/5 px-3 py-1.5 text-[11px] text-gold">
                           <span className="uppercase tracking-[0.15em]">Von dir ergänzt</span>
@@ -657,6 +803,12 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
                         ex={ex}
                         clientId={clientId}
                         logs={logs.filter((l) => l.exercise_id === ex.id)}
+                        draft={exerciseDraft}
+                        draftRestored={sessionDraftRestored}
+                        hasPersistedDraft={Boolean(sessionDraft.exercises[ex.id])}
+                        onDraftChange={(update) =>
+                          updateExerciseDraft(ex.id, plannedRestSeconds, update)
+                        }
                         onLog={async (set_number, weight_kg, reps) => {
                           const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
                           if (isOffline) {
@@ -746,7 +898,7 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
                       <div className="space-y-2">
                         <input
                           value={newExName}
-                          onChange={(e) => setNewExName(e.target.value)}
+                          onChange={(e) => setNewExerciseField("name", e.target.value)}
                           placeholder="Übungsname (z.B. Waden stehend)"
                           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                           autoFocus
@@ -754,14 +906,14 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
                         <div className="grid grid-cols-2 gap-2">
                           <input
                             value={newExSets}
-                            onChange={(e) => setNewExSets(e.target.value)}
+                            onChange={(e) => setNewExerciseField("sets", e.target.value)}
                             inputMode="numeric"
                             placeholder="Sätze"
                             className="rounded-md border border-input bg-background px-3 py-2 text-sm"
                           />
                           <input
                             value={newExReps}
-                            onChange={(e) => setNewExReps(e.target.value)}
+                            onChange={(e) => setNewExerciseField("reps", e.target.value)}
                             placeholder="Wdh. (z.B. 8 oder 8-12)"
                             className="rounded-md border border-input bg-background px-3 py-2 text-sm"
                           />
@@ -771,7 +923,7 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
                             type="button"
                             onClick={() => {
                               setAddingDayId(null);
-                              setNewExName("");
+                              setNewExerciseField("name", "");
                             }}
                             className="rounded-md border border-border px-3 py-1.5 text-xs"
                           >
@@ -793,9 +945,9 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
                                 });
                                 setExercises((cur) => [...cur, row as Exercise]);
                                 setAddingDayId(null);
-                                setNewExName("");
-                                setNewExSets("3");
-                                setNewExReps("8");
+                                setNewExerciseField("name", "");
+                                setNewExerciseField("sets", "3");
+                                setNewExerciseField("reps", "8");
                                 toast.success("Übung ergänzt");
                               } catch (e: unknown) {
                                 toast.error(
@@ -890,6 +1042,18 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
                                 });
                               }
                               setCompletedDayIds((cur) => new Set(cur).add(d.id));
+                              try {
+                                await clearAfterCompletion();
+                                clearLegacyTrainingExerciseDrafts(
+                                  clientId,
+                                  dayEx.map((exercise) => exercise.id),
+                                  todayStr,
+                                );
+                              } catch {
+                                // The completed workout is already confirmed.
+                                // Keeping a local draft is safer than reporting
+                                // the whole completion as failed.
+                              }
                             } catch (e: unknown) {
                               toast.error(
                                 e instanceof Error ? e.message : "Abschluss fehlgeschlagen",
@@ -964,12 +1128,22 @@ function ExerciseCard({
   ex,
   clientId,
   logs,
+  draft,
+  draftRestored,
+  hasPersistedDraft,
+  onDraftChange,
   onLog,
   onDelete,
 }: {
   ex: Exercise;
   clientId: string;
   logs: SetLog[];
+  draft: TrainingExerciseDraft;
+  draftRestored: boolean;
+  hasPersistedDraft: boolean;
+  onDraftChange: (
+    update: TrainingExerciseDraft | ((previous: TrainingExerciseDraft) => TrainingExerciseDraft),
+  ) => void;
   onLog: (
     set_number: number,
     weight_kg: number | null,
@@ -985,42 +1159,104 @@ function ExerciseCard({
   const lastPerformance = previousLogs[0] ?? null;
   const plannedRestSeconds = Math.max(15, Math.min(600, ex.rest_seconds ?? 90));
   const restTimerKey = `bf.tt.rest.${clientId}.${ex.id}.${todayStr}`;
-  const initialRestTimer = useRef<{
-    remaining: number;
-    running: boolean;
-    deadline: number | null;
-  } | null>(null);
-  if (initialRestTimer.current === null) {
-    try {
-      const parsed = JSON.parse(localStorage.getItem(restTimerKey) || "null") as {
-        remaining?: number;
-        running?: boolean;
-        deadline?: number | null;
-      } | null;
-      const deadline =
-        parsed?.running && typeof parsed.deadline === "number" ? parsed.deadline : null;
-      const remaining = deadline
-        ? Math.max(0, Math.ceil((deadline - Date.now()) / 1000))
-        : Math.max(0, Number(parsed?.remaining) || plannedRestSeconds);
-      initialRestTimer.current = {
-        remaining,
-        running: Boolean(deadline && remaining > 0),
-        deadline,
-      };
-    } catch {
-      initialRestTimer.current = {
-        remaining: plannedRestSeconds,
-        running: false,
-        deadline: null,
-      };
-    }
-  }
-  const [restRemaining, setRestRemaining] = useState(initialRestTimer.current.remaining);
-  const [restRunning, setRestRunning] = useState(initialRestTimer.current.running);
-  const [restDeadline, setRestDeadline] = useState<number | null>(
-    initialRestTimer.current.deadline,
+  const overridesKey = `bf.tt.overrides.${clientId}.${ex.id}.${todayStr}`;
+  const extraKey = `bf.tt.extra.${clientId}.${ex.id}.${todayStr}`;
+  const noteKey = `bf.tt.note.${clientId}.${ex.id}.${todayStr}`;
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
+  const onDraftChangeRef = useRef(onDraftChange);
+  onDraftChangeRef.current = onDraftChange;
+  const remainingFromDraft = (value: TrainingExerciseDraft) =>
+    value.restTimer.running && value.restTimer.endsAt
+      ? Math.max(0, Math.ceil((value.restTimer.endsAt - Date.now()) / 1000))
+      : Math.max(0, value.restTimer.remainingSeconds);
+  const [restRemaining, setRestRemaining] = useState(() => remainingFromDraft(draft));
+  const [restRunning, setRestRunning] = useState(
+    () => draft.restTimer.running && remainingFromDraft(draft) > 0,
   );
+  const [restDeadline, setRestDeadline] = useState<number | null>(draft.restTimer.endsAt);
   const [savingSet, setSavingSet] = useState<number | null>(null);
+  const legacyMigratedRef = useRef(false);
+
+  // Move the previous localStorage-only fields into the versioned whole-workout
+  // draft once. This keeps an in-progress workout alive across this deployment.
+  useEffect(() => {
+    if (!draftRestored || hasPersistedDraft || legacyMigratedRef.current) return;
+    legacyMigratedRef.current = true;
+    if (typeof window === "undefined") return;
+
+    const migrated = createEmptyTrainingExerciseDraft(plannedRestSeconds);
+    let changed = false;
+    try {
+      const rawOverrides = window.localStorage.getItem(overridesKey);
+      if (rawOverrides) {
+        const parsed = JSON.parse(rawOverrides) as Record<string, { w?: string; r?: string }>;
+        migrated.overrides = Object.fromEntries(
+          Object.entries(parsed).map(([setNumber, value]) => [
+            setNumber,
+            { weight: value.w ?? "", reps: value.r ?? "" },
+          ]),
+        );
+        changed = Object.keys(migrated.overrides).length > 0;
+      }
+
+      const rawExtra = window.localStorage.getItem(extraKey);
+      if (rawExtra !== null) {
+        migrated.extraSets = Math.max(0, Number(rawExtra) || 0);
+        changed ||= migrated.extraSets > 0;
+      }
+
+      const rawNote = window.localStorage.getItem(noteKey);
+      if (rawNote !== null) {
+        migrated.note = rawNote;
+        migrated.noteTouched = true;
+        changed = true;
+      }
+
+      const rawTimer = window.localStorage.getItem(restTimerKey);
+      if (rawTimer) {
+        const parsed = JSON.parse(rawTimer) as {
+          remaining?: number;
+          running?: boolean;
+          deadline?: number | null;
+        };
+        const endsAt =
+          parsed.running && typeof parsed.deadline === "number" ? parsed.deadline : null;
+        const remainingSeconds = endsAt
+          ? Math.max(0, Math.ceil((endsAt - Date.now()) / 1000))
+          : Math.max(0, Number(parsed.remaining) || plannedRestSeconds);
+        migrated.restTimer = {
+          durationSeconds: plannedRestSeconds,
+          remainingSeconds,
+          endsAt,
+          running: Boolean(endsAt && remainingSeconds > 0),
+        };
+        changed ||= Boolean(endsAt) || remainingSeconds !== plannedRestSeconds;
+      }
+    } catch {
+      // Malformed legacy values are ignored; the new draft remains valid.
+    }
+
+    if (changed) onDraftChangeRef.current(migrated);
+  }, [
+    draftRestored,
+    extraKey,
+    hasPersistedDraft,
+    noteKey,
+    overridesKey,
+    plannedRestSeconds,
+    restTimerKey,
+  ]);
+
+  useEffect(() => {
+    const remaining = remainingFromDraft(draft);
+    setRestRemaining(remaining);
+    setRestRunning(draft.restTimer.running && remaining > 0);
+    setRestDeadline(draft.restTimer.endsAt);
+    // The individual primitive dependencies intentionally avoid resetting the
+    // visible countdown on unrelated set/note edits.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft.restTimer.endsAt, draft.restTimer.remainingSeconds, draft.restTimer.running]);
 
   useEffect(() => {
     if (!restRunning || !restDeadline) return;
@@ -1030,6 +1266,15 @@ function ExerciseCard({
       if (next === 0) {
         setRestRunning(false);
         setRestDeadline(null);
+        onDraftChangeRef.current((current) => ({
+          ...current,
+          restTimer: {
+            ...current.restTimer,
+            remainingSeconds: 0,
+            endsAt: null,
+            running: false,
+          },
+        }));
       }
     };
     tick();
@@ -1041,26 +1286,20 @@ function ExerciseCard({
     };
   }, [restDeadline, restRunning]);
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(
-        restTimerKey,
-        JSON.stringify({
-          remaining: restRemaining,
-          running: restRunning,
-          deadline: restDeadline,
-        }),
-      );
-    } catch {
-      /* optional browser cache */
-    }
-  }, [restDeadline, restRemaining, restRunning, restTimerKey]);
-
   const startRestTimer = () => {
     const deadline = Date.now() + plannedRestSeconds * 1000;
     setRestRemaining(plannedRestSeconds);
     setRestDeadline(deadline);
     setRestRunning(true);
+    onDraftChange((current) => ({
+      ...current,
+      restTimer: {
+        durationSeconds: plannedRestSeconds,
+        remainingSeconds: plannedRestSeconds,
+        endsAt: deadline,
+        running: true,
+      },
+    }));
   };
 
   const isPerSide = /kurzhantel|dumbbell|\bkh\b|\bdb\b|einarmig|one[- ]?arm|single[- ]?arm/i.test(
@@ -1095,59 +1334,32 @@ function ExerciseCard({
     return "";
   };
 
-  // Per-set editable values (user overrides). Persisted locally so a phone-lock /
-  // PWA reload doesn't wipe values the user typed before tapping the check.
-  const overridesKey = `bf.tt.overrides.${clientId}.${ex.id}.${todayStr}`;
-  const [overrides, setOverrides] = useState<Record<number, { w: string; r: string }>>(() => {
-    if (typeof window === "undefined") return {};
-    try {
-      const raw = window.localStorage.getItem(overridesKey);
-      return raw ? (JSON.parse(raw) as Record<number, { w: string; r: string }>) : {};
-    } catch {
-      return {};
-    }
-  });
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      window.localStorage.setItem(overridesKey, JSON.stringify(overrides));
-    } catch {
-      /* ignore */
-    }
-  }, [overrides, overridesKey]);
+  // Every keystroke enters the whole-workout draft immediately. localStorage
+  // is synchronous; IndexedDB and Supabase follow in the persistence hook.
+  const overrides = draft.overrides;
   const setOverride = (n: number, key: "w" | "r", val: string) =>
-    setOverrides((cur) => {
-      const next = {
-        ...cur,
-        [n]: { w: cur[n]?.w ?? "", r: cur[n]?.r ?? "", [key]: val },
+    onDraftChange((current) => {
+      const setNumber = String(n);
+      const previous = current.overrides[setNumber] ?? { weight: "", reps: "" };
+      return {
+        ...current,
+        overrides: {
+          ...current.overrides,
+          [setNumber]: {
+            ...previous,
+            [key === "w" ? "weight" : "reps"]: val,
+          },
+        },
       };
-      try {
-        window.localStorage.setItem(overridesKey, JSON.stringify(next));
-      } catch {
-        /* optional browser cache */
-      }
-      return next;
     });
 
   // Zusätzliche Sätze, die der Kunde spontan dranhängt (über den Plan hinaus).
-  const extraKey = `bf.tt.extra.${clientId}.${ex.id}.${todayStr}`;
-  const [extraSets, setExtraSets] = useState<number>(() => {
-    if (typeof window === "undefined") return 0;
-    try {
-      const raw = window.localStorage.getItem(extraKey);
-      return raw ? Math.max(0, Number(raw) || 0) : 0;
-    } catch {
-      return 0;
-    }
-  });
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      window.localStorage.setItem(extraKey, String(extraSets));
-    } catch {
-      /* ignore */
-    }
-  }, [extraSets, extraKey]);
+  const extraSets = draft.extraSets;
+  const changeExtraSets = (delta: number) =>
+    onDraftChange((current) => ({
+      ...current,
+      extraSets: Math.max(0, current.extraSets + delta),
+    }));
 
   const renderedSetCount = Math.max(targetSets + extraSets, todaysLogs.length);
   const nextIncompleteSet =
@@ -1156,7 +1368,8 @@ function ExerciseCard({
     ) ?? null;
 
   const valueFor = (n: number, key: "w" | "r"): string => {
-    const o = overrides[n]?.[key];
+    const current = overrides[String(n)];
+    const o = key === "w" ? current?.weight : current?.reps;
     if (o !== undefined && o !== "") return o;
     return key === "w" ? defaultWeightFor(n) : defaultRepsFor(n);
   };
@@ -1172,51 +1385,62 @@ function ExerciseCard({
     setSavingSet(n);
     try {
       const saved = await onLog(n, w, r);
-      if (saved) startRestTimer();
+      if (saved) {
+        onDraftChange((current) => {
+          const nextOverrides = { ...current.overrides };
+          delete nextOverrides[String(n)];
+          return { ...current, overrides: nextOverrides };
+        });
+        startRestTimer();
+      }
     } finally {
       setSavingSet(null);
     }
   };
 
   // Notes per exercise per day
-  const noteKey = `bf.tt.note.${clientId}.${ex.id}.${todayStr}`;
-  const [note, setNote] = useState("");
   const [noteLoaded, setNoteLoaded] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const note = draft.note;
 
   useEffect(() => {
+    if (!draftRestored) return;
+    if (draftRef.current.noteTouched) {
+      setNoteLoaded(true);
+      return;
+    }
     let alive = true;
     (async () => {
-      const { data } = await supabase
-        .from("training_exercise_notes")
-        .select("note")
-        .eq("exercise_id", ex.id)
-        .eq("client_id", clientId)
-        .eq("note_date", todayStr)
-        .maybeSingle();
-      if (!alive) return;
-      const serverNote = (data?.note as string | undefined) ?? "";
-      let localDraft: string | null = null;
       try {
-        localDraft = window.localStorage.getItem(noteKey);
-      } catch {
-        localDraft = null;
+        const { data } = await supabase
+          .from("training_exercise_notes")
+          .select("note")
+          .eq("exercise_id", ex.id)
+          .eq("client_id", clientId)
+          .eq("note_date", todayStr)
+          .maybeSingle();
+        if (!alive || draftRef.current.noteTouched) return;
+        const serverNote = (data?.note as string | undefined) ?? "";
+        if (serverNote) {
+          onDraftChangeRef.current((current) =>
+            current.noteTouched ? current : { ...current, note: serverNote },
+          );
+        }
+      } finally {
+        if (alive) setNoteLoaded(true);
       }
-      setNote(localDraft ?? serverNote);
-      setNoteLoaded(true);
     })();
     return () => {
       alive = false;
     };
-  }, [ex.id, clientId, todayStr, noteKey]);
+  }, [clientId, draftRestored, ex.id, todayStr]);
 
   const onNoteChange = (val: string) => {
-    setNote(val);
-    try {
-      window.localStorage.setItem(noteKey, val);
-    } catch {
-      /* ignore */
-    }
+    onDraftChange((current) => ({
+      ...current,
+      note: val,
+      noteTouched: true,
+    }));
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
       const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
@@ -1241,12 +1465,18 @@ function ExerciseCard({
             { exercise_id: ex.id, client_id: clientId, note_date: todayStr, note: val },
             { onConflict: "exercise_id,client_id,note_date" },
           );
-        window.localStorage.removeItem(noteKey);
       } catch {
         /* silent */
       }
     }, 600);
   };
+
+  useEffect(
+    () => () => {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+    },
+    [],
+  );
 
   return (
     <article className="overflow-hidden rounded-2xl border border-border bg-background/45 shadow-[0_18px_45px_-38px_rgba(0,0,0,0.75)]">
@@ -1303,8 +1533,12 @@ function ExerciseCard({
             const setNum = index + 1;
             const log = todaysLogs.find((item) => item.set_number === setNum);
             const done = !!log;
-            const weightValue = done ? String(log!.weight_kg ?? "") : (overrides[setNum]?.w ?? "");
-            const repsValue = done ? String(log!.reps ?? "") : (overrides[setNum]?.r ?? "");
+            const weightValue = done
+              ? String(log!.weight_kg ?? "")
+              : (overrides[String(setNum)]?.weight ?? "");
+            const repsValue = done
+              ? String(log!.reps ?? "")
+              : (overrides[String(setNum)]?.reps ?? "");
             const weightPlaceholder = defaultWeightFor(setNum);
             const repsPlaceholder = defaultRepsFor(setNum);
 
@@ -1332,7 +1566,7 @@ function ExerciseCard({
                       setOverride(setNum, "w", event.target.value.replace(/[^0-9.,]/g, ""))
                     }
                     onFocus={(event) => {
-                      if (!overrides[setNum]?.w && weightPlaceholder) {
+                      if (!overrides[String(setNum)]?.weight && weightPlaceholder) {
                         setOverride(setNum, "w", weightPlaceholder);
                         requestAnimationFrame(() => {
                           event.target.setSelectionRange(
@@ -1358,7 +1592,7 @@ function ExerciseCard({
                     setOverride(setNum, "r", event.target.value.replace(/[^0-9]/g, ""))
                   }
                   onFocus={(event) => {
-                    if (!overrides[setNum]?.r && repsPlaceholder) {
+                    if (!overrides[String(setNum)]?.reps && repsPlaceholder) {
                       setOverride(setNum, "r", repsPlaceholder);
                       requestAnimationFrame(() => {
                         event.target.setSelectionRange(
@@ -1411,7 +1645,7 @@ function ExerciseCard({
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => setExtraSets((count) => count + 1)}
+              onClick={() => changeExtraSets(1)}
               className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-dashed border-border px-2 py-2 text-[10px] font-bold text-muted-foreground transition hover:border-primary/40 hover:text-primary"
             >
               <Plus className="h-3.5 w-3.5" /> Satz hinzufügen
@@ -1419,7 +1653,7 @@ function ExerciseCard({
             {extraSets > 0 && (
               <button
                 type="button"
-                onClick={() => setExtraSets((count) => Math.max(0, count - 1))}
+                onClick={() => changeExtraSets(-1)}
                 className="rounded-xl border border-border px-3 py-2 text-[10px] font-bold text-muted-foreground transition hover:text-destructive"
               >
                 Zusatzsatz entfernen
@@ -1449,14 +1683,37 @@ function ExerciseCard({
               type="button"
               onClick={() => {
                 if (restRunning) {
+                  const remaining = restDeadline
+                    ? Math.max(0, Math.ceil((restDeadline - Date.now()) / 1000))
+                    : restRemaining;
+                  setRestRemaining(remaining);
                   setRestRunning(false);
                   setRestDeadline(null);
+                  onDraftChange((current) => ({
+                    ...current,
+                    restTimer: {
+                      ...current.restTimer,
+                      remainingSeconds: remaining,
+                      endsAt: null,
+                      running: false,
+                    },
+                  }));
                   return;
                 }
                 const seconds = restRemaining === 0 ? plannedRestSeconds : restRemaining;
+                const deadline = Date.now() + seconds * 1000;
                 setRestRemaining(seconds);
-                setRestDeadline(Date.now() + seconds * 1000);
+                setRestDeadline(deadline);
                 setRestRunning(true);
+                onDraftChange((current) => ({
+                  ...current,
+                  restTimer: {
+                    durationSeconds: plannedRestSeconds,
+                    remainingSeconds: seconds,
+                    endsAt: deadline,
+                    running: true,
+                  },
+                }));
               }}
               className="grid h-9 w-9 place-items-center rounded-xl border border-border text-muted-foreground transition hover:border-primary/35 hover:text-primary"
               aria-label={restRunning ? "Pausentimer anhalten" : "Pausentimer starten"}
@@ -1469,6 +1726,15 @@ function ExerciseCard({
                 setRestRemaining(plannedRestSeconds);
                 setRestRunning(false);
                 setRestDeadline(null);
+                onDraftChange((current) => ({
+                  ...current,
+                  restTimer: {
+                    durationSeconds: plannedRestSeconds,
+                    remainingSeconds: plannedRestSeconds,
+                    endsAt: null,
+                    running: false,
+                  },
+                }));
               }}
               className="grid h-9 w-9 place-items-center rounded-xl border border-border text-muted-foreground transition hover:border-primary/35 hover:text-primary"
               aria-label="Pausentimer zurücksetzen"
