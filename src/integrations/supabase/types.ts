@@ -9469,6 +9469,45 @@ export type Database = {
         }
         Relationships: []
       }
+      workout_session_drafts: {
+        Row: {
+          client_revision: number
+          created_at: string
+          device_id: string
+          id: string
+          payload: Json
+          server_revision: number
+          session_key: string
+          subject_user_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          client_revision?: number
+          created_at?: string
+          device_id: string
+          id?: string
+          payload: Json
+          server_revision?: number
+          session_key: string
+          subject_user_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          client_revision?: number
+          created_at?: string
+          device_id?: string
+          id?: string
+          payload?: Json
+          server_revision?: number
+          session_key?: string
+          subject_user_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       foods_search: {
@@ -10143,6 +10182,17 @@ export type Database = {
           _user_id: string
         }
         Returns: number
+      }
+      save_workout_session_draft: {
+        Args: {
+          p_client_revision: number
+          p_device_id: string
+          p_expected_server_revision: number
+          p_payload: Json
+          p_session_key: string
+          p_subject_user_id: string
+        }
+        Returns: Json
       }
       search_foods: {
         Args: {
