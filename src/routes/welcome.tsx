@@ -1,11 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Flame, Lock } from "lucide-react";
-import { toast } from "sonner";
+import { Flame } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+
 
 export const Route = createFileRoute("/welcome")({
   head: () => ({ meta: [{ title: "Willkommen — BODYFUEL" }] }),
