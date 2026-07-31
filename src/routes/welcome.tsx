@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Flame, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -52,12 +52,14 @@ function WelcomePage() {
         const type = get("type");
 
         if (accessToken && refreshToken) {
-          await supabase.auth.setSession({
+          const { error: sessionError } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken,
           });
+          if (sessionError) throw sessionError;
         } else if (code) {
-          await supabase.auth.exchangeCodeForSession(code);
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          if (exchangeError) throw exchangeError;
         } else if (tokenHash) {
           const { error: verifyError } = await supabase.auth.verifyOtp({
             token_hash: tokenHash,
@@ -76,7 +78,7 @@ function WelcomePage() {
       window.history.replaceState({}, "", window.location.pathname);
       if (data.session) {
         setReady(true);
-      } else if (!error) {
+      } else {
         setError("Der Einladungslink ist ungültig oder abgelaufen. Bitte fordere eine neue Einladung an.");
       }
       setChecking(false);
@@ -88,7 +90,7 @@ function WelcomePage() {
     };
   }, []);
 
-  const submitPassword = async (event: React.FormEvent<HTMLFormElement>) => {
+  const submitPassword = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (password.length < 8) {
       toast.error("Bitte wähle ein Passwort mit mindestens 8 Zeichen.");
