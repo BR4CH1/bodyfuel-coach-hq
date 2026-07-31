@@ -37,11 +37,16 @@ export function registerOfflineSW() {
     return;
   }
 
-  // Defer until idle so it doesn't compete with first paint.
+  // Defer until idle so it doesn't compete with first paint. Always bypass the
+  // browser's HTTP cache for worker updates: otherwise mobile mail browsers can
+  // keep an old invite/password flow active after a deployment.
   const start = () => {
-    navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => {
-      /* ignore */
-    });
+    navigator.serviceWorker
+      .register("/sw.js", { scope: "/", updateViaCache: "none" })
+      .then((registration) => registration.update())
+      .catch(() => {
+        /* ignore */
+      });
   };
   if (document.readyState === "complete") start();
   else window.addEventListener("load", start, { once: true });
