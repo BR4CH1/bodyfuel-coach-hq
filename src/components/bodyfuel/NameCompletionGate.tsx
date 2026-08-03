@@ -100,8 +100,13 @@ export function NameCompletionGate() {
     };
   }, [incomplete]);
 
-  const isAuthFlow = pathname === "/welcome" || pathname === "/auth" || pathname === "/login";
+  const AUTH_FLOW_PATHS = ["/welcome", "/auth", "/login", "/reset-password"];
+  const currentPath =
+    typeof window !== "undefined" ? window.location.pathname : pathname;
+  const isAuthFlow =
+    AUTH_FLOW_PATHS.includes(pathname) || AUTH_FLOW_PATHS.includes(currentPath);
   if (!supabaseUser || !incomplete || isAuthFlow) return null;
+
 
   const save = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

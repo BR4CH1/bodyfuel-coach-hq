@@ -38,13 +38,13 @@ if (pwaEnabled) {
           {
             urlPattern: ({ request, url }) =>
               request.mode === "navigate" &&
-              ["/welcome", "/auth", "/login", "/app"].includes(url.pathname),
+              ["/welcome", "/auth", "/login", "/app", "/reset-password"].includes(url.pathname),
             handler: "NetworkOnly",
           },
           {
             urlPattern: ({ request, url }) =>
               request.mode === "navigate" &&
-              !["/welcome", "/auth", "/login", "/app"].includes(url.pathname) &&
+              !["/welcome", "/auth", "/login", "/app", "/reset-password"].includes(url.pathname) &&
               !url.pathname.startsWith("/api/") &&
               !url.pathname.startsWith("/~oauth") &&
               !url.pathname.startsWith("/lovable/"),

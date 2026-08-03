@@ -15,6 +15,7 @@ const EXCLUDED_PREFIXES = [
   "/login",
   "/app",
   "/welcome",
+  "/reset-password",
   "/trial",
   "/smart",
   "/join",

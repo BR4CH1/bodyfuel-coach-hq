@@ -116,7 +116,10 @@ function ProfileContent() {
 
   // Account edit state
   const [newEmail, setNewEmail] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [changingPw, setChangingPw] = useState(false);
 
   useEffect(() => {
     if (!uid) return;
@@ -170,17 +173,52 @@ function ProfileContent() {
   };
 
   const changePassword = async () => {
-    if (!newPassword || newPassword.length < 6) {
-      toast.error("Mindestens 6 Zeichen");
+    const email = supabaseUser?.email;
+    if (!email) {
+      toast.error("Keine E-Mail am Konto hinterlegt.");
       return;
     }
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-    if (error) toast.error(error.message);
-    else {
+    if (!currentPassword) {
+      toast.error("Bitte aktuelles Passwort eingeben");
+      return;
+    }
+    if (!newPassword || newPassword.length < 8) {
+      toast.error("Neues Passwort: mindestens 8 Zeichen");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("Die neuen Passwörter stimmen nicht überein");
+      return;
+    }
+    if (newPassword === currentPassword) {
+      toast.error("Das neue Passwort muss sich vom aktuellen unterscheiden");
+      return;
+    }
+
+    setChangingPw(true);
+    try {
+      const { error: verifyError } = await supabase.auth.signInWithPassword({
+        email,
+        password: currentPassword,
+      });
+      if (verifyError) {
+        toast.error("Aktuelles Passwort ist falsch");
+        return;
+      }
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
       toast.success("Passwort aktualisiert");
+      setCurrentPassword("");
       setNewPassword("");
+      setConfirmPassword("");
+    } finally {
+      setChangingPw(false);
     }
   };
+
 
   const changeEmail = async () => {
     if (!newEmail) return;
@@ -333,21 +371,40 @@ function ProfileContent() {
         <h2 className="font-display text-lg font-bold">Account</h2>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="new-pw">Passwort ändern</Label>
-            <div className="flex gap-2">
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="current-pw">Passwort ändern</Label>
+            <div className="grid gap-2 sm:grid-cols-3">
+              <Input
+                id="current-pw"
+                type="password"
+                autoComplete="current-password"
+                placeholder="Aktuelles Passwort"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+              />
               <Input
                 id="new-pw"
                 type="password"
-                placeholder="Neues Passwort"
+                autoComplete="new-password"
+                placeholder="Neues Passwort (min. 8 Zeichen)"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
               />
-              <Button onClick={changePassword} variant="secondary">
-                <KeyRound className="h-4 w-4" />
-              </Button>
+              <Input
+                id="confirm-pw"
+                type="password"
+                autoComplete="new-password"
+                placeholder="Neues Passwort bestätigen"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
             </div>
+            <Button onClick={changePassword} variant="secondary" disabled={changingPw}>
+              <KeyRound className="mr-2 h-4 w-4" />
+              {changingPw ? "Wird gespeichert…" : "Passwort ändern"}
+            </Button>
           </div>
+
 
           <div className="space-y-2">
             <Label htmlFor="new-mail">E-Mail ändern</Label>
