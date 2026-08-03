@@ -48,10 +48,45 @@ function AuthPage() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [busy, setBusy] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetBusy, setResetBusy] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
   // Beitrittslinks (next=/join/...) starten direkt im Registrieren-Modus.
   const [mode, setMode] = useState<"signin" | "signup">(
     next && next.startsWith("/join/") ? "signup" : "signin",
   );
+
+  const requestReset = async () => {
+    const parsed = emailSchema.safeParse((resetEmail || email).trim().toLowerCase());
+    if (!parsed.success) {
+      toast.error("Bitte gültige E-Mail eingeben");
+      return;
+    }
+    setResetBusy(true);
+    try {
+      const origin =
+        typeof window !== "undefined" && window.location.origin.includes("localhost")
+          ? window.location.origin
+          : PUBLIC_APP_ORIGIN;
+      const { error } = await supabase.auth.resetPasswordForEmail(parsed.data, {
+        redirectTo: `${origin}/reset-password`,
+      });
+      if (error) throw error;
+      setResetSent(true);
+      toast.success("Reset-Mail verschickt. Bitte prüfe dein Postfach (auch Spam).");
+    } catch (err: unknown) {
+      const raw = err instanceof Error ? err.message : "Fehler";
+      toast.error(
+        /rate limit|too many/i.test(raw)
+          ? "Zu viele Anfragen. Bitte in ein paar Minuten erneut versuchen."
+          : raw,
+      );
+    } finally {
+      setResetBusy(false);
+    }
+  };
+
 
   useEffect(() => {
     if (loading) return;
