@@ -116,7 +116,10 @@ function ProfileContent() {
 
   // Account edit state
   const [newEmail, setNewEmail] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [changingPw, setChangingPw] = useState(false);
 
   useEffect(() => {
     if (!uid) return;
