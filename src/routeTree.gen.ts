@@ -17,6 +17,7 @@ import { Route as TrainingImportRouteImport } from './routes/training-import'
 import { Route as TrainingRouteImport } from './routes/training'
 import { Route as StrengthCheckRouteImport } from './routes/strength-check'
 import { Route as SmartRouteImport } from './routes/smart'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RankingRouteImport } from './routes/ranking'
 import { Route as ProgressRouteImport } from './routes/progress'
 import { Route as ProfileRouteImport } from './routes/profile'
@@ -201,6 +202,11 @@ const StrengthCheckRoute = StrengthCheckRouteImport.update({
 const SmartRoute = SmartRouteImport.update({
   id: '/smart',
   path: '/smart',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RankingRoute = RankingRouteImport.update({
@@ -986,6 +992,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRoute
   '/progress': typeof ProgressRoute
   '/ranking': typeof RankingRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/smart': typeof SmartRouteWithChildren
   '/strength-check': typeof StrengthCheckRoute
   '/training': typeof TrainingRoute
@@ -1137,6 +1144,7 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/progress': typeof ProgressRoute
   '/ranking': typeof RankingRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/strength-check': typeof StrengthCheckRoute
   '/training': typeof TrainingRoute
   '/training-import': typeof TrainingImportRoute
@@ -1285,6 +1293,7 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRoute
   '/progress': typeof ProgressRoute
   '/ranking': typeof RankingRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/smart': typeof SmartRouteWithChildren
   '/strength-check': typeof StrengthCheckRoute
   '/training': typeof TrainingRoute
@@ -1442,6 +1451,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/progress'
     | '/ranking'
+    | '/reset-password'
     | '/smart'
     | '/strength-check'
     | '/training'
@@ -1593,6 +1603,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/progress'
     | '/ranking'
+    | '/reset-password'
     | '/strength-check'
     | '/training'
     | '/training-import'
@@ -1740,6 +1751,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/progress'
     | '/ranking'
+    | '/reset-password'
     | '/smart'
     | '/strength-check'
     | '/training'
@@ -1896,6 +1908,7 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRoute
   ProgressRoute: typeof ProgressRoute
   RankingRoute: typeof RankingRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   SmartRoute: typeof SmartRouteWithChildren
   StrengthCheckRoute: typeof StrengthCheckRoute
   TrainingRoute: typeof TrainingRoute
@@ -2005,6 +2018,13 @@ declare module '@tanstack/react-router' {
       path: '/smart'
       fullPath: '/smart'
       preLoaderRoute: typeof SmartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/ranking': {
@@ -3343,6 +3363,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   ProgressRoute: ProgressRoute,
   RankingRoute: RankingRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   SmartRoute: SmartRouteWithChildren,
   StrengthCheckRoute: StrengthCheckRoute,
   TrainingRoute: TrainingRoute,
