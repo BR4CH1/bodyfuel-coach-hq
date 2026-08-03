@@ -173,17 +173,52 @@ function ProfileContent() {
   };
 
   const changePassword = async () => {
-    if (!newPassword || newPassword.length < 6) {
-      toast.error("Mindestens 6 Zeichen");
+    const email = supabaseUser?.email;
+    if (!email) {
+      toast.error("Keine E-Mail am Konto hinterlegt.");
       return;
     }
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-    if (error) toast.error(error.message);
-    else {
+    if (!currentPassword) {
+      toast.error("Bitte aktuelles Passwort eingeben");
+      return;
+    }
+    if (!newPassword || newPassword.length < 8) {
+      toast.error("Neues Passwort: mindestens 8 Zeichen");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("Die neuen Passwörter stimmen nicht überein");
+      return;
+    }
+    if (newPassword === currentPassword) {
+      toast.error("Das neue Passwort muss sich vom aktuellen unterscheiden");
+      return;
+    }
+
+    setChangingPw(true);
+    try {
+      const { error: verifyError } = await supabase.auth.signInWithPassword({
+        email,
+        password: currentPassword,
+      });
+      if (verifyError) {
+        toast.error("Aktuelles Passwort ist falsch");
+        return;
+      }
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
       toast.success("Passwort aktualisiert");
+      setCurrentPassword("");
       setNewPassword("");
+      setConfirmPassword("");
+    } finally {
+      setChangingPw(false);
     }
   };
+
 
   const changeEmail = async () => {
     if (!newEmail) return;
