@@ -1,6 +1,6 @@
 export const PUBLIC_APP_ORIGIN = "https://bodyfuel-coaching.com";
 
-const AUTH_PATHS = new Set(["/auth", "/login", "/welcome", "/app"]);
+const AUTH_PATHS = new Set(["/auth", "/login", "/welcome", "/app", "/reset-password"]);
 
 export function sanitizeInternalRedirect(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined;
