@@ -371,21 +371,40 @@ function ProfileContent() {
         <h2 className="font-display text-lg font-bold">Account</h2>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="new-pw">Passwort ändern</Label>
-            <div className="flex gap-2">
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="current-pw">Passwort ändern</Label>
+            <div className="grid gap-2 sm:grid-cols-3">
+              <Input
+                id="current-pw"
+                type="password"
+                autoComplete="current-password"
+                placeholder="Aktuelles Passwort"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+              />
               <Input
                 id="new-pw"
                 type="password"
-                placeholder="Neues Passwort"
+                autoComplete="new-password"
+                placeholder="Neues Passwort (min. 8 Zeichen)"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
               />
-              <Button onClick={changePassword} variant="secondary">
-                <KeyRound className="h-4 w-4" />
-              </Button>
+              <Input
+                id="confirm-pw"
+                type="password"
+                autoComplete="new-password"
+                placeholder="Neues Passwort bestätigen"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
             </div>
+            <Button onClick={changePassword} variant="secondary" disabled={changingPw}>
+              <KeyRound className="mr-2 h-4 w-4" />
+              {changingPw ? "Wird gespeichert…" : "Passwort ändern"}
+            </Button>
           </div>
+
 
           <div className="space-y-2">
             <Label htmlFor="new-mail">E-Mail ändern</Label>
