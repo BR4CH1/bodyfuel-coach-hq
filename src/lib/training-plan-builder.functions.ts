@@ -70,7 +70,14 @@ export type LibraryExercise = {
   default_rest_seconds: number;
   notes: string | null;
   is_active: boolean;
+  /** Medienmodell (optional, rückwärtskompatibel) */
+  thumbnail_url?: string | null;
+  animation_url?: string | null;
+  media_type?: string | null;
+  media_source?: string | null;
+  technique_hint?: string | null;
 };
+
 
 export type StrengthBaseline = {
   bench_press_kg: number | null;
