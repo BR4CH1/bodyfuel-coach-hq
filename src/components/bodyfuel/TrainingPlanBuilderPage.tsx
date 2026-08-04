@@ -24,6 +24,9 @@ import {
   Trash2,
   Users,
 } from "lucide-react";
+import { normalizeExerciseMedia } from "@/lib/exercise-media";
+import { ExerciseMediaThumb } from "@/components/bodyfuel/ExerciseMediaThumb";
+import { ExerciseMediaEditorDialog } from "@/components/bodyfuel/ExerciseMediaEditorDialog";
 import {
   listExerciseLibrary,
   getCustomerTrainingContext,
