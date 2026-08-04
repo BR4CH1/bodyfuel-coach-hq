@@ -1482,13 +1482,19 @@ function ExerciseCard({
     <article className="overflow-hidden rounded-2xl border border-border bg-background/45 shadow-[0_18px_45px_-38px_rgba(0,0,0,0.75)]">
       <header className="flex items-start justify-between gap-2 border-b border-border p-3 sm:gap-3 sm:p-4">
         <div className="flex min-w-0 flex-1 items-start gap-2 sm:gap-3">
-          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary sm:h-11 sm:w-11">
-            <Dumbbell className="h-5 w-5" />
-          </div>
+          <button
+            type="button"
+            onClick={() => setMediaOpen(true)}
+            aria-label={`Ausführung von ${ex.name} ansehen`}
+            className="rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <ExerciseMediaThumb media={exerciseMedia} name={ex.name} muscle={ex.name} size={44} />
+          </button>
           <div className="min-w-0 flex-1">
             <h4 className="break-words font-sans text-base font-black leading-tight tracking-tight sm:text-lg">
               {ex.name}
             </h4>
+
             <p className="mt-0.5 text-[11px] text-muted-foreground">
               {lastPerformance
                 ? `Letztes Mal: ${
