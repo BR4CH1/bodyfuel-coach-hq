@@ -33,6 +33,9 @@ export function DayCard({
   hideHeaderActions,
   partnerLinkForSlot,
   onEnsureMealImage,
+  onApplyTargets,
+  onResetTargets,
+  targetsBusy,
 }: {
   day: BuilderDay;
   library: LibraryMeal[];
@@ -42,8 +45,12 @@ export function DayCard({
   hideHeaderActions?: boolean;
   partnerLinkForSlot?: (slot: Slot) => PartnerSlotLink | undefined;
   onEnsureMealImage?: (mealId: string) => void;
+  onApplyTargets?: (targets: MacroValues, scope: TargetScope, adjustMeals: boolean) => void;
+  onResetTargets?: (scope: TargetScope) => void;
+  targetsBusy?: boolean;
 }) {
   const { target, totals, filledSlots, totalSlots, isBalanced } = summarizeDay(day, ctx, library);
+
 
   // ---- Index-based helpers so multiple meals per slot are supported ----
   const updateMealAtIndex = (index: number, upd: (m: BuilderMeal) => BuilderMeal) => {
