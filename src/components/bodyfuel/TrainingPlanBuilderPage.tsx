@@ -53,6 +53,21 @@ const WD_LONG = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Fre
 const WD_ORDER = [1, 2, 3, 4, 5, 6, 0]; // Mo..So
 const EXERCISE_DRAG_TYPE = "application/x-bodyfuel-training-exercise";
 
+/**
+ * Stellt die geladene Übungsbibliothek für Medien-Lookups bereit, damit bereits
+ * gewählte Übungen (nur per Name gespeichert) ihr Thumbnail finden.
+ */
+const ExerciseMediaLibraryContext = createContext<LibraryExercise[]>([]);
+
+function useExerciseMedia(name: string) {
+  const library = useContext(ExerciseMediaLibraryContext);
+  return useMemo(() => {
+    const key = name.trim().toLowerCase();
+    const hit = key ? library.find((entry) => entry.name.trim().toLowerCase() === key) : undefined;
+    return normalizeExerciseMedia(hit ?? {});
+  }, [library, name]);
+}
+
 type DragExercisePayload = {
   week: number;
   weekday: number;
