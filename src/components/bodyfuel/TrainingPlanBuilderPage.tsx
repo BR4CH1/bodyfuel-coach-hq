@@ -1353,6 +1353,8 @@ function ExerciseLibraryPanel({
 }) {
   const [q, setQ] = useState("");
   const [group, setGroup] = useState<string>("all");
+  const [mediaFor, setMediaFor] = useState<LibraryExercise | null>(null);
+
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
