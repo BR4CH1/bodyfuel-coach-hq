@@ -1162,6 +1162,10 @@ function ExerciseCard({
   const overridesKey = `bf.tt.overrides.${clientId}.${ex.id}.${todayStr}`;
   const extraKey = `bf.tt.extra.${clientId}.${ex.id}.${todayStr}`;
   const noteKey = `bf.tt.note.${clientId}.${ex.id}.${todayStr}`;
+  const lookupMedia = useExerciseMediaLibrary();
+  const exerciseMedia = lookupMedia(ex.name);
+  const [mediaOpen, setMediaOpen] = useState(false);
+
   const draftRef = useRef(draft);
   draftRef.current = draft;
   const onDraftChangeRef = useRef(onDraftChange);
