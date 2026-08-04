@@ -92,7 +92,9 @@ export function DayNavigator({
                   ) : (
                     <Moon className="h-3 w-3 text-sky-500" />
                   )}
-                  {day.type === "training" ? "Training" : "Ruhetag"}
+                  <span className="truncate">
+                    {day.type === "training" ? (day.split || "Training") : "Ruhetag"}
+                  </span>
                 </div>
               </button>
             );
