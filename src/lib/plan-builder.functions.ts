@@ -201,11 +201,24 @@ export const getCustomerPlanContext = createServerFn({ method: "POST" })
   });
 
 // Save a builder plan by adapting to existing importer.
+/**
+ * Zutat im Builder. `name`/`grams` sind Pflicht (rückwärtskompatibel).
+ * `base_grams`, `role` und `per100` werden nur vom Makro-Ziel-Editor gesetzt
+ * und dürfen bei alten Entwürfen fehlen.
+ */
+export type BuilderIngredient = {
+  name: string;
+  grams: number;
+  /** Ursprungsmenge vor der Makro-Optimierung. */
+  base_grams?: number | null;
+  role?: IngredientRole | null;
+  per100?: Per100 | null;
+};
 export type BuilderMeal = {
   slot: "breakfast" | "lunch" | "dinner" | "snack";
   name: string;
   description?: string | null;
-  ingredients: Array<{ name: string; grams: number }>;
+  ingredients: BuilderIngredient[];
   kcal?: number | null;
   protein_g?: number | null;
   carbs_g?: number | null;
@@ -215,6 +228,17 @@ export type BuilderMeal = {
   portion_factor?: number; // 1.0 = normale Portion
   linked_prep_group?: string | null;
   linked_partner_group?: string | null; // shared id when meal is coupled with partner's meal
+  /**
+   * Makros für Portion 1 nach individueller Zutatenanpassung.
+   * Hat Vorrang vor den Bibliothekswerten, sonst würden angepasste
+   * Zutatenmengen im Builder nicht sichtbar.
+   */
+  macro_override?: {
+    kcal: number;
+    protein_g: number;
+    carbs_g: number;
+    fat_g: number;
+  } | null;
 };
 export type BuilderDay = {
   name: string;
@@ -222,7 +246,10 @@ export type BuilderDay = {
   typeOverride?: boolean; // true when coach toggled manually
   meals: BuilderMeal[];
   prepCoupleLunchDinner?: boolean;
+  /** Individuelles Tagesziel; überschreibt das Profilziel nur in diesem Plan. */
+  customTargets?: { kcal: number; p: number; c: number; f: number } | null;
 };
+
 
 async function persistBuilderPlan(
   supabase: any,
