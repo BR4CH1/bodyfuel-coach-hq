@@ -36,6 +36,11 @@ export function PartnerDayBlock({
   onPartnerChange,
   onCopy,
   onEnsureMealImage,
+  onApplyClientTargets,
+  onResetClientTargets,
+  onApplyPartnerTargets,
+  onResetPartnerTargets,
+  targetsBusy,
 }: {
   clientDay: BuilderDay;
   partnerDay: BuilderDay;
@@ -49,7 +54,13 @@ export function PartnerDayBlock({
   onPartnerChange: (u: (d: BuilderDay) => BuilderDay) => void;
   onCopy: () => void;
   onEnsureMealImage?: (mealId: string) => void;
+  onApplyClientTargets?: (targets: MacroValues, scope: TargetScope, adjust: boolean) => void;
+  onResetClientTargets?: (scope: TargetScope) => void;
+  onApplyPartnerTargets?: (targets: MacroValues, scope: TargetScope, adjust: boolean) => void;
+  onResetPartnerTargets?: (scope: TargetScope) => void;
+  targetsBusy?: boolean;
 }) {
+
   // Sync coupled meals (same linked_partner_group) → recipe from client mirrors to partner.
   // Portion factor stays per person. Runs after render.
   useEffect(() => {
