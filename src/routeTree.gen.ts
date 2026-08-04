@@ -9,314 +9,164 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as WelcomeRouteImport } from './routes/welcome'
-import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
-import { Route as TrustRouteImport } from './routes/trust'
-import { Route as TrialRouteImport } from './routes/trial'
-import { Route as TrainingImportRouteImport } from './routes/training-import'
-import { Route as TrainingRouteImport } from './routes/training'
-import { Route as StrengthCheckRouteImport } from './routes/strength-check'
-import { Route as SmartRouteImport } from './routes/smart'
-import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as RankingRouteImport } from './routes/ranking'
-import { Route as ProgressRouteImport } from './routes/progress'
-import { Route as ProfileRouteImport } from './routes/profile'
-import { Route as NutritionRouteImport } from './routes/nutrition'
-import { Route as MessagesRouteImport } from './routes/messages'
-import { Route as MeinBodyfuelRouteImport } from './routes/mein-bodyfuel'
-import { Route as MeasurementsRouteImport } from './routes/measurements'
-import { Route as McpRouteImport } from './routes/mcp'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as ImpressumRouteImport } from './routes/impressum'
-import { Route as GuardianConsentRouteImport } from './routes/guardian-consent'
-import { Route as FuelyRouteImport } from './routes/fuely'
-import { Route as DatenschutzRouteImport } from './routes/datenschutz'
-import { Route as DashboardRouteImport } from './routes/dashboard'
-import { Route as DailyChecklistRouteImport } from './routes/daily-checklist'
-import { Route as CommunityRouteImport } from './routes/community'
-import { Route as CoachToolsRouteImport } from './routes/coach-tools'
-import { Route as CoachRouteImport } from './routes/coach'
-import { Route as CheckInRouteImport } from './routes/check-in'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as AppRouteImport } from './routes/app'
-import { Route as AchievementsRouteImport } from './routes/achievements'
-import { Route as OrgSlugRouteImport } from './routes/$orgSlug'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as TrackerIndexRouteImport } from './routes/tracker.index'
-import { Route as SmartIndexRouteImport } from './routes/smart.index'
-import { Route as NutritionIndexRouteImport } from './routes/nutrition.index'
-import { Route as CoachIndexRouteImport } from './routes/coach.index'
-import { Route as CoachToolsIndexRouteImport } from './routes/coach-tools.index'
-import { Route as BullsIndexRouteImport } from './routes/bulls.index'
+import { Route as OrgSlugRouteImport } from './routes/$orgSlug'
+import { Route as AchievementsRouteImport } from './routes/achievements'
+import { Route as AppRouteImport } from './routes/app'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as CheckInRouteImport } from './routes/check-in'
+import { Route as CoachRouteImport } from './routes/coach'
+import { Route as CoachToolsRouteImport } from './routes/coach-tools'
+import { Route as CommunityRouteImport } from './routes/community'
+import { Route as DailyChecklistRouteImport } from './routes/daily-checklist'
+import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as DatenschutzRouteImport } from './routes/datenschutz'
+import { Route as FuelyRouteImport } from './routes/fuely'
+import { Route as GuardianConsentRouteImport } from './routes/guardian-consent'
+import { Route as ImpressumRouteImport } from './routes/impressum'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as McpRouteImport } from './routes/mcp'
+import { Route as MeasurementsRouteImport } from './routes/measurements'
+import { Route as MeinBodyfuelRouteImport } from './routes/mein-bodyfuel'
+import { Route as MessagesRouteImport } from './routes/messages'
+import { Route as NutritionRouteImport } from './routes/nutrition'
+import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as ProgressRouteImport } from './routes/progress'
+import { Route as RankingRouteImport } from './routes/ranking'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as SmartRouteImport } from './routes/smart'
+import { Route as StrengthCheckRouteImport } from './routes/strength-check'
+import { Route as TrainingRouteImport } from './routes/training'
+import { Route as TrainingImportRouteImport } from './routes/training-import'
+import { Route as TrialRouteImport } from './routes/trial'
+import { Route as TrustRouteImport } from './routes/trust'
+import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
+import { Route as WelcomeRouteImport } from './routes/welcome'
 import { Route as OrgSlugIndexRouteImport } from './routes/$orgSlug.index'
-import { Route as TrackerSignupRouteImport } from './routes/tracker.signup'
-import { Route as TrackerLoginRouteImport } from './routes/tracker.login'
-import { Route as TrackerAppRouteImport } from './routes/tracker.app'
-import { Route as SmartTrialRouteImport } from './routes/smart.trial'
-import { Route as SmartSignupRouteImport } from './routes/smart.signup'
-import { Route as OnboardingSmartNutritionRouteImport } from './routes/onboarding.smart-nutrition'
-import { Route as OnboardingSmartRouteImport } from './routes/onboarding.smart'
-import { Route as NutritionTrackingRouteImport } from './routes/nutrition.tracking'
-import { Route as NutritionShoppingRouteImport } from './routes/nutrition.shopping'
-import { Route as NutritionRecipeFromIngredientsRouteImport } from './routes/nutrition.recipe-from-ingredients'
-import { Route as NutritionFavoritesRouteImport } from './routes/nutrition.favorites'
-import { Route as JoinTokenRouteImport } from './routes/join.$token'
-import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
-import { Route as CoachReviewsRouteImport } from './routes/coach.reviews'
-import { Route as CoachPlayerCardsRouteImport } from './routes/coach.player-cards'
-import { Route as CoachPerformanceTeamsRouteImport } from './routes/coach.performance-teams'
-import { Route as CoachPackageRequestsRouteImport } from './routes/coach.package-requests'
-import { Route as CoachLeadsRouteImport } from './routes/coach.leads'
-import { Route as CoachImportPlanRouteImport } from './routes/coach.import-plan'
-import { Route as CoachGiftsRouteImport } from './routes/coach.gifts'
-import { Route as CoachFoodsRouteImport } from './routes/coach.foods'
-import { Route as CoachCustomersRouteImport } from './routes/coach.customers'
-import { Route as CoachBullsPerformanceRouteImport } from './routes/coach.bulls-performance'
-import { Route as CoachAffiliatesRouteImport } from './routes/coach.affiliates'
-import { Route as CoachClientIdRouteImport } from './routes/coach.$clientId'
-import { Route as CoachToolsTimerRouteImport } from './routes/coach-tools.timer'
-import { Route as CoachToolsTemplatesRouteImport } from './routes/coach-tools.templates'
-import { Route as CoachToolsSummerRouteImport } from './routes/coach-tools.summer'
-import { Route as CoachToolsParticipantsRouteImport } from './routes/coach-tools.participants'
-import { Route as CoachToolsMusicRouteImport } from './routes/coach-tools.music'
-import { Route as CoachToolsLiveRouteImport } from './routes/coach-tools.live'
-import { Route as CoachToolsExercisesRouteImport } from './routes/coach-tools.exercises'
-import { Route as CoachToolsAiRouteImport } from './routes/coach-tools.ai'
-import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
-import { Route as BullsWeightRouteImport } from './routes/bulls.weight'
-import { Route as BullsTrainingRouteImport } from './routes/bulls.training'
-import { Route as BullsRecoveryRouteImport } from './routes/bulls.recovery'
-import { Route as BullsRankingRouteImport } from './routes/bulls.ranking'
-import { Route as BullsPhotosRouteImport } from './routes/bulls.photos'
-import { Route as BullsPerformanceRouteImport } from './routes/bulls.performance'
-import { Route as BullsNutritionRouteImport } from './routes/bulls.nutrition'
-import { Route as BullsCheckinRouteImport } from './routes/bulls.checkin'
-import { Route as BullsBenchmarksRouteImport } from './routes/bulls.benchmarks'
-import { Route as AdminPlayerCardsRouteImport } from './routes/admin.player-cards'
-import { Route as AdminFoodDatabaseRouteImport } from './routes/admin.food-database'
-import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
-import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
-import { Route as OrgSlugTrainingRouteImport } from './routes/$orgSlug.training'
-import { Route as OrgSlugRankingRouteImport } from './routes/$orgSlug.ranking'
-import { Route as OrgSlugProfilRouteImport } from './routes/$orgSlug.profil'
-import { Route as OrgSlugPerformanceRouteImport } from './routes/$orgSlug.performance'
-import { Route as OrgSlugOnboardingRouteImport } from './routes/$orgSlug.onboarding'
-import { Route as OrgSlugNutritionRouteImport } from './routes/$orgSlug.nutrition'
-import { Route as OrgSlugHomeRouteImport } from './routes/$orgSlug.home'
-import { Route as OrgSlugFuelyRouteImport } from './routes/$orgSlug.fuely'
-import { Route as OrgSlugCommunityRouteImport } from './routes/$orgSlug.community'
 import { Route as OrgSlugCheckinRouteImport } from './routes/$orgSlug.checkin'
-import { Route as TrackerAppIndexRouteImport } from './routes/tracker.app.index'
-import { Route as CoachTeamsIndexRouteImport } from './routes/coach.teams.index'
-import { Route as CoachCustomersIndexRouteImport } from './routes/coach.customers.index'
-import { Route as BullsPerformanceIndexRouteImport } from './routes/bulls.performance.index'
-import { Route as BullsNutritionIndexRouteImport } from './routes/bulls.nutrition.index'
-import { Route as OrgSlugNutritionIndexRouteImport } from './routes/$orgSlug.nutrition.index'
-import { Route as TrackerAppWeightRouteImport } from './routes/tracker.app.weight'
-import { Route as TrackerAppWaterRouteImport } from './routes/tracker.app.water'
-import { Route as TrackerAppTrainingRouteImport } from './routes/tracker.app.training'
-import { Route as TrackerAppProfileRouteImport } from './routes/tracker.app.profile'
-import { Route as TrackerAppNutritionRouteImport } from './routes/tracker.app.nutrition'
-import { Route as TrackerAppActivityRouteImport } from './routes/tracker.app.activity'
-import { Route as TrackerAppAchievementsRouteImport } from './routes/tracker.app.achievements'
-import { Route as SmartGiftCodeRouteImport } from './routes/smart.gift.$code'
-import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
-import { Route as CoachTrainingBuilderUserIdRouteImport } from './routes/coach.training-builder.$userId'
-import { Route as CoachTeamsOrgIdRouteImport } from './routes/coach.teams.$orgId'
-import { Route as CoachPlayerCardsRankingRouteImport } from './routes/coach.player-cards.ranking'
-import { Route as CoachPlanPreviewPlanIdRouteImport } from './routes/coach.plan-preview.$planId'
-import { Route as CoachPlanBuilderUserIdRouteImport } from './routes/coach.plan-builder.$userId'
-import { Route as CoachCustomersNewRouteImport } from './routes/coach.customers.new'
-import { Route as CoachCustomersUserIdRouteImport } from './routes/coach.customers.$userId'
-import { Route as BullsPerformanceModuleIdRouteImport } from './routes/bulls.performance.$moduleId'
-import { Route as BullsNutritionTrackingRouteImport } from './routes/bulls.nutrition.tracking'
-import { Route as BullsNutritionShoppingRouteImport } from './routes/bulls.nutrition.shopping'
-import { Route as BullsNutritionFavoritesRouteImport } from './routes/bulls.nutrition.favorites'
-import { Route as ApiPublicGuardianConsentRouteImport } from './routes/api/public/guardian-consent'
-import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
-import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
-import { Route as OrgSlugNutritionTrackingRouteImport } from './routes/$orgSlug.nutrition.tracking'
-import { Route as OrgSlugNutritionShoppingRouteImport } from './routes/$orgSlug.nutrition.shopping'
-import { Route as OrgSlugNutritionFavoritesRouteImport } from './routes/$orgSlug.nutrition.favorites'
-import { Route as OrgSlugInviteTokenRouteImport } from './routes/$orgSlug.invite.$token'
+import { Route as OrgSlugCommunityRouteImport } from './routes/$orgSlug.community'
+import { Route as OrgSlugFuelyRouteImport } from './routes/$orgSlug.fuely'
+import { Route as OrgSlugHomeRouteImport } from './routes/$orgSlug.home'
+import { Route as OrgSlugNutritionRouteImport } from './routes/$orgSlug.nutrition'
+import { Route as OrgSlugOnboardingRouteImport } from './routes/$orgSlug.onboarding'
+import { Route as OrgSlugPerformanceRouteImport } from './routes/$orgSlug.performance'
+import { Route as OrgSlugProfilRouteImport } from './routes/$orgSlug.profil'
+import { Route as OrgSlugRankingRouteImport } from './routes/$orgSlug.ranking'
+import { Route as OrgSlugTrainingRouteImport } from './routes/$orgSlug.training'
+import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
+import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as AdminFoodDatabaseRouteImport } from './routes/admin.food-database'
+import { Route as AdminPlayerCardsRouteImport } from './routes/admin.player-cards'
+import { Route as BullsIndexRouteImport } from './routes/bulls.index'
+import { Route as BullsBenchmarksRouteImport } from './routes/bulls.benchmarks'
+import { Route as BullsCheckinRouteImport } from './routes/bulls.checkin'
+import { Route as BullsNutritionRouteImport } from './routes/bulls.nutrition'
+import { Route as BullsPerformanceRouteImport } from './routes/bulls.performance'
+import { Route as BullsPhotosRouteImport } from './routes/bulls.photos'
+import { Route as BullsRankingRouteImport } from './routes/bulls.ranking'
+import { Route as BullsRecoveryRouteImport } from './routes/bulls.recovery'
+import { Route as BullsTrainingRouteImport } from './routes/bulls.training'
+import { Route as BullsWeightRouteImport } from './routes/bulls.weight'
+import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
+import { Route as CoachToolsIndexRouteImport } from './routes/coach-tools.index'
+import { Route as CoachToolsAiRouteImport } from './routes/coach-tools.ai'
+import { Route as CoachToolsExercisesRouteImport } from './routes/coach-tools.exercises'
+import { Route as CoachToolsLiveRouteImport } from './routes/coach-tools.live'
+import { Route as CoachToolsMusicRouteImport } from './routes/coach-tools.music'
+import { Route as CoachToolsParticipantsRouteImport } from './routes/coach-tools.participants'
+import { Route as CoachToolsSummerRouteImport } from './routes/coach-tools.summer'
+import { Route as CoachToolsTemplatesRouteImport } from './routes/coach-tools.templates'
+import { Route as CoachToolsTimerRouteImport } from './routes/coach-tools.timer'
+import { Route as CoachIndexRouteImport } from './routes/coach.index'
+import { Route as CoachClientIdRouteImport } from './routes/coach.$clientId'
+import { Route as CoachAffiliatesRouteImport } from './routes/coach.affiliates'
+import { Route as CoachBullsPerformanceRouteImport } from './routes/coach.bulls-performance'
+import { Route as CoachCustomersRouteImport } from './routes/coach.customers'
+import { Route as CoachFoodsRouteImport } from './routes/coach.foods'
+import { Route as CoachGiftsRouteImport } from './routes/coach.gifts'
+import { Route as CoachImportPlanRouteImport } from './routes/coach.import-plan'
+import { Route as CoachLeadsRouteImport } from './routes/coach.leads'
+import { Route as CoachPackageRequestsRouteImport } from './routes/coach.package-requests'
+import { Route as CoachPerformanceTeamsRouteImport } from './routes/coach.performance-teams'
+import { Route as CoachPlayerCardsRouteImport } from './routes/coach.player-cards'
+import { Route as CoachReviewsRouteImport } from './routes/coach.reviews'
+import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
+import { Route as JoinTokenRouteImport } from './routes/join.$token'
+import { Route as NutritionIndexRouteImport } from './routes/nutrition.index'
+import { Route as NutritionFavoritesRouteImport } from './routes/nutrition.favorites'
+import { Route as NutritionRecipeFromIngredientsRouteImport } from './routes/nutrition.recipe-from-ingredients'
+import { Route as NutritionShoppingRouteImport } from './routes/nutrition.shopping'
+import { Route as NutritionTrackingRouteImport } from './routes/nutrition.tracking'
+import { Route as OnboardingSmartRouteImport } from './routes/onboarding.smart'
+import { Route as OnboardingSmartNutritionRouteImport } from './routes/onboarding.smart-nutrition'
+import { Route as SmartIndexRouteImport } from './routes/smart.index'
+import { Route as SmartSignupRouteImport } from './routes/smart.signup'
+import { Route as SmartTrialRouteImport } from './routes/smart.trial'
+import { Route as TrackerIndexRouteImport } from './routes/tracker.index'
+import { Route as TrackerAppRouteImport } from './routes/tracker.app'
+import { Route as TrackerLoginRouteImport } from './routes/tracker.login'
+import { Route as TrackerSignupRouteImport } from './routes/tracker.signup'
 import { Route as OrgSlugAthleticSessionIdRouteImport } from './routes/$orgSlug.athletic.$sessionId'
-import { Route as CoachTeamsOrgIdIndexRouteImport } from './routes/coach.teams.$orgId.index'
-import { Route as BullsPerformanceModuleIdIndexRouteImport } from './routes/bulls.performance.$moduleId.index'
-import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
-import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
-import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
-import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
-import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
-import { Route as CoachTeamsOrgIdPerformanceRouteImport } from './routes/coach.teams.$orgId.performance'
-import { Route as CoachPlayerCardsLayoutOrgSlugRouteImport } from './routes/coach.player-cards_.layout.$orgSlug'
-import { Route as BullsPerformanceModuleIdTestIdRouteImport } from './routes/bulls.performance.$moduleId.$testId'
-import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
-import { Route as ApiPublicHooksTrialRemindersRouteImport } from './routes/api/public/hooks/trial-reminders'
-import { Route as ApiPublicHooksSendFeatureNewsRouteImport } from './routes/api/public/hooks/send-feature-news'
-import { Route as ApiPublicHooksRegenTrainingPlansRouteImport } from './routes/api/public/hooks/regen-training-plans'
-import { Route as ApiPublicHooksRegenNutritionPlansRouteImport } from './routes/api/public/hooks/regen-nutrition-plans'
-import { Route as ApiPublicHooksRecalcNutritionLoadRouteImport } from './routes/api/public/hooks/recalc-nutrition-load'
-import { Route as ApiPublicHooksProcessPerformancePlanJobsRouteImport } from './routes/api/public/hooks/process-performance-plan-jobs'
-import { Route as ApiPublicHooksProcessAutopilotJobsRouteImport } from './routes/api/public/hooks/process-autopilot-jobs'
-import { Route as ApiPublicHooksPlanRotationRouteImport } from './routes/api/public/hooks/plan-rotation'
-import { Route as ApiPublicHooksOrgTaskEngineRouteImport } from './routes/api/public/hooks/org-task-engine'
+import { Route as OrgSlugInviteTokenRouteImport } from './routes/$orgSlug.invite.$token'
+import { Route as OrgSlugNutritionIndexRouteImport } from './routes/$orgSlug.nutrition.index'
+import { Route as OrgSlugNutritionFavoritesRouteImport } from './routes/$orgSlug.nutrition.favorites'
+import { Route as OrgSlugNutritionShoppingRouteImport } from './routes/$orgSlug.nutrition.shopping'
+import { Route as OrgSlugNutritionTrackingRouteImport } from './routes/$orgSlug.nutrition.tracking'
+import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
+import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as ApiPublicGuardianConsentRouteImport } from './routes/api/public/guardian-consent'
+import { Route as BullsNutritionIndexRouteImport } from './routes/bulls.nutrition.index'
+import { Route as BullsNutritionFavoritesRouteImport } from './routes/bulls.nutrition.favorites'
+import { Route as BullsNutritionShoppingRouteImport } from './routes/bulls.nutrition.shopping'
+import { Route as BullsNutritionTrackingRouteImport } from './routes/bulls.nutrition.tracking'
+import { Route as BullsPerformanceIndexRouteImport } from './routes/bulls.performance.index'
+import { Route as BullsPerformanceModuleIdRouteImport } from './routes/bulls.performance.$moduleId'
+import { Route as CoachCustomersIndexRouteImport } from './routes/coach.customers.index'
+import { Route as CoachCustomersUserIdRouteImport } from './routes/coach.customers.$userId'
+import { Route as CoachCustomersNewRouteImport } from './routes/coach.customers.new'
+import { Route as CoachPlanBuilderUserIdRouteImport } from './routes/coach.plan-builder.$userId'
+import { Route as CoachPlanPreviewPlanIdRouteImport } from './routes/coach.plan-preview.$planId'
+import { Route as CoachPlayerCardsRankingRouteImport } from './routes/coach.player-cards.ranking'
+import { Route as CoachTeamsIndexRouteImport } from './routes/coach.teams.index'
+import { Route as CoachTeamsOrgIdRouteImport } from './routes/coach.teams.$orgId'
+import { Route as CoachTrainingBuilderUserIdRouteImport } from './routes/coach.training-builder.$userId'
+import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
+import { Route as SmartGiftCodeRouteImport } from './routes/smart.gift.$code'
+import { Route as TrackerAppIndexRouteImport } from './routes/tracker.app.index'
+import { Route as TrackerAppAchievementsRouteImport } from './routes/tracker.app.achievements'
+import { Route as TrackerAppActivityRouteImport } from './routes/tracker.app.activity'
+import { Route as TrackerAppNutritionRouteImport } from './routes/tracker.app.nutrition'
+import { Route as TrackerAppProfileRouteImport } from './routes/tracker.app.profile'
+import { Route as TrackerAppTrainingRouteImport } from './routes/tracker.app.training'
+import { Route as TrackerAppWaterRouteImport } from './routes/tracker.app.water'
+import { Route as TrackerAppWeightRouteImport } from './routes/tracker.app.weight'
 import { Route as ApiPublicHooksCoachDailySummaryRouteImport } from './routes/api/public/hooks/coach-daily-summary'
+import { Route as ApiPublicHooksOrgTaskEngineRouteImport } from './routes/api/public/hooks/org-task-engine'
+import { Route as ApiPublicHooksPlanRotationRouteImport } from './routes/api/public/hooks/plan-rotation'
+import { Route as ApiPublicHooksProcessAutopilotJobsRouteImport } from './routes/api/public/hooks/process-autopilot-jobs'
+import { Route as ApiPublicHooksProcessPerformancePlanJobsRouteImport } from './routes/api/public/hooks/process-performance-plan-jobs'
+import { Route as ApiPublicHooksRecalcNutritionLoadRouteImport } from './routes/api/public/hooks/recalc-nutrition-load'
+import { Route as ApiPublicHooksRegenNutritionPlansRouteImport } from './routes/api/public/hooks/regen-nutrition-plans'
+import { Route as ApiPublicHooksRegenTrainingPlansRouteImport } from './routes/api/public/hooks/regen-training-plans'
+import { Route as ApiPublicHooksSendFeatureNewsRouteImport } from './routes/api/public/hooks/send-feature-news'
+import { Route as ApiPublicHooksTrialRemindersRouteImport } from './routes/api/public/hooks/trial-reminders'
+import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
+import { Route as BullsPerformanceModuleIdIndexRouteImport } from './routes/bulls.performance.$moduleId.index'
+import { Route as BullsPerformanceModuleIdTestIdRouteImport } from './routes/bulls.performance.$moduleId.$testId'
+import { Route as CoachPlayerCardsLayoutOrgSlugRouteImport } from './routes/coach.player-cards_.layout.$orgSlug'
+import { Route as CoachTeamsOrgIdIndexRouteImport } from './routes/coach.teams.$orgId.index'
+import { Route as CoachTeamsOrgIdPerformanceRouteImport } from './routes/coach.teams.$orgId.performance'
+import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
+import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
+import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
+import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
+import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
 import { Route as CoachTeamsOrgIdAthletesUserIdRouteImport } from './routes/coach.teams.$orgId.athletes.$userId'
 import { Route as CoachTeamsOrgIdPerformanceSessionSessionIdRouteImport } from './routes/coach.teams.$orgId.performance.session.$sessionId'
 
-const WelcomeRoute = WelcomeRouteImport.update({
-  id: '/welcome',
-  path: '/welcome',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const UnsubscribeRoute = UnsubscribeRouteImport.update({
-  id: '/unsubscribe',
-  path: '/unsubscribe',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TrustRoute = TrustRouteImport.update({
-  id: '/trust',
-  path: '/trust',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TrialRoute = TrialRouteImport.update({
-  id: '/trial',
-  path: '/trial',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TrainingImportRoute = TrainingImportRouteImport.update({
-  id: '/training-import',
-  path: '/training-import',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TrainingRoute = TrainingRouteImport.update({
-  id: '/training',
-  path: '/training',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const StrengthCheckRoute = StrengthCheckRouteImport.update({
-  id: '/strength-check',
-  path: '/strength-check',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SmartRoute = SmartRouteImport.update({
-  id: '/smart',
-  path: '/smart',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ResetPasswordRoute = ResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RankingRoute = RankingRouteImport.update({
-  id: '/ranking',
-  path: '/ranking',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProgressRoute = ProgressRouteImport.update({
-  id: '/progress',
-  path: '/progress',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProfileRoute = ProfileRouteImport.update({
-  id: '/profile',
-  path: '/profile',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const NutritionRoute = NutritionRouteImport.update({
-  id: '/nutrition',
-  path: '/nutrition',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MessagesRoute = MessagesRouteImport.update({
-  id: '/messages',
-  path: '/messages',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MeinBodyfuelRoute = MeinBodyfuelRouteImport.update({
-  id: '/mein-bodyfuel',
-  path: '/mein-bodyfuel',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MeasurementsRoute = MeasurementsRouteImport.update({
-  id: '/measurements',
-  path: '/measurements',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const McpRoute = McpRouteImport.update({
-  id: '/mcp',
-  path: '/mcp',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ImpressumRoute = ImpressumRouteImport.update({
-  id: '/impressum',
-  path: '/impressum',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const GuardianConsentRoute = GuardianConsentRouteImport.update({
-  id: '/guardian-consent',
-  path: '/guardian-consent',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FuelyRoute = FuelyRouteImport.update({
-  id: '/fuely',
-  path: '/fuely',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DatenschutzRoute = DatenschutzRouteImport.update({
-  id: '/datenschutz',
-  path: '/datenschutz',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DashboardRoute = DashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DailyChecklistRoute = DailyChecklistRouteImport.update({
-  id: '/daily-checklist',
-  path: '/daily-checklist',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CommunityRoute = CommunityRouteImport.update({
-  id: '/community',
-  path: '/community',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CoachToolsRoute = CoachToolsRouteImport.update({
-  id: '/coach-tools',
-  path: '/coach-tools',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CoachRoute = CoachRouteImport.update({
-  id: '/coach',
-  path: '/coach',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CheckInRoute = CheckInRouteImport.update({
-  id: '/check-in',
-  path: '/check-in',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AppRoute = AppRouteImport.update({
-  id: '/app',
-  path: '/app',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AchievementsRoute = AchievementsRouteImport.update({
-  id: '/achievements',
-  path: '/achievements',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OrgSlugRoute = OrgSlugRouteImport.update({
@@ -324,39 +174,159 @@ const OrgSlugRoute = OrgSlugRouteImport.update({
   path: '/$orgSlug',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AchievementsRoute = AchievementsRouteImport.update({
+  id: '/achievements',
+  path: '/achievements',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TrackerIndexRoute = TrackerIndexRouteImport.update({
-  id: '/tracker/',
-  path: '/tracker/',
+const AppRoute = AppRouteImport.update({
+  id: '/app',
+  path: '/app',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SmartIndexRoute = SmartIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => SmartRoute,
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const NutritionIndexRoute = NutritionIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => NutritionRoute,
+const CheckInRoute = CheckInRouteImport.update({
+  id: '/check-in',
+  path: '/check-in',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const CoachIndexRoute = CoachIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => CoachRoute,
+const CoachRoute = CoachRouteImport.update({
+  id: '/coach',
+  path: '/coach',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const CoachToolsIndexRoute = CoachToolsIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => CoachToolsRoute,
+const CoachToolsRoute = CoachToolsRouteImport.update({
+  id: '/coach-tools',
+  path: '/coach-tools',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const BullsIndexRoute = BullsIndexRouteImport.update({
-  id: '/bulls/',
-  path: '/bulls/',
+const CommunityRoute = CommunityRouteImport.update({
+  id: '/community',
+  path: '/community',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DailyChecklistRoute = DailyChecklistRouteImport.update({
+  id: '/daily-checklist',
+  path: '/daily-checklist',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DatenschutzRoute = DatenschutzRouteImport.update({
+  id: '/datenschutz',
+  path: '/datenschutz',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FuelyRoute = FuelyRouteImport.update({
+  id: '/fuely',
+  path: '/fuely',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GuardianConsentRoute = GuardianConsentRouteImport.update({
+  id: '/guardian-consent',
+  path: '/guardian-consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ImpressumRoute = ImpressumRouteImport.update({
+  id: '/impressum',
+  path: '/impressum',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MeasurementsRoute = MeasurementsRouteImport.update({
+  id: '/measurements',
+  path: '/measurements',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MeinBodyfuelRoute = MeinBodyfuelRouteImport.update({
+  id: '/mein-bodyfuel',
+  path: '/mein-bodyfuel',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MessagesRoute = MessagesRouteImport.update({
+  id: '/messages',
+  path: '/messages',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NutritionRoute = NutritionRouteImport.update({
+  id: '/nutrition',
+  path: '/nutrition',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProgressRoute = ProgressRouteImport.update({
+  id: '/progress',
+  path: '/progress',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RankingRoute = RankingRouteImport.update({
+  id: '/ranking',
+  path: '/ranking',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SmartRoute = SmartRouteImport.update({
+  id: '/smart',
+  path: '/smart',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StrengthCheckRoute = StrengthCheckRouteImport.update({
+  id: '/strength-check',
+  path: '/strength-check',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TrainingRoute = TrainingRouteImport.update({
+  id: '/training',
+  path: '/training',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TrainingImportRoute = TrainingImportRouteImport.update({
+  id: '/training-import',
+  path: '/training-import',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TrialRoute = TrialRouteImport.update({
+  id: '/trial',
+  path: '/trial',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TrustRoute = TrustRouteImport.update({
+  id: '/trust',
+  path: '/trust',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UnsubscribeRoute = UnsubscribeRouteImport.update({
+  id: '/unsubscribe',
+  path: '/unsubscribe',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WelcomeRoute = WelcomeRouteImport.update({
+  id: '/welcome',
+  path: '/welcome',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OrgSlugIndexRoute = OrgSlugIndexRouteImport.update({
@@ -364,50 +334,261 @@ const OrgSlugIndexRoute = OrgSlugIndexRouteImport.update({
   path: '/',
   getParentRoute: () => OrgSlugRoute,
 } as any)
-const TrackerSignupRoute = TrackerSignupRouteImport.update({
-  id: '/tracker/signup',
-  path: '/tracker/signup',
-  getParentRoute: () => rootRouteImport,
+const OrgSlugCheckinRoute = OrgSlugCheckinRouteImport.update({
+  id: '/checkin',
+  path: '/checkin',
+  getParentRoute: () => OrgSlugRoute,
 } as any)
-const TrackerLoginRoute = TrackerLoginRouteImport.update({
-  id: '/tracker/login',
-  path: '/tracker/login',
-  getParentRoute: () => rootRouteImport,
+const OrgSlugCommunityRoute = OrgSlugCommunityRouteImport.update({
+  id: '/community',
+  path: '/community',
+  getParentRoute: () => OrgSlugRoute,
 } as any)
-const TrackerAppRoute = TrackerAppRouteImport.update({
-  id: '/tracker/app',
-  path: '/tracker/app',
-  getParentRoute: () => rootRouteImport,
+const OrgSlugFuelyRoute = OrgSlugFuelyRouteImport.update({
+  id: '/fuely',
+  path: '/fuely',
+  getParentRoute: () => OrgSlugRoute,
 } as any)
-const SmartTrialRoute = SmartTrialRouteImport.update({
-  id: '/trial',
-  path: '/trial',
-  getParentRoute: () => SmartRoute,
+const OrgSlugHomeRoute = OrgSlugHomeRouteImport.update({
+  id: '/home',
+  path: '/home',
+  getParentRoute: () => OrgSlugRoute,
 } as any)
-const SmartSignupRoute = SmartSignupRouteImport.update({
-  id: '/signup',
-  path: '/signup',
-  getParentRoute: () => SmartRoute,
+const OrgSlugNutritionRoute = OrgSlugNutritionRouteImport.update({
+  id: '/nutrition',
+  path: '/nutrition',
+  getParentRoute: () => OrgSlugRoute,
 } as any)
-const OnboardingSmartNutritionRoute =
-  OnboardingSmartNutritionRouteImport.update({
-    id: '/onboarding/smart-nutrition',
-    path: '/onboarding/smart-nutrition',
+const OrgSlugOnboardingRoute = OrgSlugOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => OrgSlugRoute,
+} as any)
+const OrgSlugPerformanceRoute = OrgSlugPerformanceRouteImport.update({
+  id: '/performance',
+  path: '/performance',
+  getParentRoute: () => OrgSlugRoute,
+} as any)
+const OrgSlugProfilRoute = OrgSlugProfilRouteImport.update({
+  id: '/profil',
+  path: '/profil',
+  getParentRoute: () => OrgSlugRoute,
+} as any)
+const OrgSlugRankingRoute = OrgSlugRankingRouteImport.update({
+  id: '/ranking',
+  path: '/ranking',
+  getParentRoute: () => OrgSlugRoute,
+} as any)
+const OrgSlugTrainingRoute = OrgSlugTrainingRouteImport.update({
+  id: '/training',
+  path: '/training',
+  getParentRoute: () => OrgSlugRoute,
+} as any)
+const Char91DotmcpChar93ListToolsRoute =
+  Char91DotmcpChar93ListToolsRouteImport.update({
+    id: '/.mcp/list-tools',
+    path: '/.mcp/list-tools',
     getParentRoute: () => rootRouteImport,
   } as any)
-const OnboardingSmartRoute = OnboardingSmartRouteImport.update({
-  id: '/onboarding/smart',
-  path: '/onboarding/smart',
+const Char91DotwellKnownChar93OauthProtectedResourceRoute =
+  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
+    id: '/.well-known/oauth-protected-resource',
+    path: '/.well-known/oauth-protected-resource',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AdminFoodDatabaseRoute = AdminFoodDatabaseRouteImport.update({
+  id: '/admin/food-database',
+  path: '/admin/food-database',
   getParentRoute: () => rootRouteImport,
 } as any)
-const NutritionTrackingRoute = NutritionTrackingRouteImport.update({
-  id: '/tracking',
-  path: '/tracking',
+const AdminPlayerCardsRoute = AdminPlayerCardsRouteImport.update({
+  id: '/admin/player-cards',
+  path: '/admin/player-cards',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BullsIndexRoute = BullsIndexRouteImport.update({
+  id: '/bulls/',
+  path: '/bulls/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BullsBenchmarksRoute = BullsBenchmarksRouteImport.update({
+  id: '/bulls/benchmarks',
+  path: '/bulls/benchmarks',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BullsCheckinRoute = BullsCheckinRouteImport.update({
+  id: '/bulls/checkin',
+  path: '/bulls/checkin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BullsNutritionRoute = BullsNutritionRouteImport.update({
+  id: '/bulls/nutrition',
+  path: '/bulls/nutrition',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BullsPerformanceRoute = BullsPerformanceRouteImport.update({
+  id: '/bulls/performance',
+  path: '/bulls/performance',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BullsPhotosRoute = BullsPhotosRouteImport.update({
+  id: '/bulls/photos',
+  path: '/bulls/photos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BullsRankingRoute = BullsRankingRouteImport.update({
+  id: '/bulls/ranking',
+  path: '/bulls/ranking',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BullsRecoveryRoute = BullsRecoveryRouteImport.update({
+  id: '/bulls/recovery',
+  path: '/bulls/recovery',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BullsTrainingRoute = BullsTrainingRouteImport.update({
+  id: '/bulls/training',
+  path: '/bulls/training',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BullsWeightRoute = BullsWeightRouteImport.update({
+  id: '/bulls/weight',
+  path: '/bulls/weight',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CheckoutReturnRoute = CheckoutReturnRouteImport.update({
+  id: '/checkout/return',
+  path: '/checkout/return',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CoachToolsIndexRoute = CoachToolsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => CoachToolsRoute,
+} as any)
+const CoachToolsAiRoute = CoachToolsAiRouteImport.update({
+  id: '/ai',
+  path: '/ai',
+  getParentRoute: () => CoachToolsRoute,
+} as any)
+const CoachToolsExercisesRoute = CoachToolsExercisesRouteImport.update({
+  id: '/exercises',
+  path: '/exercises',
+  getParentRoute: () => CoachToolsRoute,
+} as any)
+const CoachToolsLiveRoute = CoachToolsLiveRouteImport.update({
+  id: '/live',
+  path: '/live',
+  getParentRoute: () => CoachToolsRoute,
+} as any)
+const CoachToolsMusicRoute = CoachToolsMusicRouteImport.update({
+  id: '/music',
+  path: '/music',
+  getParentRoute: () => CoachToolsRoute,
+} as any)
+const CoachToolsParticipantsRoute = CoachToolsParticipantsRouteImport.update({
+  id: '/participants',
+  path: '/participants',
+  getParentRoute: () => CoachToolsRoute,
+} as any)
+const CoachToolsSummerRoute = CoachToolsSummerRouteImport.update({
+  id: '/summer',
+  path: '/summer',
+  getParentRoute: () => CoachToolsRoute,
+} as any)
+const CoachToolsTemplatesRoute = CoachToolsTemplatesRouteImport.update({
+  id: '/templates',
+  path: '/templates',
+  getParentRoute: () => CoachToolsRoute,
+} as any)
+const CoachToolsTimerRoute = CoachToolsTimerRouteImport.update({
+  id: '/timer',
+  path: '/timer',
+  getParentRoute: () => CoachToolsRoute,
+} as any)
+const CoachIndexRoute = CoachIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => CoachRoute,
+} as any)
+const CoachClientIdRoute = CoachClientIdRouteImport.update({
+  id: '/$clientId',
+  path: '/$clientId',
+  getParentRoute: () => CoachRoute,
+} as any)
+const CoachAffiliatesRoute = CoachAffiliatesRouteImport.update({
+  id: '/affiliates',
+  path: '/affiliates',
+  getParentRoute: () => CoachRoute,
+} as any)
+const CoachBullsPerformanceRoute = CoachBullsPerformanceRouteImport.update({
+  id: '/bulls-performance',
+  path: '/bulls-performance',
+  getParentRoute: () => CoachRoute,
+} as any)
+const CoachCustomersRoute = CoachCustomersRouteImport.update({
+  id: '/customers',
+  path: '/customers',
+  getParentRoute: () => CoachRoute,
+} as any)
+const CoachFoodsRoute = CoachFoodsRouteImport.update({
+  id: '/foods',
+  path: '/foods',
+  getParentRoute: () => CoachRoute,
+} as any)
+const CoachGiftsRoute = CoachGiftsRouteImport.update({
+  id: '/gifts',
+  path: '/gifts',
+  getParentRoute: () => CoachRoute,
+} as any)
+const CoachImportPlanRoute = CoachImportPlanRouteImport.update({
+  id: '/import-plan',
+  path: '/import-plan',
+  getParentRoute: () => CoachRoute,
+} as any)
+const CoachLeadsRoute = CoachLeadsRouteImport.update({
+  id: '/leads',
+  path: '/leads',
+  getParentRoute: () => CoachRoute,
+} as any)
+const CoachPackageRequestsRoute = CoachPackageRequestsRouteImport.update({
+  id: '/package-requests',
+  path: '/package-requests',
+  getParentRoute: () => CoachRoute,
+} as any)
+const CoachPerformanceTeamsRoute = CoachPerformanceTeamsRouteImport.update({
+  id: '/performance-teams',
+  path: '/performance-teams',
+  getParentRoute: () => CoachRoute,
+} as any)
+const CoachPlayerCardsRoute = CoachPlayerCardsRouteImport.update({
+  id: '/player-cards',
+  path: '/player-cards',
+  getParentRoute: () => CoachRoute,
+} as any)
+const CoachReviewsRoute = CoachReviewsRouteImport.update({
+  id: '/reviews',
+  path: '/reviews',
+  getParentRoute: () => CoachRoute,
+} as any)
+const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
+  id: '/email/unsubscribe',
+  path: '/email/unsubscribe',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JoinTokenRoute = JoinTokenRouteImport.update({
+  id: '/join/$token',
+  path: '/join/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NutritionIndexRoute = NutritionIndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => NutritionRoute,
 } as any)
-const NutritionShoppingRoute = NutritionShoppingRouteImport.update({
-  id: '/shopping',
-  path: '/shopping',
+const NutritionFavoritesRoute = NutritionFavoritesRouteImport.update({
+  id: '/favorites',
+  path: '/favorites',
   getParentRoute: () => NutritionRoute,
 } as any)
 const NutritionRecipeFromIngredientsRoute =
@@ -416,396 +597,82 @@ const NutritionRecipeFromIngredientsRoute =
     path: '/recipe-from-ingredients',
     getParentRoute: () => NutritionRoute,
   } as any)
-const NutritionFavoritesRoute = NutritionFavoritesRouteImport.update({
-  id: '/favorites',
-  path: '/favorites',
+const NutritionShoppingRoute = NutritionShoppingRouteImport.update({
+  id: '/shopping',
+  path: '/shopping',
   getParentRoute: () => NutritionRoute,
 } as any)
-const JoinTokenRoute = JoinTokenRouteImport.update({
-  id: '/join/$token',
-  path: '/join/$token',
+const NutritionTrackingRoute = NutritionTrackingRouteImport.update({
+  id: '/tracking',
+  path: '/tracking',
+  getParentRoute: () => NutritionRoute,
+} as any)
+const OnboardingSmartRoute = OnboardingSmartRouteImport.update({
+  id: '/onboarding/smart',
+  path: '/onboarding/smart',
   getParentRoute: () => rootRouteImport,
 } as any)
-const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
-  id: '/email/unsubscribe',
-  path: '/email/unsubscribe',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CoachReviewsRoute = CoachReviewsRouteImport.update({
-  id: '/reviews',
-  path: '/reviews',
-  getParentRoute: () => CoachRoute,
-} as any)
-const CoachPlayerCardsRoute = CoachPlayerCardsRouteImport.update({
-  id: '/player-cards',
-  path: '/player-cards',
-  getParentRoute: () => CoachRoute,
-} as any)
-const CoachPerformanceTeamsRoute = CoachPerformanceTeamsRouteImport.update({
-  id: '/performance-teams',
-  path: '/performance-teams',
-  getParentRoute: () => CoachRoute,
-} as any)
-const CoachPackageRequestsRoute = CoachPackageRequestsRouteImport.update({
-  id: '/package-requests',
-  path: '/package-requests',
-  getParentRoute: () => CoachRoute,
-} as any)
-const CoachLeadsRoute = CoachLeadsRouteImport.update({
-  id: '/leads',
-  path: '/leads',
-  getParentRoute: () => CoachRoute,
-} as any)
-const CoachImportPlanRoute = CoachImportPlanRouteImport.update({
-  id: '/import-plan',
-  path: '/import-plan',
-  getParentRoute: () => CoachRoute,
-} as any)
-const CoachGiftsRoute = CoachGiftsRouteImport.update({
-  id: '/gifts',
-  path: '/gifts',
-  getParentRoute: () => CoachRoute,
-} as any)
-const CoachFoodsRoute = CoachFoodsRouteImport.update({
-  id: '/foods',
-  path: '/foods',
-  getParentRoute: () => CoachRoute,
-} as any)
-const CoachCustomersRoute = CoachCustomersRouteImport.update({
-  id: '/customers',
-  path: '/customers',
-  getParentRoute: () => CoachRoute,
-} as any)
-const CoachBullsPerformanceRoute = CoachBullsPerformanceRouteImport.update({
-  id: '/bulls-performance',
-  path: '/bulls-performance',
-  getParentRoute: () => CoachRoute,
-} as any)
-const CoachAffiliatesRoute = CoachAffiliatesRouteImport.update({
-  id: '/affiliates',
-  path: '/affiliates',
-  getParentRoute: () => CoachRoute,
-} as any)
-const CoachClientIdRoute = CoachClientIdRouteImport.update({
-  id: '/$clientId',
-  path: '/$clientId',
-  getParentRoute: () => CoachRoute,
-} as any)
-const CoachToolsTimerRoute = CoachToolsTimerRouteImport.update({
-  id: '/timer',
-  path: '/timer',
-  getParentRoute: () => CoachToolsRoute,
-} as any)
-const CoachToolsTemplatesRoute = CoachToolsTemplatesRouteImport.update({
-  id: '/templates',
-  path: '/templates',
-  getParentRoute: () => CoachToolsRoute,
-} as any)
-const CoachToolsSummerRoute = CoachToolsSummerRouteImport.update({
-  id: '/summer',
-  path: '/summer',
-  getParentRoute: () => CoachToolsRoute,
-} as any)
-const CoachToolsParticipantsRoute = CoachToolsParticipantsRouteImport.update({
-  id: '/participants',
-  path: '/participants',
-  getParentRoute: () => CoachToolsRoute,
-} as any)
-const CoachToolsMusicRoute = CoachToolsMusicRouteImport.update({
-  id: '/music',
-  path: '/music',
-  getParentRoute: () => CoachToolsRoute,
-} as any)
-const CoachToolsLiveRoute = CoachToolsLiveRouteImport.update({
-  id: '/live',
-  path: '/live',
-  getParentRoute: () => CoachToolsRoute,
-} as any)
-const CoachToolsExercisesRoute = CoachToolsExercisesRouteImport.update({
-  id: '/exercises',
-  path: '/exercises',
-  getParentRoute: () => CoachToolsRoute,
-} as any)
-const CoachToolsAiRoute = CoachToolsAiRouteImport.update({
-  id: '/ai',
-  path: '/ai',
-  getParentRoute: () => CoachToolsRoute,
-} as any)
-const CheckoutReturnRoute = CheckoutReturnRouteImport.update({
-  id: '/checkout/return',
-  path: '/checkout/return',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BullsWeightRoute = BullsWeightRouteImport.update({
-  id: '/bulls/weight',
-  path: '/bulls/weight',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BullsTrainingRoute = BullsTrainingRouteImport.update({
-  id: '/bulls/training',
-  path: '/bulls/training',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BullsRecoveryRoute = BullsRecoveryRouteImport.update({
-  id: '/bulls/recovery',
-  path: '/bulls/recovery',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BullsRankingRoute = BullsRankingRouteImport.update({
-  id: '/bulls/ranking',
-  path: '/bulls/ranking',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BullsPhotosRoute = BullsPhotosRouteImport.update({
-  id: '/bulls/photos',
-  path: '/bulls/photos',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BullsPerformanceRoute = BullsPerformanceRouteImport.update({
-  id: '/bulls/performance',
-  path: '/bulls/performance',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BullsNutritionRoute = BullsNutritionRouteImport.update({
-  id: '/bulls/nutrition',
-  path: '/bulls/nutrition',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BullsCheckinRoute = BullsCheckinRouteImport.update({
-  id: '/bulls/checkin',
-  path: '/bulls/checkin',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BullsBenchmarksRoute = BullsBenchmarksRouteImport.update({
-  id: '/bulls/benchmarks',
-  path: '/bulls/benchmarks',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminPlayerCardsRoute = AdminPlayerCardsRouteImport.update({
-  id: '/admin/player-cards',
-  path: '/admin/player-cards',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminFoodDatabaseRoute = AdminFoodDatabaseRouteImport.update({
-  id: '/admin/food-database',
-  path: '/admin/food-database',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const Char91DotwellKnownChar93OauthProtectedResourceRoute =
-  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
-    id: '/.well-known/oauth-protected-resource',
-    path: '/.well-known/oauth-protected-resource',
+const OnboardingSmartNutritionRoute =
+  OnboardingSmartNutritionRouteImport.update({
+    id: '/onboarding/smart-nutrition',
+    path: '/onboarding/smart-nutrition',
     getParentRoute: () => rootRouteImport,
   } as any)
-const Char91DotmcpChar93ListToolsRoute =
-  Char91DotmcpChar93ListToolsRouteImport.update({
-    id: '/.mcp/list-tools',
-    path: '/.mcp/list-tools',
-    getParentRoute: () => rootRouteImport,
+const SmartIndexRoute = SmartIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => SmartRoute,
+} as any)
+const SmartSignupRoute = SmartSignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => SmartRoute,
+} as any)
+const SmartTrialRoute = SmartTrialRouteImport.update({
+  id: '/trial',
+  path: '/trial',
+  getParentRoute: () => SmartRoute,
+} as any)
+const TrackerIndexRoute = TrackerIndexRouteImport.update({
+  id: '/tracker/',
+  path: '/tracker/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TrackerAppRoute = TrackerAppRouteImport.update({
+  id: '/tracker/app',
+  path: '/tracker/app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TrackerLoginRoute = TrackerLoginRouteImport.update({
+  id: '/tracker/login',
+  path: '/tracker/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TrackerSignupRoute = TrackerSignupRouteImport.update({
+  id: '/tracker/signup',
+  path: '/tracker/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OrgSlugAthleticSessionIdRoute =
+  OrgSlugAthleticSessionIdRouteImport.update({
+    id: '/athletic/$sessionId',
+    path: '/athletic/$sessionId',
+    getParentRoute: () => OrgSlugRoute,
   } as any)
-const OrgSlugTrainingRoute = OrgSlugTrainingRouteImport.update({
-  id: '/training',
-  path: '/training',
+const OrgSlugInviteTokenRoute = OrgSlugInviteTokenRouteImport.update({
+  id: '/invite/$token',
+  path: '/invite/$token',
   getParentRoute: () => OrgSlugRoute,
-} as any)
-const OrgSlugRankingRoute = OrgSlugRankingRouteImport.update({
-  id: '/ranking',
-  path: '/ranking',
-  getParentRoute: () => OrgSlugRoute,
-} as any)
-const OrgSlugProfilRoute = OrgSlugProfilRouteImport.update({
-  id: '/profil',
-  path: '/profil',
-  getParentRoute: () => OrgSlugRoute,
-} as any)
-const OrgSlugPerformanceRoute = OrgSlugPerformanceRouteImport.update({
-  id: '/performance',
-  path: '/performance',
-  getParentRoute: () => OrgSlugRoute,
-} as any)
-const OrgSlugOnboardingRoute = OrgSlugOnboardingRouteImport.update({
-  id: '/onboarding',
-  path: '/onboarding',
-  getParentRoute: () => OrgSlugRoute,
-} as any)
-const OrgSlugNutritionRoute = OrgSlugNutritionRouteImport.update({
-  id: '/nutrition',
-  path: '/nutrition',
-  getParentRoute: () => OrgSlugRoute,
-} as any)
-const OrgSlugHomeRoute = OrgSlugHomeRouteImport.update({
-  id: '/home',
-  path: '/home',
-  getParentRoute: () => OrgSlugRoute,
-} as any)
-const OrgSlugFuelyRoute = OrgSlugFuelyRouteImport.update({
-  id: '/fuely',
-  path: '/fuely',
-  getParentRoute: () => OrgSlugRoute,
-} as any)
-const OrgSlugCommunityRoute = OrgSlugCommunityRouteImport.update({
-  id: '/community',
-  path: '/community',
-  getParentRoute: () => OrgSlugRoute,
-} as any)
-const OrgSlugCheckinRoute = OrgSlugCheckinRouteImport.update({
-  id: '/checkin',
-  path: '/checkin',
-  getParentRoute: () => OrgSlugRoute,
-} as any)
-const TrackerAppIndexRoute = TrackerAppIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => TrackerAppRoute,
-} as any)
-const CoachTeamsIndexRoute = CoachTeamsIndexRouteImport.update({
-  id: '/teams/',
-  path: '/teams/',
-  getParentRoute: () => CoachRoute,
-} as any)
-const CoachCustomersIndexRoute = CoachCustomersIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => CoachCustomersRoute,
-} as any)
-const BullsPerformanceIndexRoute = BullsPerformanceIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => BullsPerformanceRoute,
-} as any)
-const BullsNutritionIndexRoute = BullsNutritionIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => BullsNutritionRoute,
 } as any)
 const OrgSlugNutritionIndexRoute = OrgSlugNutritionIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => OrgSlugNutritionRoute,
 } as any)
-const TrackerAppWeightRoute = TrackerAppWeightRouteImport.update({
-  id: '/weight',
-  path: '/weight',
-  getParentRoute: () => TrackerAppRoute,
-} as any)
-const TrackerAppWaterRoute = TrackerAppWaterRouteImport.update({
-  id: '/water',
-  path: '/water',
-  getParentRoute: () => TrackerAppRoute,
-} as any)
-const TrackerAppTrainingRoute = TrackerAppTrainingRouteImport.update({
-  id: '/training',
-  path: '/training',
-  getParentRoute: () => TrackerAppRoute,
-} as any)
-const TrackerAppProfileRoute = TrackerAppProfileRouteImport.update({
-  id: '/profile',
-  path: '/profile',
-  getParentRoute: () => TrackerAppRoute,
-} as any)
-const TrackerAppNutritionRoute = TrackerAppNutritionRouteImport.update({
-  id: '/nutrition',
-  path: '/nutrition',
-  getParentRoute: () => TrackerAppRoute,
-} as any)
-const TrackerAppActivityRoute = TrackerAppActivityRouteImport.update({
-  id: '/activity',
-  path: '/activity',
-  getParentRoute: () => TrackerAppRoute,
-} as any)
-const TrackerAppAchievementsRoute = TrackerAppAchievementsRouteImport.update({
-  id: '/achievements',
-  path: '/achievements',
-  getParentRoute: () => TrackerAppRoute,
-} as any)
-const SmartGiftCodeRoute = SmartGiftCodeRouteImport.update({
-  id: '/gift/$code',
-  path: '/gift/$code',
-  getParentRoute: () => SmartRoute,
-} as any)
-const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
-  id: '/lovable/email/suppression',
-  path: '/lovable/email/suppression',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CoachTrainingBuilderUserIdRoute =
-  CoachTrainingBuilderUserIdRouteImport.update({
-    id: '/training-builder/$userId',
-    path: '/training-builder/$userId',
-    getParentRoute: () => CoachRoute,
-  } as any)
-const CoachTeamsOrgIdRoute = CoachTeamsOrgIdRouteImport.update({
-  id: '/teams/$orgId',
-  path: '/teams/$orgId',
-  getParentRoute: () => CoachRoute,
-} as any)
-const CoachPlayerCardsRankingRoute = CoachPlayerCardsRankingRouteImport.update({
-  id: '/ranking',
-  path: '/ranking',
-  getParentRoute: () => CoachPlayerCardsRoute,
-} as any)
-const CoachPlanPreviewPlanIdRoute = CoachPlanPreviewPlanIdRouteImport.update({
-  id: '/plan-preview/$planId',
-  path: '/plan-preview/$planId',
-  getParentRoute: () => CoachRoute,
-} as any)
-const CoachPlanBuilderUserIdRoute = CoachPlanBuilderUserIdRouteImport.update({
-  id: '/plan-builder/$userId',
-  path: '/plan-builder/$userId',
-  getParentRoute: () => CoachRoute,
-} as any)
-const CoachCustomersNewRoute = CoachCustomersNewRouteImport.update({
-  id: '/new',
-  path: '/new',
-  getParentRoute: () => CoachCustomersRoute,
-} as any)
-const CoachCustomersUserIdRoute = CoachCustomersUserIdRouteImport.update({
-  id: '/$userId',
-  path: '/$userId',
-  getParentRoute: () => CoachCustomersRoute,
-} as any)
-const BullsPerformanceModuleIdRoute =
-  BullsPerformanceModuleIdRouteImport.update({
-    id: '/$moduleId',
-    path: '/$moduleId',
-    getParentRoute: () => BullsPerformanceRoute,
-  } as any)
-const BullsNutritionTrackingRoute = BullsNutritionTrackingRouteImport.update({
-  id: '/tracking',
-  path: '/tracking',
-  getParentRoute: () => BullsNutritionRoute,
-} as any)
-const BullsNutritionShoppingRoute = BullsNutritionShoppingRouteImport.update({
-  id: '/shopping',
-  path: '/shopping',
-  getParentRoute: () => BullsNutritionRoute,
-} as any)
-const BullsNutritionFavoritesRoute = BullsNutritionFavoritesRouteImport.update({
-  id: '/favorites',
-  path: '/favorites',
-  getParentRoute: () => BullsNutritionRoute,
-} as any)
-const ApiPublicGuardianConsentRoute =
-  ApiPublicGuardianConsentRouteImport.update({
-    id: '/api/public/guardian-consent',
-    path: '/api/public/guardian-consent',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const Char91DotmcpChar93InvokeToolToolRoute =
-  Char91DotmcpChar93InvokeToolToolRouteImport.update({
-    id: '/.mcp/invoke-tool/$tool',
-    path: '/.mcp/invoke-tool/$tool',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
-  id: '/.lovable/oauth/consent',
-  path: '/.lovable/oauth/consent',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OrgSlugNutritionTrackingRoute =
-  OrgSlugNutritionTrackingRouteImport.update({
-    id: '/tracking',
-    path: '/tracking',
+const OrgSlugNutritionFavoritesRoute =
+  OrgSlugNutritionFavoritesRouteImport.update({
+    id: '/favorites',
+    path: '/favorites',
     getParentRoute: () => OrgSlugNutritionRoute,
   } as any)
 const OrgSlugNutritionShoppingRoute =
@@ -814,132 +681,160 @@ const OrgSlugNutritionShoppingRoute =
     path: '/shopping',
     getParentRoute: () => OrgSlugNutritionRoute,
   } as any)
-const OrgSlugNutritionFavoritesRoute =
-  OrgSlugNutritionFavoritesRouteImport.update({
-    id: '/favorites',
-    path: '/favorites',
+const OrgSlugNutritionTrackingRoute =
+  OrgSlugNutritionTrackingRouteImport.update({
+    id: '/tracking',
+    path: '/tracking',
     getParentRoute: () => OrgSlugNutritionRoute,
   } as any)
-const OrgSlugInviteTokenRoute = OrgSlugInviteTokenRouteImport.update({
-  id: '/invite/$token',
-  path: '/invite/$token',
-  getParentRoute: () => OrgSlugRoute,
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const OrgSlugAthleticSessionIdRoute =
-  OrgSlugAthleticSessionIdRouteImport.update({
-    id: '/athletic/$sessionId',
-    path: '/athletic/$sessionId',
-    getParentRoute: () => OrgSlugRoute,
+const Char91DotmcpChar93InvokeToolToolRoute =
+  Char91DotmcpChar93InvokeToolToolRouteImport.update({
+    id: '/.mcp/invoke-tool/$tool',
+    path: '/.mcp/invoke-tool/$tool',
+    getParentRoute: () => rootRouteImport,
   } as any)
-const CoachTeamsOrgIdIndexRoute = CoachTeamsOrgIdIndexRouteImport.update({
+const ApiPublicGuardianConsentRoute =
+  ApiPublicGuardianConsentRouteImport.update({
+    id: '/api/public/guardian-consent',
+    path: '/api/public/guardian-consent',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const BullsNutritionIndexRoute = BullsNutritionIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => CoachTeamsOrgIdRoute,
+  getParentRoute: () => BullsNutritionRoute,
 } as any)
-const BullsPerformanceModuleIdIndexRoute =
-  BullsPerformanceModuleIdIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => BullsPerformanceModuleIdRoute,
-  } as any)
-const LovableEmailTransactionalSendRoute =
-  LovableEmailTransactionalSendRouteImport.update({
-    id: '/lovable/email/transactional/send',
-    path: '/lovable/email/transactional/send',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const LovableEmailTransactionalPreviewRoute =
-  LovableEmailTransactionalPreviewRouteImport.update({
-    id: '/lovable/email/transactional/preview',
-    path: '/lovable/email/transactional/preview',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const LovableEmailQueueProcessRoute =
-  LovableEmailQueueProcessRouteImport.update({
-    id: '/lovable/email/queue/process',
-    path: '/lovable/email/queue/process',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const LovableEmailAuthWebhookRoute = LovableEmailAuthWebhookRouteImport.update({
-  id: '/lovable/email/auth/webhook',
-  path: '/lovable/email/auth/webhook',
-  getParentRoute: () => rootRouteImport,
+const BullsNutritionFavoritesRoute = BullsNutritionFavoritesRouteImport.update({
+  id: '/favorites',
+  path: '/favorites',
+  getParentRoute: () => BullsNutritionRoute,
 } as any)
-const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
-  id: '/lovable/email/auth/preview',
-  path: '/lovable/email/auth/preview',
-  getParentRoute: () => rootRouteImport,
+const BullsNutritionShoppingRoute = BullsNutritionShoppingRouteImport.update({
+  id: '/shopping',
+  path: '/shopping',
+  getParentRoute: () => BullsNutritionRoute,
 } as any)
-const CoachTeamsOrgIdPerformanceRoute =
-  CoachTeamsOrgIdPerformanceRouteImport.update({
-    id: '/performance',
-    path: '/performance',
-    getParentRoute: () => CoachTeamsOrgIdRoute,
+const BullsNutritionTrackingRoute = BullsNutritionTrackingRouteImport.update({
+  id: '/tracking',
+  path: '/tracking',
+  getParentRoute: () => BullsNutritionRoute,
+} as any)
+const BullsPerformanceIndexRoute = BullsPerformanceIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => BullsPerformanceRoute,
+} as any)
+const BullsPerformanceModuleIdRoute =
+  BullsPerformanceModuleIdRouteImport.update({
+    id: '/$moduleId',
+    path: '/$moduleId',
+    getParentRoute: () => BullsPerformanceRoute,
   } as any)
-const CoachPlayerCardsLayoutOrgSlugRoute =
-  CoachPlayerCardsLayoutOrgSlugRouteImport.update({
-    id: '/player-cards_/layout/$orgSlug',
-    path: '/player-cards/layout/$orgSlug',
+const CoachCustomersIndexRoute = CoachCustomersIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => CoachCustomersRoute,
+} as any)
+const CoachCustomersUserIdRoute = CoachCustomersUserIdRouteImport.update({
+  id: '/$userId',
+  path: '/$userId',
+  getParentRoute: () => CoachCustomersRoute,
+} as any)
+const CoachCustomersNewRoute = CoachCustomersNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => CoachCustomersRoute,
+} as any)
+const CoachPlanBuilderUserIdRoute = CoachPlanBuilderUserIdRouteImport.update({
+  id: '/plan-builder/$userId',
+  path: '/plan-builder/$userId',
+  getParentRoute: () => CoachRoute,
+} as any)
+const CoachPlanPreviewPlanIdRoute = CoachPlanPreviewPlanIdRouteImport.update({
+  id: '/plan-preview/$planId',
+  path: '/plan-preview/$planId',
+  getParentRoute: () => CoachRoute,
+} as any)
+const CoachPlayerCardsRankingRoute = CoachPlayerCardsRankingRouteImport.update({
+  id: '/ranking',
+  path: '/ranking',
+  getParentRoute: () => CoachPlayerCardsRoute,
+} as any)
+const CoachTeamsIndexRoute = CoachTeamsIndexRouteImport.update({
+  id: '/teams/',
+  path: '/teams/',
+  getParentRoute: () => CoachRoute,
+} as any)
+const CoachTeamsOrgIdRoute = CoachTeamsOrgIdRouteImport.update({
+  id: '/teams/$orgId',
+  path: '/teams/$orgId',
+  getParentRoute: () => CoachRoute,
+} as any)
+const CoachTrainingBuilderUserIdRoute =
+  CoachTrainingBuilderUserIdRouteImport.update({
+    id: '/training-builder/$userId',
+    path: '/training-builder/$userId',
     getParentRoute: () => CoachRoute,
   } as any)
-const BullsPerformanceModuleIdTestIdRoute =
-  BullsPerformanceModuleIdTestIdRouteImport.update({
-    id: '/$testId',
-    path: '/$testId',
-    getParentRoute: () => BullsPerformanceModuleIdRoute,
-  } as any)
-const ApiPublicPaymentsWebhookRoute =
-  ApiPublicPaymentsWebhookRouteImport.update({
-    id: '/api/public/payments/webhook',
-    path: '/api/public/payments/webhook',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicHooksTrialRemindersRoute =
-  ApiPublicHooksTrialRemindersRouteImport.update({
-    id: '/api/public/hooks/trial-reminders',
-    path: '/api/public/hooks/trial-reminders',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicHooksSendFeatureNewsRoute =
-  ApiPublicHooksSendFeatureNewsRouteImport.update({
-    id: '/api/public/hooks/send-feature-news',
-    path: '/api/public/hooks/send-feature-news',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicHooksRegenTrainingPlansRoute =
-  ApiPublicHooksRegenTrainingPlansRouteImport.update({
-    id: '/api/public/hooks/regen-training-plans',
-    path: '/api/public/hooks/regen-training-plans',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicHooksRegenNutritionPlansRoute =
-  ApiPublicHooksRegenNutritionPlansRouteImport.update({
-    id: '/api/public/hooks/regen-nutrition-plans',
-    path: '/api/public/hooks/regen-nutrition-plans',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicHooksRecalcNutritionLoadRoute =
-  ApiPublicHooksRecalcNutritionLoadRouteImport.update({
-    id: '/api/public/hooks/recalc-nutrition-load',
-    path: '/api/public/hooks/recalc-nutrition-load',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicHooksProcessPerformancePlanJobsRoute =
-  ApiPublicHooksProcessPerformancePlanJobsRouteImport.update({
-    id: '/api/public/hooks/process-performance-plan-jobs',
-    path: '/api/public/hooks/process-performance-plan-jobs',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicHooksProcessAutopilotJobsRoute =
-  ApiPublicHooksProcessAutopilotJobsRouteImport.update({
-    id: '/api/public/hooks/process-autopilot-jobs',
-    path: '/api/public/hooks/process-autopilot-jobs',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicHooksPlanRotationRoute =
-  ApiPublicHooksPlanRotationRouteImport.update({
-    id: '/api/public/hooks/plan-rotation',
-    path: '/api/public/hooks/plan-rotation',
+const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
+  id: '/lovable/email/suppression',
+  path: '/lovable/email/suppression',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SmartGiftCodeRoute = SmartGiftCodeRouteImport.update({
+  id: '/gift/$code',
+  path: '/gift/$code',
+  getParentRoute: () => SmartRoute,
+} as any)
+const TrackerAppIndexRoute = TrackerAppIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => TrackerAppRoute,
+} as any)
+const TrackerAppAchievementsRoute = TrackerAppAchievementsRouteImport.update({
+  id: '/achievements',
+  path: '/achievements',
+  getParentRoute: () => TrackerAppRoute,
+} as any)
+const TrackerAppActivityRoute = TrackerAppActivityRouteImport.update({
+  id: '/activity',
+  path: '/activity',
+  getParentRoute: () => TrackerAppRoute,
+} as any)
+const TrackerAppNutritionRoute = TrackerAppNutritionRouteImport.update({
+  id: '/nutrition',
+  path: '/nutrition',
+  getParentRoute: () => TrackerAppRoute,
+} as any)
+const TrackerAppProfileRoute = TrackerAppProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => TrackerAppRoute,
+} as any)
+const TrackerAppTrainingRoute = TrackerAppTrainingRouteImport.update({
+  id: '/training',
+  path: '/training',
+  getParentRoute: () => TrackerAppRoute,
+} as any)
+const TrackerAppWaterRoute = TrackerAppWaterRouteImport.update({
+  id: '/water',
+  path: '/water',
+  getParentRoute: () => TrackerAppRoute,
+} as any)
+const TrackerAppWeightRoute = TrackerAppWeightRouteImport.update({
+  id: '/weight',
+  path: '/weight',
+  getParentRoute: () => TrackerAppRoute,
+} as any)
+const ApiPublicHooksCoachDailySummaryRoute =
+  ApiPublicHooksCoachDailySummaryRouteImport.update({
+    id: '/api/public/hooks/coach-daily-summary',
+    path: '/api/public/hooks/coach-daily-summary',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicHooksOrgTaskEngineRoute =
@@ -948,10 +843,115 @@ const ApiPublicHooksOrgTaskEngineRoute =
     path: '/api/public/hooks/org-task-engine',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicHooksCoachDailySummaryRoute =
-  ApiPublicHooksCoachDailySummaryRouteImport.update({
-    id: '/api/public/hooks/coach-daily-summary',
-    path: '/api/public/hooks/coach-daily-summary',
+const ApiPublicHooksPlanRotationRoute =
+  ApiPublicHooksPlanRotationRouteImport.update({
+    id: '/api/public/hooks/plan-rotation',
+    path: '/api/public/hooks/plan-rotation',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksProcessAutopilotJobsRoute =
+  ApiPublicHooksProcessAutopilotJobsRouteImport.update({
+    id: '/api/public/hooks/process-autopilot-jobs',
+    path: '/api/public/hooks/process-autopilot-jobs',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksProcessPerformancePlanJobsRoute =
+  ApiPublicHooksProcessPerformancePlanJobsRouteImport.update({
+    id: '/api/public/hooks/process-performance-plan-jobs',
+    path: '/api/public/hooks/process-performance-plan-jobs',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksRecalcNutritionLoadRoute =
+  ApiPublicHooksRecalcNutritionLoadRouteImport.update({
+    id: '/api/public/hooks/recalc-nutrition-load',
+    path: '/api/public/hooks/recalc-nutrition-load',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksRegenNutritionPlansRoute =
+  ApiPublicHooksRegenNutritionPlansRouteImport.update({
+    id: '/api/public/hooks/regen-nutrition-plans',
+    path: '/api/public/hooks/regen-nutrition-plans',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksRegenTrainingPlansRoute =
+  ApiPublicHooksRegenTrainingPlansRouteImport.update({
+    id: '/api/public/hooks/regen-training-plans',
+    path: '/api/public/hooks/regen-training-plans',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksSendFeatureNewsRoute =
+  ApiPublicHooksSendFeatureNewsRouteImport.update({
+    id: '/api/public/hooks/send-feature-news',
+    path: '/api/public/hooks/send-feature-news',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicHooksTrialRemindersRoute =
+  ApiPublicHooksTrialRemindersRouteImport.update({
+    id: '/api/public/hooks/trial-reminders',
+    path: '/api/public/hooks/trial-reminders',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicPaymentsWebhookRoute =
+  ApiPublicPaymentsWebhookRouteImport.update({
+    id: '/api/public/payments/webhook',
+    path: '/api/public/payments/webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const BullsPerformanceModuleIdIndexRoute =
+  BullsPerformanceModuleIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => BullsPerformanceModuleIdRoute,
+  } as any)
+const BullsPerformanceModuleIdTestIdRoute =
+  BullsPerformanceModuleIdTestIdRouteImport.update({
+    id: '/$testId',
+    path: '/$testId',
+    getParentRoute: () => BullsPerformanceModuleIdRoute,
+  } as any)
+const CoachPlayerCardsLayoutOrgSlugRoute =
+  CoachPlayerCardsLayoutOrgSlugRouteImport.update({
+    id: '/player-cards_/layout/$orgSlug',
+    path: '/player-cards/layout/$orgSlug',
+    getParentRoute: () => CoachRoute,
+  } as any)
+const CoachTeamsOrgIdIndexRoute = CoachTeamsOrgIdIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => CoachTeamsOrgIdRoute,
+} as any)
+const CoachTeamsOrgIdPerformanceRoute =
+  CoachTeamsOrgIdPerformanceRouteImport.update({
+    id: '/performance',
+    path: '/performance',
+    getParentRoute: () => CoachTeamsOrgIdRoute,
+  } as any)
+const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
+  id: '/lovable/email/auth/preview',
+  path: '/lovable/email/auth/preview',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LovableEmailAuthWebhookRoute = LovableEmailAuthWebhookRouteImport.update({
+  id: '/lovable/email/auth/webhook',
+  path: '/lovable/email/auth/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LovableEmailQueueProcessRoute =
+  LovableEmailQueueProcessRouteImport.update({
+    id: '/lovable/email/queue/process',
+    path: '/lovable/email/queue/process',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const LovableEmailTransactionalPreviewRoute =
+  LovableEmailTransactionalPreviewRouteImport.update({
+    id: '/lovable/email/transactional/preview',
+    path: '/lovable/email/transactional/preview',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const LovableEmailTransactionalSendRoute =
+  LovableEmailTransactionalSendRouteImport.update({
+    id: '/lovable/email/transactional/send',
+    path: '/lovable/email/transactional/send',
     getParentRoute: () => rootRouteImport,
   } as any)
 const CoachTeamsOrgIdAthletesUserIdRoute =
@@ -1964,221 +1964,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/welcome': {
-      id: '/welcome'
-      path: '/welcome'
-      fullPath: '/welcome'
-      preLoaderRoute: typeof WelcomeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/unsubscribe': {
-      id: '/unsubscribe'
-      path: '/unsubscribe'
-      fullPath: '/unsubscribe'
-      preLoaderRoute: typeof UnsubscribeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/trust': {
-      id: '/trust'
-      path: '/trust'
-      fullPath: '/trust'
-      preLoaderRoute: typeof TrustRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/trial': {
-      id: '/trial'
-      path: '/trial'
-      fullPath: '/trial'
-      preLoaderRoute: typeof TrialRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/training-import': {
-      id: '/training-import'
-      path: '/training-import'
-      fullPath: '/training-import'
-      preLoaderRoute: typeof TrainingImportRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/training': {
-      id: '/training'
-      path: '/training'
-      fullPath: '/training'
-      preLoaderRoute: typeof TrainingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/strength-check': {
-      id: '/strength-check'
-      path: '/strength-check'
-      fullPath: '/strength-check'
-      preLoaderRoute: typeof StrengthCheckRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/smart': {
-      id: '/smart'
-      path: '/smart'
-      fullPath: '/smart'
-      preLoaderRoute: typeof SmartRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reset-password': {
-      id: '/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof ResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/ranking': {
-      id: '/ranking'
-      path: '/ranking'
-      fullPath: '/ranking'
-      preLoaderRoute: typeof RankingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/progress': {
-      id: '/progress'
-      path: '/progress'
-      fullPath: '/progress'
-      preLoaderRoute: typeof ProgressRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/profile': {
-      id: '/profile'
-      path: '/profile'
-      fullPath: '/profile'
-      preLoaderRoute: typeof ProfileRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/nutrition': {
-      id: '/nutrition'
-      path: '/nutrition'
-      fullPath: '/nutrition'
-      preLoaderRoute: typeof NutritionRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/messages': {
-      id: '/messages'
-      path: '/messages'
-      fullPath: '/messages'
-      preLoaderRoute: typeof MessagesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/mein-bodyfuel': {
-      id: '/mein-bodyfuel'
-      path: '/mein-bodyfuel'
-      fullPath: '/mein-bodyfuel'
-      preLoaderRoute: typeof MeinBodyfuelRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/measurements': {
-      id: '/measurements'
-      path: '/measurements'
-      fullPath: '/measurements'
-      preLoaderRoute: typeof MeasurementsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/mcp': {
-      id: '/mcp'
-      path: '/mcp'
-      fullPath: '/mcp'
-      preLoaderRoute: typeof McpRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/impressum': {
-      id: '/impressum'
-      path: '/impressum'
-      fullPath: '/impressum'
-      preLoaderRoute: typeof ImpressumRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/guardian-consent': {
-      id: '/guardian-consent'
-      path: '/guardian-consent'
-      fullPath: '/guardian-consent'
-      preLoaderRoute: typeof GuardianConsentRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/fuely': {
-      id: '/fuely'
-      path: '/fuely'
-      fullPath: '/fuely'
-      preLoaderRoute: typeof FuelyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/datenschutz': {
-      id: '/datenschutz'
-      path: '/datenschutz'
-      fullPath: '/datenschutz'
-      preLoaderRoute: typeof DatenschutzRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dashboard': {
-      id: '/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof DashboardRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/daily-checklist': {
-      id: '/daily-checklist'
-      path: '/daily-checklist'
-      fullPath: '/daily-checklist'
-      preLoaderRoute: typeof DailyChecklistRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/community': {
-      id: '/community'
-      path: '/community'
-      fullPath: '/community'
-      preLoaderRoute: typeof CommunityRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/coach-tools': {
-      id: '/coach-tools'
-      path: '/coach-tools'
-      fullPath: '/coach-tools'
-      preLoaderRoute: typeof CoachToolsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/coach': {
-      id: '/coach'
-      path: '/coach'
-      fullPath: '/coach'
-      preLoaderRoute: typeof CoachRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/check-in': {
-      id: '/check-in'
-      path: '/check-in'
-      fullPath: '/check-in'
-      preLoaderRoute: typeof CheckInRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/app': {
-      id: '/app'
-      path: '/app'
-      fullPath: '/app'
-      preLoaderRoute: typeof AppRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/achievements': {
-      id: '/achievements'
-      path: '/achievements'
-      fullPath: '/achievements'
-      preLoaderRoute: typeof AchievementsRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/$orgSlug': {
@@ -2188,53 +1978,221 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrgSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/achievements': {
+      id: '/achievements'
+      path: '/achievements'
+      fullPath: '/achievements'
+      preLoaderRoute: typeof AchievementsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/tracker/': {
-      id: '/tracker/'
-      path: '/tracker'
-      fullPath: '/tracker/'
-      preLoaderRoute: typeof TrackerIndexRouteImport
+    '/app': {
+      id: '/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/smart/': {
-      id: '/smart/'
-      path: '/'
-      fullPath: '/smart/'
-      preLoaderRoute: typeof SmartIndexRouteImport
-      parentRoute: typeof SmartRoute
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/nutrition/': {
-      id: '/nutrition/'
-      path: '/'
-      fullPath: '/nutrition/'
-      preLoaderRoute: typeof NutritionIndexRouteImport
-      parentRoute: typeof NutritionRoute
+    '/check-in': {
+      id: '/check-in'
+      path: '/check-in'
+      fullPath: '/check-in'
+      preLoaderRoute: typeof CheckInRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/coach/': {
-      id: '/coach/'
-      path: '/'
-      fullPath: '/coach/'
-      preLoaderRoute: typeof CoachIndexRouteImport
-      parentRoute: typeof CoachRoute
+    '/coach': {
+      id: '/coach'
+      path: '/coach'
+      fullPath: '/coach'
+      preLoaderRoute: typeof CoachRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/coach-tools/': {
-      id: '/coach-tools/'
-      path: '/'
-      fullPath: '/coach-tools/'
-      preLoaderRoute: typeof CoachToolsIndexRouteImport
-      parentRoute: typeof CoachToolsRoute
+    '/coach-tools': {
+      id: '/coach-tools'
+      path: '/coach-tools'
+      fullPath: '/coach-tools'
+      preLoaderRoute: typeof CoachToolsRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/bulls/': {
-      id: '/bulls/'
-      path: '/bulls'
-      fullPath: '/bulls/'
-      preLoaderRoute: typeof BullsIndexRouteImport
+    '/community': {
+      id: '/community'
+      path: '/community'
+      fullPath: '/community'
+      preLoaderRoute: typeof CommunityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/daily-checklist': {
+      id: '/daily-checklist'
+      path: '/daily-checklist'
+      fullPath: '/daily-checklist'
+      preLoaderRoute: typeof DailyChecklistRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/datenschutz': {
+      id: '/datenschutz'
+      path: '/datenschutz'
+      fullPath: '/datenschutz'
+      preLoaderRoute: typeof DatenschutzRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/fuely': {
+      id: '/fuely'
+      path: '/fuely'
+      fullPath: '/fuely'
+      preLoaderRoute: typeof FuelyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/guardian-consent': {
+      id: '/guardian-consent'
+      path: '/guardian-consent'
+      fullPath: '/guardian-consent'
+      preLoaderRoute: typeof GuardianConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/impressum': {
+      id: '/impressum'
+      path: '/impressum'
+      fullPath: '/impressum'
+      preLoaderRoute: typeof ImpressumRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/measurements': {
+      id: '/measurements'
+      path: '/measurements'
+      fullPath: '/measurements'
+      preLoaderRoute: typeof MeasurementsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mein-bodyfuel': {
+      id: '/mein-bodyfuel'
+      path: '/mein-bodyfuel'
+      fullPath: '/mein-bodyfuel'
+      preLoaderRoute: typeof MeinBodyfuelRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/messages': {
+      id: '/messages'
+      path: '/messages'
+      fullPath: '/messages'
+      preLoaderRoute: typeof MessagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/nutrition': {
+      id: '/nutrition'
+      path: '/nutrition'
+      fullPath: '/nutrition'
+      preLoaderRoute: typeof NutritionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/progress': {
+      id: '/progress'
+      path: '/progress'
+      fullPath: '/progress'
+      preLoaderRoute: typeof ProgressRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ranking': {
+      id: '/ranking'
+      path: '/ranking'
+      fullPath: '/ranking'
+      preLoaderRoute: typeof RankingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/smart': {
+      id: '/smart'
+      path: '/smart'
+      fullPath: '/smart'
+      preLoaderRoute: typeof SmartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/strength-check': {
+      id: '/strength-check'
+      path: '/strength-check'
+      fullPath: '/strength-check'
+      preLoaderRoute: typeof StrengthCheckRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/training': {
+      id: '/training'
+      path: '/training'
+      fullPath: '/training'
+      preLoaderRoute: typeof TrainingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/training-import': {
+      id: '/training-import'
+      path: '/training-import'
+      fullPath: '/training-import'
+      preLoaderRoute: typeof TrainingImportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/trial': {
+      id: '/trial'
+      path: '/trial'
+      fullPath: '/trial'
+      preLoaderRoute: typeof TrialRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/trust': {
+      id: '/trust'
+      path: '/trust'
+      fullPath: '/trust'
+      preLoaderRoute: typeof TrustRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/unsubscribe': {
+      id: '/unsubscribe'
+      path: '/unsubscribe'
+      fullPath: '/unsubscribe'
+      preLoaderRoute: typeof UnsubscribeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/welcome': {
+      id: '/welcome'
+      path: '/welcome'
+      fullPath: '/welcome'
+      preLoaderRoute: typeof WelcomeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/$orgSlug/': {
@@ -2244,389 +2202,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrgSlugIndexRouteImport
       parentRoute: typeof OrgSlugRoute
     }
-    '/tracker/signup': {
-      id: '/tracker/signup'
-      path: '/tracker/signup'
-      fullPath: '/tracker/signup'
-      preLoaderRoute: typeof TrackerSignupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/tracker/login': {
-      id: '/tracker/login'
-      path: '/tracker/login'
-      fullPath: '/tracker/login'
-      preLoaderRoute: typeof TrackerLoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/tracker/app': {
-      id: '/tracker/app'
-      path: '/tracker/app'
-      fullPath: '/tracker/app'
-      preLoaderRoute: typeof TrackerAppRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/smart/trial': {
-      id: '/smart/trial'
-      path: '/trial'
-      fullPath: '/smart/trial'
-      preLoaderRoute: typeof SmartTrialRouteImport
-      parentRoute: typeof SmartRoute
-    }
-    '/smart/signup': {
-      id: '/smart/signup'
-      path: '/signup'
-      fullPath: '/smart/signup'
-      preLoaderRoute: typeof SmartSignupRouteImport
-      parentRoute: typeof SmartRoute
-    }
-    '/onboarding/smart-nutrition': {
-      id: '/onboarding/smart-nutrition'
-      path: '/onboarding/smart-nutrition'
-      fullPath: '/onboarding/smart-nutrition'
-      preLoaderRoute: typeof OnboardingSmartNutritionRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/onboarding/smart': {
-      id: '/onboarding/smart'
-      path: '/onboarding/smart'
-      fullPath: '/onboarding/smart'
-      preLoaderRoute: typeof OnboardingSmartRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/nutrition/tracking': {
-      id: '/nutrition/tracking'
-      path: '/tracking'
-      fullPath: '/nutrition/tracking'
-      preLoaderRoute: typeof NutritionTrackingRouteImport
-      parentRoute: typeof NutritionRoute
-    }
-    '/nutrition/shopping': {
-      id: '/nutrition/shopping'
-      path: '/shopping'
-      fullPath: '/nutrition/shopping'
-      preLoaderRoute: typeof NutritionShoppingRouteImport
-      parentRoute: typeof NutritionRoute
-    }
-    '/nutrition/recipe-from-ingredients': {
-      id: '/nutrition/recipe-from-ingredients'
-      path: '/recipe-from-ingredients'
-      fullPath: '/nutrition/recipe-from-ingredients'
-      preLoaderRoute: typeof NutritionRecipeFromIngredientsRouteImport
-      parentRoute: typeof NutritionRoute
-    }
-    '/nutrition/favorites': {
-      id: '/nutrition/favorites'
-      path: '/favorites'
-      fullPath: '/nutrition/favorites'
-      preLoaderRoute: typeof NutritionFavoritesRouteImport
-      parentRoute: typeof NutritionRoute
-    }
-    '/join/$token': {
-      id: '/join/$token'
-      path: '/join/$token'
-      fullPath: '/join/$token'
-      preLoaderRoute: typeof JoinTokenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/email/unsubscribe': {
-      id: '/email/unsubscribe'
-      path: '/email/unsubscribe'
-      fullPath: '/email/unsubscribe'
-      preLoaderRoute: typeof EmailUnsubscribeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/coach/reviews': {
-      id: '/coach/reviews'
-      path: '/reviews'
-      fullPath: '/coach/reviews'
-      preLoaderRoute: typeof CoachReviewsRouteImport
-      parentRoute: typeof CoachRoute
-    }
-    '/coach/player-cards': {
-      id: '/coach/player-cards'
-      path: '/player-cards'
-      fullPath: '/coach/player-cards'
-      preLoaderRoute: typeof CoachPlayerCardsRouteImport
-      parentRoute: typeof CoachRoute
-    }
-    '/coach/performance-teams': {
-      id: '/coach/performance-teams'
-      path: '/performance-teams'
-      fullPath: '/coach/performance-teams'
-      preLoaderRoute: typeof CoachPerformanceTeamsRouteImport
-      parentRoute: typeof CoachRoute
-    }
-    '/coach/package-requests': {
-      id: '/coach/package-requests'
-      path: '/package-requests'
-      fullPath: '/coach/package-requests'
-      preLoaderRoute: typeof CoachPackageRequestsRouteImport
-      parentRoute: typeof CoachRoute
-    }
-    '/coach/leads': {
-      id: '/coach/leads'
-      path: '/leads'
-      fullPath: '/coach/leads'
-      preLoaderRoute: typeof CoachLeadsRouteImport
-      parentRoute: typeof CoachRoute
-    }
-    '/coach/import-plan': {
-      id: '/coach/import-plan'
-      path: '/import-plan'
-      fullPath: '/coach/import-plan'
-      preLoaderRoute: typeof CoachImportPlanRouteImport
-      parentRoute: typeof CoachRoute
-    }
-    '/coach/gifts': {
-      id: '/coach/gifts'
-      path: '/gifts'
-      fullPath: '/coach/gifts'
-      preLoaderRoute: typeof CoachGiftsRouteImport
-      parentRoute: typeof CoachRoute
-    }
-    '/coach/foods': {
-      id: '/coach/foods'
-      path: '/foods'
-      fullPath: '/coach/foods'
-      preLoaderRoute: typeof CoachFoodsRouteImport
-      parentRoute: typeof CoachRoute
-    }
-    '/coach/customers': {
-      id: '/coach/customers'
-      path: '/customers'
-      fullPath: '/coach/customers'
-      preLoaderRoute: typeof CoachCustomersRouteImport
-      parentRoute: typeof CoachRoute
-    }
-    '/coach/bulls-performance': {
-      id: '/coach/bulls-performance'
-      path: '/bulls-performance'
-      fullPath: '/coach/bulls-performance'
-      preLoaderRoute: typeof CoachBullsPerformanceRouteImport
-      parentRoute: typeof CoachRoute
-    }
-    '/coach/affiliates': {
-      id: '/coach/affiliates'
-      path: '/affiliates'
-      fullPath: '/coach/affiliates'
-      preLoaderRoute: typeof CoachAffiliatesRouteImport
-      parentRoute: typeof CoachRoute
-    }
-    '/coach/$clientId': {
-      id: '/coach/$clientId'
-      path: '/$clientId'
-      fullPath: '/coach/$clientId'
-      preLoaderRoute: typeof CoachClientIdRouteImport
-      parentRoute: typeof CoachRoute
-    }
-    '/coach-tools/timer': {
-      id: '/coach-tools/timer'
-      path: '/timer'
-      fullPath: '/coach-tools/timer'
-      preLoaderRoute: typeof CoachToolsTimerRouteImport
-      parentRoute: typeof CoachToolsRoute
-    }
-    '/coach-tools/templates': {
-      id: '/coach-tools/templates'
-      path: '/templates'
-      fullPath: '/coach-tools/templates'
-      preLoaderRoute: typeof CoachToolsTemplatesRouteImport
-      parentRoute: typeof CoachToolsRoute
-    }
-    '/coach-tools/summer': {
-      id: '/coach-tools/summer'
-      path: '/summer'
-      fullPath: '/coach-tools/summer'
-      preLoaderRoute: typeof CoachToolsSummerRouteImport
-      parentRoute: typeof CoachToolsRoute
-    }
-    '/coach-tools/participants': {
-      id: '/coach-tools/participants'
-      path: '/participants'
-      fullPath: '/coach-tools/participants'
-      preLoaderRoute: typeof CoachToolsParticipantsRouteImport
-      parentRoute: typeof CoachToolsRoute
-    }
-    '/coach-tools/music': {
-      id: '/coach-tools/music'
-      path: '/music'
-      fullPath: '/coach-tools/music'
-      preLoaderRoute: typeof CoachToolsMusicRouteImport
-      parentRoute: typeof CoachToolsRoute
-    }
-    '/coach-tools/live': {
-      id: '/coach-tools/live'
-      path: '/live'
-      fullPath: '/coach-tools/live'
-      preLoaderRoute: typeof CoachToolsLiveRouteImport
-      parentRoute: typeof CoachToolsRoute
-    }
-    '/coach-tools/exercises': {
-      id: '/coach-tools/exercises'
-      path: '/exercises'
-      fullPath: '/coach-tools/exercises'
-      preLoaderRoute: typeof CoachToolsExercisesRouteImport
-      parentRoute: typeof CoachToolsRoute
-    }
-    '/coach-tools/ai': {
-      id: '/coach-tools/ai'
-      path: '/ai'
-      fullPath: '/coach-tools/ai'
-      preLoaderRoute: typeof CoachToolsAiRouteImport
-      parentRoute: typeof CoachToolsRoute
-    }
-    '/checkout/return': {
-      id: '/checkout/return'
-      path: '/checkout/return'
-      fullPath: '/checkout/return'
-      preLoaderRoute: typeof CheckoutReturnRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/bulls/weight': {
-      id: '/bulls/weight'
-      path: '/bulls/weight'
-      fullPath: '/bulls/weight'
-      preLoaderRoute: typeof BullsWeightRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/bulls/training': {
-      id: '/bulls/training'
-      path: '/bulls/training'
-      fullPath: '/bulls/training'
-      preLoaderRoute: typeof BullsTrainingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/bulls/recovery': {
-      id: '/bulls/recovery'
-      path: '/bulls/recovery'
-      fullPath: '/bulls/recovery'
-      preLoaderRoute: typeof BullsRecoveryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/bulls/ranking': {
-      id: '/bulls/ranking'
-      path: '/bulls/ranking'
-      fullPath: '/bulls/ranking'
-      preLoaderRoute: typeof BullsRankingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/bulls/photos': {
-      id: '/bulls/photos'
-      path: '/bulls/photos'
-      fullPath: '/bulls/photos'
-      preLoaderRoute: typeof BullsPhotosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/bulls/performance': {
-      id: '/bulls/performance'
-      path: '/bulls/performance'
-      fullPath: '/bulls/performance'
-      preLoaderRoute: typeof BullsPerformanceRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/bulls/nutrition': {
-      id: '/bulls/nutrition'
-      path: '/bulls/nutrition'
-      fullPath: '/bulls/nutrition'
-      preLoaderRoute: typeof BullsNutritionRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/bulls/checkin': {
-      id: '/bulls/checkin'
-      path: '/bulls/checkin'
-      fullPath: '/bulls/checkin'
-      preLoaderRoute: typeof BullsCheckinRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/bulls/benchmarks': {
-      id: '/bulls/benchmarks'
-      path: '/bulls/benchmarks'
-      fullPath: '/bulls/benchmarks'
-      preLoaderRoute: typeof BullsBenchmarksRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/player-cards': {
-      id: '/admin/player-cards'
-      path: '/admin/player-cards'
-      fullPath: '/admin/player-cards'
-      preLoaderRoute: typeof AdminPlayerCardsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/food-database': {
-      id: '/admin/food-database'
-      path: '/admin/food-database'
-      fullPath: '/admin/food-database'
-      preLoaderRoute: typeof AdminFoodDatabaseRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/.well-known/oauth-protected-resource': {
-      id: '/.well-known/oauth-protected-resource'
-      path: '/.well-known/oauth-protected-resource'
-      fullPath: '/.well-known/oauth-protected-resource'
-      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/.mcp/list-tools': {
-      id: '/.mcp/list-tools'
-      path: '/.mcp/list-tools'
-      fullPath: '/.mcp/list-tools'
-      preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/$orgSlug/training': {
-      id: '/$orgSlug/training'
-      path: '/training'
-      fullPath: '/$orgSlug/training'
-      preLoaderRoute: typeof OrgSlugTrainingRouteImport
-      parentRoute: typeof OrgSlugRoute
-    }
-    '/$orgSlug/ranking': {
-      id: '/$orgSlug/ranking'
-      path: '/ranking'
-      fullPath: '/$orgSlug/ranking'
-      preLoaderRoute: typeof OrgSlugRankingRouteImport
-      parentRoute: typeof OrgSlugRoute
-    }
-    '/$orgSlug/profil': {
-      id: '/$orgSlug/profil'
-      path: '/profil'
-      fullPath: '/$orgSlug/profil'
-      preLoaderRoute: typeof OrgSlugProfilRouteImport
-      parentRoute: typeof OrgSlugRoute
-    }
-    '/$orgSlug/performance': {
-      id: '/$orgSlug/performance'
-      path: '/performance'
-      fullPath: '/$orgSlug/performance'
-      preLoaderRoute: typeof OrgSlugPerformanceRouteImport
-      parentRoute: typeof OrgSlugRoute
-    }
-    '/$orgSlug/onboarding': {
-      id: '/$orgSlug/onboarding'
-      path: '/onboarding'
-      fullPath: '/$orgSlug/onboarding'
-      preLoaderRoute: typeof OrgSlugOnboardingRouteImport
-      parentRoute: typeof OrgSlugRoute
-    }
-    '/$orgSlug/nutrition': {
-      id: '/$orgSlug/nutrition'
-      path: '/nutrition'
-      fullPath: '/$orgSlug/nutrition'
-      preLoaderRoute: typeof OrgSlugNutritionRouteImport
-      parentRoute: typeof OrgSlugRoute
-    }
-    '/$orgSlug/home': {
-      id: '/$orgSlug/home'
-      path: '/home'
-      fullPath: '/$orgSlug/home'
-      preLoaderRoute: typeof OrgSlugHomeRouteImport
-      parentRoute: typeof OrgSlugRoute
-    }
-    '/$orgSlug/fuely': {
-      id: '/$orgSlug/fuely'
-      path: '/fuely'
-      fullPath: '/$orgSlug/fuely'
-      preLoaderRoute: typeof OrgSlugFuelyRouteImport
+    '/$orgSlug/checkin': {
+      id: '/$orgSlug/checkin'
+      path: '/checkin'
+      fullPath: '/$orgSlug/checkin'
+      preLoaderRoute: typeof OrgSlugCheckinRouteImport
       parentRoute: typeof OrgSlugRoute
     }
     '/$orgSlug/community': {
@@ -2636,228 +2216,452 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrgSlugCommunityRouteImport
       parentRoute: typeof OrgSlugRoute
     }
-    '/$orgSlug/checkin': {
-      id: '/$orgSlug/checkin'
-      path: '/checkin'
-      fullPath: '/$orgSlug/checkin'
-      preLoaderRoute: typeof OrgSlugCheckinRouteImport
+    '/$orgSlug/fuely': {
+      id: '/$orgSlug/fuely'
+      path: '/fuely'
+      fullPath: '/$orgSlug/fuely'
+      preLoaderRoute: typeof OrgSlugFuelyRouteImport
       parentRoute: typeof OrgSlugRoute
     }
-    '/tracker/app/': {
-      id: '/tracker/app/'
-      path: '/'
-      fullPath: '/tracker/app/'
-      preLoaderRoute: typeof TrackerAppIndexRouteImport
-      parentRoute: typeof TrackerAppRoute
+    '/$orgSlug/home': {
+      id: '/$orgSlug/home'
+      path: '/home'
+      fullPath: '/$orgSlug/home'
+      preLoaderRoute: typeof OrgSlugHomeRouteImport
+      parentRoute: typeof OrgSlugRoute
     }
-    '/coach/teams/': {
-      id: '/coach/teams/'
-      path: '/teams'
-      fullPath: '/coach/teams/'
-      preLoaderRoute: typeof CoachTeamsIndexRouteImport
+    '/$orgSlug/nutrition': {
+      id: '/$orgSlug/nutrition'
+      path: '/nutrition'
+      fullPath: '/$orgSlug/nutrition'
+      preLoaderRoute: typeof OrgSlugNutritionRouteImport
+      parentRoute: typeof OrgSlugRoute
+    }
+    '/$orgSlug/onboarding': {
+      id: '/$orgSlug/onboarding'
+      path: '/onboarding'
+      fullPath: '/$orgSlug/onboarding'
+      preLoaderRoute: typeof OrgSlugOnboardingRouteImport
+      parentRoute: typeof OrgSlugRoute
+    }
+    '/$orgSlug/performance': {
+      id: '/$orgSlug/performance'
+      path: '/performance'
+      fullPath: '/$orgSlug/performance'
+      preLoaderRoute: typeof OrgSlugPerformanceRouteImport
+      parentRoute: typeof OrgSlugRoute
+    }
+    '/$orgSlug/profil': {
+      id: '/$orgSlug/profil'
+      path: '/profil'
+      fullPath: '/$orgSlug/profil'
+      preLoaderRoute: typeof OrgSlugProfilRouteImport
+      parentRoute: typeof OrgSlugRoute
+    }
+    '/$orgSlug/ranking': {
+      id: '/$orgSlug/ranking'
+      path: '/ranking'
+      fullPath: '/$orgSlug/ranking'
+      preLoaderRoute: typeof OrgSlugRankingRouteImport
+      parentRoute: typeof OrgSlugRoute
+    }
+    '/$orgSlug/training': {
+      id: '/$orgSlug/training'
+      path: '/training'
+      fullPath: '/$orgSlug/training'
+      preLoaderRoute: typeof OrgSlugTrainingRouteImport
+      parentRoute: typeof OrgSlugRoute
+    }
+    '/.mcp/list-tools': {
+      id: '/.mcp/list-tools'
+      path: '/.mcp/list-tools'
+      fullPath: '/.mcp/list-tools'
+      preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/food-database': {
+      id: '/admin/food-database'
+      path: '/admin/food-database'
+      fullPath: '/admin/food-database'
+      preLoaderRoute: typeof AdminFoodDatabaseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/player-cards': {
+      id: '/admin/player-cards'
+      path: '/admin/player-cards'
+      fullPath: '/admin/player-cards'
+      preLoaderRoute: typeof AdminPlayerCardsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bulls/': {
+      id: '/bulls/'
+      path: '/bulls'
+      fullPath: '/bulls/'
+      preLoaderRoute: typeof BullsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bulls/benchmarks': {
+      id: '/bulls/benchmarks'
+      path: '/bulls/benchmarks'
+      fullPath: '/bulls/benchmarks'
+      preLoaderRoute: typeof BullsBenchmarksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bulls/checkin': {
+      id: '/bulls/checkin'
+      path: '/bulls/checkin'
+      fullPath: '/bulls/checkin'
+      preLoaderRoute: typeof BullsCheckinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bulls/nutrition': {
+      id: '/bulls/nutrition'
+      path: '/bulls/nutrition'
+      fullPath: '/bulls/nutrition'
+      preLoaderRoute: typeof BullsNutritionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bulls/performance': {
+      id: '/bulls/performance'
+      path: '/bulls/performance'
+      fullPath: '/bulls/performance'
+      preLoaderRoute: typeof BullsPerformanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bulls/photos': {
+      id: '/bulls/photos'
+      path: '/bulls/photos'
+      fullPath: '/bulls/photos'
+      preLoaderRoute: typeof BullsPhotosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bulls/ranking': {
+      id: '/bulls/ranking'
+      path: '/bulls/ranking'
+      fullPath: '/bulls/ranking'
+      preLoaderRoute: typeof BullsRankingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bulls/recovery': {
+      id: '/bulls/recovery'
+      path: '/bulls/recovery'
+      fullPath: '/bulls/recovery'
+      preLoaderRoute: typeof BullsRecoveryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bulls/training': {
+      id: '/bulls/training'
+      path: '/bulls/training'
+      fullPath: '/bulls/training'
+      preLoaderRoute: typeof BullsTrainingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bulls/weight': {
+      id: '/bulls/weight'
+      path: '/bulls/weight'
+      fullPath: '/bulls/weight'
+      preLoaderRoute: typeof BullsWeightRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/checkout/return': {
+      id: '/checkout/return'
+      path: '/checkout/return'
+      fullPath: '/checkout/return'
+      preLoaderRoute: typeof CheckoutReturnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/coach-tools/': {
+      id: '/coach-tools/'
+      path: '/'
+      fullPath: '/coach-tools/'
+      preLoaderRoute: typeof CoachToolsIndexRouteImport
+      parentRoute: typeof CoachToolsRoute
+    }
+    '/coach-tools/ai': {
+      id: '/coach-tools/ai'
+      path: '/ai'
+      fullPath: '/coach-tools/ai'
+      preLoaderRoute: typeof CoachToolsAiRouteImport
+      parentRoute: typeof CoachToolsRoute
+    }
+    '/coach-tools/exercises': {
+      id: '/coach-tools/exercises'
+      path: '/exercises'
+      fullPath: '/coach-tools/exercises'
+      preLoaderRoute: typeof CoachToolsExercisesRouteImport
+      parentRoute: typeof CoachToolsRoute
+    }
+    '/coach-tools/live': {
+      id: '/coach-tools/live'
+      path: '/live'
+      fullPath: '/coach-tools/live'
+      preLoaderRoute: typeof CoachToolsLiveRouteImport
+      parentRoute: typeof CoachToolsRoute
+    }
+    '/coach-tools/music': {
+      id: '/coach-tools/music'
+      path: '/music'
+      fullPath: '/coach-tools/music'
+      preLoaderRoute: typeof CoachToolsMusicRouteImport
+      parentRoute: typeof CoachToolsRoute
+    }
+    '/coach-tools/participants': {
+      id: '/coach-tools/participants'
+      path: '/participants'
+      fullPath: '/coach-tools/participants'
+      preLoaderRoute: typeof CoachToolsParticipantsRouteImport
+      parentRoute: typeof CoachToolsRoute
+    }
+    '/coach-tools/summer': {
+      id: '/coach-tools/summer'
+      path: '/summer'
+      fullPath: '/coach-tools/summer'
+      preLoaderRoute: typeof CoachToolsSummerRouteImport
+      parentRoute: typeof CoachToolsRoute
+    }
+    '/coach-tools/templates': {
+      id: '/coach-tools/templates'
+      path: '/templates'
+      fullPath: '/coach-tools/templates'
+      preLoaderRoute: typeof CoachToolsTemplatesRouteImport
+      parentRoute: typeof CoachToolsRoute
+    }
+    '/coach-tools/timer': {
+      id: '/coach-tools/timer'
+      path: '/timer'
+      fullPath: '/coach-tools/timer'
+      preLoaderRoute: typeof CoachToolsTimerRouteImport
+      parentRoute: typeof CoachToolsRoute
+    }
+    '/coach/': {
+      id: '/coach/'
+      path: '/'
+      fullPath: '/coach/'
+      preLoaderRoute: typeof CoachIndexRouteImport
       parentRoute: typeof CoachRoute
     }
-    '/coach/customers/': {
-      id: '/coach/customers/'
-      path: '/'
-      fullPath: '/coach/customers/'
-      preLoaderRoute: typeof CoachCustomersIndexRouteImport
-      parentRoute: typeof CoachCustomersRoute
+    '/coach/$clientId': {
+      id: '/coach/$clientId'
+      path: '/$clientId'
+      fullPath: '/coach/$clientId'
+      preLoaderRoute: typeof CoachClientIdRouteImport
+      parentRoute: typeof CoachRoute
     }
-    '/bulls/performance/': {
-      id: '/bulls/performance/'
-      path: '/'
-      fullPath: '/bulls/performance/'
-      preLoaderRoute: typeof BullsPerformanceIndexRouteImport
-      parentRoute: typeof BullsPerformanceRoute
+    '/coach/affiliates': {
+      id: '/coach/affiliates'
+      path: '/affiliates'
+      fullPath: '/coach/affiliates'
+      preLoaderRoute: typeof CoachAffiliatesRouteImport
+      parentRoute: typeof CoachRoute
     }
-    '/bulls/nutrition/': {
-      id: '/bulls/nutrition/'
+    '/coach/bulls-performance': {
+      id: '/coach/bulls-performance'
+      path: '/bulls-performance'
+      fullPath: '/coach/bulls-performance'
+      preLoaderRoute: typeof CoachBullsPerformanceRouteImport
+      parentRoute: typeof CoachRoute
+    }
+    '/coach/customers': {
+      id: '/coach/customers'
+      path: '/customers'
+      fullPath: '/coach/customers'
+      preLoaderRoute: typeof CoachCustomersRouteImport
+      parentRoute: typeof CoachRoute
+    }
+    '/coach/foods': {
+      id: '/coach/foods'
+      path: '/foods'
+      fullPath: '/coach/foods'
+      preLoaderRoute: typeof CoachFoodsRouteImport
+      parentRoute: typeof CoachRoute
+    }
+    '/coach/gifts': {
+      id: '/coach/gifts'
+      path: '/gifts'
+      fullPath: '/coach/gifts'
+      preLoaderRoute: typeof CoachGiftsRouteImport
+      parentRoute: typeof CoachRoute
+    }
+    '/coach/import-plan': {
+      id: '/coach/import-plan'
+      path: '/import-plan'
+      fullPath: '/coach/import-plan'
+      preLoaderRoute: typeof CoachImportPlanRouteImport
+      parentRoute: typeof CoachRoute
+    }
+    '/coach/leads': {
+      id: '/coach/leads'
+      path: '/leads'
+      fullPath: '/coach/leads'
+      preLoaderRoute: typeof CoachLeadsRouteImport
+      parentRoute: typeof CoachRoute
+    }
+    '/coach/package-requests': {
+      id: '/coach/package-requests'
+      path: '/package-requests'
+      fullPath: '/coach/package-requests'
+      preLoaderRoute: typeof CoachPackageRequestsRouteImport
+      parentRoute: typeof CoachRoute
+    }
+    '/coach/performance-teams': {
+      id: '/coach/performance-teams'
+      path: '/performance-teams'
+      fullPath: '/coach/performance-teams'
+      preLoaderRoute: typeof CoachPerformanceTeamsRouteImport
+      parentRoute: typeof CoachRoute
+    }
+    '/coach/player-cards': {
+      id: '/coach/player-cards'
+      path: '/player-cards'
+      fullPath: '/coach/player-cards'
+      preLoaderRoute: typeof CoachPlayerCardsRouteImport
+      parentRoute: typeof CoachRoute
+    }
+    '/coach/reviews': {
+      id: '/coach/reviews'
+      path: '/reviews'
+      fullPath: '/coach/reviews'
+      preLoaderRoute: typeof CoachReviewsRouteImport
+      parentRoute: typeof CoachRoute
+    }
+    '/email/unsubscribe': {
+      id: '/email/unsubscribe'
+      path: '/email/unsubscribe'
+      fullPath: '/email/unsubscribe'
+      preLoaderRoute: typeof EmailUnsubscribeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/join/$token': {
+      id: '/join/$token'
+      path: '/join/$token'
+      fullPath: '/join/$token'
+      preLoaderRoute: typeof JoinTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/nutrition/': {
+      id: '/nutrition/'
       path: '/'
-      fullPath: '/bulls/nutrition/'
-      preLoaderRoute: typeof BullsNutritionIndexRouteImport
-      parentRoute: typeof BullsNutritionRoute
+      fullPath: '/nutrition/'
+      preLoaderRoute: typeof NutritionIndexRouteImport
+      parentRoute: typeof NutritionRoute
+    }
+    '/nutrition/favorites': {
+      id: '/nutrition/favorites'
+      path: '/favorites'
+      fullPath: '/nutrition/favorites'
+      preLoaderRoute: typeof NutritionFavoritesRouteImport
+      parentRoute: typeof NutritionRoute
+    }
+    '/nutrition/recipe-from-ingredients': {
+      id: '/nutrition/recipe-from-ingredients'
+      path: '/recipe-from-ingredients'
+      fullPath: '/nutrition/recipe-from-ingredients'
+      preLoaderRoute: typeof NutritionRecipeFromIngredientsRouteImport
+      parentRoute: typeof NutritionRoute
+    }
+    '/nutrition/shopping': {
+      id: '/nutrition/shopping'
+      path: '/shopping'
+      fullPath: '/nutrition/shopping'
+      preLoaderRoute: typeof NutritionShoppingRouteImport
+      parentRoute: typeof NutritionRoute
+    }
+    '/nutrition/tracking': {
+      id: '/nutrition/tracking'
+      path: '/tracking'
+      fullPath: '/nutrition/tracking'
+      preLoaderRoute: typeof NutritionTrackingRouteImport
+      parentRoute: typeof NutritionRoute
+    }
+    '/onboarding/smart': {
+      id: '/onboarding/smart'
+      path: '/onboarding/smart'
+      fullPath: '/onboarding/smart'
+      preLoaderRoute: typeof OnboardingSmartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding/smart-nutrition': {
+      id: '/onboarding/smart-nutrition'
+      path: '/onboarding/smart-nutrition'
+      fullPath: '/onboarding/smart-nutrition'
+      preLoaderRoute: typeof OnboardingSmartNutritionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/smart/': {
+      id: '/smart/'
+      path: '/'
+      fullPath: '/smart/'
+      preLoaderRoute: typeof SmartIndexRouteImport
+      parentRoute: typeof SmartRoute
+    }
+    '/smart/signup': {
+      id: '/smart/signup'
+      path: '/signup'
+      fullPath: '/smart/signup'
+      preLoaderRoute: typeof SmartSignupRouteImport
+      parentRoute: typeof SmartRoute
+    }
+    '/smart/trial': {
+      id: '/smart/trial'
+      path: '/trial'
+      fullPath: '/smart/trial'
+      preLoaderRoute: typeof SmartTrialRouteImport
+      parentRoute: typeof SmartRoute
+    }
+    '/tracker/': {
+      id: '/tracker/'
+      path: '/tracker'
+      fullPath: '/tracker/'
+      preLoaderRoute: typeof TrackerIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tracker/app': {
+      id: '/tracker/app'
+      path: '/tracker/app'
+      fullPath: '/tracker/app'
+      preLoaderRoute: typeof TrackerAppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tracker/login': {
+      id: '/tracker/login'
+      path: '/tracker/login'
+      fullPath: '/tracker/login'
+      preLoaderRoute: typeof TrackerLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tracker/signup': {
+      id: '/tracker/signup'
+      path: '/tracker/signup'
+      fullPath: '/tracker/signup'
+      preLoaderRoute: typeof TrackerSignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/$orgSlug/athletic/$sessionId': {
+      id: '/$orgSlug/athletic/$sessionId'
+      path: '/athletic/$sessionId'
+      fullPath: '/$orgSlug/athletic/$sessionId'
+      preLoaderRoute: typeof OrgSlugAthleticSessionIdRouteImport
+      parentRoute: typeof OrgSlugRoute
+    }
+    '/$orgSlug/invite/$token': {
+      id: '/$orgSlug/invite/$token'
+      path: '/invite/$token'
+      fullPath: '/$orgSlug/invite/$token'
+      preLoaderRoute: typeof OrgSlugInviteTokenRouteImport
+      parentRoute: typeof OrgSlugRoute
     }
     '/$orgSlug/nutrition/': {
       id: '/$orgSlug/nutrition/'
       path: '/'
       fullPath: '/$orgSlug/nutrition/'
       preLoaderRoute: typeof OrgSlugNutritionIndexRouteImport
-      parentRoute: typeof OrgSlugNutritionRoute
-    }
-    '/tracker/app/weight': {
-      id: '/tracker/app/weight'
-      path: '/weight'
-      fullPath: '/tracker/app/weight'
-      preLoaderRoute: typeof TrackerAppWeightRouteImport
-      parentRoute: typeof TrackerAppRoute
-    }
-    '/tracker/app/water': {
-      id: '/tracker/app/water'
-      path: '/water'
-      fullPath: '/tracker/app/water'
-      preLoaderRoute: typeof TrackerAppWaterRouteImport
-      parentRoute: typeof TrackerAppRoute
-    }
-    '/tracker/app/training': {
-      id: '/tracker/app/training'
-      path: '/training'
-      fullPath: '/tracker/app/training'
-      preLoaderRoute: typeof TrackerAppTrainingRouteImport
-      parentRoute: typeof TrackerAppRoute
-    }
-    '/tracker/app/profile': {
-      id: '/tracker/app/profile'
-      path: '/profile'
-      fullPath: '/tracker/app/profile'
-      preLoaderRoute: typeof TrackerAppProfileRouteImport
-      parentRoute: typeof TrackerAppRoute
-    }
-    '/tracker/app/nutrition': {
-      id: '/tracker/app/nutrition'
-      path: '/nutrition'
-      fullPath: '/tracker/app/nutrition'
-      preLoaderRoute: typeof TrackerAppNutritionRouteImport
-      parentRoute: typeof TrackerAppRoute
-    }
-    '/tracker/app/activity': {
-      id: '/tracker/app/activity'
-      path: '/activity'
-      fullPath: '/tracker/app/activity'
-      preLoaderRoute: typeof TrackerAppActivityRouteImport
-      parentRoute: typeof TrackerAppRoute
-    }
-    '/tracker/app/achievements': {
-      id: '/tracker/app/achievements'
-      path: '/achievements'
-      fullPath: '/tracker/app/achievements'
-      preLoaderRoute: typeof TrackerAppAchievementsRouteImport
-      parentRoute: typeof TrackerAppRoute
-    }
-    '/smart/gift/$code': {
-      id: '/smart/gift/$code'
-      path: '/gift/$code'
-      fullPath: '/smart/gift/$code'
-      preLoaderRoute: typeof SmartGiftCodeRouteImport
-      parentRoute: typeof SmartRoute
-    }
-    '/lovable/email/suppression': {
-      id: '/lovable/email/suppression'
-      path: '/lovable/email/suppression'
-      fullPath: '/lovable/email/suppression'
-      preLoaderRoute: typeof LovableEmailSuppressionRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/coach/training-builder/$userId': {
-      id: '/coach/training-builder/$userId'
-      path: '/training-builder/$userId'
-      fullPath: '/coach/training-builder/$userId'
-      preLoaderRoute: typeof CoachTrainingBuilderUserIdRouteImport
-      parentRoute: typeof CoachRoute
-    }
-    '/coach/teams/$orgId': {
-      id: '/coach/teams/$orgId'
-      path: '/teams/$orgId'
-      fullPath: '/coach/teams/$orgId'
-      preLoaderRoute: typeof CoachTeamsOrgIdRouteImport
-      parentRoute: typeof CoachRoute
-    }
-    '/coach/player-cards/ranking': {
-      id: '/coach/player-cards/ranking'
-      path: '/ranking'
-      fullPath: '/coach/player-cards/ranking'
-      preLoaderRoute: typeof CoachPlayerCardsRankingRouteImport
-      parentRoute: typeof CoachPlayerCardsRoute
-    }
-    '/coach/plan-preview/$planId': {
-      id: '/coach/plan-preview/$planId'
-      path: '/plan-preview/$planId'
-      fullPath: '/coach/plan-preview/$planId'
-      preLoaderRoute: typeof CoachPlanPreviewPlanIdRouteImport
-      parentRoute: typeof CoachRoute
-    }
-    '/coach/plan-builder/$userId': {
-      id: '/coach/plan-builder/$userId'
-      path: '/plan-builder/$userId'
-      fullPath: '/coach/plan-builder/$userId'
-      preLoaderRoute: typeof CoachPlanBuilderUserIdRouteImport
-      parentRoute: typeof CoachRoute
-    }
-    '/coach/customers/new': {
-      id: '/coach/customers/new'
-      path: '/new'
-      fullPath: '/coach/customers/new'
-      preLoaderRoute: typeof CoachCustomersNewRouteImport
-      parentRoute: typeof CoachCustomersRoute
-    }
-    '/coach/customers/$userId': {
-      id: '/coach/customers/$userId'
-      path: '/$userId'
-      fullPath: '/coach/customers/$userId'
-      preLoaderRoute: typeof CoachCustomersUserIdRouteImport
-      parentRoute: typeof CoachCustomersRoute
-    }
-    '/bulls/performance/$moduleId': {
-      id: '/bulls/performance/$moduleId'
-      path: '/$moduleId'
-      fullPath: '/bulls/performance/$moduleId'
-      preLoaderRoute: typeof BullsPerformanceModuleIdRouteImport
-      parentRoute: typeof BullsPerformanceRoute
-    }
-    '/bulls/nutrition/tracking': {
-      id: '/bulls/nutrition/tracking'
-      path: '/tracking'
-      fullPath: '/bulls/nutrition/tracking'
-      preLoaderRoute: typeof BullsNutritionTrackingRouteImport
-      parentRoute: typeof BullsNutritionRoute
-    }
-    '/bulls/nutrition/shopping': {
-      id: '/bulls/nutrition/shopping'
-      path: '/shopping'
-      fullPath: '/bulls/nutrition/shopping'
-      preLoaderRoute: typeof BullsNutritionShoppingRouteImport
-      parentRoute: typeof BullsNutritionRoute
-    }
-    '/bulls/nutrition/favorites': {
-      id: '/bulls/nutrition/favorites'
-      path: '/favorites'
-      fullPath: '/bulls/nutrition/favorites'
-      preLoaderRoute: typeof BullsNutritionFavoritesRouteImport
-      parentRoute: typeof BullsNutritionRoute
-    }
-    '/api/public/guardian-consent': {
-      id: '/api/public/guardian-consent'
-      path: '/api/public/guardian-consent'
-      fullPath: '/api/public/guardian-consent'
-      preLoaderRoute: typeof ApiPublicGuardianConsentRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/.mcp/invoke-tool/$tool': {
-      id: '/.mcp/invoke-tool/$tool'
-      path: '/.mcp/invoke-tool/$tool'
-      fullPath: '/.mcp/invoke-tool/$tool'
-      preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/.lovable/oauth/consent': {
-      id: '/.lovable/oauth/consent'
-      path: '/.lovable/oauth/consent'
-      fullPath: '/.lovable/oauth/consent'
-      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/$orgSlug/nutrition/tracking': {
-      id: '/$orgSlug/nutrition/tracking'
-      path: '/tracking'
-      fullPath: '/$orgSlug/nutrition/tracking'
-      preLoaderRoute: typeof OrgSlugNutritionTrackingRouteImport
-      parentRoute: typeof OrgSlugNutritionRoute
-    }
-    '/$orgSlug/nutrition/shopping': {
-      id: '/$orgSlug/nutrition/shopping'
-      path: '/shopping'
-      fullPath: '/$orgSlug/nutrition/shopping'
-      preLoaderRoute: typeof OrgSlugNutritionShoppingRouteImport
       parentRoute: typeof OrgSlugNutritionRoute
     }
     '/$orgSlug/nutrition/favorites': {
@@ -2867,151 +2671,221 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrgSlugNutritionFavoritesRouteImport
       parentRoute: typeof OrgSlugNutritionRoute
     }
-    '/$orgSlug/invite/$token': {
-      id: '/$orgSlug/invite/$token'
-      path: '/invite/$token'
-      fullPath: '/$orgSlug/invite/$token'
-      preLoaderRoute: typeof OrgSlugInviteTokenRouteImport
-      parentRoute: typeof OrgSlugRoute
+    '/$orgSlug/nutrition/shopping': {
+      id: '/$orgSlug/nutrition/shopping'
+      path: '/shopping'
+      fullPath: '/$orgSlug/nutrition/shopping'
+      preLoaderRoute: typeof OrgSlugNutritionShoppingRouteImport
+      parentRoute: typeof OrgSlugNutritionRoute
     }
-    '/$orgSlug/athletic/$sessionId': {
-      id: '/$orgSlug/athletic/$sessionId'
-      path: '/athletic/$sessionId'
-      fullPath: '/$orgSlug/athletic/$sessionId'
-      preLoaderRoute: typeof OrgSlugAthleticSessionIdRouteImport
-      parentRoute: typeof OrgSlugRoute
+    '/$orgSlug/nutrition/tracking': {
+      id: '/$orgSlug/nutrition/tracking'
+      path: '/tracking'
+      fullPath: '/$orgSlug/nutrition/tracking'
+      preLoaderRoute: typeof OrgSlugNutritionTrackingRouteImport
+      parentRoute: typeof OrgSlugNutritionRoute
     }
-    '/coach/teams/$orgId/': {
-      id: '/coach/teams/$orgId/'
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.mcp/invoke-tool/$tool': {
+      id: '/.mcp/invoke-tool/$tool'
+      path: '/.mcp/invoke-tool/$tool'
+      fullPath: '/.mcp/invoke-tool/$tool'
+      preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/guardian-consent': {
+      id: '/api/public/guardian-consent'
+      path: '/api/public/guardian-consent'
+      fullPath: '/api/public/guardian-consent'
+      preLoaderRoute: typeof ApiPublicGuardianConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bulls/nutrition/': {
+      id: '/bulls/nutrition/'
       path: '/'
-      fullPath: '/coach/teams/$orgId/'
-      preLoaderRoute: typeof CoachTeamsOrgIdIndexRouteImport
-      parentRoute: typeof CoachTeamsOrgIdRoute
+      fullPath: '/bulls/nutrition/'
+      preLoaderRoute: typeof BullsNutritionIndexRouteImport
+      parentRoute: typeof BullsNutritionRoute
     }
-    '/bulls/performance/$moduleId/': {
-      id: '/bulls/performance/$moduleId/'
+    '/bulls/nutrition/favorites': {
+      id: '/bulls/nutrition/favorites'
+      path: '/favorites'
+      fullPath: '/bulls/nutrition/favorites'
+      preLoaderRoute: typeof BullsNutritionFavoritesRouteImport
+      parentRoute: typeof BullsNutritionRoute
+    }
+    '/bulls/nutrition/shopping': {
+      id: '/bulls/nutrition/shopping'
+      path: '/shopping'
+      fullPath: '/bulls/nutrition/shopping'
+      preLoaderRoute: typeof BullsNutritionShoppingRouteImport
+      parentRoute: typeof BullsNutritionRoute
+    }
+    '/bulls/nutrition/tracking': {
+      id: '/bulls/nutrition/tracking'
+      path: '/tracking'
+      fullPath: '/bulls/nutrition/tracking'
+      preLoaderRoute: typeof BullsNutritionTrackingRouteImport
+      parentRoute: typeof BullsNutritionRoute
+    }
+    '/bulls/performance/': {
+      id: '/bulls/performance/'
       path: '/'
-      fullPath: '/bulls/performance/$moduleId/'
-      preLoaderRoute: typeof BullsPerformanceModuleIdIndexRouteImport
-      parentRoute: typeof BullsPerformanceModuleIdRoute
+      fullPath: '/bulls/performance/'
+      preLoaderRoute: typeof BullsPerformanceIndexRouteImport
+      parentRoute: typeof BullsPerformanceRoute
     }
-    '/lovable/email/transactional/send': {
-      id: '/lovable/email/transactional/send'
-      path: '/lovable/email/transactional/send'
-      fullPath: '/lovable/email/transactional/send'
-      preLoaderRoute: typeof LovableEmailTransactionalSendRouteImport
-      parentRoute: typeof rootRouteImport
+    '/bulls/performance/$moduleId': {
+      id: '/bulls/performance/$moduleId'
+      path: '/$moduleId'
+      fullPath: '/bulls/performance/$moduleId'
+      preLoaderRoute: typeof BullsPerformanceModuleIdRouteImport
+      parentRoute: typeof BullsPerformanceRoute
     }
-    '/lovable/email/transactional/preview': {
-      id: '/lovable/email/transactional/preview'
-      path: '/lovable/email/transactional/preview'
-      fullPath: '/lovable/email/transactional/preview'
-      preLoaderRoute: typeof LovableEmailTransactionalPreviewRouteImport
-      parentRoute: typeof rootRouteImport
+    '/coach/customers/': {
+      id: '/coach/customers/'
+      path: '/'
+      fullPath: '/coach/customers/'
+      preLoaderRoute: typeof CoachCustomersIndexRouteImport
+      parentRoute: typeof CoachCustomersRoute
     }
-    '/lovable/email/queue/process': {
-      id: '/lovable/email/queue/process'
-      path: '/lovable/email/queue/process'
-      fullPath: '/lovable/email/queue/process'
-      preLoaderRoute: typeof LovableEmailQueueProcessRouteImport
-      parentRoute: typeof rootRouteImport
+    '/coach/customers/$userId': {
+      id: '/coach/customers/$userId'
+      path: '/$userId'
+      fullPath: '/coach/customers/$userId'
+      preLoaderRoute: typeof CoachCustomersUserIdRouteImport
+      parentRoute: typeof CoachCustomersRoute
     }
-    '/lovable/email/auth/webhook': {
-      id: '/lovable/email/auth/webhook'
-      path: '/lovable/email/auth/webhook'
-      fullPath: '/lovable/email/auth/webhook'
-      preLoaderRoute: typeof LovableEmailAuthWebhookRouteImport
-      parentRoute: typeof rootRouteImport
+    '/coach/customers/new': {
+      id: '/coach/customers/new'
+      path: '/new'
+      fullPath: '/coach/customers/new'
+      preLoaderRoute: typeof CoachCustomersNewRouteImport
+      parentRoute: typeof CoachCustomersRoute
     }
-    '/lovable/email/auth/preview': {
-      id: '/lovable/email/auth/preview'
-      path: '/lovable/email/auth/preview'
-      fullPath: '/lovable/email/auth/preview'
-      preLoaderRoute: typeof LovableEmailAuthPreviewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/coach/teams/$orgId/performance': {
-      id: '/coach/teams/$orgId/performance'
-      path: '/performance'
-      fullPath: '/coach/teams/$orgId/performance'
-      preLoaderRoute: typeof CoachTeamsOrgIdPerformanceRouteImport
-      parentRoute: typeof CoachTeamsOrgIdRoute
-    }
-    '/coach/player-cards_/layout/$orgSlug': {
-      id: '/coach/player-cards_/layout/$orgSlug'
-      path: '/player-cards/layout/$orgSlug'
-      fullPath: '/coach/player-cards/layout/$orgSlug'
-      preLoaderRoute: typeof CoachPlayerCardsLayoutOrgSlugRouteImport
+    '/coach/plan-builder/$userId': {
+      id: '/coach/plan-builder/$userId'
+      path: '/plan-builder/$userId'
+      fullPath: '/coach/plan-builder/$userId'
+      preLoaderRoute: typeof CoachPlanBuilderUserIdRouteImport
       parentRoute: typeof CoachRoute
     }
-    '/bulls/performance/$moduleId/$testId': {
-      id: '/bulls/performance/$moduleId/$testId'
-      path: '/$testId'
-      fullPath: '/bulls/performance/$moduleId/$testId'
-      preLoaderRoute: typeof BullsPerformanceModuleIdTestIdRouteImport
-      parentRoute: typeof BullsPerformanceModuleIdRoute
+    '/coach/plan-preview/$planId': {
+      id: '/coach/plan-preview/$planId'
+      path: '/plan-preview/$planId'
+      fullPath: '/coach/plan-preview/$planId'
+      preLoaderRoute: typeof CoachPlanPreviewPlanIdRouteImport
+      parentRoute: typeof CoachRoute
     }
-    '/api/public/payments/webhook': {
-      id: '/api/public/payments/webhook'
-      path: '/api/public/payments/webhook'
-      fullPath: '/api/public/payments/webhook'
-      preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
+    '/coach/player-cards/ranking': {
+      id: '/coach/player-cards/ranking'
+      path: '/ranking'
+      fullPath: '/coach/player-cards/ranking'
+      preLoaderRoute: typeof CoachPlayerCardsRankingRouteImport
+      parentRoute: typeof CoachPlayerCardsRoute
+    }
+    '/coach/teams/': {
+      id: '/coach/teams/'
+      path: '/teams'
+      fullPath: '/coach/teams/'
+      preLoaderRoute: typeof CoachTeamsIndexRouteImport
+      parentRoute: typeof CoachRoute
+    }
+    '/coach/teams/$orgId': {
+      id: '/coach/teams/$orgId'
+      path: '/teams/$orgId'
+      fullPath: '/coach/teams/$orgId'
+      preLoaderRoute: typeof CoachTeamsOrgIdRouteImport
+      parentRoute: typeof CoachRoute
+    }
+    '/coach/training-builder/$userId': {
+      id: '/coach/training-builder/$userId'
+      path: '/training-builder/$userId'
+      fullPath: '/coach/training-builder/$userId'
+      preLoaderRoute: typeof CoachTrainingBuilderUserIdRouteImport
+      parentRoute: typeof CoachRoute
+    }
+    '/lovable/email/suppression': {
+      id: '/lovable/email/suppression'
+      path: '/lovable/email/suppression'
+      fullPath: '/lovable/email/suppression'
+      preLoaderRoute: typeof LovableEmailSuppressionRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/hooks/trial-reminders': {
-      id: '/api/public/hooks/trial-reminders'
-      path: '/api/public/hooks/trial-reminders'
-      fullPath: '/api/public/hooks/trial-reminders'
-      preLoaderRoute: typeof ApiPublicHooksTrialRemindersRouteImport
-      parentRoute: typeof rootRouteImport
+    '/smart/gift/$code': {
+      id: '/smart/gift/$code'
+      path: '/gift/$code'
+      fullPath: '/smart/gift/$code'
+      preLoaderRoute: typeof SmartGiftCodeRouteImport
+      parentRoute: typeof SmartRoute
     }
-    '/api/public/hooks/send-feature-news': {
-      id: '/api/public/hooks/send-feature-news'
-      path: '/api/public/hooks/send-feature-news'
-      fullPath: '/api/public/hooks/send-feature-news'
-      preLoaderRoute: typeof ApiPublicHooksSendFeatureNewsRouteImport
-      parentRoute: typeof rootRouteImport
+    '/tracker/app/': {
+      id: '/tracker/app/'
+      path: '/'
+      fullPath: '/tracker/app/'
+      preLoaderRoute: typeof TrackerAppIndexRouteImport
+      parentRoute: typeof TrackerAppRoute
     }
-    '/api/public/hooks/regen-training-plans': {
-      id: '/api/public/hooks/regen-training-plans'
-      path: '/api/public/hooks/regen-training-plans'
-      fullPath: '/api/public/hooks/regen-training-plans'
-      preLoaderRoute: typeof ApiPublicHooksRegenTrainingPlansRouteImport
-      parentRoute: typeof rootRouteImport
+    '/tracker/app/achievements': {
+      id: '/tracker/app/achievements'
+      path: '/achievements'
+      fullPath: '/tracker/app/achievements'
+      preLoaderRoute: typeof TrackerAppAchievementsRouteImport
+      parentRoute: typeof TrackerAppRoute
     }
-    '/api/public/hooks/regen-nutrition-plans': {
-      id: '/api/public/hooks/regen-nutrition-plans'
-      path: '/api/public/hooks/regen-nutrition-plans'
-      fullPath: '/api/public/hooks/regen-nutrition-plans'
-      preLoaderRoute: typeof ApiPublicHooksRegenNutritionPlansRouteImport
-      parentRoute: typeof rootRouteImport
+    '/tracker/app/activity': {
+      id: '/tracker/app/activity'
+      path: '/activity'
+      fullPath: '/tracker/app/activity'
+      preLoaderRoute: typeof TrackerAppActivityRouteImport
+      parentRoute: typeof TrackerAppRoute
     }
-    '/api/public/hooks/recalc-nutrition-load': {
-      id: '/api/public/hooks/recalc-nutrition-load'
-      path: '/api/public/hooks/recalc-nutrition-load'
-      fullPath: '/api/public/hooks/recalc-nutrition-load'
-      preLoaderRoute: typeof ApiPublicHooksRecalcNutritionLoadRouteImport
-      parentRoute: typeof rootRouteImport
+    '/tracker/app/nutrition': {
+      id: '/tracker/app/nutrition'
+      path: '/nutrition'
+      fullPath: '/tracker/app/nutrition'
+      preLoaderRoute: typeof TrackerAppNutritionRouteImport
+      parentRoute: typeof TrackerAppRoute
     }
-    '/api/public/hooks/process-performance-plan-jobs': {
-      id: '/api/public/hooks/process-performance-plan-jobs'
-      path: '/api/public/hooks/process-performance-plan-jobs'
-      fullPath: '/api/public/hooks/process-performance-plan-jobs'
-      preLoaderRoute: typeof ApiPublicHooksProcessPerformancePlanJobsRouteImport
-      parentRoute: typeof rootRouteImport
+    '/tracker/app/profile': {
+      id: '/tracker/app/profile'
+      path: '/profile'
+      fullPath: '/tracker/app/profile'
+      preLoaderRoute: typeof TrackerAppProfileRouteImport
+      parentRoute: typeof TrackerAppRoute
     }
-    '/api/public/hooks/process-autopilot-jobs': {
-      id: '/api/public/hooks/process-autopilot-jobs'
-      path: '/api/public/hooks/process-autopilot-jobs'
-      fullPath: '/api/public/hooks/process-autopilot-jobs'
-      preLoaderRoute: typeof ApiPublicHooksProcessAutopilotJobsRouteImport
-      parentRoute: typeof rootRouteImport
+    '/tracker/app/training': {
+      id: '/tracker/app/training'
+      path: '/training'
+      fullPath: '/tracker/app/training'
+      preLoaderRoute: typeof TrackerAppTrainingRouteImport
+      parentRoute: typeof TrackerAppRoute
     }
-    '/api/public/hooks/plan-rotation': {
-      id: '/api/public/hooks/plan-rotation'
-      path: '/api/public/hooks/plan-rotation'
-      fullPath: '/api/public/hooks/plan-rotation'
-      preLoaderRoute: typeof ApiPublicHooksPlanRotationRouteImport
+    '/tracker/app/water': {
+      id: '/tracker/app/water'
+      path: '/water'
+      fullPath: '/tracker/app/water'
+      preLoaderRoute: typeof TrackerAppWaterRouteImport
+      parentRoute: typeof TrackerAppRoute
+    }
+    '/tracker/app/weight': {
+      id: '/tracker/app/weight'
+      path: '/weight'
+      fullPath: '/tracker/app/weight'
+      preLoaderRoute: typeof TrackerAppWeightRouteImport
+      parentRoute: typeof TrackerAppRoute
+    }
+    '/api/public/hooks/coach-daily-summary': {
+      id: '/api/public/hooks/coach-daily-summary'
+      path: '/api/public/hooks/coach-daily-summary'
+      fullPath: '/api/public/hooks/coach-daily-summary'
+      preLoaderRoute: typeof ApiPublicHooksCoachDailySummaryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/hooks/org-task-engine': {
@@ -3021,11 +2895,137 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksOrgTaskEngineRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/hooks/coach-daily-summary': {
-      id: '/api/public/hooks/coach-daily-summary'
-      path: '/api/public/hooks/coach-daily-summary'
-      fullPath: '/api/public/hooks/coach-daily-summary'
-      preLoaderRoute: typeof ApiPublicHooksCoachDailySummaryRouteImport
+    '/api/public/hooks/plan-rotation': {
+      id: '/api/public/hooks/plan-rotation'
+      path: '/api/public/hooks/plan-rotation'
+      fullPath: '/api/public/hooks/plan-rotation'
+      preLoaderRoute: typeof ApiPublicHooksPlanRotationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/process-autopilot-jobs': {
+      id: '/api/public/hooks/process-autopilot-jobs'
+      path: '/api/public/hooks/process-autopilot-jobs'
+      fullPath: '/api/public/hooks/process-autopilot-jobs'
+      preLoaderRoute: typeof ApiPublicHooksProcessAutopilotJobsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/process-performance-plan-jobs': {
+      id: '/api/public/hooks/process-performance-plan-jobs'
+      path: '/api/public/hooks/process-performance-plan-jobs'
+      fullPath: '/api/public/hooks/process-performance-plan-jobs'
+      preLoaderRoute: typeof ApiPublicHooksProcessPerformancePlanJobsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/recalc-nutrition-load': {
+      id: '/api/public/hooks/recalc-nutrition-load'
+      path: '/api/public/hooks/recalc-nutrition-load'
+      fullPath: '/api/public/hooks/recalc-nutrition-load'
+      preLoaderRoute: typeof ApiPublicHooksRecalcNutritionLoadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/regen-nutrition-plans': {
+      id: '/api/public/hooks/regen-nutrition-plans'
+      path: '/api/public/hooks/regen-nutrition-plans'
+      fullPath: '/api/public/hooks/regen-nutrition-plans'
+      preLoaderRoute: typeof ApiPublicHooksRegenNutritionPlansRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/regen-training-plans': {
+      id: '/api/public/hooks/regen-training-plans'
+      path: '/api/public/hooks/regen-training-plans'
+      fullPath: '/api/public/hooks/regen-training-plans'
+      preLoaderRoute: typeof ApiPublicHooksRegenTrainingPlansRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/send-feature-news': {
+      id: '/api/public/hooks/send-feature-news'
+      path: '/api/public/hooks/send-feature-news'
+      fullPath: '/api/public/hooks/send-feature-news'
+      preLoaderRoute: typeof ApiPublicHooksSendFeatureNewsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/trial-reminders': {
+      id: '/api/public/hooks/trial-reminders'
+      path: '/api/public/hooks/trial-reminders'
+      fullPath: '/api/public/hooks/trial-reminders'
+      preLoaderRoute: typeof ApiPublicHooksTrialRemindersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/payments/webhook': {
+      id: '/api/public/payments/webhook'
+      path: '/api/public/payments/webhook'
+      fullPath: '/api/public/payments/webhook'
+      preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bulls/performance/$moduleId/': {
+      id: '/bulls/performance/$moduleId/'
+      path: '/'
+      fullPath: '/bulls/performance/$moduleId/'
+      preLoaderRoute: typeof BullsPerformanceModuleIdIndexRouteImport
+      parentRoute: typeof BullsPerformanceModuleIdRoute
+    }
+    '/bulls/performance/$moduleId/$testId': {
+      id: '/bulls/performance/$moduleId/$testId'
+      path: '/$testId'
+      fullPath: '/bulls/performance/$moduleId/$testId'
+      preLoaderRoute: typeof BullsPerformanceModuleIdTestIdRouteImport
+      parentRoute: typeof BullsPerformanceModuleIdRoute
+    }
+    '/coach/player-cards_/layout/$orgSlug': {
+      id: '/coach/player-cards_/layout/$orgSlug'
+      path: '/player-cards/layout/$orgSlug'
+      fullPath: '/coach/player-cards/layout/$orgSlug'
+      preLoaderRoute: typeof CoachPlayerCardsLayoutOrgSlugRouteImport
+      parentRoute: typeof CoachRoute
+    }
+    '/coach/teams/$orgId/': {
+      id: '/coach/teams/$orgId/'
+      path: '/'
+      fullPath: '/coach/teams/$orgId/'
+      preLoaderRoute: typeof CoachTeamsOrgIdIndexRouteImport
+      parentRoute: typeof CoachTeamsOrgIdRoute
+    }
+    '/coach/teams/$orgId/performance': {
+      id: '/coach/teams/$orgId/performance'
+      path: '/performance'
+      fullPath: '/coach/teams/$orgId/performance'
+      preLoaderRoute: typeof CoachTeamsOrgIdPerformanceRouteImport
+      parentRoute: typeof CoachTeamsOrgIdRoute
+    }
+    '/lovable/email/auth/preview': {
+      id: '/lovable/email/auth/preview'
+      path: '/lovable/email/auth/preview'
+      fullPath: '/lovable/email/auth/preview'
+      preLoaderRoute: typeof LovableEmailAuthPreviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/auth/webhook': {
+      id: '/lovable/email/auth/webhook'
+      path: '/lovable/email/auth/webhook'
+      fullPath: '/lovable/email/auth/webhook'
+      preLoaderRoute: typeof LovableEmailAuthWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/queue/process': {
+      id: '/lovable/email/queue/process'
+      path: '/lovable/email/queue/process'
+      fullPath: '/lovable/email/queue/process'
+      preLoaderRoute: typeof LovableEmailQueueProcessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/transactional/preview': {
+      id: '/lovable/email/transactional/preview'
+      path: '/lovable/email/transactional/preview'
+      fullPath: '/lovable/email/transactional/preview'
+      preLoaderRoute: typeof LovableEmailTransactionalPreviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/transactional/send': {
+      id: '/lovable/email/transactional/send'
+      path: '/lovable/email/transactional/send'
+      fullPath: '/lovable/email/transactional/send'
+      preLoaderRoute: typeof LovableEmailTransactionalSendRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/coach/teams/$orgId/athletes/$userId': {
