@@ -262,6 +262,11 @@ export type BuilderMeal = {
 export type BuilderDay = {
   name: string;
   type: "training" | "rest";
+  /**
+   * Splitbezeichnung des Trainingstages laut Trainingsplan (z. B. "Pull · Rücken").
+   * Null/undefined bei Ruhetagen oder Plänen ohne Splitinformation.
+   */
+  split?: string | null;
   typeOverride?: boolean; // true when coach toggled manually
   meals: BuilderMeal[];
   prepCoupleLunchDinner?: boolean;
