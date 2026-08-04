@@ -335,7 +335,14 @@ async function persistBuilderPlan(
     const iso = base.toISOString().slice(0, 10);
     await supabaseAdmin
       .from("nutrition_plan_days")
-      .update({ day_type: src.type, day_date: iso } as any)
+      .update({
+        day_type: src.type,
+        day_date: iso,
+        target_kcal: src.customTargets ? Math.round(src.customTargets.kcal) : null,
+        target_protein_g: src.customTargets ? Math.round(src.customTargets.p) : null,
+        target_carbs_g: src.customTargets ? Math.round(src.customTargets.c) : null,
+        target_fat_g: src.customTargets ? Math.round(src.customTargets.f) : null,
+      } as any)
       .eq("id", dayId);
 
     const { data: mealRows } = await supabaseAdmin
