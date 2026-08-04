@@ -4,6 +4,26 @@ import type {
   BuilderDay,
   BuilderMeal,
 } from "@/lib/plan-builder.functions";
+import { isMealCompatibleWithDiet } from "@/lib/diet-compat";
+
+/** Zentrale Ernährungsform-Prüfung für Picker, Auto-Fill und Scoring. */
+export function mealFitsDiet(
+  m: LibraryMeal,
+  dietStyle: string | null | undefined,
+): boolean {
+  return isMealCompatibleWithDiet(
+    {
+      name: m.name,
+      description: m.description,
+      tags: m.tags,
+      ingredients: m.ingredients,
+      main_protein: m.main_protein,
+      no_go_ingredients: m.no_go_ingredients,
+    },
+    dietStyle,
+  );
+}
+
 
 export type Slot = "breakfast" | "lunch" | "dinner" | "snack";
 export const SLOTS: { key: Slot; label: string }[] = [
@@ -896,23 +916,11 @@ export function scoreMeal(
     }
   }
 
-  if (ctx.dietStyle) {
-    const ds = ctx.dietStyle.toLowerCase();
-    if (ds.includes("vegan") && !m.tags.includes("vegan")) {
-      score -= 100;
-      reasons.push("Nicht vegan");
-    }
-    if (ds.includes("veget") && !m.tags.includes("vegetarian") && !m.tags.includes("vegan")) {
-      if (/hähnchen|pute|rind|lachs|fisch|thunfisch/.test(hay)) {
-        score -= 100;
-        reasons.push("Nicht vegetarisch");
-      }
-    }
-    if (ds.includes("pesc") && /hähnchen|huhn|pute|rind|schwein|hackfleisch/.test(hay)) {
-      score -= 100;
-      reasons.push("Nicht pescetarisch");
-    }
+  if (ctx.dietStyle && !mealFitsDiet(m, ctx.dietStyle)) {
+    score -= 500;
+    reasons.push("Passt nicht zur Ernährungsform");
   }
+
 
   const prepStyle = (ctx.mealPrepStyle ?? "").toLowerCase();
   const wantsMealPrep =
