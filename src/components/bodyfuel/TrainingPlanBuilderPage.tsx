@@ -1,4 +1,12 @@
-import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type DragEvent,
+} from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -24,6 +32,9 @@ import {
   Trash2,
   Users,
 } from "lucide-react";
+import { normalizeExerciseMedia } from "@/lib/exercise-media";
+import { ExerciseMediaThumb } from "@/components/bodyfuel/ExerciseMediaThumb";
+import { ExerciseMediaEditorDialog } from "@/components/bodyfuel/ExerciseMediaEditorDialog";
 import {
   listExerciseLibrary,
   getCustomerTrainingContext,
@@ -49,6 +60,21 @@ const WD_LABEL = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
 const WD_LONG = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
 const WD_ORDER = [1, 2, 3, 4, 5, 6, 0]; // Mo..So
 const EXERCISE_DRAG_TYPE = "application/x-bodyfuel-training-exercise";
+
+/**
+ * Stellt die geladene Übungsbibliothek für Medien-Lookups bereit, damit bereits
+ * gewählte Übungen (nur per Name gespeichert) ihr Thumbnail finden.
+ */
+const ExerciseMediaLibraryContext = createContext<LibraryExercise[]>([]);
+
+function useExerciseMedia(name: string) {
+  const library = useContext(ExerciseMediaLibraryContext);
+  return useMemo(() => {
+    const key = name.trim().toLowerCase();
+    const hit = key ? library.find((entry) => entry.name.trim().toLowerCase() === key) : undefined;
+    return normalizeExerciseMedia(hit ?? {});
+  }, [library, name]);
+}
 
 type DragExercisePayload = {
   week: number;
@@ -549,7 +575,9 @@ export function TrainingPlanBuilderPage({
   );
 
   return (
+    <ExerciseMediaLibraryContext.Provider value={library}>
     <div className="training-v2-shell -mx-4 -my-6 min-h-[calc(100vh-4rem)] bg-background px-4 py-6 sm:-mx-6 sm:px-6 lg:-mx-10 lg:-my-10 lg:px-8 lg:py-8">
+
       <div className="mx-auto max-w-[1380px] space-y-5">
         <div className="flex items-center justify-between gap-3">
           {returnOrgId ? (
@@ -952,7 +980,9 @@ export function TrainingPlanBuilderPage({
         />
       </div>
     </div>
+    </ExerciseMediaLibraryContext.Provider>
   );
+
 }
 
 function DayCard({
@@ -1126,7 +1156,9 @@ function ExerciseRow({
   onChange: (patch: Partial<BuilderTrainingExercise>) => void;
   onRemove: () => void;
 }) {
+  const media = useExerciseMedia(ex.name);
   return (
+
     <div
       draggable
       onDragStart={(event) => {
@@ -1154,7 +1186,14 @@ function ExerciseRow({
 
         <div className="flex min-w-0 items-center gap-2">
           <GripVertical className="h-4 w-4 shrink-0 cursor-grab text-muted-foreground/55 lg:hidden" />
+          <ExerciseMediaThumb
+            media={media}
+            name={ex.name || "Übung"}
+            muscle={ex.name}
+            size={40}
+          />
           <input
+
             value={ex.name}
             onChange={(event) => onChange({ name: event.target.value })}
             placeholder="Übungsname"
@@ -1353,6 +1392,8 @@ function ExerciseLibraryPanel({
 }) {
   const [q, setQ] = useState("");
   const [group, setGroup] = useState<string>("all");
+  const [mediaFor, setMediaFor] = useState<LibraryExercise | null>(null);
+
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
@@ -1427,27 +1468,47 @@ function ExerciseLibraryPanel({
         </div>
       ) : (
         <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filtered.map((exercise) => (
-            <button
-              key={exercise.id}
-              type="button"
-              disabled={!selectedDayLabel}
-              onClick={() => onPick(exercise)}
-              className="group flex min-w-0 items-center gap-3 rounded-xl border border-border bg-background p-3 text-left transition hover:-translate-y-0.5 hover:border-primary/40 hover:bg-primary/5 hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-45"
-            >
-              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary transition group-hover:bg-primary group-hover:text-primary-foreground">
-                <Dumbbell className="h-4 w-4" />
+          {filtered.map((exercise) => {
+            const media = normalizeExerciseMedia(exercise);
+            return (
+              <div
+                key={exercise.id}
+                className="group flex min-w-0 items-center gap-3 rounded-xl border border-border bg-background p-2.5 text-card-foreground transition hover:border-primary/40 hover:bg-primary/5 hover:shadow-sm"
+              >
+                <button
+                  type="button"
+                  onClick={() => setMediaFor(exercise)}
+                  aria-label={`Medien für ${exercise.name} ansehen oder pflegen`}
+                  className="rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <ExerciseMediaThumb
+                    media={media}
+                    name={exercise.name}
+                    muscle={exercise.primary_muscle}
+                    size={56}
+                  />
+                </button>
+                <button
+                  type="button"
+                  disabled={!selectedDayLabel}
+                  onClick={() => onPick(exercise)}
+                  className="flex min-w-0 flex-1 items-center gap-2 text-left transition disabled:cursor-not-allowed disabled:text-muted-foreground"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-xs font-black text-foreground">
+                      {exercise.name}
+                    </span>
+                    <span className="mt-0.5 block truncate text-[9px] font-semibold text-muted-foreground">
+                      {exercise.primary_muscle} · {exercise.default_sets} × {exercise.default_reps}
+                    </span>
+                  </span>
+                  <Plus className="h-4 w-4 shrink-0 text-muted-foreground transition group-hover:text-primary" />
+                </button>
               </div>
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-xs font-black">{exercise.name}</div>
-                <div className="mt-0.5 truncate text-[9px] font-semibold text-muted-foreground">
-                  {exercise.primary_muscle} · {exercise.default_sets} × {exercise.default_reps}
-                </div>
-              </div>
-              <Plus className="h-4 w-4 shrink-0 text-muted-foreground transition group-hover:text-primary" />
-            </button>
-          ))}
+            );
+          })}
         </div>
+
       )}
 
       {library.length > filtered.length && (
@@ -1456,6 +1517,9 @@ function ExerciseLibraryPanel({
           Ergebnisse.
         </p>
       )}
+
+      <ExerciseMediaEditorDialog exercise={mediaFor} onClose={() => setMediaFor(null)} />
     </section>
+
   );
 }
