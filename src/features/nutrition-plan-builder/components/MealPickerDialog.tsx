@@ -18,6 +18,8 @@ import {
   isFoodQueryValid,
   matchesMealQuery,
   mealFromFood,
+  mealFitsDiet,
+
   scoreMeal,
   type Slot,
 } from "../lib/plan-builder.logic";
@@ -59,7 +61,12 @@ export function MealPickerDialog({
   const scored = useMemo(
     () =>
       library
-        .filter((meal) => meal.category === slot && (!excludeId || meal.id !== excludeId))
+        .filter(
+          (meal) =>
+            meal.category === slot &&
+            (!excludeId || meal.id !== excludeId) &&
+            mealFitsDiet(meal, ctx.dietStyle),
+        )
         .map((meal) => {
           const result = scoreMeal(meal, ctx, dayType, remaining);
           return { meal, ...result };
@@ -67,14 +74,13 @@ export function MealPickerDialog({
         .filter(
           ({ reasons }) =>
             !reasons.some((reason) =>
-              /^(Allergie\/Intoleranz|No-Go|Nicht vegan|Nicht vegetarisch|Nicht pescetarisch)/.test(
-                reason,
-              ),
+              /^(Allergie\/Intoleranz|No-Go|Passt nicht zur Ernährungsform)/.test(reason),
             ),
         )
         .sort((a, b) => b.score - a.score),
     [library, ctx, slot, dayType, remaining, excludeId],
   );
+
 
   const visibleMeals = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
