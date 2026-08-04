@@ -3171,6 +3171,10 @@ export type Database = {
           name: string
           plan_id: string
           sort_order: number
+          target_carbs_g: number | null
+          target_fat_g: number | null
+          target_kcal: number | null
+          target_protein_g: number | null
           week_number: number
         }
         Insert: {
@@ -3181,6 +3185,10 @@ export type Database = {
           name: string
           plan_id: string
           sort_order?: number
+          target_carbs_g?: number | null
+          target_fat_g?: number | null
+          target_kcal?: number | null
+          target_protein_g?: number | null
           week_number?: number
         }
         Update: {
@@ -3191,6 +3199,10 @@ export type Database = {
           name?: string
           plan_id?: string
           sort_order?: number
+          target_carbs_g?: number | null
+          target_fat_g?: number | null
+          target_kcal?: number | null
+          target_protein_g?: number | null
           week_number?: number
         }
         Relationships: [

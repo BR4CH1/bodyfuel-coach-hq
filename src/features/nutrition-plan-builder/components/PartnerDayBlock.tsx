@@ -19,9 +19,12 @@ import {
   targetsFor,
   type PartnerSlotLink,
   type SharedSlotsMap,
+  type MacroValues,
   type Slot,
 } from "../lib/plan-builder.logic";
 import { DayCard } from "./DayCard";
+import type { TargetScope } from "./MacroTargetEditorDialog";
+
 
 export function PartnerDayBlock({
   clientDay,
@@ -36,6 +39,11 @@ export function PartnerDayBlock({
   onPartnerChange,
   onCopy,
   onEnsureMealImage,
+  onApplyClientTargets,
+  onResetClientTargets,
+  onApplyPartnerTargets,
+  onResetPartnerTargets,
+  targetsBusy,
 }: {
   clientDay: BuilderDay;
   partnerDay: BuilderDay;
@@ -49,7 +57,13 @@ export function PartnerDayBlock({
   onPartnerChange: (u: (d: BuilderDay) => BuilderDay) => void;
   onCopy: () => void;
   onEnsureMealImage?: (mealId: string) => void;
+  onApplyClientTargets?: (targets: MacroValues, scope: TargetScope, adjust: boolean) => void;
+  onResetClientTargets?: (scope: TargetScope) => void;
+  onApplyPartnerTargets?: (targets: MacroValues, scope: TargetScope, adjust: boolean) => void;
+  onResetPartnerTargets?: (scope: TargetScope) => void;
+  targetsBusy?: boolean;
 }) {
+
   // Sync coupled meals (same linked_partner_group) → recipe from client mirrors to partner.
   // Portion factor stays per person. Runs after render.
   useEffect(() => {
@@ -295,6 +309,9 @@ export function PartnerDayBlock({
               hideHeaderActions
               partnerLinkForSlot={linkForClient}
               onEnsureMealImage={onEnsureMealImage}
+              onApplyTargets={onApplyClientTargets}
+              onResetTargets={onResetClientTargets}
+              targetsBusy={targetsBusy}
             />
           </TabsContent>
           <TabsContent value="partner" className="mt-3">
@@ -307,8 +324,12 @@ export function PartnerDayBlock({
               hideHeaderActions
               partnerLinkForSlot={linkForPartner}
               onEnsureMealImage={onEnsureMealImage}
+              onApplyTargets={onApplyPartnerTargets}
+              onResetTargets={onResetPartnerTargets}
+              targetsBusy={targetsBusy}
             />
           </TabsContent>
+
         </Tabs>
       </CardContent>
     </Card>

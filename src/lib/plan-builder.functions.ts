@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { IngredientRole, Per100 } from "@/lib/ingredient-roles";
 import {
   assertCoachOrOrgStaffForAthlete,
   assertGlobalCoachOrAnyOrgCoach,
@@ -201,11 +202,24 @@ export const getCustomerPlanContext = createServerFn({ method: "POST" })
   });
 
 // Save a builder plan by adapting to existing importer.
+/**
+ * Zutat im Builder. `name`/`grams` sind Pflicht (rückwärtskompatibel).
+ * `base_grams`, `role` und `per100` werden nur vom Makro-Ziel-Editor gesetzt
+ * und dürfen bei alten Entwürfen fehlen.
+ */
+export type BuilderIngredient = {
+  name: string;
+  grams: number;
+  /** Ursprungsmenge vor der Makro-Optimierung. */
+  base_grams?: number | null;
+  role?: IngredientRole | null;
+  per100?: Per100 | null;
+};
 export type BuilderMeal = {
   slot: "breakfast" | "lunch" | "dinner" | "snack";
   name: string;
   description?: string | null;
-  ingredients: Array<{ name: string; grams: number }>;
+  ingredients: BuilderIngredient[];
   kcal?: number | null;
   protein_g?: number | null;
   carbs_g?: number | null;
@@ -215,6 +229,17 @@ export type BuilderMeal = {
   portion_factor?: number; // 1.0 = normale Portion
   linked_prep_group?: string | null;
   linked_partner_group?: string | null; // shared id when meal is coupled with partner's meal
+  /**
+   * Makros für Portion 1 nach individueller Zutatenanpassung.
+   * Hat Vorrang vor den Bibliothekswerten, sonst würden angepasste
+   * Zutatenmengen im Builder nicht sichtbar.
+   */
+  macro_override?: {
+    kcal: number;
+    protein_g: number;
+    carbs_g: number;
+    fat_g: number;
+  } | null;
 };
 export type BuilderDay = {
   name: string;
@@ -222,7 +247,10 @@ export type BuilderDay = {
   typeOverride?: boolean; // true when coach toggled manually
   meals: BuilderMeal[];
   prepCoupleLunchDinner?: boolean;
+  /** Individuelles Tagesziel; überschreibt das Profilziel nur in diesem Plan. */
+  customTargets?: { kcal: number; p: number; c: number; f: number } | null;
 };
+
 
 async function persistBuilderPlan(
   supabase: any,
@@ -307,7 +335,14 @@ async function persistBuilderPlan(
     const iso = base.toISOString().slice(0, 10);
     await supabaseAdmin
       .from("nutrition_plan_days")
-      .update({ day_type: src.type, day_date: iso } as any)
+      .update({
+        day_type: src.type,
+        day_date: iso,
+        target_kcal: src.customTargets ? Math.round(src.customTargets.kcal) : null,
+        target_protein_g: src.customTargets ? Math.round(src.customTargets.p) : null,
+        target_carbs_g: src.customTargets ? Math.round(src.customTargets.c) : null,
+        target_fat_g: src.customTargets ? Math.round(src.customTargets.f) : null,
+      } as any)
       .eq("id", dayId);
 
     const { data: mealRows } = await supabaseAdmin
@@ -549,7 +584,9 @@ export const loadNutritionPlanForBuilder = createServerFn({ method: "POST" })
 
     const { data: dayRows } = await supabaseAdmin
       .from("nutrition_plan_days")
-      .select("id, sort_order, day_type, day_date")
+      .select(
+        "id, sort_order, day_type, day_date, target_kcal, target_protein_g, target_carbs_g, target_fat_g",
+      )
       .eq("plan_id", data.planId)
       .order("sort_order");
 
@@ -575,6 +612,7 @@ export const loadNutritionPlanForBuilder = createServerFn({ method: "POST" })
     const days: BuilderDay[] = ((dayRows ?? []) as any[]).map((d, i) => {
       const meals = (byDay.get(d.id) ?? []).map((m: any) => {
         const ing = Array.isArray(m.ingredients_json) ? m.ingredients_json : [];
+        const hasIngredients = ing.length > 0;
         return {
           slot: (m.meal_slot ?? "lunch") as BuilderMeal["slot"],
           name: m.name ?? "",
@@ -592,16 +630,42 @@ export const loadNutritionPlanForBuilder = createServerFn({ method: "POST" })
           portion_factor: 1,
           linked_prep_group: m.linked_prep_group ?? null,
           linked_partner_group: null,
+          // Gespeicherte Makros stammen aus der Nährwert-Engine und bilden
+          // individuell angepasste Zutatenmengen ab — sie schlagen daher die
+          // Bibliothekswerte des Ursprungsgerichts.
+          macro_override:
+            hasIngredients && m.kcal != null
+              ? {
+                  kcal: Number(m.kcal),
+                  protein_g: Number(m.protein_g ?? 0),
+                  carbs_g: Number(m.carbs_g ?? 0),
+                  fat_g: Number(m.fat_g ?? 0),
+                }
+              : null,
         } as BuilderMeal;
       });
+      const hasCustomTargets =
+        d.target_kcal != null ||
+        d.target_protein_g != null ||
+        d.target_carbs_g != null ||
+        d.target_fat_g != null;
       return {
         name: `Tag ${i + 1}`,
         type: (d.day_type === "training" ? "training" : "rest") as "training" | "rest",
         typeOverride: true,
         meals,
         prepCoupleLunchDinner: false,
+        customTargets: hasCustomTargets
+          ? {
+              kcal: Number(d.target_kcal ?? 0),
+              p: Number(d.target_protein_g ?? 0),
+              c: Number(d.target_carbs_g ?? 0),
+              f: Number(d.target_fat_g ?? 0),
+            }
+          : null,
       };
     });
+
 
     const endIso = (plan as any).scheduled_end_date ?? start;
     return {

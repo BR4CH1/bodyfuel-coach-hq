@@ -83,6 +83,11 @@ export function PlanBuilderPage({
     runAutoFillWeek,
     undoWeekFill,
     ensureLibraryMealImage,
+    targetsBusy,
+    applyClientTargets,
+    applyPartnerTargets,
+    resetClientTargets,
+    resetPartnerTargets,
   } = usePlanBuilder({ userId, planId, returnOrgId });
 
   const [activeDayIndex, setActiveDayIndex] = useState(0);
@@ -456,6 +461,15 @@ export function PlanBuilderPage({
             onPartnerChange={(update) => setPartnerDay(activeDayIndex, update)}
             onCopy={() => setCopyChoiceIdx(activeDayIndex)}
             onEnsureMealImage={ensureLibraryMealImage}
+            targetsBusy={targetsBusy}
+            onApplyClientTargets={(targets, scope, adjust) =>
+              applyClientTargets(activeDayIndex, targets, scope, adjust)
+            }
+            onResetClientTargets={(scope) => resetClientTargets(activeDayIndex, scope)}
+            onApplyPartnerTargets={(targets, scope, adjust) =>
+              applyPartnerTargets(activeDayIndex, targets, scope, adjust)
+            }
+            onResetPartnerTargets={(scope) => resetPartnerTargets(activeDayIndex, scope)}
           />
         ) : (
           <DayCard
@@ -466,7 +480,13 @@ export function PlanBuilderPage({
             onChange={(update) => setDay(activeDayIndex, update)}
             onCopy={() => copyClientDay(activeDayIndex)}
             onEnsureMealImage={ensureLibraryMealImage}
+            targetsBusy={targetsBusy}
+            onApplyTargets={(targets, scope, adjust) =>
+              applyClientTargets(activeDayIndex, targets, scope, adjust)
+            }
+            onResetTargets={(scope) => resetClientTargets(activeDayIndex, scope)}
           />
+
         ))}
 
       <AlertDialog

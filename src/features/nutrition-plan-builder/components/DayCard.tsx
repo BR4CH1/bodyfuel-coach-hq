@@ -18,11 +18,14 @@ import {
   mealFromLibrary,
   rebalanceDay,
   summarizeDay,
+  type MacroValues,
   type PartnerSlotLink,
   type Slot,
 } from "../lib/plan-builder.logic";
+import { MacroTargetEditorDialog, type TargetScope } from "./MacroTargetEditorDialog";
 import { MealPickerDialog } from "./MealPickerDialog";
 import { MealSlotRow } from "./MealSlotRow";
+
 
 export function DayCard({
   day,
@@ -33,6 +36,9 @@ export function DayCard({
   hideHeaderActions,
   partnerLinkForSlot,
   onEnsureMealImage,
+  onApplyTargets,
+  onResetTargets,
+  targetsBusy,
 }: {
   day: BuilderDay;
   library: LibraryMeal[];
@@ -42,8 +48,12 @@ export function DayCard({
   hideHeaderActions?: boolean;
   partnerLinkForSlot?: (slot: Slot) => PartnerSlotLink | undefined;
   onEnsureMealImage?: (mealId: string) => void;
+  onApplyTargets?: (targets: MacroValues, scope: TargetScope, adjustMeals: boolean) => void;
+  onResetTargets?: (scope: TargetScope) => void;
+  targetsBusy?: boolean;
 }) {
   const { target, totals, filledSlots, totalSlots, isBalanced } = summarizeDay(day, ctx, library);
+
 
   // ---- Index-based helpers so multiple meals per slot are supported ----
   const updateMealAtIndex = (index: number, upd: (m: BuilderMeal) => BuilderMeal) => {
@@ -255,24 +265,43 @@ export function DayCard({
       <CardContent className="space-y-4 pt-4">
         {/* Balance */}
         <div className="rounded-xl border border-border bg-background p-3">
-          <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div>
-              <div className="text-sm font-semibold">Tagesbilanz</div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold">Tagesbilanz</span>
+                {day.customTargets && (
+                  <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
+                    Individuelles Ziel
+                  </Badge>
+                )}
+              </div>
               <div className="text-xs text-muted-foreground">
                 {filledSlots}/{totalSlots} Slots · {day.meals.length} Mahlzeiten geplant
               </div>
             </div>
-            <Badge
-              variant={isBalanced ? "default" : "outline"}
-              className={
-                isBalanced
-                  ? "bg-emerald-500 text-white hover:bg-emerald-500"
-                  : "text-muted-foreground"
-              }
-            >
-              {isBalanced ? "Im Zielbereich" : "Noch offen"}
-            </Badge>
+            <div className="flex items-center gap-1">
+              {onApplyTargets && (
+                <MacroTargetEditorDialog
+                  currentTarget={target}
+                  hasCustomTarget={Boolean(day.customTargets)}
+                  onApply={onApplyTargets}
+                  onReset={(scope) => onResetTargets?.(scope)}
+                  busy={targetsBusy}
+                />
+              )}
+              <Badge
+                variant={isBalanced ? "default" : "outline"}
+                className={
+                  isBalanced
+                    ? "bg-emerald-500 text-white hover:bg-emerald-500"
+                    : "text-muted-foreground"
+                }
+              >
+                {isBalanced ? "Im Zielbereich" : "Noch offen"}
+              </Badge>
+            </div>
           </div>
+
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {(
               [

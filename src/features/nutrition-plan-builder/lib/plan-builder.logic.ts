@@ -76,7 +76,9 @@ export function buildBuilderDays(
       typeOverride: existing?.typeOverride ?? false,
       meals: existing?.meals ?? [],
       prepCoupleLunchDinner: existing?.prepCoupleLunchDinner ?? false,
+      customTargets: existing?.customTargets ?? null,
     });
+
   }
 
   return next;
@@ -118,8 +120,17 @@ export function mealFromLibrary(
 }
 
 export function mealMacros(m: BuilderMeal, library: LibraryMeal[]) {
-  const lib = library.find((x) => x.id === m.library_meal_id);
   const f = m.portion_factor && m.portion_factor > 0 ? m.portion_factor : 1;
+  // Individuell angepasste Zutatenmengen haben Vorrang vor Bibliothekswerten.
+  if (m.macro_override) {
+    return {
+      kcal: Math.max(0, Number(m.macro_override.kcal) || 0) * f,
+      p: Math.max(0, Number(m.macro_override.protein_g) || 0) * f,
+      c: Math.max(0, Number(m.macro_override.carbs_g) || 0) * f,
+      f: Math.max(0, Number(m.macro_override.fat_g) || 0) * f,
+    };
+  }
+  const lib = library.find((x) => x.id === m.library_meal_id);
   if (!lib) {
     const kcal = Number(m.kcal ?? 0);
     const p = Number(m.protein_g ?? 0);
@@ -146,6 +157,15 @@ export function mealMacros(m: BuilderMeal, library: LibraryMeal[]) {
 export type AutoFillMode = "empty_only" | "all_unlocked";
 
 export function targetsFor(day: BuilderDay, ctx: CustomerPlanContext) {
+  if (day.customTargets) {
+    const t = day.customTargets;
+    return {
+      kcal: Math.max(0, Math.round(Number(t.kcal) || 0)),
+      p: Math.max(0, Math.round(Number(t.p) || 0)),
+      c: Math.max(0, Math.round(Number(t.c) || 0)),
+      f: Math.max(0, Math.round(Number(t.f) || 0)),
+    };
+  }
   return day.type === "training"
     ? {
         kcal: ctx.targets.kcal_train,
@@ -160,6 +180,7 @@ export function targetsFor(day: BuilderDay, ctx: CustomerPlanContext) {
         f: ctx.targets.fat_rest,
       };
 }
+
 
 export type MacroValues = { kcal: number; p: number; c: number; f: number };
 
