@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { IngredientRole, Per100 } from "@/lib/ingredient-roles";
+import type { TrainingWeekSchedule } from "@/lib/training-schedule.logic";
 import {
   assertCoachOrOrgStaffForAthlete,
   assertGlobalCoachOrAnyOrgCoach,
@@ -116,7 +117,7 @@ export type CustomerPlanContext = {
    * abgeleitet aus dem aktuell gültigen Trainingsplan. Leer, wenn kein Plan
    * vorhanden ist (dann greift der Fallback über `trainingWeekdays`).
    */
-  trainingSchedule: TrainingWeekSchedule;
+  trainingSchedule?: TrainingWeekSchedule;
 };
 
 
@@ -175,6 +176,15 @@ export const getCustomerPlanContext = createServerFn({ method: "POST" })
     };
     const merge = (...vs: any[]) => Array.from(new Set(vs.flatMap(toList)));
 
+    // Wochentagszuordnung aus dem aktuell gültigen Trainingsplan (inkl. Split).
+    let trainingSchedule: TrainingWeekSchedule | undefined;
+    try {
+      const { loadTrainingWeekSchedule } = await import("@/lib/training-schedule.server");
+      trainingSchedule = (await loadTrainingWeekSchedule(supabaseAdmin, data.customerId)) ?? undefined;
+    } catch (e) {
+      console.error("[getCustomerPlanContext] training schedule failed", e);
+    }
+
     return {
       targets: {
         kcal_train: Number(tgt?.kcal ?? 0),
@@ -205,6 +215,7 @@ export const getCustomerPlanContext = createServerFn({ method: "POST" })
           ? prof.variety_level
           : null,
       trainingWeekdays: normalizeWeekdays(prof?.training_weekdays),
+      trainingSchedule,
     };
   });
 
