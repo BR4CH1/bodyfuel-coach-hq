@@ -76,7 +76,9 @@ export function buildBuilderDays(
       typeOverride: existing?.typeOverride ?? false,
       meals: existing?.meals ?? [],
       prepCoupleLunchDinner: existing?.prepCoupleLunchDinner ?? false,
+      customTargets: existing?.customTargets ?? null,
     });
+
   }
 
   return next;
