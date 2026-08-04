@@ -584,7 +584,9 @@ export const loadNutritionPlanForBuilder = createServerFn({ method: "POST" })
 
     const { data: dayRows } = await supabaseAdmin
       .from("nutrition_plan_days")
-      .select("id, sort_order, day_type, day_date")
+      .select(
+        "id, sort_order, day_type, day_date, target_kcal, target_protein_g, target_carbs_g, target_fat_g",
+      )
       .eq("plan_id", data.planId)
       .order("sort_order");
 
