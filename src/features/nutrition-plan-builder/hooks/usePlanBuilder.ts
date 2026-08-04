@@ -23,10 +23,22 @@ import {
   isoDate,
   rebalanceDay,
   remapMealsForCopy,
+  targetsFor,
   type AutoFillMode,
+  type MacroValues,
   type SharedSlotsMap,
 } from "@/features/nutrition-plan-builder/lib/plan-builder.logic";
+import {
+  createNutritionResolver,
+  normalizeTargets,
+  optimizeDayToTargets,
+  summarizeChanges,
+  type OptimizationChange,
+} from "@/features/nutrition-plan-builder/lib/macro-optimizer";
+import type { TargetScope } from "@/features/nutrition-plan-builder/components/MacroTargetEditorDialog";
+import { resolveIngredientNutrition } from "@/lib/ingredient-nutrition.functions";
 import { clearFormDraft, useFormDraft } from "@/hooks/use-form-draft";
+
 
 type UsePlanBuilderParams = {
   userId: string;
