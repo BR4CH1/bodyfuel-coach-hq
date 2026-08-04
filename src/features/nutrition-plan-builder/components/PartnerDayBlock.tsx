@@ -295,6 +295,9 @@ export function PartnerDayBlock({
               hideHeaderActions
               partnerLinkForSlot={linkForClient}
               onEnsureMealImage={onEnsureMealImage}
+              onApplyTargets={onApplyClientTargets}
+              onResetTargets={onResetClientTargets}
+              targetsBusy={targetsBusy}
             />
           </TabsContent>
           <TabsContent value="partner" className="mt-3">
@@ -307,8 +310,12 @@ export function PartnerDayBlock({
               hideHeaderActions
               partnerLinkForSlot={linkForPartner}
               onEnsureMealImage={onEnsureMealImage}
+              onApplyTargets={onApplyPartnerTargets}
+              onResetTargets={onResetPartnerTargets}
+              targetsBusy={targetsBusy}
             />
           </TabsContent>
+
         </Tabs>
       </CardContent>
     </Card>
