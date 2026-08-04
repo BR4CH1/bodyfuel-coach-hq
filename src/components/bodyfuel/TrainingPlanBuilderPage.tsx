@@ -1163,7 +1163,14 @@ function ExerciseRow({
 
         <div className="flex min-w-0 items-center gap-2">
           <GripVertical className="h-4 w-4 shrink-0 cursor-grab text-muted-foreground/55 lg:hidden" />
+          <ExerciseMediaThumb
+            media={media}
+            name={ex.name || "Übung"}
+            muscle={ex.name}
+            size={40}
+          />
           <input
+
             value={ex.name}
             onChange={(event) => onChange({ name: event.target.value })}
             placeholder="Übungsname"
