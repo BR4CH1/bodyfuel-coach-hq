@@ -612,6 +612,7 @@ export const loadNutritionPlanForBuilder = createServerFn({ method: "POST" })
     const days: BuilderDay[] = ((dayRows ?? []) as any[]).map((d, i) => {
       const meals = (byDay.get(d.id) ?? []).map((m: any) => {
         const ing = Array.isArray(m.ingredients_json) ? m.ingredients_json : [];
+        const hasIngredients = ing.length > 0;
         return {
           slot: (m.meal_slot ?? "lunch") as BuilderMeal["slot"],
           name: m.name ?? "",
@@ -629,16 +630,42 @@ export const loadNutritionPlanForBuilder = createServerFn({ method: "POST" })
           portion_factor: 1,
           linked_prep_group: m.linked_prep_group ?? null,
           linked_partner_group: null,
+          // Gespeicherte Makros stammen aus der Nährwert-Engine und bilden
+          // individuell angepasste Zutatenmengen ab — sie schlagen daher die
+          // Bibliothekswerte des Ursprungsgerichts.
+          macro_override:
+            hasIngredients && m.kcal != null
+              ? {
+                  kcal: Number(m.kcal),
+                  protein_g: Number(m.protein_g ?? 0),
+                  carbs_g: Number(m.carbs_g ?? 0),
+                  fat_g: Number(m.fat_g ?? 0),
+                }
+              : null,
         } as BuilderMeal;
       });
+      const hasCustomTargets =
+        d.target_kcal != null ||
+        d.target_protein_g != null ||
+        d.target_carbs_g != null ||
+        d.target_fat_g != null;
       return {
         name: `Tag ${i + 1}`,
         type: (d.day_type === "training" ? "training" : "rest") as "training" | "rest",
         typeOverride: true,
         meals,
         prepCoupleLunchDinner: false,
+        customTargets: hasCustomTargets
+          ? {
+              kcal: Number(d.target_kcal ?? 0),
+              p: Number(d.target_protein_g ?? 0),
+              c: Number(d.target_carbs_g ?? 0),
+              f: Number(d.target_fat_g ?? 0),
+            }
+          : null,
       };
     });
+
 
     const endIso = (plan as any).scheduled_end_date ?? start;
     return {
