@@ -951,3 +951,67 @@ export function scoreMeal(
 
   return { score, label, reasons };
 }
+
+/* ---------------- Lebensmittel (Food-DB) → BuilderMeal ---------------- */
+
+export type FoodPickInput = {
+  name: string;
+  brand?: string | null;
+  unit?: "g" | "ml" | null;
+  density_g_per_ml?: number | null;
+  kcal_per_100g: number;
+  protein_per_100g: number;
+  carbs_per_100g: number;
+  fat_per_100g: number;
+};
+
+const round1 = (value: number) => Math.round((Number.isFinite(value) ? value : 0) * 10) / 10;
+
+/**
+ * Wandelt ein Lebensmittel aus der zentralen Datenbank plus Menge in eine
+ * einfache BuilderMeal um. Werte beziehen sich immer auf 100 g bzw. 100 ml.
+ */
+export function mealFromFood(food: FoodPickInput, amount: number, slot: Slot): BuilderMeal {
+  const unit: "g" | "ml" = food.unit === "ml" ? "ml" : "g";
+  const safeAmount = Math.max(0, Number(amount) || 0);
+  const factor = safeAmount / 100;
+  const density = Number(food.density_g_per_ml);
+  const grams =
+    unit === "ml" ? safeAmount * (Number.isFinite(density) && density > 0 ? density : 1) : safeAmount;
+  const label = food.brand ? `${food.name} (${food.brand})` : food.name;
+
+  return {
+    slot,
+    name: `${label} · ${round1(safeAmount)} ${unit}`,
+    description: null,
+    library_meal_id: null,
+    portion_factor: 1,
+    ingredients: [{ name: label, grams: Math.round(grams) }],
+    kcal: round1(Number(food.kcal_per_100g) * factor),
+    protein_g: round1(Number(food.protein_per_100g) * factor),
+    carbs_g: round1(Number(food.carbs_per_100g) * factor),
+    fat_g: round1(Number(food.fat_per_100g) * factor),
+  };
+}
+
+/** Suchfeld-Validierung für die Lebensmittel-Suche (min. 2 Zeichen). */
+export function isFoodQueryValid(query: string): boolean {
+  return query.trim().length >= 2;
+}
+
+/** Filtert Gerichte des Pickers nach Freitext über Name, Zutaten und Tags. */
+export function matchesMealQuery(meal: LibraryMeal, query: string): boolean {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) return true;
+  return [
+    meal.name,
+    meal.description ?? "",
+    meal.main_protein ?? "",
+    meal.main_carb ?? "",
+    ...(meal.tags ?? []),
+    ...(meal.ingredients ?? []).map((ingredient) => ingredient.name),
+  ]
+    .join(" ")
+    .toLowerCase()
+    .includes(normalized);
+}
