@@ -83,6 +83,11 @@ export function PlanBuilderPage({
     runAutoFillWeek,
     undoWeekFill,
     ensureLibraryMealImage,
+    targetsBusy,
+    applyClientTargets,
+    applyPartnerTargets,
+    resetClientTargets,
+    resetPartnerTargets,
   } = usePlanBuilder({ userId, planId, returnOrgId });
 
   const [activeDayIndex, setActiveDayIndex] = useState(0);
