@@ -418,6 +418,115 @@ export function usePlanBuilder({ userId, planId, returnOrgId }: UsePlanBuilderPa
     toast.success("Rückgängig gemacht");
   };
 
+  // ---- Makro-Ziel-Editor -------------------------------------------------
+  const dayMatchesScope = (day: BuilderDay, index: number, scope: TargetScope, dayIndex: number) =>
+    scope === "all" ||
+    (scope === "day" && index === dayIndex) ||
+    (scope === "training" && day.type === "training") ||
+    (scope === "rest" && day.type === "rest");
+
+  const applyTargetsTo = async (
+    side: "client" | "partner",
+    dayIndex: number,
+    rawTargets: MacroValues,
+    scope: TargetScope,
+    adjustMeals: boolean,
+  ) => {
+    const context = side === "client" ? contextQuery.data : partnerContextQuery.data;
+    const sourceDays = side === "client" ? days : partnerDays;
+    const setSide = side === "client" ? setDays : setPartnerDays;
+    if (!context) return;
+
+    const targets = normalizeTargets(rawTargets);
+    setUndoSnapshot({
+      client: cloneBuilderDays(days),
+      partner: partnerMode ? cloneBuilderDays(partnerDays) : null,
+    });
+
+    if (!adjustMeals) {
+      setSide((previous) =>
+        previous.map((day, index) =>
+          dayMatchesScope(day, index, scope, dayIndex) ? { ...day, customTargets: targets } : day,
+        ),
+      );
+      toast.success("Tagesziele übernommen");
+      return;
+    }
+
+    setTargetsBusy(true);
+    try {
+      const affected = sourceDays.filter((day, index) =>
+        dayMatchesScope(day, index, scope, dayIndex),
+      );
+      const names = Array.from(
+        new Set(
+          affected.flatMap((day) =>
+            day.meals.flatMap((meal) =>
+              (meal.ingredients ?? []).map((ingredient) => ingredient.name).filter(Boolean),
+            ),
+          ),
+        ),
+      );
+      let resolved: Record<string, { kcal: number; protein_g: number; carbs_g: number; fat_g: number }> =
+        {};
+      if (names.length) {
+        try {
+          resolved = await resolveNutrition({ data: { names } });
+        } catch {
+          // Fallback-Tabelle übernimmt, wenn die Datenbank nicht erreichbar ist.
+        }
+      }
+      const resolve = createNutritionResolver(resolved);
+      const library = libraryQuery.data ?? [];
+      const changes: OptimizationChange[] = [];
+      let missedTolerance = 0;
+
+      const nextDays = sourceDays.map((day, index) => {
+        if (!dayMatchesScope(day, index, scope, dayIndex)) return day;
+        const result = optimizeDayToTargets({
+          day: { ...day, customTargets: targets },
+          target: targets,
+          ctx: context,
+          library,
+          resolve,
+        });
+        changes.push(...result.changes);
+        if (!result.withinTolerance) missedTolerance += 1;
+        return result.day;
+      });
+
+      setSide(nextDays);
+
+      const summary = summarizeChanges(changes);
+      if (summary.length === 0) {
+        toast.info("Ziele übernommen — keine Anpassung der Gerichte nötig.");
+      } else {
+        toast.success(
+          `Ziele übernommen: ${summary.slice(0, 4).join(", ")}${summary.length > 4 ? ` und ${summary.length - 4} weitere` : ""}`,
+        );
+      }
+      if (missedTolerance > 0) {
+        toast.warning(
+          `${missedTolerance} Tag(e) konnten nicht vollständig ins Ziel gebracht werden. Bitte Gerichte oder Ziele prüfen.`,
+        );
+      }
+    } finally {
+      setTargetsBusy(false);
+    }
+  };
+
+  const resetTargetsFor = (side: "client" | "partner", dayIndex: number, scope: TargetScope) => {
+    const setSide = side === "client" ? setDays : setPartnerDays;
+    setSide((previous) =>
+      previous.map((day, index) =>
+        dayMatchesScope(day, index, scope, dayIndex) ? { ...day, customTargets: null } : day,
+      ),
+    );
+    toast.success("Profilziele wieder aktiv");
+  };
+
+
+
   return {
     title,
     setTitle,
