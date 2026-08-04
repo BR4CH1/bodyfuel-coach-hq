@@ -32,6 +32,9 @@ import {
 } from "@/lib/training.functions";
 import { ExerciseAnalytics } from "./ExerciseAnalytics";
 import { normalizeExerciseName } from "@/lib/exercise-name-match";
+import { useExerciseMediaLibrary } from "@/hooks/use-exercise-media-library";
+import { ExerciseMediaThumb } from "@/components/bodyfuel/ExerciseMediaThumb";
+import { ExerciseMediaSheet } from "@/components/bodyfuel/ExerciseMediaSheet";
 import { AddTrainingSessionButton } from "./AddTrainingSessionDialog";
 import { TrainingSessionsList } from "./TrainingSessionsList";
 import { enqueue, flushQueue } from "@/lib/offline/queue";
