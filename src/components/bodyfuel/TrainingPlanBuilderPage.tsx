@@ -552,7 +552,9 @@ export function TrainingPlanBuilderPage({
   );
 
   return (
+    <ExerciseMediaLibraryContext.Provider value={library}>
     <div className="training-v2-shell -mx-4 -my-6 min-h-[calc(100vh-4rem)] bg-background px-4 py-6 sm:-mx-6 sm:px-6 lg:-mx-10 lg:-my-10 lg:px-8 lg:py-8">
+
       <div className="mx-auto max-w-[1380px] space-y-5">
         <div className="flex items-center justify-between gap-3">
           {returnOrgId ? (
