@@ -1101,6 +1101,7 @@ export type Database = {
       }
       coach_exercise_library: {
         Row: {
+          animation_url: string | null
           category: string
           created_at: string
           default_reps: string
@@ -1112,14 +1113,19 @@ export type Database = {
           id: string
           is_active: boolean
           is_unilateral: boolean
+          media_source: string | null
+          media_type: string | null
           movement_pattern: string
           name: string
           notes: string | null
           primary_muscle: string
           secondary_muscles: string[]
+          technique_hint: string | null
+          thumbnail_url: string | null
           updated_at: string
         }
         Insert: {
+          animation_url?: string | null
           category: string
           created_at?: string
           default_reps?: string
@@ -1131,14 +1137,19 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_unilateral?: boolean
+          media_source?: string | null
+          media_type?: string | null
           movement_pattern: string
           name: string
           notes?: string | null
           primary_muscle: string
           secondary_muscles?: string[]
+          technique_hint?: string | null
+          thumbnail_url?: string | null
           updated_at?: string
         }
         Update: {
+          animation_url?: string | null
           category?: string
           created_at?: string
           default_reps?: string
@@ -1150,11 +1161,15 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_unilateral?: boolean
+          media_source?: string | null
+          media_type?: string | null
           movement_pattern?: string
           name?: string
           notes?: string | null
           primary_muscle?: string
           secondary_muscles?: string[]
+          technique_hint?: string | null
+          thumbnail_url?: string | null
           updated_at?: string
         }
         Relationships: []
