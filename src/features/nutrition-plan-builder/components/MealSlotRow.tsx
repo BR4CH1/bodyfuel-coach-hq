@@ -26,6 +26,7 @@ interface MealSlotRowProps {
   dayType: "training" | "rest";
   remaining: { kcal: number; p: number; c: number; f: number };
   onPick: (meal: LibraryMeal) => void;
+  onPickFood?: (meal: BuilderMeal) => void;
   onSwap: (meal: LibraryMeal) => void;
   onFactor: (factor: number) => void;
   onLockToggle: () => void;
@@ -43,6 +44,7 @@ export function MealSlotRow({
   dayType,
   remaining,
   onPick,
+  onPickFood,
   onSwap,
   onFactor,
   onLockToggle,
@@ -101,6 +103,7 @@ export function MealSlotRow({
             dayType={dayType}
             remaining={remaining}
             onPick={onPick}
+            onPickFood={onPickFood}
           />
           {partnerLink && (
             <Button

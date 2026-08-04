@@ -109,6 +109,10 @@ export function DayCard({
     });
   };
 
+  const addFoodMeal = (slot: Slot, built: BuilderMeal) => {
+    onChange((d) => ({ ...d, meals: [...d.meals, { ...built, slot }] }));
+  };
+
   const addAdditionalMeal = (slot: Slot, lib: LibraryMeal) => {
     onChange((d) => ({ ...d, meals: [...d.meals, mealFromLibrary(lib, slot)] }));
   };
@@ -344,6 +348,7 @@ export function DayCard({
                   dayType={day.type}
                   remaining={remaining}
                   onPick={(lib) => pickMealForEmptySlot(slot.key, lib)}
+                  onPickFood={(built) => addFoodMeal(slot.key, built)}
                   onSwap={() => {}}
                   onFactor={() => {}}
                   onLockToggle={() => {}}
@@ -366,6 +371,7 @@ export function DayCard({
                       dayType={day.type}
                       remaining={remaining}
                       onPick={(lib) => addAdditionalMeal(slot.key, lib)}
+                      onPickFood={(built) => addFoodMeal(slot.key, built)}
                       onSwap={(lib) =>
                         updateMealAtIndex(idx, (curr) => ({
                           ...curr,
@@ -409,6 +415,7 @@ export function DayCard({
                     dayType={day.type}
                     remaining={remaining}
                     onPick={(lib) => addAdditionalMeal(slot.key, lib)}
+                    onPickFood={(built) => addFoodMeal(slot.key, built)}
                   />
                 </>
               )}
