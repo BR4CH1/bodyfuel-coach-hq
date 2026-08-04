@@ -117,6 +117,48 @@ export const listExerciseLibrary = createServerFn({ method: "GET" })
     return (data ?? []) as unknown as LibraryExercise[];
   });
 
+/**
+ * Coach-Medienpflege für die Übungsbibliothek.
+ * Nur Coaches dürfen schreiben; Kund:innen lesen die Felder ausschließlich.
+ */
+export const updateExerciseMedia = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (d: {
+      exerciseId: string;
+      thumbnailUrl?: string | null;
+      animationUrl?: string | null;
+      mediaSource?: string | null;
+      techniqueHint?: string | null;
+    }) => d,
+  )
+  .handler(async ({ data, context }): Promise<{ ok: true }> => {
+    await assertGlobalCoachOrAnyOrgCoach(context);
+    const { validateMediaInput, resolveMediaKind } = await import("@/lib/exercise-media");
+    const check = validateMediaInput({
+      thumbnailUrl: data.thumbnailUrl,
+      animationUrl: data.animationUrl,
+    });
+    if (!check.ok) throw new Error(check.error);
+
+    const thumb = data.thumbnailUrl?.trim() || null;
+    const anim = data.animationUrl?.trim() || null;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("coach_exercise_library" as any)
+      .update({
+        thumbnail_url: thumb,
+        animation_url: anim,
+        media_type: resolveMediaKind(anim ?? thumb),
+        media_source: data.mediaSource?.trim() || null,
+        technique_hint: data.techniqueHint?.trim() || null,
+      } as any)
+      .eq("id", data.exerciseId);
+    if (error) throw error;
+    return { ok: true };
+  });
+
+
 export const getCustomerTrainingContext = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { customerId: string }) => d)
