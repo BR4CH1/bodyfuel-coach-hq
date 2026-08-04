@@ -19,9 +19,12 @@ import {
   targetsFor,
   type PartnerSlotLink,
   type SharedSlotsMap,
+  type MacroValues,
   type Slot,
 } from "../lib/plan-builder.logic";
 import { DayCard } from "./DayCard";
+import type { TargetScope } from "./MacroTargetEditorDialog";
+
 
 export function PartnerDayBlock({
   clientDay,
