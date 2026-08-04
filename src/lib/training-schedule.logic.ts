@@ -102,7 +102,8 @@ export function weekdayFromDayName(name: string | null | undefined): number | nu
   return key in WEEKDAY_TOKENS ? WEEKDAY_TOKENS[key] : null;
 }
 
-const REST_RE = /(ruhetag|ruhe|rest\b|off\b|erholung|pause)/i;
+/** Erkennt Ruhetags-Bezeichnungen ("Di - Rest — Ruhe & Erholung"). */
+const REST_NAME_RE = /(^|[-–—]\s*)(rest|ruhetag|ruhe|off|frei)\b/i;
 
 /**
  * Splitbezeichnung aus dem Tagesnamen extrahieren.
@@ -110,31 +111,28 @@ const REST_RE = /(ruhetag|ruhe|rest\b|off\b|erholung|pause)/i;
  */
 export function splitFromDayName(name: string | null | undefined): string | null {
   if (!name) return null;
-  let rest = name.trim();
-  // Wochentagspräfix entfernen
-  const parts = rest.split(/\s*[-–—]\s*/).filter((p) => p.trim().length > 0);
+  const parts = name
+    .trim()
+    .split(/\s*[-–—]\s*/)
+    .map((p) => p.trim())
+    .filter(Boolean);
   const cleaned: string[] = [];
   for (const part of parts) {
-    const key = part.trim().toLowerCase().replace(/\./g, "");
+    const key = part.toLowerCase().replace(/\./g, "");
     if (cleaned.length === 0 && key in WEEKDAY_TOKENS) continue; // "Di"
-    if (/^(gym|studio|home|zuhause|training)$/i.test(part.trim())) continue;
-    cleaned.push(part.trim());
+    if (/^(gym|studio|home|zuhause|training)$/i.test(part)) continue;
+    cleaned.push(part);
   }
-  rest = cleaned.join(" · ").trim();
-  if (!rest) return null;
-  if (REST_RE.test(rest) && cleaned.length <= 2 && /^(rest|ruhetag|ruhe|off)/i.test(cleaned[0] ?? ""))
-    return null;
-  return rest;
+  const label = cleaned.join(" · ").trim();
+  return label || null;
 }
 
 function isRestDay(day: TrainingScheduleSourceDay): boolean {
   const count = day.exercise_count;
   if (typeof count === "number" && count <= 0) return true;
-  const name = day.name ?? "";
-  return /^(\s*\S+\s*[-–—]\s*)?(rest|ruhetag|ruhe|off)\b/i.test(name.replace(/^\s*\S{2,10}\s*[-–—]\s*/, "$&"))
-    ? /(^|[-–—]\s*)(rest|ruhetag|ruhe|off)\b/i.test(name)
-    : /(^|[-–—]\s*)(rest|ruhetag|ruhe|off)\b/i.test(name);
+  return REST_NAME_RE.test(day.name ?? "");
 }
+
 
 /** Wochentag eines Quell-Tages bestimmen (Datum > Name > sort_order). */
 export function weekdayForSourceDay(
