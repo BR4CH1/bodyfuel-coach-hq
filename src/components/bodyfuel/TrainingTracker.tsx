@@ -1822,6 +1822,14 @@ function ExerciseCard({
           </details>
         </div>
       </div>
+
+      <ExerciseMediaSheet
+        open={mediaOpen}
+        onOpenChange={setMediaOpen}
+        name={ex.name}
+        media={exerciseMedia}
+      />
     </article>
+
   );
 }
