@@ -1427,27 +1427,47 @@ function ExerciseLibraryPanel({
         </div>
       ) : (
         <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filtered.map((exercise) => (
-            <button
-              key={exercise.id}
-              type="button"
-              disabled={!selectedDayLabel}
-              onClick={() => onPick(exercise)}
-              className="group flex min-w-0 items-center gap-3 rounded-xl border border-border bg-background p-3 text-left transition hover:-translate-y-0.5 hover:border-primary/40 hover:bg-primary/5 hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-45"
-            >
-              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary transition group-hover:bg-primary group-hover:text-primary-foreground">
-                <Dumbbell className="h-4 w-4" />
+          {filtered.map((exercise) => {
+            const media = normalizeExerciseMedia(exercise);
+            return (
+              <div
+                key={exercise.id}
+                className="group flex min-w-0 items-center gap-3 rounded-xl border border-border bg-background p-2.5 text-card-foreground transition hover:border-primary/40 hover:bg-primary/5 hover:shadow-sm"
+              >
+                <button
+                  type="button"
+                  onClick={() => setMediaFor(exercise)}
+                  aria-label={`Medien für ${exercise.name} ansehen oder pflegen`}
+                  className="rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <ExerciseMediaThumb
+                    media={media}
+                    name={exercise.name}
+                    muscle={exercise.primary_muscle}
+                    size={56}
+                  />
+                </button>
+                <button
+                  type="button"
+                  disabled={!selectedDayLabel}
+                  onClick={() => onPick(exercise)}
+                  className="flex min-w-0 flex-1 items-center gap-2 text-left transition disabled:cursor-not-allowed disabled:text-muted-foreground"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-xs font-black text-foreground">
+                      {exercise.name}
+                    </span>
+                    <span className="mt-0.5 block truncate text-[9px] font-semibold text-muted-foreground">
+                      {exercise.primary_muscle} · {exercise.default_sets} × {exercise.default_reps}
+                    </span>
+                  </span>
+                  <Plus className="h-4 w-4 shrink-0 text-muted-foreground transition group-hover:text-primary" />
+                </button>
               </div>
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-xs font-black">{exercise.name}</div>
-                <div className="mt-0.5 truncate text-[9px] font-semibold text-muted-foreground">
-                  {exercise.primary_muscle} · {exercise.default_sets} × {exercise.default_reps}
-                </div>
-              </div>
-              <Plus className="h-4 w-4 shrink-0 text-muted-foreground transition group-hover:text-primary" />
-            </button>
-          ))}
+            );
+          })}
         </div>
+
       )}
 
       {library.length > filtered.length && (
