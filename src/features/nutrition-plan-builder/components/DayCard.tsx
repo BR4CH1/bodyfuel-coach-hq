@@ -18,11 +18,14 @@ import {
   mealFromLibrary,
   rebalanceDay,
   summarizeDay,
+  type MacroValues,
   type PartnerSlotLink,
   type Slot,
 } from "../lib/plan-builder.logic";
+import { MacroTargetEditorDialog, type TargetScope } from "./MacroTargetEditorDialog";
 import { MealPickerDialog } from "./MealPickerDialog";
 import { MealSlotRow } from "./MealSlotRow";
+
 
 export function DayCard({
   day,
