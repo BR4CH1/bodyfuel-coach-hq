@@ -1133,7 +1133,9 @@ function ExerciseRow({
   onChange: (patch: Partial<BuilderTrainingExercise>) => void;
   onRemove: () => void;
 }) {
+  const media = useExerciseMedia(ex.name);
   return (
+
     <div
       draggable
       onDragStart={(event) => {
