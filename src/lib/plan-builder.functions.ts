@@ -111,7 +111,14 @@ export type CustomerPlanContext = {
   mealPrepDays: number | null;
   varietyLevel: "low" | "medium" | "high" | null;
   trainingWeekdays: number[]; // 0=Sun..6=Sat
+  /**
+   * Wochentag (0=So…6=Sa) → Trainingstag/Ruhetag inkl. Splitbezeichnung,
+   * abgeleitet aus dem aktuell gültigen Trainingsplan. Leer, wenn kein Plan
+   * vorhanden ist (dann greift der Fallback über `trainingWeekdays`).
+   */
+  trainingSchedule: TrainingWeekSchedule;
 };
+
 
 export const listMealLibrary = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
