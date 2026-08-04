@@ -1,4 +1,5 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,9 +11,16 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Search, Sparkles, Utensils } from "lucide-react";
-import type { CustomerPlanContext, LibraryMeal } from "@/lib/plan-builder.functions";
+import type { BuilderMeal, CustomerPlanContext, LibraryMeal } from "@/lib/plan-builder.functions";
+import { searchFoodsDb, type FoodResult } from "@/lib/nutrition.functions";
 import { cn } from "@/lib/utils";
-import { scoreMeal, type Slot } from "../lib/plan-builder.logic";
+import {
+  isFoodQueryValid,
+  matchesMealQuery,
+  mealFromFood,
+  scoreMeal,
+  type Slot,
+} from "../lib/plan-builder.logic";
 
 interface MealPickerDialogProps {
   trigger: ReactNode;
@@ -23,10 +31,13 @@ interface MealPickerDialogProps {
   dayType: "training" | "rest";
   remaining: { kcal: number; p: number; c: number; f: number };
   onPick: (meal: LibraryMeal) => void;
+  /** Optional: übernimmt ein einzelnes Lebensmittel als einfache Mahlzeit. */
+  onPickFood?: (meal: BuilderMeal) => void;
   excludeId?: string | null;
 }
 
 type PickerMode = "recommended" | "all";
+type PickerTab = "meals" | "foods";
 
 export function MealPickerDialog({
   trigger,
@@ -37,11 +48,13 @@ export function MealPickerDialog({
   dayType,
   remaining,
   onPick,
+  onPickFood,
   excludeId,
 }: MealPickerDialogProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState<PickerMode>("recommended");
+  const [tab, setTab] = useState<PickerTab>("meals");
 
   const scored = useMemo(
     () =>
@@ -68,17 +81,7 @@ export function MealPickerDialog({
     return scored.filter(({ meal, score }) => {
       if (mode === "recommended" && score < 30) return false;
       if (!normalizedQuery) return true;
-      const haystack = [
-        meal.name,
-        meal.description ?? "",
-        meal.main_protein ?? "",
-        meal.main_carb ?? "",
-        ...(meal.tags ?? []),
-        ...(meal.ingredients ?? []).map((ingredient) => ingredient.name),
-      ]
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(normalizedQuery);
+      return matchesMealQuery(meal, normalizedQuery);
     });
   }, [mode, query, scored]);
 
