@@ -330,3 +330,40 @@ WHERE NOT EXISTS (
   SELECT 1 FROM public.coach_meal_library existing
   WHERE lower(existing.name) = lower(s.name) AND existing.category = s.category
 );
+
+-- Nachtrag: vier weitere Gerichte, damit mindestens 100 aktive Gerichte vorhanden sind
+INSERT INTO public.coach_meal_library (
+  name, description, category, kcal, protein_g, carbs_g, fat_g, portion_label,
+  ingredients, instructions, tags, no_go_ingredients,
+  suitable_training, suitable_rest, mealprep_ok, eat_cold,
+  effort, budget, main_protein, main_carb, is_system, is_active
+)
+SELECT s.name, s.description, s.category, s.kcal, s.protein_g, s.carbs_g, s.fat_g, s.portion_label,
+       s.ingredients, s.instructions, s.tags, s.no_go_ingredients,
+       s.suitable_training, s.suitable_rest, s.mealprep_ok, s.eat_cold,
+       s.effort, s.budget, s.main_protein, s.main_carb, true, true
+FROM (VALUES
+  ('Hirtensalat mit Ei und Vollkornbrot', 'Frischer Abendsalat mit Feta und Ei', 'dinner'::meal_slot_kind, 566, 30.0, 40.0, 30.0, '1 große Schale',
+   '[{"name": "Feta", "amount_g": 80}, {"name": "Eier", "amount_g": 110}, {"name": "Gurke", "amount_g": 120}, {"name": "Tomate", "amount_g": 150}, {"name": "Vollkornbrot", "amount_g": 60}, {"name": "Olivenöl", "amount_g": 10}]'::jsonb,
+   'Gemüse würfeln, Eier kochen, alles mit Feta und Öl mischen, Brot dazu.', ARRAY['vegetarisch','kalt','schnell','high_protein']::text[], ARRAY[]::text[],
+   true, true, false, true, 'low'::meal_effort_level, 'medium'::meal_budget_level, 'Feta', 'Vollkornbrot'),
+  ('Pilzrisotto mit Hähnchen', 'Cremiges Risotto mit magerem Hähnchen', 'dinner'::meal_slot_kind, 646, 44.0, 68.0, 20.0, '1 Teller',
+   '[{"name": "Hähnchenbrust", "amount_g": 160}, {"name": "Risottoreis gekocht", "amount_g": 230}, {"name": "Champignons", "amount_g": 150}, {"name": "Parmesan", "amount_g": 20}, {"name": "Olivenöl", "amount_g": 10}]'::jsonb,
+   'Reis mit Brühe cremig garen, Pilze und Hähnchen anbraten, unterheben, mit Parmesan abrunden.', ARRAY['warm','klassisch','high_protein']::text[], ARRAY[]::text[],
+   true, true, true, false, 'medium'::meal_effort_level, 'medium'::meal_budget_level, 'Hähnchen', 'Reis'),
+  ('Skyr mit Zimt und Walnüssen', 'Cremiger Snack mit gesunden Fetten', 'snack'::meal_slot_kind, 303, 22.0, 10.0, 19.0, '1 Becher',
+   '[{"name": "Skyr natur", "amount_g": 150}, {"name": "Walnüsse", "amount_g": 25}, {"name": "Zimt", "amount_g": 2}]'::jsonb,
+   'Skyr mit Zimt verrühren und Walnüsse darüber streuen.', ARRAY['high_protein','low_carb','kalt','schnell','vegetarisch']::text[], ARRAY[]::text[],
+   true, true, true, true, 'low'::meal_effort_level, 'medium'::meal_budget_level, 'Skyr', 'Walnüsse'),
+  ('Vollkornwrap mit Frischkäse und Pute', 'Handlicher Snack für unterwegs', 'snack'::meal_slot_kind, 318, 25.0, 32.0, 9.0, '1 halber Wrap',
+   '[{"name": "Vollkorn-Wrap", "amount_g": 50}, {"name": "Putenbrust Aufschnitt", "amount_g": 60}, {"name": "Frischkäse light", "amount_g": 30}, {"name": "Salat", "amount_g": 30}]'::jsonb,
+   'Wrap bestreichen, belegen, aufrollen und halbieren.', ARRAY['high_protein','kalt','schnell','mealprep']::text[], ARRAY[]::text[],
+   true, true, true, true, 'low'::meal_effort_level, 'medium'::meal_budget_level, 'Putenbrust', 'Wrap')
+) AS s(name, description, category, kcal, protein_g, carbs_g, fat_g, portion_label,
+       ingredients, instructions, tags, no_go_ingredients,
+       suitable_training, suitable_rest, mealprep_ok, eat_cold,
+       effort, budget, main_protein, main_carb)
+WHERE NOT EXISTS (
+  SELECT 1 FROM public.coach_meal_library existing
+  WHERE lower(existing.name) = lower(s.name) AND existing.category = s.category
+);
