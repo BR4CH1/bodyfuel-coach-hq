@@ -69,6 +69,7 @@ export function usePlanBuilder({ userId, planId, returnOrgId }: UsePlanBuilderPa
   const getPartner = useServerFn(getPartnerLink);
   const loadPlan = useServerFn(loadNutritionPlanForBuilder);
   const generateLibraryImage = useServerFn(generateMealImage);
+  const resolveNutrition = useServerFn(resolveIngredientNutrition);
   const requestedLibraryImages = useRef(new Set<string>());
   const restoredDraft = useRef(false);
 
