@@ -472,3 +472,24 @@ describe("manuelle Portionierung nach Zutatenanpassung", () => {
     expect(single.c).toBeCloseTo(meal.macro_override!.carbs_g * (meal.portion_factor ?? 1) === 0 ? 0 : meal.macro_override!.carbs_g, 3);
   });
 });
+
+describe("Reporting", () => {
+  it("dokumentiert das 30-g-Beispiel", () => {
+    const day = highCarbDay();
+    const before = dayTotals(day);
+    const target = {
+      kcal: Math.round(before.kcal - (before.c - 30) * 4),
+      p: Math.round(before.p),
+      c: 30,
+      f: Math.round(before.f),
+    };
+    const res = optimizeDayToTargets({ day, target, ctx: ctxOf(), library: LIBRARY, resolve });
+    const after = dayTotals(res.day);
+    const fmt = (t: typeof before) =>
+      `kcal ${Math.round(t.kcal)} | P ${t.p.toFixed(1)} | KH ${t.c.toFixed(1)} | F ${t.f.toFixed(1)}`;
+    console.log("VORHER :", fmt(before));
+    console.log("ZIEL   :", `kcal ${target.kcal} | P ${target.p} | KH ${target.c} | F ${target.f}`);
+    console.log("NACHHER:", fmt(after));
+    for (const c of res.changes) console.log("  -", JSON.stringify(c));
+  });
+});
