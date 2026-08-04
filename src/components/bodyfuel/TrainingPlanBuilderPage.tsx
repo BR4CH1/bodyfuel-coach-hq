@@ -957,7 +957,9 @@ export function TrainingPlanBuilderPage({
         />
       </div>
     </div>
+    </ExerciseMediaLibraryContext.Provider>
   );
+
 }
 
 function DayCard({
