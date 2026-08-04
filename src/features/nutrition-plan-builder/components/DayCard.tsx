@@ -233,6 +233,9 @@ export function DayCard({
           >
             {day.type === "training" ? "Trainingstag" : "Restday"}
           </Badge>
+          {day.type === "training" && day.split ? (
+            <span className="text-xs text-muted-foreground">{day.split}</span>
+          ) : null}
         </div>
         {!hideHeaderActions && (
           <div className="flex flex-wrap gap-1">

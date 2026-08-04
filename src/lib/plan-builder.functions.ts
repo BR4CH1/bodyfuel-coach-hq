@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { IngredientRole, Per100 } from "@/lib/ingredient-roles";
+import type { TrainingWeekSchedule } from "@/lib/training-schedule.logic";
 import {
   assertCoachOrOrgStaffForAthlete,
   assertGlobalCoachOrAnyOrgCoach,
@@ -111,7 +112,14 @@ export type CustomerPlanContext = {
   mealPrepDays: number | null;
   varietyLevel: "low" | "medium" | "high" | null;
   trainingWeekdays: number[]; // 0=Sun..6=Sat
+  /**
+   * Wochentag (0=So…6=Sa) → Trainingstag/Ruhetag inkl. Splitbezeichnung,
+   * abgeleitet aus dem aktuell gültigen Trainingsplan. Leer, wenn kein Plan
+   * vorhanden ist (dann greift der Fallback über `trainingWeekdays`).
+   */
+  trainingSchedule?: TrainingWeekSchedule;
 };
+
 
 export const listMealLibrary = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -168,6 +176,15 @@ export const getCustomerPlanContext = createServerFn({ method: "POST" })
     };
     const merge = (...vs: any[]) => Array.from(new Set(vs.flatMap(toList)));
 
+    // Wochentagszuordnung aus dem aktuell gültigen Trainingsplan (inkl. Split).
+    let trainingSchedule: TrainingWeekSchedule | undefined;
+    try {
+      const { loadTrainingWeekSchedule } = await import("@/lib/training-schedule.server");
+      trainingSchedule = (await loadTrainingWeekSchedule(supabaseAdmin, data.customerId)) ?? undefined;
+    } catch (e) {
+      console.error("[getCustomerPlanContext] training schedule failed", e);
+    }
+
     return {
       targets: {
         kcal_train: Number(tgt?.kcal ?? 0),
@@ -198,6 +215,7 @@ export const getCustomerPlanContext = createServerFn({ method: "POST" })
           ? prof.variety_level
           : null,
       trainingWeekdays: normalizeWeekdays(prof?.training_weekdays),
+      trainingSchedule,
     };
   });
 
@@ -244,6 +262,11 @@ export type BuilderMeal = {
 export type BuilderDay = {
   name: string;
   type: "training" | "rest";
+  /**
+   * Splitbezeichnung des Trainingstages laut Trainingsplan (z. B. "Pull · Rücken").
+   * Null/undefined bei Ruhetagen oder Plänen ohne Splitinformation.
+   */
+  split?: string | null;
   typeOverride?: boolean; // true when coach toggled manually
   meals: BuilderMeal[];
   prepCoupleLunchDinner?: boolean;

@@ -148,15 +148,34 @@ export function usePlanBuilder({ userId, planId, returnOrgId }: UsePlanBuilderPa
 
   const trainingWeekdays = contextQuery.data?.trainingWeekdays ?? EMPTY_WEEKDAYS;
   const partnerTrainingWeekdays = partnerContextQuery.data?.trainingWeekdays ?? EMPTY_WEEKDAYS;
+  // Jede Person bringt ihren eigenen Wochen-Trainingsplan mit (Partner-Modus).
+  const trainingSchedule = contextQuery.data?.trainingSchedule ?? null;
+  const partnerTrainingSchedule = partnerContextQuery.data?.trainingSchedule ?? null;
 
   useEffect(() => {
-    setDays((previous) => buildBuilderDays(previous, startDate, numDays, trainingWeekdays));
+    setDays((previous) =>
+      buildBuilderDays(previous, startDate, numDays, trainingWeekdays, trainingSchedule),
+    );
     if (partnerMode) {
       setPartnerDays((previous) =>
-        buildBuilderDays(previous, startDate, numDays, partnerTrainingWeekdays),
+        buildBuilderDays(
+          previous,
+          startDate,
+          numDays,
+          partnerTrainingWeekdays,
+          partnerTrainingSchedule,
+        ),
       );
     }
-  }, [startDate, numDays, trainingWeekdays, partnerTrainingWeekdays, partnerMode]);
+  }, [
+    startDate,
+    numDays,
+    trainingWeekdays,
+    partnerTrainingWeekdays,
+    trainingSchedule,
+    partnerTrainingSchedule,
+    partnerMode,
+  ]);
 
   useEffect(() => {
     if (!planId || !loadedPlanQuery.data || loadedPlanApplied || restoredDraft.current) return;

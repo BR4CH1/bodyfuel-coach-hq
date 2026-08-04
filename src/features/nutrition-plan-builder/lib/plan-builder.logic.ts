@@ -5,6 +5,11 @@ import type {
   BuilderMeal,
 } from "@/lib/plan-builder.functions";
 import { isMealCompatibleWithDiet } from "@/lib/diet-compat";
+import {
+  resolveTrainingDay,
+  scheduleFromWeekdays,
+  type TrainingWeekSchedule,
+} from "@/lib/training-schedule.logic";
 
 /** Zentrale Ernährungsform-Prüfung für Picker, Auto-Fill und Scoring. */
 export function mealFitsDiet(
@@ -52,33 +57,54 @@ export function addDays(iso: string, n: number): string {
   return isoDate(d);
 }
 
+/**
+ * Baut die Kalendertage des Ernährungsplans.
+ *
+ * Trainingstag/Ruhetag UND Splitbezeichnung stammen ausschließlich aus dem
+ * Wochenplan (`schedule`), der pro Wochentag (0=So…6=Sa) hinterlegt ist —
+ * es wird nichts zyklisch nach Array-Reihenfolge rotiert. Fehlt der Wochenplan,
+ * greift der abwärtskompatible Fallback über `trainingWeekdays`
+ * (dann nur Trainingstag/Ruhetag, ohne Split).
+ *
+ * Manuell umgeschaltete Tage (`typeOverride`) bleiben bei Re-Renders erhalten.
+ * Für einen bewussten Neuaufbau `forceRecompute = true` setzen.
+ */
 export function buildBuilderDays(
   previous: BuilderDay[],
   startDate: string,
   numDays: number,
   trainingWeekdays: number[],
+  schedule?: TrainingWeekSchedule | null,
+  forceRecompute = false,
 ): BuilderDay[] {
   const next: BuilderDay[] = [];
   const weekdayLabels = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+  const effectiveSchedule =
+    schedule && Object.keys(schedule).length > 0
+      ? schedule
+      : scheduleFromWeekdays(trainingWeekdays);
 
   for (let index = 0; index < numDays; index += 1) {
     const iso = addDays(startDate, index);
     const date = new Date(`${iso}T00:00:00Z`);
     const weekday = date.getUTCDay();
     const existing = previous[index];
-    const autoType: BuilderDay["type"] = trainingWeekdays.includes(weekday) ? "training" : "rest";
-    const type = existing?.typeOverride ? existing.type : autoType;
+    const planned = resolveTrainingDay(effectiveSchedule, iso);
+    const keepOverride = !forceRecompute && existing?.typeOverride === true;
+    const type = keepOverride ? existing!.type : planned.type;
+    // Ruhetage tragen nie eine alte Splitbezeichnung.
+    const split = type === "training" ? (planned.split ?? null) : null;
     const dateLabel = `${weekdayLabels[weekday]} ${String(date.getUTCDate()).padStart(2, "0")}.${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
 
     next.push({
       name: `Tag ${index + 1} · ${dateLabel}`,
       type,
-      typeOverride: existing?.typeOverride ?? false,
+      split,
+      typeOverride: keepOverride,
       meals: existing?.meals ?? [],
       prepCoupleLunchDinner: existing?.prepCoupleLunchDinner ?? false,
       customTargets: existing?.customTargets ?? null,
     });
-
   }
 
   return next;
