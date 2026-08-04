@@ -567,5 +567,24 @@ export function usePlanBuilder({ userId, planId, returnOrgId }: UsePlanBuilderPa
     runAutoFillWeek,
     undoWeekFill,
     ensureLibraryMealImage,
+    targetsBusy,
+    applyClientTargets: (
+      dayIndex: number,
+      targets: MacroValues,
+      scope: TargetScope,
+      adjust: boolean,
+    ) => void applyTargetsTo("client", dayIndex, targets, scope, adjust),
+    applyPartnerTargets: (
+      dayIndex: number,
+      targets: MacroValues,
+      scope: TargetScope,
+      adjust: boolean,
+    ) => void applyTargetsTo("partner", dayIndex, targets, scope, adjust),
+    resetClientTargets: (dayIndex: number, scope: TargetScope) =>
+      resetTargetsFor("client", dayIndex, scope),
+    resetPartnerTargets: (dayIndex: number, scope: TargetScope) =>
+      resetTargetsFor("partner", dayIndex, scope),
+    dayTargetsFor: (day: BuilderDay) =>
+      contextQuery.data ? targetsFor(day, contextQuery.data) : null,
   };
 }
