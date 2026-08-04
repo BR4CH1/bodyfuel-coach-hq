@@ -1481,6 +1481,9 @@ function ExerciseLibraryPanel({
           Ergebnisse.
         </p>
       )}
+
+      <ExerciseMediaEditorDialog exercise={mediaFor} onClose={() => setMediaFor(null)} />
     </section>
+
   );
 }
