@@ -281,6 +281,44 @@ function runPasses(models: MealModel[], target: MacroValues, locked: MacroValues
   }
 }
 
+/** Umlaut-/Schreibweisen-tolerante Normalisierung für Regelvergleiche. */
+function normalizeRuleText(raw: unknown): string {
+  return String(raw ?? "")
+    .toLowerCase()
+    .replace(/[äÄ]/g, "a")
+    .replace(/[öÖ]/g, "o")
+    .replace(/[üÜ]/g, "u")
+    .replace(/ß/g, "ss")
+    .replace(/[^a-z0-9 ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Harte Ausschlusskriterien: Allergien, Intoleranzen, No-Gos, Ernährungsform. */
+export function violatesHardRules(meal: LibraryMeal, ctx: CustomerPlanContext): boolean {
+  if (!mealFitsDiet(meal, ctx.dietStyle)) return true;
+  const hay = normalizeRuleText(
+    [
+      meal.name,
+      meal.description ?? "",
+      ...(meal.tags ?? []),
+      meal.main_protein ?? "",
+      meal.main_carb ?? "",
+      ...(meal.ingredients ?? []).map((i) => i.name),
+      ...(meal.no_go_ingredients ?? []),
+    ].join(" "),
+  );
+  const forbidden = [...ctx.allergies, ...ctx.intolerances, ...ctx.noGoFoods]
+    .map((entry) => normalizeRuleText(entry))
+    // Ein einzelner Wortstamm reicht (z. B. "Walnüsse" trifft "Walnüssen").
+    // Nur bei ausreichend langen Begriffen, sonst drohen Fehltreffer.
+    .map((entry) => (entry.length >= 6 ? entry.replace(/(en|e|n|s)$/, "") : entry))
+
+    .filter((entry) => entry.length > 2);
+  return forbidden.some((entry) => hay.includes(entry));
+}
+
+
 /** Ersatzkandidat, der harte Regeln einhält und dem Restziel am nächsten kommt. */
 function findReplacement(
   slot: Slot,
@@ -294,9 +332,9 @@ function findReplacement(
   const candidates = library
     .filter((m) => m.category === slot)
     .filter((m) => !excludeIds.has(m.id))
-    .filter((m) => mealFitsDiet(m, ctx.dietStyle))
+    // Harte Regeln sind nicht verhandelbar — vor jedem Scoring.
+    .filter((m) => !violatesHardRules(m, ctx))
     .map((m) => ({ meal: m, ...scoreMeal(m, ctx, dayType, remaining) }))
-    .filter((entry) => entry.score > 0)
     .map((entry) => {
       const carbGap = Math.abs(Number(entry.meal.carbs_g) - desired.c);
       const proteinGap = Math.abs(Number(entry.meal.protein_g) - desired.p);
@@ -306,6 +344,7 @@ function findReplacement(
     .sort((a, b) => a.fit - b.fit);
   return candidates[0]?.meal ?? null;
 }
+
 
 function writeBack(model: MealModel): BuilderMeal {
   const ingredients: BuilderIngredient[] = model.meal.ingredients.map((ingredient, index) => {
@@ -379,13 +418,16 @@ export function optimizeDayToTargets({
   }
 
   if (models.length === 0) {
+    // Alles fixiert: es kann nichts verändert werden, aber die Bewertung muss
+    // trotzdem alle vier Makros berücksichtigen.
     return {
       day,
       changes,
       totals: lockedTotals,
-      withinTolerance: Math.abs(lockedTotals.kcal - target.kcal) <= MACRO_TOLERANCE.kcal,
+      withinTolerance: isWithinTolerance(lockedTotals, target),
     };
   }
+
 
   runPasses(models, target, lockedTotals);
 
@@ -454,6 +496,8 @@ export function optimizeDayToTargets({
   }
 
   // --- Letzter Fallback: Portionsfaktor, wenn kcal weiterhin klar daneben liegt ---
+  // Er darf ein bereits erreichtes Makroziel (v. a. Kohlenhydrate) niemals
+  // wieder aus der Toleranz schieben — sonst wird er komplett zurückgenommen.
   let totals = totalsOf(models, lockedTotals);
   if (target.kcal > 0 && Math.abs(totals.kcal - target.kcal) > target.kcal * 0.1) {
     const unlockedKcal = totals.kcal - lockedTotals.kcal;
@@ -461,18 +505,33 @@ export function optimizeDayToTargets({
       const wanted = Math.max(0, target.kcal - lockedTotals.kcal) / unlockedKcal;
       const scale = Math.min(2, Math.max(0.5, Math.round(wanted * 4) / 4));
       if (scale !== 1) {
+        const before = { totals, factors: models.map((model) => model.factor) };
+        const portionChanges: OptimizationChange[] = [];
         for (const model of models) {
           const from = model.factor;
           const next = Math.min(8, Math.max(0.25, Math.round(from * scale * 4) / 4));
           if (next !== from) {
             model.factor = next;
-            changes.push({
+            portionChanges.push({
               kind: "portion",
               meal: model.meal.name,
               fromFactor: from,
               toFactor: next,
             });
           }
+        }
+        const after = totalsOf(models, lockedTotals);
+        const brokeMacro = (["c", "p", "f"] as const).some(
+          (key) =>
+            Math.abs(after[key] - target[key]) > MACRO_TOLERANCE[key] &&
+            Math.abs(after[key] - target[key]) > Math.abs(before.totals[key] - target[key]),
+        );
+        if (brokeMacro) {
+          models.forEach((model, index) => {
+            model.factor = before.factors[index] ?? model.factor;
+          });
+        } else {
+          changes.push(...portionChanges);
         }
       }
     }
@@ -497,15 +556,27 @@ export function optimizeDayToTargets({
   for (const model of models) nextMeals[model.index] = writeBack(model);
   const nextDay: BuilderDay = { ...day, meals: nextMeals };
 
-  totals = totalsOf(models, lockedTotals);
-  const withinTolerance =
+  // Die gemeldeten Summen müssen exakt aus dem tatsächlich zurückgegebenen Tag
+  // stammen (inkl. Rundung der macro_override-Werte).
+  totals = nextDay.meals.reduce<MacroValues>(
+    (acc, meal) => addMacros(acc, mealMacros(meal, library)),
+    emptyMacros(),
+  );
+
+  return { day: nextDay, changes, totals, withinTolerance: isWithinTolerance(totals, target) };
+}
+
+/** Prüft alle vier Makros gegen die dokumentierte Toleranz. */
+export function isWithinTolerance(totals: MacroValues, target: MacroValues): boolean {
+  return (
     Math.abs(totals.c - target.c) <= MACRO_TOLERANCE.c &&
     Math.abs(totals.p - target.p) <= MACRO_TOLERANCE.p &&
     Math.abs(totals.f - target.f) <= MACRO_TOLERANCE.f &&
-    Math.abs(totals.kcal - target.kcal) <= MACRO_TOLERANCE.kcal;
-
-  return { day: nextDay, changes, totals, withinTolerance };
+    Math.abs(totals.kcal - target.kcal) <= MACRO_TOLERANCE.kcal
+  );
 }
+
+
 
 /** Normalisiert Zieleingaben aus dem Editor auf ganze, plausible Werte. */
 export function normalizeTargets(raw: Partial<MacroValues>): MacroValues {
