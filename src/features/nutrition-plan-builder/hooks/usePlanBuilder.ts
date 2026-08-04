@@ -105,6 +105,7 @@ export function usePlanBuilder({ userId, planId, returnOrgId }: UsePlanBuilderPa
   const [days, setDays] = useState<BuilderDay[]>([]);
   const [partnerDays, setPartnerDays] = useState<BuilderDay[]>([]);
   const [copyChoiceIdx, setCopyChoiceIdx] = useState<number | null>(null);
+  const [targetsBusy, setTargetsBusy] = useState(false);
   const draftKey = useMemo(
     () => `bf.planBuilder.draft.${userId}.${planId ?? "new"}`,
     [userId, planId],
