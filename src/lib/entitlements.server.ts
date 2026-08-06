@@ -67,6 +67,18 @@ export class SmartAccessError extends Error {
 export async function assertSmartAccess(userId: string): Promise<Entitlement> {
   const entitlement = await resolveEntitlementFor(userId);
   if (!entitlement.hasSmart) {
+    // Coaches und Plattform-Owner haben immer Vollzugriff (arbeiten für Kunden).
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: roles } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId);
+    const privileged = (roles ?? []).some(
+      (r: { role: string }) => r.role === "coach" || r.role === "platform_owner",
+    );
+    if (privileged) return { ...entitlement, hasSmart: true };
+  }
+  if (!entitlement.hasSmart) {
     throw new SmartAccessError(smartGateMessage(entitlement));
   }
   return entitlement;
