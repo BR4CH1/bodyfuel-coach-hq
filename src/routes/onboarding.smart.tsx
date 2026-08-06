@@ -15,6 +15,8 @@ import {
 import { useSession } from "@/lib/bodyfuel/session";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/bodyfuel/Logo";
+import { useEntitlement } from "@/hooks/use-entitlement";
+import { SmartLockCard } from "@/components/bodyfuel/SmartGate";
 
 export const Route = createFileRoute("/onboarding/smart")({
   head: () => ({
@@ -124,6 +126,8 @@ function SmartOnboardingPage() {
   const { supabaseUser, loading } = useSession();
   const statusFn = useServerFn(getOnboardingStatus);
   const completeFn = useServerFn(completeSmartOnboarding);
+  // Smart-Gate (zusätzlich zum serverseitigen Gate in completeSmartOnboarding).
+  const { hasSmart, loading: entLoading } = useEntitlement();
 
   useEffect(() => {
     if (!loading && !supabaseUser) navigate({ to: "/auth", search: { next: undefined } });
@@ -132,7 +136,7 @@ function SmartOnboardingPage() {
   const { data: status } = useQuery({
     queryKey: ["smart-onboarding-status"],
     queryFn: () => statusFn(),
-    enabled: !!supabaseUser,
+    enabled: !!supabaseUser && hasSmart,
   });
 
   const [form, setForm] = useState<Form>(EMPTY);
