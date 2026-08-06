@@ -17,7 +17,8 @@ import { useScrollRestore } from "@/hooks/use-scroll-restore";
 
 import { useTrial } from "@/hooks/use-trial";
 import { TrialTrainingPlan } from "@/components/bodyfuel/TrialPlanView";
-import { ensureTrialTrainingPlan } from "@/lib/trial.functions";
+import { useEntitlement } from "@/hooks/use-entitlement";
+import { SmartLockCard } from "@/components/bodyfuel/SmartGate";
 
 export const Route = createFileRoute("/training")({
   head: () => ({ meta: [{ title: "Trainingsplan — BODYFUEL" }] }),
@@ -30,12 +31,10 @@ export const Route = createFileRoute("/training")({
 
 function TrainingPage() {
   const { isCoach, supabaseUser } = useSession();
-  const { isTrial, isExpired } = useTrial();
-  const ensureFn = useServerFn(ensureTrialTrainingPlan);
+  const { hasSmart } = useEntitlement();
   const statusFn = useServerFn(getMyStrengthStatus);
   const [clientId, setClientId] = useState<string>("");
-  const [trackerKey, setTrackerKey] = useState(0);
-  const seededRef = useRef(false);
+  const [trackerKey] = useState(0);
 
   // Scroll-Position über Tab-/Routenwechsel hinweg merken.
   useScrollRestore(`training:${supabaseUser?.id ?? "anon"}`, !!supabaseUser);
@@ -45,21 +44,6 @@ function TrainingPage() {
     queryFn: () => statusFn(),
     enabled: !!supabaseUser && !isCoach,
   });
-
-  // Trial-Nutzer: Starter-Trainingsplan idempotent anlegen, damit der Tracker
-  // sofort Übungen anzeigt und Sätze geloggt werden können.
-  useEffect(() => {
-    if (!supabaseUser || isCoach || !isTrial || seededRef.current) return;
-    seededRef.current = true;
-    (async () => {
-      try {
-        await ensureFn();
-        setTrackerKey((k) => k + 1);
-      } catch (e) {
-        console.error("ensureTrialTrainingPlan failed", e);
-      }
-    })();
-  }, [supabaseUser, isCoach, isTrial, ensureFn]);
 
   useEffect(() => {
     if (!supabaseUser || isCoach) return;
@@ -103,16 +87,16 @@ function TrainingPage() {
         </>
       ) : (
         <>
-          {supabaseUser && !isTrial && !isExpired && <LivePlanBanner userId={supabaseUser.id} />}
+          {supabaseUser && hasSmart && <LivePlanBanner userId={supabaseUser.id} />}
 
-          {supabaseUser && !isExpired && effectiveId && (
+          {supabaseUser && effectiveId && (
             <section className="space-y-4">
               <TrainingTracker key={`${trackerKey}:${effectiveId}`} clientId={effectiveId} />
             </section>
           )}
 
-          {isTrial || isExpired ? (
-            <TrialTrainingPlan />
+          {!hasSmart ? (
+            <SmartLockCard title="KI-Trainingsplan" />
           ) : (
             supabaseUser &&
             effectiveId && (

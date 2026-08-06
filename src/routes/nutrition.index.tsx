@@ -26,7 +26,7 @@ export const Route = createFileRoute("/nutrition/")({
 
 function NutritionIndex() {
   const { isCoach, supabaseUser } = useSession();
-  const { isTrial, isExpired } = useTrial();
+  const { hasSmart } = useEntitlement();
   const [coachClientId, setCoachClientId] = useState<string>("");
 
   const viewClientId = isCoach ? coachClientId : supabaseUser?.id ?? "";
@@ -167,8 +167,8 @@ function NutritionIndex() {
 
         )}
         {isCoach && <PlansView planType="nutrition" onClientChange={setCoachClientId} />}
-        {!isCoach && (isTrial || isExpired) ? (
-          <TrialNutritionPlan />
+        {!isCoach && !hasSmart ? (
+          <SmartLockCard title="KI-Ernährungsplan" />
         ) : (
           viewClientId && <PlanContentView clientId={viewClientId} planType="nutrition" />
         )}

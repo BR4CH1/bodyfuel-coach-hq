@@ -31,7 +31,7 @@ export const Route = createFileRoute("/$orgSlug/nutrition/")({
 function OrgNutrition() {
   const { org } = OrgLayoutRoute.useLoaderData();
   const { supabaseUser } = useSession();
-  const { isTrial, isExpired } = useTrial();
+  const { hasSmart } = useEntitlement();
 
   const fetchHome = useServerFn(getOrgHomeData);
   const { data: home } = useQuery({
@@ -236,8 +236,8 @@ function OrgNutrition() {
 
         {org.slug === "bulls" ? (
           supabaseUser?.id && <BullsPlanContentView />
-        ) : isTrial || isExpired ? (
-          <TrialNutritionPlan />
+        ) : !hasSmart ? (
+          <SmartLockCard title="KI-Ernährungsplan" />
         ) : (
           supabaseUser?.id && <PlanContentView clientId={supabaseUser.id} planType="nutrition" />
         )}

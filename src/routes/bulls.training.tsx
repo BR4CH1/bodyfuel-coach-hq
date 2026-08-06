@@ -12,7 +12,8 @@ import { LivePlanBanner } from "@/components/bodyfuel/LivePlanBanner";
 import { BullsAthleteAthleticSession } from "@/components/bodyfuel/BullsAthleteAthleticSession";
 import { useSession } from "@/lib/bodyfuel/session";
 import { useTrial } from "@/hooks/use-trial";
-import { TrialTrainingPlan } from "@/components/bodyfuel/TrialPlanView";
+import { useEntitlement } from "@/hooks/use-entitlement";
+import { SmartLockCard } from "@/components/bodyfuel/SmartGate";
 import { trackHubEvent } from "@/lib/bulls.functions";
 
 export const Route = createFileRoute("/bulls/training")({
@@ -33,7 +34,7 @@ function TrainingPage() {
   }, [track]);
 
   const { supabaseUser } = useSession();
-  const { isTrial, isExpired } = useTrial();
+  const { hasSmart } = useEntitlement();
 
   return (
     <div className="space-y-6">
@@ -57,18 +58,18 @@ function TrainingPage() {
       </section>
 
       {supabaseUser && <AthleteProfileBanner />}
-      {supabaseUser && !isTrial && !isExpired && <LivePlanBanner userId={supabaseUser.id} />}
+      {supabaseUser && hasSmart && <LivePlanBanner userId={supabaseUser.id} />}
 
       {supabaseUser && <BullsAthleteAthleticSession />}
 
-      {supabaseUser && !isExpired && (
+      {supabaseUser && (
         <section className="space-y-4">
           <TrainingTracker clientId={supabaseUser.id} />
         </section>
       )}
 
-      {isTrial || isExpired ? (
-        <TrialTrainingPlan />
+      {!hasSmart ? (
+        <SmartLockCard title="KI-Trainingsplan" />
       ) : (
         supabaseUser && (
           <details className="rounded-2xl border border-border bg-card">
