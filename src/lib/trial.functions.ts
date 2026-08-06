@@ -204,6 +204,8 @@ export const coachExtendTrial = createServerFn({ method: "POST" })
       })
       .eq("id", data.user_id);
     if (error) throw new Error(error.message);
+    const { activateTrialPackage } = await import("@/lib/entitlements.server");
+    await activateTrialPackage(data.user_id, newStart, newEnd);
     return { ok: true, trial_end: newEnd };
   });
 
@@ -224,6 +226,8 @@ export const coachStartTrial = createServerFn({ method: "POST" })
       .update({ trial_status: "trial", trial_start: start, trial_end: end })
       .eq("id", data.user_id);
     if (error) throw new Error(error.message);
+    const { activateTrialPackage } = await import("@/lib/entitlements.server");
+    await activateTrialPackage(data.user_id, start, end);
     return { ok: true, trial_start: start, trial_end: end };
   });
 
@@ -239,6 +243,8 @@ export const coachEndTrial = createServerFn({ method: "POST" })
       .update({ trial_status: "trial_expired", trial_end: todayIso() })
       .eq("id", data.user_id);
     if (error) throw new Error(error.message);
+    const { deactivateTrialPackage } = await import("@/lib/entitlements.server");
+    await deactivateTrialPackage(data.user_id);
     return { ok: true };
   });
 
