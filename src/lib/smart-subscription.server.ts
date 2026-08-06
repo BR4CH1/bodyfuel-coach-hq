@@ -47,6 +47,9 @@ export async function hasActiveSmartSubscription(
     .eq("user_id", userId)
     .eq("is_active", true)
     .eq("package", "smart")
+    // Der 7-Tage-Test ist KEIN bezahltes Abo und darf niemals automatisch
+    // in eines übergehen.
+    .neq("source", "trial")
     .order("started_at", { ascending: false })
     .limit(1)
     .maybeSingle();
