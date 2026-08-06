@@ -59,6 +59,12 @@ export const generateShoppingList = createServerFn({ method: "POST" })
       d,
   )
   .handler(async ({ data, context }) => {
+    // Smart-Gate: Free- und abgelaufene Trial-Nutzer haben hier keinen Zugriff.
+    {
+      const { assertSmartAccess } = await import("@/lib/entitlements.server");
+      await assertSmartAccess(context.userId);
+    }
+
     const { supabase, userId } = context;
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY fehlt");

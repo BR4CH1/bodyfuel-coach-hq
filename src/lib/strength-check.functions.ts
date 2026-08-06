@@ -198,6 +198,12 @@ export const startStrengthCheck = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { bodyweight_kg?: number | null }) => d)
   .handler(async ({ data, context }) => {
+    // Smart-Gate: Free- und abgelaufene Trial-Nutzer haben hier keinen Zugriff.
+    {
+      const { assertSmartAccess } = await import("@/lib/entitlements.server");
+      await assertSmartAccess(context.userId);
+    }
+
     const { supabase, userId } = context;
     // Reuse an existing draft if present.
     const { data: existing } = await supabase
@@ -273,6 +279,12 @@ export const completeStrengthCheck = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { check_id: string; bodyweight_kg?: number | null; notes?: string | null }) => d)
   .handler(async ({ data, context }) => {
+    // Smart-Gate: Free- und abgelaufene Trial-Nutzer haben hier keinen Zugriff.
+    {
+      const { assertSmartAccess } = await import("@/lib/entitlements.server");
+      await assertSmartAccess(context.userId);
+    }
+
     const { supabase, userId } = context;
     const { data: chk } = await supabase
       .from("strength_checks")

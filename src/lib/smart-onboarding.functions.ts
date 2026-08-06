@@ -48,6 +48,12 @@ export const completeSmartOnboarding = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: SmartOnboardingInput) => d)
   .handler(async ({ data, context }) => {
+    // Smart-Gate: Free- und abgelaufene Trial-Nutzer haben hier keinen Zugriff.
+    {
+      const { assertSmartAccess } = await import("@/lib/entitlements.server");
+      await assertSmartAccess(context.userId);
+    }
+
     const { supabase, userId } = context;
 
     // 1) Profil-Stammdaten upserten
