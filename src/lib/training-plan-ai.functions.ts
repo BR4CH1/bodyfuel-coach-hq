@@ -16,6 +16,12 @@ export const generateAiTrainingPlanDraft = createServerFn({ method: "POST" })
     }) => d,
   )
   .handler(async ({ data, context }) => {
+    // Smart-Gate: Free- und abgelaufene Trial-Nutzer haben hier keinen Zugriff.
+    {
+      const { assertSmartAccess } = await import("@/lib/entitlements.server");
+      await assertSmartAccess(context.userId);
+    }
+
     const { supabase, userId } = context;
     const target = data.user_id;
 

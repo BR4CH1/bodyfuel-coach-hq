@@ -10,8 +10,8 @@ import { PlanContentView } from "@/components/bodyfuel/PlanContentView";
 import { WeekScheduleCard } from "@/components/bodyfuel/WeekScheduleCard";
 import { useSession } from "@/lib/bodyfuel/session";
 
-import { useTrial } from "@/hooks/use-trial";
-import { TrialNutritionPlan } from "@/components/bodyfuel/TrialPlanView";
+import { useEntitlement } from "@/hooks/use-entitlement";
+import { SmartLockCard } from "@/components/bodyfuel/SmartGate";
 import { getMySmartProfile } from "@/lib/smart-profile.functions";
 import { MealWishesCard } from "@/components/bodyfuel/MealWishesCard";
 import { CustomMealsCard } from "@/components/bodyfuel/CustomMealsCard";
@@ -26,7 +26,7 @@ export const Route = createFileRoute("/nutrition/")({
 
 function NutritionIndex() {
   const { isCoach, supabaseUser } = useSession();
-  const { isTrial, isExpired } = useTrial();
+  const { hasSmart } = useEntitlement();
   const [coachClientId, setCoachClientId] = useState<string>("");
 
   const viewClientId = isCoach ? coachClientId : supabaseUser?.id ?? "";
@@ -167,8 +167,8 @@ function NutritionIndex() {
 
         )}
         {isCoach && <PlansView planType="nutrition" onClientChange={setCoachClientId} />}
-        {!isCoach && (isTrial || isExpired) ? (
-          <TrialNutritionPlan />
+        {!isCoach && !hasSmart ? (
+          <SmartLockCard title="KI-Ernährungsplan" />
         ) : (
           viewClientId && <PlanContentView clientId={viewClientId} planType="nutrition" />
         )}

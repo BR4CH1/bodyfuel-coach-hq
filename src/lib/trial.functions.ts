@@ -128,11 +128,20 @@ export const ensureTrialTrainingPlan = createServerFn({ method: "POST" })
     return r;
   });
 
-/** Wird vom Smart-Trial-Signup nach Auth-Signup aufgerufen, um den 7-Tage-Smart-Trial zu starten. */
+/**
+ * Startet den 7-Tage-Smart-Trial.
+ *
+ * Wird ausschließlich vom echten Trial-Flow (/trial bzw. /smart/trial) über das
+ * `bodyfuel.trial.pending`-Flag aufgerufen. Ein direkter Signup über /auth
+ * setzt dieses Flag nicht und erhält damit keinen Trial.
+ * Es entsteht kein kostenpflichtiges Abo: die erzeugte Paketzeile trägt
+ * `source='trial'` und wird von allen Bezahl-Checks ausgeschlossen.
+ */
 export const startMyTrial = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { activateTrialPackage } = await import("@/lib/entitlements.server");
     const { data: existing } = await supabaseAdmin
       .from("profiles")
       .select("trial_status, trial_start, trial_end")
@@ -140,6 +149,7 @@ export const startMyTrial = createServerFn({ method: "POST" })
       .maybeSingle();
 
     // Wenn bereits aktiv/trial/abgelaufen, Status unverändert zurückgeben.
+    // (Kein zweiter Trial nach Ablauf.)
     if (existing && existing.trial_status !== "none") {
       return {
         ok: true,
@@ -156,11 +166,13 @@ export const startMyTrial = createServerFn({ method: "POST" })
       .update({ trial_status: "trial", trial_start: start, trial_end: end })
       .eq("id", context.userId);
     if (error) throw new Error(error.message);
+    await activateTrialPackage(context.userId, start, end);
     // Hinweis: Kein Seed eines generischen Starter-Plans mehr — der Smart-Trial
     // führt den User direkt in das Smart-Onboarding, das den echten Smart-Plan
     // erstellt.
     return { ok: true, trial_status: "trial" as const, trial_start: start, trial_end: end };
   });
+
 
 /** Coach: Trial verlängern (beliebige Tageszahl 1–365). Verlängert auch abgelaufene Trials. */
 export const coachExtendTrial = createServerFn({ method: "POST" })
@@ -192,6 +204,8 @@ export const coachExtendTrial = createServerFn({ method: "POST" })
       })
       .eq("id", data.user_id);
     if (error) throw new Error(error.message);
+    const { activateTrialPackage } = await import("@/lib/entitlements.server");
+    await activateTrialPackage(data.user_id, newStart, newEnd);
     return { ok: true, trial_end: newEnd };
   });
 
@@ -212,6 +226,8 @@ export const coachStartTrial = createServerFn({ method: "POST" })
       .update({ trial_status: "trial", trial_start: start, trial_end: end })
       .eq("id", data.user_id);
     if (error) throw new Error(error.message);
+    const { activateTrialPackage } = await import("@/lib/entitlements.server");
+    await activateTrialPackage(data.user_id, start, end);
     return { ok: true, trial_start: start, trial_end: end };
   });
 
@@ -227,6 +243,8 @@ export const coachEndTrial = createServerFn({ method: "POST" })
       .update({ trial_status: "trial_expired", trial_end: todayIso() })
       .eq("id", data.user_id);
     if (error) throw new Error(error.message);
+    const { deactivateTrialPackage } = await import("@/lib/entitlements.server");
+    await deactivateTrialPackage(data.user_id);
     return { ok: true };
   });
 

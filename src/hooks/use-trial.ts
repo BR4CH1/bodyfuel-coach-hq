@@ -95,7 +95,9 @@ export function useTrial(): TrialState {
   const isTrial = effectiveStatus === "trial";
   const isExpired = effectiveStatus === "trial_expired";
   const isMember = effectiveStatus === "active";
-  const hasFullAccess = isMember || isCoach || effectiveStatus === "none";
+  // Bugfix: status="none" bedeutet Free — NICHT Vollzugriff.
+  // Vollzugriff hat nur, wer Mitglied ist, Coach ist oder im laufenden Trial.
+  const hasFullAccess = isMember || isCoach || isTrial;
 
   return {
     loading: state.loading,

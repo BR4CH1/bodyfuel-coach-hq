@@ -15,6 +15,8 @@ import {
 import { useSession } from "@/lib/bodyfuel/session";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/bodyfuel/Logo";
+import { useEntitlement } from "@/hooks/use-entitlement";
+import { SmartLockCard } from "@/components/bodyfuel/SmartGate";
 
 export const Route = createFileRoute("/onboarding/smart")({
   head: () => ({
@@ -124,6 +126,8 @@ function SmartOnboardingPage() {
   const { supabaseUser, loading } = useSession();
   const statusFn = useServerFn(getOnboardingStatus);
   const completeFn = useServerFn(completeSmartOnboarding);
+  // Smart-Gate (zusätzlich zum serverseitigen Gate in completeSmartOnboarding).
+  const { hasSmart, loading: entLoading } = useEntitlement();
 
   useEffect(() => {
     if (!loading && !supabaseUser) navigate({ to: "/auth", search: { next: undefined } });
@@ -132,7 +136,7 @@ function SmartOnboardingPage() {
   const { data: status } = useQuery({
     queryKey: ["smart-onboarding-status"],
     queryFn: () => statusFn(),
-    enabled: !!supabaseUser,
+    enabled: !!supabaseUser && hasSmart,
   });
 
   const [form, setForm] = useState<Form>(EMPTY);
@@ -206,7 +210,16 @@ function SmartOnboardingPage() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  if (!entLoading && supabaseUser && !hasSmart) {
+    return (
+      <div className="mx-auto max-w-md p-6">
+        <SmartLockCard title="Smart-Onboarding" />
+      </div>
+    );
+  }
+
   if (status?.completed) {
+
     return (
       <div className="mx-auto max-w-md p-6 text-center">
         <h1 className="font-display text-2xl font-bold">Schon erledigt ✓</h1>

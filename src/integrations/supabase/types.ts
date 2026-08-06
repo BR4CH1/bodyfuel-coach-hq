@@ -9875,6 +9875,7 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      expire_stale_trials: { Args: { _user_id?: string }; Returns: number }
       finalize_all_orgs_previous_month: { Args: never; Returns: undefined }
       finalize_bulls_month: {
         Args: { _month: number; _organization_id: string; _year: number }
@@ -10108,6 +10109,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      has_smart_access: { Args: { _user_id: string }; Returns: boolean }
       immutable_unaccent: { Args: { "": string }; Returns: string }
       is_bulls_coach: { Args: { _user_id: string }; Returns: boolean }
       is_bulls_org: { Args: { _org_id: string }; Returns: boolean }
@@ -10189,6 +10191,7 @@ export type Database = {
         Returns: undefined
       }
       recompute_user_points: { Args: { _user_id: string }; Returns: undefined }
+      resolve_entitlement: { Args: { _user_id: string }; Returns: Json }
       reverse_bulls_points_by_source: {
         Args: {
           _event_kind?: string

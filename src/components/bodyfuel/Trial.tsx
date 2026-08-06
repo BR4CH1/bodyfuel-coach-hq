@@ -11,6 +11,9 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useTrial } from "@/hooks/use-trial";
+import { useEntitlement } from "@/hooks/use-entitlement";
+import { SmartCheckoutButton } from "@/components/bodyfuel/SmartGate";
+import { TRIAL_EXPIRED_MESSAGE } from "@/lib/entitlements.logic";
 import { useSession } from "@/lib/bodyfuel/session";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -31,8 +34,8 @@ export function TrialWelcomeDialog() {
   }, [isTrial]);
 
   const features = [
-    "Starter Ernährungsplan",
-    "Starter Trainingsplan",
+    "KI-Ernährungsplan (Smart)",
+    "KI-Trainingsplan (Smart)",
     "Gewicht- & Wassertracking",
     "Schlaf- & Schrittetracking",
     "Dashboard & Ranking",
@@ -50,7 +53,7 @@ export function TrialWelcomeDialog() {
             🔥 Willkommen bei BODYFUEL
           </DialogTitle>
           <DialogDescription className="text-center">
-            Dein kostenloser 7-Tage-Testzugang wurde erfolgreich aktiviert.
+            Dein kostenloser 7-Tage-Testzugang mit vollem Smart-Zugriff ist aktiv.
           </DialogDescription>
         </DialogHeader>
 
@@ -86,7 +89,7 @@ export function TrialWelcomeDialog() {
             className="w-full"
             onClick={() => setOpen(false)}
           >
-            <Link to="/nutrition">📖 Starterplan ansehen</Link>
+            <Link to="/nutrition">📖 Smart-Plan ansehen</Link>
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -96,7 +99,7 @@ export function TrialWelcomeDialog() {
 
 /** Banner oben auf dem Dashboard – Countdown oder reiches Abschluss-Panel. */
 export function TrialStatusBanner() {
-  const { isTrial, isExpired, daysLeft } = useTrial();
+  const { isTrial, daysLeft, isTrialExpired: isExpired } = useEntitlement();
   const { supabaseUser } = useSession();
   const [stats, setStats] = useState<{ total: number; streak: number; checks: number; meals: number; sets: number } | null>(null);
 
@@ -126,10 +129,11 @@ export function TrialStatusBanner() {
           <Trophy className="h-3 w-3" /> Dein 7-Tage-Test ist abgeschlossen
         </div>
         <h2 className="mt-2 font-display text-2xl font-bold sm:text-3xl">
-          Stark gemacht — bereit für den nächsten Schritt?
+          {TRIAL_EXPIRED_MESSAGE}
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Hier ist, was du in deinem Trial erreicht hast:
+          Dein Konto bleibt bestehen — der Ernährungstracker und alle Free-Funktionen
+          laufen weiter. Hier ist, was du im Test erreicht hast:
         </p>
 
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -141,15 +145,18 @@ export function TrialStatusBanner() {
 
         <div className="mt-5 rounded-2xl border border-border bg-background/40 p-4">
           <p className="text-sm">
-            Mit deiner Mitgliedschaft bekommst du <strong>individuelle Pläne</strong>,{" "}
-            <strong>persönliches Coaching</strong>, <strong>WhatsApp-Support</strong> und
-            <strong>Smart-Anpassungen</strong> — basierend auf allem, was du im Trial schon getrackt hast.
+            Mit <strong>BodyFuel Smart</strong> bekommst du wieder{" "}
+            <strong>KI-Ernährungsplan</strong>, <strong>KI-Trainingsplan</strong>,{" "}
+            <strong>Einkaufsliste</strong>, <strong>Strength Check</strong>,{" "}
+            <strong>Prognosen</strong> und den <strong>Partner-Modus</strong>.
           </p>
         </div>
 
-        <Button asChild className="mt-4 h-11 w-full bg-gradient-gold font-bold text-primary-foreground sm:w-auto">
-          <Link to="/profile">Mitgliedschaft aktivieren</Link>
-        </Button>
+        <div className="mt-4">
+          <SmartCheckoutButton className="h-11 w-full bg-gradient-gold font-bold text-primary-foreground sm:w-auto">
+            Smart buchen
+          </SmartCheckoutButton>
+        </div>
       </div>
     );
   }
@@ -169,16 +176,17 @@ export function TrialStatusBanner() {
               {urgent ? "Trial endet bald" : "Kostenloser Test"}
             </p>
             <p className="font-display text-xl font-bold">
-              Noch {daysLeft ?? 7} {daysLeft === 1 ? "Tag" : "Tage"} kostenlos testen
+              Noch {daysLeft ?? 7} {daysLeft === 1 ? "Tag" : "Tage"} Smart kostenlos
             </p>
             <p className="text-xs text-muted-foreground">
-              Individuelle Pläne & Coaching werden nach Aktivierung freigeschaltet.
+              Voller Smart-Zugriff. Danach fällst du automatisch auf Free zurück —
+              kein Abo, keine automatische Verlängerung.
             </p>
           </div>
         </div>
-        <Button asChild className="bg-gradient-gold text-primary-foreground">
-          <Link to="/profile">Mitgliedschaft aktivieren</Link>
-        </Button>
+        <SmartCheckoutButton className="bg-gradient-gold text-primary-foreground">
+          Smart buchen
+        </SmartCheckoutButton>
       </div>
     </div>
   );

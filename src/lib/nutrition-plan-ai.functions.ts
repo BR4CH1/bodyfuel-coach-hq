@@ -13,6 +13,12 @@ export const generateAiNutritionPlanDraft = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: GenerateNutritionPlanInput) => data)
   .handler(async ({ data, context }) => {
+    // Smart-Gate: Free- und abgelaufene Trial-Nutzer haben hier keinen Zugriff.
+    {
+      const { assertSmartAccess } = await import("@/lib/entitlements.server");
+      await assertSmartAccess(context.userId);
+    }
+
     const { userId } = context;
     const target = data.user_id;
 

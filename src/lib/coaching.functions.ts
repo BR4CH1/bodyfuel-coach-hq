@@ -1027,9 +1027,13 @@ export const getMyPackage = createServerFn({ method: "GET" })
       .select("*")
       .eq("user_id", context.userId)
       .order("payment_date", { ascending: false });
+    const { resolveEntitlementFor } = await import("@/lib/entitlements.server");
+    const entitlement = await resolveEntitlementFor(context.userId);
     return {
       active: pkgs?.find((p) => p.is_active) ?? pkgs?.[0] ?? null,
       payments: payments ?? [],
+      // Vereinheitlichtes Entitlement: laufender Trial zählt hier als Smart.
+      entitlement,
     };
   });
 
@@ -1041,6 +1045,7 @@ export const requestRenewal = createServerFn({ method: "POST" })
       .select("*")
       .eq("user_id", context.userId)
       .eq("is_active", true)
+      .neq("source", "trial")
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();

@@ -529,6 +529,12 @@ export const generatePartnerNutritionPlanDraft = createServerFn({ method: "POST"
     }) => d,
   )
   .handler(async ({ data, context }) => {
+    // Smart-Gate: Free- und abgelaufene Trial-Nutzer haben hier keinen Zugriff.
+    {
+      const { assertSmartAccess } = await import("@/lib/entitlements.server");
+      await assertSmartAccess(context.userId);
+    }
+
     const { supabase, userId } = context;
     const { data: isCoach } = await supabase.rpc("has_role", { _user_id: userId, _role: "coach" });
     if (!isCoach) throw new Error("Forbidden");
