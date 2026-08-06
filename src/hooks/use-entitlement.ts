@@ -6,6 +6,8 @@ import { useSession } from "@/lib/bodyfuel/session";
 
 export type EntitlementState = Entitlement & {
   loading: boolean;
+  /** Alias für trialDaysLeft (Kompatibilität mit useTrial). */
+  daysLeft: number | null;
   /** Coaches haben immer Vollzugriff. */
   isCoach: boolean;
   refresh: () => void;
@@ -31,6 +33,7 @@ export function useEntitlement(): EntitlementState {
   return {
     ...base,
     hasSmart: base.hasSmart || isCoach,
+    daysLeft: base.trialDaysLeft,
     loading: isLoading && !!supabaseUser?.id,
     isCoach,
     refresh: () => {
