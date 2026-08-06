@@ -10,8 +10,8 @@ import { PlanContentView } from "@/components/bodyfuel/PlanContentView";
 import { WeekScheduleCard } from "@/components/bodyfuel/WeekScheduleCard";
 import { useSession } from "@/lib/bodyfuel/session";
 
-import { useTrial } from "@/hooks/use-trial";
-import { TrialNutritionPlan } from "@/components/bodyfuel/TrialPlanView";
+import { useEntitlement } from "@/hooks/use-entitlement";
+import { SmartLockCard } from "@/components/bodyfuel/SmartGate";
 import { getMySmartProfile } from "@/lib/smart-profile.functions";
 import { MealWishesCard } from "@/components/bodyfuel/MealWishesCard";
 import { CustomMealsCard } from "@/components/bodyfuel/CustomMealsCard";

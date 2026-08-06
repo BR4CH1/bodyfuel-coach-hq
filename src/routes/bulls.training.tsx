@@ -11,7 +11,6 @@ import { AthleteProfileBanner } from "@/components/bodyfuel/AthleteProfileBanner
 import { LivePlanBanner } from "@/components/bodyfuel/LivePlanBanner";
 import { BullsAthleteAthleticSession } from "@/components/bodyfuel/BullsAthleteAthleticSession";
 import { useSession } from "@/lib/bodyfuel/session";
-import { useTrial } from "@/hooks/use-trial";
 import { useEntitlement } from "@/hooks/use-entitlement";
 import { SmartLockCard } from "@/components/bodyfuel/SmartGate";
 import { trackHubEvent } from "@/lib/bulls.functions";

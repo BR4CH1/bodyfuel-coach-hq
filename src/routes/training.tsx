@@ -15,8 +15,6 @@ import { AthleteProfileBanner } from "@/components/bodyfuel/AthleteProfileBanner
 import { LivePlanBanner } from "@/components/bodyfuel/LivePlanBanner";
 import { useScrollRestore } from "@/hooks/use-scroll-restore";
 
-import { useTrial } from "@/hooks/use-trial";
-import { TrialTrainingPlan } from "@/components/bodyfuel/TrialPlanView";
 import { useEntitlement } from "@/hooks/use-entitlement";
 import { SmartLockCard } from "@/components/bodyfuel/SmartGate";
 

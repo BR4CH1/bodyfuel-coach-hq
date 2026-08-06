@@ -4,7 +4,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, Utensils, Heart, ShoppingCart, Carrot, Sparkles, RefreshCw } from "lucide-react";
 import { useSession } from "@/lib/bodyfuel/session";
-import { useTrial } from "@/hooks/use-trial";
+import { useEntitlement } from "@/hooks/use-entitlement";
+import { SmartLockCard } from "@/components/bodyfuel/SmartGate";
 import { getMySmartProfile } from "@/lib/smart-profile.functions";
 import { getOrgHomeData } from "@/lib/organizations/athlete.functions";
 import { enqueueAutopilotJob, getMyAutopilotJob } from "@/lib/autopilot-jobs.functions";
@@ -19,7 +20,6 @@ import { PlateauWarning } from "@/components/bodyfuel/PlateauWarning";
 import { DietPreferencesCard } from "@/components/bodyfuel/DietPreferencesCard";
 import { MealWishesCard } from "@/components/bodyfuel/MealWishesCard";
 import { CustomMealsCard } from "@/components/bodyfuel/CustomMealsCard";
-import { TrialNutritionPlan } from "@/components/bodyfuel/TrialPlanView";
 import { Button } from "@/components/ui/button";
 import { Route as OrgLayoutRoute } from "./$orgSlug";
 
