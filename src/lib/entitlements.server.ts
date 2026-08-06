@@ -71,3 +71,41 @@ export async function assertSmartAccess(userId: string): Promise<Entitlement> {
   }
   return entitlement;
 }
+
+/**
+ * Hält die sichtbare Trial-Paketzeile (`customer_packages`, source='trial')
+ * mit dem Profil-Trial synchron. Diese Zeile ist NUR Anzeige/Vereinheitlichung
+ * und wird bei bezahlten Checks per `source <> 'trial'` ausgeschlossen —
+ * ein Trial kann dadurch niemals in ein bezahltes Abo „hineinwachsen".
+ */
+export async function activateTrialPackage(userId: string, start: string, end: string) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { error } = await supabaseAdmin.from("customer_packages").upsert(
+    {
+      user_id: userId,
+      package: "smart",
+      price_eur: 0,
+      start_date: start,
+      end_date: end,
+      is_active: true,
+      source: "trial",
+      status: "trial",
+      started_at: new Date().toISOString(),
+      ended_at: null,
+      notes: "7-Tage-Smart-Test",
+    } as never,
+    { onConflict: "user_id,package" },
+  );
+  if (error) console.error("[entitlements] activateTrialPackage failed", error);
+}
+
+/** Beendet die Trial-Paketzeile sofort (Coach beendet Test / Ablauf). */
+export async function deactivateTrialPackage(userId: string) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { error } = await supabaseAdmin
+    .from("customer_packages")
+    .update({ is_active: false, status: "expired", ended_at: new Date().toISOString() } as never)
+    .eq("user_id", userId)
+    .eq("source", "trial");
+  if (error) console.error("[entitlements] deactivateTrialPackage failed", error);
+}
