@@ -210,7 +210,16 @@ function SmartOnboardingPage() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  if (!entLoading && supabaseUser && !hasSmart) {
+    return (
+      <div className="mx-auto max-w-md p-6">
+        <SmartLockCard title="Smart-Onboarding" />
+      </div>
+    );
+  }
+
   if (status?.completed) {
+
     return (
       <div className="mx-auto max-w-md p-6 text-center">
         <h1 className="font-display text-2xl font-bold">Schon erledigt ✓</h1>
