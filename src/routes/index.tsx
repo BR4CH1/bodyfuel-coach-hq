@@ -7,17 +7,17 @@ import { useSession } from "@/lib/bodyfuel/session";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "BODYFUEL — Ernährung, Training & Fortschritt in einem System" },
+      { title: "BODYFUEL — Dein Ziel. Ein System. Jeden Tag." },
       {
         name: "description",
         content:
-          "BodyFuel verbindet Ernährungsplanung, Training, Tracking und Motivation in einer App. Smart 7 Tage kostenlos testen oder persönliche 1:1-Begleitung im Coaching nutzen.",
+          "BodyFuel verbindet Ernährung, Training, Tracking und Fortschritt in einer App. Smart 7 Tage kostenlos testen oder persönliche 1:1-Begleitung im Coaching nutzen.",
       },
       { property: "og:title", content: "BODYFUEL — Dein Ziel. Ein System. Jeden Tag." },
       {
         property: "og:description",
         content:
-          "Ernährung, Training und Fortschritt in einer App — mit BodyFuel Smart oder persönlichem Coaching.",
+          "Ernährung, Training, Tracking und Fortschritt in einer App — mit BodyFuel Smart oder persönlichem Coaching.",
       },
     ],
   }),
