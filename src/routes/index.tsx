@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { Flame } from "lucide-react";
-import { LandingPageV2 } from "@/components/bodyfuel/LandingPageV2";
+import { LandingPageV3 } from "@/components/bodyfuel/LandingPageV3";
 import { useSession } from "@/lib/bodyfuel/session";
 
 export const Route = createFileRoute("/")({
@@ -48,5 +48,5 @@ function LandingRoute() {
     );
   }
 
-  return <LandingPageV2 />;
+  return <LandingPageV3 />;
 }
