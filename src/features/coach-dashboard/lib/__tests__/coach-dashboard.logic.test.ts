@@ -4,6 +4,7 @@ import {
   buildCoachDashboardViewModel,
   calculateCoachScore,
   daysAgo,
+  daysUntil,
   getPlanValidity,
   mondayOf,
 } from "../coach-dashboard.logic";
@@ -35,6 +36,14 @@ describe("coach dashboard logic", () => {
     expect(mondayOf(today)).toBe("2026-07-20");
     expect(daysAgo("2026-07-18T12:00:00.000Z", today.getTime())).toBe(2);
     expect(daysAgo(null, today.getTime())).toBeNull();
+  });
+
+  it("keeps calendar dates stable around local midnight", () => {
+    const shortlyAfterMidnight = new Date(2026, 6, 20, 0, 30);
+
+    expect(mondayOf(shortlyAfterMidnight)).toBe("2026-07-20");
+    expect(daysUntil("2026-07-20", shortlyAfterMidnight)).toBe(0);
+    expect(daysAgo("2026-07-19", shortlyAfterMidnight.getTime())).toBe(1);
   });
 
   it("keeps healthy clients green", () => {

@@ -11,23 +11,47 @@ import type {
 const DAY_MS = 86_400_000;
 const PLAN_WARNING_DAYS = 5;
 
+function calendarDay(date: Date): number {
+  return Math.floor(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / DAY_MS);
+}
+
+function dateOnlyCalendarDay(value: string): number | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return null;
+
+  const [, year, month, day] = match;
+  return Math.floor(Date.UTC(Number(year), Number(month) - 1, Number(day)) / DAY_MS);
+}
+
+function formatLocalDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export function mondayOf(date: Date): string {
   const monday = new Date(date);
   const day = (monday.getDay() + 6) % 7;
   monday.setDate(monday.getDate() - day);
-  return monday.toISOString().slice(0, 10);
+  return formatLocalDate(monday);
 }
 
 export function daysAgo(iso: string | null, nowMs = Date.now()): number | null {
   if (!iso) return null;
+
+  const dateOnlyDay = dateOnlyCalendarDay(iso);
+  if (dateOnlyDay !== null) {
+    return calendarDay(new Date(nowMs)) - dateOnlyDay;
+  }
+
   return Math.floor((nowMs - new Date(iso).getTime()) / DAY_MS);
 }
 
 export function daysUntil(iso: string, today: Date): number {
-  const startOfToday = new Date(today);
-  startOfToday.setHours(0, 0, 0, 0);
-  const days = Math.ceil((new Date(iso).getTime() - startOfToday.getTime()) / DAY_MS);
-  return days === 0 ? 0 : days;
+  const dateOnlyDay = dateOnlyCalendarDay(iso);
+  const endDay = dateOnlyDay ?? calendarDay(new Date(iso));
+  return endDay - calendarDay(today);
 }
 
 function latestActivityDays(client: CoachClient, nowMs: number): number | null {
