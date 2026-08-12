@@ -1,10 +1,21 @@
-import { supabase } from "@/integrations/supabase/client";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import type { CoachClient, CoachDashboardData, CoachLead } from "@/features/coach-dashboard/types";
+import { coachDateKey } from "@/features/coach-dashboard/lib/coach-dashboard.logic";
+import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 
 type QueryError = { message?: string } | null;
 type QueryResult<T> = { data: T[] | null; error: QueryError };
 
-type ActivePackageRow = { user_id: string };
+type CoachDataClient = SupabaseClient<Database>;
+type ActivePackageRow = {
+  user_id: string;
+  package: string;
+  source: string | null;
+  end_date: string | null;
+  status: string | null;
+};
 type ProfileRow = { id: string; display_name: string | null };
 type CheckinRow = { user_id: string; week_start: string; submitted_at: string | null };
 type MeasurementRow = { user_id: string; weight_kg: number | null; measured_at: string };
@@ -22,9 +33,42 @@ type PlanDayRow = { id: string; plan_id: string; name: string };
 type PlanMealRow = { day_id: string; kcal: number | null };
 type LeadRow = CoachLead;
 
-async function readRows<T>(label: string, query: PromiseLike<QueryResult<T>>): Promise<T[]> {
+export function countActiveProductCustomers(
+  rows: ActivePackageRow[],
+  today = coachDateKey(new Date()),
+) {
+  const coaching = new Set<string>();
+  const smart = new Set<string>();
+
+  rows.forEach((row) => {
+    const status = row.status?.toLowerCase();
+    const isEnded = ["canceled", "cancelled", "expired", "inactive"].includes(status ?? "");
+    const isCurrent = !row.end_date || row.end_date >= today;
+    if (isEnded || !isCurrent) return;
+
+    if (["starter", "coaching", "premium"].includes(row.package)) {
+      coaching.add(row.user_id);
+    }
+
+    if (row.package === "smart" && row.source !== "trial" && isCurrent) {
+      smart.add(row.user_id);
+    }
+  });
+
+  return {
+    coachingIds: [...coaching],
+    productCounts: { coaching: coaching.size, smart: smart.size },
+  };
+}
+
+async function readRows<T>(
+  label: string,
+  query: PromiseLike<QueryResult<T>>,
+  strict = false,
+): Promise<T[]> {
   const { data, error } = await query;
   if (error) {
+    if (strict) throw new Error(`coach dashboard: ${label}: ${error.message ?? "query failed"}`);
     console.error(`coach dashboard: ${label}`, error);
     return [];
   }
@@ -40,7 +84,11 @@ function newestByKey<T, K>(rows: T[], keyOf: (row: T) => K): Map<K, T> {
   return map;
 }
 
-async function loadPlanMealsInBatches(dayIds: string[]): Promise<PlanMealRow[]> {
+async function loadPlanMealsInBatches(
+  client: CoachDataClient,
+  dayIds: string[],
+  strict: boolean,
+): Promise<PlanMealRow[]> {
   if (dayIds.length === 0) return [];
 
   const batchSize = 50;
@@ -54,7 +102,8 @@ async function loadPlanMealsInBatches(dayIds: string[]): Promise<PlanMealRow[]> 
     batches.map((ids, index) =>
       readRows<PlanMealRow>(
         `nutrition plan meals ${index + 1}/${batches.length}`,
-        supabase.from("nutrition_plan_meals").select("day_id, kcal").in("day_id", ids),
+        client.from("nutrition_plan_meals").select("day_id, kcal").in("day_id", ids),
+        strict,
       ),
     ),
   );
@@ -62,55 +111,65 @@ async function loadPlanMealsInBatches(dayIds: string[]): Promise<PlanMealRow[]> 
   return rows.flat();
 }
 
-async function loadClients(clientIds: string[]): Promise<CoachClient[]> {
+async function loadClients(
+  client: CoachDataClient,
+  clientIds: string[],
+  strict: boolean,
+): Promise<CoachClient[]> {
   if (clientIds.length === 0) return [];
 
   const [profiles, checkins, measurements, foods, trainingSets, plans] = await Promise.all([
     readRows<ProfileRow>(
       "profiles",
-      supabase.from("profiles").select("id, display_name").in("id", clientIds),
+      client.from("profiles").select("id, display_name").in("id", clientIds),
+      strict,
     ),
     readRows<CheckinRow>(
       "weekly checkins",
-      supabase
+      client
         .from("weekly_checkins")
         .select("user_id, week_start, submitted_at")
         .in("user_id", clientIds)
         .order("week_start", { ascending: false }),
+      strict,
     ),
     readRows<MeasurementRow>(
       "measurements",
-      supabase
+      client
         .from("body_measurements")
         .select("user_id, weight_kg, measured_at")
         .in("user_id", clientIds)
         .order("measured_at", { ascending: false }),
+      strict,
     ),
     readRows<FoodRow>(
       "food entries",
-      supabase
+      client
         .from("food_entries")
         .select("user_id, name, created_at")
         .in("user_id", clientIds)
         .order("created_at", { ascending: false })
         .limit(200),
+      strict,
     ),
     readRows<TrainingRow>(
       "training logs",
-      supabase
+      client
         .from("training_set_logs")
         .select("client_id, performed_at")
         .in("client_id", clientIds)
         .order("performed_at", { ascending: false })
         .limit(200),
+      strict,
     ),
     readRows<PlanRow>(
       "active plans",
-      supabase
+      client
         .from("nutrition_plans")
         .select("id, client_id, plan_type, scheduled_end_date, status")
         .in("client_id", clientIds)
         .eq("status", "active"),
+      strict,
     ),
   ]);
 
@@ -123,24 +182,23 @@ async function loadClients(clientIds: string[]): Promise<CoachClient[]> {
   const [targets, planDays] = await Promise.all([
     readRows<TargetRow>(
       "nutrition targets",
-      supabase
-        .from("nutrition_targets")
-        .select("user_id, kcal, kcal_rest")
-        .in("user_id", clientIds),
+      client.from("nutrition_targets").select("user_id, kcal, kcal_rest").in("user_id", clientIds),
+      strict,
     ),
     nutritionPlanIds.length > 0
       ? readRows<PlanDayRow>(
           "nutrition plan days",
-          supabase
+          client
             .from("nutrition_plan_days")
             .select("id, plan_id, name")
             .in("plan_id", nutritionPlanIds),
+          strict,
         )
       : Promise.resolve([]),
   ]);
 
   const planDayIds = planDays.map((day) => day.id);
-  const planMeals = await loadPlanMealsInBatches(planDayIds);
+  const planMeals = await loadPlanMealsInBatches(client, planDayIds, strict);
 
   const caloriesByDay = new Map<string, number>();
   planMeals.forEach((meal) => {
@@ -245,32 +303,40 @@ async function loadClients(clientIds: string[]): Promise<CoachClient[]> {
   }));
 }
 
-export async function loadCoachDashboardData(): Promise<CoachDashboardData> {
+export async function loadCoachDashboardDataForClient(
+  client: CoachDataClient,
+  options: { strict?: boolean } = {},
+): Promise<CoachDashboardData> {
+  const strict = options.strict ?? false;
   // "Mein BODYFUEL" is the personal coaching workspace. A global client role
   // alone only means that somebody registered at some point; it does not mean
   // that Manuel is actively coaching that person.
   const activePackages = await readRows<ActivePackageRow>(
-    "active coaching packages",
-    supabase
+    "active customer packages",
+    client
       .from("customer_packages")
-      .select("user_id")
-      .eq("is_active", true)
-      .in("package", ["starter", "coaching", "premium"]),
+      .select("user_id, package, source, end_date, status")
+      .eq("is_active", true),
+    strict,
   );
-  const clientIds = [...new Set(activePackages.map((row) => row.user_id).filter(Boolean))];
+  const { coachingIds: clientIds, productCounts } = countActiveProductCustomers(activePackages);
 
   const [clients, leads] = await Promise.all([
-    loadClients(clientIds),
+    loadClients(client, clientIds, strict),
     readRows<LeadRow>(
       "leads",
-      supabase
+      client
         .from("leads")
         .select("id, name, email, goal, created_at")
         .eq("status", "new")
-        .order("created_at", { ascending: false })
-        .limit(10),
+        .order("created_at", { ascending: false }),
+      strict,
     ),
   ]);
 
-  return { clients, leads };
+  return { clients, leads, productCounts };
+}
+
+export async function loadCoachDashboardData(): Promise<CoachDashboardData> {
+  return loadCoachDashboardDataForClient(supabase);
 }

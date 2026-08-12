@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildCoachDashboardViewModel,
   calculateCoachScore,
+  coachDateKey,
   daysAgo,
   getPlanValidity,
   mondayOf,
@@ -35,6 +36,11 @@ describe("coach dashboard logic", () => {
     expect(mondayOf(today)).toBe("2026-07-20");
     expect(daysAgo("2026-07-18T12:00:00.000Z", today.getTime())).toBe(2);
     expect(daysAgo(null, today.getTime())).toBeNull();
+  });
+
+  it("uses Europe/Berlin for calendar dates and week boundaries", () => {
+    expect(coachDateKey(new Date("2026-08-12T22:30:00.000Z"))).toBe("2026-08-13");
+    expect(mondayOf(new Date("2026-08-16T22:30:00.000Z"))).toBe("2026-08-17");
   });
 
   it("keeps healthy clients green", () => {

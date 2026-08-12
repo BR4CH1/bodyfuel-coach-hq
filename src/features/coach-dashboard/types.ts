@@ -32,7 +32,15 @@ export type ExpiringPlan = {
   end: string;
   days: number;
 };
-export type CoachDashboardData = { clients: CoachClient[]; leads: CoachLead[] };
+export type CoachProductCounts = {
+  coaching: number;
+  smart: number;
+};
+export type CoachDashboardData = {
+  clients: CoachClient[];
+  leads: CoachLead[];
+  productCounts: CoachProductCounts;
+};
 export type CoachDashboardViewModel = {
   weekStart: string;
   openWeek: CoachClient[];
