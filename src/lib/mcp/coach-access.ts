@@ -18,13 +18,18 @@ export async function requireCoach(
 ): Promise<string | null> {
   const userId = ctx.getUserId();
   if (!userId) return null;
-  const { data, error } = await client.rpc("has_role", {
-    _user_id: userId,
-    _role: "coach",
-  });
 
-  if (error) throw new Error(`Coach access check failed: ${error.message}`);
-  return data ? userId : null;
+  for (const role of ["coach", "platform_owner"] as const) {
+    const { data, error } = await client.rpc("has_role", {
+      _user_id: userId,
+      _role: role,
+    });
+
+    if (error) throw new Error(`Coach access check failed for ${role}: ${error.message}`);
+    if (data) return userId;
+  }
+
+  return null;
 }
 
 export function toolError(message: string) {
