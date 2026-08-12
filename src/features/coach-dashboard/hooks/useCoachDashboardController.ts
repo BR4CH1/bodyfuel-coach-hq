@@ -11,6 +11,7 @@ import type { CoachClient, CoachLead } from "@/features/coach-dashboard/types";
 
 const EMPTY_CLIENTS: CoachClient[] = [];
 const EMPTY_LEADS: CoachLead[] = [];
+const EMPTY_PRODUCT_COUNTS = { coaching: 0, smart: 0 } as const;
 
 export function useCoachDashboardController() {
   const dashboardQuery = useQuery({
@@ -21,6 +22,7 @@ export function useCoachDashboardController() {
 
   const clients = dashboardQuery.data?.clients ?? EMPTY_CLIENTS;
   const leads = dashboardQuery.data?.leads ?? EMPTY_LEADS;
+  const productCounts = dashboardQuery.data?.productCounts ?? EMPTY_PRODUCT_COUNTS;
   const view = useMemo(() => buildCoachDashboardViewModel(clients), [clients]);
   const briefing = useMemo(
     () =>
@@ -42,6 +44,7 @@ export function useCoachDashboardController() {
   return {
     clients,
     leads,
+    productCounts,
     view,
     briefing,
     followUps,

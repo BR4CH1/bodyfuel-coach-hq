@@ -10,24 +10,48 @@ import type {
 
 const DAY_MS = 86_400_000;
 const PLAN_WARNING_DAYS = 5;
+const COACH_TIME_ZONE = "Europe/Berlin";
+
+export function coachDateKey(date: Date): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: COACH_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((entry) => entry.type === type)?.value;
+
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}
+
+function dateKeyDay(value: string): number {
+  const [year, month, day] = value.split("-").map(Number);
+  return Date.UTC(year, month - 1, day) / DAY_MS;
+}
 
 export function mondayOf(date: Date): string {
-  const monday = new Date(date);
-  const day = (monday.getDay() + 6) % 7;
-  monday.setDate(monday.getDate() - day);
-  return monday.toISOString().slice(0, 10);
+  const dateKey = coachDateKey(date);
+  const dateUtc = new Date(dateKeyDay(dateKey) * DAY_MS);
+  const daysSinceMonday = (dateUtc.getUTCDay() + 6) % 7;
+
+  return new Date((dateKeyDay(dateKey) - daysSinceMonday) * DAY_MS).toISOString().slice(0, 10);
 }
 
 export function daysAgo(iso: string | null, nowMs = Date.now()): number | null {
   if (!iso) return null;
+
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (dateOnly) {
+    return dateKeyDay(coachDateKey(new Date(nowMs))) - dateKeyDay(iso);
+  }
+
   return Math.floor((nowMs - new Date(iso).getTime()) / DAY_MS);
 }
 
 export function daysUntil(iso: string, today: Date): number {
-  const startOfToday = new Date(today);
-  startOfToday.setHours(0, 0, 0, 0);
-  const days = Math.ceil((new Date(iso).getTime() - startOfToday.getTime()) / DAY_MS);
-  return days === 0 ? 0 : days;
+  const endDateKey = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso : coachDateKey(new Date(iso));
+  return dateKeyDay(endDateKey) - dateKeyDay(coachDateKey(today));
 }
 
 function latestActivityDays(client: CoachClient, nowMs: number): number | null {

@@ -16,14 +16,24 @@ export function CoachDashboardPage() {
   const [followUpFilter, setFollowUpFilter] = useState<CoachFollowUpCategory | null>(null);
   const [workloadFocus, setWorkloadFocus] = useState<CoachWorkloadKey | null>(null);
   const controller = useCoachDashboardController();
-  const { clients, leads, view, briefing, followUps, workload, isLoading, isError, error } =
-    controller;
+  const {
+    clients,
+    leads,
+    productCounts,
+    view,
+    briefing,
+    followUps,
+    workload,
+    isLoading,
+    isError,
+    error,
+  } = controller;
 
   return (
     <div className="space-y-6">
       <CoachDashboardHeader
         weekStart={view.weekStart}
-        clientCount={clients.length}
+        clientCount={productCounts.coaching}
         leadCount={leads.length}
         openCheckinCount={view.openWeek.length}
         expiringPlanCount={view.expiringPlans.length}

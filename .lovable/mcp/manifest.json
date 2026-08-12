@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "sdk_version": "0.20.0",
+  "sdk_version": "0.20.1",
   "path": "/mcp",
   "auth": {
     "type": "oauth",
@@ -106,6 +106,47 @@
           "required": [
             "weight_kg"
           ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "coach_business_summary",
+        "title": "BodyFuel business summary",
+        "description": "Read-only BodyFuel coach overview: active Coaching and Smart customers, open leads, check-ins, expiring plans, inactivity, risks, and workload.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "coach_open_tasks",
+        "title": "BodyFuel open coach tasks",
+        "description": "Returns prioritized read-only coach tasks from live BodyFuel Coaching data, including customer or lead names and the reason for action.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 15,
+              "description": "Maximum tasks to return."
+            }
+          },
           "additionalProperties": false,
           "$schema": "http://json-schema.org/draft-07/schema#"
         },
