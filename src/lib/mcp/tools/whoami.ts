@@ -1,5 +1,6 @@
-import { createClient } from "@supabase/supabase-js";
 import { defineTool, type ToolContext } from "@lovable.dev/mcp-js";
+
+import { authenticatedMcpClient } from "@/lib/mcp/coach-access";
 
 export default defineTool({
   name: "whoami",
@@ -8,17 +9,18 @@ export default defineTool({
   inputSchema: {},
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async (_input, ctx: ToolContext) => {
-    if (!ctx.isAuthenticated()) {
+    const sb = authenticatedMcpClient(ctx);
+    if (!sb) {
       return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
     }
-    const sb = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
-      global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
+    const userId = ctx.getUserId();
+    if (!userId) {
+      return { content: [{ type: "text", text: "Authenticated user ID missing" }], isError: true };
+    }
     const { data, error } = await sb
       .from("profiles")
-      .select("first_name,last_name,goal,height_cm,activity_level")
-      .eq("id", ctx.getUserId())
+      .select("display_name,nickname,coaching_goal,training_goal,height_cm,activity_level")
+      .eq("id", userId)
       .maybeSingle();
     if (error) return { content: [{ type: "text", text: error.message }], isError: true };
     return {
