@@ -17,15 +17,30 @@ export default defineTool({
     if (!userId) {
       return { content: [{ type: "text", text: "Authenticated user ID missing" }], isError: true };
     }
-    const { data, error } = await sb
-      .from("profiles")
-      .select("display_name,nickname,coaching_goal,training_goal,height_cm,activity_level")
-      .eq("id", userId)
-      .maybeSingle();
-    if (error) return { content: [{ type: "text", text: error.message }], isError: true };
+    const [{ data: profile, error: profileError }, { data: roleRows, error: rolesError }] =
+      await Promise.all([
+        sb
+          .from("profiles")
+          .select("display_name,nickname,coaching_goal,training_goal,height_cm,activity_level")
+          .eq("id", userId)
+          .maybeSingle(),
+        sb.from("user_roles").select("role").eq("user_id", userId),
+      ]);
+    if (profileError) {
+      return { content: [{ type: "text", text: profileError.message }], isError: true };
+    }
+    if (rolesError) {
+      return { content: [{ type: "text", text: rolesError.message }], isError: true };
+    }
+    const roles = (roleRows ?? []).map((row) => row.role);
     return {
-      content: [{ type: "text", text: JSON.stringify({ email: ctx.getUserEmail(), ...data }) }],
-      structuredContent: { email: ctx.getUserEmail(), profile: data },
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({ email: ctx.getUserEmail(), roles, ...profile }),
+        },
+      ],
+      structuredContent: { email: ctx.getUserEmail(), roles, profile },
     };
   },
 });
