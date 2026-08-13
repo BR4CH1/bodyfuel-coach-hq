@@ -54,7 +54,7 @@ export function daysUntil(iso: string, today: Date): number {
   return dateKeyDay(endDateKey) - dateKeyDay(coachDateKey(today));
 }
 
-function latestActivityDays(client: CoachClient, nowMs: number): number | null {
+export function latestActivityDays(client: CoachClient, nowMs: number): number | null {
   const activity = [client.last_training_at, client.last_nutrition_at, client.last_weight_at]
     .filter((value): value is string => Boolean(value))
     .map((value) => new Date(value).getTime());
@@ -191,11 +191,18 @@ export function buildCoachDashboardViewModel(
   const nowMs = today.getTime();
   const weekStart = mondayOf(today);
 
+  const pendingCheckins = clients
+    .filter((client) => client.pending_checkin_submitted_at)
+    .sort(
+      (a, b) =>
+        new Date(b.pending_checkin_submitted_at!).getTime() -
+        new Date(a.pending_checkin_submitted_at!).getTime(),
+    );
   const openWeek = clients.filter((client) => client.last_checkin !== weekStart);
   const inactive: InactiveCoachClient[] = clients
-    .map((client) => ({ ...client, days: daysAgo(client.last_checkin, nowMs) }))
-    .filter((client) => client.days === null || client.days >= 14)
-    .sort((a, b) => (b.days ?? 999) - (a.days ?? 999));
+    .map((client) => ({ ...client, days: latestActivityDays(client, nowMs) }))
+    .filter((client) => client.days !== null && client.days >= 14)
+    .sort((a, b) => (b.days ?? 0) - (a.days ?? 0));
 
   const recentMeasurements = [...clients]
     .filter((client) => client.last_weight_at)
@@ -240,6 +247,7 @@ export function buildCoachDashboardViewModel(
 
   return {
     weekStart,
+    pendingCheckins,
     openWeek,
     inactive,
     recentMeasurements,

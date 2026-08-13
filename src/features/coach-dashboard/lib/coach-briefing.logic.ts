@@ -55,6 +55,18 @@ export function buildCoachBriefing({
     });
   }
 
+  if (view.pendingCheckins.length > 0) {
+    candidates.push({
+      id: "pending-checkins",
+      priority: 25,
+      tone: "attention",
+      title: `${view.pendingCheckins.length} ${plural(view.pendingCheckins.length, "Check-in ist", "Check-ins sind")} bereit`,
+      description: "Eingereichte Check-ins prüfen und Coach-Feedback ergänzen.",
+      actionLabel: "Check-ins prüfen",
+      target: { kind: "customers" },
+    });
+  }
+
   if (leads.length > 0) {
     candidates.push({
       id: "new-leads",

@@ -26,7 +26,8 @@ export function buildBusinessSummaryPayload(data: CoachDashboardData, now = new 
     products: data.productCounts,
     leads: { open: data.leads.length },
     coaching: {
-      openCheckins: view.openWeek.length,
+      openCheckins: view.pendingCheckins.length,
+      missingCheckins: view.openWeek.length,
       expiringPlans: view.expiringPlans.length,
       inactiveCustomers: view.inactive.length,
       riskCustomers: view.redClients.length,

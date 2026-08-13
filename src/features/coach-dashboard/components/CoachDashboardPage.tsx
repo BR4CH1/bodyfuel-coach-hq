@@ -35,7 +35,7 @@ export function CoachDashboardPage() {
         weekStart={view.weekStart}
         clientCount={productCounts.coaching}
         leadCount={leads.length}
-        openCheckinCount={view.openWeek.length}
+        pendingCheckinCount={view.pendingCheckins.length}
         expiringPlanCount={view.expiringPlans.length}
       />
 

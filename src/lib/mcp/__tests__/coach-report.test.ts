@@ -20,7 +20,10 @@ const data: CoachDashboardData = {
     {
       id: "client-1",
       display_name: "Michelle",
-      last_checkin: null,
+      last_checkin: "2026-08-10",
+      last_checkin_submitted_at: "2026-08-12T07:00:00.000Z",
+      pending_checkin_week_start: "2026-08-10",
+      pending_checkin_submitted_at: "2026-08-12T07:00:00.000Z",
       last_weight: null,
       last_weight_at: null,
       last_nutrition_at: null,
@@ -28,14 +31,17 @@ const data: CoachDashboardData = {
       last_training_at: null,
       nutrition_plan_end: "2026-08-11",
       training_plan_end: null,
-      kcal_dev: null,
-      kcal_dev_dir: null,
-      plateau_days: null,
+      kcal_dev: 650,
+      kcal_dev_dir: "over",
+      plateau_days: 14,
     },
     {
       id: "client-2",
       display_name: "Timo",
       last_checkin: "2026-08-10",
+      last_checkin_submitted_at: "2026-08-10T07:00:00.000Z",
+      pending_checkin_week_start: null,
+      pending_checkin_submitted_at: null,
       last_weight: 82,
       last_weight_at: "2026-08-12T07:00:00.000Z",
       last_nutrition_at: "2026-08-12T07:00:00.000Z",
@@ -57,11 +63,12 @@ describe("coach agent reports", () => {
     expect(summary.products).toEqual({ coaching: 2, smart: 7 });
     expect(summary.leads.open).toBe(1);
     expect(summary.coaching.openCheckins).toBe(1);
+    expect(summary.coaching.missingCheckins).toBe(0);
     expect(summary.coaching.expiringPlans).toBe(1);
     expect(summary.coaching.riskCustomers).toBe(1);
   });
 
-  it("prioritizes risk and plan tasks before leads", () => {
+  it("groups risk, check-in and plan work before leads", () => {
     const tasks = buildOpenTasksPayload(data, { limit: 10, now: NOW });
 
     expect(tasks.openTotal).toBeGreaterThan(0);
@@ -69,7 +76,8 @@ describe("coach agent reports", () => {
       category: "risk",
       customerOrLead: "Michelle",
     });
-    expect(tasks.tasks.some((task) => task.category === "plan")).toBe(true);
+    expect(tasks.tasks[0].reason).toContain("Ernährungsplan");
+    expect(tasks.tasks.some((task) => task.category === "plan")).toBe(false);
     expect(tasks.tasks.some((task) => task.category === "lead")).toBe(true);
   });
 });

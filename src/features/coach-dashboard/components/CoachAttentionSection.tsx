@@ -34,7 +34,7 @@ export function CoachAttentionSection({
       <div className="grid gap-6 lg:grid-cols-2">
         <Panel
           icon={<Clock className="h-5 w-5" />}
-          title="Offene Check-ins (diese Woche)"
+          title="Fehlende Check-ins (diese Woche)"
           empty={openWeek.length === 0}
           emptyText="Alle Kunden haben ihren Wochen-Check-in abgegeben 🎉"
           footer={
@@ -109,7 +109,7 @@ export function CoachAttentionSection({
               scoreValue={scoreById.get(client.id)?.score ?? null}
               meta={
                 client.days === null
-                  ? "Noch nie eingecheckt"
+                  ? "Keine Aktivität erfasst"
                   : `Vor ${client.days} Tagen zuletzt aktiv`
               }
             />

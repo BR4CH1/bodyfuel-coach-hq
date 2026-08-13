@@ -9865,6 +9865,19 @@ export type Database = {
         Args: { _coach_id: string; _target_user_id: string }
         Returns: boolean
       }
+      coach_can_access_current_user: {
+        Args: { _coach_id: string; _target_user_id: string }
+        Returns: boolean
+      }
+      coach_latest_client_activity: {
+        Args: { _client_ids: string[] }
+        Returns: {
+          last_nutrition_at: string | null
+          last_nutrition_name: string | null
+          last_training_at: string | null
+          user_id: string
+        }[]
+      }
       compute_macro_targets: { Args: { _user_id: string }; Returns: undefined }
       delete_email: {
         Args: { message_id: number; queue_name: string }
