@@ -2,6 +2,9 @@ export type CoachClient = {
   id: string;
   display_name: string | null;
   last_checkin: string | null;
+  last_checkin_submitted_at: string | null;
+  pending_checkin_week_start: string | null;
+  pending_checkin_submitted_at: string | null;
   last_weight: number | null;
   last_weight_at: string | null;
   last_nutrition_at: string | null;
@@ -43,6 +46,7 @@ export type CoachDashboardData = {
 };
 export type CoachDashboardViewModel = {
   weekStart: string;
+  pendingCheckins: CoachClient[];
   openWeek: CoachClient[];
   inactive: InactiveCoachClient[];
   recentMeasurements: CoachClient[];

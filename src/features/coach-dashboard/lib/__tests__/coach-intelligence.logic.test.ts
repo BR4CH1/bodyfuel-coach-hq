@@ -6,6 +6,9 @@ const client: CoachClient = {
   id: "u1",
   display_name: "Manu",
   last_checkin: null,
+  last_checkin_submitted_at: null,
+  pending_checkin_week_start: null,
+  pending_checkin_submitted_at: null,
   last_weight: 80,
   last_weight_at: null,
   last_nutrition_at: null,
@@ -21,6 +24,7 @@ const client: CoachClient = {
 const view: CoachDashboardViewModel = {
   weekStart: "2026-07-20",
   openWeek: [client],
+  pendingCheckins: [],
   inactive: [{ ...client, days: 8 }],
   recentMeasurements: [],
   recentNutrition: [],

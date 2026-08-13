@@ -7,13 +7,13 @@ export function CoachDashboardHeader({
   weekStart,
   clientCount,
   leadCount,
-  openCheckinCount,
+  pendingCheckinCount,
   expiringPlanCount,
 }: {
   weekStart: string;
   clientCount: number;
   leadCount: number;
-  openCheckinCount: number;
+  pendingCheckinCount: number;
   expiringPlanCount: number;
 }) {
   return (
@@ -31,9 +31,9 @@ export function CoachDashboardHeader({
         <StatPill icon={<Inbox className="h-4 w-4" />} value={leadCount} label="Neue Leads" />
         <StatPill
           icon={<Clock className="h-4 w-4" />}
-          value={openCheckinCount}
-          label="Check-in offen"
-          warn={openCheckinCount > 0}
+          value={pendingCheckinCount}
+          label="Check-ins zu prüfen"
+          warn={pendingCheckinCount > 0}
         />
         <StatPill
           icon={<CalendarClock className="h-4 w-4" />}

@@ -17,10 +17,19 @@ type ActivePackageRow = {
   status: string | null;
 };
 type ProfileRow = { id: string; display_name: string | null };
-type CheckinRow = { user_id: string; week_start: string; submitted_at: string | null };
+type CheckinRow = {
+  user_id: string;
+  week_start: string;
+  submitted_at: string | null;
+  coach_notes: string | null;
+};
 type MeasurementRow = { user_id: string; weight_kg: number | null; measured_at: string };
-type FoodRow = { user_id: string; name: string; created_at: string };
-type TrainingRow = { client_id: string; performed_at: string };
+type LatestActivityRow = {
+  user_id: string;
+  last_nutrition_at: string | null;
+  last_nutrition_name: string | null;
+  last_training_at: string | null;
+};
 type PlanRow = {
   id: string;
   client_id: string;
@@ -118,7 +127,7 @@ async function loadClients(
 ): Promise<CoachClient[]> {
   if (clientIds.length === 0) return [];
 
-  const [profiles, checkins, measurements, foods, trainingSets, plans] = await Promise.all([
+  const [profiles, checkins, measurements, latestActivities, plans] = await Promise.all([
     readRows<ProfileRow>(
       "profiles",
       client.from("profiles").select("id, display_name").in("id", clientIds),
@@ -128,9 +137,10 @@ async function loadClients(
       "weekly checkins",
       client
         .from("weekly_checkins")
-        .select("user_id, week_start, submitted_at")
+        .select("user_id, week_start, submitted_at, coach_notes")
         .in("user_id", clientIds)
-        .order("week_start", { ascending: false }),
+        .not("submitted_at", "is", null)
+        .order("submitted_at", { ascending: false }),
       strict,
     ),
     readRows<MeasurementRow>(
@@ -142,24 +152,9 @@ async function loadClients(
         .order("measured_at", { ascending: false }),
       strict,
     ),
-    readRows<FoodRow>(
-      "food entries",
-      client
-        .from("food_entries")
-        .select("user_id, name, created_at")
-        .in("user_id", clientIds)
-        .order("created_at", { ascending: false })
-        .limit(200),
-      strict,
-    ),
-    readRows<TrainingRow>(
-      "training logs",
-      client
-        .from("training_set_logs")
-        .select("client_id, performed_at")
-        .in("client_id", clientIds)
-        .order("performed_at", { ascending: false })
-        .limit(200),
+    readRows<LatestActivityRow>(
+      "latest client activity",
+      client.rpc("coach_latest_client_activity", { _client_ids: clientIds }),
       strict,
     ),
     readRows<PlanRow>(
@@ -242,9 +237,20 @@ async function loadClients(
   });
 
   const lastCheckin = newestByKey(checkins, (row) => row.user_id);
+  const pendingCutoff = Date.now() - 7 * 86_400_000;
+  const pendingCheckin = newestByKey(
+    checkins.filter(
+      (row) =>
+        row.submitted_at !== null &&
+        new Date(row.submitted_at).getTime() >= pendingCutoff &&
+        !row.coach_notes?.trim(),
+    ),
+    (row) => row.user_id,
+  );
   const lastWeight = newestByKey(measurements, (row) => row.user_id);
-  const lastFood = newestByKey(foods, (row) => row.user_id);
-  const lastTraining = newestByKey(trainingSets, (row) => row.client_id);
+  const latestActivityByUser = new Map(
+    latestActivities.map((activity) => [activity.user_id, activity] as const),
+  );
 
   const measurementsByUser = new Map<string, MeasurementRow[]>();
   measurements.forEach((measurement) => {
@@ -290,11 +296,14 @@ async function loadClients(
     id: profile.id,
     display_name: profile.display_name,
     last_checkin: lastCheckin.get(profile.id)?.week_start ?? null,
+    last_checkin_submitted_at: lastCheckin.get(profile.id)?.submitted_at ?? null,
+    pending_checkin_week_start: pendingCheckin.get(profile.id)?.week_start ?? null,
+    pending_checkin_submitted_at: pendingCheckin.get(profile.id)?.submitted_at ?? null,
     last_weight: lastWeight.get(profile.id)?.weight_kg ?? null,
     last_weight_at: lastWeight.get(profile.id)?.measured_at ?? null,
-    last_nutrition_at: lastFood.get(profile.id)?.created_at ?? null,
-    last_nutrition_name: lastFood.get(profile.id)?.name ?? null,
-    last_training_at: lastTraining.get(profile.id)?.performed_at ?? null,
+    last_nutrition_at: latestActivityByUser.get(profile.id)?.last_nutrition_at ?? null,
+    last_nutrition_name: latestActivityByUser.get(profile.id)?.last_nutrition_name ?? null,
+    last_training_at: latestActivityByUser.get(profile.id)?.last_training_at ?? null,
     nutrition_plan_end: nutritionEnd.get(profile.id) ?? null,
     training_plan_end: trainingEnd.get(profile.id) ?? null,
     kcal_dev: kcalDeviation.get(profile.id)?.dev ?? null,

@@ -17,6 +17,9 @@ function client(overrides: Partial<CoachClient> = {}): CoachClient {
     id: "client-1",
     display_name: "Alex",
     last_checkin: "2026-07-20",
+    last_checkin_submitted_at: "2026-07-20T07:00:00.000Z",
+    pending_checkin_week_start: null,
+    pending_checkin_submitted_at: null,
     last_weight: 80,
     last_weight_at: "2026-07-19T10:00:00.000Z",
     last_nutrition_at: "2026-07-20T08:00:00.000Z",
@@ -111,6 +114,52 @@ describe("coach dashboard logic", () => {
     ]);
     expect(view.recentNutrition[0].id).toBe("current");
     expect(view.scoreCounts.green + view.scoreCounts.yellow + view.scoreCounts.red).toBe(3);
+  });
+
+  it("separates missing customer check-ins from submitted coach reviews", () => {
+    const view = buildCoachDashboardViewModel(
+      [
+        client({ id: "missing", last_checkin: "2026-07-13" }),
+        client({
+          id: "pending",
+          last_checkin: "2026-07-20",
+          pending_checkin_week_start: "2026-07-20",
+          pending_checkin_submitted_at: "2026-07-20T09:00:00.000Z",
+        }),
+      ],
+      today,
+    );
+
+    expect(view.openWeek.map((entry) => entry.id)).toEqual(["missing"]);
+    expect(view.pendingCheckins.map((entry) => entry.id)).toEqual(["pending"]);
+  });
+
+  it("uses the latest real activity and excludes clients without activity data", () => {
+    const view = buildCoachDashboardViewModel(
+      [
+        client({
+          id: "recent",
+          last_weight_at: "2026-06-01T10:00:00.000Z",
+          last_nutrition_at: "2026-07-19T10:00:00.000Z",
+          last_training_at: null,
+        }),
+        client({
+          id: "stale",
+          last_weight_at: null,
+          last_nutrition_at: "2026-06-20T10:00:00.000Z",
+          last_training_at: null,
+        }),
+        client({
+          id: "unknown",
+          last_weight_at: null,
+          last_nutrition_at: null,
+          last_training_at: null,
+        }),
+      ],
+      today,
+    );
+
+    expect(view.inactive.map((entry) => entry.id)).toEqual(["stale"]);
   });
 
   it("describes missing, expiring and expired plan validity", () => {

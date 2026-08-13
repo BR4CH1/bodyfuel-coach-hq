@@ -97,7 +97,7 @@ export function CoachFuelyWorkload({
                       Nur die aktuell betroffenen Personen
                     </div>
                   </div>
-                  {metric.value > 0 && (
+                  {metric.value > 0 && metric.key !== "checkin" && (
                     <button
                       type="button"
                       onClick={() => onOpenFollowUps?.(CATEGORY_BY_KEY[metric.key])}
@@ -129,7 +129,8 @@ export function CoachFuelyWorkload({
                               params={{ userId: item.target.userId }}
                               className="inline-flex h-9 items-center rounded-md border border-border px-3 text-xs hover:border-gold/50 hover:text-gold"
                             >
-                              <UserRoundSearch className="mr-2 h-4 w-4" /> Profil
+                              <UserRoundSearch className="mr-2 h-4 w-4" />
+                              {metric.key === "checkin" ? "Check-in prüfen" : "Profil"}
                             </Link>
                           ) : (
                             <Link
@@ -139,13 +140,15 @@ export function CoachFuelyWorkload({
                               <UserRoundSearch className="mr-2 h-4 w-4" /> Anfrage
                             </Link>
                           )}
-                          <button
-                            type="button"
-                            onClick={() => onOpenFollowUps?.(CATEGORY_BY_KEY[metric.key])}
-                            className="inline-flex h-9 items-center rounded-md bg-gold px-3 text-xs font-semibold text-primary-foreground"
-                          >
-                            <MessageCircleMore className="mr-2 h-4 w-4" /> Follow-up
-                          </button>
+                          {metric.key !== "checkin" && (
+                            <button
+                              type="button"
+                              onClick={() => onOpenFollowUps?.(CATEGORY_BY_KEY[metric.key])}
+                              className="inline-flex h-9 items-center rounded-md bg-gold px-3 text-xs font-semibold text-primary-foreground"
+                            >
+                              <MessageCircleMore className="mr-2 h-4 w-4" /> Follow-up
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))}

@@ -172,6 +172,6 @@ function getItemIcon(item: CoachBriefingItem) {
   if (item.id.includes("plan")) return <CalendarClock className="h-4 w-4" />;
   if (item.id === "new-leads") return <Inbox className="h-4 w-4" />;
   if (item.id === "performance-checks") return <Activity className="h-4 w-4" />;
-  if (item.id === "open-checkins") return <Clock3 className="h-4 w-4" />;
+  if (item.id.includes("checkins")) return <Clock3 className="h-4 w-4" />;
   return <Users className="h-4 w-4" />;
 }
