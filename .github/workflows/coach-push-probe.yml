@@ -34,97 +34,64 @@ jobs:
 
           messages = Path('src/lib/coach-messages.functions.ts')
           text = messages.read_text()
-          old = '''    const { error } = await context.supabase.from("coach_messages").insert({
-              thread_user_id: context.userId,
-              sender_id: context.userId,
-              from_coach: false,
-              body,
-            });
-            if (error) throw new Error(error.message);
-            return { ok: true };
-          });'''
-          new = '''    const { error } = await context.supabase.from("coach_messages").insert({
-              thread_user_id: context.userId,
-              sender_id: context.userId,
-              from_coach: false,
-              body,
-            });
-            if (error) throw new Error(error.message);
+          if 'title: "Neue Kundennachricht"' not in text:
+              start = text.index('// === Client: send to coach ===')
+              end = text.index('// === Client: get own thread ===')
+              section = text[start:end]
+              needle = '    if (error) throw new Error(error.message);\n    return { ok: true };'
+              insert = '''    if (error) throw new Error(error.message);
 
-            // Push is best-effort and must never make a stored message appear failed.
-            try {
-              const { getPushActorName, notifyEnabledCoaches } = await import("@/lib/coach-push.server");
-              const name = await getPushActorName(context.userId);
-              await notifyEnabledCoaches({
-                title: "Neue Kundennachricht",
-                body: `${name} hat dir eine neue Nachricht geschickt.`,
-                url: "/coach",
-                tag: `message-${context.userId}-${Date.now()}`,
-              });
-            } catch (pushError) {
-              console.warn("[coach-push] message notification failed", pushError);
-            }
-            return { ok: true };
-          });'''
-          if old in text:
-              text = text.replace(old, new, 1)
+    // Push is best-effort and must never make a stored message appear failed.
+    try {
+      const { getPushActorName, notifyEnabledCoaches } = await import("@/lib/coach-push.server");
+      const name = await getPushActorName(context.userId);
+      await notifyEnabledCoaches({
+        title: "Neue Kundennachricht",
+        body: `${name} hat dir eine neue Nachricht geschickt.`,
+        url: "/coach",
+        tag: `message-${context.userId}-${Date.now()}`,
+      });
+    } catch (pushError) {
+      console.warn("[coach-push] message notification failed", pushError);
+    }
+    return { ok: true };'''
+              if needle not in section:
+                  raise SystemExit('Could not wire coach message push trigger')
+              text = text[:start] + section.replace(needle, insert, 1) + text[end:]
               messages.write_text(text)
-          elif 'Neue Kundennachricht' not in text:
-              raise SystemExit('Could not wire coach message push trigger')
 
           checkin = Path('src/routes/check-in.tsx')
           text = checkin.read_text()
-          if 'useServerFn' not in text.split('\n', 3)[0:3]:
+          if 'import { useServerFn } from "@tanstack/react-start";' not in text:
               text = text.replace(
                   'import { createFileRoute } from "@tanstack/react-router";\n',
-                  'import { createFileRoute } from "@tanstack/react-router";\nimport { useServerFn } from "@tanstack/react-start";\n',
-                  1,
-              )
-          if 'notifyCoachCheckinSubmitted' not in text:
+                  'import { createFileRoute } from "@tanstack/react-router";\nimport { useServerFn } from "@tanstack/react-start";\n', 1)
+          if 'import { notifyCoachCheckinSubmitted }' not in text:
               text = text.replace(
                   'import { useFormDraft, clearFormDraft } from "@/hooks/use-form-draft";\n',
-                  'import { useFormDraft, clearFormDraft } from "@/hooks/use-form-draft";\nimport { notifyCoachCheckinSubmitted } from "@/lib/coach-push.functions";\n',
-                  1,
-              )
+                  'import { useFormDraft, clearFormDraft } from "@/hooks/use-form-draft";\nimport { notifyCoachCheckinSubmitted } from "@/lib/coach-push.functions";\n', 1)
+          if 'const notifyCoachCheckin = useServerFn(notifyCoachCheckinSubmitted);' not in text:
               text = text.replace(
-                  'function WeeklyCheckIn() {\n  const { supabaseUser } = useSession();\n',
-                  'function WeeklyCheckIn() {\n  const notifyCoachCheckin = useServerFn(notifyCoachCheckinSubmitted);\n  const { supabaseUser } = useSession();\n',
-                  1,
-              )
-              old_success = '''    else {
-              clearFormDraft(draftKey);
-              toast.success(existingId ? "Check-in aktualisiert" : "Check-in gespeichert");
-            }'''
-              new_success = '''    else {
-              clearFormDraft(draftKey);
-              toast.success(existingId ? "Check-in aktualisiert" : "Check-in gespeichert");
-              if (!existingId) {
-                void notifyCoachCheckin({ data: { weekStart: week } }).catch(() => {
-                  // Check-in is already stored; Push delivery remains best-effort.
-                });
-              }
-            }'''
-              if old_success not in text:
+                  'function WeeklyCheckIn() {\n',
+                  'function WeeklyCheckIn() {\n  const notifyCoachCheckin = useServerFn(notifyCoachCheckinSubmitted);\n', 1)
+          if 'notifyCoachCheckin({ data: { weekStart: week } })' not in text:
+              needle = '      toast.success(existingId ? "Check-in aktualisiert" : "Check-in gespeichert");'
+              insert = '''      toast.success(existingId ? "Check-in aktualisiert" : "Check-in gespeichert");
+      if (!existingId) {
+        void notifyCoachCheckin({ data: { weekStart: week } }).catch(() => {
+          // Check-in is already stored; Push delivery remains best-effort.
+        });
+      }'''
+              if needle not in text:
                   raise SystemExit('Could not wire check-in push trigger')
-              text = text.replace(old_success, new_success, 1)
-              checkin.write_text(text)
+              text = text.replace(needle, insert, 1)
+          checkin.write_text(text)
           PY
 
       - run: npm install --ignore-scripts
-
       - name: Format changed product files
         run: |
-          npx prettier --write \
-            package.json \
-            src/lib/coach-push.server.ts \
-            src/lib/coach-push.functions.ts \
-            src/lib/coach-messages.functions.ts \
-            src/routes/check-in.tsx \
-            src/features/coach-dashboard/components/CoachPushCard.tsx \
-            src/features/coach-dashboard/components/CoachDashboardPage.tsx \
-            public/coach-push-sw.js \
-            vite.config.ts
-
+          npx prettier --write package.json src/lib/coach-push.server.ts src/lib/coach-push.functions.ts src/lib/coach-messages.functions.ts src/routes/check-in.tsx src/features/coach-dashboard/components/CoachPushCard.tsx src/features/coach-dashboard/components/CoachDashboardPage.tsx public/coach-push-sw.js vite.config.ts
       - name: Commit generated lock and wiring
         run: |
           git config user.name "github-actions[bot]"
@@ -134,7 +101,6 @@ jobs:
             git commit -m "feat: wire coach push events and dependencies"
             git push origin HEAD:feature/coach-web-push
           fi
-
       - name: Typecheck
         run: npm run typecheck
       - name: Full tests
