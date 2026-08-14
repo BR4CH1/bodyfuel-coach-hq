@@ -1,0 +1,30 @@
+name: Diagnose Live Service Worker
+
+on:
+  push:
+    branches:
+      - fix/coach-push-status-check
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Inspect live sw.js
+        run: |
+          set -euxo pipefail
+          curl -sS -D /tmp/sw.headers -o /tmp/sw.body https://bodyfuel-coaching.com/sw.js || true
+          cat /tmp/sw.headers || true
+          echo '--- sw body ---'
+          head -c 800 /tmp/sw.body || true
+          echo
+      - name: Inspect live coach-push-sw.js
+        run: |
+          set -euxo pipefail
+          curl -sS -D /tmp/push.headers -o /tmp/push.body https://bodyfuel-coaching.com/coach-push-sw.js || true
+          cat /tmp/push.headers || true
+          echo '--- push body ---'
+          head -c 800 /tmp/push.body || true
+          echo
