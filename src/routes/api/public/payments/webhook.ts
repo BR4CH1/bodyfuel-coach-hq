@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
+import { classifySuccessfulPayment } from "@/lib/payment-push.logic";
 import { type StripeEnv, verifyWebhook } from "@/lib/stripe.server";
 
 let _supabase: ReturnType<typeof createClient> | null = null;
@@ -148,6 +149,34 @@ async function handleSubscriptionDeleted(subscription: any, env: StripeEnv) {
   }
 }
 
+async function notifySuccessfulLivePayment(event: any, env: StripeEnv) {
+  // Never notify for Stripe sandbox/test traffic.
+  if (env !== "live") return;
+
+  const notification = classifySuccessfulPayment(event);
+  if (!notification) return;
+
+  // Push delivery is intentionally best-effort. A notification outage must not
+  // turn an otherwise valid Stripe webhook into a failed payment webhook.
+  try {
+    const { claimCoachPushEvent, isCoachPushConfigured, notifyEnabledCoaches } =
+      await import("@/lib/coach-push.server");
+    if (!isCoachPushConfigured()) return;
+
+    const claimed = await claimCoachPushEvent(notification.eventKey);
+    if (!claimed) return;
+
+    await notifyEnabledCoaches({
+      title: notification.title,
+      body: notification.body,
+      url: notification.url,
+      tag: notification.tag,
+    });
+  } catch (error) {
+    console.warn("[payments-webhook] live payment push failed", error);
+  }
+}
+
 async function handleWebhook(req: Request, env: StripeEnv) {
   const event = await verifyWebhook(req, env);
   switch (event.type) {
@@ -160,9 +189,16 @@ async function handleWebhook(req: Request, env: StripeEnv) {
     case "customer.subscription.deleted":
       await handleSubscriptionDeleted(event.data.object, env);
       break;
+    case "invoice.payment_succeeded":
+    case "checkout.session.completed":
+    case "checkout.session.async_payment_succeeded":
+      // Payment events are handled by notifySuccessfulLivePayment below.
+      break;
     default:
       console.log("[payments-webhook] unhandled event:", event.type);
   }
+
+  await notifySuccessfulLivePayment(event, env);
 }
 
 export const Route = createFileRoute("/api/public/payments/webhook")({
