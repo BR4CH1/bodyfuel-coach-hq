@@ -1,18 +1,29 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import {
   AlertTriangle,
   CalendarClock,
+  Check,
   CheckCircle2,
   ChevronRight,
   Clock3,
   Inbox,
+  Loader2,
   MessageCircleMore,
   Sparkles,
   UserRoundSearch,
+  X,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Fuely } from "@/components/bodyfuel/Fuely";
+import {
+  listCoachFollowUpActions,
+  saveCoachFollowUpAction,
+  type CoachFollowUpAction,
+} from "@/features/coach-dashboard/lib/coach-followups.functions";
 import {
   buildCoachTodayQueue,
   filterCoachTodayQueue,
@@ -23,9 +34,12 @@ import type {
   CoachFollowUpCategory,
   CoachIntelligenceViewModel,
   CoachWorkloadKey,
+  CoachWorkloadMetric,
   CoachWorkloadViewModel,
 } from "@/features/coach-dashboard/types";
 import { cn } from "@/lib/utils";
+
+const COMPLETED_COOLDOWN_MS = 14 * 24 * 60 * 60 * 1000;
 
 const METRIC_ICONS: Record<CoachWorkloadKey, React.ReactNode> = {
   risk: <AlertTriangle className="h-4 w-4" />,
@@ -33,6 +47,8 @@ const METRIC_ICONS: Record<CoachWorkloadKey, React.ReactNode> = {
   plan: <CalendarClock className="h-4 w-4" />,
   lead: <Inbox className="h-4 w-4" />,
 };
+
+type ActionMap = Record<string, CoachFollowUpAction>;
 
 export function CoachTodayCockpit({
   workload,
@@ -47,12 +63,116 @@ export function CoachTodayCockpit({
   onFilterChange: (filter: CoachWorkloadKey | "all") => void;
   onOpenFollowUps?: (category: CoachFollowUpCategory) => void;
 }) {
-  const queue = useMemo(
+  const qc = useQueryClient();
+  const listActionsFn = useServerFn(listCoachFollowUpActions);
+  const saveActionFn = useServerFn(saveCoachFollowUpAction);
+  const [localActions, setLocalActions] = useState<ActionMap>({});
+  const [savingItemId, setSavingItemId] = useState<string | null>(null);
+
+  const actionsQuery = useQuery({
+    queryKey: ["coach-followup-actions"],
+    queryFn: () => listActionsFn(),
+    staleTime: 15_000,
+  });
+
+  const actions = useMemo<ActionMap>(() => {
+    const serverActions = Object.fromEntries(
+      (actionsQuery.data?.items ?? []).map((action) => [action.sourceSignalId, action]),
+    );
+    return { ...serverActions, ...localActions };
+  }, [actionsQuery.data, localActions]);
+
+  const rawQueue = useMemo(
     () => buildCoachTodayQueue(workload, intelligence),
     [workload, intelligence],
   );
+  const queue = useMemo(
+    () => rawQueue.filter((item) => hasOpenActionSignal(item.actionSignalIds, actions)),
+    [rawQueue, actions],
+  );
   const visible = useMemo(() => filterCoachTodayQueue(queue, filter), [queue, filter]);
   const urgent = queue.filter((item) => item.priority === "urgent").length;
+
+  async function persistItemAction(item: CoachTodayItem, action: CoachFollowUpAction) {
+    if (item.actionSignalIds.length === 0) return;
+    const previousLocal = localActions;
+    const nextActions = Object.fromEntries(
+      item.actionSignalIds.map((sourceSignalId) => [
+        sourceSignalId,
+        { ...action, sourceSignalId } satisfies CoachFollowUpAction,
+      ]),
+    );
+
+    setSavingItemId(item.id);
+    setLocalActions((current) => ({ ...current, ...nextActions }));
+
+    try {
+      await Promise.all(
+        Object.values(nextActions).map((nextAction) => saveActionFn({ data: nextAction })),
+      );
+      await qc.invalidateQueries({ queryKey: ["coach-followup-actions"] });
+    } catch (error) {
+      setLocalActions(previousLocal);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Status konnte nicht gespeichert werden. Bitte erneut versuchen.",
+      );
+      throw error;
+    } finally {
+      setSavingItemId(null);
+    }
+  }
+
+  async function completeItem(item: CoachTodayItem) {
+    try {
+      await persistItemAction(item, {
+        sourceSignalId: item.actionSignalIds[0] ?? item.id,
+        status: "completed",
+        completedAt: new Date().toISOString(),
+        deliveryChannel: "manual",
+      });
+      toast.success(`${item.name}: erledigt`);
+    } catch {
+      /* error toast is handled by persistItemAction */
+    }
+  }
+
+  async function snoozeItem(item: CoachTodayItem) {
+    try {
+      await persistItemAction(item, {
+        sourceSignalId: item.actionSignalIds[0] ?? item.id,
+        status: "snoozed",
+        until: tomorrowAtEight().toISOString(),
+      });
+      toast.success(`${item.name}: morgen um 08:00 Uhr wieder sichtbar`);
+    } catch {
+      /* error toast is handled by persistItemAction */
+    }
+  }
+
+  async function dismissItem(item: CoachTodayItem) {
+    const choices =
+      "Kein Handlungsbedarf | Bereits persönlich geklärt | Falsches Signal | Kunde pausiert | Sonstiges";
+    const reason = window.prompt(
+      `Grund fürs Ausblenden:\n${choices}`,
+      "Bereits persönlich geklärt",
+    );
+    if (!reason?.trim()) return;
+
+    try {
+      await persistItemAction(item, {
+        sourceSignalId: item.actionSignalIds[0] ?? item.id,
+        status: "dismissed",
+        reason: reason.trim(),
+        completedAt: new Date().toISOString(),
+        deliveryChannel: "manual",
+      });
+      toast.success(`${item.name}: ausgeblendet`);
+    } catch {
+      /* error toast is handled by persistItemAction */
+    }
+  }
 
   return (
     <section
@@ -82,7 +202,7 @@ export function CoachTodayCockpit({
               <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
                 {queue.length === 0
                   ? "Aktuell wartet nichts Kritisches auf dich."
-                  : "Kunden werden nur einmal angezeigt. Alle Gründe und Signale bleiben trotzdem sichtbar."}
+                  : "Kunden werden nur einmal angezeigt. Erledigen, verschieben oder ausblenden geht direkt hier."}
               </p>
             </div>
           </div>
@@ -95,17 +215,20 @@ export function CoachTodayCockpit({
               icon={<Sparkles className="h-4 w-4" />}
               onClick={() => onFilterChange("all")}
             />
-            {workload.metrics.map((metric) => (
-              <MetricButton
-                key={metric.key}
-                active={filter === metric.key}
-                value={metric.value}
-                label={metric.label}
-                icon={METRIC_ICONS[metric.key]}
-                tone={metric.tone}
-                onClick={() => onFilterChange(metric.key)}
-              />
-            ))}
+            {workload.metrics.map((metric) => {
+              const value = openMetricCount(metric, actions);
+              return (
+                <MetricButton
+                  key={metric.key}
+                  active={filter === metric.key}
+                  value={value}
+                  label={metric.label}
+                  icon={METRIC_ICONS[metric.key]}
+                  tone={value === 0 ? "neutral" : metric.tone}
+                  onClick={() => onFilterChange(metric.key)}
+                />
+              );
+            })}
           </div>
         </div>
       </div>
@@ -128,6 +251,10 @@ export function CoachTodayCockpit({
                 key={item.id}
                 item={item}
                 rank={index + 1}
+                isSaving={savingItemId === item.id}
+                onComplete={() => completeItem(item)}
+                onSnooze={() => snoozeItem(item)}
+                onDismiss={() => dismissItem(item)}
                 onOpenFollowUps={onOpenFollowUps}
               />
             ))}
@@ -192,10 +319,18 @@ function MetricButton({
 function TodayRow({
   item,
   rank,
+  isSaving,
+  onComplete,
+  onSnooze,
+  onDismiss,
   onOpenFollowUps,
 }: {
   item: CoachTodayItem;
   rank: number;
+  isSaving: boolean;
+  onComplete: () => void;
+  onSnooze: () => void;
+  onDismiss: () => void;
   onOpenFollowUps?: (category: CoachFollowUpCategory) => void;
 }) {
   const followUpCategory = bestFollowUpCategory(item.categories);
@@ -271,6 +406,37 @@ function TodayRow({
             <MessageCircleMore className="mr-1.5 h-4 w-4" /> Follow-up
           </button>
         )}
+
+        <button
+          type="button"
+          onClick={onComplete}
+          disabled={isSaving}
+          className="inline-flex h-9 items-center rounded-lg border border-emerald-500/35 bg-emerald-500/10 px-3 text-xs font-semibold text-emerald-600 transition hover:bg-emerald-500/15 disabled:opacity-50 dark:text-emerald-400"
+        >
+          {isSaving ? (
+            <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+          ) : (
+            <Check className="mr-1.5 h-4 w-4" />
+          )}
+          Erledigt
+        </button>
+        <button
+          type="button"
+          onClick={onSnooze}
+          disabled={isSaving}
+          className="inline-flex h-9 items-center rounded-lg border border-border bg-background/60 px-3 text-xs font-semibold transition hover:border-amber-500/40 hover:text-amber-500 disabled:opacity-50"
+        >
+          <Clock3 className="mr-1.5 h-4 w-4" /> Morgen erinnern
+        </button>
+        <button
+          type="button"
+          onClick={onDismiss}
+          disabled={isSaving}
+          className="inline-flex h-9 items-center rounded-lg px-2.5 text-xs font-semibold text-muted-foreground transition hover:bg-secondary hover:text-foreground disabled:opacity-50"
+          title="Diesen aktuellen Fall dauerhaft ausblenden"
+        >
+          <X className="mr-1 h-4 w-4" /> Ausblenden
+        </button>
       </div>
     </article>
   );
@@ -312,4 +478,40 @@ function bestFollowUpCategory(categories: CoachTodayCategory[]): CoachFollowUpCa
   if (categories.includes("lead")) return "lead";
   if (categories.includes("attention")) return "attention";
   return null;
+}
+
+function tomorrowAtEight() {
+  const date = new Date();
+  date.setDate(date.getDate() + 1);
+  date.setHours(8, 0, 0, 0);
+  return date;
+}
+
+function isActionHidden(action: CoachFollowUpAction | undefined, now = Date.now()) {
+  if (!action) return false;
+  if (action.status === "dismissed") return true;
+  if (action.status === "snoozed") {
+    return Boolean(action.until && new Date(action.until).getTime() > now);
+  }
+  if (action.status === "completed") {
+    const completedAt = action.completedAt ? new Date(action.completedAt).getTime() : now;
+    return now - completedAt < COMPLETED_COOLDOWN_MS;
+  }
+  return false;
+}
+
+function hasOpenActionSignal(signalIds: string[], actions: ActionMap) {
+  if (signalIds.length === 0) return true;
+  const now = Date.now();
+  return signalIds.some((sourceSignalId) => !isActionHidden(actions[sourceSignalId], now));
+}
+
+function openMetricCount(metric: CoachWorkloadMetric, actions: ActionMap) {
+  const now = Date.now();
+  return metric.items.reduce((count, item) => {
+    const signalIds = item.actionSignalIds?.length ? item.actionSignalIds : [item.sourceSignalId];
+    return (
+      count + signalIds.filter((sourceSignalId) => !isActionHidden(actions[sourceSignalId], now)).length
+    );
+  }, 0);
 }
