@@ -3,6 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertCoachOrOrgStaffForAthlete } from "@/lib/organizations/org-coach-access";
 import type { FoodAmountUnit } from "@/lib/food-units";
 import { checkFoodEnergy } from "@/lib/food-energy";
+import { resolveConfiguredDayType } from "@/lib/day-type.logic";
 import {
   expandFoodQuery,
   normalizeFoodTerm,
@@ -10,11 +11,8 @@ import {
   foodSourcePriority,
 } from "@/lib/food-search.logic";
 
-
 export type { FoodSource, FoodResult } from "@/lib/nutrition.types";
 import type { FoodResult, FoodSource } from "@/lib/nutrition.types";
-
-
 
 function mapNutritionFoodRow(r: any): FoodResult {
   const unit: FoodAmountUnit = r.unit_type === "ml" ? "ml" : "g";
@@ -62,8 +60,6 @@ function mapNutritionFoodRow(r: any): FoodResult {
 
 const FOOD_SEARCH_SELECT =
   "id,name,aliases,source,source_id,source_name,brand,barcode,image_url,image_source,kcal_per_100g,protein_per_100g,carbs_per_100g,fat_per_100g,fiber_per_100g,sugar_per_100g,saturated_fat_per_100g,salt_per_100g,sodium_mg_per_100g,verified_by_coach,unit_type,default_state,density_g_per_ml,is_active,safe_for_smart";
-
-
 
 function dedupeFoodResults(results: FoodResult[]): FoodResult[] {
   const seen = new Set<string>();
@@ -128,7 +124,6 @@ async function runCatalogSearch(
   const catalogRows = [...((direct?.data ?? []) as any[]), ...((variantHits?.data ?? []) as any[])];
   const catalog = catalogRows.map(mapNutritionFoodRow);
 
-
   const normalizedVariants = variants.map(normalizeFoodTerm);
   const own = ((ownFoods?.data ?? []) as any[])
     .filter((row) => {
@@ -161,9 +156,6 @@ async function runCatalogSearch(
   return rankFoodResults(merged, q).slice(0, limit);
 }
 
-
-
-
 /** Barcode-Lookup: erst interner Katalog, dann Open Food Facts (Markenprodukte). */
 export const lookupBarcode = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -187,7 +179,6 @@ export const lookupBarcode = createServerFn({ method: "POST" })
     return off;
   });
 
-
 /**
  * Kompatibilitäts-Suche. Live-Abfragen externer Datenquellen sind bewusst
  * deaktiviert: Externe Datensätze werden erst importiert, auditiert und dann
@@ -199,7 +190,6 @@ export const searchFoods = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<FoodResult[]> => {
     return runCatalogSearch(context.supabase, data.query, 50, context.userId);
   });
-
 
 /* ----------- Targets (coach only) ----------- */
 
@@ -309,6 +299,27 @@ export const getDayType = createServerFn({ method: "POST" })
     if (override?.kind) {
       return { kind: override.kind as DayType, source: "manual" as const };
     }
+    // Der aktive Trainingsplan ist die primäre Quelle für Training/Rest.
+    // Profil-Wochentage dienen nur noch als Fallback für Nutzer ohne lesbaren Plan.
+    try {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { loadTrainingWeekSchedule } = await import("@/lib/training-schedule.server");
+      const trainingSchedule = await loadTrainingWeekSchedule(
+        supabaseAdmin,
+        data.user_id,
+        data.date,
+      );
+      const scheduledKind = resolveConfiguredDayType({
+        date: data.date,
+        trainingSchedule,
+      });
+      if (scheduledKind) {
+        return { kind: scheduledKind, source: "auto" as const };
+      }
+    } catch (error) {
+      console.error("Day type from active training plan failed:", error);
+    }
+
     // Fallback: derive from the user's configured training weekdays.
     const { data: prof } = await context.supabase
       .from("smart_nutrition_profile")
@@ -317,14 +328,14 @@ export const getDayType = createServerFn({ method: "POST" })
       .maybeSingle();
     const weekdays: string[] = (prof as any)?.training_weekdays ?? [];
     if (weekdays.length) {
-      const KEYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
-      const wkKey = KEYS[new Date(`${data.date}T12:00:00`).getDay()];
-      return {
-        kind: (weekdays.map((s) => s.toLowerCase()).includes(wkKey)
-          ? "training"
-          : "rest") as DayType,
-        source: "auto" as const,
-      };
+      const configuredKind = resolveConfiguredDayType({
+        date: data.date,
+        trainingSchedule: null,
+        configuredTrainingWeekdays: weekdays,
+      });
+      if (configuredKind) {
+        return { kind: configuredKind, source: "auto" as const };
+      }
     }
     // Final fallback: did the user log a training set on this date?
     const start = `${data.date}T00:00:00`;
@@ -646,7 +657,8 @@ Antworte NUR mit gültigem JSON:
         messages: [{ role: "user", content: prompt }],
       }),
     });
-    if (res.status === 429) throw new Error("Rate-Limit erreicht — bitte gleich nochmal versuchen.");
+    if (res.status === 429)
+      throw new Error("Rate-Limit erreicht — bitte gleich nochmal versuchen.");
     if (res.status === 402) throw new Error("KI-Guthaben aufgebraucht — bitte aufladen.");
     if (!res.ok) throw new Error(`KI-Fehler [${res.status}]`);
 
@@ -689,7 +701,6 @@ Antworte NUR mit gültigem JSON:
     };
   });
 
-
 /* ----------- BodyFuel Lebensmittel-DB (BLS 4.0 + verified) ----------- */
 
 /**
@@ -702,4 +713,3 @@ export const searchFoodsDb = createServerFn({ method: "POST" })
     const limit = Math.min(50, Math.max(1, data.limit ?? 15));
     return runCatalogSearch(context.supabase, data.query, limit, context.userId);
   });
-

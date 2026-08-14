@@ -120,7 +120,6 @@ export type CustomerPlanContext = {
   trainingSchedule?: TrainingWeekSchedule;
 };
 
-
 export const listMealLibrary = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<LibraryMeal[]> => {
@@ -180,7 +179,8 @@ export const getCustomerPlanContext = createServerFn({ method: "POST" })
     let trainingSchedule: TrainingWeekSchedule | undefined;
     try {
       const { loadTrainingWeekSchedule } = await import("@/lib/training-schedule.server");
-      trainingSchedule = (await loadTrainingWeekSchedule(supabaseAdmin, data.customerId)) ?? undefined;
+      trainingSchedule =
+        (await loadTrainingWeekSchedule(supabaseAdmin, data.customerId)) ?? undefined;
     } catch (e) {
       console.error("[getCustomerPlanContext] training schedule failed", e);
     }
@@ -273,7 +273,6 @@ export type BuilderDay = {
   /** Individuelles Tagesziel; überschreibt das Profilziel nur in diesem Plan. */
   customTargets?: { kcal: number; p: number; c: number; f: number } | null;
 };
-
 
 async function persistBuilderPlan(
   supabase: any,
@@ -541,45 +540,42 @@ export const saveBuilderPartnerPlan = createServerFn({ method: "POST" })
 
     // Build individual + combined shopping lists (best-effort, like AI flow).
     const apiKey = process.env.LOVABLE_API_KEY;
-    if (apiKey) {
-      try {
-        const { daysUntilNextShopping } = await import("./shopping-cycle");
-        const { data: prof } = await supabaseAdmin
-          .from("smart_nutrition_profile")
-          .select("shopping_days")
-          .eq("user_id", data.customerId)
-          .maybeSingle();
-        const windowDays = daysUntilNextShopping((prof as any)?.shopping_days);
-        const { generateShoppingListForPlan, generateCombinedShoppingList } =
-          await import("./shopping-list-engine.server");
-        await generateShoppingListForPlan({
-          supabase: supabaseAdmin,
-          apiKey,
-          planId: A.plan_id,
-          windowDays,
-        });
-        await generateShoppingListForPlan({
-          supabase: supabaseAdmin,
-          apiKey,
-          planId: B.plan_id,
-          windowDays,
-        });
-        await generateCombinedShoppingList({
-          apiKey,
-          planAId: A.plan_id,
-          planBId: B.plan_id,
-          userA: data.customerId,
-          userB: data.partnerId,
-          windowDays,
-        });
-      } catch (e) {
-        console.error("Partner shopping list (manual plan) failed:", e);
-      }
+    try {
+      const { daysUntilNextShopping } = await import("./shopping-cycle");
+      const { data: prof } = await supabaseAdmin
+        .from("smart_nutrition_profile")
+        .select("shopping_days")
+        .eq("user_id", data.customerId)
+        .maybeSingle();
+      const windowDays = daysUntilNextShopping((prof as any)?.shopping_days);
+      const { generateShoppingListForPlan, generateCombinedShoppingList } =
+        await import("./shopping-list-engine.server");
+      await generateShoppingListForPlan({
+        supabase: supabaseAdmin,
+        apiKey,
+        planId: A.plan_id,
+        windowDays,
+      });
+      await generateShoppingListForPlan({
+        supabase: supabaseAdmin,
+        apiKey,
+        planId: B.plan_id,
+        windowDays,
+      });
+      await generateCombinedShoppingList({
+        apiKey,
+        planAId: A.plan_id,
+        planBId: B.plan_id,
+        userA: data.customerId,
+        userB: data.partnerId,
+        windowDays,
+      });
+    } catch (e) {
+      console.error("Partner shopping list (manual plan) failed:", e);
     }
 
     return { ok: true, client_plan_id: A.plan_id, partner_plan_id: B.plan_id };
   });
-
 
 // -------- Load existing plan for editing --------
 
@@ -688,7 +684,6 @@ export const loadNutritionPlanForBuilder = createServerFn({ method: "POST" })
           : null,
       };
     });
-
 
     const endIso = (plan as any).scheduled_end_date ?? start;
     return {

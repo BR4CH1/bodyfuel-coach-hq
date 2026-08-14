@@ -67,7 +67,6 @@ export const generateShoppingList = createServerFn({ method: "POST" })
 
     const { supabase, userId } = context;
     const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY fehlt");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     // Resolve plan
@@ -122,11 +121,7 @@ export const generateShoppingList = createServerFn({ method: "POST" })
         .eq("plan_id", planId)
         .eq("scope", data.scope === "combined" ? "partner_combined" : "individual")
         .maybeSingle();
-      if (
-        cached &&
-        (cached as any).items?.length &&
-        (cached as any).days === windowDays
-      ) {
+      if (cached && (cached as any).items?.length && (cached as any).days === windowDays) {
         const { cleanShoppingItems } = await import("./shopping-list-engine.server");
         const cleanedItems = cleanShoppingItems((cached as any).items as ShoppingItem[]);
         await supabaseAdmin
