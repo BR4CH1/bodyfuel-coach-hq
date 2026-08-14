@@ -2,10 +2,10 @@
  * Wochenstruktur — deterministisch, Single Source of Truth für day_date/role/focus.
  *
  * Input: gewählte Gym-Trainingstage (Mo..So Keys), Sport-/Spieltage, Anzahl Wochen,
- *        Erfahrungslevel + Wochenstart-Datum.
- * Output: Für JEDE Woche eine 7-Tage-Liste (Mo→So), jeder Tag mit
+ *        Erfahrungslevel + Planstart-Datum.
+ * Output: Für JEDE 7-Tage-Planwoche ab dem Startdatum eine Liste, jeder Tag mit
  *   - day_date (ISO)
- *   - weekday key + label
+ *   - dem tatsächlichen Wochentag dieses Datums
  *   - role: "gym" | "sport" | "recovery" | "rest" | "gym_light"
  *   - focus: SessionFocus | null
  *   - slots: MovementSlot[] (nur für gym/gym_light)
@@ -25,20 +25,51 @@ import {
 } from "./movement-framework";
 
 export type WeekdayKey =
-  | "monday" | "tuesday" | "wednesday"
-  | "thursday" | "friday" | "saturday" | "sunday";
+  | "monday"
+  | "tuesday"
+  | "wednesday"
+  | "thursday"
+  | "friday"
+  | "saturday"
+  | "sunday";
 
 export const WEEKDAY_ORDER: WeekdayKey[] = [
-  "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+];
+
+const JS_DAY_TO_WEEKDAY: WeekdayKey[] = [
+  "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
 ];
 
 export const weekdayShort: Record<WeekdayKey, string> = {
-  monday: "Mo", tuesday: "Di", wednesday: "Mi", thursday: "Do",
-  friday: "Fr", saturday: "Sa", sunday: "So",
+  monday: "Mo",
+  tuesday: "Di",
+  wednesday: "Mi",
+  thursday: "Do",
+  friday: "Fr",
+  saturday: "Sa",
+  sunday: "So",
 };
 export const weekdayLong: Record<WeekdayKey, string> = {
-  monday: "Montag", tuesday: "Dienstag", wednesday: "Mittwoch",
-  thursday: "Donnerstag", friday: "Freitag", saturday: "Samstag", sunday: "Sonntag",
+  monday: "Montag",
+  tuesday: "Dienstag",
+  wednesday: "Mittwoch",
+  thursday: "Donnerstag",
+  friday: "Freitag",
+  saturday: "Samstag",
+  sunday: "Sonntag",
 };
 
 export type DayRole = "gym" | "gym_light" | "sport" | "recovery" | "rest";
@@ -72,10 +103,23 @@ function focusRotation(numGymDays: number, experience: Experience): SessionFocus
   return ["push", "pull", "legs", "push", "pull", "legs"]; // 6
 }
 
+/**
+ * Reiner Kalendertag ohne UTC-Verschiebung: der vom Caller gemeinte lokale
+ * Starttag bleibt derselbe, auch wenn der Prozess nicht in UTC läuft.
+ */
 function isoDay(base: Date, offsetDays: number): string {
   const d = new Date(base);
+  d.setHours(12, 0, 0, 0);
   d.setDate(d.getDate() + offsetDays);
-  return d.toISOString().slice(0, 10);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function weekdayForIsoDate(iso: string): WeekdayKey {
+  const jsDay = new Date(`${iso}T00:00:00Z`).getUTCDay();
+  return JS_DAY_TO_WEEKDAY[jsDay];
 }
 
 export type BuildWeekPlanOpts = {
@@ -102,21 +146,25 @@ export function buildWeekPlan(opts: BuildWeekPlanOpts): WeekPlan[] {
       sport = new Set([...sport].filter((d) => !training.has(d)));
     }
   }
-  const rotation = focusRotation(opts.trainingWeekdays.length, opts.experience);
+  const rotation = focusRotation(training.size, opts.experience);
 
   const plans: WeekPlan[] = [];
   for (let w = 0; w < opts.weeks; w++) {
     const isDeload = opts.weeks >= 4 && w === opts.weeks - 1; // letzte Woche = Deload
     let gymIdx = 0;
-    const days: PlannedDay[] = WEEKDAY_ORDER.map((wd, i) => {
-      const dateStr = isoDay(opts.startDate, w * 7 + i);
+    const days: PlannedDay[] = Array.from({ length: 7 }, (_, i) => {
+      const offset = w * 7 + i;
+      const dateStr = isoDay(opts.startDate, offset);
+      // Entscheidend: Der Wochentag wird aus dem tatsächlichen Kalendertag
+      // abgeleitet. Früher wurde hier blind Mo→So verwendet, obwohl startDate
+      // z. B. ein Dienstag sein konnte; dadurch war der ganze Plan um 1 Tag verschoben.
+      const wd = weekdayForIsoDate(dateStr);
       const isGym = training.has(wd);
       const isSport = sport.has(wd);
 
-      // Vor-Tag Sport? → recovery statt rest
-      const prevIdx = (i + 6) % 7;
-      const prevWd = WEEKDAY_ORDER[prevIdx];
-      const wasSportYesterday = i > 0 && sport.has(prevWd);
+      const prevDate = isoDay(opts.startDate, offset - 1);
+      const prevWd = weekdayForIsoDate(prevDate);
+      const wasSportYesterday = offset > 0 && sport.has(prevWd);
 
       let role: DayRole = "rest";
       let focus: SessionFocus | null = null;
@@ -127,7 +175,10 @@ export function buildWeekPlan(opts: BuildWeekPlanOpts): WeekPlan[] {
         focus = "upper"; // an Sport-/Spieltag nur Oberkörper-Zusatz
         slots = slotsForFocus(focus, opts.experience)
           // an gym_light-Tagen keine schweren Compounds
-          .filter((s) => s.tier !== "compound" || s.pattern.includes("push") || s.pattern.includes("pull"))
+          .filter(
+            (s) =>
+              s.tier !== "compound" || s.pattern.includes("push") || s.pattern.includes("pull"),
+          )
           .map((s) => ({ ...s, sets: Math.max(2, s.sets - 1) }));
       } else if (isGym) {
         role = "gym";
@@ -152,9 +203,13 @@ export function buildWeekPlan(opts: BuildWeekPlanOpts): WeekPlan[] {
         day_date: dateStr,
         role,
         focus,
-        focus_label: focus ? focusLabel[focus] : role === "sport"
-          ? "Sport / Mannschaftstraining"
-          : role === "recovery" ? "Recovery / Mobility" : "Ruhetag",
+        focus_label: focus
+          ? focusLabel[focus]
+          : role === "sport"
+            ? "Sport / Mannschaftstraining"
+            : role === "recovery"
+              ? "Recovery / Mobility"
+              : "Ruhetag",
         slots,
       };
     });

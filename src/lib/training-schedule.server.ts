@@ -59,9 +59,18 @@ export async function loadTrainingWeekSchedule(
     counts.set(ex.day_id, (counts.get(ex.day_id) ?? 0) + 1);
   }
 
-  // Nur die erste Woche bestimmt die Wochenstruktur; Folgewochen wiederholen sie.
-  const firstWeek = Math.min(...days.map((d) => Number(d.week_number ?? 1)));
-  const weekDays = days.filter((d) => Number(d.week_number ?? 1) === firstWeek);
+  // Bei datierten Plänen ist die Woche des angefragten Kalendertags die
+  // Source of Truth. Das schützt bestehende Pläne, deren frühere Wochen durch
+  // einen alten Generatorfehler anders datiert waren, ohne historische Logs
+  // nachträglich umzuschreiben. Alte/importierte Pläne ohne day_date fallen
+  // weiterhin auf die erste Woche zurück.
+  const todayRow = days.find(
+    (d) => String(d.day_date ?? "").slice(0, 10) === todayIso,
+  );
+  const referenceWeek = todayRow
+    ? Number(todayRow.week_number ?? 1)
+    : Math.min(...days.map((d) => Number(d.week_number ?? 1)));
+  const weekDays = days.filter((d) => Number(d.week_number ?? 1) === referenceWeek);
 
   return buildTrainingWeekSchedule(
     weekDays.map((d) => ({
