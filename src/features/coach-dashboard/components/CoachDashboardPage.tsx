@@ -7,7 +7,6 @@ import { TierMetricsCard } from "@/components/bodyfuel/TierMetricsCard";
 import { CoachCustomerOverviewSection } from "@/features/coach-dashboard/components/CoachCustomerOverviewSection";
 import { CoachDashboardHeader } from "@/features/coach-dashboard/components/CoachDashboardHeader";
 import { CoachFuelyFollowUps } from "@/features/coach-dashboard/components/CoachFuelyFollowUps";
-import { CoachPushCard } from "@/features/coach-dashboard/components/CoachPushCard";
 import { CoachRankingPanel } from "@/features/coach-dashboard/components/CoachRankingPanel";
 import { CoachTodayCockpit } from "@/features/coach-dashboard/components/CoachTodayCockpit";
 import { useCoachDashboardController } from "@/features/coach-dashboard/hooks/useCoachDashboardController";
@@ -77,8 +76,6 @@ export function CoachDashboardPage() {
 
       {!isLoading && !isError && (
         <div className="space-y-8">
-          <CoachPushCard />
-
           <CoachTodayCockpit
             workload={workload}
             intelligence={intelligence}
