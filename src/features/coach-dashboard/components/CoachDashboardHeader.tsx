@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { CalendarClock, ChevronDown, Clock, Inbox, Settings2, Users } from "lucide-react";
 
 import { StatPill } from "@/features/coach-dashboard/components/CoachDashboardPrimitives";
+import type { CoachWorkloadKey } from "@/features/coach-dashboard/types";
 
 export function CoachDashboardHeader({
   weekStart,
@@ -9,12 +10,14 @@ export function CoachDashboardHeader({
   leadCount,
   pendingCheckinCount,
   expiringPlanCount,
+  onOpenToday,
 }: {
   weekStart: string;
   clientCount: number;
   leadCount: number;
   pendingCheckinCount: number;
   expiringPlanCount: number;
+  onOpenToday?: (filter: CoachWorkloadKey) => void;
 }) {
   return (
     <div className="space-y-4">
@@ -27,20 +30,47 @@ export function CoachDashboardHeader({
       </div>
 
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-        <StatPill icon={<Users className="h-4 w-4" />} value={clientCount} label="aktive Kunden" />
-        <StatPill icon={<Inbox className="h-4 w-4" />} value={leadCount} label="Neue Leads" />
-        <StatPill
-          icon={<Clock className="h-4 w-4" />}
-          value={pendingCheckinCount}
-          label="Check-ins zu prüfen"
-          warn={pendingCheckinCount > 0}
-        />
-        <StatPill
-          icon={<CalendarClock className="h-4 w-4" />}
-          value={expiringPlanCount}
-          label="Pläne laufen aus"
-          warn={expiringPlanCount > 0}
-        />
+        <Link
+          to="/coach/customers"
+          className="rounded-xl outline-none transition hover:-translate-y-0.5 focus:ring-2 focus:ring-gold/40"
+          title="Alle Coaching-Kunden öffnen"
+        >
+          <StatPill icon={<Users className="h-4 w-4" />} value={clientCount} label="aktive Kunden" />
+        </Link>
+        <button
+          type="button"
+          onClick={() => onOpenToday?.("lead")}
+          className="rounded-xl text-left outline-none transition hover:-translate-y-0.5 focus:ring-2 focus:ring-gold/40"
+          title="Neue Leads im Heute-Bereich anzeigen"
+        >
+          <StatPill icon={<Inbox className="h-4 w-4" />} value={leadCount} label="Neue Leads" warn={leadCount > 0} />
+        </button>
+        <button
+          type="button"
+          onClick={() => onOpenToday?.("checkin")}
+          className="rounded-xl text-left outline-none transition hover:-translate-y-0.5 focus:ring-2 focus:ring-gold/40"
+          title="Offene Check-ins im Heute-Bereich anzeigen"
+        >
+          <StatPill
+            icon={<Clock className="h-4 w-4" />}
+            value={pendingCheckinCount}
+            label="Check-ins zu prüfen"
+            warn={pendingCheckinCount > 0}
+          />
+        </button>
+        <button
+          type="button"
+          onClick={() => onOpenToday?.("plan")}
+          className="rounded-xl text-left outline-none transition hover:-translate-y-0.5 focus:ring-2 focus:ring-gold/40"
+          title="Auslaufende Pläne im Heute-Bereich anzeigen"
+        >
+          <StatPill
+            icon={<CalendarClock className="h-4 w-4" />}
+            value={expiringPlanCount}
+            label="Pläne laufen aus"
+            warn={expiringPlanCount > 0}
+          />
+        </button>
       </div>
 
       <details className="group rounded-2xl border border-border bg-card">
