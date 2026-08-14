@@ -1,0 +1,27 @@
+name: Payment push verification
+
+on:
+  push:
+    branches:
+      - feature/live-payment-push
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Payment push regression tests
+        run: npx vitest run src/lib/__tests__/payment-push.logic.test.ts
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Full test suite
+        run: npm test
+      - name: Production build
+        run: npm run build
