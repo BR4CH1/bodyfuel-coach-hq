@@ -116,7 +116,9 @@ export function CoachTodayCockpit({
             <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-500" />
             <div>
               <div className="font-semibold">Keine offenen Fälle in diesem Filter</div>
-              <div className="text-xs text-muted-foreground">Du kannst direkt zum nächsten Bereich weiter.</div>
+              <div className="text-xs text-muted-foreground">
+                Du kannst direkt zum nächsten Bereich weiter.
+              </div>
             </div>
           </div>
         ) : (
@@ -197,7 +199,6 @@ function TodayRow({
   onOpenFollowUps?: (category: CoachFollowUpCategory) => void;
 }) {
   const followUpCategory = bestFollowUpCategory(item.categories);
-  const isCustomer = item.target.kind === "customer";
   const hasCheckin = item.categories.includes("checkin");
 
   return (
@@ -243,7 +244,7 @@ function TodayRow({
       </div>
 
       <div className="mt-3 flex flex-wrap justify-end gap-2 sm:pl-11">
-        {isCustomer ? (
+        {item.target.kind === "customer" ? (
           <Link
             to="/coach/customers/$userId"
             params={{ userId: item.target.userId }}
