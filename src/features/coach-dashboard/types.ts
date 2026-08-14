@@ -112,6 +112,7 @@ export type CoachWorkloadItem = {
   reason: string;
   target: CoachFollowUpTarget;
   sourceSignalId: string;
+  actionSignalIds?: string[];
 };
 export type CoachWorkloadMetric = {
   key: CoachWorkloadKey;
