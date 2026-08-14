@@ -1,0 +1,154 @@
+name: Validate owner push business events v2
+
+on:
+  push:
+    branches:
+      - feature/owner-push-business-events
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-validate:
+    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Apply exact business-event push changes
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_exact(path: str, old: str, new: str):
+              p = Path(path)
+              text = p.read_text()
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{path}: expected 1 exact match, found {count}")
+              p.write_text(text.replace(old, new, 1))
+
+          # Central registration detection: one authenticated, deduplicated server call.
+          replace_exact(
+              "src/lib/bodyfuel/session.tsx",
+              'import { createContext, useContext, useEffect, useState, type ReactNode } from "react";\n',
+              'import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";\nimport { useServerFn } from "@tanstack/react-start";\n',
+          )
+          replace_exact(
+              "src/lib/bodyfuel/session.tsx",
+              'import { supabase } from "@/integrations/supabase/client";\n',
+              'import { supabase } from "@/integrations/supabase/client";\nimport { notifyCoachRecentRegistration } from "@/lib/coach-push.functions";\n',
+          )
+          replace_exact(
+              "src/lib/bodyfuel/session.tsx",
+              'export function SessionProvider({ children }: { children: ReactNode }) {\n  const [demoUserId, setDemoUserId] = useState<string | null>(null);\n',
+              'export function SessionProvider({ children }: { children: ReactNode }) {\n  const notifyRecentRegistration = useServerFn(notifyCoachRecentRegistration);\n  const registrationPushChecked = useRef<string | null>(null);\n  const [demoUserId, setDemoUserId] = useState<string | null>(null);\n',
+          )
+          replace_exact(
+              "src/lib/bodyfuel/session.tsx",
+              '  // hydrate supabase\n  useEffect(() => {\n',
+              '''  // A successful authenticated session is the trustworthy point at which a\n  // recent self-registration can be verified server-side. The server checks\n  // timestamps/origin and deduplicates before any owner push is sent.\n  useEffect(() => {\n    const userId = supabaseUser?.id;\n    if (!userId || registrationPushChecked.current === userId) return;\n    registrationPushChecked.current = userId;\n    void notifyRecentRegistration().catch((error) => {\n      registrationPushChecked.current = null;\n      console.warn("[coach-push] registration verification failed", error);\n    });\n  }, [supabaseUser?.id, notifyRecentRegistration]);\n\n  // hydrate supabase\n  useEffect(() => {\n''',
+          )
+
+          logic_path = Path("src/lib/coach-push-registration.logic.ts")
+          if logic_path.exists():
+              raise SystemExit(f"{logic_path}: already exists")
+          logic_path.write_text('''export type RecentRegistrationCandidate = {\n  created_at?: string | null;\n  confirmed_at?: string | null;\n  email_confirmed_at?: string | null;\n  invited_at?: string | null;\n  user_metadata?: Record<string, unknown> | null;\n};\n\nexport type RecentRegistrationKind = "free" | "smart" | "account";\n\nconst RECENT_REGISTRATION_WINDOW_MS = 20 * 60 * 1000;\nconst CLOCK_SKEW_TOLERANCE_MS = 5 * 60 * 1000;\n\nexport function classifyRecentSelfRegistration(\n  user: RecentRegistrationCandidate,\n  nowMs = Date.now(),\n): RecentRegistrationKind | null {\n  // Admin invitations and coach-created accounts are operational customer\n  // setup, not organic registrations and should not generate owner noise.\n  if (user.invited_at) return null;\n\n  const metadata = user.user_metadata ?? {};\n  if (metadata.created_via === "coach") return null;\n\n  const tier = typeof metadata.tier === "string" ? metadata.tier.toLowerCase() : "";\n  const role = typeof metadata.role === "string" ? metadata.role.toLowerCase() : "";\n  if (role === "client" && !tier) return null;\n\n  // For email-confirmation flows, confirmation time is the point at which the\n  // account actually becomes usable. Immediate-session signups fall back to\n  // created_at.\n  const eventAt = user.email_confirmed_at ?? user.confirmed_at ?? user.created_at ?? null;\n  if (!eventAt) return null;\n\n  const eventMs = Date.parse(eventAt);\n  if (!Number.isFinite(eventMs)) return null;\n  const ageMs = nowMs - eventMs;\n  if (ageMs < -CLOCK_SKEW_TOLERANCE_MS || ageMs > RECENT_REGISTRATION_WINDOW_MS) {\n    return null;\n  }\n\n  if (tier === "free") return "free";\n  if (tier === "smart") return "smart";\n  return "account";\n}\n''')
+
+          test_path = Path("src/lib/__tests__/coach-push-registration.logic.test.ts")
+          if test_path.exists():
+              raise SystemExit(f"{test_path}: already exists")
+          test_path.write_text('''import { describe, expect, it } from "vitest";\n\nimport { classifyRecentSelfRegistration } from "@/lib/coach-push-registration.logic";\n\nconst NOW = Date.parse("2026-08-14T19:00:00.000Z");\n\ndescribe("classifyRecentSelfRegistration", () => {\n  it("classifies a recent free self-registration", () => {\n    expect(\n      classifyRecentSelfRegistration(\n        { created_at: "2026-08-14T18:59:00.000Z", user_metadata: { tier: "free" } },\n        NOW,\n      ),\n    ).toBe("free");\n  });\n\n  it("uses recent email confirmation for delayed Smart activation", () => {\n    expect(\n      classifyRecentSelfRegistration(\n        {\n          created_at: "2026-08-10T10:00:00.000Z",\n          email_confirmed_at: "2026-08-14T18:58:00.000Z",\n          user_metadata: { tier: "smart" },\n        },\n        NOW,\n      ),\n    ).toBe("smart");\n  });\n\n  it("ignores admin invitations", () => {\n    expect(\n      classifyRecentSelfRegistration(\n        {\n          created_at: "2026-08-14T18:59:00.000Z",\n          invited_at: "2026-08-14T18:58:00.000Z",\n          user_metadata: { role: "client" },\n        },\n        NOW,\n      ),\n    ).toBeNull();\n  });\n\n  it("ignores explicitly coach-created accounts", () => {\n    expect(\n      classifyRecentSelfRegistration(\n        {\n          created_at: "2026-08-14T18:59:00.000Z",\n          user_metadata: { tier: "free", created_via: "coach" },\n        },\n        NOW,\n      ),\n    ).toBeNull();\n  });\n\n  it("ignores stale existing accounts", () => {\n    expect(\n      classifyRecentSelfRegistration(\n        { created_at: "2026-08-14T17:00:00.000Z", user_metadata: {} },\n        NOW,\n      ),\n    ).toBeNull();\n  });\n});\n''')
+
+          # Server-side registration verifier + dedupe. No PII is placed in push text.
+          push_fn = Path("src/lib/coach-push.functions.ts")
+          push_text = push_fn.read_text()
+          import_anchor = 'import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";\n'
+          if push_text.count(import_anchor) != 1:
+              raise SystemExit("coach-push.functions.ts: import anchor mismatch")
+          push_text = push_text.replace(
+              import_anchor,
+              import_anchor + 'import { classifyRecentSelfRegistration } from "@/lib/coach-push-registration.logic";\n',
+              1,
+          )
+          if "notifyCoachRecentRegistration" in push_text:
+              raise SystemExit("coach-push.functions.ts: registration notifier already exists")
+          push_text += '''\n\nexport const notifyCoachRecentRegistration = createServerFn({ method: "POST" })\n  .middleware([requireSupabaseAuth])\n  .handler(async ({ context }) => {\n    try {\n      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");\n      const { data, error } = await supabaseAdmin.auth.admin.getUserById(context.userId);\n      if (error || !data.user) return { ok: false };\n\n      const kind = classifyRecentSelfRegistration(data.user);\n      if (!kind) return { ok: true };\n\n      const { claimCoachPushEvent, isCoachPushConfigured, notifyEnabledCoaches } =\n        await import("@/lib/coach-push.server");\n      if (!isCoachPushConfigured()) return { ok: true };\n\n      const claimed = await claimCoachPushEvent(`registration:${context.userId}`);\n      if (!claimed) return { ok: true };\n\n      const body =\n        kind === "free"\n          ? "Ein neuer BodyFuel-Tracker-Account wurde aktiviert."\n          : kind === "smart"\n            ? "Ein neuer BodyFuel-Smart-Account wurde aktiviert."\n            : "Ein neuer BodyFuel-Account wurde aktiviert.";\n\n      await notifyEnabledCoaches({\n        title: "Neue Registrierung",\n        body,\n        url: "/coach",\n        tag: `registration-${context.userId}`,\n      });\n    } catch (error) {\n      // Registration/login must never fail because Push delivery is unavailable.\n      console.warn("[coach-push] registration notification failed", error);\n    }\n    return { ok: true };\n  });\n'''
+          push_fn.write_text(push_text)
+
+          # Public lead: only after the database insert succeeded; Push is best-effort.
+          replace_exact(
+              "src/lib/coaching.functions.ts",
+              '''    const { error } = await supabaseAdmin.from("leads").insert({\n      name: name.slice(0, 120),\n      email: email.slice(0, 200),\n      phone: phone?.slice(0, 40) || null,\n      goal: data.goal?.slice(0, 200) || null,\n      current_weight: data.current_weight?.slice(0, 20) || null,\n      desired_package: data.desired_package || null,\n      message: data.message?.slice(0, 2000) || null,\n    });\n    if (error) throw new Error(error.message);\n    return { ok: true };\n''',
+              '''    const { error } = await supabaseAdmin.from("leads").insert({\n      name: name.slice(0, 120),\n      email: email.slice(0, 200),\n      phone: phone?.slice(0, 40) || null,\n      goal: data.goal?.slice(0, 200) || null,\n      current_weight: data.current_weight?.slice(0, 20) || null,\n      desired_package: data.desired_package || null,\n      message: data.message?.slice(0, 2000) || null,\n    });\n    if (error) throw new Error(error.message);\n\n    try {\n      const { isCoachPushConfigured, notifyEnabledCoaches } =\n        await import("@/lib/coach-push.server");\n      if (isCoachPushConfigured()) {\n        await notifyEnabledCoaches({\n          title: "Neue Coaching-Anfrage",\n          body: "Eine neue unverbindliche Anfrage ist eingegangen.",\n          url: "/coach/leads",\n          tag: `lead-${Date.now()}`,\n        });\n      }\n    } catch (pushError) {\n      console.warn("[coach-push] lead notification failed", pushError);\n    }\n\n    return { ok: true };\n''',
+          )
+
+          # Mark coach-created auth users so the registration verifier can explicitly exclude them.
+          replace_exact(
+              "src/lib/coaching.functions.ts",
+              '''          full_name: displayName,\n          name: displayName,\n          ...(isFree ? { tier: "free" } : { role: "client" }),\n''',
+              '''          full_name: displayName,\n          name: displayName,\n          created_via: "coach",\n          ...(isFree ? { tier: "free" } : { role: "client" }),\n''',
+          )
+          replace_exact(
+              "src/lib/coaching.functions.ts",
+              '''            full_name: displayName,\n            name: displayName,\n            ...(isFree ? { tier: "free" } : { role: "client" }),\n''',
+              '''            full_name: displayName,\n            name: displayName,\n            created_via: "coach",\n            ...(isFree ? { tier: "free" } : { role: "client" }),\n''',
+          )
+
+          # Authenticated package/contact request: only after the stored request succeeded.
+          replace_exact(
+              "src/lib/coaching.functions.ts",
+              '''    const { error } = await context.supabase.from("package_requests").insert({\n      user_id: context.userId,\n      request_type: data.request_type,\n      current_package: pkg?.package ?? null,\n      requested_package: data.requested_package ?? null,\n      note: data.note?.slice(0, 2000) ?? null,\n    });\n    if (error) throw new Error(error.message);\n    return { ok: true };\n''',
+              '''    const { error } = await context.supabase.from("package_requests").insert({\n      user_id: context.userId,\n      request_type: data.request_type,\n      current_package: pkg?.package ?? null,\n      requested_package: data.requested_package ?? null,\n      note: data.note?.slice(0, 2000) ?? null,\n    });\n    if (error) throw new Error(error.message);\n\n    try {\n      const { isCoachPushConfigured, notifyEnabledCoaches } =\n        await import("@/lib/coach-push.server");\n      if (isCoachPushConfigured()) {\n        const title =\n          data.request_type === "renewal"\n            ? "Neue Verlängerungsanfrage"\n            : data.request_type === "change"\n              ? "Neue Paketanfrage"\n              : "Neue Kontaktanfrage";\n        await notifyEnabledCoaches({\n          title,\n          body: "Eine neue Kundenanfrage ist eingegangen.",\n          url: "/coach/package-requests",\n          tag: `package-request-${context.userId}-${Date.now()}`,\n        });\n      }\n    } catch (pushError) {\n      console.warn("[coach-push] package request notification failed", pushError);\n    }\n\n    return { ok: true };\n''',
+          )
+
+          replace_exact(
+              "src/features/coach-dashboard/components/CoachPushCard.tsx",
+              '          Neue Kundennachrichten und Check-ins direkt auf diesem Gerät melden.\n',
+              '          Nachrichten, Check-ins, Anfragen und neue Registrierungen direkt auf diesem Gerät melden.\n',
+          )
+          PY
+
+          git diff --check
+          git status --short
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Targeted registration tests
+        run: npx vitest run src/lib/__tests__/coach-push-registration.logic.test.ts
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Full test suite
+        run: npm test
+
+      - name: Production build
+        run: npm run build
+
+      - name: Commit validated product changes and remove temporary workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            src/lib/bodyfuel/session.tsx \
+            src/lib/coach-push-registration.logic.ts \
+            src/lib/__tests__/coach-push-registration.logic.test.ts \
+            src/lib/coach-push.functions.ts \
+            src/lib/coaching.functions.ts \
+            src/features/coach-dashboard/components/CoachPushCard.tsx
+          git rm .github/workflows/tmp-owner-push-business-events-v2.yml
+          git diff --cached --check
+          git commit -m "feat: add owner push business events [skip ci]"
+          git push origin HEAD:feature/owner-push-business-events
