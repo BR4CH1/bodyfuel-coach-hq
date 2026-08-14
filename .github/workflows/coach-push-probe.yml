@@ -1,4 +1,4 @@
-name: Coach Push Runtime Probe
+name: Coach Push Verification
 
 on:
   push:
@@ -6,27 +6,140 @@ on:
       - feature/coach-web-push
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  probe:
+  verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: feature/coach-web-push
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
-      - run: npm install --ignore-scripts
-      - run: npm run build
-      - name: Collect generated worker config
+
+      - name: Wire event triggers and dependencies
         run: |
-          mkdir -p push-probe
-          cp .output/server/wrangler.json push-probe/wrangler.json
-          cp .wrangler/deploy/config.json push-probe/deploy-config.json
-          node -e "const f=require('./push-probe/wrangler.json'); console.log(JSON.stringify({compatibility_date:f.compatibility_date,compatibility_flags:f.compatibility_flags},null,2))"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: coach-push-runtime-config
-          path: push-probe
-          if-no-files-found: error
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          package = Path('package.json')
+          data = json.loads(package.read_text())
+          data['dependencies']['web-push'] = '3.6.7'
+          data['devDependencies']['@types/web-push'] = '3.6.4'
+          package.write_text(json.dumps(data, indent=2, ensure_ascii=False) + '\n')
+
+          messages = Path('src/lib/coach-messages.functions.ts')
+          text = messages.read_text()
+          old = '''    const { error } = await context.supabase.from("coach_messages").insert({
+              thread_user_id: context.userId,
+              sender_id: context.userId,
+              from_coach: false,
+              body,
+            });
+            if (error) throw new Error(error.message);
+            return { ok: true };
+          });'''
+          new = '''    const { error } = await context.supabase.from("coach_messages").insert({
+              thread_user_id: context.userId,
+              sender_id: context.userId,
+              from_coach: false,
+              body,
+            });
+            if (error) throw new Error(error.message);
+
+            // Push is best-effort and must never make a stored message appear failed.
+            try {
+              const { getPushActorName, notifyEnabledCoaches } = await import("@/lib/coach-push.server");
+              const name = await getPushActorName(context.userId);
+              await notifyEnabledCoaches({
+                title: "Neue Kundennachricht",
+                body: `${name} hat dir eine neue Nachricht geschickt.`,
+                url: "/coach",
+                tag: `message-${context.userId}-${Date.now()}`,
+              });
+            } catch (pushError) {
+              console.warn("[coach-push] message notification failed", pushError);
+            }
+            return { ok: true };
+          });'''
+          if old in text:
+              text = text.replace(old, new, 1)
+              messages.write_text(text)
+          elif 'Neue Kundennachricht' not in text:
+              raise SystemExit('Could not wire coach message push trigger')
+
+          checkin = Path('src/routes/check-in.tsx')
+          text = checkin.read_text()
+          if 'useServerFn' not in text.split('\n', 3)[0:3]:
+              text = text.replace(
+                  'import { createFileRoute } from "@tanstack/react-router";\n',
+                  'import { createFileRoute } from "@tanstack/react-router";\nimport { useServerFn } from "@tanstack/react-start";\n',
+                  1,
+              )
+          if 'notifyCoachCheckinSubmitted' not in text:
+              text = text.replace(
+                  'import { useFormDraft, clearFormDraft } from "@/hooks/use-form-draft";\n',
+                  'import { useFormDraft, clearFormDraft } from "@/hooks/use-form-draft";\nimport { notifyCoachCheckinSubmitted } from "@/lib/coach-push.functions";\n',
+                  1,
+              )
+              text = text.replace(
+                  'function WeeklyCheckIn() {\n  const { supabaseUser } = useSession();\n',
+                  'function WeeklyCheckIn() {\n  const notifyCoachCheckin = useServerFn(notifyCoachCheckinSubmitted);\n  const { supabaseUser } = useSession();\n',
+                  1,
+              )
+              old_success = '''    else {
+              clearFormDraft(draftKey);
+              toast.success(existingId ? "Check-in aktualisiert" : "Check-in gespeichert");
+            }'''
+              new_success = '''    else {
+              clearFormDraft(draftKey);
+              toast.success(existingId ? "Check-in aktualisiert" : "Check-in gespeichert");
+              if (!existingId) {
+                void notifyCoachCheckin({ data: { weekStart: week } }).catch(() => {
+                  // Check-in is already stored; Push delivery remains best-effort.
+                });
+              }
+            }'''
+              if old_success not in text:
+                  raise SystemExit('Could not wire check-in push trigger')
+              text = text.replace(old_success, new_success, 1)
+              checkin.write_text(text)
+          PY
+
+      - run: npm install --ignore-scripts
+
+      - name: Format changed product files
+        run: |
+          npx prettier --write \
+            package.json \
+            src/lib/coach-push.server.ts \
+            src/lib/coach-push.functions.ts \
+            src/lib/coach-messages.functions.ts \
+            src/routes/check-in.tsx \
+            src/features/coach-dashboard/components/CoachPushCard.tsx \
+            src/features/coach-dashboard/components/CoachDashboardPage.tsx \
+            public/coach-push-sw.js \
+            vite.config.ts
+
+      - name: Commit generated lock and wiring
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json src public/coach-push-sw.js vite.config.ts supabase/migrations/20260814152000_coach_push_subscriptions.sql
+          if ! git diff --cached --quiet; then
+            git commit -m "feat: wire coach push events and dependencies"
+            git push origin HEAD:feature/coach-web-push
+          fi
+
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Full tests
+        run: npm test
+      - name: Production build
+        run: npm run build
+      - name: Verify generated service worker imports push handler
+        run: grep -F 'coach-push-sw.js' .output/public/sw.js
