@@ -77,16 +77,34 @@ export const notifyCoachCheckinSubmitted = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(data.weekStart)) return { ok: false };
 
-    // The event is derived from the authenticated session, never a client-supplied user id.
+    // Verify the claimed event belongs to the authenticated user. The client
+    // only supplies the week identifier, never a user id or notification text.
+    const { data: checkin, error: checkinError } = await context.supabase
+      .from("weekly_checkins")
+      .select("id")
+      .eq("user_id", context.userId)
+      .eq("week_start", data.weekStart)
+      .maybeSingle();
+    if (checkinError || !checkin) return { ok: false };
+
     // Keep delivery best-effort: a Push outage must not break a successfully stored check-in.
     try {
-      const { getPushActorName, notifyEnabledCoaches } = await import("@/lib/coach-push.server");
+      const {
+        claimCoachPushEvent,
+        getPushActorName,
+        isCoachPushConfigured,
+        notifyEnabledCoaches,
+      } = await import("@/lib/coach-push.server");
+      if (!isCoachPushConfigured()) return { ok: true };
+      const claimed = await claimCoachPushEvent(`checkin:${context.userId}:${checkin.id}`);
+      if (!claimed) return { ok: true };
+
       const name = await getPushActorName(context.userId);
       await notifyEnabledCoaches({
         title: "Neuer Check-in",
         body: `${name} hat einen neuen Wochen-Check-in eingereicht.`,
         url: "/coach",
-        tag: `checkin-${context.userId}-${data.weekStart}`,
+        tag: `checkin-${checkin.id}`,
       });
     } catch (error) {
       console.warn("[coach-push] check-in notification failed", error);
