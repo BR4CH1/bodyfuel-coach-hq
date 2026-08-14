@@ -41,21 +41,48 @@ describe("coach today queue", () => {
             label: "Risiko",
             value: 1,
             tone: "urgent",
-            items: [{ id: "1", name: "Mia", reason: "Risiko", target, sourceSignalId: "r1" }],
+            items: [
+              {
+                id: "1",
+                name: "Mia",
+                reason: "Risiko",
+                target,
+                sourceSignalId: "r1",
+                actionSignalIds: ["risk-1"],
+              },
+            ],
           },
           {
             key: "checkin",
             label: "Check-ins",
             value: 1,
             tone: "attention",
-            items: [{ id: "1", name: "Mia", reason: "Check-in wartet", target, sourceSignalId: "c1" }],
+            items: [
+              {
+                id: "1",
+                name: "Mia",
+                reason: "Check-in wartet",
+                target,
+                sourceSignalId: "c1",
+                actionSignalIds: ["checkin-review-1-2026-07-20"],
+              },
+            ],
           },
           {
             key: "plan",
             label: "Pläne ≤ 5 Tage",
-            value: 1,
+            value: 2,
             tone: "attention",
-            items: [{ id: "1", name: "Mia", reason: "Plan läuft aus", target, sourceSignalId: "p1" }],
+            items: [
+              {
+                id: "1",
+                name: "Mia",
+                reason: "Plan läuft aus",
+                target,
+                sourceSignalId: "p1",
+                actionSignalIds: ["plan-nutrition-1", "plan-training-1"],
+              },
+            ],
           },
           { key: "lead", label: "Leads", value: 0, tone: "neutral", items: [] },
         ],
@@ -66,7 +93,17 @@ describe("coach today queue", () => {
     expect(result).toHaveLength(1);
     expect(result[0].priority).toBe("urgent");
     expect(result[0].categories).toEqual(expect.arrayContaining(["risk", "checkin", "plan"]));
-    expect(result[0].reasons).toEqual(expect.arrayContaining(["Risiko", "Check-in wartet", "Plan läuft aus"]));
+    expect(result[0].reasons).toEqual(
+      expect.arrayContaining(["Risiko", "Check-in wartet", "Plan läuft aus"]),
+    );
+    expect(result[0].actionSignalIds).toEqual(
+      expect.arrayContaining([
+        "risk-1",
+        "checkin-review-1-2026-07-20",
+        "plan-nutrition-1",
+        "plan-training-1",
+      ]),
+    );
   });
 
   it("adds intelligence signals to the existing customer instead of duplicating it", () => {
@@ -105,6 +142,7 @@ describe("coach today queue", () => {
     expect(result).toHaveLength(1);
     expect(result[0].priority).toBe("urgent");
     expect(result[0].categories).toEqual(expect.arrayContaining(["checkin", "stagnation"]));
+    expect(result[0].actionSignalIds).toEqual(expect.arrayContaining(["c1", "stagnation-1"]));
   });
 
   it("filters the queue by workload category", () => {
