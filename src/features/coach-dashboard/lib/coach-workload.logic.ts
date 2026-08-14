@@ -7,10 +7,12 @@ import type {
   CoachWorkloadViewModel,
 } from "@/features/coach-dashboard/types";
 
+type CustomerSignal = Exclude<CoachWorkloadKey, "lead">;
 type CustomerCase = {
   client: CoachClient;
   reasons: string[];
-  signals: Set<Exclude<CoachWorkloadKey, "lead">>;
+  signals: Set<CustomerSignal>;
+  actionSignalIds: Map<CustomerSignal, Set<string>>;
 };
 
 const displayName = (client: CoachClient) => client.display_name?.trim() || "Unbenannter Kunde";
@@ -31,11 +33,20 @@ export function buildCoachWorkload(
 
   const addCase = (
     client: CoachClient,
-    signal: Exclude<CoachWorkloadKey, "lead">,
+    signal: CustomerSignal,
     reason: string,
+    actionSignalId: string,
   ) => {
-    const item = cases.get(client.id) ?? { client, reasons: [], signals: new Set() };
+    const item = cases.get(client.id) ?? {
+      client,
+      reasons: [],
+      signals: new Set<CustomerSignal>(),
+      actionSignalIds: new Map<CustomerSignal, Set<string>>(),
+    };
     item.signals.add(signal);
+    const ids = item.actionSignalIds.get(signal) ?? new Set<string>();
+    ids.add(actionSignalId);
+    item.actionSignalIds.set(signal, ids);
     if (reason && !item.reasons.includes(reason)) item.reasons.push(reason);
     cases.set(client.id, item);
   };
@@ -45,18 +56,22 @@ export function buildCoachWorkload(
       client,
       "risk",
       client._score.reasons.slice(0, 2).join(" · ") || `Coach Score ${client._score.score}/100`,
+      `risk-${client.id}`,
     ),
   );
 
-  safePendingCheckins.forEach((client) =>
+  safePendingCheckins.forEach((client) => {
+    const checkinKey =
+      client.pending_checkin_week_start ?? client.pending_checkin_submitted_at ?? "pending";
     addCase(
       client,
       "checkin",
       client.pending_checkin_submitted_at
         ? `Check-in vom ${new Date(client.pending_checkin_submitted_at).toLocaleDateString("de-DE")} eingegangen und noch ungeprüft`
         : "Check-in eingegangen und noch ungeprüft",
-    ),
-  );
+      `checkin-review-${client.id}-${checkinKey}`,
+    );
+  });
 
   actionablePlans.forEach((plan) => {
     const client = clientById.get(plan.id) ?? {
@@ -85,10 +100,11 @@ export function buildCoachWorkload(
         : plan.days === 0
           ? `${plan.kind === "nutrition" ? "Ernährungs" : "Trainings"}plan läuft heute aus`
           : `${plan.kind === "nutrition" ? "Ernährungs" : "Trainings"}plan läuft in ${plan.days} Tagen aus`,
+      `plan-${plan.kind}-${plan.id}`,
     );
   });
 
-  const customerItems: Record<Exclude<CoachWorkloadKey, "lead">, CoachWorkloadItem[]> = {
+  const customerItems: Record<CustomerSignal, CoachWorkloadItem[]> = {
     risk: [],
     checkin: [],
     plan: [],
@@ -102,6 +118,7 @@ export function buildCoachWorkload(
         reason: item.reasons.join(" · "),
         target: { kind: "customer", userId: item.client.id },
         sourceSignalId: `case-${item.client.id}-${signal}`,
+        actionSignalIds: [...(item.actionSignalIds.get(signal) ?? [])],
       });
     });
   });
@@ -112,6 +129,7 @@ export function buildCoachWorkload(
     reason: lead.goal ? `Neue Anfrage: ${lead.goal}` : "Neue Coaching-Anfrage",
     target: { kind: "lead", leadId: lead.id },
     sourceSignalId: `lead-${lead.id}`,
+    actionSignalIds: [`lead-${lead.id}`],
   }));
 
   const urgent = customerItems.risk.length;
