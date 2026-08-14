@@ -22,3 +22,15 @@ grant select, insert, update, delete on table public.coach_push_subscriptions to
 
 comment on table public.coach_push_subscriptions is
   'Server-only Web Push subscriptions for coach accounts.';
+
+create table if not exists public.coach_push_event_receipts (
+  event_key text primary key,
+  created_at timestamptz not null default now()
+);
+
+alter table public.coach_push_event_receipts enable row level security;
+revoke all on table public.coach_push_event_receipts from anon, authenticated;
+grant select, insert, delete on table public.coach_push_event_receipts to service_role;
+
+comment on table public.coach_push_event_receipts is
+  'Server-only idempotency keys preventing duplicate coach push events.';
