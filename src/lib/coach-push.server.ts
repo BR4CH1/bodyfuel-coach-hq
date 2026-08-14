@@ -5,6 +5,10 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 export const COACH_PUSH_VAPID_PUBLIC_KEY =
   "BL2dn-Oix8CCCAORreNFxQWDNm2HAcnoBoMVf5qPN8Mbxe_x7Er009dIjOL4J1BNzJIFKvcVg_KNnMwqiSvSdvE";
 
+// BodyFuel customer notifications are intentionally owner-only. A future
+// account receiving the generic `coach` role must not inherit these pushes.
+export const BODYFUEL_OWNER_USER_ID = "5d5c808b-0893-45f3-9c1a-fee343df60d9";
+
 const VAPID_SUBJECT = "https://bodyfuel-coaching.com";
 const MAX_BODY_LENGTH = 220;
 
@@ -76,6 +80,7 @@ export async function saveCoachPushSubscription(
   userId: string,
   input: PushSubscriptionInput,
 ): Promise<void> {
+  if (userId !== BODYFUEL_OWNER_USER_ID) throw new Error("Nicht autorisiert");
   validateSubscription(input);
   const { error } = await db()
     .from("coach_push_subscriptions")
@@ -94,6 +99,7 @@ export async function saveCoachPushSubscription(
 }
 
 export async function removeCoachPushSubscription(userId: string, endpoint: string): Promise<void> {
+  if (userId !== BODYFUEL_OWNER_USER_ID) throw new Error("Nicht autorisiert");
   const { error } = await db()
     .from("coach_push_subscriptions")
     .delete()
@@ -159,11 +165,12 @@ async function sendToSubscriptions(rows: StoredSubscription[], payload: PushPayl
 }
 
 export async function sendCoachPushToUser(userId: string, payload: PushPayload) {
+  if (userId !== BODYFUEL_OWNER_USER_ID) return { sent: 0, failed: 0, stale: 0 };
   if (!isCoachPushConfigured()) return { sent: 0, failed: 0, stale: 0 };
   const { data, error } = await db()
     .from("coach_push_subscriptions")
     .select("id,user_id,endpoint,p256dh,auth")
-    .eq("user_id", userId);
+    .eq("user_id", BODYFUEL_OWNER_USER_ID);
   if (error) throw new Error(error.message);
   return sendToSubscriptions((data ?? []) as StoredSubscription[], payload);
 }
@@ -172,7 +179,8 @@ export async function notifyEnabledCoaches(payload: PushPayload) {
   if (!isCoachPushConfigured()) return { sent: 0, failed: 0, stale: 0 };
   const { data, error } = await db()
     .from("coach_push_subscriptions")
-    .select("id,user_id,endpoint,p256dh,auth");
+    .select("id,user_id,endpoint,p256dh,auth")
+    .eq("user_id", BODYFUEL_OWNER_USER_ID);
   if (error) throw new Error(error.message);
   return sendToSubscriptions((data ?? []) as StoredSubscription[], payload);
 }

@@ -12,6 +12,9 @@ export type CoachPushSubscriptionInput = {
 };
 
 async function assertCoach(ctx: { supabase: any; userId: string }) {
+  const { BODYFUEL_OWNER_USER_ID } = await import("@/lib/coach-push.server");
+  if (ctx.userId !== BODYFUEL_OWNER_USER_ID) throw new Error("Nicht autorisiert");
+
   const { data, error } = await ctx.supabase.rpc("has_role", {
     _user_id: ctx.userId,
     _role: "coach",
