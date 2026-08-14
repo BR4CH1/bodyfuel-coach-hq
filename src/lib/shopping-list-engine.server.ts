@@ -7,6 +7,7 @@
 // owns / is coach for / is partner of the affected plans).
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { shoppingIngredientLines } from "@/lib/shopping-list-ingredients.logic";
 
 type ShoppingItem = { name: string; quantity: string; category: string; checked?: boolean };
 
@@ -39,84 +40,465 @@ const CATEGORY_ORDER = [
 ];
 
 const INGREDIENT_RULES: Array<[RegExp, IngredientRule]> = [
-  [/^paprikapulver\b.*/, { key: "paprikapulver", display: "Paprikapulver", category: "Vorrat & Gewürze", spice: true }],
-  [/^(salz|meersalz)\b.*/, { key: "salz", display: "Salz", category: "Vorrat & Gewürze", spice: true }],
-  [/^(pfeffer|schwarzer\s+pfeffer)\b.*/, { key: "pfeffer", display: "Pfeffer", category: "Vorrat & Gewürze", spice: true }],
-  [/^zimt\b.*/, { key: "zimt", display: "Zimt", category: "Vorrat & Gewürze", spice: true, teaspoonGram: 2.5 }],
-  [/^(petersilie|schnittlauch|basilikum|koriander|dill)\b.*/, { key: "kräuter", display: "Frische Kräuter", category: "Obst & Gemüse", preferredUnit: "Bund" }],
-  [/^skyr\b.*/, { key: "skyr", display: "Skyr", category: "Eier & Milchprodukte", tablespoonGram: 15, teaspoonGram: 5 }],
-  [/^magerquark\b.*/, { key: "magerquark", display: "Magerquark", category: "Eier & Milchprodukte", tablespoonGram: 15, teaspoonGram: 5 }],
-  [/^(griechischer\s+)?joghurt\b.*/, { key: "griechischer joghurt", display: "Griechischer Joghurt", category: "Eier & Milchprodukte", tablespoonGram: 15, teaspoonGram: 5 }],
-  [/^(hütten|huetten|körniger\s+frisch)?käse\b.*/, { key: "käse", display: "Käse", category: "Eier & Milchprodukte", tablespoonGram: 10, teaspoonGram: 4 }],
-  [/^hüttenkäse\b.*/, { key: "hüttenkäse", display: "Hüttenkäse", category: "Eier & Milchprodukte", tablespoonGram: 15, teaspoonGram: 5 }],
-  [/^feta\b.*/, { key: "feta", display: "Feta", category: "Eier & Milchprodukte", tablespoonGram: 10, teaspoonGram: 4 }],
-  [/^mozzarella\b.*/, { key: "mozzarella", display: "Mozzarella", category: "Eier & Milchprodukte" }],
-  [/^parmesan\b.*/, { key: "parmesan", display: "Parmesan", category: "Eier & Milchprodukte", tablespoonGram: 8, teaspoonGram: 3 }],
-  [/^proteinpudding\b.*/, { key: "proteinpudding", display: "Proteinpudding", category: "Eier & Milchprodukte" }],
-  [/^(protein(shake|pulver|riegel)?|whey)\b.*/, { key: "proteinpulver", display: "Proteinpulver", category: "Vorrat & Gewürze" }],
-  [/^(milch|kuhmilch)\b.*/, { key: "milch", display: "Milch", category: "Eier & Milchprodukte", tablespoonMl: 15, teaspoonMl: 5 }],
-  [/^hafermilch\b.*/, { key: "hafermilch", display: "Hafermilch", category: "Eier & Milchprodukte", tablespoonMl: 15, teaspoonMl: 5 }],
-  [/^mandelmilch\b.*/, { key: "mandelmilch", display: "Mandelmilch", category: "Eier & Milchprodukte", tablespoonMl: 15, teaspoonMl: 5 }],
-  [/^(ei|eier|eiklar|eiweiß)\b.*/, { key: "eier", display: "Eier", category: "Eier & Milchprodukte", preferredUnit: "Stück", pieceGram: 60 }],
-  [/^(hähnchen|haehnchen)(brust)?(filet)?\b.*/, { key: "hähnchenbrust", display: "Hähnchenbrust", category: "Fleisch & Fisch" }],
-  [/^pute(nbrust|nfilet|nstreifen)?\b.*/, { key: "putenbrust", display: "Putenbrust", category: "Fleisch & Fisch" }],
-  [/^((rinder|puten|hähnchen|haehnchen)?hack(fleisch)?|hackfleisch)\b.*/, { key: "putenhack", display: "Putenhack", category: "Fleisch & Fisch" }],
+  [
+    /^paprikapulver\b.*/,
+    { key: "paprikapulver", display: "Paprikapulver", category: "Vorrat & Gewürze", spice: true },
+  ],
+  [
+    /^(salz|meersalz)\b.*/,
+    { key: "salz", display: "Salz", category: "Vorrat & Gewürze", spice: true },
+  ],
+  [
+    /^(pfeffer|schwarzer\s+pfeffer)\b.*/,
+    { key: "pfeffer", display: "Pfeffer", category: "Vorrat & Gewürze", spice: true },
+  ],
+  [
+    /^zimt\b.*/,
+    { key: "zimt", display: "Zimt", category: "Vorrat & Gewürze", spice: true, teaspoonGram: 2.5 },
+  ],
+  [
+    /^(petersilie|schnittlauch|basilikum|koriander|dill)\b.*/,
+    {
+      key: "kräuter",
+      display: "Frische Kräuter",
+      category: "Obst & Gemüse",
+      preferredUnit: "Bund",
+    },
+  ],
+  [
+    /^skyr\b.*/,
+    {
+      key: "skyr",
+      display: "Skyr",
+      category: "Eier & Milchprodukte",
+      tablespoonGram: 15,
+      teaspoonGram: 5,
+    },
+  ],
+  [
+    /^magerquark\b.*/,
+    {
+      key: "magerquark",
+      display: "Magerquark",
+      category: "Eier & Milchprodukte",
+      tablespoonGram: 15,
+      teaspoonGram: 5,
+    },
+  ],
+  [
+    /^(griechischer\s+)?joghurt\b.*/,
+    {
+      key: "griechischer joghurt",
+      display: "Griechischer Joghurt",
+      category: "Eier & Milchprodukte",
+      tablespoonGram: 15,
+      teaspoonGram: 5,
+    },
+  ],
+  [
+    /^(hütten|huetten|körniger\s+frisch)?käse\b.*/,
+    {
+      key: "käse",
+      display: "Käse",
+      category: "Eier & Milchprodukte",
+      tablespoonGram: 10,
+      teaspoonGram: 4,
+    },
+  ],
+  [
+    /^hüttenkäse\b.*/,
+    {
+      key: "hüttenkäse",
+      display: "Hüttenkäse",
+      category: "Eier & Milchprodukte",
+      tablespoonGram: 15,
+      teaspoonGram: 5,
+    },
+  ],
+  [
+    /^feta\b.*/,
+    {
+      key: "feta",
+      display: "Feta",
+      category: "Eier & Milchprodukte",
+      tablespoonGram: 10,
+      teaspoonGram: 4,
+    },
+  ],
+  [
+    /^mozzarella\b.*/,
+    { key: "mozzarella", display: "Mozzarella", category: "Eier & Milchprodukte" },
+  ],
+  [
+    /^parmesan\b.*/,
+    {
+      key: "parmesan",
+      display: "Parmesan",
+      category: "Eier & Milchprodukte",
+      tablespoonGram: 8,
+      teaspoonGram: 3,
+    },
+  ],
+  [
+    /^proteinpudding\b.*/,
+    { key: "proteinpudding", display: "Proteinpudding", category: "Eier & Milchprodukte" },
+  ],
+  [
+    /^(protein(shake|pulver|riegel)?|whey)\b.*/,
+    { key: "proteinpulver", display: "Proteinpulver", category: "Vorrat & Gewürze" },
+  ],
+  [
+    /^(milch|kuhmilch)\b.*/,
+    {
+      key: "milch",
+      display: "Milch",
+      category: "Eier & Milchprodukte",
+      tablespoonMl: 15,
+      teaspoonMl: 5,
+    },
+  ],
+  [
+    /^hafermilch\b.*/,
+    {
+      key: "hafermilch",
+      display: "Hafermilch",
+      category: "Eier & Milchprodukte",
+      tablespoonMl: 15,
+      teaspoonMl: 5,
+    },
+  ],
+  [
+    /^mandelmilch\b.*/,
+    {
+      key: "mandelmilch",
+      display: "Mandelmilch",
+      category: "Eier & Milchprodukte",
+      tablespoonMl: 15,
+      teaspoonMl: 5,
+    },
+  ],
+  [
+    /^(ei|eier|eiklar|eiweiß)\b.*/,
+    {
+      key: "eier",
+      display: "Eier",
+      category: "Eier & Milchprodukte",
+      preferredUnit: "Stück",
+      pieceGram: 60,
+    },
+  ],
+  [
+    /^(hähnchen|haehnchen)(brust)?(filet)?\b.*/,
+    { key: "hähnchenbrust", display: "Hähnchenbrust", category: "Fleisch & Fisch" },
+  ],
+  [
+    /^pute(nbrust|nfilet|nstreifen)?\b.*/,
+    { key: "putenbrust", display: "Putenbrust", category: "Fleisch & Fisch" },
+  ],
+  [
+    /^((rinder|puten|hähnchen|haehnchen)?hack(fleisch)?|hackfleisch)\b.*/,
+    { key: "putenhack", display: "Putenhack", category: "Fleisch & Fisch" },
+  ],
   [/^lachs(filet)?\b.*/, { key: "lachs", display: "Lachs", category: "Fleisch & Fisch" }],
   [/^thunfisch\b.*/, { key: "thunfisch", display: "Thunfisch", category: "Fleisch & Fisch" }],
   [/^garnelen\b.*/, { key: "garnelen", display: "Garnelen", category: "Fleisch & Fisch" }],
-  [/^(basmati|jasmin)?reis\b.*/, { key: "reis", display: "Reis", category: "Getreide & Beilagen", cookedToRawFactor: 0.35 }],
-  [/^(vollkorn)?nudeln?\b.*/, { key: "nudeln", display: "Nudeln", category: "Getreide & Beilagen", cookedToRawFactor: 0.45 }],
-  [/^(spaghetti|penne|fusilli)\b.*/, { key: "nudeln", display: "Nudeln", category: "Getreide & Beilagen", cookedToRawFactor: 0.45 }],
+  [
+    /^(basmati|jasmin)?reis\b.*/,
+    { key: "reis", display: "Reis", category: "Getreide & Beilagen", cookedToRawFactor: 0.35 },
+  ],
+  [
+    /^(vollkorn)?nudeln?\b.*/,
+    { key: "nudeln", display: "Nudeln", category: "Getreide & Beilagen", cookedToRawFactor: 0.45 },
+  ],
+  [
+    /^(spaghetti|penne|fusilli)\b.*/,
+    { key: "nudeln", display: "Nudeln", category: "Getreide & Beilagen", cookedToRawFactor: 0.45 },
+  ],
   [/^kartoffeln?\b.*/, { key: "kartoffeln", display: "Kartoffeln", category: "Obst & Gemüse" }],
-  [/^(süßkartoffeln?|suesskartoffeln?)\b.*/, { key: "süßkartoffeln", display: "Süßkartoffeln", category: "Obst & Gemüse" }],
-  [/^haferflocken\b.*/, { key: "haferflocken", display: "Haferflocken", category: "Getreide & Beilagen" }],
+  [
+    /^(süßkartoffeln?|suesskartoffeln?)\b.*/,
+    { key: "süßkartoffeln", display: "Süßkartoffeln", category: "Obst & Gemüse" },
+  ],
+  [
+    /^haferflocken\b.*/,
+    { key: "haferflocken", display: "Haferflocken", category: "Getreide & Beilagen" },
+  ],
   [/^(müsli|muesli)\b.*/, { key: "müsli", display: "Müsli", category: "Getreide & Beilagen" }],
-  [/^(vollkorn[-\s]*)?tortillas?\b.*/, { key: "vollkorn-tortillas", display: "Vollkorn-Tortillas", category: "Getreide & Beilagen", preferredUnit: "Stück", pieceGram: 60 }],
-  [/^wraps?\b.*/, { key: "wraps", display: "Wraps", category: "Getreide & Beilagen", preferredUnit: "Stück", pieceGram: 60 }],
-  [/^vollkornbrot\b.*/, { key: "vollkornbrot", display: "Vollkornbrot", category: "Getreide & Beilagen", preferredUnit: "Scheiben", sliceGram: 45 }],
-  [/^(eiweiß|protein)brot\b.*/, { key: "eiweißbrot", display: "Eiweißbrot", category: "Getreide & Beilagen", preferredUnit: "Scheiben", sliceGram: 45 }],
-  [/^reiswaffeln?\b.*/, { key: "reiswaffeln", display: "Reiswaffeln", category: "Getreide & Beilagen", preferredUnit: "Stück" }],
-  [/^couscous\b.*/, { key: "couscous", display: "Couscous", category: "Getreide & Beilagen", cookedToRawFactor: 0.45 }],
-  [/^quinoa\b.*/, { key: "quinoa", display: "Quinoa", category: "Getreide & Beilagen", cookedToRawFactor: 0.35 }],
+  [
+    /^(vollkorn[-\s]*)?tortillas?\b.*/,
+    {
+      key: "vollkorn-tortillas",
+      display: "Vollkorn-Tortillas",
+      category: "Getreide & Beilagen",
+      preferredUnit: "Stück",
+      pieceGram: 60,
+    },
+  ],
+  [
+    /^wraps?\b.*/,
+    {
+      key: "wraps",
+      display: "Wraps",
+      category: "Getreide & Beilagen",
+      preferredUnit: "Stück",
+      pieceGram: 60,
+    },
+  ],
+  [
+    /^vollkornbrot\b.*/,
+    {
+      key: "vollkornbrot",
+      display: "Vollkornbrot",
+      category: "Getreide & Beilagen",
+      preferredUnit: "Scheiben",
+      sliceGram: 45,
+    },
+  ],
+  [
+    /^(eiweiß|protein)brot\b.*/,
+    {
+      key: "eiweißbrot",
+      display: "Eiweißbrot",
+      category: "Getreide & Beilagen",
+      preferredUnit: "Scheiben",
+      sliceGram: 45,
+    },
+  ],
+  [
+    /^reiswaffeln?\b.*/,
+    {
+      key: "reiswaffeln",
+      display: "Reiswaffeln",
+      category: "Getreide & Beilagen",
+      preferredUnit: "Stück",
+    },
+  ],
+  [
+    /^couscous\b.*/,
+    {
+      key: "couscous",
+      display: "Couscous",
+      category: "Getreide & Beilagen",
+      cookedToRawFactor: 0.45,
+    },
+  ],
+  [
+    /^quinoa\b.*/,
+    { key: "quinoa", display: "Quinoa", category: "Getreide & Beilagen", cookedToRawFactor: 0.35 },
+  ],
   [/^linsen\b.*/, { key: "linsen", display: "Linsen", category: "Getreide & Beilagen" }],
-  [/^kichererbsen\b.*/, { key: "kichererbsen", display: "Kichererbsen", category: "Getreide & Beilagen" }],
+  [
+    /^kichererbsen\b.*/,
+    { key: "kichererbsen", display: "Kichererbsen", category: "Getreide & Beilagen" },
+  ],
   [/^bohnen\b.*/, { key: "bohnen", display: "Bohnen", category: "Getreide & Beilagen" }],
-  [/^bananen?\b.*/, { key: "bananen", display: "Bananen", category: "Obst & Gemüse", preferredUnit: "Stück", pieceGram: 120 }],
-  [/^[äa]pfel\b.*/, { key: "äpfel", display: "Äpfel", category: "Obst & Gemüse", preferredUnit: "Stück", pieceGram: 180 }],
-  [/^heidelbeeren?\b.*/, { key: "heidelbeeren", display: "Heidelbeeren", category: "Obst & Gemüse" }],
+  [
+    /^bananen?\b.*/,
+    {
+      key: "bananen",
+      display: "Bananen",
+      category: "Obst & Gemüse",
+      preferredUnit: "Stück",
+      pieceGram: 120,
+    },
+  ],
+  [
+    /^[äa]pfel\b.*/,
+    {
+      key: "äpfel",
+      display: "Äpfel",
+      category: "Obst & Gemüse",
+      preferredUnit: "Stück",
+      pieceGram: 180,
+    },
+  ],
+  [
+    /^heidelbeeren?\b.*/,
+    { key: "heidelbeeren", display: "Heidelbeeren", category: "Obst & Gemüse" },
+  ],
   [/^erdbeeren?\b.*/, { key: "erdbeeren", display: "Erdbeeren", category: "Obst & Gemüse" }],
   [/^himbeeren?\b.*/, { key: "himbeeren", display: "Himbeeren", category: "Obst & Gemüse" }],
   [/^beeren\b.*/, { key: "beeren", display: "Beeren", category: "Obst & Gemüse" }],
   [/^brokkoli\b.*/, { key: "brokkoli", display: "Brokkoli", category: "Obst & Gemüse" }],
   [/^blumenkohl\b.*/, { key: "blumenkohl", display: "Blumenkohl", category: "Obst & Gemüse" }],
-  [/^(karotten?|möhren?|moehren?)\b.*/, { key: "karotten", display: "Karotten", category: "Obst & Gemüse" }],
-  [/^paprikaschoten?\b.*/, { key: "paprika", display: "Paprika", category: "Obst & Gemüse", pieceGram: 150 }],
-  [/^paprika\b.*/, { key: "paprika", display: "Paprika", category: "Obst & Gemüse", pieceGram: 150 }],
-  [/^kirschtomaten?\b.*/, { key: "kirschtomaten", display: "Kirschtomaten", category: "Obst & Gemüse" }],
+  [
+    /^(karotten?|möhren?|moehren?)\b.*/,
+    { key: "karotten", display: "Karotten", category: "Obst & Gemüse" },
+  ],
+  [
+    /^paprikaschoten?\b.*/,
+    { key: "paprika", display: "Paprika", category: "Obst & Gemüse", pieceGram: 150 },
+  ],
+  [
+    /^paprika\b.*/,
+    { key: "paprika", display: "Paprika", category: "Obst & Gemüse", pieceGram: 150 },
+  ],
+  [
+    /^kirschtomaten?\b.*/,
+    { key: "kirschtomaten", display: "Kirschtomaten", category: "Obst & Gemüse" },
+  ],
   [/^tomaten?\b.*/, { key: "tomaten", display: "Tomaten", category: "Obst & Gemüse" }],
-  [/^(salatgurken?|gurken?)\b.*/, { key: "gurke", display: "Gurke", category: "Obst & Gemüse", preferredUnit: "Stück", pieceGram: 300 }],
-  [/^zucchini\b.*/, { key: "zucchini", display: "Zucchini", category: "Obst & Gemüse", pieceGram: 200 }],
+  [
+    /^(salatgurken?|gurken?)\b.*/,
+    {
+      key: "gurke",
+      display: "Gurke",
+      category: "Obst & Gemüse",
+      preferredUnit: "Stück",
+      pieceGram: 300,
+    },
+  ],
+  [
+    /^zucchini\b.*/,
+    { key: "zucchini", display: "Zucchini", category: "Obst & Gemüse", pieceGram: 200 },
+  ],
   [/^spinat\b.*/, { key: "spinat", display: "Spinat", category: "Obst & Gemüse" }],
   [/^erbsen\b.*/, { key: "erbsen", display: "Erbsen", category: "Obst & Gemüse" }],
   [/^salat\b.*/, { key: "salat", display: "Salat", category: "Obst & Gemüse" }],
-  [/^avocados?\b.*/, { key: "avocado", display: "Avocado", category: "Obst & Gemüse", preferredUnit: "Stück", pieceGram: 180 }],
+  [
+    /^avocados?\b.*/,
+    {
+      key: "avocado",
+      display: "Avocado",
+      category: "Obst & Gemüse",
+      preferredUnit: "Stück",
+      pieceGram: 180,
+    },
+  ],
   [/^zwiebeln?\b.*/, { key: "zwiebeln", display: "Zwiebeln", category: "Obst & Gemüse" }],
   [/^knoblauch\b.*/, { key: "knoblauch", display: "Knoblauch", category: "Obst & Gemüse" }],
   [/^aubergine\b.*/, { key: "aubergine", display: "Aubergine", category: "Obst & Gemüse" }],
   [/^spargel\b.*/, { key: "spargel", display: "Spargel", category: "Obst & Gemüse" }],
-  [/^(oliven[öo]l|olivenöl)\b.*/, { key: "olivenöl", display: "Olivenöl", category: "Vorrat & Gewürze", tablespoonMl: 15, teaspoonMl: 5 }],
-  [/^rapsöl\b.*/, { key: "rapsöl", display: "Rapsöl", category: "Vorrat & Gewürze", tablespoonMl: 15, teaspoonMl: 5 }],
-  [/^kokos[öo]l\b.*/, { key: "kokosöl", display: "Kokosöl", category: "Vorrat & Gewürze", tablespoonGram: 13, teaspoonGram: 4 }],
-  [/^butter\b.*/, { key: "butter", display: "Butter", category: "Vorrat & Gewürze", tablespoonGram: 12, teaspoonGram: 4 }],
-  [/^honig\b.*/, { key: "honig", display: "Honig", category: "Vorrat & Gewürze", tablespoonGram: 20, teaspoonGram: 7 }],
-  [/^ahornsirup\b.*/, { key: "ahornsirup", display: "Ahornsirup", category: "Vorrat & Gewürze", tablespoonGram: 20, teaspoonGram: 7 }],
-  [/^(mandeln?|walnüsse|walnuesse|walnuss|cashews?|erdnüsse|erdnuesse|erdnuss)\b.*/, { key: "nüsse", display: "Nüsse", category: "Vorrat & Gewürze", tablespoonGram: 10, teaspoonGram: 4 }],
-  [/^(leinsamen|chia|chiasamen|sesam|sonnenblumenkerne|kürbiskerne)\b.*/, { key: "samen", display: "Samen & Kerne", category: "Vorrat & Gewürze", tablespoonGram: 10, teaspoonGram: 3 }],
-  [/^(erdnuss|mandel)mus\b.*/, { key: "nussmus", display: "Nussmus", category: "Vorrat & Gewürze", tablespoonGram: 15, teaspoonGram: 5 }],
-  [/^pesto\b.*/, { key: "pesto", display: "Pesto", category: "Vorrat & Gewürze", tablespoonGram: 15, teaspoonGram: 5 }],
-  [/^senf\b.*/, { key: "senf", display: "Senf", category: "Vorrat & Gewürze", tablespoonGram: 15, teaspoonGram: 5 }],
-  [/^ketchup\b.*/, { key: "ketchup", display: "Ketchup", category: "Vorrat & Gewürze", tablespoonGram: 15, teaspoonGram: 5 }],
-  [/^(mineralwasser|flaschenwasser)\b.*/, { key: "mineralwasser", display: "Mineralwasser", category: "Getränke", tablespoonMl: 15, teaspoonMl: 5 }],
+  [
+    /^(oliven[öo]l|olivenöl)\b.*/,
+    {
+      key: "olivenöl",
+      display: "Olivenöl",
+      category: "Vorrat & Gewürze",
+      tablespoonMl: 15,
+      teaspoonMl: 5,
+    },
+  ],
+  [
+    /^rapsöl\b.*/,
+    {
+      key: "rapsöl",
+      display: "Rapsöl",
+      category: "Vorrat & Gewürze",
+      tablespoonMl: 15,
+      teaspoonMl: 5,
+    },
+  ],
+  [
+    /^kokos[öo]l\b.*/,
+    {
+      key: "kokosöl",
+      display: "Kokosöl",
+      category: "Vorrat & Gewürze",
+      tablespoonGram: 13,
+      teaspoonGram: 4,
+    },
+  ],
+  [
+    /^butter\b.*/,
+    {
+      key: "butter",
+      display: "Butter",
+      category: "Vorrat & Gewürze",
+      tablespoonGram: 12,
+      teaspoonGram: 4,
+    },
+  ],
+  [
+    /^honig\b.*/,
+    {
+      key: "honig",
+      display: "Honig",
+      category: "Vorrat & Gewürze",
+      tablespoonGram: 20,
+      teaspoonGram: 7,
+    },
+  ],
+  [
+    /^ahornsirup\b.*/,
+    {
+      key: "ahornsirup",
+      display: "Ahornsirup",
+      category: "Vorrat & Gewürze",
+      tablespoonGram: 20,
+      teaspoonGram: 7,
+    },
+  ],
+  [
+    /^(mandeln?|walnüsse|walnuesse|walnuss|cashews?|erdnüsse|erdnuesse|erdnuss)\b.*/,
+    {
+      key: "nüsse",
+      display: "Nüsse",
+      category: "Vorrat & Gewürze",
+      tablespoonGram: 10,
+      teaspoonGram: 4,
+    },
+  ],
+  [
+    /^(leinsamen|chia|chiasamen|sesam|sonnenblumenkerne|kürbiskerne)\b.*/,
+    {
+      key: "samen",
+      display: "Samen & Kerne",
+      category: "Vorrat & Gewürze",
+      tablespoonGram: 10,
+      teaspoonGram: 3,
+    },
+  ],
+  [
+    /^(erdnuss|mandel)mus\b.*/,
+    {
+      key: "nussmus",
+      display: "Nussmus",
+      category: "Vorrat & Gewürze",
+      tablespoonGram: 15,
+      teaspoonGram: 5,
+    },
+  ],
+  [
+    /^pesto\b.*/,
+    {
+      key: "pesto",
+      display: "Pesto",
+      category: "Vorrat & Gewürze",
+      tablespoonGram: 15,
+      teaspoonGram: 5,
+    },
+  ],
+  [
+    /^senf\b.*/,
+    {
+      key: "senf",
+      display: "Senf",
+      category: "Vorrat & Gewürze",
+      tablespoonGram: 15,
+      teaspoonGram: 5,
+    },
+  ],
+  [
+    /^ketchup\b.*/,
+    {
+      key: "ketchup",
+      display: "Ketchup",
+      category: "Vorrat & Gewürze",
+      tablespoonGram: 15,
+      teaspoonGram: 5,
+    },
+  ],
+  [
+    /^(mineralwasser|flaschenwasser)\b.*/,
+    {
+      key: "mineralwasser",
+      display: "Mineralwasser",
+      category: "Getränke",
+      tablespoonMl: 15,
+      teaspoonMl: 5,
+    },
+  ],
 ];
 
 function titleCase(s: string) {
@@ -153,7 +535,10 @@ function stripNonIngredientNotes(text: string) {
     .replace(/\s+/g, " ")
     .trim();
 
-  t = t.replace(/^für\s+(dressing|sauce|soße|sosse|marinade|topping|füllung|fuellung)\s*:?\s*/i, "");
+  t = t.replace(
+    /^für\s+(dressing|sauce|soße|sosse|marinade|topping|füllung|fuellung)\s*:?\s*/i,
+    "",
+  );
   return t.trim();
 }
 
@@ -161,11 +546,17 @@ function isNonIngredientText(text: string) {
   const t = compactText(text).toLowerCase();
   if (!t || !/[a-zäöüß]/i.test(t)) return true;
   if (/^für\s+.+\s+—\s+insgesamt\b/i.test(text)) return true;
-  if (/^für\s+(?!dressing|sauce|soße|sosse|marinade|topping|füllung|fuellung)\b/i.test(text)) return true;
+  if (/^für\s+(?!dressing|sauce|soße|sosse|marinade|topping|füllung|fuellung)\b/i.test(text))
+    return true;
   if (/^für\s+[a-zäöüß]+\s+[a-zäöüß]+\b.*\binsgesamt\b/i.test(text)) return true;
-  if (/\binsgesamt\s+\d+(?:[,.]\d+)?\s*(g|kg|ml|l)\b/i.test(text) && /^für\b/i.test(text)) return true;
-  if (/^(portion(en)?|person(en)?|ergibt|rezept|hinweis|notiz|zubereitung|gesamt|summe)\b/i.test(text)) return true;
-  if (/\b(servieren|vermengen|anbraten|braten|kochen|backen|garen|abschmecken)\b/i.test(text)) return true;
+  if (/\binsgesamt\s+\d+(?:[,.]\d+)?\s*(g|kg|ml|l)\b/i.test(text) && /^für\b/i.test(text))
+    return true;
+  if (
+    /^(portion(en)?|person(en)?|ergibt|rezept|hinweis|notiz|zubereitung|gesamt|summe)\b/i.test(text)
+  )
+    return true;
+  if (/\b(servieren|vermengen|anbraten|braten|kochen|backen|garen|abschmecken)\b/i.test(text))
+    return true;
   return false;
 }
 
@@ -199,7 +590,9 @@ function normalizeUnit(unit: string | undefined): Unit | null {
 
 function parseQuantityText(text: string): Quantity | null {
   const q = compactText(text).replace(/^(ca\.|circa)\s+/i, "");
-  const m = q.match(/^(\d+\s*\/\s*\d+|\d+(?:[,.]\d+)?|ein(?:e|en|em|er)?|halb(?:e|er|es)?)\s*(kg|kilogramm|g|gramm|ml|milliliter|l|liter|el|esslöffel|essloeffel|tl|teelöffel|teeloeffel|prisen?|scheiben?|stück|stueck|stk\.?|bund|eier?|ei)?\b/i);
+  const m = q.match(
+    /^(\d+\s*\/\s*\d+|\d+(?:[,.]\d+)?|ein(?:e|en|em|er)?|halb(?:e|er|es)?)\s*(kg|kilogramm|g|gramm|ml|milliliter|l|liter|el|esslöffel|essloeffel|tl|teelöffel|teeloeffel|prisen?|scheiben?|stück|stueck|stk\.?|bund|eier?|ei)?\b/i,
+  );
   if (!m) return null;
   const amount = parseNumberToken(m[1]);
   const unit = normalizeUnit(m[2]);
@@ -218,16 +611,32 @@ function parseQuantityList(text: string): Quantity[] {
     .filter((q): q is Quantity => !!q);
 }
 
-function takeQuantityFromText(text: string): { name: string; quantity: Quantity | null; cooked: boolean; rawHadSlice: boolean; rawHadPinch: boolean } {
+function takeQuantityFromText(text: string): {
+  name: string;
+  quantity: Quantity | null;
+  cooked: boolean;
+  rawHadSlice: boolean;
+  rawHadPinch: boolean;
+} {
   let t = stripNonIngredientNotes(text).replace(/^ekochtes\s+ei\b/i, "Gekochtes Ei");
-  const cooked = /\b(gekocht|gekochte|gekochter|gekochtes|gegart|gegarte|gegarter|gegartes)\b/i.test(t);
-  const rawHadSlice = /^\s*(\d+\s*\/\s*\d+|\d+(?:[,.]\d+)?|ein(?:e|en|em|er)?|halb(?:e|er|es)?)?\s*scheiben?\b/i.test(t);
-  const rawHadPinch = /^\s*(\d+\s*\/\s*\d+|\d+(?:[,.]\d+)?|ein(?:e|en|em|er)?)?\s*prisen?\b/i.test(t);
+  const cooked =
+    /\b(gekocht|gekochte|gekochter|gekochtes|gegart|gegarte|gegarter|gegartes)\b/i.test(t);
+  const rawHadSlice =
+    /^\s*(\d+\s*\/\s*\d+|\d+(?:[,.]\d+)?|ein(?:e|en|em|er)?|halb(?:e|er|es)?)?\s*scheiben?\b/i.test(
+      t,
+    );
+  const rawHadPinch = /^\s*(\d+\s*\/\s*\d+|\d+(?:[,.]\d+)?|ein(?:e|en|em|er)?)?\s*prisen?\b/i.test(
+    t,
+  );
 
-  const colon = t.match(/^(.+?):\s*(\d+\s*\/\s*\d+|\d+(?:[,.]\d+)?)\s*(kg|g|ml|l|el|tl|scheiben?|stück|stk\.?)?$/i);
+  const colon = t.match(
+    /^(.+?):\s*(\d+\s*\/\s*\d+|\d+(?:[,.]\d+)?)\s*(kg|g|ml|l|el|tl|scheiben?|stück|stk\.?)?$/i,
+  );
   if (colon) t = `${colon[2]} ${colon[3] ?? "g"} ${colon[1]}`;
 
-  const start = t.match(/^(\d+\s*\/\s*\d+|\d+(?:[,.]\d+)?|ein(?:e|en|em|er)?|halb(?:e|er|es)?)\s*(kg|kilogramm|g|gramm|ml|milliliter|l|liter|el|esslöffel|essloeffel|tl|teelöffel|teeloeffel|prisen?|scheiben?|stück|stueck|stk\.?|bund|eier?|ei)?\b\s*(.*)$/i);
+  const start = t.match(
+    /^(\d+\s*\/\s*\d+|\d+(?:[,.]\d+)?|ein(?:e|en|em|er)?|halb(?:e|er|es)?)\s*(kg|kilogramm|g|gramm|ml|milliliter|l|liter|el|esslöffel|essloeffel|tl|teelöffel|teeloeffel|prisen?|scheiben?|stück|stueck|stk\.?|bund|eier?|ei)?\b\s*(.*)$/i,
+  );
   if (start) {
     const amount = parseNumberToken(start[1]);
     const unit = normalizeUnit(start[2]);
@@ -235,17 +644,31 @@ function takeQuantityFromText(text: string): { name: string; quantity: Quantity 
       let normalizedAmount = amount;
       if (/^kg$/i.test(start[2] ?? "")) normalizedAmount *= 1000;
       if (/^l$/i.test(start[2] ?? "")) normalizedAmount *= 1000;
-      return { name: start[3].trim(), quantity: { amount: normalizedAmount, unit: unit ?? "Stück" }, cooked, rawHadSlice, rawHadPinch };
+      return {
+        name: start[3].trim(),
+        quantity: { amount: normalizedAmount, unit: unit ?? "Stück" },
+        cooked,
+        rawHadSlice,
+        rawHadPinch,
+      };
     }
   }
 
   const unitOnly = t.match(/^(prisen?|scheiben?|bund)\s+(.+)$/i);
   if (unitOnly) {
     const unit = normalizeUnit(unitOnly[1]);
-    return { name: unitOnly[2].trim(), quantity: unit ? { amount: 1, unit } : null, cooked, rawHadSlice, rawHadPinch };
+    return {
+      name: unitOnly[2].trim(),
+      quantity: unit ? { amount: 1, unit } : null,
+      cooked,
+      rawHadSlice,
+      rawHadPinch,
+    };
   }
 
-  const end = t.match(/^(.+?)\s+(\d+\s*\/\s*\d+|\d+(?:[,.]\d+)?)\s*(kg|g|ml|l|el|tl|prisen?|scheiben?|stück|stk\.?|bund|eier?|ei)$/i);
+  const end = t.match(
+    /^(.+?)\s+(\d+\s*\/\s*\d+|\d+(?:[,.]\d+)?)\s*(kg|g|ml|l|el|tl|prisen?|scheiben?|stück|stk\.?|bund|eier?|ei)$/i,
+  );
   if (end) {
     let amount = parseNumberToken(end[2]);
     const unit = normalizeUnit(end[3]);
@@ -264,7 +687,10 @@ function normalizeIngredientName(name: string) {
     .replace(/^ekochtes\s+ei\b/i, "Gekochtes Ei")
     .replace(/\([^)]*\)/g, " ")
     .replace(/[‐‑‒–—]/g, "-")
-    .replace(/\b(ungekocht|gekocht(?:e[rsn]?)?|gegart(?:e[rsn]?)?|gebraten(?:e[rsn]?)?|gedünstet(?:e[rsn]?)?|geduenstet(?:e[rsn]?)?|gegrillt(?:e[rsn]?)?|roh(?:e[rsn]?)?|trocken(?:e[rsn]?)?|frisch(?:e[rsn]?)?|tiefgekühlt|tiefgekuehlt|tk|light|fettarm|zuckerarm|mager(?:e[rsn]?)?|natur|pur|optional|gewürfelt|gewuerfelt|geschnitten|gerieben)\b/gi, " ")
+    .replace(
+      /\b(ungekocht|gekocht(?:e[rsn]?)?|gegart(?:e[rsn]?)?|gebraten(?:e[rsn]?)?|gedünstet(?:e[rsn]?)?|geduenstet(?:e[rsn]?)?|gegrillt(?:e[rsn]?)?|roh(?:e[rsn]?)?|trocken(?:e[rsn]?)?|frisch(?:e[rsn]?)?|tiefgekühlt|tiefgekuehlt|tk|light|fettarm|zuckerarm|mager(?:e[rsn]?)?|natur|pur|optional|gewürfelt|gewuerfelt|geschnitten|gerieben)\b/gi,
+      " ",
+    )
     .replace(/\b(gehackt)\b/gi, " ")
     .replace(/^(eine?|ein|einen|einem|einer|der|die|das|etwas)\s+/i, "")
     .replace(/^(scheiben?|prisen?)\s+/i, "")
@@ -278,7 +704,12 @@ function canonicalize(rawName: string): IngredientRule | null {
   let n = normalizeIngredientName(rawName);
   if (!n || isNonIngredientText(n)) return null;
   if (/^(wasser|leitungswasser|stilles\s+wasser|sprudelwasser)\b/i.test(n)) return null;
-  if (/^(gehackt|gekocht|gegart|gebraten|gedünstet|geduenstet|gewürfelt|gewuerfelt|geschnitten|frisch|optional)$/i.test(n)) return null;
+  if (
+    /^(gehackt|gekocht|gegart|gebraten|gedünstet|geduenstet|gewürfelt|gewuerfelt|geschnitten|frisch|optional)$/i.test(
+      n,
+    )
+  )
+    return null;
   n = n.replace(/\s*-\s*/g, "-").trim();
   const lower = n.toLowerCase();
   for (const [re, rule] of INGREDIENT_RULES) {
@@ -287,7 +718,11 @@ function canonicalize(rawName: string): IngredientRule | null {
   return { key: lower, display: titleCase(n), category: categoryFor(n) };
 }
 
-function normalizeQuantity(quantity: Quantity | null, rule: IngredientRule, opts: { cooked: boolean; rawHadSlice: boolean; rawHadPinch: boolean }): Quantity {
+function normalizeQuantity(
+  quantity: Quantity | null,
+  rule: IngredientRule,
+  opts: { cooked: boolean; rawHadSlice: boolean; rawHadPinch: boolean },
+): Quantity {
   let q = quantity ? { ...quantity } : null;
   if (!q) {
     if (rule.spice || rule.pantry) return { amount: 1, unit: "Vorrat" };
@@ -296,13 +731,19 @@ function normalizeQuantity(quantity: Quantity | null, rule: IngredientRule, opts
   }
 
   if (rule.key === "eier") {
-    if (q.unit === "g") q = { amount: Math.max(1, Math.round(q.amount / 60) || 1), unit: "Stück", estimated: true };
+    if (q.unit === "g")
+      q = { amount: Math.max(1, Math.round(q.amount / 60) || 1), unit: "Stück", estimated: true };
     else q.unit = "Stück";
     return q;
   }
 
   if (opts.rawHadSlice || rule.preferredUnit === "Scheiben") {
-    if (q.unit === "g" && rule.sliceGram) return { amount: Math.max(1, Math.round(q.amount / rule.sliceGram)), unit: "Scheiben", estimated: true };
+    if (q.unit === "g" && rule.sliceGram)
+      return {
+        amount: Math.max(1, Math.round(q.amount / rule.sliceGram)),
+        unit: "Scheiben",
+        estimated: true,
+      };
     if (q.unit === "Stück") q.unit = "Scheiben";
     return q;
   }
@@ -318,10 +759,14 @@ function normalizeQuantity(quantity: Quantity | null, rule: IngredientRule, opts
     return q;
   }
 
-  if (q.unit === "EL" && rule.tablespoonGram) return { amount: q.amount * rule.tablespoonGram, unit: "g", estimated: true };
-  if (q.unit === "TL" && rule.teaspoonGram) return { amount: q.amount * rule.teaspoonGram, unit: "g", estimated: true };
-  if (q.unit === "EL" && rule.tablespoonMl) return { amount: q.amount * rule.tablespoonMl, unit: "ml", estimated: true };
-  if (q.unit === "TL" && rule.teaspoonMl) return { amount: q.amount * rule.teaspoonMl, unit: "ml", estimated: true };
+  if (q.unit === "EL" && rule.tablespoonGram)
+    return { amount: q.amount * rule.tablespoonGram, unit: "g", estimated: true };
+  if (q.unit === "TL" && rule.teaspoonGram)
+    return { amount: q.amount * rule.teaspoonGram, unit: "g", estimated: true };
+  if (q.unit === "EL" && rule.tablespoonMl)
+    return { amount: q.amount * rule.tablespoonMl, unit: "ml", estimated: true };
+  if (q.unit === "TL" && rule.teaspoonMl)
+    return { amount: q.amount * rule.teaspoonMl, unit: "ml", estimated: true };
 
   if (opts.cooked && q.unit === "g" && rule.cookedToRawFactor) {
     return { amount: q.amount * rule.cookedToRawFactor, unit: "g", estimated: true };
@@ -336,7 +781,9 @@ function normalizeQuantity(quantity: Quantity | null, rule: IngredientRule, opts
   return q;
 }
 
-function parseShoppingItem(source: ShoppingItem): { rule: IngredientRule; quantities: Quantity[]; checked: boolean } | null {
+function parseShoppingItem(
+  source: ShoppingItem,
+): { rule: IngredientRule; quantities: Quantity[]; checked: boolean } | null {
   const rawName = compactText(source.name);
   if (!rawName || isNonIngredientText(rawName)) return null;
   const inline = takeQuantityFromText(rawName);
@@ -358,10 +805,16 @@ function addQuantity(map: Map<Unit, { amount: number; estimated: boolean }>, q: 
   if (q.unit === "Vorrat" && map.size > 0) return;
   if (q.unit !== "Vorrat" && map.has("Vorrat")) map.delete("Vorrat");
   const existing = map.get(q.unit) ?? { amount: 0, estimated: false };
-  map.set(q.unit, { amount: existing.amount + q.amount, estimated: existing.estimated || !!q.estimated });
+  map.set(q.unit, {
+    amount: existing.amount + q.amount,
+    estimated: existing.estimated || !!q.estimated,
+  });
 }
 
-function resolveMixedUnits(rule: IngredientRule, units: Map<Unit, { amount: number; estimated: boolean }>) {
+function resolveMixedUnits(
+  rule: IngredientRule,
+  units: Map<Unit, { amount: number; estimated: boolean }>,
+) {
   const g = units.get("g");
   const ml = units.get("ml");
   const pieces = units.get("Stück");
@@ -416,7 +869,10 @@ function formatUnit(unit: Unit, amount: number) {
   return unit;
 }
 
-function formatQuantities(rule: IngredientRule, units: Map<Unit, { amount: number; estimated: boolean }>) {
+function formatQuantities(
+  rule: IngredientRule,
+  units: Map<Unit, { amount: number; estimated: boolean }>,
+) {
   resolveMixedUnits(rule, units);
   if (!units.size) return "Vorrat";
   const parts: string[] = [];
@@ -438,8 +894,13 @@ function formatQuantities(rule: IngredientRule, units: Map<Unit, { amount: numbe
       amount /= 1000;
       outUnit = "l";
     }
-    const rounded = unit === "Stück" || unit === "Scheiben" || unit === "Bund" ? Math.round(amount * 2) / 2 : amount;
-    parts.push(`${entry.estimated ? "ca. " : ""}${formatAmount(rounded)} ${formatUnit(outUnit as Unit, rounded)}`);
+    const rounded =
+      unit === "Stück" || unit === "Scheiben" || unit === "Bund"
+        ? Math.round(amount * 2) / 2
+        : amount;
+    parts.push(
+      `${entry.estimated ? "ca. " : ""}${formatAmount(rounded)} ${formatUnit(outUnit as Unit, rounded)}`,
+    );
   }
   return parts.join(" + ");
 }
@@ -447,7 +908,11 @@ function formatQuantities(rule: IngredientRule, units: Map<Unit, { amount: numbe
 export function normalizeShoppingListItems(items: ShoppingItem[]): ShoppingItem[] {
   const groups = new Map<
     string,
-    { rule: IngredientRule; units: Map<Unit, { amount: number; estimated: boolean }>; checked: boolean }
+    {
+      rule: IngredientRule;
+      units: Map<Unit, { amount: number; estimated: boolean }>;
+      checked: boolean;
+    }
   >();
 
   for (const source of items) {
@@ -487,11 +952,28 @@ export function cleanShoppingItems(items: ShoppingItem[]): ShoppingItem[] {
 
 function categoryFor(name: string) {
   const n = name.toLowerCase();
-  if (/hähnchen|pute|rind|hack|filet|fisch|lachs|thunfisch|garnelen/.test(n)) return "Fleisch & Fisch";
-  if (/skyr|quark|joghurt|käse|feta|mozzarella|parmesan|proteinpudding|eier?|milch/.test(n)) return "Eier & Milchprodukte";
-  if (/reis|nudel|couscous|quinoa|brot|tortilla|wrap|hafer|müsli|reiswaffel|linsen|kichererbsen|bohnen/.test(n)) return "Getreide & Beilagen";
-  if (/salz|pfeffer|zimt|paprikapulver|öl|butter|nuss|nüss|mandel|cashew|walnuss|erdnuss|kern|samen|honig|sirup|pesto|senf|ketchup/.test(n)) return "Vorrat & Gewürze";
-  if (/salat|gemüse|brokkoli|karotte|paprika|spargel|beeren|erdbeer|banane|apfel|äpfel|tomate|zucchini|gurke|spinat|erbse|kartoffel|zwiebel|knoblauch|avocado|aubergine|kräuter|petersilie/.test(n)) return "Obst & Gemüse";
+  if (/hähnchen|pute|rind|hack|filet|fisch|lachs|thunfisch|garnelen/.test(n))
+    return "Fleisch & Fisch";
+  if (/skyr|quark|joghurt|käse|feta|mozzarella|parmesan|proteinpudding|eier?|milch/.test(n))
+    return "Eier & Milchprodukte";
+  if (
+    /reis|nudel|couscous|quinoa|brot|tortilla|wrap|hafer|müsli|reiswaffel|linsen|kichererbsen|bohnen/.test(
+      n,
+    )
+  )
+    return "Getreide & Beilagen";
+  if (
+    /salz|pfeffer|zimt|paprikapulver|öl|butter|nuss|nüss|mandel|cashew|walnuss|erdnuss|kern|samen|honig|sirup|pesto|senf|ketchup/.test(
+      n,
+    )
+  )
+    return "Vorrat & Gewürze";
+  if (
+    /salat|gemüse|brokkoli|karotte|paprika|spargel|beeren|erdbeer|banane|apfel|äpfel|tomate|zucchini|gurke|spinat|erbse|kartoffel|zwiebel|knoblauch|avocado|aubergine|kräuter|petersilie/.test(
+      n,
+    )
+  )
+    return "Obst & Gemüse";
   return "Sonstiges";
 }
 
@@ -516,7 +998,11 @@ function fallbackItemsFromLines(lines: string[]): ShoppingItem[] {
   const items: ShoppingItem[] = [];
   for (const line of lines) {
     const hasIngredientMarker = line.includes(" | Zutaten: ");
-    const partsText = hasIngredientMarker ? line.split(" | Zutaten: ")[1] : line.includes(" | ") ? line.split(" | ")[1] : "";
+    const partsText = hasIngredientMarker
+      ? line.split(" | Zutaten: ")[1]
+      : line.includes(" | ")
+        ? line.split(" | ")[1]
+        : "";
     for (const rawPart of splitIngredientParts(partsText)) {
       const part = stripNonIngredientNotes(rawPart);
       if (!part || isNonIngredientText(part)) continue;
@@ -601,7 +1087,9 @@ async function fetchMealLines(
   if (!dayIds.length) return [];
   const { data: meals } = await supabaseAdmin
     .from("nutrition_plan_meals")
-    .select("day_id, name, description, recipe_ingredients, sort_order, is_shared")
+    .select(
+      "day_id, name, description, recipe_ingredients, ingredients_json, sort_order, is_shared",
+    )
     .in("day_id", dayIds)
     .order("sort_order");
   const dayOrder = new Map(dayIds.map((id, index) => [id, index]));
@@ -613,7 +1101,7 @@ async function fetchMealLines(
         (a.sort_order ?? 0) - (b.sort_order ?? 0),
     )
     .map((m: any) => {
-      const rawIngs = Array.isArray(m.recipe_ingredients) ? (m.recipe_ingredients as string[]) : [];
+      const rawIngs = shoppingIngredientLines(m);
       // In combined mode we want the "insgesamt" portion for shared meals,
       // but for non-shared meals each partner only contributes their own amount.
       const lineScope: "self" | "combined" = m.is_shared ? scope : "self";
@@ -628,7 +1116,6 @@ async function fetchMealLines(
       return `- ${cleanName}${ing ? " | Zutaten: " + ing : m.description ? " | " + m.description : ""}`;
     });
 }
-
 
 async function callAi(prompt: string, apiKey: string): Promise<ShoppingItem[]> {
   const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -659,10 +1146,29 @@ async function callAi(prompt: string, apiKey: string): Promise<ShoppingItem[]> {
   }
 }
 
+async function resolveShoppingItems(
+  lines: string[],
+  prompt: string,
+  apiKey?: string,
+): Promise<ShoppingItem[]> {
+  const deterministic = normalizeShoppingListItems(fallbackItemsFromLines(lines));
+  if (deterministic.length) return deterministic;
+
+  if (!apiKey) {
+    throw new Error("Keine verwertbaren Zutaten im Plan gefunden und kein KI-Fallback verfügbar.");
+  }
+
+  const aiItems = normalizeShoppingListItems(await callAi(prompt, apiKey));
+  if (!aiItems.length) {
+    throw new Error("Aus den Planmahlzeiten konnte keine Einkaufsliste erstellt werden.");
+  }
+  return aiItems;
+}
+
 export async function generateShoppingListForPlan(opts: {
   /** Kept for API compatibility; engine uses the admin client internally. */
   supabase?: any;
-  apiKey: string;
+  apiKey?: string;
   planId: string;
   windowDays: number;
 }): Promise<{ items: ShoppingItem[]; days: number }> {
@@ -670,7 +1176,6 @@ export async function generateShoppingListForPlan(opts: {
 
   const lines = await fetchMealLines(planId, windowDays, "self");
   if (!lines.length) throw new Error("Plan enthält keine Mahlzeiten.");
-
 
   const prompt = `Du bist Ernährungsassistent. Erstelle aus den folgenden Mahlzeiten EINE konsolidierte Einkaufsliste für ${windowDays} Tage.
 
@@ -685,8 +1190,7 @@ ${lines.join("\n")}
 Antworte ausschließlich mit gültigem JSON:
 {"items":[{"name":"Hähnchenbrust","quantity":"1.4 kg","category":"Fleisch & Fisch"}]}`;
 
-  const parsedItems = fallbackItemsFromLines(lines);
-  const items = normalizeShoppingListItems(parsedItems.length ? parsedItems : await callAi(prompt, apiKey));
+  const items = await resolveShoppingItems(lines, prompt, apiKey);
 
   await supabaseAdmin.from("shopping_lists").upsert(
     {
@@ -705,7 +1209,7 @@ Antworte ausschließlich mit gültigem JSON:
 /** Combined shopping list summing two partner plans. Stored on BOTH plans with scope='partner_combined'. */
 export async function generateCombinedShoppingList(opts: {
   supabase?: any;
-  apiKey: string;
+  apiKey?: string;
   planAId: string;
   planBId: string;
   userA: string;
@@ -720,7 +1224,6 @@ export async function generateCombinedShoppingList(opts: {
     fetchMealLines(planAId, windowDays, "combined"),
     fetchMealLines(planBId, windowDays, "combined", { skipShared: true }),
   ]);
-
 
   if (!linesA.length && !linesB.length) throw new Error("Keine Mahlzeiten für die Partnerpläne.");
 
@@ -746,8 +1249,7 @@ ${mealsText}
 Antworte ausschließlich mit gültigem JSON:
 {"items":[{"name":"Hähnchenbrust","quantity":"1.4 kg","category":"Fleisch & Fisch"}]}`;
 
-  const parsedItems = fallbackItemsFromLines([...linesA, ...linesB]);
-  const items = normalizeShoppingListItems(parsedItems.length ? parsedItems : await callAi(prompt, apiKey));
+  const items = await resolveShoppingItems([...linesA, ...linesB], prompt, apiKey);
 
   const now = new Date().toISOString();
   await supabaseAdmin.from("shopping_lists").upsert(

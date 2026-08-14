@@ -21,9 +21,7 @@ type StructuredIngredient = {
  */
 export function shoppingIngredientLines(meal: ShoppingMealIngredientSource): string[] {
   const recipeIngredients = Array.isArray(meal.recipe_ingredients)
-    ? meal.recipe_ingredients
-        .map((value) => String(value ?? "").trim())
-        .filter(Boolean)
+    ? meal.recipe_ingredients.map((value) => String(value ?? "").trim()).filter(Boolean)
     : [];
   if (recipeIngredients.length) return recipeIngredients;
 

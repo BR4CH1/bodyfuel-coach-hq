@@ -49,7 +49,9 @@ export function normalizeConfiguredTrainingWeekdays(value: unknown): number[] {
   if (!Array.isArray(value)) return [];
   const weekdays = new Set<number>();
   for (const raw of value) {
-    const key = String(raw ?? "").trim().toLowerCase();
+    const key = String(raw ?? "")
+      .trim()
+      .toLowerCase();
     if (key in WEEKDAY_ALIASES) weekdays.add(WEEKDAY_ALIASES[key]);
   }
   return [...weekdays];
