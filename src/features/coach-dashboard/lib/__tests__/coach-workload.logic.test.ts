@@ -50,6 +50,9 @@ describe("coach workload logic", () => {
     );
     expect(result.state).toBe("critical");
     expect(result.total).toBe(1);
+    expect(result.metrics.find((metric) => metric.key === "risk")?.items[0].actionSignalIds).toEqual([
+      "risk-1",
+    ]);
   });
 
   it("counts plans expiring within five days", () => {
@@ -83,6 +86,10 @@ describe("coach workload logic", () => {
     expect(planMetric?.items).toHaveLength(1);
     expect(planMetric?.items[0].reason).toContain("Ernährungsplan");
     expect(planMetric?.items[0].reason).toContain("Trainingsplan");
+    expect(planMetric?.items[0].actionSignalIds).toEqual([
+      "plan-nutrition-1",
+      "plan-training-1",
+    ]);
   });
 
   it("returns clear without open work", () => {
@@ -132,5 +139,8 @@ describe("coach workload logic", () => {
     expect(result.metrics.find((metric) => metric.key === "risk")?.items[0].reason).toContain(
       "Ernährungsplan",
     );
+    expect(result.metrics.find((metric) => metric.key === "checkin")?.items[0].actionSignalIds).toEqual([
+      "checkin-review-1-2026-07-20",
+    ]);
   });
 });
