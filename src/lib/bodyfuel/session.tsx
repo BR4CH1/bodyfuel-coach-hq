@@ -1,6 +1,8 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { notifyCoachRecentRegistration } from "@/lib/coach-push.functions";
 import { CLIENTS, findClient, type Client, type DailyCheck, todayKey } from "./data";
 
 export type Profile = {
@@ -32,6 +34,8 @@ const Ctx = createContext<SessionCtx | null>(null);
 const KEY = "bodyfuel.session";
 
 export function SessionProvider({ children }: { children: ReactNode }) {
+  const notifyRecentRegistration = useServerFn(notifyCoachRecentRegistration);
+  const registrationPushChecked = useRef<string | null>(null);
   const [demoUserId, setDemoUserId] = useState<string | null>(null);
   const [supabaseUser, setSupabaseUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -51,6 +55,19 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       }
     } catch {}
   }, []);
+
+  // A successful authenticated session is the trustworthy point at which a
+  // recent self-registration can be verified server-side. The server checks
+  // timestamps/origin and deduplicates before any owner push is sent.
+  useEffect(() => {
+    const userId = supabaseUser?.id;
+    if (!userId || registrationPushChecked.current === userId) return;
+    registrationPushChecked.current = userId;
+    void notifyRecentRegistration().catch((error) => {
+      registrationPushChecked.current = null;
+      console.warn("[coach-push] registration verification failed", error);
+    });
+  }, [supabaseUser?.id, notifyRecentRegistration]);
 
   // hydrate supabase
   useEffect(() => {

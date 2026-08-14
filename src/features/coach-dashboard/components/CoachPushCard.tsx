@@ -226,7 +226,7 @@ export function CoachPushCard() {
 
       <div className="border-t border-border p-3">
         <p className="text-xs text-muted-foreground">
-          Neue Kundennachrichten und Check-ins direkt auf diesem Gerät melden.
+          Nachrichten, Check-ins, Anfragen und neue Registrierungen direkt auf diesem Gerät melden.
         </p>
 
         <div className="mt-3 flex flex-wrap gap-2">

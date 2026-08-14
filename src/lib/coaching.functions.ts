@@ -57,6 +57,22 @@ export const submitLead = createServerFn({ method: "POST" })
       message: data.message?.slice(0, 2000) || null,
     });
     if (error) throw new Error(error.message);
+
+    try {
+      const { isCoachPushConfigured, notifyEnabledCoaches } =
+        await import("@/lib/coach-push.server");
+      if (isCoachPushConfigured()) {
+        await notifyEnabledCoaches({
+          title: "Neue Coaching-Anfrage",
+          body: "Eine neue unverbindliche Anfrage ist eingegangen.",
+          url: "/coach/leads",
+          tag: `lead-${Date.now()}`,
+        });
+      }
+    } catch (pushError) {
+      console.warn("[coach-push] lead notification failed", pushError);
+    }
+
     return { ok: true };
   });
 
@@ -358,6 +374,7 @@ export const createCustomer = createServerFn({ method: "POST" })
           last_name: lastName,
           full_name: displayName,
           name: displayName,
+          created_via: "coach",
           ...(isFree ? { tier: "free" } : { role: "client" }),
         },
       });
@@ -373,6 +390,7 @@ export const createCustomer = createServerFn({ method: "POST" })
             last_name: lastName,
             full_name: displayName,
             name: displayName,
+            created_via: "coach",
             ...(isFree ? { tier: "free" } : { role: "client" }),
           },
           redirectTo: isFree ? `${origin}/tracker/app` : `${origin}/welcome`,
@@ -1095,6 +1113,28 @@ export const createPackageRequest = createServerFn({ method: "POST" })
       note: data.note?.slice(0, 2000) ?? null,
     });
     if (error) throw new Error(error.message);
+
+    try {
+      const { isCoachPushConfigured, notifyEnabledCoaches } =
+        await import("@/lib/coach-push.server");
+      if (isCoachPushConfigured()) {
+        const title =
+          data.request_type === "renewal"
+            ? "Neue Verlängerungsanfrage"
+            : data.request_type === "change"
+              ? "Neue Paketanfrage"
+              : "Neue Kontaktanfrage";
+        await notifyEnabledCoaches({
+          title,
+          body: "Eine neue Kundenanfrage ist eingegangen.",
+          url: "/coach/package-requests",
+          tag: `package-request-${context.userId}-${Date.now()}`,
+        });
+      }
+    } catch (pushError) {
+      console.warn("[coach-push] package request notification failed", pushError);
+    }
+
     return { ok: true };
   });
 
