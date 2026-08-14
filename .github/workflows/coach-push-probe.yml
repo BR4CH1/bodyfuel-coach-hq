@@ -1,0 +1,27 @@
+name: Coach Push Runtime Probe
+
+on:
+  push:
+    branches:
+      - feature/coach-web-push
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm install --ignore-scripts
+      - run: npm run build
+      - name: Show generated Wrangler config
+        run: |
+          echo '=== .output/server/wrangler.json ==='
+          cat .output/server/wrangler.json || true
+          echo '=== .wrangler/deploy/config.json ==='
+          cat .wrangler/deploy/config.json || true
