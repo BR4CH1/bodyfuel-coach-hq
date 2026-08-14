@@ -24,9 +24,8 @@ export const getCoachPushConfig = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertCoach(context);
-    const { COACH_PUSH_VAPID_PUBLIC_KEY, isCoachPushConfigured } = await import(
-      "@/lib/coach-push.server"
-    );
+    const { COACH_PUSH_VAPID_PUBLIC_KEY, isCoachPushConfigured } =
+      await import("@/lib/coach-push.server");
     return {
       publicKey: COACH_PUSH_VAPID_PUBLIC_KEY,
       configured: isCoachPushConfigured(),
@@ -57,9 +56,7 @@ export const sendMyCoachPushTest = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertCoach(context);
-    const { isCoachPushConfigured, sendCoachPushToUser } = await import(
-      "@/lib/coach-push.server"
-    );
+    const { isCoachPushConfigured, sendCoachPushToUser } = await import("@/lib/coach-push.server");
     if (!isCoachPushConfigured()) throw new Error("Push ist serverseitig noch nicht konfiguriert");
     const result = await sendCoachPushToUser(context.userId, {
       title: "BodyFuel Coach 🔔",
@@ -89,12 +86,8 @@ export const notifyCoachCheckinSubmitted = createServerFn({ method: "POST" })
 
     // Keep delivery best-effort: a Push outage must not break a successfully stored check-in.
     try {
-      const {
-        claimCoachPushEvent,
-        getPushActorName,
-        isCoachPushConfigured,
-        notifyEnabledCoaches,
-      } = await import("@/lib/coach-push.server");
+      const { claimCoachPushEvent, getPushActorName, isCoachPushConfigured, notifyEnabledCoaches } =
+        await import("@/lib/coach-push.server");
       if (!isCoachPushConfigured()) return { ok: true };
       const claimed = await claimCoachPushEvent(`checkin:${context.userId}:${checkin.id}`);
       if (!claimed) return { ok: true };

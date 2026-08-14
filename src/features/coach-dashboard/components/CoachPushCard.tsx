@@ -171,7 +171,11 @@ export function CoachPushCard() {
           {state === "active" ? (
             <>
               <Button size="sm" variant="outline" onClick={test} disabled={busy}>
-                {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                {busy ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="mr-2 h-4 w-4" />
+                )}
                 Test-Push
               </Button>
               <Button size="sm" variant="ghost" onClick={deactivate} disabled={busy}>
@@ -182,9 +186,19 @@ export function CoachPushCard() {
             <Button
               size="sm"
               onClick={activate}
-              disabled={busy || state === "loading" || state === "blocked" || state === "unsupported" || state === "unconfigured"}
+              disabled={
+                busy ||
+                state === "loading" ||
+                state === "blocked" ||
+                state === "unsupported" ||
+                state === "unconfigured"
+              }
             >
-              {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Bell className="mr-2 h-4 w-4" />}
+              {busy ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Bell className="mr-2 h-4 w-4" />
+              )}
               Push aktivieren
             </Button>
           )}

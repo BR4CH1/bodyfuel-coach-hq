@@ -48,6 +48,20 @@ export const sendMessageToCoach = createServerFn({ method: "POST" })
       body,
     });
     if (error) throw new Error(error.message);
+
+    // Push is best-effort and must never make a stored message appear failed.
+    try {
+      const { getPushActorName, notifyEnabledCoaches } = await import("@/lib/coach-push.server");
+      const name = await getPushActorName(context.userId);
+      await notifyEnabledCoaches({
+        title: "Neue Kundennachricht",
+        body: `${name} hat dir eine neue Nachricht geschickt.`,
+        url: "/coach",
+        tag: `message-${context.userId}-${Date.now()}`,
+      });
+    } catch (pushError) {
+      console.warn("[coach-push] message notification failed", pushError);
+    }
     return { ok: true };
   });
 
@@ -170,10 +184,7 @@ export const getCoachInbox = createServerFn({ method: "GET" })
       .limit(2000);
     if (error) throw new Error(error.message);
 
-    const byThread = new Map<
-      string,
-      { last: any; unread: number }
-    >();
+    const byThread = new Map<string, { last: any; unread: number }>();
     for (const m of (msgs ?? []) as any[]) {
       const cur = byThread.get(m.thread_user_id);
       if (!cur) {

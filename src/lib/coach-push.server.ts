@@ -77,24 +77,23 @@ export async function saveCoachPushSubscription(
   input: PushSubscriptionInput,
 ): Promise<void> {
   validateSubscription(input);
-  const { error } = await db().from("coach_push_subscriptions").upsert(
-    {
-      user_id: userId,
-      endpoint: input.endpoint,
-      p256dh: input.keys.p256dh,
-      auth: input.keys.auth,
-      user_agent: input.userAgent?.slice(0, 500) || null,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "endpoint" },
-  );
+  const { error } = await db()
+    .from("coach_push_subscriptions")
+    .upsert(
+      {
+        user_id: userId,
+        endpoint: input.endpoint,
+        p256dh: input.keys.p256dh,
+        auth: input.keys.auth,
+        user_agent: input.userAgent?.slice(0, 500) || null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "endpoint" },
+    );
   if (error) throw new Error(error.message);
 }
 
-export async function removeCoachPushSubscription(
-  userId: string,
-  endpoint: string,
-): Promise<void> {
+export async function removeCoachPushSubscription(userId: string, endpoint: string): Promise<void> {
   const { error } = await db()
     .from("coach_push_subscriptions")
     .delete()

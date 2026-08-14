@@ -8,7 +8,8 @@ self.addEventListener("push", (event) => {
 
   const title = typeof payload.title === "string" ? payload.title : "BodyFuel Coach";
   const body = typeof payload.body === "string" ? payload.body : "Es gibt etwas Neues im Coaching.";
-  const url = typeof payload.url === "string" && payload.url.startsWith("/") ? payload.url : "/coach";
+  const url =
+    typeof payload.url === "string" && payload.url.startsWith("/") ? payload.url : "/coach";
   const tag = typeof payload.tag === "string" ? payload.tag : undefined;
 
   event.waitUntil(
