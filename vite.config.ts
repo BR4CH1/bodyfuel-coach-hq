@@ -32,6 +32,7 @@ if (pwaEnabled) {
       manifest: false,
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,webmanifest,woff2}"],
+        importScripts: ["/coach-push-sw.js"],
         navigateFallback: undefined,
         cleanupOutdatedCaches: true,
         runtimeCaching: [
