@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { CalendarClock, ChevronDown, Clock, Inbox, Settings2, Users } from "lucide-react";
 
 import { StatPill } from "@/features/coach-dashboard/components/CoachDashboardPrimitives";
+import { CoachPushCard } from "@/features/coach-dashboard/components/CoachPushCard";
 import type { CoachWorkloadKey } from "@/features/coach-dashboard/types";
 
 export function CoachDashboardHeader({
@@ -85,6 +86,7 @@ export function CoachDashboardHeader({
           <QuickLink to="/coach/gifts" icon="🎁" label="Geschenklinks" />
           <QuickLink to="/coach/affiliates" icon="🤝" label="Affiliate Partner" />
           <QuickLink to="/coach/foods" icon="🥗" label="Lebensmittel-DB" />
+          <CoachPushCard />
         </div>
       </details>
     </div>
