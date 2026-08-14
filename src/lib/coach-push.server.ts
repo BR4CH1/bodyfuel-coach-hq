@@ -49,6 +49,14 @@ export function isCoachPushConfigured(): boolean {
   return Boolean(privateVapidKey());
 }
 
+export async function claimCoachPushEvent(eventKey: string): Promise<boolean> {
+  if (!eventKey || eventKey.length > 500) return false;
+  const { error } = await db().from("coach_push_event_receipts").insert({ event_key: eventKey });
+  if (!error) return true;
+  if (error.code === "23505") return false;
+  throw new Error(error.message);
+}
+
 function validateSubscription(input: PushSubscriptionInput) {
   let endpoint: URL;
   try {
