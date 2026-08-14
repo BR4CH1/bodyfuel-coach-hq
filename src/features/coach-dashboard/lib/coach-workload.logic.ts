@@ -15,12 +15,6 @@ type CustomerCase = {
 
 const displayName = (client: CoachClient) => client.display_name?.trim() || "Unbenannter Kunde";
 
-function primarySignal(item: CustomerCase): Exclude<CoachWorkloadKey, "lead"> {
-  if (item.signals.has("risk")) return "risk";
-  if (item.signals.has("checkin")) return "checkin";
-  return "plan";
-}
-
 export function buildCoachWorkload(
   view: CoachDashboardViewModel,
   leads: CoachLead[],
@@ -64,7 +58,7 @@ export function buildCoachWorkload(
   );
 
   safePlans
-    .filter((plan) => plan.days <= 3)
+    .filter((plan) => plan.days <= 5)
     .forEach((plan) => {
       const client = clientById.get(plan.id) ?? {
         id: plan.id,
@@ -89,7 +83,9 @@ export function buildCoachWorkload(
         "plan",
         plan.days < 0
           ? `${plan.kind === "nutrition" ? "Ernährungs" : "Trainings"}plan seit ${Math.abs(plan.days)} Tagen abgelaufen`
-          : `${plan.kind === "nutrition" ? "Ernährungs" : "Trainings"}plan läuft in ${plan.days} Tagen aus`,
+          : plan.days === 0
+            ? `${plan.kind === "nutrition" ? "Ernährungs" : "Trainings"}plan läuft heute aus`
+            : `${plan.kind === "nutrition" ? "Ernährungs" : "Trainings"}plan läuft in ${plan.days} Tagen aus`,
       );
     });
 
@@ -98,14 +94,16 @@ export function buildCoachWorkload(
     checkin: [],
     plan: [],
   };
+
   cases.forEach((item) => {
-    const signal = primarySignal(item);
-    customerItems[signal].push({
-      id: item.client.id,
-      name: displayName(item.client),
-      reason: item.reasons.join(" · "),
-      target: { kind: "customer", userId: item.client.id },
-      sourceSignalId: `case-${item.client.id}`,
+    item.signals.forEach((signal) => {
+      customerItems[signal].push({
+        id: item.client.id,
+        name: displayName(item.client),
+        reason: item.reasons.join(" · "),
+        target: { kind: "customer", userId: item.client.id },
+        sourceSignalId: `case-${item.client.id}-${signal}`,
+      });
     });
   });
 
@@ -159,7 +157,7 @@ export function buildCoachWorkload(
       },
       {
         key: "plan",
-        label: "Pläne ≤ 3 Tage",
+        label: "Pläne ≤ 5 Tage",
         value: expiring,
         tone: expiring > 0 ? "attention" : "neutral",
         items: customerItems.plan,
