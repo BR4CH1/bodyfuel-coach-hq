@@ -1,12 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
-import { useEffect } from "react";
-import { MessageCircle, Send, Loader2, Megaphone, ChevronRight } from "lucide-react";
+import { ChevronRight, Loader2, Megaphone, MessageCircle, Send } from "lucide-react";
 import { toast } from "sonner";
+
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -14,11 +13,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { clearFormDraft, useFormDraft } from "@/hooks/use-form-draft";
 import { supabase } from "@/integrations/supabase/client";
-import { useFormDraft, clearFormDraft } from "@/hooks/use-form-draft";
 import {
-  getCoachInbox,
   broadcastFromCoach,
+  getCoachInbox,
   type InboxThread,
 } from "@/lib/coach-messages.functions";
 
@@ -33,6 +33,12 @@ function timeAgo(iso: string) {
   return `vor ${d} Tag${d === 1 ? "" : "en"}`;
 }
 
+function audienceLabel(audience: "all" | "client" | "free") {
+  if (audience === "client") return "alle Coaching-Kunden";
+  if (audience === "free") return "alle Free-Nutzer";
+  return "alle Client- und Free-Nutzer";
+}
+
 export function CoachMessagesCard() {
   const qc = useQueryClient();
   const inboxFn = useServerFn(getCoachInbox);
@@ -44,7 +50,6 @@ export function CoachMessagesCard() {
     refetchInterval: 60_000,
   });
 
-  // Realtime: any new message → refresh inbox
   useEffect(() => {
     const channel = supabase
       .channel("coach-inbox-watch")
@@ -68,55 +73,113 @@ export function CoachMessagesCard() {
   useFormDraft(
     "bf.coach.broadcast.v1",
     { broadcastBody, audience },
-    (d) => {
-      if (typeof d.broadcastBody === "string") setBroadcastBody(d.broadcastBody);
-      if (d.audience === "all" || d.audience === "client" || d.audience === "free") setAudience(d.audience);
-      if (typeof d.broadcastBody === "string" && d.broadcastBody.length > 0) setShowBroadcast(true);
+    (draft) => {
+      if (typeof draft.broadcastBody === "string") setBroadcastBody(draft.broadcastBody);
+      if (draft.audience === "all" || draft.audience === "client" || draft.audience === "free") {
+        setAudience(draft.audience);
+      }
+      if (typeof draft.broadcastBody === "string" && draft.broadcastBody.length > 0) {
+        setShowBroadcast(true);
+      }
     },
   );
 
   const broadcastMut = useMutation({
     mutationFn: () => broadcastFn({ data: { body: broadcastBody.trim(), audience } }),
-    onSuccess: (res: any) => {
-      toast.success(`Broadcast gesendet an ${res?.sent ?? 0} Kunden`);
+    onSuccess: (result: any) => {
+      toast.success(`Broadcast gesendet an ${result?.sent ?? 0} Kunden`);
       setBroadcastBody("");
       clearFormDraft("bf.coach.broadcast.v1");
       setShowBroadcast(false);
       qc.invalidateQueries({ queryKey: ["coach-inbox"] });
     },
-    onError: (e: any) => toast.error(e.message ?? "Fehler"),
+    onError: (error: any) => toast.error(error.message ?? "Fehler"),
   });
 
   const threads = (inbox ?? []) as InboxThread[];
-  const totalUnread = threads.reduce((s, t) => s + t.unread_count, 0);
+  const totalUnread = threads.reduce((sum, thread) => sum + thread.unread_count, 0);
+
+  const sendBroadcast = () => {
+    const body = broadcastBody.trim();
+    if (!body) return;
+    const confirmed = window.confirm(
+      `Broadcast wirklich an ${audienceLabel(audience)} senden?\n\n${body.slice(0, 240)}${body.length > 240 ? "…" : ""}`,
+    );
+    if (confirmed) broadcastMut.mutate();
+  };
 
   return (
     <div className="rounded-2xl border border-border bg-card p-5">
-      <div className="mb-4 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <MessageCircle className="h-5 w-5 text-gold" />
-          <h2 className="font-display text-lg font-bold">Nachrichten</h2>
-          {totalUnread > 0 && (
-            <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-xs font-bold text-red-500">
-              {totalUnread} neu
-            </span>
-          )}
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowBroadcast((v) => !v)}
-        >
-          <Megaphone className="mr-1.5 h-4 w-4" />
-          An alle
-        </Button>
+      <div className="mb-4 flex items-center gap-2">
+        <MessageCircle className="h-5 w-5 text-gold" />
+        <h2 className="font-display text-lg font-bold">Nachrichten</h2>
+        {totalUnread > 0 && (
+          <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-xs font-bold text-red-500">
+            {totalUnread} neu
+          </span>
+        )}
       </div>
 
-      {showBroadcast && (
-        <div className="mb-4 space-y-2 rounded-xl border border-gold/30 bg-gold/5 p-3">
-          <div className="flex items-center gap-2">
+      {isLoading ? (
+        <p className="text-sm text-muted-foreground">Lade…</p>
+      ) : threads.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Noch keine Nachrichten.</p>
+      ) : (
+        <div className="space-y-1.5">
+          {threads.slice(0, 8).map((thread) => {
+            const name = thread.nickname || thread.display_name || "Unbekannt";
+            return (
+              <Link
+                key={thread.user_id}
+                to="/coach/customers/$userId"
+                params={{ userId: thread.user_id }}
+                hash="messages"
+                className="flex items-center justify-between gap-2 rounded-lg px-3 py-2 transition hover:bg-secondary"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="truncate font-semibold">{name}</span>
+                    {thread.unread_count > 0 && (
+                      <span className="shrink-0 rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
+                        {thread.unread_count}
+                      </span>
+                    )}
+                  </div>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {thread.last_from_coach ? "Du: " : ""}
+                    {thread.last_body}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-1.5 text-[11px] text-muted-foreground">
+                  {timeAgo(thread.last_at)}
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      )}
+
+      <details
+        open={showBroadcast}
+        onToggle={(event) => setShowBroadcast(event.currentTarget.open)}
+        className="group mt-4 border-t border-border/60 pt-3"
+      >
+        <summary className="flex cursor-pointer list-none items-center gap-2 text-xs font-semibold text-muted-foreground transition hover:text-foreground">
+          <Megaphone className="h-4 w-4" />
+          Broadcast an mehrere Nutzer
+          <span className="ml-auto text-[10px] uppercase tracking-wider group-open:hidden">
+            öffnen
+          </span>
+        </summary>
+
+        <div className="mt-3 space-y-2 rounded-xl border border-gold/30 bg-gold/5 p-3">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs font-semibold text-muted-foreground">Empfänger:</span>
-            <Select value={audience} onValueChange={(v) => setAudience(v as any)}>
+            <Select
+              value={audience}
+              onValueChange={(value) => setAudience(value as "all" | "client" | "free")}
+            >
               <SelectTrigger className="h-8 w-44 text-xs">
                 <SelectValue />
               </SelectTrigger>
@@ -129,18 +192,18 @@ export function CoachMessagesCard() {
           </div>
           <Textarea
             value={broadcastBody}
-            onChange={(e) => setBroadcastBody(e.target.value)}
-            placeholder="Nachricht an alle Kunden…"
+            onChange={(event) => setBroadcastBody(event.target.value)}
+            placeholder="Nachricht an mehrere Nutzer…"
             rows={3}
             maxLength={4000}
           />
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3">
             <span className="text-[11px] text-muted-foreground">
-              Wird in jeden Kunden-Thread eingefügt.
+              Vor dem Versand kommt immer eine Sicherheitsabfrage.
             </span>
             <Button
               size="sm"
-              onClick={() => broadcastMut.mutate()}
+              onClick={sendBroadcast}
               disabled={broadcastMut.isPending || broadcastBody.trim().length === 0}
             >
               {broadcastMut.isPending ? (
@@ -152,47 +215,7 @@ export function CoachMessagesCard() {
             </Button>
           </div>
         </div>
-      )}
-
-      {isLoading ? (
-        <p className="text-sm text-muted-foreground">Lade…</p>
-      ) : threads.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Noch keine Nachrichten.</p>
-      ) : (
-        <div className="space-y-1.5">
-          {threads.slice(0, 8).map((t) => {
-            const name = t.nickname || t.display_name || "Unbekannt";
-            return (
-              <Link
-                key={t.user_id}
-                to="/coach/customers/$userId"
-                params={{ userId: t.user_id }}
-                hash="messages"
-                className="flex items-center justify-between gap-2 rounded-lg px-3 py-2 transition hover:bg-secondary"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="truncate font-semibold">{name}</span>
-                    {t.unread_count > 0 && (
-                      <span className="shrink-0 rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
-                        {t.unread_count}
-                      </span>
-                    )}
-                  </div>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {t.last_from_coach ? "Du: " : ""}
-                    {t.last_body}
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-1.5 text-[11px] text-muted-foreground">
-                  {timeAgo(t.last_at)}
-                  <ChevronRight className="h-3.5 w-3.5" />
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-      )}
+      </details>
     </div>
   );
 }

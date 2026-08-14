@@ -15,12 +15,6 @@ type CustomerCase = {
 
 const displayName = (client: CoachClient) => client.display_name?.trim() || "Unbenannter Kunde";
 
-function primarySignal(item: CustomerCase): Exclude<CoachWorkloadKey, "lead"> {
-  if (item.signals.has("risk")) return "risk";
-  if (item.signals.has("checkin")) return "checkin";
-  return "plan";
-}
-
 export function buildCoachWorkload(
   view: CoachDashboardViewModel,
   leads: CoachLead[],
@@ -29,6 +23,7 @@ export function buildCoachWorkload(
   const safePendingCheckins = Array.isArray(view.pendingCheckins) ? view.pendingCheckins : [];
   const safePlans = Array.isArray(view.expiringPlans) ? view.expiringPlans : [];
   const safeLeads = Array.isArray(leads) ? leads : [];
+  const actionablePlans = safePlans.filter((plan) => plan.days <= 5);
   const clientById = new Map(
     [...safeRed, ...safePendingCheckins].map((client) => [client.id, client] as const),
   );
@@ -63,49 +58,51 @@ export function buildCoachWorkload(
     ),
   );
 
-  safePlans
-    .filter((plan) => plan.days <= 3)
-    .forEach((plan) => {
-      const client = clientById.get(plan.id) ?? {
-        id: plan.id,
-        display_name: plan.name,
-        last_checkin: null,
-        last_checkin_submitted_at: null,
-        pending_checkin_week_start: null,
-        pending_checkin_submitted_at: null,
-        last_weight: null,
-        last_weight_at: null,
-        last_nutrition_at: null,
-        last_nutrition_name: null,
-        last_training_at: null,
-        nutrition_plan_end: null,
-        training_plan_end: null,
-        kcal_dev: null,
-        kcal_dev_dir: null,
-        plateau_days: null,
-      };
-      addCase(
-        client,
-        "plan",
-        plan.days < 0
-          ? `${plan.kind === "nutrition" ? "Ernährungs" : "Trainings"}plan seit ${Math.abs(plan.days)} Tagen abgelaufen`
+  actionablePlans.forEach((plan) => {
+    const client = clientById.get(plan.id) ?? {
+      id: plan.id,
+      display_name: plan.name,
+      last_checkin: null,
+      last_checkin_submitted_at: null,
+      pending_checkin_week_start: null,
+      pending_checkin_submitted_at: null,
+      last_weight: null,
+      last_weight_at: null,
+      last_nutrition_at: null,
+      last_nutrition_name: null,
+      last_training_at: null,
+      nutrition_plan_end: null,
+      training_plan_end: null,
+      kcal_dev: null,
+      kcal_dev_dir: null,
+      plateau_days: null,
+    };
+    addCase(
+      client,
+      "plan",
+      plan.days < 0
+        ? `${plan.kind === "nutrition" ? "Ernährungs" : "Trainings"}plan seit ${Math.abs(plan.days)} Tagen abgelaufen`
+        : plan.days === 0
+          ? `${plan.kind === "nutrition" ? "Ernährungs" : "Trainings"}plan läuft heute aus`
           : `${plan.kind === "nutrition" ? "Ernährungs" : "Trainings"}plan läuft in ${plan.days} Tagen aus`,
-      );
-    });
+    );
+  });
 
   const customerItems: Record<Exclude<CoachWorkloadKey, "lead">, CoachWorkloadItem[]> = {
     risk: [],
     checkin: [],
     plan: [],
   };
+
   cases.forEach((item) => {
-    const signal = primarySignal(item);
-    customerItems[signal].push({
-      id: item.client.id,
-      name: displayName(item.client),
-      reason: item.reasons.join(" · "),
-      target: { kind: "customer", userId: item.client.id },
-      sourceSignalId: `case-${item.client.id}`,
+    item.signals.forEach((signal) => {
+      customerItems[signal].push({
+        id: item.client.id,
+        name: displayName(item.client),
+        reason: item.reasons.join(" · "),
+        target: { kind: "customer", userId: item.client.id },
+        sourceSignalId: `case-${item.client.id}-${signal}`,
+      });
     });
   });
 
@@ -119,7 +116,7 @@ export function buildCoachWorkload(
 
   const urgent = customerItems.risk.length;
   const due = customerItems.checkin.length;
-  const expiring = customerItems.plan.length;
+  const expiring = actionablePlans.length;
   const newLeads = leadItems.length;
   const total = cases.size + newLeads;
 
@@ -159,7 +156,7 @@ export function buildCoachWorkload(
       },
       {
         key: "plan",
-        label: "Pläne ≤ 3 Tage",
+        label: "Pläne ≤ 5 Tage",
         value: expiring,
         tone: expiring > 0 ? "attention" : "neutral",
         items: customerItems.plan,

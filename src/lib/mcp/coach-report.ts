@@ -2,7 +2,7 @@ import { buildCoachBriefing } from "@/features/coach-dashboard/lib/coach-briefin
 import { buildCoachDashboardViewModel } from "@/features/coach-dashboard/lib/coach-dashboard.logic";
 import { buildCoachIntelligence } from "@/features/coach-dashboard/lib/coach-intelligence.logic";
 import { buildCoachWorkload } from "@/features/coach-dashboard/lib/coach-workload.logic";
-import type { CoachDashboardData } from "@/features/coach-dashboard/types";
+import type { CoachDashboardData, CoachFollowUpTarget } from "@/features/coach-dashboard/types";
 
 export function buildCoachAgentReport(data: CoachDashboardData, now = new Date()) {
   const view = buildCoachDashboardViewModel(data.clients, now);
@@ -41,14 +41,18 @@ export function buildBusinessSummaryPayload(data: CoachDashboardData, now = new 
   };
 }
 
+function targetKey(target: CoachFollowUpTarget) {
+  return target.kind === "customer" ? `customer:${target.userId}` : `lead:${target.leadId}`;
+}
+
 export function buildOpenTasksPayload(
   data: CoachDashboardData,
   options: { limit: number; now?: Date },
 ) {
   const now = options.now ?? new Date();
   const { briefing, workload, intelligence } = buildCoachAgentReport(data, now);
-  const priority = new Map(["risk", "plan", "lead", "checkin"].map((key, i) => [key, i]));
-  const tasks = workload.metrics
+  const priority = new Map(["risk", "checkin", "plan", "lead"].map((key, i) => [key, i]));
+  const candidates = workload.metrics
     .flatMap((metric) =>
       metric.items.map((item) => ({
         id: item.sourceSignalId,
@@ -60,7 +64,16 @@ export function buildOpenTasksPayload(
     )
     .sort(
       (left, right) => (priority.get(left.category) ?? 99) - (priority.get(right.category) ?? 99),
-    )
+    );
+
+  const seenTargets = new Set<string>();
+  const tasks = candidates
+    .filter((task) => {
+      const key = targetKey(task.target);
+      if (seenTargets.has(key)) return false;
+      seenTargets.add(key);
+      return true;
+    })
     .slice(0, options.limit);
 
   return {

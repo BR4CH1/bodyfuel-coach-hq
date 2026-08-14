@@ -1,33 +1,55 @@
+import { useState } from "react";
+
 import { CoachMessagesCard } from "@/components/bodyfuel/CoachMessagesCard";
 import { CoachTrialOverview } from "@/components/bodyfuel/CoachTrialOverview";
 import { PendingDraftsCard } from "@/components/bodyfuel/PendingDraftsCard";
 import { TierMetricsCard } from "@/components/bodyfuel/TierMetricsCard";
 import { CoachCustomerOverviewSection } from "@/features/coach-dashboard/components/CoachCustomerOverviewSection";
 import { CoachDashboardHeader } from "@/features/coach-dashboard/components/CoachDashboardHeader";
-import { CoachFuelyBriefing } from "@/features/coach-dashboard/components/CoachFuelyBriefing";
 import { CoachFuelyFollowUps } from "@/features/coach-dashboard/components/CoachFuelyFollowUps";
-import { CoachFuelyWorkload } from "@/features/coach-dashboard/components/CoachFuelyWorkload";
 import { CoachRankingPanel } from "@/features/coach-dashboard/components/CoachRankingPanel";
+import { CoachTodayCockpit } from "@/features/coach-dashboard/components/CoachTodayCockpit";
 import { useCoachDashboardController } from "@/features/coach-dashboard/hooks/useCoachDashboardController";
 import type { CoachFollowUpCategory, CoachWorkloadKey } from "@/features/coach-dashboard/types";
-import { useState } from "react";
 
 export function CoachDashboardPage() {
   const [followUpFilter, setFollowUpFilter] = useState<CoachFollowUpCategory | null>(null);
-  const [workloadFocus, setWorkloadFocus] = useState<CoachWorkloadKey | null>(null);
+  const [todayFilter, setTodayFilter] = useState<CoachWorkloadKey | "all">("all");
   const controller = useCoachDashboardController();
   const {
     clients,
     leads,
     productCounts,
     view,
-    briefing,
     followUps,
     workload,
+    intelligence,
     isLoading,
     isError,
     error,
   } = controller;
+
+  const focusToday = (filter: CoachWorkloadKey) => {
+    setTodayFilter(filter);
+    window.setTimeout(
+      () =>
+        document
+          .getElementById("coach-today")
+          ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+      0,
+    );
+  };
+
+  const openFollowUps = (category: CoachFollowUpCategory) => {
+    setFollowUpFilter(category);
+    window.setTimeout(
+      () =>
+        document
+          .getElementById("fuely-followups")
+          ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+      0,
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -37,6 +59,7 @@ export function CoachDashboardPage() {
         leadCount={leads.length}
         pendingCheckinCount={view.pendingCheckins.length}
         expiringPlanCount={view.expiringPlans.length}
+        onOpenToday={focusToday}
       />
 
       {isLoading && (
@@ -53,32 +76,22 @@ export function CoachDashboardPage() {
 
       {!isLoading && !isError && (
         <div className="space-y-8">
-          <CoachFuelyBriefing
-            briefing={briefing}
-            onOpenWorkload={(key) => {
-              setWorkloadFocus(key);
-              window.setTimeout(
-                () =>
-                  document
-                    .getElementById("fuely-workload")
-                    ?.scrollIntoView({ behavior: "smooth", block: "start" }),
-                0,
-              );
-            }}
+          <CoachTodayCockpit
+            workload={workload}
+            intelligence={intelligence}
+            filter={todayFilter}
+            onFilterChange={setTodayFilter}
+            onOpenFollowUps={openFollowUps}
           />
-          <div id="fuely-workload" className="scroll-mt-24">
-            <CoachFuelyWorkload
-              workload={workload}
-              focusKey={workloadFocus}
-              onOpenFollowUps={(category) => setFollowUpFilter(category)}
-            />
-          </div>
+
+          <CoachMessagesCard />
+
           <CoachFuelyFollowUps
             drafts={followUps}
             selectedCategory={followUpFilter}
             onClearFilter={() => setFollowUpFilter(null)}
           />
-          <CoachMessagesCard />
+
           <PendingDraftsCard
             redClients={view.redClients.map((client) => ({
               id: client.id,
@@ -88,20 +101,16 @@ export function CoachDashboardPage() {
 
           <details className="group rounded-3xl border border-border bg-card">
             <summary className="cursor-pointer list-none px-5 py-4 font-display text-lg font-bold">
-              Kunden, Umsatz & Auswertungen
+              Kunden & Conversions
               <span className="ml-2 text-xs font-normal text-muted-foreground">
-                bei Bedarf öffnen
+                Analyse und Gesamtübersicht
               </span>
             </summary>
             <div className="space-y-6 border-t border-border p-4 sm:p-5">
               <CoachCustomerOverviewSection
                 clients={clients}
-                planOverview={view.planOverview}
-                recentMeasurements={view.recentMeasurements}
-                recentNutrition={view.recentNutrition}
-                recentTraining={view.recentTraining}
                 scoreCounts={view.scoreCounts}
-                redClients={view.redClients}
+                scoreById={view.scoreById}
               />
               <TierMetricsCard />
               <CoachTrialOverview />

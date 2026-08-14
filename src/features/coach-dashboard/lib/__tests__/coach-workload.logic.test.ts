@@ -52,24 +52,44 @@ describe("coach workload logic", () => {
     expect(result.total).toBe(1);
   });
 
-  it("only counts plans expiring within three days", () => {
+  it("counts plans expiring within five days", () => {
     const result = buildCoachWorkload(
       view({
         expiringPlans: [
           { id: "1", name: "A", kind: "nutrition", end: "2026-07-21", days: 1 },
-          { id: "2", name: "B", kind: "training", end: "2026-07-27", days: 7 },
+          { id: "2", name: "B", kind: "training", end: "2026-07-25", days: 5 },
+          { id: "3", name: "C", kind: "training", end: "2026-07-27", days: 7 },
         ],
       }),
       [],
     );
-    expect(result.metrics.find((metric) => metric.label === "Pläne ≤ 3 Tage")?.value).toBe(1);
+    expect(result.metrics.find((metric) => metric.label === "Pläne ≤ 5 Tage")?.value).toBe(2);
+  });
+
+  it("counts two expiring plans for one customer but keeps one customer case", () => {
+    const result = buildCoachWorkload(
+      view({
+        expiringPlans: [
+          { id: "1", name: "Mia", kind: "nutrition", end: "2026-07-21", days: 1 },
+          { id: "1", name: "Mia", kind: "training", end: "2026-07-22", days: 2 },
+        ],
+      }),
+      [],
+    );
+
+    const planMetric = result.metrics.find((metric) => metric.key === "plan");
+    expect(result.total).toBe(1);
+    expect(planMetric?.value).toBe(2);
+    expect(planMetric?.items).toHaveLength(1);
+    expect(planMetric?.items[0].reason).toContain("Ernährungsplan");
+    expect(planMetric?.items[0].reason).toContain("Trainingsplan");
   });
 
   it("returns clear without open work", () => {
     expect(buildCoachWorkload(view(), []).state).toBe("clear");
   });
 
-  it("groups risk, check-in and plan work into one customer case", () => {
+  it("deduplicates the customer total but keeps each workload signal count", () => {
     const customer = {
       id: "1",
       display_name: "Mia",
@@ -95,16 +115,22 @@ describe("coach workload logic", () => {
         redClients: [
           { ...customer, _score: { score: 20, level: "red", reasons: ["Keine Aktivität"] } },
         ],
-        expiringPlans: [{ id: "1", name: "Mia", kind: "nutrition", end: "2026-07-19", days: -1 }],
+        expiringPlans: [
+          { id: "1", name: "Mia", kind: "nutrition", end: "2026-07-19", days: -1 },
+        ],
       }),
       [],
     );
 
     expect(result.total).toBe(1);
     expect(result.metrics.find((metric) => metric.key === "risk")?.value).toBe(1);
-    expect(result.metrics.find((metric) => metric.key === "checkin")?.value).toBe(0);
-    expect(result.metrics.find((metric) => metric.key === "plan")?.value).toBe(0);
-    expect(result.metrics[0].items[0].reason).toContain("noch ungeprüft");
-    expect(result.metrics[0].items[0].reason).toContain("Ernährungsplan");
+    expect(result.metrics.find((metric) => metric.key === "checkin")?.value).toBe(1);
+    expect(result.metrics.find((metric) => metric.key === "plan")?.value).toBe(1);
+    expect(result.metrics.find((metric) => metric.key === "risk")?.items[0].reason).toContain(
+      "noch ungeprüft",
+    );
+    expect(result.metrics.find((metric) => metric.key === "risk")?.items[0].reason).toContain(
+      "Ernährungsplan",
+    );
   });
 });
