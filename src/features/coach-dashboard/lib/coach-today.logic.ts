@@ -15,6 +15,7 @@ export type CoachTodayItem = {
   priority: CoachTodayPriority;
   categories: CoachTodayCategory[];
   reasons: string[];
+  actionSignalIds: string[];
 };
 
 const PRIORITY_RANK: Record<CoachTodayPriority, number> = {
@@ -40,6 +41,12 @@ function addCategory(item: CoachTodayItem, category: CoachTodayCategory) {
   if (!item.categories.includes(category)) item.categories.push(category);
 }
 
+function addActionSignalIds(item: CoachTodayItem, ids: string[]) {
+  ids.forEach((id) => {
+    if (id && !item.actionSignalIds.includes(id)) item.actionSignalIds.push(id);
+  });
+}
+
 export function buildCoachTodayQueue(
   workload: CoachWorkloadViewModel,
   intelligence: CoachIntelligenceViewModel,
@@ -52,6 +59,7 @@ export function buildCoachTodayQueue(
     category: CoachTodayCategory,
     priority: CoachTodayPriority,
     reason: string,
+    actionSignalIds: string[],
   ) => {
     const key = queueKey(target);
     const current = queue.get(key) ?? {
@@ -61,10 +69,12 @@ export function buildCoachTodayQueue(
       priority,
       categories: [],
       reasons: [],
+      actionSignalIds: [],
     };
     current.priority = mergePriority(current.priority, priority);
     addCategory(current, category);
     addReason(current, reason);
+    addActionSignalIds(current, actionSignalIds);
     queue.set(key, current);
   };
 
@@ -72,7 +82,14 @@ export function buildCoachTodayQueue(
     const priority: CoachTodayPriority =
       metric.key === "risk" ? "urgent" : metric.key === "lead" ? "info" : "attention";
     metric.items.forEach((item) => {
-      upsert(item.target, item.name, metric.key, priority, item.reason);
+      upsert(
+        item.target,
+        item.name,
+        metric.key,
+        priority,
+        item.reason,
+        item.actionSignalIds?.length ? item.actionSignalIds : [item.sourceSignalId],
+      );
     });
   });
 
@@ -83,6 +100,7 @@ export function buildCoachTodayQueue(
       "stagnation",
       signal.severity === "urgent" ? "urgent" : "attention",
       signal.detail,
+      [signal.id],
     );
   });
 
@@ -93,6 +111,7 @@ export function buildCoachTodayQueue(
       "risk",
       "urgent",
       signal.detail,
+      [signal.id],
     );
   });
 
@@ -103,6 +122,7 @@ export function buildCoachTodayQueue(
       "attention",
       "attention",
       signal.detail,
+      [signal.id],
     );
   });
 
