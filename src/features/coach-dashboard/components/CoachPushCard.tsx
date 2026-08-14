@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Bell, BellOff, ChevronDown, Loader2, Send } from "lucide-react";
+import { Bell, BellOff, ChevronDown, Loader2, RefreshCw, Send } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,16 @@ import {
   sendMyCoachPushTest,
 } from "@/lib/coach-push.functions";
 
-type PushState = "loading" | "unsupported" | "blocked" | "inactive" | "active" | "unconfigured";
+type PushState =
+  | "loading"
+  | "unsupported"
+  | "blocked"
+  | "inactive"
+  | "active"
+  | "unconfigured"
+  | "error";
+
+const STATUS_TIMEOUT_MS = 5000;
 
 function urlBase64ToUint8Array(value: string): Uint8Array<ArrayBuffer> {
   const padding = "=".repeat((4 - (value.length % 4)) % 4);
@@ -31,6 +40,42 @@ function browserSupportsPush() {
   );
 }
 
+function withTimeout<T>(promise: Promise<T>, message: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timeoutId = window.setTimeout(() => reject(new Error(message)), STATUS_TIMEOUT_MS);
+    promise.then(
+      (value) => {
+        window.clearTimeout(timeoutId);
+        resolve(value);
+      },
+      (error) => {
+        window.clearTimeout(timeoutId);
+        reject(error);
+      },
+    );
+  });
+}
+
+async function getExistingPushSubscription(): Promise<PushSubscription | null> {
+  const registration = await withTimeout(
+    navigator.serviceWorker.getRegistration(),
+    "Service Worker antwortet nicht",
+  );
+  if (!registration) return null;
+  return withTimeout(registration.pushManager.getSubscription(), "Push-Status antwortet nicht");
+}
+
+async function ensurePushRegistration(): Promise<ServiceWorkerRegistration> {
+  const existing = await withTimeout(
+    navigator.serviceWorker.getRegistration(),
+    "Service Worker antwortet nicht",
+  );
+  if (existing) return existing;
+
+  await withTimeout(navigator.serviceWorker.register("/sw.js"), "Service Worker konnte nicht gestartet werden");
+  return withTimeout(navigator.serviceWorker.ready, "Service Worker wurde nicht rechtzeitig bereit");
+}
+
 export function CoachPushCard() {
   const getConfig = useServerFn(getCoachPushConfig);
   const saveSubscription = useServerFn(saveMyCoachPushSubscription);
@@ -39,7 +84,6 @@ export function CoachPushCard() {
 
   const [state, setState] = useState<PushState>("loading");
   const [busy, setBusy] = useState(false);
-  const [publicKey, setPublicKey] = useState("");
 
   const statusText = useMemo(() => {
     if (state === "active") return "Aktiv auf diesem Gerät";
@@ -47,73 +91,84 @@ export function CoachPushCard() {
     if (state === "unsupported") return "Auf diesem Gerät nicht verfügbar";
     if (state === "unconfigured") return "Server-Konfiguration fehlt";
     if (state === "inactive") return "Noch nicht aktiviert";
+    if (state === "error") return "Status konnte nicht geprüft werden";
     return "Status wird geprüft…";
   }, [state]);
 
+  const checkStatus = useCallback(async () => {
+    setState("loading");
+    if (!browserSupportsPush()) {
+      setState("unsupported");
+      return;
+    }
+    if (Notification.permission === "denied") {
+      setState("blocked");
+      return;
+    }
+
+    try {
+      const existing = await getExistingPushSubscription();
+      setState(existing ? "active" : "inactive");
+    } catch {
+      setState("error");
+    }
+  }, []);
+
   useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const config = await getConfig();
-        if (cancelled) return;
-        setPublicKey(config.publicKey);
-        if (!config.configured) {
-          setState("unconfigured");
-          return;
-        }
-        if (!browserSupportsPush()) {
-          setState("unsupported");
-          return;
-        }
-        if (Notification.permission === "denied") {
-          setState("blocked");
-          return;
-        }
-        const registration = await navigator.serviceWorker.ready;
-        const existing = await registration.pushManager.getSubscription();
-        setState(existing ? "active" : "inactive");
-      } catch {
-        if (!cancelled) setState("unsupported");
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [getConfig]);
+    void checkStatus();
+  }, [checkStatus]);
 
   const activate = async () => {
-    if (!browserSupportsPush() || !publicKey) return;
+    if (!browserSupportsPush()) {
+      setState("unsupported");
+      return;
+    }
+
     setBusy(true);
     try {
+      const config = await withTimeout(getConfig(), "Push-Konfiguration antwortet nicht");
+      if (!config.configured) {
+        setState("unconfigured");
+        toast.error("Push ist serverseitig noch nicht konfiguriert");
+        return;
+      }
+
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {
         setState(permission === "denied" ? "blocked" : "inactive");
         return;
       }
 
-      const registration = await navigator.serviceWorker.ready;
+      const registration = await ensurePushRegistration();
       const subscription =
-        (await registration.pushManager.getSubscription()) ??
-        (await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(publicKey),
-        }));
+        (await withTimeout(registration.pushManager.getSubscription(), "Push-Status antwortet nicht")) ??
+        (await withTimeout(
+          registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(config.publicKey),
+          }),
+          "Push-Aktivierung dauert zu lange",
+        ));
 
       const json = subscription.toJSON();
       if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) {
         throw new Error("Browser hat keine vollständige Push-Subscription geliefert");
       }
 
-      await saveSubscription({
-        data: {
-          endpoint: json.endpoint,
-          keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
-          userAgent: navigator.userAgent,
-        },
-      });
+      await withTimeout(
+        saveSubscription({
+          data: {
+            endpoint: json.endpoint,
+            keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
+            userAgent: navigator.userAgent,
+          },
+        }),
+        "Push-Subscription konnte nicht gespeichert werden",
+      );
       setState("active");
       toast.success("Coach-Push aktiviert");
     } catch (error) {
+      setState("error");
       toast.error(error instanceof Error ? error.message : "Push konnte nicht aktiviert werden");
     } finally {
       setBusy(false);
@@ -124,15 +179,18 @@ export function CoachPushCard() {
     if (!browserSupportsPush()) return;
     setBusy(true);
     try {
-      const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.getSubscription();
+      const subscription = await getExistingPushSubscription();
       if (subscription) {
-        await removeSubscription({ data: { endpoint: subscription.endpoint } });
-        await subscription.unsubscribe();
+        await withTimeout(
+          removeSubscription({ data: { endpoint: subscription.endpoint } }),
+          "Push-Subscription konnte nicht entfernt werden",
+        );
+        await withTimeout(subscription.unsubscribe(), "Push konnte nicht deaktiviert werden");
       }
       setState("inactive");
       toast.success("Coach-Push deaktiviert");
     } catch (error) {
+      setState("error");
       toast.error(error instanceof Error ? error.message : "Push konnte nicht deaktiviert werden");
     } finally {
       setBusy(false);
@@ -142,7 +200,7 @@ export function CoachPushCard() {
   const test = async () => {
     setBusy(true);
     try {
-      await sendTest();
+      await withTimeout(sendTest(), "Test-Push antwortet nicht");
       toast.success("Test-Push wurde versendet");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Test-Push fehlgeschlagen");
@@ -186,6 +244,11 @@ export function CoachPushCard() {
                 Deaktivieren
               </Button>
             </>
+          ) : state === "error" ? (
+            <Button size="sm" variant="outline" onClick={() => void checkStatus()} disabled={busy}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Erneut prüfen
+            </Button>
           ) : (
             <Button
               size="sm"
