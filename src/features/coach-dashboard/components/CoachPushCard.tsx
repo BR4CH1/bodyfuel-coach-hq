@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Bell, BellOff, Loader2, Send } from "lucide-react";
+import { Bell, BellOff, ChevronDown, Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -43,9 +43,9 @@ export function CoachPushCard() {
 
   const statusText = useMemo(() => {
     if (state === "active") return "Aktiv auf diesem Gerät";
-    if (state === "blocked") return "Benachrichtigungen im Browser blockiert";
-    if (state === "unsupported") return "Auf diesem Gerät/Browser nicht verfügbar";
-    if (state === "unconfigured") return "Server-Konfiguration fehlt noch";
+    if (state === "blocked") return "Im Browser blockiert";
+    if (state === "unsupported") return "Auf diesem Gerät nicht verfügbar";
+    if (state === "unconfigured") return "Server-Konfiguration fehlt";
     if (state === "inactive") return "Noch nicht aktiviert";
     return "Status wird geprüft…";
   }, [state]);
@@ -152,22 +152,26 @@ export function CoachPushCard() {
   };
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-4 sm:p-5">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-3">
-          <div className="rounded-xl bg-primary/10 p-2.5 text-primary">
-            {state === "active" ? <Bell className="h-5 w-5" /> : <BellOff className="h-5 w-5" />}
-          </div>
-          <div>
-            <p className="font-display text-lg font-bold">Coach Push</p>
-            <p className="text-sm text-muted-foreground">{statusText}</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Meldet neue Kundennachrichten und neu eingereichte Check-ins direkt auf diesem Gerät.
-            </p>
-          </div>
-        </div>
+    <details className="group rounded-xl border border-border bg-card sm:col-span-2 lg:col-span-2">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5">
+        <span className="flex min-w-0 items-center gap-2.5">
+          <span className="rounded-lg bg-primary/10 p-2 text-primary">
+            {state === "active" ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
+          </span>
+          <span className="min-w-0">
+            <span className="block font-display text-sm font-bold">Coach Push</span>
+            <span className="block truncate text-xs text-muted-foreground">{statusText}</span>
+          </span>
+        </span>
+        <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition group-open:rotate-180" />
+      </summary>
 
-        <div className="flex flex-wrap gap-2">
+      <div className="border-t border-border p-3">
+        <p className="text-xs text-muted-foreground">
+          Neue Kundennachrichten und Check-ins direkt auf diesem Gerät melden.
+        </p>
+
+        <div className="mt-3 flex flex-wrap gap-2">
           {state === "active" ? (
             <>
               <Button size="sm" variant="outline" onClick={test} disabled={busy}>
@@ -204,6 +208,6 @@ export function CoachPushCard() {
           )}
         </div>
       </div>
-    </div>
+    </details>
   );
 }
