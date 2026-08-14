@@ -1,0 +1,34 @@
+name: Static Service Worker Verification
+
+on:
+  push:
+    branches:
+      - fix/static-pwa-service-worker
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - name: Verify static PWA assets
+        run: |
+          set -euxo pipefail
+          test -f .output/public/sw.js
+          grep -F 'BodyFuel static service worker' .output/public/sw.js
+          test -f .output/public/manifest.webmanifest
+          grep -F 'BodyFuel Coaching' .output/public/manifest.webmanifest
+          if ls .output/public/workbox-*.js >/dev/null 2>&1; then
+            echo 'Unexpected generated Workbox runtime found'
+            exit 1
+          fi
