@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Bell, BellOff, ChevronDown, Loader2, RefreshCw, Send } from "lucide-react";
 import { toast } from "sonner";
@@ -95,7 +95,7 @@ export function CoachPushCard() {
     return "Status wird geprüft…";
   }, [state]);
 
-  const checkStatus = async () => {
+  const checkStatus = useCallback(async () => {
     setState("loading");
     if (!browserSupportsPush()) {
       setState("unsupported");
@@ -112,11 +112,11 @@ export function CoachPushCard() {
     } catch {
       setState("error");
     }
-  };
+  }, []);
 
   useEffect(() => {
     void checkStatus();
-  }, []);
+  }, [checkStatus]);
 
   const activate = async () => {
     if (!browserSupportsPush()) {
@@ -129,7 +129,8 @@ export function CoachPushCard() {
       const config = await withTimeout(getConfig(), "Push-Konfiguration antwortet nicht");
       if (!config.configured) {
         setState("unconfigured");
-        throw new Error("Push ist serverseitig noch nicht konfiguriert");
+        toast.error("Push ist serverseitig noch nicht konfiguriert");
+        return;
       }
 
       const permission = await Notification.requestPermission();
@@ -167,7 +168,7 @@ export function CoachPushCard() {
       setState("active");
       toast.success("Coach-Push aktiviert");
     } catch (error) {
-      if (state !== "unconfigured") setState("error");
+      setState("error");
       toast.error(error instanceof Error ? error.message : "Push konnte nicht aktiviert werden");
     } finally {
       setBusy(false);
