@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 
 import { loadCoachDashboardData } from "@/features/coach-dashboard/lib/coach-dashboard.data";
 import { buildCoachDashboardViewModel } from "@/features/coach-dashboard/lib/coach-dashboard.logic";
-import { buildCoachBriefing } from "@/features/coach-dashboard/lib/coach-briefing.logic";
 import { buildCoachFollowUps } from "@/features/coach-dashboard/lib/coach-followups.logic";
 import { buildCoachWorkload } from "@/features/coach-dashboard/lib/coach-workload.logic";
 import { buildCoachIntelligence } from "@/features/coach-dashboard/lib/coach-intelligence.logic";
@@ -24,16 +23,6 @@ export function useCoachDashboardController() {
   const leads = dashboardQuery.data?.leads ?? EMPTY_LEADS;
   const productCounts = dashboardQuery.data?.productCounts ?? EMPTY_PRODUCT_COUNTS;
   const view = useMemo(() => buildCoachDashboardViewModel(clients), [clients]);
-  const briefing = useMemo(
-    () =>
-      buildCoachBriefing({
-        view,
-        leads,
-        performancePending: 0,
-        showPerformanceNavigation: false,
-      }),
-    [view, leads],
-  );
   const workload = useMemo(() => buildCoachWorkload(view, leads), [view, leads]);
   const intelligence = useMemo(() => buildCoachIntelligence(view, clients), [view, clients]);
   const followUps = useMemo(
@@ -46,9 +35,9 @@ export function useCoachDashboardController() {
     leads,
     productCounts,
     view,
-    briefing,
     followUps,
     workload,
+    intelligence,
     isLoading: dashboardQuery.isLoading,
     isError: dashboardQuery.isError,
     error: dashboardQuery.error,
