@@ -66,6 +66,25 @@ describe("coach workload logic", () => {
     expect(result.metrics.find((metric) => metric.label === "Pläne ≤ 5 Tage")?.value).toBe(2);
   });
 
+  it("counts two expiring plans for one customer but keeps one customer case", () => {
+    const result = buildCoachWorkload(
+      view({
+        expiringPlans: [
+          { id: "1", name: "Mia", kind: "nutrition", end: "2026-07-21", days: 1 },
+          { id: "1", name: "Mia", kind: "training", end: "2026-07-22", days: 2 },
+        ],
+      }),
+      [],
+    );
+
+    const planMetric = result.metrics.find((metric) => metric.key === "plan");
+    expect(result.total).toBe(1);
+    expect(planMetric?.value).toBe(2);
+    expect(planMetric?.items).toHaveLength(1);
+    expect(planMetric?.items[0].reason).toContain("Ernährungsplan");
+    expect(planMetric?.items[0].reason).toContain("Trainingsplan");
+  });
+
   it("returns clear without open work", () => {
     expect(buildCoachWorkload(view(), []).state).toBe("clear");
   });
