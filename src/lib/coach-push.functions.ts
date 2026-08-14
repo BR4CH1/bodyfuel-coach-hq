@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { classifyRecentSelfRegistration } from "@/lib/coach-push-registration.logic";
 
 export type CoachPushSubscriptionInput = {
   endpoint: string;
@@ -104,6 +105,44 @@ export const notifyCoachCheckinSubmitted = createServerFn({ method: "POST" })
       });
     } catch (error) {
       console.warn("[coach-push] check-in notification failed", error);
+    }
+    return { ok: true };
+  });
+
+
+export const notifyCoachRecentRegistration = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    try {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data, error } = await supabaseAdmin.auth.admin.getUserById(context.userId);
+      if (error || !data.user) return { ok: false };
+
+      const kind = classifyRecentSelfRegistration(data.user);
+      if (!kind) return { ok: true };
+
+      const { claimCoachPushEvent, isCoachPushConfigured, notifyEnabledCoaches } =
+        await import("@/lib/coach-push.server");
+      if (!isCoachPushConfigured()) return { ok: true };
+
+      const claimed = await claimCoachPushEvent(`registration:${context.userId}`);
+      if (!claimed) return { ok: true };
+
+      const body =
+        kind === "free"
+          ? "Ein neuer BodyFuel-Tracker-Account wurde aktiviert."
+          : kind === "smart"
+            ? "Ein neuer BodyFuel-Smart-Account wurde aktiviert."
+            : "Ein neuer BodyFuel-Account wurde aktiviert.";
+
+      await notifyEnabledCoaches({
+        title: "Neue Registrierung",
+        body,
+        url: "/coach",
+        tag: `registration-${context.userId}`,
+      });
+    } catch (error) {
+      console.warn("[coach-push] registration notification failed", error);
     }
     return { ok: true };
   });
