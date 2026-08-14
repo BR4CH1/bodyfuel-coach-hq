@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { CalendarCheck, Save, Smile } from "lucide-react";
 import { toast } from "sonner";
@@ -13,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useFormDraft, clearFormDraft } from "@/hooks/use-form-draft";
+import { notifyCoachCheckinSubmitted } from "@/lib/coach-push.functions";
 
 export const Route = createFileRoute("/check-in")({
   head: () => ({ meta: [{ title: "Wochen-Check-in — BODYFUEL" }] }),
@@ -71,6 +73,7 @@ const empty: Form = {
 };
 
 function WeeklyCheckIn() {
+  const notifyCoachCheckin = useServerFn(notifyCoachCheckinSubmitted);
   const { supabaseUser } = useSession();
   const uid = supabaseUser?.id;
   const week = mondayOf(new Date());
@@ -95,7 +98,8 @@ function WeeklyCheckIn() {
         setForm({
           weight_kg: data.weight_kg?.toString() ?? "",
           body_fat_pct: data.body_fat_pct?.toString() ?? "",
-          muscle_mass_kg: (data as { muscle_mass_kg?: number | null }).muscle_mass_kg?.toString() ?? "",
+          muscle_mass_kg:
+            (data as { muscle_mass_kg?: number | null }).muscle_mass_kg?.toString() ?? "",
           waist_cm: data.waist_cm?.toString() ?? "",
           chest_cm: data.chest_cm?.toString() ?? "",
           thigh_left_cm: data.thigh_left_cm?.toString() ?? "",
@@ -191,6 +195,11 @@ function WeeklyCheckIn() {
     else {
       clearFormDraft(draftKey);
       toast.success(existingId ? "Check-in aktualisiert" : "Check-in gespeichert");
+      if (!existingId) {
+        void notifyCoachCheckin({ data: { weekStart: week } }).catch(() => {
+          // Check-in is already stored; Push delivery remains best-effort.
+        });
+      }
     }
   };
 
@@ -199,9 +208,7 @@ function WeeklyCheckIn() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-          Wochen-Check-in
-        </p>
+        <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Wochen-Check-in</p>
         <h1 className="font-display text-3xl font-bold sm:text-4xl">
           Woche ab {new Date(week).toLocaleDateString("de-DE")}
         </h1>
@@ -212,7 +219,6 @@ function WeeklyCheckIn() {
 
       {/* Aktueller Check-in inkl. Coach-Feedback & Archiv */}
       <MyCheckinsHistorySection userId={uid} />
-
 
       {loading ? (
         <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground">
@@ -389,13 +395,7 @@ function Section({
   );
 }
 
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
       <Label className="text-xs uppercase tracking-wider text-muted-foreground">{label}</Label>
@@ -416,9 +416,7 @@ function Rating({
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
-        <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-          {label}
-        </Label>
+        <Label className="text-xs uppercase tracking-wider text-muted-foreground">{label}</Label>
         <span className="text-xs text-muted-foreground">{value ? `${value} / 5` : "—"}</span>
       </div>
       <div className="grid grid-cols-5 gap-2">
