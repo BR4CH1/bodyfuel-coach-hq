@@ -73,23 +73,27 @@ export function CoachMessagesCard() {
   useFormDraft(
     "bf.coach.broadcast.v1",
     { broadcastBody, audience },
-    (d) => {
-      if (typeof d.broadcastBody === "string") setBroadcastBody(d.broadcastBody);
-      if (d.audience === "all" || d.audience === "client" || d.audience === "free") setAudience(d.audience);
-      if (typeof d.broadcastBody === "string" && d.broadcastBody.length > 0) setShowBroadcast(true);
+    (draft) => {
+      if (typeof draft.broadcastBody === "string") setBroadcastBody(draft.broadcastBody);
+      if (draft.audience === "all" || draft.audience === "client" || draft.audience === "free") {
+        setAudience(draft.audience);
+      }
+      if (typeof draft.broadcastBody === "string" && draft.broadcastBody.length > 0) {
+        setShowBroadcast(true);
+      }
     },
   );
 
   const broadcastMut = useMutation({
     mutationFn: () => broadcastFn({ data: { body: broadcastBody.trim(), audience } }),
-    onSuccess: (res: any) => {
-      toast.success(`Broadcast gesendet an ${res?.sent ?? 0} Kunden`);
+    onSuccess: (result: any) => {
+      toast.success(`Broadcast gesendet an ${result?.sent ?? 0} Kunden`);
       setBroadcastBody("");
       clearFormDraft("bf.coach.broadcast.v1");
       setShowBroadcast(false);
       qc.invalidateQueries({ queryKey: ["coach-inbox"] });
     },
-    onError: (e: any) => toast.error(e.message ?? "Fehler"),
+    onError: (error: any) => toast.error(error.message ?? "Fehler"),
   });
 
   const threads = (inbox ?? []) as InboxThread[];
@@ -106,63 +110,15 @@ export function CoachMessagesCard() {
 
   return (
     <div className="rounded-2xl border border-border bg-card p-5">
-      <div className="mb-4 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <MessageCircle className="h-5 w-5 text-gold" />
-          <h2 className="font-display text-lg font-bold">Nachrichten</h2>
-          {totalUnread > 0 && (
-            <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-xs font-bold text-red-500">
-              {totalUnread} neu
-            </span>
-          )}
-        </div>
-        <Button variant="outline" size="sm" onClick={() => setShowBroadcast((value) => !value)}>
-          <Megaphone className="mr-1.5 h-4 w-4" />
-          Broadcast
-        </Button>
+      <div className="mb-4 flex items-center gap-2">
+        <MessageCircle className="h-5 w-5 text-gold" />
+        <h2 className="font-display text-lg font-bold">Nachrichten</h2>
+        {totalUnread > 0 && (
+          <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-xs font-bold text-red-500">
+            {totalUnread} neu
+          </span>
+        )}
       </div>
-
-      {showBroadcast && (
-        <div className="mb-4 space-y-2 rounded-xl border border-gold/30 bg-gold/5 p-3">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-muted-foreground">Empfänger:</span>
-            <Select value={audience} onValueChange={(value) => setAudience(value as "all" | "client" | "free")}>
-              <SelectTrigger className="h-8 w-44 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Alle (Client + Free)</SelectItem>
-                <SelectItem value="client">Nur Coaching-Kunden</SelectItem>
-                <SelectItem value="free">Nur Free-Nutzer</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <Textarea
-            value={broadcastBody}
-            onChange={(event) => setBroadcastBody(event.target.value)}
-            placeholder="Nachricht an mehrere Nutzer…"
-            rows={3}
-            maxLength={4000}
-          />
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-[11px] text-muted-foreground">
-              Vor dem Versand kommt immer eine Sicherheitsabfrage.
-            </span>
-            <Button
-              size="sm"
-              onClick={sendBroadcast}
-              disabled={broadcastMut.isPending || broadcastBody.trim().length === 0}
-            >
-              {broadcastMut.isPending ? (
-                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="mr-1.5 h-4 w-4" />
-              )}
-              Senden
-            </Button>
-          </div>
-        </div>
-      )}
 
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Lade…</p>
@@ -203,6 +159,63 @@ export function CoachMessagesCard() {
           })}
         </div>
       )}
+
+      <details
+        open={showBroadcast}
+        onToggle={(event) => setShowBroadcast(event.currentTarget.open)}
+        className="group mt-4 border-t border-border/60 pt-3"
+      >
+        <summary className="flex cursor-pointer list-none items-center gap-2 text-xs font-semibold text-muted-foreground transition hover:text-foreground">
+          <Megaphone className="h-4 w-4" />
+          Broadcast an mehrere Nutzer
+          <span className="ml-auto text-[10px] uppercase tracking-wider group-open:hidden">
+            öffnen
+          </span>
+        </summary>
+
+        <div className="mt-3 space-y-2 rounded-xl border border-gold/30 bg-gold/5 p-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold text-muted-foreground">Empfänger:</span>
+            <Select
+              value={audience}
+              onValueChange={(value) => setAudience(value as "all" | "client" | "free")}
+            >
+              <SelectTrigger className="h-8 w-44 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Alle (Client + Free)</SelectItem>
+                <SelectItem value="client">Nur Coaching-Kunden</SelectItem>
+                <SelectItem value="free">Nur Free-Nutzer</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Textarea
+            value={broadcastBody}
+            onChange={(event) => setBroadcastBody(event.target.value)}
+            placeholder="Nachricht an mehrere Nutzer…"
+            rows={3}
+            maxLength={4000}
+          />
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[11px] text-muted-foreground">
+              Vor dem Versand kommt immer eine Sicherheitsabfrage.
+            </span>
+            <Button
+              size="sm"
+              onClick={sendBroadcast}
+              disabled={broadcastMut.isPending || broadcastBody.trim().length === 0}
+            >
+              {broadcastMut.isPending ? (
+                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="mr-1.5 h-4 w-4" />
+              )}
+              Senden
+            </Button>
+          </div>
+        </div>
+      </details>
     </div>
   );
 }
