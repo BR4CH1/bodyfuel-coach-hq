@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertGlobalCoachOrAnyOrgCoach } from "@/lib/organizations/org-coach-access";
 import type { ImportedPlan } from "@/lib/customer-training-plan.functions";
+import { toEngineIngredientAmount } from "@/lib/nutrition-ingredient-units";
 
 /**
  * Coach-Plan-Import:
@@ -375,19 +376,6 @@ export const parseCoachNutritionPlan = createServerFn({ method: "POST" })
     return normalizeNutritionPlan(parsed);
   });
 
-/** Nur verlustfreie metrische Umrechnung; Portionsschätzungen sind absichtlich verboten. */
-function canonicalAmount(
-  amount: number,
-  unit: string,
-): { amount: number; unit: "g" | "ml" } | null {
-  const u = unit.toLowerCase().trim();
-  if (u === "g" || u === "gramm") return { amount, unit: "g" };
-  if (u === "kg") return { amount: amount * 1000, unit: "g" };
-  if (u === "ml" || u === "milliliter") return { amount, unit: "ml" };
-  if (u === "l" || u === "liter") return { amount: amount * 1000, unit: "ml" };
-  return null;
-}
-
 export type NutritionSaveMode = "new_plan" | "append_week" | "replace_week" | "replace_plan";
 
 /**
@@ -446,24 +434,13 @@ export const saveCoachNutritionPlanDraft = createServerFn({ method: "POST" })
       let daySum = { kcal: 0, p: 0, c: 0, f: 0 };
       for (const m of d.meals) {
         const engineIngs = m.ingredients.map((ing) => {
-          const grams = Number(ing.grams ?? 0);
-          const canonical =
-            grams > 0
-              ? { amount: grams, unit: "g" as const }
-              : ing.amount && ing.unit
-                ? canonicalAmount(Number(ing.amount), ing.unit)
-                : null;
-          if (!canonical || canonical.amount <= 0) {
+          const normalizedAmount = toEngineIngredientAmount(ing);
+          if (!normalizedAmount) {
             throw new Error(
               `Ungültige Menge für „${ing.name}": Flüssigkeiten müssen in ml, alles andere in g angegeben sein.`,
             );
           }
-          return {
-            name: ing.name,
-            grams: Math.round(canonical.amount),
-            amount: Math.round(canonical.amount),
-            unit: canonical.unit,
-          };
+          return { name: ing.name, ...normalizedAmount };
         });
         const result = await computeMealFromIngredients(supabaseAdmin, engineIngs);
         meals.push({
