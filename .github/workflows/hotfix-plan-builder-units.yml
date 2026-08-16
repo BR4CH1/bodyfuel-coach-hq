@@ -1,0 +1,92 @@
+name: Temporary plan builder unit hotfix
+
+on:
+  push:
+    branches:
+      - fix/plan-builder-unit-validation
+
+permissions:
+  contents: write
+
+jobs:
+  hotfix:
+    if: ${{ !contains(github.event.head_commit.message, '[hotfix applied]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/plan-builder-unit-validation
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Apply focused hotfix
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/lib/plan-builder.functions.ts')
+          text = path.read_text()
+
+          old_import = 'import type { TrainingWeekSchedule } from "@/lib/training-schedule.logic";\n'
+          new_import = old_import + 'import { normalizeBuilderIngredientsForSave } from "@/features/nutrition-plan-builder/lib/ingredient-save.logic";\n'
+          if new_import not in text:
+              if old_import not in text:
+                  raise SystemExit('expected import anchor not found')
+              text = text.replace(old_import, new_import, 1)
+
+          old_type = '''export type BuilderIngredient = {\n  name: string;\n  grams: number;\n  /** Ursprungsmenge vor der Makro-Optimierung. */\n'''
+          new_type = '''export type BuilderIngredient = {\n  name: string;\n  grams: number;\n  /** Legacy Auto-Drafts/Bibliotheks-Snapshots können noch amount_g/amount enthalten. */\n  amount_g?: number | null;\n  amount?: number | null;\n  unit?: "g" | "ml" | null;\n  /** Ursprungsmenge vor der Makro-Optimierung. */\n'''
+          if new_type not in text:
+              if old_type not in text:
+                  raise SystemExit('expected BuilderIngredient anchor not found')
+              text = text.replace(old_type, new_type, 1)
+
+          old_mapping = '''              ingredients: m.ingredients.map((i) => ({\n                name: i.name,\n                grams: Math.round((i.grams ?? 0) * f),\n              })),\n'''
+          new_mapping = '''              ingredients: normalizeBuilderIngredientsForSave(m.ingredients, f),\n'''
+          if new_mapping not in text:
+              if old_mapping not in text:
+                  raise SystemExit('expected ingredient mapping anchor not found')
+              text = text.replace(old_mapping, new_mapping, 1)
+
+          path.write_text(text)
+
+          helper = Path('src/features/nutrition-plan-builder/lib/ingredient-save.logic.ts')
+          helper.write_text('''export type BuilderIngredientSaveInput = {\n  name: string;\n  grams?: number | null;\n  amount_g?: number | null;\n  amount?: number | null;\n  unit?: "g" | "ml" | null;\n};\n\nfunction positiveAmount(...values: unknown[]): number {\n  for (const value of values) {\n    const parsed = Number(value);\n    if (Number.isFinite(parsed) && parsed > 0) return parsed;\n  }\n  return 0;\n}\n\n/**\n * Normalisiert Builder-Zutaten vor dem Speichern.\n *\n * - Aktuelle Builder-Daten nutzen `grams`.\n * - Ältere Auto-Drafts/Bibliotheks-Snapshots können noch `amount_g` oder\n *   `amount` enthalten. Diese Werte dürfen beim Publish nicht zu 0 g werden.\n * - Zutaten, die der Makro-Optimizer bewusst auf 0 g reduziert hat, werden\n *   ausgelassen statt den gesamten Plan mit einer Mengen-Fehlermeldung zu blockieren.\n */\nexport function normalizeBuilderIngredientsForSave(\n  ingredients: readonly BuilderIngredientSaveInput[],\n  portionFactor = 1,\n): Array<{ name: string; grams: number }> {\n  const factor =\n    Number.isFinite(Number(portionFactor)) && Number(portionFactor) > 0\n      ? Number(portionFactor)\n      : 1;\n\n  return ingredients.flatMap((ingredient) => {\n    const name = String(ingredient.name ?? "").trim();\n    if (!name) return [];\n\n    // `grams` ist die aktuelle Wahrheit. Nur wenn das Feld fehlt/ungültig ist,\n    // greifen wir auf Legacy-Felder zurück. Ein explizites grams=0 vom Optimizer\n    // bleibt 0 und wird unten bewusst entfernt.\n    const hasCurrentGrams =\n      ingredient.grams !== null &&\n      ingredient.grams !== undefined &&\n      Number.isFinite(Number(ingredient.grams));\n    const baseAmount = hasCurrentGrams\n      ? Math.max(0, Number(ingredient.grams))\n      : positiveAmount(ingredient.amount_g, ingredient.amount);\n    const grams = Math.round(baseAmount * factor);\n\n    return grams > 0 ? [{ name, grams }] : [];\n  });\n}\n''')
+
+          test = Path('src/features/nutrition-plan-builder/lib/ingredient-save.logic.test.ts')
+          test.write_text('''import { describe, expect, it } from "vitest";\nimport { normalizeBuilderIngredientsForSave } from "./ingredient-save.logic";\n\ndescribe("normalizeBuilderIngredientsForSave", () => {\n  it("keeps current gram amounts for rice, honey and cinnamon", () => {\n    expect(\n      normalizeBuilderIngredientsForSave([\n        { name: "Reis (roh)", grams: 80 },\n        { name: "Honig", grams: 10 },\n        { name: "Zimt", grams: 2 },\n      ]),\n    ).toEqual([\n      { name: "Reis (roh)", grams: 80 },\n      { name: "Honig", grams: 10 },\n      { name: "Zimt", grams: 2 },\n    ]);\n  });\n\n  it("recovers legacy amount_g drafts instead of converting every ingredient to 0 g", () => {\n    expect(\n      normalizeBuilderIngredientsForSave([\n        { name: "Reis (roh)", amount_g: 80 },\n        { name: "Honig", amount_g: 10 },\n        { name: "Zimt", amount_g: 2 },\n      ]),\n    ).toEqual([\n      { name: "Reis (roh)", grams: 80 },\n      { name: "Honig", grams: 10 },\n      { name: "Zimt", grams: 2 },\n    ]);\n  });\n\n  it("drops ingredients deliberately optimized to zero grams", () => {\n    expect(\n      normalizeBuilderIngredientsForSave([\n        { name: "Reis (roh)", grams: 0, amount_g: 80 },\n        { name: "Hähnchenbrust", grams: 180 },\n      ]),\n    ).toEqual([{ name: "Hähnchenbrust", grams: 180 }]);\n  });\n\n  it("applies the portion factor after recovering the amount", () => {\n    expect(\n      normalizeBuilderIngredientsForSave(\n        [\n          { name: "Reis (roh)", amount_g: 80 },\n          { name: "Zimt", grams: 2 },\n        ],\n        0.5,\n      ),\n    ).toEqual([\n      { name: "Reis (roh)", grams: 40 },\n      { name: "Zimt", grams: 1 },\n    ]);\n  });\n});\n''')
+          PY
+
+      - name: Install dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Focused regression
+        run: npx vitest run src/features/nutrition-plan-builder/lib/ingredient-save.logic.test.ts
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Full test suite
+        run: npm test
+
+      - name: Production build
+        run: npm run build
+
+      - name: Diff sanity
+        run: git diff --check
+
+      - name: Commit verified hotfix
+        shell: bash
+        run: |
+          git checkout -- package-lock.json 2>/dev/null || true
+          git config user.name "BodyFuel CI"
+          git config user.email "bodyfuel-ci@users.noreply.github.com"
+          git add src/lib/plan-builder.functions.ts \
+            src/features/nutrition-plan-builder/lib/ingredient-save.logic.ts \
+            src/features/nutrition-plan-builder/lib/ingredient-save.logic.test.ts
+          git commit -m "fix: preserve plan builder ingredient amounts [hotfix applied]"
+          git push origin HEAD:fix/plan-builder-unit-validation
