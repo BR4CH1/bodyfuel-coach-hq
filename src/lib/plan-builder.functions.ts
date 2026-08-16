@@ -228,6 +228,10 @@ export const getCustomerPlanContext = createServerFn({ method: "POST" })
 export type BuilderIngredient = {
   name: string;
   grams: number;
+  /** Explizite Menge aus der Food-DB-Auswahl; bei Legacy-/Bibliothekszutaten optional. */
+  amount?: number | null;
+  /** Nur echte kanonische Einheiten. Fehlt sie, entscheidet die Nutrition-DB. */
+  unit?: "g" | "ml" | null;
   /** Ursprungsmenge vor der Makro-Optimierung. */
   base_grams?: number | null;
   role?: IngredientRole | null;
@@ -303,10 +307,24 @@ async function persistBuilderPlan(
               slot: m.slot,
               name: m.name,
               description: m.description ?? null,
-              ingredients: m.ingredients.map((i) => ({
-                name: i.name,
-                grams: Math.round((i.grams ?? 0) * f),
-              })),
+              ingredients: m.ingredients.map((i) => {
+                const explicitAmount = Number(i.amount ?? 0);
+                if (
+                  (i.unit === "g" || i.unit === "ml") &&
+                  Number.isFinite(explicitAmount) &&
+                  explicitAmount > 0
+                ) {
+                  return {
+                    name: i.name,
+                    amount: Math.round(explicitAmount * f),
+                    unit: i.unit,
+                  };
+                }
+                return {
+                  name: i.name,
+                  grams: Math.round((i.grams ?? 0) * f),
+                };
+              }),
             };
           }),
         })),

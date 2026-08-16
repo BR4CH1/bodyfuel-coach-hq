@@ -23,7 +23,9 @@ describe("mealFromFood", () => {
     expect(meal.protein_g).toBe(30);
     expect(meal.carbs_g).toBe(10);
     expect(meal.fat_g).toBeCloseTo(0.8, 1);
-    expect(meal.ingredients).toEqual([{ name: "Magerquark (Milbona)", grams: 250 }]);
+    expect(meal.ingredients).toEqual([
+      { name: "Magerquark (Milbona)", grams: 250, amount: 250, unit: "g" },
+    ]);
   });
 
   it("nutzt Dichte für Flüssigkeiten in ml", () => {
@@ -33,6 +35,8 @@ describe("mealFromFood", () => {
       "lunch",
     );
     expect(meal.ingredients[0]!.grams).toBe(46);
+    expect(meal.ingredients[0]!.amount).toBe(50);
+    expect(meal.ingredients[0]!.unit).toBe("ml");
     expect(meal.name).toContain("50 ml");
   });
 

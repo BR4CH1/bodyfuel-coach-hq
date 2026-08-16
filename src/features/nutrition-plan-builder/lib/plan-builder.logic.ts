@@ -1041,7 +1041,9 @@ export function mealFromFood(food: FoodPickInput, amount: number, slot: Slot): B
     description: null,
     library_meal_id: null,
     portion_factor: 1,
-    ingredients: [{ name: label, grams: Math.round(grams) }],
+    ingredients: [
+      { name: label, grams: Math.round(grams), amount: round1(safeAmount), unit },
+    ],
     kcal: round1(Number(food.kcal_per_100g) * factor),
     protein_g: round1(Number(food.protein_per_100g) * factor),
     carbs_g: round1(Number(food.carbs_per_100g) * factor),
