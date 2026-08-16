@@ -4,12 +4,8 @@ import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/bodyfuel/session";
-import {
-  getDayType,
-  getNutritionTargets,
-  setDayType,
-  type DayType,
-} from "@/lib/nutrition.functions";
+import { getDayType, setDayType, type DayType } from "@/lib/nutrition.functions";
+import { getNutritionTrackerTargets } from "@/lib/nutrition-tracker-targets.functions";
 import {
   getBullsDailyNutritionTargets,
   setBullsDayType,
@@ -38,7 +34,7 @@ export function useNutritionTracker(variant: NutritionTrackerVariant) {
   const [waterGlasses, setWaterGlasses] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  const getNutritionTargetsFn = useServerFn(getNutritionTargets);
+  const getNutritionTargetsFn = useServerFn(getNutritionTrackerTargets);
   const getDayTypeFn = useServerFn(getDayType);
   const setDayTypeFn = useServerFn(setDayType);
   const getBullsNutritionTargetsFn = useServerFn(getBullsDailyNutritionTargets);
@@ -108,7 +104,7 @@ export function useNutritionTracker(variant: NutritionTrackerVariant) {
           setDayTypeSource(bulls.dayTypeSource);
         } else {
           const [nutritionTargets, resolvedDayType] = await Promise.all([
-            getNutritionTargetsFn({ data: { user_id: userId } }),
+            getNutritionTargetsFn({ data: { user_id: userId, date } }),
             getDayTypeFn({ data: { user_id: userId, date } }),
           ]);
           if (cancelled) return;
