@@ -46,8 +46,14 @@ export function PlanAdjustmentsCard({ userId }: { userId: string }) {
       const { idx, ...rest } = n;
       return applyFn({ data: { user_id: userId, ...rest } }).then((r) => ({ r, idx }));
     },
-    onSuccess: ({ idx }) => {
-      toast.success("Ernährungsziele übernommen");
+    onSuccess: ({ r, idx }) => {
+      if ((r as any)?.applies_immediately) {
+        toast.success("Ernährungsziele übernommen");
+      } else {
+        toast.success("Neue Zielbasis gespeichert", {
+          description: "Der aktuell aktive Ernährungsplan bleibt unverändert. Die Werte gelten nach dem Planwechsel bzw. für den nächsten Plan.",
+        });
+      }
       setAppliedNutritionFor(idx);
       qc.invalidateQueries({ queryKey: historyKey });
     },

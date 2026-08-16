@@ -567,6 +567,13 @@ export const getCustomerDetail = createServerFn({ method: "POST" })
         .maybeSingle(),
     ]);
 
+    const { loadEffectiveNutritionTargets } = await import("@/lib/nutrition-tracker-targets.functions");
+    const effectiveTargets = await loadEffectiveNutritionTargets(
+      customerDb,
+      data.user_id,
+      new Date().toISOString().slice(0, 10),
+    );
+
     const u = authUser;
     const banned = u?.banned_until ? new Date(u.banned_until).getTime() > Date.now() : false;
     const activityCandidates = [
@@ -597,7 +604,7 @@ export const getCustomerDetail = createServerFn({ method: "POST" })
       groups: (groups.data ?? []).map((g: any) => g.group_name as string),
       coaching_goal: (profile.data as any)?.coaching_goal ?? null,
       next_checkin_date: (profile.data as any)?.next_checkin_date ?? null,
-      targets: targets.data ?? null,
+      targets: effectiveTargets ?? targets.data ?? null,
       auth: {
         invited_at: u?.invited_at ?? null,
         confirmed_at: u?.email_confirmed_at ?? u?.confirmed_at ?? null,

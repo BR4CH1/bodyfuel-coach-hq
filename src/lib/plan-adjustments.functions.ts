@@ -53,6 +53,12 @@ export const generatePlanAdjustments = createServerFn({ method: "POST" })
 
     const target = data.user_id;
     const today = new Date();
+    const { loadEffectiveNutritionTargets } = await import("@/lib/nutrition-tracker-targets.functions");
+    const effectiveTargets = await loadEffectiveNutritionTargets(
+      supabase,
+      target,
+      today.toISOString().slice(0, 10),
+    );
     const since14 = new Date(today.getTime() - 14 * 86400000).toISOString().slice(0, 10);
     const since30 = new Date(today.getTime() - 30 * 86400000).toISOString().slice(0, 10);
 
@@ -61,17 +67,11 @@ export const generatePlanAdjustments = createServerFn({ method: "POST" })
         supabase
           .from("profiles")
           .select(
-            "first_name, gender, height_cm, current_weight_kg, target_weight_kg, goal, activity_level, birthdate",
+            "display_name, gender, height_cm, goal_weight_kg, coaching_goal, training_goal, activity_level, birthdate",
           )
           .eq("id", target)
           .maybeSingle(),
-        supabase
-          .from("nutrition_targets")
-          .select(
-            "kcal, protein_g, carbs_g, fat_g, kcal_rest, protein_g_rest, carbs_g_rest, fat_g_rest",
-          )
-          .eq("user_id", target)
-          .maybeSingle(),
+        Promise.resolve({ data: effectiveTargets }),
         supabase
           .from("weekly_checkins")
           .select(
@@ -81,11 +81,12 @@ export const generatePlanAdjustments = createServerFn({ method: "POST" })
           .order("week_start", { ascending: false })
           .limit(4),
         supabase
-          .from("bulls_weight_logs")
-          .select("log_date, weight_kg")
+          .from("body_measurements")
+          .select("measured_at, weight_kg")
           .eq("user_id", target)
-          .gte("log_date", since30)
-          .order("log_date", { ascending: false }),
+          .not("weight_kg", "is", null)
+          .gte("measured_at", since30)
+          .order("measured_at", { ascending: false }),
         supabase
           .from("food_entries")
           .select("entry_date, kcal, protein_g, carbs_g, fat_g")
@@ -116,7 +117,7 @@ export const generatePlanAdjustments = createServerFn({ method: "POST" })
       return Math.round(s / loggedDays);
     };
 
-    const weights = (weightsRes.data ?? []) as Array<{ log_date: string; weight_kg: number }>;
+    const weights = (weightsRes.data ?? []) as Array<{ measured_at: string; weight_kg: number }>;
     const weightTrend =
       weights.length >= 2
         ? Number((weights[0].weight_kg - weights[weights.length - 1].weight_kg).toFixed(2))
@@ -126,8 +127,8 @@ export const generatePlanAdjustments = createServerFn({ method: "POST" })
         ? Math.max(
             1,
             Math.round(
-              (new Date(weights[0].log_date).getTime() -
-                new Date(weights[weights.length - 1].log_date).getTime()) /
+              (new Date(weights[0].measured_at).getTime() -
+                new Date(weights[weights.length - 1].measured_at).getTime()) /
                 86400000,
             ),
           )
@@ -262,8 +263,7 @@ Antworte AUSSCHLIESSLICH mit gültigem JSON:
       throw new Error("Antwort konnte nicht gelesen werden.");
     }
 
-    const profileForWeight = profileRes.data as { current_weight_kg?: unknown } | null;
-    const latestWeight = Number(weights[0]?.weight_kg ?? profileForWeight?.current_weight_kg);
+    const latestWeight = Number(weights[0]?.weight_kg);
     const weightForProteinCap =
       Number.isFinite(latestWeight) && latestWeight > 0 ? latestWeight : null;
 
@@ -330,6 +330,13 @@ export const applyNutritionAdjustment = createServerFn({ method: "POST" })
     const supabase = context.supabase as any;
     await assertCoach(supabase, userId);
 
+    const { loadEffectiveNutritionTargets } = await import("@/lib/nutrition-tracker-targets.functions");
+    const effectiveBefore = await loadEffectiveNutritionTargets(
+      supabase,
+      data.user_id,
+      new Date().toISOString().slice(0, 10),
+    );
+
     const { data: before } = await supabase
       .from("nutrition_targets")
       .select("kcal, protein_g, carbs_g, fat_g")
@@ -379,7 +386,7 @@ export const applyNutritionAdjustment = createServerFn({ method: "POST" })
       kind: "nutrition",
       area: "macros",
       summary: `kcal ${patch.kcal} · P${patch.protein_g}/C${patch.carbs_g}/F${patch.fat_g}`,
-      before_json: before ?? null,
+      before_json: effectiveBefore ?? before ?? null,
       after_json: {
         kcal: patch.kcal,
         protein_g: patch.protein_g,
@@ -389,7 +396,12 @@ export const applyNutritionAdjustment = createServerFn({ method: "POST" })
       rationale: data.rationale ?? null,
     });
 
-    return { ok: true };
+    const appliesImmediately = effectiveBefore?.source !== "active_plan";
+    return {
+      ok: true,
+      applies_immediately: appliesImmediately,
+      active_plan_id: effectiveBefore?.source === "active_plan" ? effectiveBefore.plan_id ?? null : null,
+    };
   });
 
 export type TrainingApplyAction =
@@ -407,10 +419,14 @@ export const applyTrainingAdjustment = createServerFn({ method: "POST" })
     const action = data.action;
 
     const { data: plan } = await supabase
-      .from("training_plans")
+      .from("nutrition_plans")
       .select("id")
       .eq("client_id", data.user_id)
-      .eq("is_active", true)
+      .eq("plan_type", "training")
+      .eq("status", "active")
+      .eq("performance_context", false)
+      .order("created_at", { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     if (!plan) throw new Error("Kein aktiver Trainingsplan gefunden.");

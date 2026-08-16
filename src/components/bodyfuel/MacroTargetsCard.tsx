@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Dumbbell, Moon } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { getNutritionTargets } from "@/lib/nutrition.functions";
+import { getNutritionTrackerTargets } from "@/lib/nutrition-tracker-targets.functions";
 import {
   getBullsDailyNutritionTargets,
   type BullsMacroDTO,
@@ -22,7 +22,9 @@ export function MacroTargetsCard({
 }
 
 function PersonalMacroTargetsCard({ userId }: { userId: string | undefined }) {
-  const getFn = useServerFn(getNutritionTargets);
+  const getFn = useServerFn(getNutritionTrackerTargets);
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   const [t, setT] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -31,7 +33,7 @@ function PersonalMacroTargetsCard({ userId }: { userId: string | undefined }) {
     let cancelled = false;
     (async () => {
       try {
-        const row = await getFn({ data: { user_id: userId } });
+        const row = await getFn({ data: { user_id: userId, date: today } });
         if (!cancelled) setT(row);
       } finally {
         if (!cancelled) setLoading(false);
@@ -40,7 +42,7 @@ function PersonalMacroTargetsCard({ userId }: { userId: string | undefined }) {
     return () => {
       cancelled = true;
     };
-  }, [userId, getFn]);
+  }, [userId, getFn, today]);
 
   if (loading || !t) return null;
 
@@ -49,9 +51,11 @@ function PersonalMacroTargetsCard({ userId }: { userId: string | undefined }) {
     <Card
       hasRest={hasRest}
       subtitle={
-        hasRest
-          ? "Trainingstage und Restdays nutzen unterschiedliche Macros."
-          : "Aktuell ist kein Restday-Wert hinterlegt."
+        t.source === "active_plan"
+          ? "Werte aus dem aktuell gültigen Ernährungsplan."
+          : hasRest
+            ? "Fallback-Ziele: Trainingstage und Restdays nutzen unterschiedliche Macros."
+            : "Fallback-Ziele: Aktuell ist kein Restday-Wert hinterlegt."
       }
       training={{
         kcal: t.kcal,

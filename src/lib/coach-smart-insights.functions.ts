@@ -34,6 +34,12 @@ export const getCustomerRiskFlags = createServerFn({ method: "GET" })
 
     const target = data.user_id;
     const today = new Date();
+    const { loadEffectiveNutritionTargets } = await import("@/lib/nutrition-tracker-targets.functions");
+    const effectiveTargets = await loadEffectiveNutritionTargets(
+      supabase,
+      target,
+      today.toISOString().slice(0, 10),
+    );
     const since = new Date(today.getTime() - 14 * 24 * 3600 * 1000)
       .toISOString()
       .slice(0, 10);
@@ -82,11 +88,7 @@ export const getCustomerRiskFlags = createServerFn({ method: "GET" })
           .eq("user_id", target)
           .eq("kind", "eaten")
           .gte("created_at", since),
-        supabase
-          .from("nutrition_targets")
-          .select("kcal, protein_g")
-          .eq("user_id", target)
-          .maybeSingle(),
+        Promise.resolve({ data: effectiveTargets }),
         supabase
           .from("food_entries")
           .select("entry_date, protein_g, kcal")

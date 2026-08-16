@@ -46,7 +46,7 @@ export const generateCheckinDraft = createServerFn({ method: "POST" })
     const { data: profile } = await supabase
       .from("profiles")
       .select(
-        "first_name, last_name, gender, height_cm, current_weight_kg, target_weight_kg, goal, activity_level, birthdate",
+        "display_name, gender, height_cm, goal_weight_kg, coaching_goal, training_goal, activity_level, birthdate",
       )
       .eq("id", target)
       .maybeSingle();
@@ -63,19 +63,21 @@ export const generateCheckinDraft = createServerFn({ method: "POST" })
 
     // Gewichtsverlauf
     const { data: weights } = await supabase
-      .from("bulls_weight_logs")
-      .select("log_date, weight_kg")
+      .from("body_measurements")
+      .select("measured_at, weight_kg")
       .eq("user_id", target)
-      .gte("log_date", since30)
-      .order("log_date", { ascending: false })
+      .not("weight_kg", "is", null)
+      .gte("measured_at", since30)
+      .order("measured_at", { ascending: false })
       .limit(30);
 
-    // Aktuelle Ziele
-    const { data: targets } = await supabase
-      .from("nutrition_targets")
-      .select("kcal, protein_g, carbs_g, fat_g")
-      .eq("user_id", target)
-      .maybeSingle();
+    // Aktuell tatsächlich gültige Ziele (aktiver Plan vor Fallback-Tabelle).
+    const { loadEffectiveNutritionTargets } = await import("@/lib/nutrition-tracker-targets.functions");
+    const targets = await loadEffectiveNutritionTargets(
+      supabase,
+      target,
+      today.toISOString().slice(0, 10),
+    );
 
     // Letzte 14 Tage Food-Logs zusammengefasst
     const { data: foods } = await supabase
@@ -123,7 +125,7 @@ export const generateCheckinDraft = createServerFn({ method: "POST" })
     };
 
     const dataPackage = {
-      profile,
+      profile: { ...profile, current_weight_kg: weights?.[0]?.weight_kg ?? null },
       checkins: checkins ?? [],
       weight_logs: weights ?? [],
       nutrition: nutritionSummary,
