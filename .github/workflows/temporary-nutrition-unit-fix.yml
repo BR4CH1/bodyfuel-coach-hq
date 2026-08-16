@@ -1,0 +1,136 @@
+name: Temporary nutrition unit fix
+
+on:
+  push:
+    branches:
+      - fix/nutrition-builder-unit-resolution
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/nutrition-builder-unit-resolution
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Apply minimal unit-resolution fix
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str):
+              p = Path(path)
+              text = p.read_text()
+              if old in text:
+                  text = text.replace(old, new, 1)
+                  p.write_text(text)
+                  return
+              if new in text:
+                  return
+              raise SystemExit(f"Expected snippet not found in {path}")
+
+          # 1) Builder ingredients can preserve an explicit canonical display amount/unit.
+          replace_once(
+              "src/lib/plan-builder.functions.ts",
+              '''export type BuilderIngredient = {\n  name: string;\n  grams: number;\n  /** Ursprungsmenge vor der Makro-Optimierung. */''',
+              '''export type BuilderIngredient = {\n  name: string;\n  grams: number;\n  /** Explizite Menge aus der Food-DB-Auswahl; bei Legacy-/Bibliothekszutaten optional. */\n  amount?: number | null;\n  /** Nur echte kanonische Einheiten. Fehlt sie, entscheidet die Nutrition-DB. */\n  unit?: "g" | "ml" | null;\n  /** Ursprungsmenge vor der Makro-Optimierung. */''',
+          )
+
+          replace_once(
+              "src/lib/plan-builder.functions.ts",
+              '''              ingredients: m.ingredients.map((i) => ({\n                name: i.name,\n                grams: Math.round((i.grams ?? 0) * f),\n              })),''',
+              '''              ingredients: m.ingredients.map((i) => {\n                const explicitAmount = Number(i.amount ?? 0);\n                if (\n                  (i.unit === "g" || i.unit === "ml") &&\n                  Number.isFinite(explicitAmount) &&\n                  explicitAmount > 0\n                ) {\n                  return {\n                    name: i.name,\n                    amount: Math.round(explicitAmount * f),\n                    unit: i.unit,\n                  };\n                }\n                return {\n                  name: i.name,\n                  grams: Math.round((i.grams ?? 0) * f),\n                };\n              }),''',
+          )
+
+          # 2) Manual Food-DB picks retain ml/g explicitly while preserving legacy grams.
+          replace_once(
+              "src/features/nutrition-plan-builder/lib/plan-builder.logic.ts",
+              '''    ingredients: [{ name: label, grams: Math.round(grams) }],''',
+              '''    ingredients: [\n      { name: label, grams: Math.round(grams), amount: round1(safeAmount), unit },\n    ],''',
+          )
+
+          # 3) Import/publish path: never invent g for legacy builder amounts.
+          replace_once(
+              "src/lib/coach-plan-import.functions.ts",
+              '''import type { ImportedPlan } from "@/lib/customer-training-plan.functions";''',
+              '''import type { ImportedPlan } from "@/lib/customer-training-plan.functions";\nimport { toEngineIngredientAmount } from "@/lib/nutrition-ingredient-units";''',
+          )
+
+          replace_once(
+              "src/lib/coach-plan-import.functions.ts",
+              '''/** Nur verlustfreie metrische Umrechnung; Portionsschätzungen sind absichtlich verboten. */\nfunction canonicalAmount(\n  amount: number,\n  unit: string,\n): { amount: number; unit: "g" | "ml" } | null {\n  const u = unit.toLowerCase().trim();\n  if (u === "g" || u === "gramm") return { amount, unit: "g" };\n  if (u === "kg") return { amount: amount * 1000, unit: "g" };\n  if (u === "ml" || u === "milliliter") return { amount, unit: "ml" };\n  if (u === "l" || u === "liter") return { amount: amount * 1000, unit: "ml" };\n  return null;\n}\n\n''',
+              '''''',
+          )
+
+          replace_once(
+              "src/lib/coach-plan-import.functions.ts",
+              '''        const engineIngs = m.ingredients.map((ing) => {\n          const grams = Number(ing.grams ?? 0);\n          const canonical =\n            grams > 0\n              ? { amount: grams, unit: "g" as const }\n              : ing.amount && ing.unit\n                ? canonicalAmount(Number(ing.amount), ing.unit)\n                : null;\n          if (!canonical || canonical.amount <= 0) {\n            throw new Error(\n              `Ungültige Menge für „${ing.name}": Flüssigkeiten müssen in ml, alles andere in g angegeben sein.`,\n            );\n          }\n          return {\n            name: ing.name,\n            grams: Math.round(canonical.amount),\n            amount: Math.round(canonical.amount),\n            unit: canonical.unit,\n          };\n        });''',
+              '''        const engineIngs = m.ingredients.map((ing) => {\n          const normalizedAmount = toEngineIngredientAmount(ing);\n          if (!normalizedAmount) {\n            throw new Error(\n              `Ungültige Menge für „${ing.name}": Flüssigkeiten müssen in ml, alles andere in g angegeben sein.`,\n            );\n          }\n          return { name: ing.name, ...normalizedAmount };\n        });''',
+          )
+
+          # 4) Regression expectations for explicit Food-DB picks.
+          replace_once(
+              "src/features/nutrition-plan-builder/lib/__tests__/food-to-meal.logic.test.ts",
+              '''    expect(meal.ingredients).toEqual([{ name: "Magerquark (Milbona)", grams: 250 }]);''',
+              '''    expect(meal.ingredients).toEqual([\n      { name: "Magerquark (Milbona)", grams: 250, amount: 250, unit: "g" },\n    ]);''',
+          )
+
+          replace_once(
+              "src/features/nutrition-plan-builder/lib/__tests__/food-to-meal.logic.test.ts",
+              '''    expect(meal.ingredients[0]!.grams).toBe(46);\n    expect(meal.name).toContain("50 ml");''',
+              '''    expect(meal.ingredients[0]!.grams).toBe(46);\n    expect(meal.ingredients[0]!.amount).toBe(50);\n    expect(meal.ingredients[0]!.unit).toBe("ml");\n    expect(meal.name).toContain("50 ml");''',
+          )
+
+          helper = Path("src/lib/nutrition-ingredient-units.ts")
+          helper.write_text('''export type NutritionIngredientAmountInput = {\n  grams?: number | null;\n  amount?: number | null;\n  unit?: "g" | "ml" | null;\n};\n\nexport type EngineIngredientAmount = {\n  grams: number;\n  amount: number;\n  unit?: "g" | "ml";\n};\n\n/**\n * Normalisiert ausschließlich die Menge für die Nutrition Engine.\n *\n * Explizite g/ml-Angaben bleiben erhalten und werden später gegen die Food-DB\n * validiert. Legacy-Builder-Zutaten besitzen dagegen nur `grams`; dort wird\n * absichtlich KEINE Einheit erfunden, damit die Engine nach dem Food-Lookup\n * `nutrition_foods.unit_type` als Source of Truth nutzen kann.\n */\nexport function toEngineIngredientAmount(\n  ingredient: NutritionIngredientAmountInput,\n): EngineIngredientAmount | null {\n  const explicitAmount = Number(ingredient.amount ?? 0);\n  if (\n    (ingredient.unit === "g" || ingredient.unit === "ml") &&\n    Number.isFinite(explicitAmount) &&\n    explicitAmount > 0\n  ) {\n    const amount = Math.round(explicitAmount);\n    return { grams: amount, amount, unit: ingredient.unit };\n  }\n\n  const legacyAmount = Number(ingredient.grams ?? 0);\n  if (!Number.isFinite(legacyAmount) || legacyAmount <= 0) return null;\n  const amount = Math.round(legacyAmount);\n  return { grams: amount, amount };\n}\n''')
+
+          test = Path("src/lib/__tests__/nutrition-ingredient-units.test.ts")
+          test.parent.mkdir(parents=True, exist_ok=True)
+          test.write_text('''import { describe, expect, it } from "vitest";\nimport { toEngineIngredientAmount } from "@/lib/nutrition-ingredient-units";\n\ndescribe("toEngineIngredientAmount", () => {\n  it.each([\n    ["Reis", 100],\n    ["Honig", 15],\n    ["Zimt", 2],\n  ])("lässt bei Legacy-%s die Einheit für die Food-DB offen", (_name, grams) => {\n    expect(toEngineIngredientAmount({ grams })).toEqual({ grams, amount: grams });\n  });\n\n  it("bewahrt eine explizite Flüssigkeitsmenge in ml", () => {\n    expect(toEngineIngredientAmount({ grams: 206, amount: 200, unit: "ml" })).toEqual({\n      grams: 200,\n      amount: 200,\n      unit: "ml",\n    });\n  });\n\n  it("bewahrt eine explizite feste Menge in g", () => {\n    expect(toEngineIngredientAmount({ amount: 80, unit: "g" })).toEqual({\n      grams: 80,\n      amount: 80,\n      unit: "g",\n    });\n  });\n\n  it("weist fehlende oder nicht-positive Mengen ab", () => {\n    expect(toEngineIngredientAmount({})).toBeNull();\n    expect(toEngineIngredientAmount({ grams: 0 })).toBeNull();\n    expect(toEngineIngredientAmount({ amount: -1, unit: "ml" })).toBeNull();\n  });\n});\n''')
+          PY
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Targeted regression tests
+        run: npx vitest run src/lib/__tests__/nutrition-ingredient-units.test.ts src/features/nutrition-plan-builder/lib/__tests__/food-to-meal.logic.test.ts
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Full test suite
+        run: npm test
+
+      - name: Production build
+        run: npm run build
+
+      - name: Commit verified fix
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/lib/plan-builder.functions.ts \
+                  src/features/nutrition-plan-builder/lib/plan-builder.logic.ts \
+                  src/features/nutrition-plan-builder/lib/__tests__/food-to-meal.logic.test.ts \
+                  src/lib/coach-plan-import.functions.ts \
+                  src/lib/nutrition-ingredient-units.ts \
+                  src/lib/__tests__/nutrition-ingredient-units.test.ts
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            echo "No code changes to commit"
+          else
+            git commit -m "Fix nutrition builder unit resolution"
+            git push origin HEAD:fix/nutrition-builder-unit-resolution
+          fi
