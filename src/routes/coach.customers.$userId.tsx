@@ -10,7 +10,6 @@ import { AiCheckinDraftCard } from "@/components/bodyfuel/AiCheckinDraftCard";
 import { CoachBaseDataEditor } from "@/components/bodyfuel/CoachBaseDataEditor";
 import { CoachKitchenEquipmentCard } from "@/components/bodyfuel/CoachKitchenEquipmentCard";
 import { CoachMessageThread } from "@/components/bodyfuel/CoachMessageThread";
-import { CoachNutritionPlanHistoryCard } from "@/components/bodyfuel/CoachNutritionPlanHistoryCard";
 import { CoachStrengthCheckCard } from "@/components/bodyfuel/CoachStrengthCheckCard";
 import { CoachTrainingAlertsCard } from "@/components/bodyfuel/CoachTrainingAlertsCard";
 import { CoachTrainingGoalCard } from "@/components/bodyfuel/CoachTrainingGoalCard";
@@ -521,56 +520,98 @@ function CustomerDetail() {
       )}
 
       {activeTab === "ernaehrung" && (
-        <TabPanel title="Ernährung" subtitle="Targets, Ernährungsplan und Ernährungsverhalten an einem Ort.">
+        <TabPanel
+          title="Ernährung"
+          subtitle="Aktuelle Zielwerte, Planstatus und Adhärenz zuerst — Planungsdetails nur bei Bedarf."
+        >
           <MacroTargetsCard userId={userId} />
-          <NutritionTargetsEditor userId={userId} />
           <SmartNutritionInsightsCard userId={userId} />
           <PlanManagementCard userId={userId} />
-          <Button variant="secondary" className="w-full" asChild>
-            <Link to="/coach/plan-builder/$userId" params={{ userId }}>
-              Plan manuell erstellen
-            </Link>
-          </Button>
-          <CoachNutritionPlanHistoryCard userId={userId} />
-          <CoachKitchenEquipmentCard userId={userId} />
-          <MealWishesCard userId={userId} mode="coach" />
-          <RecipeInsightsCard userId={userId} />
+
+          <SubpointDetails
+            title="Fallback-Ziele & Wasser"
+            subtitle="Nur relevant, wenn kein aktiver Ernährungsplan den Tracker steuert."
+          >
+            <NutritionTargetsEditor userId={userId} />
+          </SubpointDetails>
+
+          <SubpointDetails
+            title="Planungsgrundlagen"
+            subtitle="Wunschgerichte, Küchenausstattung und Rezeptfeedback für die nächste Planrunde."
+          >
+            <div className="space-y-5">
+              <MealWishesCard userId={userId} mode="coach" />
+              <CoachKitchenEquipmentCard userId={userId} />
+              <RecipeInsightsCard userId={userId} />
+            </div>
+          </SubpointDetails>
         </TabPanel>
       )}
 
       {activeTab === "training" && (
-        <TabPanel title="Training" subtitle="Planung, Belastung, Strength Check und freie Einheiten.">
-          <StepGoalEditor userId={userId} initial={profile.daily_step_goal ?? 10000} />
+        <TabPanel
+          title="Training"
+          subtitle="Aktiver Plan, Auffälligkeiten und Entwicklung zuerst — Detaildiagnostik nur bei Bedarf."
+        >
+          <TrainingPlanManagementCard userId={userId} />
+          <CoachTrainingAlertsCard userId={userId} />
+          <CoachTrainingSummary clientId={userId} />
           <CoachTrainingGoalCard
             trainingGoal={profile.training_goal ?? null}
-            targets={(data as any).targets ?? null}
             measurements={(data.measurements ?? []) as any}
             goalWeight={profile.goal_weight_kg ?? null}
             goalTargetDate={profile.goal_target_date ?? null}
           />
           <GoalProjectionCard profile={profile} currentWeight={currentWeight} />
-          <TrainingPlanManagementCard userId={userId} />
-          <CoachStrengthCheckCard userId={userId} />
-          <CoachTrainingAlertsCard userId={userId} />
-          <section className="rounded-2xl border border-border bg-card p-5">
-            <h3 className="font-display text-base font-bold">Freie Trainingseinheiten</h3>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Kurse, Sport, Mobility und andere Einheiten, die der Kunde außerhalb des Plans geloggt hat.
-            </p>
-            <div className="mt-3">
-              <TrainingSessionsList clientId={userId} days={30} />
+
+          <SubpointDetails
+            title="Alltag & Schrittziel"
+            subtitle="NEAT-Vorgabe separat anpassen, ohne die Trainingsanalyse zu überladen."
+          >
+            <StepGoalEditor userId={userId} initial={profile.daily_step_goal ?? 10000} />
+          </SubpointDetails>
+
+          <SubpointDetails
+            title="Strength Check"
+            subtitle="Kraftprofil, Dysbalancen, Einzelwerte und Verlauf."
+          >
+            <CoachStrengthCheckCard userId={userId} />
+          </SubpointDetails>
+
+          <SubpointDetails
+            title="Freie Einheiten & Trainingsbonus"
+            subtitle="Sport, Kurse, Mobility sowie PR- und Bonusdaten außerhalb des Plan-Kernflows."
+          >
+            <div className="space-y-5">
+              <section className="rounded-2xl border border-border bg-card p-5">
+                <h3 className="font-display text-base font-bold">Freie Trainingseinheiten</h3>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Kurse, Sport, Mobility und andere Einheiten, die der Kunde außerhalb des Plans geloggt hat.
+                </p>
+                <div className="mt-3">
+                  <TrainingSessionsList clientId={userId} days={30} />
+                </div>
+              </section>
+              <TrainingBonusCard userId={userId} isCoach />
             </div>
-          </section>
-          <TrainingBonusCard userId={userId} isCoach />
-          <CoachTrainingSummary clientId={userId} />
+          </SubpointDetails>
         </TabPanel>
       )}
 
       {activeTab === "fortschritt" && (
         <TabPanel
           title="Fortschritt & Check-ins"
-          subtitle="Gewicht, Maße, Fotos, Check-ins und Plananpassungen."
+          subtitle="Check-in lesen → Entwurf prüfen → Maßnahmen entscheiden → Verlauf kontrollieren."
         >
+          <SectionErrorBoundary label="Check-ins">
+            <CustomerCheckinsCard userId={userId} />
+          </SectionErrorBoundary>
+          <SectionErrorBoundary label="AI Check-in Entwurf">
+            <AiCheckinDraftCard userId={userId} />
+          </SectionErrorBoundary>
+          <SectionErrorBoundary label="Plan-Anpassungen">
+            <PlanAdjustmentsCard userId={userId} />
+          </SectionErrorBoundary>
           <SectionErrorBoundary label="Gewichtsentwicklung">
             <WeightProgressChart
               measurements={(data.measurements ?? []) as any}
@@ -582,21 +623,20 @@ function CustomerDetail() {
           <SectionErrorBoundary label="Maße & Gewicht">
             <MeasurementsCard measurements={data.measurements ?? []} />
           </SectionErrorBoundary>
-          <SectionErrorBoundary label="Fortschrittsfotos">
-            <ProgressPhotosCard userId={userId} readOnly />
-          </SectionErrorBoundary>
-          <SectionErrorBoundary label="Foto-Auswertung">
-            <PhotoAssessmentCard userId={userId} isCoach />
-          </SectionErrorBoundary>
-          <SectionErrorBoundary label="AI Check-in Entwurf">
-            <AiCheckinDraftCard userId={userId} />
-          </SectionErrorBoundary>
-          <SectionErrorBoundary label="Plan-Anpassungen">
-            <PlanAdjustmentsCard userId={userId} />
-          </SectionErrorBoundary>
-          <SectionErrorBoundary label="Check-ins">
-            <CustomerCheckinsCard userId={userId} />
-          </SectionErrorBoundary>
+
+          <SubpointDetails
+            title="Fortschrittsfotos & Vergleich"
+            subtitle="Foto-Sets und Coach-Auswertung zusammen an einem Ort."
+          >
+            <div className="space-y-5">
+              <SectionErrorBoundary label="Fortschrittsfotos">
+                <ProgressPhotosCard userId={userId} readOnly />
+              </SectionErrorBoundary>
+              <SectionErrorBoundary label="Foto-Auswertung">
+                <PhotoAssessmentCard userId={userId} isCoach />
+              </SectionErrorBoundary>
+            </div>
+          </SubpointDetails>
         </TabPanel>
       )}
 
@@ -629,40 +669,50 @@ function CustomerDetail() {
 
             <ProfileSummary profile={profile} currentWeight={currentWeight} />
 
-            <CoachBaseDataEditor
-              userId={userId}
-              currentWeightKg={currentWeight}
-              initial={{
-                height_cm: profile.height_cm ?? null,
-                birthdate: profile.birthdate ?? null,
-                gender: profile.gender ?? null,
-                goal_weight_kg: profile.goal_weight_kg ?? null,
-                goal_target_date: profile.goal_target_date ?? null,
-                activity_level: profile.activity_level ?? null,
-                training_goal: profile.training_goal ?? null,
-              }}
-            />
+            <SubpointDetails
+              title="Stammdaten bearbeiten"
+              subtitle="Größe, Zielgewicht, Aktivitätslevel und Trainingsziel ändern."
+            >
+              <CoachBaseDataEditor
+                userId={userId}
+                currentWeightKg={currentWeight}
+                initial={{
+                  height_cm: profile.height_cm ?? null,
+                  birthdate: profile.birthdate ?? null,
+                  gender: profile.gender ?? null,
+                  goal_weight_kg: profile.goal_weight_kg ?? null,
+                  goal_target_date: profile.goal_target_date ?? null,
+                  activity_level: profile.activity_level ?? null,
+                  training_goal: profile.training_goal ?? null,
+                }}
+              />
+            </SubpointDetails>
 
-            <AthleteProfileEditor
-              userId={userId}
-              mode="coach"
-              initial={{
-                sport: profile.sport ?? null,
-                sport_position: profile.sport_position ?? null,
-                sport_level: profile.sport_level ?? null,
-                team_sport: profile.team_sport ?? false,
-                match_days_per_week: profile.match_days_per_week ?? null,
-                practice_days_per_week: profile.practice_days_per_week ?? null,
-                season_phase: profile.season_phase ?? null,
-                class_types: profile.class_types ?? [],
-                class_days_per_week: profile.class_days_per_week ?? null,
-                mobility_frequency: profile.mobility_frequency ?? null,
-                mobility_focus: profile.mobility_focus ?? null,
-                cardio_outside_gym: profile.cardio_outside_gym ?? null,
-                injuries: profile.injuries ?? null,
-                training_experience: profile.training_experience ?? null,
-              }}
-            />
+            <SubpointDetails
+              title="Trainings- & Sportprofil bearbeiten"
+              subtitle="Sportart, Trainingswoche, Verletzungen, Mobility und Leistungskontext."
+            >
+              <AthleteProfileEditor
+                userId={userId}
+                mode="coach"
+                initial={{
+                  sport: profile.sport ?? null,
+                  sport_position: profile.sport_position ?? null,
+                  sport_level: profile.sport_level ?? null,
+                  team_sport: profile.team_sport ?? false,
+                  match_days_per_week: profile.match_days_per_week ?? null,
+                  practice_days_per_week: profile.practice_days_per_week ?? null,
+                  season_phase: profile.season_phase ?? null,
+                  class_types: profile.class_types ?? [],
+                  class_days_per_week: profile.class_days_per_week ?? null,
+                  mobility_frequency: profile.mobility_frequency ?? null,
+                  mobility_focus: profile.mobility_focus ?? null,
+                  cardio_outside_gym: profile.cardio_outside_gym ?? null,
+                  injuries: profile.injuries ?? null,
+                  training_experience: profile.training_experience ?? null,
+                }}
+              />
+            </SubpointDetails>
 
             <GroupsCard
               userId={userId}
@@ -898,6 +948,36 @@ function TabPanel({
       </div>
       {children}
     </section>
+  );
+}
+
+function SubpointDetails({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string;
+  subtitle: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <details className="group rounded-2xl border border-border bg-secondary/10">
+      <summary className="cursor-pointer list-none px-4 py-4 sm:px-5">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h3 className="font-display text-base font-bold">{title}</h3>
+            <p className="mt-1 text-xs text-muted-foreground">{subtitle}</p>
+          </div>
+          <span className="shrink-0 text-xs font-semibold text-muted-foreground group-open:hidden">
+            Öffnen
+          </span>
+          <span className="hidden shrink-0 text-xs font-semibold text-muted-foreground group-open:inline">
+            Schließen
+          </span>
+        </div>
+      </summary>
+      <div className="border-t border-border p-4 sm:p-5">{children}</div>
+    </details>
   );
 }
 
