@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { IngredientRole, Per100 } from "@/lib/ingredient-roles";
 import type { TrainingWeekSchedule } from "@/lib/training-schedule.logic";
+import { normalizeBuilderIngredientsForSave } from "@/features/nutrition-plan-builder/lib/ingredient-save.logic";
 import {
   assertCoachOrOrgStaffForAthlete,
   assertGlobalCoachOrAnyOrgCoach,
@@ -228,6 +229,8 @@ export const getCustomerPlanContext = createServerFn({ method: "POST" })
 export type BuilderIngredient = {
   name: string;
   grams: number;
+  /** Legacy-Auto-Drafts können noch das frühere Bibliotheksfeld enthalten. */
+  amount_g?: number | null;
   /** Explizite Menge aus der Food-DB-Auswahl; bei Legacy-/Bibliothekszutaten optional. */
   amount?: number | null;
   /** Nur echte kanonische Einheiten. Fehlt sie, entscheidet die Nutrition-DB. */
@@ -307,24 +310,7 @@ async function persistBuilderPlan(
               slot: m.slot,
               name: m.name,
               description: m.description ?? null,
-              ingredients: m.ingredients.map((i) => {
-                const explicitAmount = Number(i.amount ?? 0);
-                if (
-                  (i.unit === "g" || i.unit === "ml") &&
-                  Number.isFinite(explicitAmount) &&
-                  explicitAmount > 0
-                ) {
-                  return {
-                    name: i.name,
-                    amount: Math.round(explicitAmount * f),
-                    unit: i.unit,
-                  };
-                }
-                return {
-                  name: i.name,
-                  grams: Math.round((i.grams ?? 0) * f),
-                };
-              }),
+              ingredients: normalizeBuilderIngredientsForSave(m.ingredients, f),
             };
           }),
         })),
