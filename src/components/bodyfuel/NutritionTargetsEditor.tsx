@@ -12,16 +12,25 @@ import {
   setNutritionTargets,
   extractTargetsFromPlan,
 } from "@/lib/nutrition.functions";
+import { getNutritionTrackerTargets } from "@/lib/nutrition-tracker-targets.functions";
 
 export function NutritionTargetsEditor({ userId }: { userId: string }) {
   const getFn = useServerFn(getNutritionTargets);
   const setFn = useServerFn(setNutritionTargets);
   const extractFn = useServerFn(extractTargetsFromPlan);
   const qc = useQueryClient();
+  const getEffectiveFn = useServerFn(getNutritionTrackerTargets);
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
   const { data: loaded, isLoading: loading } = useQuery({
     queryKey: ["nutrition-targets", userId],
     queryFn: () => getFn({ data: { user_id: userId } }),
+  });
+
+  const { data: effective } = useQuery({
+    queryKey: ["nutrition-effective-targets", userId, today],
+    queryFn: () => getEffectiveFn({ data: { user_id: userId, date: today } }),
   });
 
   const [kcal, setKcal] = useState(2200);
@@ -117,6 +126,15 @@ export function NutritionTargetsEditor({ userId }: { userId: string }) {
       <p className="mt-1 text-xs text-muted-foreground">
         Vorgaben für Kalorien, Makros und Wasser. Kalorien werden auf 50-er-Schritte gerundet.
       </p>
+      {effective?.source === "active_plan" && (
+        <div className="mt-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs">
+          <div className="font-semibold text-emerald-400">Aktiver Plan steuert aktuell das Tracking</div>
+          <div className="mt-1 text-muted-foreground">
+            Effektiv: {effective.kcal} kcal · P {effective.protein_g} g · KH {effective.carbs_g} g · F {effective.fat_g} g
+            {effective.kcal_rest != null ? ` · Restday ${effective.kcal_rest} kcal` : ""}. Die Felder unten sind Fallback-Ziele für Zeiten ohne aktiven Plan.
+          </div>
+        </div>
+      )}
       {loading ? (
         <p className="mt-4 text-sm text-muted-foreground">Lade…</p>
       ) : (
