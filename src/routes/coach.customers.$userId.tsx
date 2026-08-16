@@ -1,22 +1,42 @@
 import { createFileRoute, Link, useParams, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { AppLayout } from "@/components/bodyfuel/AppLayout";
-import {
-  getCustomerDetail,
-  updateCustomerPackage,
-  updateCustomerCoachingInfo,
-  confirmPayment,
-  resendInvite,
-  sendPasswordReset,
-  setCustomerActive,
-  setCustomerPassword,
-  deleteCustomer,
-} from "@/lib/coaching.functions";
-import { setUserGroup } from "@/lib/admin-groups.functions";
 
+import { AppLayout } from "@/components/bodyfuel/AppLayout";
+import { AthleteProfileEditor } from "@/components/bodyfuel/AthleteProfileEditor";
+import { AiCheckinDraftCard } from "@/components/bodyfuel/AiCheckinDraftCard";
+import { CoachBaseDataEditor } from "@/components/bodyfuel/CoachBaseDataEditor";
+import { CoachKitchenEquipmentCard } from "@/components/bodyfuel/CoachKitchenEquipmentCard";
+import { CoachMessageThread } from "@/components/bodyfuel/CoachMessageThread";
+import { CoachNutritionPlanHistoryCard } from "@/components/bodyfuel/CoachNutritionPlanHistoryCard";
+import { CoachStrengthCheckCard } from "@/components/bodyfuel/CoachStrengthCheckCard";
+import { CoachTrainingAlertsCard } from "@/components/bodyfuel/CoachTrainingAlertsCard";
+import { CoachTrainingGoalCard } from "@/components/bodyfuel/CoachTrainingGoalCard";
+import { CoachTrainingSummary } from "@/components/bodyfuel/TrainingTrends";
+import { CoachTrialCard } from "@/components/bodyfuel/CoachTrialCard";
+import { CustomerCheckinsCard } from "@/components/bodyfuel/CustomerCheckinsCard";
+import { CustomerRecentActivityCard } from "@/components/bodyfuel/CustomerRecentActivityCard";
+import { CustomerStatusBadge } from "@/components/bodyfuel/CustomerStatusBadge";
+import { GoalProjectionCard } from "@/components/bodyfuel/GoalProjectionCard";
+import { MacroTargetsCard } from "@/components/bodyfuel/MacroTargetsCard";
+import { MealWishesCard } from "@/components/bodyfuel/MealWishesCard";
+import { NutritionTargetsEditor } from "@/components/bodyfuel/NutritionTargetsEditor";
+import { PartnerLinkCard } from "@/components/bodyfuel/PartnerLinkCard";
+import { PhotoAssessmentCard } from "@/components/bodyfuel/PhotoAssessmentCard";
+import { PlanAdjustmentsCard } from "@/components/bodyfuel/PlanAdjustmentsCard";
+import { PlanManagementCard } from "@/components/bodyfuel/PlanManagementCard";
+import { ProgressPhotosCard } from "@/components/bodyfuel/ProgressPhotosCard";
+import { RecipeInsightsCard } from "@/components/bodyfuel/RecipeInsightsCard";
+import { SectionErrorBoundary } from "@/components/bodyfuel/SectionErrorBoundary";
+import { SmartNutritionInsightsCard } from "@/components/bodyfuel/SmartNutritionInsightsCard";
+import { StepGoalEditor } from "@/components/bodyfuel/StepGoalEditor";
+import { TrainingBonusCard } from "@/components/bodyfuel/TrainingBonusCard";
+import { TrainingPlanManagementCard } from "@/components/bodyfuel/TrainingPlanManagementCard";
+import { TrainingSessionsList } from "@/components/bodyfuel/TrainingSessionsList";
+import { WeightProgressChart } from "@/components/bodyfuel/WeightProgressChart";
+import { UserAccessDebugCard } from "@/components/admin/UserAccessDebugCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,52 +47,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { CoachTrainingSummary } from "@/components/bodyfuel/TrainingTrends";
-import { CoachStrengthCheckCard } from "@/components/bodyfuel/CoachStrengthCheckCard";
-import { NutritionTargetsEditor } from "@/components/bodyfuel/NutritionTargetsEditor";
-import { MacroTargetsCard } from "@/components/bodyfuel/MacroTargetsCard";
-import { TrainingBonusCard } from "@/components/bodyfuel/TrainingBonusCard";
-import { CustomerStatusBadge } from "@/components/bodyfuel/CustomerStatusBadge";
+import { setUserGroup } from "@/lib/admin-groups.functions";
 import { getCoachRadar } from "@/lib/coach-radar.functions";
-import { CustomerRecentActivityCard } from "@/components/bodyfuel/CustomerRecentActivityCard";
-import { CoachTrialCard } from "@/components/bodyfuel/CoachTrialCard";
-import { RecipeInsightsCard } from "@/components/bodyfuel/RecipeInsightsCard";
-import { SmartNutritionInsightsCard } from "@/components/bodyfuel/SmartNutritionInsightsCard";
-import { CustomerCheckinsCard } from "@/components/bodyfuel/CustomerCheckinsCard";
-import { AiCheckinDraftCard } from "@/components/bodyfuel/AiCheckinDraftCard";
-import { PlanAdjustmentsCard } from "@/components/bodyfuel/PlanAdjustmentsCard";
-import { PlanManagementCard } from "@/components/bodyfuel/PlanManagementCard";
-import { TrainingPlanManagementCard } from "@/components/bodyfuel/TrainingPlanManagementCard";
-import { CoachNutritionPlanHistoryCard } from "@/components/bodyfuel/CoachNutritionPlanHistoryCard";
-import { MealWishesCard } from "@/components/bodyfuel/MealWishesCard";
-import { CoachKitchenEquipmentCard } from "@/components/bodyfuel/CoachKitchenEquipmentCard";
-import { ProgressPhotosCard } from "@/components/bodyfuel/ProgressPhotosCard";
-import { PhotoAssessmentCard } from "@/components/bodyfuel/PhotoAssessmentCard";
-import { SectionErrorBoundary } from "@/components/bodyfuel/SectionErrorBoundary";
-
-import { PartnerLinkCard } from "@/components/bodyfuel/PartnerLinkCard";
-import { UserAccessDebugCard } from "@/components/admin/UserAccessDebugCard";
-import { CoachTrainingGoalCard } from "@/components/bodyfuel/CoachTrainingGoalCard";
-import { StepGoalEditor } from "@/components/bodyfuel/StepGoalEditor";
-import { AthleteProfileEditor } from "@/components/bodyfuel/AthleteProfileEditor";
-import { TrainingSessionsList } from "@/components/bodyfuel/TrainingSessionsList";
-import { CoachTrainingAlertsCard } from "@/components/bodyfuel/CoachTrainingAlertsCard";
-import { WeightProgressChart } from "@/components/bodyfuel/WeightProgressChart";
-import { GoalProjectionCard } from "@/components/bodyfuel/GoalProjectionCard";
-import { CoachBaseDataEditor } from "@/components/bodyfuel/CoachBaseDataEditor";
-import { CoachMessageThread } from "@/components/bodyfuel/CoachMessageThread";
+import {
+  confirmPayment,
+  deleteCustomer,
+  getCustomerDetail,
+  resendInvite,
+  sendPasswordReset,
+  setCustomerActive,
+  setCustomerPassword,
+  updateCustomerCoachingInfo,
+  updateCustomerPackage,
+} from "@/lib/coaching.functions";
 import { labelForTrainingGoal } from "@/lib/training-goals";
-
-
-
-
-
 
 export const Route = createFileRoute("/coach/customers/$userId")({
   head: () => ({ meta: [{ title: "Kunde — BODYFUEL" }] }),
@@ -84,12 +72,33 @@ export const Route = createFileRoute("/coach/customers/$userId")({
 });
 
 const CUSTOMER_DETAIL_TIMEOUT_MS = 15_000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+type CustomerTab =
+  | "overview"
+  | "ernaehrung"
+  | "training"
+  | "fortschritt"
+  | "messages"
+  | "verwaltung";
+
+type FocusItem = {
+  title: string;
+  detail: string;
+  tab: CustomerTab;
+  action: string;
+};
 
 async function withCustomerDetailTimeout<T>(request: Promise<T>): Promise<T> {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<never>((_, reject) => {
     timeoutId = setTimeout(
-      () => reject(new Error("Die Kundendaten konnten nicht geladen werden. Bitte Verbindung prüfen und erneut versuchen.")),
+      () =>
+        reject(
+          new Error(
+            "Die Kundendaten konnten nicht geladen werden. Bitte Verbindung prüfen und erneut versuchen.",
+          ),
+        ),
       CUSTOMER_DETAIL_TIMEOUT_MS,
     );
   });
@@ -116,55 +125,45 @@ function CustomerDetail() {
   const groupFn = useServerFn(setUserGroup);
   const radarFn = useServerFn(getCoachRadar);
   const qc = useQueryClient();
+
   const { data: radar } = useQuery({
     queryKey: ["coach-radar"],
     queryFn: () => radarFn(),
     staleTime: 60_000,
   });
-  const radarStatus = (radar?.clients ?? []).find((c) => c.user_id === userId) ?? null;
+  const radarStatus = (radar?.clients ?? []).find((client) => client.user_id === userId) ?? null;
 
   const [newPw, setNewPw] = useState("");
   const [showPwForm, setShowPwForm] = useState(false);
   const [showDangerZone, setShowDangerZone] = useState(false);
+  const [activeTab, setActiveTab] = useState<CustomerTab>("overview");
 
-
-  const {
-    data,
-    isLoading,
-    isError,
-    error,
-    refetch,
-    isFetching,
-  } = useQuery({
+  const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ["customer", userId],
-    queryFn: () =>
-      withCustomerDetailTimeout(getFn({ data: { user_id: userId } })),
+    queryFn: () => withCustomerDetailTimeout(getFn({ data: { user_id: userId } })),
     retry: false,
   });
 
-  const activePkg = data?.packages.find((p) => p.is_active) ?? data?.packages[0];
-
-  const [price, setPrice] = useState<number>(0);
-  const [pkgKey, setPkgKey] = useState<string>("");
-  const [startDate, setStartDate] = useState<string>("");
-  const [endDate, setEndDate] = useState<string>("");
-  const [coachingGoal, setCoachingGoal] = useState<string>("");
-  const [nextCheckin, setNextCheckin] = useState<string>("");
+  const activePkg = data?.packages.find((pkg) => pkg.is_active) ?? data?.packages[0];
+  const [price, setPrice] = useState(0);
+  const [pkgKey, setPkgKey] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [coachingGoal, setCoachingGoal] = useState("");
+  const [nextCheckin, setNextCheckin] = useState("");
 
   useEffect(() => {
-    if (activePkg) {
-      setPrice(Number(activePkg.price_eur));
-      setPkgKey(activePkg.package);
-      setStartDate(activePkg.start_date ?? "");
-      setEndDate(activePkg.end_date);
-    }
+    if (!activePkg) return;
+    setPrice(Number(activePkg.price_eur));
+    setPkgKey(activePkg.package);
+    setStartDate(activePkg.start_date ?? "");
+    setEndDate(activePkg.end_date);
   }, [activePkg]);
 
   useEffect(() => {
-    if (data) {
-      setCoachingGoal((data as any).coaching_goal ?? "");
-      setNextCheckin((data as any).next_checkin_date ?? "");
-    }
+    if (!data) return;
+    setCoachingGoal((data as any).coaching_goal ?? "");
+    setNextCheckin((data as any).next_checkin_date ?? "");
   }, [data]);
 
   const saveCoaching = useMutation({
@@ -180,27 +179,26 @@ function CustomerDetail() {
       toast.success("Coaching-Infos gespeichert.");
       qc.invalidateQueries({ queryKey: ["customer", userId] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (mutationError: Error) => toast.error(mutationError.message),
   });
 
-
   const update = useMutation({
-    mutationFn: (patch: Parameters<typeof updFn>[0]["data"]) =>
-      updFn({ data: patch }),
+    mutationFn: (patch: Parameters<typeof updFn>[0]["data"]) => updFn({ data: patch }),
     onSuccess: () => {
       toast.success("Gespeichert.");
       qc.invalidateQueries({ queryKey: ["customer", userId] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (mutationError: Error) => toast.error(mutationError.message),
   });
 
   const confirm = useMutation({
-    mutationFn: (payment_id: string) => payFn({ data: { payment_id, extend_days: 30 } }),
+    mutationFn: (paymentId: string) =>
+      payFn({ data: { payment_id: paymentId, extend_days: 30 } }),
     onSuccess: () => {
       toast.success("Zahlung bestätigt, Laufzeit verlängert.");
       qc.invalidateQueries({ queryKey: ["customer", userId] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (mutationError: Error) => toast.error(mutationError.message),
   });
 
   const accessAction = useMutation({
@@ -210,20 +208,22 @@ function CustomerDetail() {
       if (action === "reset") return resetFn({ data: { user_id: userId, origin } });
       return activeFn({ data: { user_id: userId, active: action === "activate" } });
     },
-    onSuccess: (_d, action) => {
-      const m = {
+    onSuccess: (_result, action) => {
+      const message = {
         invite: "Einladung erneut versendet.",
         reset: "Passwort-Reset-Mail versendet.",
         activate: "Zugang aktiviert.",
         deactivate: "Zugang deaktiviert.",
       } as const;
-      toast.success(m[action]);
+      toast.success(message[action]);
       qc.invalidateQueries({ queryKey: ["customer", userId] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (mutationError: Error) => toast.error(mutationError.message),
   });
 
-  if (isLoading) return <p className="text-sm text-muted-foreground">Lade Kundendaten…</p>;
+  if (isLoading) {
+    return <p className="text-sm text-muted-foreground">Lade Kundendaten…</p>;
+  }
 
   if (isError || !data) {
     return (
@@ -253,255 +253,414 @@ function CustomerDetail() {
       : status === "deactivated"
         ? "bg-destructive/10 text-destructive"
         : "bg-warning/20 text-warning";
-  const latestWeightMeasurement = data.measurements?.find((item: any) => item.weight_kg != null) ?? null;
+
+  const weightMeasurements = (data.measurements ?? []).filter(
+    (item: any) => item.weight_kg != null,
+  );
+  const latestWeightMeasurement = weightMeasurements[0] ?? null;
+  const currentWeight =
+    latestWeightMeasurement?.weight_kg != null ? Number(latestWeightMeasurement.weight_kg) : null;
+  const thirtyDaysAgo = Date.now() - 30 * DAY_MS;
+  const comparisonWeight =
+    weightMeasurements.find((item: any) => new Date(item.measured_at).getTime() <= thirtyDaysAgo) ??
+    (weightMeasurements.length > 1 ? weightMeasurements[weightMeasurements.length - 1] : null);
+  const weightDelta30 =
+    currentWeight != null && comparisonWeight?.weight_kg != null
+      ? currentWeight - Number(comparisonWeight.weight_kg)
+      : null;
+
+  const lastActivityIso = (data.auth as any)?.last_activity_at ?? data.auth?.last_sign_in_at ?? null;
+  const lastActivityDate = lastActivityIso ? new Date(lastActivityIso) : null;
+  const inactiveDays = lastActivityDate
+    ? Math.max(0, Math.floor((Date.now() - lastActivityDate.getTime()) / DAY_MS))
+    : null;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const nextCheckinDate = (data as any).next_checkin_date
+    ? new Date(`${(data as any).next_checkin_date}T00:00:00`)
+    : null;
+  const checkinDays = nextCheckinDate
+    ? Math.ceil((nextCheckinDate.getTime() - today.getTime()) / DAY_MS)
+    : null;
+  const packageEndDate = activePkg?.end_date ? new Date(`${activePkg.end_date}T00:00:00`) : null;
+  const packageDaysLeft = packageEndDate
+    ? Math.ceil((packageEndDate.getTime() - today.getTime()) / DAY_MS)
+    : null;
+
+  const focusItems: FocusItem[] = [];
+  if (radarStatus && radarStatus.level !== "green") {
+    focusItems.push({
+      title: "Coach-Radar",
+      detail: radarStatus.primary_reason,
+      tab: "fortschritt",
+      action: "Prüfen",
+    });
+  }
+  if (checkinDays != null && checkinDays <= 0) {
+    focusItems.push({
+      title: checkinDays < 0 ? "Check-in überfällig" : "Check-in heute",
+      detail:
+        checkinDays < 0
+          ? `Seit ${Math.abs(checkinDays)} Tag${Math.abs(checkinDays) === 1 ? "" : "en"} fällig.`
+          : "Heute ist der nächste Check-in geplant.",
+      tab: "fortschritt",
+      action: "Check-ins öffnen",
+    });
+  }
+  if (packageDaysLeft != null && packageDaysLeft <= 7) {
+    focusItems.push({
+      title: packageDaysLeft < 0 ? "Paket abgelaufen" : "Paket läuft bald aus",
+      detail:
+        packageDaysLeft < 0
+          ? `Seit ${Math.abs(packageDaysLeft)} Tag${Math.abs(packageDaysLeft) === 1 ? "" : "en"} abgelaufen.`
+          : `Noch ${packageDaysLeft} Tag${packageDaysLeft === 1 ? "" : "e"} Laufzeit.`,
+      tab: "verwaltung",
+      action: "Mitgliedschaft öffnen",
+    });
+  }
+  if (inactiveDays != null && inactiveDays >= 5) {
+    focusItems.push({
+      title: "Kunde länger inaktiv",
+      detail: `Letzte Aktivität vor ${inactiveDays} Tagen.`,
+      tab: "messages",
+      action: "Nachricht senden",
+    });
+  }
+  const visibleFocusItems = focusItems.slice(0, 3);
+
+  const profile = (data.profile as any) ?? {};
+  const packageLabel = activePkg
+    ? activePkg.package === "coaching"
+      ? "BodyFuel Coaching"
+      : activePkg.package === "smart"
+        ? "BodyFuel Smart"
+        : activePkg.package
+    : null;
 
   return (
     <div className="space-y-6">
-      <div>
-        <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Kunde</p>
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="font-display text-3xl font-bold">
-            {data.profile?.display_name ?? data.email}
-          </h1>
-          {radarStatus && (
-            <CustomerStatusBadge level={radarStatus.level} size="md" showLabel />
-          )}
-        </div>
-        {radarStatus && radarStatus.level !== "green" && (
-          <p className="mt-1 text-xs text-warning">{radarStatus.primary_reason}</p>
-        )}
-        <p className="text-sm text-muted-foreground">{data.email}</p>
-        {data.profile?.phone && (
-          <p className="text-sm text-muted-foreground">{data.profile.phone}</p>
-        )}
-      </div>
-
-      <Accordion type="multiple" defaultValue={["stammdaten"]} className="space-y-3">
-        <AccordionItem
-          value="stammdaten"
-          className="rounded-2xl border border-border bg-card px-4"
+      <header className="space-y-4">
+        <Link
+          to="/coach/customers"
+          className="inline-flex text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-foreground"
         >
-          <AccordionTrigger className="font-display text-base font-bold">
-            Stammdaten & Zugang
-          </AccordionTrigger>
-          <AccordionContent className="space-y-6 pt-2">
-            <div className="rounded-2xl border border-border bg-card p-6">
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="font-display text-lg font-bold">Zugang</h2>
-                <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${statusClass}`}>
-                  {statusLabel}
+          ← Kunden
+        </Link>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Coach Cockpit</p>
+            <div className="mt-1 flex flex-wrap items-center gap-3">
+              <h1 className="font-display text-3xl font-bold">
+                {data.profile?.display_name ?? data.email}
+              </h1>
+              {radarStatus && <CustomerStatusBadge level={radarStatus.level} size="md" showLabel />}
+            </div>
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+              <span>{data.email}</span>
+              {data.profile?.phone && <span>{data.profile.phone}</span>}
+              {packageLabel && (
+                <span>
+                  {packageLabel}
+                  {activePkg?.end_date
+                    ? ` · bis ${new Date(`${activePkg.end_date}T00:00:00`).toLocaleDateString("de-DE")}`
+                    : ""}
                 </span>
-              </div>
-              <div className="mt-3 text-xs text-muted-foreground space-y-0.5">
-                {data.auth?.invited_at && (
-                  <div>Eingeladen am: {new Date(data.auth.invited_at).toLocaleDateString("de-DE")}</div>
-                )}
-                {(data.auth as any)?.last_activity_at ? (
-                  <div>Letzte Aktivität: {new Date((data.auth as any).last_activity_at).toLocaleString("de-DE")}</div>
-                ) : data.auth?.last_sign_in_at && (
-                  <div>Letzte Aktivität: {new Date(data.auth.last_sign_in_at).toLocaleString("de-DE")}</div>
-                )}
-              </div>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Button
-                  size="sm"
-                  onClick={() => accessAction.mutate("invite")}
-                  disabled={accessAction.isPending}
-                  className="bg-gradient-gold text-primary-foreground"
-                >
-                  {status === "invited" ? "Einladung erneut senden" : "Einladung senden"}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => accessAction.mutate("reset")}
-                  disabled={accessAction.isPending}
-                >
-                  Passwort zurücksetzen
-                </Button>
-                {status === "deactivated" && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => accessAction.mutate("activate")}
-                    disabled={accessAction.isPending}
-                  >
-                    Zugang aktivieren
-                  </Button>
-                )}
-              </div>
+              )}
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => setActiveTab("messages")}>
+              Nachricht
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setActiveTab("fortschritt")}
+              className="bg-gradient-gold text-primary-foreground"
+            >
+              Check-ins & Fortschritt
+            </Button>
+          </div>
+        </div>
+      </header>
 
-              {/* Danger zone — versteckt, damit nichts versehentlich passiert */}
-              <div className="mt-4 border-t border-border pt-3">
-                <button
-                  type="button"
-                  onClick={() => setShowDangerZone((v) => !v)}
-                  className="text-[11px] uppercase tracking-wider text-muted-foreground hover:text-destructive"
-                >
-                  {showDangerZone ? "▾ Erweiterte Aktionen ausblenden" : "▸ Erweiterte Aktionen anzeigen"}
-                </button>
-                {showDangerZone && (
-                  <div className="mt-3 rounded-xl border border-destructive/30 bg-destructive/5 p-3">
-                    <p className="mb-3 text-[11px] text-muted-foreground">
-                      Diese Aktionen sind kritisch. Bitte vorsichtig nutzen.
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setShowPwForm((v) => !v)}
-                      >
-                        Passwort selbst setzen
-                      </Button>
-                      {status !== "deactivated" && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            if (window.confirm("Zugang wirklich deaktivieren? Der Kunde kann sich nicht mehr einloggen.")) {
-                              accessAction.mutate("deactivate");
-                            }
-                          }}
-                          disabled={accessAction.isPending}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          Zugang deaktivieren
-                        </Button>
-                      )}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={async () => {
-                          const name = data.profile?.display_name ?? data.email ?? "diesen Kunden";
-                          const confirm1 = window.prompt(
-                            `Konto von ${name} unwiderruflich löschen?\n\nAlle Pakete und Zahlungen werden ebenfalls entfernt.\n\nZum Bestätigen tippe LÖSCHEN ein:`,
-                          );
-                          if (confirm1 !== "LÖSCHEN") return;
-                          try {
-                            await deleteFn({ data: { user_id: userId } });
-                            toast.success("Kunde gelöscht.");
-                            navigate({ to: "/coach/customers" });
-                          } catch (e) {
-                            toast.error((e as Error).message);
-                          }
-                        }}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        Konto löschen
-                      </Button>
-                    </div>
-                  </div>
-                )}
+      <CustomerTabs active={activeTab} onChange={setActiveTab} />
+
+      {activeTab === "overview" && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <CockpitStat
+              label="Gewicht"
+              value={currentWeight != null ? `${currentWeight.toLocaleString("de-DE")} kg` : "—"}
+              hint={
+                weightDelta30 != null
+                  ? `${weightDelta30 > 0 ? "+" : ""}${weightDelta30.toLocaleString("de-DE", {
+                      maximumFractionDigits: 1,
+                    })} kg im Vergleich`
+                  : "Noch kein Verlauf"
+              }
+            />
+            <CockpitStat
+              label="Ziel"
+              value={
+                profile.goal_weight_kg
+                  ? `${profile.goal_weight_kg} kg`
+                  : labelForTrainingGoal(profile.training_goal)
+              }
+              hint={(data as any).coaching_goal ? `Coaching: ${(data as any).coaching_goal}` : "Coaching-Ziel"}
+            />
+            <CockpitStat
+              label="Nächster Check-in"
+              value={
+                nextCheckinDate
+                  ? nextCheckinDate.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })
+                  : "Nicht geplant"
+              }
+              hint={
+                checkinDays == null
+                  ? "Termin festlegen"
+                  : checkinDays < 0
+                    ? `${Math.abs(checkinDays)} Tage überfällig`
+                    : checkinDays === 0
+                      ? "Heute"
+                      : `in ${checkinDays} Tagen`
+              }
+            />
+            <CockpitStat
+              label="Letzte Aktivität"
+              value={
+                lastActivityDate
+                  ? lastActivityDate.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })
+                  : "—"
+              }
+              hint={
+                inactiveDays == null
+                  ? "Keine Aktivität erfasst"
+                  : inactiveDays === 0
+                    ? "Heute aktiv"
+                    : `vor ${inactiveDays} Tagen`
+              }
+            />
+          </div>
+
+          <section className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                  Coach-Fokus
+                </p>
+                <h2 className="mt-1 font-display text-xl font-bold">Heute relevant</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Maximal drei Punkte, die eine Entscheidung oder Aktion brauchen.
+                </p>
               </div>
-
-
-              {showPwForm && (
-                <form
-                  className="mt-4 flex flex-wrap items-end gap-2"
-                  onSubmit={async (e) => {
-                    e.preventDefault();
-                    if (newPw.length < 8) return toast.error("Mindestens 8 Zeichen.");
-                    try {
-                      await setPwFn({ data: { user_id: userId, password: newPw } });
-                      toast.success("Passwort gesetzt.");
-                      setNewPw("");
-                      setShowPwForm(false);
-                    } catch (err) {
-                      toast.error((err as Error).message);
-                    }
-                  }}
-                >
-                  <div className="space-y-1">
-                    <Label htmlFor="manual-pw">Neues Passwort</Label>
-                    <Input
-                      id="manual-pw"
-                      type="text"
-                      value={newPw}
-                      onChange={(e) => setNewPw(e.target.value)}
-                      placeholder="Mind. 8 Zeichen"
-                      className="w-56"
-                      autoComplete="new-password"
-                    />
-                  </div>
-                  <Button type="submit" size="sm" className="bg-gradient-gold text-primary-foreground">
-                    Speichern
-                  </Button>
-                </form>
+              {visibleFocusItems.length === 0 && (
+                <span className="rounded-full bg-gold/10 px-3 py-1 text-xs font-semibold text-gold">
+                  Alles im grünen Bereich
+                </span>
               )}
             </div>
 
-            {(() => {
-              const p: any = data.profile ?? {};
-              const activity: Record<string, string> = {
-                sedentary: "Sitzend",
-                light: "Leicht aktiv",
-                moderate: "Moderat aktiv",
-                active: "Sehr aktiv",
-                athlete: "Leistungssport",
-              };
-              const gender: Record<string, string> = { male: "Männlich", female: "Weiblich", other: "Divers" };
-              const row = (label: string, value: any) => (
-                <div className="space-y-0.5">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
-                  <p className="text-sm font-medium text-foreground">{value || "—"}</p>
-                </div>
-              );
-              return (
-                <div className="rounded-2xl border border-border bg-card p-6">
-                  <h2 className="font-display text-lg font-bold">Stammdaten</h2>
-                  <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
-                    {row("Trainingsziel", labelForTrainingGoal(p.training_goal))}
-                    {row("Aktuelles Gewicht", latestWeightMeasurement?.weight_kg ? `${latestWeightMeasurement.weight_kg} kg` : null)}
-                    {row("Wunschgewicht", p.goal_weight_kg ? `${p.goal_weight_kg} kg` : null)}
-                    {row("Wunschgewicht bis", (p as any).goal_target_date ? new Date((p as any).goal_target_date).toLocaleDateString("de-DE") : null)}
-                    {row("Aktivitätslevel", activity[p.activity_level] ?? p.activity_level)}
-                    {row("Größe", p.height_cm ? `${p.height_cm} cm` : null)}
-                    {row("Geschlecht", gender[p.gender] ?? p.gender)}
-                    {row("Geburtsdatum", p.birthdate ? new Date(p.birthdate).toLocaleDateString("de-DE") : null)}
+            {visibleFocusItems.length > 0 ? (
+              <div className="mt-4 grid gap-3 lg:grid-cols-3">
+                {visibleFocusItems.map((item) => (
+                  <div
+                    key={`${item.title}-${item.action}`}
+                    className="rounded-xl border border-warning/30 bg-warning/5 p-4"
+                  >
+                    <p className="text-sm font-semibold">{item.title}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{item.detail}</p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="mt-3"
+                      onClick={() => setActiveTab(item.tab)}
+                    >
+                      {item.action}
+                    </Button>
                   </div>
-                </div>
-              );
-            })()}
+                ))}
+              </div>
+            ) : (
+              <p className="mt-4 text-sm text-muted-foreground">
+                Aktuell gibt es keinen akuten Handlungsbedarf. Du kannst direkt in Ernährung, Training
+                oder Kommunikation springen.
+              </p>
+            )}
+          </section>
+
+          <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <QuickAction
+              label="Ernährungsplan"
+              description="Targets, Plan und Verlauf"
+              onClick={() => setActiveTab("ernaehrung")}
+            />
+            <QuickAction
+              label="Trainingsplan"
+              description="Plan, Alerts und Strength Check"
+              onClick={() => setActiveTab("training")}
+            />
+            <QuickAction
+              label="Check-in auswerten"
+              description="Fortschritt, Fotos und Check-ins"
+              onClick={() => setActiveTab("fortschritt")}
+            />
+            <QuickAction
+              label="Nachricht senden"
+              description="Direkt in den Kundenthread"
+              onClick={() => setActiveTab("messages")}
+            />
+          </section>
+
+          <SectionErrorBoundary label="Letzte Aktivität">
+            <CustomerRecentActivityCard userId={userId} />
+          </SectionErrorBoundary>
+        </div>
+      )}
+
+      {activeTab === "ernaehrung" && (
+        <TabPanel title="Ernährung" subtitle="Targets, Ernährungsplan und Ernährungsverhalten an einem Ort.">
+          <MacroTargetsCard userId={userId} />
+          <NutritionTargetsEditor userId={userId} />
+          <SmartNutritionInsightsCard userId={userId} />
+          <PlanManagementCard userId={userId} />
+          <Button variant="secondary" className="w-full" asChild>
+            <Link to="/coach/plan-builder/$userId" params={{ userId }}>
+              Plan manuell erstellen
+            </Link>
+          </Button>
+          <CoachNutritionPlanHistoryCard userId={userId} />
+          <CoachKitchenEquipmentCard userId={userId} />
+          <MealWishesCard userId={userId} mode="coach" />
+          <RecipeInsightsCard userId={userId} />
+        </TabPanel>
+      )}
+
+      {activeTab === "training" && (
+        <TabPanel title="Training" subtitle="Planung, Belastung, Strength Check und freie Einheiten.">
+          <StepGoalEditor userId={userId} initial={profile.daily_step_goal ?? 10000} />
+          <CoachTrainingGoalCard
+            trainingGoal={profile.training_goal ?? null}
+            targets={(data as any).targets ?? null}
+            measurements={(data.measurements ?? []) as any}
+            goalWeight={profile.goal_weight_kg ?? null}
+            goalTargetDate={profile.goal_target_date ?? null}
+          />
+          <GoalProjectionCard profile={profile} currentWeight={currentWeight} />
+          <TrainingPlanManagementCard userId={userId} />
+          <CoachStrengthCheckCard userId={userId} />
+          <CoachTrainingAlertsCard userId={userId} />
+          <section className="rounded-2xl border border-border bg-card p-5">
+            <h3 className="font-display text-base font-bold">Freie Trainingseinheiten</h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Kurse, Sport, Mobility und andere Einheiten, die der Kunde außerhalb des Plans geloggt hat.
+            </p>
+            <div className="mt-3">
+              <TrainingSessionsList clientId={userId} days={30} />
+            </div>
+          </section>
+          <TrainingBonusCard userId={userId} isCoach />
+          <CoachTrainingSummary clientId={userId} />
+        </TabPanel>
+      )}
+
+      {activeTab === "fortschritt" && (
+        <TabPanel
+          title="Fortschritt & Check-ins"
+          subtitle="Gewicht, Maße, Fotos, Check-ins und Plananpassungen."
+        >
+          <SectionErrorBoundary label="Gewichtsentwicklung">
+            <WeightProgressChart
+              measurements={(data.measurements ?? []) as any}
+              goalWeight={profile.goal_weight_kg ?? null}
+              title="Gewichtsentwicklung"
+              emptyHint="Sobald der Kunde sein erstes Gewicht einträgt, erscheint hier sein Verlauf."
+            />
+          </SectionErrorBoundary>
+          <SectionErrorBoundary label="Maße & Gewicht">
+            <MeasurementsCard measurements={data.measurements ?? []} />
+          </SectionErrorBoundary>
+          <SectionErrorBoundary label="Fortschrittsfotos">
+            <ProgressPhotosCard userId={userId} readOnly />
+          </SectionErrorBoundary>
+          <SectionErrorBoundary label="Foto-Auswertung">
+            <PhotoAssessmentCard userId={userId} isCoach />
+          </SectionErrorBoundary>
+          <SectionErrorBoundary label="AI Check-in Entwurf">
+            <AiCheckinDraftCard userId={userId} />
+          </SectionErrorBoundary>
+          <SectionErrorBoundary label="Plan-Anpassungen">
+            <PlanAdjustmentsCard userId={userId} />
+          </SectionErrorBoundary>
+          <SectionErrorBoundary label="Check-ins">
+            <CustomerCheckinsCard userId={userId} />
+          </SectionErrorBoundary>
+        </TabPanel>
+      )}
+
+      {activeTab === "messages" && (
+        <TabPanel title="Kommunikation" subtitle="Kundenthread und direkte Betreuung.">
+          <CoachMessageThread mode="coach" userId={userId} />
+        </TabPanel>
+      )}
+
+      {activeTab === "verwaltung" && (
+        <div className="space-y-6">
+          <AdminSection title="Konto & Basisdaten" subtitle="Zugang, Stammdaten und Gruppenrechte.">
+            <AccessCard
+              data={data}
+              status={status}
+              statusLabel={statusLabel}
+              statusClass={statusClass}
+              accessAction={accessAction}
+              showDangerZone={showDangerZone}
+              setShowDangerZone={setShowDangerZone}
+              showPwForm={showPwForm}
+              setShowPwForm={setShowPwForm}
+              newPw={newPw}
+              setNewPw={setNewPw}
+              setPwFn={setPwFn}
+              deleteFn={deleteFn}
+              userId={userId}
+              navigate={navigate}
+            />
+
+            <ProfileSummary profile={profile} currentWeight={currentWeight} />
 
             <CoachBaseDataEditor
               userId={userId}
-              currentWeightKg={(latestWeightMeasurement as any)?.weight_kg ?? null}
+              currentWeightKg={currentWeight}
               initial={{
-                height_cm: (data.profile as any)?.height_cm ?? null,
-                birthdate: (data.profile as any)?.birthdate ?? null,
-                gender: (data.profile as any)?.gender ?? null,
-                goal_weight_kg: (data.profile as any)?.goal_weight_kg ?? null,
-                goal_target_date: (data.profile as any)?.goal_target_date ?? null,
-                activity_level: (data.profile as any)?.activity_level ?? null,
-                training_goal: (data.profile as any)?.training_goal ?? null,
+                height_cm: profile.height_cm ?? null,
+                birthdate: profile.birthdate ?? null,
+                gender: profile.gender ?? null,
+                goal_weight_kg: profile.goal_weight_kg ?? null,
+                goal_target_date: profile.goal_target_date ?? null,
+                activity_level: profile.activity_level ?? null,
+                training_goal: profile.training_goal ?? null,
               }}
             />
-
-            <GoalProjectionCard
-              profile={(data.profile as any) ?? {}}
-              currentWeight={(latestWeightMeasurement as any)?.weight_kg ?? null}
-            />
-
-
 
             <AthleteProfileEditor
               userId={userId}
               mode="coach"
               initial={{
-                sport: (data.profile as any)?.sport ?? null,
-                sport_position: (data.profile as any)?.sport_position ?? null,
-                sport_level: (data.profile as any)?.sport_level ?? null,
-                team_sport: (data.profile as any)?.team_sport ?? false,
-                match_days_per_week: (data.profile as any)?.match_days_per_week ?? null,
-                practice_days_per_week: (data.profile as any)?.practice_days_per_week ?? null,
-                season_phase: (data.profile as any)?.season_phase ?? null,
-                class_types: (data.profile as any)?.class_types ?? [],
-                class_days_per_week: (data.profile as any)?.class_days_per_week ?? null,
-                mobility_frequency: (data.profile as any)?.mobility_frequency ?? null,
-                mobility_focus: (data.profile as any)?.mobility_focus ?? null,
-                cardio_outside_gym: (data.profile as any)?.cardio_outside_gym ?? null,
-                injuries: (data.profile as any)?.injuries ?? null,
-                training_experience: (data.profile as any)?.training_experience ?? null,
+                sport: profile.sport ?? null,
+                sport_position: profile.sport_position ?? null,
+                sport_level: profile.sport_level ?? null,
+                team_sport: profile.team_sport ?? false,
+                match_days_per_week: profile.match_days_per_week ?? null,
+                practice_days_per_week: profile.practice_days_per_week ?? null,
+                season_phase: profile.season_phase ?? null,
+                class_types: profile.class_types ?? [],
+                class_days_per_week: profile.class_days_per_week ?? null,
+                mobility_frequency: profile.mobility_frequency ?? null,
+                mobility_focus: profile.mobility_focus ?? null,
+                cardio_outside_gym: profile.cardio_outside_gym ?? null,
+                injuries: profile.injuries ?? null,
+                training_experience: profile.training_experience ?? null,
               }}
             />
 
@@ -513,33 +672,28 @@ function CustomerDetail() {
                   await groupFn({ data: { user_id: userId, group, enabled } });
                   toast.success(enabled ? "Zugang aktiviert." : "Zugang entfernt.");
                   qc.invalidateQueries({ queryKey: ["customer", userId] });
-                } catch (e) {
-                  toast.error((e as Error).message);
+                } catch (toggleError) {
+                  toast.error((toggleError as Error).message);
                 }
               }}
             />
-          </AccordionContent>
-        </AccordionItem>
+          </AdminSection>
 
-        <AccordionItem
-          value="mitgliedschaft"
-          className="rounded-2xl border border-border bg-card px-4"
-        >
-          <AccordionTrigger className="font-display text-base font-bold">
-            Mitgliedschaft & Zahlungen
-          </AccordionTrigger>
-          <AccordionContent className="space-y-6 pt-2">
+          <AdminSection
+            title="Mitgliedschaft & Zahlungen"
+            subtitle="Paket, Laufzeit, Coaching-Infos und Zahlungshistorie."
+          >
             <CoachTrialCard userId={userId} />
 
             {activePkg && (
-              <div className="rounded-2xl border border-border bg-card p-6">
-                <h2 className="font-display text-lg font-bold">Aktives Paket</h2>
+              <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+                <h3 className="font-display text-lg font-bold">Aktives Paket</h3>
                 <div className="mt-4 grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label>Paket</Label>
                     <select
                       value={pkgKey}
-                      onChange={(e) => setPkgKey(e.target.value)}
+                      onChange={(event) => setPkgKey(event.target.value)}
                       className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                     >
                       <option value="smart">BodyFuel Smart</option>
@@ -557,7 +711,7 @@ function CustomerDetail() {
                       type="number"
                       step="0.01"
                       value={price}
-                      onChange={(e) => setPrice(Number(e.target.value))}
+                      onChange={(event) => setPrice(Number(event.target.value))}
                     />
                   </div>
                   <div className="space-y-2">
@@ -565,18 +719,15 @@ function CustomerDetail() {
                     <Input
                       type="date"
                       value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
+                      onChange={(event) => setStartDate(event.target.value)}
                     />
-                    <p className="text-[11px] text-muted-foreground">
-                      Vertragsbeginn — auch in der Zukunft möglich (z.B. 01.07.).
-                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label>Ablaufdatum</Label>
                     <Input
                       type="date"
                       value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
+                      onChange={(event) => setEndDate(event.target.value)}
                     />
                   </div>
                 </div>
@@ -598,10 +749,7 @@ function CustomerDetail() {
                   <Button
                     variant="outline"
                     onClick={() =>
-                      update.mutate({
-                        package_id: activePkg.id,
-                        is_active: !activePkg.is_active,
-                      })
+                      update.mutate({ package_id: activePkg.id, is_active: !activePkg.is_active })
                     }
                   >
                     {activePkg.is_active ? "Deaktivieren" : "Aktivieren"}
@@ -610,8 +758,8 @@ function CustomerDetail() {
               </div>
             )}
 
-            <div className="rounded-2xl border border-border bg-card p-6">
-              <h2 className="font-display text-lg font-bold">Coaching-Infos</h2>
+            <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+              <h3 className="font-display text-lg font-bold">Coaching-Infos</h3>
               <p className="mt-1 text-xs text-muted-foreground">
                 Diese Werte werden im Kundenprofil angezeigt — der Kunde kann sie nicht ändern.
               </p>
@@ -634,7 +782,7 @@ function CustomerDetail() {
                   <Input
                     type="date"
                     value={nextCheckin}
-                    onChange={(e) => setNextCheckin(e.target.value)}
+                    onChange={(event) => setNextCheckin(event.target.value)}
                   />
                 </div>
               </div>
@@ -647,189 +795,430 @@ function CustomerDetail() {
               </Button>
             </div>
 
-            <div className="rounded-2xl border border-border bg-card p-6">
-              <h2 className="font-display text-lg font-bold">Zahlungshistorie</h2>
-              {data.payments.length === 0 ? (
-                <p className="mt-3 text-sm text-muted-foreground">Noch keine Zahlungen.</p>
-              ) : (
-                <table className="mt-4 w-full text-sm">
-                  <thead className="text-left text-[11px] uppercase tracking-wider text-muted-foreground">
-                    <tr>
-                      <th className="py-2">Datum</th>
-                      <th>Betrag</th>
-                      <th>Methode</th>
-                      <th>Status</th>
-                      <th>Notiz</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.payments.map((p) => (
-                      <tr key={p.id} className="border-t border-border">
-                        <td className="py-2">{p.payment_date}</td>
-                        <td>{Number(p.amount_eur).toFixed(2)} €</td>
-                        <td>{p.method}</td>
-                        <td>
-                          <span
-                            className={
-                              "rounded-full px-2 py-0.5 text-[10px] font-bold uppercase " +
-                              (p.status === "confirmed"
-                                ? "bg-gold/10 text-gold"
-                                : p.status === "pending"
-                                  ? "bg-warning/20 text-warning"
-                                  : "bg-muted text-muted-foreground")
-                            }
-                          >
-                            {p.status}
-                          </span>
-                        </td>
-                        <td className="text-muted-foreground">{p.note ?? "—"}</td>
-                        <td className="text-right">
-                          {p.status === "pending" && (
-                            <Button size="sm" onClick={() => confirm.mutate(p.id)}>
-                              Bestätigen
-                            </Button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
+            <PaymentsCard payments={data.payments} onConfirm={(paymentId) => confirm.mutate(paymentId)} />
+          </AdminSection>
 
-        <AccordionItem
-          value="ernaehrung"
-          className="rounded-2xl border border-border bg-card px-4"
-        >
-          <AccordionTrigger className="font-display text-base font-bold">
-            Ernährung
-          </AccordionTrigger>
-          <AccordionContent className="space-y-6 pt-2">
-            <MacroTargetsCard userId={userId} />
-            <NutritionTargetsEditor userId={userId} />
-            <SmartNutritionInsightsCard userId={userId} />
-            <PlanManagementCard userId={userId} />
-            <Button variant="secondary" className="w-full" asChild>
-              <Link to="/coach/plan-builder/$userId" params={{ userId }}>
-                Plan manuell erstellen
-              </Link>
-            </Button>
-            <CoachNutritionPlanHistoryCard userId={userId} />
-            <CoachKitchenEquipmentCard userId={userId} />
-            <MealWishesCard userId={userId} mode="coach" />
-            <RecipeInsightsCard userId={userId} />
-
-          </AccordionContent>
-        </AccordionItem>
-
-        <AccordionItem
-          value="training"
-          className="rounded-2xl border border-border bg-card px-4"
-        >
-          <AccordionTrigger className="font-display text-base font-bold">
-            Training
-          </AccordionTrigger>
-          <AccordionContent className="space-y-6 pt-2">
-            <StepGoalEditor
-              userId={userId}
-              initial={(data.profile as any)?.daily_step_goal ?? 10000}
-            />
-            <CoachTrainingGoalCard
-              trainingGoal={(data.profile as any)?.training_goal ?? null}
-              targets={(data as any).targets ?? null}
-              measurements={(data.measurements ?? []) as any}
-              goalWeight={(data.profile as any)?.goal_weight_kg ?? null}
-              goalTargetDate={(data.profile as any)?.goal_target_date ?? null}
-            />
-            <GoalProjectionCard
-              profile={(data.profile as any) ?? {}}
-              currentWeight={(latestWeightMeasurement as any)?.weight_kg ?? null}
-            />
-            <TrainingPlanManagementCard userId={userId} />
-            <CoachStrengthCheckCard userId={userId} />
-            <CoachTrainingAlertsCard userId={userId} />
-            <section className="rounded-2xl border border-border bg-card p-5">
-              <h3 className="font-display text-base font-bold mb-3">Freie Trainingseinheiten</h3>
-              <p className="text-xs text-muted-foreground mb-3">
-                Kurse, Sport, Mobility und andere Einheiten, die der Kunde außerhalb des Plans geloggt hat.
-              </p>
-              <TrainingSessionsList clientId={userId} days={30} />
-            </section>
-            <TrainingBonusCard userId={userId} isCoach />
-            <CoachTrainingSummary clientId={userId} />
-          </AccordionContent>
-        </AccordionItem>
-
-        <AccordionItem
-          value="fortschritt"
-          className="rounded-2xl border border-border bg-card px-4"
-        >
-          <AccordionTrigger className="font-display text-base font-bold">
-            Fortschritt & Check-ins
-          </AccordionTrigger>
-          <AccordionContent className="space-y-6 pt-2">
-            <SectionErrorBoundary label="Gewichtsentwicklung">
-              <WeightProgressChart
-                measurements={(data.measurements ?? []) as any}
-                goalWeight={(data.profile as any)?.goal_weight_kg ?? null}
-                title="Gewichtsentwicklung"
-                emptyHint="Sobald der Kunde sein erstes Gewicht einträgt, erscheint hier sein Verlauf."
-              />
-            </SectionErrorBoundary>
-            <SectionErrorBoundary label="Maße & Gewicht">
-              <MeasurementsCard measurements={data.measurements ?? []} />
-            </SectionErrorBoundary>
-            <SectionErrorBoundary label="Fortschrittsfotos">
-              <ProgressPhotosCard userId={userId} readOnly />
-            </SectionErrorBoundary>
-            <SectionErrorBoundary label="Foto-Auswertung">
-              <PhotoAssessmentCard userId={userId} isCoach />
-            </SectionErrorBoundary>
-            <SectionErrorBoundary label="AI Check-in Entwurf">
-              <AiCheckinDraftCard userId={userId} />
-            </SectionErrorBoundary>
-            <SectionErrorBoundary label="Plan-Anpassungen">
-              <PlanAdjustmentsCard userId={userId} />
-            </SectionErrorBoundary>
-            <SectionErrorBoundary label="Check-ins">
-              <CustomerCheckinsCard userId={userId} />
-            </SectionErrorBoundary>
-            <SectionErrorBoundary label="Letzte Aktivität">
-              <CustomerRecentActivityCard userId={userId} />
-            </SectionErrorBoundary>
-          </AccordionContent>
-
-        </AccordionItem>
-
-        <AccordionItem
-          value="messages"
-          className="rounded-2xl border border-border bg-card px-4"
-        >
-          <AccordionTrigger id="messages" className="font-display text-base font-bold">
-            Nachrichten
-          </AccordionTrigger>
-          <AccordionContent className="space-y-6 pt-2">
-            <CoachMessageThread mode="coach" userId={userId} />
-          </AccordionContent>
-        </AccordionItem>
-
-        <AccordionItem
-          value="partner"
-          className="rounded-2xl border border-border bg-card px-4"
-        >
-          <AccordionTrigger className="font-display text-base font-bold">
-            Partner & Verknüpfungen
-          </AccordionTrigger>
-          <AccordionContent className="space-y-6 pt-2">
+          <AdminSection
+            title="Partner & Verknüpfungen"
+            subtitle="Partnerzugänge und technische Diagnose getrennt vom Coaching-Alltag."
+          >
             <PartnerLinkCard userId={userId} />
-            <UserAccessDebugCard userId={userId} />
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
+            <details className="rounded-xl border border-border bg-secondary/20 p-4">
+              <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Technische Diagnose
+              </summary>
+              <div className="mt-4">
+                <UserAccessDebugCard userId={userId} />
+              </div>
+            </details>
+          </AdminSection>
+        </div>
+      )}
     </div>
+  );
+}
+
+function CustomerTabs({ active, onChange }: { active: CustomerTab; onChange: (tab: CustomerTab) => void }) {
+  const tabs: Array<[CustomerTab, string]> = [
+    ["overview", "Übersicht"],
+    ["ernaehrung", "Ernährung"],
+    ["training", "Training"],
+    ["fortschritt", "Fortschritt"],
+    ["messages", "Kommunikation"],
+    ["verwaltung", "Verwaltung"],
+  ];
+
+  return (
+    <nav className="sticky top-2 z-20 -mx-1 overflow-x-auto rounded-2xl border border-border bg-background/95 p-1 shadow-sm backdrop-blur">
+      <div className="flex min-w-max gap-1">
+        {tabs.map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => onChange(key)}
+            className={`rounded-xl px-3 py-2 text-xs font-semibold transition-colors ${
+              active === key
+                ? "bg-foreground text-background"
+                : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
+function CockpitStat({ label, value, hint }: { label: string; value: string; hint: string }) {
+  return (
+    <div className="rounded-2xl border border-border bg-card p-4">
+      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
+      <p className="mt-1 font-display text-xl font-bold">{value}</p>
+      <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
+    </div>
+  );
+}
+
+function QuickAction({
+  label,
+  description,
+  onClick,
+}: {
+  label: string;
+  description: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="rounded-2xl border border-border bg-card p-4 text-left transition-colors hover:border-foreground/20 hover:bg-secondary/30"
+    >
+      <p className="text-sm font-semibold">{label}</p>
+      <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+    </button>
+  );
+}
+
+function TabPanel({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string;
+  subtitle: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="space-y-6">
+      <div>
+        <h2 className="font-display text-xl font-bold">{title}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function AdminSection({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string;
+  subtitle: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="space-y-5 rounded-2xl border border-border bg-secondary/10 p-4 sm:p-5">
+      <div>
+        <h2 className="font-display text-xl font-bold">{title}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function ProfileSummary({ profile, currentWeight }: { profile: any; currentWeight: number | null }) {
+  const activity: Record<string, string> = {
+    sedentary: "Sitzend",
+    light: "Leicht aktiv",
+    moderate: "Moderat aktiv",
+    active: "Sehr aktiv",
+    athlete: "Leistungssport",
+  };
+  const gender: Record<string, string> = { male: "Männlich", female: "Weiblich", other: "Divers" };
+  const row = (label: string, value: string | number | null | undefined) => (
+    <div className="space-y-0.5">
+      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="text-sm font-medium text-foreground">{value || "—"}</p>
+    </div>
+  );
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+      <h3 className="font-display text-lg font-bold">Stammdaten</h3>
+      <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
+        {row("Trainingsziel", labelForTrainingGoal(profile.training_goal))}
+        {row("Aktuelles Gewicht", currentWeight != null ? `${currentWeight} kg` : null)}
+        {row("Wunschgewicht", profile.goal_weight_kg ? `${profile.goal_weight_kg} kg` : null)}
+        {row(
+          "Wunschgewicht bis",
+          profile.goal_target_date ? new Date(profile.goal_target_date).toLocaleDateString("de-DE") : null,
+        )}
+        {row("Aktivitätslevel", activity[profile.activity_level] ?? profile.activity_level)}
+        {row("Größe", profile.height_cm ? `${profile.height_cm} cm` : null)}
+        {row("Geschlecht", gender[profile.gender] ?? profile.gender)}
+        {row(
+          "Geburtsdatum",
+          profile.birthdate ? new Date(profile.birthdate).toLocaleDateString("de-DE") : null,
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AccessCard({
+  data,
+  status,
+  statusLabel,
+  statusClass,
+  accessAction,
+  showDangerZone,
+  setShowDangerZone,
+  showPwForm,
+  setShowPwForm,
+  newPw,
+  setNewPw,
+  setPwFn,
+  deleteFn,
+  userId,
+  navigate,
+}: any) {
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="font-display text-lg font-bold">Zugang</h3>
+        <span
+          className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${statusClass}`}
+        >
+          {statusLabel}
+        </span>
+      </div>
+      <div className="mt-3 space-y-0.5 text-xs text-muted-foreground">
+        {data.auth?.invited_at && (
+          <div>Eingeladen am: {new Date(data.auth.invited_at).toLocaleDateString("de-DE")}</div>
+        )}
+        {(data.auth as any)?.last_activity_at ? (
+          <div>
+            Letzte Aktivität: {new Date((data.auth as any).last_activity_at).toLocaleString("de-DE")}
+          </div>
+        ) : (
+          data.auth?.last_sign_in_at && (
+            <div>Letzte Aktivität: {new Date(data.auth.last_sign_in_at).toLocaleString("de-DE")}</div>
+          )
+        )}
+      </div>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Button
+          size="sm"
+          onClick={() => accessAction.mutate("invite")}
+          disabled={accessAction.isPending}
+          className="bg-gradient-gold text-primary-foreground"
+        >
+          {status === "invited" ? "Einladung erneut senden" : "Einladung senden"}
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => accessAction.mutate("reset")}
+          disabled={accessAction.isPending}
+        >
+          Passwort zurücksetzen
+        </Button>
+        {status === "deactivated" && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => accessAction.mutate("activate")}
+            disabled={accessAction.isPending}
+          >
+            Zugang aktivieren
+          </Button>
+        )}
+      </div>
+
+      <div className="mt-4 border-t border-border pt-3">
+        <button
+          type="button"
+          onClick={() => setShowDangerZone((value: boolean) => !value)}
+          className="text-[11px] uppercase tracking-wider text-muted-foreground hover:text-destructive"
+        >
+          {showDangerZone ? "▾ Erweiterte Aktionen ausblenden" : "▸ Erweiterte Aktionen anzeigen"}
+        </button>
+        {showDangerZone && (
+          <div className="mt-3 rounded-xl border border-destructive/30 bg-destructive/5 p-3">
+            <p className="mb-3 text-[11px] text-muted-foreground">
+              Diese Aktionen sind kritisch. Bitte vorsichtig nutzen.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" onClick={() => setShowPwForm((value: boolean) => !value)}>
+                Passwort selbst setzen
+              </Button>
+              {status !== "deactivated" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        "Zugang wirklich deaktivieren? Der Kunde kann sich nicht mehr einloggen.",
+                      )
+                    ) {
+                      accessAction.mutate("deactivate");
+                    }
+                  }}
+                  disabled={accessAction.isPending}
+                  className="text-destructive hover:text-destructive"
+                >
+                  Zugang deaktivieren
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={async () => {
+                  const name = data.profile?.display_name ?? data.email ?? "diesen Kunden";
+                  const confirmation = window.prompt(
+                    `Konto von ${name} unwiderruflich löschen?\n\nAlle Pakete und Zahlungen werden ebenfalls entfernt.\n\nZum Bestätigen tippe LÖSCHEN ein:`,
+                  );
+                  if (confirmation !== "LÖSCHEN") return;
+                  try {
+                    await deleteFn({ data: { user_id: userId } });
+                    toast.success("Kunde gelöscht.");
+                    navigate({ to: "/coach/customers" });
+                  } catch (deleteError) {
+                    toast.error((deleteError as Error).message);
+                  }
+                }}
+                className="text-destructive hover:text-destructive"
+              >
+                Konto löschen
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {showPwForm && (
+        <form
+          className="mt-4 flex flex-wrap items-end gap-2"
+          onSubmit={async (event) => {
+            event.preventDefault();
+            if (newPw.length < 8) return toast.error("Mindestens 8 Zeichen.");
+            try {
+              await setPwFn({ data: { user_id: userId, password: newPw } });
+              toast.success("Passwort gesetzt.");
+              setNewPw("");
+              setShowPwForm(false);
+            } catch (passwordError) {
+              toast.error((passwordError as Error).message);
+            }
+          }}
+        >
+          <div className="space-y-1">
+            <Label htmlFor="manual-pw">Neues Passwort</Label>
+            <Input
+              id="manual-pw"
+              type="text"
+              value={newPw}
+              onChange={(event) => setNewPw(event.target.value)}
+              placeholder="Mind. 8 Zeichen"
+              className="w-56"
+              autoComplete="new-password"
+            />
+          </div>
+          <Button type="submit" size="sm" className="bg-gradient-gold text-primary-foreground">
+            Speichern
+          </Button>
+        </form>
+      )}
+    </div>
+  );
+}
+
+function PaymentsCard({
+  payments,
+  onConfirm,
+}: {
+  payments: any[];
+  onConfirm: (paymentId: string) => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+      <h3 className="font-display text-lg font-bold">Zahlungshistorie</h3>
+      {payments.length === 0 ? (
+        <p className="mt-3 text-sm text-muted-foreground">Noch keine Zahlungen.</p>
+      ) : (
+        <>
+          <div className="mt-4 space-y-3 md:hidden">
+            {payments.map((payment) => (
+              <div key={payment.id} className="rounded-xl border border-border bg-secondary/20 p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold">{Number(payment.amount_eur).toFixed(2)} €</p>
+                    <p className="text-xs text-muted-foreground">
+                      {payment.payment_date} · {payment.method}
+                    </p>
+                  </div>
+                  <PaymentStatus status={payment.status} />
+                </div>
+                {payment.note && <p className="mt-2 text-xs text-muted-foreground">{payment.note}</p>}
+                {payment.status === "pending" && (
+                  <Button size="sm" className="mt-3" onClick={() => onConfirm(payment.id)}>
+                    Bestätigen
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 hidden overflow-x-auto md:block">
+            <table className="min-w-[720px] w-full text-sm">
+              <thead className="text-left text-[11px] uppercase tracking-wider text-muted-foreground">
+                <tr>
+                  <th className="py-2">Datum</th>
+                  <th>Betrag</th>
+                  <th>Methode</th>
+                  <th>Status</th>
+                  <th>Notiz</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {payments.map((payment) => (
+                  <tr key={payment.id} className="border-t border-border">
+                    <td className="py-2">{payment.payment_date}</td>
+                    <td>{Number(payment.amount_eur).toFixed(2)} €</td>
+                    <td>{payment.method}</td>
+                    <td>
+                      <PaymentStatus status={payment.status} />
+                    </td>
+                    <td className="text-muted-foreground">{payment.note ?? "—"}</td>
+                    <td className="text-right">
+                      {payment.status === "pending" && (
+                        <Button size="sm" onClick={() => onConfirm(payment.id)}>
+                          Bestätigen
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function PaymentStatus({ status }: { status: string }) {
+  return (
+    <span
+      className={
+        "rounded-full px-2 py-0.5 text-[10px] font-bold uppercase " +
+        (status === "confirmed"
+          ? "bg-gold/10 text-gold"
+          : status === "pending"
+            ? "bg-warning/20 text-warning"
+            : "bg-muted text-muted-foreground")
+      }
+    >
+      {status}
+    </span>
   );
 }
 
@@ -839,18 +1228,18 @@ function MeasurementsCard({ measurements }: { measurements: any[] }) {
     return (
       <div className="rounded-2xl border border-border bg-card p-6">
         <h2 className="font-display text-lg font-bold">Maße & Gewicht</h2>
-        <p className="mt-3 text-sm text-muted-foreground">
-          Noch keine Maße erfasst.
-        </p>
+        <p className="mt-3 text-sm text-muted-foreground">Noch keine Maße erfasst.</p>
       </div>
     );
   }
+
   const latest = measurements[0];
   const visible = showAll ? measurements : measurements.slice(0, 5);
-  const fmt = (v: any, unit: string) =>
-    v == null || v === "" ? "—" : `${Number(v).toLocaleString("de-DE")} ${unit}`;
+  const fmt = (value: any, unit: string) =>
+    value == null || value === "" ? "—" : `${Number(value).toLocaleString("de-DE")} ${unit}`;
+
   return (
-    <div className="rounded-2xl border border-border bg-card p-6">
+    <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
       <div className="flex items-center justify-between gap-3">
         <h2 className="font-display text-lg font-bold">Maße & Gewicht</h2>
         <span className="text-xs text-muted-foreground">
@@ -869,8 +1258,27 @@ function MeasurementsCard({ measurements }: { measurements: any[] }) {
         <Stat label="Bizeps R" value={fmt(latest.biceps_right_cm, "cm")} />
       </div>
 
-      <div className="mt-6 overflow-x-auto">
-        <table className="w-full text-sm">
+      <div className="mt-6 space-y-2 md:hidden">
+        {visible.map((measurement) => (
+          <div key={measurement.id} className="rounded-xl border border-border bg-secondary/20 p-3">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm font-semibold">{fmt(measurement.weight_kg, "kg")}</span>
+              <span className="text-xs text-muted-foreground">
+                {new Date(measurement.measured_at).toLocaleDateString("de-DE")}
+              </span>
+            </div>
+            <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+              <span>KFA: {fmt(measurement.body_fat_pct, "%")}</span>
+              <span>Bauch: {fmt(measurement.waist_cm, "cm")}</span>
+              <span>Muskel: {fmt(measurement.muscle_mass_kg, "kg")}</span>
+              <span>Brust: {fmt(measurement.chest_cm, "cm")}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-6 hidden overflow-x-auto md:block">
+        <table className="min-w-[860px] w-full text-sm">
           <thead className="text-left text-[11px] uppercase tracking-wider text-muted-foreground">
             <tr>
               <th className="py-2">Datum</th>
@@ -886,28 +1294,30 @@ function MeasurementsCard({ measurements }: { measurements: any[] }) {
             </tr>
           </thead>
           <tbody>
-            {visible.map((m) => (
-              <tr key={m.id} className="border-t border-border">
+            {visible.map((measurement) => (
+              <tr key={measurement.id} className="border-t border-border">
                 <td className="py-2">
-                  {new Date(m.measured_at).toLocaleDateString("de-DE")}
+                  {new Date(measurement.measured_at).toLocaleDateString("de-DE")}
                 </td>
-                <td>{fmt(m.weight_kg, "kg")}</td>
-                <td>{fmt(m.body_fat_pct, "%")}</td>
-                <td>{fmt(m.muscle_mass_kg, "kg")}</td>
-                <td>{fmt(m.waist_cm, "cm")}</td>
-                <td>{fmt(m.chest_cm, "cm")}</td>
-                <td>{fmt(m.thigh_left_cm, "cm")}</td>
-                <td>{fmt(m.thigh_right_cm, "cm")}</td>
-                <td>{fmt(m.biceps_left_cm, "cm")}</td>
-                <td>{fmt(m.biceps_right_cm, "cm")}</td>
+                <td>{fmt(measurement.weight_kg, "kg")}</td>
+                <td>{fmt(measurement.body_fat_pct, "%")}</td>
+                <td>{fmt(measurement.muscle_mass_kg, "kg")}</td>
+                <td>{fmt(measurement.waist_cm, "cm")}</td>
+                <td>{fmt(measurement.chest_cm, "cm")}</td>
+                <td>{fmt(measurement.thigh_left_cm, "cm")}</td>
+                <td>{fmt(measurement.thigh_right_cm, "cm")}</td>
+                <td>{fmt(measurement.biceps_left_cm, "cm")}</td>
+                <td>{fmt(measurement.biceps_right_cm, "cm")}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
       {measurements.length > 5 && (
         <button
-          onClick={() => setShowAll((v) => !v)}
+          type="button"
+          onClick={() => setShowAll((value) => !value)}
           className="mt-3 text-xs font-semibold uppercase tracking-wider text-gold hover:underline"
         >
           {showAll ? "Weniger anzeigen" : `Alle ${measurements.length} anzeigen`}
@@ -920,9 +1330,7 @@ function MeasurementsCard({ measurements }: { measurements: any[] }) {
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl border border-border bg-secondary/30 p-3">
-      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-        {label}
-      </div>
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
       <div className="font-display text-lg font-bold">{value}</div>
     </div>
   );
@@ -945,29 +1353,30 @@ function GroupsCard({
       desc: "Zugriff auf den kostenlosen Bulls Performance Hub.",
     },
   ];
+
   return (
-    <div className="rounded-2xl border border-border bg-card p-6">
-      <h2 className="font-display text-lg font-bold">Gruppen & Zugänge</h2>
+    <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+      <h3 className="font-display text-lg font-bold">Gruppen & Zugänge</h3>
       <p className="mt-1 text-xs text-muted-foreground">
         Schalter sind unabhängig voneinander — ein Nutzer kann mehrere Zugänge gleichzeitig haben.
       </p>
       <div className="mt-4 space-y-2">
-        {items.map((it) => {
-          const enabled = groups.includes(it.key);
+        {items.map((item) => {
+          const enabled = groups.includes(item.key);
           return (
             <label
-              key={it.key}
-              className="flex items-start gap-3 rounded-xl border border-border bg-secondary/30 p-3 cursor-pointer"
+              key={item.key}
+              className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-secondary/30 p-3"
             >
               <input
                 type="checkbox"
                 checked={enabled}
-                onChange={(e) => onToggle(it.key, e.target.checked)}
+                onChange={(event) => onToggle(item.key, event.target.checked)}
                 className="mt-0.5 h-4 w-4"
               />
               <div>
-                <div className="text-sm font-semibold">{it.label}</div>
-                <div className="text-xs text-muted-foreground">{it.desc}</div>
+                <div className="text-sm font-semibold">{item.label}</div>
+                <div className="text-xs text-muted-foreground">{item.desc}</div>
               </div>
             </label>
           );
@@ -976,6 +1385,3 @@ function GroupsCard({
     </div>
   );
 }
-
-
-
