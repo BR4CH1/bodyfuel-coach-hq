@@ -1,12 +1,10 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, ShieldAlert } from "lucide-react";
-import { toast } from "sonner";
 import {
   getCustomerSmartProfile,
   getCustomerRiskFlags,
   getCustomerSkipBreakdown,
-  setCustomerAutoPublish,
 } from "@/lib/coach-smart-insights.functions";
 import { SKIP_REASONS } from "@/lib/meal-skips.functions";
 
@@ -16,12 +14,10 @@ const REASON_LABEL: Record<string, string> = Object.fromEntries(
 );
 
 export function SmartNutritionInsightsCard({ userId }: { userId: string }) {
-  const qc = useQueryClient();
   const profileFn = useServerFn(getCustomerSmartProfile);
   const riskFn = useServerFn(getCustomerRiskFlags);
   const skipFn = useServerFn(getCustomerSkipBreakdown);
-  const autoFn = useServerFn(setCustomerAutoPublish);
-  
+
 
   const profile = useQuery({
     queryKey: ["smart-profile", userId],
@@ -34,15 +30,6 @@ export function SmartNutritionInsightsCard({ userId }: { userId: string }) {
   const skips = useQuery({
     queryKey: ["skip-breakdown", userId],
     queryFn: () => skipFn({ data: { user_id: userId } }),
-  });
-
-  const toggleAuto = useMutation({
-    mutationFn: (val: boolean) => autoFn({ data: { user_id: userId, auto_publish: val } }),
-    onSuccess: () => {
-      toast.success("Gespeichert.");
-      qc.invalidateQueries({ queryKey: ["smart-profile", userId] });
-    },
-    onError: (e: Error) => toast.error(e.message),
   });
 
   const p = profile.data?.profile ?? null;
@@ -118,19 +105,6 @@ export function SmartNutritionInsightsCard({ userId }: { userId: string }) {
               muted="⚠ noch nicht gesetzt"
             />
             <Row label="Budget" value={p.budget_band ?? "—"} />
-            <div className="flex items-center gap-2 pt-2">
-              <input
-                type="checkbox"
-                id={`auto-${userId}`}
-                checked={!!p.auto_publish}
-                disabled={toggleAuto.isPending}
-                onChange={(e) => toggleAuto.mutate(e.target.checked)}
-                className="h-4 w-4"
-              />
-              <label htmlFor={`auto-${userId}`} className="text-xs">
-                Auto-Publish: Pläne automatisch aktivieren (sonst Coach-Freigabe nötig)
-              </label>
-            </div>
           </div>
         )}
       </div>
