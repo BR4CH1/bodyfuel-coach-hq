@@ -302,6 +302,25 @@ function ProfileContent() {
       {/* Mein Paket */}
       <MyPackageSection pkg={pkg} />
 
+      {String(pkg?.package ?? "").toLowerCase() === "smart" && (
+        <section className="rounded-2xl border border-gold/25 bg-gradient-to-br from-gold/10 via-card to-card p-6">
+          <div className="flex items-start gap-4">
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-gold/30 bg-gold/10 text-gold">
+              <Sparkles className="h-5 w-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h2 className="font-display text-lg font-bold">Smart Tutorial</h2>
+              <p className="mt-1 text-sm leading-5 text-muted-foreground">
+                Einführung, Smart Nutrition und automatische Plan-Erstellung noch einmal ansehen. Deine gespeicherten Angaben bleiben dabei unverändert.
+              </p>
+              <Button className="mt-4" variant="secondary" onClick={() => navigate({ to: "/onboarding/smart-start" })}>
+                <Sparkles className="mr-2 h-4 w-4" /> Tutorial erneut starten
+              </Button>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Check-in-Ergebnisse werden jetzt direkt unter /check-in angezeigt. */}
 
 
