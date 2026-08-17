@@ -517,9 +517,6 @@ function CustomerDetail() {
             />
           </section>
 
-          <SectionErrorBoundary label="Letzte Aktivität">
-            <CustomerRecentActivityCard userId={userId} />
-          </SectionErrorBoundary>
         </div>
       )}
 
