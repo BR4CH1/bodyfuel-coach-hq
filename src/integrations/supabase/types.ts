@@ -1312,6 +1312,54 @@ export type Database = {
         }
         Relationships: []
       }
+      coach_push_event_receipts: {
+        Row: {
+          created_at: string
+          event_key: string
+        }
+        Insert: {
+          created_at?: string
+          event_key: string
+        }
+        Update: {
+          created_at?: string
+          event_key?: string
+        }
+        Relationships: []
+      }
+      coach_push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          p256dh: string
+          updated_at: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          p256dh: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       coach_task_state: {
         Row: {
           coach_id: string
@@ -9861,20 +9909,20 @@ export type Database = {
         Args: { _target: string; _viewer: string }
         Returns: boolean
       }
-      coach_can_access_user: {
+      coach_can_access_current_user: {
         Args: { _coach_id: string; _target_user_id: string }
         Returns: boolean
       }
-      coach_can_access_current_user: {
+      coach_can_access_user: {
         Args: { _coach_id: string; _target_user_id: string }
         Returns: boolean
       }
       coach_latest_client_activity: {
         Args: { _client_ids: string[] }
         Returns: {
-          last_nutrition_at: string | null
-          last_nutrition_name: string | null
-          last_training_at: string | null
+          last_nutrition_at: string
+          last_nutrition_name: string
+          last_training_at: string
           user_id: string
         }[]
       }

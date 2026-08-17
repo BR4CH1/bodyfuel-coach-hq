@@ -8,6 +8,7 @@ import { CoachCustomerOverviewSection } from "@/features/coach-dashboard/compone
 import { CoachDashboardHeader } from "@/features/coach-dashboard/components/CoachDashboardHeader";
 import { CoachFuelyFollowUps } from "@/features/coach-dashboard/components/CoachFuelyFollowUps";
 import { CoachRankingPanel } from "@/features/coach-dashboard/components/CoachRankingPanel";
+import { CoachRecentTrackingFeed } from "@/features/coach-dashboard/components/CoachRecentTrackingFeed";
 import { CoachTodayCockpit } from "@/features/coach-dashboard/components/CoachTodayCockpit";
 import { useCoachDashboardController } from "@/features/coach-dashboard/hooks/useCoachDashboardController";
 import type { CoachFollowUpCategory, CoachWorkloadKey } from "@/features/coach-dashboard/types";
@@ -83,6 +84,8 @@ export function CoachDashboardPage() {
             onFilterChange={setTodayFilter}
             onOpenFollowUps={openFollowUps}
           />
+
+          <CoachRecentTrackingFeed clients={clients} limit={10} />
 
           <CoachMessagesCard />
 
