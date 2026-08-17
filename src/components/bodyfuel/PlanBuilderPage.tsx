@@ -24,6 +24,7 @@ import {
   type AutoFillMode,
   type Slot,
 } from "@/features/nutrition-plan-builder/lib/plan-builder.logic";
+import type { AutoFillStrategy } from "@/features/nutrition-plan-builder/lib/auto-fill-strategy";
 import { usePlanBuilder } from "@/features/nutrition-plan-builder/hooks/usePlanBuilder";
 import {
   AlertDialog,
@@ -91,6 +92,7 @@ export function PlanBuilderPage({
   } = usePlanBuilder({ userId, planId, returnOrgId });
 
   const [activeDayIndex, setActiveDayIndex] = useState(0);
+  const [autoFillStrategy, setAutoFillStrategy] = useState<AutoFillStrategy>("profile");
 
   useEffect(() => {
     setActiveDayIndex((current) => Math.max(0, Math.min(current, days.length - 1)));
@@ -178,37 +180,84 @@ export function PlanBuilderPage({
           <AlertDialogHeader>
             <AlertDialogTitle>Woche automatisch füllen?</AlertDialogTitle>
             <AlertDialogDescription>
+              Wähle bewusst zwischen Profilvorgabe, maximaler Abwechslung und Mealprep.
               Fixierte Mahlzeiten bleiben immer erhalten. Vor der Aktion wird ein Snapshot
               gespeichert — du kannst über „Rückgängig“ zurückkehren.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <RadioGroup
-            value={weekMode}
-            onValueChange={(value) => setWeekMode(value as AutoFillMode)}
-            className="space-y-2 py-2"
-          >
-            <label className="flex items-start gap-2 text-sm">
-              <RadioGroupItem value="empty_only" className="mt-0.5" />
-              <div>
-                <div className="font-medium">Nur leere Slots füllen</div>
-                <div className="text-xs text-muted-foreground">
-                  Bestehende Mahlzeiten bleiben unverändert.
+
+          <div className="space-y-2 py-2">
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Planstil
+            </div>
+            <RadioGroup
+              value={autoFillStrategy}
+              onValueChange={(value) => setAutoFillStrategy(value as AutoFillStrategy)}
+              className="grid gap-2 sm:grid-cols-3"
+            >
+              <label className="flex items-start gap-2 rounded-lg border border-border p-3 text-sm">
+                <RadioGroupItem value="profile" className="mt-0.5" />
+                <div>
+                  <div className="font-medium">Nach Profil</div>
+                  <div className="text-xs text-muted-foreground">
+                    Nutzt die hinterlegten Vorlieben des Kunden.
+                  </div>
                 </div>
-              </div>
-            </label>
-            <label className="flex items-start gap-2 text-sm">
-              <RadioGroupItem value="all_unlocked" className="mt-0.5" />
-              <div>
-                <div className="font-medium">Alle nicht fixierten Slots neu füllen</div>
-                <div className="text-xs text-muted-foreground">
-                  Ersetzt nicht-fixierte Mahlzeiten durch neue Vorschläge.
+              </label>
+              <label className="flex items-start gap-2 rounded-lg border border-border p-3 text-sm">
+                <RadioGroupItem value="variety" className="mt-0.5" />
+                <div>
+                  <div className="font-medium">Variety</div>
+                  <div className="text-xs text-muted-foreground">
+                    Maximiert Abwechslung und vermeidet Wiederholungen.
+                  </div>
                 </div>
-              </div>
-            </label>
-          </RadioGroup>
+              </label>
+              <label className="flex items-start gap-2 rounded-lg border border-border p-3 text-sm">
+                <RadioGroupItem value="mealprep" className="mt-0.5" />
+                <div>
+                  <div className="font-medium">Mealprep</div>
+                  <div className="text-xs text-muted-foreground">
+                    Wiederholt geeignete Gerichte blockweise für mehrere Tage.
+                  </div>
+                </div>
+              </label>
+            </RadioGroup>
+          </div>
+
+          <div className="space-y-2 pb-2">
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Bestehende Mahlzeiten
+            </div>
+            <RadioGroup
+              value={weekMode}
+              onValueChange={(value) => setWeekMode(value as AutoFillMode)}
+              className="space-y-2"
+            >
+              <label className="flex items-start gap-2 text-sm">
+                <RadioGroupItem value="empty_only" className="mt-0.5" />
+                <div>
+                  <div className="font-medium">Nur leere Slots füllen</div>
+                  <div className="text-xs text-muted-foreground">
+                    Bestehende Mahlzeiten bleiben unverändert.
+                  </div>
+                </div>
+              </label>
+              <label className="flex items-start gap-2 text-sm">
+                <RadioGroupItem value="all_unlocked" className="mt-0.5" />
+                <div>
+                  <div className="font-medium">Alle nicht fixierten Slots neu füllen</div>
+                  <div className="text-xs text-muted-foreground">
+                    Ersetzt nicht-fixierte Mahlzeiten durch neue Vorschläge.
+                  </div>
+                </div>
+              </label>
+            </RadioGroup>
+          </div>
+
           <AlertDialogFooter>
             <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-            <AlertDialogAction onClick={() => runAutoFillWeek(weekMode)}>
+            <AlertDialogAction onClick={() => runAutoFillWeek(weekMode, autoFillStrategy)}>
               Ausführen
             </AlertDialogAction>
           </AlertDialogFooter>

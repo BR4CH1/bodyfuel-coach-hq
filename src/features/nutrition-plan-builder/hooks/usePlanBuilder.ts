@@ -16,8 +16,6 @@ import { generateMealImage, type MealImageStatus } from "@/lib/meal-images.funct
 import { getPartnerLink } from "@/lib/partner.functions";
 import {
   addDays,
-  autoFillWeekImpl,
-  autoFillWeekPairImpl,
   buildBuilderDays,
   cloneBuilderDays,
   isoDate,
@@ -28,6 +26,11 @@ import {
   type MacroValues,
   type SharedSlotsMap,
 } from "@/features/nutrition-plan-builder/lib/plan-builder.logic";
+import {
+  autoFillWeekPairWithStrategy,
+  autoFillWeekWithStrategy,
+  type AutoFillStrategy,
+} from "@/features/nutrition-plan-builder/lib/auto-fill-strategy";
 import {
   createNutritionResolver,
   normalizeTargets,
@@ -392,7 +395,7 @@ export function usePlanBuilder({ userId, planId, returnOrgId }: UsePlanBuilderPa
     });
   };
 
-  const runAutoFillWeek = (mode: AutoFillMode) => {
+  const runAutoFillWeek = (mode: AutoFillMode, strategy: AutoFillStrategy = "profile") => {
     const context = contextQuery.data;
     const library = libraryQuery.data ?? [];
     if (!context) return;
@@ -404,7 +407,7 @@ export function usePlanBuilder({ userId, planId, returnOrgId }: UsePlanBuilderPa
 
     let missingCount = 0;
     if (partnerMode && partnerContextQuery.data) {
-      const result = autoFillWeekPairImpl(
+      const result = autoFillWeekPairWithStrategy(
         days,
         partnerDays,
         context,
@@ -412,12 +415,13 @@ export function usePlanBuilder({ userId, planId, returnOrgId }: UsePlanBuilderPa
         library,
         mode,
         sharedSlots,
+        strategy,
       );
       missingCount += result.missing;
       setDays(result.clientDays);
       setPartnerDays(result.partnerDays);
     } else {
-      const result = autoFillWeekImpl(days, context, library, mode);
+      const result = autoFillWeekWithStrategy(days, context, library, mode, strategy);
       missingCount += result.missing;
       setDays(result.days);
     }
