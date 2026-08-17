@@ -443,6 +443,10 @@ function CustomerDetail() {
             />
           </div>
 
+          <SectionErrorBoundary label="Letzte Aktivität">
+            <CustomerRecentActivityCard userId={userId} />
+          </SectionErrorBoundary>
+
           <section className="rounded-2xl border border-border bg-card p-5 sm:p-6">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
