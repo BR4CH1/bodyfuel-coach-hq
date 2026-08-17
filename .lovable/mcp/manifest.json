@@ -12,7 +12,7 @@
   "mcp": {
     "server": {
       "name": "bodyfuel-mcp",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "title": "BODYFUEL Coaching"
     },
     "tools": [
@@ -147,6 +147,71 @@
               "description": "Maximum tasks to return."
             }
           },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "coach_update_training_plan_end_date",
+        "title": "Update BodyFuel training plan end date",
+        "description": "Coach-only write action that changes the scheduled end date of a personal BodyFuel training plan. Performance/team plans are explicitly excluded.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "plan_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Training plan UUID."
+            },
+            "scheduled_end_date": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "description": "New plan end date in YYYY-MM-DD format."
+            }
+          },
+          "required": [
+            "plan_id",
+            "scheduled_end_date"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "coach_reactivate_training_plan",
+        "title": "Reactivate archived BodyFuel training plan",
+        "description": "Coach-only write action that reactivates an archived personal BodyFuel training plan. By default it refuses to replace an existing active plan; replace_active must be set explicitly to archive and replace it.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "plan_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Archived training plan UUID."
+            },
+            "replace_active": {
+              "type": "boolean",
+              "default": false,
+              "description": "Explicitly archive an existing active personal training plan before reactivation."
+            }
+          },
+          "required": [
+            "plan_id"
+          ],
           "additionalProperties": false,
           "$schema": "http://json-schema.org/draft-07/schema#"
         },
