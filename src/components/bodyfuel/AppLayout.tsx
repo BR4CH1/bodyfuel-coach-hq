@@ -264,7 +264,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
       const isSmart = (pkg?.package as string | undefined) === "smart";
       const done = !!(prof as any)?.smart_onboarding_completed_at;
       if (isSmart && !done) {
-        navigate({ to: "/onboarding/smart" });
+        navigate({ to: "/onboarding/smart-start" });
       } else {
         setSmartGateChecked(true);
       }
