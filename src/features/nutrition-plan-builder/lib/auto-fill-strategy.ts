@@ -8,6 +8,14 @@ import {
 
 export type AutoFillStrategy = "profile" | "variety" | "mealprep";
 
+function explicitMealPrepDays(context: CustomerPlanContext): number {
+  const configured = Number(context.mealPrepDays);
+  if (Number.isFinite(configured) && configured >= 2) {
+    return Math.max(2, Math.min(7, Math.round(configured)));
+  }
+  return 3;
+}
+
 /**
  * Creates an ephemeral planning context for an explicit auto-fill strategy.
  * The stored customer profile is never mutated.
@@ -29,15 +37,13 @@ export function contextForAutoFillStrategy(
     };
   }
 
+  const mealPrepDays = sharedMealPrepDays ?? explicitMealPrepDays(context);
   return {
     ...context,
     varietyLevel: "low",
     mealPrepStyle: "meal_prep",
     eatingStyle: "meal_prep",
-    mealPrepDays: Math.max(
-      2,
-      Math.min(7, Math.round(sharedMealPrepDays ?? context.mealPrepDays ?? 3)),
-    ),
+    mealPrepDays: Math.max(2, Math.min(7, Math.round(mealPrepDays))),
   };
 }
 
@@ -74,10 +80,10 @@ export function autoFillWeekPairWithStrategy(
   }
 
   // Shared partner meals must use the same prep cadence. Prefer the more
-  // conservative cadence if both profiles already specify one.
+  // conservative cadence if both profiles already specify a real prep span.
   const sharedMealPrepDays = Math.min(
-    clientContext.mealPrepDays ?? 3,
-    partnerContext.mealPrepDays ?? 3,
+    explicitMealPrepDays(clientContext),
+    explicitMealPrepDays(partnerContext),
   );
 
   return autoFillWeekPairImpl(
