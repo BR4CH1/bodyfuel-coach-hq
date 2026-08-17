@@ -84,6 +84,8 @@ export function CoachDashboardPage() {
             onOpenFollowUps={openFollowUps}
           />
 
+          <CoachRecentTrackingFeed clients={clients} limit={10} />
+
           <CoachMessagesCard />
 
           <CoachFuelyFollowUps
