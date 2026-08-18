@@ -1,6 +1,8 @@
 name: Smart Guided Flow Verification
 
 on:
+  push:
+    branches: [feature/guided-smart-first-plan]
   pull_request:
     branches: [main]
 
