@@ -12,6 +12,7 @@ import { createBuildProfilePlugins } from "./scripts/vite-build-profile-plugin";
 const buildProfileEnabled = process.env.BF_BUILD_PROFILE === "1";
 const mcpEnabled = process.env.BF_DISABLE_MCP !== "1";
 const inlineSsr = process.env.BF_SSR_INLINE_DYNAMIC_IMPORTS === "1";
+const nativeAppBuild = process.env.BF_NATIVE_APP === "1";
 
 const plugins: PluginOption[] = [];
 
@@ -37,6 +38,7 @@ export default defineConfig({
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
     server: { entry: "server" },
+    ...(nativeAppBuild ? { spa: { enabled: true } } : {}),
   },
   vite: viteConfig,
 });
