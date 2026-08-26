@@ -10,6 +10,10 @@ import {
   evaluateReadinessGate,
   applyReadinessGateWithMeta,
 } from "./training-engine/readiness-gate";
+import {
+  TRAINING_SET_LOG_UPSERT_CONFLICT,
+  buildTrainingSetLogUpsert,
+} from "./training/training-set-log.logic";
 import type { ReadinessCheckin } from "@/lib/readiness";
 
 /** Zentrales Laden der letzten 30 Tage Check-ins für das Readiness-Gate. */
@@ -191,19 +195,15 @@ export const logSet = createServerFn({ method: "POST" })
       set_number: number;
       weight_kg: number | null;
       reps: number | null;
+      training_date?: string | null;
     }) => data,
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    const rowForUpsert = buildTrainingSetLogUpsert(data, userId);
     const { data: row, error } = await supabase
       .from("training_set_logs")
-      .insert({
-        exercise_id: data.exercise_id,
-        client_id: userId,
-        set_number: data.set_number,
-        weight_kg: data.weight_kg,
-        reps: data.reps,
-      })
+      .upsert(rowForUpsert, { onConflict: TRAINING_SET_LOG_UPSERT_CONFLICT })
       .select()
       .single();
     if (error) throw new Error(error.message);

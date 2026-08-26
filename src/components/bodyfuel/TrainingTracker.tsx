@@ -52,6 +52,7 @@ import {
   createEmptyTrainingSessionDraft,
   getTrainingExerciseDraft,
 } from "@/lib/training/training-session-state";
+import { mergeTodaysTrainingLogs } from "@/lib/training/training-set-log.logic";
 import { createSupabaseWorkoutDraftAdapter } from "@/lib/training/workout-session-draft.supabase";
 import type {
   TrainingExerciseDraft,
@@ -242,6 +243,23 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
   const [weeksCount, setWeeksCount] = useState(1);
   const reloadSequenceRef = useRef(0);
 
+  const syncTodaysLogs = useCallback(async () => {
+    if (!clientId || exercises.length === 0) return;
+    const today = localDateKey();
+    const exerciseIds = exercises.map((exercise) => exercise.id);
+    const { data, error } = await supabase
+      .from("training_set_logs")
+      .select("*")
+      .eq("client_id", clientId)
+      .eq("training_date", today)
+      .in("exercise_id", exerciseIds)
+      .order("performed_at", { ascending: false });
+    if (error) return;
+    setLogs((current) =>
+      mergeTodaysTrainingLogs(current, ((data as SetLog[]) ?? []), exerciseIds, today),
+    );
+  }, [clientId, exercises]);
+
   const reload = async (cachedView = Boolean(plan)) => {
     if (!clientId) return;
     const requestId = ++reloadSequenceRef.current;
@@ -416,6 +434,39 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
     void reload(Boolean(cached));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
+
+  useEffect(() => {
+    if (typeof document === "undefined" || typeof window === "undefined") return;
+
+    const writeCurrentSnapshot = () => {
+      if (!clientId || !plan || loading) return;
+      writeTrainingTrackerSnapshot({
+        clientId,
+        plan,
+        days,
+        exercises,
+        logs,
+        activeWeek,
+        weeksCount,
+      });
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "hidden") writeCurrentSnapshot();
+      if (document.visibilityState === "visible") void syncTodaysLogs();
+    };
+    const handleOnline = () => void syncTodaysLogs();
+
+    window.addEventListener("pagehide", writeCurrentSnapshot);
+    window.addEventListener("online", handleOnline);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      window.removeEventListener("pagehide", writeCurrentSnapshot);
+      window.removeEventListener("online", handleOnline);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [activeWeek, clientId, days, exercises, loading, logs, plan, syncTodaysLogs, weeksCount]);
 
   useEffect(() => {
     if (!sessionDraftRestored || !plan?.id || sessionDraft.planId === plan.id) return;
@@ -824,6 +875,7 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
                                 weight_kg,
                                 reps,
                                 logged_at: new Date().toISOString(),
+                                training_date: sessionDate,
                               });
                               const optimistic: SetLog = {
                                 id: `offline-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -844,9 +896,10 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
                           }
                           try {
                             const row = await logFn({
-                              data: { exercise_id: ex.id, set_number, weight_kg, reps },
+                              data: { exercise_id: ex.id, set_number, weight_kg, reps, training_date: sessionDate },
                             });
-                            setLogs((cur) => [row as SetLog, ...cur]);
+                            const savedRow = row as SetLog;
+                            setLogs((cur) => [savedRow, ...cur.filter((log) => log.id !== savedRow.id)]);
                             // Auto-check the daily "Training" task
                             try {
                               const date = localDateKey();
