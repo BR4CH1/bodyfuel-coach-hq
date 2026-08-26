@@ -886,7 +886,17 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
                                 reps,
                                 performed_at: new Date().toISOString(),
                               };
-                              setLogs((cur) => [optimistic, ...cur]);
+                              setLogs((cur) => [
+                                optimistic,
+                                ...cur.filter(
+                                  (log) =>
+                                    !(
+                                      log.exercise_id === ex.id &&
+                                      log.set_number === set_number &&
+                                      localDateKey(log.performed_at) === sessionDate
+                                    ),
+                                ),
+                              ]);
                               toast.success("Offline gespeichert · synct beim Wieder-Online");
                               return true;
                             } catch (e: unknown) {
@@ -899,7 +909,18 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
                               data: { exercise_id: ex.id, set_number, weight_kg, reps, training_date: sessionDate },
                             });
                             const savedRow = row as SetLog;
-                            setLogs((cur) => [savedRow, ...cur.filter((log) => log.id !== savedRow.id)]);
+                            setLogs((cur) => [
+                              savedRow,
+                              ...cur.filter(
+                                (log) =>
+                                  !(
+                                    log.id === savedRow.id ||
+                                    (log.exercise_id === ex.id &&
+                                      log.set_number === set_number &&
+                                      localDateKey(log.performed_at) === sessionDate)
+                                  ),
+                              ),
+                            ]);
                             // Auto-check the daily "Training" task
                             try {
                               const date = localDateKey();
