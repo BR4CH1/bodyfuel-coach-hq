@@ -7,6 +7,11 @@ import {
   readEmergencyDraft,
   writeLocalDraft,
 } from "./workout-session-draft.store";
+import {
+  recoverWorkoutDraft,
+  saveDraftWithSingleRebaseRetry,
+  withWorkoutDraftView,
+} from "./workout-session-draft.sync";
 import type {
   WorkoutDraftEnvelope,
   WorkoutDraftRemoteAdapter,
@@ -74,6 +79,7 @@ export function usePersistentWorkoutSession<TState extends Record<string, unknow
   const mountedRef = useRef(true);
   const clearedRef = useRef(false);
   const stateEditCountRef = useRef(0);
+  const lastKnownScrollYRef = useRef(0);
 
   initialStateRef.current = initialState;
 
@@ -103,25 +109,25 @@ export function usePersistentWorkoutSession<TState extends Record<string, unknow
         if (mountedRef.current) setSaveStatus("saving");
 
         try {
-          const result = await remote.save(snapshot);
+          const result = await saveDraftWithSingleRebaseRetry({
+            draft: snapshot,
+            getCurrentDraft: () => envelopeRef.current,
+            remote,
+            persistRebasedDraft: async (rebased) => {
+              replaceEnvelope(rebased);
+              await writeLocalDraft(rebased);
+            },
+          });
           const current = envelopeRef.current;
 
           if (!result.applied) {
-            // A response may have been lost after the server applied this exact
-            // revision. Treat that idempotent retry as successfully synced.
-            const sameRevisionAlreadyStored =
-              result.current.deviceId === snapshot.deviceId &&
-              result.current.localRevision === snapshot.localRevision;
-
-            if (!sameRevisionAlreadyStored) {
-              if (mountedRef.current) setSaveStatus("conflict");
-              onConflict?.(snapshot, result.current);
-              continue;
-            }
+            if (mountedRef.current) setSaveStatus("conflict");
+            if (result.conflictDraft) onConflict?.(result.savedDraft, result.conflictDraft);
+            continue;
           }
 
           const nextRemoteRevision = result.remoteRevision;
-          if (current.localRevision === snapshot.localRevision) {
+          if (current.localRevision === result.savedDraft.localRevision) {
             const synced = { ...current, remoteRevision: nextRemoteRevision };
             replaceEnvelope(synced);
             await writeLocalDraft(synced);
@@ -207,6 +213,47 @@ export function usePersistentWorkoutSession<TState extends Record<string, unknow
     await pushRemote(current);
   }, [pushRemote]);
 
+  const flushLatestImmediately = useCallback(async () => {
+    if (remoteTimerRef.current) {
+      clearTimeout(remoteTimerRef.current);
+      remoteTimerRef.current = null;
+    }
+
+    const current = envelopeRef.current;
+    await writeLocalDraft(current);
+    if (!browserIsOffline()) await pushRemote(current);
+  }, [pushRemote]);
+
+  const recoverAndRetry = useCallback(async () => {
+    if (clearedRef.current) return;
+    if (remoteTimerRef.current) {
+      clearTimeout(remoteTimerRef.current);
+      remoteTimerRef.current = null;
+    }
+
+    const current = envelopeRef.current;
+    await writeLocalDraft(current);
+
+    const [local, remoteDraft] = await Promise.all([
+      loadLocalDraft<TState>(draftKey),
+      remote && !browserIsOffline()
+        ? remote.load(draftKey).catch(() => null)
+        : Promise.resolve(null),
+    ]);
+
+    if (clearedRef.current) return;
+
+    const recovered = recoverWorkoutDraft({ current: envelopeRef.current, local, remote: remoteDraft });
+    replaceEnvelope(recovered.draft);
+    await writeLocalDraft(recovered.draft);
+
+    if (remote && !browserIsOffline() && recovered.shouldPushRemote) {
+      await pushRemote(recovered.draft);
+    } else if (remote && !browserIsOffline() && remoteQueueRef.current) {
+      await runRemoteQueue();
+    }
+  }, [draftKey, remote, replaceEnvelope, pushRemote, runRemoteQueue]);
+
   const clearAfterCompletion = useCallback(async () => {
     if (remoteTimerRef.current) {
       clearTimeout(remoteTimerRef.current);
@@ -262,12 +309,7 @@ export function usePersistentWorkoutSession<TState extends Record<string, unknow
       replaceEnvelope(selected);
       await writeLocalDraft(selected);
 
-      if (
-        remote &&
-        newestLocal &&
-        selected === newestLocal &&
-        selected.updatedAt !== remoteDraft?.updatedAt
-      ) {
+      if (remote && newestLocal && selected === newestLocal && selected !== remoteDraft) {
         queueRemoteSave(selected);
       }
 
@@ -303,21 +345,17 @@ export function usePersistentWorkoutSession<TState extends Record<string, unknow
     if (typeof window === "undefined") return;
 
     let lastScrollWrite = 0;
-    let lastKnownScrollY = window.scrollY;
+    lastKnownScrollYRef.current = window.scrollY;
 
     const saveCurrentView = () => {
-      lastKnownScrollY = window.scrollY;
+      lastKnownScrollYRef.current = window.scrollY;
       const now = Date.now();
       if (now - lastScrollWrite < 250 || clearedRef.current) return;
       lastScrollWrite = now;
 
       const current = envelopeRef.current;
-      const withView = {
-        ...current,
-        localRevision: current.localRevision + 1,
-        updatedAt: new Date().toISOString(),
-        view: { scrollY: lastKnownScrollY },
-      };
+      const withView = withWorkoutDraftView(current, lastKnownScrollYRef.current);
+      if (withView === current) return;
       envelopeRef.current = withView;
       void writeLocalDraft(withView);
     };
@@ -325,22 +363,18 @@ export function usePersistentWorkoutSession<TState extends Record<string, unknow
     const saveBeforeBackground = () => {
       if (clearedRef.current) return;
       const current = envelopeRef.current;
-      const withView = {
-        ...current,
-        localRevision: current.localRevision + 1,
-        updatedAt: new Date().toISOString(),
-        view: { scrollY: lastKnownScrollY },
-      };
+      const withView = withWorkoutDraftView(current, lastKnownScrollYRef.current);
       replaceEnvelope(withView);
       void writeLocalDraft(withView);
-      if (!browserIsOffline()) void pushRemote(withView);
+      void flushLatestImmediately();
     };
 
     const handleVisibility = () => {
       if (document.visibilityState === "hidden") saveBeforeBackground();
+      if (document.visibilityState === "visible") void recoverAndRetry();
     };
     const handleOnline = () => {
-      if (!clearedRef.current) void pushRemote(envelopeRef.current);
+      if (!clearedRef.current) void recoverAndRetry();
     };
 
     if (captureScroll) window.addEventListener("scroll", saveCurrentView, { passive: true });
@@ -354,7 +388,7 @@ export function usePersistentWorkoutSession<TState extends Record<string, unknow
       window.removeEventListener("online", handleOnline);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [captureScroll, pushRemote, replaceEnvelope]);
+  }, [captureScroll, flushLatestImmediately, recoverAndRetry, replaceEnvelope]);
 
   useEffect(
     () => () => {

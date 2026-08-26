@@ -3,6 +3,10 @@
 
 import { openDB, type IDBPDatabase } from "idb";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  TRAINING_SET_LOG_UPSERT_CONFLICT,
+  buildTrainingSetLogUpsert,
+} from "@/lib/training/training-set-log.logic";
 
 type PendingSetLog = {
   kind: "set_log";
@@ -12,6 +16,7 @@ type PendingSetLog = {
   weight_kg: number | null;
   reps: number | null;
   logged_at: string;
+  training_date?: string | null;
 };
 
 type PendingNote = {
@@ -105,13 +110,21 @@ async function bumpAttempt(item: PendingItem) {
 async function applyItem(item: PendingItem): Promise<{ ok: boolean; fatal?: boolean }> {
   try {
     if (item.kind === "set_log") {
-      const { error } = await supabase.from("training_set_logs").insert({
-        exercise_id: item.exercise_id,
-        client_id: item.client_id,
-        set_number: item.set_number,
-        weight_kg: item.weight_kg,
-        reps: item.reps,
-      });
+      const { error } = await supabase.from("training_set_logs").upsert(
+        buildTrainingSetLogUpsert(
+          {
+            exercise_id: item.exercise_id,
+            set_number: item.set_number,
+            weight_kg: item.weight_kg,
+            reps: item.reps,
+            training_date: item.training_date,
+            performed_at: item.logged_at,
+          },
+          item.client_id,
+          item.logged_at,
+        ),
+        { onConflict: TRAINING_SET_LOG_UPSERT_CONFLICT },
+      );
       if (error) return { ok: false };
       return { ok: true };
     }

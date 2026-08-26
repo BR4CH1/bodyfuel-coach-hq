@@ -8931,6 +8931,7 @@ export type Database = {
           reps: number | null
           rpe: number | null
           set_number: number
+          training_date: string | null
           weight_kg: number | null
         }
         Insert: {
@@ -8942,6 +8943,7 @@ export type Database = {
           reps?: number | null
           rpe?: number | null
           set_number: number
+          training_date?: string | null
           weight_kg?: number | null
         }
         Update: {
@@ -8953,6 +8955,7 @@ export type Database = {
           reps?: number | null
           rpe?: number | null
           set_number?: number
+          training_date?: string | null
           weight_kg?: number | null
         }
         Relationships: [
