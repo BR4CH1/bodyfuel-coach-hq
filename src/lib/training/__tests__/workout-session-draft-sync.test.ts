@@ -34,7 +34,7 @@ function envelope(
 
 describe("workout session draft sync", () => {
   it("rebases and retries once after a lost save response/revision conflict", async () => {
-    const local = envelope(481, 155, "2026-08-25T19:29:02.000Z", "butterfly");
+    const local = envelope(482, 155, "2026-08-25T19:29:02.000Z", "butterfly");
     const remote = envelope(481, 155, "2026-08-25T19:26:54.000Z", "brustpresse");
     const saved: WorkoutDraftEnvelope<TrainingSessionDraftState>[] = [];
 
