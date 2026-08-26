@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -10216,6 +10216,10 @@ export type Database = {
         }
       }
       map_ats_status_to_ts: { Args: { _s: string }; Returns: string }
+      membership_role_of: {
+        Args: { _membership_id: string }
+        Returns: Database["public"]["Enums"]["organization_role"]
+      }
       move_to_dlq: {
         Args: {
           dlq_name: string
