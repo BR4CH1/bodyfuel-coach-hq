@@ -1,51 +1,60 @@
-# Diagnose: Trainingstracker Stefan Huven, 25.08.2026
+# Diagnose: TrainingTracker verliert Eingaben nach iPhone-Sperre (PWA)
 
-Nur Analyse, keine Änderungen vorgenommen.
+Nur Analyse — keine Codeänderungen vorgenommen. Ablauf: Werte eintragen / Satz speichern → Handy sperren bzw. App in den Hintergrund → App wieder öffnen → Teil des Stands fehlt.
 
-## Befund in den Daten
+## Beobachteter Referenzfall (verifiziert in der DB)
 
-Sätze wurden sehr wohl gespeichert — 17 Logs am 25.08. (19:19–19:29 UTC), u. a.:
+- Remote-Draft `b5f6d31b…:2026-08-25`: letzter Server-Schreibvorgang **19:26:54 UTC**, `client_revision 481`, `server_revision 155`.
+- `training_set_logs` desselben Nutzers wurden danach noch bis **19:29:02 UTC** geschrieben (Butterfly Maschine, Sätze 1–3).
+- Heißt: der Satz-Insert-Pfad lief weiter, der **Draft-Sync war ab 19:26:54 dauerhaft tot** — kein Netzausfall, sondern ein Zustandsproblem im Sync.
 
-```text
-19:22:41  Brustpresse Maschine  Satz 1  55 kg × 8
-19:23:12  Brustpresse Maschine  Satz 1  55 kg × 8   <- Duplikat
-19:23:28  Brustpresse Maschine  Satz 1  55 kg × 8   <- Duplikat
-19:23:42  Brustpresse Maschine  Satz 1  55 kg × 8   <- Duplikat
-19:24:45  Brustpresse Maschine  Satz 1  55 kg × 8   <- Duplikat
-19:24:46  Brustpresse Maschine  Satz 2  60 kg × 8
-19:24:50  Brustpresse Maschine  Satz 3  60 kg × 8
-19:19–19:28  Warm-up Rudergerät  Satz 1  6x hintereinander
-```
+## Root-Cause-Hypothesen, nach Wahrscheinlichkeit
 
-Der Draft `b5f6d31b…:2026-08-25` existiert, wurde aber zuletzt **19:26:54** geschrieben (server_revision 155, client_revision 481) — obwohl der Nutzer bis 19:29:02 weiter geloggt hat. Der Draft hat danach keine Server-Updates mehr erhalten.
+### 1. Konflikt-Pfad verwirft Änderungen endgültig und heilt nie (erklärt den Referenzfall vollständig)
 
-Zusätzlich am 26.08.: zwei Logs derselben Übung „Warm-up: Rudergerät locker“ innerhalb von 6 Sekunden, aber auf **zwei verschiedenen Übungs-IDs** (Push-Tag 07.08. und Pull-Tag 08.08.) — der geöffnete Trainingstag ist zwischen den Eingaben gewechselt.
+`use-persistent-workout-session.ts:105-121`: bei `applied === false` und nicht exakt gleicher Revision wird `setSaveStatus("conflict")` gesetzt und der Snapshot per `continue` **verworfen** — ohne `remoteRevision` auf den Serverwert zu rebasen und ohne Wiederholung.
 
-## Ursachen
+Der Server (`save_workout_session_draft`) wendet nur an, wenn `p_expected_server_revision = server_revision`. Sobald der Client eine Antwort verliert (typisch beim Bildschirmsperren: der Request in `saveBeforeBackground`, Zeile 336, wird per `void pushRemote(...)` unbeaufsichtigt abgeschickt, iOS friert den Prozess ein und die Antwort kommt nie an), bleibt `remoteRevision` beim Client veraltet. Jeder weitere Save schickt dieselbe veraltete `expected`-Revision → `applied=false` → conflict → verworfen. Genau dieses Bild: Server bleibt bei 155/481 stehen, der lokale Zähler läuft weiter.
 
-1. **Trainingsplan ist abgelaufen, Tracker zeigt einen Alt-Tag.**
-   Aktiver Plan `01e5fed0…` startet 17.07., 4 Wochen, letzter Tag 13.08. `TrainingTracker.reload()` (src/components/bodyfuel/TrainingTracker.tsx:293-330) klemmt die Woche auf `weeks_count` und zeigt daher am 25.08. Woche 4 mit `day_date = 2026-08-07`. Es gibt keinen Tag für „heute“; gewählt wird der erste Trainingstag der Woche. Gespeicherte Sätze landen also an Übungen eines Datums, das nicht dem heutigen entspricht — im Verlauf/„Letzte Einheit“ sieht das für den Nutzer nach Chaos bzw. Verlust aus.
+Zusätzlich fehlt jede Heilung: `restore()` (Zeile 229-300) läuft nur beim Mount; `handleVisibility` (Zeile 339-341) reagiert **nur auf `hidden`**, nicht auf `visible`. Es gibt also keinen Re-Load/Re-Sync beim Zurückkommen aus dem Hintergrund. Sichtbar ist das nur als kleiner amberfarbener Chip „Synchronisierung nötig“ (`WorkoutSaveIndicator`), was im Training niemand als Datenverlust liest.
 
-2. **Tag springt während der Eingabe (führt zu doppelten Logs auf anderer Übungs-ID).**
-   Der Namens-Sync-Effekt (TrainingTracker.tsx:474-504) mappt einen Tagesnamen aus `PlanContentView` per `days.find(...)` auf den **ersten** passenden Tag. Der Plan verwendet dieselben Namen mehrfach pro Woche („Push …“, „Pull …“, „Beine“), dazu kommt der `storage`-Event-Listener. Dadurch kann `openDayId` auf einen anderen Tag mit gleichem Namen wechseln; die angezeigten Übungs-IDs wechseln mit, bereits geloggte Sätze verschwinden aus der Ansicht.
+### 2. Remote-Draft ist beim Remount älter als der lokale Stand — aber gewinnt, wenn iOS den lokalen Speicher geräumt hat
 
-3. **Anzeige „schon geloggt?“ hängt an flüchtigem State + Cache, nicht an der DB.**
-   `nextIncompleteSet` (TrainingTracker.tsx:1371-1375) wird aus `logs`/`todaysLogs` berechnet. `logs` kommt beim Mount zuerst aus dem localStorage-Snapshot (Debounce 120 ms, TrainingTracker.tsx:429-445) und wird erst danach per `reload()` bestätigt. Wenn das Handy in die Tastensperre fällt / die PWA neu mountet, bevor der Snapshot geschrieben wurde, oder wenn `reload()` in den 12-s-Timeout läuft (`withTimeout`, TrainingTracker.tsx:101-118, dann nur `loadError`-Banner), zeigt die Karte Satz 1 wieder als offen. Der Nutzer tippt erneut auf Speichern.
+Nach dem Aufwecken verwirft iOS PWA-Seiten regelmäßig; die Komponente mountet neu (`TrainingTracker` hängt in `src/routes/training.tsx:82/92` an einem Key mit `effectiveId`; solange die Session noch nicht hydriert ist, ist `effectiveId` leer → Unmount/Remount).
 
-4. **`logSet` ist ein reiner INSERT ohne Idempotenz — jedes erneute Tippen erzeugt eine neue Zeile.**
-   src/lib/training.functions.ts:186-211 fügt ein; auf `training_set_logs` existiert nur der Primärschlüssel, kein Unique über (client_id, exercise_id, Datum, set_number). Daraus die 5x Satz 1 / 6x Warm-up-Satz-1.
+`restore()` wählt dann per `chooseNewestDraft` zwischen localStorage-Notfall-Snapshot, IndexedDB und Remote. Ist der lokale Anteil weg oder unlesbar (Safari-Eviction, Speicherdruck, Quota-Fehler in `writeLocalDraft` → still verschluckt, `workout-session-draft.store.ts:164-168`), gewinnt der **auf 19:26:54 eingefrorene Remote-Draft** — also exakt das Symptom „Stand teilweise weg“ (alles nach dem letzten erfolgreichen Server-Save fehlt). Ohne Hypothese 1 wäre der Remote-Stand aktuell und der Verlust unsichtbar; die beiden Fehler multiplizieren sich.
 
-5. **Draft-Sync stirbt still bei Revisions-Konflikt.**
-   `save_workout_session_draft` liefert `applied=false`, wenn `p_expected_server_revision` nicht der gespeicherten `server_revision` entspricht (z. B. zweites Gerät/Tab, verlorene Antwort). Im Client (src/lib/training/use-persistent-workout-session.ts:109-121) wird die Momentaufnahme dann per `continue` **verworfen**, `remoteRevision` bleibt veraltet — alle weiteren Saves scheitern ebenfalls. Genau dieses Bild zeigt der 25.08.-Draft: Stopp um 19:26:54, danach nichts mehr. Sichtbar nur als kleiner Statuschip „Synchronisierung nötig“, ohne Wiederholung.
+### 3. Debounce + eingefrorener Prozess: das letzte Fenster von 800 ms ist ungeschützt
 
-6. **RLS ist nicht die Ursache.** Policies auf `training_set_logs` und `workout_session_drafts` sind korrekt eigentümerbasiert; alle Schreibvorgänge sind durchgegangen.
+`updateWorkout` (Zeile 172-197) schreibt localStorage synchron, der Server-Save ist um `autosaveMs = 800` verzögert (`queueRemoteSave`, Zeile 161-170). Beim Sperren feuert `visibilitychange`/`pagehide` → `saveBeforeBackground`, das aber
+- den anstehenden Debounce-Timer nicht abbricht (ein späterer, älterer Push kann danach noch laufen),
+- den Request ohne `keepalive`/`sendBeacon` und ohne `await` abschickt.
+iOS beendet den Netzwerk-Request beim Freeze zuverlässig. Ergebnis: entweder gar kein Server-Save oder ein „halb angekommener“ Save → siehe Hypothese 1.
+
+### 4. Revisionszähler wird durch Scroll-Events erhöht, ohne dass der State mitgeführt wird
+
+`saveCurrentView` (Zeile 308-323) erhöht `localRevision` **nur auf `envelopeRef`** und schreibt lokal, ohne `setEnvelope` und ohne Server-Save. Damit divergieren React-State und Ref, und der lokale Revisionszähler springt gegenüber dem Server-Stand (481 vs. laufend höher) allein durch Scrollen im Training. Das verschärft jeden Vergleich in `chooseNewestDraft` und macht „gleiche Revision = idempotenter Retry“ (Zeile 112-114) praktisch wertlos.
+
+### 5. Ein Gerät, zwei Tabs/Kontexte teilen dieselbe `deviceId`
+
+`getOrCreateWorkoutDeviceId` speichert die ID in localStorage, also identisch für PWA-Tab und Safari-Tab derselben Origin. Der Server verlangt bei gleicher `device_id` strikt `p_client_revision > client_revision`. Zwei parallel offene Tracker (z. B. `/training` und `/bulls/training`) zählen unabhängig hoch → der Tab mit dem niedrigeren Zähler bekommt dauerhaft `applied=false` → Hypothese 1 tritt ohne jeden Netzfehler ein.
+
+### 6. Sichtbarer Satzstatus hängt am 120-ms-Cache, nicht an der DB
+
+Der „ist Satz X gespeichert“-Status kommt aus `logs` im TrainingTracker: beim Mount zuerst aus dem localStorage-Snapshot (Debounce 120 ms, `TrainingTracker.tsx:429-445`), erst danach bestätigt `reload()` gegen die DB — mit 12-s-Timeout, dessen Fehlschlag nur ein Banner erzeugt (`withTimeout`, Zeile 101-118). Wird direkt nach dem Speichern gesperrt, fehlt der letzte Satz im Snapshot; bei zäher Verbindung nach dem Aufwecken bleibt der veraltete Cache stehen → „meine Eingaben sind weg“, obwohl die Zeile in der DB liegt. Das ist der Auslöser für die dokumentierten Mehrfach-Inserts (5× Satz 1 Brustpresse am 25.08.), da `logSet` ein reiner INSERT ohne Unique-Constraint ist.
+
+### 7. Unwahrscheinlich, aber ausgeschlossen zu prüfen
+
+- **RLS/Rechte:** Policies auf `workout_session_drafts` und `training_set_logs` sind korrekt eigentümerbasiert; alle Schreibvorgänge des 25.08. gingen durch. Nicht die Ursache.
+- **Datumswechsel im `draftKey`:** `draftKey = clientId:localDateKey()`; ein Training über Mitternacht erzeugt einen neuen Key und damit scheinbar leeren Stand. Im Referenzfall (21:29 Ortszeit) nicht relevant, als Nebenrisiko aber real.
 
 ## Minimal nötige Fixes (Vorschlag, noch nicht umgesetzt)
 
-1. Doppelklick-/Retry-Schutz beim Loggen: Unique-Index `(client_id, exercise_id, (performed_at::date), set_number)` + `upsert` statt `insert` in `logSet`, plus Rückgabe der bestehenden Zeile.
-2. Satzstatus aus der DB statt aus Cache verifizieren: nach jedem Speichern und bei `visibilitychange` gezielt die heutigen `training_set_logs` der offenen Übungen neu laden (kleiner Query, nicht der komplette `reload()`), und Sätze mit vorhandenem Log hart als „gespeichert“ rendern.
-3. Tag-Sprung stoppen: `openDayId` nur noch per Tag-ID synchronisieren (nicht per Name), oder Namensmatch auf den Tag mit passendem `day_date` einschränken; `storage`-Listener nur akzeptieren, wenn kein Satz-Speichern läuft.
-4. Draft-Sync konfliktresistent machen: bei `applied=false` die Server-`remoteRevision` übernehmen, lokalen State rebasen und **einmal erneut senden**, statt die Momentaufnahme zu verwerfen.
-5. Abgelaufenen Plan sichtbar behandeln: wenn `heute > letzter Plan-Tag`, klaren Hinweis („Plan endete am 13.08.“) und Tagesauswahl an das heutige Datum binden, damit Logs nicht an Alt-Tagen hängen.
+1. `applied === false` nicht mehr verwerfen: `remoteRevision` aus der Server-Antwort übernehmen, lokalen State darauf rebasen und **einmal erneut senden**; erst danach echten Konflikt melden.
+2. Wieder-Sichtbarkeit heilen: bei `visibilitychange → visible` und `online` Draft neu laden, mit Server-Revision rebasen und die Warteschlange erneut abarbeiten.
+3. Hintergrund-Save robust machen: anstehenden Debounce-Timer abbrechen, Save mit `keepalive`-Semantik bzw. sofort (ohne Debounce) beim ersten `hidden` senden.
+4. Satzstatus verifizieren: nach `visible` gezielt die heutigen `training_set_logs` der offenen Übungen nachladen (kleiner Query statt komplettem `reload()`), damit gespeicherte Sätze nie als offen erscheinen.
+5. Doppelinserts unmöglich machen: Unique-Index `(client_id, exercise_id, performed_at::date, set_number)` + `upsert` in `logSet`.
+6. Aufräumen: `saveCurrentView` soll den Revisionszähler nicht erhöhen (Scrollposition getrennt oder ohne Revisionsbump speichern); `deviceId` pro Tab/Instanz ergänzen (z. B. `deviceId + Instanz-UUID`).
 
-Priorität für den berichteten Fall: 1, 2 und 4 (verhindern Duplikate und den stillen Draft-Stopp), danach 3 und 5.
+Priorität für den gemeldeten Ablauf: 1, 2, 3 (Datenverlust), dann 4 und 5 (falscher sichtbarer Stand, Duplikate), dann 6.
