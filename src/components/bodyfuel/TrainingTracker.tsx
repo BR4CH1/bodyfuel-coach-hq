@@ -58,6 +58,7 @@ import {
 } from "@/lib/training/training-session-state";
 import { mergeTodaysTrainingLogs } from "@/lib/training/training-set-log.logic";
 import {
+  chunkIds,
   loadTrainingTrackerCore,
   mergeReloadedTrainingLogs,
   type TrackerCoreSource,
@@ -319,7 +320,8 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
       }
       return histExercises;
     },
-    fetchLogs: async (exerciseIds) => {
+    fetchCurrentLogs: async (exerciseIds: string[]) => {
+      // Small, focused query for the visible workout only.
       const { data, error } = await withTimeout(
         supabase
           .from("training_set_logs")
@@ -327,12 +329,31 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
           .in("exercise_id", exerciseIds)
           .eq("client_id", clientId)
           .order("performed_at", { ascending: false })
-          .limit(2000),
+          .limit(500),
       );
       // Never swallow this error: falling back to [] used to wipe the whole
       // visible workout even though every set was safe in the database.
       if (error) throw error;
       return (data as SetLog[]) ?? [];
+    },
+    fetchHistoricLogs: async (exerciseIds: string[]) => {
+      // Athletes with several old 4-week plans have hundreds of exercise ids.
+      // Chunked + best effort so the live tracker never depends on history.
+      const rows: SetLog[] = [];
+      for (const chunk of chunkIds(exerciseIds)) {
+        const { data, error } = await withTimeout(
+          supabase
+            .from("training_set_logs")
+            .select("*")
+            .in("exercise_id", chunk)
+            .eq("client_id", clientId)
+            .order("performed_at", { ascending: false })
+            .limit(1000),
+        );
+        if (error) throw error;
+        rows.push(...((data as SetLog[]) ?? []));
+      }
+      return rows;
     },
   });
 
