@@ -477,6 +477,21 @@ export function DayCard({
           const slotEntries = day.meals
             .map((m, idx) => ({ m, idx }))
             .filter(({ m }) => m.slot === slot.key);
+          const slotTarget = slotTargets[slot.key];
+          const slotActual = slotTotals(day, slot.key, library);
+          const slotRemaining = {
+            kcal: slotTarget.kcal - slotActual.kcal,
+            p: slotTarget.p - slotActual.p,
+            c: slotTarget.c - slotActual.c,
+            f: slotTarget.f - slotActual.f,
+          };
+          const entryCount = Math.max(1, slotEntries.length);
+          const perEntryTarget = {
+            kcal: Math.round(slotTarget.kcal / entryCount),
+            p: Math.round(slotTarget.p / entryCount),
+            c: Math.round(slotTarget.c / entryCount),
+            f: Math.round(slotTarget.f / entryCount),
+          };
 
           return (
             <div key={slot.key} className="space-y-2">
@@ -488,7 +503,8 @@ export function DayCard({
                   library={library}
                   ctx={ctx}
                   dayType={day.type}
-                  remaining={remaining}
+                  remaining={slotRemaining}
+                  slotTarget={perEntryTarget}
                   onPick={(lib) => pickMealForEmptySlot(slot.key, lib)}
                   onPickFood={(built) => addFoodMeal(slot.key, built)}
                   onSwap={() => {}}
@@ -511,7 +527,8 @@ export function DayCard({
                       library={library}
                       ctx={ctx}
                       dayType={day.type}
-                      remaining={remaining}
+                      remaining={slotRemaining}
+                      slotTarget={perEntryTarget}
                       onPick={(lib) => addAdditionalMeal(slot.key, lib)}
                       onPickFood={(built) => addFoodMeal(slot.key, built)}
                       onSwap={(lib) =>
@@ -555,7 +572,7 @@ export function DayCard({
                     library={library}
                     ctx={ctx}
                     dayType={day.type}
-                    remaining={remaining}
+                    remaining={slotRemaining}
                     onPick={(lib) => addAdditionalMeal(slot.key, lib)}
                     onPickFood={(built) => addFoodMeal(slot.key, built)}
                   />
