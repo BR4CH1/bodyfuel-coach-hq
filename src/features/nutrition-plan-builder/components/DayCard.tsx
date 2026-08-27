@@ -13,10 +13,15 @@ import type {
 import {
   SLOTS,
   autoFillDayImpl,
+  daySlotTargets,
   macroProgress,
   makeGroupId,
   mealFromLibrary,
   rebalanceDay,
+  resolveSlotKcalTargets,
+  setSlotKcalTarget,
+  slotStatus,
+  slotTotals,
   summarizeDay,
   type MacroValues,
   type PartnerSlotLink,
@@ -25,6 +30,8 @@ import {
 import { MacroTargetEditorDialog, type TargetScope } from "./MacroTargetEditorDialog";
 import { MealPickerDialog } from "./MealPickerDialog";
 import { MealSlotRow } from "./MealSlotRow";
+import { Input } from "@/components/ui/input";
+
 
 
 export function DayCard({
@@ -53,6 +60,19 @@ export function DayCard({
   targetsBusy?: boolean;
 }) {
   const { target, totals, filledSlots, totalSlots, isBalanced } = summarizeDay(day, ctx, library);
+  const slotTargets = daySlotTargets(day, ctx);
+  const slotKcalTargets = resolveSlotKcalTargets(target.kcal, day.slotKcalTargets ?? null);
+
+  const updateSlotKcalTarget = (slot: Slot, value: number) => {
+    onChange((d) => ({
+      ...d,
+      slotKcalTargets: setSlotKcalTarget(slotKcalTargets, slot, value, target.kcal),
+    }));
+  };
+
+  const resetSlotTargets = () => onChange((d) => ({ ...d, slotKcalTargets: null }));
+
+
 
 
   // ---- Index-based helpers so multiple meals per slot are supported ----

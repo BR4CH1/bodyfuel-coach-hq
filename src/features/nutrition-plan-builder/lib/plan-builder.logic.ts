@@ -104,6 +104,8 @@ export function buildBuilderDays(
       meals: existing?.meals ?? [],
       prepCoupleLunchDinner: existing?.prepCoupleLunchDinner ?? false,
       customTargets: existing?.customTargets ?? null,
+      slotKcalTargets: existing?.slotKcalTargets ?? null,
+
     });
   }
 
@@ -261,6 +263,227 @@ export function macroProgress(value: number, target: number): number {
   return Math.max(0, Math.min(100, Math.round((value / target) * 100)));
 }
 
+/* ---------------- Mahlzeiten-Zielverteilung (Slot-Ziele) ---------------- */
+
+/** Standardverteilung des Tagesziels auf die vier Mahlzeiten-Slots. */
+export const DEFAULT_SLOT_SHARES: Record<Slot, number> = {
+  breakfast: 0.25,
+  lunch: 0.3,
+  dinner: 0.3,
+  snack: 0.15,
+};
+
+/** Untergrenze pro Slot, damit keine 0-kcal-Restslots entstehen. */
+export const MIN_SLOT_KCAL = 100;
+
+/** Optionale, im Builder-State gehaltene kcal-Overrides pro Slot (keine DB-Migration nötig). */
+export type SlotKcalTargets = Partial<Record<Slot, number>>;
+
+const SLOT_KEYS: Slot[] = SLOTS.map((slot) => slot.key);
+
+/** Rundet Werte auf ganze Zahlen und gleicht die Rundungsdifferenz zur Summe aus. */
+function distributeRounded(values: number[], total: number): number[] {
+  const rounded = values.map((value) => Math.max(0, Math.round(Number(value) || 0)));
+  const targetTotal = Math.max(0, Math.round(Number(total) || 0));
+  let diff = targetTotal - rounded.reduce((sum, value) => sum + value, 0);
+  if (diff === 0 || rounded.length === 0) return rounded;
+  const order = rounded.map((_, index) => index).sort((a, b) => rounded[b] - rounded[a]);
+  let cursor = 0;
+  let guard = 0;
+  while (diff !== 0 && guard < 10000) {
+    const index = order[cursor % order.length];
+    const step = diff > 0 ? 1 : -1;
+    if (rounded[index] + step >= 0) {
+      rounded[index] += step;
+      diff -= step;
+    }
+    cursor += 1;
+    guard += 1;
+  }
+  return rounded;
+}
+
+function toSlotRecord(values: number[]): Record<Slot, number> {
+  return SLOT_KEYS.reduce(
+    (acc, key, index) => {
+      acc[key] = values[index] ?? 0;
+      return acc;
+    },
+    {} as Record<Slot, number>,
+  );
+}
+
+/**
+ * Leitet die kcal-Ziele je Slot aus dem Tagesziel ab. Vorhandene Overrides
+ * werden proportional auf das aktuelle Tagesziel normalisiert, sodass die
+ * Summe der Slot-Ziele immer exakt dem Tagesziel entspricht.
+ */
+export function resolveSlotKcalTargets(
+  dayKcal: number,
+  overrides?: SlotKcalTargets | null,
+): Record<Slot, number> {
+  const total = Math.max(0, Math.round(Number(dayKcal) || 0));
+  const raw = SLOT_KEYS.map((key) => {
+    const override = Number(overrides?.[key]);
+    return Number.isFinite(override) && override > 0 ? override : DEFAULT_SLOT_SHARES[key] * total;
+  });
+  const sum = raw.reduce((acc, value) => acc + value, 0);
+  const scaled =
+    sum > 0
+      ? raw.map((value) => (value * total) / sum)
+      : SLOT_KEYS.map((key) => DEFAULT_SLOT_SHARES[key] * total);
+  return toSlotRecord(distributeRounded(scaled, total));
+}
+
+/**
+ * Setzt das kcal-Ziel eines Slots und verteilt die Differenz proportional auf
+ * die übrigen Slots, ohne die Mindestgrenze zu unterschreiten.
+ */
+export function setSlotKcalTarget(
+  current: Record<Slot, number>,
+  slot: Slot,
+  value: number,
+  dayKcal: number,
+): Record<Slot, number> {
+  const total = Math.max(0, Math.round(Number(dayKcal) || 0));
+  if (total <= 0) return resolveSlotKcalTargets(0, null);
+  const others = SLOT_KEYS.filter((key) => key !== slot);
+  const minSlot =
+    total >= MIN_SLOT_KCAL * SLOT_KEYS.length
+      ? MIN_SLOT_KCAL
+      : Math.floor(total / (SLOT_KEYS.length * 2));
+  const maxForSlot = Math.max(minSlot, total - minSlot * others.length);
+  const wanted = Math.max(minSlot, Math.min(maxForSlot, Math.round(Number(value) || 0)));
+  const rest = Math.max(0, total - wanted);
+
+  const currentOthers = others.map((key) => Math.max(0, Number(current[key]) || 0));
+  const otherSum = currentOthers.reduce((acc, item) => acc + item, 0);
+  let values = currentOthers.map((item) =>
+    otherSum > 0 ? (item * rest) / otherSum : rest / others.length,
+  );
+  // Mindestgrenze anheben und Überschuss bei den größeren Slots abziehen.
+  values = values.map((item) => Math.max(minSlot, item));
+  let excess = values.reduce((acc, item) => acc + item, 0) - rest;
+  let guard = 0;
+  while (excess > 0.0001 && guard < 50) {
+    const reducible = values.reduce((acc, item) => acc + Math.max(0, item - minSlot), 0);
+    if (reducible <= 0.0001) break;
+    values = values.map((item) => item - (Math.max(0, item - minSlot) / reducible) * excess);
+    excess = values.reduce((acc, item) => acc + item, 0) - rest;
+    guard += 1;
+  }
+
+  const combined = SLOT_KEYS.map((key) =>
+    key === slot ? wanted : values[others.indexOf(key)] ?? 0,
+  );
+  return toSlotRecord(distributeRounded(combined, total));
+}
+
+/**
+ * Leitet aus dem Tagesziel und der kcal-Verteilung die vollständigen
+ * Makro-Ziele je Slot ab (Summe entspricht exakt dem Tagesziel).
+ */
+export function slotMacroTargets(
+  dayTarget: MacroValues,
+  overrides?: SlotKcalTargets | null,
+): Record<Slot, MacroValues> {
+  const kcals = resolveSlotKcalTargets(dayTarget.kcal, overrides);
+  const totalKcal = SLOT_KEYS.reduce((sum, key) => sum + kcals[key], 0);
+  const shares = SLOT_KEYS.map((key) =>
+    totalKcal > 0 ? kcals[key] / totalKcal : DEFAULT_SLOT_SHARES[key],
+  );
+  const protein = distributeRounded(
+    shares.map((share) => share * dayTarget.p),
+    dayTarget.p,
+  );
+  const carbs = distributeRounded(
+    shares.map((share) => share * dayTarget.c),
+    dayTarget.c,
+  );
+  const fat = distributeRounded(
+    shares.map((share) => share * dayTarget.f),
+    dayTarget.f,
+  );
+  return SLOT_KEYS.reduce(
+    (acc, key, index) => {
+      acc[key] = { kcal: kcals[key], p: protein[index], c: carbs[index], f: fat[index] };
+      return acc;
+    },
+    {} as Record<Slot, MacroValues>,
+  );
+}
+
+/** Slot-Ziele eines konkreten Tages (inkl. individueller Tagesziele/Overrides). */
+export function daySlotTargets(
+  day: BuilderDay,
+  ctx: CustomerPlanContext,
+): Record<Slot, MacroValues> {
+  return slotMacroTargets(targetsFor(day, ctx), day.slotKcalTargets ?? null);
+}
+
+/** Ist-Makros aller Mahlzeiten eines Slots. */
+export function slotTotals(
+  day: BuilderDay,
+  slot: Slot,
+  library: LibraryMeal[],
+): MacroValues {
+  return day.meals
+    .filter((meal) => meal.slot === slot)
+    .reduce<MacroValues>(
+      (acc, meal) => {
+        const macros = mealMacros(meal, library);
+        return {
+          kcal: acc.kcal + macros.kcal,
+          p: acc.p + macros.p,
+          c: acc.c + macros.c,
+          f: acc.f + macros.f,
+        };
+      },
+      { kcal: 0, p: 0, c: 0, f: 0 },
+    );
+}
+
+export type SlotStatus = "on_target" | "under" | "over";
+
+/** Bewertet eine Ist-/Ziel-Kombination mit ±10 % kcal-Toleranz. */
+export function slotStatus(actualKcal: number, targetKcal: number, tolerance = 0.1): SlotStatus {
+  if (!targetKcal) return "on_target";
+  const diff = (actualKcal - targetKcal) / targetKcal;
+  if (diff > tolerance) return "over";
+  if (diff < -tolerance) return "under";
+  return "on_target";
+}
+
+const clampFactor = (value: number) => Math.min(8, Math.max(0.25, value));
+const roundQuarter = (value: number) => Math.round(value * 4) / 4;
+
+/** Portionsfaktor, der eine Mahlzeit möglichst nah an ein kcal-Ziel bringt. */
+export function suggestedPortionFactor(unitKcal: number, targetKcal: number): number {
+  const kcal = Number(unitKcal) || 0;
+  const target = Number(targetKcal) || 0;
+  if (kcal <= 0 || target <= 0) return 1;
+  return clampFactor(roundQuarter(target / kcal)) || 1;
+}
+
+/**
+ * Zusatzbewertung für Auto-Fill: Kandidaten, die mit realistischer Portion
+ * nah am Slot-Ziel liegen, werden bevorzugt; sehr kleine oder sehr große
+ * Gerichte werden deutlich abgewertet.
+ */
+export function slotSizeScore(unitKcal: number, slotTargetKcal: number): number {
+  const kcal = Number(unitKcal) || 0;
+  const target = Number(slotTargetKcal) || 0;
+  if (kcal <= 0 || target <= 0) return 0;
+  const rawRatio = target / kcal;
+  const factor = suggestedPortionFactor(kcal, target);
+  const achieved = kcal * factor;
+  const kcalError = Math.abs(achieved - target) / target;
+  // Portionsnähe an 1.0 belohnen, extreme Skalierung bestrafen.
+  const scalePenalty = Math.abs(Math.log(Math.max(0.05, rawRatio))) * 22;
+  return 25 - kcalError * 120 - scalePenalty;
+}
+
+
 export type AutoFillSelectionContext = {
   usageCount?: ReadonlyMap<string, number>;
   selectionSeed?: number;
@@ -318,23 +541,28 @@ export function autoFillDayImpl(
   if (mode === "all_unlocked") {
     meals = meals.filter((m) => m.is_locked);
   }
-  const target = targetsFor(day, ctx);
+  const slotTargets = daySlotTargets(day, ctx);
   const slotOrder: Slot[] = ["breakfast", "lunch", "dinner", "snack"];
   const missing: Slot[] = [];
 
-  const remaining = () => {
-    const cur = meals.reduce(
-      (acc, m) => {
-        const mm = mealMacros(m, library);
-        return { kcal: acc.kcal + mm.kcal, p: acc.p + mm.p, c: acc.c + mm.c, f: acc.f + mm.f };
-      },
-      { kcal: 0, p: 0, c: 0, f: 0 },
-    );
+  // Kandidaten werden gegen das Ziel des jeweiligen Slots bewertet — nicht
+  // gegen den Rest des ganzen Tages. Das verhindert 150-kcal-/800-kcal-Ausreißer.
+  const slotRemaining = (slot: Slot) => {
+    const planned = meals
+      .filter((m) => m.slot === slot)
+      .reduce(
+        (acc, m) => {
+          const mm = mealMacros(m, library);
+          return { kcal: acc.kcal + mm.kcal, p: acc.p + mm.p, c: acc.c + mm.c, f: acc.f + mm.f };
+        },
+        { kcal: 0, p: 0, c: 0, f: 0 },
+      );
+    const st = slotTargets[slot];
     return {
-      kcal: target.kcal - cur.kcal,
-      p: target.p - cur.p,
-      c: target.c - cur.c,
-      f: target.f - cur.f,
+      kcal: st.kcal - planned.kcal,
+      p: st.p - planned.p,
+      c: st.c - planned.c,
+      f: st.f - planned.f,
     };
   };
 
@@ -342,14 +570,16 @@ export function autoFillDayImpl(
     const existing = meals.find((m) => m.slot === slot);
     if (existing) continue; // locked or (empty_only) user meal → keep
 
+    const remainingForSlot = slotRemaining(slot);
     const candidates = library
       .filter((m) => m.category === slot)
       .map((m) => {
-        const result = scoreMeal(m, ctx, day.type, remaining());
+        const result = scoreMeal(m, ctx, day.type, remainingForSlot);
+        const sizeScore = slotSizeScore(Number(m.kcal), remainingForSlot.kcal);
         return {
           meal: m,
           ...result,
-          adjustedScore: adjustedMealScore(m, result.score, ctx, selection),
+          adjustedScore: adjustedMealScore(m, result.score + sizeScore, ctx, selection),
         };
       })
       .filter((x) => x.score > 0)
@@ -359,6 +589,8 @@ export function autoFillDayImpl(
       missing.push(slot);
       continue;
     }
+
+    const initialFactor = suggestedPortionFactor(Number(best.meal.kcal), remainingForSlot.kcal);
 
     if (day.prepCoupleLunchDinner && (slot === "lunch" || slot === "dinner")) {
       const partner = meals.find((m) => m.slot === (slot === "lunch" ? "dinner" : "lunch"));
@@ -370,7 +602,12 @@ export function autoFillDayImpl(
           meals = meals.map((m) =>
             m.slot === partner.slot ? { ...m, linked_prep_group: groupId } : m,
           );
-          const clone = mealFromLibrary(src, slot, 1, groupId);
+          const clone = mealFromLibrary(
+            src,
+            slot,
+            suggestedPortionFactor(Number(src.kcal), remainingForSlot.kcal),
+            groupId,
+          );
           if (slot === "dinner")
             clone.description = (src.description ?? "") + " (Portion 2 aus Mealprep)";
           meals.push(clone);
@@ -378,15 +615,26 @@ export function autoFillDayImpl(
         continue;
       }
       const groupId = makeGroupId();
-      const lunch = mealFromLibrary(best.meal, "lunch", 1, groupId);
-      const dinner = mealFromLibrary(best.meal, "dinner", 1, groupId);
+      const lunch = mealFromLibrary(
+        best.meal,
+        "lunch",
+        suggestedPortionFactor(Number(best.meal.kcal), slotTargets.lunch.kcal),
+        groupId,
+      );
+      const dinner = mealFromLibrary(
+        best.meal,
+        "dinner",
+        suggestedPortionFactor(Number(best.meal.kcal), slotTargets.dinner.kcal),
+        groupId,
+      );
       dinner.description = (best.meal.description ?? "") + " (Portion 2 aus Mealprep)";
       meals = meals.filter((m) => (m.slot !== "lunch" && m.slot !== "dinner") || m.is_locked);
       meals.push(lunch, dinner);
       continue;
     }
-    meals.push(mealFromLibrary(best.meal, slot));
+    meals.push(mealFromLibrary(best.meal, slot, initialFactor));
   }
+
   return { day: { ...day, meals }, missing };
 }
 
@@ -482,17 +730,28 @@ export function autoFillDayPair(
   const slotOrder: Slot[] = ["breakfast", "lunch", "dinner", "snack"];
   let missing = 0;
 
-  const remainingFor = (meals: BuilderMeal[], day: BuilderDay, ctx: CustomerPlanContext) => {
-    const t = targetsFor(day, ctx);
-    const cur = meals.reduce(
-      (acc, m) => {
-        const mm = mealMacros(m, library);
-        return { kcal: acc.kcal + mm.kcal, p: acc.p + mm.p, c: acc.c + mm.c, f: acc.f + mm.f };
-      },
-      { kcal: 0, p: 0, c: 0, f: 0 },
-    );
+  const clientSlotTargets = daySlotTargets(clientDay, clientCtx);
+  const partnerSlotTargets = daySlotTargets(partnerDay, partnerCtx);
+
+  // Pro Person deren eigenes Slot-Ziel als Referenz verwenden.
+  const remainingFor = (
+    meals: BuilderMeal[],
+    slot: Slot,
+    slotTargets: Record<Slot, MacroValues>,
+  ) => {
+    const t = slotTargets[slot];
+    const cur = meals
+      .filter((m) => m.slot === slot)
+      .reduce(
+        (acc, m) => {
+          const mm = mealMacros(m, library);
+          return { kcal: acc.kcal + mm.kcal, p: acc.p + mm.p, c: acc.c + mm.c, f: acc.f + mm.f };
+        },
+        { kcal: 0, p: 0, c: 0, f: 0 },
+      );
     return { kcal: t.kcal - cur.kcal, p: t.p - cur.p, c: t.c - cur.c, f: t.f - cur.f };
   };
+
 
   for (const slot of slotOrder) {
     const cExisting = clientMeals.find((m) => m.slot === slot);
@@ -501,18 +760,20 @@ export function autoFillDayPair(
     if (cExisting && pExisting) continue;
 
     if (sharedSlots[slot] && !cExisting && !pExisting) {
-      const cRem = remainingFor(clientMeals, clientDay, clientCtx);
-      const pRem = remainingFor(partnerMeals, partnerDay, partnerCtx);
+      const cRem = remainingFor(clientMeals, slot, clientSlotTargets);
+      const pRem = remainingFor(partnerMeals, slot, partnerSlotTargets);
       const scored = library
         .filter((m) => m.category === slot)
         .map((m) => {
           const sc = scoreMeal(m, clientCtx, clientDay.type, cRem);
           const sp = scoreMeal(m, partnerCtx, partnerDay.type, pRem);
+          const cSize = slotSizeScore(Number(m.kcal), cRem.kcal);
+          const pSize = slotSizeScore(Number(m.kcal), pRem.kcal);
           return {
             meal: m,
             combined:
-              adjustedMealScore(m, sc.score, clientCtx, selection?.client) +
-              adjustedMealScore(m, sp.score, partnerCtx, selection?.partner),
+              adjustedMealScore(m, sc.score + cSize, clientCtx, selection?.client) +
+              adjustedMealScore(m, sp.score + pSize, partnerCtx, selection?.partner),
             sc: sc.score,
             sp: sp.score,
           };
@@ -523,12 +784,8 @@ export function autoFillDayPair(
       if (best) {
         const group = makeGroupId();
         // per-person kcal scaling
-        const scale = (rem: { kcal: number }, kcal: number) => {
-          if (!kcal) return 1;
-          const target = Math.max(200, rem.kcal);
-          const raw = target / kcal;
-          return Math.max(0.25, Math.min(2, Math.round(raw * 4) / 4));
-        };
+        const scale = (rem: { kcal: number }, kcal: number) =>
+          suggestedPortionFactor(kcal, rem.kcal);
         const clientFactor = scale(cRem, best.meal.kcal);
         const partnerFactor = scale(pRem, best.meal.kcal);
         const cMeal = mealFromLibrary(best.meal, slot, clientFactor, null);
@@ -542,7 +799,7 @@ export function autoFillDayPair(
     }
     // Fallback: independent picks per side (only where side is empty)
     if (!cExisting) {
-      const cRem = remainingFor(clientMeals, clientDay, clientCtx);
+      const cRem = remainingFor(clientMeals, slot, clientSlotTargets);
       const cCand = library
         .filter((m) => m.category === slot)
         .map((m) => {
@@ -550,16 +807,24 @@ export function autoFillDayPair(
           return {
             meal: m,
             ...result,
-            adjustedScore: adjustedMealScore(m, result.score, clientCtx, selection?.client),
+            adjustedScore: adjustedMealScore(
+              m,
+              result.score + slotSizeScore(Number(m.kcal), cRem.kcal),
+              clientCtx,
+              selection?.client,
+            ),
           };
         })
         .filter((x) => x.score > 0)
         .sort((a, b) => b.adjustedScore - a.adjustedScore)[0];
-      if (cCand) clientMeals.push(mealFromLibrary(cCand.meal, slot));
+      if (cCand)
+        clientMeals.push(
+          mealFromLibrary(cCand.meal, slot, suggestedPortionFactor(Number(cCand.meal.kcal), cRem.kcal)),
+        );
       else missing++;
     }
     if (!pExisting) {
-      const pRem = remainingFor(partnerMeals, partnerDay, partnerCtx);
+      const pRem = remainingFor(partnerMeals, slot, partnerSlotTargets);
       const pCand = library
         .filter((m) => m.category === slot)
         .map((m) => {
@@ -567,12 +832,20 @@ export function autoFillDayPair(
           return {
             meal: m,
             ...result,
-            adjustedScore: adjustedMealScore(m, result.score, partnerCtx, selection?.partner),
+            adjustedScore: adjustedMealScore(
+              m,
+              result.score + slotSizeScore(Number(m.kcal), pRem.kcal),
+              partnerCtx,
+              selection?.partner,
+            ),
           };
         })
         .filter((x) => x.score > 0)
         .sort((a, b) => b.adjustedScore - a.adjustedScore)[0];
-      if (pCand) partnerMeals.push(mealFromLibrary(pCand.meal, slot));
+      if (pCand)
+        partnerMeals.push(
+          mealFromLibrary(pCand.meal, slot, suggestedPortionFactor(Number(pCand.meal.kcal), pRem.kcal)),
+        );
       else missing++;
     }
   }
@@ -748,90 +1021,99 @@ export function macroFitScore(totals: MacroValues, target: MacroValues): number 
   }, 0);
 }
 
-// Optimizes unlocked portions against calories, protein, carbs and fat together.
+/**
+ * Optimiert die Portionen slotweise gegen das jeweilige Slot-Ziel
+ * (kcal + Makros). Fixierte Mahlzeiten bleiben unverändert, leere Slots
+ * werden NICHT auf andere Mahlzeiten umgelegt — dadurch entstehen keine
+ * künstlich aufgeblasenen Portionen mehr.
+ */
 export function rebalanceDay(
   day: BuilderDay,
   ctx: CustomerPlanContext,
   library: LibraryMeal[],
 ): BuilderDay {
-  const target = targetsFor(day, ctx);
-  const lockedTotals = day.meals.reduce<MacroValues>(
-    (totals, meal) => {
-      if (!meal.is_locked) return totals;
-      const macros = mealMacros(meal, library);
-      return {
-        kcal: totals.kcal + macros.kcal,
-        p: totals.p + macros.p,
-        c: totals.c + macros.c,
-        f: totals.f + macros.f,
-      };
-    },
-    { kcal: 0, p: 0, c: 0, f: 0 },
-  );
-  const adjustableMeals = day.meals.flatMap((meal, index) => {
-    if (meal.is_locked) return [];
-    const unitMacros = mealMacros({ ...meal, portion_factor: 1 }, library);
-    if (!unitMacros.kcal) return [];
-    return [{ index, unitMacros }];
-  });
-  if (adjustableMeals.length === 0) return day;
+  const slotTargets = daySlotTargets(day, ctx);
+  const factorOptions = Array.from({ length: 32 }, (_, i) => (i + 1) * 0.25);
+  const factorByMealIndex = new Map<number, number>();
 
-  const clamp = (n: number) => Math.min(8, Math.max(0.25, n));
-  const roundQuarter = (n: number) => Math.round(n * 4) / 4;
+  for (const slot of SLOT_KEYS) {
+    const entries = day.meals
+      .map((meal, index) => ({ meal, index }))
+      .filter((entry) => entry.meal.slot === slot);
+    if (entries.length === 0) continue;
 
-  // Seed: Uniformer Faktor, der das kcal-Ziel exakt trifft (nach abzug locked kcal).
-  const remainingKcal = Math.max(0, target.kcal - lockedTotals.kcal);
-  const unitUnlockedKcal = adjustableMeals.reduce((s, m) => s + m.unitMacros.kcal, 0);
-  const seedFactor = unitUnlockedKcal > 0 ? clamp(remainingKcal / unitUnlockedKcal) : 1;
-
-  const factors = adjustableMeals.map(() => roundQuarter(seedFactor));
-  let bestFactors = [...factors];
-  let bestScore = Number.POSITIVE_INFINITY;
-
-  const scoreFactors = (candidateFactors: number[]) => {
-    const totals = adjustableMeals.reduce<MacroValues>(
-      (sum, meal, index) => {
-        const factor = candidateFactors[index];
+    const lockedTotals = entries.reduce<MacroValues>(
+      (totals, entry) => {
+        if (!entry.meal.is_locked) return totals;
+        const macros = mealMacros(entry.meal, library);
         return {
-          kcal: sum.kcal + meal.unitMacros.kcal * factor,
-          p: sum.p + meal.unitMacros.p * factor,
-          c: sum.c + meal.unitMacros.c * factor,
-          f: sum.f + meal.unitMacros.f * factor,
+          kcal: totals.kcal + macros.kcal,
+          p: totals.p + macros.p,
+          c: totals.c + macros.c,
+          f: totals.f + macros.f,
         };
       },
-      { ...lockedTotals },
+      { kcal: 0, p: 0, c: 0, f: 0 },
     );
-    // Sanfte Präferenz Richtung Portion 1, aber schwächer als früher —
-    // sonst wird das kcal-Ziel bewusst verfehlt.
-    const portionPenalty =
-      candidateFactors.reduce((sum, factor) => sum + Math.abs(factor - 1), 0) * 0.0003;
-    return macroFitScore(totals, target) + portionPenalty;
-  };
 
-  // Lokale Feinsuche um den kcal-Seed (±2 in 0.25-Schritten).
-  const factorOptions = Array.from({ length: 32 }, (_, i) => (i + 1) * 0.25);
-  bestScore = scoreFactors(bestFactors);
+    const adjustableMeals = entries.flatMap((entry) => {
+      if (entry.meal.is_locked) return [];
+      const unitMacros = mealMacros({ ...entry.meal, portion_factor: 1 }, library);
+      if (!unitMacros.kcal) return [];
+      return [{ index: entry.index, unitMacros }];
+    });
+    if (adjustableMeals.length === 0) continue;
 
-  for (let pass = 0; pass < 12; pass += 1) {
-    let improved = false;
-    for (let mealIndex = 0; mealIndex < adjustableMeals.length; mealIndex += 1) {
-      for (const factor of factorOptions) {
-        const candidate = [...bestFactors];
-        candidate[mealIndex] = factor;
-        const score = scoreFactors(candidate);
-        if (score < bestScore - 1e-6) {
-          bestScore = score;
-          bestFactors = candidate;
-          improved = true;
+    const target = slotTargets[slot];
+    const remainingKcal = Math.max(0, target.kcal - lockedTotals.kcal);
+    const unitUnlockedKcal = adjustableMeals.reduce((sum, meal) => sum + meal.unitMacros.kcal, 0);
+    const seedFactor = unitUnlockedKcal > 0 ? clampFactor(remainingKcal / unitUnlockedKcal) : 1;
+
+    let bestFactors = adjustableMeals.map(() => Math.max(0.25, roundQuarter(seedFactor)));
+
+    const scoreFactors = (candidateFactors: number[]) => {
+      const totals = adjustableMeals.reduce<MacroValues>(
+        (sum, meal, index) => {
+          const factor = candidateFactors[index];
+          return {
+            kcal: sum.kcal + meal.unitMacros.kcal * factor,
+            p: sum.p + meal.unitMacros.p * factor,
+            c: sum.c + meal.unitMacros.c * factor,
+            f: sum.f + meal.unitMacros.f * factor,
+          };
+        },
+        { ...lockedTotals },
+      );
+      const portionPenalty =
+        candidateFactors.reduce((sum, factor) => sum + Math.abs(factor - 1), 0) * 0.0003;
+      return macroFitScore(totals, target) + portionPenalty;
+    };
+
+    let bestScore = scoreFactors(bestFactors);
+    for (let pass = 0; pass < 12; pass += 1) {
+      let improved = false;
+      for (let mealIndex = 0; mealIndex < adjustableMeals.length; mealIndex += 1) {
+        for (const factor of factorOptions) {
+          const candidate = [...bestFactors];
+          candidate[mealIndex] = factor;
+          const score = scoreFactors(candidate);
+          if (score < bestScore - 1e-6) {
+            bestScore = score;
+            bestFactors = candidate;
+            improved = true;
+          }
         }
       }
+      if (!improved) break;
     }
-    if (!improved) break;
+
+    adjustableMeals.forEach((meal, index) => {
+      factorByMealIndex.set(meal.index, bestFactors[index]);
+    });
   }
 
-  const factorByMealIndex = new Map(
-    adjustableMeals.map((meal, index) => [meal.index, bestFactors[index]]),
-  );
+  if (factorByMealIndex.size === 0) return day;
+
   return {
     ...day,
     meals: day.meals.map((meal, index) => {
@@ -840,6 +1122,7 @@ export function rebalanceDay(
     }),
   };
 }
+
 
 
 // Deep-copy meals for day-copy: fresh linked_prep_group + linked_partner_group IDs (shared across a paired copy via caller-supplied maps).

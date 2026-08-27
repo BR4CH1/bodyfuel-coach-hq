@@ -279,6 +279,12 @@ export type BuilderDay = {
   prepCoupleLunchDinner?: boolean;
   /** Individuelles Tagesziel; überschreibt das Profilziel nur in diesem Plan. */
   customTargets?: { kcal: number; p: number; c: number; f: number } | null;
+  /**
+   * Optionale kcal-Ziele je Mahlzeiten-Slot (nur Builder-State/Draft, keine DB-Spalte).
+   * Fehlen sie, werden sie aus Standardverteilung + Tagesziel abgeleitet.
+   */
+  slotKcalTargets?: Partial<Record<"breakfast" | "lunch" | "dinner" | "snack", number>> | null;
+
 };
 
 async function persistBuilderPlan(
