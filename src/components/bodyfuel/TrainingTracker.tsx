@@ -340,20 +340,11 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
         if (!requestIsCurrent()) return;
         const exList = (exRows as Exercise[]) ?? [];
         setExercises(exList);
-        const today = localDateKey();
-        const trainingDayIds = new Set(exList.map((exercise) => exercise.day_id));
-        const todayTraining = dayList.find(
-          (day) => day.day_date === today && trainingDayIds.has(day.id),
-        );
-        const firstTraining = dayList.find((day) => trainingDayIds.has(day.id));
-        const preferredDay = todayTraining ?? firstTraining ?? dayList[0] ?? null;
-        setOpenDay((current) =>
-          resolveOpenDayId({
-            current,
-            visibleDayIds: dayList.filter((d) => trainingDayIds.has(d.id)).map((d) => d.id),
-            preferredDayId: preferredDay?.id ?? null,
-          }),
-        );
+        // NOTE: the open day is intentionally NOT set here. reload() can run
+        // while the remote draft restore is still in flight; picking a default
+        // day here would race the restored openDayId. Selection happens in a
+        // dedicated effect once the draft is restored.
+
 
         if (exList.length) {
           // Pull historic exercises across ALL of this client's training plans,
