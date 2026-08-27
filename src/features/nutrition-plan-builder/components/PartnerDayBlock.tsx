@@ -13,10 +13,10 @@ import type {
 } from "@/lib/plan-builder.functions";
 import {
   autoFillDayPair,
+  daySlotTargets,
   makeGroupId,
   rebalanceDay,
   scaleFactorToTarget,
-  targetsFor,
   type PartnerSlotLink,
   type SharedSlotsMap,
   type MacroValues,
@@ -115,10 +115,10 @@ export function PartnerDayBlock({
     }
   };
 
-  const cTargetKcal = targetsFor(clientDay, clientCtx).kcal;
-  const pTargetKcal = targetsFor(partnerDay, partnerCtx).kcal;
+  const cSlotTargets = daySlotTargets(clientDay, clientCtx);
+  const pSlotTargets = daySlotTargets(partnerDay, partnerCtx);
 
-  // Couple a slot: mirror recipe to the other side, scale portion to their target.
+  // Couple a slot: mirror recipe to the other side, scale portion to their slot target.
   // "from" = which side is the master (has the meal to mirror).
   const coupleSlot = (slot: Slot, from: "client" | "partner") => {
     const cM = clientDay.meals.find((m) => m.slot === slot);
@@ -126,7 +126,11 @@ export function PartnerDayBlock({
     const group = makeGroupId();
     if (from === "client") {
       if (!cM) return;
-      const scaledFactor = scaleFactorToTarget(cM.portion_factor ?? 1, cTargetKcal, pTargetKcal);
+      const scaledFactor = scaleFactorToTarget(
+        cM.portion_factor ?? 1,
+        cSlotTargets[slot].kcal,
+        pSlotTargets[slot].kcal,
+      );
       onClientChange((d) => ({
         ...d,
         meals: d.meals.map((m) => (m.slot === slot ? { ...m, linked_partner_group: group } : m)),
@@ -158,7 +162,11 @@ export function PartnerDayBlock({
       }
     } else {
       if (!pM) return;
-      const scaledFactor = scaleFactorToTarget(pM.portion_factor ?? 1, pTargetKcal, cTargetKcal);
+      const scaledFactor = scaleFactorToTarget(
+        pM.portion_factor ?? 1,
+        pSlotTargets[slot].kcal,
+        cSlotTargets[slot].kcal,
+      );
       onPartnerChange((d) => ({
         ...d,
         meals: d.meals.map((m) => (m.slot === slot ? { ...m, linked_partner_group: group } : m)),
@@ -200,7 +208,7 @@ export function PartnerDayBlock({
     }));
   };
 
-  // Swap for both: update recipe on both sides, keep group, rescale "other" factor to target.
+  // Swap for both: update recipe on both sides, keep group, rescale "other" factor to slot target.
   const swapCoupled = (slot: Slot, lib: LibraryMeal, from: "client" | "partner") => {
     const ing = (lib.ingredients ?? []).map((i) => ({
       name: i.name,
@@ -217,8 +225,8 @@ export function PartnerDayBlock({
     const baseFactor = from === "client" ? (cM?.portion_factor ?? 1) : (pM?.portion_factor ?? 1);
     const otherFactor =
       from === "client"
-        ? scaleFactorToTarget(baseFactor, cTargetKcal, pTargetKcal)
-        : scaleFactorToTarget(baseFactor, pTargetKcal, cTargetKcal);
+        ? scaleFactorToTarget(baseFactor, cSlotTargets[slot].kcal, pSlotTargets[slot].kcal)
+        : scaleFactorToTarget(baseFactor, pSlotTargets[slot].kcal, cSlotTargets[slot].kcal);
     onClientChange((d) => ({
       ...d,
       meals: d.meals.map((m) =>
