@@ -629,24 +629,9 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
 
   return (
     <div className="space-y-4">
-      {(refreshing || loadError) && (
-        <div
-          className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-2 text-[11px] ${
-            loadError
-              ? "border-amber-500/30 bg-amber-500/8 text-amber-500"
-              : "border-primary/20 bg-primary/5 text-muted-foreground"
-          }`}
-        >
-          <span>
-            {loadError
-              ? "Letzter sicherer Stand – Verbindung wird beim nächsten Versuch aktualisiert."
-              : "Aktualisiere Trainingsdaten im Hintergrund …"}
-          </span>
-          {loadError && (
-            <button type="button" onClick={() => void reload()} className="font-bold">
-              Neu laden
-            </button>
-          )}
+      {refreshing && (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-[11px] text-muted-foreground">
+          <span>Aktualisiere Trainingsdaten im Hintergrund …</span>
         </div>
       )}
       <section className="overflow-hidden rounded-3xl border border-primary/20 bg-[linear-gradient(145deg,rgba(17,28,25,0.98),rgba(12,18,17,0.98))] text-white shadow-[0_24px_70px_-38px_rgba(0,0,0,0.85)]">
