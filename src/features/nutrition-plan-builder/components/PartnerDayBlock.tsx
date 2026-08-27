@@ -13,10 +13,10 @@ import type {
 } from "@/lib/plan-builder.functions";
 import {
   autoFillDayPair,
+  daySlotTargets,
   makeGroupId,
   rebalanceDay,
   scaleFactorToTarget,
-  targetsFor,
   type PartnerSlotLink,
   type SharedSlotsMap,
   type MacroValues,
