@@ -115,8 +115,8 @@ export function PartnerDayBlock({
     }
   };
 
-  const cTargetKcal = targetsFor(clientDay, clientCtx).kcal;
-  const pTargetKcal = targetsFor(partnerDay, partnerCtx).kcal;
+  const clientSlotTargets = daySlotTargets(clientDay, clientCtx);
+  const partnerSlotTargets = daySlotTargets(partnerDay, partnerCtx);
 
   // Couple a slot: mirror recipe to the other side, scale portion to their target.
   // "from" = which side is the master (has the meal to mirror).
