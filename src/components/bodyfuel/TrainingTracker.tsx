@@ -34,7 +34,7 @@ import { ExerciseAnalytics } from "./ExerciseAnalytics";
 import {
   remapHistoricLogs,
   resolveExternalDaySelection,
-  resolveOpenDayId,
+  resolveRestoredOpenDayId,
 } from "@/lib/training/tracker-day-selection";
 import { useExerciseMediaLibrary } from "@/hooks/use-exercise-media-library";
 import { ExerciseMediaThumb } from "@/components/bodyfuel/ExerciseMediaThumb";
@@ -340,20 +340,11 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
         if (!requestIsCurrent()) return;
         const exList = (exRows as Exercise[]) ?? [];
         setExercises(exList);
-        const today = localDateKey();
-        const trainingDayIds = new Set(exList.map((exercise) => exercise.day_id));
-        const todayTraining = dayList.find(
-          (day) => day.day_date === today && trainingDayIds.has(day.id),
-        );
-        const firstTraining = dayList.find((day) => trainingDayIds.has(day.id));
-        const preferredDay = todayTraining ?? firstTraining ?? dayList[0] ?? null;
-        setOpenDay((current) =>
-          resolveOpenDayId({
-            current,
-            visibleDayIds: dayList.filter((d) => trainingDayIds.has(d.id)).map((d) => d.id),
-            preferredDayId: preferredDay?.id ?? null,
-          }),
-        );
+        // NOTE: the open day is intentionally NOT set here. reload() can run
+        // while the remote draft restore is still in flight; picking a default
+        // day here would race the restored openDayId. Selection happens in a
+        // dedicated effect once the draft is restored.
+
 
         if (exList.length) {
           // Pull historic exercises across ALL of this client's training plans,
@@ -513,9 +504,25 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
     };
   }, [clientId, days]);
 
+  // Day selection happens ONLY after the remote draft has been restored and the
+  // plan days/exercises are loaded. A still-valid open day is always kept.
+  useEffect(() => {
+    if (!sessionDraftRestored || loading || !days.length) return;
+    const trackable = days.filter((day) => exercises.some((ex) => ex.day_id === day.id));
+    if (!trackable.length) return;
+    setOpenDay((current) =>
+      resolveRestoredOpenDayId({
+        current,
+        trackableDays: trackable,
+        todayDateKey: localDateKey(),
+      }),
+    );
+  }, [sessionDraftRestored, loading, days, exercises, setOpenDay]);
+
   // Sync open day with PlanContentView selection (top of /training page).
-  // ID-ONLY: PlanContentView publishes an explicit day_id. Day names are never
-  // used to switch the live tracker day.
+  // ID-ONLY and EXPLICIT-ONLY: only a live user pick event switches the day.
+  // Stored values are never read at mount (an automatic re-mount after
+  // iPhone lock/resume must not move the athlete to another day).
   useEffect(() => {
     if (!days.length) return;
     const key = `bf:training:active-day-id:${clientId}`;
@@ -529,7 +536,8 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
       );
     };
     try {
-      applyDayId(localStorage.getItem(key));
+      // Legacy name-based auto-sync keys must never steer the tracker.
+      localStorage.removeItem(`bf:training:active-day-name:${clientId}`);
     } catch {
       /* local storage is optional */
     }
@@ -564,6 +572,12 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
 
   if (!supabaseUser) return null;
   if (loading) return <div className="text-sm text-muted-foreground">Lade Übungen...</div>;
+  if (!isCoach && !sessionDraftRestored)
+    return (
+      <div className="rounded-2xl border border-border bg-card p-5 text-sm text-muted-foreground">
+        Trainingsstand wird wiederhergestellt…
+      </div>
+    );
   if (!plan && loadError)
     return (
       <div className="rounded-2xl border border-amber-500/30 bg-amber-500/8 p-5 text-sm">

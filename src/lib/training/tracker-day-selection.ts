@@ -32,6 +32,38 @@ export function resolveExternalDaySelection(input: {
   return requested;
 }
 
+/**
+ * Selection AFTER the remote draft has been restored.
+ *
+ * A still-valid `current` day_id always wins — a plan reload must never move
+ * the athlete to another day while they are logging sets. When there is no
+ * valid current day (fresh session), an extended multi-week plan whose last
+ * week is being reused is matched by WEEKDAY of `day_date`, not by "first
+ * training day", so e.g. a Thursday maps back onto the plan's Thursday.
+ */
+export function resolveRestoredOpenDayId(input: {
+  current: string | null;
+  trackableDays: ReadonlyArray<{ id: string; day_date?: string | null }>;
+  todayDateKey: string;
+}): string | null {
+  const days = input.trackableDays;
+  if (!days.length) return input.current;
+  if (input.current && days.some((d) => d.id === input.current)) return input.current;
+
+  const exact = days.find((d) => d.day_date === input.todayDateKey);
+  if (exact) return exact.id;
+
+  const weekdayOf = (value: string) => new Date(`${value}T12:00:00Z`).getUTCDay();
+  const todayWd = weekdayOf(input.todayDateKey);
+  const weekdayMatches = days.filter((d) => d.day_date && weekdayOf(d.day_date) === todayWd);
+  if (weekdayMatches.length) {
+    // Latest dated match — the reused week is the most recent one.
+    return weekdayMatches.reduce((a, b) => ((a.day_date ?? "") >= (b.day_date ?? "") ? a : b)).id;
+  }
+
+  return days[0]?.id ?? null;
+}
+
 export type RemappableLog = {
   exercise_id: string;
   performed_at?: string | null;
