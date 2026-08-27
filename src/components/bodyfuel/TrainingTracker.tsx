@@ -504,9 +504,25 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
     };
   }, [clientId, days]);
 
+  // Day selection happens ONLY after the remote draft has been restored and the
+  // plan days/exercises are loaded. A still-valid open day is always kept.
+  useEffect(() => {
+    if (!sessionDraftRestored || loading || !days.length) return;
+    const trackable = days.filter((day) => exercises.some((ex) => ex.day_id === day.id));
+    if (!trackable.length) return;
+    setOpenDay((current) =>
+      resolveRestoredOpenDayId({
+        current,
+        trackableDays: trackable,
+        todayDateKey: localDateKey(),
+      }),
+    );
+  }, [sessionDraftRestored, loading, days, exercises, setOpenDay]);
+
   // Sync open day with PlanContentView selection (top of /training page).
-  // ID-ONLY: PlanContentView publishes an explicit day_id. Day names are never
-  // used to switch the live tracker day.
+  // ID-ONLY and EXPLICIT-ONLY: only a live user pick event switches the day.
+  // Stored values are never read at mount (an automatic re-mount after
+  // iPhone lock/resume must not move the athlete to another day).
   useEffect(() => {
     if (!days.length) return;
     const key = `bf:training:active-day-id:${clientId}`;
@@ -520,7 +536,8 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
       );
     };
     try {
-      applyDayId(localStorage.getItem(key));
+      // Legacy name-based auto-sync keys must never steer the tracker.
+      localStorage.removeItem(`bf:training:active-day-name:${clientId}`);
     } catch {
       /* local storage is optional */
     }
