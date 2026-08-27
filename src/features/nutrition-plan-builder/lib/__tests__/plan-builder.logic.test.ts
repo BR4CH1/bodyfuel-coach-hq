@@ -5,12 +5,16 @@ import {
   autoFillWeekImpl,
   buildBuilderDays,
   cloneBuilderDays,
+  daySlotTargets,
   macroFitScore,
   macroProgress,
   mealRepeatSpan,
   rebalanceDay,
   remapMealsForCopy,
+  resolveSlotKcalTargets,
   scoreMeal,
+  setSlotKcalTarget,
+  slotTotals,
   summarizeDay,
 } from "../plan-builder.logic";
 
@@ -400,5 +404,69 @@ describe("autoFillWeekImpl", () => {
     expect(breakfastIds[1]).toBe(breakfastIds[0]);
     expect(breakfastIds[2]).toBe(breakfastIds[0]);
     expect(breakfastIds[3]).not.toBe(breakfastIds[0]);
+  });
+});
+
+describe("Slot-Zielverteilung", () => {
+  it("verteilt 2000 kcal auf 500/600/600/300", () => {
+    const t = resolveSlotKcalTargets(2000, null);
+    expect(t).toEqual({ breakfast: 500, lunch: 600, dinner: 600, snack: 300 });
+  });
+
+  it("hält die Tagessumme bei manueller Änderung eines Slots", () => {
+    const t = setSlotKcalTarget(resolveSlotKcalTargets(2000, null), "breakfast", 800, 2000);
+    expect(t.breakfast).toBe(800);
+    expect(t.breakfast + t.lunch + t.dinner + t.snack).toBe(2000);
+  });
+
+  it("skaliert eine bestehende Verteilung auf ein neues Tagesziel", () => {
+    const custom = setSlotKcalTarget(resolveSlotKcalTargets(2000, null), "breakfast", 800, 2000);
+    const scaled = resolveSlotKcalTargets(2500, custom);
+    expect(scaled.breakfast + scaled.lunch + scaled.dinner + scaled.snack).toBe(2500);
+    expect(scaled.breakfast).toBeGreaterThan(900);
+  });
+
+  it("bläht einzelne Mahlzeiten nicht auf das ganze Tagesziel auf", () => {
+    const library = [libraryMeal("breakfast", "breakfast", { kcal: 500 })];
+    const day: BuilderDay = {
+      name: "Tag 1",
+      type: "rest",
+      meals: [
+        {
+          slot: "breakfast",
+          name: "Frühstück",
+          library_meal_id: "breakfast",
+          ingredients: [],
+          portion_factor: 1,
+        },
+      ],
+    };
+    const result = rebalanceDay(day, context, library);
+    expect(result.meals[0].portion_factor).toBeLessThanOrEqual(1.5);
+  });
+
+  it("hält bei 4 Slots jede Mahlzeit grob im Slot-Zielbereich", () => {
+    const library = (["breakfast", "lunch", "dinner", "snack"] as const).map((category) =>
+      libraryMeal(category, category, { kcal: 400, protein_g: 30, carbs_g: 40, fat_g: 12 }),
+    );
+    const day: BuilderDay = {
+      name: "Tag 1",
+      type: "rest",
+      meals: library.map((meal) => ({
+        slot: meal.category as BuilderDay["meals"][number]["slot"],
+        name: meal.name,
+        library_meal_id: meal.id,
+        ingredients: [],
+        portion_factor: 1,
+      })),
+    };
+    const result = rebalanceDay(day, context, library);
+    const targets = daySlotTargets(result, context);
+    for (const meal of result.meals) {
+      const actual = slotTotals(result, meal.slot, library);
+      expect(Math.abs(actual.kcal - targets[meal.slot].kcal)).toBeLessThanOrEqual(
+        targets[meal.slot].kcal * 0.3,
+      );
+    }
   });
 });
