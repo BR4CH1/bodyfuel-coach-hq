@@ -57,6 +57,11 @@ import {
   getTrainingExerciseDraft,
 } from "@/lib/training/training-session-state";
 import { mergeTodaysTrainingLogs } from "@/lib/training/training-set-log.logic";
+import {
+  loadTrainingTrackerCore,
+  mergeReloadedTrainingLogs,
+  type TrackerCoreSource,
+} from "@/lib/training/tracker-core-load";
 import { createSupabaseWorkoutDraftAdapter } from "@/lib/training/workout-session-draft.supabase";
 import type {
   TrainingExerciseDraft,
@@ -264,15 +269,9 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
     );
   }, [clientId, exercises]);
 
-  const reload = async (cachedView = Boolean(plan)) => {
-    if (!clientId) return;
-    const requestId = ++reloadSequenceRef.current;
-    const requestIsCurrent = () => reloadSequenceRef.current === requestId;
-    setLoadError(null);
-    setLoading(!cachedView);
-    setRefreshing(cachedView);
-    try {
-      const { data: planRow, error: planError } = await withTimeout(
+  const createCoreSource = (): TrackerCoreSource => ({
+    fetchActivePlan: async () => {
+      const { data, error } = await withTimeout(
         supabase
           .from("nutrition_plans")
           .select("id, client_id, title, weeks_count, scheduled_start_date")
@@ -281,13 +280,81 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
           .eq("is_active", true)
           .maybeSingle(),
       );
-      if (planError) throw planError;
+      if (error) throw error;
+      return (data as Plan | null) ?? null;
+    },
+    fetchDays: async (planId) => {
+      const { data, error } = await withTimeout(
+        supabase
+          .from("training_days")
+          .select("*")
+          .eq("plan_id", planId)
+          .order("week_number")
+          .order("sort_order"),
+      );
+      if (error) throw error;
+      return (data as Day[]) ?? [];
+    },
+    fetchExercises: async (dayIds) => {
+      const { data, error } = await withTimeout(
+        supabase.from("training_exercises").select("*").in("day_id", dayIds).order("sort_order"),
+      );
+      if (error) throw error;
+      return (data as Exercise[]) ?? [];
+    },
+    fetchHistoricExercises: async () => {
+      const { data, error } = await supabase
+        .from("nutrition_plans")
+        .select("id, training_days(id, training_exercises(id, name))")
+        .eq("client_id", clientId)
+        .eq("plan_type", "training");
+      if (error) throw error;
+      const histExercises: { id: string; name: string }[] = [];
+      for (const p of (data as HistoricalPlan[]) ?? []) {
+        for (const d of p?.training_days ?? []) {
+          for (const e of d?.training_exercises ?? []) {
+            if (e?.id && e?.name) histExercises.push({ id: e.id, name: e.name });
+          }
+        }
+      }
+      return histExercises;
+    },
+    fetchLogs: async (exerciseIds) => {
+      const { data, error } = await withTimeout(
+        supabase
+          .from("training_set_logs")
+          .select("*")
+          .in("exercise_id", exerciseIds)
+          .eq("client_id", clientId)
+          .order("performed_at", { ascending: false })
+          .limit(2000),
+      );
+      // Never swallow this error: falling back to [] used to wipe the whole
+      // visible workout even though every set was safe in the database.
+      if (error) throw error;
+      return (data as SetLog[]) ?? [];
+    },
+  });
+
+  // Safe refresh: nothing is written to state before the FULL core load
+  // succeeded. On any error the previously displayed plan, days, exercises and
+  // set logs stay exactly as they are and only `loadError` is set.
+  const reload = async (cachedView = Boolean(plan)) => {
+    if (!clientId) return;
+    const requestId = ++reloadSequenceRef.current;
+    const requestIsCurrent = () => reloadSequenceRef.current === requestId;
+    const hasSafeState = Boolean(plan);
+    setLoadError(null);
+    setLoading(!cachedView && !hasSafeState);
+    setRefreshing(cachedView || hasSafeState);
+    try {
+      const result = await loadTrainingTrackerCore(createCoreSource());
       if (!requestIsCurrent()) return;
 
-      if (!planRow) {
+      if (result.status === "no-plan") {
         // A cached workout remains usable until the backend positively returns
         // a replacement. An auth/network wobble must never blank the screen.
-        if (cachedView && plan) {
+        if (hasSafeState) {
           throw new Error("Aktiver Trainingsplan konnte gerade nicht bestätigt werden.");
         }
         setPlan(null);
@@ -297,101 +364,21 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
         clearTrainingTrackerSnapshot(clientId);
         return;
       }
-      const currentPlan = planRow as Plan;
-      setPlan(currentPlan);
-      const { data: dayRows, error: dayError } = await withTimeout(
-        supabase
-          .from("training_days")
-          .select("*")
-          .eq("plan_id", planRow.id)
-          .order("week_number")
-          .order("sort_order"),
+
+      // Atomic commit of a fully validated core load.
+      const today = localDateKey();
+      const exerciseIds = result.exercises.map((exercise) => exercise.id);
+      setPlan(result.plan);
+      setActiveWeek(result.activeWeek);
+      setWeeksCount(result.weeksCount);
+      setDays(result.days);
+      setExercises(result.exercises);
+      // NOTE: the open day is intentionally NOT set here. reload() can run
+      // while the remote draft restore is still in flight; picking a default
+      // day here would race the restored openDayId.
+      setLogs((current) =>
+        mergeReloadedTrainingLogs(current, result.logs, exerciseIds, today),
       );
-      if (dayError) throw dayError;
-      if (!requestIsCurrent()) return;
-      const allDays = (dayRows as Day[]) ?? [];
-
-      // For multi-week plans, only show the current week's days.
-      const wc = currentPlan.weeks_count ?? 1;
-      const startStr = currentPlan.scheduled_start_date ?? null;
-      let aw = 1;
-      if (startStr && wc > 1) {
-        const start = new Date(startStr + "T00:00:00");
-        const diffDays = Math.floor((Date.now() - start.getTime()) / 86400000);
-        aw = Math.max(1, Math.min(wc, Math.floor(diffDays / 7) + 1));
-      }
-      setActiveWeek(aw);
-      setWeeksCount(wc);
-      const dayList = allDays.filter((d) => (d.week_number ?? 1) === aw);
-      setDays(dayList);
-
-      if (dayList.length) {
-        const { data: exRows, error: exerciseError } = await withTimeout(
-          supabase
-            .from("training_exercises")
-            .select("*")
-            .in(
-              "day_id",
-              dayList.map((d) => d.id),
-            )
-            .order("sort_order"),
-        );
-        if (exerciseError) throw exerciseError;
-        if (!requestIsCurrent()) return;
-        const exList = (exRows as Exercise[]) ?? [];
-        setExercises(exList);
-        // NOTE: the open day is intentionally NOT set here. reload() can run
-        // while the remote draft restore is still in flight; picking a default
-        // day here would race the restored openDayId. Selection happens in a
-        // dedicated effect once the draft is restored.
-
-
-        if (exList.length) {
-          // Pull historic exercises across ALL of this client's training plans,
-          // so logs from previous plans still feed into PRs / trend analysis
-          // when names match (e.g. "Bankdrücken Langhantel" from a prior plan).
-          const { data: histPlans } = await supabase
-            .from("nutrition_plans")
-            .select("id, training_days(id, training_exercises(id, name))")
-            .eq("client_id", clientId)
-            .eq("plan_type", "training");
-          const histExercises: { id: string; name: string }[] = [];
-          for (const p of (histPlans as HistoricalPlan[]) ?? []) {
-            for (const d of p?.training_days ?? []) {
-              for (const e of d?.training_exercises ?? []) {
-                if (e?.id && e?.name) histExercises.push({ id: e.id, name: e.name });
-              }
-            }
-          }
-          const allIds = Array.from(
-            new Set(histExercises.map((h) => h.id).concat(exList.map((e) => e.id))),
-          );
-          const { data: logRows } = await supabase
-            .from("training_set_logs")
-            .select("*")
-            .in("exercise_id", allIds)
-            .eq("client_id", clientId)
-            .order("performed_at", { ascending: false })
-            .limit(2000);
-          if (!requestIsCurrent()) return;
-          // Historic name matching is analytics/PR only. Today's logs are never
-          // rewritten onto another exercise_id.
-          setLogs(
-            remapHistoricLogs<SetLog>({
-              logs: (logRows as SetLog[]) ?? [],
-              currentExercises: exList.map((e) => ({ id: e.id, name: e.name })),
-              historicExercises: histExercises,
-              todayKey: today,
-              dateKeyOf: localDateKey,
-            }),
-          );
-        } else {
-          setLogs([]);
-        }
-      } else {
-        setExercises([]);
-        setLogs([]);
-      }
     } catch (error) {
       if (!requestIsCurrent()) return;
       const message =
