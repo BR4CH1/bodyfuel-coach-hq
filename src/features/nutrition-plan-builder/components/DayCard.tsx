@@ -391,7 +391,75 @@ export function DayCard({
           </div>
         </div>
 
+        {/* Mahlzeiten-Zielverteilung */}
+        <div className="rounded-xl border border-border bg-background p-3">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div className="text-sm font-semibold">Mahlzeiten-Ziele</div>
+              <div className="text-xs text-muted-foreground">
+                Verteilung des Tagesziels auf die Mahlzeiten (kcal editierbar)
+              </div>
+            </div>
+            {day.slotKcalTargets ? (
+              <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={resetSlotTargets}>
+                Standard (25/30/30/15)
+              </Button>
+            ) : null}
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {SLOTS.map(({ key, label }) => {
+              const slotTarget = slotTargets[key];
+              const actual = slotTotals(day, key, library);
+              const status = slotStatus(actual.kcal, slotTarget.kcal);
+              const diff = Math.round(actual.kcal - slotTarget.kcal);
+              const statusLabel =
+                status === "on_target"
+                  ? "Im Zielbereich"
+                  : status === "under"
+                    ? `${Math.abs(diff)} kcal offen`
+                    : `${Math.abs(diff)} kcal über Ziel`;
+              const statusColor =
+                status === "on_target"
+                  ? "text-emerald-500"
+                  : status === "under"
+                    ? "text-amber-500"
+                    : "text-destructive";
+              return (
+                <div key={key} className="rounded-lg bg-muted/50 p-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-medium">{label}</span>
+                    <div className="flex items-center gap-1">
+                      <Input
+                        type="number"
+                        min={0}
+                        step={25}
+                        value={slotKcalTargets[key]}
+                        onChange={(event) =>
+                          updateSlotKcalTarget(key, Number(event.target.value) || 0)
+                        }
+                        className="h-7 w-20 px-2 text-right text-xs"
+                        aria-label={`kcal-Ziel ${label}`}
+                      />
+                      <span className="text-[10px] text-muted-foreground">kcal</span>
+                    </div>
+                  </div>
+                  <div className="mt-1 text-[11px] text-muted-foreground">
+                    Ziel: {slotTarget.kcal} kcal · {slotTarget.p} P · {slotTarget.c} KH ·{" "}
+                    {slotTarget.f} F
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    Aktuell: {Math.round(actual.kcal)} kcal · {Math.round(actual.p)} P ·{" "}
+                    {Math.round(actual.c)} KH · {Math.round(actual.f)} F
+                  </div>
+                  <div className={`mt-0.5 text-[10px] ${statusColor}`}>{statusLabel}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Mealprep coupling */}
+
         <div className="flex items-center justify-between rounded-lg border border-dashed border-border p-2 text-xs">
           <div className="flex items-center gap-2">
             {day.prepCoupleLunchDinner ? (
