@@ -58,6 +58,7 @@ import {
 } from "@/lib/training/training-session-state";
 import { mergeTodaysTrainingLogs } from "@/lib/training/training-set-log.logic";
 import {
+  chunkIds,
   loadTrainingTrackerCore,
   mergeReloadedTrainingLogs,
   type TrackerCoreSource,

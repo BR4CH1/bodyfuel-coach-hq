@@ -46,7 +46,8 @@ function makeSource(overrides: Partial<TrackerCoreSource> = {}): TrackerCoreSour
       },
     ],
     fetchHistoricExercises: async () => [],
-    fetchLogs: async () => [],
+    fetchCurrentLogs: async () => [],
+    fetchHistoricLogs: async () => [],
     ...overrides,
   };
 }
@@ -111,7 +112,7 @@ describe("transactional tracker reload", () => {
     const result = await safeReload(
       existing,
       makeSource({
-        fetchLogs: async () => {
+        fetchCurrentLogs: async () => {
           throw new Error("Failed to fetch");
         },
       }),
@@ -142,7 +143,7 @@ describe("transactional tracker reload", () => {
     const result = await safeReload(
       existing,
       makeSource({
-        fetchLogs: async () => {
+        fetchCurrentLogs: async () => {
           throw new Error("timeout");
         },
       }),
@@ -153,7 +154,7 @@ describe("transactional tracker reload", () => {
 
   it("commits fresh data on a successful reload", async () => {
     const remote = log({ id: "remote-1", set_number: 1, weight_kg: 80 });
-    const result = await safeReload(existing, makeSource({ fetchLogs: async () => [remote] }));
+    const result = await safeReload(existing, makeSource({ fetchCurrentLogs: async () => [remote] }));
 
     expect(result.error).toBeNull();
     expect(result.state.logs.map((l) => l.id)).toEqual(["remote-1"]);
@@ -170,7 +171,7 @@ describe("transactional tracker reload", () => {
     };
     const remote = log({ id: "remote-1", set_number: 1, performed_at: `${TODAY}T12:32:00.000Z` });
 
-    const result = await safeReload(state, makeSource({ fetchLogs: async () => [remote] }));
+    const result = await safeReload(state, makeSource({ fetchCurrentLogs: async () => [remote] }));
 
     expect(result.state.logs.map((l) => l.id)).toEqual(["remote-1", "offline-a"]);
   });
@@ -183,7 +184,7 @@ describe("transactional tracker reload", () => {
         fetchHistoricExercises: async () => {
           throw new Error("analytics down");
         },
-        fetchLogs: spy,
+        fetchCurrentLogs: spy,
       }),
     );
     expect(result.error).toBeNull();
