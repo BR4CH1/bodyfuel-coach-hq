@@ -228,12 +228,6 @@ export function DayCard({
     else toast.info("Keine Portionen anpassbar (Mahlzeiten fixiert oder ohne Nährwerte).");
   };
 
-  const remaining = {
-    kcal: target.kcal - totals.kcal,
-    p: target.p - totals.p,
-    c: target.c - totals.c,
-    f: target.f - totals.f,
-  };
 
   return (
     <Card className="overflow-hidden">
