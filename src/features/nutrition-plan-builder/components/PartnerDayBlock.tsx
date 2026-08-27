@@ -218,11 +218,13 @@ export function PartnerDayBlock({
     };
     const cM = clientDay.meals.find((m) => m.slot === slot);
     const pM = partnerDay.meals.find((m) => m.slot === slot);
+    const cSlotKcal = clientSlotTargets[slot].kcal;
+    const pSlotKcal = partnerSlotTargets[slot].kcal;
     const baseFactor = from === "client" ? (cM?.portion_factor ?? 1) : (pM?.portion_factor ?? 1);
     const otherFactor =
       from === "client"
-        ? scaleFactorToTarget(baseFactor, cTargetKcal, pTargetKcal)
-        : scaleFactorToTarget(baseFactor, pTargetKcal, cTargetKcal);
+        ? scaleFactorToTarget(baseFactor, cSlotKcal, pSlotKcal)
+        : scaleFactorToTarget(baseFactor, pSlotKcal, cSlotKcal);
     onClientChange((d) => ({
       ...d,
       meals: d.meals.map((m) =>
