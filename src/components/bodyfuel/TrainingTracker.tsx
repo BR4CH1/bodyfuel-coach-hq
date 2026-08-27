@@ -57,6 +57,11 @@ import {
   getTrainingExerciseDraft,
 } from "@/lib/training/training-session-state";
 import { mergeTodaysTrainingLogs } from "@/lib/training/training-set-log.logic";
+import {
+  loadTrainingTrackerCore,
+  mergeReloadedTrainingLogs,
+  type TrackerCoreSource,
+} from "@/lib/training/tracker-core-load";
 import { createSupabaseWorkoutDraftAdapter } from "@/lib/training/workout-session-draft.supabase";
 import type {
   TrainingExerciseDraft,
