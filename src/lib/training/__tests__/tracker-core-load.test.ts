@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  chunkIds,
   loadTrainingTrackerCore,
   mergeReloadedTrainingLogs,
   type TrackerCoreSource,
@@ -201,5 +202,46 @@ describe("mergeReloadedTrainingLogs", () => {
       TODAY,
     );
     expect(merged.map((l) => l.id)).toEqual(["remote-1"]);
+  });
+});
+
+describe("history is decoupled from the live workout", () => {
+  it("keeps today's logs when the historic log query fails", async () => {
+    const live = log({ id: "live-1", set_number: 1 });
+    const result = await loadTrainingTrackerCore(
+      makeSource({
+        fetchCurrentLogs: async () => [live],
+        fetchHistoricExercises: async () => [{ id: "old-1", name: "Kniebeuge" }],
+        fetchHistoricLogs: async () => {
+          throw new Error("history too big");
+        },
+      }),
+      { todayKey: TODAY },
+    );
+
+    expect(result.status).toBe("loaded");
+    if (result.status !== "loaded") return;
+    expect(result.historyDegraded).toBe(true);
+    expect(result.logs.map((l) => l.id)).toEqual(["live-1"]);
+  });
+
+  it("requests history chunked and without the current exercise ids", async () => {
+    const historicIds = Array.from({ length: 320 }, (_, i) => `old-${i}`);
+    const calls: string[][] = [];
+    await loadTrainingTrackerCore(
+      makeSource({
+        fetchHistoricExercises: async () =>
+          historicIds.concat("ex-1").map((id) => ({ id, name: "Kniebeuge" })),
+        fetchHistoricLogs: async (ids) => {
+          for (const chunk of chunkIds(ids)) calls.push(chunk);
+          return [];
+        },
+      }),
+      { todayKey: TODAY },
+    );
+
+    expect(calls.length).toBe(3);
+    expect(calls.flat()).toHaveLength(320);
+    expect(calls.flat()).not.toContain("ex-1");
   });
 });
