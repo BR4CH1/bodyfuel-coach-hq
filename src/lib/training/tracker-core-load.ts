@@ -22,9 +22,15 @@ export type TrackerCoreSource = {
   fetchActivePlan: () => Promise<CachedTrainingPlan | null>;
   fetchDays: (planId: string) => Promise<CachedTrainingDay[]>;
   fetchExercises: (dayIds: string[]) => Promise<CachedTrainingExercise[]>;
+  /**
+   * The LIVE workout: a small, error-checked query restricted to the currently
+   * visible exercise ids. This is the only log query the tracker depends on.
+   */
+  fetchCurrentLogs: (exerciseIds: string[]) => Promise<CachedTrainingSetLog[]>;
   /** Analytics only — a failure here is tolerated and returns []. */
   fetchHistoricExercises: () => Promise<Array<{ id: string; name: string }>>;
-  fetchLogs: (exerciseIds: string[]) => Promise<CachedTrainingSetLog[]>;
+  /** Analytics/PR only — best effort, chunked, never blocks the live state. */
+  fetchHistoricLogs: (exerciseIds: string[]) => Promise<CachedTrainingSetLog[]>;
 };
 
 export type TrackerCoreResult =
@@ -37,6 +43,8 @@ export type TrackerCoreResult =
       logs: CachedTrainingSetLog[];
       activeWeek: number;
       weeksCount: number;
+      /** True when the best-effort history could not be loaded. */
+      historyDegraded: boolean;
     };
 
 export function resolveActiveWeek(
@@ -54,6 +62,14 @@ export function resolveActiveWeek(
   return { activeWeek, weeksCount };
 }
 
+export function chunkIds(ids: readonly string[], size = 150): string[][] {
+  const chunks: string[][] = [];
+  for (let index = 0; index < ids.length; index += size) {
+    chunks.push(ids.slice(index, index + size));
+  }
+  return chunks;
+}
+
 export async function loadTrainingTrackerCore(
   source: TrackerCoreSource,
   options: { now?: Date; todayKey?: string } = {},
@@ -68,28 +84,44 @@ export async function loadTrainingTrackerCore(
   const { activeWeek, weeksCount } = resolveActiveWeek(plan, now);
   const days = allDays.filter((day) => (day.week_number ?? 1) === activeWeek);
 
+  const base = { plan, days, activeWeek, weeksCount } as const;
   if (!days.length) {
-    return { status: "loaded", plan, days, exercises: [], logs: [], activeWeek, weeksCount };
+    return { status: "loaded", ...base, exercises: [], logs: [], historyDegraded: false };
   }
 
   const exercises = await source.fetchExercises(days.map((day) => day.id));
   if (!exercises.length) {
-    return { status: "loaded", plan, days, exercises, logs: [], activeWeek, weeksCount };
+    return { status: "loaded", ...base, exercises, logs: [], historyDegraded: false };
   }
 
+  const currentIds = exercises.map((exercise) => exercise.id);
+  // Required: small query for the visible workout. A failure MUST propagate;
+  // silently treating it as "no logs" is what wiped the live workout.
+  const currentLogs = await source.fetchCurrentLogs(currentIds);
+
+  // Everything below is analytics/PR history. It may be huge (several old
+  // 4-week plans) and must never be able to break or blank the live tracker.
   let historicExercises: Array<{ id: string; name: string }> = [];
+  let historicLogs: CachedTrainingSetLog[] = [];
+  let historyDegraded = false;
   try {
     historicExercises = await source.fetchHistoricExercises();
+    const historicIds = historicExercises
+      .map((h) => h.id)
+      .filter((id) => !currentIds.includes(id));
+    if (historicIds.length) historicLogs = await source.fetchHistoricLogs(historicIds);
   } catch {
     historicExercises = [];
+    historicLogs = [];
+    historyDegraded = true;
   }
 
-  const allIds = Array.from(
-    new Set(historicExercises.map((h) => h.id).concat(exercises.map((e) => e.id))),
-  );
-  // A failure here MUST propagate: silently treating it as "no logs" is what
-  // wiped the visible workout.
-  const logRows = await source.fetchLogs(allIds);
+  const seen = new Set<string>();
+  const logRows = [...currentLogs, ...historicLogs].filter((row) => {
+    if (seen.has(row.id)) return false;
+    seen.add(row.id);
+    return true;
+  });
 
   const logs = remapHistoricLogs<CachedTrainingSetLog>({
     logs: logRows,
@@ -99,7 +131,7 @@ export async function loadTrainingTrackerCore(
     dateKeyOf: localTrainingDateKey,
   });
 
-  return { status: "loaded", plan, days, exercises, logs, activeWeek, weeksCount };
+  return { status: "loaded", ...base, exercises, logs, historyDegraded };
 }
 
 /**
