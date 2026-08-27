@@ -126,7 +126,9 @@ export function PartnerDayBlock({
     const group = makeGroupId();
     if (from === "client") {
       if (!cM) return;
-      const scaledFactor = scaleFactorToTarget(cM.portion_factor ?? 1, cTargetKcal, pTargetKcal);
+      const cSlotKcal = clientSlotTargets[slot].kcal;
+      const pSlotKcal = partnerSlotTargets[slot].kcal;
+      const scaledFactor = scaleFactorToTarget(cM.portion_factor ?? 1, cSlotKcal, pSlotKcal);
       onClientChange((d) => ({
         ...d,
         meals: d.meals.map((m) => (m.slot === slot ? { ...m, linked_partner_group: group } : m)),
