@@ -34,7 +34,7 @@ import { ExerciseAnalytics } from "./ExerciseAnalytics";
 import {
   remapHistoricLogs,
   resolveExternalDaySelection,
-  resolveOpenDayId,
+  resolveRestoredOpenDayId,
 } from "@/lib/training/tracker-day-selection";
 import { useExerciseMediaLibrary } from "@/hooks/use-exercise-media-library";
 import { ExerciseMediaThumb } from "@/components/bodyfuel/ExerciseMediaThumb";
