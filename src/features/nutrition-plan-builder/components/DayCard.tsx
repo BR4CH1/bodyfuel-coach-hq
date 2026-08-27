@@ -301,6 +301,28 @@ export function DayCard({
               <div className="text-xs text-muted-foreground">
                 {filledSlots}/{totalSlots} Slots · {day.meals.length} Mahlzeiten geplant
               </div>
+              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs">
+                <span className="text-muted-foreground">
+                  Tagesziel <span className="font-medium text-foreground">{target.kcal} kcal</span>
+                </span>
+                <span className="text-muted-foreground">
+                  Verplant{" "}
+                  <span className="font-medium text-foreground">
+                    {Math.round(totals.kcal)} kcal
+                  </span>
+                </span>
+                <span
+                  className={
+                    Math.abs(totals.kcal - target.kcal) <= target.kcal * 0.05
+                      ? "font-medium text-emerald-500"
+                      : "font-medium text-amber-500"
+                  }
+                >
+                  Differenz {totals.kcal - target.kcal >= 0 ? "+" : "−"}
+                  {Math.abs(Math.round(totals.kcal - target.kcal))} kcal
+                </span>
+              </div>
+
             </div>
             <div className="flex items-center gap-1">
               {onApplyTargets && (
