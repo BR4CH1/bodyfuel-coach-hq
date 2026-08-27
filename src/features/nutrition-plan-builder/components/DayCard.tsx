@@ -10,13 +10,19 @@ import type {
   CustomerPlanContext,
   LibraryMeal,
 } from "@/lib/plan-builder.functions";
+import { Input } from "@/components/ui/input";
 import {
   SLOTS,
   autoFillDayImpl,
+  daySlotTargets,
   macroProgress,
   makeGroupId,
   mealFromLibrary,
   rebalanceDay,
+  resolveSlotKcalTargets,
+  setSlotKcalTarget,
+  slotStatus,
+  slotTotals,
   summarizeDay,
   type MacroValues,
   type PartnerSlotLink,
@@ -53,6 +59,16 @@ export function DayCard({
   targetsBusy?: boolean;
 }) {
   const { target, totals, filledSlots, totalSlots, isBalanced } = summarizeDay(day, ctx, library);
+  const slotTargets = daySlotTargets(day, ctx);
+  const slotKcalTargets = resolveSlotKcalTargets(target.kcal, day.slotKcalTargets ?? null);
+
+  const updateSlotKcalTarget = (slot: Slot, value: number) => {
+    onChange((d) => ({
+      ...d,
+      slotKcalTargets: setSlotKcalTarget(slotKcalTargets, slot, value, target.kcal),
+    }));
+  };
+  const resetSlotKcalTargets = () => onChange((d) => ({ ...d, slotKcalTargets: null }));
 
 
   // ---- Index-based helpers so multiple meals per slot are supported ----
@@ -208,13 +224,6 @@ export function DayCard({
     else toast.info("Keine Portionen anpassbar (Mahlzeiten fixiert oder ohne Nährwerte).");
   };
 
-  const remaining = {
-    kcal: target.kcal - totals.kcal,
-    p: target.p - totals.p,
-    c: target.c - totals.c,
-    f: target.f - totals.f,
-  };
-
   return (
     <Card className="overflow-hidden">
       <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 border-b border-border/70 bg-muted/20 pb-3">
@@ -280,6 +289,25 @@ export function DayCard({
               </div>
               <div className="text-xs text-muted-foreground">
                 {filledSlots}/{totalSlots} Slots · {day.meals.length} Mahlzeiten geplant
+              </div>
+              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs">
+                <span className="text-muted-foreground">
+                  Tagesziel <span className="font-medium text-foreground">{target.kcal} kcal</span>
+                </span>
+                <span className="text-muted-foreground">
+                  Verplant{" "}
+                  <span className="font-medium text-foreground">{Math.round(totals.kcal)} kcal</span>
+                </span>
+                <span
+                  className={
+                    Math.abs(totals.kcal - target.kcal) <= target.kcal * 0.05
+                      ? "font-medium text-emerald-500"
+                      : "font-medium text-amber-500"
+                  }
+                >
+                  Differenz {totals.kcal - target.kcal >= 0 ? "+" : "−"}
+                  {Math.abs(Math.round(totals.kcal - target.kcal))} kcal
+                </span>
               </div>
             </div>
             <div className="flex items-center gap-1">
@@ -349,6 +377,78 @@ export function DayCard({
           </div>
         </div>
 
+        {/* Mahlzeiten-Zielverteilung */}
+        <div className="rounded-xl border border-border bg-background p-3">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div className="text-sm font-semibold">Mahlzeiten-Ziele</div>
+              <div className="text-xs text-muted-foreground">
+                Verteilung des Tagesziels auf die Mahlzeiten · kcal editierbar
+              </div>
+            </div>
+            {day.slotKcalTargets ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 text-xs"
+                onClick={resetSlotKcalTargets}
+              >
+                Standard (25/30/30/15)
+              </Button>
+            ) : null}
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {SLOTS.map(({ key, label }) => {
+              const slotTarget = slotTargets[key];
+              const actual = slotTotals(day, key, library);
+              const status = slotStatus(actual.kcal, slotTarget.kcal);
+              const diff = Math.round(actual.kcal - slotTarget.kcal);
+              const statusLabel =
+                status === "on_target"
+                  ? "Im Zielbereich"
+                  : status === "under"
+                    ? `${Math.abs(diff)} kcal offen`
+                    : `${Math.abs(diff)} kcal über Ziel`;
+              const statusColor =
+                status === "on_target"
+                  ? "text-emerald-500"
+                  : status === "under"
+                    ? "text-amber-500"
+                    : "text-destructive";
+              return (
+                <div key={key} className="rounded-lg bg-muted/50 p-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-medium">{label}</span>
+                    <div className="flex items-center gap-1">
+                      <Input
+                        type="number"
+                        min={0}
+                        step={25}
+                        value={slotKcalTargets[key]}
+                        onChange={(event) =>
+                          updateSlotKcalTarget(key, Number(event.target.value) || 0)
+                        }
+                        className="h-7 w-20 px-2 text-right text-xs"
+                        aria-label={`kcal-Ziel ${label}`}
+                      />
+                      <span className="text-[10px] text-muted-foreground">kcal</span>
+                    </div>
+                  </div>
+                  <div className="mt-1 text-[11px] text-muted-foreground">
+                    Ziel: {slotTarget.kcal} kcal · {slotTarget.p} P · {slotTarget.c} KH ·{" "}
+                    {slotTarget.f} F
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    Aktuell: {Math.round(actual.kcal)} kcal · {Math.round(actual.p)} P ·{" "}
+                    {Math.round(actual.c)} KH · {Math.round(actual.f)} F
+                  </div>
+                  <div className={`mt-0.5 text-[10px] ${statusColor}`}>{statusLabel}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Mealprep coupling */}
         <div className="flex items-center justify-between rounded-lg border border-dashed border-border p-2 text-xs">
           <div className="flex items-center gap-2">
@@ -367,6 +467,21 @@ export function DayCard({
           const slotEntries = day.meals
             .map((m, idx) => ({ m, idx }))
             .filter(({ m }) => m.slot === slot.key);
+          const slotTarget = slotTargets[slot.key];
+          const slotActual = slotTotals(day, slot.key, library);
+          const slotRemaining = {
+            kcal: slotTarget.kcal - slotActual.kcal,
+            p: slotTarget.p - slotActual.p,
+            c: slotTarget.c - slotActual.c,
+            f: slotTarget.f - slotActual.f,
+          };
+          const entryCount = Math.max(1, slotEntries.length);
+          const perEntryTarget = {
+            kcal: Math.round(slotTarget.kcal / entryCount),
+            p: Math.round(slotTarget.p / entryCount),
+            c: Math.round(slotTarget.c / entryCount),
+            f: Math.round(slotTarget.f / entryCount),
+          };
 
           return (
             <div key={slot.key} className="space-y-2">
@@ -378,7 +493,8 @@ export function DayCard({
                   library={library}
                   ctx={ctx}
                   dayType={day.type}
-                  remaining={remaining}
+                  remaining={slotRemaining}
+                  slotTarget={perEntryTarget}
                   onPick={(lib) => pickMealForEmptySlot(slot.key, lib)}
                   onPickFood={(built) => addFoodMeal(slot.key, built)}
                   onSwap={() => {}}
@@ -401,7 +517,8 @@ export function DayCard({
                       library={library}
                       ctx={ctx}
                       dayType={day.type}
-                      remaining={remaining}
+                      remaining={slotRemaining}
+                      slotTarget={perEntryTarget}
                       onPick={(lib) => addAdditionalMeal(slot.key, lib)}
                       onPickFood={(built) => addFoodMeal(slot.key, built)}
                       onSwap={(lib) =>
@@ -445,7 +562,7 @@ export function DayCard({
                     library={library}
                     ctx={ctx}
                     dayType={day.type}
-                    remaining={remaining}
+                    remaining={slotRemaining}
                     onPick={(lib) => addAdditionalMeal(slot.key, lib)}
                     onPickFood={(built) => addFoodMeal(slot.key, built)}
                   />
