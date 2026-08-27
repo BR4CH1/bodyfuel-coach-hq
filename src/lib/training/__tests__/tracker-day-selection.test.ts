@@ -3,6 +3,7 @@ import {
   remapHistoricLogs,
   resolveExternalDaySelection,
   resolveOpenDayId,
+  resolveRestoredOpenDayId,
 } from "../tracker-day-selection";
 
 const dateKeyOf = (v: string | number | Date) => new Date(v).toISOString().slice(0, 10);
@@ -80,5 +81,55 @@ describe("remapHistoricLogs", () => {
       dateKeyOf,
     });
     expect(log.exercise_id).toBe("cur");
+  });
+});
+
+describe("resolveRestoredOpenDayId", () => {
+  const week4 = [
+    { id: "push-0811", day_date: "2026-08-11" },
+    { id: "pull-0812", day_date: "2026-08-12" },
+    { id: "beine-0810", day_date: "2026-08-10" },
+    { id: "beine-0813", day_date: "2026-08-13" },
+  ];
+
+  it("keeps a still-valid current day (reload / remount / hidden→visible)", () => {
+    expect(
+      resolveRestoredOpenDayId({
+        current: "beine-0810",
+        trackableDays: week4,
+        todayDateKey: "2026-08-27",
+      }),
+    ).toBe("beine-0810");
+  });
+
+  it("maps an extended plan's reused last week by weekday when no current day", () => {
+    // Thursday 27.08. → Thursday 13.08.
+    expect(
+      resolveRestoredOpenDayId({
+        current: null,
+        trackableDays: week4,
+        todayDateKey: "2026-08-27",
+      }),
+    ).toBe("beine-0813");
+  });
+
+  it("prefers an exact date match", () => {
+    expect(
+      resolveRestoredOpenDayId({
+        current: null,
+        trackableDays: [...week4, { id: "today", day_date: "2026-08-27" }],
+        todayDateKey: "2026-08-27",
+      }),
+    ).toBe("today");
+  });
+
+  it("falls back to the first trackable day when no weekday matches", () => {
+    expect(
+      resolveRestoredOpenDayId({
+        current: "gone",
+        trackableDays: [{ id: "a", day_date: "2026-08-11" }],
+        todayDateKey: "2026-08-27",
+      }),
+    ).toBe("a");
   });
 });
