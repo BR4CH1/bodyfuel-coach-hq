@@ -572,6 +572,12 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
 
   if (!supabaseUser) return null;
   if (loading) return <div className="text-sm text-muted-foreground">Lade Übungen...</div>;
+  if (!isCoach && !sessionDraftRestored)
+    return (
+      <div className="rounded-2xl border border-border bg-card p-5 text-sm text-muted-foreground">
+        Trainingsstand wird wiederhergestellt…
+      </div>
+    );
   if (!plan && loadError)
     return (
       <div className="rounded-2xl border border-amber-500/30 bg-amber-500/8 p-5 text-sm">
