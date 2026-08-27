@@ -115,10 +115,10 @@ export function PartnerDayBlock({
     }
   };
 
-  const cSlotTargets = daySlotTargets(clientDay, clientCtx);
-  const pSlotTargets = daySlotTargets(partnerDay, partnerCtx);
+  const clientSlotTargets = daySlotTargets(clientDay, clientCtx);
+  const partnerSlotTargets = daySlotTargets(partnerDay, partnerCtx);
 
-  // Couple a slot: mirror recipe to the other side, scale portion to their slot target.
+  // Couple a slot: mirror recipe to the other side, scale portion to their target.
   // "from" = which side is the master (has the meal to mirror).
   const coupleSlot = (slot: Slot, from: "client" | "partner") => {
     const cM = clientDay.meals.find((m) => m.slot === slot);
@@ -126,11 +126,9 @@ export function PartnerDayBlock({
     const group = makeGroupId();
     if (from === "client") {
       if (!cM) return;
-      const scaledFactor = scaleFactorToTarget(
-        cM.portion_factor ?? 1,
-        cSlotTargets[slot].kcal,
-        pSlotTargets[slot].kcal,
-      );
+      const cSlotKcal = clientSlotTargets[slot].kcal;
+      const pSlotKcal = partnerSlotTargets[slot].kcal;
+      const scaledFactor = scaleFactorToTarget(cM.portion_factor ?? 1, cSlotKcal, pSlotKcal);
       onClientChange((d) => ({
         ...d,
         meals: d.meals.map((m) => (m.slot === slot ? { ...m, linked_partner_group: group } : m)),
@@ -162,11 +160,9 @@ export function PartnerDayBlock({
       }
     } else {
       if (!pM) return;
-      const scaledFactor = scaleFactorToTarget(
-        pM.portion_factor ?? 1,
-        pSlotTargets[slot].kcal,
-        cSlotTargets[slot].kcal,
-      );
+      const cSlotKcal = clientSlotTargets[slot].kcal;
+      const pSlotKcal = partnerSlotTargets[slot].kcal;
+      const scaledFactor = scaleFactorToTarget(pM.portion_factor ?? 1, pSlotKcal, cSlotKcal);
       onPartnerChange((d) => ({
         ...d,
         meals: d.meals.map((m) => (m.slot === slot ? { ...m, linked_partner_group: group } : m)),
@@ -208,7 +204,7 @@ export function PartnerDayBlock({
     }));
   };
 
-  // Swap for both: update recipe on both sides, keep group, rescale "other" factor to slot target.
+  // Swap for both: update recipe on both sides, keep group, rescale "other" factor to target.
   const swapCoupled = (slot: Slot, lib: LibraryMeal, from: "client" | "partner") => {
     const ing = (lib.ingredients ?? []).map((i) => ({
       name: i.name,
@@ -222,11 +218,13 @@ export function PartnerDayBlock({
     };
     const cM = clientDay.meals.find((m) => m.slot === slot);
     const pM = partnerDay.meals.find((m) => m.slot === slot);
+    const cSlotKcal = clientSlotTargets[slot].kcal;
+    const pSlotKcal = partnerSlotTargets[slot].kcal;
     const baseFactor = from === "client" ? (cM?.portion_factor ?? 1) : (pM?.portion_factor ?? 1);
     const otherFactor =
       from === "client"
-        ? scaleFactorToTarget(baseFactor, cSlotTargets[slot].kcal, pSlotTargets[slot].kcal)
-        : scaleFactorToTarget(baseFactor, pSlotTargets[slot].kcal, cSlotTargets[slot].kcal);
+        ? scaleFactorToTarget(baseFactor, cSlotKcal, pSlotKcal)
+        : scaleFactorToTarget(baseFactor, pSlotKcal, cSlotKcal);
     onClientChange((d) => ({
       ...d,
       meals: d.meals.map((m) =>

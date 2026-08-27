@@ -14,13 +14,7 @@ import {
   Utensils,
 } from "lucide-react";
 import type { BuilderMeal, CustomerPlanContext, LibraryMeal } from "@/lib/plan-builder.functions";
-import {
-  mealMacros,
-  slotStatus,
-  type MacroValues,
-  type PartnerSlotLink,
-  type Slot,
-} from "../lib/plan-builder.logic";
+import { mealMacros, slotStatus, type PartnerSlotLink, type Slot } from "../lib/plan-builder.logic";
 import { MealPickerDialog } from "./MealPickerDialog";
 
 interface MealSlotRowProps {
@@ -31,7 +25,8 @@ interface MealSlotRowProps {
   ctx: CustomerPlanContext;
   dayType: "training" | "rest";
   remaining: { kcal: number; p: number; c: number; f: number };
-  slotTarget?: MacroValues;
+  /** Ziel dieser Mahlzeit (Slot-Ziel geteilt durch Anzahl Einträge im Slot). */
+  slotTarget?: { kcal: number; p: number; c: number; f: number };
   onPick: (meal: LibraryMeal) => void;
   onPickFood?: (meal: BuilderMeal) => void;
   onSwap: (meal: LibraryMeal) => void;
@@ -93,7 +88,10 @@ export function MealSlotRow({
           </div>
           <div>
             <div className="text-sm font-semibold">{label}</div>
-            <div className="text-xs text-muted-foreground">Noch keine Mahlzeit geplant</div>
+            <div className="text-xs text-muted-foreground">
+              Noch keine Mahlzeit geplant
+              {slotTarget ? ` · Ziel ${slotTarget.kcal} kcal` : ""}
+            </div>
           </div>
         </div>
         <div className="grid gap-2 sm:grid-cols-2">
@@ -173,47 +171,40 @@ export function MealSlotRow({
                 )}
               </div>
               <div className="truncate text-sm font-semibold sm:text-base">{meal.name}</div>
+              <div className="mt-1 text-xs text-muted-foreground">
+                {Math.round(macros.kcal)} kcal · {Math.round(macros.p)} g Protein ·{" "}
+                {Math.round(macros.c)} g KH · {Math.round(macros.f)} g Fett
+              </div>
               {slotTarget ? (
-                <div className="mt-1 space-y-0.5 text-xs">
-                  <div className="text-muted-foreground">
+                <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px]">
+                  <span className="text-muted-foreground">
                     Ziel: {slotTarget.kcal} kcal · {slotTarget.p} P · {slotTarget.c} KH ·{" "}
                     {slotTarget.f} F
-                  </div>
-                  <div className="text-muted-foreground">
-                    Aktuell: {Math.round(macros.kcal)} kcal · {Math.round(macros.p)} P ·{" "}
-                    {Math.round(macros.c)} KH · {Math.round(macros.f)} F
-                  </div>
+                  </span>
                   {(() => {
-                    const kcalState = slotStatus(macros.kcal, slotTarget.kcal);
-                    const proteinState = slotStatus(macros.p, slotTarget.p);
-                    const color =
-                      kcalState === "on_target"
-                        ? "text-emerald-500"
-                        : kcalState === "under"
-                          ? "text-amber-500"
-                          : "text-destructive";
-                    const label =
-                      kcalState === "on_target"
-                        ? "Im Zielbereich"
-                        : kcalState === "under"
-                          ? `${Math.round(slotTarget.kcal - macros.kcal)} kcal unter Ziel`
-                          : `${Math.round(macros.kcal - slotTarget.kcal)} kcal über Ziel`;
+                    const status = slotStatus(macros.kcal, slotTarget.kcal);
+                    const diff = Math.round(macros.kcal - slotTarget.kcal);
                     return (
-                      <div className={`text-[11px] font-medium ${color}`}>
-                        {label}
-                        {proteinState !== "on_target" && slotTarget.p > 0
-                          ? ` · Protein ${proteinState === "under" ? "unter" : "über"} Ziel`
-                          : ""}
-                      </div>
+                      <Badge
+                        variant="outline"
+                        className={
+                          status === "on_target"
+                            ? "border-emerald-500/40 px-1.5 py-0 text-[9px] text-emerald-600"
+                            : status === "under"
+                              ? "border-amber-500/40 px-1.5 py-0 text-[9px] text-amber-600"
+                              : "border-destructive/40 px-1.5 py-0 text-[9px] text-destructive"
+                        }
+                      >
+                        {status === "on_target"
+                          ? "Im Zielbereich"
+                          : status === "under"
+                            ? `${Math.abs(diff)} kcal unter Ziel`
+                            : `${Math.abs(diff)} kcal über Ziel`}
+                      </Badge>
                     );
                   })()}
                 </div>
-              ) : (
-                <div className="mt-1 text-xs text-muted-foreground">
-                  {Math.round(macros.kcal)} kcal · {Math.round(macros.p)} g Protein ·{" "}
-                  {Math.round(macros.c)} g KH · {Math.round(macros.f)} g Fett
-                </div>
-              )}
+              ) : null}
             </div>
             <div className="flex shrink-0 gap-1">
               <Button

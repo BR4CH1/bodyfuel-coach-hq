@@ -280,12 +280,12 @@ export type BuilderDay = {
   /** Individuelles Tagesziel; überschreibt das Profilziel nur in diesem Plan. */
   customTargets?: { kcal: number; p: number; c: number; f: number } | null;
   /**
-   * Optionale kcal-Ziele je Mahlzeiten-Slot (nur Builder-State/Draft, keine DB-Spalte).
-   * Fehlen sie, werden sie aus Standardverteilung + Tagesziel abgeleitet.
+   * Optionale kcal-Verteilung auf die Mahlzeiten-Slots (nur Builder-State,
+   * keine DB-Spalte). Fehlt der Wert, gilt die Standardverteilung.
    */
-  slotKcalTargets?: Partial<Record<"breakfast" | "lunch" | "dinner" | "snack", number>> | null;
-
+  slotKcalTargets?: { breakfast: number; lunch: number; dinner: number; snack: number } | null;
 };
+
 
 async function persistBuilderPlan(
   supabase: any,

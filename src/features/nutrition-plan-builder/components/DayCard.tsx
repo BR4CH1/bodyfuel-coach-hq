@@ -10,6 +10,7 @@ import type {
   CustomerPlanContext,
   LibraryMeal,
 } from "@/lib/plan-builder.functions";
+import { Input } from "@/components/ui/input";
 import {
   SLOTS,
   autoFillDayImpl,
@@ -30,8 +31,6 @@ import {
 import { MacroTargetEditorDialog, type TargetScope } from "./MacroTargetEditorDialog";
 import { MealPickerDialog } from "./MealPickerDialog";
 import { MealSlotRow } from "./MealSlotRow";
-import { Input } from "@/components/ui/input";
-
 
 
 export function DayCard({
@@ -69,10 +68,7 @@ export function DayCard({
       slotKcalTargets: setSlotKcalTarget(slotKcalTargets, slot, value, target.kcal),
     }));
   };
-
-  const resetSlotTargets = () => onChange((d) => ({ ...d, slotKcalTargets: null }));
-
-
+  const resetSlotKcalTargets = () => onChange((d) => ({ ...d, slotKcalTargets: null }));
 
 
   // ---- Index-based helpers so multiple meals per slot are supported ----
@@ -228,7 +224,6 @@ export function DayCard({
     else toast.info("Keine Portionen anpassbar (Mahlzeiten fixiert oder ohne Nährwerte).");
   };
 
-
   return (
     <Card className="overflow-hidden">
       <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 border-b border-border/70 bg-muted/20 pb-3">
@@ -301,9 +296,7 @@ export function DayCard({
                 </span>
                 <span className="text-muted-foreground">
                   Verplant{" "}
-                  <span className="font-medium text-foreground">
-                    {Math.round(totals.kcal)} kcal
-                  </span>
+                  <span className="font-medium text-foreground">{Math.round(totals.kcal)} kcal</span>
                 </span>
                 <span
                   className={
@@ -316,7 +309,6 @@ export function DayCard({
                   {Math.abs(Math.round(totals.kcal - target.kcal))} kcal
                 </span>
               </div>
-
             </div>
             <div className="flex items-center gap-1">
               {onApplyTargets && (
@@ -391,11 +383,16 @@ export function DayCard({
             <div>
               <div className="text-sm font-semibold">Mahlzeiten-Ziele</div>
               <div className="text-xs text-muted-foreground">
-                Verteilung des Tagesziels auf die Mahlzeiten (kcal editierbar)
+                Verteilung des Tagesziels auf die Mahlzeiten · kcal editierbar
               </div>
             </div>
             {day.slotKcalTargets ? (
-              <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={resetSlotTargets}>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 text-xs"
+                onClick={resetSlotKcalTargets}
+              >
                 Standard (25/30/30/15)
               </Button>
             ) : null}
@@ -453,7 +450,6 @@ export function DayCard({
         </div>
 
         {/* Mealprep coupling */}
-
         <div className="flex items-center justify-between rounded-lg border border-dashed border-border p-2 text-xs">
           <div className="flex items-center gap-2">
             {day.prepCoupleLunchDinner ? (
