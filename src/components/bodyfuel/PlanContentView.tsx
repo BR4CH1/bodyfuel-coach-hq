@@ -645,23 +645,21 @@ export function PlanContentView({ clientId, planType }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [virtualDays, dayKind]);
 
-  // Notify the Training Tracker (separate component on the /training page) so
-  // it auto-expands the matching day section when the user picks one above.
-  useEffect(() => {
-    if (planType !== "training" || !activeDay) return;
-    const vd = virtualDays.find((d) => d.id === activeDay);
-    if (!vd) return;
-    // ID-ONLY: never publish day names, the tracker must switch by stable day_id.
-    const key = `bf:training:active-day-id:${clientId}`;
+  // EXPLICIT ONLY: the live TrainingTracker is never switched by an automatic
+  // activeDay pick (mount, reload, saved pick, weekday autopick). Only a real
+  // user change in the training day <select> publishes a day_id.
+  const publishTrackerDay = (dayId: string) => {
+    if (planType !== "training") return;
+    if (!virtualDays.some((d) => d.id === dayId)) return;
     try {
-      localStorage.setItem(key, vd.id);
+      localStorage.setItem(`bf:training:active-day-id:${clientId}`, dayId);
     } catch {}
     try {
       window.dispatchEvent(
-        new CustomEvent("bf:training-active-day", { detail: { clientId, dayId: vd.id } }),
+        new CustomEvent("bf:training-active-day", { detail: { clientId, dayId } }),
       );
     } catch {}
-  }, [planType, activeDay, virtualDays, clientId]);
+  };
 
   const pickAnotherDay = () => {
     if (!virtualDays.length) return;
