@@ -650,15 +650,15 @@ export function PlanContentView({ clientId, planType }: Props) {
   useEffect(() => {
     if (planType !== "training" || !activeDay) return;
     const vd = virtualDays.find((d) => d.id === activeDay);
-    const name = vd?.name;
-    if (!name) return;
-    const key = `bf:training:active-day-name:${clientId}`;
+    if (!vd) return;
+    // ID-ONLY: never publish day names, the tracker must switch by stable day_id.
+    const key = `bf:training:active-day-id:${clientId}`;
     try {
-      localStorage.setItem(key, name);
+      localStorage.setItem(key, vd.id);
     } catch {}
     try {
       window.dispatchEvent(
-        new CustomEvent("bf:training-active-day", { detail: { clientId, name } }),
+        new CustomEvent("bf:training-active-day", { detail: { clientId, dayId: vd.id } }),
       );
     } catch {}
   }, [planType, activeDay, virtualDays, clientId]);
