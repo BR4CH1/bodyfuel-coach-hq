@@ -14,7 +14,7 @@ import {
   Utensils,
 } from "lucide-react";
 import type { BuilderMeal, CustomerPlanContext, LibraryMeal } from "@/lib/plan-builder.functions";
-import { mealMacros, type PartnerSlotLink, type Slot } from "../lib/plan-builder.logic";
+import { mealMacros, slotStatus, type PartnerSlotLink, type Slot } from "../lib/plan-builder.logic";
 import { MealPickerDialog } from "./MealPickerDialog";
 
 interface MealSlotRowProps {
@@ -25,6 +25,8 @@ interface MealSlotRowProps {
   ctx: CustomerPlanContext;
   dayType: "training" | "rest";
   remaining: { kcal: number; p: number; c: number; f: number };
+  /** Ziel dieser Mahlzeit (Slot-Ziel geteilt durch Anzahl Einträge im Slot). */
+  slotTarget?: { kcal: number; p: number; c: number; f: number };
   onPick: (meal: LibraryMeal) => void;
   onPickFood?: (meal: BuilderMeal) => void;
   onSwap: (meal: LibraryMeal) => void;
@@ -43,6 +45,7 @@ export function MealSlotRow({
   ctx,
   dayType,
   remaining,
+  slotTarget,
   onPick,
   onPickFood,
   onSwap,
@@ -85,7 +88,10 @@ export function MealSlotRow({
           </div>
           <div>
             <div className="text-sm font-semibold">{label}</div>
-            <div className="text-xs text-muted-foreground">Noch keine Mahlzeit geplant</div>
+            <div className="text-xs text-muted-foreground">
+              Noch keine Mahlzeit geplant
+              {slotTarget ? ` · Ziel ${slotTarget.kcal} kcal` : ""}
+            </div>
           </div>
         </div>
         <div className="grid gap-2 sm:grid-cols-2">
@@ -169,6 +175,36 @@ export function MealSlotRow({
                 {Math.round(macros.kcal)} kcal · {Math.round(macros.p)} g Protein ·{" "}
                 {Math.round(macros.c)} g KH · {Math.round(macros.f)} g Fett
               </div>
+              {slotTarget ? (
+                <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px]">
+                  <span className="text-muted-foreground">
+                    Ziel: {slotTarget.kcal} kcal · {slotTarget.p} P · {slotTarget.c} KH ·{" "}
+                    {slotTarget.f} F
+                  </span>
+                  {(() => {
+                    const status = slotStatus(macros.kcal, slotTarget.kcal);
+                    const diff = Math.round(macros.kcal - slotTarget.kcal);
+                    return (
+                      <Badge
+                        variant="outline"
+                        className={
+                          status === "on_target"
+                            ? "border-emerald-500/40 px-1.5 py-0 text-[9px] text-emerald-600"
+                            : status === "under"
+                              ? "border-amber-500/40 px-1.5 py-0 text-[9px] text-amber-600"
+                              : "border-destructive/40 px-1.5 py-0 text-[9px] text-destructive"
+                        }
+                      >
+                        {status === "on_target"
+                          ? "Im Zielbereich"
+                          : status === "under"
+                            ? `${Math.abs(diff)} kcal unter Ziel`
+                            : `${Math.abs(diff)} kcal über Ziel`}
+                      </Badge>
+                    );
+                  })()}
+                </div>
+              ) : null}
             </div>
             <div className="flex shrink-0 gap-1">
               <Button
