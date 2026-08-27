@@ -31,7 +31,11 @@ import {
   deleteOwnTrainingExercise,
 } from "@/lib/training.functions";
 import { ExerciseAnalytics } from "./ExerciseAnalytics";
-import { normalizeExerciseName } from "@/lib/exercise-name-match";
+import {
+  remapHistoricLogs,
+  resolveExternalDaySelection,
+  resolveOpenDayId,
+} from "@/lib/training/tracker-day-selection";
 import { useExerciseMediaLibrary } from "@/hooks/use-exercise-media-library";
 import { ExerciseMediaThumb } from "@/components/bodyfuel/ExerciseMediaThumb";
 import { ExerciseMediaSheet } from "@/components/bodyfuel/ExerciseMediaSheet";
@@ -344,7 +348,11 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
         const firstTraining = dayList.find((day) => trainingDayIds.has(day.id));
         const preferredDay = todayTraining ?? firstTraining ?? dayList[0] ?? null;
         setOpenDay((current) =>
-          current && trainingDayIds.has(current) ? current : (preferredDay?.id ?? null),
+          resolveOpenDayId({
+            current,
+            visibleDayIds: dayList.filter((d) => trainingDayIds.has(d.id)).map((d) => d.id),
+            preferredDayId: preferredDay?.id ?? null,
+          }),
         );
 
         if (exList.length) {
@@ -364,15 +372,6 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
               }
             }
           }
-          // name-group → all exercise ids that share that normalized name
-          const idsByName = new Map<string, string[]>();
-          for (const h of histExercises) {
-            const k = normalizeExerciseName(h.name);
-            if (!k) continue;
-            const arr = idsByName.get(k) ?? [];
-            arr.push(h.id);
-            idsByName.set(k, arr);
-          }
           const allIds = Array.from(
             new Set(histExercises.map((h) => h.id).concat(exList.map((e) => e.id))),
           );
@@ -384,22 +383,17 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
             .order("performed_at", { ascending: false })
             .limit(2000);
           if (!requestIsCurrent()) return;
-          // Rewrite log.exercise_id to a current-plan exercise id when the
-          // historic log belongs to a name-matched exercise. That lets the
-          // existing `logs.filter(l => l.exercise_id === ex.id)` keep working
-          // unchanged for both display and analytics.
-          const currentByName = new Map<string, string>();
-          for (const e of exList) currentByName.set(normalizeExerciseName(e.name), e.id);
-          const remapped = ((logRows as SetLog[]) ?? []).map((l) => {
-            // already current? keep.
-            if (exList.some((e) => e.id === l.exercise_id)) return l;
-            // find name of the historic exercise this log belongs to
-            const h = histExercises.find((x) => x.id === l.exercise_id);
-            if (!h) return l;
-            const target = currentByName.get(normalizeExerciseName(h.name));
-            return target ? { ...l, exercise_id: target } : l;
-          });
-          setLogs(remapped);
+          // Historic name matching is analytics/PR only. Today's logs are never
+          // rewritten onto another exercise_id.
+          setLogs(
+            remapHistoricLogs<SetLog>({
+              logs: (logRows as SetLog[]) ?? [],
+              currentExercises: exList.map((e) => ({ id: e.id, name: e.name })),
+              historicExercises: histExercises,
+              todayKey: today,
+              dateKeyOf: localDateKey,
+            }),
+          );
         } else {
           setLogs([]);
         }
@@ -520,33 +514,31 @@ export function TrainingTracker({ clientId }: { clientId: string }) {
   }, [clientId, days]);
 
   // Sync open day with PlanContentView selection (top of /training page).
-  // PlanContentView writes the active virtual-day NAME to localStorage and
-  // dispatches "bf:training-active-day" when the user picks a day.
+  // ID-ONLY: PlanContentView publishes an explicit day_id. Day names are never
+  // used to switch the live tracker day.
   useEffect(() => {
     if (!days.length) return;
-    const key = `bf:training:active-day-name:${clientId}`;
-    const applyName = (name: string | null) => {
-      if (!name) return;
-      const norm = name.trim().toLowerCase();
-      const hit = days.find(
-        (d) =>
-          d.name.trim().toLowerCase() === norm ||
-          norm.includes(d.name.trim().toLowerCase()) ||
-          d.name.trim().toLowerCase().includes(norm),
+    const key = `bf:training:active-day-id:${clientId}`;
+    const applyDayId = (dayId: unknown) => {
+      setOpenDay((current) =>
+        resolveExternalDaySelection({
+          requestedDayId: dayId,
+          visibleDayIds: days.map((d) => d.id),
+          current,
+        }),
       );
-      if (hit) setOpenDay(hit.id);
     };
     try {
-      applyName(localStorage.getItem(key));
+      applyDayId(localStorage.getItem(key));
     } catch {
       /* local storage is optional */
     }
     const onEvt = (e: Event) => {
-      const detail = (e as CustomEvent<{ clientId: string; name: string }>).detail;
-      if (detail?.clientId === clientId) applyName(detail.name);
+      const detail = (e as CustomEvent<{ clientId: string; dayId?: string }>).detail;
+      if (detail?.clientId === clientId) applyDayId(detail.dayId);
     };
     const onStorage = (e: StorageEvent) => {
-      if (e.key === key) applyName(e.newValue);
+      if (e.key === key) applyDayId(e.newValue);
     };
     window.addEventListener("bf:training-active-day", onEvt as EventListener);
     window.addEventListener("storage", onStorage);
