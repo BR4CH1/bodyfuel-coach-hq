@@ -157,7 +157,7 @@ describe("autoFillDayImpl mit Slot-Zielen", () => {
       libraryMeal("s1", "snack", { kcal: 300 }),
     ];
     const day: BuilderDay = { name: "Tag 1", type: "training", meals: [] };
-    const filled = autoFillDayImpl(day, ctx, library, []);
+    const filled = autoFillDayImpl(day, ctx, library, "all_unlocked").day;
 
     for (const meal of filled.meals) {
       const factor = meal.portion_factor ?? 1;
