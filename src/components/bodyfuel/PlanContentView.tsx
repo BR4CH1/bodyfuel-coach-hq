@@ -934,6 +934,7 @@ export function PlanContentView({ clientId, planType }: Props) {
                 try {
                   localStorage.setItem(pickStorageKey, e.target.value);
                 } catch {}
+                publishTrackerDay(e.target.value);
               }}
               className="mt-2 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             >
