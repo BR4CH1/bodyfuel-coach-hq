@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -1389,6 +1389,63 @@ export type Database = {
           note?: string | null
           snoozed_until?: string | null
           task_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      continental_challenge_applications: {
+        Row: {
+          age: number | null
+          created_at: string
+          email: string
+          first_name: string
+          goal_text: string
+          goal_type: string | null
+          id: string
+          internal_notes: string | null
+          last_name: string
+          motivation: string
+          phone: string
+          privacy_consent: boolean
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          age?: number | null
+          created_at?: string
+          email: string
+          first_name: string
+          goal_text: string
+          goal_type?: string | null
+          id?: string
+          internal_notes?: string | null
+          last_name: string
+          motivation: string
+          phone: string
+          privacy_consent?: boolean
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          age?: number | null
+          created_at?: string
+          email?: string
+          first_name?: string
+          goal_text?: string
+          goal_type?: string | null
+          id?: string
+          internal_notes?: string | null
+          last_name?: string
+          motivation?: string
+          phone?: string
+          privacy_consent?: boolean
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
           updated_at?: string
         }
         Relationships: []
