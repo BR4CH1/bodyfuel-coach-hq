@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import {
 import { normalizeExerciseCategory } from "@/lib/training-exercise-category";
+import {
   assertCoachOrOrgStaffForAthlete,
   assertGlobalCoachOrAnyOrgCoach,
 } from "@/lib/organizations/org-coach-access";
