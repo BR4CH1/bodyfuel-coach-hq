@@ -10338,6 +10338,10 @@ export type Database = {
         }
         Returns: number
       }
+      review_continental_application: {
+        Args: { _decision: string; _id: string; _reviewer: string }
+        Returns: Json
+      }
       save_workout_session_draft: {
         Args: {
           p_client_revision: number

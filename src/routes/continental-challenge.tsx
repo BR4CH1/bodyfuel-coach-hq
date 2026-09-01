@@ -39,10 +39,10 @@ export const Route = createFileRoute("/continental-challenge")({
       { property: "og:title", content: "Continental × BodyFuel – 30 Tage Challenge" },
       { property: "og:description", content: PAGE_DESCRIPTION },
       { property: "og:type", content: "website" },
-      { property: "og:url", content: "https://bodyfuel-coaching.com/continental-challenge" },
+      { property: "og:url", content: "https://bodyfuel-coach-hq.lovable.app/continental-challenge" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
-    links: [{ rel: "canonical", href: "https://bodyfuel-coaching.com/continental-challenge" }],
+    links: [{ rel: "canonical", href: "https://bodyfuel-coach-hq.lovable.app/continental-challenge" }],
   }),
   component: ContinentalChallengePage,
 });
