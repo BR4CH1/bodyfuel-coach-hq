@@ -393,7 +393,7 @@ export const getCoachRadar = createServerFn({ method: "GET" })
 
     const pendingDrafts = new Map<string, number>();
     ((drafts as any).data ?? []).forEach((d: any) =>
-      pendingDrafts.set(d.user_id, (pendingDrafts.get(d.user_id) ?? 0) + 1),
+      pendingDrafts.set(d.client_id, (pendingDrafts.get(d.client_id) ?? 0) + 1),
     );
 
     // ---- per-customer status + tasks ----
