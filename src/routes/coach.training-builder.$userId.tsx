@@ -1,6 +1,5 @@
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
-import { TrainingPlanBuilderPage } from "@/components/bodyfuel/TrainingPlanBuilderPage";
-import { TrainingWeeklyActivityEditor } from "@/components/bodyfuel/TrainingWeeklyActivityEditor";
+import { TrainingPlanBuilderWithWeeklyActivities } from "@/components/bodyfuel/TrainingPlanBuilderWithWeeklyActivities";
 import { createFileRoute, useParams, useSearch } from "@tanstack/react-router";
 
 type Search = { planId?: string; orgId?: string };
@@ -27,10 +26,11 @@ function CoachTrainingBuilderRoute() {
   const { planId, orgId } = useSearch({ from: "/coach/training-builder/$userId" });
   return (
     <AppLayout>
-      <div className="space-y-4">
-        <TrainingWeeklyActivityEditor userId={userId} />
-        <TrainingPlanBuilderPage userId={userId} planId={planId} returnOrgId={orgId} />
-      </div>
+      <TrainingPlanBuilderWithWeeklyActivities
+        userId={userId}
+        planId={planId}
+        returnOrgId={orgId}
+      />
     </AppLayout>
   );
 }
