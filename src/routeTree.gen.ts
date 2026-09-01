@@ -18,6 +18,7 @@ import { Route as CheckInRouteImport } from './routes/check-in'
 import { Route as CoachRouteImport } from './routes/coach'
 import { Route as CoachToolsRouteImport } from './routes/coach-tools'
 import { Route as CommunityRouteImport } from './routes/community'
+import { Route as ContinentalChallengeRouteImport } from './routes/continental-challenge'
 import { Route as DailyChecklistRouteImport } from './routes/daily-checklist'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as DatenschutzRouteImport } from './routes/datenschutz'
@@ -81,6 +82,7 @@ import { Route as CoachIndexRouteImport } from './routes/coach.index'
 import { Route as CoachClientIdRouteImport } from './routes/coach.$clientId'
 import { Route as CoachAffiliatesRouteImport } from './routes/coach.affiliates'
 import { Route as CoachBullsPerformanceRouteImport } from './routes/coach.bulls-performance'
+import { Route as CoachContinentalChallengeRouteImport } from './routes/coach.continental-challenge'
 import { Route as CoachCustomersRouteImport } from './routes/coach.customers'
 import { Route as CoachFoodsRouteImport } from './routes/coach.foods'
 import { Route as CoachGiftsRouteImport } from './routes/coach.gifts'
@@ -208,6 +210,11 @@ const CoachToolsRoute = CoachToolsRouteImport.update({
 const CommunityRoute = CommunityRouteImport.update({
   id: '/community',
   path: '/community',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContinentalChallengeRoute = ContinentalChallengeRouteImport.update({
+  id: '/continental-challenge',
+  path: '/continental-challenge',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DailyChecklistRoute = DailyChecklistRouteImport.update({
@@ -527,6 +534,12 @@ const CoachBullsPerformanceRoute = CoachBullsPerformanceRouteImport.update({
   path: '/bulls-performance',
   getParentRoute: () => CoachRoute,
 } as any)
+const CoachContinentalChallengeRoute =
+  CoachContinentalChallengeRouteImport.update({
+    id: '/continental-challenge',
+    path: '/continental-challenge',
+    getParentRoute: () => CoachRoute,
+  } as any)
 const CoachCustomersRoute = CoachCustomersRouteImport.update({
   id: '/customers',
   path: '/customers',
@@ -983,6 +996,7 @@ export interface FileRoutesByFullPath {
   '/coach': typeof CoachRouteWithChildren
   '/coach-tools': typeof CoachToolsRouteWithChildren
   '/community': typeof CommunityRoute
+  '/continental-challenge': typeof ContinentalChallengeRoute
   '/daily-checklist': typeof DailyChecklistRoute
   '/dashboard': typeof DashboardRoute
   '/datenschutz': typeof DatenschutzRoute
@@ -1042,6 +1056,7 @@ export interface FileRoutesByFullPath {
   '/coach/$clientId': typeof CoachClientIdRoute
   '/coach/affiliates': typeof CoachAffiliatesRoute
   '/coach/bulls-performance': typeof CoachBullsPerformanceRoute
+  '/coach/continental-challenge': typeof CoachContinentalChallengeRoute
   '/coach/customers': typeof CoachCustomersRouteWithChildren
   '/coach/foods': typeof CoachFoodsRoute
   '/coach/gifts': typeof CoachGiftsRoute
@@ -1137,6 +1152,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/check-in': typeof CheckInRoute
   '/community': typeof CommunityRoute
+  '/continental-challenge': typeof ContinentalChallengeRoute
   '/daily-checklist': typeof DailyChecklistRoute
   '/dashboard': typeof DashboardRoute
   '/datenschutz': typeof DatenschutzRoute
@@ -1191,6 +1207,7 @@ export interface FileRoutesByTo {
   '/coach/$clientId': typeof CoachClientIdRoute
   '/coach/affiliates': typeof CoachAffiliatesRoute
   '/coach/bulls-performance': typeof CoachBullsPerformanceRoute
+  '/coach/continental-challenge': typeof CoachContinentalChallengeRoute
   '/coach/foods': typeof CoachFoodsRoute
   '/coach/gifts': typeof CoachGiftsRoute
   '/coach/import-plan': typeof CoachImportPlanRoute
@@ -1286,6 +1303,7 @@ export interface FileRoutesById {
   '/coach': typeof CoachRouteWithChildren
   '/coach-tools': typeof CoachToolsRouteWithChildren
   '/community': typeof CommunityRoute
+  '/continental-challenge': typeof ContinentalChallengeRoute
   '/daily-checklist': typeof DailyChecklistRoute
   '/dashboard': typeof DashboardRoute
   '/datenschutz': typeof DatenschutzRoute
@@ -1345,6 +1363,7 @@ export interface FileRoutesById {
   '/coach/$clientId': typeof CoachClientIdRoute
   '/coach/affiliates': typeof CoachAffiliatesRoute
   '/coach/bulls-performance': typeof CoachBullsPerformanceRoute
+  '/coach/continental-challenge': typeof CoachContinentalChallengeRoute
   '/coach/customers': typeof CoachCustomersRouteWithChildren
   '/coach/foods': typeof CoachFoodsRoute
   '/coach/gifts': typeof CoachGiftsRoute
@@ -1445,6 +1464,7 @@ export interface FileRouteTypes {
     | '/coach'
     | '/coach-tools'
     | '/community'
+    | '/continental-challenge'
     | '/daily-checklist'
     | '/dashboard'
     | '/datenschutz'
@@ -1504,6 +1524,7 @@ export interface FileRouteTypes {
     | '/coach/$clientId'
     | '/coach/affiliates'
     | '/coach/bulls-performance'
+    | '/coach/continental-challenge'
     | '/coach/customers'
     | '/coach/foods'
     | '/coach/gifts'
@@ -1599,6 +1620,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/check-in'
     | '/community'
+    | '/continental-challenge'
     | '/daily-checklist'
     | '/dashboard'
     | '/datenschutz'
@@ -1653,6 +1675,7 @@ export interface FileRouteTypes {
     | '/coach/$clientId'
     | '/coach/affiliates'
     | '/coach/bulls-performance'
+    | '/coach/continental-challenge'
     | '/coach/foods'
     | '/coach/gifts'
     | '/coach/import-plan'
@@ -1747,6 +1770,7 @@ export interface FileRouteTypes {
     | '/coach'
     | '/coach-tools'
     | '/community'
+    | '/continental-challenge'
     | '/daily-checklist'
     | '/dashboard'
     | '/datenschutz'
@@ -1806,6 +1830,7 @@ export interface FileRouteTypes {
     | '/coach/$clientId'
     | '/coach/affiliates'
     | '/coach/bulls-performance'
+    | '/coach/continental-challenge'
     | '/coach/customers'
     | '/coach/foods'
     | '/coach/gifts'
@@ -1905,6 +1930,7 @@ export interface RootRouteChildren {
   CoachRoute: typeof CoachRouteWithChildren
   CoachToolsRoute: typeof CoachToolsRouteWithChildren
   CommunityRoute: typeof CommunityRoute
+  ContinentalChallengeRoute: typeof ContinentalChallengeRoute
   DailyChecklistRoute: typeof DailyChecklistRoute
   DashboardRoute: typeof DashboardRoute
   DatenschutzRoute: typeof DatenschutzRoute
@@ -2038,6 +2064,13 @@ declare module '@tanstack/react-router' {
       path: '/community'
       fullPath: '/community'
       preLoaderRoute: typeof CommunityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/continental-challenge': {
+      id: '/continental-challenge'
+      path: '/continental-challenge'
+      fullPath: '/continental-challenge'
+      preLoaderRoute: typeof ContinentalChallengeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/daily-checklist': {
@@ -2479,6 +2512,13 @@ declare module '@tanstack/react-router' {
       path: '/bulls-performance'
       fullPath: '/coach/bulls-performance'
       preLoaderRoute: typeof CoachBullsPerformanceRouteImport
+      parentRoute: typeof CoachRoute
+    }
+    '/coach/continental-challenge': {
+      id: '/coach/continental-challenge'
+      path: '/continental-challenge'
+      fullPath: '/coach/continental-challenge'
+      preLoaderRoute: typeof CoachContinentalChallengeRouteImport
       parentRoute: typeof CoachRoute
     }
     '/coach/customers': {
@@ -3179,6 +3219,7 @@ interface CoachRouteChildren {
   CoachClientIdRoute: typeof CoachClientIdRoute
   CoachAffiliatesRoute: typeof CoachAffiliatesRoute
   CoachBullsPerformanceRoute: typeof CoachBullsPerformanceRoute
+  CoachContinentalChallengeRoute: typeof CoachContinentalChallengeRoute
   CoachCustomersRoute: typeof CoachCustomersRouteWithChildren
   CoachFoodsRoute: typeof CoachFoodsRoute
   CoachGiftsRoute: typeof CoachGiftsRoute
@@ -3201,6 +3242,7 @@ const CoachRouteChildren: CoachRouteChildren = {
   CoachClientIdRoute: CoachClientIdRoute,
   CoachAffiliatesRoute: CoachAffiliatesRoute,
   CoachBullsPerformanceRoute: CoachBullsPerformanceRoute,
+  CoachContinentalChallengeRoute: CoachContinentalChallengeRoute,
   CoachCustomersRoute: CoachCustomersRouteWithChildren,
   CoachFoodsRoute: CoachFoodsRoute,
   CoachGiftsRoute: CoachGiftsRoute,
@@ -3368,6 +3410,7 @@ const rootRouteChildren: RootRouteChildren = {
   CoachRoute: CoachRouteWithChildren,
   CoachToolsRoute: CoachToolsRouteWithChildren,
   CommunityRoute: CommunityRoute,
+  ContinentalChallengeRoute: ContinentalChallengeRoute,
   DailyChecklistRoute: DailyChecklistRoute,
   DashboardRoute: DashboardRoute,
   DatenschutzRoute: DatenschutzRoute,

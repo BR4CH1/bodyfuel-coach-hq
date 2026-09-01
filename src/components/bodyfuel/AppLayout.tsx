@@ -25,6 +25,7 @@ import {
   Settings,
   Gauge,
   Rocket,
+  Flag,
 
 } from "lucide-react";
 import { getMyUnreadCount, getCoachInbox } from "@/lib/coach-messages.functions";
@@ -55,6 +56,7 @@ const coachNav = [
   { to: "/coach/customers", label: "Kunden", icon: Users },
   { to: "/coach/teams", label: "Teams", icon: Users2 },
   { to: "/coach/leads", label: "Anfragen", icon: Inbox },
+  { to: "/coach/continental-challenge", label: "Continental Challenge", icon: Flag },
   { to: "/coach/reviews", label: "Bewertungen", icon: Trophy },
 ];
 
