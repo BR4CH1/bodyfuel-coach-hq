@@ -24,6 +24,8 @@ export const Route = createFileRoute("/coach/training-builder/$userId")({
 function CoachTrainingBuilderRoute() {
   const { userId } = useParams({ from: "/coach/training-builder/$userId" });
   const { planId, orgId } = useSearch({ from: "/coach/training-builder/$userId" });
+
+  // The wrapper embeds weekly step goals and extra activities directly into every visible day card.
   return (
     <AppLayout>
       <TrainingPlanBuilderWithWeeklyActivities
