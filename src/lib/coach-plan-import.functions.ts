@@ -3,6 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertGlobalCoachOrAnyOrgCoach } from "@/lib/organizations/org-coach-access";
 import type { ImportedPlan } from "@/lib/customer-training-plan.functions";
 import { toEngineIngredientAmount } from "@/lib/nutrition-ingredient-units";
+import { normalizeExerciseCategory } from "@/lib/training-exercise-category";
 
 /**
  * Coach-Plan-Import:
@@ -230,7 +231,7 @@ export const saveCoachTrainingPlanDraft = createServerFn({ method: "POST" })
       const rows = d.exercises.map((e: any, idx: number) => ({
         day_id: dayRow.id,
         name: e.name,
-        category: e.category ?? null,
+        category: normalizeExerciseCategory(e.category),
         target_sets: e.target_sets,
         target_reps: e.target_reps,
         target_weights: e.target_weights,
