@@ -597,6 +597,44 @@ export type Database = {
           },
         ]
       }
+      athlete_weekly_activity_plan: {
+        Row: {
+          activities: Json
+          created_at: string
+          id: string
+          step_target: number | null
+          updated_at: string
+          user_id: string
+          weekday: number
+        }
+        Insert: {
+          activities?: Json
+          created_at?: string
+          id?: string
+          step_target?: number | null
+          updated_at?: string
+          user_id: string
+          weekday: number
+        }
+        Update: {
+          activities?: Json
+          created_at?: string
+          id?: string
+          step_target?: number | null
+          updated_at?: string
+          user_id?: string
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "athlete_weekly_activity_plan_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       body_measurements: {
         Row: {
           biceps_left_cm: number | null
