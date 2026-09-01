@@ -39,7 +39,6 @@ function InviteAccept() {
   const [accepting, setAccepting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load invite preview once
   useEffect(() => {
     preview({ data: { token } })
       .then((res) => {
@@ -52,9 +51,6 @@ function InviteAccept() {
       });
   }, [preview, token]);
 
-  // Auto-accept once authenticated — nur wenn die eingeloggte E-Mail zur
-  // Einladung passt, sonst würde der aktuell eingeloggte Coach die
-  // Einladung versehentlich konsumieren.
   useEffect(() => {
     if (loading || !supabaseUser || accepting) return;
     if (!info || info.ok === false) return;
@@ -137,7 +133,6 @@ function InviteAccept() {
     }
   };
 
-  // --- Rendering states ---
   if (!info || loading) {
     return <Centered>Einladung wird geladen…</Centered>;
   }
@@ -165,7 +160,7 @@ function InviteAccept() {
               : "Einladung nicht mehr gültig"}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Bitte die Vereinsleitung um eine neue Einladung.
+          Bitte den Ansprechpartner der Organisation um eine neue Einladung.
         </p>
         <Button asChild className="mt-6" variant="outline">
           <Link to="/auth" search={{ next: undefined }}>Zum Login</Link>
@@ -198,9 +193,11 @@ function InviteAccept() {
     return <Centered>Zugang wird aktiviert…{error ? ` (${error})` : ""}</Centered>;
   }
 
-
-  const roleLabel = roleLabelFromDbRole(info.role);
-  const scope = scopeLabel(info.team_name);
+  const isAthleteInvite = info.role === "athlete";
+  const roleLabel = isAthleteInvite ? "Teilnehmer" : roleLabelFromDbRole(info.role);
+  const scope = isAthleteInvite
+    ? info.team_name ?? info.organization.name
+    : scopeLabel(info.team_name);
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-10">
@@ -227,29 +224,39 @@ function InviteAccept() {
               {info.organization.name || "BODYFUEL"}
             </div>
             <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-              Staff Einladung
+              {isAthleteInvite ? "Teilnehmer-Einladung" : "Staff Einladung"}
             </div>
           </div>
         </div>
 
         <h2 className="font-display text-2xl font-bold">
-          Willkommen im Trainerteam
+          {isAthleteInvite ? "Dein Platz ist freigegeben" : "Willkommen im Trainerteam"}
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Du wurdest eingeladen als Teil des Staff bei{" "}
-          <span className="text-foreground">{info.organization.name}</span>.
-          Erstelle dein Konto, um Zugriff zu erhalten.
+          {isAthleteInvite ? (
+            <>
+              Du wurdest als Teilnehmer für{" "}
+              <span className="text-foreground">{info.organization.name}</span> freigegeben.
+              Erstelle dein Konto oder logge dich ein, um deinen Zugang zu aktivieren.
+            </>
+          ) : (
+            <>
+              Du wurdest eingeladen als Teil des Staff bei{" "}
+              <span className="text-foreground">{info.organization.name}</span>.
+              Erstelle dein Konto, um Zugriff zu erhalten.
+            </>
+          )}
         </p>
 
         <div className="mt-4 space-y-2 rounded-2xl border border-border bg-muted/30 p-4 text-sm">
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 text-gold" />
-            <span className="text-muted-foreground">Funktion:</span>
+            <span className="text-muted-foreground">{isAthleteInvite ? "Rolle:" : "Funktion:"}</span>
             <span className="font-medium">{roleLabel}</span>
           </div>
           <div className="flex items-center gap-2">
             <Users className="h-4 w-4 text-gold" />
-            <span className="text-muted-foreground">Zuständigkeit:</span>
+            <span className="text-muted-foreground">{isAthleteInvite ? "Bereich:" : "Zuständigkeit:"}</span>
             <span className="font-medium">{scope}</span>
           </div>
         </div>
