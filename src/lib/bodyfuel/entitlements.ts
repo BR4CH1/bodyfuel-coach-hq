@@ -86,7 +86,7 @@ export function useEntitlements(): Entitlements {
       const activeKeys = new Set(
         packages.map((p) => (p.package ?? "").toLowerCase()).filter(Boolean),
       );
-      const hasBodyfuelSmart = activeKeys.has("smart");
+      const hasPersonalSmartPackage = activeKeys.has("smart");
       const hasBodyfuelCoaching =
         activeKeys.has("coaching") ||
         activeKeys.has("starter") ||
@@ -99,6 +99,25 @@ export function useEntitlements(): Entitlements {
       const activeMems = memRows
         .filter((r) => (!r.status || r.status === "active") && r.organization?.status === "active")
         .map((r) => r.organization!);
+
+      // B2B/Performance-Lizenz: aktive Organisationsmitglieder erhalten Smart,
+      // wenn ihre Organisation mindestens ein Smart-Modul aktiviert hat.
+      // Dadurch braucht ein Challenge-Teilnehmer kein zusätzliches persönliches
+      // customer_packages-Row und verliert den Zugang automatisch mit der
+      // Organisationsmitgliedschaft bzw. wenn das Modul deaktiviert wird.
+      let hasOrganizationSmart = false;
+      const memberOrgIds = Array.from(new Set(activeMems.map((org) => org.id).filter(Boolean)));
+      if (memberOrgIds.length > 0) {
+        const { data: smartFeatureRows } = await supabase
+          .from("organization_features")
+          .select("organization_id")
+          .in("organization_id", memberOrgIds)
+          .in("feature", ["smart_nutrition", "smart_training"])
+          .eq("enabled", true)
+          .limit(1);
+        hasOrganizationSmart = (smartFeatureRows ?? []).length > 0;
+      }
+      const hasBodyfuelSmart = hasPersonalSmartPackage || hasOrganizationSmart;
 
       const staffRows = (staffRes.data ?? []) as Array<{
         role: string | null;
