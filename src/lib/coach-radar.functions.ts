@@ -179,8 +179,8 @@ export const getCoachRadar = createServerFn({ method: "GET" })
         .order("created_at", { ascending: false }),
       supabase
         .from("ai_checkin_drafts")
-        .select("user_id, status, created_at")
-        .in("user_id", ids)
+        .select("client_id, status, created_at")
+        .in("client_id", ids)
         .eq("status", "pending"),
       supabase
         .from("coach_alert_resolutions")
@@ -393,7 +393,7 @@ export const getCoachRadar = createServerFn({ method: "GET" })
 
     const pendingDrafts = new Map<string, number>();
     ((drafts as any).data ?? []).forEach((d: any) =>
-      pendingDrafts.set(d.user_id, (pendingDrafts.get(d.user_id) ?? 0) + 1),
+      pendingDrafts.set(d.client_id, (pendingDrafts.get(d.client_id) ?? 0) + 1),
     );
 
     // ---- per-customer status + tasks ----
