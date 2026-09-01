@@ -27,6 +27,7 @@ export type AthleteWeeklyTrainingPlan = {
   userId: string;
   displayName: string | null;
   defaultStepTarget: number | null;
+  storageReady: boolean;
   days: WeeklyTrainingDayPlan[];
 };
 
@@ -61,6 +62,20 @@ function cleanActivities(value: unknown): WeeklyTrainingActivity[] {
     .filter((item): item is WeeklyTrainingActivity => Boolean(item));
 }
 
+function isMissingWeeklyActivityPlanTable(error: any): boolean {
+  if (!error) return false;
+  const code = String(error?.code ?? "");
+  const message = String(error?.message ?? error?.details ?? "").toLowerCase();
+  return (
+    code === "42P01" ||
+    code === "PGRST205" ||
+    (message.includes("athlete_weekly_activity_plan") &&
+      (message.includes("does not exist") ||
+        message.includes("schema cache") ||
+        message.includes("could not find")))
+  );
+}
+
 async function assertSelfOrCoach(
   context: { userId: string; supabase: any },
   athleteId: string,
@@ -88,11 +103,12 @@ export const getAthleteWeeklyTrainingPlan = createServerFn({ method: "POST" })
         .eq("user_id", data.userId)
         .order("weekday"),
     ]);
-    if (error) throw error;
+    if (error && !isMissingWeeklyActivityPlanTable(error)) throw error;
 
+    const storageReady = !error;
     const defaultStepTarget = clampStepTarget((profile as any)?.daily_step_goal);
     const byWeekday = new Map<number, any>();
-    for (const row of (rows ?? []) as any[]) {
+    for (const row of ((storageReady ? rows : []) ?? []) as any[]) {
       const weekday = Number(row.weekday);
       if (Number.isInteger(weekday) && weekday >= 0 && weekday <= 6) byWeekday.set(weekday, row);
     }
@@ -112,6 +128,7 @@ export const getAthleteWeeklyTrainingPlan = createServerFn({ method: "POST" })
       userId: data.userId,
       displayName: (profile as any)?.display_name ?? null,
       defaultStepTarget,
+      storageReady,
       days,
     };
   });
@@ -149,7 +166,14 @@ export const saveAthleteWeeklyTrainingPlan = createServerFn({ method: "POST" })
     const { error } = await supabaseAdmin
       .from("athlete_weekly_activity_plan" as any)
       .upsert(rows as any, { onConflict: "user_id,weekday" });
-    if (error) throw error;
+    if (error) {
+      if (isMissingWeeklyActivityPlanTable(error)) {
+        throw new Error(
+          "Wochenziele können noch nicht gespeichert werden, weil die Datenbankmigration für athlete_weekly_activity_plan noch nicht aktiv ist.",
+        );
+      }
+      throw error;
+    }
 
     return { ok: true };
   });
