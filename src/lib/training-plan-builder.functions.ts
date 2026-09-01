@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
+import { normalizeExerciseCategory } from "@/lib/training-exercise-category";
   assertCoachOrOrgStaffForAthlete,
   assertGlobalCoachOrAnyOrgCoach,
 } from "@/lib/organizations/org-coach-access";
@@ -465,7 +466,7 @@ export async function persistTrainingPlan(data: {
             .insert({
               day_id: dayRow.id,
               name: (ex.name || "").trim().slice(0, 200),
-              category: ex.category ?? null,
+              category: normalizeExerciseCategory(ex.category),
               target_sets: targetSets,
               target_reps: ex.target_reps ?? null,
               target_weights: ex.target_weights ?? null,
@@ -792,7 +793,7 @@ export const loadTrainingPlanForBuilder = createServerFn({ method: "POST" })
       const exs = (byDay.get(d.id) ?? []).map((ex: any): BuilderTrainingExercise => ({
         library_exercise_id: ex.library_exercise_id ?? null,
         name: ex.name ?? "",
-        category: ex.category ?? null,
+        category: normalizeExerciseCategory(ex.category),
         target_sets: ex.target_sets ?? null,
         target_reps: ex.target_reps ?? null,
         target_weights: ex.target_weights ?? null,

@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { normalizeExerciseCategory } from "@/lib/training-exercise-category";
 
 /**
  * Erlaubt Kunden, einen bereits vorhandenen Trainingsplan zu importieren
@@ -245,7 +246,7 @@ export const saveCustomerTrainingPlan = createServerFn({ method: "POST" })
       const rows = d.exercises.map((e, idx) => ({
         day_id: dayRow.id,
         name: e.name,
-        category: e.category ?? null,
+        category: normalizeExerciseCategory(e.category),
         target_sets: e.target_sets,
         target_reps: e.target_reps,
         target_weights: e.target_weights,
