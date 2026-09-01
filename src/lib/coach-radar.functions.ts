@@ -179,8 +179,8 @@ export const getCoachRadar = createServerFn({ method: "GET" })
         .order("created_at", { ascending: false }),
       supabase
         .from("ai_checkin_drafts")
-        .select("user_id, status, created_at")
-        .in("user_id", ids)
+        .select("client_id, status, created_at")
+        .in("client_id", ids)
         .eq("status", "pending"),
       supabase
         .from("coach_alert_resolutions")
