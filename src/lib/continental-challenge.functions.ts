@@ -195,30 +195,25 @@ export const reviewContinentalApplication = createServerFn({ method: "POST" })
     await assertCoach(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    if (data.decision === "approved") {
-      const { count, error: countError } = await supabaseAdmin
-        .from("continental_challenge_applications")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "approved")
-        .neq("id", data.id);
-      if (countError) throw new Error(countError.message);
-      if ((count ?? 0) >= CONTINENTAL_MAX_APPROVED) {
+    const { data: rpcData, error } = await supabaseAdmin.rpc("review_continental_application", {
+      _id: data.id,
+      _decision: data.decision,
+      _reviewer: context.userId,
+    });
+    if (error) throw new Error(error.message);
+
+    const result = (rpcData ?? {}) as { ok?: boolean; code?: string };
+    if (result.ok !== true) {
+      if (result.code === "capacity") {
         return {
           ok: false,
           code: "capacity",
           message: `Alle ${CONTINENTAL_MAX_APPROVED} Plätze sind bereits vergeben. Es kann keine weitere Bewerbung angenommen werden.`,
         };
       }
+      throw new Error("Bewerbung konnte nicht aktualisiert werden.");
     }
 
-    const { error } = await supabaseAdmin
-      .from("continental_challenge_applications")
-      .update({
-        status: data.decision,
-        reviewed_at: new Date().toISOString(),
-        reviewed_by: context.userId,
-      })
-      .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
