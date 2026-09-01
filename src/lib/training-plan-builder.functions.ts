@@ -334,6 +334,11 @@ export async function persistTrainingPlan(data: {
   const isoDate = (d: Date) => d.toISOString().slice(0, 10);
   const start = new Date(data.startDate + "T00:00:00Z");
   if (Number.isNaN(start.getTime())) throw new Error("Das Startdatum ist ungültig.");
+  // Monday of the week containing the chosen start — used only to derive
+  // day_date so Mo..So labels stay on real weekdays. scheduled_start_date
+  // itself is never shifted.
+  const weekAnchor = new Date(start);
+  weekAnchor.setUTCDate(weekAnchor.getUTCDate() - ((start.getUTCDay() + 6) % 7));
   const end = new Date(start);
   end.setUTCDate(end.getUTCDate() + data.weeksCount * 7 - 1);
 
