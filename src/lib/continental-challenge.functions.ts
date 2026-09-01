@@ -214,7 +214,6 @@ export const reviewContinentalApplication = createServerFn({ method: "POST" })
       throw new Error("Bewerbung konnte nicht aktualisiert werden.");
     }
 
-    if (error) throw new Error(error.message);
     return { ok: true };
   });
 
