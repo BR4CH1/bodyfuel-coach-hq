@@ -18,6 +18,7 @@ import { Route as CheckInRouteImport } from './routes/check-in'
 import { Route as CoachRouteImport } from './routes/coach'
 import { Route as CoachToolsRouteImport } from './routes/coach-tools'
 import { Route as CommunityRouteImport } from './routes/community'
+import { Route as ContinentalRouteImport } from './routes/continental'
 import { Route as ContinentalChallengeRouteImport } from './routes/continental-challenge'
 import { Route as DailyChecklistRouteImport } from './routes/daily-checklist'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -210,6 +211,11 @@ const CoachToolsRoute = CoachToolsRouteImport.update({
 const CommunityRoute = CommunityRouteImport.update({
   id: '/community',
   path: '/community',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContinentalRoute = ContinentalRouteImport.update({
+  id: '/continental',
+  path: '/continental',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContinentalChallengeRoute = ContinentalChallengeRouteImport.update({
@@ -996,6 +1002,7 @@ export interface FileRoutesByFullPath {
   '/coach': typeof CoachRouteWithChildren
   '/coach-tools': typeof CoachToolsRouteWithChildren
   '/community': typeof CommunityRoute
+  '/continental': typeof ContinentalRoute
   '/continental-challenge': typeof ContinentalChallengeRoute
   '/daily-checklist': typeof DailyChecklistRoute
   '/dashboard': typeof DashboardRoute
@@ -1152,6 +1159,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/check-in': typeof CheckInRoute
   '/community': typeof CommunityRoute
+  '/continental': typeof ContinentalRoute
   '/continental-challenge': typeof ContinentalChallengeRoute
   '/daily-checklist': typeof DailyChecklistRoute
   '/dashboard': typeof DashboardRoute
@@ -1303,6 +1311,7 @@ export interface FileRoutesById {
   '/coach': typeof CoachRouteWithChildren
   '/coach-tools': typeof CoachToolsRouteWithChildren
   '/community': typeof CommunityRoute
+  '/continental': typeof ContinentalRoute
   '/continental-challenge': typeof ContinentalChallengeRoute
   '/daily-checklist': typeof DailyChecklistRoute
   '/dashboard': typeof DashboardRoute
@@ -1464,6 +1473,7 @@ export interface FileRouteTypes {
     | '/coach'
     | '/coach-tools'
     | '/community'
+    | '/continental'
     | '/continental-challenge'
     | '/daily-checklist'
     | '/dashboard'
@@ -1620,6 +1630,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/check-in'
     | '/community'
+    | '/continental'
     | '/continental-challenge'
     | '/daily-checklist'
     | '/dashboard'
@@ -1770,6 +1781,7 @@ export interface FileRouteTypes {
     | '/coach'
     | '/coach-tools'
     | '/community'
+    | '/continental'
     | '/continental-challenge'
     | '/daily-checklist'
     | '/dashboard'
@@ -1930,6 +1942,7 @@ export interface RootRouteChildren {
   CoachRoute: typeof CoachRouteWithChildren
   CoachToolsRoute: typeof CoachToolsRouteWithChildren
   CommunityRoute: typeof CommunityRoute
+  ContinentalRoute: typeof ContinentalRoute
   ContinentalChallengeRoute: typeof ContinentalChallengeRoute
   DailyChecklistRoute: typeof DailyChecklistRoute
   DashboardRoute: typeof DashboardRoute
@@ -2064,6 +2077,13 @@ declare module '@tanstack/react-router' {
       path: '/community'
       fullPath: '/community'
       preLoaderRoute: typeof CommunityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/continental': {
+      id: '/continental'
+      path: '/continental'
+      fullPath: '/continental'
+      preLoaderRoute: typeof ContinentalRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/continental-challenge': {
@@ -3410,6 +3430,7 @@ const rootRouteChildren: RootRouteChildren = {
   CoachRoute: CoachRouteWithChildren,
   CoachToolsRoute: CoachToolsRouteWithChildren,
   CommunityRoute: CommunityRoute,
+  ContinentalRoute: ContinentalRoute,
   ContinentalChallengeRoute: ContinentalChallengeRoute,
   DailyChecklistRoute: DailyChecklistRoute,
   DashboardRoute: DashboardRoute,
