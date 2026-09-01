@@ -431,7 +431,7 @@ export async function persistTrainingPlan(data: {
           ? src!.name || `${WD_SHORT[wd]} — Training`
           : `${WD_SHORT[wd]} — Ruhetag`;
 
-        const dayDate = new Date(start);
+        const dayDate = new Date(weekAnchor);
         dayDate.setUTCDate(dayDate.getUTCDate() + (w - 1) * 7 + order.indexOf(wd));
 
         const { data: dayRow, error: dayErr } = await supabaseAdmin
