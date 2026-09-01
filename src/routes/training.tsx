@@ -6,6 +6,7 @@ import { Activity, BarChart3, ChevronRight, Dumbbell, Sparkles, Upload } from "l
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { PlansView } from "@/components/bodyfuel/PlansView";
 import { TrainingTracker } from "@/components/bodyfuel/TrainingTracker";
+import { TrainingWeeklyActivityCard } from "@/components/bodyfuel/TrainingWeeklyActivityCard";
 import { PlanContentView } from "@/components/bodyfuel/PlanContentView";
 import { useSession } from "@/lib/bodyfuel/session";
 import { StrengthCheckStatus } from "@/components/bodyfuel/StrengthCheckStatus";
@@ -89,6 +90,7 @@ function TrainingPage() {
 
           {supabaseUser && effectiveId && (
             <section className="space-y-4">
+              <TrainingWeeklyActivityCard userId={effectiveId} />
               <TrainingTracker key={`${trackerKey}:${effectiveId}`} clientId={effectiveId} />
             </section>
           )}
