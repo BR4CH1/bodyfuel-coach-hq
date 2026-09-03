@@ -36,7 +36,7 @@ function ImpressumPage() {
               Woltering-Sonntag &amp; Holt Versicherungsvermittlungs GmbH<br />
               Schorlemerstraße 7<br />
               48683 Ahaus<br />
-              Telefon: <a href="tel:+492561934800" className="text-gold hover:underline">02561 93480</a><br />
+              Telefon: <a href="tel:+49256193480" className="text-gold hover:underline">02561 93480</a><br />
               E-Mail:{" "}
               <a href="mailto:info.woltering-sonntag-holt@continentale.de" className="text-gold hover:underline">
                 info.woltering-sonntag-holt@continentale.de
