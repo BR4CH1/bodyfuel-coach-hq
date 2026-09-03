@@ -1433,13 +1433,24 @@ export type Database = {
       }
       continental_challenge_applications: {
         Row: {
+          activity_level: string | null
           age: number | null
+          birth_year: number | null
+          blocker_other: string | null
+          blockers: string[]
+          city: string | null
           created_at: string
           email: string
+          financial_contact_consent: boolean
           first_name: string
+          goal_other: string | null
           goal_text: string
           goal_type: string | null
           id: string
+          insurance_last_review: string | null
+          insurance_notes: string | null
+          insurance_priorities: string[]
+          insurance_topics: string[]
           internal_notes: string | null
           last_name: string
           motivation: string
@@ -1451,13 +1462,24 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          activity_level?: string | null
           age?: number | null
+          birth_year?: number | null
+          blocker_other?: string | null
+          blockers?: string[]
+          city?: string | null
           created_at?: string
           email: string
+          financial_contact_consent?: boolean
           first_name: string
+          goal_other?: string | null
           goal_text: string
           goal_type?: string | null
           id?: string
+          insurance_last_review?: string | null
+          insurance_notes?: string | null
+          insurance_priorities?: string[]
+          insurance_topics?: string[]
           internal_notes?: string | null
           last_name: string
           motivation: string
@@ -1469,13 +1491,24 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          activity_level?: string | null
           age?: number | null
+          birth_year?: number | null
+          blocker_other?: string | null
+          blockers?: string[]
+          city?: string | null
           created_at?: string
           email?: string
+          financial_contact_consent?: boolean
           first_name?: string
+          goal_other?: string | null
           goal_text?: string
           goal_type?: string | null
           id?: string
+          insurance_last_review?: string | null
+          insurance_notes?: string | null
+          insurance_priorities?: string[]
+          insurance_topics?: string[]
           internal_notes?: string | null
           last_name?: string
           motivation?: string
