@@ -35,7 +35,7 @@ import {
   submitContinentalApplication,
 } from "@/lib/continental-challenge.functions";
 
-const PARTNER_LOGO = "/continentale-woltering-sonntag-holt.jpg";
+const PARTNER_LOGO = "/continentale-woltering-sonntag-holt-cropped.jpg";
 const PARTNER_NAME = "Woltering-Sonntag & Holt Versicherungsvermittlungs GmbH";
 const CANONICAL = "https://bodyfuel-coaching.com/continental-challenge";
 
