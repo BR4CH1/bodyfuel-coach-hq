@@ -337,19 +337,80 @@ function ContinentalApplicationsPage() {
                       {selected.phone}
                     </a>
                   </DetailItem>
-                  <DetailItem label="Alter">{selected.age ? `${selected.age} Jahre` : "—"}</DetailItem>
+                  <DetailItem label="Geburtsjahr / Alter">
+                    {selected.birth_year
+                      ? `${selected.birth_year}${selected.age ? ` · ${selected.age} Jahre` : ""}`
+                      : selected.age
+                        ? `${selected.age} Jahre`
+                        : "—"}
+                  </DetailItem>
+                  <DetailItem label="Wohnort">{selected.city || "—"}</DetailItem>
                   <DetailItem label="Hauptziel">
                     {selected.goal_type ? GOAL_TYPE_LABELS[selected.goal_type] ?? selected.goal_type : "—"}
+                    {selected.goal_other ? ` — ${selected.goal_other}` : ""}
+                  </DetailItem>
+                  <DetailItem label="Aktuelle Aktivität">
+                    {selected.activity_level
+                      ? ACTIVITY_LEVEL_LABELS[selected.activity_level] ?? selected.activity_level
+                      : "—"}
                   </DetailItem>
                 </div>
 
-                <DetailItem label="Was möchtest du in den 30 Tagen erreichen?">
+                <DetailItem label="Ziel der 30 Tage">
                   <p className="whitespace-pre-wrap rounded-lg bg-secondary/40 p-3">{selected.goal_text}</p>
                 </DetailItem>
 
-                <DetailItem label="Warum möchtest du bei der Challenge dabei sein?">
+                <DetailItem label="Warum möchtest du teilnehmen?">
                   <p className="whitespace-pre-wrap rounded-lg bg-secondary/40 p-3">{selected.motivation}</p>
                 </DetailItem>
+
+                <DetailItem label="Bisherige Hindernisse">
+                  <ChipList
+                    values={selected.blockers}
+                    labels={BLOCKER_LABELS}
+                    extra={selected.blocker_other}
+                  />
+                </DetailItem>
+
+                <div className="rounded-xl border border-border p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="font-semibold">Financial Fitness Check</div>
+                    <span
+                      className={`rounded-full px-3 py-1 text-[11px] font-bold uppercase ${
+                        selected.financial_contact_consent
+                          ? "bg-gold/15 text-gold"
+                          : "bg-secondary text-muted-foreground"
+                      }`}
+                    >
+                      {selected.financial_contact_consent
+                        ? "Kontaktaufnahme durch Partner erlaubt"
+                        : "Keine Weitergabe an Partner"}
+                    </span>
+                  </div>
+                  <div className="mt-3 space-y-3">
+                    <DetailItem label="Letzter Versicherungs-Check">
+                      {selected.insurance_last_review
+                        ? INSURANCE_REVIEW_LABELS[selected.insurance_last_review] ?? selected.insurance_last_review
+                        : "—"}
+                    </DetailItem>
+                    <DetailItem label="Interessante Themen">
+                      <ChipList values={selected.insurance_topics} labels={INSURANCE_TOPIC_LABELS} />
+                    </DetailItem>
+                    <DetailItem label="Prioritäten">
+                      <ChipList values={selected.insurance_priorities} labels={INSURANCE_PRIORITY_LABELS} />
+                    </DetailItem>
+                    <DetailItem label="Anmerkung">
+                      {selected.insurance_notes ? (
+                        <p className="whitespace-pre-wrap rounded-lg bg-secondary/40 p-3">
+                          {selected.insurance_notes}
+                        </p>
+                      ) : (
+                        "—"
+                      )}
+                    </DetailItem>
+                  </div>
+                </div>
+
 
                 <DetailItem label="Status">
                   <span
