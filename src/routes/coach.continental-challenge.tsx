@@ -167,7 +167,7 @@ function ContinentalApplicationsPage() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Coach</p>
-          <h1 className="font-display text-3xl font-bold">Continental Bewerbungen</h1>
+          <h1 className="font-display text-3xl font-bold">Continentale Bewerbungen</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Bewerbungen für die 30-Tage-Challenge prüfen und in die Performance-Organisation freigeben.
             Maximal {CONTINENTAL_MAX_APPROVED} Plätze.
@@ -183,7 +183,7 @@ function ContinentalApplicationsPage() {
       </div>
 
       <div className="rounded-xl border border-border bg-card p-4 text-sm">
-        <div className="font-semibold">Continental läuft über BodyFuel Performance</div>
+        <div className="font-semibold">Continentale läuft über BodyFuel Performance</div>
         <p className="mt-1 text-muted-foreground">
           Freigegebene Personen erhalten eine persönliche Athleten-Einladung. Erst nach Annahme werden
           sie Mitglied der Organisation und erhalten über die aktivierten Organisationsmodule BodyFuel Smart.
@@ -534,6 +534,29 @@ function DetailItem({ label, children }: { label: string; children: React.ReactN
     <div>
       <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
       <div className="mt-1">{children}</div>
+    </div>
+  );
+}
+
+function ChipList({
+  values,
+  labels,
+  extra,
+}: {
+  values: string[] | null;
+  labels: Record<string, string>;
+  extra?: string | null;
+}) {
+  const items = (values ?? []).map((v) => labels[v] ?? v);
+  if (extra) items.push(extra);
+  if (items.length === 0) return <span className="text-muted-foreground">—</span>;
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {items.map((item) => (
+        <span key={item} className="rounded-full bg-secondary px-2.5 py-1 text-xs">
+          {item}
+        </span>
+      ))}
     </div>
   );
 }
