@@ -35,7 +35,7 @@ import {
   submitContinentalApplication,
 } from "@/lib/continental-challenge.functions";
 
-const PARTNER_LOGO = "/continentale-woltering-sonntag-holt.jpg";
+const PARTNER_LOGO = "/continentale-woltering-sonntag-holt-cropped.jpg";
 const PARTNER_NAME = "Woltering-Sonntag & Holt Versicherungsvermittlungs GmbH";
 const CANONICAL = "https://bodyfuel-coaching.com/continental-challenge";
 
@@ -113,7 +113,7 @@ function ContinentalChallengePage() {
 function PartnerLogoCard({ className = "" }: { className?: string }) {
   return (
     <div
-      className={`grid place-items-center rounded-2xl border border-white/15 bg-white p-3 shadow-[0_10px_40px_-12px_rgba(0,0,0,0.8)] sm:p-4 ${className}`}
+      className={`grid place-items-center rounded-2xl border border-white/15 bg-white px-2 py-1.5 shadow-[0_10px_40px_-12px_rgba(0,0,0,0.8)] sm:px-3 sm:py-2 ${className}`}
     >
       <img
         src={PARTNER_LOGO}
@@ -1095,7 +1095,7 @@ function ChallengeFooter() {
 
         <p className="max-w-2xl text-xs leading-6 text-white/45">
           Kooperationspartner: {PARTNER_NAME}, Schorlemerstraße 7, 48683 Ahaus ·{" "}
-          <a href="tel:+492561 93480" className="hover:text-white/70">
+          <a href="tel:+49256193480" className="hover:text-white/70">
             02561 93480
           </a>
         </p>
@@ -1117,6 +1117,14 @@ function ChallengeFooter() {
             className="hover:text-gold"
           >
             Rechtliches des Partners
+          </a>
+          <a
+            href="https://www.continentale.de/documents/2094631/0/Agentur%2BDatenschutzhinweis.pdf"
+            target="_blank"
+            rel="noreferrer"
+            className="hover:text-gold"
+          >
+            Datenschutz des Partners
           </a>
           <span className="text-xs text-white/35">© {new Date().getFullYear()} BodyFuel Coaching</span>
         </div>
