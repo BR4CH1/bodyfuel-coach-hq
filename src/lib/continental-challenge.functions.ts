@@ -33,15 +33,81 @@ const CONTINENTAL_FEATURES = [
 ] as const;
 
 export const GOAL_TYPE_OPTIONS = [
-  { value: "abnehmen", label: "Abnehmen" },
+  { value: "abnehmen", label: "Gewicht reduzieren" },
+  { value: "fitter_werden", label: "Fitter und leistungsfähiger werden" },
   { value: "muskeln_aufbauen", label: "Muskeln aufbauen" },
-  { value: "fitter_werden", label: "Fitter werden" },
-  { value: "gewohnheiten", label: "Gewohnheiten verbessern" },
+  { value: "ernaehrung", label: "Meine Ernährung verbessern" },
+  { value: "regelmaessig_sport", label: "Wieder regelmäßig Sport treiben" },
+  { value: "gesuender_leben", label: "Allgemein gesünder leben" },
   { value: "sonstiges", label: "Sonstiges" },
 ] as const;
 
 export const GOAL_TYPE_LABELS: Record<string, string> = Object.fromEntries(
   GOAL_TYPE_OPTIONS.map((o) => [o.value, o.label]),
+);
+
+export const ACTIVITY_LEVEL_OPTIONS = [
+  { value: "kaum", label: "Aktuell kaum / gar nicht" },
+  { value: "1x", label: "1× pro Woche" },
+  { value: "2_3x", label: "2–3× pro Woche" },
+  { value: "4x_plus", label: "4× oder häufiger pro Woche" },
+] as const;
+
+export const ACTIVITY_LEVEL_LABELS: Record<string, string> = Object.fromEntries(
+  ACTIVITY_LEVEL_OPTIONS.map((o) => [o.value, o.label]),
+);
+
+export const BLOCKER_OPTIONS = [
+  { value: "motivation", label: "Fehlende Motivation" },
+  { value: "trainingsplan", label: "Fehlender Trainingsplan" },
+  { value: "ernaehrung", label: "Ernährung" },
+  { value: "zeit", label: "Zeitmangel" },
+  { value: "unterstuetzung", label: "Fehlende Unterstützung" },
+  { value: "sonstiges", label: "Sonstiges" },
+] as const;
+
+export const BLOCKER_LABELS: Record<string, string> = Object.fromEntries(
+  BLOCKER_OPTIONS.map((o) => [o.value, o.label]),
+);
+
+export const INSURANCE_REVIEW_OPTIONS = [
+  { value: "letzte_12_monate", label: "Innerhalb der letzten 12 Monate" },
+  { value: "1_3_jahre", label: "Vor 1–3 Jahren" },
+  { value: "ueber_3_jahre", label: "Länger als 3 Jahre her" },
+  { value: "noch_nie", label: "Noch nie" },
+  { value: "weiss_nicht", label: "Weiß ich nicht" },
+] as const;
+
+export const INSURANCE_REVIEW_LABELS: Record<string, string> = Object.fromEntries(
+  INSURANCE_REVIEW_OPTIONS.map((o) => [o.value, o.label]),
+);
+
+export const INSURANCE_TOPIC_OPTIONS = [
+  { value: "bestehende_vertraege", label: "Bestehende Versicherungen & Beiträge" },
+  { value: "einkommen", label: "Absicherung meines Einkommens" },
+  { value: "familie", label: "Absicherung meiner Familie" },
+  { value: "unfall", label: "Unfallabsicherung" },
+  { value: "kranken", label: "Kranken-/Zusatzversicherung" },
+  { value: "altersvorsorge", label: "Altersvorsorge & Vermögensaufbau" },
+  { value: "eigentum", label: "Absicherung von Haus/Eigentum" },
+  { value: "ueberblick", label: "Ich möchte einfach wissen, ob ich gut aufgestellt bin" },
+] as const;
+
+export const INSURANCE_TOPIC_LABELS: Record<string, string> = Object.fromEntries(
+  INSURANCE_TOPIC_OPTIONS.map((o) => [o.value, o.label]),
+);
+
+export const INSURANCE_PRIORITY_OPTIONS = [
+  { value: "bessere_leistungen", label: "Bessere Leistungen" },
+  { value: "beitraege_reduzieren", label: "Beiträge reduzieren" },
+  { value: "versorgungsluecken", label: "Versorgungslücken erkennen" },
+  { value: "familie_absichern", label: "Meine Familie besser absichern" },
+  { value: "altersvorsorge", label: "Altersvorsorge verbessern" },
+  { value: "ueberblick", label: "Erst einmal einen Überblick bekommen" },
+] as const;
+
+export const INSURANCE_PRIORITY_LABELS: Record<string, string> = Object.fromEntries(
+  INSURANCE_PRIORITY_OPTIONS.map((o) => [o.value, o.label]),
 );
 
 export type ContinentalApplicationStatus = "pending" | "approved" | "rejected";
@@ -52,6 +118,7 @@ export type SubmitContinentalResult =
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const PHONE_RE = /^[+0-9 ()\/.-]{4,40}$/;
+
 
 async function assertCoach(supabase: any, userId: string) {
   const { data, error } = await supabase.rpc("has_role", {
