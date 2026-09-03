@@ -1118,6 +1118,14 @@ function ChallengeFooter() {
           >
             Rechtliches des Partners
           </a>
+          <a
+            href="https://www.continentale.de/documents/2094631/0/Agentur%2BDatenschutzhinweis.pdf"
+            target="_blank"
+            rel="noreferrer"
+            className="hover:text-gold"
+          >
+            Datenschutz des Partners
+          </a>
           <span className="text-xs text-white/35">© {new Date().getFullYear()} BodyFuel Coaching</span>
         </div>
       </div>
