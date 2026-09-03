@@ -280,20 +280,40 @@ async function ensureContinentalAthleteInvite(
 
 /* ---------------- ÖFFENTLICH: Bewerbung absenden ---------------- */
 
+export type SubmitContinentalInput = {
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  birth_year: number | null;
+  city: string;
+  goal_type: string;
+  goal_other?: string | null;
+  activity_level: string;
+  motivation: string;
+  blockers: string[];
+  blocker_other?: string | null;
+  insurance_last_review?: string | null;
+  insurance_topics?: string[];
+  insurance_priorities?: string[];
+  insurance_notes?: string | null;
+  privacy_consent: boolean;
+  financial_contact_consent: boolean;
+};
+
+const CURRENT_YEAR = () => new Date().getFullYear();
+
+function sanitizeChoices(
+  values: unknown,
+  allowed: ReadonlyArray<{ value: string }>,
+): string[] {
+  if (!Array.isArray(values)) return [];
+  const set = new Set(allowed.map((o) => o.value));
+  return Array.from(new Set(values.filter((v): v is string => typeof v === "string" && set.has(v))));
+}
+
 export const submitContinentalApplication = createServerFn({ method: "POST" })
-  .inputValidator(
-    (data: {
-      first_name: string;
-      last_name: string;
-      email: string;
-      phone: string;
-      age?: number | null;
-      goal_type?: string | null;
-      goal_text: string;
-      motivation: string;
-      privacy_consent: boolean;
-    }) => data,
-  )
+  .inputValidator((data: SubmitContinentalInput) => data)
   .handler(async ({ data }): Promise<SubmitContinentalResult> => {
     const invalid = (message: string): SubmitContinentalResult => ({
       ok: false,
@@ -305,8 +325,11 @@ export const submitContinentalApplication = createServerFn({ method: "POST" })
     const lastName = (data.last_name ?? "").trim();
     const email = (data.email ?? "").trim().toLowerCase();
     const phone = (data.phone ?? "").trim();
-    const goalText = (data.goal_text ?? "").trim();
+    const city = (data.city ?? "").trim();
     const motivation = (data.motivation ?? "").trim();
+    const goalOther = (data.goal_other ?? "").trim();
+    const blockerOther = (data.blocker_other ?? "").trim();
+    const insuranceNotes = (data.insurance_notes ?? "").trim();
 
     if (firstName.length < 2 || firstName.length > 80) {
       return invalid("Bitte gib deinen Vornamen an.");
@@ -318,33 +341,59 @@ export const submitContinentalApplication = createServerFn({ method: "POST" })
       return invalid("Bitte gib eine gültige E-Mail-Adresse an.");
     }
     if (!PHONE_RE.test(phone)) {
-      return invalid("Bitte gib eine gültige Mobilnummer an.");
+      return invalid("Bitte gib eine gültige Telefonnummer an.");
     }
-    if (goalText.length < 5 || goalText.length > 2000) {
-      return invalid("Bitte beschreibe kurz, was du in den 30 Tagen erreichen möchtest.");
+    if (city.length < 2 || city.length > 120) {
+      return invalid("Bitte gib deinen Wohnort an.");
     }
+
+    const year = CURRENT_YEAR();
+    const birthYear = Math.round(Number(data.birth_year));
+    if (!Number.isFinite(birthYear) || birthYear < year - 99 || birthYear > year - 14) {
+      return invalid("Bitte gib ein plausibles Geburtsjahr an (Mindestalter 14 Jahre).");
+    }
+
+    const goalType = (data.goal_type ?? "").trim();
+    if (!GOAL_TYPE_OPTIONS.some((o) => o.value === goalType)) {
+      return invalid("Bitte wähle dein Hauptziel aus.");
+    }
+    if (goalType === "sonstiges" && goalOther.length < 3) {
+      return invalid("Bitte beschreibe kurz dein sonstiges Ziel.");
+    }
+
+    const activityLevel = (data.activity_level ?? "").trim();
+    if (!ACTIVITY_LEVEL_OPTIONS.some((o) => o.value === activityLevel)) {
+      return invalid("Bitte wähle aus, wie oft du aktuell aktiv bist.");
+    }
+
     if (motivation.length < 5 || motivation.length > 2000) {
       return invalid("Bitte beschreibe kurz, warum du bei der Challenge dabei sein möchtest.");
     }
+
+    const blockers = sanitizeChoices(data.blockers, BLOCKER_OPTIONS);
+    if (blockers.length === 0) {
+      return invalid("Bitte wähle mindestens ein Hindernis aus.");
+    }
+    if (blockers.includes("sonstiges") && blockerOther.length < 3) {
+      return invalid("Bitte beschreibe kurz dein sonstiges Hindernis.");
+    }
+
     if (data.privacy_consent !== true) {
       return invalid("Bitte bestätige die Einwilligung zur Datenverarbeitung.");
     }
 
-    let age: number | null = null;
-    if (data.age !== undefined && data.age !== null) {
-      const parsed = Math.round(Number(data.age));
-      if (!Number.isFinite(parsed) || parsed < 14 || parsed > 99) {
-        return invalid("Bitte gib ein gültiges Alter zwischen 14 und 99 an.");
+    let insuranceLastReview: string | null = null;
+    if (data.insurance_last_review) {
+      if (!INSURANCE_REVIEW_OPTIONS.some((o) => o.value === data.insurance_last_review)) {
+        return invalid("Bitte wähle eine gültige Angabe zum letzten Versicherungs-Check.");
       }
-      age = parsed;
+      insuranceLastReview = data.insurance_last_review;
     }
+    const insuranceTopics = sanitizeChoices(data.insurance_topics, INSURANCE_TOPIC_OPTIONS);
+    const insurancePriorities = sanitizeChoices(data.insurance_priorities, INSURANCE_PRIORITY_OPTIONS);
 
-    let goalType: string | null = null;
-    if (data.goal_type) {
-      const allowed = GOAL_TYPE_OPTIONS.some((o) => o.value === data.goal_type);
-      if (!allowed) return invalid("Bitte wähle ein gültiges Hauptziel.");
-      goalType = data.goal_type;
-    }
+    const goalLabel = GOAL_TYPE_LABELS[goalType] ?? goalType;
+    const goalText = goalType === "sonstiges" && goalOther ? `${goalLabel}: ${goalOther}` : goalLabel;
 
     const duplicateResult: SubmitContinentalResult = {
       ok: false,
@@ -370,13 +419,26 @@ export const submitContinentalApplication = createServerFn({ method: "POST" })
       last_name: lastName.slice(0, 80),
       email: email.slice(0, 200),
       phone: phone.slice(0, 40),
-      age,
+      age: year - birthYear,
+      birth_year: birthYear,
+      city: city.slice(0, 120),
       goal_type: goalType,
+      goal_other: goalOther ? goalOther.slice(0, 500) : null,
       goal_text: goalText.slice(0, 2000),
+      activity_level: activityLevel,
       motivation: motivation.slice(0, 2000),
+      blockers,
+      blocker_other: blockerOther ? blockerOther.slice(0, 500) : null,
+      insurance_last_review: insuranceLastReview,
+      insurance_topics: insuranceTopics,
+      insurance_priorities: insurancePriorities,
+      insurance_notes: insuranceNotes ? insuranceNotes.slice(0, 2000) : null,
+      financial_contact_consent: data.financial_contact_consent === true,
       privacy_consent: true,
       status: "pending",
-    });
+    } as never);
+
+
 
     if (error) {
       if (error.code === "23505") return duplicateResult;
