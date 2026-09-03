@@ -77,18 +77,58 @@ function DatenschutzPage() {
           </Section>
 
           <Section title="8. Cookies und Einwilligung">
-            <p>Wir verwenden technisch notwendige Cookies sowie – nach Ihrer Einwilligung – Cookies für Analyse und Marketing. Sie können Ihre Einwilligung jederzeit über den Link „Cookie-Einstellungen" im Footer oder über den Button oben auf dieser Seite anpassen oder widerrufen. Rechtsgrundlage: Art. 6 Abs. 1 lit. a DSGVO i. V. m. § 25 TTDSG.</p>
+            <p>Wir verwenden technisch notwendige Cookies sowie – nach Ihrer Einwilligung – Cookies für Analyse und Marketing. Sie können Ihre Einwilligung jederzeit über den Link „Cookie-Einstellungen" im Footer oder über den Button oben auf dieser Seite anpassen oder widerrufen. Rechtsgrundlage: Art. 6 Abs. 1 lit. a DSGVO i. V. m. § 25 TDDDG.</p>
           </Section>
 
-          <Section title="9. Speicherdauer">
+          <Section title="9. Bewerbung für die Continentale × BodyFuel – 30 Tage Challenge">
+            <p>Wenn Sie sich über das Bewerbungsformular für die 30-Tage-Challenge bewerben, verarbeiten wir folgende Angaben:</p>
+            <ul className="ml-5 list-disc space-y-1">
+              <li>Vor- und Nachname, Geburtsjahr, Wohnort</li>
+              <li>E-Mail-Adresse und Telefonnummer</li>
+              <li>Angaben zu Ihrem Ziel, Ihrer aktuellen Aktivität, Ihrer Motivation und Ihren Hindernissen</li>
+              <li>Freiwillige Angaben aus dem „Financial Fitness Check“ (letzter Versicherungs-Check, Themen, Prioritäten, optionale Anmerkung)</li>
+            </ul>
+            <p>Zweck: Prüfung und Auswahl der Bewerbungen sowie Durchführung der Challenge. Rechtsgrundlage: Art. 6 Abs. 1 lit. a und lit. b DSGVO.</p>
+            <p>
+              <strong>Freiwillige Weitergabe an den Kooperationspartner:</strong> Nur wenn Sie im Formular die separate,
+              freiwillige Einwilligung erteilen, geben wir Ihre Kontaktdaten und Ihre Antworten aus dem Financial Fitness Check
+              an die Woltering-Sonntag &amp; Holt Versicherungsvermittlungs GmbH, Schorlemerstraße 7, 48683 Ahaus, weiter, damit
+              diese Sie für ein unverbindliches Beratungsangebot kontaktieren darf. Ohne diese Einwilligung erfolgt weder eine
+              Weitergabe noch eine Kontaktaufnahme durch den Partner. Die Einwilligung ist keine Voraussetzung für die Teilnahme
+              an der Challenge. Rechtsgrundlage: Art. 6 Abs. 1 lit. a DSGVO.
+            </p>
+            <p>
+              Datenschutzhinweis des Partners:{" "}
+              <a
+                href="https://www.continentale.de/documents/2094631/0/Agentur%2BDatenschutzhinweis.pdf"
+                target="_blank"
+                rel="noreferrer"
+                className="text-gold hover:underline"
+              >
+                Agentur-Datenschutzhinweis (PDF)
+              </a>
+            </p>
+            <p>
+              <strong>Widerruf:</strong> Sie können erteilte Einwilligungen jederzeit mit Wirkung für die Zukunft widerrufen,
+              formlos per E-Mail an{" "}
+              <a href="mailto:info@bodyfuel-coaching.com" className="text-gold hover:underline">info@bodyfuel-coaching.com</a>.
+            </p>
+            <p>
+              <strong>Speicherdauer:</strong> Bewerbungsdaten werden bis zum Abschluss der Challenge und anschließend maximal
+              sechs Monate gespeichert, sofern keine gesetzlichen Aufbewahrungspflichten entgegenstehen oder Sie vorher
+              widerrufen.
+            </p>
+          </Section>
+
+          <Section title="10. Speicherdauer">
             <p>Personenbezogene Daten werden nur so lange gespeichert, wie dies zur Erfüllung der jeweiligen Zwecke erforderlich ist oder gesetzliche Aufbewahrungspflichten bestehen.</p>
           </Section>
 
-          <Section title="10. Weitergabe von Daten">
+          <Section title="11. Weitergabe von Daten">
             <p>Eine Weitergabe personenbezogener Daten erfolgt nur, wenn dies gesetzlich vorgeschrieben ist, zur Vertragserfüllung erforderlich ist oder eine ausdrückliche Einwilligung vorliegt.</p>
           </Section>
 
-          <Section title="11. Rechte der betroffenen Personen">
+          <Section title="12. Rechte der betroffenen Personen">
             <p>Sie haben das Recht auf:</p>
             <ul className="ml-5 list-disc space-y-1">
               <li>Auskunft gemäß Art. 15 DSGVO</li>
@@ -100,17 +140,18 @@ function DatenschutzPage() {
             </ul>
           </Section>
 
-          <Section title="12. Beschwerderecht">
+          <Section title="13. Beschwerderecht">
             <p>Sie haben das Recht, sich bei einer Datenschutzaufsichtsbehörde zu beschweren.</p>
           </Section>
 
-          <Section title="13. Datensicherheit">
+          <Section title="14. Datensicherheit">
             <p>Wir setzen technische und organisatorische Sicherheitsmaßnahmen ein, um Ihre Daten gegen Verlust, Manipulation oder unbefugten Zugriff zu schützen.</p>
           </Section>
 
-          <Section title="14. Änderungen dieser Datenschutzerklärung">
+          <Section title="15. Änderungen dieser Datenschutzerklärung">
             <p>Wir behalten uns vor, diese Datenschutzerklärung anzupassen, damit sie stets den aktuellen rechtlichen Anforderungen entspricht.</p>
           </Section>
+
         </div>
       </div>
     </main>

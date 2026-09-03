@@ -56,7 +56,7 @@ const coachNav = [
   { to: "/coach/customers", label: "Kunden", icon: Users },
   { to: "/coach/teams", label: "Teams", icon: Users2 },
   { to: "/coach/leads", label: "Anfragen", icon: Inbox },
-  { to: "/coach/continental-challenge", label: "Continental Challenge", icon: Flag },
+  { to: "/coach/continental-challenge", label: "Continentale Challenge", icon: Flag },
   { to: "/coach/reviews", label: "Bewertungen", icon: Trophy },
 ];
 

@@ -15,15 +15,20 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  ACTIVITY_LEVEL_LABELS,
+  BLOCKER_LABELS,
   CONTINENTAL_MAX_APPROVED,
   GOAL_TYPE_LABELS,
+  INSURANCE_PRIORITY_LABELS,
+  INSURANCE_REVIEW_LABELS,
+  INSURANCE_TOPIC_LABELS,
   listContinentalApplications,
   reviewContinentalApplication,
   updateContinentalApplicationNotes,
 } from "@/lib/continental-challenge.functions";
 
 export const Route = createFileRoute("/coach/continental-challenge")({
-  head: () => ({ meta: [{ title: "Continental Bewerbungen — BODYFUEL" }] }),
+  head: () => ({ meta: [{ title: "Continentale Bewerbungen — BODYFUEL" }] }),
   component: () => (
     <AppLayout>
       <ContinentalApplicationsPage />
@@ -38,9 +43,20 @@ type ApplicationRow = {
   email: string;
   phone: string;
   age: number | null;
+  birth_year: number | null;
+  city: string | null;
   goal_type: string | null;
+  goal_other: string | null;
   goal_text: string;
+  activity_level: string | null;
   motivation: string;
+  blockers: string[] | null;
+  blocker_other: string | null;
+  insurance_last_review: string | null;
+  insurance_topics: string[] | null;
+  insurance_priorities: string[] | null;
+  insurance_notes: string | null;
+  financial_contact_consent: boolean | null;
   status: string;
   reviewed_at: string | null;
   internal_notes: string | null;
@@ -50,6 +66,7 @@ type ApplicationRow = {
   performance_invite_status: string | null;
   performance_invite_path: string | null;
 };
+
 
 const STATUS_META: Record<string, { label: string; className: string }> = {
   pending: { label: "Offen", className: "bg-amber-500/15 text-amber-400" },
@@ -150,7 +167,7 @@ function ContinentalApplicationsPage() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Coach</p>
-          <h1 className="font-display text-3xl font-bold">Continental Bewerbungen</h1>
+          <h1 className="font-display text-3xl font-bold">Continentale Bewerbungen</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Bewerbungen für die 30-Tage-Challenge prüfen und in die Performance-Organisation freigeben.
             Maximal {CONTINENTAL_MAX_APPROVED} Plätze.
@@ -166,7 +183,7 @@ function ContinentalApplicationsPage() {
       </div>
 
       <div className="rounded-xl border border-border bg-card p-4 text-sm">
-        <div className="font-semibold">Continental läuft über BodyFuel Performance</div>
+        <div className="font-semibold">Continentale läuft über BodyFuel Performance</div>
         <p className="mt-1 text-muted-foreground">
           Freigegebene Personen erhalten eine persönliche Athleten-Einladung. Erst nach Annahme werden
           sie Mitglied der Organisation und erhalten über die aktivierten Organisationsmodule BodyFuel Smart.
@@ -320,19 +337,80 @@ function ContinentalApplicationsPage() {
                       {selected.phone}
                     </a>
                   </DetailItem>
-                  <DetailItem label="Alter">{selected.age ? `${selected.age} Jahre` : "—"}</DetailItem>
+                  <DetailItem label="Geburtsjahr / Alter">
+                    {selected.birth_year
+                      ? `${selected.birth_year}${selected.age ? ` · ${selected.age} Jahre` : ""}`
+                      : selected.age
+                        ? `${selected.age} Jahre`
+                        : "—"}
+                  </DetailItem>
+                  <DetailItem label="Wohnort">{selected.city || "—"}</DetailItem>
                   <DetailItem label="Hauptziel">
                     {selected.goal_type ? GOAL_TYPE_LABELS[selected.goal_type] ?? selected.goal_type : "—"}
+                    {selected.goal_other ? ` — ${selected.goal_other}` : ""}
+                  </DetailItem>
+                  <DetailItem label="Aktuelle Aktivität">
+                    {selected.activity_level
+                      ? ACTIVITY_LEVEL_LABELS[selected.activity_level] ?? selected.activity_level
+                      : "—"}
                   </DetailItem>
                 </div>
 
-                <DetailItem label="Was möchtest du in den 30 Tagen erreichen?">
+                <DetailItem label="Ziel der 30 Tage">
                   <p className="whitespace-pre-wrap rounded-lg bg-secondary/40 p-3">{selected.goal_text}</p>
                 </DetailItem>
 
-                <DetailItem label="Warum möchtest du bei der Challenge dabei sein?">
+                <DetailItem label="Warum möchtest du teilnehmen?">
                   <p className="whitespace-pre-wrap rounded-lg bg-secondary/40 p-3">{selected.motivation}</p>
                 </DetailItem>
+
+                <DetailItem label="Bisherige Hindernisse">
+                  <ChipList
+                    values={selected.blockers}
+                    labels={BLOCKER_LABELS}
+                    extra={selected.blocker_other}
+                  />
+                </DetailItem>
+
+                <div className="rounded-xl border border-border p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="font-semibold">Financial Fitness Check</div>
+                    <span
+                      className={`rounded-full px-3 py-1 text-[11px] font-bold uppercase ${
+                        selected.financial_contact_consent
+                          ? "bg-gold/15 text-gold"
+                          : "bg-secondary text-muted-foreground"
+                      }`}
+                    >
+                      {selected.financial_contact_consent
+                        ? "Kontaktaufnahme durch Partner erlaubt"
+                        : "Keine Weitergabe an Partner"}
+                    </span>
+                  </div>
+                  <div className="mt-3 space-y-3">
+                    <DetailItem label="Letzter Versicherungs-Check">
+                      {selected.insurance_last_review
+                        ? INSURANCE_REVIEW_LABELS[selected.insurance_last_review] ?? selected.insurance_last_review
+                        : "—"}
+                    </DetailItem>
+                    <DetailItem label="Interessante Themen">
+                      <ChipList values={selected.insurance_topics} labels={INSURANCE_TOPIC_LABELS} />
+                    </DetailItem>
+                    <DetailItem label="Prioritäten">
+                      <ChipList values={selected.insurance_priorities} labels={INSURANCE_PRIORITY_LABELS} />
+                    </DetailItem>
+                    <DetailItem label="Anmerkung">
+                      {selected.insurance_notes ? (
+                        <p className="whitespace-pre-wrap rounded-lg bg-secondary/40 p-3">
+                          {selected.insurance_notes}
+                        </p>
+                      ) : (
+                        "—"
+                      )}
+                    </DetailItem>
+                  </div>
+                </div>
+
 
                 <DetailItem label="Status">
                   <span
@@ -456,6 +534,29 @@ function DetailItem({ label, children }: { label: string; children: React.ReactN
     <div>
       <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
       <div className="mt-1">{children}</div>
+    </div>
+  );
+}
+
+function ChipList({
+  values,
+  labels,
+  extra,
+}: {
+  values: string[] | null;
+  labels: Record<string, string>;
+  extra?: string | null;
+}) {
+  const items = (values ?? []).map((v) => labels[v] ?? v);
+  if (extra) items.push(extra);
+  if (items.length === 0) return <span className="text-muted-foreground">—</span>;
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {items.map((item) => (
+        <span key={item} className="rounded-full bg-secondary px-2.5 py-1 text-xs">
+          {item}
+        </span>
+      ))}
     </div>
   );
 }
