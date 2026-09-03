@@ -113,7 +113,7 @@ function ContinentalChallengePage() {
 function PartnerLogoCard({ className = "" }: { className?: string }) {
   return (
     <div
-      className={`grid place-items-center rounded-2xl border border-white/15 bg-white p-3 shadow-[0_10px_40px_-12px_rgba(0,0,0,0.8)] sm:p-4 ${className}`}
+      className={`grid place-items-center rounded-2xl border border-white/15 bg-white px-2 py-1.5 shadow-[0_10px_40px_-12px_rgba(0,0,0,0.8)] sm:px-3 sm:py-2 ${className}`}
     >
       <img
         src={PARTNER_LOGO}
