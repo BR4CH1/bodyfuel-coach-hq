@@ -457,7 +457,7 @@ export const submitContinentalApplication = createServerFn({ method: "POST" })
       if (isCoachPushConfigured()) {
         await notifyEnabledCoaches({
           title: "Neue Challenge-Bewerbung",
-          body: `${firstName} ${lastName} hat sich für die Continental Challenge beworben.`,
+          body: `${firstName} ${lastName} hat sich für die Continentale Challenge beworben.`,
           url: "/coach/continental-challenge",
           tag: `continental-application-${Date.now()}`,
         });
