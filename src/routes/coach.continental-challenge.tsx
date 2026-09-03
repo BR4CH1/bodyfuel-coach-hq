@@ -15,15 +15,20 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  ACTIVITY_LEVEL_LABELS,
+  BLOCKER_LABELS,
   CONTINENTAL_MAX_APPROVED,
   GOAL_TYPE_LABELS,
+  INSURANCE_PRIORITY_LABELS,
+  INSURANCE_REVIEW_LABELS,
+  INSURANCE_TOPIC_LABELS,
   listContinentalApplications,
   reviewContinentalApplication,
   updateContinentalApplicationNotes,
 } from "@/lib/continental-challenge.functions";
 
 export const Route = createFileRoute("/coach/continental-challenge")({
-  head: () => ({ meta: [{ title: "Continental Bewerbungen — BODYFUEL" }] }),
+  head: () => ({ meta: [{ title: "Continentale Bewerbungen — BODYFUEL" }] }),
   component: () => (
     <AppLayout>
       <ContinentalApplicationsPage />
@@ -38,9 +43,20 @@ type ApplicationRow = {
   email: string;
   phone: string;
   age: number | null;
+  birth_year: number | null;
+  city: string | null;
   goal_type: string | null;
+  goal_other: string | null;
   goal_text: string;
+  activity_level: string | null;
   motivation: string;
+  blockers: string[] | null;
+  blocker_other: string | null;
+  insurance_last_review: string | null;
+  insurance_topics: string[] | null;
+  insurance_priorities: string[] | null;
+  insurance_notes: string | null;
+  financial_contact_consent: boolean | null;
   status: string;
   reviewed_at: string | null;
   internal_notes: string | null;
@@ -50,6 +66,7 @@ type ApplicationRow = {
   performance_invite_status: string | null;
   performance_invite_path: string | null;
 };
+
 
 const STATUS_META: Record<string, { label: string; className: string }> = {
   pending: { label: "Offen", className: "bg-amber-500/15 text-amber-400" },
