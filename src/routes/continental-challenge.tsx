@@ -1095,7 +1095,7 @@ function ChallengeFooter() {
 
         <p className="max-w-2xl text-xs leading-6 text-white/45">
           Kooperationspartner: {PARTNER_NAME}, Schorlemerstraße 7, 48683 Ahaus ·{" "}
-          <a href="tel:+492561 93480" className="hover:text-white/70">
+          <a href="tel:+49256193480" className="hover:text-white/70">
             02561 93480
           </a>
         </p>
