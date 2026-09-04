@@ -126,3 +126,9 @@ cd <repository-name>
 npm i
 npm run dev
 ```
+
+## BodyFuel Native
+
+Die eigenständige iPhone- und Apple-Watch-App liegt in [`apps/native`](apps/native). Sie ist bewusst vom bestehenden Web-Produkt getrennt und verwendet EAS für signierte iOS-/watchOS-Cloud-Builds ohne lokalen Mac.
+
+Setup, Architektur und TestFlight-Ablauf stehen in [`apps/native/README.md`](apps/native/README.md).
