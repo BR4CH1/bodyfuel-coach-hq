@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>NSHealthShareUsageDescription</key>
+    <string>BodyFuel liest Herzfrequenz, Distanz und aktive Energie, um deinen Lauf live anzuzeigen.</string>
+    <key>NSHealthUpdateUsageDescription</key>
+    <string>BodyFuel speichert abgeschlossene Läufe als Training in Apple Health.</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>BodyFuel benötigt deinen Standort, um Strecke und Tempo während des Laufs aufzuzeichnen.</string>
+    <key>WKBackgroundModes</key>
+    <array>
+      <string>workout-processing</string>
+    </array>
+    <key>WKCompanionAppBundleIdentifier</key>
+    <string>app.bodyfuel.mobile</string>
+  </dict>
+</plist>

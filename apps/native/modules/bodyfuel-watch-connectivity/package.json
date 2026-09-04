@@ -1,0 +1,11 @@
+{
+  "name": "bodyfuel-watch-connectivity",
+  "version": "0.1.0",
+  "description": "BodyFuel Apple Watch workout inbox for the iOS app.",
+  "main": "index.ts",
+  "license": "UNLICENSED",
+  "private": true,
+  "peerDependencies": {
+    "expo": "*"
+  }
+}
