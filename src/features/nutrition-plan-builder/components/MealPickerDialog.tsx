@@ -213,7 +213,7 @@ export function MealPickerDialog({
                     <Sparkles className="mr-1 h-3 w-3" />
                     Empfohlen
                   </Button>
-                  {requestedDishes.length > 0 && (
+                  {requestedMeals.length > 0 && (
                     <Button
                       type="button"
                       size="sm"
