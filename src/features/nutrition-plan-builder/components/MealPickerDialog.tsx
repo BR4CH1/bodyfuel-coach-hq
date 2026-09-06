@@ -72,9 +72,9 @@ export function MealPickerDialog({
   const [mode, setMode] = useState<PickerMode>("recommended");
   const [tab, setTab] = useState<PickerTab>("meals");
 
-  const customerPreferences = useMemo(
-    () => Array.from(new Set((ctx.favoriteFoods ?? []).map(normalizePreference).filter(Boolean))),
-    [ctx.favoriteFoods],
+  const requestedDishes = useMemo(
+    () => Array.from(new Set((ctx.requestedDishes ?? []).map(normalizePreference).filter(Boolean))),
+    [ctx.requestedDishes],
   );
 
   const scored = useMemo(
