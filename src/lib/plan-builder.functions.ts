@@ -103,6 +103,12 @@ export type CustomerPlanContext = {
     fat_rest: number;
   };
   favoriteFoods: string[];
+  /**
+   * Explizite Kundenwünsche (z. B. aus `extra_favorites`). Werden in der UI
+   * separat von allgemeinen Favoriten gelabelt, beeinflussen aber nicht das
+   * bestehende Scoring zusätzlich.
+   */
+  requestedDishes?: string[];
   noGoFoods: string[];
   allergies: string[];
   intolerances: string[];
@@ -198,6 +204,7 @@ export const getCustomerPlanContext = createServerFn({ method: "POST" })
         fat_rest: Number(tgt?.fat_g_rest ?? tgt?.fat_g ?? 0),
       },
       favoriteFoods: merge(prof?.favorite_foods, prof?.extra_favorites),
+      requestedDishes: toList(prof?.extra_favorites),
       noGoFoods: merge(prof?.nogo_foods, prof?.extra_nogos),
       allergies: merge(prof?.allergies, prof?.extra_allergies),
       intolerances: merge(prof?.intolerances),

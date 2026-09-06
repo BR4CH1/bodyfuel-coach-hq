@@ -72,9 +72,9 @@ export function MealPickerDialog({
   const [mode, setMode] = useState<PickerMode>("recommended");
   const [tab, setTab] = useState<PickerTab>("meals");
 
-  const customerPreferences = useMemo(
-    () => Array.from(new Set((ctx.favoriteFoods ?? []).map(normalizePreference).filter(Boolean))),
-    [ctx.favoriteFoods],
+  const requestedDishes = useMemo(
+    () => Array.from(new Set((ctx.requestedDishes ?? []).map(normalizePreference).filter(Boolean))),
+    [ctx.requestedDishes],
   );
 
   const scored = useMemo(
@@ -104,12 +104,12 @@ export function MealPickerDialog({
     const normalizedQuery = query.trim().toLowerCase();
     return scored.filter(({ meal, score }) => {
       if (mode === "recommended" && score < 30) return false;
-      if (mode === "wishes" && !customerPreferenceMatchesMeal(meal, customerPreferences)) return false;
+      if (mode === "wishes" && !customerPreferenceMatchesMeal(meal, requestedDishes)) return false;
       if (mode === "soulfood" && !isSoulfoodMeal(meal)) return false;
       if (!normalizedQuery) return true;
       return matchesMealQuery(meal, normalizedQuery);
     });
-  }, [customerPreferences, mode, query, scored]);
+  }, [requestedDishes, mode, query, scored]);
 
   const emptyHint =
     mode === "wishes"
@@ -173,14 +173,14 @@ export function MealPickerDialog({
         ) : (
           <>
             <div className="space-y-3 border-b border-border bg-muted/20 px-5 py-3">
-              {customerPreferences.length > 0 && (
+              {requestedDishes.length > 0 && (
                 <div className="rounded-lg border border-rose-500/20 bg-rose-500/5 px-3 py-2">
                   <div className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-foreground">
                     <Heart className="h-3.5 w-3.5 text-rose-500" />
-                    Kundenwünsche & Lieblingsgerichte
+                    Wunschgerichte des Kunden
                   </div>
                   <div className="flex flex-wrap gap-1">
-                    {customerPreferences.map((preference) => (
+                    {requestedDishes.map((preference) => (
                       <span
                         key={preference}
                         className="rounded-full border border-rose-500/20 bg-background px-2 py-0.5 text-[10px] text-muted-foreground"
@@ -213,7 +213,7 @@ export function MealPickerDialog({
                     <Sparkles className="mr-1 h-3 w-3" />
                     Empfohlen
                   </Button>
-                  {customerPreferences.length > 0 && (
+                  {requestedDishes.length > 0 && (
                     <Button
                       type="button"
                       size="sm"
@@ -261,7 +261,7 @@ export function MealPickerDialog({
               )}
 
               {visibleMeals.map(({ meal, label, score, reasons }, index) => {
-                const matchesCustomerPreference = customerPreferenceMatchesMeal(meal, customerPreferences);
+                const matchesCustomerWish = customerPreferenceMatchesMeal(meal, requestedDishes);
                 const soulfood = isSoulfoodMeal(meal);
                 return (
                   <button
@@ -307,7 +307,7 @@ export function MealPickerDialog({
                         </Badge>
                       </div>
                       <div className="mt-2 flex flex-wrap gap-1">
-                        {matchesCustomerPreference && (
+                        {matchesCustomerWish && (
                           <span className="rounded-full bg-rose-500/10 px-2 py-0.5 text-[10px] font-medium text-rose-600">
                             Kundenwunsch
                           </span>
