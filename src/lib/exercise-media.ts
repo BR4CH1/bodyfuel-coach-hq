@@ -84,11 +84,16 @@ export function hasExerciseMedia(media: ExerciseMedia): boolean {
   return !!(media.thumbnailUrl || media.animationUrl);
 }
 
-/** Nur wenn eine echte Animation/Video hinterlegt ist, zeigen wir das Badge. */
+/**
+ * Nur wenn eine echte Animation/Video hinterlegt ist, zeigen wir das Badge.
+ * Animierte WebPs bleiben absichtlich `image`: der Browser spielt sie im
+ * bestehenden <img>-Pfad ab, während `animation_url` die Semantik liefert.
+ */
 export function hasExerciseAnimation(media: ExerciseMedia): boolean {
   if (!media.animationUrl) return false;
   const kind = resolveMediaKind(media.animationUrl, media.mediaType);
-  return kind === "video" || kind === "gif";
+  if (kind === "video" || kind === "gif") return true;
+  return kind === "image" && pathOf(media.animationUrl).endsWith(".webp");
 }
 
 /** Bildquelle für die Listenvorschau — nie ein Video. */
