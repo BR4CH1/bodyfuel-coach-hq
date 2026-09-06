@@ -261,7 +261,7 @@ export function MealPickerDialog({
               )}
 
               {visibleMeals.map(({ meal, label, score, reasons }, index) => {
-                const matchesCustomerPreference = customerPreferenceMatchesMeal(meal, customerPreferences);
+                const matchesCustomerWish = customerPreferenceMatchesMeal(meal, requestedDishes);
                 const soulfood = isSoulfoodMeal(meal);
                 return (
                   <button
