@@ -80,6 +80,7 @@ function ctxOf(over: Partial<CustomerPlanContext> = {}): CustomerPlanContext {
       fat_rest: 70,
     },
     favoriteFoods: [],
+    requestedMeals: [],
     noGoFoods: [],
     allergies: [],
     intolerances: [],

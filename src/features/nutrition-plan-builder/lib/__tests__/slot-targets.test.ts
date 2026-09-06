@@ -22,6 +22,7 @@ const ctx: CustomerPlanContext = {
     fat_rest: 70,
   },
   favoriteFoods: [],
+  requestedMeals: [],
   noGoFoods: [],
   allergies: [],
   intolerances: [],

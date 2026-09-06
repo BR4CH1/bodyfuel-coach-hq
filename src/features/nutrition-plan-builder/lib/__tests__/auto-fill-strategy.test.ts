@@ -18,6 +18,7 @@ const baseContext: CustomerPlanContext = {
     fat_rest: 60,
   },
   favoriteFoods: [],
+  requestedMeals: [],
   noGoFoods: [],
   allergies: [],
   intolerances: [],

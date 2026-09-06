@@ -26,6 +26,7 @@ const context: CustomerPlanContext = {
     fat_rest: 80,
   },
   favoriteFoods: [],
+  requestedMeals: [],
   noGoFoods: [],
   allergies: [],
   intolerances: [],
