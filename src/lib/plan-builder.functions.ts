@@ -103,6 +103,12 @@ export type CustomerPlanContext = {
     fat_rest: number;
   };
   favoriteFoods: string[];
+  /**
+   * Explizite Kundenwünsche (z. B. aus `extra_favorites`). Werden in der UI
+   * separat von allgemeinen Favoriten gelabelt, beeinflussen aber nicht das
+   * bestehende Scoring zusätzlich.
+   */
+  requestedDishes?: string[];
   noGoFoods: string[];
   allergies: string[];
   intolerances: string[];
