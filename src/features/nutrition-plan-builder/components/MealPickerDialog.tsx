@@ -104,12 +104,12 @@ export function MealPickerDialog({
     const normalizedQuery = query.trim().toLowerCase();
     return scored.filter(({ meal, score }) => {
       if (mode === "recommended" && score < 30) return false;
-      if (mode === "wishes" && !customerPreferenceMatchesMeal(meal, requestedDishes)) return false;
+      if (mode === "wishes" && !customerPreferenceMatchesMeal(meal, requestedMeals)) return false;
       if (mode === "soulfood" && !isSoulfoodMeal(meal)) return false;
       if (!normalizedQuery) return true;
       return matchesMealQuery(meal, normalizedQuery);
     });
-  }, [requestedDishes, mode, query, scored]);
+  }, [requestedMeals, mode, query, scored]);
 
   const emptyHint =
     mode === "wishes"
