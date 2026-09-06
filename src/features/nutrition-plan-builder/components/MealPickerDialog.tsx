@@ -307,7 +307,7 @@ export function MealPickerDialog({
                         </Badge>
                       </div>
                       <div className="mt-2 flex flex-wrap gap-1">
-                        {matchesCustomerPreference && (
+                        {matchesCustomerWish && (
                           <span className="rounded-full bg-rose-500/10 px-2 py-0.5 text-[10px] font-medium text-rose-600">
                             Kundenwunsch
                           </span>
