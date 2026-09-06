@@ -108,7 +108,7 @@ export type CustomerPlanContext = {
    * separat von allgemeinen Favoriten gelabelt, beeinflussen aber nicht das
    * bestehende Scoring zusätzlich.
    */
-  requestedDishes?: string[];
+  requestedMeals: string[];
   noGoFoods: string[];
   allergies: string[];
   intolerances: string[];
