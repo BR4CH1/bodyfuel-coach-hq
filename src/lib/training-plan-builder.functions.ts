@@ -339,7 +339,10 @@ export async function persistTrainingPlan(data: {
   // itself is never shifted.
   const weekAnchor = new Date(start);
   weekAnchor.setUTCDate(weekAnchor.getUTCDate() - ((start.getUTCDay() + 6) % 7));
-  const end = new Date(start);
+  // Die generierten training_days laufen von weekAnchor bis weekAnchor + weeks*7-1.
+  // Das Planfenster muss denselben Zeitraum abdecken, sonst fehlen bei einem
+  // Start mitten in der Woche am Ende Tage ohne day_date.
+  const end = new Date(weekAnchor);
   end.setUTCDate(end.getUTCDate() + data.weeksCount * 7 - 1);
 
   type PreviousPlanState = {

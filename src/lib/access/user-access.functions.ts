@@ -57,7 +57,11 @@ export type UserAccess = {
   homeRoute: string;
 };
 
-async function loadAccess(supabase: any, userId: string): Promise<UserAccess> {
+async function loadAccess(
+  supabase: any,
+  userId: string,
+  email: string | null = null,
+): Promise<UserAccess> {
   const [
     profileRes,
     pkgRes,
@@ -69,7 +73,7 @@ async function loadAccess(supabase: any, userId: string): Promise<UserAccess> {
     teamRes,
     measurementRes,
   ] = await Promise.all([
-    supabase.from("profiles").select("id, display_name, email").eq("id", userId).maybeSingle(),
+    supabase.from("profiles").select("id, display_name").eq("id", userId).maybeSingle(),
     supabase
       .from("customer_packages")
       .select("package, status, is_active")
@@ -198,7 +202,7 @@ async function loadAccess(supabase: any, userId: string): Promise<UserAccess> {
 
   return {
     userId,
-    email: profileRes.data?.email ?? null,
+    email,
     displayName: profileRes.data?.display_name ?? null,
     personalBodyfuelAccess,
     smartAccess,
@@ -216,7 +220,11 @@ async function loadAccess(supabase: any, userId: string): Promise<UserAccess> {
 export const resolveMyAccess = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    return loadAccess(context.supabase, context.userId);
+    return loadAccess(
+      context.supabase,
+      context.userId,
+      ((context.claims as { email?: string } | undefined)?.email ?? null) as string | null,
+    );
   });
 
 /** Coach/Admin-Resolver für einen anderen User (Debug-View). */

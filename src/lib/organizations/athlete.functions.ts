@@ -690,15 +690,17 @@ export const getOrgCoachDetail = createServerFn({ method: "GET" })
     if (memberIds.length) {
       const { data } = await supabase
         .from("profiles")
-        .select("id, display_name, email")
+        .select("id, display_name")
         .in("id", memberIds);
       profiles = data ?? [];
     }
+    const { loadUserEmails } = await import("./user-emails.server");
+    const emailMap = await loadUserEmails(memberIds);
     const nameMap = new Map<string, { name: string; email: string | null }>();
     for (const p of profiles) {
       nameMap.set(p.id, {
         name: [p.display_name].filter(Boolean).join(" ") || "Athlet",
-        email: p.email ?? null,
+        email: emailMap.get(p.id) ?? null,
       });
     }
 
