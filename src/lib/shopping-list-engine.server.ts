@@ -688,7 +688,7 @@ function normalizeIngredientName(name: string) {
     .replace(/\([^)]*\)/g, " ")
     .replace(/[‐‑‒–—]/g, "-")
     .replace(
-      /\b(ungekocht|gekocht(?:e[rsn]?)?|gegart(?:e[rsn]?)?|gebraten(?:e[rsn]?)?|gedünstet(?:e[rsn]?)?|geduenstet(?:e[rsn]?)?|gegrillt(?:e[rsn]?)?|roh(?:e[rsn]?)?|trocken(?:e[rsn]?)?|frisch(?:e[rsn]?)?|tiefgekühlt|tiefgekuehlt|tk|light|fettarm|zuckerarm|mager(?:e[rsn]?)?|natur|pur|optional|gewürfelt|gewuerfelt|geschnitten|gerieben)\b/gi,
+      /\b(ungekocht|gekocht(?:e[rsn]?)?|gegart(?:e[rsn]?)?|gebraten(?:e[rsn]?)?|gedünstet(?:e[rsn]?)?|geduenstet(?:e[rsn]?)?|gegrillt(?:e[rsn]?)?|roh(?:e[rsn]?)?|optional|gewürfelt|gewuerfelt|geschnitten)\b/gi,
       " ",
     )
     .replace(/\b(gehackt)\b/gi, " ")
@@ -698,6 +698,46 @@ function normalizeIngredientName(name: string) {
     .replace(/:\s*$/g, "")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+const PURCHASE_SPECIFICITY_RE =
+  /\b(light|fettarm|zuckerarm|natur|tiefgekühlt|tiefgekuehlt|tk|gerieben|gouda|emmentaler|edamer|cheddar|hüttenkäse|huettenkaese|frischkäse|frischkaese|feta|mozzarella|parmesan|rinderhack|putenhack|hähnchenhack|haehnchenhack|basmati|jasmin|vollkornreis|vollkornnudeln|spaghetti|penne|fusilli|mandeln?|walnuss|walnüsse|walnuesse|cashews?|erdnuss|erdnüsse|erdnuesse|pistazien?|haselnuss|haselnüsse|haselnuesse|pekan|macadamia|chia|chiasamen|leinsamen|sesam|sonnenblumenkerne|kürbiskerne|kuerbiskerne|heidelbeeren|erdbeeren|himbeeren|petersilie|schnittlauch|basilikum|koriander|dill|feldsalat|rucola|eisbergsalat|romanasalat)\b/i;
+
+/**
+ * Purchase-relevant variants must survive canonicalization. A shopping list is
+ * supermarket-facing: "Mozzarella Light" and "Feta" are two products, not
+ * "Käse"; "Rinderhack" must never become "Putenhack". Only truly identical
+ * product names are grouped and summed.
+ */
+function exactPurchaseRule(name: string): IngredientRule | null {
+  const lower = name.toLowerCase().replace(/\s+/g, " ").trim();
+  const hasPercentQualifier = /\d+(?:[,.]\d+)?\s*%/.test(lower);
+  if (!PURCHASE_SPECIFICITY_RE.test(lower) && !hasPercentQualifier) return null;
+
+  const rule: IngredientRule = {
+    key: lower,
+    display: titleCase(name),
+    category: categoryFor(name),
+  };
+
+  if (/\b(basmati|jasmin|vollkornreis)\b/i.test(lower)) rule.cookedToRawFactor = 0.35;
+  if (/\b(vollkornnudeln|spaghetti|penne|fusilli)\b/i.test(lower)) rule.cookedToRawFactor = 0.45;
+  if (/\b(petersilie|schnittlauch|basilikum|koriander|dill)\b/i.test(lower)) {
+    rule.preferredUnit = "Bund";
+  }
+  if (/\b(feta|gouda|emmentaler|edamer|cheddar|hüttenkäse|huettenkaese|frischkäse|frischkaese)\b/i.test(lower)) {
+    rule.tablespoonGram = 10;
+    rule.teaspoonGram = 4;
+  }
+  if (/\b(parmesan)\b/i.test(lower)) {
+    rule.tablespoonGram = 8;
+    rule.teaspoonGram = 3;
+  }
+  if (/\b(mandeln?|walnuss|walnüsse|walnuesse|cashews?|erdnuss|erdnüsse|erdnuesse|pistazien?|haselnuss|haselnüsse|haselnuesse|pekan|macadamia|chia|chiasamen|leinsamen|sesam|sonnenblumenkerne|kürbiskerne|kuerbiskerne)\b/i.test(lower)) {
+    rule.tablespoonGram = 10;
+    rule.teaspoonGram = 4;
+  }
+  return rule;
 }
 
 function canonicalize(rawName: string): IngredientRule | null {
@@ -712,6 +752,8 @@ function canonicalize(rawName: string): IngredientRule | null {
     return null;
   n = n.replace(/\s*-\s*/g, "-").trim();
   const lower = n.toLowerCase();
+  const exactRule = exactPurchaseRule(n);
+  if (exactRule) return exactRule;
   for (const [re, rule] of INGREDIENT_RULES) {
     if (re.test(lower)) return rule;
   }
@@ -954,22 +996,22 @@ function categoryFor(name: string) {
   const n = name.toLowerCase();
   if (/hähnchen|pute|rind|hack|filet|fisch|lachs|thunfisch|garnelen/.test(n))
     return "Fleisch & Fisch";
-  if (/skyr|quark|joghurt|käse|feta|mozzarella|parmesan|proteinpudding|eier?|milch/.test(n))
+  if (/skyr|quark|joghurt|käse|feta|mozzarella|parmesan|proteinpudding|eier?|milch|gouda|emmentaler|edamer|cheddar/.test(n))
     return "Eier & Milchprodukte";
   if (
-    /reis|nudel|couscous|quinoa|brot|tortilla|wrap|hafer|müsli|reiswaffel|linsen|kichererbsen|bohnen/.test(
+    /reis|nudel|couscous|quinoa|brot|tortilla|wrap|hafer|müsli|reiswaffel|linsen|kichererbsen|bohnen|spaghetti|penne|fusilli/.test(
       n,
     )
   )
     return "Getreide & Beilagen";
   if (
-    /salz|pfeffer|zimt|paprikapulver|öl|butter|nuss|nüss|mandel|cashew|walnuss|erdnuss|kern|samen|honig|sirup|pesto|senf|ketchup/.test(
+    /salz|pfeffer|zimt|paprikapulver|öl|butter|nuss|nüss|mandel|cashew|walnuss|erdnuss|pistaz|haselnuss|pekan|macadamia|kern|samen|chia|sesam|honig|sirup|pesto|senf|ketchup/.test(
       n,
     )
   )
     return "Vorrat & Gewürze";
   if (
-    /salat|gemüse|brokkoli|karotte|paprika|spargel|beeren|erdbeer|banane|apfel|äpfel|tomate|zucchini|gurke|spinat|erbse|kartoffel|zwiebel|knoblauch|avocado|aubergine|kräuter|petersilie/.test(
+    /salat|gemüse|brokkoli|karotte|paprika|spargel|beeren|erdbeer|banane|apfel|äpfel|tomate|zucchini|gurke|spinat|erbse|kartoffel|zwiebel|knoblauch|avocado|aubergine|kräuter|petersilie|schnittlauch|basilikum|koriander|dill|rucola/.test(
       n,
     )
   )
@@ -1181,6 +1223,9 @@ export async function generateShoppingListForPlan(opts: {
 
 WICHTIG — Mengen sauber zusammenfassen:
 - Identische Zutaten in EINER Zeile mit summierter Menge (nie 3× "250 g Hähnchen", sondern "750 g Hähnchen").
+- NUR wirklich identische Produkte zusammenfassen. Unterschiedliche Sorten/Varianten müssen getrennt bleiben.
+- KEINE Sammelbegriffe als Einkaufsposition: nicht nur "Käse", "Gemüse", "Obst", "Fleisch", "Nüsse", "Beeren", "Salat" oder "Kräuter". Nenne das konkret einzukaufende Produkt.
+- Kaufrelevante Angaben erhalten: z. B. "Gouda Light gerieben", "Mozzarella Light", "Feta", "Rinderhack 5 %", "Putenhack", "Basmati-Reis", "Vollkornnudeln", "Mandeln", "Walnüsse", "TK-Heidelbeeren".
 - Einheiten vereinheitlichen (g, kg, ml, l, Stück).
 - Kategorien: Obst & Gemüse, Fleisch & Fisch, Eier & Milchprodukte, Getreide & Beilagen, Vorrat & Gewürze, Getränke, Sonstiges.
 
@@ -1238,7 +1283,9 @@ export async function generateCombinedShoppingList(opts: {
   const prompt = `Du bist Ernährungsassistent. Erstelle aus den folgenden Mahlzeiten ZWEIER Partner eine EINZIGE gemeinsame Einkaufsliste für ${windowDays} Tage.
 
 WICHTIG:
-- Identische/ähnliche Zutaten beider Personen IN EINER Zeile zusammenfassen und Mengen ADDIEREN (z. B. 500 g + 900 g Hähnchen = 1.4 kg Hähnchenbrust).
+- NUR wirklich identische Produkte beider Personen IN EINER Zeile zusammenfassen und Mengen ADDIEREN. Unterschiedliche Sorten/Varianten bleiben getrennte Einkaufspositionen.
+- KEINE Sammelbegriffe als Einkaufsposition: nicht nur "Käse", "Gemüse", "Obst", "Fleisch", "Nüsse", "Beeren", "Salat" oder "Kräuter". Nenne das konkret einzukaufende Produkt.
+- Kaufrelevante Angaben erhalten: z. B. "Gouda Light gerieben", "Mozzarella Light", "Feta", "Rinderhack 5 %", "Putenhack", "Basmati-Reis", "Vollkornnudeln", "Mandeln", "Walnüsse", "TK-Heidelbeeren".
 - Gemeinsame Mahlzeiten (z. B. Abendessen) sind im Plan oft mit "Gemeinsam mit ..." markiert — Mengen so kalkulieren, dass beide Personen davon essen können (also für 2 Portionen, nicht doppelt).
 - Einheiten vereinheitlichen (g, kg, ml, l, Stück).
 - Kategorien: Obst & Gemüse, Fleisch & Fisch, Eier & Milchprodukte, Getreide & Beilagen, Vorrat & Gewürze, Getränke, Sonstiges.
