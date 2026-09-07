@@ -18,7 +18,7 @@ async function gatherSnapshot(supabase: any, userId: string) {
     await Promise.all([
       supabase
         .from("profiles")
-        .select("first_name, display_name, goal, current_weight_kg, target_weight_kg")
+        .select("display_name, goal, current_weight_kg, target_weight_kg")
         .eq("id", userId)
         .maybeSingle(),
       supabase

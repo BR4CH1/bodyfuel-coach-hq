@@ -690,7 +690,7 @@ export const getOrgCoachDetail = createServerFn({ method: "GET" })
     if (memberIds.length) {
       const { data } = await supabase
         .from("profiles")
-        .select("id, display_name, email")
+        .select("id, display_name")
         .in("id", memberIds);
       profiles = data ?? [];
     }

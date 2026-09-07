@@ -1165,7 +1165,7 @@ export const listOrgCoachesAndCustomers = createServerFn({ method: "GET" })
     if (allIds.size) {
       const { data: profs } = await context.supabase
         .from("profiles")
-        .select("id, display_name, email")
+        .select("id, display_name")
         .in("id", Array.from(allIds));
       profiles = profs ?? [];
     }

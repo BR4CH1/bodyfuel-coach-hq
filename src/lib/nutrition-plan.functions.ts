@@ -494,15 +494,12 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
         if (clientId && otherClientId) {
           const { data: profs } = await supabaseAdmin
             .from("profiles")
-            .select("id, display_name, first_name, email")
+            .select("id, display_name")
             .in("id", [clientId, otherClientId]);
           const nameOf = (id: string, fallback: string) => {
             const p: any = (profs ?? []).find((x: any) => x.id === id);
             return (
-              p?.display_name?.trim() ||
-              p?.first_name?.trim() ||
-              (p?.email ? p.email.split("@")[0] : null) ||
-              fallback
+              p?.display_name?.trim() || fallback
             );
           };
           const otherName = partnerNameFromTitle || nameOf(otherClientId, "Partner");

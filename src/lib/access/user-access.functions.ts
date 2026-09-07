@@ -69,7 +69,7 @@ async function loadAccess(supabase: any, userId: string): Promise<UserAccess> {
     teamRes,
     measurementRes,
   ] = await Promise.all([
-    supabase.from("profiles").select("id, display_name, email").eq("id", userId).maybeSingle(),
+    supabase.from("profiles").select("id, display_name").eq("id", userId).maybeSingle(),
     supabase
       .from("customer_packages")
       .select("package, status, is_active")
@@ -198,7 +198,7 @@ async function loadAccess(supabase: any, userId: string): Promise<UserAccess> {
 
   return {
     userId,
-    email: profileRes.data?.email ?? null,
+    email: (context_email as string | null) ?? null,
     displayName: profileRes.data?.display_name ?? null,
     personalBodyfuelAccess,
     smartAccess,
