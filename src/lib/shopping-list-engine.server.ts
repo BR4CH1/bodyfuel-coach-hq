@@ -96,16 +96,6 @@ const INGREDIENT_RULES: Array<[RegExp, IngredientRule]> = [
     },
   ],
   [
-    /^(hütten|huetten|körniger\s+frisch)?käse\b.*/,
-    {
-      key: "käse",
-      display: "Käse",
-      category: "Eier & Milchprodukte",
-      tablespoonGram: 10,
-      teaspoonGram: 4,
-    },
-  ],
-  [
     /^hüttenkäse\b.*/,
     {
       key: "hüttenkäse",
@@ -113,6 +103,16 @@ const INGREDIENT_RULES: Array<[RegExp, IngredientRule]> = [
       category: "Eier & Milchprodukte",
       tablespoonGram: 15,
       teaspoonGram: 5,
+    },
+  ],
+  [
+    /^käse\b.*/,
+    {
+      key: "käse",
+      display: "Käse",
+      category: "Eier & Milchprodukte",
+      tablespoonGram: 10,
+      teaspoonGram: 4,
     },
   ],
   [
@@ -197,7 +197,7 @@ const INGREDIENT_RULES: Array<[RegExp, IngredientRule]> = [
   ],
   [
     /^((rinder|puten|hähnchen|haehnchen)?hack(fleisch)?|hackfleisch)\b.*/,
-    { key: "putenhack", display: "Putenhack", category: "Fleisch & Fisch" },
+    { key: "hackfleisch", display: "Hackfleisch", category: "Fleisch & Fisch" },
   ],
   [/^lachs(filet)?\b.*/, { key: "lachs", display: "Lachs", category: "Fleisch & Fisch" }],
   [/^thunfisch\b.*/, { key: "thunfisch", display: "Thunfisch", category: "Fleisch & Fisch" }],
@@ -700,46 +700,11 @@ function normalizeIngredientName(name: string) {
     .trim();
 }
 
-const PURCHASE_SPECIFICITY_RE =
-  /\b(light|fettarm|zuckerarm|natur|tiefgekühlt|tiefgekuehlt|tk|gerieben|gouda|emmentaler|edamer|cheddar|hüttenkäse|huettenkaese|frischkäse|frischkaese|feta|mozzarella|parmesan|rinderhack|putenhack|hähnchenhack|haehnchenhack|basmati|jasmin|vollkornreis|vollkornnudeln|spaghetti|penne|fusilli|mandeln?|walnuss|walnüsse|walnuesse|cashews?|erdnuss|erdnüsse|erdnuesse|pistazien?|haselnuss|haselnüsse|haselnuesse|pekan|macadamia|chia|chiasamen|leinsamen|sesam|sonnenblumenkerne|kürbiskerne|kuerbiskerne|heidelbeeren|erdbeeren|himbeeren|petersilie|schnittlauch|basilikum|koriander|dill|feldsalat|rucola|eisbergsalat|romanasalat)\b/i;
-
 /**
- * Purchase-relevant variants must survive canonicalization. A shopping list is
- * supermarket-facing: "Mozzarella Light" and "Feta" are two products, not
- * "Käse"; "Rinderhack" must never become "Putenhack". Only truly identical
- * product names are grouped and summed.
+ * Ingredient rules still provide unit conversion/category metadata, but the
+ * supermarket-facing product name itself is never broadened or replaced.
+ * Only exactly equal normalized names receive the same aggregation key.
  */
-function exactPurchaseRule(name: string): IngredientRule | null {
-  const lower = name.toLowerCase().replace(/\s+/g, " ").trim();
-  const hasPercentQualifier = /\d+(?:[,.]\d+)?\s*%/.test(lower);
-  if (!PURCHASE_SPECIFICITY_RE.test(lower) && !hasPercentQualifier) return null;
-
-  const rule: IngredientRule = {
-    key: lower,
-    display: titleCase(name),
-    category: categoryFor(name),
-  };
-
-  if (/\b(basmati|jasmin|vollkornreis)\b/i.test(lower)) rule.cookedToRawFactor = 0.35;
-  if (/\b(vollkornnudeln|spaghetti|penne|fusilli)\b/i.test(lower)) rule.cookedToRawFactor = 0.45;
-  if (/\b(petersilie|schnittlauch|basilikum|koriander|dill)\b/i.test(lower)) {
-    rule.preferredUnit = "Bund";
-  }
-  if (/\b(feta|gouda|emmentaler|edamer|cheddar|hüttenkäse|huettenkaese|frischkäse|frischkaese)\b/i.test(lower)) {
-    rule.tablespoonGram = 10;
-    rule.teaspoonGram = 4;
-  }
-  if (/\b(parmesan)\b/i.test(lower)) {
-    rule.tablespoonGram = 8;
-    rule.teaspoonGram = 3;
-  }
-  if (/\b(mandeln?|walnuss|walnüsse|walnuesse|cashews?|erdnuss|erdnüsse|erdnuesse|pistazien?|haselnuss|haselnüsse|haselnuesse|pekan|macadamia|chia|chiasamen|leinsamen|sesam|sonnenblumenkerne|kürbiskerne|kuerbiskerne)\b/i.test(lower)) {
-    rule.tablespoonGram = 10;
-    rule.teaspoonGram = 4;
-  }
-  return rule;
-}
-
 function canonicalize(rawName: string): IngredientRule | null {
   let n = normalizeIngredientName(rawName);
   if (!n || isNonIngredientText(n)) return null;
@@ -752,10 +717,15 @@ function canonicalize(rawName: string): IngredientRule | null {
     return null;
   n = n.replace(/\s*-\s*/g, "-").trim();
   const lower = n.toLowerCase();
-  const exactRule = exactPurchaseRule(n);
-  if (exactRule) return exactRule;
   for (const [re, rule] of INGREDIENT_RULES) {
-    if (re.test(lower)) return rule;
+    if (re.test(lower)) {
+      return {
+        ...rule,
+        key: lower,
+        display: titleCase(n),
+        category: rule.category || categoryFor(n),
+      };
+    }
   }
   return { key: lower, display: titleCase(n), category: categoryFor(n) };
 }
