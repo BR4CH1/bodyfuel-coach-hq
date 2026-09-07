@@ -104,4 +104,18 @@ describe("nutrition plan prompt builder", () => {
     expect(context.prompt).toContain("1. Lasagne");
     expect(context.wishesData).toEqual([{ id: "wish-1", wish: "Lasagne", applies_to: "dinner" }]);
   });
+
+  it("requires supermarket-ready ingredient names instead of category labels", () => {
+    const context = buildNutritionPlanGenerationContext({
+      source: createSource(),
+      opts: BASE_OPTS,
+      now: new Date("2026-09-07T12:00:00.000Z"),
+    });
+
+    expect(context.prompt).toContain("SUPERMARKT-TAUGLICHE ZUTATENNAMEN");
+    expect(context.prompt).toContain('"Käse", "Gemüse", "Obst"');
+    expect(context.prompt).toContain("Gouda Light gerieben");
+    expect(context.prompt).toContain("Rinderhack 5 %");
+    expect(context.prompt).toContain("NICHTS interpretieren oder selbst aufteilen");
+  });
 });

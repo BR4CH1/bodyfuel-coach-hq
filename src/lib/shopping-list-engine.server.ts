@@ -96,16 +96,6 @@ const INGREDIENT_RULES: Array<[RegExp, IngredientRule]> = [
     },
   ],
   [
-    /^(hütten|huetten|körniger\s+frisch)?käse\b.*/,
-    {
-      key: "käse",
-      display: "Käse",
-      category: "Eier & Milchprodukte",
-      tablespoonGram: 10,
-      teaspoonGram: 4,
-    },
-  ],
-  [
     /^hüttenkäse\b.*/,
     {
       key: "hüttenkäse",
@@ -113,6 +103,16 @@ const INGREDIENT_RULES: Array<[RegExp, IngredientRule]> = [
       category: "Eier & Milchprodukte",
       tablespoonGram: 15,
       teaspoonGram: 5,
+    },
+  ],
+  [
+    /^käse\b.*/,
+    {
+      key: "käse",
+      display: "Käse",
+      category: "Eier & Milchprodukte",
+      tablespoonGram: 10,
+      teaspoonGram: 4,
     },
   ],
   [
@@ -197,7 +197,7 @@ const INGREDIENT_RULES: Array<[RegExp, IngredientRule]> = [
   ],
   [
     /^((rinder|puten|hähnchen|haehnchen)?hack(fleisch)?|hackfleisch)\b.*/,
-    { key: "putenhack", display: "Putenhack", category: "Fleisch & Fisch" },
+    { key: "hackfleisch", display: "Hackfleisch", category: "Fleisch & Fisch" },
   ],
   [/^lachs(filet)?\b.*/, { key: "lachs", display: "Lachs", category: "Fleisch & Fisch" }],
   [/^thunfisch\b.*/, { key: "thunfisch", display: "Thunfisch", category: "Fleisch & Fisch" }],
@@ -688,7 +688,7 @@ function normalizeIngredientName(name: string) {
     .replace(/\([^)]*\)/g, " ")
     .replace(/[‐‑‒–—]/g, "-")
     .replace(
-      /\b(ungekocht|gekocht(?:e[rsn]?)?|gegart(?:e[rsn]?)?|gebraten(?:e[rsn]?)?|gedünstet(?:e[rsn]?)?|geduenstet(?:e[rsn]?)?|gegrillt(?:e[rsn]?)?|roh(?:e[rsn]?)?|trocken(?:e[rsn]?)?|frisch(?:e[rsn]?)?|tiefgekühlt|tiefgekuehlt|tk|light|fettarm|zuckerarm|mager(?:e[rsn]?)?|natur|pur|optional|gewürfelt|gewuerfelt|geschnitten|gerieben)\b/gi,
+      /\b(ungekocht|gekocht(?:e[rsn]?)?|gegart(?:e[rsn]?)?|gebraten(?:e[rsn]?)?|gedünstet(?:e[rsn]?)?|geduenstet(?:e[rsn]?)?|gegrillt(?:e[rsn]?)?|roh(?:e[rsn]?)?|optional|gewürfelt|gewuerfelt|geschnitten)\b/gi,
       " ",
     )
     .replace(/\b(gehackt)\b/gi, " ")
@@ -700,6 +700,11 @@ function normalizeIngredientName(name: string) {
     .trim();
 }
 
+/**
+ * Ingredient rules still provide unit conversion/category metadata, but the
+ * supermarket-facing product name itself is never broadened or replaced.
+ * Only exactly equal normalized names receive the same aggregation key.
+ */
 function canonicalize(rawName: string): IngredientRule | null {
   let n = normalizeIngredientName(rawName);
   if (!n || isNonIngredientText(n)) return null;
@@ -713,7 +718,14 @@ function canonicalize(rawName: string): IngredientRule | null {
   n = n.replace(/\s*-\s*/g, "-").trim();
   const lower = n.toLowerCase();
   for (const [re, rule] of INGREDIENT_RULES) {
-    if (re.test(lower)) return rule;
+    if (re.test(lower)) {
+      return {
+        ...rule,
+        key: lower,
+        display: titleCase(n),
+        category: rule.category || categoryFor(n),
+      };
+    }
   }
   return { key: lower, display: titleCase(n), category: categoryFor(n) };
 }
@@ -954,22 +966,22 @@ function categoryFor(name: string) {
   const n = name.toLowerCase();
   if (/hähnchen|pute|rind|hack|filet|fisch|lachs|thunfisch|garnelen/.test(n))
     return "Fleisch & Fisch";
-  if (/skyr|quark|joghurt|käse|feta|mozzarella|parmesan|proteinpudding|eier?|milch/.test(n))
+  if (/skyr|quark|joghurt|käse|feta|mozzarella|parmesan|proteinpudding|eier?|milch|gouda|emmentaler|edamer|cheddar/.test(n))
     return "Eier & Milchprodukte";
   if (
-    /reis|nudel|couscous|quinoa|brot|tortilla|wrap|hafer|müsli|reiswaffel|linsen|kichererbsen|bohnen/.test(
+    /reis|nudel|couscous|quinoa|brot|tortilla|wrap|hafer|müsli|reiswaffel|linsen|kichererbsen|bohnen|spaghetti|penne|fusilli/.test(
       n,
     )
   )
     return "Getreide & Beilagen";
   if (
-    /salz|pfeffer|zimt|paprikapulver|öl|butter|nuss|nüss|mandel|cashew|walnuss|erdnuss|kern|samen|honig|sirup|pesto|senf|ketchup/.test(
+    /salz|pfeffer|zimt|paprikapulver|öl|butter|nuss|nüss|mandel|cashew|walnuss|erdnuss|pistaz|haselnuss|pekan|macadamia|kern|samen|chia|sesam|honig|sirup|pesto|senf|ketchup/.test(
       n,
     )
   )
     return "Vorrat & Gewürze";
   if (
-    /salat|gemüse|brokkoli|karotte|paprika|spargel|beeren|erdbeer|banane|apfel|äpfel|tomate|zucchini|gurke|spinat|erbse|kartoffel|zwiebel|knoblauch|avocado|aubergine|kräuter|petersilie/.test(
+    /salat|gemüse|brokkoli|karotte|paprika|spargel|beeren|erdbeer|banane|apfel|äpfel|tomate|zucchini|gurke|spinat|erbse|kartoffel|zwiebel|knoblauch|avocado|aubergine|kräuter|petersilie|schnittlauch|basilikum|koriander|dill|rucola/.test(
       n,
     )
   )
@@ -1181,6 +1193,9 @@ export async function generateShoppingListForPlan(opts: {
 
 WICHTIG — Mengen sauber zusammenfassen:
 - Identische Zutaten in EINER Zeile mit summierter Menge (nie 3× "250 g Hähnchen", sondern "750 g Hähnchen").
+- NUR wirklich identische Produkte zusammenfassen. Unterschiedliche Sorten/Varianten müssen getrennt bleiben.
+- KEINE Sammelbegriffe als Einkaufsposition: nicht nur "Käse", "Gemüse", "Obst", "Fleisch", "Nüsse", "Beeren", "Salat" oder "Kräuter". Nenne das konkret einzukaufende Produkt.
+- Kaufrelevante Angaben erhalten: z. B. "Gouda Light gerieben", "Mozzarella Light", "Feta", "Rinderhack 5 %", "Putenhack", "Basmati-Reis", "Vollkornnudeln", "Mandeln", "Walnüsse", "TK-Heidelbeeren".
 - Einheiten vereinheitlichen (g, kg, ml, l, Stück).
 - Kategorien: Obst & Gemüse, Fleisch & Fisch, Eier & Milchprodukte, Getreide & Beilagen, Vorrat & Gewürze, Getränke, Sonstiges.
 
@@ -1238,7 +1253,9 @@ export async function generateCombinedShoppingList(opts: {
   const prompt = `Du bist Ernährungsassistent. Erstelle aus den folgenden Mahlzeiten ZWEIER Partner eine EINZIGE gemeinsame Einkaufsliste für ${windowDays} Tage.
 
 WICHTIG:
-- Identische/ähnliche Zutaten beider Personen IN EINER Zeile zusammenfassen und Mengen ADDIEREN (z. B. 500 g + 900 g Hähnchen = 1.4 kg Hähnchenbrust).
+- NUR wirklich identische Produkte beider Personen IN EINER Zeile zusammenfassen und Mengen ADDIEREN. Unterschiedliche Sorten/Varianten bleiben getrennte Einkaufspositionen.
+- KEINE Sammelbegriffe als Einkaufsposition: nicht nur "Käse", "Gemüse", "Obst", "Fleisch", "Nüsse", "Beeren", "Salat" oder "Kräuter". Nenne das konkret einzukaufende Produkt.
+- Kaufrelevante Angaben erhalten: z. B. "Gouda Light gerieben", "Mozzarella Light", "Feta", "Rinderhack 5 %", "Putenhack", "Basmati-Reis", "Vollkornnudeln", "Mandeln", "Walnüsse", "TK-Heidelbeeren".
 - Gemeinsame Mahlzeiten (z. B. Abendessen) sind im Plan oft mit "Gemeinsam mit ..." markiert — Mengen so kalkulieren, dass beide Personen davon essen können (also für 2 Portionen, nicht doppelt).
 - Einheiten vereinheitlichen (g, kg, ml, l, Stück).
 - Kategorien: Obst & Gemüse, Fleisch & Fisch, Eier & Milchprodukte, Getreide & Beilagen, Vorrat & Gewürze, Getränke, Sonstiges.

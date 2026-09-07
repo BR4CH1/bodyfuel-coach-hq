@@ -341,6 +341,14 @@ Die Kalorien-/Makro-Ziele sind auf aktuelles Gewicht, Wunschgewicht und Training
 🚨 KALORIEN-OBERGRENZE PRO MAHLZEIT: 850 kcal (HART). Keine einzelne Mahlzeit darf 850 kcal überschreiten — auch nicht Frühstück, Mittag oder Abend. Wenn das Tages-kcal-Ziel mit 4 Mahlzeiten nicht erreicht wird, FÜGE WEITERE SNACKS HINZU (Snack 2, Snack 3, …), bis das Tagesziel erreicht ist. Lieber 5–7 kleinere Mahlzeiten als 3–4 zu große. Verteile Kalorien gleichmäßig: typisch Hauptmahlzeiten 500–800 kcal, Snacks 150–400 kcal.
 
 🎯 ZIELWERTE EXAKT TREFFEN: Tages-kcal innerhalb ±3 %, Kohlenhydrate/Fett jeweils innerhalb ±5 g. Protein ideal zwischen Vorgabe−5 g und Vorgabe, aber NIEMALS über der angegebenen Protein-Obergrenze. Verteile verbleibende Kalorien auf Kohlenhydrate. Plane Portionsgrößen mathematisch so, dass die Summe der Mahlzeiten möglichst genau den Tageszielen entspricht.
+
+🛒 SUPERMARKT-TAUGLICHE ZUTATENNAMEN (HART — gilt für JEDE Mahlzeit und spätere Einkaufsliste):
+- Jede Zutat MUSS das KONKRET einzukaufende Lebensmittel benennen. Sammelbegriffe sind als Zutatenname VERBOTEN.
+- VERBOTEN als alleiniger Name sind insbesondere: "Käse", "Gemüse", "Obst", "Fleisch", "Fisch", "Nüsse", "Samen & Kerne", "Beeren", "Salat", "Kräuter" sowie vergleichbare Oberbegriffe.
+- Sorte und kaufrelevante Variante IMMER erhalten, sofern sie für das Rezept relevant sind: z. B. "Gouda Light gerieben", "Mozzarella Light", "Feta", "Frischkäse Light", "Rinderhack 5 %", "Putenhack", "Basmati-Reis", "Vollkornnudeln", "Mandeln", "Walnüsse", "TK-Heidelbeeren".
+- Unterschiedliche Sorten NIEMALS unter einem Oberbegriff zusammenfassen. Wenn mehrere Käsesorten verwendet werden, müssen sie als einzelne Zutaten mit jeweils eigener Menge im ingredients-Array stehen.
+- Bei Gemüse/Obst/Salat ebenfalls konkret werden: z. B. "Brokkoli", "Paprika rot", "Zucchini", "Banane", "Apfel", "Feldsalat" statt "Gemüse", "Obst" oder "Salat".
+- Das Ziel ist eine Einkaufsliste, mit der der Kunde im Supermarkt NICHTS interpretieren oder selbst aufteilen muss.
 ${noCookBlock}
 
 ${plateauNote ? `\n${plateauNote}\n` : ""}
