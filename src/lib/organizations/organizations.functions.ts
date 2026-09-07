@@ -1170,16 +1170,18 @@ export const listOrgCoachesAndCustomers = createServerFn({ method: "GET" })
       profiles = profs ?? [];
     }
     const byId = new Map(profiles.map((p) => [p.id, p]));
+    const { loadUserEmails } = await import("./user-emails.server");
+    const emailMap = await loadUserEmails(Array.from(allIds));
     const coaches = Array.from(coachIds).map((id) => ({
       user_id: id,
       display_name: byId.get(id)?.display_name ?? null,
-      email: byId.get(id)?.email ?? null,
+      email: emailMap.get(id) ?? null,
       role: (staff ?? []).find((s: any) => s.user_id === id)?.role ?? "coach",
     }));
     const customers = Array.from(memberIds).map((id) => ({
       user_id: id,
       display_name: byId.get(id)?.display_name ?? null,
-      email: byId.get(id)?.email ?? null,
+      email: emailMap.get(id) ?? null,
     }));
     return { coaches, customers };
   });
