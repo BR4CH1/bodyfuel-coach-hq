@@ -17,6 +17,50 @@ import { CustomMealsPanel } from "./CustomMealsPanel";
 import { FoodAmountEditor } from "./FoodAmountEditor";
 import { FoodSearchPanel } from "./FoodSearchPanel";
 
+function cloneCustomMeal(meal: CustomMeal): CustomMeal {
+  return {
+    ...meal,
+    ingredients: (meal.ingredients ?? []).map((ingredient) => ({ ...ingredient })),
+  };
+}
+
+function normalizedMealName(value: string): string {
+  return value
+    .replace(/\s+\([0-9]+(?:[.,][0-9]+)?×\)\s*$/i, "")
+    .trim()
+    .toLocaleLowerCase("de-DE");
+}
+
+function structuredMealForFood(
+  food: FoodResult,
+  customMeals: CustomMeal[],
+  favorites: FavoriteFood[],
+): CustomMeal | null {
+  const source = String(food.source ?? "");
+  const sourceMatch = /^custom:([0-9a-f-]{36})$/i.exec(source);
+  if (sourceMatch) {
+    const byId = customMeals.find((meal) => meal.id === sourceMatch[1]);
+    if (byId?.ingredients?.length) return byId;
+  }
+
+  // Older favorites may have lost the custom:<id> source while keeping the
+  // exact meal name. Only use the name fallback for actual favorites so a
+  // normal food search result cannot accidentally open a recipe editor.
+  const isFavorite = favorites.some(
+    (favorite) =>
+      favorite.name === food.name &&
+      (favorite.brand ?? null) === (food.brand ?? null) &&
+      (favorite.barcode ?? null) === (food.barcode ?? null),
+  );
+  if (!isFavorite) return null;
+
+  const targetName = normalizedMealName(food.name);
+  return (
+    customMeals.find(
+      (meal) => meal.ingredients?.length && normalizedMealName(meal.name) === targetName,
+    ) ?? null
+  );
+}
 
 export function AddFoodDialog({
   openMeal,
@@ -101,6 +145,17 @@ export function AddFoodDialog({
 }) {
   const mealLabel = MEALS.find((meal) => meal.key === openMeal)?.label;
 
+  const pickFoodOrStructuredMeal = (food: FoodResult, options?: FoodPickOptions) => {
+    const structuredMeal = structuredMealForFood(food, customMeals, favorites);
+    if (structuredMeal) {
+      onPickCustomMeal(cloneCustomMeal(structuredMeal));
+      return;
+    }
+    onPickFood(food, options);
+  };
+
+  const pickCustomMeal = (meal: CustomMeal) => onPickCustomMeal(cloneCustomMeal(meal));
+
   return (
     <div className="fixed inset-0 z-40 flex items-stretch justify-center bg-black/60 sm:items-center sm:p-4">
       <div className="flex h-[100dvh] w-full max-w-lg flex-col overflow-hidden border-border bg-card sm:h-auto sm:max-h-[90dvh] sm:rounded-2xl sm:border">
@@ -147,7 +202,7 @@ export function AddFoodDialog({
                 onSearch={onSearch}
                 onOpenScanner={onOpenScanner}
                 onOpenPhoto={onOpenPhoto}
-                onPickFood={onPickFood}
+                onPickFood={pickFoodOrStructuredMeal}
                 onToggleFavorite={onToggleFavorite}
                 isFavorite={isFavorite}
                 onEstimateAi={onEstimateAi}
@@ -157,7 +212,7 @@ export function AddFoodDialog({
                 meals={customMeals}
                 loading={loadingMeals}
                 onOpenBuilder={onOpenBuilder}
-                onAddMeal={onPickCustomMeal}
+                onAddMeal={pickCustomMeal}
               />
             )}
           </div>
