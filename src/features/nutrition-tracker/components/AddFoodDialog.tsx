@@ -218,10 +218,17 @@ export function AddFoodDialog({
   const searchDb = useServerFn(searchFoodsDb);
   const [resolvingFavorite, setResolvingFavorite] = useState(false);
 
+  const openFavoriteMeal = (meal: CustomMeal) => {
+    onPickCustomMeal(cloneCustomMeal(meal));
+    // A favorite should open with its saved recipe as the baseline, not with
+    // whatever overall custom-meal factor happened to be used last time.
+    onPortionChange("1");
+  };
+
   const pickFoodOrStructuredMeal = async (food: FoodResult, options?: FoodPickOptions) => {
     const structuredMeal = structuredMealForFood(food, customMeals, favorites);
     if (structuredMeal) {
-      onPickCustomMeal(cloneCustomMeal(structuredMeal));
+      openFavoriteMeal(structuredMeal);
       return;
     }
 
@@ -247,7 +254,7 @@ export function AddFoodDialog({
             foods,
           );
           if (rebuilt) {
-            onPickCustomMeal(rebuilt);
+            openFavoriteMeal(rebuilt);
             return;
           }
         }
