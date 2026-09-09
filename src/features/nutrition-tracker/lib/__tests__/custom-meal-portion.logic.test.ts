@@ -4,6 +4,7 @@ import type { CustomMeal } from "@/lib/custom-meals.functions";
 import {
   customMealEntryName,
   parsePortionFactor,
+  prepareCustomMealForFinalIngredients,
   scaleCustomMeal,
 } from "../custom-meal-portion.logic";
 
@@ -80,5 +81,29 @@ describe("scaleCustomMeal", () => {
   it("labels scaled entries", () => {
     expect(customMealEntryName(meal, 1)).toBe("Reis Bowl");
     expect(customMealEntryName(meal, 1.5)).toBe("Reis Bowl (1,5×)");
+  });
+
+  it("normalizes individually edited final ingredients through the existing factor flow", () => {
+    const finalIngredients = [
+      { name: "Reis", amount: 120, unit: "g" as const, kcal: 420, protein_g: 8.6, carbs_g: 93, fat_g: 1.3 },
+      { name: "Hähnchen", amount: 180, unit: "g" as const, kcal: 198, protein_g: 37.2, carbs_g: 0, fat_g: 4.3 },
+    ];
+
+    const prepared = prepareCustomMealForFinalIngredients(meal, finalIngredients, 1.5);
+    const tracked = scaleCustomMeal(prepared, 1.5);
+
+    expect(tracked.ingredients[0]).toMatchObject({ amount: 120, kcal: 420, carbs_g: 93 });
+    expect(tracked.ingredients[1]).toMatchObject({ amount: 180, kcal: 198, protein_g: 37.2 });
+    expect(tracked).toMatchObject({ kcal: 618, protein_g: 45.8, carbs_g: 93, fat_g: 5.6 });
+    expect(tracked.serving_g).toBe(300);
+  });
+
+  it("does not mutate the original meal while preparing an ingredient-edited draft", () => {
+    const finalIngredients = meal.ingredients.map((ingredient) => ({ ...ingredient }));
+    finalIngredients[0].amount = 80;
+
+    prepareCustomMealForFinalIngredients(meal, finalIngredients, 1);
+
+    expect(meal.ingredients[0].amount).toBe(100);
   });
 });
