@@ -29,6 +29,13 @@ function scaleValue(value: number | null | undefined, factor: number): number | 
   return round1(Number(value) * factor);
 }
 
+function unscaleValue(value: number | null | undefined, factor: number): number | null {
+  if (value === null || value === undefined || !Number.isFinite(Number(value))) return null;
+  // Keep enough precision so scaleValue(..., factor) returns the exact visible
+  // one-decimal draft instead of accumulating rounding error at factors such as 1.5/1.7.
+  return Number((Number(value) / factor).toFixed(6));
+}
+
 function ingredientAmount(ingredient: CustomMealIngredient): number {
   const amount = ingredient.amount ?? ingredient.amount_g ?? null;
   return Number.isFinite(Number(amount)) ? Number(amount) : 0;
@@ -110,24 +117,25 @@ export function prepareCustomMealForFinalIngredients(
   factor: number,
 ): CustomMeal {
   const safeFactor = Number.isFinite(factor) && factor > 0 ? factor : DEFAULT_PORTION_FACTOR;
-  const inverse = 1 / safeFactor;
   const ingredients = finalIngredients.map((ingredient) => ({
     ...ingredient,
-    amount: scaleValue(ingredient.amount, inverse),
-    amount_g: scaleValue(ingredient.amount_g, inverse),
-    kcal: scaleValue(ingredient.kcal, inverse),
-    protein_g: scaleValue(ingredient.protein_g, inverse),
-    carbs_g: scaleValue(ingredient.carbs_g, inverse),
-    fat_g: scaleValue(ingredient.fat_g, inverse),
+    amount: unscaleValue(ingredient.amount, safeFactor),
+    amount_g: unscaleValue(ingredient.amount_g, safeFactor),
+    kcal: unscaleValue(ingredient.kcal, safeFactor),
+    protein_g: unscaleValue(ingredient.protein_g, safeFactor),
+    carbs_g: unscaleValue(ingredient.carbs_g, safeFactor),
+    fat_g: unscaleValue(ingredient.fat_g, safeFactor),
   }));
 
-  const macrosComplete = finalIngredients.every(
-    (ingredient) =>
-      ingredient.kcal != null &&
-      ingredient.protein_g != null &&
-      ingredient.carbs_g != null &&
-      ingredient.fat_g != null,
-  );
+  const macrosComplete =
+    finalIngredients.length > 0 &&
+    finalIngredients.every(
+      (ingredient) =>
+        ingredient.kcal != null &&
+        ingredient.protein_g != null &&
+        ingredient.carbs_g != null &&
+        ingredient.fat_g != null,
+    );
 
   if (!macrosComplete) {
     return { ...meal, ingredients };
@@ -146,10 +154,10 @@ export function prepareCustomMealForFinalIngredients(
   return {
     ...meal,
     ingredients,
-    kcal: Math.round(totals.kcal * inverse),
-    protein_g: round1(totals.protein_g * inverse),
-    carbs_g: round1(totals.carbs_g * inverse),
-    fat_g: round1(totals.fat_g * inverse),
+    kcal: unscaleValue(Math.round(totals.kcal), safeFactor),
+    protein_g: unscaleValue(round1(totals.protein_g), safeFactor),
+    carbs_g: unscaleValue(round1(totals.carbs_g), safeFactor),
+    fat_g: unscaleValue(round1(totals.fat_g), safeFactor),
   };
 }
 
