@@ -1,6 +1,13 @@
-import type { CustomMeal } from "@/lib/custom-meals.functions";
-import type { FoodResult } from "@/lib/nutrition.functions";
+import { useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
+
+import type { CustomMeal, CustomMealIngredient } from "@/lib/custom-meals.functions";
+import { amountToGrams, macroFactorForAmount } from "@/lib/food-units";
+import { searchFoodsDb, type FoodResult } from "@/lib/nutrition.functions";
 import { MEALS } from "../constants";
+import { parseFavoriteRecipeName } from "../lib/favorite-recipe.logic";
 import { parseFoodAmount } from "../lib/nutrition-tracker.logic";
 import type {
   AddFoodSource,
@@ -31,6 +38,17 @@ function normalizedMealName(value: string): string {
     .toLocaleLowerCase("de-DE");
 }
 
+function favoriteForFood(food: FoodResult, favorites: FavoriteFood[]): FavoriteFood | null {
+  return (
+    favorites.find(
+      (favorite) =>
+        favorite.name === food.name &&
+        (favorite.brand ?? null) === (food.brand ?? null) &&
+        (favorite.barcode ?? null) === (food.barcode ?? null),
+    ) ?? null
+  );
+}
+
 function structuredMealForFood(
   food: FoodResult,
   customMeals: CustomMeal[],
@@ -46,13 +64,7 @@ function structuredMealForFood(
   // Older favorites may have lost the custom:<id> source while keeping the
   // exact meal name. Only use the name fallback for actual favorites so a
   // normal food search result cannot accidentally open a recipe editor.
-  const isFavorite = favorites.some(
-    (favorite) =>
-      favorite.name === food.name &&
-      (favorite.brand ?? null) === (food.brand ?? null) &&
-      (favorite.barcode ?? null) === (food.barcode ?? null),
-  );
-  if (!isFavorite) return null;
+  if (!favoriteForFood(food, favorites)) return null;
 
   const targetName = normalizedMealName(food.name);
   return (
@@ -60,6 +72,65 @@ function structuredMealForFood(
       (meal) => meal.ingredients?.length && normalizedMealName(meal.name) === targetName,
     ) ?? null
   );
+}
+
+function makeResolvedFavoriteMeal(
+  favorite: FavoriteFood,
+  mealSlot: Meal,
+  mealName: string,
+  specs: NonNullable<ReturnType<typeof parseFavoriteRecipeName>>["ingredients"],
+  foods: FoodResult[],
+): CustomMeal | null {
+  if (foods.length !== specs.length) return null;
+
+  const ingredients: CustomMealIngredient[] = [];
+  for (let index = 0; index < specs.length; index += 1) {
+    const spec = specs[index];
+    const food = foods[index];
+    if (!food || food.unit !== spec.unit) return null;
+    const factor = macroFactorForAmount(spec.amount);
+    ingredients.push({
+      name: spec.displayName,
+      amount: Math.round(spec.amount * 10) / 10,
+      unit: spec.unit,
+      amount_g: Math.round(amountToGrams(food, spec.amount) * 10) / 10,
+      kcal: Math.round(food.kcal_per_100g * factor),
+      protein_g: Math.round(food.protein_per_100g * factor * 10) / 10,
+      carbs_g: Math.round(food.carbs_per_100g * factor * 10) / 10,
+      fat_g: Math.round(food.fat_per_100g * factor * 10) / 10,
+    });
+  }
+
+  const totals = ingredients.reduce(
+    (sum, ingredient) => ({
+      kcal: sum.kcal + Number(ingredient.kcal ?? 0),
+      protein_g: sum.protein_g + Number(ingredient.protein_g ?? 0),
+      carbs_g: sum.carbs_g + Number(ingredient.carbs_g ?? 0),
+      fat_g: sum.fat_g + Number(ingredient.fat_g ?? 0),
+    }),
+    { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0 },
+  );
+
+  return {
+    id: favorite.fav_id,
+    user_id: "",
+    name: mealName,
+    meal_slot: mealSlot,
+    ingredients,
+    kcal: Math.round(totals.kcal),
+    protein_g: Math.round(totals.protein_g * 10) / 10,
+    carbs_g: Math.round(totals.carbs_g * 10) / 10,
+    fat_g: Math.round(totals.fat_g * 10) / 10,
+    notes: null,
+    image_url: null,
+    image_status: null,
+    image_path: null,
+    image_source: null,
+    image_error: null,
+    image_generated_at: null,
+    created_at: "",
+    updated_at: "",
+  };
 }
 
 export function AddFoodDialog({
@@ -144,13 +215,50 @@ export function AddFoodDialog({
   onAddPicked: () => void;
 }) {
   const mealLabel = MEALS.find((meal) => meal.key === openMeal)?.label;
+  const searchDb = useServerFn(searchFoodsDb);
+  const [resolvingFavorite, setResolvingFavorite] = useState(false);
 
-  const pickFoodOrStructuredMeal = (food: FoodResult, options?: FoodPickOptions) => {
+  const pickFoodOrStructuredMeal = async (food: FoodResult, options?: FoodPickOptions) => {
     const structuredMeal = structuredMealForFood(food, customMeals, favorites);
     if (structuredMeal) {
       onPickCustomMeal(cloneCustomMeal(structuredMeal));
       return;
     }
+
+    const favorite = favoriteForFood(food, favorites);
+    const parsed = favorite ? parseFavoriteRecipeName(food.name) : null;
+    if (favorite && parsed) {
+      setResolvingFavorite(true);
+      try {
+        const matches = await Promise.all(
+          parsed.ingredients.map((ingredient) =>
+            searchDb({ data: { query: ingredient.searchName, limit: 8 } }),
+          ),
+        );
+        const foods = matches.map((candidates, index) =>
+          candidates.find((candidate) => candidate.unit === parsed.ingredients[index].unit),
+        );
+        if (foods.every((candidate): candidate is FoodResult => Boolean(candidate))) {
+          const rebuilt = makeResolvedFavoriteMeal(
+            favorite,
+            openMeal,
+            parsed.mealName,
+            parsed.ingredients,
+            foods,
+          );
+          if (rebuilt) {
+            onPickCustomMeal(rebuilt);
+            return;
+          }
+        }
+        toast.info("Nicht alle Zutaten dieses alten Favoriten konnten sicher aufgelöst werden.");
+      } catch {
+        toast.info("Die Zutaten dieses Favoriten konnten gerade nicht vollständig geladen werden.");
+      } finally {
+        setResolvingFavorite(false);
+      }
+    }
+
     onPickFood(food, options);
   };
 
@@ -170,7 +278,17 @@ export function AddFoodDialog({
           </button>
         </div>
 
-        {pickingMeal ? (
+        {resolvingFavorite ? (
+          <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
+            <Loader2 className="h-6 w-6 animate-spin text-gold" />
+            <div>
+              <div className="text-sm font-semibold">Zutaten werden aufgelöst</div>
+              <div className="mt-1 text-xs text-muted-foreground">
+                Mengen und Nährwerte werden aus dem BodyFuel-Lebensmittelkatalog geladen.
+              </div>
+            </div>
+          </div>
+        ) : pickingMeal ? (
           <CustomMealPortionEditor
             meal={pickingMeal}
             portionStr={portionStr}
