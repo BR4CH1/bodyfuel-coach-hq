@@ -151,6 +151,14 @@ export function CustomMealsCard({ userId }: { userId: string }) {
                       <RefreshCw className={`h-3 w-3 ${imageBusy ? "animate-spin" : ""}`} />
                       {meal.image_url ? "Foto neu erstellen" : "Foto erstellen"}
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingMeal(meal)}
+                      className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-gold/50 px-3 py-2 text-xs font-semibold text-gold"
+                    >
+                      <ListPlus className="h-3.5 w-3.5" />
+                      Zutaten &amp; Mengen
+                    </button>
                   </div>
                 </div>
 
@@ -173,6 +181,14 @@ export function CustomMealsCard({ userId }: { userId: string }) {
           })}
         </ul>
       )}
+
+      {editingMeal ? (
+        <MealIngredientsSheet
+          meal={editingMeal}
+          open
+          onClose={() => setEditingMeal(null)}
+        />
+      ) : null}
     </div>
   );
 }
