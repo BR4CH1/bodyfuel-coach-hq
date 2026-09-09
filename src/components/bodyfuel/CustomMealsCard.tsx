@@ -1,16 +1,23 @@
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { RefreshCw, Trash2, Utensils } from "lucide-react";
+import { ListPlus, RefreshCw, Trash2, Utensils } from "lucide-react";
 import { toast } from "sonner";
 
+import {
+  formatIngredientAmount,
+  resolveIngredientAmount,
+} from "@/lib/custom-meal-ingredients.logic";
 import {
   deleteCustomMeal,
   listCustomMeals,
   trackCustomMeal,
+  type CustomMeal,
   type MealSlot,
 } from "@/lib/custom-meals.functions";
 import { generateMealImage } from "@/lib/meal-images.functions";
 import { MealImageThumb } from "./MealImageThumb";
+import { MealIngredientsSheet } from "./MealIngredientsSheet";
 
 const TRACK_SLOTS: { key: Exclude<MealSlot, "any">; label: string; emoji: string }[] = [
   { key: "breakfast", label: "Frühstück", emoji: "🥐" },
@@ -25,6 +32,7 @@ export function CustomMealsCard({ userId }: { userId: string }) {
   const deleteMeal = useServerFn(deleteCustomMeal);
   const trackMeal = useServerFn(trackCustomMeal);
   const createImage = useServerFn(generateMealImage);
+  const [editingMeal, setEditingMeal] = useState<CustomMeal | null>(null);
 
   const queryKey = ["custom-meals", userId];
   const { data: meals = [], isLoading } = useQuery({
@@ -103,16 +111,19 @@ export function CustomMealsCard({ userId }: { userId: string }) {
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <div className="truncate text-sm font-bold">{meal.name}</div>
-                        <div className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">
-                          {meal.ingredients
-                            .map(
-                              (ingredient) =>
-                                `${ingredient.name}${
-                                  ingredient.amount_g ? ` ${Math.round(ingredient.amount_g)}g` : ""
-                                }`,
-                            )
-                            .join(" · ")}
-                        </div>
+                        <ul className="mt-1 space-y-0.5 text-[11px] text-muted-foreground">
+                          {(meal.ingredients ?? []).map((ingredient, index) => (
+                            <li
+                              key={`${ingredient.name}-${index}`}
+                              className="flex flex-wrap items-baseline gap-x-2"
+                            >
+                              <span className="break-words">{ingredient.name}</span>
+                              <span className="shrink-0 font-semibold text-foreground/80">
+                                {formatIngredientAmount(resolveIngredientAmount(ingredient))}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
                         <div className="mt-1 text-[11px] text-muted-foreground">
                           {meal.kcal ?? 0} kcal · P {Math.round(meal.protein_g ?? 0)}g · KH{" "}
                           {Math.round(meal.carbs_g ?? 0)}g · F {Math.round(meal.fat_g ?? 0)}g
@@ -140,6 +151,14 @@ export function CustomMealsCard({ userId }: { userId: string }) {
                       <RefreshCw className={`h-3 w-3 ${imageBusy ? "animate-spin" : ""}`} />
                       {meal.image_url ? "Foto neu erstellen" : "Foto erstellen"}
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingMeal(meal)}
+                      className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-gold/50 px-3 py-2 text-xs font-semibold text-gold"
+                    >
+                      <ListPlus className="h-3.5 w-3.5" />
+                      Zutaten &amp; Mengen
+                    </button>
                   </div>
                 </div>
 
@@ -162,6 +181,14 @@ export function CustomMealsCard({ userId }: { userId: string }) {
           })}
         </ul>
       )}
+
+      {editingMeal ? (
+        <MealIngredientsSheet
+          meal={editingMeal}
+          open
+          onClose={() => setEditingMeal(null)}
+        />
+      ) : null}
     </div>
   );
 }
