@@ -1,16 +1,23 @@
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { RefreshCw, Trash2, Utensils } from "lucide-react";
+import { ListPlus, RefreshCw, Trash2, Utensils } from "lucide-react";
 import { toast } from "sonner";
 
+import {
+  formatIngredientAmount,
+  resolveIngredientAmount,
+} from "@/lib/custom-meal-ingredients.logic";
 import {
   deleteCustomMeal,
   listCustomMeals,
   trackCustomMeal,
+  type CustomMeal,
   type MealSlot,
 } from "@/lib/custom-meals.functions";
 import { generateMealImage } from "@/lib/meal-images.functions";
 import { MealImageThumb } from "./MealImageThumb";
+import { MealIngredientsSheet } from "./MealIngredientsSheet";
 
 const TRACK_SLOTS: { key: Exclude<MealSlot, "any">; label: string; emoji: string }[] = [
   { key: "breakfast", label: "Frühstück", emoji: "🥐" },
