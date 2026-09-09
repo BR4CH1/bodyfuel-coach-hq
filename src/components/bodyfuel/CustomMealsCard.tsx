@@ -32,6 +32,7 @@ export function CustomMealsCard({ userId }: { userId: string }) {
   const deleteMeal = useServerFn(deleteCustomMeal);
   const trackMeal = useServerFn(trackCustomMeal);
   const createImage = useServerFn(generateMealImage);
+  const [editingMeal, setEditingMeal] = useState<CustomMeal | null>(null);
 
   const queryKey = ["custom-meals", userId];
   const { data: meals = [], isLoading } = useQuery({
@@ -110,16 +111,19 @@ export function CustomMealsCard({ userId }: { userId: string }) {
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <div className="truncate text-sm font-bold">{meal.name}</div>
-                        <div className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">
-                          {meal.ingredients
-                            .map(
-                              (ingredient) =>
-                                `${ingredient.name}${
-                                  ingredient.amount_g ? ` ${Math.round(ingredient.amount_g)}g` : ""
-                                }`,
-                            )
-                            .join(" · ")}
-                        </div>
+                        <ul className="mt-1 space-y-0.5 text-[11px] text-muted-foreground">
+                          {(meal.ingredients ?? []).map((ingredient, index) => (
+                            <li
+                              key={`${ingredient.name}-${index}`}
+                              className="flex flex-wrap items-baseline gap-x-2"
+                            >
+                              <span className="break-words">{ingredient.name}</span>
+                              <span className="shrink-0 font-semibold text-foreground/80">
+                                {formatIngredientAmount(resolveIngredientAmount(ingredient))}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
                         <div className="mt-1 text-[11px] text-muted-foreground">
                           {meal.kcal ?? 0} kcal · P {Math.round(meal.protein_g ?? 0)}g · KH{" "}
                           {Math.round(meal.carbs_g ?? 0)}g · F {Math.round(meal.fat_g ?? 0)}g
