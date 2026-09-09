@@ -27,6 +27,7 @@ import { generateAiNutritionPlanDraft } from "@/lib/nutrition-plan-ai.functions"
 import { getPartnerLink } from "@/lib/partner.functions";
 import { generatePartnerNutritionPlanDraft } from "@/lib/partner-nutrition-plan-ai.functions";
 import { getCustomerSmartProfile, setCustomerWeeklyBudget } from "@/lib/smart-profile.functions";
+import { CoachMealShoppingCard } from "@/components/bodyfuel/CoachMealShoppingCard";
 import { Users } from "lucide-react";
 
 const STATUS_LABEL: Record<PlanStatus, string> = {
@@ -80,6 +81,7 @@ export function PlanManagementCard({ userId, returnOrgId }: { userId: string; re
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["plan-overview", userId] });
     qc.invalidateQueries({ queryKey: ["nutrition-targets", userId] });
+    qc.invalidateQueries({ queryKey: ["coach-meal-shopping", userId] });
   };
 
   const todayISO = new Date().toISOString().slice(0, 10);
@@ -282,7 +284,6 @@ export function PlanManagementCard({ userId, returnOrgId }: { userId: string; re
         </span>
       </div>
 
-
       <div className="mt-2 flex flex-wrap items-center gap-3 rounded-xl border border-dashed border-border bg-background/40 px-4 py-3 text-xs">
         <span className="font-semibold uppercase tracking-wider text-muted-foreground">
           Wochenbudget
@@ -316,7 +317,6 @@ export function PlanManagementCard({ userId, returnOrgId }: { userId: string; re
         )}
       </div>
 
-
       {isLoading && (
         <div className="mt-4 text-sm text-muted-foreground">Lade…</div>
       )}
@@ -335,7 +335,6 @@ export function PlanManagementCard({ userId, returnOrgId }: { userId: string; re
             tone="next"
             userId={userId}
             plan={data?.next ?? null}
-
             onApprove={(id) => trans.mutate({ id, to: "approved" })}
             onPublish={(id) => trans.mutate({ id, to: "published" })}
             onActivate={(id) => trans.mutate({ id, to: "active" })}
@@ -381,6 +380,10 @@ export function PlanManagementCard({ userId, returnOrgId }: { userId: string; re
         </div>
       )}
 
+      <div className="mt-4">
+        <CoachMealShoppingCard userId={userId} />
+      </div>
+
       {data && data.archive.length > 0 && (
         <details className="mt-4">
           <summary className="cursor-pointer text-sm font-semibold text-muted-foreground hover:text-foreground">
@@ -422,7 +425,6 @@ function PlanColumn(props: {
   const [editDates, setEditDates] = useState(false);
   const [start, setStart] = useState<string>(plan?.scheduled_start_date ?? "");
   const [end, setEnd] = useState<string>(plan?.scheduled_end_date ?? "");
-
 
   return (
     <div
