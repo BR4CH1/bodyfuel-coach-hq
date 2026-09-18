@@ -336,7 +336,10 @@ export function PlanManagementCard({ userId, returnOrgId }: { userId: string; re
             type="date"
             value={endDate}
             min={startDate || todayISO}
-            onChange={(e) => setEndDate(e.target.value)}
+            onChange={(e) => {
+              setCustomPeriod(true);
+              setEndDate(e.target.value);
+            }}
             className="rounded-md border border-input bg-background px-2 py-1 text-xs"
           />
         </label>
