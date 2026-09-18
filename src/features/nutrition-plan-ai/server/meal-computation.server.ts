@@ -82,7 +82,17 @@ function buildRawDays(
     const allowedMeals = (day.meals ?? []).filter((meal) => {
       const searchableText =
         `${meal.name} ${meal.description ?? ""} ${JSON.stringify(meal.ingredients ?? [])}`.toLowerCase();
-      return !containsForbiddenFood(searchableText, context.forbidden);
+      if (containsForbiddenFood(searchableText, context.forbidden)) return false;
+      // Zusätzlich der strengere Komposita-Matcher (z. B. "Fischstäbchen" vs. "fisch"),
+      // damit die Abschluss-Validierung später nicht am gleichen Gericht scheitert.
+      return mealIsAllowed(
+        {
+          name: meal.name,
+          description: meal.description ?? undefined,
+          ingredients: (meal.ingredients ?? []) as never,
+        },
+        context.forbidden,
+      );
     });
 
     return {
