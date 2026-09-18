@@ -22,6 +22,7 @@ export async function persistGeneratedNutritionPlan(
     cleaned,
     unresolved,
     wishesData,
+    dayTargets,
   } = input;
   const hasUnresolved = unresolved.length > 0;
 
