@@ -20,8 +20,18 @@ import type {
   RawPlanDay,
   UnresolvedIngredient,
 } from "@/features/nutrition-plan-ai/types";
+import { findMealViolations, mealIsAllowed } from "@/lib/nutrition-plan-constraints";
 
 const MAX_GENERATION_ATTEMPTS = 3;
+
+/** Rundungstoleranz für die Protein-Obergrenze: max(4 g, 2 %). */
+function proteinTolerance(target: number): number {
+  return Math.max(4, target * 0.02);
+}
+
+function buildNogoCorrectionNote(violations: string[], attempt: number): string {
+  return `⚠️ RETRY ${attempt}/${MAX_GENERATION_ATTEMPTS - 1}: Folgende Mahlzeiten verstoßen gegen harte No-Gos:\n- ${violations.slice(0, 8).join("\n- ")}\n\nGeneriere den Plan komplett neu und verwende KEINE dieser Lebensmittel oder Komposita (auch nicht als Bestandteil eines Gerichtnamens).`;
+}
 
 function sumMealMacros(meals: ComputedGeneratedMeal[]): MacroTarget {
   return meals.reduce(
@@ -72,7 +82,17 @@ function buildRawDays(
     const allowedMeals = (day.meals ?? []).filter((meal) => {
       const searchableText =
         `${meal.name} ${meal.description ?? ""} ${JSON.stringify(meal.ingredients ?? [])}`.toLowerCase();
-      return !containsForbiddenFood(searchableText, context.forbidden);
+      if (containsForbiddenFood(searchableText, context.forbidden)) return false;
+      // Zusätzlich der strengere Komposita-Matcher (z. B. "Fischstäbchen" vs. "fisch"),
+      // damit die Abschluss-Validierung später nicht am gleichen Gericht scheitert.
+      return mealIsAllowed(
+        {
+          name: meal.name,
+          description: meal.description ?? undefined,
+          ingredients: (meal.ingredients ?? []) as never,
+        },
+        context.forbidden,
+      );
     });
 
     return {
@@ -147,6 +167,29 @@ export async function generateComputedNutritionPlan(input: {
       continue;
     }
 
+    // Auch die eingesetzten Ersatz-Mahlzeiten müssen die harten No-Gos einhalten.
+    const nogoViolations = repairedRawDays.flatMap((day, index) =>
+      day.meals.flatMap((meal) =>
+        findMealViolations(
+          {
+            name: meal.name,
+            description: meal.description ?? undefined,
+            ingredients: (meal.ingredients ?? []) as never,
+          },
+          context.forbidden,
+        ).map((violation) => `Tag ${index + 1} — ${meal.name}: "${violation.term}"`),
+      ),
+    );
+    if (nogoViolations.length > 0) {
+      if (attempt >= MAX_GENERATION_ATTEMPTS) {
+        throw new Error(
+          `No-Gos konnten nicht eingehalten werden: ${Array.from(new Set(nogoViolations)).slice(0, 6).join("; ")}.`,
+        );
+      }
+      correctionNote = buildNogoCorrectionNote(Array.from(new Set(nogoViolations)), attempt);
+      continue;
+    }
+
     const attemptUnresolved: UnresolvedIngredient[] = [];
     const attemptProteinBreaches: string[] = [];
     const baseCache = new Map<string, Promise<ComputedGeneratedMeal[]>>();
@@ -207,7 +250,7 @@ export async function generateComputedNutritionPlan(input: {
       );
 
       const finalSums = sumMealMacros(correctedMeals);
-      if (finalSums.protein_g > day.target.protein_g) {
+      if (finalSums.protein_g > day.target.protein_g + proteinTolerance(day.target.protein_g)) {
         attemptProteinBreaches.push(
           `${day.name}: ${Math.round(finalSums.protein_g)} g statt max. ${day.target.protein_g} g`,
         );

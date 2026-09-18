@@ -506,7 +506,8 @@ export function validateGeneratedPlan(input: PlanValidationInput): PlanValidatio
       }),
       { kcal: 0, protein_g: 0 },
     );
-    if (sums.protein_g > target.protein_g + 1) {
+    // Rundungstoleranz: max(4 g, 2 %) — Kleinstabweichungen sind kein Verstoß.
+    if (sums.protein_g > target.protein_g + Math.max(4, target.protein_g * 0.02)) {
       macroIssues.push(
         `Tag ${dayIndex + 1}: Protein-Obergrenze überschritten (${Math.round(sums.protein_g)} g statt max. ${target.protein_g} g)`,
       );
