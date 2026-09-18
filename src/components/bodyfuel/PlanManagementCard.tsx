@@ -26,8 +26,19 @@ import {
 import { generateAiNutritionPlanDraft } from "@/lib/nutrition-plan-ai.functions";
 import { getPartnerLink } from "@/lib/partner.functions";
 import { generatePartnerNutritionPlanDraft } from "@/lib/partner-nutrition-plan-ai.functions";
-import { getCustomerSmartProfile, setCustomerWeeklyBudget } from "@/lib/smart-profile.functions";
+import {
+  getCustomerSmartProfile,
+  saveCustomerPlanConfig,
+  setCustomerWeeklyBudget,
+} from "@/lib/smart-profile.functions";
 import { CoachMealShoppingCard } from "@/components/bodyfuel/CoachMealShoppingCard";
+import {
+  DEFAULT_PLAN_CONFIG,
+  PlanConfiguratorCard,
+  type PlanConfig,
+} from "@/components/bodyfuel/PlanConfiguratorCard";
+import { PlanValidationSummary } from "@/components/bodyfuel/PlanValidationSummary";
+import type { PlanValidationReport } from "@/lib/nutrition-plan-constraints";
 import { Users } from "lucide-react";
 
 const STATUS_LABEL: Record<PlanStatus, string> = {
@@ -101,6 +112,44 @@ export function PlanManagementCard({ userId, returnOrgId }: { userId: string; re
     return Math.max(1, Math.min(31, diff));
   };
 
+  // ---- Plan-Konfigurator (harte Constraints + weiche Vorlieben) ----
+  const savePlanConfigFn = useServerFn(saveCustomerPlanConfig);
+  const [config, setConfig] = useState<PlanConfig>(DEFAULT_PLAN_CONFIG);
+  const [customPeriod, setCustomPeriod] = useState(false);
+  const [validation, setValidation] = useState<
+    { label: string; report: PlanValidationReport }[] | null
+  >(null);
+
+  const addDaysISO = (iso: string, days: number) => {
+    const d = new Date(iso);
+    d.setDate(d.getDate() + days);
+    return d.toISOString().slice(0, 10);
+  };
+
+  const handleConfigChange = (next: PlanConfig) => {
+    if (next.planDays !== config.planDays) {
+      setCustomPeriod(false);
+      setEndDate(addDaysISO(startDate, Math.max(1, next.planDays) - 1));
+    }
+    setConfig(next);
+  };
+
+  const persistConfig = () =>
+    savePlanConfigFn({
+      data: {
+        user_id: userId,
+        goal: config.goal,
+        diet_rules: config.dietRules,
+        exclusion_groups: config.exclusionGroups,
+        custom_exclusions: config.customExclusions,
+        preferences: config.preferences,
+        lifestyle: config.lifestyle,
+        meals_per_day: config.mealsPerDay,
+      },
+    });
+
+
+
   const smartProfile = useQuery({
     queryKey: ["smart-profile", userId],
     queryFn: () => smartProfileFn({ data: { user_id: userId } }),
@@ -123,9 +172,10 @@ export function PlanManagementCard({ userId, returnOrgId }: { userId: string; re
   });
 
   const gen = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       const planDays = computePlanDays();
-      return genFn({
+      await persistConfig();
+      return await genFn({
         data: {
           user_id: userId,
           start_mode: "today",
@@ -134,11 +184,12 @@ export function PlanManagementCard({ userId, returnOrgId }: { userId: string; re
         },
       });
     },
-    onSuccess: () => {
+    onSuccess: (res: any) => {
       const days = computePlanDays();
       toast.success(
         `Plan-Entwurf erstellt (${startDate} → ${endDate}, ${days} Tag${days === 1 ? "" : "e"}).`,
       );
+      setValidation(res?.validation ? [{ label: "Plan-Prüfung", report: res.validation }] : null);
       invalidate();
     },
     onError: (e: any) => toast.error(e?.message ?? "Fehler beim Erstellen"),
@@ -175,9 +226,10 @@ export function PlanManagementCard({ userId, returnOrgId }: { userId: string; re
   });
 
   const partnerGen = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       const planDays = computePlanDays();
-      return partnerGenFn({
+      await persistConfig();
+      return await partnerGenFn({
         data: {
           user_a: userId,
           user_b: partnerLink.data!.partner_id,
@@ -187,10 +239,19 @@ export function PlanManagementCard({ userId, returnOrgId }: { userId: string; re
         },
       });
     },
-    onSuccess: () => {
+    onSuccess: (res: any) => {
       const days = computePlanDays();
       toast.success(
         `Gemeinsamer Plan erstellt (${startDate} → ${endDate}, ${days} Tag${days === 1 ? "" : "e"}).`,
+      );
+      const v = res?.validation;
+      setValidation(
+        v
+          ? [
+              { label: v.names?.a ?? "Person A", report: v.a },
+              { label: v.names?.b ?? "Person B", report: v.b },
+            ]
+          : null,
       );
       invalidate();
     },
@@ -249,6 +310,24 @@ export function PlanManagementCard({ userId, returnOrgId }: { userId: string; re
         </div>
       </div>
 
+      <PlanConfiguratorCard
+        value={{ ...config, planDays: computePlanDays(), partner: config.partner }}
+        onChange={handleConfigChange}
+        partnerAvailable={Boolean(partnerLink.data)}
+        partnerName={partnerLink.data?.partner_name ?? undefined}
+        customPeriod={customPeriod}
+      />
+
+      {validation && (
+        <div className="mt-3 space-y-2">
+          {validation.map((entry) => (
+            <PlanValidationSummary key={entry.label} report={entry.report} title={entry.label} />
+          ))}
+        </div>
+      )}
+
+
+
       <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-dashed border-border bg-background/40 px-4 py-3 text-xs">
         <span className="font-semibold uppercase tracking-wider text-muted-foreground">
           Zeitraum
@@ -275,7 +354,10 @@ export function PlanManagementCard({ userId, returnOrgId }: { userId: string; re
             type="date"
             value={endDate}
             min={startDate || todayISO}
-            onChange={(e) => setEndDate(e.target.value)}
+            onChange={(e) => {
+              setCustomPeriod(true);
+              setEndDate(e.target.value);
+            }}
             className="rounded-md border border-input bg-background px-2 py-1 text-xs"
           />
         </label>

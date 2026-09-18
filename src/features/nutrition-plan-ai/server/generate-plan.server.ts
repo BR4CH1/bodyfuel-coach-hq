@@ -6,6 +6,10 @@ import type {
   GenerateNutritionPlanOpts,
   NutritionPlanSupabaseClient,
 } from "@/features/nutrition-plan-ai/types";
+import {
+  describeConstraintFailure,
+  validateGeneratedPlan,
+} from "@/lib/nutrition-plan-constraints";
 
 export async function generateAiNutritionPlanCore(
   supabase: NutritionPlanSupabaseClient,
@@ -20,7 +24,28 @@ export async function generateAiNutritionPlanCore(
     context,
   });
 
-  return persistGeneratedNutritionPlan({
+  // Abschluss-Validierung über ALLE Tage, Mahlzeiten und Zutaten.
+  const validation = validateGeneratedPlan({
+    days: generatedPlan.cleaned.map((day) => ({ name: day.name, meals: day.meals })),
+    forbidden: context.forbidden,
+    config: {
+      dietRules: [],
+      exclusionGroups: [],
+      customExclusions: context.forbidden,
+      mealsPerDay: 3,
+      planDays: context.planDays,
+    },
+    targets: generatedPlan.cleaned.map((day) =>
+      day.type === "rest" ? context.restTargets : context.trainingTargets,
+    ),
+    kcalTolerance: 0.2,
+  });
+  const nogoCheck = validation.checks.find((check) => check.id === "nogos");
+  if (nogoCheck && !nogoCheck.ok) {
+    throw new Error(describeConstraintFailure(validation));
+  }
+
+  const persisted = await persistGeneratedNutritionPlan({
     supabase,
     target: opts.target,
     uploadedBy,
@@ -32,4 +57,6 @@ export async function generateAiNutritionPlanCore(
     unresolved: generatedPlan.unresolved,
     wishesData: context.wishesData,
   });
+
+  return { ...persisted, validation };
 }

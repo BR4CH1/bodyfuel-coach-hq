@@ -1,5 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import {
+  buildForbiddenTerms,
+  type DietRule,
+  type ExclusionGroup,
+  type LifestyleFlag,
+  type PlanGoal,
+} from "@/lib/nutrition-plan-constraints";
 import { assertCoachOrOrgStaffForAthlete } from "@/lib/organizations/org-coach-access";
 
 export type SmartNutritionProfile = {
@@ -148,3 +155,75 @@ export const setCustomerKitchenEquipment = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+
+/**
+ * Speichert die Konfiguration des Smart-Plan-Builders im bestehenden
+ * Ernährungsprofil (keine parallele Datenquelle):
+ * - Ernährungsregeln + Ausschlussgruppen + individuelle No-Gos werden zu
+ *   harten Ausschluss-Begriffen expandiert und in `nogo_foods` abgelegt.
+ * - Vorlieben landen als weiche Ranking-Faktoren in `favorite_foods`.
+ */
+export const saveCustomerPlanConfig = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (d: {
+      user_id: string;
+      goal: PlanGoal;
+      diet_rules: DietRule[];
+      exclusion_groups: ExclusionGroup[];
+      custom_exclusions: string[];
+      preferences: string[];
+      lifestyle: LifestyleFlag[];
+      meals_per_day: number;
+    }) => d,
+  )
+  .handler(async ({ data, context }) => {
+    if (data.user_id !== context.userId) {
+      await assertCoachOrOrgStaffForAthlete(context, data.user_id, "nutrition");
+    }
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const forbidden = buildForbiddenTerms({
+      dietRules: data.diet_rules ?? [],
+      exclusionGroups: data.exclusion_groups ?? [],
+      customExclusions: data.custom_exclusions ?? [],
+    });
+    const preferences = Array.from(
+      new Set((data.preferences ?? []).map((value) => String(value).trim()).filter(Boolean)),
+    );
+    const dietStyle = (data.diet_rules ?? []).includes("vegan")
+      ? "vegan"
+      : (data.diet_rules ?? []).includes("vegetarisch")
+        ? "vegetarian"
+        : null;
+    const lifestyle = data.lifestyle ?? [];
+    const mealPrepStyle = lifestyle.includes("meal_prep")
+      ? "meal_prep"
+      : lifestyle.includes("schnell") || lifestyle.includes("wenig_zutaten")
+        ? "low_effort"
+        : null;
+
+    const payload: Record<string, unknown> = {
+      user_id: data.user_id,
+      nogo_foods: forbidden,
+      extra_nogos: (data.custom_exclusions ?? []).join(", ") || null,
+      favorite_foods: preferences,
+      diet_notes:
+        [
+          `Ziel: ${data.goal}`,
+          (data.diet_rules ?? []).length ? `Regeln: ${(data.diet_rules ?? []).join(", ")}` : "",
+          lifestyle.length ? `Alltag: ${lifestyle.join(", ")}` : "",
+          `Mahlzeiten/Tag: ${Math.max(2, Math.min(6, Math.round(data.meals_per_day || 3)))}`,
+        ]
+          .filter(Boolean)
+          .join(" | ") || null,
+    };
+    if (dietStyle) payload.diet_style = dietStyle;
+    if (mealPrepStyle) payload.meal_prep_style = mealPrepStyle;
+
+    const { error } = await supabaseAdmin
+      .from("smart_nutrition_profile")
+      .upsert(payload as never, { onConflict: "user_id" });
+    if (error) throw new Error(error.message);
+    return { ok: true, forbidden_terms: forbidden.length };
+  });
