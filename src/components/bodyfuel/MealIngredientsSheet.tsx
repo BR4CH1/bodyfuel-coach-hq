@@ -37,11 +37,15 @@ export function MealIngredientsSheet({
 }) {
   const queryClient = useQueryClient();
   const save = useServerFn(saveCustomMeal);
+  // Unveränderte Ausgangszutaten: jede Mengenänderung wird immer von hier aus
+  // gerechnet, damit sich Rundungen über mehrere Tastendrücke nicht aufaddieren.
+  const [base, setBase] = useState<CustomMealIngredient[]>(meal.ingredients ?? []);
   const [items, setItems] = useState<CustomMealIngredient[]>(meal.ingredients ?? []);
   const [drafts, setDrafts] = useState<string[]>(() => (meal.ingredients ?? []).map(toInputValue));
 
   useEffect(() => {
     if (!open) return;
+    setBase(meal.ingredients ?? []);
     setItems(meal.ingredients ?? []);
     setDrafts((meal.ingredients ?? []).map(toInputValue));
   }, [open, meal.ingredients]);
@@ -53,7 +57,9 @@ export function MealIngredientsSheet({
     const parsed = Number(raw.replace(",", "."));
     if (!Number.isFinite(parsed) || parsed <= 0) return;
     setItems((prev) =>
-      prev.map((ingredient, i) => (i === index ? scaleIngredientToAmount(ingredient, parsed) : ingredient)),
+      prev.map((ingredient, i) =>
+        i === index ? scaleIngredientToAmount(base[i] ?? ingredient, parsed) : ingredient,
+      ),
     );
   };
 
