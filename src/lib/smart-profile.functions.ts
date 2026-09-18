@@ -1,5 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import {
+  buildForbiddenTerms,
+  type DietRule,
+  type ExclusionGroup,
+  type LifestyleFlag,
+  type PlanGoal,
+} from "@/lib/nutrition-plan-constraints";
 import { assertCoachOrOrgStaffForAthlete } from "@/lib/organizations/org-coach-access";
 
 export type SmartNutritionProfile = {
