@@ -226,9 +226,10 @@ export function PlanManagementCard({ userId, returnOrgId }: { userId: string; re
   });
 
   const partnerGen = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       const planDays = computePlanDays();
-      return partnerGenFn({
+      await persistConfig();
+      return await partnerGenFn({
         data: {
           user_a: userId,
           user_b: partnerLink.data!.partner_id,
@@ -238,10 +239,19 @@ export function PlanManagementCard({ userId, returnOrgId }: { userId: string; re
         },
       });
     },
-    onSuccess: () => {
+    onSuccess: (res: any) => {
       const days = computePlanDays();
       toast.success(
         `Gemeinsamer Plan erstellt (${startDate} → ${endDate}, ${days} Tag${days === 1 ? "" : "e"}).`,
+      );
+      const v = res?.validation;
+      setValidation(
+        v
+          ? [
+              { label: v.names?.a ?? "Person A", report: v.a },
+              { label: v.names?.b ?? "Person B", report: v.b },
+            ]
+          : null,
       );
       invalidate();
     },
