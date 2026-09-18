@@ -18,6 +18,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { DayCard } from "@/features/nutrition-plan-builder/components/DayCard";
 import { DayNavigator } from "@/features/nutrition-plan-builder/components/DayNavigator";
 import { PartnerDayBlock } from "@/features/nutrition-plan-builder/components/PartnerDayBlock";
+import { PlanSetupPanel } from "@/features/nutrition-plan-builder/components/PlanSetupPanel";
 import {
   SLOTS,
   summarizeDay,
@@ -77,6 +78,7 @@ export function PlanBuilderPage({
     goBack,
     setDay,
     setPartnerDay,
+    applyTemplateDays,
     handleSave,
     copyClientDay,
     copyPartnerDay,
@@ -381,6 +383,18 @@ export function PlanBuilderPage({
           </CardContent>
         </Card>
       )}
+
+      <PlanSetupPanel
+        userId={userId}
+        days={days}
+        partnerDays={partnerDays}
+        partnerMode={partnerMode}
+        sharedSlots={sharedSlots as Record<string, boolean>}
+        customerContext={customerContext}
+        onApplyTemplate={applyTemplateDays}
+      />
+
+
 
       {partnerId && (
         <Card>

@@ -3583,6 +3583,51 @@ export type Database = {
           },
         ]
       }
+      nutrition_plan_templates: {
+        Row: {
+          coach_id: string
+          config: Json | null
+          created_at: string
+          days: Json
+          id: string
+          notes: string | null
+          organization_id: string | null
+          partner_days: Json | null
+          plan_days: number
+          shared_slots: Json | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          coach_id: string
+          config?: Json | null
+          created_at?: string
+          days?: Json
+          id?: string
+          notes?: string | null
+          organization_id?: string | null
+          partner_days?: Json | null
+          plan_days?: number
+          shared_slots?: Json | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          coach_id?: string
+          config?: Json | null
+          created_at?: string
+          days?: Json
+          id?: string
+          notes?: string | null
+          organization_id?: string | null
+          partner_days?: Json | null
+          plan_days?: number
+          shared_slots?: Json | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       nutrition_plans: {
         Row: {
           activated_at: string | null
