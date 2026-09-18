@@ -56,6 +56,9 @@ export async function generateAiNutritionPlanCore(
     cleaned: generatedPlan.cleaned,
     unresolved: generatedPlan.unresolved,
     wishesData: context.wishesData,
+    dayTargets: generatedPlan.cleaned.map((day) =>
+      day.type === "rest" ? context.restTargets : context.trainingTargets,
+    ),
   });
 
   return { ...persisted, validation };

@@ -100,6 +100,8 @@ export type PersistNutritionPlanInput = {
   cleaned: CleanedPlanDay[];
   unresolved: UnresolvedIngredient[];
   wishesData: Array<{ id: string; wish: string }>;
+  /** Zielwerte pro Tag (gleiche Reihenfolge wie cleaned) für die Tageszeilen. */
+  dayTargets?: MacroTarget[];
 };
 
 export type NutritionPlanGenerationResult = {

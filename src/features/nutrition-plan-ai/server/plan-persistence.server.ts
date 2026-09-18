@@ -22,6 +22,7 @@ export async function persistGeneratedNutritionPlan(
     cleaned,
     unresolved,
     wishesData,
+    dayTargets,
   } = input;
   const hasUnresolved = unresolved.length > 0;
 
@@ -85,9 +86,24 @@ export async function persistGeneratedNutritionPlan(
 
   for (let dayIndex = 0; dayIndex < cleaned.length; dayIndex++) {
     const day = cleaned[dayIndex];
+    const dayDate = new Date(start);
+    dayDate.setDate(dayDate.getDate() + dayIndex);
+    const dayTarget = dayTargets?.[dayIndex] ?? null;
     const { data: dayRow, error: dayError } = await supabase
       .from("nutrition_plan_days")
-      .insert({ plan_id: planRow.id, name: day.name, sort_order: dayIndex })
+      .insert({
+        plan_id: planRow.id,
+        name: day.name,
+        sort_order: dayIndex,
+        // Trainings-/Ruhetag und Tagesziele mitschreiben, damit der Plan im
+        // Builder mit den richtigen Zielwerten geöffnet wird.
+        day_type: day.type === "training" ? "training" : "rest",
+        day_date: toIsoDate(dayDate),
+        target_kcal: dayTarget?.kcal ?? null,
+        target_protein_g: dayTarget?.protein_g ?? null,
+        target_carbs_g: dayTarget?.carbs_g ?? null,
+        target_fat_g: dayTarget?.fat_g ?? null,
+      })
       .select("id")
       .single();
     if (dayError || !dayRow) continue;
@@ -104,9 +120,13 @@ export async function persistGeneratedNutritionPlan(
       }
 
       const ingredients = coerceIngredients(meal.ingredients ?? null);
+      const dishName = meal.name?.trim();
       return {
         day_id: dayRow.id,
-        name: `${day.name} — ${slotLabel}`,
+        // Echter Gerichtsname; der Slot steckt in meal_slot und wird in der
+        // Oberfläche daraus beschriftet.
+        name: dishName || slotLabel,
+        meal_slot: meal.slot,
         description: meal.description ?? null,
         ingredients_json: ingredients.length ? ingredients : null,
         compute_warnings: meal._compute_warnings ?? [],

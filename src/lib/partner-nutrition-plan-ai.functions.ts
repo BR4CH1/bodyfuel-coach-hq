@@ -1259,6 +1259,7 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
       who: typeof a,
       clientId: string,
       cleanedDays: CleanedPartnerDay[],
+      pickType: (index: number) => "training" | "rest",
     ): Promise<{ planId: string; dayIds: string[]; mealsByDay: ComputedPersonMeal[][] }> {
       const sums = cleanedDays.reduce(
         (acc, d) => {
@@ -1302,9 +1303,23 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
       const mealsByDay: ComputedPersonMeal[][] = [];
       for (let i = 0; i < cleanedDays.length; i++) {
         const d = cleanedDays[i];
+        const dayType = pickType(i);
+        const target = dayType === "rest" ? who.targets.rest : who.targets.training;
+        const dayDate = new Date(start);
+        dayDate.setDate(dayDate.getDate() + i);
         const { data: dayRow } = await supabase
           .from("nutrition_plan_days")
-          .insert({ plan_id: planRow.id, name: d.name, sort_order: i })
+          .insert({
+            plan_id: planRow.id,
+            name: d.name,
+            sort_order: i,
+            day_type: dayType,
+            day_date: isoDate(dayDate),
+            target_kcal: target?.kcal ?? null,
+            target_protein_g: target?.protein_g ?? null,
+            target_carbs_g: target?.carbs_g ?? null,
+            target_fat_g: target?.fat_g ?? null,
+          })
           .select("id")
           .single();
         if (!dayRow?.id) throw new Error("Day-Insert fehlgeschlagen");
@@ -1314,8 +1329,8 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
       return { planId: planRow.id, dayIds, mealsByDay };
     }
 
-    const A = await insertPlanFor(a, data.user_a, prepared.aCleaned);
-    const B = await insertPlanFor(b, data.user_b, prepared.bCleaned);
+    const A = await insertPlanFor(a, data.user_a, prepared.aCleaned, (i) => schedule[i].type_a);
+    const B = await insertPlanFor(b, data.user_b, prepared.bCleaned, (i) => schedule[i].type_b);
 
     // Ein Slot gilt nur dann als gemeinsam, wenn beide Personen an diesem Tag
     // tatsächlich dasselbe Gericht bekommen. Musste eine Person wegen eigener
@@ -1348,14 +1363,14 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
         for (let idx = 0; idx < meals.length; idx++) {
           const m = meals[idx];
           const isShared = isSharedMeal(i, m);
-          const prefix = isShared
-            ? `🍽️ Gemeinsam mit ${otherName} — ${slotLabel(m.slot)}`
-            : slotLabel(m.slot);
+          const dishName = m.name?.trim() || slotLabel(m.slot);
           const { data: mealRow, error: mealErr } = await supabase
             .from("nutrition_plan_meals")
             .insert({
               day_id: dayId,
-              name: `${prefix}: ${m.name}`,
+              // Gerichtsname bleibt der Gerichtsname; der Slot steckt in meal_slot.
+              name: isShared ? `🍽️ Gemeinsam mit ${otherName}: ${dishName}` : dishName,
+              meal_slot: m.slot,
               description: m.description ?? null,
               ingredients_json: coerceIngredients((m as any).ingredients ?? null).length
                 ? coerceIngredients((m as any).ingredients ?? null)
