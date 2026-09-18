@@ -26,8 +26,19 @@ import {
 import { generateAiNutritionPlanDraft } from "@/lib/nutrition-plan-ai.functions";
 import { getPartnerLink } from "@/lib/partner.functions";
 import { generatePartnerNutritionPlanDraft } from "@/lib/partner-nutrition-plan-ai.functions";
-import { getCustomerSmartProfile, setCustomerWeeklyBudget } from "@/lib/smart-profile.functions";
+import {
+  getCustomerSmartProfile,
+  saveCustomerPlanConfig,
+  setCustomerWeeklyBudget,
+} from "@/lib/smart-profile.functions";
 import { CoachMealShoppingCard } from "@/components/bodyfuel/CoachMealShoppingCard";
+import {
+  DEFAULT_PLAN_CONFIG,
+  PlanConfiguratorCard,
+  type PlanConfig,
+} from "@/components/bodyfuel/PlanConfiguratorCard";
+import { PlanValidationSummary } from "@/components/bodyfuel/PlanValidationSummary";
+import type { PlanValidationReport } from "@/lib/nutrition-plan-constraints";
 import { Users } from "lucide-react";
 
 const STATUS_LABEL: Record<PlanStatus, string> = {
