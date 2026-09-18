@@ -2,6 +2,17 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { BuilderDay } from "@/lib/plan-builder.functions";
 
+/** Im Template mitgespeicherte Builder-Einstellungen. */
+export type NutritionPlanTemplateConfig = {
+  goal?: string;
+  dietRules?: string[];
+  exclusionGroups?: string[];
+  customExclusions?: string[];
+  preferences?: string[];
+  lifestyle?: string[];
+  mealsPerDay?: number;
+};
+
 export type NutritionPlanTemplate = {
   id: string;
   title: string;
@@ -10,7 +21,7 @@ export type NutritionPlanTemplate = {
   days: BuilderDay[];
   partner_days: BuilderDay[] | null;
   shared_slots: Record<string, boolean> | null;
-  config: Record<string, unknown> | null;
+  config: NutritionPlanTemplateConfig | null;
   updated_at: string;
 };
 
@@ -34,7 +45,7 @@ export const listNutritionPlanTemplates = createServerFn({ method: "GET" })
       days: asDays(row.days),
       partner_days: row.partner_days ? asDays(row.partner_days) : null,
       shared_slots: (row.shared_slots as Record<string, boolean> | null) ?? null,
-      config: (row.config as Record<string, unknown> | null) ?? null,
+      config: (row.config as NutritionPlanTemplateConfig | null) ?? null,
       updated_at: row.updated_at,
     }));
   });
@@ -53,7 +64,7 @@ export const saveNutritionPlanTemplate = createServerFn({ method: "POST" })
       days: BuilderDay[];
       partnerDays?: BuilderDay[] | null;
       sharedSlots?: Record<string, boolean> | null;
-      config?: Record<string, unknown> | null;
+      config?: NutritionPlanTemplateConfig | null;
     }) => d,
   )
   .handler(async ({ data, context }) => {
