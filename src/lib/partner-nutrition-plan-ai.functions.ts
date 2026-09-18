@@ -1329,8 +1329,8 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
       return { planId: planRow.id, dayIds, mealsByDay };
     }
 
-    const A = await insertPlanFor(a, data.user_a, prepared.aCleaned);
-    const B = await insertPlanFor(b, data.user_b, prepared.bCleaned);
+    const A = await insertPlanFor(a, data.user_a, prepared.aCleaned, (i) => schedule[i].type_a);
+    const B = await insertPlanFor(b, data.user_b, prepared.bCleaned, (i) => schedule[i].type_b);
 
     // Ein Slot gilt nur dann als gemeinsam, wenn beide Personen an diesem Tag
     // tatsächlich dasselbe Gericht bekommen. Musste eine Person wegen eigener
