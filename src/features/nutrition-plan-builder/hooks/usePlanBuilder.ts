@@ -615,6 +615,7 @@ export function usePlanBuilder({ userId, planId, returnOrgId }: UsePlanBuilderPa
     goBack,
     setDay,
     setPartnerDay,
+    applyTemplateDays,
     handleSave,
     copyClientDay,
     copyPartnerDay,
