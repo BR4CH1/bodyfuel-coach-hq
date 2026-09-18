@@ -53,10 +53,13 @@ export function CustomMealPortionEditor({
   const scaled = useMemo(() => scaleCustomMeal(meal, factor || 1), [factor, meal]);
   const [ingredients, setIngredients] = useState<CustomMealIngredient[]>(scaled.ingredients);
   const [modes, setModes] = useState<Record<number, IngredientMode>>({});
+  // Rohtext-Eingaben pro Zutat, damit ein getipptes Komma nicht verschwindet.
+  const [drafts, setDrafts] = useState<Record<number, string>>({});
 
   useEffect(() => {
     setIngredients(scaled.ingredients.map((ingredient) => ({ ...ingredient })));
     setModes({});
+    setDrafts({});
   }, [meal.id, factor]);
 
   const macrosComplete = ingredients.every(ingredientHasCompleteMacros);
