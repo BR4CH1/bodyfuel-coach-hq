@@ -93,7 +93,11 @@ export function CustomMealPortionEditor({
     const nextAmount = mode === "piece" && pieceGrams ? displayAmount * pieceGrams : displayAmount;
     setIngredients((current) =>
       current.map((ingredient, currentIndex) =>
-        currentIndex === index ? scaleIngredientToAmount(ingredient, nextAmount) : ingredient,
+        currentIndex === index
+          ? // Immer von der unveränderten Ausgangszutat skalieren — sonst würde
+            // sich der Rundungsfehler bei jedem Tastendruck aufaddieren.
+            scaleIngredientToAmount(scaled.ingredients[currentIndex] ?? ingredient, nextAmount)
+          : ingredient,
       ),
     );
   };
