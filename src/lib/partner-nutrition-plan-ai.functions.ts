@@ -1259,6 +1259,7 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
       who: typeof a,
       clientId: string,
       cleanedDays: CleanedPartnerDay[],
+      pickType: (index: number) => "training" | "rest",
     ): Promise<{ planId: string; dayIds: string[]; mealsByDay: ComputedPersonMeal[][] }> {
       const sums = cleanedDays.reduce(
         (acc, d) => {
@@ -1302,9 +1303,23 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
       const mealsByDay: ComputedPersonMeal[][] = [];
       for (let i = 0; i < cleanedDays.length; i++) {
         const d = cleanedDays[i];
+        const dayType = pickType(i);
+        const target = dayType === "rest" ? who.targets.rest : who.targets.training;
+        const dayDate = new Date(start);
+        dayDate.setDate(dayDate.getDate() + i);
         const { data: dayRow } = await supabase
           .from("nutrition_plan_days")
-          .insert({ plan_id: planRow.id, name: d.name, sort_order: i })
+          .insert({
+            plan_id: planRow.id,
+            name: d.name,
+            sort_order: i,
+            day_type: dayType,
+            day_date: isoDate(dayDate),
+            target_kcal: target?.kcal ?? null,
+            target_protein_g: target?.protein_g ?? null,
+            target_carbs_g: target?.carbs_g ?? null,
+            target_fat_g: target?.fat_g ?? null,
+          })
           .select("id")
           .single();
         if (!dayRow?.id) throw new Error("Day-Insert fehlgeschlagen");
