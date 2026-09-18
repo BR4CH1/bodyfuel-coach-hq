@@ -51,3 +51,34 @@ describe("custom meal ingredients", () => {
     );
   });
 });
+
+describe("Mengenänderung ohne aufaddierte Rundungsfehler", () => {
+  const rice = {
+    name: "Reis",
+    amount: 150,
+    unit: "g",
+    kcal: 248,
+    protein_g: 5.2,
+    carbs_g: 54,
+    fat_g: 0.8,
+  } as any;
+
+  it("rechnet 150 g → 80 g korrekt, auch nach Zwischenschritten", () => {
+    const direct = scaleIngredientToAmount(rice, 80);
+    expect(Number(direct.kcal)).toBeCloseTo(132.3, 1);
+
+    // Tastendruck-Simulation: 150 → 15 → 1 → 8 → 80, immer von der Basis aus.
+    let latest = rice;
+    for (const step of [15, 1, 8, 80]) {
+      latest = scaleIngredientToAmount(rice, step);
+    }
+    expect(Number(latest.kcal)).toBeCloseTo(Number(direct.kcal), 1);
+    expect(Number(latest.amount)).toBe(80);
+  });
+
+  it("hält die Makros proportional", () => {
+    const half = scaleIngredientToAmount(rice, 75);
+    expect(Number(half.protein_g)).toBeCloseTo(2.6, 1);
+    expect(Number(half.carbs_g)).toBeCloseTo(27, 1);
+  });
+});
