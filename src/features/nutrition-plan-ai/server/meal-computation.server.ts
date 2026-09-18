@@ -167,6 +167,29 @@ export async function generateComputedNutritionPlan(input: {
       continue;
     }
 
+    // Auch die eingesetzten Ersatz-Mahlzeiten müssen die harten No-Gos einhalten.
+    const nogoViolations = repairedRawDays.flatMap((day, index) =>
+      day.meals.flatMap((meal) =>
+        findMealViolations(
+          {
+            name: meal.name,
+            description: meal.description ?? undefined,
+            ingredients: (meal.ingredients ?? []) as never,
+          },
+          context.forbidden,
+        ).map((violation) => `Tag ${index + 1} — ${meal.name}: "${violation.term}"`),
+      ),
+    );
+    if (nogoViolations.length > 0) {
+      if (attempt >= MAX_GENERATION_ATTEMPTS) {
+        throw new Error(
+          `No-Gos konnten nicht eingehalten werden: ${Array.from(new Set(nogoViolations)).slice(0, 6).join("; ")}.`,
+        );
+      }
+      correctionNote = buildNogoCorrectionNote(Array.from(new Set(nogoViolations)), attempt);
+      continue;
+    }
+
     const attemptUnresolved: UnresolvedIngredient[] = [];
     const attemptProteinBreaches: string[] = [];
     const baseCache = new Map<string, Promise<ComputedGeneratedMeal[]>>();
