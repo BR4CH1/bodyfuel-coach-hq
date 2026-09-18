@@ -1363,14 +1363,14 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
         for (let idx = 0; idx < meals.length; idx++) {
           const m = meals[idx];
           const isShared = isSharedMeal(i, m);
-          const prefix = isShared
-            ? `🍽️ Gemeinsam mit ${otherName} — ${slotLabel(m.slot)}`
-            : slotLabel(m.slot);
+          const dishName = m.name?.trim() || slotLabel(m.slot);
           const { data: mealRow, error: mealErr } = await supabase
             .from("nutrition_plan_meals")
             .insert({
               day_id: dayId,
-              name: `${prefix}: ${m.name}`,
+              // Gerichtsname bleibt der Gerichtsname; der Slot steckt in meal_slot.
+              name: isShared ? `🍽️ Gemeinsam mit ${otherName}: ${dishName}` : dishName,
+              meal_slot: m.slot,
               description: m.description ?? null,
               ingredients_json: coerceIngredients((m as any).ingredients ?? null).length
                 ? coerceIngredients((m as any).ingredients ?? null)
