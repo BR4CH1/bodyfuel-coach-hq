@@ -310,6 +310,24 @@ export function PlanManagementCard({ userId, returnOrgId }: { userId: string; re
         </div>
       </div>
 
+      <PlanConfiguratorCard
+        value={{ ...config, planDays: computePlanDays(), partner: config.partner }}
+        onChange={handleConfigChange}
+        partnerAvailable={Boolean(partnerLink.data)}
+        partnerName={partnerLink.data?.partner_name ?? undefined}
+        customPeriod={customPeriod}
+      />
+
+      {validation && (
+        <div className="mt-3 space-y-2">
+          {validation.map((entry) => (
+            <PlanValidationSummary key={entry.label} report={entry.report} title={entry.label} />
+          ))}
+        </div>
+      )}
+
+
+
       <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-dashed border-border bg-background/40 px-4 py-3 text-xs">
         <span className="font-semibold uppercase tracking-wider text-muted-foreground">
           Zeitraum
