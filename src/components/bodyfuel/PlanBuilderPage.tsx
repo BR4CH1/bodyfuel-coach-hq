@@ -78,6 +78,7 @@ export function PlanBuilderPage({
     goBack,
     setDay,
     setPartnerDay,
+    applyTemplateDays,
     handleSave,
     copyClientDay,
     copyPartnerDay,
