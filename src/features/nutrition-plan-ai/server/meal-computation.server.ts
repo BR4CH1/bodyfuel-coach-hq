@@ -250,7 +250,7 @@ export async function generateComputedNutritionPlan(input: {
       );
 
       const finalSums = sumMealMacros(correctedMeals);
-      if (finalSums.protein_g > day.target.protein_g) {
+      if (finalSums.protein_g > day.target.protein_g + proteinTolerance(day.target.protein_g)) {
         attemptProteinBreaches.push(
           `${day.name}: ${Math.round(finalSums.protein_g)} g statt max. ${day.target.protein_g} g`,
         );
