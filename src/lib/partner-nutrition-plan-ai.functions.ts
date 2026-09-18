@@ -1012,55 +1012,68 @@ Genau ${aiPlanDays} Basistage. Pro Person je 4 Slots (breakfast/lunch/dinner/sna
         // die Kalorien auf Kohlenhydrate verschoben, danach neu berechnet.
         let finalMeals = meals;
         let proteinTotal = finalMeals.reduce((sum, meal) => sum + meal.protein_g, 0);
-        if (proteinTotal > target.protein_g) {
+        // Mehrere Korrekturdurchläufe: nach dem Engine-Recompute kann durch
+        // Rundung noch ein kleiner Rest über der Obergrenze bleiben.
+        for (let pass = 0; pass < 4 && proteinTotal > target.protein_g; pass++) {
           const correction = correctProteinOverflow(finalMeals, proteinTotal, target.protein_g);
-          if (correction.changed) {
-            const recomputed: ComputedPersonMeal[] = [];
-            for (const meal of correction.meals) {
-              const structured = coerceIngredients((meal as any).ingredients ?? null);
-              const computed = structured.length
-                ? await computeMealFromIngredients(supabase, structured, {
-                    smartOnly: true,
-                    requireResolvedIds: true,
-                  })
-                : null;
-              if (computed && isUsableEngineResult(computed)) {
-                recomputed.push({
-                  ...meal,
-                  ingredients: structured,
-                  description: structured.length
-                    ? structured
-                        .map((ing: any) => `${ing.grams ?? ing.amount}g ${ing.name}`)
-                        .join(", ")
-                    : meal.description,
-                  kcal: computed.kcal,
-                  protein_g: computed.protein_g,
-                  carbs_g: computed.carbs_g,
-                  fat_g: computed.fat_g,
-                  _compute_warnings: [
-                    "Mengen automatisch an die Protein-Obergrenze angepasst.",
-                    ...(computed.warnings ?? []),
-                  ],
-                  _data_source: computed.data_source,
-                  _verified_ratio: computed.coverage,
-                } as ComputedPersonMeal);
-              } else {
-                recomputed.push(meal);
-              }
-            }
-            const correctedTotal = recomputed.reduce((sum, meal) => sum + meal.protein_g, 0);
-            if (correctedTotal <= proteinTotal) {
-              finalMeals = recomputed;
-              proteinTotal = correctedTotal;
-              console.warn(
-                `[partner-plan] ${who.name}, Tag ${dayIndex + 1}: Protein deterministisch auf ${Math.round(proteinTotal)} g korrigiert (max. ${target.protein_g} g)`,
-              );
+          if (!correction.changed) break;
+          const recomputed: ComputedPersonMeal[] = [];
+          for (const meal of correction.meals) {
+            const structured = coerceIngredients((meal as any).ingredients ?? null);
+            const computed = structured.length
+              ? await computeMealFromIngredients(supabase, structured, {
+                  smartOnly: true,
+                  requireResolvedIds: true,
+                })
+              : null;
+            if (computed && isUsableEngineResult(computed)) {
+              recomputed.push({
+                ...meal,
+                ingredients: structured,
+                description: structured.length
+                  ? structured.map((ing: any) => `${ing.grams ?? ing.amount}g ${ing.name}`).join(", ")
+                  : meal.description,
+                kcal: computed.kcal,
+                protein_g: computed.protein_g,
+                carbs_g: computed.carbs_g,
+                fat_g: computed.fat_g,
+                _compute_warnings: [
+                  "Mengen automatisch an die Protein-Obergrenze angepasst.",
+                  ...(computed.warnings ?? []),
+                ],
+                _data_source: computed.data_source,
+                _verified_ratio: computed.coverage,
+              } as ComputedPersonMeal);
+            } else {
+              recomputed.push(meal);
             }
           }
+          const correctedTotal = recomputed.reduce((sum, meal) => sum + meal.protein_g, 0);
+          if (correctedTotal >= proteinTotal) break;
+          finalMeals = recomputed;
+          proteinTotal = correctedTotal;
+          console.warn(
+            `[partner-plan] ${who.name}, Tag ${dayIndex + 1}: Protein deterministisch auf ${Math.round(proteinTotal)} g korrigiert (max. ${target.protein_g} g)`,
+          );
         }
-        if (proteinTotal > target.protein_g) {
+        // Rundungstoleranz: winzige Überschreitungen (≤2 % bzw. ≤4 g) brechen
+        // den Plan nicht ab, sondern werden am Tag als Hinweis vermerkt.
+        const proteinTolerance = Math.max(4, target.protein_g * 0.02);
+        if (proteinTotal > target.protein_g + proteinTolerance) {
           issues.push(
             `${who.name}, Tag ${dayIndex + 1}: Protein-Obergrenze überschritten (${Math.round(proteinTotal)} g statt max. ${target.protein_g} g)`,
+          );
+        } else if (proteinTotal > target.protein_g && finalMeals.length) {
+          finalMeals = finalMeals.map((meal, idx) =>
+            idx === 0
+              ? ({
+                  ...meal,
+                  _compute_warnings: [
+                    `Protein liegt mit ${Math.round(proteinTotal)} g knapp über dem Ziel (${target.protein_g} g).`,
+                    ...(meal._compute_warnings ?? []),
+                  ],
+                } as ComputedPersonMeal)
+              : meal,
           );
         }
 
