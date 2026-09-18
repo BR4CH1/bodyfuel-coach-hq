@@ -53,10 +53,13 @@ export function CustomMealPortionEditor({
   const scaled = useMemo(() => scaleCustomMeal(meal, factor || 1), [factor, meal]);
   const [ingredients, setIngredients] = useState<CustomMealIngredient[]>(scaled.ingredients);
   const [modes, setModes] = useState<Record<number, IngredientMode>>({});
+  // Rohtext-Eingaben pro Zutat, damit ein getipptes Komma nicht verschwindet.
+  const [drafts, setDrafts] = useState<Record<number, string>>({});
 
   useEffect(() => {
     setIngredients(scaled.ingredients.map((ingredient) => ({ ...ingredient })));
     setModes({});
+    setDrafts({});
   }, [meal.id, factor]);
 
   const macrosComplete = ingredients.every(ingredientHasCompleteMacros);
@@ -90,7 +93,11 @@ export function CustomMealPortionEditor({
     const nextAmount = mode === "piece" && pieceGrams ? displayAmount * pieceGrams : displayAmount;
     setIngredients((current) =>
       current.map((ingredient, currentIndex) =>
-        currentIndex === index ? scaleIngredientToAmount(ingredient, nextAmount) : ingredient,
+        currentIndex === index
+          ? // Immer von der unveränderten Ausgangszutat skalieren — sonst würde
+            // sich der Rundungsfehler bei jedem Tastendruck aufaddieren.
+            scaleIngredientToAmount(scaled.ingredients[currentIndex] ?? ingredient, nextAmount)
+          : ingredient,
       ),
     );
   };
@@ -173,7 +180,10 @@ export function CustomMealPortionEditor({
                     <div className="inline-flex shrink-0 rounded-md border border-border p-0.5 text-[10px]">
                       <button
                         type="button"
-                        onClick={() => setModes((current) => ({ ...current, [index]: "unit" }))}
+                        onClick={() => {
+                          setModes((current) => ({ ...current, [index]: "unit" }));
+                          setDrafts((current) => ({ ...current, [index]: "" }));
+                        }}
                         className={`rounded px-2 py-1 ${
                           mode === "unit" ? "bg-secondary text-foreground" : "text-muted-foreground"
                         }`}
@@ -182,7 +192,10 @@ export function CustomMealPortionEditor({
                       </button>
                       <button
                         type="button"
-                        onClick={() => setModes((current) => ({ ...current, [index]: "piece" }))}
+                        onClick={() => {
+                          setModes((current) => ({ ...current, [index]: "piece" }));
+                          setDrafts((current) => ({ ...current, [index]: "" }));
+                        }}
                         className={`rounded px-2 py-1 ${
                           mode === "piece" ? "bg-secondary text-foreground" : "text-muted-foreground"
                         }`}
@@ -200,14 +213,11 @@ export function CustomMealPortionEditor({
                     variant="outline"
                     className="h-11 w-11 shrink-0"
                     disabled={!editable}
-                    onClick={() =>
-                      setIngredientAmount(
-                        index,
-                        Math.max(step, displayAmount - step),
-                        mode,
-                        piecePreset?.grams,
-                      )
-                    }
+                    onClick={() => {
+                      const next = Math.max(step, displayAmount - step);
+                      setDrafts((current) => ({ ...current, [index]: "" }));
+                      setIngredientAmount(index, next, mode, piecePreset?.grams);
+                    }}
                     aria-label={`${ingredient.name} Menge reduzieren`}
                   >
                     <Minus className="h-4 w-4" />
@@ -215,17 +225,27 @@ export function CustomMealPortionEditor({
                   <Input
                     type="text"
                     inputMode="decimal"
-                    value={info.scalable ? decimal(displayAmount) : ""}
+                    value={
+                      drafts[index] !== undefined && drafts[index] !== ""
+                        ? drafts[index]
+                        : info.scalable
+                          ? decimal(displayAmount)
+                          : ""
+                    }
                     disabled={!editable}
                     onChange={(event) => {
-                      const parsed = Number(event.target.value.replace(",", "."));
+                      const raw = event.target.value.replace(/[^0-9.,]/g, "");
+                      setDrafts((current) => ({ ...current, [index]: raw }));
+                      const parsed = Number(raw.replace(",", "."));
                       if (Number.isFinite(parsed) && parsed > 0) {
                         setIngredientAmount(index, parsed, mode, piecePreset?.grams);
                       }
                     }}
+                    onBlur={() => setDrafts((current) => ({ ...current, [index]: "" }))}
                     className="h-11 min-w-0 flex-1 text-center text-base font-semibold"
                     aria-label={`${ingredient.name} Menge`}
                   />
+
                   <div className="w-14 shrink-0 text-xs font-semibold text-muted-foreground">
                     {mode === "piece" && piecePreset ? piecePreset.label : info.unit}
                   </div>
@@ -235,9 +255,10 @@ export function CustomMealPortionEditor({
                     variant="outline"
                     className="h-11 w-11 shrink-0"
                     disabled={!editable}
-                    onClick={() =>
-                      setIngredientAmount(index, displayAmount + step, mode, piecePreset?.grams)
-                    }
+                    onClick={() => {
+                      setDrafts((current) => ({ ...current, [index]: "" }));
+                      setIngredientAmount(index, displayAmount + step, mode, piecePreset?.grams);
+                    }}
                     aria-label={`${ingredient.name} Menge erhöhen`}
                   >
                     <Plus className="h-4 w-4" />

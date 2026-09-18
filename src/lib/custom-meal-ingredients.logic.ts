@@ -37,7 +37,12 @@ function scaleValue(value: number | null | undefined, factor: number): number | 
 
 /**
  * Setzt die Menge einer Zutat neu und skaliert ihre Makros linear anhand der
- * bisherigen Basismenge. Nicht skalierbare Zutaten bleiben unverändert.
+ * Basismenge. Nicht skalierbare Zutaten bleiben unverändert.
+ *
+ * WICHTIG: `ingredient` muss immer die unveränderte Ausgangszutat sein, nie ein
+ * bereits skalierter Zwischenstand. Sonst würde bei jedem Tastendruck erneut
+ * von gerundeten Werten weitergerechnet und der Rundungsfehler aufaddiert
+ * (150 g → 1 g → 80 g ergäbe sonst deutlich falsche Kalorien).
  */
 export function scaleIngredientToAmount(
   ingredient: CustomMealIngredient,
@@ -56,7 +61,9 @@ export function scaleIngredientToAmount(
     amount: rounded,
     unit: base.unit,
     amount_g: legacyGrams ? Math.round(legacyGrams * factor * 10) / 10 : ingredient.amount_g,
-    kcal: ingredient.kcal == null ? ingredient.kcal : Math.round(Number(ingredient.kcal) * factor),
+    // kcal bewusst mit einer Dezimalstelle: die Summe wird erst in
+    // `sumIngredientMacros` auf ganze Kalorien gerundet.
+    kcal: scaleValue(ingredient.kcal, factor),
     protein_g: scaleValue(ingredient.protein_g, factor),
     carbs_g: scaleValue(ingredient.carbs_g, factor),
     fat_g: scaleValue(ingredient.fat_g, factor),
