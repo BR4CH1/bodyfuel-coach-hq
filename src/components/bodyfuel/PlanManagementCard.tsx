@@ -172,9 +172,10 @@ export function PlanManagementCard({ userId, returnOrgId }: { userId: string; re
   });
 
   const gen = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       const planDays = computePlanDays();
-      return genFn({
+      await persistConfig();
+      return await genFn({
         data: {
           user_id: userId,
           start_mode: "today",
@@ -183,11 +184,12 @@ export function PlanManagementCard({ userId, returnOrgId }: { userId: string; re
         },
       });
     },
-    onSuccess: () => {
+    onSuccess: (res: any) => {
       const days = computePlanDays();
       toast.success(
         `Plan-Entwurf erstellt (${startDate} → ${endDate}, ${days} Tag${days === 1 ? "" : "e"}).`,
       );
+      setValidation(res?.validation ? [{ label: "Plan-Prüfung", report: res.validation }] : null);
       invalidate();
     },
     onError: (e: any) => toast.error(e?.message ?? "Fehler beim Erstellen"),
