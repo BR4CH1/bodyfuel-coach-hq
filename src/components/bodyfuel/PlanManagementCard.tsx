@@ -112,6 +112,44 @@ export function PlanManagementCard({ userId, returnOrgId }: { userId: string; re
     return Math.max(1, Math.min(31, diff));
   };
 
+  // ---- Plan-Konfigurator (harte Constraints + weiche Vorlieben) ----
+  const savePlanConfigFn = useServerFn(saveCustomerPlanConfig);
+  const [config, setConfig] = useState<PlanConfig>(DEFAULT_PLAN_CONFIG);
+  const [customPeriod, setCustomPeriod] = useState(false);
+  const [validation, setValidation] = useState<
+    { label: string; report: PlanValidationReport }[] | null
+  >(null);
+
+  const addDaysISO = (iso: string, days: number) => {
+    const d = new Date(iso);
+    d.setDate(d.getDate() + days);
+    return d.toISOString().slice(0, 10);
+  };
+
+  const handleConfigChange = (next: PlanConfig) => {
+    if (next.planDays !== config.planDays) {
+      setCustomPeriod(false);
+      setEndDate(addDaysISO(startDate, Math.max(1, next.planDays) - 1));
+    }
+    setConfig(next);
+  };
+
+  const persistConfig = () =>
+    savePlanConfigFn({
+      data: {
+        user_id: userId,
+        goal: config.goal,
+        diet_rules: config.dietRules,
+        exclusion_groups: config.exclusionGroups,
+        custom_exclusions: config.customExclusions,
+        preferences: config.preferences,
+        lifestyle: config.lifestyle,
+        meals_per_day: config.mealsPerDay,
+      },
+    });
+
+
+
   const smartProfile = useQuery({
     queryKey: ["smart-profile", userId],
     queryFn: () => smartProfileFn({ data: { user_id: userId } }),
