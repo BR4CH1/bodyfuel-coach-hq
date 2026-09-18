@@ -78,11 +78,16 @@ function escapeRegExp(value: string): string {
 }
 
 function hasTerm(haystack: string, term: string): boolean {
-  const pattern = new RegExp(
-    `(^|[^a-z0-9äöüß])${escapeRegExp(term)}([^a-z0-9äöüß]|$)`,
-    "i",
-  );
-  return pattern.test(haystack.toLowerCase());
+  const hay = haystack.toLowerCase();
+  const needle = term.toLowerCase();
+  // Deutsche Komposita: "Magerquark", "Hähnchenbrust", "Thunfisch" müssen
+  // ihre Basiszutat treffen. Kurze Begriffe ("ei") bleiben wortgenau, damit
+  // "Reis" oder "Zwiebel" nicht fälschlich als Protein gelten.
+  if (needle.length >= 5) return hay.includes(needle);
+  if (needle.length === 4) {
+    return new RegExp(`(^|[^a-z0-9äöüß])${escapeRegExp(needle)}`, "i").test(hay);
+  }
+  return new RegExp(`(^|[^a-z0-9äöüß])${escapeRegExp(needle)}([^a-z0-9äöüß]|$)`, "i").test(hay);
 }
 
 export type IngredientClass = "protein" | "carb" | "other";
