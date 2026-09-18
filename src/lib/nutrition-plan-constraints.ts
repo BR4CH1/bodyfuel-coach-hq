@@ -302,15 +302,23 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-/** Wortgrenzen-sichere Suche (deutsche Umlaute zählen als Wortzeichen). */
+/**
+ * Suche, die deutsche Komposita trifft (deutsche Umlaute zählen als
+ * Wortzeichen). Harte No-Gos müssen auch in zusammengesetzten Zutatennamen
+ * greifen ("Schweineschnitzel", "Hähnchenbrust", "Vollmilchjoghurt"):
+ * - ab 5 Zeichen: Teilwort-Treffer
+ * - 4 Zeichen: Treffer am Wortanfang
+ * - bis 3 Zeichen: nur exaktes Wort ("Ei" darf nicht in "Reis" greifen)
+ */
 export function textContainsTerm(haystack: string, term: string): boolean {
   const needle = normalize(term);
   if (!needle) return false;
-  const pattern = new RegExp(
-    `(^|[^a-z0-9äöüß])${escapeRegExp(needle)}([^a-z0-9äöüß]|$)`,
-    "i",
-  );
-  return pattern.test(normalize(haystack));
+  const hay = normalize(haystack);
+  if (needle.length >= 5) return hay.includes(needle);
+  if (needle.length === 4) {
+    return new RegExp(`(^|[^a-z0-9äöüß])${escapeRegExp(needle)}`, "i").test(hay);
+  }
+  return new RegExp(`(^|[^a-z0-9äöüß])${escapeRegExp(needle)}([^a-z0-9äöüß]|$)`, "i").test(hay);
 }
 
 /**
