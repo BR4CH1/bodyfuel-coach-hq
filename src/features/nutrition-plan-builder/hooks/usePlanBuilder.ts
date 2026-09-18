@@ -212,6 +212,38 @@ export function usePlanBuilder({ userId, planId, returnOrgId }: UsePlanBuilderPa
     );
   };
 
+  /**
+   * Überträgt die Mahlzeiten einer gespeicherten Vorlage auf den aktuellen
+   * Zeitraum. Datum, Trainings-/Ruhetag und Split bleiben erhalten — nur die
+   * Mahlzeiten und Portionsziele kommen aus der Vorlage. Ist die Vorlage
+   * kürzer als der Zeitraum, wird sie zyklisch wiederholt.
+   */
+  const applyTemplateDays = (
+    templateDays: BuilderDay[],
+    templatePartnerDays?: BuilderDay[] | null,
+  ) => {
+    if (!templateDays.length) return;
+    const mergeInto = (target: BuilderDay, source: BuilderDay): BuilderDay => ({
+      ...target,
+      meals: source.meals?.map((meal) => ({ ...meal })) ?? [],
+      prepCoupleLunchDinner: source.prepCoupleLunchDinner ?? target.prepCoupleLunchDinner,
+      slotKcalTargets: source.slotKcalTargets ?? target.slotKcalTargets ?? null,
+      customTargets: source.customTargets ?? target.customTargets ?? null,
+    });
+    setDays((previous) =>
+      previous.map((day, index) => mergeInto(day, templateDays[index % templateDays.length])),
+    );
+    if (templatePartnerDays?.length) {
+      setPartnerDays((previous) =>
+        previous.map((day, index) =>
+          mergeInto(day, templatePartnerDays[index % templatePartnerDays.length]),
+        ),
+      );
+    }
+  };
+
+
+
   const ensureLibraryMealImage = useCallback(
     (mealId: string) => {
       if (requestedLibraryImages.current.has(mealId)) return;
