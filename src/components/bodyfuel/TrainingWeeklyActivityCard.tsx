@@ -1,12 +1,18 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Activity, ChevronDown, Footprints, Home, Users } from "lucide-react";
+import { Activity, ChevronDown, Footprints, Home, Users, Zap } from "lucide-react";
+import { describeFlexActivity } from "@/lib/training-activity-types";
 import {
   getAthleteWeeklyTrainingPlan,
   WEEKLY_TRAINING_ACTIVITY_LABELS,
   type WeeklyTrainingActivity,
 } from "@/lib/training-weekly-activity.functions";
+
+function activityDetail(activity: WeeklyTrainingActivity): string {
+  if (activity.type === "flex") return describeFlexActivity(activity);
+  return activity.title;
+}
 
 const WEEKDAYS = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
 const WEEKDAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
