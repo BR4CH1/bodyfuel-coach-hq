@@ -124,7 +124,9 @@ export function TrainingWeeklyActivityCard({ userId }: { userId: string }) {
                     <div className="mt-2 space-y-1.5">
                       {day.activities.map((activity) => (
                         <div key={activity.id} className="text-[10px] text-muted-foreground">
-                          <span className="font-bold text-foreground">{activity.title}</span>
+                          <span className="font-bold text-foreground">
+                            {activityDetail(activity)}
+                          </span>
                           {activity.time ? ` · ${activity.time}` : ""}
                         </div>
                       ))}
