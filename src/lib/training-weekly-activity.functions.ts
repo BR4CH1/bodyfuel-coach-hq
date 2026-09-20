@@ -49,6 +49,7 @@ const ACTIVITY_TYPES = new Set<WeeklyTrainingActivityType>([
   "home_workout",
   "cardio",
   "mobility",
+  "flex",
   "other",
 ]);
 
