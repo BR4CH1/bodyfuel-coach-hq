@@ -3,12 +3,15 @@ import { useState } from "react";
 import {
   DIET_RULE_LABELS,
   EXCLUSION_GROUP_LABELS,
+  PLAN_GOAL_LABELS,
+  VARIATION_LABELS,
   summarizeActiveRules,
   type DietRule,
   type ExclusionGroup,
   type LifestyleFlag,
   type PlanConstraintConfig,
   type PlanGoal,
+  type VariationLevel,
 } from "@/lib/nutrition-plan-constraints";
 
 export type PlanConfig = PlanConstraintConfig;
@@ -23,15 +26,14 @@ export const DEFAULT_PLAN_CONFIG: PlanConfig = {
   mealsPerDay: 3,
   planDays: 7,
   partner: false,
+  variation: "mittel",
 };
 
-const GOALS: { id: PlanGoal; label: string }[] = [
-  { id: "abnehmen", label: "Abnehmen" },
-  { id: "muskelaufbau", label: "Muskelaufbau" },
-  { id: "halten", label: "Gewicht halten" },
-  { id: "performance", label: "Performance" },
-  { id: "individuell", label: "Individuell" },
-];
+const GOALS: { id: PlanGoal; label: string }[] = (
+  Object.keys(PLAN_GOAL_LABELS) as PlanGoal[]
+).map((id) => ({ id, label: PLAN_GOAL_LABELS[id] }));
+
+const VARIATIONS = Object.keys(VARIATION_LABELS) as VariationLevel[];
 
 const LIFESTYLE: { id: LifestyleFlag; label: string }[] = [
   { id: "meal_prep", label: "Meal Prep" },
@@ -41,7 +43,7 @@ const LIFESTYLE: { id: LifestyleFlag; label: string }[] = [
   { id: "unterwegs", label: "Unterwegs / keine Küche" },
 ];
 
-const PERIODS = [7, 14, 21, 28];
+const PERIODS = [1, 3, 7, 14, 21, 28];
 
 function toggle<T>(list: T[], value: T): T[] {
   return list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
@@ -139,8 +141,8 @@ export function PlanConfiguratorCard({
       </Group>
 
       <Group
-        title="2 · Harte Regeln & No-Gos"
-        hint="Absolute Ausschlüsse — diese Lebensmittel tauchen in keiner Zutat auf."
+        title="2 · Ernährungsform, harte Regeln & No-Gos"
+        hint="Ernährungsform steuert die Auswahl. Ausschlüsse sind absolut — sie tauchen in keiner Zutat auf."
       >
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
           {(Object.keys(DIET_RULE_LABELS) as DietRule[]).map((rule) => (
@@ -274,6 +276,18 @@ export function PlanConfiguratorCard({
               onClick={() => set({ lifestyle: toggle(value.lifestyle, flag.id) })}
             >
               {flag.label}
+            </Chip>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="text-muted-foreground">Variation</span>
+          {VARIATIONS.map((level) => (
+            <Chip
+              key={level}
+              active={(value.variation ?? "mittel") === level}
+              onClick={() => set({ variation: level })}
+            >
+              {VARIATION_LABELS[level]}
             </Chip>
           ))}
         </div>
