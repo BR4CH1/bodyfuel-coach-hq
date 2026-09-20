@@ -70,7 +70,10 @@ function cleanActivities(value: unknown): WeeklyTrainingActivity[] {
       const id = String(raw?.id ?? "").trim().slice(0, 100) || `activity-${index + 1}`;
       const time = String(raw?.time ?? "").trim().slice(0, 10) || null;
       const notes = String(raw?.notes ?? "").trim().slice(0, 300) || null;
-      return { id, type, title, time, notes };
+      const sport = isFlexActivitySport(raw?.sport) ? raw.sport : null;
+      const intensity = isActivityIntensity(raw?.intensity) ? raw.intensity : null;
+      const durationMin = clampActivityDuration(raw?.durationMin);
+      return { id, type, title, time, notes, sport, durationMin, intensity };
     })
     .filter((item): item is WeeklyTrainingActivity => Boolean(item));
 }
@@ -196,5 +199,6 @@ export const WEEKLY_TRAINING_ACTIVITY_LABELS: Record<WeeklyTrainingActivityType,
   home_workout: "Home Workout",
   cardio: "Cardio",
   mobility: "Mobility",
+  flex: "Flex-Aktivität",
   other: "Aktivität",
 };
