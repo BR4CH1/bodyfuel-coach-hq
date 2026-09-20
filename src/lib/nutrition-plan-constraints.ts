@@ -489,10 +489,35 @@ export function computeVarietyRatio(days: PlanDayLike[]): number {
 }
 
 export interface PlanValidationCheck {
-  id: "nogos" | "diet" | "macros" | "meals" | "period" | "variety";
+  id:
+    | "nogos"
+    | "allergies"
+    | "diet"
+    | "macros"
+    | "meals"
+    | "completeness"
+    | "period"
+    | "variety";
   label: string;
   ok: boolean;
   detail: string;
+}
+
+/** Ist/Soll-Kennzahlen zur Anzeige nach der Generierung. */
+export interface PlanValidationMetrics {
+  kcalActual: number;
+  kcalTarget: number;
+  proteinActual: number;
+  proteinTarget: number;
+  carbsActual: number;
+  carbsTarget: number;
+  fatActual: number;
+  fatTarget: number;
+  nogoViolations: number;
+  allergyViolations: number;
+  missingMeals: number;
+  repeatedMeals: number;
+  varietyRatio: number;
 }
 
 export interface PlanValidationReport {
@@ -500,6 +525,7 @@ export interface PlanValidationReport {
   checks: PlanValidationCheck[];
   blockingReasons: string[];
   suggestions: string[];
+  metrics: PlanValidationMetrics;
 }
 
 export interface PlanValidationInput {
@@ -515,6 +541,10 @@ export interface PlanValidationInput {
   kcalTolerance?: number;
   /** Mindestanteil einzigartiger Hauptmahlzeiten. */
   minVarietyRatio?: number;
+  /** Allergene/Intoleranzen — härteste Stufe, immer blockierend. */
+  allergyTerms?: string[];
+  /** Variationsgrad; setzt minVarietyRatio, wenn dieses fehlt. */
+  variation?: VariationLevel;
 }
 
 /**
@@ -523,7 +553,10 @@ export interface PlanValidationInput {
  */
 export function validateGeneratedPlan(input: PlanValidationInput): PlanValidationReport {
   const kcalTolerance = input.kcalTolerance ?? 0.15;
-  const minVarietyRatio = input.minVarietyRatio ?? 0.4;
+  const minVarietyRatio = input.minVarietyRatio ?? varietyTargetFor(input.variation);
+  const allergyTerms = (input.allergyTerms ?? [])
+    .map((term) => normalize(term))
+    .filter(Boolean);
   const blockingReasons: string[] = [];
   const suggestions = new Set<string>();
 
@@ -538,6 +571,21 @@ export function validateGeneratedPlan(input: PlanValidationInput): PlanValidatio
       }
     }
   });
+  // 1b) Allergien getrennt ausweisen — härteste Stufe.
+  const allergyViolations: string[] = [];
+  if (allergyTerms.length) {
+    input.days.forEach((day, dayIndex) => {
+      for (const meal of day.meals ?? []) {
+        for (const violation of findMealViolations(meal, allergyTerms)) {
+          allergyViolations.push(
+            `Tag ${dayIndex + 1} — ${meal.name ?? "Mahlzeit"}: "${violation.ingredient}" enthält "${violation.term}"`,
+          );
+        }
+      }
+    });
+    if (allergyViolations.length) blockingReasons.push(...allergyViolations.slice(0, 6));
+  }
+
   const dietRules = input.config.dietRules ?? [];
   const exclusionGroups = input.config.exclusionGroups ?? [];
   if (violations.length) {
@@ -595,9 +643,70 @@ export function validateGeneratedPlan(input: PlanValidationInput): PlanValidatio
     blockingReasons.push(`Zeitraum: ${input.days.length} statt ${expectedDays} Tage generiert`);
   }
 
+  // 4b) Vollständigkeit: jede Mahlzeit braucht Name und Energie
+  const incompleteMeals: string[] = [];
+  input.days.forEach((day, dayIndex) => {
+    (day.meals ?? []).forEach((meal) => {
+      const hasName = Boolean((meal.name ?? "").trim());
+      const hasEnergy = (Number(meal.kcal) || 0) > 0;
+      if (!hasName || !hasEnergy) {
+        incompleteMeals.push(
+          `Tag ${dayIndex + 1}: "${meal.name ?? "ohne Namen"}" ist unvollständig`,
+        );
+      }
+    });
+  });
+  if (incompleteMeals.length) blockingReasons.push(...incompleteMeals.slice(0, 4));
+
   // 5) Abwechslung
   const varietyRatio = computeVarietyRatio(input.days);
   const varietyOk = input.days.length < 3 || varietyRatio >= minVarietyRatio;
+
+  // Ist/Soll-Kennzahlen über den gesamten Zeitraum (Tagesdurchschnitt)
+  const dayCount = Math.max(1, input.days.length);
+  const actual = input.days.reduce(
+    (acc, day) => {
+      for (const meal of day.meals ?? []) {
+        acc.kcal += Number(meal.kcal) || 0;
+        acc.protein_g += Number(meal.protein_g) || 0;
+        acc.carbs_g += Number(meal.carbs_g) || 0;
+        acc.fat_g += Number(meal.fat_g) || 0;
+      }
+      return acc;
+    },
+    { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0 },
+  );
+  const targetSum = input.days.reduce(
+    (acc, _day, index) => {
+      const target = input.targets[index] ?? input.targets.at(-1);
+      if (!target) return acc;
+      acc.kcal += target.kcal;
+      acc.protein_g += target.protein_g;
+      acc.carbs_g += target.carbs_g;
+      acc.fat_g += target.fat_g;
+      return acc;
+    },
+    { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0 },
+  );
+  const mainMealNames = input.days.flatMap((day) =>
+    (day.meals ?? []).filter((meal) => meal.slot !== "snack").map((meal) => normalize(meal.name ?? "")),
+  );
+  const repeatedMeals = mainMealNames.length - new Set(mainMealNames.filter(Boolean)).size;
+  const metrics: PlanValidationMetrics = {
+    kcalActual: Math.round(actual.kcal / dayCount),
+    kcalTarget: Math.round(targetSum.kcal / dayCount),
+    proteinActual: Math.round(actual.protein_g / dayCount),
+    proteinTarget: Math.round(targetSum.protein_g / dayCount),
+    carbsActual: Math.round(actual.carbs_g / dayCount),
+    carbsTarget: Math.round(targetSum.carbs_g / dayCount),
+    fatActual: Math.round(actual.fat_g / dayCount),
+    fatTarget: Math.round(targetSum.fat_g / dayCount),
+    nogoViolations: violations.length,
+    allergyViolations: allergyViolations.length,
+    missingMeals: mealCountIssues.length,
+    repeatedMeals: Math.max(0, repeatedMeals),
+    varietyRatio,
+  };
 
   const checks: PlanValidationCheck[] = [
     {
@@ -605,6 +714,16 @@ export function validateGeneratedPlan(input: PlanValidationInput): PlanValidatio
       label: "No-Gos eingehalten",
       ok: violations.length === 0,
       detail: violations.length ? violations[0] : "Keine ausgeschlossene Zutat im Plan",
+    },
+    {
+      id: "allergies",
+      label: "Allergien eingehalten",
+      ok: allergyViolations.length === 0,
+      detail: allergyViolations.length
+        ? allergyViolations[0]
+        : allergyTerms.length
+          ? `${allergyTerms.length} Allergene geprüft`
+          : "keine Allergene hinterlegt",
     },
     {
       id: "diet",
@@ -625,6 +744,14 @@ export function validateGeneratedPlan(input: PlanValidationInput): PlanValidatio
       detail: mealCountIssues.length ? mealCountIssues[0] : `${mealsPerDay} pro Tag`,
     },
     {
+      id: "completeness",
+      label: "Mahlzeiten vollständig",
+      ok: incompleteMeals.length === 0,
+      detail: incompleteMeals.length
+        ? incompleteMeals[0]
+        : `Ø ${metrics.kcalActual} von ${metrics.kcalTarget} kcal · Protein ${metrics.proteinActual}/${metrics.proteinTarget} g · KH ${metrics.carbsActual}/${metrics.carbsTarget} g · Fett ${metrics.fatActual}/${metrics.fatTarget} g`,
+    },
+    {
       id: "period",
       label: "Zeitraum",
       ok: periodOk,
@@ -634,7 +761,7 @@ export function validateGeneratedPlan(input: PlanValidationInput): PlanValidatio
       id: "variety",
       label: "Abwechslung",
       ok: varietyOk,
-      detail: `${Math.round(varietyRatio * 100)} % unterschiedliche Hauptmahlzeiten`,
+      detail: `${Math.round(varietyRatio * 100)} % unterschiedliche Hauptmahlzeiten · ${metrics.repeatedMeals} Wiederholungen`,
     },
   ];
 
@@ -643,6 +770,7 @@ export function validateGeneratedPlan(input: PlanValidationInput): PlanValidatio
     checks,
     blockingReasons,
     suggestions: Array.from(suggestions).slice(0, 6),
+    metrics,
   };
 }
 
@@ -672,6 +800,7 @@ export function summarizeActiveRules(config: PlanConstraintConfig): string[] {
   if (config.preferences?.length) parts.push(`Vorlieben: ${config.preferences.length}`);
   parts.push(`${config.mealsPerDay} Mahlzeiten/Tag`);
   parts.push(`${config.planDays} Tage`);
+  if (config.variation) parts.push(`Variation: ${VARIATION_LABELS[config.variation]}`);
   if (config.partner) parts.push("Partnerplan");
   return parts;
 }
