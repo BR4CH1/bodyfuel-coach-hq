@@ -325,13 +325,45 @@ export function TrainingWeeklyActivityEditor({ userId }: { userId: string }) {
                       placeholder="Optionale Notiz, z. B. 30 Min locker / Kursraum 2 …"
                       className="mt-2 w-full rounded-lg border border-border bg-background px-2.5 py-2 text-[11px] outline-none focus:border-primary"
                     />
+                    <FlexActivityFields
+                      activity={activity}
+                      onPatch={(patch) =>
+                        updateDay(weekday.value, (current) => ({
+                          ...current,
+                          activities: current.activities.map((item) =>
+                            item.id === activity.id ? { ...item, ...patch } : item,
+                          ),
+                        }))
+                      }
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateDay(weekday.value, (current) => ({
+                          ...current,
+                          activities: [
+                            ...current.activities,
+                            {
+                              ...activity,
+                              id:
+                                typeof crypto !== "undefined" && "randomUUID" in crypto
+                                  ? crypto.randomUUID()
+                                  : `activity_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+                            },
+                          ],
+                        }))
+                      }
+                      className="mt-2 inline-flex min-h-[36px] items-center gap-1 rounded-lg border border-border bg-background px-2.5 py-1.5 text-[10px] font-bold text-muted-foreground transition hover:border-primary/35 hover:text-primary"
+                    >
+                      <Plus className="h-3 w-3" /> Duplizieren
+                    </button>
                   </div>
                 ))}
               </div>
             )}
 
             <div className="mt-3 flex flex-wrap gap-1.5">
-              {ACTIVITY_OPTIONS.slice(0, 4).map((option) => (
+              {ACTIVITY_OPTIONS.slice(0, 5).map((option) => (
                 <button
                   key={option.type}
                   type="button"
