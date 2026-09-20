@@ -144,6 +144,8 @@ export function PlanSetupPanel({
         preferences: template.config?.preferences ?? current.preferences,
         lifestyle: (template.config?.lifestyle as PlanConfig["lifestyle"]) ?? current.lifestyle,
         mealsPerDay: template.config?.mealsPerDay ?? current.mealsPerDay,
+        variation:
+          (template.config?.variation as PlanConfig["variation"]) ?? current.variation,
       }));
     }
     toast.success(`Vorlage „${template.title}“ übernommen.`);
@@ -196,6 +198,11 @@ export function PlanSetupPanel({
         };
       }),
       kcalTolerance: 0.2,
+      allergyTerms: [
+        ...(customerContext.allergies ?? []),
+        ...(customerContext.intolerances ?? []),
+      ],
+      variation: config.variation,
     });
   }, [config, customerContext, days]);
 
