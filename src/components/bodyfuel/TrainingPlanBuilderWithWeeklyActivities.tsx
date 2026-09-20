@@ -38,6 +38,7 @@ const ACTIVITY_OPTIONS: Array<{ type: WeeklyTrainingActivityType; label: string 
   { type: "home_workout", label: "Home Workout" },
   { type: "cardio", label: "Cardio" },
   { type: "mobility", label: "Mobility" },
+  { type: "flex", label: "Flex-Aktivität" },
 ];
 
 type PortalSlot = {
@@ -60,9 +61,14 @@ function newActivity(type: WeeklyTrainingActivityType): WeeklyTrainingActivity {
         ? ""
         : type === "home_workout"
           ? "Home Workout"
-          : WEEKLY_TRAINING_ACTIVITY_LABELS[type],
+          : type === "flex"
+            ? FLEX_SPORT_LABELS.padel
+            : WEEKLY_TRAINING_ACTIVITY_LABELS[type],
     time: null,
     notes: null,
+    sport: type === "flex" ? "padel" : null,
+    durationMin: type === "flex" ? 60 : null,
+    intensity: type === "flex" ? "mittel" : null,
   };
 }
 
