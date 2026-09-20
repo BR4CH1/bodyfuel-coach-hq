@@ -11,6 +11,8 @@ export type NutritionPlanTemplateConfig = {
   preferences?: string[];
   lifestyle?: string[];
   mealsPerDay?: number;
+  /** Variationsgrad: niedrig | mittel | hoch. */
+  variation?: string;
 };
 
 export type NutritionPlanTemplate = {

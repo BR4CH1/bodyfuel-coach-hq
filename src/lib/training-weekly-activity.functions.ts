@@ -1,12 +1,20 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertCoachOrOrgStaffForAthlete } from "@/lib/organizations/org-coach-access";
+import {
+  clampActivityDuration,
+  isActivityIntensity,
+  isFlexActivitySport,
+  type ActivityIntensity,
+  type FlexActivitySport,
+} from "@/lib/training-activity-types";
 
 export type WeeklyTrainingActivityType =
   | "class"
   | "home_workout"
   | "cardio"
   | "mobility"
+  | "flex"
   | "other";
 
 export type WeeklyTrainingActivity = {
@@ -15,6 +23,11 @@ export type WeeklyTrainingActivity = {
   title: string;
   time?: string | null;
   notes?: string | null;
+  /** Nur für Flex-Aktivitäten: vordefinierte Sportart. */
+  sport?: FlexActivitySport | null;
+  /** Dauer in Minuten (z. B. Padel 90). */
+  durationMin?: number | null;
+  intensity?: ActivityIntensity | null;
 };
 
 export type WeeklyTrainingDayPlan = {
@@ -36,6 +49,7 @@ const ACTIVITY_TYPES = new Set<WeeklyTrainingActivityType>([
   "home_workout",
   "cardio",
   "mobility",
+  "flex",
   "other",
 ]);
 
@@ -57,7 +71,10 @@ function cleanActivities(value: unknown): WeeklyTrainingActivity[] {
       const id = String(raw?.id ?? "").trim().slice(0, 100) || `activity-${index + 1}`;
       const time = String(raw?.time ?? "").trim().slice(0, 10) || null;
       const notes = String(raw?.notes ?? "").trim().slice(0, 300) || null;
-      return { id, type, title, time, notes };
+      const sport = isFlexActivitySport(raw?.sport) ? raw.sport : null;
+      const intensity = isActivityIntensity(raw?.intensity) ? raw.intensity : null;
+      const durationMin = clampActivityDuration(raw?.durationMin);
+      return { id, type, title, time, notes, sport, durationMin, intensity };
     })
     .filter((item): item is WeeklyTrainingActivity => Boolean(item));
 }
@@ -183,5 +200,6 @@ export const WEEKLY_TRAINING_ACTIVITY_LABELS: Record<WeeklyTrainingActivityType,
   home_workout: "Home Workout",
   cardio: "Cardio",
   mobility: "Mobility",
+  flex: "Flex-Aktivität",
   other: "Aktivität",
 };

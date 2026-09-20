@@ -1,12 +1,18 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Activity, ChevronDown, Footprints, Home, Users } from "lucide-react";
+import { Activity, ChevronDown, Footprints, Home, Users, Zap } from "lucide-react";
+import { describeFlexActivity } from "@/lib/training-activity-types";
 import {
   getAthleteWeeklyTrainingPlan,
   WEEKLY_TRAINING_ACTIVITY_LABELS,
   type WeeklyTrainingActivity,
 } from "@/lib/training-weekly-activity.functions";
+
+function activityDetail(activity: WeeklyTrainingActivity): string {
+  if (activity.type === "flex") return describeFlexActivity(activity);
+  return activity.title;
+}
 
 const WEEKDAYS = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
 const WEEKDAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
@@ -15,6 +21,7 @@ const numberFormat = new Intl.NumberFormat("de-DE");
 function ActivityIcon({ activity }: { activity: WeeklyTrainingActivity }) {
   if (activity.type === "class") return <Users className="h-3.5 w-3.5" />;
   if (activity.type === "home_workout") return <Home className="h-3.5 w-3.5" />;
+  if (activity.type === "flex") return <Zap className="h-3.5 w-3.5" />;
   return <Activity className="h-3.5 w-3.5" />;
 }
 
@@ -71,7 +78,9 @@ export function TrainingWeeklyActivityCard({ userId }: { userId: string }) {
                       {WEEKLY_TRAINING_ACTIVITY_LABELS[activity.type]}
                       {activity.time ? ` · ${activity.time}` : ""}
                     </div>
-                    <div className="truncate text-sm font-black">{activity.title}</div>
+                    <div className="break-words text-sm font-black">
+                      {activityDetail(activity)}
+                    </div>
                     {activity.notes && (
                       <div className="mt-0.5 text-[11px] text-muted-foreground">{activity.notes}</div>
                     )}
@@ -115,7 +124,9 @@ export function TrainingWeeklyActivityCard({ userId }: { userId: string }) {
                     <div className="mt-2 space-y-1.5">
                       {day.activities.map((activity) => (
                         <div key={activity.id} className="text-[10px] text-muted-foreground">
-                          <span className="font-bold text-foreground">{activity.title}</span>
+                          <span className="font-bold text-foreground">
+                            {activityDetail(activity)}
+                          </span>
                           {activity.time ? ` · ${activity.time}` : ""}
                         </div>
                       ))}

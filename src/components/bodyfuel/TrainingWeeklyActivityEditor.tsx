@@ -3,6 +3,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Activity, CalendarDays, Footprints, Home, Plus, Save, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
+import { FlexActivityFields } from "@/components/bodyfuel/FlexActivityFields";
+import {
+  FLEX_SPORT_LABELS,
+  summarizeWeeklyActivityLoad,
+} from "@/lib/training-activity-types";
 import {
   getAthleteWeeklyTrainingPlan,
   saveAthleteWeeklyTrainingPlan,
@@ -27,6 +32,7 @@ const ACTIVITY_OPTIONS: Array<{ type: WeeklyTrainingActivityType; label: string 
   { type: "home_workout", label: "Home Workout" },
   { type: "cardio", label: "Cardio" },
   { type: "mobility", label: "Mobility" },
+  { type: "flex", label: "Flex-Aktivität" },
   { type: "other", label: "Sonstiges" },
 ];
 
@@ -43,9 +49,14 @@ function newActivity(type: WeeklyTrainingActivityType): WeeklyTrainingActivity {
         ? ""
         : type === "home_workout"
           ? "Home Workout"
-          : WEEKLY_TRAINING_ACTIVITY_LABELS[type],
+          : type === "flex"
+            ? FLEX_SPORT_LABELS.padel
+            : WEEKLY_TRAINING_ACTIVITY_LABELS[type],
     time: null,
     notes: null,
+    sport: type === "flex" ? "padel" : null,
+    durationMin: type === "flex" ? 60 : null,
+    intensity: type === "flex" ? "mittel" : null,
   };
 }
 
@@ -194,6 +205,49 @@ export function TrainingWeeklyActivityEditor({ userId }: { userId: string }) {
         </button>
       </div>
 
+      {(() => {
+        const load = summarizeWeeklyActivityLoad(days);
+        if (load.totalCount === 0) return null;
+        return (
+          <div className="mt-4 grid gap-2 rounded-2xl border border-border bg-background p-3 sm:grid-cols-4">
+            <div>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                Flex-Aktivitäten
+              </p>
+              <p className="text-sm font-black">
+                {load.flexCount} · {load.flexMinutes} Min
+              </p>
+            </div>
+            <div>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                Cardio
+              </p>
+              <p className="text-sm font-black">
+                {load.cardioCount} · {load.cardioMinutes} Min
+              </p>
+            </div>
+            <div>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                Recovery
+              </p>
+              <p className="text-sm font-black">{load.recoveryCount}</p>
+            </div>
+            <div>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                Gesamtbelastung
+              </p>
+              <p className="text-sm font-black">
+                {load.totalCount} Einheiten · {load.totalMinutes} Min
+              </p>
+            </div>
+            <p className="text-[10px] text-muted-foreground sm:col-span-4">
+              Flex-Aktivitäten zählen separat vom Krafttraining, gehen aber in die
+              Gesamtbelastung ein. Kalorienverbräuche werden nicht geschätzt.
+            </p>
+          </div>
+        );
+      })()}
+
       <div className="mt-4 grid gap-3 xl:grid-cols-2">
         {orderedDays.map(({ weekday, day }) => (
           <article key={weekday.value} className="rounded-2xl border border-border bg-background p-3 sm:p-4">
@@ -314,13 +368,45 @@ export function TrainingWeeklyActivityEditor({ userId }: { userId: string }) {
                       placeholder="Optionale Notiz, z. B. 30 Min locker / Kursraum 2 …"
                       className="mt-2 w-full rounded-lg border border-border bg-background px-2.5 py-2 text-[11px] outline-none focus:border-primary"
                     />
+                    <FlexActivityFields
+                      activity={activity}
+                      onPatch={(patch) =>
+                        updateDay(weekday.value, (current) => ({
+                          ...current,
+                          activities: current.activities.map((item) =>
+                            item.id === activity.id ? { ...item, ...patch } : item,
+                          ),
+                        }))
+                      }
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateDay(weekday.value, (current) => ({
+                          ...current,
+                          activities: [
+                            ...current.activities,
+                            {
+                              ...activity,
+                              id:
+                                typeof crypto !== "undefined" && "randomUUID" in crypto
+                                  ? crypto.randomUUID()
+                                  : `activity_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+                            },
+                          ],
+                        }))
+                      }
+                      className="mt-2 inline-flex min-h-[36px] items-center gap-1 rounded-lg border border-border bg-background px-2.5 py-1.5 text-[10px] font-bold text-muted-foreground transition hover:border-primary/35 hover:text-primary"
+                    >
+                      <Plus className="h-3 w-3" /> Duplizieren
+                    </button>
                   </div>
                 ))}
               </div>
             )}
 
             <div className="mt-3 flex flex-wrap gap-1.5">
-              {ACTIVITY_OPTIONS.slice(0, 4).map((option) => (
+              {ACTIVITY_OPTIONS.slice(0, 5).map((option) => (
                 <button
                   key={option.type}
                   type="button"

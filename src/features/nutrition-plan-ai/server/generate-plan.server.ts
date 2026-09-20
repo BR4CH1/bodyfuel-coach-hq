@@ -18,11 +18,24 @@ export async function generateAiNutritionPlanCore(
   const uploadedBy = opts.uploadedBy ?? opts.target;
   const source = await loadNutritionPlanSourceData(supabase, opts.target);
   const context = buildNutritionPlanGenerationContext({ source, opts });
-  const generatedPlan = await generateComputedNutritionPlan({
-    supabase,
-    apiKey: opts.apiKey,
-    context,
-  });
+  let generatedPlan;
+  try {
+    generatedPlan = await generateComputedNutritionPlan({
+      supabase,
+      apiKey: opts.apiKey,
+      context,
+    });
+  } catch (error) {
+    // Verständliche Meldung statt technischem Fehler. Es müssen NICHT alle
+    // verfügbaren Lebensmittel verwendet werden — es wird nur aus
+    // kompatiblen Lebensmitteln ausgewählt, No-Gos werden nie als
+    // Fallback eingesetzt.
+    const raw = error instanceof Error ? error.message : String(error);
+    const friendly = /No-Go|Protein|Obergrenze|verstößt|Lebensmittel/i.test(raw)
+      ? raw
+      : `Der Plan konnte mit den aktuellen Vorgaben nicht erstellt werden. Bitte ein No-Go lockern, die Mahlzeitenanzahl erhöhen oder den Zeitraum verkürzen. (Details: ${raw})`;
+    throw new Error(friendly);
+  }
 
   // Abschluss-Validierung über ALLE Tage, Mahlzeiten und Zutaten.
   const validation = validateGeneratedPlan({
