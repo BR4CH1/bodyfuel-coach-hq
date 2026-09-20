@@ -9,9 +9,53 @@
  *   Vorlieben vollständig generierbar.
  */
 
-export type PlanGoal = "abnehmen" | "muskelaufbau" | "halten" | "performance" | "individuell";
+export type PlanGoal =
+  | "abnehmen"
+  | "muskelaufbau"
+  | "halten"
+  | "recomposition"
+  | "performance"
+  | "individuell";
 
-export type DietRule = "vegetarisch" | "vegan" | "glutenfrei" | "laktosefrei" | "halal";
+export const PLAN_GOAL_LABELS: Record<PlanGoal, string> = {
+  abnehmen: "Abnehmen",
+  muskelaufbau: "Muskelaufbau",
+  halten: "Gewicht halten",
+  recomposition: "Recomposition",
+  performance: "Performance",
+  individuell: "Individuell",
+};
+
+/**
+ * Ernährungsform. `mischkost`, `high_protein` und `low_carb` sind KEINE
+ * harten Ausschlüsse — sie steuern Auswahl und Priorisierung, blockieren
+ * aber keine Zutaten.
+ */
+export type DietRule =
+  | "mischkost"
+  | "vegetarisch"
+  | "vegan"
+  | "high_protein"
+  | "low_carb"
+  | "glutenfrei"
+  | "laktosefrei"
+  | "halal";
+
+/** Variationsgrad: steuert, wie stark Wiederholungen vermieden werden. */
+export type VariationLevel = "niedrig" | "mittel" | "hoch";
+
+export const VARIATION_LABELS: Record<VariationLevel, string> = {
+  niedrig: "niedrig",
+  mittel: "mittel",
+  hoch: "hoch",
+};
+
+/** Mindestanteil einzigartiger Hauptmahlzeiten je Variationsgrad. */
+export function varietyTargetFor(level: VariationLevel | undefined): number {
+  if (level === "niedrig") return 0.25;
+  if (level === "hoch") return 0.7;
+  return 0.45;
+}
 
 export type ExclusionGroup =
   | "schweinefleisch"
@@ -42,6 +86,8 @@ export interface PlanConstraintConfig {
   mealsPerDay: number;
   planDays: number;
   partner: boolean;
+  /** Variationsgrad (Standard: mittel). */
+  variation?: VariationLevel;
 }
 
 export interface IngredientLike {
@@ -193,6 +239,10 @@ const MEAT_AND_FISH_TERMS: string[] = [
 ];
 
 export const DIET_RULE_TERMS: Record<DietRule, string[]> = {
+  // Ernährungsformen ohne harte Ausschlüsse:
+  mischkost: [],
+  high_protein: [],
+  low_carb: [],
   vegetarisch: MEAT_AND_FISH_TERMS,
   vegan: [
     ...MEAT_AND_FISH_TERMS,
@@ -256,6 +306,9 @@ export const DIET_RULE_TERMS: Record<DietRule, string[]> = {
 };
 
 export const DIET_RULE_LABELS: Record<DietRule, string> = {
+  mischkost: "Mischkost",
+  high_protein: "High Protein",
+  low_carb: "Low Carb",
   vegetarisch: "vegetarisch",
   vegan: "vegan",
   glutenfrei: "glutenfrei",
@@ -287,6 +340,9 @@ export const EXCLUSION_ALTERNATIVES: Record<ExclusionGroup, string[]> = {
 };
 
 export const DIET_RULE_ALTERNATIVES: Record<DietRule, string[]> = {
+  mischkost: [],
+  high_protein: ["Skyr", "Hähnchen", "Linsen", "Tofu"],
+  low_carb: ["Gemüse", "Eier", "Fisch", "Nüsse"],
   vegetarisch: ["Tofu", "Hülsenfrüchte", "Skyr"],
   vegan: ["Tofu", "Tempeh", "Linsen", "Sojajoghurt"],
   glutenfrei: ["Reis", "Kartoffeln", "Mais", "Buchweizen", "Quinoa"],
