@@ -3,6 +3,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Activity, CalendarDays, Footprints, Home, Plus, Save, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
+import { FlexActivityFields } from "@/components/bodyfuel/FlexActivityFields";
+import {
+  FLEX_SPORT_LABELS,
+  summarizeWeeklyActivityLoad,
+} from "@/lib/training-activity-types";
 import {
   getAthleteWeeklyTrainingPlan,
   saveAthleteWeeklyTrainingPlan,
@@ -27,6 +32,7 @@ const ACTIVITY_OPTIONS: Array<{ type: WeeklyTrainingActivityType; label: string 
   { type: "home_workout", label: "Home Workout" },
   { type: "cardio", label: "Cardio" },
   { type: "mobility", label: "Mobility" },
+  { type: "flex", label: "Flex-Aktivität" },
   { type: "other", label: "Sonstiges" },
 ];
 
@@ -43,9 +49,14 @@ function newActivity(type: WeeklyTrainingActivityType): WeeklyTrainingActivity {
         ? ""
         : type === "home_workout"
           ? "Home Workout"
-          : WEEKLY_TRAINING_ACTIVITY_LABELS[type],
+          : type === "flex"
+            ? FLEX_SPORT_LABELS.padel
+            : WEEKLY_TRAINING_ACTIVITY_LABELS[type],
     time: null,
     notes: null,
+    sport: type === "flex" ? "padel" : null,
+    durationMin: type === "flex" ? 60 : null,
+    intensity: type === "flex" ? "mittel" : null,
   };
 }
 
