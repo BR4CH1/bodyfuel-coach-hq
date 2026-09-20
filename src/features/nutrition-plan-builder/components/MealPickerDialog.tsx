@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Apple, Flame, Heart, Search, Sparkles, Utensils } from "lucide-react";
 import type { BuilderMeal, CustomerPlanContext, LibraryMeal } from "@/lib/plan-builder.functions";
 import { cn } from "@/lib/utils";
+import { mealIsAllowed } from "@/lib/nutrition-plan-constraints";
 import {
   matchesMealQuery,
   mealFitsDiet,
@@ -77,6 +78,24 @@ export function MealPickerDialog({
     [ctx.requestedMeals],
   );
 
+  // Harte Ausschlüsse zusätzlich auf Zutatenebene — es werden ausschließlich
+  // kompatible Alternativen angeboten.
+  const hardTerms = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          [
+            ...(ctx.noGoFoods ?? []),
+            ...(ctx.allergies ?? []),
+            ...(ctx.intolerances ?? []),
+          ]
+            .map((term) => String(term).trim().toLowerCase())
+            .filter(Boolean),
+        ),
+      ),
+    [ctx.noGoFoods, ctx.allergies, ctx.intolerances],
+  );
+
   const scored = useMemo(
     () =>
       library
@@ -84,7 +103,8 @@ export function MealPickerDialog({
           (meal) =>
             meal.category === slot &&
             (!excludeId || meal.id !== excludeId) &&
-            mealFitsDiet(meal, ctx.dietStyle),
+            mealFitsDiet(meal, ctx.dietStyle) &&
+            mealIsAllowed(meal as never, hardTerms),
         )
         .map((meal) => {
           const result = scoreMeal(meal, ctx, dayType, remaining);
@@ -97,7 +117,7 @@ export function MealPickerDialog({
             ),
         )
         .sort((a, b) => b.score - a.score),
-    [library, ctx, slot, dayType, remaining, excludeId],
+    [library, ctx, slot, dayType, remaining, excludeId, hardTerms],
   );
 
   const visibleMeals = useMemo(() => {
