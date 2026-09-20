@@ -1,12 +1,20 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertCoachOrOrgStaffForAthlete } from "@/lib/organizations/org-coach-access";
+import {
+  clampActivityDuration,
+  isActivityIntensity,
+  isFlexActivitySport,
+  type ActivityIntensity,
+  type FlexActivitySport,
+} from "@/lib/training-activity-types";
 
 export type WeeklyTrainingActivityType =
   | "class"
   | "home_workout"
   | "cardio"
   | "mobility"
+  | "flex"
   | "other";
 
 export type WeeklyTrainingActivity = {
@@ -15,6 +23,11 @@ export type WeeklyTrainingActivity = {
   title: string;
   time?: string | null;
   notes?: string | null;
+  /** Nur für Flex-Aktivitäten: vordefinierte Sportart. */
+  sport?: FlexActivitySport | null;
+  /** Dauer in Minuten (z. B. Padel 90). */
+  durationMin?: number | null;
+  intensity?: ActivityIntensity | null;
 };
 
 export type WeeklyTrainingDayPlan = {
