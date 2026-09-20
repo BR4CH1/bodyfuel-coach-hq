@@ -21,6 +21,7 @@ const numberFormat = new Intl.NumberFormat("de-DE");
 function ActivityIcon({ activity }: { activity: WeeklyTrainingActivity }) {
   if (activity.type === "class") return <Users className="h-3.5 w-3.5" />;
   if (activity.type === "home_workout") return <Home className="h-3.5 w-3.5" />;
+  if (activity.type === "flex") return <Zap className="h-3.5 w-3.5" />;
   return <Activity className="h-3.5 w-3.5" />;
 }
 
@@ -77,7 +78,9 @@ export function TrainingWeeklyActivityCard({ userId }: { userId: string }) {
                       {WEEKLY_TRAINING_ACTIVITY_LABELS[activity.type]}
                       {activity.time ? ` · ${activity.time}` : ""}
                     </div>
-                    <div className="truncate text-sm font-black">{activity.title}</div>
+                    <div className="break-words text-sm font-black">
+                      {activityDetail(activity)}
+                    </div>
                     {activity.notes && (
                       <div className="mt-0.5 text-[11px] text-muted-foreground">{activity.notes}</div>
                     )}
