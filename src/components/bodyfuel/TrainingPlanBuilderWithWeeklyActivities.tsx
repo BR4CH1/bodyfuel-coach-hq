@@ -391,6 +391,40 @@ function InlineWeeklyDayEditor({
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
+                <FlexActivityFields
+                  activity={activity}
+                  disabled={disabled}
+                  onPatch={(patch) =>
+                    onChange((current) => ({
+                      ...current,
+                      activities: current.activities.map((item) =>
+                        item.id === activity.id ? { ...item, ...patch } : item,
+                      ),
+                    }))
+                  }
+                />
+                <button
+                  type="button"
+                  disabled={disabled}
+                  onClick={() =>
+                    onChange((current) => ({
+                      ...current,
+                      activities: [
+                        ...current.activities,
+                        {
+                          ...activity,
+                          id:
+                            typeof crypto !== "undefined" && "randomUUID" in crypto
+                              ? crypto.randomUUID()
+                              : `activity_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+                        },
+                      ],
+                    }))
+                  }
+                  className="mt-2 inline-flex items-center gap-1 rounded-lg border border-border bg-background px-2.5 py-1.5 text-[10px] font-bold text-muted-foreground transition hover:border-primary/35 hover:text-primary disabled:opacity-40"
+                >
+                  <Plus className="h-3 w-3" /> Duplizieren
+                </button>
                 <input
                   disabled={disabled}
                   value={activity.notes ?? ""}
