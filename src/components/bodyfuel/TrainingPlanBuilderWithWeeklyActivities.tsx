@@ -13,7 +13,12 @@ import {
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
+import { FlexActivityFields } from "@/components/bodyfuel/FlexActivityFields";
 import { TrainingPlanBuilderPage } from "@/components/bodyfuel/TrainingPlanBuilderPage";
+import {
+  FLEX_SPORT_LABELS,
+  summarizeWeeklyActivityLoad,
+} from "@/lib/training-activity-types";
 import {
   getAthleteWeeklyTrainingPlan,
   saveAthleteWeeklyTrainingPlan,
