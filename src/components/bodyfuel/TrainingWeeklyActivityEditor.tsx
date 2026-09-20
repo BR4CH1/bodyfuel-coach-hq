@@ -205,6 +205,49 @@ export function TrainingWeeklyActivityEditor({ userId }: { userId: string }) {
         </button>
       </div>
 
+      {(() => {
+        const load = summarizeWeeklyActivityLoad(days);
+        if (load.totalCount === 0) return null;
+        return (
+          <div className="mt-4 grid gap-2 rounded-2xl border border-border bg-background p-3 sm:grid-cols-4">
+            <div>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                Flex-Aktivitäten
+              </p>
+              <p className="text-sm font-black">
+                {load.flexCount} · {load.flexMinutes} Min
+              </p>
+            </div>
+            <div>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                Cardio
+              </p>
+              <p className="text-sm font-black">
+                {load.cardioCount} · {load.cardioMinutes} Min
+              </p>
+            </div>
+            <div>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                Recovery
+              </p>
+              <p className="text-sm font-black">{load.recoveryCount}</p>
+            </div>
+            <div>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                Gesamtbelastung
+              </p>
+              <p className="text-sm font-black">
+                {load.totalCount} Einheiten · {load.totalMinutes} Min
+              </p>
+            </div>
+            <p className="text-[10px] text-muted-foreground sm:col-span-4">
+              Flex-Aktivitäten zählen separat vom Krafttraining, gehen aber in die
+              Gesamtbelastung ein. Kalorienverbräuche werden nicht geschätzt.
+            </p>
+          </div>
+        );
+      })()}
+
       <div className="mt-4 grid gap-3 xl:grid-cols-2">
         {orderedDays.map(({ weekday, day }) => (
           <article key={weekday.value} className="rounded-2xl border border-border bg-background p-3 sm:p-4">
