@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { MealImageStatus } from "@/lib/meal-images.functions";
-import { sumIngredientTotals } from "@/lib/meal-macro-truth";
+import { reconcileMealMacros, sumIngredientTotals } from "@/lib/meal-macro-truth";
 
 
 export type MealSlot = "breakfast" | "lunch" | "dinner" | "snack" | "any";
@@ -67,7 +67,22 @@ export const listCustomMeals = createServerFn({ method: "GET" })
       .eq("user_id", target)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
-    return (rows ?? []) as unknown as CustomMeal[];
+    // Abwärtskompatibel: alte Mahlzeiten mit inkonsistent gespeicherten Summen
+    // werden beim Laden aus ihren Zutaten repariert, statt falsch anzuzeigen.
+    return ((rows ?? []) as unknown as CustomMeal[]).map((meal) => {
+      const ingredients = Array.isArray(meal.ingredients) ? meal.ingredients : [];
+      if (!ingredients.length) return meal;
+      const { macros, corrected } = reconcileMealMacros({
+        stored: {
+          kcal: meal.kcal ?? undefined,
+          protein_g: meal.protein_g ?? undefined,
+          carbs_g: meal.carbs_g ?? undefined,
+          fat_g: meal.fat_g ?? undefined,
+        },
+        computed: sumIngredientTotals(ingredients),
+      });
+      return corrected ? { ...meal, ...macros } : meal;
+    });
   });
 
 export const saveCustomMeal = createServerFn({ method: "POST" })
