@@ -56,6 +56,14 @@ export function RecipeDialog({
   const [loading, setLoading] = useState(true);
   const [regenerating, setRegenerating] = useState(false);
   const [ingredients, setIngredients] = useState<string[]>([]);
+  // Makros kommen aus den gespeicherten Zutaten (Single Source of Truth).
+  const [macros, setMacros] = useState<{
+    kcal: number;
+    protein_g: number;
+    carbs_g: number;
+    fat_g: number;
+  } | null>(null);
+  const [macrosFromIngredients, setMacrosFromIngredients] = useState(false);
   const [steps, setSteps] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(meal.image_url ?? null);
@@ -77,6 +85,8 @@ export function RecipeDialog({
       const res = await generate({ data: { meal_id: meal.id, force } });
       setIngredients(res.ingredients);
       setSteps(res.steps);
+      setMacros(res.macros ?? null);
+      setMacrosFromIngredients(res.macros_source === "ingredients");
     } catch (error) {
       setError(errorMessage(error, "Rezept konnte nicht erstellt werden"));
     } finally {
@@ -247,14 +257,30 @@ export function RecipeDialog({
                 {meal.description}
               </div>
             )}
-            {(meal.kcal != null || meal.protein_g != null) && (
-              <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">
-                {meal.kcal != null && <span>{meal.kcal} kcal</span>}
-                {meal.protein_g != null && <span>· P {meal.protein_g}g</span>}
-                {meal.carbs_g != null && <span>· KH {meal.carbs_g}g</span>}
-                {meal.fat_g != null && <span>· F {meal.fat_g}g</span>}
-              </div>
-            )}
+            {(() => {
+              const shown = macros ?? {
+                kcal: meal.kcal,
+                protein_g: meal.protein_g,
+                carbs_g: meal.carbs_g,
+                fat_g: meal.fat_g,
+              };
+              if (shown.kcal == null && shown.protein_g == null) return null;
+              return (
+                <>
+                  <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">
+                    {shown.kcal != null && <span>{shown.kcal} kcal</span>}
+                    {shown.protein_g != null && <span>· P {shown.protein_g}g</span>}
+                    {shown.carbs_g != null && <span>· KH {shown.carbs_g}g</span>}
+                    {shown.fat_g != null && <span>· F {shown.fat_g}g</span>}
+                  </div>
+                  {macrosFromIngredients && (
+                    <div className="mt-0.5 text-[10px] text-muted-foreground/80">
+                      Nährwerte automatisch aus den Zutaten berechnet
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
           <div className="flex shrink-0 items-center gap-1">
             {isCustomer && (
