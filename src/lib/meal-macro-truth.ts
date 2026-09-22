@@ -109,20 +109,18 @@ export function scaleIngredientToAmount<T extends TruthIngredient>(
   const amount = parseDecimalAmount(nextAmount);
   if (!info.scalable || amount == null || amount <= 0) return base;
   const factor = amount / info.amount;
-  const legacy = positive(base.grams) ?? positive(base.amount_g);
-  return {
+  const scaled: TruthIngredient = {
     ...base,
     amount: Math.round(amount * 100) / 100,
     unit: info.unit,
-    ...(base.grams != null ? { grams: Math.round(num(base.grams) * factor * 100) / 100 } : {}),
-    ...(base.amount_g != null || legacy == null
-      ? { amount_g: base.amount_g == null ? base.amount_g : Math.round(num(base.amount_g) * factor * 100) / 100 }
-      : {}),
     kcal: base.kcal == null ? base.kcal : num(base.kcal) * factor,
     protein_g: base.protein_g == null ? base.protein_g : num(base.protein_g) * factor,
     carbs_g: base.carbs_g == null ? base.carbs_g : num(base.carbs_g) * factor,
     fat_g: base.fat_g == null ? base.fat_g : num(base.fat_g) * factor,
-  } as T;
+  };
+  if (base.grams != null) scaled.grams = Math.round(num(base.grams) * factor * 100) / 100;
+  if (base.amount_g != null) scaled.amount_g = Math.round(num(base.amount_g) * factor * 100) / 100;
+  return scaled as T;
 }
 
 /** Skaliert eine ganze Zutatenliste (Portionsfaktor) von der Basis aus. */
