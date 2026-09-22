@@ -23,6 +23,22 @@ async function assertMealAccess(ctx: { supabase: any; userId: string }, clientId
   await assertCoachOrOrgStaffForAthlete(ctx, clientId, "nutrition");
 }
 
+/** Liest gespeicherte Zutatenzeilen robust als Wahrheitsquelle ein. */
+function asTruthIngredients(raw: unknown): TruthIngredient[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((row): row is Record<string, unknown> => !!row && typeof row === "object")
+    .map((row) => ({
+      name: String(row.name ?? "").trim(),
+      amount: row.amount == null ? null : Number(row.amount),
+      unit: row.unit === "ml" ? "ml" : row.unit === "g" ? "g" : null,
+      grams: row.grams == null ? null : Number(row.grams),
+      amount_g: row.amount_g == null ? null : Number(row.amount_g),
+      display: typeof row.display === "string" ? row.display : null,
+    }))
+    .filter((row) => row.name.length > 0);
+}
+
 type ParsedMeal = {
   name: string;
   description?: string | null;
@@ -765,18 +781,34 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
       otherPartner?.name && joined.toLowerCase().includes(otherPartner.name.toLowerCase());
     const skipCache = isPartnerMeal && (!hasPerPerson || hasPlaceholder || !otherInText);
     const partnerIngredientSplit = buildPartnerIngredientSplit();
+    const cachedSteps = (meal.recipe_steps as string[]) ?? [];
+
+    // Zutaten aus den gespeicherten Mengen haben immer Vorrang vor alten
+    // KI-Textmengen — so können Zutatenliste und Makros nicht auseinanderlaufen.
+    if (!data.force && structuredLines && cachedSteps.length > 0) {
+      if (cached.join("\n") !== structuredLines.join("\n")) {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        await supabaseAdmin
+          .from("nutrition_plan_meals")
+          .update({ recipe_ingredients: structuredLines })
+          .eq("id", meal.id);
+      }
+      return { ingredients: structuredLines, steps: cachedSteps, cached: true, ...macroPayload() };
+    }
     if (!data.force && partnerIngredientSplit && cached.length > 0) {
       return {
         ingredients: partnerIngredientSplit,
-        steps: (meal.recipe_steps as string[]) ?? [],
+        steps: cachedSteps,
         cached: true,
+        ...macroPayload(),
       };
     }
     if (!data.force && !skipCache && cached.length > 0) {
       return {
         ingredients: partnerIngredientSplit ?? fixLabels(cached),
-        steps: (meal.recipe_steps as string[]) ?? [],
+        steps: cachedSteps,
         cached: true,
+        ...macroPayload(),
       };
     }
     const apiKey = process.env.LOVABLE_API_KEY;
@@ -879,7 +911,9 @@ Antworte ausschließlich mit gültigem JSON in diesem Format:
       : [];
     if (!ingredients.length) throw new Error("Rezept konnte nicht erstellt werden");
 
-    ingredients = partnerIngredientSplit ?? fixLabels(ingredients);
+    // Mengen kommen, wenn vorhanden, aus den gespeicherten Zutaten. Die KI
+    // liefert dann ausschließlich Zubereitungsschritte.
+    ingredients = structuredLines ?? partnerIngredientSplit ?? fixLabels(ingredients);
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     await supabaseAdmin
@@ -891,5 +925,5 @@ Antworte ausschließlich mit gültigem JSON in diesem Format:
       })
       .eq("id", meal.id);
 
-    return { ingredients, steps, cached: false };
+    return { ingredients, steps, cached: false, ...macroPayload() };
   });
