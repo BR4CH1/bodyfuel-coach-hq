@@ -2,7 +2,11 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { MealImageStatus } from "@/lib/meal-images.functions";
-import { reconcileMealMacros, sumIngredientTotals } from "@/lib/meal-macro-truth";
+import {
+  ingredientsCarryMacros,
+  reconcileMealMacros,
+  sumIngredientTotals,
+} from "@/lib/meal-macro-truth";
 
 
 export type MealSlot = "breakfast" | "lunch" | "dinner" | "snack" | "any";
@@ -71,7 +75,7 @@ export const listCustomMeals = createServerFn({ method: "GET" })
     // werden beim Laden aus ihren Zutaten repariert, statt falsch anzuzeigen.
     return ((rows ?? []) as unknown as CustomMeal[]).map((meal) => {
       const ingredients = Array.isArray(meal.ingredients) ? meal.ingredients : [];
-      if (!ingredients.length) return meal;
+      if (!ingredients.length || !ingredientsCarryMacros(ingredients)) return meal;
       const { macros, corrected } = reconcileMealMacros({
         stored: {
           kcal: meal.kcal ?? undefined,

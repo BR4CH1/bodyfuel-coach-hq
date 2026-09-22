@@ -97,6 +97,18 @@ export function sumIngredientTotals(ingredients: readonly TruthIngredient[]): Ma
 }
 
 /**
+ * True, wenn die Zutaten überhaupt Nährwerte tragen. Nur dann darf aus ihnen
+ * die Rezeptsumme abgeleitet werden (sonst würden Legacy-Zutaten ohne Makros
+ * eine korrekte Summe auf 0 zurücksetzen).
+ */
+export function ingredientsCarryMacros(ingredients: readonly TruthIngredient[]): boolean {
+  return ingredients.some(
+    (ing) =>
+      ing.kcal != null || ing.protein_g != null || ing.carbs_g != null || ing.fat_g != null,
+  );
+}
+
+/**
  * Skaliert eine Zutat auf eine neue Zielmenge — immer relativ zur unveränderten
  * Basismenge. Einheitensicher: die Basiseinheit bleibt erhalten, Roh-/
  * Trockengewichte werden NICHT in gekochte Werte umgerechnet.
