@@ -28,10 +28,10 @@ function asTruthIngredients(raw: unknown): TruthIngredient[] {
   if (!Array.isArray(raw)) return [];
   return raw
     .filter((row): row is Record<string, unknown> => !!row && typeof row === "object")
-    .map((row) => ({
+    .map((row): TruthIngredient => ({
       name: String(row.name ?? "").trim(),
       amount: row.amount == null ? null : Number(row.amount),
-      unit: row.unit === "ml" ? "ml" : row.unit === "g" ? "g" : null,
+      unit: row.unit === "ml" ? ("ml" as const) : row.unit === "g" ? ("g" as const) : null,
       grams: row.grams == null ? null : Number(row.grams),
       amount_g: row.amount_g == null ? null : Number(row.amount_g),
       display: typeof row.display === "string" ? row.display : null,
