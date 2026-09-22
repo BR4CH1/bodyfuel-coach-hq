@@ -1,6 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
+  formatIngredientLine,
+  formatPartnerIngredientLines,
+  reconcileMealMacros,
+  type MacroTotals,
+  type TruthIngredient,
+} from "@/lib/meal-macro-truth";
+import {
   isGlobalCoach,
   assertCoachOrOrgStaffForAthlete,
 } from "@/lib/organizations/org-coach-access";
@@ -14,6 +21,22 @@ async function assertMealAccess(ctx: { supabase: any; userId: string }, clientId
   if (await isGlobalCoach(ctx.supabase, ctx.userId)) return;
   if (!clientId) throw new Error("Forbidden");
   await assertCoachOrOrgStaffForAthlete(ctx, clientId, "nutrition");
+}
+
+/** Liest gespeicherte Zutatenzeilen robust als Wahrheitsquelle ein. */
+function asTruthIngredients(raw: unknown): TruthIngredient[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((row): row is Record<string, unknown> => !!row && typeof row === "object")
+    .map((row): TruthIngredient => ({
+      name: String(row.name ?? "").trim(),
+      amount: row.amount == null ? null : Number(row.amount),
+      unit: row.unit === "ml" ? ("ml" as const) : row.unit === "g" ? ("g" as const) : null,
+      grams: row.grams == null ? null : Number(row.grams),
+      amount_g: row.amount_g == null ? null : Number(row.amount_g),
+      display: typeof row.display === "string" ? row.display : null,
+    }))
+    .filter((row) => row.name.length > 0);
 }
 
 type ParsedMeal = {
@@ -334,7 +357,7 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
     const { data: meal, error: mErr } = await supabase
       .from("nutrition_plan_meals")
       .select(
-        "id, name, description, kcal, protein_g, carbs_g, fat_g, day_id, partner_meal_id, is_shared, sort_order, recipe_ingredients, recipe_steps, recipe_generated_at",
+        "id, name, description, kcal, protein_g, carbs_g, fat_g, day_id, partner_meal_id, is_shared, sort_order, ingredients_json, recipe_ingredients, recipe_steps, recipe_generated_at",
       )
       .eq("id", data.meal_id)
       .maybeSingle();
@@ -366,6 +389,7 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
       carbs_g: number | null;
       fat_g: number | null;
       description?: string | null;
+      ingredients?: TruthIngredient[];
     };
     let selfPartner: Partner | null = null;
     let otherPartner: Partner | null = null;
@@ -381,7 +405,7 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
       if (partnerMealId) {
         const { data } = await supabaseAdmin
           .from("nutrition_plan_meals")
-          .select("id, kcal, protein_g, carbs_g, fat_g, day_id, description, name, sort_order")
+          .select("id, kcal, protein_g, carbs_g, fat_g, day_id, description, name, sort_order, ingredients_json")
           .eq("id", partnerMealId)
           .maybeSingle();
         pMeal = data;
@@ -412,7 +436,7 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
             // shared meals on both sides). Fall back to same sort_order.
             const { data: candidates } = await supabaseAdmin
               .from("nutrition_plan_meals")
-              .select("id, kcal, protein_g, carbs_g, fat_g, day_id, description, name, sort_order")
+              .select("id, kcal, protein_g, carbs_g, fat_g, day_id, description, name, sort_order, ingredients_json")
               .eq("day_id", pDayId);
             const list = (candidates ?? []) as any[];
             pMeal =
@@ -470,7 +494,7 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
                 const { data: candidates } = await supabaseAdmin
                   .from("nutrition_plan_meals")
                   .select(
-                    "id, kcal, protein_g, carbs_g, fat_g, day_id, description, name, sort_order",
+                    "id, kcal, protein_g, carbs_g, fat_g, day_id, description, name, sort_order, ingredients_json",
                   )
                   .eq("day_id", pDayId);
                 const list = (candidates ?? []) as any[];
@@ -511,6 +535,7 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
             carbs_g: meal.carbs_g,
             fat_g: meal.fat_g,
             description: meal.description,
+            ingredients: asTruthIngredients((meal as any).ingredients_json),
           };
           otherPartner = {
             name: otherName,
@@ -519,6 +544,7 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
             carbs_g: pMeal.carbs_g,
             fat_g: pMeal.fat_g,
             description: pMeal.description ?? null,
+            ingredients: asTruthIngredients(pMeal.ingredients_json),
           };
         }
       }
@@ -563,6 +589,74 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
         }
       }
     }
+
+    // ------------------------------------------------------------------
+    // SINGLE SOURCE OF TRUTH
+    // Die gespeicherten Zutaten (ingredients_json) sind die einzige Quelle für
+    // Mengen UND Makros. Sind sie vorhanden, wird die Rezept-Zutatenliste
+    // daraus gebaut und die Mahlzeiten-Summe frisch nachgerechnet; abweichende
+    // gespeicherte Summen werden reparariert statt angezeigt.
+    // ------------------------------------------------------------------
+    const selfIngredients = asTruthIngredients((meal as any).ingredients_json);
+    let truthMacros: MacroTotals | null = null;
+    let macrosCorrected = false;
+    let macrosNote: string | null = null;
+    let structuredLines: string[] | null = null;
+
+    if (selfIngredients.length) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { computeMealFromIngredients, coerceIngredients, isUsableEngineResult } = await import(
+        "./nutrition-engine.server"
+      );
+      const engineResult = await computeMealFromIngredients(
+        supabaseAdmin,
+        coerceIngredients((meal as any).ingredients_json ?? null),
+      );
+      if (isUsableEngineResult(engineResult)) {
+        const reconciled = reconcileMealMacros({
+          stored: {
+            kcal: meal.kcal ?? undefined,
+            protein_g: meal.protein_g ?? undefined,
+            carbs_g: meal.carbs_g ?? undefined,
+            fat_g: meal.fat_g ?? undefined,
+          } as Partial<MacroTotals>,
+          computed: {
+            kcal: engineResult.kcal,
+            protein_g: engineResult.protein_g,
+            carbs_g: engineResult.carbs_g,
+            fat_g: engineResult.fat_g,
+          },
+        });
+        truthMacros = reconciled.macros;
+        macrosCorrected = reconciled.corrected;
+        macrosNote = reconciled.note;
+        if (reconciled.corrected) {
+          await supabaseAdmin
+            .from("nutrition_plan_meals")
+            .update(reconciled.macros)
+            .eq("id", meal.id);
+        }
+      }
+
+      const partnerIngredients = otherPartner?.ingredients ?? [];
+      structuredLines =
+        otherPartner?.name && partnerIngredients.length
+          ? formatPartnerIngredientLines({
+              selfName: selfPartner?.name ?? "Du",
+              otherName: otherPartner.name,
+              selfIngredients,
+              otherIngredients: partnerIngredients,
+            })
+          : selfIngredients.map(formatIngredientLine);
+      if (!structuredLines.length) structuredLines = null;
+    }
+
+    const macroPayload = () => ({
+      macros: truthMacros,
+      macros_corrected: macrosCorrected,
+      macros_note: macrosNote,
+      macros_source: (structuredLines ? "ingredients" : "stored") as "ingredients" | "stored",
+    });
 
     type IngredientPart = { amount: number; unit: string; name: string; key: string };
     const unitsPattern = "g|kg|ml|l|el|tl|stück|stk\\.?|dose|dosen|scheibe|scheiben|zehe|zehen";
@@ -687,18 +781,34 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
       otherPartner?.name && joined.toLowerCase().includes(otherPartner.name.toLowerCase());
     const skipCache = isPartnerMeal && (!hasPerPerson || hasPlaceholder || !otherInText);
     const partnerIngredientSplit = buildPartnerIngredientSplit();
+    const cachedSteps = (meal.recipe_steps as string[]) ?? [];
+
+    // Zutaten aus den gespeicherten Mengen haben immer Vorrang vor alten
+    // KI-Textmengen — so können Zutatenliste und Makros nicht auseinanderlaufen.
+    if (!data.force && structuredLines && cachedSteps.length > 0) {
+      if (cached.join("\n") !== structuredLines.join("\n")) {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        await supabaseAdmin
+          .from("nutrition_plan_meals")
+          .update({ recipe_ingredients: structuredLines })
+          .eq("id", meal.id);
+      }
+      return { ingredients: structuredLines, steps: cachedSteps, cached: true, ...macroPayload() };
+    }
     if (!data.force && partnerIngredientSplit && cached.length > 0) {
       return {
         ingredients: partnerIngredientSplit,
-        steps: (meal.recipe_steps as string[]) ?? [],
+        steps: cachedSteps,
         cached: true,
+        ...macroPayload(),
       };
     }
     if (!data.force && !skipCache && cached.length > 0) {
       return {
         ingredients: partnerIngredientSplit ?? fixLabels(cached),
-        steps: (meal.recipe_steps as string[]) ?? [],
+        steps: cachedSteps,
         cached: true,
+        ...macroPayload(),
       };
     }
     const apiKey = process.env.LOVABLE_API_KEY;
@@ -801,7 +911,9 @@ Antworte ausschließlich mit gültigem JSON in diesem Format:
       : [];
     if (!ingredients.length) throw new Error("Rezept konnte nicht erstellt werden");
 
-    ingredients = partnerIngredientSplit ?? fixLabels(ingredients);
+    // Mengen kommen, wenn vorhanden, aus den gespeicherten Zutaten. Die KI
+    // liefert dann ausschließlich Zubereitungsschritte.
+    ingredients = structuredLines ?? partnerIngredientSplit ?? fixLabels(ingredients);
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     await supabaseAdmin
@@ -813,5 +925,5 @@ Antworte ausschließlich mit gültigem JSON in diesem Format:
       })
       .eq("id", meal.id);
 
-    return { ingredients, steps, cached: false };
+    return { ingredients, steps, cached: false, ...macroPayload() };
   });

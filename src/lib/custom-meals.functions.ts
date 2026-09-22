@@ -2,6 +2,11 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { MealImageStatus } from "@/lib/meal-images.functions";
+import {
+  ingredientsCarryMacros,
+  reconcileMealMacros,
+  sumIngredientTotals,
+} from "@/lib/meal-macro-truth";
 
 
 export type MealSlot = "breakfast" | "lunch" | "dinner" | "snack" | "any";
@@ -66,7 +71,22 @@ export const listCustomMeals = createServerFn({ method: "GET" })
       .eq("user_id", target)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
-    return (rows ?? []) as unknown as CustomMeal[];
+    // Abwärtskompatibel: alte Mahlzeiten mit inkonsistent gespeicherten Summen
+    // werden beim Laden aus ihren Zutaten repariert, statt falsch anzuzeigen.
+    return ((rows ?? []) as unknown as CustomMeal[]).map((meal) => {
+      const ingredients = Array.isArray(meal.ingredients) ? meal.ingredients : [];
+      if (!ingredients.length || !ingredientsCarryMacros(ingredients)) return meal;
+      const { macros, corrected } = reconcileMealMacros({
+        stored: {
+          kcal: meal.kcal ?? undefined,
+          protein_g: meal.protein_g ?? undefined,
+          carbs_g: meal.carbs_g ?? undefined,
+          fat_g: meal.fat_g ?? undefined,
+        },
+        computed: sumIngredientTotals(ingredients),
+      });
+      return corrected ? { ...meal, ...macros } : meal;
+    });
   });
 
 export const saveCustomMeal = createServerFn({ method: "POST" })
@@ -90,22 +110,15 @@ export const saveCustomMeal = createServerFn({ method: "POST" })
         .parse(d),
   )
   .handler(async ({ data, context }) => {
-    // Auto-sum macros from ingredients when set
-    const totals = data.ingredients.reduce(
-      (acc, ing) => ({
-        kcal: acc.kcal + (ing.kcal ?? 0),
-        protein_g: acc.protein_g + (ing.protein_g ?? 0),
-        carbs_g: acc.carbs_g + (ing.carbs_g ?? 0),
-        fat_g: acc.fat_g + (ing.fat_g ?? 0),
-      }),
-      { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0 },
-    );
+    // Single Source of Truth: die Summen werden vor JEDEM Speichern neu aus den
+    // aktuellen Zutaten berechnet — niemals aus einem früheren Rezeptstand.
+    const totals = sumIngredientTotals(data.ingredients);
     const payload = {
       user_id: context.userId,
       name: data.name,
       meal_slot: data.meal_slot,
       ingredients: data.ingredients,
-      kcal: Math.round(totals.kcal) || null,
+      kcal: totals.kcal || null,
       protein_g: totals.protein_g || null,
       carbs_g: totals.carbs_g || null,
       fat_g: totals.fat_g || null,
