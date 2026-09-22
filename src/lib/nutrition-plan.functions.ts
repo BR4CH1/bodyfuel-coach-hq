@@ -334,7 +334,7 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
     const { data: meal, error: mErr } = await supabase
       .from("nutrition_plan_meals")
       .select(
-        "id, name, description, kcal, protein_g, carbs_g, fat_g, day_id, partner_meal_id, is_shared, sort_order, recipe_ingredients, recipe_steps, recipe_generated_at",
+        "id, name, description, kcal, protein_g, carbs_g, fat_g, day_id, partner_meal_id, is_shared, sort_order, ingredients_json, recipe_ingredients, recipe_steps, recipe_generated_at",
       )
       .eq("id", data.meal_id)
       .maybeSingle();
@@ -366,6 +366,7 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
       carbs_g: number | null;
       fat_g: number | null;
       description?: string | null;
+      ingredients?: TruthIngredient[];
     };
     let selfPartner: Partner | null = null;
     let otherPartner: Partner | null = null;
@@ -381,7 +382,7 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
       if (partnerMealId) {
         const { data } = await supabaseAdmin
           .from("nutrition_plan_meals")
-          .select("id, kcal, protein_g, carbs_g, fat_g, day_id, description, name, sort_order")
+          .select("id, kcal, protein_g, carbs_g, fat_g, day_id, description, name, sort_order, ingredients_json")
           .eq("id", partnerMealId)
           .maybeSingle();
         pMeal = data;
@@ -412,7 +413,7 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
             // shared meals on both sides). Fall back to same sort_order.
             const { data: candidates } = await supabaseAdmin
               .from("nutrition_plan_meals")
-              .select("id, kcal, protein_g, carbs_g, fat_g, day_id, description, name, sort_order")
+              .select("id, kcal, protein_g, carbs_g, fat_g, day_id, description, name, sort_order, ingredients_json")
               .eq("day_id", pDayId);
             const list = (candidates ?? []) as any[];
             pMeal =
@@ -470,7 +471,7 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
                 const { data: candidates } = await supabaseAdmin
                   .from("nutrition_plan_meals")
                   .select(
-                    "id, kcal, protein_g, carbs_g, fat_g, day_id, description, name, sort_order",
+                    "id, kcal, protein_g, carbs_g, fat_g, day_id, description, name, sort_order, ingredients_json",
                   )
                   .eq("day_id", pDayId);
                 const list = (candidates ?? []) as any[];
