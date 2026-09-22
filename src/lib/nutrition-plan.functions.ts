@@ -1,6 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
+  formatIngredientLine,
+  formatPartnerIngredientLines,
+  reconcileMealMacros,
+  type MacroTotals,
+  type TruthIngredient,
+} from "@/lib/meal-macro-truth";
+import {
   isGlobalCoach,
   assertCoachOrOrgStaffForAthlete,
 } from "@/lib/organizations/org-coach-access";
@@ -512,6 +519,7 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
             carbs_g: meal.carbs_g,
             fat_g: meal.fat_g,
             description: meal.description,
+            ingredients: asTruthIngredients((meal as any).ingredients_json),
           };
           otherPartner = {
             name: otherName,
@@ -520,6 +528,7 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
             carbs_g: pMeal.carbs_g,
             fat_g: pMeal.fat_g,
             description: pMeal.description ?? null,
+            ingredients: asTruthIngredients(pMeal.ingredients_json),
           };
         }
       }
@@ -564,6 +573,74 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
         }
       }
     }
+
+    // ------------------------------------------------------------------
+    // SINGLE SOURCE OF TRUTH
+    // Die gespeicherten Zutaten (ingredients_json) sind die einzige Quelle für
+    // Mengen UND Makros. Sind sie vorhanden, wird die Rezept-Zutatenliste
+    // daraus gebaut und die Mahlzeiten-Summe frisch nachgerechnet; abweichende
+    // gespeicherte Summen werden reparariert statt angezeigt.
+    // ------------------------------------------------------------------
+    const selfIngredients = asTruthIngredients((meal as any).ingredients_json);
+    let truthMacros: MacroTotals | null = null;
+    let macrosCorrected = false;
+    let macrosNote: string | null = null;
+    let structuredLines: string[] | null = null;
+
+    if (selfIngredients.length) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { computeMealFromIngredients, coerceIngredients, isUsableEngineResult } = await import(
+        "./nutrition-engine.server"
+      );
+      const engineResult = await computeMealFromIngredients(
+        supabaseAdmin,
+        coerceIngredients((meal as any).ingredients_json ?? null),
+      );
+      if (isUsableEngineResult(engineResult)) {
+        const reconciled = reconcileMealMacros({
+          stored: {
+            kcal: meal.kcal ?? undefined,
+            protein_g: meal.protein_g ?? undefined,
+            carbs_g: meal.carbs_g ?? undefined,
+            fat_g: meal.fat_g ?? undefined,
+          } as Partial<MacroTotals>,
+          computed: {
+            kcal: engineResult.kcal,
+            protein_g: engineResult.protein_g,
+            carbs_g: engineResult.carbs_g,
+            fat_g: engineResult.fat_g,
+          },
+        });
+        truthMacros = reconciled.macros;
+        macrosCorrected = reconciled.corrected;
+        macrosNote = reconciled.note;
+        if (reconciled.corrected) {
+          await supabaseAdmin
+            .from("nutrition_plan_meals")
+            .update(reconciled.macros)
+            .eq("id", meal.id);
+        }
+      }
+
+      const partnerIngredients = otherPartner?.ingredients ?? [];
+      structuredLines =
+        otherPartner?.name && partnerIngredients.length
+          ? formatPartnerIngredientLines({
+              selfName: selfPartner?.name ?? "Du",
+              otherName: otherPartner.name,
+              selfIngredients,
+              otherIngredients: partnerIngredients,
+            })
+          : selfIngredients.map(formatIngredientLine);
+      if (!structuredLines.length) structuredLines = null;
+    }
+
+    const macroPayload = () => ({
+      macros: truthMacros,
+      macros_corrected: macrosCorrected,
+      macros_note: macrosNote,
+      macros_source: (structuredLines ? "ingredients" : "stored") as "ingredients" | "stored",
+    });
 
     type IngredientPart = { amount: number; unit: string; name: string; key: string };
     const unitsPattern = "g|kg|ml|l|el|tl|stück|stk\\.?|dose|dosen|scheibe|scheiben|zehe|zehen";
