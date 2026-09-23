@@ -114,6 +114,23 @@ export function TrainingPlanManagementCard({ userId, returnOrgId }: { userId: st
     onSuccess: () => invalidate(),
   });
 
+  const extend = useMutation({
+    mutationFn: ({ id, weeks }: { id: string; weeks: number }) =>
+      extendFn({ data: { plan_id: id, add_weeks: weeks } }),
+    onSuccess: (res: any) => {
+      if (res?.already_extended) {
+        toast.success("Plan war bereits verlängert — keine Doppelung erzeugt.");
+      } else {
+        toast.success(
+          `Plan verlängert: ${res.added_days} Tage und ${res.added_exercises} Übungen kopiert. Neue Laufzeit ${res.weeks_count} Wochen bis ${fmtDate(res.end_date)}.`,
+        );
+      }
+      invalidate();
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Verlängerung fehlgeschlagen"),
+  });
+
+
   return (
     <div className="rounded-2xl border border-border bg-card p-6">
       <div className="flex items-start justify-between gap-3">
