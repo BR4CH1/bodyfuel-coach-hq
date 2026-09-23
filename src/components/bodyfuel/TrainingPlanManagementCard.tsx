@@ -315,7 +315,7 @@ function TrainingPlanColumn(props: {
 }) {
   const { label, tone, plan, userId } = props;
 
-  const [extendWeeks, setExtendWeeks] = useState(2);
+  const [extendOpen, setExtendOpen] = useState(false);
   const [editDates, setEditDates] = useState(false);
   const [start, setStart] = useState<string>(plan?.scheduled_start_date ?? "");
   const [end, setEnd] = useState<string>(plan?.scheduled_end_date ?? "");
