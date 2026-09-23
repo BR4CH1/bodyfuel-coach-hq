@@ -21,6 +21,7 @@ import {
   deleteTrainingPlanDraft,
   updateTrainingPlanScheduling,
   setAutoPublishTraining,
+  extendTrainingPlanWeeks,
   type TrainingPlanStatus,
 } from "@/lib/training-plan-management.functions";
 import { generateAiTrainingPlanDraft } from "@/lib/training-plan-ai.functions";
@@ -58,6 +59,8 @@ export function TrainingPlanManagementCard({ userId, returnOrgId }: { userId: st
   const delFn = useServerFn(deleteTrainingPlanDraft);
   const schedFn = useServerFn(updateTrainingPlanScheduling);
   const autoFn = useServerFn(setAutoPublishTraining);
+  const extendFn = useServerFn(extendTrainingPlanWeeks);
+
 
   const { data, isLoading } = useQuery({
     queryKey: ["training-plan-overview", userId],
@@ -110,6 +113,38 @@ export function TrainingPlanManagementCard({ userId, returnOrgId }: { userId: st
       autoFn({ data: { user_id: userId, auto_publish: v } }),
     onSuccess: () => invalidate(),
   });
+
+  const extend = useMutation({
+    mutationFn: ({
+      id,
+      weeks,
+      baseWeeks,
+    }: {
+      id: string;
+      weeks: number;
+      baseWeeks?: number;
+    }) =>
+      extendFn({
+        data: {
+          plan_id: id,
+          add_weeks: weeks,
+          // Ziel-Laufzeit verhindert Doppelungen bei erneutem Klick/Retry.
+          target_weeks: baseWeeks ? baseWeeks + weeks : undefined,
+        },
+      }),
+    onSuccess: (res: any) => {
+      if (res?.already_extended) {
+        toast.success("Plan war bereits verlängert — keine Doppelung erzeugt.");
+      } else {
+        toast.success(
+          `Plan verlängert: ${res.added_days} Tage und ${res.added_exercises} Übungen kopiert. Neue Laufzeit ${res.weeks_count} Wochen bis ${fmtDate(res.end_date)}.`,
+        );
+      }
+      invalidate();
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Verlängerung fehlgeschlagen"),
+  });
+
 
   return (
     <div className="rounded-2xl border border-border bg-card p-6">
@@ -175,12 +210,18 @@ export function TrainingPlanManagementCard({ userId, returnOrgId }: { userId: st
             userId={userId}
             plan={data?.active ?? null}
             onArchive={(id) => trans.mutate({ id, to: "archived" })}
+            onExtend={(id, weeks, baseWeeks) =>
+              extend.mutate({ id, weeks, baseWeeks })
+            }
+            extendPending={extend.isPending}
           />
           <TrainingPlanColumn
             label="Nächster Plan"
             tone="next"
             userId={userId}
             plan={data?.next ?? null}
+            onExtend={(id, weeks, baseWeeks) => extend.mutate({ id, weeks, baseWeeks })}
+            extendPending={extend.isPending}
             onApprove={(id) => trans.mutate({ id, to: "approved" })}
             onPublish={(id) => trans.mutate({ id, to: "published" })}
             onActivate={(id) => trans.mutate({ id, to: "active" })}
@@ -269,9 +310,12 @@ function TrainingPlanColumn(props: {
   onActivate?: (id: string) => void;
   onDelete?: (id: string) => void;
   onUpdateDates?: (id: string, start: string | null, end: string | null) => void;
+  onExtend?: (id: string, weeks: number, baseWeeks?: number) => void;
+  extendPending?: boolean;
 }) {
   const { label, tone, plan, userId } = props;
 
+  const [extendWeeks, setExtendWeeks] = useState(2);
   const [editDates, setEditDates] = useState(false);
   const [start, setStart] = useState<string>(plan?.scheduled_start_date ?? "");
   const [end, setEnd] = useState<string>(plan?.scheduled_end_date ?? "");
@@ -323,6 +367,38 @@ function TrainingPlanColumn(props: {
               </span>
             </div>
           </div>
+
+          {props.onExtend && (
+            <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-background/60 px-2.5 py-2">
+              <span className="text-[11px] font-semibold text-muted-foreground">
+                Plan verlängern
+              </span>
+              <select
+                value={extendWeeks}
+                onChange={(e) => setExtendWeeks(Number(e.target.value))}
+                className="rounded-md border border-input bg-background px-2 py-1 text-xs"
+              >
+                {[1, 2, 3, 4, 6, 8].map((w) => (
+                  <option key={w} value={w}>
+                    +{w} Woche{w > 1 ? "n" : ""}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={() => props.onExtend?.(plan.id, extendWeeks, Math.max(1, Math.round((plan.days_count ?? 7) / 7)))}
+                disabled={props.extendPending}
+                className="inline-flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-60"
+              >
+                <Calendar className="h-3.5 w-3.5" />
+                {props.extendPending ? "Verlängere…" : "Übernehmen"}
+              </button>
+              <span className="w-full text-[10px] text-muted-foreground">
+                Übungen der bestehenden Wochen werden 1:1 in die neuen Wochen kopiert.
+              </span>
+            </div>
+          )}
+
+
 
           {tone === "next" && editDates && (
             <div className="mt-3 grid grid-cols-2 gap-2">
