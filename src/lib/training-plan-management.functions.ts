@@ -234,6 +234,8 @@ export const extendTrainingPlanWeeks = createServerFn({ method: "POST" })
         day_date: d.day_date ?? null,
       })),
       addWeeks: data.add_weeks,
+      // Ziel-Laufzeit macht Wiederholungen derselben Aktion wirkungslos.
+      targetWeeks: data.target_weeks,
     });
 
     if (!blueprint.days.length) {
