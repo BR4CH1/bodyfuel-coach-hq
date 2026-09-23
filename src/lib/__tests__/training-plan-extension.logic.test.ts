@@ -61,12 +61,14 @@ describe("buildExtensionBlueprint", () => {
     expect(new Set(sorts).size).toBe(sorts.length);
   });
 
-  it("ist idempotent: bereits vorhandene Wochen werden übersprungen", () => {
-    const already = plan(6);
-    const bp = buildExtensionBlueprint({ existingDays: already, addWeeks: 2 });
-    expect(bp.days).toHaveLength(0);
-    expect(bp.skippedWeeks).toEqual([7, 8]);
+  it("ist idempotent: dieselbe Ziel-Laufzeit erzeugt beim zweiten Mal nichts", () => {
+    const bp1 = buildExtensionBlueprint({ existingDays: plan(4), targetWeeks: 6 });
+    expect(bp1.days).toHaveLength(14);
+    const bp2 = buildExtensionBlueprint({ existingDays: plan(6), targetWeeks: 6 });
+    expect(bp2.days).toHaveLength(0);
+    expect(bp2.targetWeeks).toBe(6);
   });
+
 
   it("wiederholt das Muster zyklisch bei mehr Zusatzwochen als Basiswochen", () => {
     const bp = buildExtensionBlueprint({ existingDays: plan(2), addWeeks: 3 });
