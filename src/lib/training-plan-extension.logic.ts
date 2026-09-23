@@ -42,38 +42,50 @@ export function shiftIsoDate(iso: string, days: number): string {
 
 /**
  * Erzeugt den Plan für die anzuhängenden Wochen.
- * Idempotent: bereits vorhandene Wochen werden nie erneut erzeugt.
+ *
+ * Idempotent: Der Aufrufer gibt die Ziel-Laufzeit (`targetWeeks`) an — ein
+ * Wiederholen derselben Operation erzeugt daher keine Duplikate. Alternativ
+ * kann `addWeeks` relativ zur vorhandenen Struktur genutzt werden.
  */
 export function buildExtensionBlueprint(input: {
   existingDays: ExtensionSourceDay[];
-  addWeeks: number;
+  addWeeks?: number;
+  targetWeeks?: number;
 }): ExtensionBlueprint {
   const { existingDays } = input;
-  const addWeeks = Math.trunc(input.addWeeks);
   if (!existingDays.length) {
     throw new Error("Der Plan enthält keine Trainingstage, die verlängert werden könnten.");
-  }
-  if (addWeeks < 1 || addWeeks > 12) {
-    throw new Error("Bitte 1 bis 12 zusätzliche Wochen wählen.");
   }
 
   const weeks = existingDays.map((d) => Math.max(1, Number(d.week_number || 1)));
   const baseWeeks = Math.max(...weeks);
   const existingWeeks = new Set(weeks);
   const maxSort = Math.max(...existingDays.map((d) => Number(d.sort_order ?? 0)));
-  const targetWeeks = baseWeeks + addWeeks;
+
+  const targetWeeks =
+    input.targetWeeks != null
+      ? Math.trunc(input.targetWeeks)
+      : baseWeeks + Math.trunc(input.addWeeks ?? 0);
+  if (targetWeeks < baseWeeks) {
+    throw new Error("Die Ziel-Laufzeit darf nicht kürzer als der bestehende Plan sein.");
+  }
+  if (targetWeeks > 24) {
+    throw new Error("Die Laufzeit darf maximal 24 Wochen betragen.");
+  }
+  if (input.targetWeeks == null && (!input.addWeeks || input.addWeeks < 1)) {
+    throw new Error("Bitte mindestens eine zusätzliche Woche wählen.");
+  }
 
   const days: PlannedExtensionDay[] = [];
   const skippedWeeks: number[] = [];
   let sortCursor = maxSort;
 
-  for (let k = 1; k <= addWeeks; k++) {
-    const targetWeek = baseWeeks + k;
+  for (let targetWeek = baseWeeks + 1; targetWeek <= targetWeeks; targetWeek++) {
     if (existingWeeks.has(targetWeek)) {
       skippedWeeks.push(targetWeek);
       continue;
     }
-    const sourceWeek = ((k - 1) % baseWeeks) + 1;
+    const sourceWeek = ((targetWeek - 1) % baseWeeks) + 1;
     const sourceDays = existingDays
       .filter((d) => Math.max(1, Number(d.week_number || 1)) === sourceWeek)
       .slice()
