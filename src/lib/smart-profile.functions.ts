@@ -203,11 +203,38 @@ export const saveCustomerPlanConfig = createServerFn({ method: "POST" })
         ? "low_effort"
         : null;
 
+    // Sicherheitsnetz: Eine vollständig leere Konfiguration (z. B. wenn der
+    // Konfigurator noch nicht geladen war) darf gespeicherte harte No-Gos und
+    // Vorlieben NIE löschen.
+    const configEmpty =
+      !(data.diet_rules ?? []).length &&
+      !(data.exclusion_groups ?? []).length &&
+      !(data.custom_exclusions ?? []).length &&
+      !preferences.length;
+    let existing: { nogo_foods?: string[] | null; extra_nogos?: string | null; favorite_foods?: string[] | null } | null =
+      null;
+    if (configEmpty) {
+      const { data: row } = await supabaseAdmin
+        .from("smart_nutrition_profile")
+        .select("nogo_foods, extra_nogos, favorite_foods")
+        .eq("user_id", data.user_id)
+        .maybeSingle();
+      existing = (row as typeof existing) ?? null;
+    }
+    const keepExisting =
+      configEmpty &&
+      !!existing &&
+      ((existing.nogo_foods ?? []).length > 0 ||
+        !!existing.extra_nogos ||
+        (existing.favorite_foods ?? []).length > 0);
+
     const payload: Record<string, unknown> = {
       user_id: data.user_id,
-      nogo_foods: forbidden,
-      extra_nogos: (data.custom_exclusions ?? []).join(", ") || null,
-      favorite_foods: preferences,
+      nogo_foods: keepExisting ? (existing?.nogo_foods ?? []) : forbidden,
+      extra_nogos: keepExisting
+        ? (existing?.extra_nogos ?? null)
+        : (data.custom_exclusions ?? []).join(", ") || null,
+      favorite_foods: keepExisting ? (existing?.favorite_foods ?? []) : preferences,
       diet_notes:
         [
           `Ziel: ${data.goal}`,
