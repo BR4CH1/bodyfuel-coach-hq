@@ -201,7 +201,9 @@ export const updateTrainingPlanScheduling = createServerFn({ method: "POST" })
  */
 export const extendTrainingPlanWeeks = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { plan_id: string; add_weeks: number }) => d)
+  .inputValidator(
+    (d: { plan_id: string; add_weeks: number; target_weeks?: number }) => d,
+  )
   .handler(async ({ data, context }) => {
     const { buildExtensionBlueprint } = await import("@/lib/training-plan-extension.logic");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
