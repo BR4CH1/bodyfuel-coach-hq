@@ -52,6 +52,7 @@ import {
   type TrainingTemplateDetail,
 } from "@/lib/training-templates.functions";
 import { autoFillTrainingPlan, emptyPlan } from "@/lib/training-autofill";
+import { mirrorBuilderWeeks } from "@/lib/training-plan-extension.logic";
 import {
   buildSmartTrainingDay,
   hasStrengthTestBaseline,
