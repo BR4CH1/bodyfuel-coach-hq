@@ -195,12 +195,16 @@ export function TrainingPlanManagementCard({ userId, returnOrgId }: { userId: st
             userId={userId}
             plan={data?.active ?? null}
             onArchive={(id) => trans.mutate({ id, to: "archived" })}
+            onExtend={(id, weeks) => extend.mutate({ id, weeks })}
+            extendPending={extend.isPending}
           />
           <TrainingPlanColumn
             label="Nächster Plan"
             tone="next"
             userId={userId}
             plan={data?.next ?? null}
+            onExtend={(id, weeks) => extend.mutate({ id, weeks })}
+            extendPending={extend.isPending}
             onApprove={(id) => trans.mutate({ id, to: "approved" })}
             onPublish={(id) => trans.mutate({ id, to: "published" })}
             onActivate={(id) => trans.mutate({ id, to: "active" })}
