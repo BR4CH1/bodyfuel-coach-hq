@@ -293,9 +293,12 @@ function TrainingPlanColumn(props: {
   onActivate?: (id: string) => void;
   onDelete?: (id: string) => void;
   onUpdateDates?: (id: string, start: string | null, end: string | null) => void;
+  onExtend?: (id: string, weeks: number) => void;
+  extendPending?: boolean;
 }) {
   const { label, tone, plan, userId } = props;
 
+  const [extendWeeks, setExtendWeeks] = useState(2);
   const [editDates, setEditDates] = useState(false);
   const [start, setStart] = useState<string>(plan?.scheduled_start_date ?? "");
   const [end, setEnd] = useState<string>(plan?.scheduled_end_date ?? "");
