@@ -21,6 +21,7 @@ import {
   deleteTrainingPlanDraft,
   updateTrainingPlanScheduling,
   setAutoPublishTraining,
+  extendTrainingPlanWeeks,
   type TrainingPlanStatus,
 } from "@/lib/training-plan-management.functions";
 import { generateAiTrainingPlanDraft } from "@/lib/training-plan-ai.functions";
