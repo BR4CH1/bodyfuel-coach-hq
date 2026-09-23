@@ -115,8 +115,23 @@ export function TrainingPlanManagementCard({ userId, returnOrgId }: { userId: st
   });
 
   const extend = useMutation({
-    mutationFn: ({ id, weeks }: { id: string; weeks: number }) =>
-      extendFn({ data: { plan_id: id, add_weeks: weeks } }),
+    mutationFn: ({
+      id,
+      weeks,
+      baseWeeks,
+    }: {
+      id: string;
+      weeks: number;
+      baseWeeks?: number;
+    }) =>
+      extendFn({
+        data: {
+          plan_id: id,
+          add_weeks: weeks,
+          // Ziel-Laufzeit verhindert Doppelungen bei erneutem Klick/Retry.
+          target_weeks: baseWeeks ? baseWeeks + weeks : undefined,
+        },
+      }),
     onSuccess: (res: any) => {
       if (res?.already_extended) {
         toast.success("Plan war bereits verlängert — keine Doppelung erzeugt.");
