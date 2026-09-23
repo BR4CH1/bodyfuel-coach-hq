@@ -794,9 +794,11 @@ export function TrainingPlanBuilderPage({
               onChange={(event) => {
                 const nextWeeks = Number(event.target.value);
                 setWeeksCount(nextWeeks);
-                setClientDays(null);
-                setPartnerDays(null);
-                setActiveWeek(1);
+                // Laufzeit ändern darf bestehende Wochen nicht verwerfen:
+                // neue Wochen spiegeln das bestehende Muster (W5=W1, W6=W2…).
+                setClientDays((prev) => (prev ? mirrorBuilderWeeks(prev, nextWeeks) : prev));
+                setPartnerDays((prev) => (prev ? mirrorBuilderWeeks(prev, nextWeeks) : prev));
+                setActiveWeek((prev) => Math.min(prev, nextWeeks));
               }}
               className="mt-2 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm font-semibold outline-none focus:border-primary"
             >
