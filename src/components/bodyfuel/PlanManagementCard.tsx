@@ -38,7 +38,10 @@ import {
   type PlanConfig,
 } from "@/components/bodyfuel/PlanConfiguratorCard";
 import { PlanValidationSummary } from "@/components/bodyfuel/PlanValidationSummary";
-import type { PlanValidationReport } from "@/lib/nutrition-plan-constraints";
+import {
+  planConfigFromProfile,
+  type PlanValidationReport,
+} from "@/lib/nutrition-plan-constraints";
 import { Users } from "lucide-react";
 
 const STATUS_LABEL: Record<PlanStatus, string> = {
