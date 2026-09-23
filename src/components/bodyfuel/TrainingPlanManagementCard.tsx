@@ -59,6 +59,8 @@ export function TrainingPlanManagementCard({ userId, returnOrgId }: { userId: st
   const delFn = useServerFn(deleteTrainingPlanDraft);
   const schedFn = useServerFn(updateTrainingPlanScheduling);
   const autoFn = useServerFn(setAutoPublishTraining);
+  const extendFn = useServerFn(extendTrainingPlanWeeks);
+
 
   const { data, isLoading } = useQuery({
     queryKey: ["training-plan-overview", userId],
