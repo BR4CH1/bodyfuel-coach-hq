@@ -211,15 +211,19 @@ export const saveCustomerPlanConfig = createServerFn({ method: "POST" })
       !(data.exclusion_groups ?? []).length &&
       !(data.custom_exclusions ?? []).length &&
       !preferences.length;
-    let existing: { nogo_foods?: string[] | null; extra_nogos?: string | null; favorite_foods?: string[] | null } | null =
-      null;
+    type ExistingConstraints = {
+      nogo_foods?: string[] | null;
+      extra_nogos?: string | null;
+      favorite_foods?: string[] | null;
+    };
+    let existing: ExistingConstraints | null = null;
     if (configEmpty) {
       const { data: row } = await supabaseAdmin
         .from("smart_nutrition_profile")
         .select("nogo_foods, extra_nogos, favorite_foods")
         .eq("user_id", data.user_id)
         .maybeSingle();
-      existing = (row as typeof existing) ?? null;
+      existing = (row as ExistingConstraints | null) ?? null;
     }
     const keepExisting =
       configEmpty &&
