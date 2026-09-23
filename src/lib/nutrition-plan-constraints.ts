@@ -403,6 +403,102 @@ export function buildForbiddenTerms(
   return Array.from(terms);
 }
 
+/**
+ * Gegenrichtung zu `buildForbiddenTerms` + `saveCustomerPlanConfig`:
+ * rekonstruiert die Builder-Konfiguration aus dem gespeicherten
+ * Ernährungsprofil, damit ein Plan-Start die gespeicherten No-Gos,
+ * Vorlieben und Regeln des Kunden NICHT mit Leer-Defaults überschreibt.
+ */
+export function planConfigFromProfile(
+  profile:
+    | {
+        nogo_foods?: string[] | null;
+        extra_nogos?: string | null;
+        favorite_foods?: string[] | null;
+        diet_notes?: string | null;
+        diet_style?: string | null;
+        meal_prep_style?: string | null;
+      }
+    | null
+    | undefined,
+  base: PlanConstraintConfig,
+): PlanConstraintConfig {
+  if (!profile) return base;
+
+  const notes = String(profile.diet_notes ?? "");
+  const section = (label: string): string => {
+    const match = notes.split("|").find((part) => part.trim().toLowerCase().startsWith(label));
+    return match ? match.slice(match.indexOf(":") + 1).trim() : "";
+  };
+  const listOf = (label: string): string[] =>
+    section(label)
+      .split(",")
+      .map((v) => v.trim())
+      .filter(Boolean);
+
+  const goalRaw = section("ziel").toLowerCase();
+  const goal = (Object.keys(PLAN_GOAL_LABELS) as PlanGoal[]).includes(goalRaw as PlanGoal)
+    ? (goalRaw as PlanGoal)
+    : base.goal;
+
+  const validRules = new Set(Object.keys(DIET_RULE_TERMS) as DietRule[]);
+  const dietRules = listOf("regeln").filter((r): r is DietRule => validRules.has(r as DietRule));
+  if (!dietRules.length) {
+    if (profile.diet_style === "vegan") dietRules.push("vegan");
+    else if (profile.diet_style === "vegetarian") dietRules.push("vegetarisch");
+  }
+
+  const validLifestyle = new Set<LifestyleFlag>([
+    "meal_prep",
+    "schnell",
+    "wenig_zutaten",
+    "budget",
+    "unterwegs",
+  ]);
+  const lifestyle = listOf("alltag").filter((v): v is LifestyleFlag =>
+    validLifestyle.has(v as LifestyleFlag),
+  );
+
+  const mealsRaw = Number.parseInt(section("mahlzeiten/tag"), 10);
+  const mealsPerDay = Number.isFinite(mealsRaw)
+    ? Math.max(2, Math.min(6, mealsRaw))
+    : base.mealsPerDay;
+
+  const customExclusions = Array.from(
+    new Set(
+      String(profile.extra_nogos ?? "")
+        .split(",")
+        .map((v) => v.trim())
+        .filter(Boolean),
+    ),
+  );
+
+  const preferences = Array.from(
+    new Set((profile.favorite_foods ?? []).map((v) => String(v).trim()).filter(Boolean)),
+  );
+
+  // Ausschlussgruppen aus den gespeicherten harten Begriffen ableiten.
+  const stored = new Set((profile.nogo_foods ?? []).map((v) => normalize(String(v))));
+  const exclusionGroups = (Object.keys(EXCLUSION_GROUP_TERMS) as ExclusionGroup[]).filter(
+    (group) => {
+      const terms = EXCLUSION_GROUP_TERMS[group].map(normalize);
+      return terms.length > 0 && terms.every((term) => stored.has(term));
+    },
+  );
+
+  return {
+    ...base,
+    goal,
+    dietRules: dietRules.length ? dietRules : base.dietRules,
+    exclusionGroups: exclusionGroups.length ? exclusionGroups : base.exclusionGroups,
+    customExclusions: customExclusions.length ? customExclusions : base.customExclusions,
+    preferences: preferences.length ? preferences : base.preferences,
+    lifestyle: lifestyle.length ? lifestyle : base.lifestyle,
+    mealsPerDay,
+  };
+}
+
+
 function ingredientHaystack(ingredient: IngredientLike): string {
   return [
     ingredient.name ?? "",

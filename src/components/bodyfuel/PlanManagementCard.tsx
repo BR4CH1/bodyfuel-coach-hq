@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   Calendar,
@@ -38,7 +38,10 @@ import {
   type PlanConfig,
 } from "@/components/bodyfuel/PlanConfiguratorCard";
 import { PlanValidationSummary } from "@/components/bodyfuel/PlanValidationSummary";
-import type { PlanValidationReport } from "@/lib/nutrition-plan-constraints";
+import {
+  planConfigFromProfile,
+  type PlanValidationReport,
+} from "@/lib/nutrition-plan-constraints";
 import { Users } from "lucide-react";
 
 const STATUS_LABEL: Record<PlanStatus, string> = {
@@ -154,6 +157,17 @@ export function PlanManagementCard({ userId, returnOrgId }: { userId: string; re
     queryKey: ["smart-profile", userId],
     queryFn: () => smartProfileFn({ data: { user_id: userId } }),
   });
+  // Gespeicherte No-Gos, Vorlieben und Regeln des Kunden in den Konfigurator
+  // laden, damit das Erstellen eines Plans sie nicht mit Leer-Defaults
+  // überschreibt. Einmalig pro geladenem Profil.
+  const hydratedForRef = useRef<string | null>(null);
+  useEffect(() => {
+    const profile = smartProfile.data;
+    if (!profile || hydratedForRef.current === userId) return;
+    hydratedForRef.current = userId;
+    setConfig((prev) => planConfigFromProfile(profile, prev));
+  }, [smartProfile.data, userId]);
+
   const [budgetInput, setBudgetInput] = useState<string>("");
   useEffect(() => {
     const v = smartProfile.data?.weekly_budget_eur;
