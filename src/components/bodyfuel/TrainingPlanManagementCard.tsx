@@ -220,7 +220,7 @@ export function TrainingPlanManagementCard({ userId, returnOrgId }: { userId: st
             tone="next"
             userId={userId}
             plan={data?.next ?? null}
-            onExtend={(id, weeks) => extend.mutate({ id, weeks })}
+            onExtend={(id, weeks, baseWeeks) => extend.mutate({ id, weeks, baseWeeks })}
             extendPending={extend.isPending}
             onApprove={(id) => trans.mutate({ id, to: "approved" })}
             onPublish={(id) => trans.mutate({ id, to: "published" })}
@@ -310,7 +310,7 @@ function TrainingPlanColumn(props: {
   onActivate?: (id: string) => void;
   onDelete?: (id: string) => void;
   onUpdateDates?: (id: string, start: string | null, end: string | null) => void;
-  onExtend?: (id: string, weeks: number) => void;
+  onExtend?: (id: string, weeks: number, baseWeeks?: number) => void;
   extendPending?: boolean;
 }) {
   const { label, tone, plan, userId } = props;
@@ -385,7 +385,7 @@ function TrainingPlanColumn(props: {
                 ))}
               </select>
               <button
-                onClick={() => props.onExtend?.(plan.id, extendWeeks)}
+                onClick={() => props.onExtend?.(plan.id, extendWeeks, Math.max(1, Math.round((plan.days_count ?? 7) / 7)))}
                 disabled={props.extendPending}
                 className="inline-flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-60"
               >
