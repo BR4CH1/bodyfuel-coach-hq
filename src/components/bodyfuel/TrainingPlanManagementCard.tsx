@@ -210,7 +210,9 @@ export function TrainingPlanManagementCard({ userId, returnOrgId }: { userId: st
             userId={userId}
             plan={data?.active ?? null}
             onArchive={(id) => trans.mutate({ id, to: "archived" })}
-            onExtend={(id, weeks) => extend.mutate({ id, weeks })}
+            onExtend={(id, weeks, baseWeeks) =>
+              extend.mutate({ id, weeks, baseWeeks })
+            }
             extendPending={extend.isPending}
           />
           <TrainingPlanColumn
