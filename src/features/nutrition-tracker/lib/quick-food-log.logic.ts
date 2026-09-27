@@ -368,7 +368,7 @@ export function parseLocalCorrection(text: string, items: ReviewItem[]): LocalCo
   const hits = items.filter((it) => {
     const hay = normalizeFoodTerm(`${it.label} ${it.phrase} ${it.food?.name ?? ""}`);
     const compact = hay.replace(/\s+/g, "");
-    return tokens.some((t) => !/^\d/.test(t) && (hay.split(/\s+/).includes(t) || (t.length >= 5 && compact.includes(t))));
+    return tokens.some((t) => !/^\d/.test(t) && (hay.split(/\s+/).includes(t) || (t.length >= 4 && compact.includes(t))));
   });
   if (hits.length !== 1) return null;
   const hit = hits[0]!;
