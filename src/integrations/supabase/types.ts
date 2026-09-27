@@ -2093,14 +2093,18 @@ export type Database = {
           carbs_g: number
           created_at: string
           entry_date: string
+          estimate_level: string | null
           fat_g: number
           food_id: string | null
           id: string
           image_url: string | null
           kcal: number
+          log_draft_id: string | null
+          log_item_key: string | null
           meal: string
           name: string
           protein_g: number
+          raw_phrase: string | null
           serving_amount: number
           serving_g: number
           source: string
@@ -2114,14 +2118,18 @@ export type Database = {
           carbs_g?: number
           created_at?: string
           entry_date?: string
+          estimate_level?: string | null
           fat_g?: number
           food_id?: string | null
           id?: string
           image_url?: string | null
           kcal?: number
+          log_draft_id?: string | null
+          log_item_key?: string | null
           meal: string
           name: string
           protein_g?: number
+          raw_phrase?: string | null
           serving_amount?: number
           serving_g?: number
           source?: string
@@ -2135,14 +2143,18 @@ export type Database = {
           carbs_g?: number
           created_at?: string
           entry_date?: string
+          estimate_level?: string | null
           fat_g?: number
           food_id?: string | null
           id?: string
           image_url?: string | null
           kcal?: number
+          log_draft_id?: string | null
+          log_item_key?: string | null
           meal?: string
           name?: string
           protein_g?: number
+          raw_phrase?: string | null
           serving_amount?: number
           serving_g?: number
           source?: string
@@ -2162,6 +2174,13 @@ export type Database = {
             columns: ["food_id"]
             isOneToOne: false
             referencedRelation: "nutrition_foods_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "food_entries_log_draft_id_fkey"
+            columns: ["log_draft_id"]
+            isOneToOne: false
+            referencedRelation: "food_log_drafts"
             referencedColumns: ["id"]
           },
         ]
@@ -2295,6 +2314,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      food_log_drafts: {
+        Row: {
+          committed_at: string | null
+          created_at: string
+          id: string
+          input_mode: string
+          parsed: Json
+          parser_version: string
+          raw_text: string
+          resolved_date: string | null
+          status: string
+          text_hash: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          committed_at?: string | null
+          created_at?: string
+          id?: string
+          input_mode?: string
+          parsed?: Json
+          parser_version?: string
+          raw_text: string
+          resolved_date?: string | null
+          status?: string
+          text_hash: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          committed_at?: string | null
+          created_at?: string
+          id?: string
+          input_mode?: string
+          parsed?: Json
+          parser_version?: string
+          raw_text?: string
+          resolved_date?: string | null
+          status?: string
+          text_hash?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       food_nutrients: {
         Row: {
@@ -10085,6 +10149,7 @@ export type Database = {
         Args: { _target: string; _viewer: string }
         Returns: boolean
       }
+      cleanup_food_log_drafts: { Args: never; Returns: undefined }
       coach_can_access_current_user: {
         Args: { _coach_id: string; _target_user_id: string }
         Returns: boolean
@@ -10101,6 +10166,10 @@ export type Database = {
           last_training_at: string
           user_id: string
         }[]
+      }
+      commit_food_log: {
+        Args: { _draft_id: string; _items: Json }
+        Returns: Json
       }
       compute_macro_targets: { Args: { _user_id: string }; Returns: undefined }
       delete_email: {
