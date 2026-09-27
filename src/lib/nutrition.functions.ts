@@ -83,7 +83,7 @@ function dedupeFoodResults(results: FoodResult[]): FoodResult[] {
  * 3) Eigene Lebensmittel des Users (user_foods)
  * 4) Zentrale Nährwertprüfung + Relevanzranking
  */
-async function runCatalogSearch(
+export async function runCatalogSearch(
   supabase: any,
   query: string,
   limit: number,

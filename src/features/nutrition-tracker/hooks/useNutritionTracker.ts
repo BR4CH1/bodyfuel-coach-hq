@@ -316,5 +316,6 @@ export function useNutritionTracker(variant: NutritionTrackerVariant) {
     removeEntry,
     updateWater,
     addFood,
+    reloadEntries,
   };
 }

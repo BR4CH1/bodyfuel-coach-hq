@@ -1,6 +1,7 @@
 import { Loader2 } from "lucide-react";
 
 import { AddFoodDialog } from "@/features/nutrition-tracker/components/AddFoodDialog";
+import { QuickFoodLogCard } from "@/features/nutrition-tracker/components/QuickFoodLogCard";
 import {
   CreateMealCard,
   DateNavigator,
@@ -38,6 +39,13 @@ export function NutritionTracker({ variant = "personal" }: { variant?: "personal
   return (
     <div className="space-y-6">
       <DateNavigator date={tracker.date} isToday={tracker.isToday} onDateChange={tracker.setDate} />
+
+      <QuickFoodLogCard
+        date={tracker.date}
+        targets={tracker.targets}
+        totals={tracker.totals}
+        onTracked={tracker.reloadEntries}
+      />
 
       <DayTypeCard
         isBulls={tracker.isBulls}

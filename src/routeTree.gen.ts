@@ -59,6 +59,7 @@ import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as AdminFoodDatabaseRouteImport } from './routes/admin.food-database'
 import { Route as AdminPlayerCardsRouteImport } from './routes/admin.player-cards'
+import { Route as ApiTranscribeRouteImport } from './routes/api/transcribe'
 import { Route as BullsIndexRouteImport } from './routes/bulls.index'
 import { Route as BullsBenchmarksRouteImport } from './routes/bulls.benchmarks'
 import { Route as BullsCheckinRouteImport } from './routes/bulls.checkin'
@@ -418,6 +419,11 @@ const AdminFoodDatabaseRoute = AdminFoodDatabaseRouteImport.update({
 const AdminPlayerCardsRoute = AdminPlayerCardsRouteImport.update({
   id: '/admin/player-cards',
   path: '/admin/player-cards',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiTranscribeRoute = ApiTranscribeRouteImport.update({
+  id: '/api/transcribe',
+  path: '/api/transcribe',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BullsIndexRoute = BullsIndexRouteImport.update({
@@ -1042,6 +1048,7 @@ export interface FileRoutesByFullPath {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin/food-database': typeof AdminFoodDatabaseRoute
   '/admin/player-cards': typeof AdminPlayerCardsRoute
+  '/api/transcribe': typeof ApiTranscribeRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
   '/bulls/checkin': typeof BullsCheckinRoute
   '/bulls/nutrition': typeof BullsNutritionRouteWithChildren
@@ -1196,6 +1203,7 @@ export interface FileRoutesByTo {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin/food-database': typeof AdminFoodDatabaseRoute
   '/admin/player-cards': typeof AdminPlayerCardsRoute
+  '/api/transcribe': typeof ApiTranscribeRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
   '/bulls/checkin': typeof BullsCheckinRoute
   '/bulls/photos': typeof BullsPhotosRoute
@@ -1351,6 +1359,7 @@ export interface FileRoutesById {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin/food-database': typeof AdminFoodDatabaseRoute
   '/admin/player-cards': typeof AdminPlayerCardsRoute
+  '/api/transcribe': typeof ApiTranscribeRoute
   '/bulls/benchmarks': typeof BullsBenchmarksRoute
   '/bulls/checkin': typeof BullsCheckinRoute
   '/bulls/nutrition': typeof BullsNutritionRouteWithChildren
@@ -1513,6 +1522,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/admin/food-database'
     | '/admin/player-cards'
+    | '/api/transcribe'
     | '/bulls/benchmarks'
     | '/bulls/checkin'
     | '/bulls/nutrition'
@@ -1667,6 +1677,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/admin/food-database'
     | '/admin/player-cards'
+    | '/api/transcribe'
     | '/bulls/benchmarks'
     | '/bulls/checkin'
     | '/bulls/photos'
@@ -1821,6 +1832,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/admin/food-database'
     | '/admin/player-cards'
+    | '/api/transcribe'
     | '/bulls/benchmarks'
     | '/bulls/checkin'
     | '/bulls/nutrition'
@@ -1972,6 +1984,7 @@ export interface RootRouteChildren {
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   AdminFoodDatabaseRoute: typeof AdminFoodDatabaseRoute
   AdminPlayerCardsRoute: typeof AdminPlayerCardsRoute
+  ApiTranscribeRoute: typeof ApiTranscribeRoute
   BullsBenchmarksRoute: typeof BullsBenchmarksRoute
   BullsCheckinRoute: typeof BullsCheckinRoute
   BullsNutritionRoute: typeof BullsNutritionRouteWithChildren
@@ -2364,6 +2377,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/player-cards'
       fullPath: '/admin/player-cards'
       preLoaderRoute: typeof AdminPlayerCardsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/transcribe': {
+      id: '/api/transcribe'
+      path: '/api/transcribe'
+      fullPath: '/api/transcribe'
+      preLoaderRoute: typeof ApiTranscribeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/bulls/': {
@@ -3461,6 +3481,7 @@ const rootRouteChildren: RootRouteChildren = {
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   AdminFoodDatabaseRoute: AdminFoodDatabaseRoute,
   AdminPlayerCardsRoute: AdminPlayerCardsRoute,
+  ApiTranscribeRoute: ApiTranscribeRoute,
   BullsBenchmarksRoute: BullsBenchmarksRoute,
   BullsCheckinRoute: BullsCheckinRoute,
   BullsNutritionRoute: BullsNutritionRouteWithChildren,
