@@ -1,60 +1,159 @@
-# Diagnose: TrainingTracker verliert Eingaben nach iPhone-Sperre (PWA)
+# Quick Food Log / Food AI — Umsetzungsplan
 
-Nur Analyse — keine Codeänderungen vorgenommen. Ablauf: Werte eintragen / Satz speichern → Handy sperren bzw. App in den Hintergrund → App wieder öffnen → Teil des Stands fehlt.
+Freitext oder Sprache wird zu einer prüfbaren Liste von Einträgen, die mit einem Klick im bestehenden Tracker landen. Die KI zerlegt den Text nur. Kalorien und Makros kommen aus dem BodyFuel-Katalog oder werden klar als Schätzung markiert (gemäß Regel: kcal/Makros nur aus BLS, USDA oder Etikett, nicht frei geschätzt).
 
-## Beobachteter Referenzfall (verifiziert in der DB)
+## 1. Was bereits existiert und wiederverwendet wird
 
-- Remote-Draft `b5f6d31b…:2026-08-25`: letzter Server-Schreibvorgang **19:26:54 UTC**, `client_revision 481`, `server_revision 155`.
-- `training_set_logs` desselben Nutzers wurden danach noch bis **19:29:02 UTC** geschrieben (Butterfly Maschine, Sätze 1–3).
-- Heißt: der Satz-Insert-Pfad lief weiter, der **Draft-Sync war ab 19:26:54 dauerhaft tot** — kein Netzausfall, sondern ein Zustandsproblem im Sync.
+| Baustein | Bestand | Nutzung |
+|---|---|---|
+| Tracker-Seite | `NutritionTracker.tsx` (genutzt in `/nutrition/tracking`, `/$orgSlug/nutrition/tracking`, `/bulls/nutrition/tracking`, `/tracker/app/nutrition`) | Neue Quick-Log-Karte oben, damit sie automatisch in allen Hubs erscheint |
+| Tracker-Status | `useNutritionTracker` + `useAddFoodFlow` (`reloadEntries`, Tagesziele, Tagestyp, Summen) | „Tracken" ruft danach `reloadEntries` auf; Ziel-Vorschau über `targets`/`totals` |
+| Einträge | Tabelle `food_entries` (meal, entry_date, name, brand, food_id, serving_amount, amount_unit, serving_g, kcal, P/KH/F, source, image_url) | Einziges Ziel zum Speichern, keine Parallel-Tabelle |
+| Katalogsuche | `runCatalogSearch` / `searchFoodsDb`, RPC `search_foods`, `food-search.logic.ts` (deutsche Normalisierung, Synonyme, Komposita) | Matching jeder erkannten Position |
+| Aliasse | `food_aliases`, `food_alias_learning` | Umgangssprache → Lebensmittel; Nutzerkorrekturen als Lernsignal |
+| Einheiten | `food-units.ts`, `food-piece-sizes.ts`, `nutrition-ingredient-units.ts` | Stück/Scheibe/EL/Handvoll → Gramm mit hinterlegten Stückgewichten |
+| Plausibilität | `checkFoodEnergy` (`food-energy.ts`) | Jede Position, auch Schätzungen |
+| Eigene Gerichte | `custom_meals` + `meal-macro-truth.ts` | Treffer für „mein Overnight Oats"; Makros kommen aus den Zutaten |
+| Schätzung | `estimateFoodFromText` (Einzel-Lebensmittel) | Wird Fallback-Stufe, auf die Gateway-Standards umgestellt |
+| Foto-Tracking | `MealPhotoDialog` / `meal-photo.functions.ts` | Gleiches Review-Muster, später dieselbe Review-Karte |
+| Tagespunkte | Protein/Wasser-Autocheck in `daily_checks` | Greift automatisch nach dem Speichern |
 
-## Root-Cause-Hypothesen, nach Wahrscheinlichkeit
+## 2. Neu zu bauen
 
-### 1. Konflikt-Pfad verwirft Änderungen endgültig und heilt nie (erklärt den Referenzfall vollständig)
+- `QuickFoodLogCard` (Texteingabe + Mikrofon + „Analysieren")
+- `QuickLogReviewSheet` (Review-Ansicht als Bottom Sheet)
+- `quick-food-log.functions.ts` (parse, korrigieren, übernehmen) + `quick-food-log.server.ts` (Matching, Mengen)
+- `quick-food-log.logic.ts` (reine Logik: Mengen-Wörterbuch, Datum, Konfidenz, Summen) + Tests
+- Transkriptions-Server-Route `src/routes/api/transcribe.ts`
+- Tabelle `food_log_drafts` (siehe 3)
 
-`use-persistent-workout-session.ts:105-121`: bei `applied === false` und nicht exakt gleicher Revision wird `setSaveStatus("conflict")` gesetzt und der Snapshot per `continue` **verworfen** — ohne `remoteRevision` auf den Serverwert zu rebasen und ohne Wiederholung.
+## 3. Datenmodell
 
-Der Server (`save_workout_session_draft`) wendet nur an, wenn `p_expected_server_revision = server_revision`. Sobald der Client eine Antwort verliert (typisch beim Bildschirmsperren: der Request in `saveBeforeBackground`, Zeile 336, wird per `void pushRemote(...)` unbeaufsichtigt abgeschickt, iOS friert den Prozess ein und die Antwort kommt nie an), bleibt `remoteRevision` beim Client veraltet. Jeder weitere Save schickt dieselbe veraltete `expected`-Revision → `applied=false` → conflict → verworfen. Genau dieses Bild: Server bleibt bei 155/481 stehen, der lokale Zähler läuft weiter.
+**Wiederverwendet:** `food_entries` (Ziel), `nutrition_foods`, `food_aliases`, `food_alias_learning`, `custom_meals`.
 
-Zusätzlich fehlt jede Heilung: `restore()` (Zeile 229-300) läuft nur beim Mount; `handleVisibility` (Zeile 339-341) reagiert **nur auf `hidden`**, nicht auf `visible`. Es gibt also keinen Re-Load/Re-Sync beim Zurückkommen aus dem Hintergrund. Sichtbar ist das nur als kleiner amberfarbener Chip „Synchronisierung nötig“ (`WorkoutSaveIndicator`), was im Training niemand als Datenverlust liest.
+**Neu: `food_log_drafts`** (ein Parse = eine Zeile)
+- `id`, `user_id`, `raw_text`, `input_mode` (text|voice), `status` (parsed|committed|discarded), `parsed` (jsonb: Mahlzeiten → Positionen), `resolved_date`, `created_at`, `committed_at`, `parser_version`
+- RLS: nur eigene Zeilen; Coach liest über die bestehende Coach-Kunden-Beziehung (Phase 2)
+- Cleanup: nicht übernommene Entwürfe werden nach 7 Tagen per Cron gelöscht
 
-### 2. Remote-Draft ist beim Remount älter als der lokale Stand — aber gewinnt, wenn iOS den lokalen Speicher geräumt hat
+**Erweiterung `food_entries` (additiv, nullable):**
+- `log_draft_id uuid` + `log_item_key text`, eindeutig zusammen → verhindert doppeltes Speichern
+- `estimate_level text` (exact|matched|estimated)
+- `raw_phrase text` (Originalformulierung, Basis für Coach-Insights)
+- `source = 'quick_log'`
 
-Nach dem Aufwecken verwirft iOS PWA-Seiten regelmäßig; die Komponente mountet neu (`TrainingTracker` hängt in `src/routes/training.tsx:82/92` an einem Key mit `effectiveId`; solange die Session noch nicht hydriert ist, ist `effectiveId` leer → Unmount/Remount).
+Keine Audio-Tabelle, kein Speicher-Bucket (siehe 5).
 
-`restore()` wählt dann per `chooseNewestDraft` zwischen localStorage-Notfall-Snapshot, IndexedDB und Remote. Ist der lokale Anteil weg oder unlesbar (Safari-Eviction, Speicherdruck, Quota-Fehler in `writeLocalDraft` → still verschluckt, `workout-session-draft.store.ts:164-168`), gewinnt der **auf 19:26:54 eingefrorene Remote-Draft** — also exakt das Symptom „Stand teilweise weg“ (alles nach dem letzten erfolgreichen Server-Save fehlt). Ohne Hypothese 1 wäre der Remote-Stand aktuell und der Verlust unsichtbar; die beiden Fehler multiplizieren sich.
+## 4. Parsing- und Matching-Pipeline
 
-### 3. Debounce + eingefrorener Prozess: das letzte Fenster von 800 ms ist ungeschützt
+```text
+Text ──► [0] Vorprüfung ──► [1] KI zerlegt ──► [2] Matching ──► [3] Mengen ──► [4] Nährwerte ──► Review
+```
 
-`updateWorkout` (Zeile 172-197) schreibt localStorage synchron, der Server-Save ist um `autosaveMs = 800` verzögert (`queueRemoteSave`, Zeile 161-170). Beim Sperren feuert `visibilitychange`/`pagehide` → `saveBeforeBackground`, das aber
-- den anstehenden Debounce-Timer nicht abbricht (ein späterer, älterer Push kann danach noch laufen),
-- den Request ohne `keepalive`/`sendBeacon` und ohne `await` abschickt.
-iOS beendet den Netzwerk-Request beim Freeze zuverlässig. Ergebnis: entweder gar kein Server-Save oder ein „halb angekommener“ Save → siehe Hypothese 1.
+0. **Vorprüfung (ohne KI):** leer, zu lang (> 2.000 Zeichen), identischer Text in den letzten 10 min → gespeicherten Entwurf erneut verwenden (Cache über Hash).
+1. **Zerlegen (ein KI-Aufruf, `openai/gpt-6-astra`, Responses, gestreamt, strukturierte Ausgabe):**
+   Ausgabe je Position: `phrase`, `food_name_de`, `brand`, `quantity` (Zahl|null), `unit` (g|ml|stueck|scheibe|el|tl|portion|teller|handvoll|glas|flasche|dose|null), `vague_qualifier` (ordentlich, bisschen…), `meal_slot` (breakfast|lunch|dinner|snack|null), `relative_day` (today|yesterday|ISO), `is_dish` (Gericht vs. Einzellebensmittel), `components` bei Gerichten (Schnitzel, Röstzwiebeln, Bratkartoffeln).
+   **Keine Nährwerte von der KI in diesem Schritt.** Der Prompt enthält Alltagssprache-Hinweise („reingehauen", „Bierchen" = 0,33 l Bier, „O-Saft" = Orangensaft).
+2. **Matching (deterministisch):** Reihenfolge eigene Gerichte → Marke + Name im Katalog (Etikett vor Durchschnitt) → Alias/Lernalias → normale Katalogsuche. Aus Trefferwert + Marken-Übereinstimmung + Zustand (roh/gekocht) ergibt sich die Konfidenz. Zustand wird nie umgerechnet: „Bratkartoffeln" → verzehrfertige Variante; fehlt sie, bleibt die Position als unsicher markiert.
+3. **Mengen:** Zahl + Einheit → Gramm/ml über `food-units` und Stückgewichte. Wörterbuch für ungenaue Angaben (Handvoll ≈ 30 g, Teller ≈ 350 g, „ordentlich" = ×1,3 der Standardportion) → immer `estimated`. Flüssigkeiten bleiben in ml.
+4. **Nährwerte:** pro 100 g/ml × Menge, intern präzise, gerundet erst in der Anzeige. Nur wenn es keinen Treffer gibt: `estimateFoodFromText` (gebündelt, **ein** Aufruf für alle offenen Positionen) → `estimate_level = estimated`, deutlich gekennzeichnet.
+5. **Datum:** `relative_day` wird in der Zeitzone des Nutzers aufgelöst. Die Zukunft ist blockiert, maximal 7 Tage zurück. Weicht das Datum vom angezeigten Tag ab, zeigt das Review einen Hinweis.
 
-### 4. Revisionszähler wird durch Scroll-Events erhöht, ohne dass der State mitgeführt wird
+**Korrektur-Loop („Die Erdnussbutter waren eher 70 g"):**
+- Zuerst ein lokaler Regel-Parser (Name + Zahl + Einheit gegen vorhandene Positionen) → **kein KI-Aufruf**
+- Nur bei Mehrdeutigkeit ein kleiner KI-Aufruf mit Entwurf + Korrektursatz → gibt nur geänderte Positionen zurück
+- Nur betroffene Positionen werden neu berechnet, der Rest bleibt unverändert
 
-`saveCurrentView` (Zeile 308-323) erhöht `localRevision` **nur auf `envelopeRef`** und schreibt lokal, ohne `setEnvelope` und ohne Server-Save. Damit divergieren React-State und Ref, und der lokale Revisionszähler springt gegenüber dem Server-Stand (481 vs. laufend höher) allein durch Scrollen im Training. Das verschärft jeden Vergleich in `chooseNewestDraft` und macht „gleiche Revision = idempotenter Retry“ (Zeile 112-114) praktisch wertlos.
+## 5. Audio / Transkription
 
-### 5. Ein Gerät, zwei Tabs/Kontexte teilen dieselbe `deviceId`
+- Aufnahme im Browser (vollständige WAV-Datei, Maximum 2 min, Pegelanzeige, Stop)
+- Upload an `/api/transcribe` (angemeldet, Größenlimit), weiter an den Gateway-Sprach-zu-Text-Dienst (`google/gemini-3.5-transcribe`, deutsch)
+- **Audio wird nur im Arbeitsspeicher verarbeitet, nicht gespeichert** und nach der Antwort verworfen
+- Das Transkript landet im Textfeld und ist **editierbar**. Erst „Analysieren" startet Schritt 1. So läuft Sprache über denselben Parser.
+- Fehlende Mikrofon-Freigabe oder iOS-PWA-Besonderheiten → Hinweis „Bitte tippen"
 
-`getOrCreateWorkoutDeviceId` speichert die ID in localStorage, also identisch für PWA-Tab und Safari-Tab derselben Origin. Der Server verlangt bei gleicher `device_id` strikt `p_client_revision > client_revision`. Zwei parallel offene Tracker (z. B. `/training` und `/bulls/training`) zählen unabhängig hoch → der Tab mit dem niedrigeren Zähler bekommt dauerhaft `applied=false` → Hypothese 1 tritt ohne jeden Netzfehler ein.
+## 6. Review-UI (mobil zuerst)
 
-### 6. Sichtbarer Satzstatus hängt am 120-ms-Cache, nicht an der DB
+```text
+[ Heute · 27.09. ▾ ]                         Gesamt 2.140 kcal
+Frühstück
+  Protein-Grießpudding (Lidl Milbona)   200 g   ✓ Etikett   180 kcal  P20 K18 F3
+Mittag
+  Zwiebelschnitzel                      ~200 g  ≈ geschätzt  …
+  Röstzwiebeln                           ~20 g  ≈ geschätzt
+  Bratkartoffeln                        ~250 g  ≈ geschätzt
+Snack
+  Reiswaffeln                    5 Stück = 40 g ✓
+  Erdnussbutter                          100 g  ✓
+  Orangensaft                            700 ml ✓
+───────────────────────────────────────────────
+Tagesziel: 2.140 / 2.400 kcal · P 132/160 · …
+[ Korrektur eingeben … ]      [ Tracken ]
+```
 
-Der „ist Satz X gespeichert“-Status kommt aus `logs` im TrainingTracker: beim Mount zuerst aus dem localStorage-Snapshot (Debounce 120 ms, `TrainingTracker.tsx:429-445`), erst danach bestätigt `reload()` gegen die DB — mit 12-s-Timeout, dessen Fehlschlag nur ein Banner erzeugt (`withTimeout`, Zeile 101-118). Wird direkt nach dem Speichern gesperrt, fehlt der letzte Satz im Snapshot; bei zäher Verbindung nach dem Aufwecken bleibt der veraltete Cache stehen → „meine Eingaben sind weg“, obwohl die Zeile in der DB liegt. Das ist der Auslöser für die dokumentierten Mehrfach-Inserts (5× Satz 1 Brustpresse am 25.08.), da `logSet` ein reiner INSERT ohne Unique-Constraint ist.
+- Jede Position: Menge mit +/- und Kommazahl, Einheit, Produkt tauschen (vorhandene Suche), Mahlzeit ändern, löschen
+- Stufen: grün (Etikett/verifiziert), gelb „geschätzt", rot „unsicher" (kein oder schwacher Treffer)
+- **Rote Positionen sperren „Tracken"**, bis sie bestätigt, ersetzt oder entfernt sind. Gelbe erfordern keinen Extra-Klick, bleiben aber markiert.
+- Vorschau: Gesamtwerte + Balken „vorher → nachher" gegen die Tagesziele (Tagestyp beachtet)
+- Nach dem Speichern: Hinweis, Tracker lädt neu, der Entwurf wird `committed`
 
-### 7. Unwahrscheinlich, aber ausgeschlossen zu prüfen
+## 7. Speichern ohne Duplikate
 
-- **RLS/Rechte:** Policies auf `workout_session_drafts` und `training_set_logs` sind korrekt eigentümerbasiert; alle Schreibvorgänge des 25.08. gingen durch. Nicht die Ursache.
-- **Datumswechsel im `draftKey`:** `draftKey = clientId:localDateKey()`; ein Training über Mitternacht erzeugt einen neuen Key und damit scheinbar leeren Stand. Im Referenzfall (21:29 Ortszeit) nicht relevant, als Nebenrisiko aber real.
+- Die Server-Funktion `commitFoodLog(draftId, items)` prüft den Besitzer und `status = parsed` und schreibt alle Einträge in **einer** Datenbank-Funktion (Transaktion) mit `log_draft_id` + `log_item_key`
+- Eindeutiger Index + `on conflict do nothing` → erneutes Bestätigen oder Doppelklick erzeugt nichts Neues; die Antwort meldet „bereits getrackt"
+- Werte werden serverseitig aus Katalog + Menge neu berechnet. Vom Browser gesendete kcal gelten nicht als Wahrheit.
 
-## Minimal nötige Fixes (Vorschlag, noch nicht umgesetzt)
+## 8. Edge Cases
 
-1. `applied === false` nicht mehr verwerfen: `remoteRevision` aus der Server-Antwort übernehmen, lokalen State darauf rebasen und **einmal erneut senden**; erst danach echten Konflikt melden.
-2. Wieder-Sichtbarkeit heilen: bei `visibilitychange → visible` und `online` Draft neu laden, mit Server-Revision rebasen und die Warteschlange erneut abarbeiten.
-3. Hintergrund-Save robust machen: anstehenden Debounce-Timer abbrechen, Save mit `keepalive`-Semantik bzw. sofort (ohne Debounce) beim ersten `hidden` senden.
-4. Satzstatus verifizieren: nach `visible` gezielt die heutigen `training_set_logs` der offenen Übungen nachladen (kleiner Query statt komplettem `reload()`), damit gespeicherte Sätze nie als offen erscheinen.
-5. Doppelinserts unmöglich machen: Unique-Index `(client_id, exercise_id, performed_at::date, set_number)` + `upsert` in `logSet`.
-6. Aufräumen: `saveCurrentView` soll den Revisionszähler nicht erhöhen (Scrollposition getrennt oder ohne Revisionsbump speichern); `deviceId` pro Tab/Instanz ergänzen (z. B. `deviceId + Instanz-UUID`).
+- Marke unbekannt → allgemeiner Treffer + Hinweis „Marke nicht im Katalog"
+- Gericht ohne Rezept → Aufteilung in Bestandteile, jeder Teil geschätzt
+- Getränke/Alkohol („Bierchen", „Radler") → ml, Alkohol-kcal über Katalog
+- „nichts gegessen", reine Fragen, Nicht-Lebensmittel → leeres Ergebnis mit freundlichem Hinweis, kein Speichern
+- Mehrere Tage in einem Text → Positionen je Datum gruppiert
+- Unrealistische Mengen (5 kg, 0 g) → rote Markierung
+- Wiederholungen („wie gestern Frühstück") → Phase 2
+- KI-Fehler: 402/429 → klare Meldung, Text bleibt erhalten, keine automatische Wiederholung (außer begrenzt bei 429/5xx)
+- Offline/PWA → Text bleibt als lokaler Entwurf erhalten
+- Organisations-Hubs (Bulls/SGZ/Padellers) → gleicher Tracker, keine Sonderfälle
 
-Priorität für den gemeldeten Ablauf: 1, 2, 3 (Datenverlust), dann 4 und 5 (falscher sichtbarer Stand, Duplikate), dann 6.
+## 9. Sicherheit & Datenschutz
+
+- Alle Server-Funktionen erfordern eine Anmeldung. `user_id` kommt immer aus der Sitzung, nie vom Browser.
+- RLS auf `food_log_drafts` (eigene Zeilen), gezielte Freigaben, kein anonymer Zugriff
+- Audio: kein Speichern, kein Log, Größen- und Dauerlimit
+- Rohtexte: Entwürfe nach 7 Tagen gelöscht. `raw_phrase` bleibt nur an übernommenen Einträgen (für die Coach-Transparenz), auf Wunsch abschaltbar.
+- Prompt-Injection: Nutzertext nur als Daten, strukturierte Ausgabe mit Schema-Prüfung (Zod), Server berechnet alle Zahlen
+- Tempolimit: z. B. 30 Analysen pro Nutzer und Tag
+
+## 10. Kosten & Performance
+
+- Normalfall: **1 KI-Aufruf** (Zerlegen), optional 1 gebündelte Schätzung; Korrekturen meist ohne KI
+- Cache identischer Texte, Matching und Rechnen deterministisch in der Datenbank
+- Gestreamte Antwort → Positionen erscheinen schrittweise im Review
+- Transkription nur auf ausdrücklichen Klick auf den Mikrofon-Button
+
+## 11. MVP vs. Phase 2
+
+**MVP**
+- Textfeld + Mikrofon auf allen Tracker-Seiten
+- Zerlegen, Matching, Mengen, Datum (heute/gestern/Mahlzeit)
+- Review mit Markierungen, Bearbeiten, Tauschen, Löschen, Ziel-Vorschau
+- Korrektur-Loop (erst Regeln, dann KI)
+- Speichern ohne Duplikate, Audio wird nicht gespeichert, Entwürfe werden aufgeräumt
+- Tests: Mengen-Wörterbuch, Datum, Konfidenz, Duplikatschutz, Summen
+
+**Phase 2**
+- Lernen aus Korrekturen → `food_alias_learning` (nutzerbezogene Standardportionen)
+- „wie gestern", Favoriten-Kurzbefehle, Mischung mit Foto-Tracking
+- Coach-Insights: Anteil Schätzungen, typische Lücken, Fuely-Hinweise auf Basis von `raw_phrase`/`estimate_level`
+- Live-Transkription beim Sprechen, Siri/Share-Shortcut
+- Hinweis an den Coach bei fehlenden Katalogeinträgen → Katalog erweitern
+
+## Technische Details
+
+- Server-Funktionen in `src/lib/quick-food-log.functions.ts` mit `requireSupabaseAuth`; Admin-Client nur für den Cron-Cleanup
+- KI über den Gateway (`/v1/responses`, `openai/gpt-6-astra`, `store:false`, Reasoning `low`, strenges JSON-Schema); `estimateFoodFromText` wird dabei auf denselben Standard umgestellt
+- Transkription: `/v1/audio/transcriptions`, multipart, `stream:"true"`, Server-Route liefert SSE an den Client
+- Migration: `food_log_drafts` (+ Freigaben + RLS), `food_entries` additive Spalten + eindeutiger Teilindex `(log_draft_id, log_item_key)`, RPC `commit_food_log(draft_id, items jsonb)`, Cron-Cleanup
+- Protein-Cap/Carb-Shifting betreffen nur Planziele, nicht das Tracking; unverändert
+- Nichts veröffentlichen
