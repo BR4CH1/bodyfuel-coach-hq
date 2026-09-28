@@ -91,6 +91,7 @@ import { Route as CoachGiftsRouteImport } from './routes/coach.gifts'
 import { Route as CoachImportPlanRouteImport } from './routes/coach.import-plan'
 import { Route as CoachLeadsRouteImport } from './routes/coach.leads'
 import { Route as CoachPackageRequestsRouteImport } from './routes/coach.package-requests'
+import { Route as CoachPartnerPlanRouteImport } from './routes/coach.partner-plan'
 import { Route as CoachPerformanceTeamsRouteImport } from './routes/coach.performance-teams'
 import { Route as CoachPlayerCardsRouteImport } from './routes/coach.player-cards'
 import { Route as CoachReviewsRouteImport } from './routes/coach.reviews'
@@ -580,6 +581,11 @@ const CoachLeadsRoute = CoachLeadsRouteImport.update({
 const CoachPackageRequestsRoute = CoachPackageRequestsRouteImport.update({
   id: '/package-requests',
   path: '/package-requests',
+  getParentRoute: () => CoachRoute,
+} as any)
+const CoachPartnerPlanRoute = CoachPartnerPlanRouteImport.update({
+  id: '/partner-plan',
+  path: '/partner-plan',
   getParentRoute: () => CoachRoute,
 } as any)
 const CoachPerformanceTeamsRoute = CoachPerformanceTeamsRouteImport.update({
@@ -1077,6 +1083,7 @@ export interface FileRoutesByFullPath {
   '/coach/import-plan': typeof CoachImportPlanRoute
   '/coach/leads': typeof CoachLeadsRoute
   '/coach/package-requests': typeof CoachPackageRequestsRoute
+  '/coach/partner-plan': typeof CoachPartnerPlanRoute
   '/coach/performance-teams': typeof CoachPerformanceTeamsRoute
   '/coach/player-cards': typeof CoachPlayerCardsRouteWithChildren
   '/coach/reviews': typeof CoachReviewsRoute
@@ -1229,6 +1236,7 @@ export interface FileRoutesByTo {
   '/coach/import-plan': typeof CoachImportPlanRoute
   '/coach/leads': typeof CoachLeadsRoute
   '/coach/package-requests': typeof CoachPackageRequestsRoute
+  '/coach/partner-plan': typeof CoachPartnerPlanRoute
   '/coach/performance-teams': typeof CoachPerformanceTeamsRoute
   '/coach/player-cards': typeof CoachPlayerCardsRouteWithChildren
   '/coach/reviews': typeof CoachReviewsRoute
@@ -1388,6 +1396,7 @@ export interface FileRoutesById {
   '/coach/import-plan': typeof CoachImportPlanRoute
   '/coach/leads': typeof CoachLeadsRoute
   '/coach/package-requests': typeof CoachPackageRequestsRoute
+  '/coach/partner-plan': typeof CoachPartnerPlanRoute
   '/coach/performance-teams': typeof CoachPerformanceTeamsRoute
   '/coach/player-cards': typeof CoachPlayerCardsRouteWithChildren
   '/coach/reviews': typeof CoachReviewsRoute
@@ -1551,6 +1560,7 @@ export interface FileRouteTypes {
     | '/coach/import-plan'
     | '/coach/leads'
     | '/coach/package-requests'
+    | '/coach/partner-plan'
     | '/coach/performance-teams'
     | '/coach/player-cards'
     | '/coach/reviews'
@@ -1703,6 +1713,7 @@ export interface FileRouteTypes {
     | '/coach/import-plan'
     | '/coach/leads'
     | '/coach/package-requests'
+    | '/coach/partner-plan'
     | '/coach/performance-teams'
     | '/coach/player-cards'
     | '/coach/reviews'
@@ -1861,6 +1872,7 @@ export interface FileRouteTypes {
     | '/coach/import-plan'
     | '/coach/leads'
     | '/coach/package-requests'
+    | '/coach/partner-plan'
     | '/coach/performance-teams'
     | '/coach/player-cards'
     | '/coach/reviews'
@@ -2603,6 +2615,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CoachPackageRequestsRouteImport
       parentRoute: typeof CoachRoute
     }
+    '/coach/partner-plan': {
+      id: '/coach/partner-plan'
+      path: '/partner-plan'
+      fullPath: '/coach/partner-plan'
+      preLoaderRoute: typeof CoachPartnerPlanRouteImport
+      parentRoute: typeof CoachRoute
+    }
     '/coach/performance-teams': {
       id: '/coach/performance-teams'
       path: '/performance-teams'
@@ -3266,6 +3285,7 @@ interface CoachRouteChildren {
   CoachImportPlanRoute: typeof CoachImportPlanRoute
   CoachLeadsRoute: typeof CoachLeadsRoute
   CoachPackageRequestsRoute: typeof CoachPackageRequestsRoute
+  CoachPartnerPlanRoute: typeof CoachPartnerPlanRoute
   CoachPerformanceTeamsRoute: typeof CoachPerformanceTeamsRoute
   CoachPlayerCardsRoute: typeof CoachPlayerCardsRouteWithChildren
   CoachReviewsRoute: typeof CoachReviewsRoute
@@ -3289,6 +3309,7 @@ const CoachRouteChildren: CoachRouteChildren = {
   CoachImportPlanRoute: CoachImportPlanRoute,
   CoachLeadsRoute: CoachLeadsRoute,
   CoachPackageRequestsRoute: CoachPackageRequestsRoute,
+  CoachPartnerPlanRoute: CoachPartnerPlanRoute,
   CoachPerformanceTeamsRoute: CoachPerformanceTeamsRoute,
   CoachPlayerCardsRoute: CoachPlayerCardsRouteWithChildren,
   CoachReviewsRoute: CoachReviewsRoute,

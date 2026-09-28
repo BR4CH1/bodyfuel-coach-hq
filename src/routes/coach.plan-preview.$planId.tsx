@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft, Printer, Calendar, ListChecks } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
 import { getPlanPreview } from "@/lib/plan-management.functions";
+import { PartnerPlanBanner, PartnerMealSync } from "@/components/bodyfuel/PartnerPlanBadge";
 
 export const Route = createFileRoute("/coach/plan-preview/$planId")({
   head: () => ({ meta: [{ title: "Plan-Vorschau — Coach" }] }),
@@ -104,6 +105,7 @@ function PreviewContent() {
             <Macro label="F" value={plan.fat_g} suffix="g" />
           </div>
         )}
+        {!isTraining && <PartnerPlanBanner planId={planId} />}
       </header>
 
       <div className="space-y-6">
@@ -173,6 +175,7 @@ function PreviewContent() {
                     <li key={m.id} className="rounded-xl border border-border bg-background/40 p-4">
                       <div className="flex items-start justify-between gap-3">
                         <h3 className="font-semibold">{m.name}</h3>
+                        {m.partner_meal_id && <PartnerMealSync mealId={m.id} planId={planId} />}
                       </div>
                       {m.description && (
                         <p className="mt-1 text-sm text-muted-foreground whitespace-pre-line">

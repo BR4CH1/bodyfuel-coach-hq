@@ -3709,6 +3709,7 @@ export type Database = {
           kcal: number | null
           last_auto_generated_at: string | null
           organization_id: string | null
+          partner_group_id: string | null
           partner_plan_id: string | null
           performance_context: boolean
           plan_type: string
@@ -3741,6 +3742,7 @@ export type Database = {
           kcal?: number | null
           last_auto_generated_at?: string | null
           organization_id?: string | null
+          partner_group_id?: string | null
           partner_plan_id?: string | null
           performance_context?: boolean
           plan_type?: string
@@ -3773,6 +3775,7 @@ export type Database = {
           kcal?: number | null
           last_auto_generated_at?: string | null
           organization_id?: string | null
+          partner_group_id?: string | null
           partner_plan_id?: string | null
           performance_context?: boolean
           plan_type?: string
@@ -3795,6 +3798,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nutrition_plans_partner_group_id_fkey"
+            columns: ["partner_group_id"]
+            isOneToOne: false
+            referencedRelation: "partner_plan_groups"
             referencedColumns: ["id"]
           },
           {
@@ -5701,6 +5711,60 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      partner_plan_groups: {
+        Row: {
+          client_a_id: string
+          client_b_id: string
+          coach_id: string
+          created_at: string
+          id: string
+          plan_a_id: string | null
+          plan_b_id: string | null
+          source: string
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_a_id: string
+          client_b_id: string
+          coach_id: string
+          created_at?: string
+          id?: string
+          plan_a_id?: string | null
+          plan_b_id?: string | null
+          source?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_a_id?: string
+          client_b_id?: string
+          coach_id?: string
+          created_at?: string
+          id?: string
+          plan_a_id?: string | null
+          plan_b_id?: string | null
+          source?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_plan_groups_plan_a_id_fkey"
+            columns: ["plan_a_id"]
+            isOneToOne: false
+            referencedRelation: "nutrition_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_plan_groups_plan_b_id_fkey"
+            columns: ["plan_b_id"]
+            isOneToOne: false
+            referencedRelation: "nutrition_plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payment_history: {
         Row: {

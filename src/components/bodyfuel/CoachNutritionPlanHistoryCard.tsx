@@ -9,6 +9,8 @@ import {
   setNutritionPlanStatus,
   type CoachPlanRow,
 } from "@/lib/coach-plan-history.functions";
+import { listPartnerBadges } from "@/lib/partner-plan.functions";
+import { PartnerPlanChip } from "@/components/bodyfuel/PartnerPlanBadge";
 
 function fmt(d: string | null | undefined) {
   if (!d) return "—";
@@ -77,6 +79,13 @@ export function CoachNutritionPlanHistoryCard({ userId }: { userId: string }) {
           className="inline-flex items-center gap-1.5 rounded-md border border-gold/40 bg-gold/10 px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-gold/20"
         >
           <PackagePlus className="h-3.5 w-3.5" /> Woche / Plan importieren
+        </Link>
+        <Link
+          to="/coach/partner-plan"
+          search={{ client: userId }}
+          className="inline-flex items-center gap-1.5 rounded-md border border-gold/40 bg-gold/10 px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-gold/20"
+        >
+          <PackagePlus className="h-3.5 w-3.5" /> Partnerplan
         </Link>
       </div>
 
@@ -155,6 +164,13 @@ function Bucket({
   onArchive?: (id: string) => void;
   userId: string;
 }) {
+  const badgesFn = useServerFn(listPartnerBadges);
+  const ids = rows.map((r) => r.id);
+  const { data: badges } = useQuery({
+    queryKey: ["partner-badges", ids.join(",")],
+    queryFn: () => badgesFn({ data: { plan_ids: ids } }),
+    enabled: ids.length > 0,
+  });
   return (
     <div>
       {title && (
@@ -173,6 +189,7 @@ function Bucket({
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="truncate text-sm font-semibold">{p.title || "Ohne Titel"}</p>
                     <StatusBadge status={p.status} />
+                    {badges?.[p.id] && <PartnerPlanChip name={badges[p.id].partner_name} />}
                     {p.source && (
                       <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
                         {SOURCE_LABEL[p.source] ?? p.source}
