@@ -226,6 +226,16 @@ export const extendTrainingPlanWeeks = createServerFn({ method: "POST" })
     if (dayErr) throw new Error(dayErr.message);
 
     const existingDays = (dayRows ?? []) as any[];
+    // Echte Basiswochen aus den vorhandenen Tagen ableiten — ein vom Client
+    // geschätztes target_weeks (z. B. aus days_count/7 bei Plänen ohne
+    // Ruhetage) darf niemals unter der echten Laufzeit liegen.
+    const realBaseWeeks = existingDays.length
+      ? Math.max(...existingDays.map((d) => Math.max(1, Number(d.week_number ?? 1))))
+      : 0;
+    const targetWeeks =
+      data.target_weeks != null && data.target_weeks >= realBaseWeeks
+        ? data.target_weeks
+        : undefined;
     const blueprint = buildExtensionBlueprint({
       existingDays: existingDays.map((d) => ({
         id: d.id,
@@ -236,7 +246,7 @@ export const extendTrainingPlanWeeks = createServerFn({ method: "POST" })
       })),
       addWeeks: data.add_weeks,
       // Ziel-Laufzeit macht Wiederholungen derselben Aktion wirkungslos.
-      targetWeeks: data.target_weeks,
+      targetWeeks,
     });
 
     if (!blueprint.days.length) {
