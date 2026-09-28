@@ -310,7 +310,7 @@ Regeln:
 - Keine Nährwerte angeben — die werden serverseitig aus der Datenbank berechnet.
 - Keine Erklärungen außerhalb des JSON.`;
 
-function normalizeNutritionPlan(input: any): ImportedNutritionPlan {
+export function normalizeNutritionPlan(input: any): ImportedNutritionPlan {
   const raw: any = input ?? {};
   const days = Array.isArray(raw.days) ? raw.days : [];
   const cleaned: ImportedNutritionDay[] = days
