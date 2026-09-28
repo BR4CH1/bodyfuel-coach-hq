@@ -20,7 +20,7 @@ async function assertCoach(ctx: { supabase: any; userId: string }) {
   await assertGlobalCoachOrAnyOrgCoach(ctx);
 }
 
-async function callGateway(messages: any[]): Promise<any> {
+export async function callGateway(messages: any[]): Promise<any> {
   const apiKey = process.env.LOVABLE_API_KEY;
   if (!apiKey) throw new Error("LOVABLE_API_KEY fehlt");
   const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -54,7 +54,7 @@ async function callGateway(messages: any[]): Promise<any> {
   }
 }
 
-function buildMessages(
+export function buildMessages(
   systemPrompt: string,
   mode: "text" | "image" | "pdf",
   payload: string,
