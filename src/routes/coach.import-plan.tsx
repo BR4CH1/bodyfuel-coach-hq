@@ -233,6 +233,23 @@ function ImportPage() {
         </p>
       </div>
 
+      {type === "nutrition" && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gold/30 bg-card p-4">
+          <div>
+            <p className="text-sm font-semibold">Plan für zwei Personen?</p>
+            <p className="text-xs text-muted-foreground">
+              Modus „Partnerplan": ein PDF hochladen, nach Person trennen und in zwei Kundenkonten anlegen.
+            </p>
+          </div>
+          <button
+            onClick={() => navigate({ to: "/coach/partner-plan", search: { client } })}
+            className="rounded-md border border-gold/50 bg-gold/10 px-3 py-2 text-xs font-semibold hover:bg-gold/20"
+          >
+            Partnerplan importieren
+          </button>
+        </div>
+      )}
+
       <div className="grid gap-2 sm:grid-cols-3">
         <ModeBtn active={mode === "upload"} onClick={() => setMode("upload")} icon={<Upload className="h-4 w-4" />} label="PDF / Bild" />
         <ModeBtn active={mode === "text"} onClick={() => setMode("text")} icon={<Type className="h-4 w-4" />} label="Text einfügen" />
