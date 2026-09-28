@@ -21,6 +21,7 @@ export type TrainingPlanSummary = {
   created_at: string;
   days_count: number;
   exercises_count: number;
+  weeks_count: number | null;
 };
 
 async function loadTrainingPlan(
