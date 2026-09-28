@@ -423,7 +423,7 @@ export const getPlanPreview = createServerFn({ method: "GET" })
     if (dayList.length) {
       const { data: m } = await supabase
         .from("nutrition_plan_meals")
-        .select("id, day_id, name, description, kcal, protein_g, carbs_g, fat_g, sort_order")
+        .select("id, day_id, name, description, kcal, protein_g, carbs_g, fat_g, sort_order, partner_meal_id")
         .in("day_id", dayList.map((d) => d.id))
         .order("sort_order");
       meals = (m ?? []) as any[];
