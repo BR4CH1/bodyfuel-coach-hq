@@ -21,6 +21,7 @@ export type TrainingPlanSummary = {
   created_at: string;
   days_count: number;
   exercises_count: number;
+  weeks_count: number | null;
 };
 
 async function loadTrainingPlan(
@@ -30,7 +31,7 @@ async function loadTrainingPlan(
   const { data: plan } = await supabase
     .from("nutrition_plans")
     .select(
-      "id, client_id, title, status, source, scheduled_start_date, scheduled_end_date, activated_at, archived_at, created_at",
+      "id, client_id, title, status, source, scheduled_start_date, scheduled_end_date, activated_at, archived_at, created_at, weeks_count",
     )
     .eq("id", id)
     .maybeSingle();
@@ -225,6 +226,16 @@ export const extendTrainingPlanWeeks = createServerFn({ method: "POST" })
     if (dayErr) throw new Error(dayErr.message);
 
     const existingDays = (dayRows ?? []) as any[];
+    // Echte Basiswochen aus den vorhandenen Tagen ableiten — ein vom Client
+    // geschätztes target_weeks (z. B. aus days_count/7 bei Plänen ohne
+    // Ruhetage) darf niemals unter der echten Laufzeit liegen.
+    const realBaseWeeks = existingDays.length
+      ? Math.max(...existingDays.map((d) => Math.max(1, Number(d.week_number ?? 1))))
+      : 0;
+    const targetWeeks =
+      data.target_weeks != null && data.target_weeks >= realBaseWeeks
+        ? data.target_weeks
+        : undefined;
     const blueprint = buildExtensionBlueprint({
       existingDays: existingDays.map((d) => ({
         id: d.id,
@@ -235,7 +246,7 @@ export const extendTrainingPlanWeeks = createServerFn({ method: "POST" })
       })),
       addWeeks: data.add_weeks,
       // Ziel-Laufzeit macht Wiederholungen derselben Aktion wirkungslos.
-      targetWeeks: data.target_weeks,
+      targetWeeks,
     });
 
     if (!blueprint.days.length) {
