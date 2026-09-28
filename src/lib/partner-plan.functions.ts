@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertGlobalCoachOrAnyOrgCoach } from "@/lib/organizations/org-coach-access";
+import { callGateway, buildMessages } from "@/lib/coach-plan-import.functions";
 import {
   normalizePartnerParse,
   scaleMeal,
@@ -66,7 +67,6 @@ export const parsePartnerNutritionPlan = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<ParsedPartnerImport> => {
     await assertGlobalCoachOrAnyOrgCoach(context);
     if (data.payload.length < 10) throw new Error("Kein Inhalt zum Parsen.");
-    const { callGateway, buildMessages } = await import("@/lib/coach-plan-import.functions");
     const parsed = await callGateway(
       buildMessages(
         PARTNER_PROMPT,
