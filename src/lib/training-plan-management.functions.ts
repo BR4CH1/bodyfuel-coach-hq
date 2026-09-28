@@ -31,7 +31,7 @@ async function loadTrainingPlan(
   const { data: plan } = await supabase
     .from("nutrition_plans")
     .select(
-      "id, client_id, title, status, source, scheduled_start_date, scheduled_end_date, activated_at, archived_at, created_at",
+      "id, client_id, title, status, source, scheduled_start_date, scheduled_end_date, activated_at, archived_at, created_at, weeks_count",
     )
     .eq("id", id)
     .maybeSingle();

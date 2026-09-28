@@ -391,7 +391,11 @@ function TrainingPlanColumn(props: {
                           props.onExtend?.(
                             plan.id,
                             w,
-                            Math.max(1, Math.round((plan.days_count ?? 7) / 7)),
+                            Math.max(
+                              1,
+                              Number((plan as any).weeks_count) ||
+                                Math.round((plan.days_count ?? 7) / 7),
+                            ),
                           );
                         }}
                         className="inline-flex min-h-[44px] items-center justify-center rounded-md bg-primary px-2 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-60"
