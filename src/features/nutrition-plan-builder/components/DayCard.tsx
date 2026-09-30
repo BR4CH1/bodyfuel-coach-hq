@@ -31,6 +31,7 @@ import {
 import { MacroTargetEditorDialog, type TargetScope } from "./MacroTargetEditorDialog";
 import { MealPickerDialog } from "./MealPickerDialog";
 import { MealSlotRow } from "./MealSlotRow";
+import { targetDeviation } from "../lib/builder-persist.logic";
 
 
 export function DayCard({
@@ -309,6 +310,12 @@ export function DayCard({
                   {Math.abs(Math.round(totals.kcal - target.kcal))} kcal
                 </span>
               </div>
+              {day.meals.length > 0 && targetDeviation(totals.kcal, target.kcal).significant && (
+                <div className="mt-1 text-[11px] text-amber-500">
+                  Hinweis: {targetDeviation(totals.kcal, target.kcal).message} — dein Ziel bleibt
+                  unverändert.
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-1">
               {onApplyTargets && (
