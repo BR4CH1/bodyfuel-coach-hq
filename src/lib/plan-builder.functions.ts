@@ -4,6 +4,14 @@ import type { IngredientRole, Per100 } from "@/lib/ingredient-roles";
 import type { TrainingWeekSchedule } from "@/lib/training-schedule.logic";
 import { normalizeBuilderIngredientsForSave } from "@/features/nutrition-plan-builder/lib/ingredient-save.logic";
 import {
+  averagePlanTotals,
+  customTargetsToRow,
+  loadCustomTargets,
+  resolvePersistedMealMacros,
+  type PersistMacros,
+} from "@/features/nutrition-plan-builder/lib/builder-persist.logic";
+import { mealMacros } from "@/features/nutrition-plan-builder/lib/plan-builder.logic";
+import {
   assertCoachOrOrgStaffForAthlete,
   assertGlobalCoachOrAnyOrgCoach,
 } from "@/lib/organizations/org-coach-access";
@@ -285,7 +293,12 @@ export type BuilderDay = {
   meals: BuilderMeal[];
   prepCoupleLunchDinner?: boolean;
   /** Individuelles Tagesziel; überschreibt das Profilziel nur in diesem Plan. */
-  customTargets?: { kcal: number; p: number; c: number; f: number } | null;
+  customTargets?: {
+    kcal: number | null;
+    p: number | null;
+    c: number | null;
+    f: number | null;
+  } | null;
   /**
    * Optionale kcal-Verteilung auf die Mahlzeiten-Slots (nur Builder-State,
    * keine DB-Spalte). Fehlt der Wert, gilt die Standardverteilung.
@@ -352,12 +365,25 @@ async function persistBuilderPlan(
       image_generated_at: string | null;
     }
   >();
+  // Bibliothekswerte, damit gespeicherte Mahlzeiten exakt den Builder-Werten entsprechen.
+  const libraryMacros: any[] = [];
   if (libraryIds.length) {
     const { data: imageRows } = await supabaseAdmin
       .from("coach_meal_library")
-      .select("id, image_url, image_path, image_status, image_source, image_generated_at")
+      .select(
+        "id, image_url, image_path, image_status, image_source, image_generated_at, kcal, protein_g, carbs_g, fat_g",
+      )
       .in("id", libraryIds);
-    for (const row of imageRows ?? []) libraryImages.set(row.id, row);
+    for (const row of (imageRows ?? []) as any[]) {
+      libraryImages.set(row.id, row);
+      libraryMacros.push({
+        id: row.id,
+        kcal: Number(row.kcal ?? 0),
+        protein_g: Number(row.protein_g ?? 0),
+        carbs_g: Number(row.carbs_g ?? 0),
+        fat_g: Number(row.fat_g ?? 0),
+      });
+    }
   }
 
   const { data: dayRows } = await supabaseAdmin
@@ -366,6 +392,7 @@ async function persistBuilderPlan(
     .eq("plan_id", planId)
     .order("sort_order");
   const dayArr = dayRows ?? [];
+  const persistedDays: PersistMacros[][] = [];
   for (let di = 0; di < data.days.length && di < dayArr.length; di++) {
     const dayId = dayArr[di].id;
     const src = data.days[di];
@@ -377,21 +404,25 @@ async function persistBuilderPlan(
       .update({
         day_type: src.type,
         day_date: iso,
-        target_kcal: src.customTargets ? Math.round(src.customTargets.kcal) : null,
-        target_protein_g: src.customTargets ? Math.round(src.customTargets.p) : null,
-        target_carbs_g: src.customTargets ? Math.round(src.customTargets.c) : null,
-        target_fat_g: src.customTargets ? Math.round(src.customTargets.f) : null,
+        ...customTargetsToRow(src.customTargets),
       } as any)
       .eq("id", dayId);
 
     const { data: mealRows } = await supabaseAdmin
       .from("nutrition_plan_meals")
-      .select("id, sort_order")
+      .select("id, sort_order, kcal, protein_g, carbs_g, fat_g")
       .eq("day_id", dayId)
       .order("sort_order");
-    const mealArr = mealRows ?? [];
+    const mealArr = (mealRows ?? []) as any[];
+    const dayPersisted: PersistMacros[] = [];
     for (let mi = 0; mi < src.meals.length && mi < mealArr.length; mi++) {
       const m = src.meals[mi];
+      // Builder-Wahrheit übernehmen statt der Neuberechnung aus Zutatennamen.
+      const persisted = resolvePersistedMealMacros(
+        mealMacros(m, libraryMacros as any),
+        mealArr[mi],
+      );
+      dayPersisted.push(persisted);
       const libraryImage = m.library_meal_id ? libraryImages.get(m.library_meal_id) : undefined;
       await supabaseAdmin
         .from("nutrition_plan_meals")
@@ -400,6 +431,10 @@ async function persistBuilderPlan(
           library_meal_id: m.library_meal_id ?? null,
           is_locked: !!m.is_locked,
           linked_prep_group: m.linked_prep_group ?? null,
+          kcal: persisted.kcal,
+          protein_g: persisted.protein_g,
+          carbs_g: persisted.carbs_g,
+          fat_g: persisted.fat_g,
           ...(libraryImage?.image_url
             ? {
                 image_url: libraryImage.image_url,
@@ -412,6 +447,14 @@ async function persistBuilderPlan(
         } as any)
         .eq("id", mealArr[mi].id);
     }
+    persistedDays.push(dayPersisted);
+  }
+  // Plan-Übersicht aus denselben Mahlzeitenwerten (kein 50er-Runden gegen die Makros).
+  if (persistedDays.length) {
+    await supabaseAdmin
+      .from("nutrition_plans")
+      .update(averagePlanTotals(persistedDays) as any)
+      .eq("id", planId);
   }
   if (data.publish) {
     await supabaseAdmin
@@ -656,6 +699,10 @@ export const loadNutritionPlanForBuilder = createServerFn({ method: "POST" })
           ingredients: ing.map((x: any) => ({
             name: String(x?.name ?? ""),
             grams: Math.round(Number(x?.grams ?? x?.amount_g ?? 0)),
+            // ml-/explizite Mengen erhalten, sonst fallen sie beim nächsten Speichern weg.
+            ...(x?.unit === "g" || x?.unit === "ml"
+              ? { amount: Number(x?.amount ?? 0) || null, unit: x.unit }
+              : {}),
           })),
           kcal: m.kcal == null ? null : Number(m.kcal),
           protein_g: m.protein_g == null ? null : Number(m.protein_g),
@@ -680,25 +727,13 @@ export const loadNutritionPlanForBuilder = createServerFn({ method: "POST" })
               : null,
         } as BuilderMeal;
       });
-      const hasCustomTargets =
-        d.target_kcal != null ||
-        d.target_protein_g != null ||
-        d.target_carbs_g != null ||
-        d.target_fat_g != null;
       return {
         name: `Tag ${i + 1}`,
         type: (d.day_type === "training" ? "training" : "rest") as "training" | "rest",
         typeOverride: true,
         meals,
         prepCoupleLunchDinner: false,
-        customTargets: hasCustomTargets
-          ? {
-              kcal: Number(d.target_kcal ?? 0),
-              p: Number(d.target_protein_g ?? 0),
-              c: Number(d.target_carbs_g ?? 0),
-              f: Number(d.target_fat_g ?? 0),
-            }
-          : null,
+        customTargets: loadCustomTargets(d),
       };
     });
 

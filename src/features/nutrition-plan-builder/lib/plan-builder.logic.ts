@@ -183,15 +183,25 @@ export function mealMacros(m: BuilderMeal, library: LibraryMeal[]) {
 export type AutoFillMode = "empty_only" | "all_unlocked";
 
 export function targetsFor(day: BuilderDay, ctx: CustomerPlanContext) {
+  const base = profileTargetsFor(day, ctx);
   if (day.customTargets) {
     const t = day.customTargets;
+    // Fehlende Einzelwerte fallen auf das Profilziel zurück — niemals auf 0.
+    const pick = (value: number | null | undefined, fallback: number) =>
+      value == null || !Number.isFinite(Number(value))
+        ? fallback
+        : Math.max(0, Math.round(Number(value)));
     return {
-      kcal: Math.max(0, Math.round(Number(t.kcal) || 0)),
-      p: Math.max(0, Math.round(Number(t.p) || 0)),
-      c: Math.max(0, Math.round(Number(t.c) || 0)),
-      f: Math.max(0, Math.round(Number(t.f) || 0)),
+      kcal: pick(t.kcal, base.kcal),
+      p: pick(t.p, base.p),
+      c: pick(t.c, base.c),
+      f: pick(t.f, base.f),
     };
   }
+  return base;
+}
+
+function profileTargetsFor(day: BuilderDay, ctx: CustomerPlanContext) {
   return day.type === "training"
     ? {
         kcal: ctx.targets.kcal_train,
