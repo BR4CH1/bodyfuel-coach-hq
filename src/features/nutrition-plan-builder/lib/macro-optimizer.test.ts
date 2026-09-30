@@ -413,7 +413,7 @@ describe("Persistenz & Serialisierung", () => {
     day.customTargets = { kcal: 1800, p: 160, c: 30, f: 85 };
     const optimized = optimizeDayToTargets({
       day,
-      target: day.customTargets,
+      target: { kcal: 1800, p: 160, c: 30, f: 85 },
       ctx: ctxOf(),
       library: LIBRARY,
       resolve,
