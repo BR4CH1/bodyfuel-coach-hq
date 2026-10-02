@@ -1,9 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { Apple, LoaderCircle, Plus, Search, Sparkles, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { BuilderMeal, CustomerPlanContext } from "@/lib/plan-builder.functions";
+import {
+  saveComposedMealToLibrary,
+  type BuilderMeal,
+  type CustomerPlanContext,
+  type LibraryMeal,
+} from "@/lib/plan-builder.functions";
 import { searchFoodsDb, type FoodResult } from "@/lib/nutrition.functions";
 import { generateRecipeFromIngredients } from "@/lib/recipe-from-ingredients.functions";
 import { piecePresetFor, piecesToGrams } from "@/lib/food-piece-sizes";
@@ -129,6 +136,38 @@ export function FoodMealComposer({
 }) {
   const runSearch = useServerFn(searchFoodsDb);
   const generateRecipe = useServerFn(generateRecipeFromIngredients);
+  const saveToLibraryFn = useServerFn(saveComposedMealToLibrary);
+  const queryClient = useQueryClient();
+  const [saveToLibrary, setSaveToLibrary] = useState(true);
+
+  // Optional dauerhaft in „Deine Gerichte“ (Bibliothek) speichern, dann übernehmen.
+  const finishAdd = async (meal: BuilderMeal) => {
+    if (!saveToLibrary) return onAdd(meal);
+    try {
+      const saved = await saveToLibraryFn({
+        data: {
+          slot: meal.slot,
+          name: meal.name,
+          description: meal.description ?? null,
+          ingredients: meal.ingredients.map((i) => ({
+            name: i.name,
+            amount_g: Number(i.amount ?? i.grams ?? i.amount_g ?? 0),
+            unit: i.unit ?? null,
+          })),
+          kcal: Number(meal.kcal ?? 0),
+          protein_g: Number(meal.protein_g ?? 0),
+          carbs_g: Number(meal.carbs_g ?? 0),
+          fat_g: Number(meal.fat_g ?? 0),
+        },
+      });
+      queryClient.setQueryData<LibraryMeal[]>(["meal-library"], (prev = []) => [...prev, saved]);
+      toast.success(`„${saved.name}“ in der Gerichtsbibliothek gespeichert`);
+      onAdd({ ...meal, library_meal_id: saved.id });
+    } catch (e) {
+      toast.error(`Nicht in der Bibliothek gespeichert: ${(e as Error).message}`);
+      onAdd(meal);
+    }
+  };
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<FoodResult[]>([]);
   const [items, setItems] = useState<ComposerItem[]>([]);
@@ -202,7 +241,7 @@ export function FoodMealComposer({
 
   const fallbackAdd = () => {
     if (!preview || !allAmountsValid) return;
-    onAdd({ ...preview, description: "Aus fest vorgegebenen Lebensmitteln und Mengen erstellt." });
+    void finishAdd({ ...preview, description: "Aus fest vorgegebenen Lebensmitteln und Mengen erstellt." });
   };
 
   const handleGenerate = async () => {
@@ -247,7 +286,7 @@ export function FoodMealComposer({
       const preparation = steps.length ? `Zubereitung: ${steps.join(" · ")}` : "";
       const description = [generatedDescription, preparation].filter(Boolean).join("\n").slice(0, 500);
 
-      onAdd({
+      await finishAdd({
         ...preview,
         name: generatedName || preview.name,
         description: description || "Aus fest vorgegebenen Lebensmitteln und Mengen erstellt.",
@@ -430,6 +469,16 @@ export function FoodMealComposer({
             {generateError}
           </div>
         )}
+
+        <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-border px-3 text-sm">
+          <input
+            type="checkbox"
+            className="h-4 w-4"
+            checked={saveToLibrary}
+            onChange={(e) => setSaveToLibrary(e.target.checked)}
+          />
+          Als eigenes Gericht in der Bibliothek speichern (wiederverwendbar)
+        </label>
 
         <div className="flex flex-wrap justify-end gap-2 pb-1">
           {generateError && (
