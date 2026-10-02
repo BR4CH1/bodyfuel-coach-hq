@@ -161,6 +161,69 @@ export const listMealLibrary = createServerFn({ method: "GET" })
     });
   });
 
+/** Speichert ein im Builder zusammengestelltes Gericht dauerhaft in der Gerichtsbibliothek. */
+export const saveComposedMealToLibrary = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: {
+    slot: "breakfast" | "lunch" | "dinner" | "snack";
+    name: string;
+    description?: string | null;
+    ingredients: { name: string; amount_g: number; unit?: "g" | "ml" | null }[];
+    kcal: number;
+    protein_g: number;
+    carbs_g: number;
+    fat_g: number;
+  }) => {
+    const name = String(d?.name ?? "").trim().slice(0, 180);
+    if (!name) throw new Error("Name fehlt");
+    if (!["breakfast", "lunch", "dinner", "snack"].includes(d.slot)) throw new Error("Ungültiger Slot");
+    const ingredients = (Array.isArray(d.ingredients) ? d.ingredients : [])
+      .map((i) => ({
+        name: String(i?.name ?? "").trim().slice(0, 180),
+        amount_g: Math.max(0, Number(i?.amount_g) || 0),
+        ...(i?.unit === "ml" ? { unit: "ml" as const } : {}),
+      }))
+      .filter((i) => i.name && i.amount_g > 0);
+    if (!ingredients.length) throw new Error("Mindestens eine Zutat nötig");
+    const n = (v: unknown) => Math.max(0, Math.round((Number(v) || 0) * 10) / 10);
+    return {
+      slot: d.slot,
+      name,
+      description: d.description ? String(d.description).slice(0, 1000) : null,
+      ingredients,
+      kcal: n(d.kcal),
+      protein_g: n(d.protein_g),
+      carbs_g: n(d.carbs_g),
+      fat_g: n(d.fat_g),
+    };
+  })
+  .handler(async ({ data, context }): Promise<LibraryMeal> => {
+    await assertGlobalCoachOrAnyOrgCoach(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: row, error } = await supabaseAdmin
+      .from("coach_meal_library")
+      .insert({
+        created_by: context.userId,
+        is_system: false,
+        is_active: true,
+        name: data.name,
+        description: data.description,
+        category: data.slot,
+        kcal: data.kcal,
+        protein_g: data.protein_g,
+        carbs_g: data.carbs_g,
+        fat_g: data.fat_g,
+        ingredients: data.ingredients as never,
+        tags: ["eigenes_rezept"],
+        suitable_training: true,
+        suitable_rest: true,
+      } as never)
+      .select("*")
+      .single();
+    if (error) throw new Error(error.message);
+    return row as unknown as LibraryMeal;
+  });
+
 export const getCustomerPlanContext = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { customerId: string }) => d)
