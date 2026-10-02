@@ -151,7 +151,7 @@ export function FoodMealComposer({
           description: meal.description ?? null,
           ingredients: meal.ingredients.map((i) => ({
             name: i.name,
-            amount_g: Number(i.amount ?? i.grams ?? i.amount_g ?? 0),
+            amount_g: Number(i.unit === "ml" ? (i.amount ?? i.grams) : (i.grams ?? i.amount ?? i.amount_g ?? 0)),
             unit: i.unit ?? null,
           })),
           kcal: Number(meal.kcal ?? 0),
