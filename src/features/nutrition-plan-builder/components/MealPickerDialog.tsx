@@ -35,7 +35,10 @@ interface MealPickerDialogProps {
   excludeId?: string | null;
 }
 
-type PickerMode = "recommended" | "wishes" | "soulfood" | "all";
+type PickerMode = "recommended" | "wishes" | "soulfood" | "high_protein" | "vegetarian" | "vegan" | "all";
+
+const hasAnyTag = (meal: LibraryMeal, tags: string[]) =>
+  (meal.tags ?? []).some((tag) => tags.includes(tag.trim().toLowerCase()));
 type PickerTab = "meals" | "foods";
 
 function normalizePreference(value: string): string {
@@ -126,6 +129,9 @@ export function MealPickerDialog({
       if (mode === "recommended" && score < 30) return false;
       if (mode === "wishes" && !customerPreferenceMatchesMeal(meal, requestedMeals)) return false;
       if (mode === "soulfood" && !isSoulfoodMeal(meal)) return false;
+      if (mode === "high_protein" && !hasAnyTag(meal, ["high_protein", "high-protein"])) return false;
+      if (mode === "vegetarian" && !hasAnyTag(meal, ["vegetarisch", "vegetarian", "vegan"])) return false;
+      if (mode === "vegan" && !hasAnyTag(meal, ["vegan"])) return false;
       if (!normalizedQuery) return true;
       return matchesMealQuery(meal, normalizedQuery);
     });
@@ -255,6 +261,22 @@ export function MealPickerDialog({
                     <Flame className="mr-1 h-3 w-3" />
                     Soulfood
                   </Button>
+                  {([
+                    ["high_protein", "High Protein"],
+                    ["vegetarian", "Vegetarisch"],
+                    ["vegan", "Vegan"],
+                  ] as const).map(([key, label]) => (
+                    <Button
+                      key={key}
+                      type="button"
+                      size="sm"
+                      variant={mode === key ? "secondary" : "ghost"}
+                      className="h-7 text-xs"
+                      onClick={() => setMode(key)}
+                    >
+                      {label}
+                    </Button>
+                  ))}
                   <Button
                     type="button"
                     size="sm"

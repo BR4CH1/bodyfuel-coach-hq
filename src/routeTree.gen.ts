@@ -90,6 +90,7 @@ import { Route as CoachFoodsRouteImport } from './routes/coach.foods'
 import { Route as CoachGiftsRouteImport } from './routes/coach.gifts'
 import { Route as CoachImportPlanRouteImport } from './routes/coach.import-plan'
 import { Route as CoachLeadsRouteImport } from './routes/coach.leads'
+import { Route as CoachMealLibraryRouteImport } from './routes/coach.meal-library'
 import { Route as CoachPackageRequestsRouteImport } from './routes/coach.package-requests'
 import { Route as CoachPartnerPlanRouteImport } from './routes/coach.partner-plan'
 import { Route as CoachPerformanceTeamsRouteImport } from './routes/coach.performance-teams'
@@ -576,6 +577,11 @@ const CoachImportPlanRoute = CoachImportPlanRouteImport.update({
 const CoachLeadsRoute = CoachLeadsRouteImport.update({
   id: '/leads',
   path: '/leads',
+  getParentRoute: () => CoachRoute,
+} as any)
+const CoachMealLibraryRoute = CoachMealLibraryRouteImport.update({
+  id: '/meal-library',
+  path: '/meal-library',
   getParentRoute: () => CoachRoute,
 } as any)
 const CoachPackageRequestsRoute = CoachPackageRequestsRouteImport.update({
@@ -1082,6 +1088,7 @@ export interface FileRoutesByFullPath {
   '/coach/gifts': typeof CoachGiftsRoute
   '/coach/import-plan': typeof CoachImportPlanRoute
   '/coach/leads': typeof CoachLeadsRoute
+  '/coach/meal-library': typeof CoachMealLibraryRoute
   '/coach/package-requests': typeof CoachPackageRequestsRoute
   '/coach/partner-plan': typeof CoachPartnerPlanRoute
   '/coach/performance-teams': typeof CoachPerformanceTeamsRoute
@@ -1235,6 +1242,7 @@ export interface FileRoutesByTo {
   '/coach/gifts': typeof CoachGiftsRoute
   '/coach/import-plan': typeof CoachImportPlanRoute
   '/coach/leads': typeof CoachLeadsRoute
+  '/coach/meal-library': typeof CoachMealLibraryRoute
   '/coach/package-requests': typeof CoachPackageRequestsRoute
   '/coach/partner-plan': typeof CoachPartnerPlanRoute
   '/coach/performance-teams': typeof CoachPerformanceTeamsRoute
@@ -1395,6 +1403,7 @@ export interface FileRoutesById {
   '/coach/gifts': typeof CoachGiftsRoute
   '/coach/import-plan': typeof CoachImportPlanRoute
   '/coach/leads': typeof CoachLeadsRoute
+  '/coach/meal-library': typeof CoachMealLibraryRoute
   '/coach/package-requests': typeof CoachPackageRequestsRoute
   '/coach/partner-plan': typeof CoachPartnerPlanRoute
   '/coach/performance-teams': typeof CoachPerformanceTeamsRoute
@@ -1559,6 +1568,7 @@ export interface FileRouteTypes {
     | '/coach/gifts'
     | '/coach/import-plan'
     | '/coach/leads'
+    | '/coach/meal-library'
     | '/coach/package-requests'
     | '/coach/partner-plan'
     | '/coach/performance-teams'
@@ -1712,6 +1722,7 @@ export interface FileRouteTypes {
     | '/coach/gifts'
     | '/coach/import-plan'
     | '/coach/leads'
+    | '/coach/meal-library'
     | '/coach/package-requests'
     | '/coach/partner-plan'
     | '/coach/performance-teams'
@@ -1871,6 +1882,7 @@ export interface FileRouteTypes {
     | '/coach/gifts'
     | '/coach/import-plan'
     | '/coach/leads'
+    | '/coach/meal-library'
     | '/coach/package-requests'
     | '/coach/partner-plan'
     | '/coach/performance-teams'
@@ -2608,6 +2620,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CoachLeadsRouteImport
       parentRoute: typeof CoachRoute
     }
+    '/coach/meal-library': {
+      id: '/coach/meal-library'
+      path: '/meal-library'
+      fullPath: '/coach/meal-library'
+      preLoaderRoute: typeof CoachMealLibraryRouteImport
+      parentRoute: typeof CoachRoute
+    }
     '/coach/package-requests': {
       id: '/coach/package-requests'
       path: '/package-requests'
@@ -3284,6 +3303,7 @@ interface CoachRouteChildren {
   CoachGiftsRoute: typeof CoachGiftsRoute
   CoachImportPlanRoute: typeof CoachImportPlanRoute
   CoachLeadsRoute: typeof CoachLeadsRoute
+  CoachMealLibraryRoute: typeof CoachMealLibraryRoute
   CoachPackageRequestsRoute: typeof CoachPackageRequestsRoute
   CoachPartnerPlanRoute: typeof CoachPartnerPlanRoute
   CoachPerformanceTeamsRoute: typeof CoachPerformanceTeamsRoute
@@ -3308,6 +3328,7 @@ const CoachRouteChildren: CoachRouteChildren = {
   CoachGiftsRoute: CoachGiftsRoute,
   CoachImportPlanRoute: CoachImportPlanRoute,
   CoachLeadsRoute: CoachLeadsRoute,
+  CoachMealLibraryRoute: CoachMealLibraryRoute,
   CoachPackageRequestsRoute: CoachPackageRequestsRoute,
   CoachPartnerPlanRoute: CoachPartnerPlanRoute,
   CoachPerformanceTeamsRoute: CoachPerformanceTeamsRoute,
