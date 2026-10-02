@@ -18,7 +18,7 @@ export const Route = createFileRoute("/coach/plan-preview/$planId")({
     return (
       <AppLayout>
         <div className="py-20 text-center">
-          <p className="text-destructive">{error.message}</p>
+          <p className="text-destructive">{error instanceof Error ? error.message : String(error)}</p>
           <button
             onClick={() => { reset(); router.invalidate(); }}
             className="mt-4 text-gold hover:underline"
