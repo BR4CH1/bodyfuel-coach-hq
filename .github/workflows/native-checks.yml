@@ -1,0 +1,84 @@
+name: Native checks
+
+on:
+  push:
+    branches:
+      - main
+      - "codex/**"
+    paths:
+      - "apps/native/**"
+      - ".github/workflows/native-checks.yml"
+  pull_request:
+    paths:
+      - "apps/native/**"
+      - ".github/workflows/native-checks.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: TypeScript, tests and iOS bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/native
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/native/package-lock.json
+      - run: npm ci
+      - run: npm run verify
+      - run: npx expo config --type public > /dev/null
+      - run: npx expo prebuild --platform ios --clean --no-install
+      - run: npx expo export --platform ios --output-dir dist-ios --clear
+
+  native-compile:
+    name: Compile iOS bridge and watchOS target
+    runs-on: macos-26
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: apps/native
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/native/package-lock.json
+      - run: npm ci
+      - run: npx expo prebuild --platform ios --clean --no-install
+      - name: Install iOS pods
+        run: pod install --project-directory=ios
+      - name: Compile WatchConnectivity bridge without code signing
+        run: >-
+          xcodebuild
+          -project ios/Pods/Pods.xcodeproj
+          -target BodyFuelWatchConnectivity
+          -configuration Debug
+          -sdk iphonesimulator
+          CODE_SIGNING_ALLOWED=NO
+          CODE_SIGNING_REQUIRED=NO
+          COMPILER_INDEX_STORE_ENABLE=NO
+          build
+      - name: Compile BodyFuelWatch without code signing
+        run: >-
+          xcodebuild
+          -project ios/BodyFuel.xcodeproj
+          -target BodyFuelWatch
+          -configuration Debug
+          -sdk watchsimulator
+          CODE_SIGNING_ALLOWED=NO
+          CODE_SIGNING_REQUIRED=NO
+          COMPILER_INDEX_STORE_ENABLE=NO
+          build
