@@ -258,6 +258,7 @@ export const saveCoachTrainingPlanDraft = createServerFn({ method: "POST" })
 export type ImportedNutritionIngredient = {
   name: string;
   grams?: number | null;
+  amount_g?: number | null;
   amount?: number | null;
   unit?: "g" | "ml" | null;
 };
@@ -310,6 +311,40 @@ Regeln:
 - Keine Nährwerte angeben — die werden serverseitig aus der Datenbank berechnet.
 - Keine Erklärungen außerhalb des JSON.`;
 
+function positiveIngredientAmount(value: unknown): number | null {
+  if (
+    value === null ||
+    value === undefined ||
+    typeof value === "boolean" ||
+    (typeof value === "string" && value.trim() === "")
+  ) {
+    return null;
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function normalizeImportedIngredientAmount(
+  ingredient: any,
+): Omit<ImportedNutritionIngredient, "name"> {
+  const unit = ingredient?.unit === "ml" ? "ml" : ingredient?.unit === "g" ? "g" : null;
+  const amount = positiveIngredientAmount(ingredient?.amount);
+
+  if (unit && amount !== null) return { amount, unit };
+
+  const grams = positiveIngredientAmount(ingredient?.grams);
+  if (grams !== null) return { grams };
+
+  const amountG = positiveIngredientAmount(ingredient?.amount_g);
+  if (amountG !== null) return { amount_g: amountG };
+
+  const hasNoUnit =
+    ingredient?.unit === null || ingredient?.unit === undefined || ingredient?.unit === "";
+  if (hasNoUnit && amount !== null) return { grams: amount };
+
+  return { grams: null, amount_g: null, amount: null, unit };
+}
+
 export function normalizeNutritionPlan(input: any): ImportedNutritionPlan {
   const raw: any = input ?? {};
   const days = Array.isArray(raw.days) ? raw.days : [];
@@ -334,9 +369,7 @@ export function normalizeNutritionPlan(input: any): ImportedNutritionPlan {
               ingredients: ings
                 .map((ing: any) => ({
                   name: String(ing?.name ?? "").slice(0, 120),
-                  grams: Number.isFinite(Number(ing?.grams)) ? Number(ing.grams) : null,
-                  amount: Number.isFinite(Number(ing?.amount)) ? Number(ing.amount) : null,
-                  unit: ing?.unit === "ml" ? "ml" : ing?.unit === "g" ? "g" : null,
+                  ...normalizeImportedIngredientAmount(ing),
                 }))
                 .filter((x: any) => x.name),
             };

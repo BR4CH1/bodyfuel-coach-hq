@@ -1,5 +1,6 @@
 export type NutritionIngredientAmountInput = {
   grams?: number | null;
+  amount_g?: number | null;
   amount?: number | null;
   unit?: "g" | "ml" | null;
 };
@@ -18,21 +19,30 @@ export type EngineIngredientAmount = {
  * absichtlich KEINE Einheit erfunden, damit die Engine nach dem Food-Lookup
  * `nutrition_foods.unit_type` als Source of Truth nutzen kann.
  */
+function positiveAmount(value: unknown): number | null {
+  if (
+    value === null ||
+    value === undefined ||
+    typeof value === "boolean" ||
+    (typeof value === "string" && value.trim() === "")
+  ) {
+    return null;
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
 export function toEngineIngredientAmount(
   ingredient: NutritionIngredientAmountInput,
 ): EngineIngredientAmount | null {
-  const explicitAmount = Number(ingredient.amount ?? 0);
-  if (
-    (ingredient.unit === "g" || ingredient.unit === "ml") &&
-    Number.isFinite(explicitAmount) &&
-    explicitAmount > 0
-  ) {
+  const explicitAmount = positiveAmount(ingredient.amount);
+  if ((ingredient.unit === "g" || ingredient.unit === "ml") && explicitAmount !== null) {
     const amount = Math.round(explicitAmount);
     return { grams: amount, amount, unit: ingredient.unit };
   }
 
-  const legacyAmount = Number(ingredient.grams ?? 0);
-  if (!Number.isFinite(legacyAmount) || legacyAmount <= 0) return null;
+  const legacyAmount = positiveAmount(ingredient.grams) ?? positiveAmount(ingredient.amount_g);
+  if (legacyAmount === null) return null;
   const amount = Math.round(legacyAmount);
   return { grams: amount, amount };
 }
