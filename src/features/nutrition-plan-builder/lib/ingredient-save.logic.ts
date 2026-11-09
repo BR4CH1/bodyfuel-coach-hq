@@ -4,6 +4,8 @@ export type BuilderIngredientSaveInput = {
   amount_g?: number | null;
   amount?: number | null;
   unit?: "g" | "ml" | null;
+  /** Ursprungsmenge des Makro-Optimizers zur Erkennung späterer Änderungen. */
+  base_grams?: number | null;
 };
 
 export type BuilderIngredientSaveOutput =
@@ -34,18 +36,32 @@ export function normalizeBuilderIngredientsForSave(
     if (!name) continue;
 
     const explicitAmount = positive(ingredient.amount);
-    if ((ingredient.unit === "g" || ingredient.unit === "ml") && explicitAmount) {
-      const amount = Math.round(explicitAmount * factor);
-      if (amount > 0) output.push({ name, amount, unit: ingredient.unit });
-      continue;
-    }
-
     const hasCurrentGrams =
       ingredient.grams !== null &&
       ingredient.grams !== undefined &&
       Number.isFinite(Number(ingredient.grams));
-    const sourceAmount = hasCurrentGrams
-      ? Math.max(0, Number(ingredient.grams))
+    const currentGrams = hasCurrentGrams ? Math.max(0, Number(ingredient.grams)) : null;
+    const baseGrams = positive(ingredient.base_grams);
+
+    if ((ingredient.unit === "g" || ingredient.unit === "ml") && explicitAmount) {
+      let currentAmount = explicitAmount;
+      if (ingredient.unit === "g" && currentGrams !== null) {
+        // Nach dem erneuten Laden kann `amount` noch den alten DB-Wert tragen.
+        // Eine positive bzw. vom Optimizer bewusst auf 0 gesetzte Bearbeitungsmenge
+        // ist aktueller. grams=0 ohne Optimizer-Basis ist dagegen ein alter Draft.
+        if (currentGrams > 0 || baseGrams !== null) currentAmount = currentGrams;
+      } else if (ingredient.unit === "ml" && currentGrams !== null && baseGrams !== null) {
+        // Der Optimizer arbeitet am Gewicht; die kanonische ml-Menge skaliert
+        // proportional zur unveränderten Ausgangsmenge.
+        currentAmount = explicitAmount * (currentGrams / baseGrams);
+      }
+      const amount = Math.round(currentAmount * factor);
+      if (amount > 0) output.push({ name, amount, unit: ingredient.unit });
+      continue;
+    }
+
+    const sourceAmount = currentGrams !== null
+      ? currentGrams
       : positive(ingredient.amount_g) ?? explicitAmount ?? 0;
     const grams = Math.round(sourceAmount * factor);
     if (grams > 0) output.push({ name, grams });

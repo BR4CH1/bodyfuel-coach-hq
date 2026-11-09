@@ -761,7 +761,12 @@ export const loadNutritionPlanForBuilder = createServerFn({ method: "POST" })
           description: m.description ?? null,
           ingredients: ing.map((x: any) => ({
             name: String(x?.name ?? ""),
-            grams: Math.round(Number(x?.grams ?? x?.amount_g ?? 0)),
+            // Bei expliziten Grammangaben ist `amount` dieselbe aktuelle Menge.
+            // Ohne diesen Fallback stünde nach dem Laden fälschlich grams=0 neben
+            // amount>0, und eine spätere Optimierung könnte nicht korrekt skalieren.
+            grams: Math.round(
+              Number(x?.grams ?? x?.amount_g ?? (x?.unit === "g" ? x?.amount : 0)) || 0,
+            ),
             // ml-/explizite Mengen erhalten, sonst fallen sie beim nächsten Speichern weg.
             ...(x?.unit === "g" || x?.unit === "ml"
               ? { amount: Number(x?.amount ?? 0) || null, unit: x.unit }
