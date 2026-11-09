@@ -138,6 +138,84 @@ export const transitionTrainingPlanStatus = createServerFn({ method: "POST" })
     return { ok: true, status: data.to };
   });
 
+/**
+ * Reaktiviert einen archivierten Trainingsplan. Der Plan wird (inkl. aller
+ * Tages-Daten) um ganze Wochen auf den gewählten Montag verschoben, damit
+ * Wochentage erhalten bleiben und er nicht sofort wieder als abgelaufen gilt.
+ * Übungen bleiben unverändert. Ein aktuell aktiver Plan wird archiviert.
+ */
+export const reactivateArchivedTrainingPlan = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (d: { plan_id: string; start: "this_week" | "next_week" }) => d,
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: plan } = await supabaseAdmin
+      .from("nutrition_plans")
+      .select("id, client_id, plan_type, status, scheduled_start_date, scheduled_end_date")
+      .eq("id", data.plan_id)
+      .maybeSingle();
+    const p = plan as any;
+    if (!p || p.plan_type !== "training") throw new Error("Trainingsplan nicht gefunden");
+    if (p.status !== "archived") throw new Error("Nur archivierte Pläne können reaktiviert werden.");
+    await assertCoachOrOrgStaffForAthlete(context, p.client_id, "training");
+
+    const { data: dayRows } = await supabaseAdmin
+      .from("training_days")
+      .select("id, day_date")
+      .eq("plan_id", data.plan_id);
+    const days = (dayRows ?? []) as { id: string; day_date: string | null }[];
+
+    const DAY = 86400000;
+    const toUtc = (s: string) => Date.parse(`${s.slice(0, 10)}T00:00:00Z`);
+    const iso = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+    const mondayOf = (ms: number) => {
+      const wd = (new Date(ms).getUTCDay() + 6) % 7;
+      return ms - wd * DAY;
+    };
+    const today = toUtc(new Date().toISOString());
+    const targetMonday = mondayOf(today) + (data.start === "next_week" ? 7 * DAY : 0);
+    const dated = days.map((d) => d.day_date).filter(Boolean) as string[];
+    const oldStartSrc =
+      p.scheduled_start_date ?? (dated.length ? dated.sort()[0] : null);
+    const oldMonday = oldStartSrc ? mondayOf(toUtc(oldStartSrc)) : targetMonday;
+    const offset = Math.round((targetMonday - oldMonday) / (7 * DAY)) * 7 * DAY;
+
+    const shift = (s: string | null) => (s ? iso(toUtc(s) + offset) : null);
+    if (offset !== 0) {
+      for (const d of days) {
+        if (!d.day_date) continue;
+        const { error } = await supabaseAdmin
+          .from("training_days")
+          .update({ day_date: shift(d.day_date) })
+          .eq("id", d.id);
+        if (error) throw new Error(error.message);
+      }
+    }
+
+    await supabaseAdmin
+      .from("nutrition_plans")
+      .update({ status: "archived", archived_at: new Date().toISOString() })
+      .eq("client_id", p.client_id)
+      .eq("plan_type", "training")
+      .eq("status", "active")
+      .neq("id", data.plan_id);
+
+    const { error } = await supabaseAdmin
+      .from("nutrition_plans")
+      .update({
+        status: "active",
+        archived_at: null,
+        activated_at: new Date().toISOString(),
+        scheduled_start_date: p.scheduled_start_date ? shift(p.scheduled_start_date) : iso(targetMonday),
+        scheduled_end_date: shift(p.scheduled_end_date),
+      })
+      .eq("id", data.plan_id);
+    if (error) throw new Error(error.message);
+    return { ok: true, start: p.scheduled_start_date ? shift(p.scheduled_start_date) : iso(targetMonday) };
+  });
+
 export const deleteTrainingPlanDraft = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { plan_id: string }) => d)

@@ -22,6 +22,7 @@ import {
   updateTrainingPlanScheduling,
   setAutoPublishTraining,
   extendTrainingPlanWeeks,
+  reactivateArchivedTrainingPlan,
   type TrainingPlanStatus,
 } from "@/lib/training-plan-management.functions";
 import { generateAiTrainingPlanDraft } from "@/lib/training-plan-ai.functions";
@@ -60,6 +61,20 @@ export function TrainingPlanManagementCard({ userId, returnOrgId }: { userId: st
   const schedFn = useServerFn(updateTrainingPlanScheduling);
   const autoFn = useServerFn(setAutoPublishTraining);
   const extendFn = useServerFn(extendTrainingPlanWeeks);
+  const reactFn = useServerFn(reactivateArchivedTrainingPlan);
+  const [reactivateId, setReactivateId] = useState<string | null>(null);
+  const react = useMutation({
+    mutationFn: ({ id, start }: { id: string; start: "this_week" | "next_week" }) =>
+      reactFn({ data: { plan_id: id, start } }),
+    onSuccess: (res: any) => {
+      toast.success(
+        `Plan reaktiviert ab ${fmtDate(res?.start)} – Übungen unverändert. Über „+ Wochen verlängern" kannst du ihn jetzt verlängern.`,
+      );
+      setReactivateId(null);
+      invalidate();
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Reaktivierung fehlgeschlagen"),
+  });
 
 
   const { data, isLoading } = useQuery({
@@ -281,15 +296,42 @@ export function TrainingPlanManagementCard({ userId, returnOrgId }: { userId: st
             {data.archive.map((p: any) => (
               <li
                 key={p.id}
-                className="flex items-center justify-between gap-2 py-2"
+                className="flex flex-wrap items-center justify-between gap-2 py-2"
               >
                 <div className="flex items-center gap-2 min-w-0">
                   <Dumbbell className="h-4 w-4 text-muted-foreground shrink-0" />
                   <span className="truncate">{p.title}</span>
                 </div>
-                <span className="text-xs text-muted-foreground shrink-0">
-                  {fmtDate(p.created_at)}
-                </span>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className="text-xs text-muted-foreground">
+                    {fmtDate(p.created_at)}
+                  </span>
+                  <button
+                    onClick={() => setReactivateId(reactivateId === p.id ? null : p.id)}
+                    className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-gold/40 bg-background px-2.5 text-xs font-semibold hover:bg-accent"
+                  >
+                    <Rocket className="h-3.5 w-3.5" />
+                    Reaktivieren
+                  </button>
+                </div>
+                {reactivateId === p.id && (
+                  <div className="flex w-full flex-wrap gap-2 pt-2">
+                    <button
+                      disabled={react.isPending}
+                      onClick={() => react.mutate({ id: p.id, start: "this_week" })}
+                      className="min-h-10 flex-1 rounded-lg bg-gradient-gold px-3 text-xs font-semibold text-primary-foreground disabled:opacity-60"
+                    >
+                      Ab dieser Woche
+                    </button>
+                    <button
+                      disabled={react.isPending}
+                      onClick={() => react.mutate({ id: p.id, start: "next_week" })}
+                      className="min-h-10 flex-1 rounded-lg border border-border bg-background px-3 text-xs font-semibold hover:bg-accent disabled:opacity-60"
+                    >
+                      Ab nächster Woche
+                    </button>
+                  </div>
+                )}
               </li>
             ))}
           </ul>
