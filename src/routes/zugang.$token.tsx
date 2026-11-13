@@ -52,7 +52,9 @@ function SetupPage() {
       const { error } = await supabase.auth.signInWithPassword({ email: r.email, password });
       if (error) throw error;
       toast.success("Passwort gespeichert – los geht's!");
-      navigate({ to: "/welcome" });
+      const next = new URLSearchParams(window.location.search).get("next");
+      if (next && next.startsWith("/") && !next.startsWith("//")) window.location.assign(next);
+      else navigate({ to: "/welcome" });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Das hat nicht geklappt.");
     } finally {

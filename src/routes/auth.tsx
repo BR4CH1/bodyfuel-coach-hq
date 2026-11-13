@@ -1,4 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { requestAccountSetupLink } from "@/lib/account-setup.functions";
 import { useEffect, useState } from "react";
 import { Flame, Lock, Mail, User } from "lucide-react";
 import { z } from "zod";
@@ -51,6 +53,7 @@ function AuthPage() {
   const [resetOpen, setResetOpen] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [resetBusy, setResetBusy] = useState(false);
+  const requestLink = useServerFn(requestAccountSetupLink);
   const [resetSent, setResetSent] = useState(false);
   // Beitrittslinks (next=/join/...) starten direkt im Registrieren-Modus.
   const [mode, setMode] = useState<"signin" | "signup">(
@@ -65,14 +68,7 @@ function AuthPage() {
     }
     setResetBusy(true);
     try {
-      const origin =
-        typeof window !== "undefined" && window.location.origin.includes("localhost")
-          ? window.location.origin
-          : PUBLIC_APP_ORIGIN;
-      const { error } = await supabase.auth.resetPasswordForEmail(parsed.data, {
-        redirectTo: `${origin}/reset-password`,
-      });
-      if (error) throw error;
+      await requestLink({ data: { email: parsed.data } });
       setResetSent(true);
       toast.success("Reset-Mail verschickt. Bitte prüfe dein Postfach (auch Spam).");
     } catch (err: unknown) {

@@ -8,7 +8,7 @@ const FROM_DOMAIN = "bodyfuel-coaching.com";
 const APP_URL = "https://bodyfuel-coaching.com";
 
 /** Erzeugt (oder nutzt) einen dauerhaft gültigen Einrichtungslink und verschickt ihn. */
-export async function sendAccountSetupEmail(userId: string, email: string, firstName?: string) {
+export async function sendAccountSetupEmail(userId: string, email: string, firstName?: string, next = "/welcome") {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: existing } = await supabaseAdmin
     .from("account_setup_tokens").select("token").eq("user_id", userId).maybeSingle();
@@ -20,7 +20,7 @@ export async function sendAccountSetupEmail(userId: string, email: string, first
     if (error) throw new Error(error.message);
   }
   const tpl = TEMPLATES["account-setup"];
-  const payload = { firstName, setupUrl: `${APP_URL}/zugang/${token}` };
+  const payload = { firstName, setupUrl: `${APP_URL}/zugang/${token}${next !== "/welcome" ? `?next=${encodeURIComponent(next)}` : ""}` };
   const element = React.createElement(tpl.component, payload);
   const html = await render(element);
   const text = await render(element, { plainText: true });

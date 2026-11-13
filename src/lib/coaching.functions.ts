@@ -355,10 +355,8 @@ export const createCustomer = createServerFn({ method: "POST" })
       if (!existingProfile?.display_name) profileUpdate.display_name = displayName;
       await supabaseAdmin.from("profiles").update(profileUpdate).eq("id", newUserId);
       if (!data.skip_invite) {
-        const { error: resetError } = await supabaseAdmin.auth.resetPasswordForEmail(email, {
-          redirectTo: `${origin}/welcome`,
-        });
-        if (resetError) throw new Error(resetError.message);
+        const { sendAccountSetupEmail } = await import("@/lib/account-setup.server");
+        await sendAccountSetupEmail(newUserId, email, firstName);
       }
     } else if (data.skip_invite) {
       // Silent anlegen (z.B. Influencer) – kein Invite-Mail.
@@ -381,10 +379,10 @@ export const createCustomer = createServerFn({ method: "POST" })
       if (createErr) throw new Error(createErr.message);
       newUserId = created.user!.id;
     } else {
-      const { data: invited, error: invErr } = await supabaseAdmin.auth.admin.inviteUserByEmail(
+      const { data: invited, error: invErr } = await supabaseAdmin.auth.admin.createUser({
         email,
-        {
-          data: {
+        email_confirm: true,
+        user_metadata: {
             display_name: displayName,
             first_name: firstName,
             last_name: lastName,
@@ -392,12 +390,12 @@ export const createCustomer = createServerFn({ method: "POST" })
             name: displayName,
             created_via: "coach",
             ...(isFree ? { tier: "free" } : { role: "client" }),
-          },
-          redirectTo: isFree ? `${origin}/tracker/app` : `${origin}/welcome`,
         },
-      );
+      });
       if (invErr) throw new Error(invErr.message);
       newUserId = invited.user.id;
+      const { sendAccountSetupEmail } = await import("@/lib/account-setup.server");
+      await sendAccountSetupEmail(newUserId, email, firstName, isFree ? "/tracker/app" : "/welcome");
     }
 
     if (isFree) {
@@ -843,11 +841,13 @@ export const resendInvite = createServerFn({ method: "POST" })
     if (!firstName) firstName = usableFirstName(existingMeta.full_name);
     if (!firstName) firstName = usableFirstName(existingMeta.name);
 
-    const { error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-      data: { ...existingMeta, first_name: firstName },
-      redirectTo: `${origin}/welcome`,
-    });
-    if (error) throw new Error(error.message);
+    if (firstName && existingMeta.first_name !== firstName) {
+      await supabaseAdmin.auth.admin.updateUserById(data.user_id, {
+        user_metadata: { ...existingMeta, first_name: firstName },
+      });
+    }
+    const { sendAccountSetupEmail } = await import("@/lib/account-setup.server");
+    await sendAccountSetupEmail(data.user_id, email, firstName);
     return { ok: true };
   });
 
@@ -863,10 +863,8 @@ export const sendPasswordReset = createServerFn({ method: "POST" })
     const email = u.user?.email;
     if (!email) throw new Error("Kein E-Mail-Account gefunden");
 
-    const { error } = await supabaseAdmin.auth.resetPasswordForEmail(email, {
-      redirectTo: `${origin}/welcome`,
-    });
-    if (error) throw new Error(error.message);
+    const { sendAccountSetupEmail } = await import("@/lib/account-setup.server");
+    await sendAccountSetupEmail(data.user_id, email);
     return { ok: true };
   });
 
