@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { daysUntilNextShopping } from "./shopping-cycle";
 import { assertCoachOrOrgStaffForAthlete } from "@/lib/organizations/org-coach-access";
+import { buildNutritionReactivationSchedule } from "./nutrition-plan-reactivation.logic";
 
 export type PlanStatus = "draft" | "approved" | "published" | "active" | "archived";
 
@@ -160,14 +161,19 @@ export const getCustomerPlanOverview = createServerFn({ method: "GET" })
 
 export const transitionPlanStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { plan_id: string; to: PlanStatus }) => d)
+  .inputValidator((d: { plan_id: string; to: PlanStatus; reactivate_start?: "this_week" | "next_week" }) => {
+    if (d.reactivate_start !== undefined && (d.to !== "active" || !["this_week", "next_week"].includes(d.reactivate_start))) {
+      throw new Error("Ungültige Auswahl für die Reaktivierung.");
+    }
+    return d;
+  })
   .handler(async ({ data, context }) => {
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const { data: plan } = await supabaseAdmin
       .from("nutrition_plans")
-      .select("id, client_id, plan_type, status, source, kcal, protein_g, carbs_g, fat_g, performance_context")
+      .select("id, client_id, plan_type, status, source, kcal, protein_g, carbs_g, fat_g, performance_context, scheduled_start_date, scheduled_end_date, activated_at, archived_at")
       .eq("id", data.plan_id)
       .maybeSingle();
     if (!plan) throw new Error("Plan nicht gefunden");
@@ -182,6 +188,64 @@ export const transitionPlanStatus = createServerFn({ method: "POST" })
     // nutzen wir den Admin-Client (Identität ist via Auth-Middleware verifiziert,
     // und wir schreiben ausschließlich auf den geprüften plan_id/client_id).
     const supabase = supabaseAdmin;
+
+    if (data.reactivate_start) {
+      if (plan.plan_type !== "nutrition" || plan.performance_context || plan.status !== "archived") {
+        throw new Error("Nur archivierte Ernährungspläne können reaktiviert werden.");
+      }
+      await assertCoachOrOrgStaffForAthlete(context, plan.client_id, "nutrition");
+      const { data: days, error: daysError } = await supabase.from("nutrition_plan_days")
+        .select("id, day_date, sort_order").eq("plan_id", plan.id);
+      if (daysError) throw new Error(daysError.message);
+      const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+      const schedule = buildNutritionReactivationSchedule({
+        start: data.reactivate_start, today,
+        scheduled_start_date: plan.scheduled_start_date,
+        scheduled_end_date: plan.scheduled_end_date,
+        days: days ?? [],
+      });
+      const { data: current, error: currentError } = await supabase.from("nutrition_plans")
+        .select("id, archived_at").eq("client_id", plan.client_id).eq("plan_type", "nutrition")
+        .eq("performance_context", false).eq("status", "active").neq("id", plan.id);
+      if (currentError) throw new Error(currentError.message);
+      const changedDays: string[] = [];
+      const archivedPlans: string[] = [];
+      const now = new Date().toISOString();
+      try {
+        for (const day of schedule.days) {
+          const { error } = await supabase.from("nutrition_plan_days").update({ day_date: day.day_date }).eq("id", day.id);
+          if (error) throw new Error(error.message);
+          changedDays.push(day.id);
+        }
+        for (const active of current ?? []) {
+          const { error } = await supabase.from("nutrition_plans").update({ status: "archived", archived_at: now }).eq("id", active.id).eq("status", "active");
+          if (error) throw new Error(error.message);
+          archivedPlans.push(active.id);
+        }
+        const { data: activated, error } = await supabase.from("nutrition_plans").update({
+          status: "active", archived_at: null, activated_at: now,
+          scheduled_start_date: schedule.scheduled_start_date,
+          scheduled_end_date: schedule.scheduled_end_date,
+        }).eq("id", plan.id).eq("status", "archived").select("id").maybeSingle();
+        if (error || !activated) throw new Error(error?.message ?? "Plan wurde zwischenzeitlich geändert. Bitte neu laden.");
+      } catch (error) {
+        let rollbackFailed = false;
+        for (const day of days ?? []) {
+          if (!changedDays.includes(day.id)) continue;
+          const result = await supabase.from("nutrition_plan_days").update({ day_date: day.day_date }).eq("id", day.id);
+          if (result.error) rollbackFailed = true;
+        }
+        for (const active of current ?? []) {
+          if (!archivedPlans.includes(active.id)) continue;
+          const result = await supabase.from("nutrition_plans").update({ status: "active", archived_at: active.archived_at }).eq("id", active.id);
+          if (result.error) rollbackFailed = true;
+        }
+        if (rollbackFailed) throw new Error("Reaktivierung fehlgeschlagen; Wiederherstellung unvollständig. Bitte Planstatus und Termine prüfen.");
+        throw error;
+      }
+      // Reactivation preserves the existing customer targets, including Smart plans.
+      return { ok: true, status: "active" as const, start: schedule.scheduled_start_date };
+    }
 
     // If transitioning to active, archive the currently active plan first
     if (data.to === "active") {

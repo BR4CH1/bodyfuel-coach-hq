@@ -43,6 +43,7 @@ import {
   type PlanValidationReport,
 } from "@/lib/nutrition-plan-constraints";
 import { Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const STATUS_LABEL: Record<PlanStatus, string> = {
   draft: "Entwurf",
@@ -74,6 +75,18 @@ export function PlanManagementCard({ userId, returnOrgId }: { userId: string; re
   const getFn = useServerFn(getCustomerPlanOverview);
   const genFn = useServerFn(generateAiNutritionPlanDraft);
   const transFn = useServerFn(transitionPlanStatus);
+  const [reactivateId, setReactivateId] = useState<string | null>(null);
+  const react = useMutation({
+    mutationFn: ({ id, start }: { id: string; start: "this_week" | "next_week" }) =>
+      transFn({ data: { plan_id: id, to: "active", reactivate_start: start } }),
+    onSuccess: (result) => {
+      toast.success(`Ernährungsplan reaktiviert ab ${fmtDate("start" in result ? result.start ?? null : null)} – Mahlzeiten und Mengen unverändert.`);
+      setReactivateId(null);
+      invalidate();
+      qc.invalidateQueries({ queryKey: ["coach-nutrition-plans", userId] });
+    },
+    onError: (error: Error) => toast.error(error.message || "Reaktivierung fehlgeschlagen"),
+  });
   const delFn = useServerFn(deletePlanDraft);
   const schedFn = useServerFn(updatePlanScheduling);
   const autoFn = useServerFn(setAutoPublish);
@@ -487,7 +500,7 @@ export function PlanManagementCard({ userId, returnOrgId }: { userId: string; re
           </summary>
           <ul className="mt-3 divide-y divide-border text-sm">
             {data.archive.map((p: any) => (
-              <li key={p.id} className="flex items-center justify-between gap-2 py-2">
+              <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
                   <span className="truncate">{p.title}</span>
@@ -495,7 +508,22 @@ export function PlanManagementCard({ userId, returnOrgId }: { userId: string; re
                 <div className="flex items-center gap-3 shrink-0">
                   {p.compliance && <ComplianceDot c={p.compliance} />}
                   <span className="text-xs text-muted-foreground">{fmtDate(p.created_at)}</span>
+                  <Button variant="outline" className="min-h-11 text-xs" disabled={react.isPending}
+                    onClick={() => setReactivateId(reactivateId === p.id ? null : p.id)}>
+                    <Rocket /> Reaktivieren
+                  </Button>
                 </div>
+                {reactivateId === p.id && (
+                  <div className="w-full space-y-2 pt-2">
+                    <p className="text-xs text-muted-foreground">Der aktuelle Ernährungsplan wird archiviert. Mahlzeiten, Mengen und Tagesziele bleiben erhalten. Partnerpläne werden separat reaktiviert.</p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button className="min-h-11 flex-1 text-xs" disabled={react.isPending}
+                        onClick={() => react.mutate({ id: p.id, start: "this_week" })}>Ab dieser Woche</Button>
+                      <Button variant="outline" className="min-h-11 flex-1 text-xs" disabled={react.isPending}
+                        onClick={() => react.mutate({ id: p.id, start: "next_week" })}>Ab nächster Woche</Button>
+                    </div>
+                  </div>
+                )}
               </li>
             ))}
           </ul>
