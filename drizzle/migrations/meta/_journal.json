@@ -8,6 +8,13 @@
       "when": 1794604741596,
       "tag": "0000_account_setup_tokens",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794607550593,
+      "tag": "0001_restore_consented_public_reviews",
+      "breakpoints": true
     }
   ]
 }

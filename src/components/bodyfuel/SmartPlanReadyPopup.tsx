@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { useConsent } from "@/lib/consent";
 import { getMySmartProfile } from "@/lib/smart-profile.functions";
 import {
   getCustomerPlanOverview,
@@ -32,6 +33,7 @@ import { enqueueAutopilotJob, getMyAutopilotJob } from "@/lib/autopilot-jobs.fun
  *  - pro Session dismissable (sessionStorage)
  */
 export function SmartPlanReadyPopup({ userId }: { userId: string }) {
+  const { decided, isSettingsOpen } = useConsent();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const profileFn = useServerFn(getMySmartProfile);
@@ -112,7 +114,7 @@ export function SmartPlanReadyPopup({ userId }: { userId: string }) {
     setOpen(false);
   };
 
-  if (!shouldShow) return null;
+  if (!shouldShow || !decided || isSettingsOpen) return null;
 
   return (
     <Dialog open={open} onOpenChange={(v) => (!v ? dismiss() : setOpen(true))}>
@@ -122,11 +124,11 @@ export function SmartPlanReadyPopup({ userId }: { userId: string }) {
             <Sparkles className="h-6 w-6" />
           </div>
           <DialogTitle className="text-center text-xl">
-            Dein Smart-Plan ist bereit ✨
+            Bereit für deinen Smart-Plan?
           </DialogTitle>
           <DialogDescription className="text-center">
-            Wir haben alle deine Vorlieben — jetzt nur noch ein Klick und dein
-            persönlicher Ernährungsplan ist startklar.
+            Deine Vorlieben sind gespeichert. Starte jetzt die Erstellung deines
+            persönlichen Ernährungsplans.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="flex flex-col gap-2 sm:flex-col">

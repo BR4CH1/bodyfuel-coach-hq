@@ -33,6 +33,7 @@ import { getIsPlatformOwner } from "@/lib/organizations/organizations.functions"
 import { useSession } from "@/lib/bodyfuel/session";
 import { useEntitlements } from "@/lib/bodyfuel/entitlements";
 import { Logo } from "./Logo";
+import { Button } from "@/components/ui/button";
 import { getLevel } from "@/lib/bodyfuel/data";
 import { totalPoints } from "@/lib/bodyfuel/data";
 import { ReviewPrompt } from "./ReviewPrompt";
@@ -582,12 +583,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Mobile top bar */}
-      <header className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background/85 px-4 py-3 backdrop-blur lg:hidden">
+      <header className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-y-2 border-b border-border bg-background/85 px-4 py-3 backdrop-blur lg:hidden">
         <Link to={isCoach ? "/coach" : "/dashboard"}>
           <Logo />
         </Link>
-        <div className="flex items-center gap-1">
-          <OrganizationContextSwitcher compact />
+        <div className="flex shrink-0 items-center gap-1">
           {!isFreeUser && (
             <>
               <Link
@@ -611,17 +611,18 @@ export function AppLayout({ children }: { children: ReactNode }) {
               </Link>
             </>
           )}
-          <button
+          <Button variant="ghost" size="icon"
             onClick={() => {
               logout();
               navigate({ to: "/login" });
             }}
-            className="rounded-md p-2 text-muted-foreground hover:text-foreground"
+            className="h-11 w-11 text-muted-foreground hover:text-foreground"
             aria-label="Logout"
           >
             <LogOut className="h-4 w-4" />
-          </button>
+          </Button>
         </div>
+        <div className="w-full min-w-0"><OrganizationContextSwitcher compact /></div>
       </header>
 
       {/* Main */}

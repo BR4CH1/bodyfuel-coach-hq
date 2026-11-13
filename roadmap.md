@@ -10,7 +10,7 @@
 - [x] Desktop und Handy geprüft (auch 402 × 290), 606 Tests bestanden; nicht veröffentlicht.
 
 # Startseite ergänzen und App prüfen
-- [ ] Echte freigegebene Kundenstimmen einbinden, ohne Ersatzbewertungen.
-- [ ] Trainingsvorschau und Entscheidungshilfe für Smart/Coaching ergänzen.
-- [ ] Hauptbereiche der App angemeldet auf Desktop und Handy prüfen; konkrete Auffälligkeiten dokumentieren.
-- [ ] Tests und Startseitenablauf prüfen; nicht veröffentlichen.
+- [x] Drei freigegebene Sternebewertungen einbinden; keine schriftlichen Kommentare vorhanden, keine Zitate erfunden.
+- [x] Gekennzeichnete Trainingsbeispielansicht und Entscheidungshilfe für Smart/Coaching ergänzen.
+- [x] Hauptbereiche mit dem gewünschten Kundenkonto auf Desktop und Handy geprüft; Grenzen und Auffälligkeiten in APP-REVIEW.md dokumentiert.
+- [x] Startseitenablauf und 606 vorhandene Tests geprüft; Datenschutztests ergänzt; nicht veröffentlicht.
