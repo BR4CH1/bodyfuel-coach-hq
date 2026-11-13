@@ -32,6 +32,7 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-gold: var(--gold);
+  --color-landing-panel: var(--landing-panel);
   --color-gold-soft: var(--gold-soft);
   --color-success: var(--success);
   --color-warning: var(--warning);
@@ -63,6 +64,10 @@
 
   --gold: oklch(0.72 0.18 148);
   --gold-soft: oklch(0.82 0.14 150);
+  --landing-panel: oklch(0.2 0.015 160);
+  --landing-hero-shade: linear-gradient(90deg, oklch(0.12 0.005 160 / 0.96), oklch(0.12 0.005 160 / 0.73) 43%, oklch(0.12 0.005 160 / 0.1) 100%);
+  --landing-mobile-shade: linear-gradient(90deg, oklch(0.12 0.005 160 / 0.95), oklch(0.12 0.005 160 / 0.67));
+  --landing-screen-shadow: 0 20px 50px oklch(0.08 0.005 160 / 0.35);
 
   --secondary: oklch(0.24 0.008 250);
   --secondary-foreground: oklch(0.97 0.005 90);
@@ -110,6 +115,16 @@
     font-family: var(--font-display);
     letter-spacing: 0.01em;
   }
+}
+
+.bodyfuel-landing { letter-spacing: 0; }
+.bodyfuel-landing h1, .bodyfuel-landing h2, .bodyfuel-landing h3 { letter-spacing: 0; }
+.bodyfuel-landing a, .bodyfuel-landing summary { scroll-margin-top: 6rem; }
+.landing-hero-shade { background: var(--landing-hero-shade); }
+.landing-product-stage { background-color: var(--landing-panel); }
+.landing-app-screen { box-shadow: var(--landing-screen-shadow); }
+@media (max-width: 639px) {
+  .landing-hero-shade { background: var(--landing-mobile-shade); }
 }
 
 /* Green gradient utilities */
