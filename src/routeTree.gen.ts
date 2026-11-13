@@ -36,6 +36,7 @@ import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as ProgressRouteImport } from './routes/progress'
 import { Route as RankingRouteImport } from './routes/ranking'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SmartRouteImport } from './routes/smart'
 import { Route as StrengthCheckRouteImport } from './routes/strength-check'
 import { Route as TrainingRouteImport } from './routes/training'
@@ -305,6 +306,11 @@ const RankingRoute = RankingRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SmartRoute = SmartRouteImport.update({
@@ -1044,6 +1050,7 @@ export interface FileRoutesByFullPath {
   '/progress': typeof ProgressRoute
   '/ranking': typeof RankingRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/smart': typeof SmartRouteWithChildren
   '/strength-check': typeof StrengthCheckRoute
   '/training': typeof TrainingRoute
@@ -1204,6 +1211,7 @@ export interface FileRoutesByTo {
   '/progress': typeof ProgressRoute
   '/ranking': typeof RankingRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/strength-check': typeof StrengthCheckRoute
   '/training': typeof TrainingRoute
   '/training-import': typeof TrainingImportRoute
@@ -1361,6 +1369,7 @@ export interface FileRoutesById {
   '/progress': typeof ProgressRoute
   '/ranking': typeof RankingRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/smart': typeof SmartRouteWithChildren
   '/strength-check': typeof StrengthCheckRoute
   '/training': typeof TrainingRoute
@@ -1527,6 +1536,7 @@ export interface FileRouteTypes {
     | '/progress'
     | '/ranking'
     | '/reset-password'
+    | '/sitemap.xml'
     | '/smart'
     | '/strength-check'
     | '/training'
@@ -1687,6 +1697,7 @@ export interface FileRouteTypes {
     | '/progress'
     | '/ranking'
     | '/reset-password'
+    | '/sitemap.xml'
     | '/strength-check'
     | '/training'
     | '/training-import'
@@ -1843,6 +1854,7 @@ export interface FileRouteTypes {
     | '/progress'
     | '/ranking'
     | '/reset-password'
+    | '/sitemap.xml'
     | '/smart'
     | '/strength-check'
     | '/training'
@@ -2008,6 +2020,7 @@ export interface RootRouteChildren {
   ProgressRoute: typeof ProgressRoute
   RankingRoute: typeof RankingRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   SmartRoute: typeof SmartRouteWithChildren
   StrengthCheckRoute: typeof StrengthCheckRoute
   TrainingRoute: typeof TrainingRoute
@@ -2253,6 +2266,13 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/smart': {
@@ -3530,6 +3550,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProgressRoute: ProgressRoute,
   RankingRoute: RankingRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   SmartRoute: SmartRouteWithChildren,
   StrengthCheckRoute: StrengthCheckRoute,
   TrainingRoute: TrainingRoute,
