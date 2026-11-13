@@ -23,6 +23,8 @@ import type {
 import { findMealViolations, mealIsAllowed } from "@/lib/nutrition-plan-constraints";
 
 const MAX_GENERATION_ATTEMPTS = 3;
+/** Erlaubte Kalorien-Abweichung pro Tag, bevor Mengen skaliert werden. */
+const KCAL_TOLERANCE = 0.07;
 
 /** Rundungstoleranz für die Protein-Obergrenze: max(4 g, 2 %). */
 function proteinTolerance(target: number): number {
@@ -249,6 +251,11 @@ export async function generateComputedNutritionPlan(input: {
         context.forbidden,
       );
 
+      // Kalorien-Ziel deterministisch einhalten: Liegt der Tag deutlich über
+      // (oder unter) dem Ziel, werden alle Zutatenmengen proportional
+      // skaliert und die Nährwerte frisch aus den Zutaten berechnet.
+      correctedMeals = await scaleDayToKcalTarget(correctedMeals, day.target.kcal);
+
       const finalSums = sumMealMacros(correctedMeals);
       if (finalSums.protein_g > day.target.protein_g + proteinTolerance(day.target.protein_g)) {
         attemptProteinBreaches.push(
@@ -271,6 +278,44 @@ export async function generateComputedNutritionPlan(input: {
 
       return correctedMeals;
     };
+
+    async function scaleDayToKcalTarget(
+      meals: ComputedGeneratedMeal[],
+      targetKcal: number,
+    ): Promise<ComputedGeneratedMeal[]> {
+      for (let pass = 0; pass < 2; pass += 1) {
+        const actual = sumMealMacros(meals).kcal;
+        if (!(actual > 0) || !(targetKcal > 0)) return meals;
+        const ratio = targetKcal / actual;
+        if (Math.abs(1 - ratio) <= KCAL_TOLERANCE) return meals;
+        const factor = Math.min(1.3, Math.max(0.45, ratio));
+        meals = await Promise.all(
+          meals.map(async (meal) => {
+            const ingredients = coerceIngredients(meal.ingredients ?? null);
+            if (!ingredients.length) return meal;
+            const scaled = ingredients.map((ing) => {
+              const base = Number(ing.amount ?? ing.grams) || 0;
+              const next = Math.max(5, Math.round((base * factor) / 5) * 5);
+              return { ...ing, amount: next, grams: next, display: undefined };
+            });
+            const result = await computeMealFromIngredients(supabase, scaled, {
+              smartOnly: true,
+              requireResolvedIds: true,
+            });
+            if (!isUsableEngineResult(result)) return meal;
+            return {
+              ...meal,
+              ingredients: scaled,
+              kcal: result.kcal,
+              protein_g: result.protein_g,
+              carbs_g: result.carbs_g,
+              fat_g: result.fat_g,
+            };
+          }),
+        );
+      }
+      return meals;
+    }
 
     const cleaned = await Promise.all(
       repairedRawDays.map(async (day, dayIndex): Promise<CleanedPlanDay> => {
