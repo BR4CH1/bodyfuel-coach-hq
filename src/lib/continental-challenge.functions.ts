@@ -2,35 +2,30 @@
  * Continental × BodyFuel – 30 Tage Challenge
  *
  * Bewerbungsstrecke: öffentliche Bewerbung (pending) + Coach-Review.
- * Nach Freigabe wird KEIN Account automatisch erstellt. Stattdessen erhält
- * die Person eine normale Athleten-Einladung zur Performance-Organisation.
+ * Nach Freigabe erhält die Person einen regulären BodyFuel-Smart-Zugang
+ * (Kundenrolle, Smart-Paket für die Challenge-Dauer, normales Onboarding,
+ * Ranking). Performance-Einladungen werden nicht mehr verwendet.
  */
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { PUBLIC_APP_ORIGIN } from "@/lib/auth-flow.logic";
 
 export const CONTINENTAL_MAX_APPROVED = 25;
 export const CONTINENTAL_ORG_SLUG = "continental";
 export const CONTINENTAL_ORG_NAME = "Continental";
+/** Challenge-Zeitraum: Smart-Zugang ab Start für 30 Tage. */
+export const CONTINENTAL_CHALLENGE_START = "2026-11-15";
+export const CONTINENTAL_CHALLENGE_DAYS = 30;
+export const CONTINENTAL_PACKAGE_MARKER = "[Continentale Challenge]";
+export const CONTINENTAL_GROUP = "continental";
 
-const CONTINENTAL_FEATURES = [
-  "home",
-  "nutrition",
-  "smart_nutrition",
-  "recipes",
-  "shopping_list",
-  "athletic_training",
-  "training",
-  "smart_training",
-  "checkins",
-  "onboarding",
-  "body_metrics",
-  "progress_tracking",
-  "community",
-  "gamification",
-  "challenges",
-  "ranking",
-  "analytics",
-] as const;
+export function continentalPackageWindow(today: string) {
+  // Zugang sofort ab Freigabe (Onboarding vor dem Start), Ende = Challenge-Ende.
+  const start = today;
+  const end = new Date(`${CONTINENTAL_CHALLENGE_START}T00:00:00Z`);
+  end.setUTCDate(end.getUTCDate() + CONTINENTAL_CHALLENGE_DAYS);
+  return { start_date: start, end_date: end.toISOString().slice(0, 10) };
+}
 
 export const GOAL_TYPE_OPTIONS = [
   { value: "abnehmen", label: "Gewicht reduzieren" },
@@ -129,153 +124,169 @@ async function assertCoach(supabase: any, userId: string) {
   if (!data) throw new Error("Nur für Coaches.");
 }
 
-async function isPlatformOwner(supabase: any, userId: string): Promise<boolean> {
-  const { data, error } = await supabase.rpc("has_role", {
-    _user_id: userId,
-    _role: "platform_owner",
-  });
-  if (error) throw new Error(error.message);
-  return !!data;
+
+type SmartAccessStatus = "none" | "invited" | "active";
+
+async function findAuthUserByEmail(email: string) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  for (let page = 1; page <= 20; page++) {
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 1000 });
+    if (error) throw new Error(error.message);
+    const match = data.users.find((u) => (u.email ?? "").toLowerCase() === email);
+    if (match) return match;
+    if (data.users.length < 1000) return null;
+  }
+  return null;
+}
+
+/** Revoked offene Performance-Einladungen (Altbestand) – ohne Org anzulegen. */
+async function revokeContinentalPerformanceInvites(email: string) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: org } = await supabaseAdmin
+    .from("organizations")
+    .select("id")
+    .eq("slug", CONTINENTAL_ORG_SLUG)
+    .maybeSingle();
+  if (!org) return;
+  await supabaseAdmin
+    .from("organization_invites")
+    .update({ status: "revoked" as any })
+    .eq("organization_id", (org as any).id)
+    .eq("email", email)
+    .eq("status", "pending" as any);
 }
 
 /**
- * Legt Continental einmalig als normale Performance-Organisation an.
- * Besteht sie bereits, wird nichts dupliziert.
+ * Regulärer Smart-Zugang (identisch zum Coach-Kundenanlegen): Einladung per
+ * Mail → /welcome (Onboarding), Rolle client, Smart-Paket 0 € für die
+ * Challenge-Dauer, Gruppe "continental". Idempotent.
  */
-async function ensureContinentalOrganization(supabase: any, userId: string) {
+async function provisionContinentalSmartAccess(
+  application: { email: string; first_name: string; last_name: string; phone: string | null },
+  opts: { resend?: boolean } = {},
+): Promise<{ user_id: string; invited: boolean }> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const email = application.email.toLowerCase().trim();
+  const firstName = application.first_name.trim().split(/\s+/)[0] ?? "";
+  const lastName = application.last_name.trim();
+  const displayName = [firstName, lastName].filter(Boolean).join(" ");
+  const origin = PUBLIC_APP_ORIGIN;
 
-  const { data: existing, error: existingError } = await supabaseAdmin
-    .from("organizations")
-    .select("id, name, slug, organization_type, status, max_customers")
-    .eq("slug", CONTINENTAL_ORG_SLUG)
-    .maybeSingle();
-  if (existingError) throw new Error(existingError.message);
-  if (existing) return existing as any;
-
-  if (!(await isPlatformOwner(supabase, userId))) {
-    throw new Error(
-      "Die Continental Performance-Organisation muss einmalig von einem Plattform-Owner initialisiert werden.",
-    );
-  }
-
-  const { data: created, error: createError } = await supabaseAdmin
-    .from("organizations")
-    .insert({
-      name: CONTINENTAL_ORG_NAME,
-      short_name: CONTINENTAL_ORG_NAME,
-      slug: CONTINENTAL_ORG_SLUG,
-      organization_type: "company" as any,
-      status: "active",
-      claim: "30 Tage. Ein Ziel. Deine Challenge.",
-      license_plan: "custom",
-      license_status: "active",
-      max_customers: CONTINENTAL_MAX_APPROVED,
-      max_coaches: 5,
-    } as any)
-    .select("id, name, slug, organization_type, status, max_customers")
-    .single();
-
-  if (createError) {
-    // Parallelaufruf: falls der Slug inzwischen angelegt wurde, vorhandene Org nutzen.
-    if (createError.code === "23505") {
-      const { data: raced } = await supabaseAdmin
-        .from("organizations")
-        .select("id, name, slug, organization_type, status, max_customers")
-        .eq("slug", CONTINENTAL_ORG_SLUG)
-        .maybeSingle();
-      if (raced) return raced as any;
+  const existing = await findAuthUserByEmail(email);
+  let userId: string;
+  let invited = false;
+  if (existing) {
+    userId = existing.id;
+    const neverSignedIn = !existing.last_sign_in_at;
+    if (opts.resend || neverSignedIn) {
+      if (neverSignedIn) {
+        const { error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+          redirectTo: `${origin}/welcome`,
+        });
+        if (error) {
+          const { error: resetError } = await supabaseAdmin.auth.resetPasswordForEmail(email, {
+            redirectTo: `${origin}/welcome`,
+          });
+          if (resetError) throw new Error(resetError.message);
+        }
+      } else {
+        const { error } = await supabaseAdmin.auth.resetPasswordForEmail(email, {
+          redirectTo: `${origin}/welcome`,
+        });
+        if (error) throw new Error(error.message);
+      }
+      invited = true;
     }
-    throw new Error(createError.message);
-  }
-
-  const orgId = (created as any).id as string;
-
-  const { data: existingStaff } = await supabaseAdmin
-    .from("staff_assignments")
-    .select("id")
-    .eq("user_id", userId)
-    .eq("organization_id", orgId)
-    .limit(1);
-  if ((existingStaff ?? []).length === 0) {
-    const { error: staffError } = await supabaseAdmin.from("staff_assignments").insert({
-      user_id: userId,
-      organization_id: orgId,
-      team_id: null,
-      role: "organization_admin" as any,
-      permissions: [],
+  } else {
+    await supabaseAdmin.from("leads").insert({
+      name: displayName,
+      email,
+      phone: application.phone || null,
+      desired_package: null,
+      status: "converted",
+      message: `${CONTINENTAL_PACKAGE_MARKER} Teilnahme freigegeben`,
     } as any);
-    if (staffError) throw new Error(staffError.message);
+    const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+      data: {
+        display_name: displayName,
+        first_name: firstName,
+        last_name: lastName,
+        full_name: displayName,
+        name: displayName,
+        created_via: "coach",
+        role: "client",
+      },
+      redirectTo: `${origin}/welcome`,
+    });
+    if (error) throw new Error(error.message);
+    userId = data.user.id;
+    invited = true;
   }
 
-  const featureRows = CONTINENTAL_FEATURES.map((feature) => ({
-    organization_id: orgId,
-    feature,
-    enabled: true,
-  }));
-  const { error: featuresError } = await supabaseAdmin
-    .from("organization_features")
-    .upsert(featureRows as any, { onConflict: "organization_id,feature" } as any);
-  if (featuresError) throw new Error(featuresError.message);
+  // Kundenrolle sicherstellen (Ranking zählt Rolle client).
+  await supabaseAdmin
+    .from("user_roles")
+    .upsert({ user_id: userId, role: "client" } as any, { onConflict: "user_id,role" } as any);
 
-  return created as any;
-}
-
-async function findLatestContinentalInvite(orgId: string, email: string) {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data, error } = await supabaseAdmin
-    .from("organization_invites")
-    .select("id, invite_token, status, created_at")
-    .eq("organization_id", orgId)
-    .eq("email", email.toLowerCase().trim())
-    .eq("assigned_role", "athlete" as any)
-    .order("created_at", { ascending: false })
-    .limit(1)
+  const { data: profile } = await supabaseAdmin
+    .from("profiles")
+    .select("display_name, phone")
+    .eq("id", userId)
     .maybeSingle();
-  if (error) throw new Error(error.message);
-  return data as any;
-}
+  await supabaseAdmin
+    .from("profiles")
+    .update({
+      display_name: (profile as any)?.display_name || displayName,
+      phone: (profile as any)?.phone || application.phone || null,
+    } as any)
+    .eq("id", userId);
 
-async function ensureContinentalAthleteInvite(
-  orgId: string,
-  email: string,
-  createdBy: string,
-): Promise<{ id: string; token: string; status: string; created: boolean }> {
-  const normalizedEmail = email.toLowerCase().trim();
-  const existing = await findLatestContinentalInvite(orgId, normalizedEmail);
-  if (existing && (existing.status === "pending" || existing.status === "accepted")) {
-    return {
-      id: existing.id,
-      token: existing.invite_token,
-      status: existing.status,
-      created: false,
-    };
+  const { data: activePkgs } = await supabaseAdmin
+    .from("customer_packages")
+    .select("id, notes, end_date")
+    .eq("user_id", userId)
+    .eq("is_active", true);
+  const window = continentalPackageWindow(new Date().toISOString().slice(0, 10));
+  const hasContinental = (activePkgs ?? []).some((p: any) =>
+    String(p.notes ?? "").includes(CONTINENTAL_PACKAGE_MARKER),
+  );
+  // Bestehende bezahlte Pakete werden NICHT angetastet.
+  if (!hasContinental && (activePkgs ?? []).length === 0) {
+    const { error: pkgErr } = await supabaseAdmin.from("customer_packages").upsert(
+      {
+        user_id: userId,
+        package: "smart",
+        price_eur: 0,
+        start_date: window.start_date,
+        end_date: window.end_date,
+        is_active: true,
+        notes: `${CONTINENTAL_PACKAGE_MARKER} 30 Tage Smart, kostenlos`,
+      } as any,
+      { onConflict: "user_id,package" } as any,
+    );
+    if (pkgErr) throw new Error(pkgErr.message);
   }
 
-  const inviteToken = crypto.randomUUID().replace(/-/g, "");
+  await supabaseAdmin
+    .from("user_groups")
+    .upsert({ user_id: userId, group_name: CONTINENTAL_GROUP } as any, {
+      onConflict: "user_id,group_name",
+    } as any);
+
+  await revokeContinentalPerformanceInvites(email);
+  return { user_id: userId, invited };
+}
+
+async function deactivateContinentalSmartAccess(email: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data: invite, error } = await supabaseAdmin
-    .from("organization_invites")
-    .insert({
-      organization_id: orgId,
-      email: normalizedEmail,
-      assigned_role: "athlete" as any,
-      team_id: null,
-      permissions: [],
-      created_by: createdBy,
-      invite_token: inviteToken,
-      status: "pending" as any,
-      expires_at: null,
-    } as any)
-    .select("id, invite_token, status")
-    .single();
-  if (error) throw new Error(error.message);
-  return {
-    id: (invite as any).id,
-    token: (invite as any).invite_token,
-    status: (invite as any).status,
-    created: true,
-  };
+  const user = await findAuthUserByEmail(email);
+  if (!user) return;
+  await supabaseAdmin
+    .from("customer_packages")
+    .update({ is_active: false })
+    .eq("user_id", user.id)
+    .eq("is_active", true)
+    .like("notes", `${CONTINENTAL_PACKAGE_MARKER}%`);
 }
 
 /* ---------------- ÖFFENTLICH: Bewerbung absenden ---------------- */
@@ -475,7 +486,6 @@ export const listContinentalApplications = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertCoach(context.supabase, context.userId);
-    const organization = await ensureContinentalOrganization(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data, error } = await supabaseAdmin
       .from("continental_challenge_applications")
@@ -483,41 +493,45 @@ export const listContinentalApplications = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
 
-    const emails = Array.from(
-      new Set((data ?? []).map((row: any) => String(row.email ?? "").toLowerCase()).filter(Boolean)),
+    const emails = new Set(
+      (data ?? []).map((row: any) => String(row.email ?? "").toLowerCase()).filter(Boolean),
     );
-    const inviteByEmail = new Map<string, any>();
-    if (emails.length > 0) {
-      const { data: invites, error: inviteError } = await supabaseAdmin
-        .from("organization_invites")
-        .select("id, email, invite_token, status, created_at")
-        .eq("organization_id", (organization as any).id)
-        .eq("assigned_role", "athlete" as any)
-        .in("email", emails)
-        .order("created_at", { ascending: false });
-      if (inviteError) throw new Error(inviteError.message);
-      for (const invite of (invites ?? []) as any[]) {
-        const key = String(invite.email ?? "").toLowerCase();
-        if (key && !inviteByEmail.has(key)) inviteByEmail.set(key, invite);
+    const userByEmail = new Map<string, { id: string; last_sign_in_at: string | null }>();
+    for (let page = 1; page <= 20 && emails.size > userByEmail.size; page++) {
+      const { data: users, error: usersError } = await supabaseAdmin.auth.admin.listUsers({
+        page,
+        perPage: 1000,
+      });
+      if (usersError) throw new Error(usersError.message);
+      for (const u of users.users) {
+        const key = (u.email ?? "").toLowerCase();
+        if (emails.has(key)) userByEmail.set(key, { id: u.id, last_sign_in_at: u.last_sign_in_at ?? null });
       }
+      if (users.users.length < 1000) break;
+    }
+    const userIds = Array.from(userByEmail.values()).map((u) => u.id);
+    const activePkgUsers = new Set<string>();
+    if (userIds.length > 0) {
+      const { data: pkgs } = await supabaseAdmin
+        .from("customer_packages")
+        .select("user_id")
+        .in("user_id", userIds)
+        .eq("is_active", true);
+      for (const p of (pkgs ?? []) as any[]) activePkgUsers.add(p.user_id);
     }
 
     return (data ?? []).map((row: any) => {
-      const invite = inviteByEmail.get(String(row.email ?? "").toLowerCase());
-      return {
-        ...row,
-        performance_org_id: (organization as any).id,
-        performance_org_slug: (organization as any).slug,
-        performance_invite_status: invite?.status ?? null,
-        performance_invite_path: invite?.invite_token
-          ? `/${(organization as any).slug}/invite/${invite.invite_token}`
-          : null,
-      };
+      const user = userByEmail.get(String(row.email ?? "").toLowerCase());
+      let smart_status: SmartAccessStatus = "none";
+      if (user && activePkgUsers.has(user.id)) {
+        smart_status = user.last_sign_in_at ? "active" : "invited";
+      }
+      return { ...row, smart_user_id: user?.id ?? null, smart_status };
     });
   });
 
 export type ReviewContinentalResult =
-  | { ok: true; invite_path?: string | null; invite_status?: string | null }
+  | { ok: true; smart_invited?: boolean }
   | { ok: false; code: "capacity"; message: string };
 
 export const reviewContinentalApplication = createServerFn({ method: "POST" })
@@ -525,58 +539,24 @@ export const reviewContinentalApplication = createServerFn({ method: "POST" })
   .inputValidator((data: { id: string; decision: "approved" | "rejected" }) => data)
   .handler(async ({ data, context }): Promise<ReviewContinentalResult> => {
     await assertCoach(context.supabase, context.userId);
-    const organization = await ensureContinentalOrganization(context.supabase, context.userId);
-    const orgId = (organization as any).id as string;
-    const orgSlug = (organization as any).slug as string;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const { data: application, error: appError } = await supabaseAdmin
       .from("continental_challenge_applications")
-      .select("id, email, status")
+      .select("id, email, status, first_name, last_name, phone")
       .eq("id", data.id)
       .maybeSingle();
     if (appError) throw new Error(appError.message);
     if (!application) throw new Error("Bewerbung nicht gefunden.");
-
-    const email = String((application as any).email ?? "").toLowerCase().trim();
-    const currentInvite = await findLatestContinentalInvite(orgId, email);
-
-    if (data.decision === "rejected" && currentInvite?.status === "accepted") {
-      throw new Error(
-        "Die Person ist bereits der Performance-Organisation beigetreten. Entferne sie bei Bedarf direkt im Performance-Cockpit.",
-      );
-    }
-
-    let provisionedInvite:
-      | { id: string; token: string; status: string; created: boolean }
-      | null = null;
-    if (data.decision === "approved") {
-      provisionedInvite = await ensureContinentalAthleteInvite(orgId, email, context.userId);
-    }
 
     const { data: rpcData, error } = await supabaseAdmin.rpc("review_continental_application", {
       _id: data.id,
       _decision: data.decision,
       _reviewer: context.userId,
     });
-    if (error) {
-      if (provisionedInvite?.created) {
-        await supabaseAdmin
-          .from("organization_invites")
-          .update({ status: "revoked" as any })
-          .eq("id", provisionedInvite.id);
-      }
-      throw new Error(error.message);
-    }
-
+    if (error) throw new Error(error.message);
     const result = (rpcData ?? {}) as { ok?: boolean; code?: string };
     if (result.ok !== true) {
-      if (provisionedInvite?.created) {
-        await supabaseAdmin
-          .from("organization_invites")
-          .update({ status: "revoked" as any })
-          .eq("id", provisionedInvite.id);
-      }
       if (result.code === "capacity") {
         return {
           ok: false,
@@ -587,20 +567,35 @@ export const reviewContinentalApplication = createServerFn({ method: "POST" })
       throw new Error("Bewerbung konnte nicht aktualisiert werden.");
     }
 
-    if (data.decision === "rejected" && currentInvite?.status === "pending") {
-      await supabaseAdmin
-        .from("organization_invites")
-        .update({ status: "revoked" as any })
-        .eq("id", currentInvite.id);
+    const email = String((application as any).email ?? "").toLowerCase().trim();
+    if (data.decision === "approved") {
+      const res = await provisionContinentalSmartAccess(application as any);
+      return { ok: true, smart_invited: res.invited };
     }
+    await deactivateContinentalSmartAccess(email);
+    await revokeContinentalPerformanceInvites(email);
+    return { ok: true };
+  });
 
-    return data.decision === "approved" && provisionedInvite
-      ? {
-          ok: true,
-          invite_status: provisionedInvite.status,
-          invite_path: `/${orgSlug}/invite/${provisionedInvite.token}`,
-        }
-      : { ok: true };
+/** Smart-Zugang für bereits angenommene Bewerbungen einrichten bzw. Einladung erneut senden. */
+export const sendContinentalSmartAccess = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { id: string }) => data)
+  .handler(async ({ data, context }) => {
+    await assertCoach(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: application, error } = await supabaseAdmin
+      .from("continental_challenge_applications")
+      .select("id, email, status, first_name, last_name, phone")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!application) throw new Error("Bewerbung nicht gefunden.");
+    if ((application as any).status !== "approved") {
+      throw new Error("Nur angenommene Bewerbungen erhalten einen Smart-Zugang.");
+    }
+    const res = await provisionContinentalSmartAccess(application as any, { resend: true });
+    return { ok: true, invited: res.invited };
   });
 
 export const updateContinentalApplicationNotes = createServerFn({ method: "POST" })
