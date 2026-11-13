@@ -785,17 +785,22 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
 
     // Zutaten aus den gespeicherten Mengen haben immer Vorrang vor alten
     // KI-Textmengen — so können Zutatenliste und Makros nicht auseinanderlaufen.
-    if (!data.force && structuredLines && cachedSteps.length > 0) {
-      if (cached.join("\n") !== structuredLines.join("\n")) {
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        await supabaseAdmin
-          .from("nutrition_plan_meals")
-          .update({ recipe_ingredients: structuredLines })
-          .eq("id", meal.id);
-      }
+    // Zubereitungsschritte gehören zu genau einer Zutatenliste. Weicht die
+    // gespeicherte Rezept-Zutatenliste von den echten Zutaten ab, waren die
+    // Schritte für andere Zutaten geschrieben (z. B. „Schinkenwürfel", die gar
+    // nicht im Plan/auf der Einkaufsliste stehen) — dann neu erzeugen.
+    if (
+      !data.force &&
+      structuredLines &&
+      cachedSteps.length > 0 &&
+      cached.join("\n") === structuredLines.join("\n") &&
+      // Vor diesem Zeitpunkt wurden Schritte ohne feste Zutatenliste erzeugt
+      // und die Liste nachträglich ersetzt — solche Schritte neu erzeugen.
+      String((meal as any).recipe_generated_at ?? "") >= "2026-11-13T14:00:00"
+    ) {
       return { ingredients: structuredLines, steps: cachedSteps, cached: true, ...macroPayload() };
     }
-    if (!data.force && partnerIngredientSplit && cached.length > 0) {
+    if (!data.force && !structuredLines && partnerIngredientSplit && cached.length > 0) {
       return {
         ingredients: partnerIngredientSplit,
         steps: cachedSteps,
@@ -803,7 +808,7 @@ export const generateMealRecipe = createServerFn({ method: "POST" })
         ...macroPayload(),
       };
     }
-    if (!data.force && !skipCache && cached.length > 0) {
+    if (!data.force && !structuredLines && !skipCache && cached.length > 0) {
       return {
         ingredients: partnerIngredientSplit ?? fixLabels(cached),
         steps: cachedSteps,
@@ -857,6 +862,15 @@ Mahlzeit: ${meal.name}${meal.description ? ` — ${meal.description}` : ""}
 ${!partnerBlock && macros ? `Zielwerte (Pflicht, ±10 %): ${macros}` : ""}
 ${partnerBlock}
 ${onePersonBlock}
+${
+  structuredLines
+    ? `
+FESTE ZUTATENLISTE (verbindlich, entspricht Plan und Einkaufsliste):
+${structuredLines.map((l) => `- ${l}`).join("\n")}
+
+Die Zubereitungsschritte dürfen AUSSCHLIESSLICH diese Zutaten verwenden. Erwähne KEINE weiteren Lebensmittel (kein zusätzliches Öl, Fleisch, Schinken, Käse, Kartoffeln o. Ä.). Erlaubt sind nur zusätzlich Wasser, Salz, Pfeffer und trockene Gewürze/Kräuter. Gib im Feld "ingredients" genau diese Liste zurück.`
+    : ""
+}
 
 KRITISCH — die Mengen MÜSSEN zu den Zielwerten passen:
 - Rechne intern jede Zutat mit USDA/DGE-Werten zusammen und prüfe, dass die Summe ≈ Zielwerte ergibt, BEVOR du antwortest. Wenn nicht: Mengen anpassen.
