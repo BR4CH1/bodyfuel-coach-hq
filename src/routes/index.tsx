@@ -14,6 +14,8 @@ export const Route = createFileRoute("/")({
           "BodyFuel verbindet Ernährung, Training, Tracking und Fortschritt in einer App. Smart 7 Tage kostenlos testen oder persönliche 1:1-Begleitung im Coaching nutzen.",
       },
       { property: "og:title", content: "BODYFUEL — Dein Ziel. Ein System. Jeden Tag." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       {
         property: "og:description",
         content:

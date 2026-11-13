@@ -43,6 +43,8 @@ export const Route = createFileRoute("/smart/")({
           "Ernährung, Training und Fortschritt automatisch organisiert. 7 Tage gratis testen — ohne Zahlungsdaten.",
       },
       { property: "og:url", content: "https://bodyfuel-coaching.com/smart" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [{ rel: "canonical", href: "https://bodyfuel-coaching.com/smart" }],
   }),
@@ -510,6 +512,7 @@ function SmartFooter() {
         <Link to="/"><BrandLogo /></Link>
         <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-white/45">
           <Link to="/">Homepage</Link>
+          <Link to="/ratgeber">Ratgeber</Link>
           <Link to="/impressum">Impressum</Link>
           <Link to="/datenschutz">Datenschutz</Link>
           <span>© {new Date().getFullYear()} BodyFuel Coaching</span>

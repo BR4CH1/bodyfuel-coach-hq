@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { guides } from "@/lib/ratgeber-content";
 
 const BASE_URL = "https://bodyfuel-coaching.com";
 // Nur öffentliche, für Besucher gedachte Seiten (keine Login-/App-Bereiche).
-const PUBLIC_PATHS = ["/", "/smart", "/trial", "/continental-challenge", "/trust", "/impressum", "/datenschutz"];
+const PUBLIC_PATHS = ["/", "/smart", "/trial", "/continental-challenge", "/trust", "/impressum", "/datenschutz", "/ratgeber", ...guides.map(guide => `/ratgeber/${guide.slug}`)];
 
 export const Route = createFileRoute("/sitemap.xml")({
   server: {

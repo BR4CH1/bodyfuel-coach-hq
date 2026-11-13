@@ -107,6 +107,8 @@ import { Route as NutritionTrackingRouteImport } from './routes/nutrition.tracki
 import { Route as OnboardingSmartRouteImport } from './routes/onboarding.smart'
 import { Route as OnboardingSmartNutritionRouteImport } from './routes/onboarding.smart-nutrition'
 import { Route as OnboardingSmartStartRouteImport } from './routes/onboarding.smart-start'
+import { Route as RatgeberIndexRouteImport } from './routes/ratgeber.index'
+import { Route as RatgeberSlugRouteImport } from './routes/ratgeber.$slug'
 import { Route as SmartIndexRouteImport } from './routes/smart.index'
 import { Route as SmartSignupRouteImport } from './routes/smart.signup'
 import { Route as SmartTrialRouteImport } from './routes/smart.trial'
@@ -668,6 +670,16 @@ const OnboardingSmartStartRoute = OnboardingSmartStartRouteImport.update({
   path: '/onboarding/smart-start',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RatgeberIndexRoute = RatgeberIndexRouteImport.update({
+  id: '/ratgeber/',
+  path: '/ratgeber/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RatgeberSlugRoute = RatgeberSlugRouteImport.update({
+  id: '/ratgeber/$slug',
+  path: '/ratgeber/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SmartIndexRoute = SmartIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -1116,6 +1128,7 @@ export interface FileRoutesByFullPath {
   '/onboarding/smart': typeof OnboardingSmartRoute
   '/onboarding/smart-nutrition': typeof OnboardingSmartNutritionRoute
   '/onboarding/smart-start': typeof OnboardingSmartStartRoute
+  '/ratgeber/$slug': typeof RatgeberSlugRoute
   '/smart/signup': typeof SmartSignupRoute
   '/smart/trial': typeof SmartTrialRoute
   '/tracker/app': typeof TrackerAppRouteWithChildren
@@ -1127,6 +1140,7 @@ export interface FileRoutesByFullPath {
   '/coach-tools/': typeof CoachToolsIndexRoute
   '/coach/': typeof CoachIndexRoute
   '/nutrition/': typeof NutritionIndexRoute
+  '/ratgeber/': typeof RatgeberIndexRoute
   '/smart/': typeof SmartIndexRoute
   '/tracker/': typeof TrackerIndexRoute
   '/$orgSlug/athletic/$sessionId': typeof OrgSlugAthleticSessionIdRoute
@@ -1272,6 +1286,7 @@ export interface FileRoutesByTo {
   '/onboarding/smart': typeof OnboardingSmartRoute
   '/onboarding/smart-nutrition': typeof OnboardingSmartNutritionRoute
   '/onboarding/smart-start': typeof OnboardingSmartStartRoute
+  '/ratgeber/$slug': typeof RatgeberSlugRoute
   '/smart/signup': typeof SmartSignupRoute
   '/smart/trial': typeof SmartTrialRoute
   '/tracker/login': typeof TrackerLoginRoute
@@ -1282,6 +1297,7 @@ export interface FileRoutesByTo {
   '/coach-tools': typeof CoachToolsIndexRoute
   '/coach': typeof CoachIndexRoute
   '/nutrition': typeof NutritionIndexRoute
+  '/ratgeber': typeof RatgeberIndexRoute
   '/smart': typeof SmartIndexRoute
   '/tracker': typeof TrackerIndexRoute
   '/$orgSlug/athletic/$sessionId': typeof OrgSlugAthleticSessionIdRoute
@@ -1435,6 +1451,7 @@ export interface FileRoutesById {
   '/onboarding/smart': typeof OnboardingSmartRoute
   '/onboarding/smart-nutrition': typeof OnboardingSmartNutritionRoute
   '/onboarding/smart-start': typeof OnboardingSmartStartRoute
+  '/ratgeber/$slug': typeof RatgeberSlugRoute
   '/smart/signup': typeof SmartSignupRoute
   '/smart/trial': typeof SmartTrialRoute
   '/tracker/app': typeof TrackerAppRouteWithChildren
@@ -1446,6 +1463,7 @@ export interface FileRoutesById {
   '/coach-tools/': typeof CoachToolsIndexRoute
   '/coach/': typeof CoachIndexRoute
   '/nutrition/': typeof NutritionIndexRoute
+  '/ratgeber/': typeof RatgeberIndexRoute
   '/smart/': typeof SmartIndexRoute
   '/tracker/': typeof TrackerIndexRoute
   '/$orgSlug/athletic/$sessionId': typeof OrgSlugAthleticSessionIdRoute
@@ -1602,6 +1620,7 @@ export interface FileRouteTypes {
     | '/onboarding/smart'
     | '/onboarding/smart-nutrition'
     | '/onboarding/smart-start'
+    | '/ratgeber/$slug'
     | '/smart/signup'
     | '/smart/trial'
     | '/tracker/app'
@@ -1613,6 +1632,7 @@ export interface FileRouteTypes {
     | '/coach-tools/'
     | '/coach/'
     | '/nutrition/'
+    | '/ratgeber/'
     | '/smart/'
     | '/tracker/'
     | '/$orgSlug/athletic/$sessionId'
@@ -1758,6 +1778,7 @@ export interface FileRouteTypes {
     | '/onboarding/smart'
     | '/onboarding/smart-nutrition'
     | '/onboarding/smart-start'
+    | '/ratgeber/$slug'
     | '/smart/signup'
     | '/smart/trial'
     | '/tracker/login'
@@ -1768,6 +1789,7 @@ export interface FileRouteTypes {
     | '/coach-tools'
     | '/coach'
     | '/nutrition'
+    | '/ratgeber'
     | '/smart'
     | '/tracker'
     | '/$orgSlug/athletic/$sessionId'
@@ -1920,6 +1942,7 @@ export interface FileRouteTypes {
     | '/onboarding/smart'
     | '/onboarding/smart-nutrition'
     | '/onboarding/smart-start'
+    | '/ratgeber/$slug'
     | '/smart/signup'
     | '/smart/trial'
     | '/tracker/app'
@@ -1931,6 +1954,7 @@ export interface FileRouteTypes {
     | '/coach-tools/'
     | '/coach/'
     | '/nutrition/'
+    | '/ratgeber/'
     | '/smart/'
     | '/tracker/'
     | '/$orgSlug/athletic/$sessionId'
@@ -2049,11 +2073,13 @@ export interface RootRouteChildren {
   OnboardingSmartRoute: typeof OnboardingSmartRoute
   OnboardingSmartNutritionRoute: typeof OnboardingSmartNutritionRoute
   OnboardingSmartStartRoute: typeof OnboardingSmartStartRoute
+  RatgeberSlugRoute: typeof RatgeberSlugRoute
   TrackerAppRoute: typeof TrackerAppRouteWithChildren
   TrackerLoginRoute: typeof TrackerLoginRoute
   TrackerSignupRoute: typeof TrackerSignupRoute
   ZugangTokenRoute: typeof ZugangTokenRoute
   BullsIndexRoute: typeof BullsIndexRoute
+  RatgeberIndexRoute: typeof RatgeberIndexRoute
   TrackerIndexRoute: typeof TrackerIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -2763,6 +2789,20 @@ declare module '@tanstack/react-router' {
       path: '/onboarding/smart-start'
       fullPath: '/onboarding/smart-start'
       preLoaderRoute: typeof OnboardingSmartStartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ratgeber/': {
+      id: '/ratgeber/'
+      path: '/ratgeber'
+      fullPath: '/ratgeber/'
+      preLoaderRoute: typeof RatgeberIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ratgeber/$slug': {
+      id: '/ratgeber/$slug'
+      path: '/ratgeber/$slug'
+      fullPath: '/ratgeber/$slug'
+      preLoaderRoute: typeof RatgeberSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/smart/': {
@@ -3580,11 +3620,13 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingSmartRoute: OnboardingSmartRoute,
   OnboardingSmartNutritionRoute: OnboardingSmartNutritionRoute,
   OnboardingSmartStartRoute: OnboardingSmartStartRoute,
+  RatgeberSlugRoute: RatgeberSlugRoute,
   TrackerAppRoute: TrackerAppRouteWithChildren,
   TrackerLoginRoute: TrackerLoginRoute,
   TrackerSignupRoute: TrackerSignupRoute,
   ZugangTokenRoute: ZugangTokenRoute,
   BullsIndexRoute: BullsIndexRoute,
+  RatgeberIndexRoute: RatgeberIndexRoute,
   TrackerIndexRoute: TrackerIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,

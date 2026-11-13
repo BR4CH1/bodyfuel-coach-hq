@@ -29,6 +29,7 @@ import nutritionMacrosAsset from "@/assets/nutrition-macros.jpeg.asset.json";
 import nutritionTrackerAsset from "@/assets/nutrition-tracker.jpeg.asset.json";
 import manuCoachAsset from "@/assets/manu-coach.png.asset.json";
 import { Button } from "@/components/ui/button";
+import { GuideTeasers } from "@/components/ratgeber/GuidePages";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -149,6 +150,7 @@ export function LandingPageV3() {
         <PricingSection />
         <OutcomeStrip />
         <FaqAndCtaSection />
+        <GuideTeasers />
         <ContactSection />
       </main>
       <Footer />
@@ -739,7 +741,7 @@ function Footer() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid gap-10 md:grid-cols-[1.4fr_1fr_1fr]">
           <div><BrandLogo /><p className="mt-4 max-w-sm text-sm leading-6 text-white/45">Dein Ziel. Ein System. Jeden Tag.</p></div>
-          <FooterCol title="BodyFuel"><a href="#system">System</a><a href="#ablauf">So funktioniert&apos;s</a><a href="#wege">Smart oder Coaching</a><a href="#preise">Preise</a><Link to="/app">Login</Link></FooterCol>
+          <FooterCol title="BodyFuel"><a href="#system">System</a><a href="#ablauf">So funktioniert&apos;s</a><a href="#wege">Smart oder Coaching</a><a href="#preise">Preise</a><Link to="/ratgeber">Ratgeber</Link><Link to="/app">Login</Link></FooterCol>
           <FooterCol title="Kontakt & Rechtliches">
             <a href="mailto:info@bodyfuel-coaching.com" className="inline-flex items-center gap-2"><Mail className="h-3.5 w-3.5" /> info@bodyfuel-coaching.com</a>
             <a href="https://instagram.com/bodyfuel_coaching" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2"><Instagram className="h-3.5 w-3.5" /> @bodyfuel_coaching</a>
