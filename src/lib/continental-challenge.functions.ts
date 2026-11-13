@@ -8,7 +8,6 @@
  */
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { PUBLIC_APP_ORIGIN } from "@/lib/auth-flow.logic";
 
 export const CONTINENTAL_MAX_APPROVED = 25;
 export const CONTINENTAL_ORG_SLUG = "continental";
@@ -170,7 +169,6 @@ async function provisionContinentalSmartAccess(
   const firstName = application.first_name.trim().split(/\s+/)[0] ?? "";
   const lastName = application.last_name.trim();
   const displayName = [firstName, lastName].filter(Boolean).join(" ");
-  const origin = PUBLIC_APP_ORIGIN;
 
   const existing = await findAuthUserByEmail(email);
   let userId: string;
@@ -179,22 +177,8 @@ async function provisionContinentalSmartAccess(
     userId = existing.id;
     const neverSignedIn = !existing.last_sign_in_at;
     if (opts.resend || neverSignedIn) {
-      if (neverSignedIn) {
-        const { error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-          redirectTo: `${origin}/welcome`,
-        });
-        if (error) {
-          const { error: resetError } = await supabaseAdmin.auth.resetPasswordForEmail(email, {
-            redirectTo: `${origin}/welcome`,
-          });
-          if (resetError) throw new Error(resetError.message);
-        }
-      } else {
-        const { error } = await supabaseAdmin.auth.resetPasswordForEmail(email, {
-          redirectTo: `${origin}/welcome`,
-        });
-        if (error) throw new Error(error.message);
-      }
+      const { sendAccountSetupEmail } = await import("@/lib/account-setup.server");
+      await sendAccountSetupEmail(userId, email, firstName);
       invited = true;
     }
   } else {
@@ -206,8 +190,10 @@ async function provisionContinentalSmartAccess(
       status: "converted",
       message: `${CONTINENTAL_PACKAGE_MARKER} Teilnahme freigegeben`,
     } as any);
-    const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-      data: {
+    const { data, error } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      email_confirm: true,
+      user_metadata: {
         display_name: displayName,
         first_name: firstName,
         last_name: lastName,
@@ -216,10 +202,11 @@ async function provisionContinentalSmartAccess(
         created_via: "coach",
         role: "client",
       },
-      redirectTo: `${origin}/welcome`,
     });
     if (error) throw new Error(error.message);
     userId = data.user.id;
+    const { sendAccountSetupEmail } = await import("@/lib/account-setup.server");
+    await sendAccountSetupEmail(userId, email, firstName);
     invited = true;
   }
 

@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_setup_tokens: {
+        Row: {
+          created_at: string
+          email: string
+          last_used_at: string | null
+          token: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          last_used_at?: string | null
+          token: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          last_used_at?: string | null
+          token?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       achievements: {
         Row: {
           category: string

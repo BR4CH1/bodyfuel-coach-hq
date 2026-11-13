@@ -107,7 +107,10 @@
     "@types/node": "^22.16.5",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
+    "@types/web-push": "3.6.4",
     "@vitejs/plugin-react": "^5.0.4",
+    "drizzle-kit": "0.x",
+    "drizzle-orm": "0.x",
     "eslint": "^9.32.0",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-prettier": "^5.2.6",
@@ -115,12 +118,12 @@
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^15.15.0",
     "nitro": "3.0.260603-beta",
+    "postgres": "^4.1.1",
     "prettier": "^3.7.3",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
     "vite": "^7.3.1",
-    "vitest": "^4.1.10",
-    "@types/web-push": "3.6.4"
+    "vitest": "^4.1.10"
   },
   "pnpm": {
     "overrides": {

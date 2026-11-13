@@ -113,6 +113,7 @@ import { Route as TrackerIndexRouteImport } from './routes/tracker.index'
 import { Route as TrackerAppRouteImport } from './routes/tracker.app'
 import { Route as TrackerLoginRouteImport } from './routes/tracker.login'
 import { Route as TrackerSignupRouteImport } from './routes/tracker.signup'
+import { Route as ZugangTokenRouteImport } from './routes/zugang.$token'
 import { Route as OrgSlugAthleticSessionIdRouteImport } from './routes/$orgSlug.athletic.$sessionId'
 import { Route as OrgSlugInviteTokenRouteImport } from './routes/$orgSlug.invite.$token'
 import { Route as OrgSlugNutritionIndexRouteImport } from './routes/$orgSlug.nutrition.index'
@@ -696,6 +697,11 @@ const TrackerSignupRoute = TrackerSignupRouteImport.update({
   path: '/tracker/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ZugangTokenRoute = ZugangTokenRouteImport.update({
+  id: '/zugang/$token',
+  path: '/zugang/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OrgSlugAthleticSessionIdRoute =
   OrgSlugAthleticSessionIdRouteImport.update({
     id: '/athletic/$sessionId',
@@ -1108,6 +1114,7 @@ export interface FileRoutesByFullPath {
   '/tracker/app': typeof TrackerAppRouteWithChildren
   '/tracker/login': typeof TrackerLoginRoute
   '/tracker/signup': typeof TrackerSignupRoute
+  '/zugang/$token': typeof ZugangTokenRoute
   '/$orgSlug/': typeof OrgSlugIndexRoute
   '/bulls/': typeof BullsIndexRoute
   '/coach-tools/': typeof CoachToolsIndexRoute
@@ -1261,6 +1268,7 @@ export interface FileRoutesByTo {
   '/smart/trial': typeof SmartTrialRoute
   '/tracker/login': typeof TrackerLoginRoute
   '/tracker/signup': typeof TrackerSignupRoute
+  '/zugang/$token': typeof ZugangTokenRoute
   '/$orgSlug': typeof OrgSlugIndexRoute
   '/bulls': typeof BullsIndexRoute
   '/coach-tools': typeof CoachToolsIndexRoute
@@ -1423,6 +1431,7 @@ export interface FileRoutesById {
   '/tracker/app': typeof TrackerAppRouteWithChildren
   '/tracker/login': typeof TrackerLoginRoute
   '/tracker/signup': typeof TrackerSignupRoute
+  '/zugang/$token': typeof ZugangTokenRoute
   '/$orgSlug/': typeof OrgSlugIndexRoute
   '/bulls/': typeof BullsIndexRoute
   '/coach-tools/': typeof CoachToolsIndexRoute
@@ -1588,6 +1597,7 @@ export interface FileRouteTypes {
     | '/tracker/app'
     | '/tracker/login'
     | '/tracker/signup'
+    | '/zugang/$token'
     | '/$orgSlug/'
     | '/bulls/'
     | '/coach-tools/'
@@ -1741,6 +1751,7 @@ export interface FileRouteTypes {
     | '/smart/trial'
     | '/tracker/login'
     | '/tracker/signup'
+    | '/zugang/$token'
     | '/$orgSlug'
     | '/bulls'
     | '/coach-tools'
@@ -1902,6 +1913,7 @@ export interface FileRouteTypes {
     | '/tracker/app'
     | '/tracker/login'
     | '/tracker/signup'
+    | '/zugang/$token'
     | '/$orgSlug/'
     | '/bulls/'
     | '/coach-tools/'
@@ -2027,6 +2039,7 @@ export interface RootRouteChildren {
   TrackerAppRoute: typeof TrackerAppRouteWithChildren
   TrackerLoginRoute: typeof TrackerLoginRoute
   TrackerSignupRoute: typeof TrackerSignupRoute
+  ZugangTokenRoute: typeof ZugangTokenRoute
   BullsIndexRoute: typeof BullsIndexRoute
   TrackerIndexRoute: typeof TrackerIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
@@ -2779,6 +2792,13 @@ declare module '@tanstack/react-router' {
       path: '/tracker/signup'
       fullPath: '/tracker/signup'
       preLoaderRoute: typeof TrackerSignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/zugang/$token': {
+      id: '/zugang/$token'
+      path: '/zugang/$token'
+      fullPath: '/zugang/$token'
+      preLoaderRoute: typeof ZugangTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/$orgSlug/athletic/$sessionId': {
@@ -3542,6 +3562,7 @@ const rootRouteChildren: RootRouteChildren = {
   TrackerAppRoute: TrackerAppRouteWithChildren,
   TrackerLoginRoute: TrackerLoginRoute,
   TrackerSignupRoute: TrackerSignupRoute,
+  ZugangTokenRoute: ZugangTokenRoute,
   BullsIndexRoute: BullsIndexRoute,
   TrackerIndexRoute: TrackerIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
