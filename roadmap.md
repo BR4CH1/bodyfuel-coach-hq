@@ -1,5 +1,5 @@
 # Continentale Challenge starten
-- [ ] Tagesziele und Challenge-Zeitraumpunkte im bestehenden Coach-Menüpunkt ergänzen und mit echtem Konto prüfen.
+- [x] Tagesziele und Challenge-Zeitraumpunkte im bestehenden Coach-Menüpunkt ergänzt; acht echte Teilnehmer, Datumsfilter, Handyansicht und 15 Tests geprüft.
 - [x] Challenge-Zuordnung und separates Ranking repariert; alle acht freigegebenen Teilnehmer zugeordnet, mit Teilnehmerkonto geprüft.
 - [x] Tagescheck-Button in beiden Dashboard-Ansichten auf die Punkte-Checkliste geführt; zwölf Tests und Handyprüfung bestanden.
 - [x] Mailtext mit bestätigten Regeln zur Freigabe vorbereitet; noch nichts versendet.
