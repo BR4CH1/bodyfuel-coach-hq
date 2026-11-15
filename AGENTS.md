@@ -5,3 +5,4 @@
 - Landing testimonials read only the consented, approved, non-hidden public review view; never substitute invented reviews or expose the private base table.
 - Account setup emails must check suppression and attach a stored, unused unsubscribe token before enqueueing; the email service rejects transactional payloads without it.
 - Challenge ranking isolation belongs in the authenticated get_ranking database function using existing user_groups; this keeps participant filtering enforced server-side without duplicating point storage.
+- Coach challenge progress derives date-windowed task scores from existing daily_checks through the coach-authorized application list; no parallel point ledger is maintained.

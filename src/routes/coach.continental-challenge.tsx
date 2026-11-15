@@ -5,6 +5,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { CheckCircle2, Clock3, Copy, Flag, Users, XCircle } from "lucide-react";
 import { AppLayout } from "@/components/bodyfuel/AppLayout";
+import { ContinentalProgress } from "@/components/bodyfuel/ContinentalProgress";
+import type { ChallengeCheck } from "@/lib/continental-progress.logic";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -29,7 +31,14 @@ import {
 } from "@/lib/continental-challenge.functions";
 
 export const Route = createFileRoute("/coach/continental-challenge")({
-  head: () => ({ meta: [{ title: "Continentale Bewerbungen — BODYFUEL" }] }),
+  head: () => ({ meta: [
+    { title: "Continentale Challenge-Dashboard — BODYFUEL" },
+    { name: "description", content: "Teilnehmer, Tagesziele und Bewerbungen der Continentale × BodyFuel Challenge." },
+    { property: "og:title", content: "Continentale Challenge-Dashboard — BODYFUEL" },
+    { property: "og:description", content: "Die Challenge-Übersicht für BodyFuel-Coaches." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: () => (
     <AppLayout>
       <ContinentalApplicationsPage />
@@ -64,6 +73,7 @@ type ApplicationRow = {
   created_at: string;
   smart_user_id: string | null;
   smart_status: "none" | "invited" | "active";
+  challenge_checks?: ChallengeCheck[];
 };
 
 
@@ -99,9 +109,10 @@ function ContinentalApplicationsPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [notesDraft, setNotesDraft] = useState("");
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["continental-applications"],
     queryFn: () => listFn(),
+    refetchInterval: 60000,
   });
 
   const applications = (data ?? []) as ApplicationRow[];
@@ -164,7 +175,7 @@ function ContinentalApplicationsPage() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Coach</p>
-          <h1 className="font-display text-3xl font-bold">Continentale Bewerbungen</h1>
+          <h1 className="font-display text-3xl font-bold">Continentale Challenge</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Bewerbungen für die 30-Tage-Challenge prüfen und freigeben.
             Maximal {CONTINENTAL_MAX_APPROVED} Plätze.
@@ -172,6 +183,9 @@ function ContinentalApplicationsPage() {
         </div>
       </div>
 
+      <ContinentalProgress participants={applications} loading={isLoading} error={error?.message ?? null} refresh={() => { void refetch(); }} />
+
+      <h2 className="font-display text-2xl font-bold">Bewerbungen</h2>
       <div className="rounded-xl border border-border bg-card p-4 text-sm">
         <div className="font-semibold">Teilnehmer bekommen regulär BodyFuel Smart</div>
         <p className="mt-1 text-muted-foreground">

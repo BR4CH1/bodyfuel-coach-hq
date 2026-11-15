@@ -500,7 +500,21 @@ export const listContinentalApplications = createServerFn({ method: "GET" })
     }
     const userIds = Array.from(userByEmail.values()).map((u) => u.id);
     const activePkgUsers = new Set<string>();
+    const checksByUser = new Map<string, { check_date: string; tasks: unknown }[]>();
     if (userIds.length > 0) {
+      const { CHALLENGE_FIRST_DAY, CHALLENGE_END_EXCLUSIVE } = await import("@/lib/continental-progress.logic");
+      const { data: checks, error: checksError } = await supabaseAdmin
+        .from("daily_checks")
+        .select("user_id, check_date, tasks")
+        .in("user_id", userIds)
+        .gte("check_date", CHALLENGE_FIRST_DAY)
+        .lt("check_date", CHALLENGE_END_EXCLUSIVE);
+      if (checksError) throw new Error(`Tagesziele konnten nicht geladen werden: ${checksError.message}`);
+      for (const check of checks ?? []) {
+        const existing = checksByUser.get(check.user_id) ?? [];
+        existing.push({ check_date: check.check_date, tasks: check.tasks });
+        checksByUser.set(check.user_id, existing);
+      }
       const { data: pkgs } = await supabaseAdmin
         .from("customer_packages")
         .select("user_id")
@@ -515,7 +529,7 @@ export const listContinentalApplications = createServerFn({ method: "GET" })
       if (user && activePkgUsers.has(user.id)) {
         smart_status = user.last_sign_in_at ? "active" : "invited";
       }
-      return { ...row, smart_user_id: user?.id ?? null, smart_status };
+      return { ...row, smart_user_id: user?.id ?? null, smart_status, challenge_checks: row.status === "approved" && user ? checksByUser.get(user.id) ?? [] : [] };
     });
   });
 
