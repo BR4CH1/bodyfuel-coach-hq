@@ -1,7 +1,8 @@
 # Continentale Challenge starten
-- [ ] Challenge-Zuordnung und separates Ranking reparieren; bestehende Teilnehmer zuordnen.
-- [ ] Tagescheck-Button auf die Punkte-Checkliste führen und Regeln prüfen.
-- [ ] Mailtext mit bestätigten Regeln zur Freigabe zeigen; Versand wartet auf Freigabe.
+- [x] Challenge-Zuordnung und separates Ranking repariert; alle acht freigegebenen Teilnehmer zugeordnet, mit Teilnehmerkonto geprüft.
+- [x] Tagescheck-Button in beiden Dashboard-Ansichten auf die Punkte-Checkliste geführt; zwölf Tests und Handyprüfung bestanden.
+- [x] Mailtext mit bestätigten Regeln zur Freigabe vorbereitet; noch nichts versendet.
+- [ ] Versand nach Textfreigabe und Klärung eines geeigneten Versandwegs für die Teilnehmerliste.
 
 # Ratgeber für BodyFuel
 - [x] Drei quellenbasierte Ratgeber erstellen.
