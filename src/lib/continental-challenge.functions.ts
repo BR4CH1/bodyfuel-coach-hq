@@ -211,9 +211,10 @@ async function provisionContinentalSmartAccess(
   }
 
   // Kundenrolle sicherstellen (Ranking zählt Rolle client).
-  await supabaseAdmin
+  const { error: roleError } = await supabaseAdmin
     .from("user_roles")
     .upsert({ user_id: userId, role: "client" } as any, { onConflict: "user_id,role" } as any);
+  if (roleError) throw new Error(roleError.message);
 
   const { data: profile } = await supabaseAdmin
     .from("profiles")
@@ -254,11 +255,12 @@ async function provisionContinentalSmartAccess(
     if (pkgErr) throw new Error(pkgErr.message);
   }
 
-  await supabaseAdmin
+  const { error: groupError } = await supabaseAdmin
     .from("user_groups")
-    .upsert({ user_id: userId, group_name: CONTINENTAL_GROUP } as any, {
+    .upsert({ user_id: userId, group_name: CONTINENTAL_GROUP }, {
       onConflict: "user_id,group_name",
-    } as any);
+    });
+  if (groupError) throw new Error(`Challenge-Zuordnung fehlgeschlagen: ${groupError.message}`);
 
   await revokeContinentalPerformanceInvites(email);
   return { user_id: userId, invited };

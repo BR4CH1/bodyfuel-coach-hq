@@ -54,7 +54,14 @@ import {
 } from "@/lib/bodyfuel/data";
 
 export const Route = createFileRoute("/dashboard")({
-  head: () => ({ meta: [{ title: "Dashboard — BODYFUEL" }] }),
+  head: () => ({ meta: [
+    { title: "Dashboard — BODYFUEL" },
+    { name: "description", content: "Deine BodyFuel-Tagesziele, Pläne und persönlichen Fortschritte." },
+    { property: "og:title", content: "Dashboard — BODYFUEL" },
+    { property: "og:description", content: "Deine Tagesziele, Pläne und Fortschritte bei BodyFuel." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: () => (
     <AppLayout>
       <DashboardContent />
@@ -131,10 +138,10 @@ function DashboardContent() {
           <h1 className="font-display text-3xl font-bold sm:text-4xl">Hey {greetingName} 👋</h1>
         </div>
         <Link
-          to="/check-in"
+          to="/daily-checklist"
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-gold px-5 py-3 text-sm font-semibold text-primary-foreground shadow-gold transition hover:opacity-90"
         >
-          Tagescheck starten <ArrowRight className="h-4 w-4" />
+          Tagesziele abhaken <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
 
@@ -840,6 +847,7 @@ function PendingPaymentBanner({ userId }: { userId: string }) {
 }
 
 const QUICK_ACTIONS = [
+  { key: "daily", to: "/daily-checklist", label: "Tagesziele abhaken", Icon: ListChecks },
   { key: "training", to: "/training", label: "Training eintragen", Icon: Dumbbell },
   { key: "measurement", to: "/measurements", label: "Messung eintragen", Icon: Plus },
 ] as const;

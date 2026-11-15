@@ -1,3 +1,8 @@
+# Continentale Challenge starten
+- [ ] Challenge-Zuordnung und separates Ranking reparieren; bestehende Teilnehmer zuordnen.
+- [ ] Tagescheck-Button auf die Punkte-Checkliste führen und Regeln prüfen.
+- [ ] Mailtext mit bestätigten Regeln zur Freigabe zeigen; Versand wartet auf Freigabe.
+
 # Ratgeber für BodyFuel
 - [x] Drei quellenbasierte Ratgeber erstellen.
 - [x] Übersicht, interne Links und Sitemap ergänzen.

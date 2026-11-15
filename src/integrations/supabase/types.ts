@@ -10778,7 +10778,7 @@ export type Database = {
       unaccent: { Args: { "": string }; Returns: string }
     }
     Enums: {
-      app_group: "bulls" | "running_team" | "sgz" | "premium"
+      app_group: "bulls" | "running_team" | "sgz" | "premium" | "continental"
       app_role: "coach" | "client" | "free" | "platform_owner"
       bulls_goal: "fat_loss" | "muscle_gain" | "performance" | "general_fitness"
       bulls_point_category:
@@ -11000,7 +11000,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_group: ["bulls", "running_team", "sgz", "premium"],
+      app_group: ["bulls", "running_team", "sgz", "premium", "continental"],
       app_role: ["coach", "client", "free", "platform_owner"],
       bulls_goal: ["fat_loss", "muscle_gain", "performance", "general_fitness"],
       bulls_point_category: [

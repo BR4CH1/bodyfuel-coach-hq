@@ -15,6 +15,13 @@
       "when": 1794607550593,
       "tag": "0001_restore_consented_public_reviews",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794742747797,
+      "tag": "0002_continental_ranking_group",
+      "breakpoints": true
     }
   ]
 }

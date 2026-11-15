@@ -15,7 +15,14 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/ranking")({
-  head: () => ({ meta: [{ title: "Ranking — BODYFUEL" }] }),
+  head: () => ({ meta: [
+    { title: "Ranking — BODYFUEL" },
+    { name: "description", content: "Deine Punkte und Platzierung im BodyFuel-Community- oder Challenge-Ranking." },
+    { property: "og:title", content: "Ranking — BODYFUEL" },
+    { property: "og:description", content: "Punkte und Platzierungen in der BodyFuel-Community." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: RankingRoute,
 });
 
@@ -39,21 +46,22 @@ const SORTS: { key: SortKey; label: string; icon: any }[] = [
 ];
 
 function RankingPage() {
-  const { supabaseUser } = useSession();
+  const { supabaseUser, hasGroup } = useSession();
+  const isContinental = hasGroup("continental");
   const qc = useQueryClient();
   const rankingFn = useServerFn(getRanking);
   const nickFn = useServerFn(getMyNickname);
   const setNickFn = useServerFn(setMyNickname);
 
   const { data: myNick, isLoading: nickLoading } = useQuery({
-    queryKey: ["my-nickname"],
+    queryKey: ["my-nickname", supabaseUser?.id],
     queryFn: () => nickFn(),
   });
 
   const needsNickname = !nickLoading && !myNick?.nickname;
 
   const { data, isLoading } = useQuery({
-    queryKey: ["ranking"],
+    queryKey: ["ranking", supabaseUser?.id, isContinental],
     queryFn: () => rankingFn(),
     enabled: !needsNickname,
   });
@@ -92,10 +100,10 @@ function RankingPage() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-xs uppercase tracking-[0.2em] text-gold">Community</p>
-        <h1 className="font-display text-3xl font-bold sm:text-4xl">Ranking</h1>
+        <p className="text-xs uppercase tracking-[0.2em] text-gold">{isContinental ? "Continentale × BodyFuel" : "Community"}</p>
+        <h1 className="font-display text-3xl font-bold sm:text-4xl">{isContinental ? "Challenge-Ranking" : "Ranking"}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Vergleiche dich anonym mit anderen Coaching-Mitgliedern. Du erscheinst nur mit deinem Nickname.
+          {isContinental ? "Nur Teilnehmer der Continentale Challenge. Du erscheinst mit deinem Nickname." : "Vergleiche dich anonym mit anderen Coaching-Mitgliedern. Du erscheinst nur mit deinem Nickname."}
         </p>
       </div>
 
@@ -134,7 +142,9 @@ function RankingPage() {
         <>
           <div className="flex flex-wrap gap-2">
             {SORTS.map(({ key, label, icon: Icon }) => (
-              <button
+              <Button
+                variant="outline"
+                size="sm"
                 key={key}
                 onClick={() => setSort(key)}
                 className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
@@ -145,7 +155,7 @@ function RankingPage() {
               >
                 <Icon className="h-3.5 w-3.5" />
                 {label}
-              </button>
+              </Button>
             ))}
           </div>
 
