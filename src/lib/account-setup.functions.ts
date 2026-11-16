@@ -50,6 +50,6 @@ export const requestAccountSetupLink = createServerFn({ method: "POST" })
     if (!user) return { ok: true };
     const { sendAccountSetupEmail } = await import("@/lib/account-setup.server");
     const first = String(user.user_metadata?.first_name ?? "").split(/\s+/)[0] || undefined;
-    await sendAccountSetupEmail(user.id, data.email, first, "/");
+    await sendAccountSetupEmail(user.id, data.email, first, "/", "reset");
     return { ok: true };
   });

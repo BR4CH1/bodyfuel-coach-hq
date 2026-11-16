@@ -178,7 +178,7 @@ async function provisionContinentalSmartAccess(
     const neverSignedIn = !existing.last_sign_in_at;
     if (opts.resend || neverSignedIn) {
       const { sendAccountSetupEmail } = await import("@/lib/account-setup.server");
-      await sendAccountSetupEmail(userId, email, firstName);
+      await sendAccountSetupEmail(userId, email, firstName, "/welcome", "smart");
       invited = true;
     }
   } else {
@@ -206,7 +206,7 @@ async function provisionContinentalSmartAccess(
     if (error) throw new Error(error.message);
     userId = data.user.id;
     const { sendAccountSetupEmail } = await import("@/lib/account-setup.server");
-    await sendAccountSetupEmail(userId, email, firstName);
+    await sendAccountSetupEmail(userId, email, firstName, "/welcome", "smart");
     invited = true;
   }
 

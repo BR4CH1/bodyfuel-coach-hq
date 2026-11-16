@@ -356,7 +356,7 @@ export const createCustomer = createServerFn({ method: "POST" })
       await supabaseAdmin.from("profiles").update(profileUpdate).eq("id", newUserId);
       if (!data.skip_invite) {
         const { sendAccountSetupEmail } = await import("@/lib/account-setup.server");
-        await sendAccountSetupEmail(newUserId, email, firstName);
+        await sendAccountSetupEmail(newUserId, email, firstName, "/welcome", isFree ? "invite" : "coaching");
       }
     } else if (data.skip_invite) {
       // Silent anlegen (z.B. Influencer) – kein Invite-Mail.
@@ -395,7 +395,7 @@ export const createCustomer = createServerFn({ method: "POST" })
       if (invErr) throw new Error(invErr.message);
       newUserId = invited.user.id;
       const { sendAccountSetupEmail } = await import("@/lib/account-setup.server");
-      await sendAccountSetupEmail(newUserId, email, firstName, isFree ? "/tracker/app" : "/welcome");
+      await sendAccountSetupEmail(newUserId, email, firstName, isFree ? "/tracker/app" : "/welcome", isFree ? "invite" : "coaching");
     }
 
     if (isFree) {
@@ -864,7 +864,7 @@ export const sendPasswordReset = createServerFn({ method: "POST" })
     if (!email) throw new Error("Kein E-Mail-Account gefunden");
 
     const { sendAccountSetupEmail } = await import("@/lib/account-setup.server");
-    await sendAccountSetupEmail(data.user_id, email);
+    await sendAccountSetupEmail(data.user_id, email, undefined, "/welcome", "reset");
     return { ok: true };
   });
 

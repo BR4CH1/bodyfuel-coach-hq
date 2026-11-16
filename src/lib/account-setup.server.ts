@@ -8,19 +8,15 @@ const FROM_DOMAIN = "bodyfuel-coaching.com";
 const APP_URL = "https://bodyfuel-coaching.com";
 
 /** Erzeugt (oder nutzt) einen dauerhaft gültigen Einrichtungslink und verschickt ihn. */
-export async function sendAccountSetupEmail(userId: string, email: string, firstName?: string, next = "/welcome") {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const normalizedEmail = email.trim().toLowerCase();
-  const { data: suppressed, error: suppressionError } = await supabaseAdmin
-    .from("suppressed_emails").select("id").eq("email", normalizedEmail).limit(1).maybeSingle();
-  if (suppressionError) throw new Error("E-Mail-Versand konnte nicht geprüft werden.");
-  if (suppressed) throw new Error("Diese E-Mail-Adresse ist für den Versand gesperrt.");
+export type AccountSetupKind = "invite" | "smart" | "coaching" | "reset";
 
+/** Liefert einen gespeicherten, unbenutzten Abmelde-Token (erstellt ihn bei Bedarf). */
+export async function getUnsubscribeToken(supabaseAdmin: any, normalizedEmail: string): Promise<string> {
   const { data: existingUnsubscribe, error: lookupError } = await supabaseAdmin
     .from("email_unsubscribe_tokens").select("token, used_at").eq("email", normalizedEmail).maybeSingle();
   if (lookupError) throw new Error("E-Mail konnte nicht vorbereitet werden.");
   if (existingUnsubscribe?.used_at) throw new Error("Diese E-Mail-Adresse hat sich vom Versand abgemeldet.");
-  let unsubscribeToken = existingUnsubscribe?.token;
+  let unsubscribeToken: string | undefined = existingUnsubscribe?.token;
   if (!unsubscribeToken) {
     const bytes = crypto.getRandomValues(new Uint8Array(32));
     const candidate = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
@@ -32,6 +28,18 @@ export async function sendAccountSetupEmail(userId: string, email: string, first
     if (readError || !stored?.token || stored.used_at) throw new Error("E-Mail konnte nicht vorbereitet werden.");
     unsubscribeToken = stored.token;
   }
+  return unsubscribeToken as string;
+}
+
+export async function sendAccountSetupEmail(userId: string, email: string, firstName?: string, next = "/welcome", kind: AccountSetupKind = "invite") {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const normalizedEmail = email.trim().toLowerCase();
+  const { data: suppressed, error: suppressionError } = await supabaseAdmin
+    .from("suppressed_emails").select("id").eq("email", normalizedEmail).limit(1).maybeSingle();
+  if (suppressionError) throw new Error("E-Mail-Versand konnte nicht geprüft werden.");
+  if (suppressed) throw new Error("Diese E-Mail-Adresse ist für den Versand gesperrt.");
+
+  const unsubscribeToken = await getUnsubscribeToken(supabaseAdmin, normalizedEmail);
   const { data: existing } = await supabaseAdmin
     .from("account_setup_tokens").select("token").eq("user_id", userId).maybeSingle();
   let token = (existing as any)?.token as string | undefined;
@@ -42,7 +50,7 @@ export async function sendAccountSetupEmail(userId: string, email: string, first
     if (error) throw new Error(error.message);
   }
   const tpl = TEMPLATES["account-setup"];
-  const payload = { firstName, setupUrl: `${APP_URL}/zugang/${token}${next !== "/welcome" ? `?next=${encodeURIComponent(next)}` : ""}` };
+  const payload = { firstName, kind, setupUrl: `${APP_URL}/zugang/${token}${next !== "/welcome" ? `?next=${encodeURIComponent(next)}` : ""}` };
   const element = React.createElement(tpl.component, payload);
   const html = await render(element);
   const text = await render(element, { plainText: true });

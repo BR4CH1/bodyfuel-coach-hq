@@ -104,6 +104,14 @@ export const startGuardianConsent = createServerFn({ method: "POST" })
     const subject = typeof tpl.subject === "function" ? tpl.subject(payload) : tpl.subject;
     const idempotencyKey = `guardian-consent:${userId}:${token.token}`;
 
+    const { getUnsubscribeToken } = await import("@/lib/account-setup.server");
+    let unsubscribeToken: string;
+    try {
+      unsubscribeToken = await getUnsubscribeToken(supabaseAdmin, data.guardianEmail.trim().toLowerCase());
+    } catch (e: any) {
+      return { ok: false, isMinor: true, error: e?.message ?? "E-Mail konnte nicht vorbereitet werden." };
+    }
+
     await supabaseAdmin.from("email_send_log").insert({
       message_id: idempotencyKey,
       template_name: "guardian-consent",
@@ -111,11 +119,12 @@ export const startGuardianConsent = createServerFn({ method: "POST" })
       status: "pending",
     });
 
-    await supabaseAdmin.rpc("enqueue_email", {
+    const { error: enqueueError } = await supabaseAdmin.rpc("enqueue_email", {
       queue_name: "transactional_emails",
       payload: {
         message_id: idempotencyKey,
-        to: data.guardianEmail,
+        to: data.guardianEmail.trim().toLowerCase(),
+        unsubscribe_token: unsubscribeToken,
         from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
         sender_domain: SENDER_DOMAIN,
         subject,
@@ -126,7 +135,8 @@ export const startGuardianConsent = createServerFn({ method: "POST" })
         idempotency_key: idempotencyKey,
         queued_at: new Date().toISOString(),
       },
-    });
+    } as any);
+    if (enqueueError) return { ok: false, isMinor: true, error: "E-Mail konnte nicht versendet werden." };
 
     return { ok: true, isMinor: true };
   });
