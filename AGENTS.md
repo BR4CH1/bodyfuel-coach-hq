@@ -1,6 +1,7 @@
 # Architecture rules
 
 - Food catalogue corrections use explicitly reviewed source-record mappings with before-value snapshots; energy plausibility flags never overwrite source kcal, and historical logs remain untouched.
+- Reusing a linked food suggestion and saving a food draft must revalidate its current catalogue values; source-review exclusions must not be bypassed by historical snapshots.
 
 - Nutrition archive reactivation uses the existing transitionPlanStatus function and a pure scheduling helper; keep meals, ingredient amounts and targets untouched to preserve the original plan.
 - Public nutrition guides use a browser-safe content catalogue shared by article routes and the existing sitemap; this keeps published article URLs and search metadata consistent without accessing customer data.

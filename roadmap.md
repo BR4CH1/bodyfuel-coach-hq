@@ -2,6 +2,7 @@
 - [x] Alle 372 zentralen Lebensmittel geprüft; alternative Lebensmittelbestände sind leer.
 - [x] 238 eindeutig zugeordnete Lebensmittel mit offizieller BLS-4.0-Datei abgeglichen; 134 nicht belegbare Einträge zur Quellenprüfung aus neuen Katalogtreffern ausgeschlossen. Historische Logs unangetastet, vorherige Werte gesichert.
 - [x] 248 Fachtests bestanden, alle 372 gespeicherten Ergebnisse abgeglichen und idempotenter Verwaltungsablauf auf Desktop/Handy geprüft.
+- [x] Tatsächliche Suche und Portionsanzeige auf Desktop/Handy geprüft; Wiederverwendung verknüpfter Favoriten/Tracking-Vorschläge und Speichern alter Entwürfe gegen aktuelle Katalogwerte abgesichert.
 - [ ] 134 verbleibende Quellenprüfungen abschließen: eindeutige Produktetiketten bzw. passende Quellen mit belegter 100-ml-Basis/Dichte fehlen; keine Werte schätzen.
 
 # Continentale Challenge starten

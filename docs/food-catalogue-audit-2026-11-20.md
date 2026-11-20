@@ -19,6 +19,7 @@ Die Zuordnungen, verwendeten Nährwerte und ursprünglichen Werte stehen in `src
 - Leinsamen und zahlreiche weitere generische Lebensmittel hatten voneinander abweichende, nicht durch echte Quellencodes belegte Werte.
 - Die Anzeigeprüfung ersetzte bislang widersprüchliche kcal durch eine Berechnung aus möglicherweise ebenfalls falschen Makros. Sie markiert jetzt nur Prüfbedarf und bewahrt die Quellenenergie und Dezimalpräzision.
 - Live-Etikettimporte akzeptieren keine Energie ohne explizite 100-g-/100-ml-Basis, keine unvollständigen Hauptmakros und keine starke Energieabweichung; explizite 100-ml-Werte werden nicht mit 100-g-Werten gemischt.
+- Wiederverwendung aus Favoriten und zuletzt getrackten Einträgen lädt bei verknüpften Katalog-IDs aktuelle, nicht gesperrte Werte. Auch beim Speichern werden veraltete Entwürfe erneut geprüft; die Originaleinträge bleiben unverändert.
 
 ## Offene Quellenprüfung
 Insbesondere Marken-/Proteinprodukte, unspezifische Mischgerichte, spezifische Reissorten und Flüssigkeiten benötigen exakt passende Daten. BLS stellt Werte pro 100 g bereit: ohne belastbaren Dichtenachweis werden daraus keine vermeintlich verifizierten 100-ml-Werte. Eine mathematisch plausible Zahl ist kein Nachweis ihrer sachlichen Richtigkeit.
@@ -28,3 +29,4 @@ Insbesondere Marken-/Proteinprodukte, unspezifische Mischgerichte, spezifische R
 - 248 Fachtests bestanden, darunter 13 neue Quellendaten-/Importtests und acht Energieprüfungen.
 - Owner-autorisierter Verwaltungsablauf mit realem Konto ausgeführt und erneut ausgeführt: keine Doppeländerungen, 372 geprüft / 238 abgeglichen / 134 offen, keine Seitenfehler.
 - Handyansicht 402 × 874 ohne horizontalen Überlauf geprüft. Nicht veröffentlicht; Datenänderungen gelten bereits im gemeinsamen Backend.
+- Zusätzlicher realer Trackingweg: Hinzufügen → Suche „Pfeffer“ → Auswahl → 150-g-Portion zeigt 456 kcal, 16,4 g Protein, 69,1 g Kohlenhydrate und 4,2 g Fett auf Desktop und Handy. Keine Testportion in das echte Ernährungstagebuch geschrieben.

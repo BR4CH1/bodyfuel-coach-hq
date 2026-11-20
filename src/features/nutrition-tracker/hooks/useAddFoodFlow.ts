@@ -26,6 +26,7 @@ const LAST_PORTION_KEY = "bf.nutritionTracker.lastMealPortion";
 
 import {
   estimateFoodFromText,
+  getCatalogueFoodForTracking,
   lookupBarcode,
   searchFoodsDb,
   type FoodResult,
@@ -91,6 +92,7 @@ export function useAddFoodFlow({
   const searchDbFn = useServerFn(searchFoodsDb);
   const lookupFn = useServerFn(lookupBarcode);
   const estimateFn = useServerFn(estimateFoodFromText);
+  const currentFoodFn = useServerFn(getCatalogueFoodForTracking);
 
   const draftKey = userId ? `bf.nutritionTracker.add.${userId}.${date}.v1` : null;
   useFormDraft(draftKey, { openMeal, query, picking, unit, amountStr, source }, (draft) => {
@@ -246,9 +248,14 @@ export function useAddFoodFlow({
     [favIndex, favorites, userId],
   );
 
-  const pickFood = useCallback((food: FoodResult, options?: FoodPickOptions) => {
+  const pickFood = useCallback(async (candidate: FoodResult, options?: FoodPickOptions) => {
+    let food = candidate;
+    if (candidate.id) {
+      try { food = await currentFoodFn({ data: { id: candidate.id } }); }
+      catch (error) { toast.error(error instanceof Error ? error.message : "Lebensmittel konnte nicht geprüft werden"); return; }
+    }
     setPicking(food);
-    setUnit(options?.unit ?? food.unit);
+    setUnit(food.unit);
     const preset = piecePresetFor(food);
     if (preset && !options?.amount) {
       setAmountMode("piece");
@@ -256,8 +263,9 @@ export function useAddFoodFlow({
       return;
     }
     setAmountMode("unit");
-    setAmountStr(options?.amount ?? "100");
-  }, []);
+    // A legacy ml portion cannot become the same numeric amount in g.
+    setAmountStr(options?.unit && options.unit !== food.unit ? "100" : options?.amount ?? "100");
+  }, [currentFoodFn]);
 
   const changeAmountMode = useCallback(
     (mode: FoodAmountMode) => {
@@ -521,6 +529,17 @@ export function useAddFoodFlow({
 
   const addPicked = useCallback(async () => {
     if (!picking || !openMeal || !userId) return;
+    if (picking.id) {
+      try {
+        const current = await currentFoodFn({ data: { id: picking.id } });
+        if (current.unit !== picking.unit || ["kcal_per_100g", "protein_per_100g", "carbs_per_100g", "fat_per_100g"].some((key) => current[key as keyof FoodResult] !== picking[key as keyof FoodResult])) {
+          setPicking(current);
+          setUnit(current.unit);
+          toast.info("Nährwerte wurden aktualisiert. Bitte Menge und Werte vor dem Eintragen erneut prüfen.");
+          return;
+        }
+      } catch (error) { toast.error(error instanceof Error ? error.message : "Quellenprüfung fehlgeschlagen"); return; }
+    }
     const amount = parseFoodAmount(amountStr);
     if (!Number.isFinite(amount) || amount <= 0) {
       toast.error("Bitte gültige Menge eingeben");
@@ -572,7 +591,7 @@ export function useAddFoodFlow({
     setOpenMeal(null);
     clearFormDraft(draftKey);
     toast.success("Eintrag hinzugefügt");
-  }, [amountMode, amountStr, date, draftKey, openMeal, picking, setEntries, unit, userId]);
+  }, [amountMode, amountStr, date, draftKey, openMeal, picking, setEntries, unit, userId, currentFoodFn]);
 
   return {
     openMeal,

@@ -52,9 +52,9 @@ export function FoodNutritionLine({ food }: { food: NutritionFood & { energy_fla
       {food.energy_flagged && (
         <span
           className="ml-1 rounded bg-destructive/10 px-1 py-0.5 text-[10px] font-medium text-destructive"
-          title="kcal des Datensatzes waren unplausibel und wurden aus den Makros berechnet."
+          title="Kalorien und Makros sind widersprüchlich; die Originalquelle muss geprüft werden."
         >
-          kcal korrigiert
+          Quelle prüfen
         </span>
       )}
     </div>

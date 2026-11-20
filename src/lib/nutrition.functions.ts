@@ -157,6 +157,18 @@ export async function runCatalogSearch(
 }
 
 /** Barcode-Lookup: erst interner Katalog, dann Open Food Facts (Markenprodukte). */
+export const getCatalogueFoodForTracking = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { id: string }) => input)
+  .handler(async ({ data, context }): Promise<FoodResult> => {
+    const { data: row, error } = await context.supabase.from("nutrition_foods_public")
+      .select(FOOD_SEARCH_SELECT).eq("id", data.id).eq("is_active", true)
+      .neq("audit_status", "needs_review").maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!row) throw new Error("Dieses Lebensmittel benötigt eine Quellenprüfung. Bitte ein geprüftes Lebensmittel oder das konkrete Produktetikett wählen.");
+    return mapNutritionFoodRow(row);
+  });
+
 export const lookupBarcode = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { barcode: string }) => d)
