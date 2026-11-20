@@ -1,10 +1,11 @@
 import manifest from "@/lib/data/food-catalogue-audit-2026-11-20.json";
+import { catalogueReviewRows, reviewedNutrientChanges } from "./food-catalogue-review.logic";
 
 /** Explicit source identity review; never infer a correction from macro arithmetic. */
 export async function applyFoodCatalogueAudit(admin: any) {
   const outcomes: { id: string; corrected: boolean; error?: string }[] = [];
-  for (let start = 0; start < manifest.rows.length; start += 12) {
-    await Promise.all(manifest.rows.slice(start, start + 12).map(async (row) => {
+  for (let start = 0; start < catalogueReviewRows.length; start += 12) {
+    await Promise.all(catalogueReviewRows.slice(start, start + 12).map(async (row) => {
       const { data: current, error: readError } = await admin.from("nutrition_foods")
         .select("*").eq("id", row.id).single();
       if (readError || !current) {
@@ -16,48 +17,35 @@ export async function applyFoodCatalogueAudit(admin: any) {
         outcomes.push({ id: row.id, corrected: false, error: "Produktetikett muss separat geprüft werden" });
         return;
       }
-      if (current.raw_data?.bodyfuel_source_audit?.date === manifest.audited_on) {
+      const previousAudit = current.raw_data?.bodyfuel_source_audit;
+      if ((previousAudit?.revision ?? previousAudit?.date) === row.revision) {
         outcomes.push({ id: row.id, corrected: row.status === "source_checked" });
         return;
       }
       const raw = current.raw_data && typeof current.raw_data === "object" ? current.raw_data : {};
       const audit = {
         date: manifest.audited_on,
+        revision: row.revision,
         status: row.status,
-        source_url: manifest.source_url,
-        bls_code: row.bls_code ?? null,
-        bls_name: row.bls_name ?? null,
+        source_url: row.source_url,
+        source_record: row.source_record,
+        source_food_name: row.source_food_name,
+        initial_audit: previousAudit ?? null,
         previous: current,
       };
-      const changes = row.status === "source_checked" && row.nutrients ? {
-        ...row.nutrients,
-        source: "bls_4_0",
-        // Distinct legacy identities retain their IDs and foreign-key references.
-        source_id: `${row.bls_code}:catalog:${row.id}`,
-        source_name: manifest.source_name,
-        citation: `${manifest.source_name}, ${row.bls_code}: ${row.bls_name}; ${manifest.source_url}`,
-        license: manifest.license,
-        source_verified: true,
-        source_updated_at: `${manifest.audited_on}T00:00:00Z`,
-        macro_reference_unit: "g",
-        unit_type: row.state === "cooked" ? "cooked" : "raw",
-        default_state: row.state,
-        density_g_per_ml: null,
-        volume_conversion_estimated: false,
-        needs_review: false,
-        review_reason: null,
-      } : {
+      const changes = reviewedNutrientChanges(row) ?? {
         needs_review: true,
         safe_for_smart: false,
         source_verified: false,
         // Not AUTO-AUDIT: the plausibility trigger must not erase source-review flags.
         review_reason: `[SOURCE-REVIEW ${manifest.audited_on}] ${row.reason}`,
       };
-      const { error } = await admin.from("nutrition_foods").update({
+      const { data: written, error } = await admin.from("nutrition_foods").update({
         ...changes,
         raw_data: { ...raw, bodyfuel_source_audit: audit },
-      }).eq("id", row.id).eq("updated_at", current.updated_at);
-      outcomes.push({ id: row.id, corrected: row.status === "source_checked", ...(error ? { error: error.message } : {}) });
+      }).eq("id", row.id).eq("updated_at", current.updated_at).select("id");
+      const writeError = error?.message ?? (written?.length === 1 ? null : "Eintrag zwischenzeitlich geändert; Quellenabgleich erneut starten");
+      outcomes.push({ id: row.id, corrected: row.status === "source_checked", ...(writeError ? { error: writeError } : {}) });
     }));
   }
   const errors = outcomes.filter((row) => row.error);

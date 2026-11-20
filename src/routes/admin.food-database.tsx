@@ -83,7 +83,7 @@ function FoodDatabaseAdminPage() {
           setErr(null);
           try {
             const result = await reconcile();
-            setAuditResult(`${result.reviewed} geprüft · ${result.corrected} mit BLS abgeglichen · ${result.needsSource} benötigen Originalquelle oder Etikett`);
+            setAuditResult(`${result.reviewed} geprüft · ${result.corrected} mit BLS/USDA abgeglichen · ${result.needsSource} benötigen Originalquelle oder Etikett`);
             await refresh();
           } catch (error) {
             setErr(error instanceof Error ? error.message : "Quellenabgleich fehlgeschlagen");

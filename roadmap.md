@@ -3,7 +3,8 @@
 - [x] 238 eindeutig zugeordnete Lebensmittel mit offizieller BLS-4.0-Datei abgeglichen; 134 nicht belegbare Einträge zur Quellenprüfung aus neuen Katalogtreffern ausgeschlossen. Historische Logs unangetastet, vorherige Werte gesichert.
 - [x] 248 Fachtests bestanden, alle 372 gespeicherten Ergebnisse abgeglichen und idempotenter Verwaltungsablauf auf Desktop/Handy geprüft.
 - [x] Tatsächliche Suche und Portionsanzeige auf Desktop/Handy geprüft; Wiederverwendung verknüpfter Favoriten/Tracking-Vorschläge und Speichern alter Entwürfe gegen aktuelle Katalogwerte abgesichert.
-- [ ] 134 verbleibende Quellenprüfungen abschließen: eindeutige Produktetiketten bzw. passende Quellen mit belegter 100-ml-Basis/Dichte fehlen; keine Werte schätzen.
+- [x] Alle 134 offenen Lebensmittel erneut geprüft; 23 weitere belegte BLS-/USDA-Korrekturen angewendet, 28 Tests bestanden und alle Ergebnisse rückgelesen. Einzelentscheidungen und Originalquellen dokumentiert; historische Logs unverändert.
+- [ ] 111 Lebensmittel freigeben: blockiert durch fehlende konkrete Produkt-/Rezept-/Variantenangaben, vollständige Quellenwerte oder belegte Dichte/100-g-Basis; weiterhin gesperrt, keine Schätzwerte.
 
 # Continentale Challenge starten
 - [x] Tagesziele und Challenge-Zeitraumpunkte im bestehenden Coach-Menüpunkt ergänzt; acht echte Teilnehmer, Datumsfilter, Handyansicht und 15 Tests geprüft.
