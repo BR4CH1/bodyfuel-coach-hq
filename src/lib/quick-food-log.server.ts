@@ -362,18 +362,9 @@ export async function buildReviewItems(input: {
     }),
   );
 
-  const missing = input.parsed
-    .map((p, index) => ({ index, name: p.food_name_de, brand: p.brand, liquid: p.is_liquid }))
-    .filter((_, i) => !matches[i]!.food || matches[i]!.score < 25);
-  if (missing.length) {
-    const est = await aiEstimateFoods(input.apiKey, missing).catch((e) => {
-      console.error("[quick-log] estimate failed", e);
-      return new Map<number, FoodRef>();
-    });
-    for (const m of missing) {
-      const ref = est.get(m.index);
-      if (ref) matches[m.index] = { food: ref, score: 30, brandMatched: false };
-    }
+  // Keine KI-Nährwertschätzung: ohne Katalogtreffer muss ein Lebensmittel gewählt werden.
+  for (let i = 0; i < matches.length; i++) {
+    if (matches[i]!.food && matches[i]!.score < 25) matches[i] = { food: null, score: 0, brandMatched: false };
   }
 
   let dateAdjusted = false;

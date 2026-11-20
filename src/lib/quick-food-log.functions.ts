@@ -203,20 +203,29 @@ export const commitFoodLog = createServerFn({ method: "POST" })
     if (draft.status === "committed") return { inserted: 0, alreadyCommitted: true };
 
     // Katalogwerte serverseitig neu laden — Browserwerte sind nicht die Wahrheit.
-    const ids = [...new Set(data.items.map((i) => i.food?.food_id).filter(Boolean) as string[])];
+    const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const ids = [...new Set(data.items.map((i) => i.food?.food_id).filter((id): id is string => !!id && UUID.test(id)))];
     const catalog = new Map<string, any>();
     if (ids.length) {
       const { data: rows } = await supabase
         .from("nutrition_foods")
-        .select("id,name,brand,unit_type,kcal_per_100g,protein_per_100g,carbs_per_100g,fat_per_100g")
+        .select("id,name,brand,is_active,audit_status,needs_review,unit_type,kcal_per_100g,protein_per_100g,carbs_per_100g,fat_per_100g")
         .in("id", ids);
       for (const r of rows ?? []) catalog.set(r.id, r);
     }
 
     const payload = data.items.map((it) => {
       if (!it.food) throw new Error(`„${it.label}" hat noch kein Lebensmittel.`);
+      if (it.food.source === "ai_estimate") throw new Error(`„${it.label}": bitte ein geprüftes Lebensmittel wählen.`);
       let food = { ...it.food, serving_g: null as number | null, verified: false };
       const row = it.food.food_id ? catalog.get(it.food.food_id) : null;
+      if (it.food.food_id && UUID.test(it.food.food_id) && !row) throw new Error(`„${it.label}" ist nicht mehr verfügbar – bitte neu wählen.`);
+      if (row && (!row.is_active || row.audit_status === "needs_review" || row.needs_review)) {
+        throw new Error(`„${row.name}" benötigt eine Quellenprüfung – bitte ein anderes Lebensmittel wählen.`);
+      }
+      if (row && (row.unit_type === "ml" ? "ml" : "g") !== it.unit) {
+        throw new Error(`„${row.name}": Einheit passt nicht (g/ml) – bitte Menge neu prüfen.`);
+      }
       if (row) {
         food = {
           ...food,

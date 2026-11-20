@@ -277,6 +277,7 @@ export function classifyConfidence(input: {
 
 /** Rote Positionen blockieren das Tracken, bis sie bestätigt wurden. */
 export function isBlocking(item: ReviewItem): boolean {
+  if (!item.food || item.food.source === "ai_estimate") return true;
   return item.confidence === "low" && !item.confirmed;
 }
 
