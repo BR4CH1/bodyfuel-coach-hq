@@ -4,7 +4,8 @@
 - [x] 248 Fachtests bestanden, alle 372 gespeicherten Ergebnisse abgeglichen und idempotenter Verwaltungsablauf auf Desktop/Handy geprüft.
 - [x] Tatsächliche Suche und Portionsanzeige auf Desktop/Handy geprüft; Wiederverwendung verknüpfter Favoriten/Tracking-Vorschläge und Speichern alter Entwürfe gegen aktuelle Katalogwerte abgesichert.
 - [x] Alle 134 offenen Lebensmittel erneut geprüft; 23 weitere belegte BLS-/USDA-Korrekturen angewendet, 28 Tests bestanden und alle Ergebnisse rückgelesen. Einzelentscheidungen und Originalquellen dokumentiert; historische Logs unverändert.
-- [ ] 111 Lebensmittel freigeben: blockiert durch fehlende konkrete Produkt-/Rezept-/Variantenangaben, vollständige Quellenwerte oder belegte Dichte/100-g-Basis; weiterhin gesperrt, keine Schätzwerte.
+- [x] Originalquellen aller 111 offenen Einträge selbstständig recherchiert (BLS, SR Legacy, Foundation Oktober 2026, FNDDS 2021–2023, Hersteller); 26 weitere freigegeben. Alle 27 neuen Entscheidungen rückgelesen, 37 Tests und Desktop-/Handyprüfung inklusive Wiederholen/Neuladen bestanden.
+- [ ] 85 Lebensmittel vollständig freigeben: konkrete Produkt-/Rezept-/Variantenangaben, vollständige widerspruchsfreie Quellenwerte oder belegte Dichte/100-g-Basis fehlen. Recherche pro Eintrag dokumentiert; keine Fremdvarianten, Schätzwerte oder erfundenen Dichten verwenden.
 
 # Continentale Challenge starten
 - [x] Tagesziele und Challenge-Zeitraumpunkte im bestehenden Coach-Menüpunkt ergänzt; acht echte Teilnehmer, Datumsfilter, Handyansicht und 15 Tests geprüft.

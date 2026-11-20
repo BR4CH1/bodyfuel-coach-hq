@@ -1,11 +1,13 @@
 import initial from "./data/food-catalogue-audit-2026-11-20.json";
 import followup from "./data/food-catalogue-followup-2026-11-20.json";
+import research from "./data/food-catalogue-research-2026-11-20.json";
 
 export const catalogueReviewRows = initial.rows.map((original) => {
-  const reviewed = followup.rows.find((row) => row.id === original.id);
+  const researched = research.rows.find((row) => row.id === original.id);
+  const reviewed = researched ?? followup.rows.find((row) => row.id === original.id);
   return reviewed ? {
     ...reviewed,
-    revision: followup.revision,
+    revision: researched ? research.revision : followup.revision,
     source: reviewed.source ?? "bls_4_0",
     source_record: reviewed.source_record ?? null,
     source_food_name: reviewed.source_food_name ?? null,

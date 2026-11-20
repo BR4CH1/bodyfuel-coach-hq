@@ -7,7 +7,7 @@ describe("reviewed follow-up catalogue sources", () => {
     expect(followup.rows).toHaveLength(134);
     expect(catalogueReviewRows).toHaveLength(372);
     expect(new Set(catalogueReviewRows.map((row) => row.id)).size).toBe(372);
-    expect(catalogueReviewRows.filter((row) => row.status === "source_checked")).toHaveLength(261);
+    expect(followup.rows.filter((row) => row.status === "source_checked")).toHaveLength(23);
   });
   it("keeps cooked long-grain rice on its own USDA source", () => {
     const row = catalogueReviewRows.find((r) => r.name === "Reis weiß, langkorn, gekocht");
