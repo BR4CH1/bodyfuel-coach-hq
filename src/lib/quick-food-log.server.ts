@@ -316,7 +316,7 @@ function customMealRef(meal: CustomMealRow): FoodRef | null {
 export type MatchResult = { food: FoodRef | null; score: number; brandMatched: boolean };
 
 export function pickBestMatch(
-  item: Pick<ParsedFoodItem, "food_name_de" | "brand">,
+  item: Pick<ParsedFoodItem, "food_name_de" | "brand"> & { phrase?: string | null },
   candidates: FoodResult[],
 ): MatchResult {
   if (!candidates.length) return { food: null, score: 0, brandMatched: false };
@@ -330,6 +330,14 @@ export function pickBestMatch(
     if (!best || s > best.s) best = { f, s, b };
   }
   if (!best || best.s <= -100) return { food: null, score: 0, brandMatched: false };
+  // Gesagtes Wort muss im Treffer vorkommen; sonst (z. B. „Glumpfibrot“ → „Brot“) nur unsicher vorschlagen.
+  const hay = normalizeFoodTerm(`${best.f.name} ${best.f.brand ?? ""}`);
+  const hayTokens = hay.split(/\s+/).filter((t) => t.length >= 4);
+  const STOP = new Set(["eine", "einen", "einem", "einer", "etwas", "paar", "halbe", "halben", "stueck", "stuck", "scheibe", "scheiben", "glas", "glaeser", "tasse", "becher", "portion", "schale", "flasche", "dose", "loeffel", "gramm", "liter", "heute", "gestern", "morgens", "mittags", "abends", "noch", "dazu", "ungefaehr", "circa", "grosse", "grossen", "kleine", "kleinen"]);
+  const words = normalizeFoodTerm(`${item.food_name_de} ${item.phrase ?? ""}`).split(/\s+/)
+    .filter((t) => t.length >= 4 && /^[a-z]+$/.test(t) && !STOP.has(t));
+  const known = (t: string) => hay.includes(t) || hayTokens.some((h) => t.startsWith(h) || h.startsWith(t));
+  if (words.some((t) => !known(t))) best.s = Math.min(best.s, 35);
   return { food: foodResultToRef(best.f), score: Math.max(0, Math.min(150, best.s)), brandMatched: best.b };
 }
 

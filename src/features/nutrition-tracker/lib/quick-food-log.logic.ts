@@ -154,10 +154,14 @@ export function resolveAmount(
 
   if (unit === "g" || unit === "ml") {
     if (q == null) return done(liquid ? DEFAULT_PORTION_ML : DEFAULT_PORTION_G, null, true);
+    // ml ↔ g ohne hinterlegte Dichte nur als markierte Annahme übernehmen.
+    if (unit !== target) return done(q, `${q} ${unit} ≈ ${q} ${target}`, true);
     return done(q, null, false);
   }
   if (unit === "kg" || unit === "l") {
     if (q == null) return done(1000, null, true);
+    const sameKind = (unit === "l") === (target === "ml");
+    if (!sameKind) return done(q * 1000, `${q} ${unit} ≈ ${q * 1000} ${target}`, true);
     return done(q * 1000, null, false);
   }
   if (unit === "stueck" || unit === "scheibe") {
