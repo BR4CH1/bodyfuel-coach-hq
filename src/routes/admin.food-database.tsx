@@ -1,18 +1,28 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { getFoodDatabaseStats } from "@/lib/food-database.functions";
+import { getFoodDatabaseStats, reconcileFoodCatalogue } from "@/lib/food-database.functions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Database, RefreshCw } from "lucide-react";
 
 export const Route = createFileRoute("/admin/food-database")({
-  head: () => ({ meta: [{ title: "Lebensmittel-Datenbank — Admin" }] }),
+  head: () => ({ meta: [
+    { title: "BodyFuel Lebensmittel – Quellenprüfung und Verwaltung" },
+    { name: "description", content: "BodyFuel Lebensmittelkatalog: geprüfte Nährwertquellen, Freigaben und offene Quellenprüfungen." },
+    { property: "og:title", content: "BodyFuel Lebensmittel – Quellenprüfung und Verwaltung" },
+    { property: "og:description", content: "Quellenbasierte Verwaltung des BodyFuel Lebensmittelkatalogs." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: FoodDatabaseAdminPage,
 });
 
 function FoodDatabaseAdminPage() {
   const load = useServerFn(getFoodDatabaseStats);
+  const reconcile = useServerFn(reconcileFoodCatalogue);
+  const [auditing, setAuditing] = useState(false);
+  const [auditResult, setAuditResult] = useState<string | null>(null);
   const [stats, setStats] = useState<Awaited<ReturnType<typeof getFoodDatabaseStats>> | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -65,6 +75,25 @@ function FoodDatabaseAdminPage() {
           {err}
         </div>
       )}
+
+      <section className="space-y-3 border-y border-border py-4" aria-label="Nährwert-Quellenabgleich">
+        <h2 className="font-semibold">Nährwert-Quellenabgleich · 20.11.2026</h2>
+        <Button variant="outline" disabled={auditing || loading || !!err} onClick={async () => {
+          setAuditing(true);
+          setErr(null);
+          try {
+            const result = await reconcile();
+            setAuditResult(`${result.reviewed} geprüft · ${result.corrected} mit BLS abgeglichen · ${result.needsSource} benötigen Originalquelle oder Etikett`);
+            await refresh();
+          } catch (error) {
+            setErr(error instanceof Error ? error.message : "Quellenabgleich fehlgeschlagen");
+          } finally { setAuditing(false); }
+        }}>
+          <RefreshCw className={`mr-2 h-4 w-4 ${auditing ? "animate-spin" : ""}`} />
+          {auditing ? "Quellenabgleich läuft…" : "Quellenabgleich anwenden"}
+        </Button>
+        {auditResult && <p role="status" className="text-sm text-muted-foreground">{auditResult}</p>}
+      </section>
 
       {stats && (
         <>

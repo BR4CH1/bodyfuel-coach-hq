@@ -14,7 +14,7 @@ describe("Nährwertvalidierung (EU 1169/2011)", () => {
     expect(result.kcal_per_100g).toBe(372);
   });
 
-  it("korrigiert das fehlerhafte Kölln-Haferflocken-Mapping (29 kcal)", () => {
+  it("markiert widersprüchliche 29 kcal, ohne aus möglicherweise falschen Makros neue kcal zu erfinden", () => {
     const result = checkFoodEnergy({
       kcal_per_100g: 29,
       protein_per_100g: 14,
@@ -23,7 +23,8 @@ describe("Nährwertvalidierung (EU 1169/2011)", () => {
     });
     expect(result.flagged).toBe(true);
     // 4*14 + 4*56 + 9*6.7 = 340.3
-    expect(result.kcal_per_100g).toBeCloseTo(340, 0);
+    expect(result.kcal_per_100g).toBe(29);
+    expect(result.corrected).toBe(false);
     expect(result.computed_kcal).toBe(340);
     expect(result.reason).toBeTruthy();
   });
@@ -40,14 +41,14 @@ describe("Nährwertvalidierung (EU 1169/2011)", () => {
     expect(result.flagged).toBe(false);
   });
 
-  it("flaggt nicht bei fehlenden Makros", () => {
+  it("markiert 250 kcal ohne passende Makros als ungeklärt", () => {
     const result = checkFoodEnergy({
       kcal_per_100g: 250,
       protein_per_100g: 0,
       carbs_per_100g: 0,
       fat_per_100g: 0,
     });
-    expect(result.flagged).toBe(false);
+    expect(result.flagged).toBe(true);
     expect(result.kcal_per_100g).toBe(250);
   });
 
@@ -72,6 +73,17 @@ describe("Nährwertvalidierung (EU 1169/2011)", () => {
     });
     expect(food.name).toBe("Kölln Blütenzarte Haferflocken");
     expect(food.energy_flagged).toBe(true);
-    expect(food.kcal_per_100g).toBeGreaterThan(300);
+    expect(food.kcal_per_100g).toBe(29);
+  });
+
+  it("bewahrt exakte Quellenwerte bis zur Anzeigerundung", () => {
+    expect(checkFoodEnergy({ kcal_per_100g: 48.41, protein_per_100g: 3.5, carbs_per_100g: 4.8, fat_per_100g: 1.5 }).kcal_per_100g).toBe(48.41);
+  });
+
+  it("erfindet keine kcal bei fehlender Quellenenergie", () => {
+    const result = checkFoodEnergy({ kcal_per_100g: null, protein_per_100g: 20, carbs_per_100g: 10, fat_per_100g: 5 });
+    expect(result.kcal_per_100g).toBe(0);
+    expect(result.flagged).toBe(true);
+    expect(result.corrected).toBe(false);
   });
 });

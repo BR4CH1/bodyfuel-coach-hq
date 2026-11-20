@@ -70,13 +70,18 @@ export function mapOffProduct(p: any): FoodResult | null {
   const n = p?.nutriments;
   if (!n) return null;
   const unit = detectUnit(p);
+  // OFF's conventional _100g keys describe the label's 100 g/100 ml basis.
+  // If explicit _100ml fields exist, never mix them with mass-based fields.
+  const basis = unit === "ml" && Object.keys(n).some((key) => key.endsWith("_100ml")) ? "100ml" : "100g";
   const per = (key: string) =>
-    Number(n[`${key}_100g`] ?? n[`${key}_100ml`] ?? 0) || 0;
-  const kcal =
-    Number(n["energy-kcal_100g"] ?? n["energy-kcal_100ml"] ?? n["energy-kcal"] ?? 0) || 0;
+    Number(n[`${key}_${basis}`]);
+  const kcal = per("energy-kcal");
   const protein = per("proteins");
   const carbs = per("carbohydrates");
   const fat = per("fat");
+  if (["energy-kcal", "proteins", "carbohydrates", "fat"].some((key) => n[`${key}_${basis}`] == null)) return null;
+  if (![kcal, protein, carbs, fat].every((v) => Number.isFinite(v) && v >= 0)) return null;
+  if (kcal > 900 || [protein, carbs, fat].some((v) => v > 100)) return null;
   // Qualitätsfilter: ohne kcal und ohne Makros ist der Datensatz wertlos.
   if (!kcal && !protein && !carbs && !fat) return null;
 
@@ -85,7 +90,7 @@ export function mapOffProduct(p: any): FoodResult | null {
   ).trim();
   if (!name) return null;
 
-  const fiber = n["fiber_100g"] ?? n["fiber_100ml"];
+  const fiber = n[`fiber_${basis}`];
   const energy = checkFoodEnergy({
     kcal_per_100g: kcal,
     protein_per_100g: protein,
@@ -93,6 +98,8 @@ export function mapOffProduct(p: any): FoodResult | null {
     fat_per_100g: fat,
     fiber_per_100g: fiber == null ? null : Number(fiber),
   });
+  // An inconsistent label must be reviewed, not silently converted to invented kcal.
+  if (energy.flagged) return null;
 
   const image_url = offImage(p);
   return {
@@ -107,11 +114,11 @@ export function mapOffProduct(p: any): FoodResult | null {
     carbs_per_100g: carbs,
     fat_per_100g: fat,
     fiber_per_100g: fiber == null ? null : Number(fiber),
-    sugar_per_100g: n["sugars_100g"] == null ? null : Number(n["sugars_100g"]),
+    sugar_per_100g: n[`sugars_${basis}`] == null ? null : per("sugars"),
     saturated_fat_per_100g:
-      n["saturated-fat_100g"] == null ? null : Number(n["saturated-fat_100g"]),
-    salt_per_100g: n["salt_100g"] == null ? null : Number(n["salt_100g"]),
-    sodium_mg_per_100g: n["sodium_100g"] == null ? null : Number(n["sodium_100g"]) * 1000,
+      n[`saturated-fat_${basis}`] == null ? null : per("saturated-fat"),
+    salt_per_100g: n[`salt_${basis}`] == null ? null : per("salt"),
+    sodium_mg_per_100g: n[`sodium_${basis}`] == null ? null : per("sodium") * 1000,
     serving_g: null,
     serving_label: `pro 100 ${unit}`,
     source: "open_food_facts",

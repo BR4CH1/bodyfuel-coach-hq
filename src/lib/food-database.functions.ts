@@ -86,3 +86,17 @@ export const getFoodDatabaseStats = createServerFn({ method: "GET" })
       recentRuns: (runsRes.data ?? []) as any[],
     };
   });
+
+/** One idempotent, owner-only source reconciliation; never touches user logs. */
+export const reconcileFoodCatalogue = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: isOwner, error } = await context.supabase.rpc("has_role", {
+      _user_id: context.userId,
+      _role: "platform_owner",
+    });
+    if (error || !isOwner) throw new Error("Forbidden");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { applyFoodCatalogueAudit } = await import("@/lib/food-catalogue-audit.server");
+    return applyFoodCatalogueAudit(supabaseAdmin);
+  });

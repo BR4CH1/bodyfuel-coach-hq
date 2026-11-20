@@ -3,8 +3,8 @@
  *
  * Regel: kcal je 100 g/ml müssen zu den Makros passen
  * (4*Protein + 4*Kohlenhydrate + 9*Fett, zzgl. Ballaststoffe/Alkohol/Polyole/Säuren).
- * Ist die Abweichung zu groß, wird der offensichtlich falsche kcal-Wert NICHT angezeigt,
- * sondern durch den berechneten Wert ersetzt und der Datensatz markiert.
+ * Abweichungen markieren einen Prüfbedarf, beweisen aber nicht, ob kcal oder
+ * Makros falsch sind. Quellenwerte werden deshalb niemals rechnerisch ersetzt.
  *
  * Bestehende Tracking-Einträge werden dadurch nicht verändert — die Korrektur
  * greift ausschließlich bei der Anzeige/Übernahme neuer Werte.
@@ -30,7 +30,7 @@ export type EnergyCheckResult = {
   computed_kcal: number;
   /** Prozentuale Abweichung zum berechneten Wert (0 wenn nicht berechenbar). */
   deviation_pct: number;
-  /** true, wenn der gelieferte kcal-Wert unplausibel war und ersetzt wurde. */
+  /** Quellenwerte werden nicht ersetzt; für bestehende Aufrufer beibehalten. */
   corrected: boolean;
   /** true, wenn der Datensatz als fehlerhaft markiert werden sollte. */
   flagged: boolean;
@@ -65,7 +65,7 @@ export function checkFoodEnergy(input: EnergyCheckInput): EnergyCheckResult {
 
   // Ohne Makros lässt sich nichts prüfen — Originalwert bleibt bestehen.
   if (computed <= 0) {
-    // Wasser, Salz, Gewürze: alle Werte explizit 0 → korrekt, keine Markierung.
+    // Nur vollständige, explizite Nullwerte (z. B. Wasser) sind prüfbar.
     const explicitZero =
       [input.kcal_per_100g, input.protein_per_100g, input.carbs_per_100g, input.fat_per_100g].every(
         (v) => v != null && Number.isFinite(Number(v)),
@@ -75,21 +75,21 @@ export function checkFoodEnergy(input: EnergyCheckInput): EnergyCheckResult {
       computed_kcal: 0,
       deviation_pct: 0,
       corrected: false,
-      flagged: kcal <= 0 && !explicitZero,
-      reason: kcal <= 0 && !explicitZero ? "Keine Nährwerte hinterlegt" : null,
+      flagged: !explicitZero,
+      reason: !explicitZero ? "Nährwerte unvollständig oder widersprüchlich – Quelle prüfen" : null,
     };
   }
 
 
-  // kcal fehlt komplett → aus Makros ableiten (sicherer Fallback).
+  // Fehlende kcal sind keine Erlaubnis, Quellenwerte zu erfinden.
   if (kcal <= 0) {
     return {
-      kcal_per_100g: computedRounded,
+      kcal_per_100g: kcal,
       computed_kcal: computedRounded,
       deviation_pct: 100,
-      corrected: true,
+      corrected: false,
       flagged: true,
-      reason: "kcal fehlten und wurden aus den Makros berechnet",
+      reason: "kcal fehlen – Originalquelle prüfen",
     };
   }
 
@@ -99,7 +99,7 @@ export function checkFoodEnergy(input: EnergyCheckInput): EnergyCheckResult {
 
   if (diff <= tolerance) {
     return {
-      kcal_per_100g: Math.round(kcal),
+      kcal_per_100g: kcal,
       computed_kcal: computedRounded,
       deviation_pct: deviation,
       corrected: false,
@@ -109,12 +109,12 @@ export function checkFoodEnergy(input: EnergyCheckInput): EnergyCheckResult {
   }
 
   return {
-    kcal_per_100g: computedRounded,
+    kcal_per_100g: kcal,
     computed_kcal: computedRounded,
     deviation_pct: deviation,
-    corrected: true,
+    corrected: false,
     flagged: true,
-    reason: `Energieabweichung ${deviation}% — kcal aus Makros berechnet`,
+    reason: `Energieabweichung ${deviation}% – kcal und Makros anhand der Originalquelle prüfen`,
   };
 }
 

@@ -59,7 +59,7 @@ function mapNutritionFoodRow(r: any): FoodResult {
 }
 
 const FOOD_SEARCH_SELECT =
-  "id,name,aliases,source,source_id,source_name,brand,barcode,image_url,image_source,kcal_per_100g,protein_per_100g,carbs_per_100g,fat_per_100g,fiber_per_100g,sugar_per_100g,saturated_fat_per_100g,salt_per_100g,sodium_mg_per_100g,verified_by_coach,unit_type,default_state,density_g_per_ml,is_active,safe_for_smart";
+  "id,name,aliases,source,source_id,source_name,brand,barcode,image_url,image_source,kcal_per_100g,protein_per_100g,carbs_per_100g,fat_per_100g,fiber_per_100g,sugar_per_100g,saturated_fat_per_100g,salt_per_100g,sodium_mg_per_100g,alcohol_per_100g,polyols_per_100g,organic_acids_per_100g,verified_by_coach,unit_type,default_state,density_g_per_ml,is_active,safe_for_smart";
 
 function dedupeFoodResults(results: FoodResult[]): FoodResult[] {
   const seen = new Set<string>();
