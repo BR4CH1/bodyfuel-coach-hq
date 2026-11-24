@@ -195,7 +195,7 @@ export const transitionPlanStatus = createServerFn({ method: "POST" })
       }
       await assertCoachOrOrgStaffForAthlete(context, plan.client_id, "nutrition");
       const { data: days, error: daysError } = await supabase.from("nutrition_plan_days")
-        .select("id, day_date, sort_order").eq("plan_id", plan.id);
+        .select("id, day_date, sort_order, name").eq("plan_id", plan.id);
       if (daysError) throw new Error(daysError.message);
       const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
       const schedule = buildNutritionReactivationSchedule({
@@ -213,7 +213,7 @@ export const transitionPlanStatus = createServerFn({ method: "POST" })
       const now = new Date().toISOString();
       try {
         for (const day of schedule.days) {
-          const { error } = await supabase.from("nutrition_plan_days").update({ day_date: day.day_date }).eq("id", day.id);
+          const { error } = await supabase.from("nutrition_plan_days").update({ day_date: day.day_date, name: day.name }).eq("id", day.id);
           if (error) throw new Error(error.message);
           changedDays.push(day.id);
         }
@@ -232,7 +232,7 @@ export const transitionPlanStatus = createServerFn({ method: "POST" })
         let rollbackFailed = false;
         for (const day of days ?? []) {
           if (!changedDays.includes(day.id)) continue;
-          const result = await supabase.from("nutrition_plan_days").update({ day_date: day.day_date }).eq("id", day.id);
+          const result = await supabase.from("nutrition_plan_days").update({ day_date: day.day_date, name: day.name }).eq("id", day.id);
           if (result.error) rollbackFailed = true;
         }
         for (const active of current ?? []) {

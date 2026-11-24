@@ -38,3 +38,12 @@ describe("archived nutrition plan schedule", () => {
     expect(() => buildNutritionReactivationSchedule({ ...base, start: "this_week", days: days.slice(0, 1), scheduled_end_date: "2026-09-28" })).toThrow("abgelaufen");
   });
 });
+import { relabelDatedDayName } from "../nutrition-plan-reactivation.logic";
+describe("relabelDatedDayName", () => {
+  it("updates old dated labels to the reactivated date", () => {
+    expect(relabelDatedDayName("Tag 2 · Di 17.11", "2026-11-24")).toBe("Tag 2 · Di 24.11");
+  });
+  it("leaves custom names untouched", () => {
+    expect(relabelDatedDayName("Trainingstag", "2026-11-24")).toBe("Trainingstag");
+  });
+});

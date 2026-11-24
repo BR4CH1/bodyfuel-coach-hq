@@ -1,5 +1,17 @@
 const DAY = 86_400_000;
-type Day = { id: string; day_date: string | null; sort_order: number };
+type Day = { id: string; day_date: string | null; sort_order: number; name?: string | null };
+const WD = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+const DATED_NAME = /^(Tag\s+\d+)\s*·\s*(Mo|Di|Mi|Do|Fr|Sa|So)\s+\d{1,2}\.\d{1,2}\.?(\d{2,4})?/;
+
+/** Rewrites generated day names like "Tag 2 · Di 17.11" to the new date; other names stay untouched. */
+export function relabelDatedDayName(name: string | null | undefined, isoDate: string): string | null | undefined {
+  if (!name) return name;
+  const m = DATED_NAME.exec(name);
+  if (!m) return name;
+  const d = new Date(`${isoDate}T00:00:00Z`);
+  const label = `${m[1]} · ${WD[d.getUTCDay()]} ${String(d.getUTCDate()).padStart(2, "0")}.${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+  return label + name.slice(m[0].length);
+}
 
 export function buildNutritionReactivationSchedule(input: {
   start: "this_week" | "next_week";
@@ -24,10 +36,10 @@ export function buildNutritionReactivationSchedule(input: {
   const targetMonday = monday(parse(input.today)) + (input.start === "next_week" ? 7 * DAY : 0);
   const start = oldStart == null ? targetMonday : targetMonday + (oldStart - monday(oldStart));
   const offset = oldStart == null ? 0 : start - oldStart;
-  const days = ordered.map((d, index) => ({
-    id: d.id,
-    day_date: iso(d.day_date ? parse(d.day_date) + offset : start + index * DAY),
-  }));
+  const days = ordered.map((d, index) => {
+    const day_date = iso(d.day_date ? parse(d.day_date) + offset : start + index * DAY);
+    return d.name === undefined ? { id: d.id, day_date } : { id: d.id, day_date, name: relabelDatedDayName(d.name, day_date) ?? null };
+  });
   const end = Math.max(
     start + (ordered.length - 1) * DAY,
     ...days.map((d) => parse(d.day_date)),
