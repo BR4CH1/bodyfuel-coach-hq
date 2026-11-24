@@ -213,7 +213,7 @@ export const transitionPlanStatus = createServerFn({ method: "POST" })
       const now = new Date().toISOString();
       try {
         for (const day of schedule.days) {
-          const { error } = await supabase.from("nutrition_plan_days").update({ day_date: day.day_date, name: day.name }).eq("id", day.id);
+          const { error } = await supabase.from("nutrition_plan_days").update({ day_date: day.day_date, ...("name" in day && day.name ? { name: day.name } : {}) }).eq("id", day.id);
           if (error) throw new Error(error.message);
           changedDays.push(day.id);
         }
