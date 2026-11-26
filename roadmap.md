@@ -30,3 +30,7 @@
 - [x] Gekennzeichnete Trainingsbeispielansicht und Entscheidungshilfe für Smart/Coaching ergänzen.
 - [x] Hauptbereiche mit dem gewünschten Kundenkonto auf Desktop und Handy geprüft; Grenzen und Auffälligkeiten in APP-REVIEW.md dokumentiert.
 - [x] Startseitenablauf und 606 vorhandene Tests geprüft; Datenschutztests ergänzt; nicht veröffentlicht.
+
+# Kunden-Übersicht: Aktivitätsfenster
+- [x] Aktivitätsbereich zeigt immer die letzten 10 Tage statt 3; Überschrift, Tagesauswahl und Datenfenster aus derselben Regel.
+- [x] Echte Kundenseite in der Vorschau geprüft: 10 Tage im Dropdown, ältester Tag lädt korrekt; 672 Tests bestanden; nicht veröffentlicht.
