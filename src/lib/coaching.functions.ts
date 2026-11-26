@@ -1,6 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { PUBLIC_APP_ORIGIN } from "@/lib/auth-flow.logic";
+import {
+  buildRecentActivityWindow,
+  clampRecentActivityDays,
+} from "@/lib/customer-recent-activity.logic";
 
 const PAYPAL_ME = "https://www.paypal.me/ManuSchrader";
 
@@ -702,18 +706,8 @@ export const getCustomerRecentActivity = createServerFn({ method: "POST" })
     await assertCoach(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const days = Math.max(1, Math.min(7, data.days ?? 3));
-    const today = new Date();
-    const dateList: string[] = [];
-    for (let i = 0; i < days; i++) {
-      const d = new Date(today);
-      d.setDate(today.getDate() - i);
-      dateList.push(d.toISOString().slice(0, 10));
-    }
-    const fromDate = dateList[dateList.length - 1];
-    const toDate = dateList[0];
-    const fromIso = `${fromDate}T00:00:00.000Z`;
-    const toEndIso = `${toDate}T23:59:59.999Z`;
+    const days = clampRecentActivityDays(data.days);
+    const { dateList, fromDate, toDate, fromIso, toEndIso } = buildRecentActivityWindow(days);
 
     const [checks, foods, sets] = await Promise.all([
       supabaseAdmin

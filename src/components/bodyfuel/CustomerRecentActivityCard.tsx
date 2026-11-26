@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getCustomerRecentActivity } from "@/lib/coaching.functions";
+import { RECENT_ACTIVITY_DAYS } from "@/lib/customer-recent-activity.logic";
 import {
   Select,
   SelectContent,
@@ -34,7 +35,7 @@ export function CustomerRecentActivityCard({ userId }: { userId: string }) {
   const getFn = useServerFn(getCustomerRecentActivity);
   const { data, isLoading } = useQuery({
     queryKey: ["customer-recent-activity", userId],
-    queryFn: () => getFn({ data: { user_id: userId, days: 3 } }),
+    queryFn: () => getFn({ data: { user_id: userId, days: RECENT_ACTIVITY_DAYS } }),
   });
 
   const [selected, setSelected] = useState<string>("");
@@ -47,7 +48,9 @@ export function CustomerRecentActivityCard({ userId }: { userId: string }) {
   return (
     <div className="rounded-2xl border border-border bg-card p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="font-display text-lg font-bold">Aktivität (letzte 3 Tage)</h2>
+        <h2 className="font-display text-lg font-bold">
+          Aktivität (letzte {RECENT_ACTIVITY_DAYS} Tage)
+        </h2>
         <Select value={activeDate} onValueChange={setSelected}>
           <SelectTrigger className="w-56">
             <SelectValue placeholder="Tag wählen" />
